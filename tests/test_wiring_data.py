@@ -22,7 +22,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.breadboard import before_power  # noqa: E402
-from spark.breadboard import breadboard_codes  # noqa: E402
 from spark.breadboard import sheet  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "data" / "breadboard"
@@ -77,21 +76,21 @@ class TheMotorDataTest(unittest.TestCase):
         # Written from the "Before you power it" section of motor/breadboard.expected.md.
         l9110s, inlet, button = "L9110S dual motor driver module", "JST PH 2-pin power inlet", "6x6 mm tactile push button"
         self.assertEqual([(item.kind, item.subject, item.pin, item.record) for item in self.items], [
-            (before_power.OFF_BOARD_SUPPLY, "MOTOR6V", None, None),
-            (before_power.CONFLICT, "L9110sModule", "AIA", "l9110s-module"),
-            (before_power.CONFLICT, "L9110sModule", "AIB", "l9110s-module"),
-            (before_power.UNUSED_PIN, "L9110sModule", "BIA", "l9110s-module"),
-            (before_power.UNUSED_PIN, "L9110sModule", "BIB", "l9110s-module"),
-            (before_power.HOST_REQUIREMENT, l9110s, None, "l9110s-module"),
-            (before_power.HOST_REQUIREMENT, l9110s, None, "l9110s-module"),
-            (before_power.HOST_REQUIREMENT, inlet, None, "jst-ph-2-power-inlet"),
-            (before_power.HOST_REQUIREMENT, inlet, None, "jst-ph-2-power-inlet"),
-            (before_power.HOST_REQUIREMENT, inlet, None, "jst-ph-2-power-inlet"),
-            (before_power.HOST_REQUIREMENT, inlet, None, "jst-ph-2-power-inlet"),
-            (before_power.FIRMWARE_PULL, "BtnOpen", "A", "tactile-button"),
-            (before_power.HOST_REQUIREMENT, button, None, "tactile-button"),
-            (before_power.HOST_REQUIREMENT, button, None, "tactile-button"),
-            (before_power.FIRMWARE_PULL, "BtnMode", "A", "tactile-button"),
+            ("off-board-supply", "MOTOR6V", None, None),
+            ("conflict", "L9110sModule", "AIA", "l9110s-module"),
+            ("conflict", "L9110sModule", "AIB", "l9110s-module"),
+            ("unused-pin", "L9110sModule", "BIA", "l9110s-module"),
+            ("unused-pin", "L9110sModule", "BIB", "l9110s-module"),
+            ("host-requirement", l9110s, None, "l9110s-module"),
+            ("host-requirement", l9110s, None, "l9110s-module"),
+            ("host-requirement", inlet, None, "jst-ph-2-power-inlet"),
+            ("host-requirement", inlet, None, "jst-ph-2-power-inlet"),
+            ("host-requirement", inlet, None, "jst-ph-2-power-inlet"),
+            ("host-requirement", inlet, None, "jst-ph-2-power-inlet"),
+            ("firmware-pull", "BtnOpen", "A", "tactile-button"),
+            ("host-requirement", button, None, "tactile-button"),
+            ("host-requirement", button, None, "tactile-button"),
+            ("firmware-pull", "BtnMode", "A", "tactile-button"),
         ])
 
     def test_a_supply_names_its_users_sorted_and_says_nothing_of_its_own(self):
@@ -101,12 +100,12 @@ class TheMotorDataTest(unittest.TestCase):
         self.assertEqual({item.users for item in self.items[1:]}, {()})
 
     def test_each_kind_says_the_record_s_own_words(self):
-        said = {item.kind: item.said for item in reversed(self.items)}  # the first item of each kind
-        self.assertTrue(said[before_power.CONFLICT].startswith("AIA: the board's 10000 ohm pull-down"), said)
-        self.assertEqual(said[before_power.UNUSED_PIN],
+        said = {item.kind: item.said for item in reversed(self.items)}  # the first item of each kind, by its kind's word
+        self.assertTrue(said["conflict"].startswith("AIA: the board's 10000 ohm pull-down"), said)
+        self.assertEqual(said["unused-pin"],
                          "channel B is unused in a one-motor design and must not float — tie it to the driver's own ground")
-        self.assertTrue(said[before_power.HOST_REQUIREMENT].startswith("Pull both inputs down in HARDWARE."), said)
-        self.assertIsNone(said[before_power.FIRMWARE_PULL])
+        self.assertTrue(said["host-requirement"].startswith("Pull both inputs down in HARDWARE."), said)
+        self.assertIsNone(said["firmware-pull"])
 
     def test_the_records_are_the_ids_of_the_line_that_names_each_record_whole(self):
         self.assertEqual(self.data.before_power.records, ["jst-ph-2-power-inlet", "l9110s-module", "tactile-button"])
@@ -123,7 +122,7 @@ class NoBuildIsRefusedTest(unittest.TestCase):
         shutil.rmtree(project / "dist")
         with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuiltError) as said:
             sheet.wiring_data(project / "requirements.json")
-        self.assertEqual(said.exception.code, breadboard_codes.NOT_BUILT)
+        self.assertEqual(said.exception.code, "not_built")
 
 
 if __name__ == "__main__":
