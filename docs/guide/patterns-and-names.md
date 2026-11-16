@@ -58,7 +58,9 @@ child of `image_evidence`) still never import `spark.core`: they add no path lin
 
 The core ([P442](https://github.com/xmejkal/spark/issues/587), wave 3 of the refactor) is what every area and every
 frontend shares, so that a CLI, an agent or an MCP tool runs the same code. An Operation (`spark.core.operation`) is a
-class with `name` (the `op` the envelope prints), `summary` (one sentence for a catalogue or an MCP tool, P726), `details` (the long text that `--help` prints after the arguments, without the CLI's own `--json` and exit codes, P481), `arguments` (its `Argument`s, as argparse adds them; an Argument with `payload` names a JSON file the CLI adapter reads and hands in as a value, `cli.load_payloads`) and `effects`
+class with `name` (the `op` the envelope prints), `summary` (one sentence for a catalogue or an MCP tool, P726),
+`details` (what `--help` prints after the arguments, before the CLI's own text, P481), `arguments` (its `Argument`s,
+as argparse adds them; an Argument with `payload` names a JSON file the CLI adapter reads and hands in as a value, `cli.load_payloads`) and `effects`
 (the effect words are listed under the table at the top), `input_schema()` and `output_schema()` (JSON Schemas of the values and the envelope, an MCP tool's `inputSchema` and `outputSchema`, P605), and one public method, `run(**values, outside)`, which returns an `OperationResult`
 (`spark.core.result`): `data`, `findings` (a `Finding` per thing found, with its severity, subject, code, sentence and
 fix), `next` (a `NextStep` per step an agent may take), `lines` (the report a person reads), `diagnostics` (lines for
@@ -84,8 +86,7 @@ flag is a `bad_argument` envelope under `--json`, the usage without), runs, rend
 `EXIT_FOR[status]`. Rule X2 names it by file and name as the function that prints in `scripts/spark/`, beside the
 Renderers, the terminal consent and `TerminalReporter`, which prints the text of a `LINE` (an `Event` holds `kind`,
 `code` and `text`); `outcomes.AnsweringParser.exit_with_usage` prints the usage too and stands in the baseline. A
-script's `main(argv=None, outside=None, operation=None)` is one call of `run_cli`. `scripts/look.py` is the first, over `LookAtBoard`: its `HelpText` gives only the CLI's own `epilog`, so `parser_for` takes the Operation's `summary` and puts its `details` first (P481).
-The core's own codes are in `spark.core.codes`.
+script's `main` is one call of `run_cli`, and the look's takes `operation=None` (P481).
 
 ```mermaid
 classDiagram
@@ -270,8 +271,7 @@ Each docstring says these things:
 A tiny value or a calculation with no state stays a plain function or a namedtuple. Make a class when something holds
 state and offers several actions on it, or when a test or a caller must swap it.
 
-The fake of a part that a caller can swap lives in `tests/fakes.py` and starts with `Fake`, for example
-`FakeBoardConnection` and `FakeConsent`. A fake of a tool's output, such as mpremote's, stays in its test file.
+A fake of a tool's output, such as mpremote's, stays in its test file, not in `tests/fakes.py` (the role table's `Fake`).
 
 The PO's bench tools for live work on a board sit beside the deploy area. The four Operations in `scripts/spark/bench/` (`issue-grant`, `check-grant`, `live`, `reach`) are behind `grant.py`, `live.py` and `reach.py`
 (P657). `reach.py` runs one line on the board and cures it once when its USB output died at power-on (P251,

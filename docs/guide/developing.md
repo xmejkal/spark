@@ -287,7 +287,6 @@ imports come first. It runs only `--help` and writes nothing. `--spark DIR` read
 `python3 tools/measure.py` prints the shape of the code under `scripts/` (every folder in it but the MicroPython
 `stand_in/`), ending in a SCORE line (P322). `--rules` prints each breach of an architecture rule as
 `rule:file:name:value`. `--rules --accept` writes the breaches as `tests/architecture_baseline.json` (P440, #585).
-The rules and the role words are in [patterns-and-names.md](patterns-and-names.md).
 
 ## Patterns and names in spark's core
 
@@ -321,7 +320,9 @@ as `tests/test_docs.py`. It fails when the docs:
 - run over a page's line budget (`BUDGETS`, 400 by default) or a table cell's limit (`CELL_LIMITS`, 300 by default). These
   only go down, kept by review: cut or split the page, never raise a number, remove a split page's entry ([P500](https://github.com/xmejkal/spark/issues/689)).
 
-A ` ```sh ` block marked `<!-- runs: exit N -->` is run in an empty project, with a store of its own, and must exit `N`. A page block, from the line `<!-- spark:operation NAME -->` to its end marker, the same with a slash before `spark`, is the help of the Operation NAME, its `summary` and a row per Argument, written by `python3 tools/doc_blocks.py` (P481). Change the Operation, never the block: `tests/test_doc_blocks.py` fails while a block is stale.
+A ` ```sh ` block marked `<!-- runs: exit N -->` is run in an empty project, with a store of its own, and must exit `N`.
+A page block, between the line `<!-- spark:operation NAME -->` and an end marker with a slash before `spark`, is
+written by `python3 tools/doc_blocks.py` from the Operation NAME (P481): change the Operation, never the block.
 
 Nothing mechanical checks a skill or agent named in prose, an absolute link, or a second, wrong version; the council
 reads those. Nor can it tell whether a step's status is still current. So when a step of the [journey](journey.md)
@@ -371,8 +372,7 @@ reads each board whole, 100 cards a page, and judges where a card stands by the 
 part, or a card in a stage the gate does not know, makes the status one could-not-run line naming it; a card with no
 *Status* is said; and the bin's board read in part, or with no *Status* on any card, is set aside and said as the gate
 says it, spark's cards counted alone. `python3 tools/board.py close "the day's one line"` posts the day-close as a status update on spark's board — one a
-day, a second refused with exit 1; `--dry-run` prints it and posts nothing. Each verb's `--help` says what it prints,
-posts and refuses.
+day, a second refused with exit 1; `--dry-run` prints it and posts nothing.
 
 [`scripts/cost.py`](../../scripts/cost.py) is not a team tool. It ships with the plugin: `parts.py --step` and `--tally`
 import it to count what a project's run cost, and on one transcript it says what that run cost
