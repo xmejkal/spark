@@ -7,9 +7,27 @@
  },
  {
   "file": "scripts/spark/core/cli.py",
+  "name": "P481: a CLI's own sentence gives way to the Operation's summary",
+  "find": "    description = operation.summary if text.description is None else text.description",
+  "replace": "    description = operation.summary if text.description is None else operation.summary"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
   "name": "P481: --help leaves out the Operation's details",
-  "find": "    said = [part for part in (operation.details, text.epilog) if part is not None]",
-  "replace": "    said = [part for part in (text.epilog,) if part is not None]"
+  "find": "    said = [part for part in (operation.details, text.epilog) if part]",
+  "replace": "    said = [part for part in (text.epilog,) if part]"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: an empty epilog of the CLI adds a stray blank line after the details",
+  "find": "    said = [part for part in (operation.details, text.epilog) if part]",
+  "replace": "    said = [part for part in (operation.details, text.epilog) if part is not None]"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: no details and no epilog give an empty epilog, not None",
+  "find": "epilog=\"\\n\\n\".join(said) if said else None,",
+  "replace": "epilog=\"\\n\\n\".join(said),"
  },
  {
   "file": "scripts/spark/core/cli.py",

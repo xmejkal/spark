@@ -24,8 +24,9 @@ from spark.core.text_guards import guard_lines, printable
 #: Value: what a CLI says of itself in `--help`: its file name, one sentence, and the CLI's own text after the arguments.
 #: A None `description` takes the Operation's `summary`, and the Operation's `details` stand before the `epilog` (P481).
 #: `tool` is the envelope's `tool`, the script that answered (P707): a CLI with several Operations gives its own name
-#: (`parts`), and None means the Operation's name, as the one-Operation CLIs print it. `bad_argument_fix` is the fix sentence of a bad
-#: argument when the CLI has a better one than `BAD_ARGUMENT_FIX` (parts.py's describe route, P726 PR 3); None takes the default.
+#: (`parts`), and None means the Operation's name, as the one-Operation CLIs print it. `bad_argument_fix` is the fix
+#: sentence of a bad argument when the CLI has a better one than `BAD_ARGUMENT_FIX` (parts.py's describe route, P726 PR 3);
+#: None takes the default.
 HelpText = namedtuple("HelpText", "prog description epilog tool bad_argument_fix", defaults=(None, None, None, None))
 #: The sentence of a crash's Finding holds the class only, because the message can carry a home path.
 CRASH_MESSAGE = "%s: the traceback is on stderr"
@@ -100,9 +101,10 @@ def parser_for(text, operation):
     """The AnsweringParser of a CLI: each Argument as argparse takes it, and a `group` as one mutually exclusive group. An
     Argument whose first flag does not start with `-` is a positional (P804): argparse takes its dest from that flag and
     refuses both `dest` and `required` for it. The description is `text.description`, or the Operation's `summary` when
-    it is None, and the epilog is the Operation's `details`, a blank line and `text.epilog`, without whichever is None (P481)."""
+    it is None, and the epilog is the Operation's `details`, a blank line and `text.epilog`, without whichever is None or
+    empty, and None when both are (P481)."""
     description = operation.summary if text.description is None else text.description
-    said = [part for part in (operation.details, text.epilog) if part is not None]
+    said = [part for part in (operation.details, text.epilog) if part]
     parser = outcomes.AnsweringParser(prog=text.prog, description=description, epilog="\n\n".join(said) if said else None,
                                       formatter_class=argparse.RawDescriptionHelpFormatter)
     groups = {}
