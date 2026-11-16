@@ -218,6 +218,21 @@ class PlantedBreachesTest(unittest.TestCase):
             "X2:scripts/spark/core/out.py:sys.stdin": 1, "X2:scripts/spark/core/out.py:sys.stdout": 1,
             "X2:scripts/spark/core/out.py:SystemExit": 1})
 
+    def test_x2_every_route_to_print_read_or_exit_by_what_its_name_stands_for(self):
+        # P459: the routes the plain names miss, each counted under the name it resolves to
+        root = planted({"scripts/spark/routes.py": (
+            "import builtins\nimport builtins as b\nimport os\nfrom builtins import print as say\n"
+            "from os import _exit, write as put\nfrom sys import exit as leave, stderr\n\n\n"
+            "def run(show=print):\n    builtins.print(1)\n    b.input()\n    say(2)\n    p = print\n    p(3)\n"
+            "    os.write(1, b\"x\")\n    put(2, b\"y\")\n    os._exit(1)\n    _exit(2)\n    exit()\n    quit()\n"
+            "    leave(3)\n    stderr.write(\"z\")\n    sys.__stderr__.flush()\n    os.getcwd()\n    printer, exited = 1, 2\n    input = None\n")})
+        self.assertEqual(measure.breaches(root), {
+            "X2:scripts/spark/routes.py:builtins.input": 1, "X2:scripts/spark/routes.py:builtins.print": 2,
+            "X2:scripts/spark/routes.py:exit": 1, "X2:scripts/spark/routes.py:os._exit": 2,
+            "X2:scripts/spark/routes.py:os.write": 2, "X2:scripts/spark/routes.py:print": 2,
+            "X2:scripts/spark/routes.py:quit": 1, "X2:scripts/spark/routes.py:sys.exit": 1,
+            "X2:scripts/spark/routes.py:sys.__stderr__": 1, "X2:scripts/spark/routes.py:sys.stderr": 1})
+
     def test_u1_a_leaf_that_imports_a_script_matching_with_drawer_a_moved_guard_and_a_missing_leaf(self):
         # the layout since wave 6 (P721): drawer and matching in a package, imported through it
         root = planted({

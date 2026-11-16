@@ -105,7 +105,7 @@
 "T1:scripts/spark/breadboard/bench_changes.py:file-write": 1,
 "T1:scripts/spark/breadboard/sheet.py:file-write": 3,
 "T1:scripts/spark/build/board_engine.py:os.environ": 1,
-"T1:scripts/spark/build/build_service.py:file-write": 7,
+"T1:scripts/spark/build/build_service.py:file-write": 6,
 "T1:scripts/spark/build/kept_files.py:file-write": 2,
 "T1:scripts/spark/build/project_setup.py:file-write": 2,
 "T1:scripts/spark/build/requirements_build.py:file-write": 1,
