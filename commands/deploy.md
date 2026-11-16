@@ -16,10 +16,23 @@ Before you propose a flash, and when the person asks whether the right board is 
 ${CLAUDE_PLUGIN_ROOT}/scripts/look.py --json
 ```
 
+<!-- spark:operation look -->
+
+Read the board on USB without changing it, compare it with the project's board record, and print a token (P219).
+
+| flag | value | what it does |
+|---|---|---|
+| `--project` | `PROJECT` | the project folder with requirements.json and sim/ (default: here) |
+| `--port` | `PORT` | the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB (one board on two nodes named by its serial counts once) |
+| `--ignore-older-runs` |  | give a token even when a log in sim/runs/ tested another image (default: no token) |
+| `--no-simulation` |  | give a token for an image that no simulation tested, when firmware/ has a main.py, compiles and is what the image holds (default: a passed run must name the image) |
+
+<!-- /spark:operation look -->
+
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
 changes no flash. It compares the board's chip and flash size with the board in `requirements.json` and prints each as
-`same`, `differs` or `unknown`, with the board's MAC, the last deploy that spark's store record names for it, and a token. With two boards on USB, it lists them and needs
-`--port <the board's serial port>`. One board that shows on two nodes with one USB serial (a CP2104 does) is one board: the look names the other nodes in `also_on`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Read the envelope (`status`, `problems`, `unchecked`, `data`, `next`: `docs/guide/agents/json.md`, "look.py and deploy.py's envelope") and relay it in words. Each item of `problems` and `unchecked` has a `code` (the table is in the same section): decide on the code, and relay the sentence. Without `--json` the same facts are lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
+`same`, `differs` or `unknown`, with the board's MAC, the last deploy that spark's store record names for it, and a token.
+One board that shows on two nodes with one USB serial (a CP2104 does) is one board: the look names the other nodes in `also_on`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Read the envelope (`status`, `problems`, `unchecked`, `data`, `next`: `docs/guide/agents/json.md`, "look.py and deploy.py's envelope") and relay it in words. Each item of `problems` and `unchecked` has a `code` (the table is in the same section): decide on the code, and relay the sentence. Without `--json` the same facts are lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
 not propose the flash. `unknown` is not a pass. The token is not the person's yes. `look.py` is in this command's
 `allowed-tools`, and so is `deploy.py` (P242): Claude Code does not ask before it runs deploy.py. The gate is inside
 deploy.py. With no deploy grant, it asks for a yes in a real terminal, Claude's shell has none, and deploy.py exits 2
