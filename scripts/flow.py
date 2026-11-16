@@ -15,9 +15,11 @@ DEFAULT_VERB = "show"
 
 EPILOG = """flow.py show reads the project's files and the store, and writes nothing. It says nine phases in order: idea,
 needs, parts, requirements, build, breadboard, firmware, simulate and deploy. Each phase has a status (ok, problems,
-could-not-run, not-started, partial or stale; idea, firmware and simulate have none), who does it (you, claude or your
-terminal), its facts and its offers. An offer is a key, such as pick:soil:x-led, with one line that says what taking it
-does. flow.py runs no offer. The last line names the first phase that is not done.
+could-not-run, not-started, partial or stale, or none), who does it (you, claude or your terminal), what it says and its
+offers. The idea has no status. A hand-written project (requirements.json and no needs) has none for its needs and
+parts. Written firmware and a simulated image have none, because what their sentences say is for you to judge. An offer
+is a key, such as pick:soil:x-led, with one line that says what taking it does. flow.py runs no offer. The last line
+names the first phase that is not done.
 
 The build phase reads .spark/build.json, which check_spine.py --keep writes when its folder is a project. It is stale when
 requirements.json changed after that build.
@@ -25,8 +27,9 @@ requirements.json changed after that build.
 With --json it prints one envelope: data.phases and data.stands_at (docs/guide/agents/flow.md).
 
 Exit codes: 0 no phase holds problems or could not run, 1 a phase holds problems (a need that cannot be matched,
-requirements the picks cannot give, a build that failed), 2 a phase could not be read or its last build could not run,
-or an argument is wrong. Every phase answers either way."""
+requirements the picks cannot give, a build that failed, a firmware line in sim/wokwi.toml that spark cannot use), 2 a
+phase could not be read or its last build could not run, or an argument is wrong. Problems win: with both, the status is
+problems and the exit 1, and the phase that could not run is listed under unchecked. Every phase answers either way."""
 
 
 def operation_for(argv):

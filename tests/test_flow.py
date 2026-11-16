@@ -1,7 +1,8 @@
 """
 The flow reader (P825, #1183): `flow.py show` says where a project stands, phase by phase, from the files the earlier
-stages wrote, and offers the next steps as keys. On five projects (no needs, picked, built, a build that could not run,
-requirements changed after the build) each test pins the nine phases' status and offers from `flow.py show --json`.
+stages wrote, and offers the next steps as keys. On five projects (no needs, picked, built by hand with no needs, a build
+that ended in could-not-run, requirements changed after the build) each test pins all nine phases' status and offer keys
+from `flow.py show --json`, and `stands_at`. More tests pin one phase each.
 It covers the area's modules `show_flow`, `phase_readers` and `flow_codes`, and the build record `build_record`.
 
     python3 -m unittest tests.test_flow
@@ -44,6 +45,11 @@ def show(project, *argv):
     return json.loads(out.getvalue()), code
 
 
+def table(envelope):
+    """{phase: (status, [offer keys])} for all nine phases."""
+    return {phase["phase"]: (phase["status"], [offer["key"] for offer in phase["offers"]]) for phase in envelope["data"]["phases"]}
+
+
 def statuses(envelope):
     return {phase["phase"]: phase["status"] for phase in envelope["data"]["phases"]}
 
@@ -52,8 +58,8 @@ def offers(envelope, phase):
     return [offer["key"] for offer in next(each for each in envelope["data"]["phases"] if each["phase"] == phase)["offers"]]
 
 
-def facts(envelope, phase):
-    return next(each for each in envelope["data"]["phases"] if each["phase"] == phase)["facts"]
+def says(envelope, phase):
+    return next(each for each in envelope["data"]["phases"] if each["phase"] == phase)["says"]
 
 
 def a_store():
@@ -91,6 +97,19 @@ def a_built_project(status="ok"):
     return project
 
 
+def a_built_project_with_a_sheet_from(requirements):
+    """A built project whose built-from.json names `requirements`."""
+    project = a_built_project()
+    (project / "dist" / "board" / "built-from.json").write_text(json.dumps({"requirements": requirements}))
+    return project
+
+
+NS = "not-started"
+#: A project built by hand: requirements.json and no needs, its build and its sheet current, no firmware yet.
+BUILT_TABLE = {"idea": (None, []), "needs": (None, []), "parts": (None, []), "requirements": ("ok", []), "build": ("ok", ["build"]),
+               "breadboard": ("ok", []), "firmware": (NS, []), "simulate": (NS, []), "deploy": (NS, [])}
+
+
 class FlowTest(unittest.TestCase):
     def setUp(self):
         self.home = a_store()
@@ -106,14 +125,15 @@ class ThePhasesTest(FlowTest):
         said, code = show(project)
         self.assertEqual((code, said["status"], said["tool"], said["op"]), (0, "ok", "flow", "show-flow"))
         self.assertEqual([phase["phase"] for phase in said["data"]["phases"]], PHASES)
-        self.assertEqual(statuses(said), {"idea": None, "needs": "not-started", "parts": "not-started", "requirements": "not-started",
-                                          "build": "not-started", "breadboard": "not-started", "firmware": None, "simulate": None,
-                                          "deploy": "not-started"})
+        self.assertEqual(table(said), {"idea": (None, []), "needs": (NS, []), "parts": (NS, []), "requirements": (NS, []),
+                                       "build": (NS, []), "breadboard": (NS, []), "firmware": (NS, []), "simulate": (NS, []),
+                                       "deploy": (NS, [])})
         self.assertEqual(said["data"]["stands_at"], "needs")
-        self.assertEqual({phase: offers(said, phase) for phase in PHASES}, {phase: [] for phase in PHASES})
-        self.assertEqual(facts(said, "idea"), ["Tell Claude your goal in the chat"])
-        self.assertEqual(facts(said, "firmware"), ["no firmware/main.py yet"])
-        self.assertIn("no sim/wokwi.toml", facts(said, "simulate")[0])
+        self.assertEqual(says(said, "idea"), ["Tell Claude your goal in the chat"])
+        self.assertEqual(says(said, "firmware"), ["no firmware/main.py yet"])
+        self.assertIn("no sim/wokwi.toml", says(said, "simulate")[0])
+        self.assertEqual(says(said, "deploy"), ["ask Claude to look at the board first",
+                                                "then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in your terminal"])
         self.assertEqual([phase["by"] for phase in said["data"]["phases"]],
                          ["you", "claude", "you", "claude", "claude", "you", "claude", "your terminal", "your terminal"])
 
@@ -123,17 +143,16 @@ class ThePhasesTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture"}])
         said, code = show(project)
         self.assertEqual(code, 0)
-        self.assertEqual({phase: statuses(said)[phase] for phase in ("needs", "parts", "requirements", "build")},
-                         {"needs": "ok", "parts": "partial", "requirements": "not-started", "build": "not-started"})
+        picks = ["pick:%s:%s" % (need, part) for need in ("soil", "wet") for part in ("x-held", "x-many", "x-unknown", "vl6180x-breakout")]
+        self.assertEqual(table(said), {"idea": (None, []), "needs": ("ok", ["needs-drop:soil", "needs-drop:wet"]), "parts": ("partial", picks),
+                                       "requirements": (NS, ["requirements"]), "build": (NS, []), "breadboard": (NS, []),
+                                       "firmware": (NS, []), "simulate": (NS, []), "deploy": (NS, [])})
         self.assertEqual(said["data"]["stands_at"], "parts")
-        self.assertEqual(offers(said, "needs"), ["needs-drop:soil", "needs-drop:wet"])
-        self.assertIn("1 of 2 needs picked", facts(said, "parts"))
-        self.assertEqual(offers(said, "requirements"), ["requirements"])
+        self.assertIn("1 of 2 needs picked", says(said, "parts"))
         effects = {offer["key"]: offer["effect"] for offer in said["data"]["phases"][2]["offers"]}
         self.assertEqual(effects["pick:wet:x-held"], "replaces the picks of need wet in needs.json; you have 3; held by smartbin-local")
         self.assertEqual(effects["pick:wet:x-many"], "replaces the picks of need wet in needs.json; you have many")
         self.assertEqual(effects["pick:wet:x-unknown"], "replaces the picks of need wet in needs.json; how many you have is unknown")
-        self.assertIn("pick:soil:x-many", effects)
         self.assertEqual(said["data"]["phases"][1]["offers"][0]["effect"], "drops need soil from needs.json and frees its holds")
 
     def test_every_need_picked_makes_the_parts_ok(self):
@@ -145,45 +164,48 @@ class ThePhasesTest(FlowTest):
 
     def test_needs_with_no_pick_leave_the_parts_not_started(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "soil", "does": "sense", "what": "soil-moisture"}])
-        self.assertEqual(statuses(show(project)[0])["parts"], "not-started")
+        self.assertEqual(statuses(show(project)[0])["parts"], NS)
 
     def test_a_need_with_no_what_gives_the_parts_problems_and_exit_1(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "soil", "does": "sense"}])
         said, code = show(project)
         self.assertEqual((code, said["status"], statuses(said)["parts"]), (1, "problems", "problems"))
-        self.assertIn("soil: a need with no `what` cannot be matched", facts(said, "parts")[0])
+        self.assertIn("soil: a need with no `what` cannot be matched", says(said, "parts")[0])
         self.assertEqual([(item["subject"], item["code"]) for item in said["problems"]], [("parts", "phase_problems")])
 
-    def test_a_built_project_with_no_needs_has_each_built_phase_ok_and_stands_at_the_needs(self):
+    def test_problems_beside_a_phase_that_could_not_run_give_problems_and_exit_1(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "soil", "does": "sense"}])
+        (project / ".spark" / "build.json").write_text("{not json")
+        said, code = show(project)
+        self.assertEqual((code, said["status"], statuses(said)["build"]), (1, "problems", "could-not-run"))
+        self.assertEqual([item["subject"] for item in said["unchecked"]], ["build"])
+
+    def test_a_project_built_by_hand_with_no_needs_stands_at_the_firmware(self):
         said, code = show(a_built_project())
         self.assertEqual(code, 0)
-        self.assertEqual(statuses(said), {"idea": None, "needs": "not-started", "parts": "not-started", "requirements": "ok",
-                                          "build": "ok", "breadboard": "ok", "firmware": None, "simulate": None,
-                                          "deploy": "not-started"})
-        self.assertEqual(said["data"]["stands_at"], "needs")
-        self.assertEqual(offers(said, "build"), ["build"])
-        self.assertEqual(offers(said, "requirements"), [])
-        self.assertIn(zone_time.stamp(FakeClock().now()), " ".join(facts(said, "build")))
+        self.assertEqual(table(said), BUILT_TABLE)
+        self.assertEqual(said["data"]["stands_at"], "firmware")
+        self.assertEqual(says(said, "needs"), ["a hand-written project: requirements.json and no needs"])
+        self.assertIn(zone_time.stamp(FakeClock().now()), " ".join(says(said, "build")))
 
     def test_a_build_that_could_not_run_says_so_and_exits_2(self):
         said, code = show(a_built_project("could-not-run"))
-        self.assertEqual((code, said["status"], statuses(said)["build"]), (2, "could-not-run", "could-not-run"))
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+        self.assertEqual(table(said), dict(BUILT_TABLE, build=("could-not-run", ["build"])))
+        self.assertEqual(said["data"]["stands_at"], "build")
         self.assertEqual([(item["subject"], item["code"]) for item in said["unchecked"]], [("build", "phase_could_not_run")])
-        self.assertIn("build: could-not-run", facts(said, "build"))
+        self.assertIn("build: could-not-run", says(said, "build"))
 
     def test_requirements_changed_after_the_build_make_the_build_and_the_sheet_stale(self):
         project = a_built_project()
         (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6-fresh", "parts": ["tactile-button"]}))
         said, code = show(project)
         self.assertEqual(code, 0)
-        self.assertEqual({phase: statuses(said)[phase] for phase in ("requirements", "build", "breadboard")},
-                         {"requirements": "ok", "build": "stale", "breadboard": "stale"})
-        self.assertEqual(said["data"]["stands_at"], "needs")
+        self.assertEqual(table(said), dict(BUILT_TABLE, build=("stale", ["build"]), breadboard=("stale", [])))
+        self.assertEqual(said["data"]["stands_at"], "build")
 
     def test_a_sheet_built_from_other_requirements_is_stale_while_the_build_record_is_current(self):
-        project = a_built_project()
-        (project / "dist" / "board" / "built-from.json").write_text(json.dumps({"requirements": {"board": "x", "parts": []}}))
-        said, _ = show(project)
+        said, _ = show(a_built_project_with_a_sheet_from({"board": "x", "parts": []}))
         self.assertEqual((statuses(said)["build"], statuses(said)["breadboard"]), ("ok", "stale"))
 
     def test_the_same_requirements_written_again_in_other_bytes_make_the_build_and_its_sheet_stale(self):
@@ -194,13 +216,20 @@ class ThePhasesTest(FlowTest):
         self.assertEqual({phase: statuses(said)[phase] for phase in ("requirements", "build", "breadboard")},
                          {"requirements": "ok", "build": "stale", "breadboard": "stale"})
 
+    def test_requirements_that_are_what_the_picks_give_are_ok(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"board": "xiao-esp32-c6"}]}])
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": [], "board_only": True}))
+        said, _ = show(project)
+        self.assertEqual(table(said)["requirements"], ("ok", ["requirements"]))
+        self.assertEqual(said["data"]["stands_at"], "build")
+
     def test_requirements_that_differ_from_the_picks_are_stale(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
             {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"board": "xiao-esp32-c6"}]}])
         (project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": []}))
         said, _ = show(project)
-        self.assertEqual(statuses(said)["requirements"], "stale")
-        self.assertEqual(offers(said, "requirements"), ["requirements"])
+        self.assertEqual(table(said)["requirements"], ("stale", ["requirements"]))
 
     def test_requirements_with_no_board_picked_have_problems(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -208,7 +237,7 @@ class ThePhasesTest(FlowTest):
         (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
         said, _ = show(project)
         self.assertEqual(statuses(said)["requirements"], "problems")
-        self.assertIn("board: pick one board", facts(said, "requirements")[0])
+        self.assertIn("board: pick one board", says(said, "requirements")[0])
 
     def test_a_broken_needs_file_makes_each_phase_that_reads_it_could_not_run_and_the_rest_answer(self):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
@@ -217,10 +246,18 @@ class ThePhasesTest(FlowTest):
         said, code = show(project)
         self.assertEqual(code, 2)
         self.assertEqual({phase: statuses(said)[phase] for phase in ("needs", "parts", "requirements", "build", "deploy")},
-                         {"needs": "could-not-run", "parts": "could-not-run", "requirements": "could-not-run", "build": "not-started",
-                          "deploy": "not-started"})
-        self.assertIn("is not JSON", facts(said, "needs")[0])
+                         {"needs": "could-not-run", "parts": "could-not-run", "requirements": "could-not-run", "build": NS,
+                          "deploy": NS})
+        self.assertIn("is not JSON", says(said, "needs")[0])
         self.assertEqual(sorted(item["subject"] for item in said["unchecked"]), ["needs", "parts", "requirements"])
+
+    def test_a_requirements_file_that_is_no_json_is_could_not_run(self):
+        project = Path(tempfile.mkdtemp()) / "plant-alarm"
+        project.mkdir()
+        (project / "requirements.json").write_text("{not json")
+        said, _ = show(project)
+        self.assertEqual(statuses(said)["requirements"], "could-not-run")
+        self.assertIn("is not JSON", says(said, "requirements")[0])
 
     def test_the_firmware_s_time_is_said_in_the_machine_s_zone(self):
         project = a_built_project()
@@ -228,7 +265,9 @@ class ThePhasesTest(FlowTest):
         (project / "firmware" / "main.py").write_text("print(1)\n")
         os.utime(project / "firmware" / "main.py", (1_700_000_000, 1_700_000_000))
         said, _ = show(project)
-        self.assertEqual(facts(said, "firmware"), ["firmware/main.py written %s" % zone_time.stamp(datetime.datetime.fromtimestamp(1_700_000_000))])
+        self.assertIsNone(statuses(said)["firmware"])
+        self.assertEqual(says(said, "firmware"), ["firmware/main.py written %s" % zone_time.stamp(datetime.datetime.fromtimestamp(1_700_000_000))])
+        self.assertEqual(said["data"]["stands_at"], "simulate")
 
     def test_a_simulation_fact_says_a_passed_run_tested_the_image_or_why_not(self):
         project = a_built_project()
@@ -236,9 +275,17 @@ class ThePhasesTest(FlowTest):
         (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
         (project / "sim" / "image.bin").write_bytes(b"an image")
         said, _ = show(project)
-        self.assertIn("no run in sim/runs/ tested image.bin", facts(said, "simulate")[0])
-        self.assertIn("${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml uses Wokwi CI minutes", facts(said, "simulate"))
+        self.assertIn("no run in sim/runs/ tested image.bin", says(said, "simulate")[0])
+        self.assertIn("run ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml in your terminal: "
+                      "it uses Wokwi CI minutes", says(said, "simulate"))
         self.assertIsNone(statuses(said)["simulate"])
+
+    def test_a_firmware_line_spark_cannot_read_gives_the_simulate_phase_problems(self):
+        project = a_built_project()
+        (project / "sim").mkdir()
+        (project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 42\n")
+        said, _ = show(project)
+        self.assertEqual(statuses(said)["simulate"], "problems")
 
 
 class TheCommandTest(FlowTest):
@@ -261,6 +308,17 @@ class TheCommandTest(FlowTest):
         self.assertEqual(code, 0)
         self.assertIn("needs: not started", out.getvalue())
         self.assertIn("stands at: needs", out.getvalue())
+
+    def test_the_lines_leave_ok_to_the_mark_and_show_five_offer_keys_and_how_many_more(self):
+        project = with_needs(a_built_project(), [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture"}])
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            flow.main(["show", "--project", str(project)])
+        lines = out.getvalue().splitlines()
+        self.assertIn("  ✓ needs: 2 need(s): soil, wet (claude)", lines)
+        self.assertIn("      offers: pick:soil:x-held, pick:soil:x-many, pick:soil:x-unknown, pick:soil:vl6180x-breakout, "
+                      "pick:wet:x-held, +3 more", lines)
 
     def test_the_data_keys_are_a_real_answer_s_keys(self):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"

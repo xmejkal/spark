@@ -1,7 +1,7 @@
 """
 The readers of the nine phases of a project (P825): each reads the files one stage wrote and says where that phase
-stands, with its facts and the offers a person or Claude may take next. A library for `show_flow`. Nothing here writes,
-and no offer runs: P829 rebuilds the command from the key.
+stands, with its sentences and the offers a person or Claude may take next. A library for `show_flow`. Nothing here
+writes, and no offer runs: P829 rebuilds the command from the key.
 """
 
 import datetime
@@ -12,9 +12,10 @@ from pathlib import Path
 from spark.build.build_record import BuildRecordStore, sha256_of
 from spark.breadboard import sheet
 from spark.design import need_requirements, needs
+from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import flow_codes
-from spark.records import records_codes
+from spark.records import records_codes, store
 from spark.core.errors import CodedMessageError, SparkError
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import stamp
@@ -24,17 +25,20 @@ from spark.core.zone_time import stamp
 REQUIREMENTS_FILE = "requirements.json"
 #: The firmware Claude writes, as `/spark:build`'s next step names it.
 MAIN_FILE = Path("firmware") / "main.py"
-#: How each status reads: (the word in a line, the glyph a page shows). None is a phase with no status of its own.
-MARKS = {OK: ("ok", "✓"), PROBLEMS: ("problems", "✗"), COULD_NOT_RUN: ("could not run", "?"),
+#: How each status reads: (the word in a person's line, the glyph a page shows). The mark alone says ok, and None is a
+#: phase with no status of its own.
+MARKS = {OK: (None, "✓"), PROBLEMS: ("problems", "✗"), COULD_NOT_RUN: ("could not run", "?"),
          flow_codes.NOT_STARTED: ("not started", "○"), flow_codes.PARTIAL: ("partly done", "◐"),
          flow_codes.STALE: ("out of date", "↻"), None: (None, "·")}
+#: The reasons of a ProjectImage that say only that nothing was simulated yet; any other reason is a problem.
+NOT_SIMULATED_YET = (firmware_codes.NO_SIM_TOML, firmware_codes.NO_IMAGE)
 #: Value: one offer of a phase: its key (`pick:soil:x-led`) and the line that says what taking it does.
 Offer = namedtuple("Offer", "key effect")
 
 
-class Phase(namedtuple("Phase", "phase status mark by facts offers")):
+class Phase(namedtuple("Phase", "phase status mark by says offers")):
     """Value: where one phase of a project stands: its name, its status (an outcome, a phase word of `flow_codes`, or None),
-    its glyph from MARKS, who does it, its facts (a null one reads `unknown`) and its Offers."""
+    its glyph from MARKS, who does it, what it says (sentences for a person; a null value reads `unknown`) and its Offers."""
 
     def to_dict(self):
         return dict(self._asdict(), offers=[offer._asdict() for offer in self.offers])
@@ -58,18 +62,52 @@ class PhaseReader:
         except (CodedMessageError, OSError) as unread:
             return self.phase(COULD_NOT_RUN, [str(unread)])
 
-    def phase(self, status, facts, offers=()):
+    def phase(self, status, says, offers=()):
         return Phase(self.PHASE, status, MARKS[status][1], self.BY,
-                     [flow_codes.UNKNOWN if fact is None else fact for fact in facts], list(offers))
+                     [flow_codes.UNKNOWN if said is None else said for said in says], list(offers))
+
+
+def read_requirements(project):
+    """The project's requirements.json as JSON, or None when there is none. A store.StoreError when it is no JSON."""
+    path = Path(project) / REQUIREMENTS_FILE
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except ValueError as broken:
+        raise store.StoreError("%s is not JSON (%s)", path, broken, code=records_codes.RECORD_FILE_BROKEN)
+
+
+def read_built_from(project):
+    """The requirements the last finished build was built from (`dist/board/built-from.json`), or None when it recorded none
+    or the file cannot be read: either way the sheet is not from the requirements now."""
+    path = Path(project) / sheet.BUILT_FROM
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("requirements") if path.is_file() else None
+    except (ValueError, AttributeError):
+        return None
+
+
+def problem_lines(problems):
+    """Each problem item ({subject, sentence, …}) as one line, `subject: sentence`."""
+    return ["%s: %s" % (problem["subject"], problem["sentence"]) for problem in problems]
+
+
+def without_needs(project):
+    """(status, sentence) of the needs and parts of a project with no needs: a hand-written project (requirements.json and
+    no needs) has nothing open there, so its status is None; any other is not started."""
+    if (Path(project) / REQUIREMENTS_FILE).is_file():
+        return None, flow_codes.HAND_WRITTEN_MESSAGE
+    return flow_codes.NOT_STARTED, flow_codes.NO_NEEDS_MESSAGE
 
 
 class IdeaReader(PhaseReader):
-    """Strategy: the idea is said in the chat, so the phase has no status and one fact."""
+    """Strategy: the idea is said in the chat, so the phase has no status and one sentence."""
 
     PHASE, BY = flow_codes.IDEA, flow_codes.BY_YOU
 
     def read(self, project):
-        return self.phase(None, [flow_codes.IDEA_FACT])
+        return self.phase(None, [flow_codes.IDEA_MESSAGE])
 
 
 class NeedsReader(PhaseReader):
@@ -80,19 +118,20 @@ class NeedsReader(PhaseReader):
     def read(self, project):
         ids = [need["id"] for need in needs.read(project)]
         if not ids:
-            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_NEEDS_FACT])
-        drops = [Offer("%s:%s" % (flow_codes.NEEDS_DROP, need), flow_codes.DROP_EFFECT % need) for need in ids]
-        return self.phase(OK, [flow_codes.NEEDS_FACT % (len(ids), ", ".join(ids))], drops)
+            status, said = without_needs(project)
+            return self.phase(status, [said])
+        drops = [Offer("%s:%s" % (flow_codes.NEEDS_DROP, need), flow_codes.DROP_MESSAGE % need) for need in ids]
+        return self.phase(OK, [flow_codes.NEEDS_MESSAGE % (len(ids), ", ".join(ids))], drops)
 
 
 def pick_effect(need, candidate):
     """The effect line of picking `candidate` (a row of `needs.match`) for `need`: what it replaces, how many the person
     has (`owned`: a number, "many" or "unknown") and, when none is free, which projects hold them."""
     owned = candidate["owned"]
-    said = [flow_codes.PICK_EFFECT % need,
-            flow_codes.OWNED_UNKNOWN_EFFECT if owned == "unknown" else flow_codes.OWNED_EFFECT % owned]
+    said = [flow_codes.PICK_MESSAGE % need,
+            flow_codes.OWNED_UNKNOWN_MESSAGE if owned == "unknown" else flow_codes.OWNED_MESSAGE % owned]
     if candidate.get("free") == 0 and candidate.get("held_by"):
-        said.append(flow_codes.HELD_EFFECT % ", ".join(candidate["held_by"]))
+        said.append(flow_codes.HELD_MESSAGE % ", ".join(candidate["held_by"]))
     return "; ".join(said)
 
 
@@ -105,25 +144,15 @@ class PartsReader(PhaseReader):
     def read(self, project):
         matched, problems = needs.match(project)
         if problems:
-            return self.phase(PROBLEMS, ["%s: %s" % (problem["subject"], problem["sentence"]) for problem in problems])
+            return self.phase(PROBLEMS, problem_lines(problems))
         if not matched:
-            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_NEEDS_FACT])
+            status, said = without_needs(project)
+            return self.phase(status, [said])
         picked = sum(1 for need in matched if need.get("pick"))
         status = OK if picked == len(matched) else flow_codes.PARTIAL if picked else flow_codes.NOT_STARTED
         picks = [Offer("%s:%s:%s" % (flow_codes.PICK, need["need"], candidate["id"] or candidate["entry"]), pick_effect(need["need"], candidate))
                  for need in matched for candidate in need["candidates"]]
-        return self.phase(status, [flow_codes.PICKED_FACT % (picked, len(matched))], picks)
-
-
-def read_requirements(project):
-    """The project's requirements.json as JSON, or None when there is none. A SparkError when it is no JSON."""
-    path = Path(project) / REQUIREMENTS_FILE
-    if not path.is_file():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except ValueError as broken:
-        raise SparkError("%s is not JSON (%s)", path, broken, code=records_codes.RECORD_FILE_BROKEN)
+        return self.phase(status, [flow_codes.PICKED_MESSAGE % (picked, len(matched))], picks)
 
 
 class RequirementsReader(PhaseReader):
@@ -134,25 +163,25 @@ class RequirementsReader(PhaseReader):
 
     def read(self, project):
         held, listed = read_requirements(project), needs.read(project)
-        offers = [Offer(flow_codes.WRITE_REQUIREMENTS, flow_codes.REQUIREMENTS_EFFECT)] if listed else []
+        offers = [Offer(flow_codes.WRITE_REQUIREMENTS, flow_codes.REQUIREMENTS_MESSAGE)] if listed else []
         if held is None:
-            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_FACT], offers)
+            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_MESSAGE], offers)
         if not listed:
-            return self.phase(OK, [flow_codes.HAND_WRITTEN_FACT])
+            return self.phase(OK, [flow_codes.NOTHING_TO_COMPARE_MESSAGE])
         given = need_requirements.requirements(project)
         if given.problems:
-            return self.phase(PROBLEMS, ["%s: %s" % (problem["subject"], problem["sentence"]) for problem in given.problems], offers)
+            return self.phase(PROBLEMS, problem_lines(given.problems), offers)
         if given.content != held:
-            return self.phase(flow_codes.STALE, [flow_codes.REQUIREMENTS_STALE_FACT], offers)
+            return self.phase(flow_codes.STALE, [flow_codes.REQUIREMENTS_STALE_MESSAGE], offers)
         return self.phase(OK, [REQUIREMENTS_FILE], offers)
 
 
 def why_build_stale(project, record):
-    """The fact that says the requirements file changed after the build `record` was made, or None when it did not."""
+    """The sentence that says the requirements file changed after the build `record` was made, or None when it did not."""
     named = Path(record.get("requirements") or REQUIREMENTS_FILE)
     path = named if named.is_absolute() else Path(project) / named
     if not path.is_file() or sha256_of(path) != record.get("requirements_sha256"):
-        return flow_codes.BUILD_STALE_FACT % named
+        return flow_codes.BUILD_STALE_MESSAGE % named
     return None
 
 
@@ -164,16 +193,16 @@ class BuildReader(PhaseReader):
 
     def read(self, project):
         record = BuildRecordStore(project).read()
-        offers = [Offer(flow_codes.BUILD_BOARD, flow_codes.BUILD_EFFECT)] if (project / REQUIREMENTS_FILE).is_file() else []
+        offers = [Offer(flow_codes.BUILD_BOARD, flow_codes.BUILD_MESSAGE)] if (project / REQUIREMENTS_FILE).is_file() else []
         if record is None:
-            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_BUILD_FACT], offers)
-        facts = [flow_codes.BUILT_FACT % (record.get("at") or flow_codes.UNKNOWN, record.get("status") or flow_codes.UNKNOWN)]
-        facts += ["%s: %s" % (stage.get("name"), stage.get("status")) for stage in record.get("stages") or [] if stage.get("status") != OK]
-        facts += [flow_codes.MISSING_FACTS_FACT % len(record["missing_facts"])] if record.get("missing_facts") else []
+            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_BUILD_MESSAGE], offers)
+        says = [flow_codes.BUILT_MESSAGE % (record.get("at") or flow_codes.UNKNOWN, record.get("status") or flow_codes.UNKNOWN)]
+        says += ["%s: %s" % (stage.get("name"), stage.get("status")) for stage in record.get("stages") or [] if stage.get("status") != OK]
+        says += [flow_codes.MISSING_FACTS_MESSAGE % len(record["missing_facts"])] if record.get("missing_facts") else []
         stale = why_build_stale(project, record)
         if stale:
-            return self.phase(flow_codes.STALE, [stale] + facts, offers)
-        return self.phase(record.get("status") if record.get("status") in (OK, PROBLEMS) else COULD_NOT_RUN, facts, offers)
+            return self.phase(flow_codes.STALE, [stale] + says, offers)
+        return self.phase(record.get("status") if record.get("status") in (OK, PROBLEMS) else COULD_NOT_RUN, says, offers)
 
 
 class BreadboardReader(PhaseReader):
@@ -184,33 +213,30 @@ class BreadboardReader(PhaseReader):
 
     def read(self, project):
         if not (project / sheet.SHEET).is_file():
-            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_SHEET_FACT])
-        record, built_from = BuildRecordStore(project).read(), project / sheet.BUILT_FROM
-        try:
-            recorded = json.loads(built_from.read_text(encoding="utf-8")).get("requirements") if built_from.is_file() else None
-        except (ValueError, AttributeError):
-            recorded = None
-        if (record and why_build_stale(project, record)) or recorded != read_requirements(project):
-            return self.phase(flow_codes.STALE, [flow_codes.SHEET_STALE_FACT])
+            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_SHEET_MESSAGE])
+        record = BuildRecordStore(project).read()
+        if (record and why_build_stale(project, record)) or read_built_from(project) != read_requirements(project):
+            return self.phase(flow_codes.STALE, [flow_codes.SHEET_STALE_MESSAGE])
         return self.phase(OK, [sheet.SHEET])
 
 
 class FirmwareReader(PhaseReader):
-    """Strategy: firmware/main.py, which Claude writes in the chat: whether it is there and when it was last written,
-    in the machine's zone."""
+    """Strategy: firmware/main.py, which Claude writes in the chat: not started when it is not there, else when it was last
+    written, in the machine's zone, with no status, because spark cannot judge the firmware."""
 
     PHASE, BY = flow_codes.FIRMWARE, flow_codes.BY_CLAUDE
 
     def read(self, project):
         main = project / MAIN_FILE
         if not main.is_file():
-            return self.phase(None, [flow_codes.NO_FIRMWARE_FACT])
-        return self.phase(None, [flow_codes.FIRMWARE_FACT % stamp(datetime.datetime.fromtimestamp(main.stat().st_mtime))])
+            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_FIRMWARE_MESSAGE])
+        return self.phase(None, [flow_codes.FIRMWARE_MESSAGE % stamp(datetime.datetime.fromtimestamp(main.stat().st_mtime))])
 
 
 class SimulateReader(PhaseReader):
-    """Strategy: the image sim/wokwi.toml names and the runs that tested it (`ProjectImage`): a pass on an older image
-    never reads as current. A log that cannot be read is could-not-run."""
+    """Strategy: the image sim/wokwi.toml names and the runs that tested it (`ProjectImage`): not started with no
+    sim/wokwi.toml or no image, problems with a firmware line spark cannot use, and else no status, with what the runs
+    say: a pass on an older image never reads as current. A log that cannot be read is could-not-run."""
 
     PHASE, BY = flow_codes.SIMULATE, flow_codes.BY_TERMINAL
 
@@ -218,14 +244,15 @@ class SimulateReader(PhaseReader):
         try:
             image = ProjectImage(project)
         except DeployError as missing:
-            return self.phase(None, [str(missing), flow_codes.SCENARIO_LINE])
+            status = flow_codes.NOT_STARTED if missing.reason in NOT_SIMULATED_YET else PROBLEMS
+            return self.phase(status, [str(missing), flow_codes.SCENARIO_COMMAND])
         try:
-            facts = [image.why_untested() or flow_codes.TESTED_FACT]
+            says = [image.why_untested() or flow_codes.TESTED_MESSAGE]
         except DeployError as unread:
             raise SparkError("%s", unread, code=unread.reason)
         newer = image.find_newer_files()
-        facts += [flow_codes.NEWER_FACT % ", ".join(newer)] if newer else []
-        return self.phase(None, facts + [flow_codes.SCENARIO_LINE])
+        says += [flow_codes.NEWER_MESSAGE % ", ".join(newer)] if newer else []
+        return self.phase(None, says + [flow_codes.SCENARIO_COMMAND])
 
 
 class DeployReader(PhaseReader):
@@ -234,7 +261,7 @@ class DeployReader(PhaseReader):
     PHASE, BY = flow_codes.DEPLOY, flow_codes.BY_TERMINAL
 
     def read(self, project):
-        return self.phase(flow_codes.NOT_STARTED, [flow_codes.LOOK_FIRST_FACT, flow_codes.DEPLOY_LINE])
+        return self.phase(flow_codes.NOT_STARTED, [flow_codes.LOOK_FIRST_MESSAGE, flow_codes.DEPLOY_COMMAND])
 
 
 #: The readers of the nine phases, in the order of `flow_codes.PHASES`.

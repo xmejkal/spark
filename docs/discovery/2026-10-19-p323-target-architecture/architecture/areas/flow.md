@@ -43,7 +43,7 @@ flowchart LR
 
 ### How flow is tested alone
 
-`tests/test_flow.py` runs `flow.main` on five projects: no needs, picked, built, a build that ended in
+`tests/test_flow.py` runs `flow.main` on five projects: no needs, picked, built by hand with no needs, a build that ended in
 `could-not-run`, and requirements changed after the build. Each test pins the phases' status and offers. The build record's own tests are in
 `tests/test_check_spine.py`. Flow has no golden net of its own: `GOLDEN_NET_ELSEWHERE` in `tools/story_tests.py` maps it
 to the design net, `tests/test_golden_design.py`, which pins the record's line in `check_spine.py --keep`.
