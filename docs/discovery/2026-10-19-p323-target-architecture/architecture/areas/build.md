@@ -4,8 +4,8 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 [refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 Names real since P706: `BuildService`, `BuildInputs`, `TscircuitEngine`, `BuildResult` (and design's `BoardEmitter`, which
-the build calls in process); since P783 PR 3, `RequirementsBuildService` and `RequirementsBuildResult`. Still proposed: `DiagramConverter` (the renames card), `ProjectSetupService`,
-`build/__init__.py` with `OPERATIONS`, and the Operation names `build` and `init`. The `BuildStage` family (six subclasses,
+the build calls in process); since P783 PR 3, `RequirementsBuildService` and `RequirementsBuildResult`; since P804, `BuildBoard` (op `build-board`) and `KeepAsked`. Still proposed: `DiagramConverter` (the renames card), `ProjectSetupService`,
+and the Operation name `init`. The `BuildStage` family (six subclasses,
 `BUILD_STAGES`, `goes_on`) was dropped as YAGNI at P706: six methods on one Service are the small version, and a base class
 with one implementation per stage waits for a second implementation of a stage.
 
@@ -19,7 +19,7 @@ a new project with the files every check and reviewer needs.
 
 | Operation | CLI | Effects |
 |---|---|---|
-| `build` | `check_spine.py requirements.json`, `--keep DIR`, `--sim-dir`, `--firmware` (`check_spine.main` over `RequirementsBuildService`) | reads, runs `tsci` and the diagram converter, writes the kept build and, with `--keep`, the breadboard sheet |
+| `build-board` | `check_spine.py requirements.json`, `--keep DIR`, `--sim-dir`, `--firmware` (since P804 the Operation `BuildBoard` over `RequirementsBuildService`, which `check_spine.main` hands to `run_cli`) | reads, runs `tsci` and the diagram converter, writes the kept build and, with `--keep`, the breadboard sheet |
 | `init` | `init_project.py --project --board --circuit --force` (`init_project.main`) | reads, writes the project's files |
 
 ### Its components
@@ -27,16 +27,18 @@ a new project with the files every check and reviewer needs.
 | Module | Holds |
 |---|---|
 | `build/build_service.py` | `BuildService(engine, emitter, find_tool=None, runner=None)` (P706, P725, P664: `runner` runs the converter's command): `build(inputs)` runs the six stage methods over the engine and the emitter it is given, with `BuildInputs`, `board_alone`, `islands_in`, `verdict` and the stage sentences |
-| `build/requirements_build.py` | `RequirementsBuildService(build_service=None)` (P783 PR 3; `build_service` is an object with `for_toolchain`, BuildService or a fake): `build(requirements_path, firmware, simulation)` is `check_spine.py`'s whole run of the chain: the requirements read (a refusal is one `requirements` stage), the work folder, a `BuildService`'s stages (a timeout that reaches it is one `stage_timed_out` stage, its guard since P664, and any other exception one `stage_crashed` stage), and the history note; a `RequirementsBuildResult` of `stages`, `workdir`, `requirements`, `toolchain` and `diagnostics`. `REFERENCE` is here. `check_spine.main` prints the diagnostics and its `report` renders the stages |
+| `build/requirements_build.py` | `RequirementsBuildService(build_service=None)` (P783 PR 3; `build_service` is an object with `for_toolchain`, BuildService or a fake): `build(requirements_path, firmware, simulation)` is `check_spine.py`'s whole run of the chain: the requirements read (a refusal is one `requirements` stage), the work folder, a `BuildService`'s stages (a timeout that reaches it is one `stage_timed_out` stage, its guard since P664, and any other exception one `stage_crashed` stage), and the history note; a `RequirementsBuildResult` of `stages`, `workdir`, `requirements`, `toolchain` and `diagnostics`. `REFERENCE` is here. `BuildBoard` hands the diagnostics on and renders the stages |
+| `build/build_board.py` | the Operation `BuildBoard(service=None)` (op `build-board`, P804): it runs a `RequirementsBuildService`, keeps what `--keep` and `--sim-dir` ask for (`kept_files.keep_all`), removes the work folder in a `finally`, and answers with the dict `--json` prints (`said_of`, rendered by `FlatJsonLine`), the verdict's text (`render`), the diagnostics and the Findings (`build_service.findings_of`) |
+| `build/build_operations.py` | `OPERATIONS`, which maps each printed `op` to its class, for the frontends (P804) |
 | `build/stages.py` | `Stage` (one link's result) and `NO_FOOTPRINT_HINT`, imported by name (P705) |
 | `build/board_engine.py` | the Adapter `TscircuitEngine` with `BuildResult` (P706: `found_from`, `build`, `version`, `probe`, the runner resolved at each call; P664: `build` and `probe` run through the Adapter `LimitedRun` and raise `TimedOutError` with `timed_out_sentence`, and `convert` returns a timed-out `simulation` stage), `find_toolchain`, and the converter functions to `convert`, of which `converter_command` and `converter_stage_problem` take a `find_tool` keyword (P725: a test gives `FakeToolFinder(...).find`; `BuildService`, the converter functions and `stage_chips` take the module `find`'s shape, a name and a project, so the build Operations bind the project when they hand them `outside.find_tool`, a later step); later the Adapter `DiagramConverter` |
-| `build/kept_files.py` | the files `--keep` writes into DIR and what an earlier build left there (P705). `kept_` means what a run keeps between runs, as breadboard's `kept_moves.py` |
+| `build/kept_files.py` | the files `--keep` writes into DIR and what an earlier build left there (P705), and since P804 the keep step `keep_all(stages, workdir, KeepAsked, exporter)`. `kept_` means what a run keeps between runs, as breadboard's `kept_moves.py` |
 | `build/build_record.py` | the Store `BuildRecordStore` of a project's last build, `.spark/build.json` (P825): its status, its stages, the requirements file and its sha256, and the time. `kept_files.keep_build_record` writes it when `--keep` names a project folder with a requirements file, and `flow.py show` reads it |
 | `build/project_setup.py` | `init_project.py`'s library (P705); later `ProjectSetupService` |
 | `build/build_codes.py` | the leaf of codes (P701): one per stage that stops the build and per refusal of init. A `Stage` carries a `code` (a design error's own when one stopped it), and `project_setup`'s `why_project_refused`, `why_board_refused` and `find_circuit` return a `Refusal`. Only the sheet's `not written` entry in `kept` writes its code |
 | `build/ai_files.py` | `AiFiles`, moved as is (P705) |
 | `build/board_alone_input.py` | `read_board_alone`, `make_converter_input`, `BoardAloneResult` and `NETLIST`: the converter's input for a board-only build, moved out of `records/onboard_parts.py` in P708 |
-| `build/__init__.py` | its index docstring, no import; later the area's `OPERATIONS`. One module per Operation, named after it |
+| `build/__init__.py` | its index docstring, no import. The table is `build_operations.py` (P804). One module per Operation, named after it |
 
 ### Its seams and adapters
 
