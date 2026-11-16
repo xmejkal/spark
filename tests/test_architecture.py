@@ -401,7 +401,7 @@ class TheChecksAreaTest(unittest.TestCase):
     module imports alone. `scripts/` keeps the six CLIs and `check_spine.py`, and each CLI defines `main` only."""
     CHECKS = ROOT / "scripts" / "spark" / "checks"
     #: The modules of the area, by the names of its page (`areas/checks.md`).
-    MODULES = ["build_check", "check", "check_codes", "order_check", "physics_board", "physics_check", "rules_check", "vendor_pins_check"]
+    MODULES = ["build_check", "check", "check_codes", "check_design", "checks_operations", "order_check", "physics_board", "physics_check", "rules_check", "vendor_pins_check"]
     CLIS = ["check_all.py", "check_bom.py", "check_footprints.py", "check_physics.py", "check_vendor_pins.py",
             "compare_design.py"]
 
@@ -424,6 +424,13 @@ class TheChecksAreaTest(unittest.TestCase):
 
     def test_each_checks_module_imports_alone(self):
         each_module_imports_alone(self, "checks")
+
+    def test_the_operations_table_maps_each_op_to_its_operation_class(self):
+        # P804: check_all as the Operation `check-design`; the table is a module, because the area's __init__ imports nothing
+        code = ("from spark.core.operation import Operation; from spark.checks import checks_operations as c; "
+                "print(sorted(c.OPERATIONS)); print([op for op, cls in c.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(run.stdout.split("\n")[:2], ["['check-design']", "[]"], run.stderr)
 # --- end MVP ---
 
 

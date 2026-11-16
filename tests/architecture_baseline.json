@@ -7,7 +7,6 @@
 "R1:scripts/assign_pins.py:main": 62,
 "R1:scripts/boards.py:main": 52,
 "R1:scripts/breadboard.py:main": 26,
-"R1:scripts/check_all.py:main": 21,
 "R1:scripts/check_bom.py:main": 28,
 "R1:scripts/check_footprints.py:main": 30,
 "R1:scripts/check_spine.py:main": 29,

@@ -14,6 +14,8 @@ JSON yet: the codes wait in the library for the Operation that comes later. A ch
 NO_CIRCUIT, NO_RULES_FILE, RULES_REFUSED = "no_circuit", "no_rules_file", "rules_refused"
 #: check_all.py: what stops one check, or the whole run.
 INPUT_AMBIGUOUS, CHECK_CRASHED, PROJECT_UNUSABLE = "input_ambiguous", "check_crashed", "project_unusable"
+#: check_all.py's Findings (P804): one check found problems, one could not look, or every check was skipped.
+CHECK_FOUND_PROBLEMS, CHECK_COULD_NOT_LOOK, NOTHING_ASKED = "check_found_problems", "check_could_not_look", "nothing_asked"
 #: compare_design.py.
 CIRCUIT_NOT_JSON, NO_RULE_STATED = "circuit_not_json", "no_rule_stated"
 #: check_vendor_pins.py: one board file.
@@ -30,6 +32,9 @@ CODES = {
     INPUT_AMBIGUOUS: "an input matched more than one file, and nothing chose between them",
     CHECK_CRASHED: "a check raised an error it did not expect, so it did not look",
     PROJECT_UNUSABLE: "the folder --project names is not a project folder spark can read",
+    CHECK_FOUND_PROBLEMS: "a check ran and found problems in the design",
+    CHECK_COULD_NOT_LOOK: "a check was asked for and could not look, or left part of its input unchecked",
+    NOTHING_ASKED: "every check was skipped, because no input was given or found, so the answer says nothing about the board",
     CIRCUIT_NOT_JSON: "the built circuit is not JSON",
     NO_RULE_STATED: "the rules file names no I2C line and no pin that must not float, so there is nothing to compare",
     NO_VENDOR_VARIANT: "the board file names no vendor.arduino_variant, so there is no vendor header to check it against",

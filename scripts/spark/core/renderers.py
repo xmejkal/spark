@@ -1,7 +1,7 @@
 """
 The Renderers of an OperationResult's `--json` line (P657): `JsonEnvelope`, the default of `Operation.json_renderer`,
-`FlatJsonLine`, which the bench scripts keep, and `FullEnvelope`, parts.py's envelope with every key (P707). `TextReport`,
-the text a person reads, stays in cli.py.
+`FlatJsonLine`, which the bench scripts keep, `JsonDocument`, its indented sibling, which check_all keeps (P804),
+and `FullEnvelope`, parts.py's envelope with every key (P707). `TextReport`, the text a person reads, stays in cli.py.
 """
 
 import json
@@ -49,3 +49,14 @@ class FlatJsonLine:
     @staticmethod
     def render_bad_argument(result, tool, op):
         return None
+
+
+
+class JsonDocument(FlatJsonLine):
+    """Renderer: FlatJsonLine's indented sibling (P804): an OperationResult's `data` as one JSON document over several
+    lines, as `json.dumps(data, indent=2)` writes it, which check_all prints with --json. An empty text when `data` is
+    None, so nothing is printed, and a bad argument gets the usage, as FlatJsonLine's."""
+
+    @staticmethod
+    def render(result, tool, op):
+        return "" if result.data is None else json.dumps(result.data, indent=2)
