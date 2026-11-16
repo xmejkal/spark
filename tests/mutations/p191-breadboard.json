@@ -72,16 +72,16 @@
   "replace": "    if False:"
  },
  {
-  "file": "scripts/spark/breadboard/sheet.py",
+  "file": "scripts/spark/breadboard/before_power.py",
   "name": "a CONFLICT is not said before power",
-  "find": "        lines += [\"- **CONFLICT** on %s: %s\" % (name, conflict) for conflict in part_rules.pull_conflicts(part)]",
-  "replace": "        lines += []"
+  "find": "                      for conflict in part_rules.conflicts_of(part)]",
+  "replace": "                      for conflict in []]"
  },
  {
-  "file": "scripts/spark/breadboard/sheet.py",
+  "file": "scripts/spark/breadboard/before_power.py",
   "name": "a pin that must not float is not said",
-  "find": "        lines += [\"- %s %s: %s\" % (name, pin[\"pin\"], pin.get(\"note\", \"\")) for pin in part.get(\"unused_pins\") or []]",
-  "replace": "        lines += []"
+  "find": "                      for pin in part.get(\"unused_pins\") or []]",
+  "replace": "                      for pin in []]"
  },
  {
   "file": "scripts/breadboard.py",
@@ -114,7 +114,7 @@
   "replace": "        pass\n"
  },
  {
-  "file": "scripts/spark/breadboard/sheet.py",
+  "file": "scripts/spark/breadboard/before_power.py",
   "name": "a record's warnings repeat for each instance of the part",
   "find": "        if part[\"id\"] not in seen:",
   "replace": "        if True:"
@@ -150,10 +150,10 @@
   "replace": "    rows += [\"| %d | %s resistor, through-hole | %s | %s |\" % (1, value,"
  },
  {
-  "file": "scripts/spark/breadboard/sheet.py",
+  "file": "scripts/spark/breadboard/before_power.py",
   "name": "a supply from off the board is not said before power",
-  "find": "              for net, users in supplies.items()]\n",
-  "replace": "              for net, users in {}.items()]\n"
+  "find": "for net, users in supplies.items()]\n",
+  "replace": "for net, users in {}.items()]\n"
  },
  {
   "file": "scripts/spark/breadboard/wiring_steps.py",
