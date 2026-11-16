@@ -46,6 +46,7 @@ from spark.build import board_engine  # noqa: E402
 from spark.build import build_service  # noqa: E402
 from spark.build import requirements_build  # noqa: E402
 from spark.build import kept_files  # noqa: E402
+from spark.build import build_board  # noqa: E402
 from spark.build.stages import Stage  # noqa: E402
 from suite_runs import slow  # noqa: E402
 from spark.design import loader  # noqa: E402
@@ -60,7 +61,10 @@ from spark.records import store  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402
 from spark.flow import phase_readers  # noqa: E402
 import test_converter  # noqa: E402
-from fakes import FakeBuildService, FakeToolFinder, FakeTscircuitEngine  # noqa: E402
+from fakes import FakeBuildService, FakeOutsideWorld, FakeRequirementsBuild, FakeToolFinder, FakeTscircuitEngine, run_build_board  # noqa: E402
+from spark.core import outcomes  # noqa: E402
+from spark.core.cli import run_operation  # noqa: E402
+from spark.core.result import OperationResult  # noqa: E402
 
 
 def build_stages(requirements, workdir, toolchain=None, find_tool=None, **inputs):
@@ -125,7 +129,7 @@ class WhatTheExitCodeMeansTest(unittest.TestCase):
                          check_spine.EXIT_PROBLEMS)
 
     def test_the_rendering_never_calls_an_unexercised_chain_a_pass(self):
-        rendered = check_spine.render([stage("build", check_spine.COULD_NOT_RUN)],
+        rendered = build_board.render([stage("build", check_spine.COULD_NOT_RUN)],
                                       check_spine.EXIT_COULD_NOT_RUN)
         self.assertIn("NOT exercised", rendered)
         self.assertNotIn("runs end to end", rendered)
@@ -371,7 +375,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
+            run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
         self.assertTrue((into / "dist" / "board" / "circuit.json").is_file(),
                         "report did not put the board where the checks look")
         self.assertFalse(work.exists(), "the temp directory is still cleared away")
@@ -389,7 +393,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
+            run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
         self.assertIn("board D3", (into / "breadboard.md").read_text())
         self.assertIn("the parts and how to wire them on a breadboard", err.getvalue())
 
@@ -405,7 +409,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
+            run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
         return into, err.getvalue()
 
     def test_keeping_a_xiao_build_writes_its_drawn_breadboard_beside_the_sheet(self):
@@ -438,7 +442,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         (into / "breadboard.json").write_text("{}")  # an old drawing, which describes another build
         args = argparse.Namespace(json=True, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
-            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
+            run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
         kept = json.loads(out.getvalue())["kept"]
         by_file = {Path(entry["file"]).name: entry for entry in kept if Path(entry["file"]).name.startswith("breadboard.")}
         self.assertEqual((by_file["breadboard.svg"]["did"], by_file["breadboard.svg"]["drawn_from"]), ("wrote", "record"))
@@ -457,7 +461,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         shutil.copy(fixture / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
         args = argparse.Namespace(json=True, keep=Path(tempfile.mkdtemp()) / "project", requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
-            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
+            run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
         return [entry for entry in json.loads(out.getvalue())["kept"] if Path(entry["file"]).name.startswith("breadboard.")]
 
     def test_a_part_with_no_drawing_fact_names_its_code_and_a_wrote_entry_of_wokwi_geometry_has_no_drawn_from(self):
@@ -497,7 +501,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into.mkdir(); (into / "breadboard.json").write_text("{}")
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
         self.assertFalse((into / "breadboard.json").exists())
         self.assertIn("no drawn breadboard: the build did not finish in this run; removed", err.getvalue())
 
@@ -514,7 +518,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         earlier = (into / "breadboard.json").read_text()
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
         self.assertEqual((into / "breadboard.json").read_text(), earlier)
         self.assertIn("left alone: %s (it may hold your moves" % (into / "breadboard.json"), err.getvalue())
         self.assertFalse((into / "breadboard.svg").exists())
@@ -528,7 +532,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
         self.assertFalse((into / "breadboard.md").exists())
         self.assertIn("no breadboard sheet: the build did not finish", err.getvalue())
 
@@ -542,7 +546,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into.mkdir(); (into / "breadboard.md").write_text("# an earlier build's sheet")
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
         self.assertFalse((into / "breadboard.md").exists())
         self.assertIn("removed", err.getvalue())
 
@@ -554,7 +558,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
         args = argparse.Namespace(json=True, keep=into, requirements=str(requirements or fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report(stages or [Stage("build", check_spine.OK, "fine")], args, self.workdir())
+            run_build_board(stages or [Stage("build", check_spine.OK, "fine")], args, self.workdir())
         return json.loads(out.getvalue())["kept"], err.getvalue()
 
     def emitted_pins(self, requirements):
@@ -811,7 +815,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into.mkdir(); (into / "board.tsx").write_text("// MINE")
         args = argparse.Namespace(json=True, keep=into)
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([Stage("build", check_spine.OK, "fine")], args, self.workdir())
+            run_build_board([Stage("build", check_spine.OK, "fine")], args, self.workdir())
         kept = json.loads(out.getvalue())["kept"]
         self.assertIn({"file": str(into / "board.tsx"), "did": "left alone", "why": "delete it to have it regenerated"}, kept)
         self.assertIn({"file": str(into / "dist"), "did": "wrote", "why": "this is what every check reads"}, kept)
@@ -824,7 +828,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         blocked = Path(tempfile.mkdtemp()) / "a-file"; blocked.write_text("not a folder")
         args = argparse.Namespace(json=True, keep=blocked)
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([Stage("build", check_spine.OK, "fine")], args, self.workdir())
+            run_build_board([Stage("build", check_spine.OK, "fine")], args, self.workdir())
         said = json.loads(out.getvalue())
         self.assertEqual((said["status"], said["kept"][0]["did"]), ("ok", "not kept"))
         self.assertIn("not kept", err.getvalue())
@@ -836,7 +840,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         work = self.workdir()
         args = argparse.Namespace(json=False, keep=None)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
+            run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
         self.assertFalse(work.exists())
 
     def test_the_documented_one_command_leaves_the_board_behind(self):
@@ -967,7 +971,7 @@ class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
         (into / "board.tsx").write_text(self.BUILT.replace(".D6", ".D12"))
         args = argparse.Namespace(json=True, keep=into)
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            code = check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
+            code = run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
         said = json.loads(out.getvalue())
         entry, = self.differs(said["kept"])
         self.assertNotIn("line", entry)
@@ -1179,7 +1183,7 @@ class ReachingSimulationTest(unittest.TestCase):
 
     def test_the_stage_appears_in_the_rendering(self):
         # If the banner still stops at `build`, a reader is told the chain is shorter than it is.
-        rendered = check_spine.render([stage("build", check_spine.OK)], check_spine.EXIT_OK)
+        rendered = build_board.render([stage("build", check_spine.OK)], check_spine.EXIT_OK)
         self.assertIn("simulation", rendered)
 
 
@@ -1768,7 +1772,7 @@ class TheBoardAloneTest(unittest.TestCase):
 
     def test_the_verdict_says_the_board_alone_ran(self):
         _, stages = self.run_alone()
-        said = check_spine.render(stages, build_service.verdict(stages))
+        said = build_board.render(stages, build_service.verdict(stages))
         self.assertIn("[--  ] build", said)
         self.assertIn("the chain runs end to end for the board alone", said)
 
@@ -2063,7 +2067,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         """`report` for a verdict: what it printed on stdout. A --json run is read back."""
         args = argparse.Namespace(json=as_json, keep=None)
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
-            check_spine.report(stages, args)
+            run_build_board(stages, args)
         return json.loads(out.getvalue()) if as_json else out.getvalue()
 
     # --- MVP --- (P430, #569) a crash's text is stored raw and guarded where it is printed
@@ -2563,9 +2567,9 @@ class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
         stages = [stage("board", check_spine.OK)]
         args = argparse.Namespace(keep="kept", json=False, requirements=None, sim_dir=None)
         err = io.StringIO()
-        with mock.patch.object(check_spine, "_kept", return_value=[{"file": "f", "did": "wrote", "why": "w", "line": "wrote a\u202eb"}]), \
+        with mock.patch.object(kept_files, "_kept", return_value=[{"file": "f", "did": "wrote", "why": "w", "line": "wrote a\u202eb"}]), \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
-            check_spine.report(stages, args, workdir=Path(tempfile.mkdtemp()))
+            run_build_board(stages, args, workdir=Path(tempfile.mkdtemp()))
         self.assertEqual(err.getvalue(), "  wrote a?b\n")
 
     def test_a_file_that_leaves_nothing_off_says_the_verdict_alone(self):
@@ -2590,7 +2594,7 @@ class TheVerdictNamesTheFirmwareStepTest(unittest.TestCase):
         args = argparse.Namespace(keep=None, json=json_out, requirements=str(project / "requirements.json"), sim_dir=None)
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
-            code = check_spine.report(stages, args)
+            code = run_build_board(stages, args)
         return code, out.getvalue(), project
 
     def ok(self):
@@ -2824,11 +2828,11 @@ class AnAllSkippedSimulationKeepsTheBuildTest(unittest.TestCase):
         self.assertEqual(kept_files.drop_an_older_build(workdir, self.ALONE)[0]["did"], "removed")
 
     def test_the_closing_line_says_every_part_is_skipped_and_the_board_only_line_stays(self):
-        self.assertEqual(check_spine.render(self.FULL, check_spine.EXIT_OK).splitlines()[-1],
+        self.assertEqual(build_board.render(self.FULL, check_spine.EXIT_OK).splitlines()[-1],
                          "  the chain runs end to end; every part is skipped from the simulation, so the diagram holds none of the project's parts")
-        self.assertEqual(check_spine.render(self.ALONE, check_spine.EXIT_OK).splitlines()[-1],
+        self.assertEqual(build_board.render(self.ALONE, check_spine.EXIT_OK).splitlines()[-1],
                          "  the chain runs end to end for the board alone: nothing to wire, so no board was built")
-        self.assertEqual(check_spine.render([Stage("build", check_spine.OK, "x"), Stage("simulation", check_spine.OK, "y")], check_spine.EXIT_OK).splitlines()[-1],
+        self.assertEqual(build_board.render([Stage("build", check_spine.OK, "x"), Stage("simulation", check_spine.OK, "y")], check_spine.EXIT_OK).splitlines()[-1],
                          "  the chain runs end to end")
 
 
@@ -2855,7 +2859,7 @@ class TheKeepRecordsTheBuildTest(unittest.TestCase):
     def keep(project, stages, requirements=None):
         args = argparse.Namespace(json=True, keep=project, requirements=str(requirements or project / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
-            check_spine.report(stages, args)
+            run_build_board(stages, args)
         return {Path(entry["file"]).name: entry for entry in json.loads(out.getvalue())["kept"]}
 
     def record(self, project):
@@ -2887,7 +2891,7 @@ class TheKeepRecordsTheBuildTest(unittest.TestCase):
         project, workdir = self.a_project(), Path(tempfile.mkdtemp())
         args = argparse.Namespace(json=True, keep=project, requirements=None)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            check_spine.report([Stage("build", check_spine.OK, "fine")], args, workdir)
+            run_build_board([Stage("build", check_spine.OK, "fine")], args, workdir)
         self.assertFalse((project / ".spark" / "build.json").exists())
 
     def test_a_record_that_cannot_be_written_is_not_kept_and_says_why(self):
@@ -2919,3 +2923,56 @@ class TheKeepRecordsTheBuildTest(unittest.TestCase):
                     self.assertEqual(phase_readers.BuildReader().answer(project).status, check_spine.OK)
         finally:
             os.chdir(here)
+
+
+class AStageThatCannotBeRead:
+    """A stage whose name raises when it is read, which `kept_files.keep_simulation` reads and `verdict` does not."""
+    status, detail, code = check_spine.OK, "fine", None
+
+    @property
+    def name(self):
+        raise RuntimeError("a stage that cannot be read")
+
+
+class TheBuildIsAnOperationTest(unittest.TestCase):
+    """P804: the build is the Operation `build-board`. It takes plain values, its data is the --json line, its Findings
+    answer by the rule `verdict` answers by, and it removes the work folder whatever happens in the keep step."""
+
+    @staticmethod
+    def work():
+        folder = Path(tempfile.mkdtemp())
+        (folder / "sim").mkdir()
+        (folder / "sim" / "diagram.json").write_text("{}")
+        return folder
+
+    def test_the_findings_answer_what_verdict_answers(self):
+        cases = {"ok": [Stage("build", check_spine.OK, "fine")],
+                 "skipped": [Stage("build", check_spine.SKIPPED, "board only"), Stage("simulation", check_spine.OK, "ran")],
+                 "could not run": [Stage("build", check_spine.COULD_NOT_RUN, "no tsci", "tool_missing")],
+                 "problems and could not run": [Stage("schematic-notes", check_spine.PROBLEMS, "a size", "schematic_noted"),
+                                                Stage("build", check_spine.COULD_NOT_RUN, "no tsci", "tool_missing")]}
+        for name, stages in cases.items():
+            with self.subTest(case=name):
+                result = OperationResult(findings=build_service.findings_of(stages))
+                self.assertEqual(outcomes.EXIT_FOR[result.status()], build_service.verdict(stages))
+        found = build_service.findings_of(cases["could not run"])
+        self.assertEqual([(f.severity, f.subject, f.code, f.sentence) for f in found], [(check_spine.COULD_NOT_RUN, "build", "tool_missing", "no tsci")])
+
+    def test_run_operation_with_plain_strings_gives_the_json_line_and_the_exit(self):
+        stages, sim = [Stage("build", check_spine.OK, "fine")], Path(tempfile.mkdtemp()) / "sim"
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = run_build_board(stages, argparse.Namespace(json=True, sim_dir=sim), self.work())
+        values = {"requirements": None, "keep": None, "sim_dir": str(sim), "firmware": None}
+        result = run_operation(build_board.BuildBoard(FakeRequirementsBuild(stages, self.work())), values, FakeOutsideWorld())
+        self.assertEqual(result.data, json.loads(out.getvalue()))
+        self.assertEqual([(entry["file"], entry["did"]) for entry in result.data["kept"]], [(str(sim), "wrote")])
+        self.assertEqual(outcomes.EXIT_FOR[result.status()], code)
+
+    def test_a_crash_in_the_keep_step_still_removes_the_work_folder_and_answers_could_not_run(self):
+        work, into = self.work(), Path(tempfile.mkdtemp()) / "project"
+        values = {"requirements": None, "keep": str(into), "sim_dir": None, "firmware": None}
+        result = run_operation(build_board.BuildBoard(FakeRequirementsBuild([AStageThatCannotBeRead()], work)), values, FakeOutsideWorld())
+        self.assertFalse(work.exists(), "the work folder is left behind")
+        self.assertEqual([(f.severity, f.code) for f in result.findings], [(check_spine.COULD_NOT_RUN, "crash")])
+        self.assertEqual(result.diagnostics[0], "build-board: crashed, RuntimeError")

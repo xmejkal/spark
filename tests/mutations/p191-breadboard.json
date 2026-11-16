@@ -90,9 +90,9 @@
   "replace": "    out = requirements.resolve().parent / SHEET"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "--keep writes no breadboard sheet",
-  "find": "        kept += keep_breadboard(Path(args.requirements), Path(args.keep), stages) + ",
+  "find": "        kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + ",
   "replace": "        kept += "
  },
  {

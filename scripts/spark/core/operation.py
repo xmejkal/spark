@@ -14,7 +14,8 @@ from spark.core.result import output_schema
 #: Value: one argument of an Operation, as argparse adds it. `flags` are its option strings, `dest` the keyword `run`
 #: takes, `kind` the type of the value (`Path`, `str`) or `bool` for a flag that is on when given, `group` the name of
 #: the group whose arguments exclude each other, or None, `required` whether the person must give it, `choices` the
-#: values it may take, or None, `nargs` argparse's count of values (`"+"`, `"*"` or an int; None for one value, P726),
+#: values it may take, or None, `nargs` argparse's count of values (`"+"`, `"*"` or an int; None for one value, P726;
+#: `"?"` for one value or none, P804),
 #: `metavar` the word `--help` shows for the value (`PROJECT`), or None for argparse's, `repeats` whether the flag may
 #: be given more than once, each value kept in a list (`--label a=x --label b=y`; argparse's `append`, P726 PR 2), and
 #: `payload` the index of the token that names a JSON file the frontend reads for the Operation (0 for a one-value flag,
@@ -50,12 +51,14 @@ PAYLOAD_SCHEMA = {"type": ["object", "array"]}
 
 def _argument_schema(argument):
     """One Argument as a JSON Schema property: its type (an array of it when `nargs` takes several values or the flag
-    `repeats`), its help, its `enum` when it has choices, and its default when it has one (a flag's is False)."""
+    `repeats`; `"?"` takes one or none), its help, its `enum` when it has choices, and its default when it has one (a
+    flag's is False)."""
     default = False if argument.kind is bool else argument.default
     kind = {"type": JSON_TYPE_OF_KIND[argument.kind]}
     if argument.payload is not None and argument.nargs is None:
         kind = dict(PAYLOAD_SCHEMA)
-    said = dict({"type": "array", "items": kind} if argument.nargs is not None or argument.repeats else kind, description=argument.help)
+    many = argument.nargs not in (None, "?") or argument.repeats
+    said = dict({"type": "array", "items": kind} if many else kind, description=argument.help)
     if argument.payload is not None and isinstance(argument.nargs, int):  # the payload token among the others (JSON Schema 2020-12)
         said = dict(said, prefixItems=[dict(PAYLOAD_SCHEMA) if i == argument.payload else dict(kind) for i in range(argument.nargs)])
     said.update({"enum": list(argument.choices)} if argument.choices else {})

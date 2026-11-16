@@ -90,7 +90,7 @@
   "replace": "    unpicked = []"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_board.py",
   "name": "C-2: the verdict stands alone over needs left off the board",
   "find": "if unserved and code == EXIT_OK else \"\"))",
   "replace": "if False else \"\"))"

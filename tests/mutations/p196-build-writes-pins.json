@@ -1,8 +1,8 @@
 [
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "P196: the build writes no pin map again",
-  "find": "        kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))\n",
+  "find": "        kept.append(_kept_pins(Path(requirements_file), Path(keep)))\n",
   "replace": ""
  },
  {
@@ -38,7 +38,7 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "JB1/P116: --keep keeps no simulation project again",
-  "find": "    return Path(args.keep) / \"sim\" if getattr(args, \"keep\", None) else None",
+  "find": "    return Path(keep) / \"sim\" if keep else None",
   "replace": "    return None"
  },
  {

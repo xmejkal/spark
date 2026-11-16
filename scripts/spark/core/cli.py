@@ -96,7 +96,9 @@ def traceback_lines(crashed):
 
 
 def parser_for(text, operation):
-    """The AnsweringParser of a CLI: each Argument as argparse takes it, and a `group` as one mutually exclusive group."""
+    """The AnsweringParser of a CLI: each Argument as argparse takes it, and a `group` as one mutually exclusive group. An
+    Argument whose first flag does not start with `-` is a positional (P804): argparse takes its dest from that flag and
+    refuses both `dest` and `required` for it."""
     parser = outcomes.AnsweringParser(prog=text.prog, description=text.description, epilog=text.epilog,
                                       formatter_class=argparse.RawDescriptionHelpFormatter)
     groups = {}
@@ -109,8 +111,9 @@ def parser_for(text, operation):
         else:
             counted = {key: value for key, value in (("nargs", argument.nargs), ("metavar", argument.metavar)) if value is not None}
             counted.update({"action": "append"} if argument.repeats else {})
-            target.add_argument(*argument.flags, dest=argument.dest, type=argument.kind, default=argument.default, help=argument.help,
-                                required=argument.required, choices=argument.choices, **counted)
+            named = {} if not argument.flags[0].startswith("-") else {"dest": argument.dest, "required": argument.required}
+            target.add_argument(*argument.flags, type=argument.kind, default=argument.default, help=argument.help,
+                                choices=argument.choices, **named, **counted)
     return parser
 
 
