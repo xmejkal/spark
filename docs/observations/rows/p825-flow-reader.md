@@ -1,0 +1,17 @@
+# P825: the flow reader, `flow.py show --json`, and the build record `.spark/build.json`: rows
+
+Card: [P825 #1183](https://github.com/xmejkal/spark/issues/1183). Plan: `sorted-pondering-umbrella.md` in the PO's plans
+folder, after two council rounds (one lens and the refuter, then the refuter). New logic: one lens and the refuter on
+the PR. This file holds the acted, raised and rejected findings only (rules.md). 2026-11-16.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | the plan says the record changes the pinned output at `tests/test_check_spine.py:1319-1320` | build (the claim checked in the code) | rejected | dropped because that test keeps into a temp folder with no `.spark/` and no `boards/active.json`, which is no project, so no record is written and its `kept` stays the same; only `tests/golden-design/check-spine-ok-keep.txt` gains the line `wrote .spark/build.json` |
+| 2 | the plan says a reader turns a `SparkError` into its phase's could-not-run | build | acted | `needs.read` and the record raise `store.StoreError`, a `CodedMessageError` beside `SparkError`, not under it; `PhaseReader.answer` catches `CodedMessageError` and `OSError` |
+| 3 | the plan says the requirements comparison keeps a board the file names when no need picks one | build | rejected | dropped because it cannot be reached: with no board pick, `need_requirements.requirements` reports "pick one board — none is picked", so the phase is `problems` before any comparison. A test pins that. `parts.py --requirements` refuses the same way and writes nothing (tried on a scratch store): it does not drop a board typed by hand, so no card is filed |
+| 4 | the plan says a broken needs.json makes the needs and parts phases could-not-run while the others answer | build | acted | the requirements phase reads needs.json too, so it is could-not-run as well; the test pins all three, and the other six answer |
+| 5 | the plan says a `keep` that is a file writes no record and says why | build | acted | a file is no project folder, so `keep_build_record` writes nothing and adds no entry; the board's own `not kept` entry already says why. The `not kept` entry of the record is tested with a `.spark` that is a file in a project, where the write fails with an OSError |
+| 6 | the plan does not say when the envelope's status is problems or could-not-run | build | acted | a phase with problems adds one problems Finding (`phase_problems`), and a phase that could not be read or whose recorded build could not run adds one could-not-run Finding (`phase_could_not_run`); the exit follows them. The `--help` epilog and the agents page say so |
+| 7 | the plan's breadboard rule (stale when the build is stale or built-from differs) has a clause no fixture tells apart | build | acted | two tests: a built-from.json from other requirements under a current record, and the same requirements written again in other bytes; a mutation row for each clause |
+| 8 | the `--keep` help line that names `.spark/build.json` raised R1's `main` of `check_spine.py` from 29 to 30 lines | build (`test_architecture`) | acted | the help text folded back into the same number of lines; the baseline did not grow |
+| 9 | a change to `flow_codes` or `phase_readers` alone would not pick `test_flow` in the story run, since no test imports them by name | build (`story_tests._tests_for`) | acted | the docstring of `tests/test_flow.py` names `show_flow`, `phase_readers`, `flow_codes` and `build_record` |

@@ -180,6 +180,20 @@ class ThePhasesTest(FlowTest):
                          {"requirements": "ok", "build": "stale", "breadboard": "stale"})
         self.assertEqual(said["data"]["stands_at"], "needs")
 
+    def test_a_sheet_built_from_other_requirements_is_stale_while_the_build_record_is_current(self):
+        project = a_built_project()
+        (project / "dist" / "board" / "built-from.json").write_text(json.dumps({"requirements": {"board": "x", "parts": []}}))
+        said, _ = show(project)
+        self.assertEqual((statuses(said)["build"], statuses(said)["breadboard"]), ("ok", "stale"))
+
+    def test_the_same_requirements_written_again_in_other_bytes_make_the_build_and_its_sheet_stale(self):
+        project = a_built_project()
+        written = json.loads((project / "requirements.json").read_text())
+        (project / "requirements.json").write_text(json.dumps(written, indent=4))
+        said, _ = show(project)
+        self.assertEqual({phase: statuses(said)[phase] for phase in ("requirements", "build", "breadboard")},
+                         {"requirements": "ok", "build": "stale", "breadboard": "stale"})
+
     def test_requirements_that_differ_from_the_picks_are_stale(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
             {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"board": "xiao-esp32-c6"}]}])
