@@ -9,8 +9,10 @@ rows. Then each point gets an anchor (its first part pin, else its first resisto
 pin's jumper, or a rail when its ends do not fit one row), and every other end joins the anchor in one step: a jumper,
 or a resistor leg. Spark claims no row numbers, no rail colour and no side of the gap, because it does not know them.
 
-`BreadboardSteps.walk()` is the one source. A renderer (`NumberedList`, `MermaidDiagram`, a later drawing such as
-P267) takes the steps and gives lines; it never decides the wiring again, and a new one needs no change here.
+`BreadboardSteps.numbered()` numbers the steps for the step list and the diagram, and gives the data a page reads
+(P826); the drawing (`drawing.py`) and the bench changes (`bench_changes.py`) number `anchored()` themselves. A
+renderer (`NumberedList`, `MermaidDiagram`, a later drawing such as P267) takes the steps and gives lines; it never
+decides the wiring again, and a new one needs no change here.
 """
 
 import collections
@@ -37,6 +39,9 @@ End = collections.namedtuple("End", "kind component name words pin job value", d
 StepPoint = collections.namedtuple("StepPoint", "ends supply rail")
 #: One step: its words, and the two diagram names it joins (None for a step that only places something).
 WiringStep = collections.namedtuple("WiringStep", "words edge")
+#: One step with its number, from 1: its words, and its edge (None for a step that only places something). What the step
+#: list, the diagram and a page read (P826).
+NumberedStep = collections.namedtuple("NumberedStep", "number words edge")
 #: What a step does: put a component in, set a point's anchor up, join an end to the anchor, or connect a supply.
 PLACE, SETUP, JOIN, SUPPLY = "place", "setup", "join", "supply"
 #: One step with what it is about: what it does, its subject (the component placed, the End set up or joined, the
@@ -141,13 +146,15 @@ class BreadboardSteps:
         self.placed = list(placed)
         self.points = list(points)
 
-    def walk(self):
-        """[WiringStep], in order: each thing placed, then each point's anchor set up and its other ends joined, then its
-        supply."""
-        return [seated.step for seated in self.anchored()]
+    def numbered(self):
+        """[NumberedStep], in the order of anchored(), numbered from 1: each thing placed, then each point's anchor set up
+        and its other ends joined, then its supply. The step list and the diagram take their numbers from here."""
+        return [NumberedStep(number, seated.step.words, seated.step.edge)
+                for number, seated in enumerate(self.anchored(), 1)]
 
     def anchored(self):
-        """[Seated]: the steps of walk(), in its order, each with what it does, its subject and its anchor."""
+        """[Seated], in order, each step with what it does, its subject and its anchor. numbered() numbers them for the
+        step list, the diagram and a page; a drawing numbers them itself."""
         walked = [Seated(WiringStep("Put %s in the breadboard, each pin in its own row."
                               % ("the board" if placed == THE_BOARD else placed), None), PLACE, placed, None, False)
                   for placed in self.placed]
@@ -177,7 +184,7 @@ class NumberedList:
     """Renderer: the steps as numbered Markdown lines."""
 
     def render(self, steps):
-        return ["%d. %s" % (number, step.words) for number, step in enumerate(steps.walk(), 1)]
+        return ["%d. %s" % (step.number, step.words) for step in steps.numbered()]
 
 
 class MermaidDiagram:
@@ -194,7 +201,7 @@ class MermaidDiagram:
         for number, (component, names) in enumerate(steps.boxes().items(), 1):
             lines += ['  subgraph g%d["%s"]' % (number, _quote(component))]
             lines += [node(name, "    ") for name in names] + ["  end"]
-        edges = [(number, step.edge) for number, step in enumerate(steps.walk(), 1) if step.edge]
+        edges = [(step.number, step.edge) for step in steps.numbered() if step.edge]
         lines += [node(name, "  ") for name in dict.fromkeys(name for _, edge in edges for name in edge)
                   if name not in ids]
         lines += ['  %s ---|"%d"| %s' % (ids[one], number, ids[other]) for number, (one, other) in edges]

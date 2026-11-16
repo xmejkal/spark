@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/spark/breadboard/wiring_steps.py",
+  "name": "the steps are numbered from 0",
+  "find": "                for number, seated in enumerate(self.anchored(), 1)]",
+  "replace": "                for number, seated in enumerate(self.anchored())]"
+ },
+ {
+  "file": "scripts/spark/breadboard/wiring_steps.py",
+  "name": "a numbered step loses its edge",
+  "find": "NumberedStep(number, seated.step.words, seated.step.edge)",
+  "replace": "NumberedStep(number, seated.step.words, None)"
+ },
+ {
+  "file": "scripts/spark/breadboard/wiring_steps.py",
+  "name": "the diagram counts its edges by itself again, apart from the step numbers",
+  "find": "        edges = [(step.number, step.edge) for step in steps.numbered() if step.edge]",
+  "replace": "        edges = [(number, step.edge) for number, step in enumerate((step for step in steps.numbered() if step.edge), 1)]"
+ },
+ {
+  "file": "scripts/spark/breadboard/before_power.py",
+  "name": "an unused pin is said as a firmware pull",
+  "find": "BeforePowerItem(UNUSED_PIN, name,",
+  "replace": "BeforePowerItem(FIRMWARE_PULL, name,"
+ },
+ {
+  "file": "scripts/spark/breadboard/before_power.py",
+  "name": "a CONFLICT loses its record",
+  "find": "BeforePowerItem(CONFLICT, name, conflict[\"pin\"], part[\"id\"],",
+  "replace": "BeforePowerItem(CONFLICT, name, conflict[\"pin\"], None,"
+ },
+ {
+  "file": "scripts/spark/breadboard/before_power.py",
+  "name": "a supply's users are not in name order",
+  "find": "tuple(sorted(users))",
+  "replace": "tuple(sorted(users, reverse=True))"
+ },
+ {
+  "file": "scripts/spark/breadboard/before_power.py",
+  "name": "the records are in the design's order, not sorted",
+  "find": "        return cls(items, sorted({part[\"id\"] for part in design_parts}))",
+  "replace": "        return cls(items, list(dict.fromkeys(part[\"id\"] for part in design_parts)))"
+ },
+ {
+  "file": "scripts/spark/breadboard/before_power.py",
+  "name": "an unused pin with no note says None, not \"\"",
+  "find": "pin.get(\"note\", \"\")",
+  "replace": "pin.get(\"note\")"
+ }
+]

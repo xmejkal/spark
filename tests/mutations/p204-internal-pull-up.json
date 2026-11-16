@@ -42,10 +42,10 @@
   "replace": "netlist, [tuple(pair) for pair in rules[\"must_not_float\"]],"
  },
  {
-  "file": "scripts/spark/breadboard/sheet.py",
+  "file": "scripts/spark/breadboard/before_power.py",
   "name": "the sheet does not say the firmware must pull the button up",
-  "find": "% (name, pin) for pin in part.get(\"_firmware_pulls\", [])]",
-  "replace": "% (name, pin) for pin in []]"
+  "find": "                      for pin in part.get(\"_firmware_pulls\", [])]",
+  "replace": "                      for pin in []]"
  },
  {
   "file": "scripts/spark/sourcing/part_rules.py",
