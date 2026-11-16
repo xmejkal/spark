@@ -14,9 +14,10 @@ from spark.records import board_pads
 from spark.design import loader
 from spark.design import board_components
 from spark.breadboard import part_shape
-from spark.sourcing import drawer, part_rules
+from spark.sourcing import drawer
 from spark.records import store
 from spark.breadboard import bench_changes
+from spark.breadboard import before_power
 from spark.breadboard import breadboard_codes
 from spark.breadboard import drawing
 from spark.breadboard import drawing_catalog
@@ -49,6 +50,8 @@ STEP_COLORS = wiring_steps.StepColors()
 #: new entry here, and nothing else changes.
 DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(STEP_COLORS),
                      drawing.SvgBreadboardDiagram(STEP_COLORS))
+#: What the sheet says before power is applied, from `wiring_data`'s before_power.
+BEFORE_POWER_LIST = before_power.BeforePowerList()
 #: What the sheet says of the bench: one line per change since the last build, in these words.
 CHANGE_LIST = bench_changes.ChangeList()
 #: The drawing a person edits in Wokwi, whose moves a rebuild keeps (P273).
@@ -192,26 +195,6 @@ def _unwired(board, design):
             % (a["signal"], pads.pad_of(a["pin"])) for a in assignments if a["signal"] in {s["name"] for s in own}]
 
 
-def _before_power(design_parts, supplies):
-    """What each part's record says must be true before power is applied: its CONFLICTs, its floating pins, its
-    warnings, in the record's own words; and the supplies from off the board, whose voltage this sheet does not set."""
-    lines, seen = [], set()
-    lines += ["- %s comes from off the board, and this sheet does not say its voltage: check it against the supply "
-              "range of %s (`parts.py --show`) before you connect it" % (net, ", ".join(sorted(users)))
-              for net, users in supplies.items()]
-    for part in design_parts:
-        name = board_components.component_name(part)
-        lines += ["- **CONFLICT** on %s: %s" % (name, conflict) for conflict in part_rules.pull_conflicts(part)]
-        lines += ["- %s %s has no resistor: the firmware must pull it up with Pin.PULL_UP, as `pins.py` says (P204)"
-                  % (name, pin) for pin in part.get("_firmware_pulls", [])]
-        lines += ["- %s %s: %s" % (name, pin["pin"], pin.get("note", "")) for pin in part.get("unused_pins") or []]
-        if part["id"] not in seen:
-            seen.add(part["id"])
-            lines += ["- %s: %s" % (part.get("name"), requirement) for requirement in part.get("host_requirements") or []]
-    shows = ", ".join("`parts.py --show %s`" % record_id for record_id in sorted({part["id"] for part in design_parts}))
-    return lines + ["", "Each record whole, with what it asks of the board: %s." % shows]
-
-
 #: What one build gives the sheet and the drawing: the design, its circuit, its resistors and its steps.
 Read = collections.namedtuple("Read", "built circuit resistors point_lines steps")
 
@@ -236,6 +219,18 @@ def _read_build(requirements_path, circuit_path=None):
                                     and c.get("ftype") == "simple_resistor"), 1))
     point_lines, steps = wiring_steps.wiring(built.board, circuit, built.parts, resistors, BOARD_COMPONENT)
     return Read(built, circuit, resistors, point_lines, steps)
+
+
+#: The wiring of one build as data, for a page (P826): its steps ([wiring_steps.NumberedStep]) and what must be true before
+#: power is applied (before_power.BeforePower). The sheet prints the same values.
+WiringData = collections.namedtuple("WiringData", "steps before_power")
+
+
+def wiring_data(requirements_path, circuit_path=None, read=None):
+    """WiringData for a requirements file whose project has been built with --keep (or its circuit). With no `read`, it
+    reads the build and refuses as the sheet does (NotBuiltError)."""
+    read = read or _read_build(requirements_path, circuit_path)
+    return WiringData(read.steps.numbered(), before_power.BeforePower.of(read.built.parts, _supplies(read.circuit)))
 
 
 def _drawing_inputs(read):
@@ -358,7 +353,8 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
     lines += read.point_lines
     unwired = _unwired(built.board, built)
     lines += (["", "Not wired:", ""] + unwired) if unwired else []
-    lines += ["", "## Before you power it", ""] + _before_power(built.parts, supplies)
+    lines += ["", "## Before you power it", ""]
+    lines += BEFORE_POWER_LIST.render(wiring_data(requirements_path, read=read).before_power)
     return "\n".join(lines) + "\n"
 
 

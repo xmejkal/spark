@@ -41,6 +41,7 @@ What exists (read 2026-11-15, checked by the lenses and the refuter):
   service writes only a history note to the store (scripts/spark/build/requirements_build.py:75).
 - The wiring steps are data (`BreadboardSteps`, scripts/spark/breadboard/wiring_steps.py:137, `walk()` :144), rendered only as
   Markdown. The before-power lines are Markdown strings (`sheet._before_power`, sheet.py:195).
+  Since P826, `numbered()` replaced `walk()`, and the before-power lines are the value `before_power.BeforePower`.
 - The core: `Operation` (scripts/spark/core/operation.py:65), the envelope and the `next` step from `step()` (scripts/spark/core/outcomes.py:99-136, :114).
   `--pick` and `--requirements` have dry runs (pick_parts.py:63, write_requirements.py:50). `--match` answers no `next`.
   A `next` step's `argv` and `env` are unmasked by design (scripts/spark/core/privacy.py:11). Board steps carry no
