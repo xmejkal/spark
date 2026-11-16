@@ -17,10 +17,10 @@ from spark.records.onboard_parts import OnboardPartReader
 #: name the converter's `lib/mapping.ts` matches (a test reads both).
 NETLIST = "netlist.json"
 
-#: The line a full build adds when a stand-in it gave the converter is not in the diagram: a project's own converter
-#: older than P792 ignores `--add-netlist`, and its limits then say the board's own LED and button are not wired.
-NOT_WIRED_BY_OLDER_CONVERTER = ("the diagram holds no stand-in for the board's own LED or button: a project's own "
-                                "converter older than P792 does not wire them")
+#: The line a full build adds when a stand-in it gave the converter is not in the diagram (`%s`: their roles): a project's
+#: own converter older than P792 ignores `--add-netlist`, and its limits then say those parts are not wired.
+NOT_WIRED_BY_OLDER_CONVERTER = ("the diagram holds no stand-in for %s: a project's own converter older than P792 does "
+                                "not wire the board's own LED and button")
 
 
 class BoardAloneResult(NamedTuple):
@@ -125,6 +125,7 @@ class OnboardStandIns:
     def found_in(self, diagram):
         """The StandInsFound of the diagram the converter wrote."""
         found = wired_in(diagram, self.given.wired)
-        note = "\n           " + NOT_WIRED_BY_OLDER_CONVERTER if len(found) < len(self.given.wired) else ""
+        missing = [part["_instance"] for part in self.given.wired if part not in found]
+        note = "\n           " + NOT_WIRED_BY_OLDER_CONVERTER % " and ".join(missing) if missing else ""
         return StandInsFound({part["_instance"] for part in found}, onboard_parts.say_wired_gpios(found), note)
 # --- end MVP ---

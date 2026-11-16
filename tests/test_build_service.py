@@ -292,5 +292,5 @@ class AStandInBoardsOwnPartsInTheFullBuildTest(TheSimulationStageOfASkippedDesig
 
     def test_a_converter_that_wires_no_stand_in_says_so_and_the_limits_do_not_claim_them(self):
         stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}], BOARD_ALONE_DIAGRAM)
-        self.assertIn("the diagram holds no stand-in for the board's own LED or button: a project's own converter older than P792", stage.detail)
+        self.assertIn("the diagram holds no stand-in for onboard_led and onboard_button: a project's own converter older than P792", stage.detail)
         self.assertNotIn(self.BUTTON, stage.detail)

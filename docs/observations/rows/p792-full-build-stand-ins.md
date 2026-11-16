@@ -1,7 +1,7 @@
 # P792 the full build wires a stand-in board's own LED and button: rows
 
 Card: [P792 #1100](https://github.com/xmejkal/spark/issues/1100), XS to S. Plan `~/.claude/plans/synthetic-purring-sky.md`. Rows 1 to 10 are
-the plan refuter (Opus), 11 the implementer. 2026-11-16.
+the plan refuter (Opus), 11 and 12 the implementer, 13 to 18 the PR refuter (Opus). 2026-11-16.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -16,3 +16,10 @@ the plan refuter (Opus), 11 the implementer. 2026-11-16.
 | 9 | only check-spine-ok.json and -keep.txt change among the goldens | plan refuter (Opus) | rejected | confirmed by the accept run: those two files only |
 | 10 | a part-id check is not a press: a free CI Wokwi run would prove the press itself | plan refuter (Opus) | raised | dropped because the card's "a scenario presses" is met at the part-id level without a Wokwi run, as P480's test does; a free CI run is the PO's call |
 | 11 | a TypeScript mutation row is caught by the stale sha256 test, whatever the converter's tests say | implementer | acted | no TS row in tests/mutations/p792-full-build-stand-ins.json; `bun test` (53) guards `addNetlist` |
+| 12 | the first push failed R1 (`_simulation` 55 lines, limit 40) and T1 (file writes in build_service.py 7 to 8) | implementer | acted | fixed: `board_alone_input.OnboardStandIns` and `StandInsFound` hold the stand-in logic, `BuildService._sim_folder` fills `sim/` in one write loop; mutation row 9 added with its test |
+| 13 | the look (`image_evidence.find_limits`) still says no stand-in is wired for a design with parts, so the look and the full build disagree | PR refuter (Opus) | acted | fixed: `limits_of_board(design.board, None, None)` always; test_image_evidence's test says the stand-in is wired with parts or without |
+| 14 | `board_engine.convert`'s docstring names only `--circuit` and `--netlist` | PR refuter (Opus) | acted | fixed: it names `--add-netlist` |
+| 15 | a person's hand-added part with a stand-in's id is overwritten by the merge with no warning (merge.ts matches by id), and the older-converter note then says "no stand-in" when one is missing | PR refuter (Opus) | raised | the merge: card [P830 #1189](https://github.com/xmejkal/spark/issues/1189); the note: fixed, it names the missing roles |
+| 16 | the fake converter adds the stand-in parts but no wires, so the golden's "4 wire(s)" shows the sentences, not the wiring | PR refuter (Opus) | raised | dropped because the -keep golden shows both parts in `sim/diagram.json` and the limits sentences, and tests/test_converter.py proves the wires on the real bundle |
+| 17 | a blank line is missing before the new test in tests/test_converter.py | PR refuter (Opus) | acted | fixed |
+| 18 | the bundle and its sha256 match the sources, `addNetlist` maps ids, `--check` holds, a kept diagram from before P792 merges, the 9 rows each name a fault a test catches | PR refuter (Opus) | rejected | its own runs: bundle byte-identical, 53 TS tests, 131 Python tests OK |

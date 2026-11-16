@@ -199,6 +199,7 @@ class TheBundleConvertsOnNodeTest(unittest.TestCase):
         self.assertIn("wokwi-led", [part["type"] for part in diagram["parts"]])
         self.assertTrue(any("valve1:A" in "%s-%s" % (wire[0], wire[1]) for wire in diagram["connections"]),
                         "the record's pin map did not reach the wires")
+
     @unittest.skipUnless(node(), "node is not installed")
     def test_a_full_build_s_stand_ins_reach_the_diagram_and_a_scenario_may_press_one(self):
         # P792: the FireBeetle's own LED and button, from the netlist spark writes for them, beside a project's part;

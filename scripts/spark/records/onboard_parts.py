@@ -95,7 +95,7 @@ def limits_of_board(board, roles, wired, definitions=None, key=None):
     `board_records.role_limits`, {role: [(component, sentence)]}, when `roles` is a list, else `board_records.onboard_limits`,
     the pairs of every role. `wired` is {gpio: sentence} for the GPIOs spark wires in the diagram (`say_wired_gpios`): {} when
     a converter wired none (a project's own converter older than P792), None for those `OnboardPartReader` gives this
-    board (the pick, which says what both builds wire, P792). `definitions` and `key`
+    board (the pick and the look, which say what both builds wire, P792). `definitions` and `key`
     are `role_limits`'s memo. It reads the board's Wokwi definition from the store and nothing else, and never raises.
     """
     if wired is None:

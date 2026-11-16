@@ -44,7 +44,7 @@
  {
   "file": "scripts/spark/build/board_alone_input.py",
   "name": "P792: an older converter that wired no stand-in goes unsaid",
-  "find": "if len(found) < len(self.given.wired) else \"\"",
+  "find": "if missing else \"\"",
   "replace": "if False else \"\""
  },
  {
