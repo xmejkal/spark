@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from fakes import FakeTscircuitEngine  # noqa: E402
 from golden_design import fed_circuit  # noqa: E402
-from spark.build import board_engine, kept_files  # noqa: E402
+from spark.build import board_alone_input, board_engine, kept_files  # noqa: E402
 from spark.build.build_service import BuildInputs, BuildService  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS, SKIPPED  # noqa: E402
@@ -175,11 +175,17 @@ if __name__ == "__main__":
     unittest.main()
 
 
+#: Where `a_converter_shim` writes the arguments it was run with.
+SHIM_ARGS = "converter-args.json"
+
+
 def a_converter_shim(folder, diagram):
-    """The tools list entry of a diagram converter in `folder` that writes `diagram` to its --out, run by this Python."""
+    """The tools list entry of a diagram converter in `folder` that writes `diagram` to its --out, run by this Python, and
+    its arguments to `folder`/SHIM_ARGS."""
     shim = Path(folder) / "fake-circuit-to-wokwi"
     shim.write_text("#!%s\nimport json, sys\nargs = sys.argv[1:]\nwith open(args[args.index('--out') + 1], 'w') as out:\n"
-                    "    json.dump(%s, out)\n" % (sys.executable, json.dumps(diagram)))
+                    "    json.dump(%s, out)\nwith open(%r, 'w') as said:\n    json.dump(args, said)\n"
+                    % (sys.executable, json.dumps(diagram), str(Path(folder) / SHIM_ARGS)))
     shim.chmod(0o755)
     return {"circuit-to-wokwi": {"kind": "path", "exe": str(shim), "also": [], "fetch": None, "needs": []}}
 
@@ -189,6 +195,9 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
     every part is skipped is a skipped stage that says so, with the limits, and vouches for no build (the PO, 2026-11-12)."""
 
     SKIPPED = "Display: not simulated at all: Wokwi has no ST7789V part for a 240x320 panel"
+    BOARD = "xiao-esp32-c6"
+    #: Whether the board's Wokwi part is another board's (`wokwi_is_stand_in`), so the build adds its own LED and button.
+    STAND_IN = False
 
     FEEDS = (("Mcu", "3V3", "V33"), ("Display", "VCC", "V33"))
 
@@ -200,12 +209,12 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         """The stages of a build on the XIAO whose project holds the display's record and a converter that writes
         `diagram` (run by `runner` when given); the engine builds a circuit that feeds the board and the display, so the
         build stage passes."""
-        project = Path(tempfile.mkdtemp()) / "sim project"
+        project = self.project = Path(tempfile.mkdtemp()) / "sim project"
         (project / ".spark").mkdir(parents=True)
         (project / "parts").mkdir()
         (project / "parts" / "dfr0664-tft-2in.json").write_text(json.dumps(DISPLAY))
         (project / ".spark" / "tools.json").write_text(json.dumps(a_converter_shim(project, diagram)))
-        _, stages = a_build({"board": "xiao-esp32-c6", "parts": parts}, engine=FakeTscircuitEngine(fed_circuit(self.FEEDS)), runner=runner, project=project)
+        self.workdir, stages = a_build({"board": self.BOARD, "parts": parts}, engine=FakeTscircuitEngine(fed_circuit(self.FEEDS)), runner=runner, project=project)
         self.assertEqual(stages[-1].name, "simulation", [(stage.name, stage.status, stage.detail) for stage in stages])
         return stages
 
@@ -214,7 +223,7 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         stages = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}])
         stage = stages[-1]
         self.assertEqual((stage.status, stage.code), (SKIPPED, None))
-        self.assertTrue(stage.detail.startswith("every part is skipped from the simulation, so the diagram holds the board alone, 0 wire(s) in the diagram"), stage.detail)
+        self.assertTrue(stage.detail.startswith("every part is skipped from the simulation, so the diagram holds none of the project's parts, 0 wire(s) in the diagram"), stage.detail)
         self.assertIn("what it cannot show (", stage.detail)
         self.assertIn(self.SKIPPED, stage.detail)
         self.assertEqual((verdict(stages), vouches_for_a_build(stages)), (0, False))
@@ -235,7 +244,46 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         self.assertEqual((stage.status, stage.code), (PROBLEMS, "diagram_unwired"))
         self.assertNotIn("every part is skipped", stage.detail)
 
+    def test_the_converter_gets_an_added_netlist_only_on_a_stand_in_board(self):  # P792
+        self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}])
+        self.assertEqual("--add-netlist" in json.loads((self.project / SHIM_ARGS).read_text()), self.STAND_IN)
+
     def test_an_empty_mapping_is_not_every_part_skipped_and_a_real_part_is_not_either(self):
         self.assertFalse(every_part_skipped({}))
         self.assertFalse(every_part_skipped({"Display": {"skip": "no part"}, "Led": {"wokwiType": "wokwi-led"}}))
         self.assertTrue(every_part_skipped({"Display": {"skip": "no part"}, "Jack": {"skip": "wiring"}}))
+
+
+class AStandInBoardsOwnPartsInTheFullBuildTest(TheSimulationStageOfASkippedDesignTest):
+    """P792: on a stand-in board (the FireBeetle's Wokwi part is the S3 devkit), the full build gives the converter the
+    board's own LED and button with --add-netlist, as the board-only build wires them, and says only what the diagram holds."""
+
+    BOARD = "firebeetle2-esp32s3"
+    STAND_IN = True
+    #: What the converter writes for the board and its two stand-ins: the serial monitor and four wires.
+    STAND_INS = {"version": 1, "parts": [{"type": "board-esp32-s3-devkitc-1", "id": "mcu"}, {"type": "wokwi-led", "id": "onboard_led"},
+                                         {"type": "wokwi-pushbutton", "id": "onboard_button"}],
+                 "connections": BOARD_ALONE_DIAGRAM["connections"] + [
+                     ["mcu:21", "onboard_led:A", "green", []], ["mcu:GND.1", "onboard_led:C", "black", []],
+                     ["mcu:47", "onboard_button:1.l", "green", []], ["mcu:GND.1", "onboard_button:2.l", "black", []]]}
+    BUTTON = "ONBOARD_BUTTON (GPIO47): the Wokwi stand-in has no button on GPIO47, so spark wires Wokwi's pushbutton"
+
+    def test_the_stand_ins_reach_the_converter_and_the_limits_and_every_part_skipped_stays_skipped(self):
+        stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}], self.STAND_INS)
+        self.assertEqual((stage.status, stage.code), (SKIPPED, None))
+        self.assertIn("so the diagram holds none of the project's parts, 4 wire(s) in the diagram", stage.detail)
+        self.assertIn(self.BUTTON, stage.detail)
+        self.assertIn("ONBOARD_LED (GPIO21): the Wokwi stand-in has no LED on GPIO21", stage.detail)
+        args = json.loads((self.project / SHIM_ARGS).read_text())
+        self.assertEqual(args[args.index("--add-netlist") + 1], str(self.workdir / "sim" / "netlist.json"))
+        mapping = json.loads((self.workdir / "sim" / "wokwi-mapping.json").read_text())
+        self.assertEqual(sorted(mapping), ["Display", "onboard_button", "onboard_led"])
+
+    def test_wires_to_the_stand_ins_alone_are_still_the_unwired_diagram(self):
+        stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}, {"part": "led-red-5mm", "name": "Led"}], self.STAND_INS)
+        self.assertEqual((stage.status, stage.code), (PROBLEMS, "diagram_unwired"))
+
+    def test_a_converter_that_wires_no_stand_in_says_so_and_the_limits_do_not_claim_them(self):
+        stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}], BOARD_ALONE_DIAGRAM)
+        self.assertIn(board_alone_input.NOT_WIRED_BY_OLDER_CONVERTER, stage.detail)
+        self.assertNotIn(self.BUTTON, stage.detail)

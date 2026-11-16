@@ -1,6 +1,7 @@
 """
-The converter's input for a board-only build (P484, P708): what `build_service.board_alone` writes into `sim/` before any
-converter runs. It reads the wired parts of `onboard_parts` and their records, and writes nothing.
+The converter's input for the board's own LED and button on a stand-in board (P484, P708): what `build_service.board_alone`
+writes into `sim/` before any converter runs, and what the full build adds to its circuit with `--add-netlist` (P792). It
+reads the wired parts of `onboard_parts` and their records, and writes nothing.
 """
 
 from typing import NamedTuple, Optional
@@ -14,6 +15,11 @@ from spark.records.onboard_parts import OnboardPartReader
 #: The netlist's file name in the simulation project. The board's component name is `sheet.BOARD_COMPONENT`, the
 #: name the converter's `lib/mapping.ts` matches (a test reads both).
 NETLIST = "netlist.json"
+
+#: The line a full build adds when a stand-in it gave the converter is not in the diagram: a project's own converter
+#: older than P792 ignores `--add-netlist`, and its limits then say the board's own LED and button are not wired.
+NOT_WIRED_BY_OLDER_CONVERTER = ("the diagram holds no stand-in for the board's own LED or button: a project's own "
+                                "converter older than P792 does not wire them")
 
 
 class BoardAloneResult(NamedTuple):
@@ -75,4 +81,10 @@ def make_converter_input(parts, ground, project):
         mapping[role] = {"wokwiType": wokwi["part"], "pins": wokwi.get("pins") or {}, "attrs": wokwi.get("attrs") or {}}
     netlist = {"components": components, "nets": nets + [{"id": "ground", "name": "GND", "members": grounds}]}
     return {sim_project.MAPPING_FILE: mapping, NETLIST: netlist}, None
+
+
+def wired_in(diagram, parts):
+    """The `parts` (`OnboardPartReader.parts`) whose role is a part id in `diagram`: the stand-ins a converter wired."""
+    ids = {part.get("id") for part in (diagram or {}).get("parts") or [] if isinstance(part, dict)}
+    return [part for part in parts if part["_instance"] in ids]
 # --- end MVP ---

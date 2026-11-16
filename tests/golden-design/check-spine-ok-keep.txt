@@ -6,10 +6,12 @@
   [ok  ] footprint        FireBeetle2Esp32S3.tsx
   [ok  ] build            9 trace(s), 0 errors, tsci 0.0.0-fake; the documents were measured on core 0.0.2600
   [ok  ] simulation       4 wire(s) in the diagram
-           what it cannot show (3):
+           what it cannot show (5):
              LedRed5mm: Wokwi's LED: lights on current; its forward voltage and brightness are not this part's
              TactileButton: Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled
              onboard GPIOs: not checked: spark's store lacks the Wokwi definition that the board record names, its sha256 differs, or it does not parse
+             ONBOARD_LED (GPIO21): the Wokwi stand-in has no LED on GPIO21, so spark wires Wokwi's LED to GPIO21 in its place: a passed run shows the level a scenario read on GPIO21, not a PWM duty or a brightness, nor that the board's own LED lights. Test it on the board.
+             ONBOARD_BUTTON (GPIO47): the Wokwi stand-in has no button on GPIO47, so spark wires Wokwi's pushbutton to GPIO47 in its place: a scenario presses that part, not the board's own button. Test it on the board.
 
   the chain runs end to end
   next: SPARK_HOME=<spark-home> <repo>/scripts/look.py --project <project-dir> — first write firmware/main.py from pins.py
@@ -61,6 +63,20 @@ ONBOARD_BUTTON_ON = 0  # the active level in the board record, the source is on 
       "id": "BTN1",
       "top": 60,
       "left": 120,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-stand-in",
+      "id": "onboard_led",
+      "top": 0,
+      "left": 240,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-stand-in",
+      "id": "onboard_button",
+      "top": 0,
+      "left": 240,
       "attrs": {}
     }
   ],

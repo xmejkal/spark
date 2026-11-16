@@ -70,7 +70,7 @@ from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, 
 from spark.core.text_guards import guard_lines  # noqa: E402
 
 #: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
-EVERY_PART_SKIPPED_LINE = "; every part is skipped from the simulation, so the diagram holds the board alone"
+EVERY_PART_SKIPPED_LINE = "; every part is skipped from the simulation, so the diagram holds none of the project's parts"
 
 
 def render(stages, code, unserved=()):
