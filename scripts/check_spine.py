@@ -104,9 +104,8 @@ def main(argv=None):
                              "`move not kept`; an end the drawing joins differently from the points is a `drawing differs` entry), "
                              "breadboard.svg, that drawing as a picture, "
                              "a rebuild also lists what to change on the bench (one `changed` entry for each line), page.html, the breadboard, schematic and PCB "
-                             "in three tabs to open in a browser or to publish as an Artifact, and "
-                             "firmware/pins.py, the pins the firmware imports, with one `missing_facts` item for each fact the board record lacks, and, "
-                             "when DIR is a project folder, .spark/build.json, the record of this build that flow.py reads. The simulation project goes to DIR/sim")
+                             "in three tabs to open in a browser or to publish as an Artifact, firmware/pins.py, the pins the firmware imports, with one "
+                             "`missing_facts` item for each fact the board record lacks, and in a project .spark/build.json, which flow.py reads. The simulation project goes to DIR/sim")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here instead of DIR/sim: diagram.json, wokwi.toml, the chips")
     parser.add_argument("--firmware", metavar="IMAGE",

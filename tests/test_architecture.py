@@ -655,6 +655,31 @@ class TheIdeaAreaTest(unittest.TestCase):
 
     def test_each_idea_module_imports_alone(self):
         each_module_imports_alone(self, "idea")
+
+
+class TheFlowAreaTest(unittest.TestCase):
+    """P825: the flow area's modules live in `scripts/spark/flow/`, its `__init__.py` imports nothing, each module imports
+    alone, and `flow_operations.OPERATIONS` maps each op to its Operation. `scripts/` keeps the CLI `flow.py`."""
+    FLOW = ROOT / "scripts" / "spark" / "flow"
+    #: The modules of the area, by the names of its page (`areas/flow.md`).
+    MODULES = ["flow_codes", "flow_operations", "phase_readers", "show_flow"]
+
+    def test_the_area_holds_its_modules_and_scripts_holds_no_copy(self):
+        self.assertEqual(sorted(path.stem for path in self.FLOW.glob("*.py") if path.name != "__init__.py"), self.MODULES)
+        self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in (ROOT / "scripts").glob("*.py")}), [])
+
+    def test_the_area_s_init_imports_nothing(self):
+        tree = ast.parse((self.FLOW / "__init__.py").read_text())
+        self.assertEqual([node.lineno for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [])
+
+    def test_each_flow_module_imports_alone(self):
+        each_module_imports_alone(self, "flow")
+
+    def test_the_operations_table_maps_each_op_to_its_operation_class(self):
+        code = ("from spark.core.operation import Operation; from spark.flow import flow_operations as f; "
+                "print(sorted(f.OPERATIONS)); print([op for op, cls in f.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(run.stdout.split("\n")[:2], ["['show-flow']", "[]"], run.stderr)
 # --- end MVP ---
 
 
