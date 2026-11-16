@@ -479,8 +479,8 @@ class TheBuildAreaTest(unittest.TestCase):
     `board_engine.TscircuitEngine` and `board_emitter.BoardEmitter` in process, so no build module starts a child."""
     BUILD = ROOT / "scripts" / "spark" / "build"
     #: The modules of the area, by the names of its page (`areas/build.md`).
-    MODULES = ["ai_files", "board_alone_input", "board_engine", "build_codes", "build_service", "kept_files", "project_setup",
-               "requirements_build", "stages"]
+    MODULES = ["ai_files", "board_alone_input", "board_engine", "build_codes", "build_record", "build_service", "kept_files",
+               "project_setup", "requirements_build", "stages"]
     #: Each CLI's own top-level functions: `main` and what only it uses to parse and print (`report` prints). A library
     #: function back in a CLI, under any name, fails the check.
     CLIS = {"check_spine.py": ["main", "render", "report"], "init_project.py": ["main"]}

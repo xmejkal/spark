@@ -61,8 +61,8 @@ sys.path.insert(0, str(SCRIPTS))
 from spark.bench import board_envelope  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402
 from spark.build.build_service import verdict  # noqa: E402
-from spark.build.kept_files import (_kept, _kept_pins, drop_an_older_build, keep_breadboard, keep_simulation,  # noqa: E402
-                                    keep_tabbed_page, left_off, simulation_dir)
+from spark.build.kept_files import (_kept, _kept_pins, drop_an_older_build, keep_breadboard, keep_build_record,  # noqa: E402
+                                    keep_simulation, keep_tabbed_page, left_off, simulation_dir)
 from spark.build.requirements_build import RequirementsBuildService  # noqa: E402
 from spark.build.stages import skipped_the_build  # noqa: E402
 
@@ -105,7 +105,8 @@ def main(argv=None):
                              "breadboard.svg, that drawing as a picture, "
                              "a rebuild also lists what to change on the bench (one `changed` entry for each line), page.html, the breadboard, schematic and PCB "
                              "in three tabs to open in a browser or to publish as an Artifact, and "
-                             "firmware/pins.py, the pins the firmware imports, with one `missing_facts` item for each fact the board record lacks. The simulation project goes to DIR/sim")
+                             "firmware/pins.py, the pins the firmware imports, with one `missing_facts` item for each fact the board record lacks, and, "
+                             "when DIR is a project folder, .spark/build.json, the record of this build that flow.py reads. The simulation project goes to DIR/sim")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here instead of DIR/sim: diagram.json, wokwi.toml, the chips")
     parser.add_argument("--firmware", metavar="IMAGE",
@@ -136,6 +137,7 @@ def report(stages, args, workdir=None, requirements=None, exporter=None):
         kept += keep_breadboard(Path(args.requirements), Path(args.keep), stages) + drop_an_older_build(Path(args.keep), stages)
         kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))
         kept.append(keep_tabbed_page(Path(args.keep), stages, kept, exporter or tabbed_page.TscircuitExport(None)))
+        kept += keep_build_record(Path(args.keep), Path(args.requirements), stages, kept)  # P825: what flow.py reads
     simulation = keep_simulation(workdir, simulation_dir(args), stages) if workdir is not None and simulation_dir(args) else None
     kept = (kept or []) + [simulation] if simulation is not None else kept
     if args.json:

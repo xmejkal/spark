@@ -24,6 +24,7 @@
   no drawn breadboard: Wokwi has no part with this board's pins
   wrote firmware/pins.py — the pins the firmware imports
   wrote page.html — the breadboard, schematic and PCB in three tabs: open it in a browser, and Claude can publish it as an Artifact
+  wrote .spark/build.json — what this build was built from and how it ended, which flow.py reads
   wrote sim — the simulation project: diagram.json, wokwi.toml and the chips
 --- firmware/pins.py ---
 # The pin map: written by spark's assign_pins.py from requirements.json

@@ -2830,3 +2830,74 @@ class AnAllSkippedSimulationKeepsTheBuildTest(unittest.TestCase):
         self.assertEqual(check_spine.render([Stage("build", check_spine.OK, "x"), Stage("simulation", check_spine.OK, "y")], check_spine.EXIT_OK).splitlines()[-1],
                          "  the chain runs end to end")
 
+
+
+class TheKeepRecordsTheBuildTest(unittest.TestCase):
+    """P825: `--keep` with a requirements file writes the project's `.spark/build.json`, which `flow.py show` reads, and lists
+    it under `kept`. Only a keep folder that is a project itself gets one: a `.spark/` folder would make any folder one."""
+
+    BUILT = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light-xiao"
+
+    def setUp(self):
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def a_project(self, boards=True):
+        project = Path(tempfile.mkdtemp()) / "xiao"
+        shutil.copytree(self.BUILT, project)
+        if not boards:
+            shutil.rmtree(project / "boards")
+        return project
+
+    @staticmethod
+    def keep(project, stages, requirements=None):
+        args = argparse.Namespace(json=True, keep=project, requirements=str(requirements or project / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            check_spine.report(stages, args)
+        return {Path(entry["file"]).name: entry for entry in json.loads(out.getvalue())["kept"]}
+
+    def record(self, project):
+        return json.loads((project / ".spark" / "build.json").read_text())
+
+    def test_a_finished_build_records_its_status_stages_file_and_sha256_and_lists_the_record(self):
+        project = self.a_project()
+        kept = self.keep(project, [Stage("build", check_spine.OK, "9 trace(s)")])
+        record = self.record(project)
+        self.assertEqual({key: record[key] for key in ("schema", "status", "stages", "requirements", "requirements_sha256")},
+                         {"schema": 1, "status": "ok", "stages": [{"name": "build", "status": "ok"}], "requirements": "requirements.json",
+                          "requirements_sha256": hashlib.sha256((project / "requirements.json").read_bytes()).hexdigest()})
+        self.assertRegex(record["at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$")
+        self.assertEqual((kept["build.json"]["did"], kept["build.json"]["file"]), ("wrote", str(project / ".spark" / "build.json")))
+
+    def test_a_build_that_could_not_run_is_recorded_too(self):
+        project = self.a_project()
+        self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")])
+        self.assertEqual((self.record(project)["status"], self.record(project)["stages"]),
+                         ("could-not-run", [{"name": "requirements", "status": "could-not-run"}]))
+
+    def test_a_keep_folder_that_is_no_project_gets_no_record_and_no_spark_folder(self):
+        project = self.a_project(boards=False)
+        kept = self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")])
+        self.assertFalse((project / ".spark").exists())
+        self.assertNotIn("build.json", kept)
+
+    def test_a_run_with_no_requirements_file_writes_no_record(self):
+        project, workdir = self.a_project(), Path(tempfile.mkdtemp())
+        args = argparse.Namespace(json=True, keep=project, requirements=None)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.report([Stage("build", check_spine.OK, "fine")], args, workdir)
+        self.assertFalse((project / ".spark" / "build.json").exists())
+
+    def test_a_record_that_cannot_be_written_is_not_kept_and_says_why(self):
+        project = self.a_project()
+        (project / ".spark").write_text("a file where the folder goes")
+        kept = self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")])
+        self.assertEqual(kept["build.json"]["did"], "not kept")
+        self.assertTrue(kept["build.json"]["why"])
+
+    def test_a_requirements_file_outside_the_project_is_recorded_as_given(self):
+        project, elsewhere = self.a_project(), Path(tempfile.mkdtemp()) / "requirements.json"
+        shutil.copy(self.BUILT / "requirements.json", elsewhere)
+        self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")], elsewhere)
+        self.assertEqual(self.record(project)["requirements"], str(elsewhere))
