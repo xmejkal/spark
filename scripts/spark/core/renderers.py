@@ -51,7 +51,6 @@ class FlatJsonLine:
         return None
 
 
-
 class JsonDocument(FlatJsonLine):
     """Renderer: FlatJsonLine's indented sibling (P804): an OperationResult's `data` as one JSON document over several
     lines, as `json.dumps(data, indent=2)` writes it, which check_all prints with --json. An empty text when `data` is

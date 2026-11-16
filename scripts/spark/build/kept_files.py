@@ -403,7 +403,7 @@ def keep_all(stages, workdir, asked, exporter):
     What a build run keeps (P804), as kept entries {file, did, why, line}: the built board in `asked.keep` (`_kept`); with
     a requirements file also the breadboard sheet, the pin map, the page (its tabs drawn by `exporter`) and the build
     record; and the simulation project in `simulation_dir`. None when --keep was not given, or was given with no work
-    folder and no requirements file that is there, and no simulation project was kept. With no work folder, a refused
+    folder and no requirements file that is there. Even then, a kept simulation project is one entry. With no work folder, a refused
     requirements file that is there still removes what an earlier build left (P280); a missing one, which can be a typo,
     removes nothing. It removes no work folder: the caller does.
     """

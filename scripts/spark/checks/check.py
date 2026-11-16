@@ -484,7 +484,7 @@ def run_every_check(project=None, boards=(), circuit=None, rules=None, package=N
     checked, refusal = CheckedFolder.named(project)
     if refusal:
         return {"tool": "check_all", "status": COULD_NOT_RUN, "reason": refusal}
-    values = {"project": project, "boards": list(boards or ()), "circuit": circuit, "rules": rules, "package": package}
+    values = {"project": project, "boards": [boards] if isinstance(boards, str) else list(boards or ()), "circuit": circuit, "rules": rules, "package": package}
     inputs, resolved, ambiguous = inputs_for(values, checked)
     results = run(inputs, ambiguous)
     result = {"tool": "check_all", "status": verdict(results), "unmeasured": unmeasured_in(results),

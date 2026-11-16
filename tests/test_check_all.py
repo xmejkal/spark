@@ -686,6 +686,12 @@ class CheckDesignIsAnOperationTest(unittest.TestCase):
         self.assertEqual(outcomes.EXIT_FOR[result.status()], code)
         self.assertEqual(sorted(CheckDesign.data_keys), sorted(result.data))
 
+    def test_boards_given_as_one_string_is_one_board_not_its_characters(self):
+        # the review of P804: `list("b.json")` was six boards of one character each
+        folder = Path(tempfile.mkdtemp())
+        one = check.run_every_check(project=str(folder), boards="b1.json")
+        self.assertEqual([note for note in one["resolved"] if note.startswith("boards ")], ["boards       b1.json (given)"])
+
     def test_a_folder_that_is_not_there_is_one_could_not_run_finding(self):
         missing = str(Path(tempfile.mkdtemp()) / "nowhere")
         result = run_operation(CheckDesign(), {"project": missing}, FakeOutsideWorld())

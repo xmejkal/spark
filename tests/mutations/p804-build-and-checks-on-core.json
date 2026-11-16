@@ -38,8 +38,8 @@
  {
   "file": "scripts/spark/build/build_board.py",
   "name": "P804: a crash in the keep step leaves the work folder behind",
-  "find": "        finally:\n            if run.workdir is not None:\n",
-  "replace": "        except RuntimeError:\n            raise\n        if run.workdir is not None:\n"
+  "find": "        finally:\n            if built.workdir is not None:\n",
+  "replace": "        except RuntimeError:\n            raise\n        if built.workdir is not None:\n"
  },
  {
   "file": "scripts/spark/build/build_board.py",
@@ -50,7 +50,13 @@
  {
   "file": "scripts/spark/build/build_board.py",
   "name": "P804: the kept entries' lines never reach stderr",
-  "find": "diagnostics=list(run.diagnostics) + [\"  %s\" % entry[\"line\"] for entry in kept or []]",
-  "replace": "diagnostics=list(run.diagnostics)"
+  "find": "diagnostics=list(built.diagnostics) + [\"  %s\" % entry[\"line\"] for entry in kept or []]",
+  "replace": "diagnostics=list(built.diagnostics)"
+ },
+ {
+  "file": "scripts/spark/checks/check.py",
+  "name": "P804: a --boards given as one string becomes a list of its characters",
+  "find": "\"boards\": [boards] if isinstance(boards, str) else list(boards or ()), \"circuit\"",
+  "replace": "\"boards\": list(boards or ()), \"circuit\""
  }
 ]

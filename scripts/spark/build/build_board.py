@@ -94,16 +94,16 @@ class BuildBoard(Operation):
     def run(self, requirements=None, keep=None, sim_dir=None, firmware=None, *, outside):
         """The build of `requirements` (a path as given, or None), `keep` and `sim_dir` each a str, a Path or None."""
         keep, sim_dir = (Path(keep) if keep else None), (Path(sim_dir) if sim_dir else None)
-        run = self.service.build(requirements, firmware, simulation_dir(sim_dir, keep))
+        built = self.service.build(requirements, firmware, simulation_dir(sim_dir, keep))
         try:
-            code = verdict(run.stages)
+            code = verdict(built.stages)
             following = board_envelope.firmware_next_steps(code == EXIT_OK, requirements)  # P517: write the firmware next
-            kept = keep_all(run.stages, run.workdir, KeepAsked(requirements, keep, sim_dir), tabbed_page.TscircuitExport(run.toolchain))
-            text = guard_lines(render(run.stages, code, left_off(run.requirements)) + board_envelope.next_text(following))
-            return OperationResult(said_of(run.stages, code, run.requirements, following, kept), findings_of(run.stages),
+            kept = keep_all(built.stages, built.workdir, KeepAsked(requirements, keep, sim_dir), tabbed_page.TscircuitExport(built.toolchain))
+            text = guard_lines(render(built.stages, code, left_off(built.requirements)) + board_envelope.next_text(following))
+            return OperationResult(said_of(built.stages, code, built.requirements, following, kept), findings_of(built.stages),
                                    lines=text[:-1].split("\n"),  # the one final newline is `print`'s
-                                   diagnostics=list(run.diagnostics) + ["  %s" % entry["line"] for entry in kept or []])
+                                   diagnostics=list(built.diagnostics) + ["  %s" % entry["line"] for entry in kept or []])
         finally:
-            if run.workdir is not None:
-                shutil.rmtree(run.workdir, ignore_errors=True)
+            if built.workdir is not None:
+                shutil.rmtree(built.workdir, ignore_errors=True)
 # --- end MVP ---
