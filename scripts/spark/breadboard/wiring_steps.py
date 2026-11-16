@@ -9,9 +9,10 @@ rows. Then each point gets an anchor (its first part pin, else its first resisto
 pin's jumper, or a rail when its ends do not fit one row), and every other end joins the anchor in one step: a jumper,
 or a resistor leg. Spark claims no row numbers, no rail colour and no side of the gap, because it does not know them.
 
-`BreadboardSteps.numbered()` is the one source of the step numbers: the step list and the diagram read it, and so does
-a page that shows the steps as data (P826). A renderer (`NumberedList`, `MermaidDiagram`, a later drawing such as P267)
-takes the steps and gives lines; it never decides the wiring again, and a new one needs no change here.
+`BreadboardSteps.numbered()` numbers the steps for the step list and the diagram, and gives the data a page reads
+(P826); the drawing (`drawing.py`) and the bench changes (`bench_changes.py`) number `anchored()` themselves. A
+renderer (`NumberedList`, `MermaidDiagram`, a later drawing such as P267) takes the steps and gives lines; it never
+decides the wiring again, and a new one needs no change here.
 """
 
 import collections

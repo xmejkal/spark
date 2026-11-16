@@ -23,8 +23,8 @@ BeforePowerItem = collections.namedtuple("BeforePowerItem", "kind subject pin re
 
 
 class BeforePower:
-    """Value: the items, in the sheet's order, and the design's record ids, sorted: each record `parts.py --show` shows
-    whole."""
+    """Value: the items, in the sheet's order, and the design's record ids, each of which `parts.py --show` shows whole;
+    `of` sorts them."""
 
     def __init__(self, items, records):
         self.items = list(items)
