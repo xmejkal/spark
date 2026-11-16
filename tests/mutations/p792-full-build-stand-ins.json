@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P792: the full build gives the converter no --add-netlist",
+  "find": "([\"--add-netlist\", str(sim_dir / board_alone_input.NETLIST)] if given.wired else [])",
+  "replace": "[]"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P792: the full build trusts that the converter wired every stand-in it was given",
+  "find": "stand_ins = board_alone_input.wired_in(diagram, given.wired)",
+  "replace": "stand_ins = given.wired"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P792: every_part_skipped reads the mapping after the stand-ins joined it",
+  "find": "skipped = every_part_skipped(mapping)",
+  "replace": "skipped = every_part_skipped(dict(mapping, **(given.files[sim_project.MAPPING_FILE] if given.wired else {})))"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P792: the unwired-diagram check counts the stand-ins' wires",
+  "find": "if wires_in(diagram, {part[\"_instance\"] for part in stand_ins}) == 0 and not skipped:",
+  "replace": "if wires_in(diagram) == 0 and not skipped:"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P792: wires_in counts a wire to a part it was told to leave out",
+  "find": " or str(end).split(\":\")[0] in apart for end",
+  "replace": " for end"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P792: the stand-ins' mapping entries do not join the mapping file",
+  "find": "dict(mapping, **stand_in_files.get(sim_project.MAPPING_FILE, {}))",
+  "replace": "dict(mapping)"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P792: the full build's limits say no stand-in is wired",
+  "find": "write_limits(sim_dir, loaded, board, onboard_parts.say_wired_gpios(stand_ins))",
+  "replace": "write_limits(sim_dir, loaded, board, {})"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P792: an older converter that wired no stand-in goes unsaid",
+  "find": "if len(stand_ins) < len(given.wired):",
+  "replace": "if False:"
+ }
+]
