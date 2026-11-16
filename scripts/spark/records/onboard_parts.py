@@ -1,5 +1,6 @@
 """
-Library for the board's own LED and button as wired parts of a board-only build's Wokwi diagram (P484, #663): which rows
+Library for the board's own LED and button as wired parts of a build's Wokwi diagram, board-only (P484, #663) or full
+(P792, #1100): which rows
 of the board record's `pin_roles` spark wires, and the sentence each wired GPIO gives the limits. The build area reads it:
 `board_alone_input` makes the converter's input from these parts. `limits_of_board` is what a passed run does not test
 of the board's own parts, the one answer the pick, the build and the look give (P778).
@@ -40,7 +41,7 @@ ONBOARD_PARTS = {
 
 class OnboardPartReader:
     """
-    Value: the board's own parts that spark wires into a board-only build's Wokwi diagram, from the board record alone.
+    Value: the board's own parts that spark wires into a build's Wokwi diagram (both builds, P792), from the board record alone.
     Given the record; reads no file, writes nothing, never raises. Only a stand-in board (`wokwi_is_stand_in`) gets them:
     spark's record then says the Wokwi part is another board's, so the board's own LED and button are absent from it. For
     any other board spark's records do not say the Wokwi part lacks them, so nothing is wired.
@@ -93,8 +94,8 @@ def limits_of_board(board, roles, wired, definitions=None, key=None):
     What a passed run does not test of the board's own parts, for the pick, the build and the look alike (P778):
     `board_records.role_limits`, {role: [(component, sentence)]}, when `roles` is a list, else `board_records.onboard_limits`,
     the pairs of every role. `wired` is {gpio: sentence} for the GPIOs spark wires in the diagram (`say_wired_gpios`): {} when
-    nothing is wired (the full build, whose diagram holds no stand-in until P792 #1100), None for those `OnboardPartReader`
-    gives this board (the board-only build, and the pick, which says the board-only build's truth). `definitions` and `key`
+    a converter wired none (a project's own converter older than P792), None for those `OnboardPartReader` gives this
+    board (the pick, which says what both builds wire, P792). `definitions` and `key`
     are `role_limits`'s memo. It reads the board's Wokwi definition from the store and nothing else, and never raises.
     """
     if wired is None:

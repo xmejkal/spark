@@ -141,6 +141,26 @@ class TheBundleConvertsOnNodeTest(unittest.TestCase):
                                         "--chips", str(self.chips), *extra],
                               cwd=str(self.chips.parent), capture_output=True, text=True, timeout=120, env=env)
 
+    def write_circuit(self, parts, nets):
+        """A circuit.json at `self.circuit` of `parts` ({name: [pin]}) and `nets` ([(name, ["Part:pin"])])."""
+        import json
+        elements, port_ids = [], {}
+        for index, (name, pins) in enumerate(parts.items()):
+            elements.append({"type": "source_component", "source_component_id": "source_component_%d" % index,
+                             "name": name, "ftype": "simple_chip"})
+            for number, pin in enumerate(pins, 1):
+                port = "source_port_%d_%d" % (index, number)
+                port_ids["%s:%s" % (name, pin)] = port
+                elements.append({"type": "source_port", "source_port_id": port,
+                                 "source_component_id": "source_component_%d" % index, "name": "pin%d" % number,
+                                 "pin_number": number, "port_hints": [pin, "pin%d" % number]})
+        for index, (net_name, members) in enumerate(nets):
+            elements.append({"type": "source_net", "source_net_id": "source_net_%d" % index, "name": net_name})
+            elements.append({"type": "source_trace", "source_trace_id": "source_trace_%d" % index,
+                             "connected_source_port_ids": [port_ids[m] for m in members],
+                             "connected_source_net_ids": ["source_net_%d" % index]})
+        self.circuit.write_text(json.dumps(elements))
+
     @unittest.skipUnless(node(), "node is not installed")
     def test_it_writes_a_diagram_and_then_finds_it_up_to_date(self):
         import tempfile
@@ -167,25 +187,8 @@ class TheBundleConvertsOnNodeTest(unittest.TestCase):
         here = Path(tempfile.mkdtemp())
         self.circuit, self.out, self.chips = here / "circuit.json", here / "diagram.json", here / "chips"
         self.chips.mkdir()
-        parts = {"Mcu": ["SDA", "GND1"], "Valve1": ["SIGNAL", "GND"], "DcBarrelJack12vInlet": ["VIN", "GND"]}
-        nets = [("VALVE1", ["Mcu:SDA", "Valve1:SIGNAL"]),
-                ("GND", ["Mcu:GND1", "Valve1:GND", "DcBarrelJack12vInlet:GND"])]
-        elements, port_ids = [], {}
-        for index, (name, pins) in enumerate(parts.items()):
-            elements.append({"type": "source_component", "source_component_id": "source_component_%d" % index,
-                             "name": name, "ftype": "simple_chip"})
-            for number, pin in enumerate(pins, 1):
-                port = "source_port_%d_%d" % (index, number)
-                port_ids["%s:%s" % (name, pin)] = port
-                elements.append({"type": "source_port", "source_port_id": port,
-                                 "source_component_id": "source_component_%d" % index, "name": "pin%d" % number,
-                                 "pin_number": number, "port_hints": [pin, "pin%d" % number]})
-        for index, (net_name, members) in enumerate(nets):
-            elements.append({"type": "source_net", "source_net_id": "source_net_%d" % index, "name": net_name})
-            elements.append({"type": "source_trace", "source_trace_id": "source_trace_%d" % index,
-                             "connected_source_port_ids": [port_ids[m] for m in members],
-                             "connected_source_net_ids": ["source_net_%d" % index]})
-        self.circuit.write_text(json.dumps(elements))
+        self.write_circuit({"Mcu": ["SDA", "GND1"], "Valve1": ["SIGNAL", "GND"], "DcBarrelJack12vInlet": ["VIN", "GND"]},
+                           [("VALVE1", ["Mcu:SDA", "Valve1:SIGNAL"]), ("GND", ["Mcu:GND1", "Valve1:GND", "DcBarrelJack12vInlet:GND"])])
         mapping = here / "wokwi-mapping.json"
         mapping.write_text(json.dumps({
             "Valve1": {"wokwiType": "wokwi-led", "pins": {"SIGNAL": "A", "GND": "C", "VCC": None}},
@@ -196,6 +199,38 @@ class TheBundleConvertsOnNodeTest(unittest.TestCase):
         self.assertIn("wokwi-led", [part["type"] for part in diagram["parts"]])
         self.assertTrue(any("valve1:A" in "%s-%s" % (wire[0], wire[1]) for wire in diagram["connections"]),
                         "the record's pin map did not reach the wires")
+    @unittest.skipUnless(node(), "node is not installed")
+    def test_a_full_build_s_stand_ins_reach_the_diagram_and_a_scenario_may_press_one(self):
+        # P792: the FireBeetle's own LED and button, from the netlist spark writes for them, beside a project's part;
+        # the scenario's part-id check (P399) then finds onboard_button, with no Wokwi run.
+        import json
+        import tempfile
+        from spark.build import board_alone_input
+        from spark.firmware import sim_project
+        from spark.firmware.scenario_steps import ScenarioSteps
+        from spark.records import board_records
+        from spark.records.onboard_parts import OnboardPartReader
+        here = Path(tempfile.mkdtemp())
+        self.circuit, self.out, self.chips = here / "circuit.json", here / "diagram.json", here / "chips"
+        self.chips.mkdir()
+        self.write_circuit({"Mcu": ["SDA", "GND1"], "Valve1": ["SIGNAL", "GND"]},
+                           [("VALVE1", ["Mcu:SDA", "Valve1:SIGNAL"]), ("GND", ["Mcu:GND1", "Valve1:GND"])])
+        reader = OnboardPartReader(board_records.load(ROOT, "firebeetle2-esp32s3"))
+        files, why = board_alone_input.make_converter_input(reader.parts(), reader.ground(), ROOT)
+        self.assertIsNone(why)
+        mapping, netlist = here / "wokwi-mapping.json", here / board_alone_input.NETLIST
+        mapping.write_text(json.dumps(dict(files[sim_project.MAPPING_FILE], Valve1={"wokwiType": "wokwi-led", "pins": {"SIGNAL": "A", "GND": "C"}})))
+        netlist.write_text(json.dumps(files[board_alone_input.NETLIST]))
+        done = self.convert("--mapping", str(mapping), "--add-netlist", str(netlist))
+        self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
+        diagram = json.loads(self.out.read_text())
+        self.assertEqual(board_alone_input.wired_in(diagram, reader.parts()), reader.parts())
+        wires = [wire[:2] for wire in diagram["connections"]]
+        self.assertIn(["mcu:47", "onboard_button:1.l"], wires)
+        self.assertTrue(any("valve1:A" in wire for wire in wires), wires)
+        pressed = ScenarioSteps.from_text("name: x\nversion: 1\nsteps:\n  - set-control: { part-id: onboard_button, name: pressed, value: 1 }\n")
+        self.assertEqual(set(pressed.component_ids) - set(sim_project.component_ids_in(self.out).ids), set())
+
 
 if __name__ == "__main__":
     unittest.main()

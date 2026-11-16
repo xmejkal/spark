@@ -458,7 +458,7 @@ def board_alone(board, workdir, firmware=None, project=None, runner=None):
     """
     The stages after `board` for a project that runs on the board alone (P236): parts, schematic, footprint and build are
     SKIPPED, never ok. The converter wires the board's own LED and button that `onboard_parts` gives (P484), as `BuildService` does;
-    with none, the diagram holds the board's part alone. A limit "not checked" stays a limit in an ok stage (P396, P37).
+    with none, the diagram holds the board's part alone. The full build adds the same parts to its circuit (P792). A limit "not checked" stays a limit in an ok stage (P396, P37).
     """
     skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", board_emitter.SCHEMATIC_STAGE, board_emitter.FOOTPRINT_STAGE, "build")]
     if not board.get("wokwi_part_type"):
