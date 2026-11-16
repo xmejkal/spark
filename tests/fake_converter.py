@@ -2,7 +2,8 @@
 A stand-in for the diagram converter (circuit-to-wokwi) in the design goldens (P699), so no golden runs node or the
 real bundle. Like the converter, it is given `--circuit` or `--netlist`, `--out`, `--mapping` and `--chips`, and it
 writes a diagram to `--out`: one canned diagram, the board, a red LED and a button, its serial port wired to Wokwi's
-serial monitor. It prints nothing and exits 0.
+serial monitor. Given `--add-netlist` (P792), it adds a part for each added component that is no board, its id the
+component's name in lower case, as the converter names it. It prints nothing and exits 0.
 """
 
 import json
@@ -28,6 +29,10 @@ DIAGRAM = {
 }
 
 args = sys.argv[1:]
+if "--add-netlist" in args:
+    with open(args[args.index("--add-netlist") + 1]) as added:
+        DIAGRAM["parts"] += [{"type": "wokwi-stand-in", "id": component["name"].lower(), "top": 0, "left": 240, "attrs": {}}
+                             for component in json.load(added)["components"] if component["type"] != "board"]
 with open(args[args.index("--out") + 1], "w") as out:
     json.dump(DIAGRAM, out, indent=2)
     out.write("\n")

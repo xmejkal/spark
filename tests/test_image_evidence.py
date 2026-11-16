@@ -357,13 +357,13 @@ class PassedRunEvidenceTest(unittest.TestCase):
         (self.project / "boards" / "firebeetle2-esp32s3.json").write_text(json.dumps(board))
         (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": parts}))
 
-    def test_a_design_with_parts_says_the_full_build_s_truth_and_a_board_only_design_the_board_only_build_s(self):
-        # P778 PR round: the full build wires none of the board's own parts (P792 will), the board-only build wires them
+    def test_a_design_with_parts_and_a_board_only_design_both_say_the_stand_in_is_wired(self):
+        # P778 PR round, P792: both builds wire the board's own parts, so the look says so with parts or without
         self.firebeetle_with_its_definition(["led-red-5mm"])
         found = NoSimulationEvidence(self.project).find_limits(self.image)
         self.assertEqual(found[0], ("LedRed5mm", "Wokwi's LED: lights on current; its forward voltage and brightness are not this part's"))
-        self.assertIn(self.STAND_IN_BUTTON, found)
-        self.assertNotIn(self.WIRED_BUTTON, found)
+        self.assertIn(self.WIRED_BUTTON, found)
+        self.assertNotIn(self.STAND_IN_BUTTON, found)
         (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [], "board_only": True}))
         found = NoSimulationEvidence(self.project).find_limits(self.image)
         self.assertIn(self.WIRED_BUTTON, found)

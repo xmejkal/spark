@@ -386,14 +386,13 @@ class NoSimulationEvidence(ImageEvidence):
     def find_limits(self, image):
         """The sim_project.Limit list of the project from its records (P778): `sim_project.limits_of` of the design its
         requirements.json loads, then `onboard_parts.limits_of_board` of its board, as the build of that design says them
-        (nothing wired with parts, the board's own parts wired without). [] when the file or the board does not load, and
-        then `caveats` says so."""
+        (the board's own parts wired with parts or without, P792). [] when the file or the board does not load, and then
+        `caveats` says so."""
         design, _ = self._design()
         if design is None:
             return []
-        wired = {} if design.parts else None  # a full build wires none of the board's own parts; a board-only build wires them (P778)
         return [sim_project.Limit(component, sentence)
-                for component, sentence in sim_project.limits_of(design) + onboard_parts.limits_of_board(design.board, None, wired)]
+                for component, sentence in sim_project.limits_of(design) + onboard_parts.limits_of_board(design.board, None, None)]
 
     def find_unnamed_must(self, image, must):
         """The UnnamedMust of every `must` line: no run, so no scenario named any of them."""

@@ -19,6 +19,7 @@ points are.
 ```
 circuit.json                    or a netlist already written as JSON (--netlist)
      │  lib/netlist.ts          extract what is logically true (buildNetlist), or check the file's two lists (readNetlist)
+     │                          and add a second netlist's parts and nets (addNetlist, --add-netlist)
      ▼
   Netlist  ◄── the intermediate representation: every future emitter reads this, and only this
      │
@@ -125,6 +126,11 @@ the two), through `readNetlist` in `lib/netlist.ts`, which checks only its `comp
 spine writes one for a board-only build, which has no circuit.json: the board as `Mcu` and its own LED and button,
 each wired to its GPIO's pin and to ground ([P484](https://github.com/xmejkal/spark/issues/663)). The emitter, the
 merge and the validation treat it as they treat a netlist read from a circuit.
+
+`--add-netlist <file>` adds a second `Netlist` to either source, through `addNetlist`
+([P792](https://github.com/xmejkal/spark/issues/1100)). The spark spine gives it the same board and onboard parts for a
+full build of a stand-in board. The added board component (type `board`) is the design's component of the same name.
+Any other added component must be new, in any capitals, because the emitter names a Wokwi part by its name in lower case.
 
 ## Deliberate non-goals
 

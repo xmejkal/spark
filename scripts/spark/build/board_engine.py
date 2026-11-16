@@ -218,7 +218,8 @@ def simulation_could_not_look(said):
 
 def convert(project, own, source, sim_dir, runner=None):
     """
-    The converter run on `source` (["--circuit", path] or ["--netlist", path]) and what `sim_dir` holds, merging into the
+    The converter run on `source` (["--circuit", path] or ["--netlist", path], with ["--add-netlist", path] after it for
+    a stand-in board's own parts, P792) and what `sim_dir` holds, merging into the
     person's kept diagram (P482): (the diagram, None, the merge notes), or (None, the Stage that stopped it, ""), a run past
     CONVERTER_TIMEOUT_S among them (P664). `sim_dir` is the work folder's `sim/`; `runner` runs the command, as `LimitedRun`'s.
     """

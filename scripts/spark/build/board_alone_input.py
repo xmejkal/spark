@@ -1,6 +1,7 @@
 """
-The converter's input for a board-only build (P484, P708): what `build_service.board_alone` writes into `sim/` before any
-converter runs. It reads the wired parts of `onboard_parts` and their records, and writes nothing.
+The converter's input for the board's own LED and button on a stand-in board (P484, P708): what `build_service.board_alone`
+writes into `sim/` before any converter runs, and what the full build adds to its circuit with `--add-netlist` (P792). It
+reads the wired parts of `onboard_parts` and their records, and writes nothing.
 """
 
 from typing import NamedTuple, Optional
@@ -8,12 +9,18 @@ from typing import NamedTuple, Optional
 from spark.breadboard import sheet
 from spark.design import loader
 from spark.firmware import sim_project
+from spark.records import onboard_parts
 from spark.records.onboard_parts import OnboardPartReader
 
 # --- MVP ---
 #: The netlist's file name in the simulation project. The board's component name is `sheet.BOARD_COMPONENT`, the
 #: name the converter's `lib/mapping.ts` matches (a test reads both).
 NETLIST = "netlist.json"
+
+#: The line a full build adds when a stand-in it gave the converter is not in the diagram (`%s`: their roles): a project's
+#: own converter older than P792 ignores `--add-netlist`, and its limits then say those parts are not wired.
+NOT_WIRED_BY_OLDER_CONVERTER = ("the diagram holds no stand-in for %s: a project's own converter older than P792 does "
+                                "not wire the board's own LED and button")
 
 
 class BoardAloneResult(NamedTuple):
@@ -75,4 +82,50 @@ def make_converter_input(parts, ground, project):
         mapping[role] = {"wokwiType": wokwi["part"], "pins": wokwi.get("pins") or {}, "attrs": wokwi.get("attrs") or {}}
     netlist = {"components": components, "nets": nets + [{"id": "ground", "name": "GND", "members": grounds}]}
     return {sim_project.MAPPING_FILE: mapping, NETLIST: netlist}, None
+
+
+def wired_in(diagram, parts):
+    """The `parts` (`OnboardPartReader.parts`) whose role is a part id in `diagram`: the stand-ins a converter wired."""
+    ids = {part.get("id") for part in (diagram or {}).get("parts") or [] if isinstance(part, dict)}
+    return [part for part in parts if part["_instance"] in ids]
+
+
+class StandInsFound(NamedTuple):
+    """
+    Value: what a full build's diagram holds of the stand-ins it gave the converter. `ids` are their part ids, which the
+    unwired check leaves out; `gpios` is `onboard_parts.say_wired_gpios`'s {gpio: sentence} for the limits; `note` is ""
+    or the line NOT_WIRED_BY_OLDER_CONVERTER, for the stage's detail.
+    """
+
+    ids: set
+    gpios: dict
+    note: str
+
+
+class OnboardStandIns:
+    """
+    Value: the board's own LED and button that a full build adds to its circuit (P792), as the board-only build wires
+    them. Given the board record and the project; reads the parts' records once, writes nothing, runs nothing.
+    """
+
+    def __init__(self, board, project):
+        self.given = read_board_alone(board, project)
+        self.why = self.given.why
+
+    def files(self, mapping):
+        """{file name: JSON value} for `sim/`: `mapping` with the stand-ins' entries, and NETLIST when one is wired."""
+        if not self.given.wired:
+            return {sim_project.MAPPING_FILE: mapping}
+        return {sim_project.MAPPING_FILE: dict(mapping, **self.given.files[sim_project.MAPPING_FILE]), NETLIST: self.given.files[NETLIST]}
+
+    def source(self, sim_dir):
+        """The converter's arguments that add the stand-ins' netlist in `sim_dir`, or [] when none is wired."""
+        return ["--add-netlist", str(sim_dir / NETLIST)] if self.given.wired else []
+
+    def found_in(self, diagram):
+        """The StandInsFound of the diagram the converter wrote."""
+        found = wired_in(diagram, self.given.wired)
+        missing = [part["_instance"] for part in self.given.wired if part not in found]
+        note = "\n           " + NOT_WIRED_BY_OLDER_CONVERTER % " and ".join(missing) if missing else ""
+        return StandInsFound({part["_instance"] for part in found}, onboard_parts.say_wired_gpios(found), note)
 # --- end MVP ---
