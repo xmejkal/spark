@@ -255,9 +255,10 @@ TERMINAL_CLASSES = ("Terminal", "TerminalReporter")
 #: Renderer rendered (P442). A nested def or a method of that name elsewhere is counted.
 TERMINAL_FUNCTIONS = (("scripts/spark/core/cli.py", "run_cli"),)
 #: X2: what prints, reads or ends the program, by what a name or an attribute stands for, so that `p = print`, `builtins.print`,
-#: `os.write`, `exit()` and `from sys import exit` count too (P459).
+#: `os.write`, `exit()` and `from sys import exit` count too (P459). Names are read by file, not by scope: a local or a
+#: parameter named `input`, `exit`, `quit` or `print` counts as well.
 OUTPUT_NAMES = {"print", "input", "exit", "quit", "builtins.print", "builtins.input", "builtins.exit", "builtins.quit",
-                "sys.stdin", "sys.stdout", "sys.stderr", "sys.exit", "os.write", "os._exit"}
+                "sys.stdin", "sys.stdout", "sys.stderr", "sys.__stdout__", "sys.__stderr__", "sys.exit", "os.write", "os._exit"}
 #: X2: the modules whose names a `from M import name` brings in under another name.
 OUTPUT_MODULES = ("builtins", "os", "sys")
 EXCEPTION_NAMES = {name for name, value in vars(builtins).items() if isinstance(value, type) and issubclass(value, BaseException)}
