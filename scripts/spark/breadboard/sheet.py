@@ -174,12 +174,13 @@ def _parts_table(board, design_parts, resistors, supplies, have):
     return rows + ["| | a breadboard and jumper wires | | %s |" % status(None), "", LEGEND]
 
 
-def _supplies(circuit):
-    """{net name: the parts on it} for each point that carries a named net and no board pin: a supply from off the board."""
+def _supplies(circuit, parts):
+    """{net name: the parts on it} for each point with a named net and no board pin: a supply from off the board,
+    unless a part makes that net on the board (`wiring_steps.off_board_supplies`, P860)."""
     found = {}
     for point in wiring_steps.points(circuit):
         if point.nets and not any(component["name"] == BOARD_COMPONENT for component, _ in point.members):
-            for net in point.nets:
+            for net in wiring_steps.off_board_supplies(point.nets, parts):
                 found.setdefault(net, set()).update(component["name"] for component, _ in point.members)
     return found
 
@@ -230,7 +231,8 @@ def wiring_data(requirements_path, circuit_path=None, read=None):
     """WiringData for a requirements file whose project has been built with --keep (or its circuit). With no `read`, it
     reads the build and refuses as the sheet does (NotBuiltError)."""
     read = read or _read_build(requirements_path, circuit_path)
-    return WiringData(read.steps.numbered(), before_power.BeforePower.of(read.built.parts, _supplies(read.circuit)))
+    parts = read.built.parts
+    return WiringData(read.steps.numbered(), before_power.BeforePower.of(parts, _supplies(read.circuit, parts)))
 
 
 def _drawing_inputs(read):
@@ -337,7 +339,7 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
     read = read or _read_build(requirements_path, circuit_path)
     planned = planned or _plan_once(read)
     built, circuit, resistors, steps = read.built, read.circuit, read.resistors, read.steps
-    supplies = _supplies(circuit)
+    supplies = _supplies(circuit, built.parts)
     have = _have(requirements_path, {part["id"] for part in built.parts} | {built.board.get("id")})
     lines = ["# Breadboard: %s, on a %s" % (requirements_path.resolve().parent.name, built.board.get("name")), "",
              "## Parts", ""]

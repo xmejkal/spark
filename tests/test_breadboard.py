@@ -31,6 +31,7 @@ import breadboard  # noqa: E402
 from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 from spark.design import loader  # noqa: E402
+from spark.design import power_rails  # noqa: E402
 from spark.records import store  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
@@ -103,6 +104,42 @@ class TheSheetTest(unittest.TestCase):
 
 MOTOR = ROOT / "tests" / "data" / "breadboard" / "motor"
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
+AMPLIFIER = ROOT / "tests" / "data" / "breadboard" / "amplifier"
+
+
+class TheAmplifierTest(unittest.TestCase):
+    """P860: the DFR0954 drives SPEAKER_P and SPEAKER_N from its own supply, so the sheet asks for no supply on them."""
+
+    def setUp(self):
+        self.project = Path(tempfile.mkdtemp()) / "amplifier"
+        shutil.copytree(AMPLIFIER, self.project)
+        with in_store(Path(tempfile.mkdtemp())):
+            self.text = sheet.sheet(self.project / "requirements.json")
+
+    def test_an_amplifier_s_outputs_are_no_supply_from_off_the_board(self):
+        # P711's walk 1: steps 11 and 13 said to connect a supply to the amplifier's speaker outputs.
+        for net in ("SPEAKER_P", "SPEAKER_N"):
+            with self.subTest(net=net):
+                self.assertNotIn("what feeds %s" % net, self.text)
+                self.assertNotIn("the %s supply" % net, self.text)
+                self.assertNotIn("%s comes from off the board" % net, self.text)
+
+    def test_a_part_makes_on_the_board_what_it_drives_from_power_it_draws(self):
+        amplifier, inlet = (json.loads((ROOT / "parts" / name).read_text())
+                            for name in ("max98357a-dfr0954.json", "jst-ph-2-power-inlet.json"))
+        regulator = {"id": "a-regulator", "power": [{"pin": "VIN", "rail": "motor", "direction": "in"},
+                                                     {"pin": "VOUT", "rail": "logic", "direction": "out"},
+                                                     {"pin": "GND", "rail": "ground", "direction": "in"}]}
+        self.assertEqual(power_rails.rails_made_on_board([amplifier]), {"SPEAKER_P", "SPEAKER_N"})
+        self.assertEqual(power_rails.rails_made_on_board([inlet]), set())  # its supply comes from off the board
+        self.assertEqual(power_rails.rails_made_on_board([inlet, regulator]), {"V33"})
+        grounded_only = {"id": "x", "power": [{"pin": "GND", "rail": "ground"},
+                                              {"pin": "OUT", "rail": "motor", "direction": "out"}]}
+        self.assertEqual(power_rails.rails_made_on_board([grounded_only]), set())  # a ground, "in" by default, draws none
+
+    def test_the_speaker_terminal_is_still_wired_to_the_amplifier(self):
+        self.assertIn("Run a jumper from the row of SpeakerTerminal SPK_P to the row of Max98357aDfr0954 SPK_P.", self.text)
+        self.assertIn("Run a jumper from the row of SpeakerTerminal SPK_N to the row of Max98357aDfr0954 SPK_N.", self.text)
 
 
 class TheMotorExampleTest(unittest.TestCase):

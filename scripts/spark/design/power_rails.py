@@ -346,6 +346,15 @@ def rails_driven_by(part_list):
             if supply.get("direction") == "out" and net not in GROUND_NETS}
 
 
+def rails_made_on_board(part_list):
+    """The driven nets a part makes from power it draws on this board: an amplifier's outputs, a regulator's VOUT
+    (P860). A part with no power input, such as an inlet or a battery, only passes in a supply from off the board."""
+    powered = {id(part) for part, supply, net in power_connections(part_list)
+               if supply.get("direction", "in") == "in" and net not in GROUND_NETS}
+    return {net for part, supply, net in power_connections(part_list)
+            if id(part) in powered and supply.get("direction") == "out" and net not in GROUND_NETS}
+
+
 def mcu_power_nets(board, part_list):
     """
     The module's own power pads, as (pad, net, wired): which ones this board joins, and to what.

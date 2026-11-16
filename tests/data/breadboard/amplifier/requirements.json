@@ -1,0 +1,7 @@
+{
+  "board": "firebeetle2-esp32s3",
+  "parts": [
+    "max98357a-dfr0954",
+    "speaker-terminal"
+  ]
+}
