@@ -142,6 +142,38 @@ def cli(*argv, outside=None):
     return code, out.getvalue(), err.getvalue()
 
 
+class Told(Toy):
+    summary = "The toy's own sentence."
+    details = "The toy's own paragraph."
+
+
+class TheHelpTextTest(unittest.TestCase):
+    """P481: `parser_for` takes the Operation's summary and details, and a CLI's own text where it gives one."""
+
+    def parsed(self, text, operation):
+        from spark.core.cli import parser_for
+        parser = parser_for(text, operation)
+        return parser.description, parser.epilog
+
+    def test_a_clis_own_sentence_beats_the_operations_summary(self):
+        self.assertEqual(self.parsed(HelpText("x", "own sentence"), Told())[0], "own sentence")
+
+    def test_no_sentence_of_its_own_takes_the_operations_summary(self):
+        self.assertEqual(self.parsed(HelpText("x"), Told())[0], "The toy's own sentence.")
+
+    def test_the_details_stand_before_the_clis_text_after_one_blank_line(self):
+        self.assertEqual(self.parsed(HelpText("x", epilog="Exit codes."), Told())[1], "The toy's own paragraph.\n\nExit codes.")
+
+    def test_no_details_and_no_text_give_no_epilog(self):
+        self.assertIsNone(self.parsed(HelpText("x", "s", None), Toy())[1])
+        self.assertIsNone(self.parsed(HelpText("x", "s", ""), Toy())[1])
+
+    def test_one_of_the_two_gives_that_one_alone(self):
+        self.assertEqual(self.parsed(HelpText("x", "s", "Exit codes."), Toy())[1], "Exit codes.")
+        self.assertEqual(self.parsed(HelpText("x", "s", None), Told())[1], "The toy's own paragraph.")
+        self.assertEqual(self.parsed(HelpText("x", "s", ""), Told())[1], "The toy's own paragraph.")
+
+
 class RunCliTest(unittest.TestCase):
     def test_ok_prints_the_lines_without_json_and_the_envelope_with_it_and_exits_0(self):
         self.assertEqual(cli("--what", "ok", "--left"), (0, "  what   ok\n  left   True\n", ""))

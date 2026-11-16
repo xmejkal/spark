@@ -77,6 +77,9 @@ class Operation:
     #: The one sentence a catalogue or an MCP tool description prints (P726 PR 3); None takes the help of the Argument whose
     #: flag is `--<name>`, which every parts.py Operation has.
     summary = None
+    #: The long text of what the Operation does, the paragraphs after the arguments in `--help` (P481), or None. The
+    #: frontend's own text (its `--json`, a bad flag, its exit codes) is not in it.
+    details = None
     arguments = ()
     effects = ()
     #: The keys of `data` the Operation answers with, for `--describe` and an agent that reads it (P726 PR 3; it was parts.py's

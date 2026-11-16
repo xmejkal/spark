@@ -1,0 +1,110 @@
+[
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: a CLI with no description of its own shows no sentence in --help",
+  "find": "    description = operation.summary if text.description is None else text.description",
+  "replace": "    description = text.description"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: a CLI's own sentence gives way to the Operation's summary",
+  "find": "    description = operation.summary if text.description is None else text.description",
+  "replace": "    description = operation.summary if text.description is None else operation.summary"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: --help leaves out the Operation's details",
+  "find": "    said = [part for part in (operation.details, text.epilog) if part]",
+  "replace": "    said = [part for part in (text.epilog,) if part]"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: an empty epilog of the CLI adds a stray blank line after the details",
+  "find": "    said = [part for part in (operation.details, text.epilog) if part]",
+  "replace": "    said = [part for part in (operation.details, text.epilog) if part is not None]"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: no details and no epilog give an empty epilog, not None",
+  "find": "epilog=\"\\n\\n\".join(said) if said else None,",
+  "replace": "epilog=\"\\n\\n\".join(said),"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: no blank line stands between the details and the CLI's text",
+  "find": "epilog=\"\\n\\n\".join(said) if said else None,",
+  "replace": "epilog=\"\\n\".join(said) if said else None,"
+ },
+ {
+  "file": "scripts/spark/core/operation_help_table.py",
+  "name": "P481: a | in a help breaks the page's table",
+  "find": "argument.help.replace(\"|\", \"\\\\|\"))",
+  "replace": "argument.help)"
+ },
+ {
+  "file": "scripts/spark/core/operation_help_table.py",
+  "name": "P481: the page block lists --json, which is the frontend's",
+  "find": "for argument in operation.arguments if argument.dest != JSON_DEST]",
+  "replace": "for argument in operation.arguments]"
+ },
+ {
+  "file": "scripts/spark/core/operation_help_table.py",
+  "name": "P481: a bool flag shows a value it does not take",
+  "find": "    if argument.kind is bool:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a second start before the end is written as one block",
+  "find": "            if name is not None:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a start without its end at the page's end drops the rest of the page",
+  "find": "    if name is not None:\n        raise",
+  "replace": "    if False:\n        raise"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a name no table holds crashes, unnamed",
+  "find": "            if name not in operations:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: an Operation with no summary crashes, unnamed",
+  "find": "            if operations[name].summary is None:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: an end without its start is named as the wrong end",
+  "find": "        elif name is None:",
+  "replace": "        elif False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: an end that names another Operation closes the block",
+  "find": "        elif marker[1] != name:",
+  "replace": "        elif False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a comment line with a typo in its marker is passed over in silence",
+  "find": "    raise BlockError(NOT_A_MARKER_MESSAGE % (page, number))",
+  "replace": "    return None"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a marker in a code fence is written over",
+  "find": "            fenced = not fenced",
+  "replace": "            fenced = False"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a sentence that quotes a marker is refused",
+  "find": "    if not (line.lstrip().startswith(COMMENT_START) and MARKER_WORD in line):",
+  "replace": "    if MARKER_WORD not in line:"
+ }
+]

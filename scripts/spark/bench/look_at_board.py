@@ -26,6 +26,38 @@ from spark.core.text_guards import guard_sentence
 SCRIPT = "look.py"
 #: The group of the two flags that pick the evidence: they exclude each other.
 EVIDENCE_GROUP = "evidence"
+#: What the look does, the paragraphs of look.py's `--help` before its `--json` and exit codes, line breaks and all
+#: (P481). Its two `--json` mentions stay until the other CLIs move (P481 PR 2).
+DETAILS = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash-id`. It writes nothing,
+erases nothing and changes no flash. The board restarts while esptool reads it: a running program stops and starts again.
+Nothing else on the board is touched. The board's record is the one requirements.json names. The look compares the chip
+and the flash size, and prints each as same, differs or unknown. It also prints the board's MAC, and on its micropython
+line the MicroPython banner of the image it would flash, read from the file, never from the board (P779).
+
+The verdict: another chip, or a flash smaller than the image, is a stop (deploy.py will refuse). A flash that differs
+but holds the image, or a field that is unknown, is a warning that the person must accept. The token is two halves of 4
+hex digits: one from the board's MAC and one from the image (the one a passed run names, or with --no-simulation, the
+image file). It shows that a look was made on this board for this image. It is not the yes and it is not a secret. With
+no MAC, no image or no evidence for the image, there is no token, and the line says why.
+
+For an image that a passed run tested, the look also prints what that run did not test (the caveats), and under "what this
+simulation cannot show, so test it on the board:" the limits of the project that sim/WHAT-THIS-CANNOT-SHOW.md holds, read
+from the limits section of every passed log. --json has them as data.limits, a list of {component, sentence}. With
+--no-simulation no log is read: the limits come from the project's records (requirements.json's parts and board, what the pick
+and the build read too), and a requirements file or board that does not load gives a caveat that contains "not checked:". An
+empty list is not a pass: it never means the project has none.
+Under "no scenario named these must lines, so test them on the board:" it lists each must line of .spark/project.json that no passed
+scenario named in a step's own name: key (--json: data.unnamed_must); with --no-simulation, every must line. [] is not a pass: when a
+log cannot say, a caveat that contains "not checked:" says so.
+
+With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a token
+even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it. --no-simulation gives a
+token for an image that no simulation tested: firmware/ has a main.py, every .py file compiles, no run in sim/runs/ failed on the image and the image holds
+firmware/ as it is now. Else it prints why not, and the command that builds the image. deploy.py needs the same flag.
+
+When esptool's read of the board fails, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
+port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
+and one next step for your hands, as the last line. Its look at the console can restart the board."""
 
 
 class LookAtBoard(Operation):
@@ -40,6 +72,8 @@ class LookAtBoard(Operation):
     """
 
     name = "look"
+    summary = "Read the board on USB without changing it, compare it with the project's board record, and print a token (P219)."
+    details = DETAILS
     arguments = (COMMON_ARGUMENTS["project"], COMMON_ARGUMENTS["port"],
                  Argument((IGNORE_OLDER_RUNS_FLAG,), "ignore_older_runs", bool,
                           "give a token even when a log in sim/runs/ tested another image (default: no token)", group=EVIDENCE_GROUP),

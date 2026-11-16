@@ -138,7 +138,7 @@ class WhatTheChoiceRemovesTest(unittest.TestCase):
 
     def test_every_always_run_test_exists_in_this_repository(self):
         texts = {found.stem: "" for found in (ROOT / "tests").glob("test_*.py")}
-        self.assertEqual(len(story_tests.select(["README.md"], texts, {}).modules), 17)
+        self.assertEqual(len(story_tests.select(["README.md"], texts, {}).modules), 18)
 
 
 if __name__ == "__main__":

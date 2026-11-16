@@ -1,0 +1,28 @@
+# P481 PR 1: the look's help comes from its Operation, and a page block renders it: rows
+
+Card: [P481 #660](https://github.com/xmejkal/spark/issues/660), PR [#1219](https://github.com/xmejkal/spark/pull/1219).
+Plan `~/.claude/plans/p481-help-from-operation.md` (round 1: lens Sonnet and refuter Opus; round 2: refuter Opus). The
+PR review: one lens (Sonnet, rows L1 to L10) and the refuter (Opus, rows R1 to R6), 0 must rows. `look.py --help` is
+byte-equal under Python 3.10 and 3.9 with `COLUMNS=100`, before and after. This file holds the acted, raised and
+rejected findings only (rules.md). 2026-11-16.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | L1: the `else text.description` branch of `parser_for` has no test and no row, so a CLI's own sentence could give way to the summary unseen | PR review, lens | acted | `test_core.TheHelpTextTest.test_a_clis_own_sentence_beats_the_operations_summary` and a row in `tests/mutations/p481-help-from-operation.json` |
+| 2 | L2: the epilog join has no test for its None cases, and parts.py's `""` epilog would leave a blank line after an Operation's details | PR review, lens | acted | `parser_for` filters with `if part`; three `TheHelpTextTest` tests (both empty give None, one gives that one alone); two rows. `--help` of parts, look, check_all, check_spine and boards is unchanged under 3.10 and 3.9 |
+| 3 | L3: a mistyped or Windows-line-end marker, a space after it and an end marker with no start are passed over in silence | PR review, lens | acted | `doc_blocks.fresh_text` reads the page line by line and refuses an end without its start, and a line that starts `<!--` and holds `spark:operation` but is no marker, each with the page and the line. A sentence that quotes a marker in backticks stays allowed, so a guide can name it. Tests and rows for each |
+| 4 | L4: the added doc sentences are single long lines, so the line budgets hold by count only | PR review, lens | acted | wrapped in `developing.md` and `patterns-and-names.md`. Cut for the budgets: in developing.md "The rules and the role words are in patterns-and-names.md" and "Each verb's `--help` says what it prints, posts and refuses"; in patterns-and-names.md "The core's own codes are in `spark.core.codes`" and the fakes paragraph's first sentence, which the role table's `Fake` row says. The marker stays in words in developing.md, because check_docs reads the end marker as a `/spark:` command (row 17) |
+| 5 | L5: the card's value line says one edit shows in `--help`, `input_schema()` and the block, which holds for an Argument only | PR review, lens | acted | on #660 by the session lead: the summary shows in `--help` and the block, `details` in `--help` only, an Argument in all three |
+| 6 | L6: the `PAGES` globs and the stale branch of `stale_pages` have no row | PR review, lens | rejected | a page that leaves `PAGES` fails the tree test at once, and the stale branch is tested (`test_a_changed_block_and_a_broken_one_are_each_named_and_nothing_is_written`) |
+| 7 | L7: `OperationHelpTable` mishandles a None summary, a newline or `<` in a help, and an `nargs` "+" or `repeats` value | PR review, lens | acted | its docstring names what it does not handle yet; a later PR of P481 handles each when a block needs it. A None summary is refused first by `doc_blocks` (row 11) |
+| 8 | L8: the tool's docstring does not give its exit codes | PR review, lens | acted | the module docstring names the pages it reads and the exits: 0 written or current, 1 refused. It prints nothing new |
+| 9 | L9: the `HelpText` comment has one line longer than its neighbours | PR review, lens | acted | rewrapped |
+| 10 | L10: patterns-and-names.md says every script's `main` takes `operation=None`, which six do not | PR review, lens | acted | "A script's `main` is one call of `run_cli`, and the look's takes `operation=None` (P481)" |
+| 11 | R1: a block for an Operation with no summary (five of the six bench Operations) crashes with a TypeError and no page | PR review, refuter | acted | a BlockError naming the page, the line and the Operation; `test_an_operation_with_no_summary_is_named_and_not_a_crash` and a row |
+| 12 | R2: a marker in a code fence is written over | PR review, refuter | acted | a line in a fence is never a marker; `test_a_marker_in_a_code_fence_is_an_example_and_stays` and a row |
+| 13 | R3: the tool writes a CRLF page back with LF line ends | PR review, refuter | rejected | no tracked file uses CRLF, and a CRLF marker line is now refused with its page and line (row 3) |
+| 14 | R4: some markers are skipped with no warning (an indent, a trailing space, a stray end), and developing.md does not name the folders the tool reads | PR review, refuter | acted | row 3's refusals; the tool's docstring names the folders (`PAGES`) |
+| 15 | R5: the sentence cut from commands/deploy.md also carried "with two boards on USB, the look lists them" | PR review, refuter | acted | the fact is back in a few words, after the block |
+| 16 | R6: the card's value line claims what the tests do not show, and says the plan's text is in the PR | PR review, refuter | acted | on #660 by the session lead |
+| 17 | `tools/check_docs.py` reads `/spark:operation` in a guide page as a command that does not exist, so the first block in `docs/guide/` or the README fails `test_docs` | build | raised | #660, PR 3 (the first block in `docs/guide/agents/scripts.md` fixes check_docs's command pattern or the marker) |
+| 18 | the plan put `main`'s signature at `patterns-and-names.md:83` and an always-run count in `docs/guide/map.md` | build | acted | the sentence is at line 87; map.md has no count and changed only to list `operation_help_table.py` |
