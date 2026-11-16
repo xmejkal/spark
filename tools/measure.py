@@ -254,6 +254,12 @@ TERMINAL_CLASSES = ("Terminal", "TerminalReporter")
 #: X2: the one function that prints in `scripts/spark/`, by file and top-level name: the CLI frontend, which prints what a
 #: Renderer rendered (P442). A nested def or a method of that name elsewhere is counted.
 TERMINAL_FUNCTIONS = (("scripts/spark/core/cli.py", "run_cli"),)
+#: X2: what prints, reads or ends the program, by what a name or an attribute stands for, so that `p = print`, `builtins.print`,
+#: `os.write`, `exit()` and `from sys import exit` count too (P459).
+OUTPUT_NAMES = {"print", "input", "exit", "quit", "builtins.print", "builtins.input", "builtins.exit", "builtins.quit",
+                "sys.stdin", "sys.stdout", "sys.stderr", "sys.exit", "os.write", "os._exit"}
+#: X2: the modules whose names a `from M import name` brings in under another name.
+OUTPUT_MODULES = ("builtins", "os", "sys")
 EXCEPTION_NAMES = {name for name, value in vars(builtins).items() if isinstance(value, type) and issubclass(value, BaseException)}
 #: T1: the calls of `time` that read the clock or sleep.
 CLOCK_CALLS = {"time", "time_ns", "monotonic", "monotonic_ns", "perf_counter", "perf_counter_ns", "process_time", "sleep",
@@ -273,7 +279,7 @@ RULES = {
     "T1": "only an Adapter runs a program, reads the clock or the environment, calls the network or writes a file",
     "T2": "a test file never adds a mock.patch (mock.patch.dict on os.environ is the exception)",
     "T4": "code never branches on what is imported, as in `\"unittest\" in sys.modules`",
-    "X2": "scripts/spark/ holds no main, print, input, stdin, stdout, stderr or exit outside a Renderer, the terminal adapter, the terminal reporter and run_cli",
+    "X2": "scripts/spark/ holds no main, print, input, stdin, stdout, stderr, exit, quit or os.write, by any name, outside a Renderer, the terminal adapter, the terminal reporter and run_cli",
     "U1": "a leaf imports nothing of spark, matching imports no drawer, and no script reads a moved guard from its old module",
     "C1": "a file name under scripts/ is unique, and an exception name ends in Error",
     "C3": "an exit code has no second name (no EXIT_ alias)",
@@ -406,6 +412,17 @@ def aliases_of(tree):
     return found
 
 
+def output_aliases(tree):
+    """X2's `aliases_of(tree)`, with `import builtins as b` and each name a `from builtins|os|sys import` binds."""
+    found = aliases_of(tree)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            found.update({a.asname: a.name for a in node.names if a.asname and a.name == "builtins"})
+        elif isinstance(node, ast.ImportFrom) and node.module in OUTPUT_MODULES:
+            found.update({a.asname or a.name: node.module + "." + a.name for a in node.names})
+    return found
+
+
 def _resolved(node, aliases):
     """`_dotted(node)` with its first name replaced by what an alias stands for."""
     first, _, rest = _dotted(node).partition(".")
@@ -511,16 +528,15 @@ def branch_on_imports(source, known):
 
 
 def output_in_spark(source, known):
-    """X2: main, print, input, sys.stdin, sys.stdout, sys.stderr, sys.exit, readline or SystemExit in scripts/spark/, outside the Renderers, the terminal consent, the terminal reporter and `run_cli`."""
+    """X2: main, a name of OUTPUT_NAMES, readline or SystemExit in scripts/spark/, outside the Renderers, the terminal consent, the terminal reporter and `run_cli`."""
     if not source.file.startswith("scripts/spark/"):
         return []
-    aliases, seen, exempt = aliases_of(source.tree), collections.Counter(), _terminal_functions(source)
+    aliases, seen, exempt = output_aliases(source.tree), collections.Counter(), _terminal_functions(source)
     for node in walk_outside(source.tree, lambda node: _may_print(node) or id(node) in exempt):
+        read = isinstance(node, ast.Attribute) or isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
         if isinstance(node, ast.FunctionDef) and node.name == "main":
             seen["main"] += 1
-        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in ("print", "input"):
-            seen[node.func.id] += 1
-        elif isinstance(node, ast.Attribute) and _resolved(node, aliases) in ("sys.stdin", "sys.stdout", "sys.stderr", "sys.exit"):
+        elif read and _resolved(node, aliases) in OUTPUT_NAMES:
             seen[_resolved(node, aliases)] += 1
         elif isinstance(node, ast.Attribute) and node.attr == "readline":
             seen["readline"] += 1

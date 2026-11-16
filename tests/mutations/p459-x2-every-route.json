@@ -1,0 +1,9 @@
+[
+ {"file": "tools/measure.py", "name": "P459: a name from `from sys import` is not resolved", "find": "elif isinstance(node, ast.ImportFrom) and node.module in OUTPUT_MODULES:", "replace": "elif False:"},
+ {"file": "tools/measure.py", "name": "P459: a name imported without `as` is not resolved", "find": "{a.asname or a.name: node.module + \".\" + a.name for a in node.names}", "replace": "{a.asname: node.module + \".\" + a.name for a in node.names if a.asname}"},
+ {"file": "tools/measure.py", "name": "P459: `import builtins as b` hides builtins.print", "find": "if a.asname and a.name == \"builtins\"}", "replace": "if False}"},
+ {"file": "tools/measure.py", "name": "P459: a bare name like `p = print` is no output", "find": "isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)", "replace": "isinstance(node, ast.Name) and False"},
+ {"file": "tools/measure.py", "name": "P459: a name that is assigned counts as output", "find": "isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)", "replace": "isinstance(node, ast.Name)"},
+ {"file": "tools/measure.py", "name": "P459: os.write is no output", "find": "\"sys.exit\", \"os.write\", \"os._exit\"}", "replace": "\"sys.exit\", \"os._exit\"}"},
+ {"file": "tools/measure.py", "name": "P459: exit() and quit() are no exit", "find": "OUTPUT_NAMES = {\"print\", \"input\", \"exit\", \"quit\",", "replace": "OUTPUT_NAMES = {\"print\", \"input\","}
+]
