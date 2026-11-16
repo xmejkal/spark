@@ -352,7 +352,7 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
     The record of this build in the project's `.spark/build.json` (P825), as a list of one kept entry {file, did, why,
     line}: `wrote`, or `not kept` with the OSError. None is written, and the list is empty, when `destination` is no
     project folder itself (`board_records.project_root`): a `.spark/` folder would make it one. A could-not-run build is
-    recorded too. `requirements` is named relative to the project when it is inside it, else as given; `kept` gives the
+    recorded too. `requirements` is named relative to the project when it is inside it, else by its whole path; `kept` gives the
     pin map's missing facts. `records` is the BuildRecordStore a test gives.
     """
     destination = Path(destination)
@@ -373,11 +373,13 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
 
 
 def _named_from(requirements, project):
-    """The requirements file relative to the project when it is inside it, else as given."""
+    """The requirements file relative to the project when it is inside it, else its whole path. A path as typed is
+    relative to the folder the build ran from, which a reader of the record does not know."""
+    whole = requirements.resolve()
     try:
-        return str(requirements.resolve().relative_to(project.resolve()))
+        return str(whole.relative_to(project.resolve()))
     except ValueError:
-        return str(requirements)
+        return str(whole)
 # --- end MVP ---
 
 

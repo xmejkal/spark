@@ -58,6 +58,7 @@ import parts  # noqa: E402
 from spark.sourcing import part_facts  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402
+from spark.flow import phase_readers  # noqa: E402
 import test_converter  # noqa: E402
 from fakes import FakeBuildService, FakeToolFinder, FakeTscircuitEngine  # noqa: E402
 
@@ -2900,4 +2901,21 @@ class TheKeepRecordsTheBuildTest(unittest.TestCase):
         project, elsewhere = self.a_project(), Path(tempfile.mkdtemp()) / "requirements.json"
         shutil.copy(self.BUILT / "requirements.json", elsewhere)
         self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")], elsewhere)
-        self.assertEqual(self.record(project)["requirements"], str(elsewhere))
+        self.assertEqual(self.record(project)["requirements"], str(elsewhere.resolve()))
+
+    def test_paths_typed_relative_to_another_folder_are_recorded_so_flow_reads_the_build_as_current(self):
+        # the PR refuter (R1): a relative path is relative to where the build ran, not to the project
+        project = self.a_project()
+        (project.parent / "reqs").mkdir()
+        shutil.copy(project / "requirements.json", project.parent / "reqs" / "requirements.json")
+        here = Path.cwd()
+        os.chdir(project.parent)
+        try:
+            for typed, recorded in (("xiao/requirements.json", "requirements.json"),
+                                    ("reqs/requirements.json", str((project.parent / "reqs" / "requirements.json").resolve()))):
+                with self.subTest(typed=typed):
+                    self.keep(Path("xiao"), [Stage("build", check_spine.OK, "9 trace(s)")], Path(typed))
+                    self.assertEqual(self.record(project)["requirements"], recorded)
+                    self.assertEqual(phase_readers.BuildReader().answer(project).status, check_spine.OK)
+        finally:
+            os.chdir(here)
