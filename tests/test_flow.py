@@ -2,6 +2,7 @@
 The flow reader (P825, #1183): `flow.py show` says where a project stands, phase by phase, from the files the earlier
 stages wrote, and offers the next steps as keys. On five projects (no needs, picked, built, a build that could not run,
 requirements changed after the build) each test pins the nine phases' status and offers from `flow.py show --json`.
+It covers the area's modules `show_flow`, `phase_readers` and `flow_codes`, and the build record `build_record`.
 
     python3 -m unittest tests.test_flow
 """

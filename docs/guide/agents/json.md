@@ -139,13 +139,14 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `check_spine.py` | `check`, `stages`, `status`, and `kept`, `missing_facts`, `next` and `unserved` when they apply ([its keys](#check_spinepy)) |
 | `look.py`, `deploy.py` | the envelope, as `parts.py`'s ([their envelope](#lookpy-and-deploypys-envelope)) |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
+| `flow.py` | the envelope, as `parts.py`'s, with `data.phases` and `data.stands_at` ([its keys](flow.md)) |
 
 ### check_spine.py
 
 - `stages` names the stage that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`; so is the simulation stage of a design whose every part's record skips the simulation (P778), and such a build is not noted in the store.
   `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed.
 - `kept`, with `--keep` or `--sim-dir`, lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`,
-  `removed`, `not written`, `not kept`, `traces differ` or `traces not compared`, for a file that cannot be read or holds a trace spark does not read) and `why`. A `traces differ` entry follows the `left alone` entry of a `.tsx` whose traces join other pins than this build's board (P660). Its `only_in_kept` and `only_in_build` list each trace as `A to B`. It never changes `status`: tell the person not to wire or build from that file. When the sheet is written, a drawing's `not written` entry has `code`
+  `removed`, `not written`, `not kept`, `traces differ` or `traces not compared`, for a file that cannot be read or holds a trace spark does not read) and `why`. In a project folder, it lists `.spark/build.json`, the record of the build that [`flow.py`](flow.md) reads (P825). A `traces differ` entry follows the `left alone` entry of a `.tsx` whose traces join other pins than this build's board (P660). Its `only_in_kept` and `only_in_build` list each trace as `A to B`. It never changes `status`: tell the person not to wire or build from that file. When the sheet is written, a drawing's `not written` entry has `code`
   (P691: never `null`), `subject` and `expected` (`true`: by design or not drawn yet; do not retry; for
   `not_drawn_yet`, tell the person to wire it by hand from the sheet's steps). When the build finished and the sheet was not written, its entry has `code` (P701). A `wrote` entry for `breadboard.svg` may have `drawn_from` (`record`).
 - `next`: one look step, only for `ok` in a project; its `why` is `first write firmware/main.py from pins.py` (P517), the pin map that `--keep` writes.
@@ -293,9 +294,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 ### Which scripts take --json
 
 These take it: `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
-`boards.py` (with `--list`: `data.boards` rows of `id`, `layer`, `active` and `stops_why`), `check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `deploy.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py`, `look.py`, `parts.py` and `research.py` (its `data.open` and `needs_reply` are in [replies.md](replies.md)). `grant.py`, `live.py` and `reach.py` print one flat line of JSON, not the envelope (P657): the keys of `data` below, and no line at all after a crash or a reach that could not start. A bad argument with `--json` prints the usage on stderr, exit 2. These do not take
-it: `boards.py` (but `--list`), `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
---status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
+`boards.py` (with `--list`: `data.boards` rows of `id`, `layer`, `active` and `stops_why`), `check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `deploy.py`, `flow.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py`, `look.py`, `parts.py` and `research.py` (its `data.open` and `needs_reply` are in [replies.md](replies.md)). `grant.py`, `live.py` and `reach.py` print one flat line of JSON, not the envelope (P657): the keys of `data` below, and no line at all after a crash or a reach that could not start. A bad argument with `--json` prints the usage on stderr, exit 2. These do not take
+it: `boards.py` (but `--list`), `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
 ### What the text output shows
 
