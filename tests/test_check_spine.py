@@ -2743,7 +2743,7 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
         "board_unusable", "board_only_with_parts", "no_parts", "broken.code", "refused.code", "stage_crashed",
         "schematic_refused", "schematic_noted", "disagreement.code", "stage_crashed", "tool_missing",
         "tool_cannot_build", "design_not_built", "stage_timed_out", "part_stranded", "design_not_built", "not_routed",
-        "simulation_fact_missing", "simulation_fact_missing", "chip_not_compiled", "diagram_unwired",
+        "simulation_fact_missing", "diagram_unwired", "chip_not_compiled",
         "simulation_fact_missing", "simulation_fact_missing",
         "broken.code", "stage_timed_out", "stage_crashed",
     ]

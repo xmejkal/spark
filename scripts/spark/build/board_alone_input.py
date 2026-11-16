@@ -9,6 +9,7 @@ from typing import NamedTuple, Optional
 from spark.breadboard import sheet
 from spark.design import loader
 from spark.firmware import sim_project
+from spark.records import onboard_parts
 from spark.records.onboard_parts import OnboardPartReader
 
 # --- MVP ---
@@ -87,4 +88,43 @@ def wired_in(diagram, parts):
     """The `parts` (`OnboardPartReader.parts`) whose role is a part id in `diagram`: the stand-ins a converter wired."""
     ids = {part.get("id") for part in (diagram or {}).get("parts") or [] if isinstance(part, dict)}
     return [part for part in parts if part["_instance"] in ids]
+
+
+class StandInsFound(NamedTuple):
+    """
+    Value: what a full build's diagram holds of the stand-ins it gave the converter. `ids` are their part ids, which the
+    unwired check leaves out; `gpios` is `onboard_parts.say_wired_gpios`'s {gpio: sentence} for the limits; `note` is ""
+    or the line NOT_WIRED_BY_OLDER_CONVERTER, for the stage's detail.
+    """
+
+    ids: set
+    gpios: dict
+    note: str
+
+
+class OnboardStandIns:
+    """
+    Value: the board's own LED and button that a full build adds to its circuit (P792), as the board-only build wires
+    them. Given the board record and the project; reads the parts' records once, writes nothing, runs nothing.
+    """
+
+    def __init__(self, board, project):
+        self.given = read_board_alone(board, project)
+        self.why = self.given.why
+
+    def files(self, mapping):
+        """{file name: JSON value} for `sim/`: `mapping` with the stand-ins' entries, and NETLIST when one is wired."""
+        if not self.given.wired:
+            return {sim_project.MAPPING_FILE: mapping}
+        return {sim_project.MAPPING_FILE: dict(mapping, **self.given.files[sim_project.MAPPING_FILE]), NETLIST: self.given.files[NETLIST]}
+
+    def source(self, sim_dir):
+        """The converter's arguments that add the stand-ins' netlist in `sim_dir`, or [] when none is wired."""
+        return ["--add-netlist", str(sim_dir / NETLIST)] if self.given.wired else []
+
+    def found_in(self, diagram):
+        """The StandInsFound of the diagram the converter wrote."""
+        found = wired_in(diagram, self.given.wired)
+        note = "\n           " + NOT_WIRED_BY_OLDER_CONVERTER if len(found) < len(self.given.wired) else ""
+        return StandInsFound({part["_instance"] for part in found}, onboard_parts.say_wired_gpios(found), note)
 # --- end MVP ---

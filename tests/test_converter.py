@@ -218,9 +218,9 @@ class TheBundleConvertsOnNodeTest(unittest.TestCase):
         reader = OnboardPartReader(board_records.load(ROOT, "firebeetle2-esp32s3"))
         files, why = board_alone_input.make_converter_input(reader.parts(), reader.ground(), ROOT)
         self.assertIsNone(why)
-        mapping, netlist = here / "wokwi-mapping.json", here / board_alone_input.NETLIST
-        mapping.write_text(json.dumps(dict(files[sim_project.MAPPING_FILE], Valve1={"wokwiType": "wokwi-led", "pins": {"SIGNAL": "A", "GND": "C"}})))
-        netlist.write_text(json.dumps(files[board_alone_input.NETLIST]))
+        mapping, netlist = here / "wokwi-mapping.json", here / "netlist.json"
+        mapping.write_text(json.dumps(dict(files["wokwi-mapping.json"], Valve1={"wokwiType": "wokwi-led", "pins": {"SIGNAL": "A", "GND": "C"}})))
+        netlist.write_text(json.dumps(files["netlist.json"]))
         done = self.convert("--mapping", str(mapping), "--add-netlist", str(netlist))
         self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
         diagram = json.loads(self.out.read_text())

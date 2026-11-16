@@ -1,26 +1,26 @@
 [
  {
-  "file": "scripts/spark/build/build_service.py",
+  "file": "scripts/spark/build/board_alone_input.py",
   "name": "P792: the full build gives the converter no --add-netlist",
-  "find": "([\"--add-netlist\", str(sim_dir / board_alone_input.NETLIST)] if given.wired else [])",
-  "replace": "[]"
+  "find": "return [\"--add-netlist\", str(sim_dir / NETLIST)] if self.given.wired else []",
+  "replace": "return []"
  },
  {
-  "file": "scripts/spark/build/build_service.py",
+  "file": "scripts/spark/build/board_alone_input.py",
   "name": "P792: the full build trusts that the converter wired every stand-in it was given",
-  "find": "stand_ins = board_alone_input.wired_in(diagram, given.wired)",
-  "replace": "stand_ins = given.wired"
+  "find": "found = wired_in(diagram, self.given.wired)",
+  "replace": "found = self.given.wired"
  },
  {
   "file": "scripts/spark/build/build_service.py",
   "name": "P792: every_part_skipped reads the mapping after the stand-ins joined it",
-  "find": "skipped = every_part_skipped(mapping)",
-  "replace": "skipped = every_part_skipped(dict(mapping, **(given.files[sim_project.MAPPING_FILE] if given.wired else {})))"
+  "find": "every_part_skipped(mapping), stand_ins.found_in(diagram)",
+  "replace": "every_part_skipped(stand_ins.files(mapping)[\"wokwi-mapping.json\"]), stand_ins.found_in(diagram)"
  },
  {
   "file": "scripts/spark/build/build_service.py",
   "name": "P792: the unwired-diagram check counts the stand-ins' wires",
-  "find": "if wires_in(diagram, {part[\"_instance\"] for part in stand_ins}) == 0 and not skipped:",
+  "find": "if wires_in(diagram, found.ids) == 0 and not skipped:",
   "replace": "if wires_in(diagram) == 0 and not skipped:"
  },
  {
@@ -30,21 +30,27 @@
   "replace": " for end"
  },
  {
-  "file": "scripts/spark/build/build_service.py",
+  "file": "scripts/spark/build/board_alone_input.py",
   "name": "P792: the stand-ins' mapping entries do not join the mapping file",
-  "find": "dict(mapping, **stand_in_files.get(sim_project.MAPPING_FILE, {}))",
-  "replace": "dict(mapping)"
+  "find": "return {sim_project.MAPPING_FILE: dict(mapping, **self.given.files[sim_project.MAPPING_FILE]), NETLIST",
+  "replace": "return {sim_project.MAPPING_FILE: mapping, NETLIST"
  },
  {
   "file": "scripts/spark/build/build_service.py",
   "name": "P792: the full build's limits say no stand-in is wired",
-  "find": "write_limits(sim_dir, loaded, board, onboard_parts.say_wired_gpios(stand_ins))",
+  "find": "write_limits(sim_dir, loaded, board, found.gpios)",
   "replace": "write_limits(sim_dir, loaded, board, {})"
  },
  {
-  "file": "scripts/spark/build/build_service.py",
+  "file": "scripts/spark/build/board_alone_input.py",
   "name": "P792: an older converter that wired no stand-in goes unsaid",
-  "find": "if len(stand_ins) < len(given.wired):",
-  "replace": "if False:"
+  "find": "if len(found) < len(self.given.wired) else \"\"",
+  "replace": "if False else \"\""
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P792: a stand-in part record that cannot be read does not stop the full build's simulation",
+  "find": "why = sim_project.unmapped_detail(unmapped) if unmapped else stand_ins.why",
+  "replace": "why = sim_project.unmapped_detail(unmapped) if unmapped else None"
  }
 ]

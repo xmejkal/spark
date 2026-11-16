@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from fakes import FakeTscircuitEngine  # noqa: E402
 from golden_design import fed_circuit  # noqa: E402
-from spark.build import board_alone_input, board_engine, kept_files  # noqa: E402
+from spark.build import board_engine, kept_files  # noqa: E402
 from spark.build.build_service import BuildInputs, BuildService  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS, SKIPPED  # noqa: E402
@@ -205,14 +205,15 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         """The simulation stage of `stages`."""
         return self.stages(parts, diagram)[-1]
 
-    def stages(self, parts, diagram=BOARD_ALONE_DIAGRAM, runner=None):
-        """The stages of a build on the XIAO whose project holds the display's record and a converter that writes
-        `diagram` (run by `runner` when given); the engine builds a circuit that feeds the board and the display, so the
+    def stages(self, parts, diagram=BOARD_ALONE_DIAGRAM, runner=None, records=()):
+        """The stages of a build on BOARD whose project holds the display's record, `records` ((id, record)), and a converter
+        that writes `diagram` (run by `runner` when given); the engine builds a circuit that feeds the board and the display, so the
         build stage passes."""
         project = self.project = Path(tempfile.mkdtemp()) / "sim project"
         (project / ".spark").mkdir(parents=True)
         (project / "parts").mkdir()
-        (project / "parts" / "dfr0664-tft-2in.json").write_text(json.dumps(DISPLAY))
+        for record_id, record in (("dfr0664-tft-2in", DISPLAY),) + tuple(records):
+            (project / "parts" / (record_id + ".json")).write_text(json.dumps(record))
         (project / ".spark" / "tools.json").write_text(json.dumps(a_converter_shim(project, diagram)))
         self.workdir, stages = a_build({"board": self.BOARD, "parts": parts}, engine=FakeTscircuitEngine(fed_circuit(self.FEEDS)), runner=runner, project=project)
         self.assertEqual(stages[-1].name, "simulation", [(stage.name, stage.status, stage.detail) for stage in stages])
@@ -283,7 +284,13 @@ class AStandInBoardsOwnPartsInTheFullBuildTest(TheSimulationStageOfASkippedDesig
         stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}, {"part": "led-red-5mm", "name": "Led"}], self.STAND_INS)
         self.assertEqual((stage.status, stage.code), (PROBLEMS, "diagram_unwired"))
 
+    def test_a_stand_in_s_record_without_its_wokwi_part_stops_the_simulation(self):
+        led = {key: value for key, value in json.loads((ROOT / "parts" / "led-red-5mm.json").read_text()).items() if key != "simulation"}
+        stage = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}], self.STAND_INS, records=[("led-red-5mm", led)])[-1]
+        self.assertEqual((stage.status, stage.code), (COULD_NOT_RUN, "simulation_fact_missing"))
+        self.assertIn("the record for 'led-red-5mm' names no signal pin, ground pin or Wokwi part, so spark cannot wire onboard_led", stage.detail)
+
     def test_a_converter_that_wires_no_stand_in_says_so_and_the_limits_do_not_claim_them(self):
         stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}], BOARD_ALONE_DIAGRAM)
-        self.assertIn(board_alone_input.NOT_WIRED_BY_OLDER_CONVERTER, stage.detail)
+        self.assertIn("the diagram holds no stand-in for the board's own LED or button: a project's own converter older than P792", stage.detail)
         self.assertNotIn(self.BUTTON, stage.detail)

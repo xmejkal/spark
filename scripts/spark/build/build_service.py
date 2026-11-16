@@ -399,8 +399,7 @@ class BuildService:
 
     def _simulation(self, inputs, project, board, built, stages):
         """The simulation project, the last step of the product goal: the converter found from the project (not from `cwd`:
-        run from /tmp the converter beside the project was "not found"), the stand-ins from the records (P31), the board's own
-        LED and button on a stand-in board (P792), the diagram."""
+        run from /tmp the converter beside the project was "not found"), the stand-ins from the records (P31) and the board's own (P792), the diagram."""
         workdir = inputs.workdir
         own = find_converter(project)
         missing = converter_stage_problem(project, own, self.find_tool)
@@ -410,48 +409,46 @@ class BuildService:
         # Read again with None for a library design, which lets a project above TMPDIR win (loader.py:192); equal otherwise.
         loaded = loader.load(workdir / "requirements.json", None if inputs.from_library else project)
         mapping, chips, unmapped = sim_project.mapping_for(loaded)
-        if unmapped:
-            stages.append(Stage("simulation", COULD_NOT_RUN, sim_project.unmapped_detail(unmapped), build_codes.SIMULATION_FACT_MISSING))
+        stand_ins = board_alone_input.OnboardStandIns(board, project)
+        why = sim_project.unmapped_detail(unmapped) if unmapped else stand_ins.why
+        if why:
+            stages.append(Stage("simulation", COULD_NOT_RUN, why, build_codes.SIMULATION_FACT_MISSING))
             return
-        # The board's own LED and button that a stand-in board lacks, wired as the board-only build wires them (P792).
-        given = board_alone_input.read_board_alone(board, project)
-        if given.why:
-            stages.append(Stage("simulation", COULD_NOT_RUN, given.why, build_codes.SIMULATION_FACT_MISSING))
+        written = self._sim_folder(inputs, board, stand_ins.files(mapping), chips, stages)
+        if written is None:
             return
-        skipped = every_part_skipped(mapping)
-        sim_dir = workdir / "sim"
-        sim_dir.mkdir(exist_ok=True)
-        stand_in_files = given.files if given.wired else {}
-        (sim_dir / sim_project.MAPPING_FILE).write_text(json.dumps(dict(mapping, **stand_in_files.get(sim_project.MAPPING_FILE, {})), indent=2) + "\n")
-        if given.wired:
-            (sim_dir / board_alone_input.NETLIST).write_text(json.dumps(stand_in_files[board_alone_input.NETLIST], indent=2) + "\n")
-        (sim_dir / "board.json").write_text(json.dumps(board, indent=2) + "\n")
-        staged, chip_problems = sim_project.stage_chips(chips, sim_dir, find_tool=self.find_tool)
-        if chip_problems:
-            stages.append(Stage("simulation", COULD_NOT_RUN, "\n".join(chip_problems), build_codes.CHIP_NOT_COMPILED))
-            return
-        (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged, inputs.firmware))
-        source = ["--circuit", str(built.circuit_path)] + (["--add-netlist", str(sim_dir / board_alone_input.NETLIST)] if given.wired else [])
-        diagram, stopped, notes = convert(project, own, source, sim_dir, self.runner)
+        sim_dir, staged = written
+        diagram, stopped, notes = convert(project, own, ["--circuit", str(built.circuit_path)] + stand_ins.source(sim_dir), sim_dir, self.runner)
         if stopped:
             stages.append(stopped)
             return
-        stand_ins = board_alone_input.wired_in(diagram, given.wired)
-        wires = wires_in(diagram)
-        if wires_in(diagram, {part["_instance"] for part in stand_ins}) == 0 and not skipped:
+        # The project's mapping, before the stand-ins joined it: a project of skipped parts stays skipped (P792).
+        wires, skipped, found = wires_in(diagram), every_part_skipped(mapping), stand_ins.found_in(diagram)
+        if wires_in(diagram, found.ids) == 0 and not skipped:
             # The same failure shape as a board with no copper: every part placed, nothing joined.
             stages.append(Stage("simulation", PROBLEMS, "a diagram with 0 connections. Every part is placed and none is wired, "
                                 "which is what an unmapped component looks like once the converter has given up on it",
                                 build_codes.DIAGRAM_UNWIRED))
             return
         compiled = sum(1 for how in staged.values() if how == "compiled")
-        # What the simulation cannot show, in the records' own words, said and kept beside the diagram (P37), with the
-        # stand-ins the diagram holds.
-        limits = sim_project.write_limits(sim_dir, loaded, board, onboard_parts.say_wired_gpios(stand_ins))
-        if len(stand_ins) < len(given.wired):
-            notes += "\n           " + board_alone_input.NOT_WIRED_BY_OLDER_CONVERTER
+        # What the simulation cannot show, in the records' own words, said and kept beside the diagram (P37).
+        limits = sim_project.write_limits(sim_dir, loaded, board, found.gpios)
         lead, status = (EVERY_PART_SKIPPED_MESSAGE, SKIPPED) if skipped else ("", OK)
-        stages.append(Stage("simulation", status, lead + simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes))
+        stages.append(Stage("simulation", status, lead + simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes + found.note))
+
+    def _sim_folder(self, inputs, board, files, chips, stages):
+        """`sim/` in the work folder with `files` ({file name: JSON value}), the board record, the chips staged and wokwi.toml:
+        (the folder, how each chip was staged), or None after the could-not-run stage of a chip that does not compile."""
+        sim_dir = inputs.workdir / "sim"
+        sim_dir.mkdir(exist_ok=True)
+        for name, data in dict(files, **{"board.json": board}).items():
+            (sim_dir / name).write_text(json.dumps(data, indent=2) + "\n")
+        staged, chip_problems = sim_project.stage_chips(chips, sim_dir, find_tool=self.find_tool)
+        if chip_problems:
+            stages.append(Stage("simulation", COULD_NOT_RUN, "\n".join(chip_problems), build_codes.CHIP_NOT_COMPILED))
+            return None
+        (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged, inputs.firmware))
+        return sim_dir, staged
 
 
 def board_alone(board, workdir, firmware=None, project=None, runner=None):
