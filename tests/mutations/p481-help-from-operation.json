@@ -55,26 +55,56 @@
  },
  {
   "file": "tools/doc_blocks.py",
-  "name": "P481: a start without its end crashes, unnamed",
-  "find": "            raise BlockError(NO_END_MESSAGE % (page, name))",
-  "replace": "            pass"
- },
- {
-  "file": "tools/doc_blocks.py",
   "name": "P481: a second start before the end is written as one block",
-  "find": "        if end is None or START.search(text, start.end(), end.start()):",
-  "replace": "        if end is None:"
+  "find": "            if name is not None:",
+  "replace": "            if False:"
  },
  {
   "file": "tools/doc_blocks.py",
-  "name": "P481: an end that names another Operation closes the block",
-  "find": "        if end.group(1) != name:",
-  "replace": "        if False:"
+  "name": "P481: a start without its end at the page's end drops the rest of the page",
+  "find": "    if name is not None:\n        raise",
+  "replace": "    if False:\n        raise"
  },
  {
   "file": "tools/doc_blocks.py",
   "name": "P481: a name no table holds crashes, unnamed",
-  "find": "        if name not in operations:",
-  "replace": "        if False:"
+  "find": "            if name not in operations:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: an Operation with no summary crashes, unnamed",
+  "find": "            if operations[name].summary is None:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: an end without its start is named as the wrong end",
+  "find": "        elif name is None:",
+  "replace": "        elif False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: an end that names another Operation closes the block",
+  "find": "        elif marker[1] != name:",
+  "replace": "        elif False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a comment line with a typo in its marker is passed over in silence",
+  "find": "    raise BlockError(NOT_A_MARKER_MESSAGE % (page, number))",
+  "replace": "    return None"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a marker in a code fence is written over",
+  "find": "            fenced = not fenced",
+  "replace": "            fenced = False"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a sentence that quotes a marker is refused",
+  "find": "    if not (line.lstrip().startswith(COMMENT_START) and MARKER_WORD in line):",
+  "replace": "    if MARKER_WORD not in line:"
  }
 ]

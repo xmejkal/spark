@@ -45,29 +45,47 @@ class TheBlockTest(unittest.TestCase):
         self.assertEqual(fresh, block("\n%s\n" % OperationHelpTable.render(LookAtBoard)))
         self.assertEqual(doc_blocks.fresh_text("a.md", fresh, LOOK), fresh)
 
-    def test_a_start_without_its_end_is_named_with_the_page_and_the_name(self):
+    def refused(self, text, operations=LOOK):
+        """The sentence of the BlockError that `text` raises."""
         with self.assertRaises(doc_blocks.BlockError) as said:
-            doc_blocks.fresh_text("a.md", "%s\nwords\n" % START, LOOK)
-        self.assertEqual(str(said.exception), "a.md: the block of look has no end marker")
+            doc_blocks.fresh_text("a.md", text, operations)
+        return str(said.exception)
+
+    def test_a_start_without_its_end_is_named_with_the_page_the_line_and_the_name(self):
+        self.assertEqual(self.refused("# A page\n%s\nwords\n" % START), "a.md line 2: the block of look has no end marker")
 
     def test_a_second_start_before_the_end_is_a_start_without_its_end(self):
-        with self.assertRaises(doc_blocks.BlockError) as said:
-            doc_blocks.fresh_text("a.md", "%s\n%s\n%s\n" % (START, START, END), LOOK)
-        self.assertEqual(str(said.exception), "a.md: the block of look has no end marker")
+        self.assertEqual(self.refused("%s\n%s\n%s\n" % (START, START, END)), "a.md line 1: the block of look has no end marker")
 
     def test_an_end_that_names_another_operation_is_named(self):
-        with self.assertRaises(doc_blocks.BlockError) as said:
-            doc_blocks.fresh_text("a.md", "%s\n<!-- /spark:operation deploy -->\n" % START, LOOK)
-        self.assertEqual(str(said.exception), "a.md: the block of look ends with the marker of deploy")
+        self.assertEqual(self.refused("%s\n<!-- /spark:operation deploy -->\n" % START),
+                         "a.md line 2: the block of look ends with the marker of deploy")
+
+    def test_an_end_without_its_start_is_named(self):
+        # P481 review: a stray end marker after a good block, or alone, is refused, never left to rot
+        self.assertEqual(self.refused(block("words") + END + "\n"), "a.md line 8: the end marker of look has no start marker")
 
     def test_a_name_no_table_holds_is_named(self):
-        with self.assertRaises(doc_blocks.BlockError) as said:
-            doc_blocks.fresh_text("a.md", block("words"), {})
-        self.assertEqual(str(said.exception), "a.md: no Operation is named look")
+        self.assertEqual(self.refused(block("words"), {}), "a.md line 3: no Operation is named look")
+
+    def test_an_operation_with_no_summary_is_named_and_not_a_crash(self):
+        # P481 review: five of the six bench Operations have no summary yet
+        self.assertEqual(self.refused(block("words"), {"look": Operation}), "a.md line 3: the Operation look has no summary to show")
+
+    def test_a_comment_line_that_names_the_marker_word_but_is_no_marker_is_named(self):
+        for line in ("<!--spark:operation look-->", START + " ", START + "\r", "<!-- spark:operation: look -->", "  " + START):
+            self.assertEqual(self.refused("# A page\n%s\n" % line), "a.md line 2: this line names spark:operation but is no marker")
 
     def test_a_marker_inside_a_line_is_no_marker(self):
         text = "The markers are `%s` and `%s`.\n" % (START, END)
         self.assertEqual(doc_blocks.fresh_text("a.md", text, {}), text)
+
+    def test_a_marker_in_a_code_fence_is_an_example_and_stays(self):
+        # P481 review: a page that shows the markers in a fence keeps its example as written
+        text = "# A page\n\n```\n%s\nan example\n%s\n```\n\n```md\n%s\n```\n" % (START, END, END)
+        self.assertEqual(doc_blocks.fresh_text("a.md", text, LOOK), text)
+        self.assertEqual(doc_blocks.fresh_text("a.md", text + block("old"), LOOK),
+                         text + block("\n%s\n" % OperationHelpTable.render(LookAtBoard)))
 
 
 class ThePagesTest(unittest.TestCase):
@@ -83,7 +101,7 @@ class ThePagesTest(unittest.TestCase):
             self.page(root, "docs/guide/b.md", "%s\n" % START)
             self.assertEqual(doc_blocks.stale_pages(Path(root), LOOK),
                              ["commands/a.md: a block differs from its Operation, so run python3 tools/doc_blocks.py",
-                              "docs/guide/b.md: the block of look has no end marker"])
+                              "docs/guide/b.md line 1: the block of look has no end marker"])
             self.assertEqual(changed.read_text(), block("hand-written words"))
 
     def test_the_writer_writes_a_stale_page_and_leaves_a_refused_one_as_it_is(self):
@@ -91,10 +109,10 @@ class ThePagesTest(unittest.TestCase):
             stale = self.page(root, "commands/a.md", block("hand-written words"))
             broken = self.page(root, "docs/guide/b.md", "%s\n" % START)
             self.assertEqual(doc_blocks.write_pages(Path(root), LOOK),
-                             (["commands/a.md"], ["docs/guide/b.md: the block of look has no end marker"]))
+                             (["commands/a.md"], ["docs/guide/b.md line 1: the block of look has no end marker"]))
             self.assertEqual(stale.read_text(), block("\n%s\n" % OperationHelpTable.render(LookAtBoard)))
             self.assertEqual(broken.read_text(), "%s\n" % START)
-            self.assertEqual(doc_blocks.stale_pages(Path(root), LOOK), ["docs/guide/b.md: the block of look has no end marker"])
+            self.assertEqual(doc_blocks.stale_pages(Path(root), LOOK), ["docs/guide/b.md line 1: the block of look has no end marker"])
 
 
 class TheHelpTableTest(unittest.TestCase):
