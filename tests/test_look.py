@@ -31,6 +31,8 @@ from spark.bench import image_evidence  # noqa: E402
 from fakes import FakeConsent, FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.events import Event  # noqa: E402
+from spark.core.operation import Argument  # noqa: E402
+from spark.core.operation_help_table import OperationHelpTable  # noqa: E402
 from suite_runs import needs_littlefs  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 from test_deploy import real_littlefs  # noqa: E402
@@ -666,14 +668,55 @@ class ACrashTest(LookScriptCase):
         self.assertEqual(imported, {"sys", "pathlib", "spark.bench", "spark.bench.look_at_board", "spark.core.cli"})
 
 
-class TheHelpTest(unittest.TestCase):
-    def test_help_says_what_it_reads_what_it_changes_the_restart_the_token_and_the_exit_codes(self):
+class Retold(look_at_board.LookAtBoard):
+    """The look told anew, to show that every interface reads the one class (P481)."""
+
+    summary = "A sentence that only this test gives the look."
+    details = "A paragraph that only this test gives the look."
+    arguments = look_at_board.LookAtBoard.arguments + (Argument(("--retold",), "retold", bool, "a flag that only this test adds"),)
+
+
+class HelpCase(unittest.TestCase):
+    def help_of(self, operation=None):
+        """What look.py --help prints, for `operation` (None: LookAtBoard)."""
         out = io.StringIO()
         with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
-            look.main(["--help"])
-        said = " ".join(out.getvalue().split())
+            look.main(["--help"], operation=operation)
+        return out.getvalue()
+
+
+class TheHelpTest(HelpCase):
+    def test_help_says_what_it_reads_what_it_changes_the_restart_the_token_and_the_exit_codes(self):
+        said = " ".join(self.help_of().split())
         for words in ("--project", "--port", "writes nothing", "erases nothing", "restarts", "token", "Exit codes", "0 ", "1 ", "2 "):
             self.assertIn(words, said)
+
+    def test_the_sentence_and_the_paragraphs_are_the_operations_word_for_word(self):
+        # P481: argparse prints a raw description and epilog as they are, so the moved texts appear unwrapped
+        said = self.help_of()
+        self.assertIn("\n" + look_at_board.LookAtBoard.summary + "\n", said)
+        self.assertIn(look_at_board.LookAtBoard.details, said)
+
+    def test_a_blank_line_stands_between_the_operations_paragraphs_and_the_clis_own(self):
+        self.assertIn(look_at_board.LookAtBoard.details + "\n\n--json prints one envelope on stdout", self.help_of())
+
+
+class TheOneSourceTest(HelpCase):
+    """P481: the summary, the details and the Arguments are written once, on the Operation, and every interface reads them."""
+
+    def test_help_shows_the_new_sentence_the_new_paragraph_and_the_new_flag(self):
+        said = self.help_of(Retold())
+        for words in (Retold.summary, Retold.details, "--retold", "a flag that only this test adds"):
+            self.assertIn(words, said)
+        self.assertNotIn(look_at_board.LookAtBoard.summary, said)
+
+    def test_the_input_schema_holds_the_new_flag(self):
+        self.assertEqual(Retold().input_schema()["properties"]["retold"]["description"], "a flag that only this test adds")
+
+    def test_the_page_block_shows_the_new_sentence_and_the_new_flag(self):
+        block = OperationHelpTable.render(Retold)
+        self.assertTrue(block.startswith(Retold.summary + "\n"))
+        self.assertIn("| `--retold` |  | a flag that only this test adds |", block)
 
 
 if __name__ == "__main__":

@@ -22,9 +22,10 @@ QUICK_RUN = "quick_run"
 RUN_STORY = "story"
 RUN_QUICK = "quick"
 
-#: These read the whole tree, so no file's name finds them. Together 38 s on 2026-11-09.
-ALWAYS_RUN_TESTS = ("test_architecture", "test_self_confirmation", "test_docs", "test_map", "test_journey", "test_lint",
-                    "test_no_magic_strings", "test_no_board_address", "test_observation_rows", "test_orphans",
+#: These read the whole tree, so no file's name finds them. Together 38 s on 2026-11-09, and test_doc_blocks
+#: adds under a second (2026-11-16).
+ALWAYS_RUN_TESTS = ("test_architecture", "test_self_confirmation", "test_docs", "test_map", "test_journey", "test_doc_blocks",
+                    "test_lint", "test_no_magic_strings", "test_no_board_address", "test_observation_rows", "test_orphans",
                     "test_python_floor", "test_scripts_isolated", "test_routes", "test_json_contracts", "test_part_shape",
                     "test_suite_temp", "test_suite_runs")
 
