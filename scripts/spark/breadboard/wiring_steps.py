@@ -20,6 +20,7 @@ import re
 
 from spark.records import board_pads
 from spark.design import board_components
+from spark.design import power_rails
 
 #: What an end is: a pad of the board, a pin of a part, or one end of a resistor a part asks for.
 BOARD, PART, RESISTOR = "board", "part", "resistor"
@@ -233,7 +234,8 @@ ROW_HOLES = 5
 def points(circuit):
     """Every connection point of the built circuit. Traces join ports and nets; a point is what they join, followed through
     both (netlist.py keeps a pin-to-pin trace's net apart from a named one on purpose; a breadboard row does not). A port
-    alone on a named net is a point too: a supply that comes from off the board."""
+    alone on a named net is a point too: a supply that comes from off the board, unless a part makes that net
+    (`off_board_supplies`)."""
     parent = {}
 
     def find(node):
@@ -258,6 +260,13 @@ def points(circuit):
         if "net:" + net["source_net_id"] in parent and net.get("name"):
             nets[find("net:" + net["source_net_id"])].append(net["name"])
     return [Point(found, sorted(nets[root])) for root, found in members.items() if len(found) > 1 or nets[root]]
+
+
+def off_board_supplies(nets, parts):
+    """The named nets of a point with no board pin that a supply from off the board must feed: every one but those a
+    part of the design makes from power it draws on the board, such as an amplifier's outputs (P860)."""
+    made = power_rails.rails_made_on_board(parts)
+    return [net for net in nets if net not in made]
 
 
 def printed_label(board, port):
@@ -300,7 +309,7 @@ def wiring(board, circuit, design_parts, resistors, board_component):
         short = "%s %s" % (component["name"], port.get("name"))
         return End(PART, component["name"], short, short + (" (%s)" % leg if leg else ""), port.get("name"))
 
-    said = [one for one in (_said(point, end) for point in points(circuit)) if one]
+    said = [one for one in (_said(point, end, design_parts) for point in points(circuit)) if one]
     said.sort(key=lambda one: (not one[0], _natural(one[1])))
     placed = {one.component for _, _, step_point in said for one in step_point.ends}
     steps = BreadboardSteps(
@@ -308,7 +317,7 @@ def wiring(board, circuit, design_parts, resistors, board_component):
     return ["%d. %s" % (number, line) for number, (_, line, _) in enumerate(said, 1)], steps
 
 
-def _said(point, end):
+def _said(point, end, parts):
     """Value: (whether it starts at the board, its wiring line, its StepPoint) for one point, each end named by `end`;
     None for a board pad nothing else joins, which is no wire: 3V3, once the firmware pulls the button up (P204)."""
     ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
@@ -317,7 +326,7 @@ def _said(point, end):
     on_board = ends[0].kind == BOARD
     if on_board and len(ends) == 1:
         return None
-    supply = " / ".join(point.nets) if point.nets and not on_board else None
+    supply = " / ".join(off_board_supplies(point.nets, parts)) or None if point.nets and not on_board else None
     if supply:
         line += " · the %s supply, from off the board, not part of the parts list" % supply
     # a board pin's end is its jumper's end, in a hole of the free row; a supply's wire takes a hole too

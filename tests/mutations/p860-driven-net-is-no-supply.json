@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/design/power_rails.py",
+  "name": "every driven net counts as made on the board, an inlet's too",
+  "find": "            if id(part) in powered and supply.get(\"direction\") == \"out\" and net not in GROUND_NETS}",
+  "replace": "            if supply.get(\"direction\") == \"out\" and net not in GROUND_NETS}"
+ },
+ {
+  "file": "scripts/spark/design/power_rails.py",
+  "name": "a ground counts as the power a part draws",
+  "find": "               if supply.get(\"direction\", \"in\") == \"in\" and net not in GROUND_NETS}",
+  "replace": "               if supply.get(\"direction\", \"in\") == \"in\"}"
+ },
+ {
+  "file": "scripts/spark/breadboard/wiring_steps.py",
+  "name": "a wiring line calls a net the amplifier makes a supply from off the board again",
+  "find": "    supply = \" / \".join(off_board_supplies(point.nets, parts)) or None if point.nets and not on_board else None",
+  "replace": "    supply = \" / \".join(point.nets) if point.nets and not on_board else None"
+ },
+ {
+  "file": "scripts/spark/breadboard/sheet.py",
+  "name": "the parts table and the before-power list call a net the amplifier makes a supply again",
+  "find": "            for net in wiring_steps.off_board_supplies(point.nets, parts):",
+  "replace": "            for net in point.nets:"
+ },
+ {
+  "file": "scripts/spark/breadboard/wiring_steps.py",
+  "name": "no net of a point is a supply from off the board, an inlet's neither",
+  "find": "    return [net for net in nets if net not in made]",
+  "replace": "    return []"
+ }
+]
