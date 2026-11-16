@@ -64,7 +64,7 @@ no Operation.
 
 ## The area map
 
-Ten areas and three leaves. A leaf is a module that imports nothing of spark. It sits at the bottom of its area, so
+Eleven areas and three leaves. A leaf is a module that imports nothing of spark. It sits at the bottom of its area, so
 any module reaches it without a cycle. An area imports only the areas it reaches along the arrows (rule U1), so bench imports design through
 firmware. Nothing imports upward, and every area imports `core`. Each area page names its direct imports.
 
@@ -78,6 +78,7 @@ flowchart TB
   FW --> DES
   DES --> SRC["sourcing"]
   IDEA["idea"] --> DES
+  FLOW["flow"] --> BUILD
   IDEA --> SRC
   SRC --> REC["records<br/>+ provenance (leaf)"]
   BENCH --> REC
@@ -91,6 +92,7 @@ flowchart TB
 | sourcing | the drawer, matching needs to parts, cost, datasheets | [sourcing](areas/sourcing.md) |
 | design | the pin map, the netlist and the board file from the requirements | [design](areas/design.md) |
 | idea | the Operations on a project's needs and what they hold: dropping a need | [idea](areas/idea.md) |
+| flow | where a project stands, phase by phase from the idea to the deploy, read from each stage's files (P825) | [flow](areas/flow.md) |
 | firmware | the flash image and the simulation | [firmware](areas/firmware.md) |
 | breadboard | the breadboard sheet and drawing | [breadboard](areas/breadboard.md) |
 | checks | grades a design | [checks](areas/checks.md) |
@@ -176,7 +178,7 @@ sequenceDiagram
 ## Pages
 
 - Level 2 and 3, one page per area: [core](areas/core.md), [records](areas/records.md),
-  [sourcing](areas/sourcing.md), [design](areas/design.md), [idea](areas/idea.md), [firmware](areas/firmware.md),
+  [sourcing](areas/sourcing.md), [design](areas/design.md), [idea](areas/idea.md), [flow](areas/flow.md), [firmware](areas/firmware.md),
   [breadboard](areas/breadboard.md), [checks](areas/checks.md), [bench](areas/bench.md), [build](areas/build.md).
 - [refactor-plan.md](refactor-plan.md): six waves, twenty-three slices, in order. The bench net came first (done).
 - [notes.md](notes.md): decisions, conflicts between the papers, the rule reference, what was cut.

@@ -9,14 +9,16 @@ import shutil
 from pathlib import Path
 
 from spark.build import build_codes
+from spark.build.build_record import BuildRecordStore, sha256_of
+from spark.build.build_service import verdict
 from spark.build.stages import skipped_the_build
 from spark.breadboard import drawing, sheet, tabbed_page
 from spark.design import board_sections, loader
 from spark.design import pin_assigner
 from spark.firmware import sim_project
-from spark.records import store
+from spark.records import board_records, store
 
-from spark.core.outcomes import OK
+from spark.core.outcomes import OK, STATUS_FOR
 from spark.core.result import envelope_item
 
 #: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
@@ -338,6 +340,47 @@ def _kept_pins(requirements, destination):
     except OSError as refused:
         target = Path(destination) / PIN_MODULE
         return {"file": str(target), "did": "not written", "why": str(refused), "line": "no pin map: %s" % refused}
+
+
+# --- MVP ---
+#: Why the build record is kept: the kept entry's `why`.
+BUILD_RECORD_WHY = "what this build was built from and how it ended, which flow.py reads"
+
+
+def keep_build_record(destination, requirements, stages, kept, records=None):
+    """
+    The record of this build in the project's `.spark/build.json` (P825), as a list of one kept entry {file, did, why,
+    line}: `wrote`, or `not kept` with the OSError. None is written, and the list is empty, when `destination` is no
+    project folder itself (`board_records.project_root`): a `.spark/` folder would make it one. A could-not-run build is
+    recorded too. `requirements` is named relative to the project when it is inside it, else by its whole path; `kept` gives the
+    pin map's missing facts. `records` is the BuildRecordStore a test gives.
+    """
+    destination = Path(destination)
+    try:
+        if board_records.project_root(destination) != destination.resolve():
+            return []
+    except board_records.BoardError:
+        return []
+    records = records or BuildRecordStore(destination)
+    try:
+        record = {"status": STATUS_FOR[verdict(stages)], "stages": [{"name": stage.name, "status": stage.status} for stage in stages],
+                  "missing_facts": [item for entry in kept for item in entry.get("missing_facts", [])],
+                  "requirements": _named_from(Path(requirements), destination), "requirements_sha256": sha256_of(requirements)}
+        path = records.write(record)
+    except OSError as refused:
+        return [{"file": str(records.path), "did": "not kept", "why": str(refused), "line": "not kept: %s — %s" % (records.path, refused)}]
+    return [{"file": str(path), "did": "wrote", "why": BUILD_RECORD_WHY, "line": "wrote %s — %s" % (path, BUILD_RECORD_WHY)}]
+
+
+def _named_from(requirements, project):
+    """The requirements file relative to the project when it is inside it, else its whole path. A path as typed is
+    relative to the folder the build ran from, which a reader of the record does not know."""
+    whole = requirements.resolve()
+    try:
+        return str(whole.relative_to(project.resolve()))
+    except ValueError:
+        return str(whole)
+# --- end MVP ---
 
 
 def simulation_dir(args):

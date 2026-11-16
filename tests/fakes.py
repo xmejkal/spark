@@ -284,6 +284,16 @@ class FakeDeployRecordStore:
         return self.last
 
 
+class FakeTextFileWriter:
+    """A fake replies.TextFileWriter: `write(path, text)` keeps the text in `written` by path and writes nothing (P825)."""
+
+    def __init__(self):
+        self.written = {}
+
+    def write(self, path, text):
+        self.written[Path(path)] = text
+
+
 class FakePartPictures:
     """Fake: stands in for part_pictures.PartPictures, giving every type the same marked square, so a test sees which
     parts of a drawing come from the pictures source and which do not."""
