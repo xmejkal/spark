@@ -40,5 +40,11 @@
   "name": "the records are in the design's order, not sorted",
   "find": "        return cls(items, sorted({part[\"id\"] for part in design_parts}))",
   "replace": "        return cls(items, list(dict.fromkeys(part[\"id\"] for part in design_parts)))"
+ },
+ {
+  "file": "scripts/spark/breadboard/before_power.py",
+  "name": "an unused pin with no note says None, not \"\"",
+  "find": "pin.get(\"note\", \"\")",
+  "replace": "pin.get(\"note\")"
  }
 ]

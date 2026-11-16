@@ -116,6 +116,18 @@ class TheMotorDataTest(unittest.TestCase):
         self.assertIsNone(self.data.steps[0].edge)
 
 
+class AnUnusedPinWithNoNoteTest(unittest.TestCase):
+    """A made-up part: an unused pin with no note, no firmware pulls and no CONFLICT. The sheet printed its line with
+    nothing after the colon, so the item says "", not None."""
+
+    def test_it_says_nothing_after_the_colon(self):
+        part = {"id": "made-up-module", "name": "Made-up module", "unused_pins": [{"pin": "EN"}]}
+        data = before_power.BeforePower.of([part], {})
+        self.assertEqual([item.said for item in data.items], [""])
+        line = before_power.BeforePowerList().render(data)[0]
+        self.assertTrue(line.endswith(" EN: "), line)
+
+
 class NoBuildIsRefusedTest(unittest.TestCase):
     def test_a_project_with_no_build_is_refused_as_the_sheet_refuses_it(self):
         project = a_copy("motor")
