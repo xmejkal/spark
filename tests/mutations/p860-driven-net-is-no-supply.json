@@ -14,7 +14,7 @@
  {
   "file": "scripts/spark/breadboard/wiring_steps.py",
   "name": "a wiring line calls a net the amplifier makes a supply from off the board again",
-  "find": "    supply = \" / \".join(off_board_supplies(point.nets, parts)) if point.nets and not on_board else None",
+  "find": "    supply = \" / \".join(off_board_supplies(point.nets, parts)) or None if point.nets and not on_board else None",
   "replace": "    supply = \" / \".join(point.nets) if point.nets and not on_board else None"
  },
  {

@@ -234,7 +234,8 @@ ROW_HOLES = 5
 def points(circuit):
     """Every connection point of the built circuit. Traces join ports and nets; a point is what they join, followed through
     both (netlist.py keeps a pin-to-pin trace's net apart from a named one on purpose; a breadboard row does not). A port
-    alone on a named net is a point too: a supply that comes from off the board."""
+    alone on a named net is a point too: a supply that comes from off the board, unless a part makes that net
+    (`off_board_supplies`)."""
     parent = {}
 
     def find(node):
@@ -325,7 +326,7 @@ def _said(point, end, parts):
     on_board = ends[0].kind == BOARD
     if on_board and len(ends) == 1:
         return None
-    supply = " / ".join(off_board_supplies(point.nets, parts)) if point.nets and not on_board else None
+    supply = " / ".join(off_board_supplies(point.nets, parts)) or None if point.nets and not on_board else None
     if supply:
         line += " · the %s supply, from off the board, not part of the parts list" % supply
     # a board pin's end is its jumper's end, in a hole of the free row; a supply's wire takes a hole too

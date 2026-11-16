@@ -347,8 +347,8 @@ def rails_driven_by(part_list):
 
 
 def rails_made_on_board(part_list):
-    """The driven nets a part makes from power it draws on this board: an amplifier's outputs, a regulator's VOUT
-    (P860). A part with no power input, such as an inlet or a battery, only passes in a supply from off the board."""
+    """The nets `rails_driven_by` lists, less those of a part with no power input on this board (P860). An amplifier's
+    outputs and a regulator's VOUT are made here. An inlet or a battery only passes in a supply from off the board."""
     powered = {id(part) for part, supply, net in power_connections(part_list)
                if supply.get("direction", "in") == "in" and net not in GROUND_NETS}
     return {net for part, supply, net in power_connections(part_list)
