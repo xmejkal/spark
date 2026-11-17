@@ -33,12 +33,36 @@ e.g. `- Job 1 · paste each task into Slack by hand · E tickets.csv:7` -->
 <!-- One ### per actor and scenario: the table, then a Mermaid flowchart of the same steps. Never a Mermaid
 journey block: it forces a score on every task. "n/a — a one-step job" may replace both.
 e.g. `| 2 | opens the app | E analytics, 90 days | never sees the task | not yet | Do they read email? |` -->
-### ⟨actor⟩ — ⟨scenario⟩ <!-- REQUIRED:journey -->
+### The maker with Claude — "let's add another joystick" after the board is wired and flashed <!-- REQUIRED:journey -->
+Today's journey, as the walks and the code show it. Each step says whether a walk saw it (E) or a lens read it from the code or the command text (H).
+
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
-| 1 | ⟨fill⟩ | ⟨tag and pointer⟩ | ⟨fill⟩ | ⟨works, partly, not yet or —⟩ | ⟨fill or —⟩ |
+| 1 | says the change in the chat; Claude adds a need | H commands/idea.md, council/user.md:70 (US-43) | no sentence says what the change will make out of date | partly | Q7: a plan first? |
+| 2 | picks a part for the new need; a held part must be freed first | E spark-walks/p711-sound-demo/rows.md row 1; p711-identify-amp/rows.md row 5 | nothing says whether a hold is still in use | partly | — |
+| 3 | writes the requirements again; old parts stay as "kept, not from a pick" | E #1234's comment; council/feasibility.md:38 (FE-17) | he removes entries by hand | partly | Q2 |
+| 4 | builds; "traces differ: board.tsx" for the file spark wrote | E p711-sound-demo/rows.md row 13 | he deletes spark's own file by hand; a refused build removes the earlier pins.py, sheet and page (★C7 (by design)) | partly | Q2 |
+| 5 | reads the new pins.py; 2 of 15 kept signals moved in the facilitator's run (★C4 (simulated; one project)) | E the run of 2026-11-17, simulated | nothing names the moved pins as moved | not yet | Q3 |
+| 6 | Claude rewrites the firmware's pin names | H council/feasibility.md:43 (FE-22) | no check that main.py names only pins that pins.py holds (★C5 (not run)) | not yet | — |
+| 7 | wires again from "Changes since the last build" | E p711-sound-demo/rows.md row 6; council/physics.md:23 (PH-10) | the section compares with the earlier sheet, not with what he wired; no order of power, flash and wire (★C6 (not measured)) | partly | Q11 |
+| 8 | looks at the board, then deploys with BOOT and RESET and his yes | E p711-sound-demo/rows.md row 14; p711-walk4-button-led/rows.md rows 3 and 5 | the look restarts the board and may read another project's board | partly | P865 #1231 |
+| 9 | asks where the project stands | E the facilitator's runs of `flow.py show` (★C1 (one project), ★C2 (reads no record)) | the build and the breadboard read as done while the requirements are out of date; the deploy always reads "not started" | not yet | Q4, Q5 |
 
 ```mermaid
 flowchart LR
-  s1["⟨step 1⟩"] --> s2["⟨step 2⟩"]
+  s1["1 say the change"] --> s2["2 pick, free a hold"] --> s3["3 requirements again"] --> s4["4 build, delete board.tsx by hand"]
+  s4 --> s5["5 new pins.py: kept pins may move"] --> s6["6 firmware pin names"] --> s7["7 wire again"] --> s8["8 look, deploy"] --> s9["9 where does it stand?"]
+```
+
+### The agent at the keyboard — reads where the project stands and acts
+| step | what they do | evidence | friction or harm | today | open question |
+| --- | --- | --- | --- | --- | --- |
+| 1 | runs `flow.py show --json` and reads data.phases and data.stands_at | E docs/guide/agents/flow.md; council/architecture.md:278 (AR-17) | — | works | — |
+| 2 | reads an offer: a key and one effect line | E council/ux.md:15 (UX-6); scripts/spark/flow/phase_readers.py:37 | no command, no "needs your yes", so it rebuilds the command from the command files' prose | partly | Q13 |
+| 3 | reads a status | E the facilitator's run (★C10 (a board-only project)) | a tick for a build whose stages were all skipped; one dot for three meanings | partly | found on the way, C21 |
+| 4 | tells the person what a change makes out of date | E council/ux.md:50 (UX-16) | nothing in the JSON says it, so the agent guesses or reads source | not yet | Q5, Q7 |
+
+```mermaid
+flowchart LR
+  a1["1 flow.py show --json"] --> a2["2 read the offers"] --> a3["3 read each status"] --> a4["4 say what a change costs"]
 ```

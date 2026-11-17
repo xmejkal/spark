@@ -375,14 +375,6 @@ The three shapes in AR-12 to AR-14 are options with their costs. Nothing here is
 
 ## Searches
 
-- "LangGraph StateGraph add_node add_conditional_edges interrupt human-in-the-loop documentation" · served: what a
-  node-and-edge runner needs from the definition (a framework's graph, part b) · used: the words nodes, conditional
-  edges, `interrupt`, `Command`, and the two official pages named in the results
-  (https://docs.langchain.com/oss/langgraph/interrupts, https://docs.langchain.com/oss/python/4-human-in-the-loop), read
-  as search results on 2026-11-17, pages not opened.
-- "build system "out of date" target content hash instead of timestamp "Build Systems à la Carte" verifying traces
-  rebuilder scheduler" · served: the industry names for candidate 2 (part c) · used: scheduler, rebuilder, verifying
-  trace, early cutoff, and that Make compares modification times. Sources named in the results:
-  https://www.microsoft.com/en-us/research/publication/build-systems-a-la-carte/ and the JFP 2020 version
-  (doi:10.1017/S0956796820000088), read as search summaries on 2026-11-17, paper not opened.
-- A third search was not made.
+- "LangGraph StateGraph add_node add_conditional_edges interrupt human-in-the-loop documentation" · served: what a node-and-edge runner needs from the definition (a framework's graph, part b) · used: the words nodes, conditional edges, `interrupt`, `Command`, and the two official pages named in the results (https://docs.langchain.com/oss/langgraph/interrupts, https://docs.langchain.com/oss/python/4-human-in-the-loop), read as search results on 2026-11-17, pages not opened.
+- "build system "out of date" target content hash instead of timestamp "Build Systems à la Carte" verifying traces rebuilder scheduler" · served: the industry names for candidate 2 (part c) · used: scheduler, rebuilder, verifying trace, early cutoff, and that Make compares modification times. Sources named in the results: https://www.microsoft.com/en-us/research/publication/build-systems-a-la-carte/ and the JFP 2020 version (doi:10.1017/S0956796820000088), read as search summaries on 2026-11-17, paper not opened.
+A third search was not made.
