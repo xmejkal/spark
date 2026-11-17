@@ -51,11 +51,10 @@ for each phase, then one section for each phase. Each has the phase name, a mark
 says and its offers as plain text. A section `Wiring` follows the last phase, when the project holds a
 `requirements.json` ([P828](https://github.com/xmejkal/spark/issues/1186)). It has the lines "Before you power it" first, then
 the wiring steps, one connection each, which a person can follow to wire a breadboard. When the project is not built, or
-was built from other requirements, the section shows no steps and says why in the refusal's own words. The pictures
+was built from other requirements, the section shows no steps and says why in the refusal's own words. A failure that is not the sheet's own refusal gives one fixed sentence: run the build again. The sentence about the Breadboard picture shows only when that picture is drawn. The pictures
 follow, in one section. The breadboard comes first when the project holds `breadboard.svg`. The schematic and the PCB are
-files too: the build with `--keep` writes `dist/board/schematic.svg` and `dist/board/pcb.svg` beside `circuit.json`, so
-`flow.py page` alone shows them. It never runs `tsci`. A picture whose export gave nothing removes the earlier file, and a
-build that did not finish removes both. Until a build kept them, the two pictures say why they are not drawn. In a project,
+files too, `dist/board/schematic.svg` and `dist/board/pcb.svg`, which the build with `--keep` writes in a project, so
+`flow.py page` alone shows them. It never runs `tsci`. The full rules are in `commands/build.md`. Until a build kept them, the two pictures say why they are not drawn. In a project,
 the build writes the same page with all three pictures, after it kept the simulation project. A build that did not finish
 removes `page.html` in a project, and `flow.py page` writes it again. If the flow page cannot be written, the build keeps
 its own result and lists one `not written` entry.
@@ -76,8 +75,10 @@ wiring is in the section `id="wiring"`, which the rail links to as "Wiring". Its
 each `<li id="step-N" value="N">`, and the lines before power are a `<ul>` of their own, never inside the steps.
 
 One at a time lives in the URL. The link "One at a time: start at step 1" goes to `#step-1`. While a step is the target of
-the URL, the page shows that step alone, with a line that says "Step N of M" and the links Back, Next, All steps and
-Picture. So the browser's Back button walks the steps. The links "Wiring", "Pictures" and "All steps" leave that view. In a
+the URL, the page shows that step alone, with its menu, the element `class="nav"`. The menu says "Step N of M" and has the
+links Back, Next, All steps and Picture. Picture shows only when the breadboard picture is drawn. So the browser's Back
+button walks the steps. The links "Wiring", "Pictures", "All steps" and "Picture" leave that view, and the browser's Back
+returns to the step. In a
 browser that does not know the CSS `:has()`, every step shows. When the page prints, every step shows. In a published
 Artifact, the fragment may not survive a reload of the outer page. The page has no script and no checkbox on a step, and
 it never says that the board is wired.
