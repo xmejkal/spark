@@ -7,6 +7,7 @@ beside the sheet, compares it with the new steps, and says each difference in th
 
 import argparse
 import contextlib
+import datetime
 import shutil
 import io
 import json
@@ -31,19 +32,40 @@ from spark.build.stages import Stage  # noqa: E402
 from fakes import run_build_board  # noqa: E402
 from test_breadboard_keep import BUTTON_ONLY, FULL, LED_ONLY, build, change_requirements, new_project  # noqa: E402
 
-SECTION = "### Changes since the last build"
+SECTION = "### Changes since"
+#: The times the tests give the sheets: a test sets `at` of a record, so the heading names a time the test knows.
+TIME_A, TIME_B = "2026-03-04T10:32:00+01:00", "2026-03-05T11:47:00+01:00"
+HEADING = "### Changes since the sheet spark wrote on "
+OLD_HEADING = "### Changes since the last build"
+NO_TIME_HEADING = "### Changes since the last sheet spark wrote"
 
 
 def record(project):
     return json.loads((project / bench_changes.WiringLog.FILE_NAME).read_text())
 
 
+def set_record(project, **keys):
+    """A test setup: the record with these keys changed (the time of its sheet, for one)."""
+    path = project / bench_changes.WiringLog.FILE_NAME
+    path.write_text(json.dumps(dict(json.loads(path.read_text()), **keys)))
+
+
+def said(at):
+    """A time of a record as the heading says it: local, to the minute."""
+    return datetime.datetime.fromisoformat(at).astimezone().strftime("%Y-%m-%d %H:%M")
+
+
+def heading(project):
+    """The line that heads the changes section, else None."""
+    return next((line for line in (project / "breadboard.md").read_text().splitlines() if line.startswith(SECTION)), None)
+
+
 def section(project):
-    """The lines of the sheet's changes section, else None."""
+    """The list lines of the sheet's changes section, else None."""
     text = (project / "breadboard.md").read_text()
     if SECTION not in text:
         return None
-    return [line for line in text.split(SECTION, 1)[1].split("\n### ", 1)[0].splitlines() if line.strip()]
+    return [line for line in text.split(SECTION, 1)[1].split("\n### ", 1)[0].splitlines() if line.startswith("- ")]
 
 
 class FirstBuildTest(unittest.TestCase):
@@ -160,6 +182,118 @@ class WriteOrderTest(unittest.TestCase):
         self.assertTrue(all(step["color"] is None for step in record(project)["steps"]))
 
 
+class BaseTest(unittest.TestCase):
+    """The list counts from the last sheet spark wrote for another design, and the heading says when that was (P875)."""
+
+    def built(self, *designs):
+        """A project built once for each design in turn; the record of each sheet is given a time the test knows."""
+        project = new_project(designs[0])
+        for number, design in enumerate(designs):
+            if number:
+                change_requirements(project, design)
+            build(project)
+            set_record(project, at=(TIME_A, TIME_B)[number % 2])
+        return project
+
+    def test_a_changed_design_built_twice_still_lists_the_changes_and_the_time_of_the_sheet_it_counts_from(self):
+        project = self.built(BUTTON_ONLY)
+        change_requirements(project, FULL)
+        first = build(project)
+        first_lines = section(project)
+        set_record(project, at=TIME_B)
+        again = build(project)
+        self.assertEqual(section(project), first_lines)
+        self.assertEqual(again.changes, first.changes)
+        self.assertEqual(heading(project), HEADING + said(TIME_A))
+
+    def test_a_third_design_lists_the_changes_from_the_second_design_s_sheet_only(self):
+        project = self.built(BUTTON_ONLY, FULL)
+        change_requirements(project, LED_ONLY)
+        build(project)
+        self.assertEqual(heading(project), HEADING + said(TIME_B))
+        self.assertTrue(section(project))
+        self.assertNotIn("- Put LedRed5mm in the breadboard.", section(project))
+
+    def test_going_back_to_the_first_design_counts_from_the_second_design_s_sheet(self):
+        project = self.built(BUTTON_ONLY, FULL)
+        change_requirements(project, BUTTON_ONLY)
+        written = build(project)
+        self.assertEqual(heading(project), HEADING + said(TIME_B))
+        self.assertIn("Take out LedRed5mm.", bench_changes.ChangeList().render(written.changes))
+
+    def test_the_section_says_since_the_sheet_spark_wrote_on_a_time_and_never_the_bench(self):
+        project = self.built(BUTTON_ONLY)
+        change_requirements(project, FULL)
+        build(project)
+        text = (project / "breadboard.md").read_text()
+        part = text[text.index(SECTION):text.index("### Steps")]
+        self.assertTrue(part.startswith(HEADING + said(TIME_A) + "\n"))
+        self.assertNotIn("bench", part)
+        self.assertIn("Count from that sheet only if you wired it.", part)
+        self.assertLess(part.index("Count from"), part.index("\n- "))
+
+    def test_a_first_design_built_twice_keeps_the_first_design_heading(self):
+        project = self.built(FULL)
+        build(project)
+        self.assertEqual(heading(project), OLD_HEADING)
+
+    def test_a_record_from_before_the_base_lists_the_changes_and_says_no_time(self):
+        project = new_project(BUTTON_ONLY)
+        build(project)
+        old = {key: value for key, value in record(project).items() if key not in ("at", "base")}
+        (project / bench_changes.WiringLog.FILE_NAME).write_text(json.dumps(old))
+        change_requirements(project, FULL)
+        written = build(project)
+        self.assertEqual(heading(project), NO_TIME_HEADING)
+        self.assertEqual(section(project), ["- " + line for line in bench_changes.ChangeList().render(written.changes)])
+        self.assertTrue(written.changes)
+        self.assertIsNone(written.since)
+        self.assertIsNone(record(project)["base"]["at"])
+        self.assertTrue(record(project)["at"])
+
+    def test_a_broken_base_is_said_and_no_list_is_made(self):
+        project = self.built(BUTTON_ONLY)
+        set_record(project, base={"steps": "none", "at": None})
+        written = build(project)
+        self.assertEqual(written.changes, [])
+        self.assertRegex(" ".join(section(project)), r"cannot be compared.*cannot be read")
+        self.assertIsNone(record(project)["base"])
+
+    def test_a_leftover_stage_file_stops_the_sheet_and_is_left_as_it_was(self):
+        project = self.built(BUTTON_ONLY)
+        change_requirements(project, FULL)
+        earlier = ((project / "breadboard.md").read_text(), (project / bench_changes.WiringLog.FILE_NAME).read_text())
+        leftover = project / (bench_changes.WiringLog.FILE_NAME + ".new")
+        leftover.write_text("mine")
+        with self.assertRaises(OSError) as stopped:
+            build(project)
+        self.assertIn("wiring-record.json.new is in the way: delete it if it is not yours", str(stopped.exception))
+        self.assertEqual(leftover.read_text(), "mine")
+        self.assertEqual(((project / "breadboard.md").read_text(), (project / bench_changes.WiringLog.FILE_NAME).read_text()), earlier)
+
+    def test_a_link_at_the_stage_name_is_not_written_through(self):
+        project = self.built(BUTTON_ONLY)
+        change_requirements(project, FULL)
+        outside = Path(tempfile.mkdtemp()) / "outside.txt"
+        outside.write_text("outside")
+        (project / (bench_changes.WiringLog.FILE_NAME + ".new")).symlink_to(outside)
+        with self.assertRaises(OSError):
+            build(project)
+        self.assertEqual(outside.read_text(), "outside")
+        self.assertTrue((project / (bench_changes.WiringLog.FILE_NAME + ".new")).is_symlink())
+
+    def test_a_sheet_that_cannot_be_written_leaves_the_record_and_no_stage(self):
+        project = self.built(BUTTON_ONLY)
+        change_requirements(project, FULL)
+        earlier = (project / bench_changes.WiringLog.FILE_NAME).read_text()
+        (project / "breadboard.md").unlink()
+        (project / "breadboard.md").mkdir()  # the sheet cannot be written over a folder
+        with self.assertRaises(OSError):
+            build(project)
+        self.assertEqual((project / bench_changes.WiringLog.FILE_NAME).read_text(), earlier)
+        self.assertEqual(sorted(one.name for one in project.glob("*.new")), [])
+
+
 class CheckSpineTest(unittest.TestCase):
     """`check_spine --keep` carries each change as a kept entry, and --json carries the entry's fields."""
 
@@ -207,6 +341,25 @@ class CheckSpineTest(unittest.TestCase):
         self.keep(project, FULL, [Stage("build", check_spine.PROBLEMS, "1 error")])
         self.assertFalse((project / "breadboard.md").exists())
         self.assertEqual((project / bench_changes.WiringLog.FILE_NAME).read_text(), earlier)
+
+    def test_a_build_that_did_not_finish_keeps_the_list_for_the_next_build(self):
+        project = self.rebuilt()
+        first, _ = self.keep(project, FULL)
+        self.keep(project, FULL, [Stage("build", check_spine.PROBLEMS, "1 error")])
+        again, _ = self.keep(project, FULL)
+        changed = [entry for entry in again if entry["did"] == "changed"]
+        self.assertEqual([entry["code"] for entry in changed], ["added"] * 5 + ["rerouted"])
+        self.assertEqual(changed, [entry for entry in first if entry["did"] == "changed"])
+
+    def test_the_sheet_s_entry_names_the_time_of_the_sheet_it_counts_from(self):
+        project = new_project(BUTTON_ONLY)
+        build(project)
+        set_record(project, at=TIME_A)
+        change_requirements(project, FULL)
+        kept, _ = self.keep(project, FULL)
+        sheet_entry = next(entry for entry in kept if entry["did"] == "wrote" and entry["file"].endswith("breadboard.md"))
+        self.assertEqual(sheet_entry["since"], TIME_A)
+        self.assertEqual(sheet_entry["since"], record(project)["base"]["at"])
 
 
 if __name__ == "__main__":

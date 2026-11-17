@@ -4,6 +4,7 @@ A rebuild lists what to change on the bench (P300, #366): the steps of the last 
     python3 -m unittest tests.test_breadboard_changes
 """
 
+import datetime
 import json
 import os
 import sys
@@ -18,6 +19,7 @@ import suite_temp  # noqa: E402,F401
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from spark.breadboard import bench_changes as changes  # noqa: E402
+from spark.build import build_record  # noqa: E402
 from spark.breadboard.wiring_steps import BOARD, PART, RESISTOR, BreadboardSteps, End, StepColors, StepPoint  # noqa: E402
 
 
@@ -235,6 +237,61 @@ class BenchColorTest(unittest.TestCase):
                       "(it went to the row of LedRed5mm K).", found)
 
 
+class BaseKeptTest(unittest.TestCase):
+    """The base is the steps of the last sheet whose wiring differs from this one, with the time of that sheet (P875)."""
+
+    def test_another_wiring_makes_the_earlier_sheet_the_base(self):
+        first = changes.WiringLog.from_build(ONE_LED, colors_of(ONE_LED), None, (), "t1")
+        second = changes.WiringLog.from_build(TWO_LEDS, colors_of(TWO_LEDS), first, (), "t2")
+        self.assertIsNone(first.base)
+        self.assertEqual((second.at, second.base), ("t2", changes.SheetBase(first.steps, "t1")))
+
+    def test_the_same_wiring_carries_the_base_on(self):
+        first = changes.WiringLog.from_build(ONE_LED, colors_of(ONE_LED), None, (), "t1")
+        second = changes.WiringLog.from_build(TWO_LEDS, colors_of(TWO_LEDS), first, (), "t2")
+        third = changes.WiringLog.from_build(TWO_LEDS, colors_of(TWO_LEDS), second, (), "t3")
+        self.assertEqual((third.at, third.base), ("t3", changes.SheetBase(first.steps, "t1")))
+
+    def test_a_first_wiring_built_twice_has_no_base(self):
+        first = changes.WiringLog.from_build(ONE_LED, colors_of(ONE_LED), None, (), "t1")
+        self.assertIsNone(changes.WiringLog.from_build(ONE_LED, colors_of(ONE_LED), first, (), "t2").base)
+
+    def test_the_base_is_read_back_as_it_was_written(self):
+        path = Path(tempfile.mkdtemp()) / changes.WiringLog.FILE_NAME
+        first = changes.WiringLog.from_build(ONE_LED, colors_of(ONE_LED), None, (), "2026-03-04T10:32:00+01:00")
+        second = changes.WiringLog.from_build(TWO_LEDS, colors_of(TWO_LEDS), first, (), "2026-03-05T11:47:00+01:00")
+        path.write_text(json.dumps(second.to_dict()))
+        again = changes.WiringLog.read(path)
+        self.assertEqual((again.at, again.base), (second.at, second.base))
+
+    def test_a_record_with_no_time_and_no_base_is_read_as_one_with_neither(self):
+        path = Path(tempfile.mkdtemp()) / changes.WiringLog.FILE_NAME
+        path.write_text(json.dumps({key: value for key, value in record_of(ONE_LED).to_dict().items() if key not in ("at", "base")}))
+        again = changes.WiringLog.read(path)
+        self.assertEqual((again.at, again.base, again.why_unread), (None, None, None))
+
+    def test_a_time_that_is_no_time_is_a_record_that_cannot_be_read(self):
+        path = Path(tempfile.mkdtemp()) / changes.WiringLog.FILE_NAME
+        path.write_text(json.dumps(dict(record_of(ONE_LED).to_dict(), at="yesterday")))
+        self.assertTrue(changes.WiringLog.read(path).why_unread)
+
+    def test_the_heading_names_the_time_or_says_none_is_known(self):
+        self.assertEqual(changes.ChangeList().heading("2026-03-04T10:32:00+01:00"),
+                         "Changes since the sheet spark wrote on " + datetime.datetime(2026, 3, 4, 10, 32, tzinfo=datetime.timezone(
+                             datetime.timedelta(hours=1))).astimezone().strftime("%Y-%m-%d %H:%M"))
+        self.assertEqual(changes.ChangeList().heading(None), "Changes since the last sheet spark wrote")
+
+
+class StagedBytesTest(unittest.TestCase):
+    def test_a_stage_made_from_data_holds_the_data_and_commits_it(self):
+        folder = Path(tempfile.mkdtemp())
+        staged = build_record.StagedFile.from_bytes(folder / "x.json.new", b"held")
+        staged.make()
+        self.assertEqual((folder / "x.json.new").read_bytes(), b"held")
+        staged.commit(folder / "x.json")
+        self.assertEqual(((folder / "x.json").read_bytes(), (folder / "x.json.new").exists()), (b"held", False))
+
+
 class RecordTest(unittest.TestCase):
     def test_the_record_is_read_back_as_it_was_written(self):
         path = Path(tempfile.mkdtemp()) / changes.WiringLog.FILE_NAME
@@ -247,11 +304,12 @@ class RecordTest(unittest.TestCase):
 
     def test_a_record_is_written_whole_or_not_at_all(self):
         path = Path(tempfile.mkdtemp()) / changes.WiringLog.FILE_NAME
-        record_of(ONE_LED).write(path)
+        store = changes.WiringLogStore(path.parent)
+        store.commit(store.stage(record_of(ONE_LED)))
         earlier = path.read_text()
         with mock.patch.object(os, "replace", side_effect=OSError("disk")):
             with self.assertRaises(OSError):
-                record_of(TWO_LEDS).write(path)
+                store.commit(store.stage(record_of(TWO_LEDS)))
         self.assertEqual(path.read_text(), earlier)
 
     def test_no_file_is_no_record(self):
