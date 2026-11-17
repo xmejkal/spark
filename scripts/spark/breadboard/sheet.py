@@ -56,9 +56,8 @@ DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(STEP_COLORS),
 BEFORE_POWER_LIST = before_power.BeforePowerList()
 #: What the sheet says of the bench: one line per change since the last sheet for another design, in these words.
 CHANGE_LIST = bench_changes.ChangeList()
-#: The heading of the section on a design with no earlier sheet for another design (P300), and the line a heading with a base has under it (P875).
-FIRST_DESIGN_HEADING = "### Changes since the last build"
-COUNT_FROM_NOTE = "Count from that sheet only if you wired it. If you did not, follow the steps below: they are the whole wiring."
+#: The heading of the section when there is no base: a design with no earlier sheet for another design, or a record that cannot be read (P300).
+LAST_BUILD_HEADING = "Changes since the last build"
 #: The drawing a person edits in Wokwi, whose moves a rebuild keeps (P273).
 EDITABLE_DRAWING = next(renderer for renderer in DRAWING_RENDERERS
                         if isinstance(renderer, drawing.WokwiBreadboardDiagram))
@@ -398,12 +397,13 @@ def _change_lines(record, new_record, changes):
     if record is None:
         return None
     if record.why_unread:
-        return [FIRST_DESIGN_HEADING, "", "- Changes cannot be compared with the last build: %s %s. The steps below are the whole wiring."
+        return ["### " + LAST_BUILD_HEADING, "", "- Changes cannot be compared with the last build: %s %s. The steps below are the whole wiring."
                 % (bench_changes.WiringLog.FILE_NAME, record.why_unread)]
     lines = ["- " + line for line in CHANGE_LIST.render(changes)] or ["- Nothing to change on the bench."]
     if not new_record.base:
-        return [FIRST_DESIGN_HEADING, ""] + lines
-    return ["### " + CHANGE_LIST.heading(new_record.base.at), "", COUNT_FROM_NOTE, ""] + lines
+        return ["### " + LAST_BUILD_HEADING, ""] + lines
+    since = new_record.base.at
+    return ["### " + CHANGE_LIST.heading(since), "", CHANGE_LIST.note(since), ""] + lines
 
 
 def _drawn_or_not(paths, planned):

@@ -14,7 +14,7 @@
 
 ### Changes since the sheet spark wrote on <time>
 
-Count from that sheet only if you wired it. If you did not, follow the steps below: they are the whole wiring.
+Use this list only if you wired the sheet from <time>. If you did not, follow the steps below: they are the whole wiring.
 
 - Take out LedRed5mm.
 - Take out R1, 330Ω in series with LedRed5mm A.

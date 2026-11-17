@@ -118,10 +118,16 @@ def _step(one):
     return step
 
 
+def _said(at):
+    """A time as `zone_time.stamp` writes it, as a heading says it: local, to the minute. ValueError, OverflowError or
+    TypeError for a time that is none, or that the local zone cannot say."""
+    return datetime.datetime.fromisoformat(at).astimezone().strftime("%Y-%m-%d %H:%M")
+
+
 def _time(value):
-    """`value` when it is a time as `zone_time.stamp` writes it, or None; ValueError for anything else."""
+    """`value` when it is a time that `_said` can say, or None; an error of `_said` for anything else."""
     if value is not None:
-        datetime.datetime.fromisoformat(value)
+        _said(value)
     return value
 
 
@@ -169,7 +175,7 @@ class WiringLog:
             base = SheetBase([_step(one) for one in held["steps"]], _time(held["at"])) if held is not None else None
             return cls([_step(one) for one in data["steps"]], [pair for pair in data["drawn_jumpers"]], None,
                        _time(data.get("at")), base)
-        except (OSError, UnicodeDecodeError, ValueError, KeyError, TypeError, AttributeError) as broken:
+        except (OSError, UnicodeDecodeError, ValueError, OverflowError, KeyError, TypeError, AttributeError) as broken:
             return cls([], (), "cannot be read (%s: %s)" % (type(broken).__name__, broken))
 
     def to_dict(self):
@@ -212,8 +218,9 @@ class WiringLogStore:
 
 def changes_between(record, seated, colors=None):
     """
-    [WiringChange] from the earlier `record` to the steps now, in the order a person acts: what to take out (a whole
-    resistor is one line), what to swap, then what to put in and which connections to move, a line that marks a rail
+    [WiringChange] from the earlier `record` (a WiringLog or a SheetBase: anything with `steps`) to the steps now, in the
+    order a person acts: what to take out (a whole resistor is one line), what to swap,
+    then what to put in and which connections to move, a line that marks a rail
     before the lines that use it, each in step order. A jumper in the record shows its bench color; one added shows
     its color in the new drawing, unless a jumper to take out or move had that color on the bench.
     """
@@ -259,10 +266,15 @@ class ChangeList:
     """Renderer: one bench action per change, the words a person reads."""
 
     def heading(self, since):
-        """The heading of the list: it names the time of the sheet it counts from (local, to the minute), else says none is known."""
+        """The heading of the list: it names the time of the sheet it counts from, else says none is known."""
         if since is None:
-            return "Changes since the last sheet spark wrote"
-        return "Changes since the sheet spark wrote on " + datetime.datetime.fromisoformat(since).astimezone().strftime("%Y-%m-%d %H:%M")
+            return "Changes since an earlier sheet spark wrote (spark did not note when)"
+        return "Changes since the sheet spark wrote on " + _said(since)
+
+    def note(self, since):
+        """The line under the heading: spark cannot know that the person wired that sheet."""
+        which = "that earlier sheet" if since is None else "the sheet from " + _said(since)
+        return "Use this list only if you wired %s. If you did not, follow the steps below: they are the whole wiring." % which
 
     def line(self, change):
         jumper = "%s jumper" % change.color if change.color else "jumper"

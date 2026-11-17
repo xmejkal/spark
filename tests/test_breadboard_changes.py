@@ -7,6 +7,8 @@ A rebuild lists what to change on the bench (P300, #366): the steps of the last 
 import datetime
 import json
 import os
+import resource
+import signal
 import sys
 import tempfile
 import unittest
@@ -279,7 +281,23 @@ class BaseKeptTest(unittest.TestCase):
         self.assertEqual(changes.ChangeList().heading("2026-03-04T10:32:00+01:00"),
                          "Changes since the sheet spark wrote on " + datetime.datetime(2026, 3, 4, 10, 32, tzinfo=datetime.timezone(
                              datetime.timedelta(hours=1))).astimezone().strftime("%Y-%m-%d %H:%M"))
-        self.assertEqual(changes.ChangeList().heading(None), "Changes since the last sheet spark wrote")
+        self.assertEqual(changes.ChangeList().heading(None), "Changes since an earlier sheet spark wrote (spark did not note when)")
+
+
+class StageWriteTest(unittest.TestCase):
+    def test_a_stage_whose_own_write_fails_leaves_no_stage(self):
+        folder = Path(tempfile.mkdtemp())
+        store = changes.WiringLogStore(folder)
+        was = signal.signal(signal.SIGXFSZ, signal.SIG_IGN)  # a file past the limit then fails with an OSError
+        soft, hard = resource.getrlimit(resource.RLIMIT_FSIZE)
+        resource.setrlimit(resource.RLIMIT_FSIZE, (10, hard))
+        try:
+            with self.assertRaises(OSError):
+                store.stage(record_of(ONE_LED))
+        finally:
+            resource.setrlimit(resource.RLIMIT_FSIZE, (soft, hard))
+            signal.signal(signal.SIGXFSZ, was)
+        self.assertEqual(list(folder.iterdir()), [])
 
 
 class StagedBytesTest(unittest.TestCase):

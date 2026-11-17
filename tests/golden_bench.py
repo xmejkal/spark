@@ -234,8 +234,8 @@ MOMENT = re.compile(r'"at": "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d{4}"')
 #: (P508). The grant is made at run time, so only the shape can match, and a changed shape still fails.
 CLOCK = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d")
 
-#: The time the breadboard sheet's changes heading names (P875): the time of a sheet spark wrote at run time, to the minute.
-SHEET_TIME = re.compile(r"(Changes since the sheet spark wrote on )\d{4}-\d\d-\d\d \d\d:\d\d")
+#: The time the breadboard sheet's changes heading and the line under it name (P875): the time of a sheet spark wrote at run time, to the minute.
+SHEET_TIME = re.compile(r"((?:Changes since the sheet spark wrote on|wired the sheet from) )\d{4}-\d\d-\d\d \d\d:\d\d")
 
 
 #: The name of a board log, a moment of the run (sim/runs/board/<moment>.log), which CLOCK does not match (P383).

@@ -92,7 +92,7 @@ class StagedFile:
     """
 
     def __init__(self, source, staged, data=None):
-        self.source, self.staged, self.data, self.made = source and Path(source), Path(staged), data, False
+        self.source, self.staged, self.data, self.made = Path(source) if source is not None else None, Path(staged), data, False
 
     @classmethod
     def from_bytes(cls, staged, data):

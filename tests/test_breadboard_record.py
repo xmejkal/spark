@@ -37,7 +37,8 @@ SECTION = "### Changes since"
 TIME_A, TIME_B = "2026-03-04T10:32:00+01:00", "2026-03-05T11:47:00+01:00"
 HEADING = "### Changes since the sheet spark wrote on "
 OLD_HEADING = "### Changes since the last build"
-NO_TIME_HEADING = "### Changes since the last sheet spark wrote"
+NO_TIME_HEADING = "### Changes since an earlier sheet spark wrote (spark did not note when)"
+NOTE = "Use this list only if you wired "
 
 
 def record(project):
@@ -229,13 +230,14 @@ class BaseTest(unittest.TestCase):
         part = text[text.index(SECTION):text.index("### Steps")]
         self.assertTrue(part.startswith(HEADING + said(TIME_A) + "\n"))
         self.assertNotIn("bench", part)
-        self.assertIn("Count from that sheet only if you wired it.", part)
-        self.assertLess(part.index("Count from"), part.index("\n- "))
+        self.assertIn(NOTE + "the sheet from " + said(TIME_A) + ". If you did not, follow the steps below", part)
+        self.assertLess(part.index(NOTE), part.index("\n- "))
 
     def test_a_first_design_built_twice_keeps_the_first_design_heading(self):
         project = self.built(FULL)
         build(project)
         self.assertEqual(heading(project), OLD_HEADING)
+        self.assertNotIn(NOTE, (project / "breadboard.md").read_text())
 
     def test_a_record_from_before_the_base_lists_the_changes_and_says_no_time(self):
         project = new_project(BUTTON_ONLY)
@@ -248,6 +250,7 @@ class BaseTest(unittest.TestCase):
         self.assertEqual(section(project), ["- " + line for line in bench_changes.ChangeList().render(written.changes)])
         self.assertTrue(written.changes)
         self.assertIsNone(written.since)
+        self.assertIn(NOTE + "that earlier sheet. If you did not", (project / "breadboard.md").read_text())
         self.assertIsNone(record(project)["base"]["at"])
         self.assertTrue(record(project)["at"])
 
@@ -258,6 +261,36 @@ class BaseTest(unittest.TestCase):
         self.assertEqual(written.changes, [])
         self.assertRegex(" ".join(section(project)), r"cannot be compared.*cannot be read")
         self.assertIsNone(record(project)["base"])
+
+    def test_a_time_that_cannot_be_said_in_the_local_zone_is_a_record_that_cannot_be_compared(self):
+        for at in ("9999-12-31T23:59:59+00:00", "0001-01-01T00:00:00"):
+            with self.subTest(at=at):
+                project = self.built(BUTTON_ONLY)
+                set_record(project, at=at)
+                change_requirements(project, FULL)
+                written = build(project)
+                self.assertEqual(written.changes, [])
+                self.assertRegex(" ".join(section(project)), r"cannot be compared.*cannot be read")
+
+    def test_a_base_whose_time_is_garbage_is_a_base_that_cannot_be_read(self):
+        project = self.built(BUTTON_ONLY)
+        set_record(project, base={"steps": record(project)["steps"], "at": "garbage"})
+        build(project)
+        self.assertRegex(" ".join(section(project)), r"cannot be compared.*cannot be read")
+        self.assertIsNone(record(project)["base"])
+
+    def test_a_record_that_is_a_link_is_replaced_and_the_file_it_pointed_to_is_not_written(self):
+        project = self.built(BUTTON_ONLY)
+        outside = Path(tempfile.mkdtemp()) / "outside.json"
+        outside.write_text((project / bench_changes.WiringLog.FILE_NAME).read_text())
+        (project / bench_changes.WiringLog.FILE_NAME).unlink()
+        (project / bench_changes.WiringLog.FILE_NAME).symlink_to(outside)
+        before = outside.read_text()
+        change_requirements(project, FULL)
+        build(project)
+        self.assertEqual(outside.read_text(), before)
+        self.assertFalse((project / bench_changes.WiringLog.FILE_NAME).is_symlink())
+        self.assertTrue(record(project)["base"])
 
     def test_a_leftover_stage_file_stops_the_sheet_and_is_left_as_it_was(self):
         project = self.built(BUTTON_ONLY)
