@@ -1734,7 +1734,6 @@ class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
         self.assertRegex(pin_assigner.pin_module_for(self.requirements).module, r"(?m)^TFT_DC = 11\b")
 
 
-@slow("one tscircuit build of the amplifier alone, about 10 s")
 @unittest.skipUnless(test_converter.node() and board_engine.find_toolchain(ROOT), "needs the board engine and Node")
 class TheAmplifierAloneBuildsForRealTest(unittest.TestCase):
     """P864 (#1230): the board and the DFR0954 with no speaker terminal build with the real board engine, with no fake."""
