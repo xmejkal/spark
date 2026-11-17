@@ -9,7 +9,7 @@ Stands on: the assumptions not retired in risks-and-tests.md; of which those the
 is unrated. check computes both. -->
 **Ready for:** collecting evidence: the frame (D1) and a direction (D5) are confirmed; Q2 to Q4 and Q6 to Q10 are answered by the PO (D6 to D13); Q12, Q13, Q14, Q16 and the importance of the assumptions were answered by the facilitator on the PO's delegation (D14 to D18) and the PO confirmed them (D20); the jobs are confirmed (D19); items.md goes to P869's triage (D21); the PO confirmed the understanding (D22); Q11 (no evidence) waits for a bench row <!-- REQUIRED:ready -->
 **Stands on:** 11 H, 4 of which would change the decision (A3, A4, A8 and A12, rated high by the facilitator on the PO's delegation, D18, and his to change) <!-- REQUIRED:debt -->
-**Decision needed:** none now: the PO confirmed the understanding as a whole (D22); Q11 (the order at the bench after a pin moved) waits for a bench row of the next walk, and the fourth refuter's fixes (council/refuter-4.md) came after D22 and are his to read <!-- REQUIRED:decision-needed -->
+**Decision needed:** two points when P873 #1241's table of phases is refined: whether P280's rule is reversed, so that a refused build keeps the last good outputs (D6's consequence), and the place and states of the bench step (D9); Q11 (the order at the bench after a pin moved) waits for a bench row of the next walk; the PO confirmed the understanding (D22) before the fixes of council/refuter-4.md and council/refuter-5.md, which are his to read <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked): three texts of the PO. (1) 2026-11-17, at the bench, during P711's walk 3, on the card #1234: "Please also take notes on the page ad [and] what is already abailable [available] and what not and lets find gaps and bugs. Apperently [Apparently], the breadboard is not available yet, which makes sense, as so far only the goal, the needs, the parts and modules and boards and the schema and where to get parts from and where else they are available, which ones to validate, which oneds [ones] to replace. Only later will breadboard and PCB and simulation be available, right? Maybe we should define this too ? Some journey or screens ? So that it ends up looking like the nice breadboard we did in one of the demos, with the nice pictures and animation of connections, we can redo the walks or do another set later". (2) 2026-11-17, after the walks stopped, in the comment on #1234: "Like I said, since we now have Fable 5.2, let's really recheck the plan and really analyze the whole user journey and the screens, or steps in general: whether it's using the interface of a CLI, an agent using a CLI, or a human using a CLI; whether it's using the artifact and code and communicating with it through the artifact, or any other way. Later, it would be the frameworks, like AI frameworks. Let's make sure we have it nicely defined: what the steps are for each of the states; when we can go back; how; what happens when we, I don't know, let's say, go on, create the goal, the needs, the parts, the schema, even the software maybe, and then I would say, \"Well, let's add another joystick.\" What would happen, actually, and so on. Let's redefine this whole and go from high level to lower, lower, lower-level details." (line breaks joined with semicolons). (3) 2026-11-17, this session: "Pull P867 #1234 into Discovery (the whole journey redefined, my words are on the card) and run the product-discovery skill with the full council. Plans, architecture and synthesis on Fable 5.2, routine lenses on the everyday model. Inputs: P869 #1236's 32 rows in ~/Development/spark-walks/p711-*/rows.md, p711-sound-demo/page-notes.md, flow.py's nine phases, P820's MVP plan. Go from high level to detail, and ask me one question at a time." <!-- REQUIRED:request -->
@@ -148,7 +148,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D18 · delegated (D14), the importance of the assumptions: high A4, A8 and A12; medium A1, A2, A6 and A9; low A5 and A10; high A3 and medium A7, which stay open, because D7 and D10 are the PO's own wish (n = 1) and not evidence of what a person wants; no pass line is set by this · the facilitator · 2026-11-17 · this session; risks-and-tests.md holds each rating · options considered: none
 - D19 · the jobs: J1 to J6 stand as written in jobs-and-journeys.md (where the project stands, a change in the middle, going back, where to get and test and replace a part, the praised breadboard screen, an agent sees the same phases) · the PO · 2026-11-17 · AskUserQuestion in this session ("Yes, all six") · options considered: drop J4; drop J6; drop both
 - D20 · the delegated answers D15 to D18 (no new slice now; a table of spark's own next steps is allowed; the hand-off is the phases and D6 to D10, each phase refined near Ready; the risk ratings) stand as the PO's decisions · the PO · 2026-11-17 · AskUserQuestion in this session ("All stand") · options considered: not D16; not D17; read them first
-- D21 · items.md: no card is filed from this discovery; the dry-change spike already ran (D4, D5), and the eight command fixes go to P869 #1236's triage as input beside the 32 walk rows, which files and orders the cards once · the PO · 2026-11-17 · AskUserQuestion in this session ("To P869's triage") · options considered: file all eight now; read items.md first
+- D21 · items.md: no card is filed from this discovery; the dry-change spike already ran (D4, D5), and the eight items ("command fixes" in the question's words; the fifth refuter counts four fixes to a command and four of new behaviour, one of which waits on Q11) go to P869 #1236's triage as input beside the 32 walk rows, which files and orders the cards once · the PO · 2026-11-17 · AskUserQuestion in this session ("To P869's triage") · options considered: file all eight now; read items.md first
 - D22 · the understanding as a whole: the journey is a table of phases and a page of documentation with no slice of its own (D5); going back marks what is out of date and keeps one previous version (D6); a change in the middle shows a plan first and waits for a yes (D10); the bench counts only through what spark recorded (D8); the command fixes go first through P869's triage (D5, D21); P827 and P828 go on and P829 waits (D11); the discovery hands off · the PO · 2026-11-17 · AskUserQuestion in this session ("Yes, hand off") · options considered: not yet
 
 ## Found on the way <!-- CLAIMS -->
@@ -167,7 +167,9 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - move #1234 from Idea to Discovery · taken 2026-11-17, read back as Discovery · D0
 - set #1234's Waiting on to the PO, with Waiting since, while a question waits · taken per question · the standing rule in the PO's rules ("It moves as the work moves, with Waiting on and Waiting since set")
-- a comment on #1234 that links this brief · pending, at the folder's PR
+- a comment on #1234 that links this brief · taken 2026-11-17, after D22 and the PO's words in this session ("make sure you are aligned"): issuecomment-6947076338
+- a comment on #1236 that names items.md's eight items and D14's Q16 row as inputs of the triage · taken 2026-11-17: issuecomment-6947075811 · D21
+- file P873 #1241 (the table of phases and the page, tied by a test) under P820 #1173, in Idea, slice Views and editors · taken 2026-11-17, read back as parent 1173, Idea, Views and editors · the PO's words in this session ("after a thorough analysis, we should create the cards, refine it, so its well testable, exchangable, reusable"); it is the one card that the fifth refuter's gap needs, and the eight items stay with the triage (D21)
 - move P870 #1237 from Idea to Discovery, because a read runs on it · taken 2026-11-17 and undone the same hour: the board's check counts the epic P820 #1173 in Discovery's limit of 2, so the push was refused ("Discovery holds 3"); P870 is back in Idea, and its read runs as this discovery's lens council/live.md · D3
 - file P870 #1237 (a spike on streaming to and from the board) under P235 #224, in Idea, slice Live 0 · taken 2026-11-17 · D2 and the PO's rule that an idea he discusses becomes a card with his words
 <!-- EXTEND:brief-sections -->
@@ -183,16 +185,21 @@ proposals, because he did not confirm them one by one.
 - Who and the jobs: the maker with Claude and an agent or framework that drives spark; J1 to J6 (D19,
   jobs-and-journeys.md).
 - The rules it holds: going back marks what is out of date with its cause, deletes nothing and keeps one previous
-  version (D6); the pins of parts that stay are kept, every moved pin is named, a bus line is asked (D7); the bench is
+  version (D6); the pins of parts that stay are kept, every moved pin is named, a bus line is asked until P868 #1235 (D7); the bench is
   state only through a witness spark wrote (D8); "test on the bench" is a step, the schematic, shops, replacement and
   PCB are views (D9); a change in the middle prints a plan and waits for a yes (D10); a table of spark's own next steps
   is allowed, never a gadget's thresholds or timings (D16).
-- Order: the command fixes first, through P869 #1236's triage, with items.md's eight fixes as input (D5, D21); P827
+- Order: the command fixes first, through P869 #1236's triage, with items.md's eight items as input, named in a comment on #1236 (D5, D21); P827
   #1185 and P828 #1186 go on, P829 #1187 waits (D11); a small "where to get it" view from the records (D12); the
   praised page is the encoder page, and its module images matter most (D13).
-- Proof, proposed in the Frame: a scratch copy of a real project gets one more part on a bus, and `flow.py show
-  --json` names each out-of-date phase and the next step, with no file edited by hand.
-- Still open: Q11 (the order of power, flash and wire after a change) waits for a bench row of the next walk; the
+- Proof, proposed in the Frame and not confirmed one by one: a scratch copy of a real project gets one more part on a
+  bus, and `flow.py show --json` names each out-of-date phase, with no file edited by hand. The Frame also asks for
+  the firmware's pin check and "recorded / none recorded" for the bench. The `next` key is an empty list today.
+  P873 #1241 holds the proof of the table and the page themselves.
+- Narrowed against the Frame: no states and screens per phase now (D17), and no slice order (D15).
+- Still open: Q11 (the order of power, flash and wire after a change) waits for a bench row of the next walk;
+  whether P280's rule is reversed (D6); the place and states of the bench step (D9); that the table means a line and
+  no graph is the facilitator's reading (Q5); A3 and A7 rest on the PO's own wish, n = 1; the
   brief stands on 11 H, 4 of which would change the decision (risks-and-tests.md).
 - Links: jobs-and-journeys.md, story-map.md, risks-and-tests.md, items.md, council/. <!-- REQUIRED:handoff -->
 

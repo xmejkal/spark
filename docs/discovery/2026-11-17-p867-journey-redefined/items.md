@@ -12,7 +12,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173 <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12) <!-- REQUIRED:spark-process:slice -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one: none is named here, P869 #1236's triage names it (D15, D21) <!-- REQUIRED:spark-process:slice -->
 
 ## The build replaces a board.tsx that spark wrote and nobody edited
 - type: story
@@ -22,7 +22,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12)
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one: none is named here, P869 #1236's triage names it (D15, D21)
 
 ## `--requirements` names each entry that an earlier pick explained and no pick explains now, and removes it on the person's yes
 - type: story
@@ -32,7 +32,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12)
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one: none is named here, P869 #1236's triage names it (D15, D21)
 
 ## `flow.py show` marks everything made from a changed thing as out of date, with its cause
 - type: story
@@ -42,7 +42,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12)
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one: none is named here, P869 #1236's triage names it (D15, D21)
 
 ## A skipped stage or an unjudged phase never shows a tick in `flow.py show`
 - type: story
@@ -52,7 +52,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12)
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one: none is named here, P869 #1236's triage names it (D15, D21)
 
 ## The parts that stay keep their pins when a part is added, and a moved pin is named
 - type: story
@@ -62,7 +62,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12)
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one: none is named here, P869 #1236's triage names it (D15, D21)
 
 ## The firmware's pin names are compared with the pin map
 - type: story
@@ -72,7 +72,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12)
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one: none is named here, P869 #1236's triage names it (D15, D21)
 
 ## After a change, the sheet gives the order of power, flash and wire
 - type: story
@@ -82,7 +82,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12)
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one: none is named here, P869 #1236's triage names it (D15, D21)
 
 ## A second build no longer erases the first build's list of bench changes
 - type: story
@@ -92,10 +92,10 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12)
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one: none is named here, P869 #1236's triage names it (D15, D21)
 
 ## Board actions
 <!-- Each action, taken or pending, with its D. e.g. `- move the item to Discovery · pending` -->
-- file the nine items above · not taken: the spike ran (D4, D5), and the eight command fixes go to P869 #1236's triage as input, which files them (D21) <!-- REQUIRED:board-actions -->
+- file the nine items above · not taken: the spike ran (D4, D5), and the eight items go to P869 #1236's triage as input, which files them (D21; a comment on #1236 names them) <!-- REQUIRED:board-actions -->
 - Later, one line each, not items yet (plans shrink with distance): the bench witnesses in the flow (a witness is a value with what it says, its source and its time, so a third witness, seen live, needs no new status word: council/live.md:229); a refused build keeps the last good outputs; the facts to test as a phase; one value for an offer and a `next` step.
-- Later, from the PO's answers, with no item yet (the fourth refuter's gap; D21 files no card from this discovery): the table of phases and the page of documentation, which is this discovery's hand-off (D5, D17); one kept previous version (D6); the bench test as a step (D9); a plan and the person's yes before a change (D10); the small "where to get it" view (D12); module images drawn after the real module (D13)
+- Later, from the PO's answers, with no item yet (the fourth refuter's gap; D21 files no card from this discovery): the table of phases and the page of documentation, which is this discovery's hand-off (D5, D17), now the card P873 #1241; one kept previous version (D6); the bench test as a step (D9); a plan and the person's yes before a change (D10); the small "where to get it" view (D12); module images drawn after the real module (D13)

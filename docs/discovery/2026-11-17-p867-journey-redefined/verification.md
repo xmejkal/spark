@@ -42,6 +42,9 @@ e.g. `- Split: Feasibility says a day, Risks says a week · Q4` -->
 - Split: the facilitator's opinion on the witnesses against walk 2's row 6, where a record was read as the state · Q4
 - Not checked by the refuter (never "holds"): the Terraform, LangGraph and KiCad pages, the datasheet page, need_requirements.py, project_image.py, the two witness-record readers, the three diaries in full, P820's brief.md
 - Second pass (council/refuter-2.md): four of the first pass's fixes were applied only in part (Q5's and Q3's opinions, Q6's wording, OQ6 (2)'s "proves") · applied 2026-11-17
+- Third pass (council/refuter-3.md): the check of the dry change's count; 5 hand actions hold as edits and deletes, 0 to 2 span phases, and one action was missed (the lost change list) · applied 2026-11-17
+- Fourth pass (council/refuter-4.md): D5 to D18; 8 of 16 claims held; stale pointers to answered questions, Q5's and D10's wording, the shops count, A3 and A7 · applied 2026-11-17
+- Fifth pass (council/refuter-5.md): D19 to D22 and the Hand-off; 13 of 23 claims held; P869 #1236 told of its input, the card P873 #1241 for the hand-off, the Hand-off's Proof, Rules and Still-open lines, stale lines · applied 2026-11-17
 - Split: the live lens (P248 #270 answers row 7) against the second refuter (P248 is about a boot read on another board) · Q16
 - Not checked by the second refuter (never "holds"): the comments of the three cards, P235's decisions in full, three of the live lens's four fetched sources, ★C4's counts
 - Split: the run (2 of 5 span phases, and the bench changes "are said", DC-21) against its check (0 to 2, and DC-21 refuted in part: the rebuild erases the change list) · Q17

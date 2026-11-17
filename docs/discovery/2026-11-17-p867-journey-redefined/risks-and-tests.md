@@ -6,10 +6,10 @@ status: open · retired · n/a because ….
 e.g. `| usability | H no test yet (A2) | a five-person prototype test | open |` -->
 | risk | evidence now | cheapest way to retire it | status |
 | --- | --- | --- | --- |
-| value <!-- REQUIRED:risk-value --> | E ★C16 (no card is blocked): one person is blocked, the PO at the bench, and the walks are stopped on his order; the need is his wish and three walks' rows (n = 1) | Q2 to Q8 with the PO; the walks run again on the first slice | open |
-| usability <!-- REQUIRED:risk-usability --> | E ★C10 (a tick for skipped stages), ★C1 (one project); E two sentences read wrong in walk 3 (rows 5, 6) and one in walk 2 (row 6) | the PO reads slice 0's output on the sound demo before more is built | open |
-| feasibility <!-- REQUIRED:risk-feasibility --> | H A1: one rule over recorded inputs for every phase; E ★C3 (four mechanisms today) | the paper spike of the brief's Riskiest section | open |
-| viability <!-- REQUIRED:risk-viability --> | H A6: more phases must not slow a basic project (AGENTS.md's one bar); E ★C16 (rework, not a stop) | the button-and-LED walk again after slice 0, by the clock | open |
+| value <!-- REQUIRED:risk-value --> | E ★C16 (no card is blocked): no card is blocked, and the walks are stopped on the PO's order; the need is his wish and three walks' rows (n = 1) | the PO's answers D6 to D11; the walks run again after the command fixes | open |
+| usability <!-- REQUIRED:risk-usability --> | E ★C10 (a tick for skipped stages), ★C1 (one project); E two sentences read wrong in walk 3 (rows 5, 6) and one in walk 2 (row 6) | the PO reads the output on a scratch copy of a walk project with a real change, not on the sound demo's folder, before more is built | open |
+| feasibility <!-- REQUIRED:risk-feasibility --> | H A1: one rule over recorded inputs for every phase; E ★C3 (four mechanisms today) | the dry change in the middle, which ran (D4, D5) | open |
+| viability <!-- REQUIRED:risk-viability --> | H A6: more phases must not slow a basic project (AGENTS.md's one bar); E ★C16 (rework, not a stop) | the button-and-LED walk again after the command fixes, by the clock | open |
 | ethics and safety <!-- REQUIRED:risk-ethics --> | E ★C6 (not measured): a 3.3 V output on a new part's signal pin when a person wires before flashing; E walk rows on a look that restarts another project's board (P865 #1231) | Q11's order line; a meter check named on the sheet | open |
 | power and battery <!-- REQUIRED:electronics-firmware:power --> | E C28: the 3V3 budget of the sound project has unknown values before any change (council/physics.md:17); found on the way | R1 once the values are measured (R6) | n/a because this item defines spark's journey and ships no hardware; the gap is a found-on-the-way row |
 | current and stall <!-- REQUIRED:electronics-firmware:stall --> | — | — | n/a because no motor is in the item or in the walk projects |
@@ -46,7 +46,7 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 <!-- One row per gap. e.g. `| Do assignees open new tasks? | Q2 | Lena, from analytics | one query | this week |` -->
 | question | decision it blocks | who can answer | how | when |
 | --- | --- | --- | --- | --- |
-| How many hand actions does a change in the middle cost, and which need a rule that spans phases? <!-- REQUIRED:collection --> | Q5, A11 | the facilitator, on scratch copies of two walk projects | the dry change in the middle, with no board | after Q1 sets its pass line |
+| How many hand actions does a change in the middle cost, and which need a rule that spans phases? <!-- REQUIRED:collection --> | Q5, A11 | the facilitator, on scratch copies of two walk projects | the dry change in the middle, with no board | done 2026-11-17 (D4, D5) |
 | Do kept pins move on other designs and boards? | Q3, A3 | the facilitator | the assigner on scratch copies of the other walk projects | with the spike |
 | What damage does the wire-before-flash state do? | Q11, A9 | nobody from files; the vendor's absolute maximum ratings, or a bench measurement | R0: the datasheet's ratings page | when Q11 is asked |
 | How many store catalog records name a shop? | Q9, A10 | the facilitator | done 2026-11-17: 18 of 18 hold `vendor` and `sku`; 15 name a maker, and 3 hold `null` (the Hadex and LaskaKit records, whose `sku` is the shop's code), read for D12 | done |

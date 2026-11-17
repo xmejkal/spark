@@ -5,7 +5,7 @@ map file. -->
 
 ## Backbone
 <!-- The activities, left to right, as the user does them. e.g. `Assign → Notice → Act → Close` -->
-Say the goal → Agree the needs → Pick the parts (with where to get them, what to replace) → Test the facts on the bench → Build the board files (schematic, pins, sheet; the PCB later) → Wire the breadboard → Write the firmware → Simulate → Put it on the board → Change it and go round again <!-- REQUIRED:backbone -->
+Say the goal → Agree the needs → Pick the parts (with where to get them, what to replace) → Test the facts on the bench (a step by D9; its place in this order is not decided) → Build the board files (schematic, pins, sheet; the PCB later) → Wire the breadboard → Write the firmware → Simulate → Put it on the board → Change it and go round again <!-- REQUIRED:backbone -->
 
 ## Slices
 <!-- Walking skeleton first: the thinnest slice that runs end to end. One row per story. job: a job in
