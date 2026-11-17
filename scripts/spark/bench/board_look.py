@@ -130,6 +130,16 @@ class PortFinder:
         and names `script`'s --port (P218's D25)."""
         return self.require_one_board(script).device
 
+    def find_row(self, port):
+        """The Port row the look reads (P865): the one board on USB as require_one_board gives it, or the row of `port` when
+        it is named. A named port is found softly: None when the list does not hold it or cannot be read, and it is read as before."""
+        if not port:
+            return self.require_one_board("look.py")
+        try:
+            return next((row for row in self.nodes() if row.device == port), None)
+        except LookStopError:
+            return None
+
     def require_one_board(self, script, port=None):
         """The Port row of the one board on USB, or of `port` when it is given. LookStopError as require_one_port says, and
         when `port` is not in the list."""
@@ -453,10 +463,12 @@ class LookService:
     def __init__(self, finder, reader, records):
         self.finder, self.reader, self.records = finder, reader, records
 
-    def run(self, project, port, evidence):
-        """A LookReport. LookStopError says why not: no record, no board, two boards without a port, a read that failed."""
+    def run(self, project, port, evidence, listed=None):
+        """A LookReport. LookStopError says why not: no record, no board, two boards without a port, a read that failed.
+        `listed` is the Port row of the one board when the caller listed it already (the look's gate, P865); with a named
+        `port` no list is read and none is used."""
         record = self.record_of(project)
-        listed = None if port else self.finder.require_one_board("look.py")
+        listed = None if port else listed or self.finder.require_one_board("look.py")
         port = port or listed.device
         reading = self.reader.read(port)
         image, why, code, gaps = None, None, board_codes.EVIDENCE_REFUSES, RunGaps()

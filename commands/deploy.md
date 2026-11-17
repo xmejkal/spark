@@ -24,6 +24,7 @@ Read the board on USB without changing it, compare it with the project's board r
 |---|---|---|
 | `--project` | `PROJECT` | the project folder with requirements.json and sim/ (default: here) |
 | `--port` | `PORT` | the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB (one board on two nodes named by its serial counts once) |
+| `--replies` | `REPLIES` | a file of your own with the person's yes to the look's open question, {"replies": {"<key>": true}}. One yes answers one look: the look sets it back to null before it reads |
 | `--ignore-older-runs` |  | give a token even when a log in sim/runs/ tested another image (default: no token) |
 | `--no-simulation` |  | give a token for an image that no simulation tested, when firmware/ has a main.py, compiles and is what the image holds (default: a passed run must name the image) |
 

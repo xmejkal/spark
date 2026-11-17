@@ -18,8 +18,9 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.bench import board_codes
-from spark.bench.board_look import NO_SERIAL
+from spark.bench.board_look import NO_SERIAL, board_token
 from spark.core.errors import SparkError
+from spark.core.replies import PERSON, YES_NO, Question
 from spark.records import store
 
 # --- MVP ---
@@ -32,8 +33,28 @@ ESPRESSIF_VENDOR = "303a"
 MAC_KEY_LENGTH = 12
 #: The store's place of the records, and the version of a record's shape.
 PLACE, SCHEMA = "known-boards", 1
-UNREADABLE_MESSAGE = "spark's record of this project's board cannot be read: %s"
 UNREADABLE_FIX = "repair or remove %s, then run look.py again"
+#: The keys of the look's questions, by the first 4 hex of sha256 of the serial's key (or of the port with no serial): a yes
+#: to read a board, and a yes to read a board that is not the kept one. A replies file's look keys answer one look only.
+READ_BOARD, SWITCH_BOARD, KEY_PREFIX = "look.read_board.%s", "look.switch_board.%s", "look."
+READ_QUESTION = "Read the board on %s (%s, %s)? It will restart: a running program stops, then starts again. Nothing is erased or written."
+SWITCH_QUESTION = ("Read the board on %s (%s, %s) in place of the kept board? It will restart: a running program stops, "
+                   "then starts again. Nothing is erased or written.")
+FIRST_WHY = "Spark has not read a board for this project before. After you say yes, it remembers this board and asks no more for it."
+NO_SERIAL_WHY = "This board reports no USB serial, so spark cannot tell it from another board before it reads it. It asks every time."
+FIRMWARE_WHY = ("This board's USB serial is set by its firmware, so spark cannot tell it from another board before it reads it. "
+                "It asks every time.")
+SWITCH_WHY = "After you say yes, spark reads this board and keeps it as this project's board, in place of the kept one."
+ANSWER_FIX = ('ask the person in this conversation, and name the port and the restart. Only after their yes to that, write '
+              '{"replies": {"%s": true}} to a file of your own outside the project, and run look.py again with --replies <that file>. '
+              'One yes is for one look')
+OTHER_BEFORE_MESSAGE = "Not read. The board on %s (%s): its USB serial is not the kept board's (MAC ends %s, kept %s). It did not restart."
+OTHER_BEFORE_FIX = "plug in this project's board, or say yes to read this board"
+OTHER_AFTER_MESSAGE = "The board on %s (MAC ends %s) is not the kept board (MAC ends %s, kept %s). It did restart: a read restarts the board."
+OTHER_AFTER_FIX = "plug in this project's board, then run look.py again"
+NO_MESSAGE, NO_FIX = "You said no. The board was not read.", "plug in this project's board, or run look.py again and say yes"
+KEPT_MESSAGE = "kept: spark remembers the board on %s (MAC ends %s) as this project's board"
+NOT_KEPT_NO_MAC_MESSAGE, NOT_KEPT_MESSAGE = "not kept: the board's MAC could not be read", "not kept: %s"
 
 
 def _key(text):
@@ -50,6 +71,22 @@ def mac_ends(text):
     """The last two bytes of a MAC, or of a USB serial's MAC part, as `34:56`: the only part of a MAC that spark prints."""
     key = _key(text)
     return "%s:%s" % (key[8:10], key[10:12])
+
+
+def named(row):
+    """How a question names the board on `row` before a read: `MAC ends 34:56` for a serial of a MAC's length, the serial
+    itself when it is shorter, or `no USB serial`."""
+    key = serial_key(row)
+    return "MAC ends %s" % mac_ends(key) if len(key) >= MAC_KEY_LENGTH else "USB serial %s" % row.serial if key else "no USB serial"
+
+
+def question_for(state, row, port):
+    """The look's Question before it reads the board on `port`, listed as `row`: SWITCH_BOARD when `state` is OTHER, else
+    READ_BOARD. Its `why` says why the look asks: a first look, no serial, or a serial that the board's firmware set."""
+    key = serial_key(row)
+    why = SWITCH_WHY if state == OTHER else FIRST_WHY if state == NONE else FIRMWARE_WHY if key else NO_SERIAL_WHY
+    text = (SWITCH_QUESTION if state == OTHER else READ_QUESTION) % (port, row.product, named(row))
+    return Question((SWITCH_BOARD if state == OTHER else READ_BOARD) % board_token(key or port), text, YES_NO, PERSON, why)
 
 
 def _vendor(row):
@@ -113,7 +150,7 @@ class KnownBoardStore:
             if not isinstance(known.mac, str) or not _key(known.mac) or not isinstance(known.usb_key, (str, type(None))):
                 raise TypeError(known)
         except (OSError, ValueError, RecursionError, KeyError, TypeError):
-            raise SparkError(UNREADABLE_MESSAGE, path, code=board_codes.KNOWN_BOARD_UNREADABLE, fix=UNREADABLE_FIX % path)
+            raise SparkError("spark's record of this project's board cannot be read: %s", path, code=board_codes.KNOWN_BOARD_UNREADABLE, fix=UNREADABLE_FIX % path)
         return known if known.project == str(Path(project).resolve()) else None
 
     def write(self, known):

@@ -87,6 +87,7 @@ class ThePrintedDeployLineTest(unittest.TestCase):
         (self.store / "downloads" / entry["file"]).write_bytes(fake_interpreter())
         for image in self.project.glob("sim/*.bin"):
             image.unlink()
+        golden_bench.plant_known_board(self.store, self.project, "mpremote-devs-one.txt")  # P865: the look reads it with no question
 
     def child(self, script, *argv, env=None):
         env = env or golden_bench.child_env(self.store, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")

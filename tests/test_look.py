@@ -537,9 +537,9 @@ class TheOperationTest(LookScriptCase):
         import inspect
         schema = look_at_board.LookAtBoard().input_schema()
         keywords = [name for name, kind in inspect.signature(look_at_board.LookAtBoard.run).parameters.items()
-                    if kind.kind == kind.POSITIONAL_OR_KEYWORD and name != "self"]
+                    if kind.kind == kind.POSITIONAL_OR_KEYWORD and name != "self"] + ["ignore_older_runs", "no_simulation"]  # P865: **evidence
         self.assertEqual(list(schema["properties"]), keywords)
-        self.assertEqual([schema["properties"][name].get("default") for name in keywords], [".", None, False, False])
+        self.assertEqual([schema["properties"][name].get("default") for name in keywords], [".", None, None, False, False])
 
     @needs_littlefs
     def test_run_operation_gives_the_lines_the_findings_and_the_deploy_step_with_no_stdout(self):
