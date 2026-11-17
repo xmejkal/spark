@@ -24,6 +24,7 @@ e.g. `- ★C3 · STATUS.md:84 · refuter: partly — "Shown on the C6, assumed f
 - ★C19 · council/existing.md:45-50 · refuter: partly for Bazel and GOV.UK; could not open the other three · reproduced how: not re-read · result: not reproduced · keep: licences were not read
 - ★C29 · spark-walks/p711-*/rows.md; council/refuter.md:9-16 · refuter: its own finding (R-0a) · reproduced how: the three rows files read once by the facilitator at the start of the session; no row about a wrong tick recalled, not counted again · result: reproduced in part · keep: counted by the refuter
 - ★C30 · spark-walks/p711-sound-demo/rows.md row 12; council/refuter.md:17-26 · refuter: its own finding (R-0b) · reproduced how: read row 12 and the folder's requirements.json 2026-11-17 (display, amplifier, joystick, speaker terminal); `flow.py show` names four needs (board, amp, speaker, volume) · result: reproduced · keep: a hand-written file
+- ★C31 · council/live.md:224, :11-75 · refuter: pending (second pass) · reproduced how: read the lens's proposals (council/live.md:222-256) and its not-checked list 2026-11-17; the cards, the code and the pages not re-read by the facilitator · result: not reproduced · keep: not tested
 
 ## Agree / split
 <!-- Where the lenses and the refuter agree, and where they split; each split becomes a question.
