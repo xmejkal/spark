@@ -8,7 +8,7 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
 **Ready for:** collecting evidence: the frame (D1) and a direction (D5) are confirmed; the jobs, the remaining risk (the importance of the assumptions) and the answers to Q2 to Q4 and Q6 to Q14 and Q16 are not <!-- REQUIRED:ready -->
-**Stands on:** 12 H, — of which would change the decision (unrated until Q1) <!-- REQUIRED:debt -->
+**Stands on:** 11 H, — of which would change the decision (unrated until Q1) <!-- REQUIRED:debt -->
 **Decision needed:** Q2, what going back means; then Q3, Q4, Q6 to Q14 and Q16, one at a time <!-- REQUIRED:decision-needed -->
 
 ## Frame
