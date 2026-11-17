@@ -42,6 +42,8 @@ one item to `unchecked`, with the code `phase_could_not_run`. A build that ended
 subject of each item is the phase. The exit is 0, 1 or 2 by those items. If both kinds are there, the status is
 `problems` and the exit is 1, and the phase that could not run is still under `unchecked`. Every phase answers either way. For example,
 a broken `.spark/needs.json` makes the needs, parts and requirements phases `could-not-run`, and the others still answer.
+A `.spark/build.json` that is not JSON, or is no build record, makes the build phase `could-not-run` with one sentence, and
+the breadboard phase too when the sheet exists ([P886](https://github.com/xmejkal/spark/issues/1256)).
 
 ## The page
 
