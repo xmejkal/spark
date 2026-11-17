@@ -107,7 +107,8 @@ diagram. Each line is said, and the stage stays `ok`.
 
 `parts.py --requirements` writes this file's board and parts from the parts you picked for your needs; run again, the
 parts you wrote stay and the board follows the pick: it adds only the parts your picks still lack, and keeps every other
-key you added by hand (`signals`).
+key you added by hand (`signals`). It names an entry that spark wrote for a pick that is gone, and removes it only on the
+person's yes (`--replies`; `/spark:idea`, step L).
 
 The project is found up from the requirements file's own directory, so this works from anywhere —
 and from nowhere: a file inside no project is built from the plugin's own library, with no rules,

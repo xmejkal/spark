@@ -77,6 +77,14 @@ Two bridge clones with one serial cannot be told apart before a read. The read t
 and the sentence says that the board did restart. `other_board` after a read gives no token and no deploy step. With no MAC read nothing is kept, and a note says so. A kept record
 that cannot be read is `known_board_unreadable`: repair or remove the file that the `fix` names.
 
+## The requirements' yes
+
+`parts.py --requirements` asks no question that waits: a run after a re-pick or a dropped need writes as today and exits 0. It names each entry that spark
+wrote for a pick that is gone (`data.unexplained`, code `entry_pick_gone`) and prints `data.remove_key`, the reply key of those entries on the file the run left. The `next[0]` step
+says how to remove them. Ask the person. On a yes, write `{"replies": {"requirements.remove_entries.1a2b3c4d": true}}` to a file of your own and run
+`--requirements <project> --replies <file>`. Only the JSON value `true` is a yes, and `false` is a no: the entries are the person's from then on. A key that fits other bytes or other entries removes nothing,
+and a note names the key that fits. The run sets every `requirements.` key of the file back to null before it changes anything, so one yes is for one run. A dry run and a refused run read nothing. A yes keeps the file before as `.spark/previous/requirements.json.txt`, the one previous version.
+
 ## The research run
 
 ```

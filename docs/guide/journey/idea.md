@@ -13,7 +13,7 @@ battery input or battery-level pin serve ([P389](https://github.com/xmejkal/spar
 `--match` prints what a passed run does not test of that part, and `--pick` puts the same sentences in a note
 ([P397](https://github.com/xmejkal/spark/issues/513)). The note names the bench as the test, and a part you own that has
 a Wokwi model as the other choice. When no part is listed and no need is left unserved, `parts.py --requirements`
-writes `"board_only": true` ([P387](https://github.com/xmejkal/spark/issues/497)).
+writes `"board_only": true` ([P387](https://github.com/xmejkal/spark/issues/497)). A later run names each entry that spark wrote for a pick that is gone, and removes it on the person's yes ([P877](https://github.com/xmejkal/spark/issues/1245)).
 
 In Claude Code, Claude asks at most three questions, one at a time, then writes the needs to a file:
 

@@ -177,7 +177,11 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements <project> --dry-run
 and without `--dry-run`. It writes `requirements.json`: the board and every part pick with a record. A later run changes
 only what the picks decide: the parts you wrote stay — a part you added, a `name`, `rails` — as does `signals`, and the
 board follows the pick. It adds only the parts your picks still lack, and says which entries no pick explains (`kept,
-not from a pick`), for you to remove if you changed a pick. A pick with no
+not from a pick`), for you to remove if you changed a pick. It also names each entry that spark wrote for a pick that is
+gone (`written for a pick that is gone`), with its need and a key. Ask the person; they can also delete the line by hand.
+A yes in your own replies file, for the key the run printed, removes them: write `{"replies": {"<remove_key>": true}}` to
+a file of your own and run `--requirements <project> --replies <file>`. The file before is kept, once, as
+`.spark/previous/requirements.json.txt`. A `false` keeps the entries as the person's; no answer names them again. A pick with no
 record (the speaker, the battery) is reserved, not placed. A board picked from the drawer with no board file stops it,
 naming the boards spark has a file for that builds, and those that stop at the footprint stage (P121): say so — the
 person picks one that builds, or a board file is written first (docs/guide/how-it-works.md, "Your own dev board"). A
@@ -190,7 +194,8 @@ file is written:
   is drawn from (`physical.header`, say), so the chain cannot generate its footprint; it is still a choice for the pin map;
 - `placeholder outline — …`: a pick whose record owes only its outline;
 - `reserved, not placed — no record: …`: a pick with no record;
-- `kept, not from a pick: …`: an entry no pick explains;
+- `kept, not from a pick: …`: an entry no pick explains and spark did not write;
+- `written for a pick that is gone: … (need …)`: an entry spark wrote that no pick explains now; ask the person, then remove it by a yes (above);
 - `board only: nothing to build but the board; …`: the board serves every need, so the file says `"board_only": true`
   and the build makes the board alone (P387). `board_only removed: the file lists parts`: a part came, so the key went;
 - `rail … has no supply — …`: a part draws from a rail nothing listed supplies; pick a power inlet or a supply;
