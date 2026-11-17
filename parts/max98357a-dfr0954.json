@@ -60,6 +60,19 @@
       "note": "must be driven, not left floating — an on-board resistor holds it high"
     }
   ],
+  "own_socket": {
+    "pins": [
+      "SPK_P",
+      "SPK_N"
+    ],
+    "verified": false,
+    "source": "DFRobot dimension drawing DFR0954_max98357a-i2s_dimension_1.0.pdf, page 1: the top view shows a connector with two contacts at the board edge between the SPK+ and SPK- pads, with a speaker symbol printed beside it; the page draws no connection between the connector and the pads.",
+    "why_it_matters": "with this fact spark asks for no separate speaker terminal; if the connector is not wired to the pads, the speaker gets no signal",
+    "cites": {
+      "document": "dfr0954-max98357a-i2s-dimension-1-0",
+      "at": "page 1"
+    }
+  },
   "power": [
     {
       "pin": "VCC",

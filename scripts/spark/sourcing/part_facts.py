@@ -1,6 +1,6 @@
 """
 What is known about a part, said and kept (W6-S3b, P721): the signals it asks for (`signals_for`), what nobody has
-checked (`unverified`, `open_questions_of`), the names it prints (`printed_names`), the shelf copy and its digest
+checked (`unverified`, `open_questions_of`), the names it prints (`printed_names`), the pins that end in its own socket (`own_socket_pins`), the shelf copy and its digest
 (`digest`, `shelve`, `note_built`), a record promoted or written to fill in (`promote`, `skeleton`), and one record
 described (`describe`, `_row`). Moved whole from `parts.py`. It imports the records area, `part_rules` and
 `part_records` below it, never `parts.py`.
@@ -26,6 +26,13 @@ def printed_names(part):
             if pin and printed and printed != pin:
                 out[pin] = printed
     return out
+
+
+def own_socket_pins(part):
+    """The pins that end in the part's own socket (P864), as a set: empty for a record with no `own_socket` or a malformed one."""
+    block = part.get("own_socket")
+    pins = block.get("pins") if isinstance(block, dict) else None
+    return frozenset(pin for pin in pins if isinstance(pin, str)) if isinstance(pins, list) else frozenset()
 
 
 def has_placeholder_footprint(part):

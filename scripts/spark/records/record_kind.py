@@ -246,6 +246,7 @@ RECORD_TYPES = {
     "facts": MapOf(dict),
     "documents": MapOf(dict),
     "pin_order": ListOf(str, nulls=True),  # a null is a pad with nothing on it
+    "own_socket": {"pins": ListOf(str), "source": str, "cites": dict},  # P864: the output pins that end in the module's own socket
 }
 
 
