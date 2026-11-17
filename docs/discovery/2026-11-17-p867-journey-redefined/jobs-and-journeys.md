@@ -38,15 +38,15 @@ Today's journey, as the walks and the code show it. Each step says whether a wal
 
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
-| 1 | says the change in the chat; Claude adds a need | H commands/idea.md, council/user.md:70 (US-43) | no sentence says what the change will make out of date | partly | Q7: a plan first? |
+| 1 | says the change in the chat; Claude adds a need | H commands/idea.md, council/user.md:70 (US-43) | no sentence says what the change will make out of date | partly | D10: a plan first, then his yes |
 | 2 | picks a part for the new need; a held part must be freed first | E spark-walks/p711-sound-demo/rows.md row 1; p711-identify-amp/rows.md row 5 | nothing says whether a hold is still in use | partly | — |
-| 3 | writes the requirements again; old parts stay as "kept, not from a pick" | E #1234's comment; council/feasibility.md:38 (FE-17) | he removes entries by hand | partly | Q2 |
-| 4 | builds; "traces differ: board.tsx" for the file spark wrote | E p711-sound-demo/rows.md row 13 | he deletes spark's own file by hand; a refused build removes the earlier pins.py, sheet and page (★C7 (by design)) | partly | Q2 |
-| 5 | reads the new pins.py; 2 of 15 kept signals moved in the facilitator's run (★C4 (simulated; one board model)) | E the run of 2026-11-17, simulated | nothing names the moved pins as moved | not yet | Q3 |
+| 3 | writes the requirements again; old parts stay as "kept, not from a pick" | E #1234's comment; council/feasibility.md:38 (FE-17) | he removes entries by hand | partly | D6; P869's triage (D21) |
+| 4 | builds; "traces differ: board.tsx" for the file spark wrote | E p711-sound-demo/rows.md row 13 | he deletes spark's own file by hand; a refused build removes the earlier pins.py, sheet and page (★C7 (by design)) | partly | D6; P869's triage (D21) |
+| 5 | reads the new pins.py; 2 of 15 kept signals moved in the facilitator's run (★C4 (simulated; one board model)) | E the run of 2026-11-17, simulated | nothing names the moved pins as moved | not yet | D7 |
 | 6 | Claude rewrites the firmware's pin names | H council/feasibility.md:43 (FE-22) | no check that main.py names only pins that pins.py holds (★C5 (not run)) | not yet | — |
 | 7 | wires again from "Changes since the last build" | E p711-sound-demo/rows.md row 6; council/physics.md:23 (PH-10) | the section compares with the earlier sheet, not with what he wired; no order of power, flash and wire (★C6 (not measured)) | partly | Q11 |
 | 8 | looks at the board, then deploys with BOOT and RESET and his yes | E p711-sound-demo/rows.md row 14; p711-walk4-button-led/rows.md rows 3 and 5 | the look restarts the board and may read another project's board | partly | P865 #1231 |
-| 9 | asks where the project stands | E the facilitator's runs of `flow.py show` (★C1 (one project), ★C2 (reads no record)) | the build and the breadboard read as done while the requirements are out of date; the deploy always reads "not started" | not yet | Q4, Q5 |
+| 9 | asks where the project stands | E the facilitator's runs of `flow.py show` (★C1 (one project), ★C2 (reads no record)) | the build and the breadboard read as done while the requirements are out of date; the deploy always reads "not started" | not yet | D8, D5 |
 
 ```mermaid
 flowchart LR
@@ -58,9 +58,9 @@ flowchart LR
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
 | 1 | runs `flow.py show --json` and reads data.phases and data.stands_at | E docs/guide/agents/flow.md; council/architecture.md:278 (AR-17) | — | works | — |
-| 2 | reads an offer: a key and one effect line | E council/ux.md:15 (UX-6); scripts/spark/flow/phase_readers.py:37 | no command, no "needs your yes", so it rebuilds the command from the command files' prose | partly | Q13 |
+| 2 | reads an offer: a key and one effect line | E council/ux.md:15 (UX-6); scripts/spark/flow/phase_readers.py:37 | no command, no "needs your yes", so it rebuilds the command from the command files' prose | partly | D16 |
 | 3 | reads a status | E the facilitator's run (★C10 (a board-only project)) | a tick for a build whose stages were all skipped; one dot for three meanings | partly | found on the way, C21 |
-| 4 | tells the person what a change makes out of date | E council/ux.md:50 (UX-16) | nothing in the JSON says it, so the agent guesses or reads source | not yet | Q5, Q7 |
+| 4 | tells the person what a change makes out of date | E council/ux.md:50 (UX-16) | nothing in the JSON says it, so the agent guesses or reads source | not yet | D5, D10 |
 
 ```mermaid
 flowchart LR

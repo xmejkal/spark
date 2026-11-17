@@ -8,7 +8,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: spike <!-- REQUIRED:item-type -->
 - needed by: "what happens when we ... go on, create the goal, the needs, the parts, the schema, even the software maybe, and then I would say, 'Well, let's add another joystick.' What would happen, actually" (the PO, 2026-11-17, #1234's comment) <!-- REQUIRED:needed-by -->
 - value proven by: a finding with its count: each hand action of the change, assigned to a command fix or to a rule that spans phases, against Q1's pass line (A11) <!-- REQUIRED:value-proven-by -->
-- depends on: Q1 <!-- REQUIRED:depends-on -->
+- depends on: — ; it ran (D4, D5) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173 <!-- REQUIRED:spark-process:parent -->
@@ -28,7 +28,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: story
 - needed by: "what happens when we ... go on, create the goal, the needs, the parts, the schema, even the software maybe, and then I would say, 'Well, let's add another joystick.' What would happen, actually" (the PO, 2026-11-17, #1234's comment)
 - value proven by: after a dropped need, requirements.json no longer lists the dropped part, with no edit by hand; an entry a person wrote stays (#1234's comment: "A person removes them by hand")
-- depends on: Q2; a candidate for P869 #1236's triage
+- depends on: D6; a candidate for P869 #1236's triage
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
@@ -38,7 +38,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: story
 - needed by: "what happens when we ... go on, create the goal, the needs, the parts, the schema, even the software maybe, and then I would say, 'Well, let's add another joystick.' What would happen, actually" (the PO, 2026-11-17, #1234's comment)
 - value proven by: on a scratch copy of a walk project with a real change (a need added after the build), every phase made from the changed thing reads out of date with its true cause, in the lines and in the JSON; not on the sound demo's folder, whose requirements were written by hand (★C30, a hand-written file)
-- depends on: Q5; the spike
+- depends on: D5; the spike ran
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
@@ -58,7 +58,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: story
 - needed by: "what happens when we ... go on, create the goal, the needs, the parts, the schema, even the software maybe, and then I would say, 'Well, let's add another joystick.' What would happen, actually" (the PO, 2026-11-17, #1234's comment)
 - value proven by: with an added I2C part on a copy of the sound demo (6 of 15 kept signals move today, ★C4 (simulated; one board model)), the answer names every moved pin, and the signals on no bus keep their pins
-- depends on: Q3; P868 #1235 (a pin on a bus line)
+- depends on: D7; P868 #1235 (a pin on a bus line)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
@@ -68,7 +68,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: story
 - needed by: "what happens when we ... go on, create the goal, the needs, the parts, the schema, even the software maybe, and then I would say, 'Well, let's add another joystick.' What would happen, actually" (the PO, 2026-11-17, #1234's comment)
 - value proven by: a main.py that names a pin the pin map lacks reads as a problem in `flow.py show`
-- depends on: Q5
+- depends on: D5
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
@@ -88,7 +88,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: story
 - needed by: "what happens when we ... go on, create the goal, the needs, the parts, the schema, even the software maybe, and then I would say, 'Well, let's add another joystick.' What would happen, actually" (the PO, 2026-11-17, #1234's comment)
 - value proven by: after a changed design is built twice, breadboard.md still lists what to rewire since the last sheet the person wired from, and never "Nothing to change on the bench." for a change nobody wired (★C32, no board)
-- depends on: Q4 (what spark may say about the bench); a candidate for P869 #1236's triage
+- depends on: D8 (only a witness counts); a candidate for P869 #1236's triage
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
@@ -98,3 +98,4 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 <!-- Each action, taken or pending, with its D. e.g. `- move the item to Discovery · pending` -->
 - file the nine items above · not taken: the spike ran (D4, D5), and the eight command fixes go to P869 #1236's triage as input, which files them (D21) <!-- REQUIRED:board-actions -->
 - Later, one line each, not items yet (plans shrink with distance): the bench witnesses in the flow (a witness is a value with what it says, its source and its time, so a third witness, seen live, needs no new status word: council/live.md:229); a refused build keeps the last good outputs; the facts to test as a phase; one value for an offer and a `next` step.
+- Later, from the PO's answers, with no item yet (the fourth refuter's gap; D21 files no card from this discovery): the table of phases and the page of documentation, which is this discovery's hand-off (D5, D17); one kept previous version (D6); the bench test as a step (D9); a plan and the person's yes before a change (D10); the small "where to get it" view (D12); module images drawn after the real module (D13)

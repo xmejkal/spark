@@ -21,11 +21,11 @@ e.g. `| 0 | Notice | the assignee gets one daily digest | job 1 | H ★C2 | the 
 | 1 | Wire the breadboard | after a change, the sheet gives the order of power, flash and wire | J2 | H ★C6 (not measured) | the sheet of a changed design opens with the order line the PO confirmed (Q11) |
 | 2 the bench as witnesses | Put it on the board | the flow shows what spark last recorded of the wiring and of the deploy, never as a pass | J1, J2 | E ★C9 (never what is on the bench) | the deploy phase reads "recorded: this project's image of <time>" or "none recorded" |
 | 2 | Change it | a refused build keeps the last good outputs | J3 | E ★C7 (by design) | after a refused build the earlier pins.py and sheet are still there, marked out of date |
-| 3 the PO's phases | Pick the parts, Test the facts | the facts to test are a phase before the wiring; the shops and the part to replace are views of the parts | J4 | H ★C12 (counted by the lens) | the page's rail shows the phase, and `parts.py --unverified`'s lines are on it |
+| 3 the PO's phases | Pick the parts, Test the facts | the facts to test are a step of their own (D9; its place in the order is not decided); the shops and the part to replace are views of the parts | J4 | H ★C12 (counted by the lens) | the page's rail shows the phase, and `parts.py --unverified`'s lines are on it |
 | later | every activity | one value for an offer and a `next` step, from which a framework's graph can be made | J6 | H ★C13 (a contract) | one sentence: a generated graph walks a basic project |
 
 ## Delta to the product's map <!-- REQUIRED:spark-process:map-delta -->
 <!-- The rows to add or change in the repository's own story map file, in that file's table shape, with its journey
 step numbers; proposed, not applied. "n/a — no map file" is allowed. -->
-Proposed in words, not applied, and not yet in the file's table shape: scrum/STORY_MAP.md defines the slice "v0.11 Change it and put it on again" as a firmware edit with one receipt line (council/existing.md:34, EX-20, read by the lens). The rows of slices 0 to 2 above would widen that slice to a change of the design, or would sit in a new slice. Which of the two is Q12, so the rows in the file's own shape wait for that answer.
+Proposed in words, not applied, and not yet in the file's table shape: scrum/STORY_MAP.md defines the slice "v0.11 Change it and put it on again" as a firmware edit with one receipt line (council/existing.md:34, EX-20, read by the lens). The rows of slices 0 to 2 above would widen that slice to a change of the design, or would sit in a new slice. Q12 is answered by D15 (confirmed in D20): no new slice and no widened slice now, and P869 #1236's triage names the slice of each command fix (D21).
 <!-- EXTEND:map -->
