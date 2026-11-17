@@ -71,8 +71,10 @@ class BuildBoard(Operation):
                                                    "when ok in a project), and kept with --keep or --sim-dir"),
                  Argument(("--keep",), "keep", Path,
                           "write the built board into DIR: board.tsx, its footprint and "
-                          "dist/, where every check already looks. A board.tsx spark wrote and nobody changed is `replaced` (its previous version is .spark/previous/board.tsx.txt), or `unchanged`; other .tsx files are left alone and named, and "
-                          "`traces differ` names the traces that differ from this build's; with --json, each file is listed under kept. With a requirements "
+                          "dist/, where every check already looks. A board.tsx that spark wrote and nobody changed is `replaced` "
+                          "(its previous version is .spark/previous/board.tsx.txt), or `unchanged` when this build made the "
+                          "same board. Other .tsx files are left alone and named, and so is one whose replace failed; "
+                                                    "`traces differ` names the traces that differ from this build's; with --json, each file is listed under kept. With a requirements "
                           "file it also writes breadboard.md, the parts and how to wire them on a breadboard, "
                           "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today; a part "
                           "you moved in it, a resistor or a jumper too, stays where you put it, or the build names it as "

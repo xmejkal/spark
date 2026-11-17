@@ -111,7 +111,7 @@ spends Wokwi CI minutes"*. The build's own simulation stage writes the diagram a
 
 ## 5. A `board.tsx` you changed is never overwritten; delete it to have it generated again
 
-But `--keep .` still replaces `dist/`, which every check reads, with a build of the freshly generated board
+A `board.tsx` that spark wrote and nobody changed is replaced by the next build; the old one is `.spark/previous/board.tsx.txt`. `--keep .` also replaces `dist/`, which every check reads, with a build of the freshly generated board
 ([P110](https://github.com/xmejkal/spark/issues/44)). So after you edit `board.tsx` or change `requirements.json`,
 the two describe different boards. When the traces of your board.tsx differ from the board this build made, the build names each one in a `traces differ` entry
 (P660). It does not stop the build, so read `kept` after `status`.

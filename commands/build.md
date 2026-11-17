@@ -129,8 +129,12 @@ where every check already looks. **Without it the chain builds in a temp directo
 which is right for a check and wrong for the command someone is told to run first — the project
 would hold only `requirements.json`, and `check_all --project .` would answer "not asked for" about
 a board that built perfectly (backlog P51). If the folder has no `.spark/`, the build and `check_all --project` both
-read the rules and the parts of the nearest project up from it (P319). A `board.tsx` that spark wrote and nobody changed is `replaced`, and the previous version is the one file `.spark/previous/board.tsx.txt` (the same board is `unchanged`; a person who restores spark's old bytes gets `replaced`). Any other `.tsx`, or one from a build before the record held its sha256, is left alone and named; delete it to have it regenerated. If its traces join other pins than this build's board, a `traces differ` line
-follows and names each trace on each side (P660). Tell the person: the status is unchanged, but they must not wire or
+read the rules and the parts of the nearest project up from it (P319). A `board.tsx` that spark wrote and nobody changed is
+`replaced`, and the previous version is the one file `.spark/previous/board.tsx.txt`. The same board is `unchanged`: nothing is
+written. A person who restores spark's old bytes gets `replaced`. Any other `.tsx` is left alone and named. So is one from a build
+before the record held its sha256, and one whose replace failed; delete it to have it regenerated. If its traces join other pins
+than this build's board, a `traces differ` line
+follows and names each trace on each side (P660). Tell the person: the status stays what it was, but they must not wire or
 build from that file until they delete it or carry this build's pins into it. A `traces not compared` line means the
 file holds a trace that spark does not read, or it cannot be read. With `--json`, each file is listed under `kept`, with what was done to it and
 why. After a build that finished, it also writes `breadboard.md`, new each time: the parts, the resistors they ask

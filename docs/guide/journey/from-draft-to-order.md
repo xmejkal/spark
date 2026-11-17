@@ -10,8 +10,8 @@ and its traces are not sized for current until each rail's current is stated. Wh
 1. **Look at it** in tscircuit's viewer: [see it](../../../commands/build.md#see-it).
 2. **State each rail's current,** as `max_current_a` in `.spark/rules.json` or as figures in the part records. The
    generator sizes a rail's traces from it.
-3. **Generate the board again.** Delete `board.tsx` and run `/spark:build`, because an existing `board.tsx` is never
-   overwritten. If you have already laid it out, move it aside first and carry the new trace widths over by hand.
+3. **Generate the board again.** Run `/spark:build`. It replaces a `board.tsx` that spark wrote and you did not change
+   (the old one is `.spark/previous/board.tsx.txt`). It leaves a `board.tsx` you changed alone: move that one aside first and carry the new trace widths over by hand.
 4. **Lay it out, then build your own `board.tsx`:** `npx --no tsci build board.tsx`. The `spark-design` skill's
    [layout notes](../../../skills/spark-design/references/pcb-layout.md) name the routes; they were not run for these docs.
    Until [P110](https://github.com/xmejkal/spark/issues/44) lands, `/spark:build` rebuilds `dist/`, which every check
