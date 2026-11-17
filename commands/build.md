@@ -156,8 +156,11 @@ A build that did not finish (a failed build, or requirements the build refuses) 
 parts, with a `left alone` entry, so a typo does not wipe your moves. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
 the line `no drawn breadboard: …` names what is missing. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
 again after a build. `page.html` shows the same circuit in three tabs: the breadboard picture, and tscircuit's
-schematic and PCB of the kept `dist/board/circuit.json` ([P271](https://github.com/xmejkal/spark/issues/307)). Open it in a
-browser. It has no script and loads nothing from the web. Its colors are tokens with a dark mode, and its title has two to
+schematic and PCB of the kept `dist/board/circuit.json` ([P271](https://github.com/xmejkal/spark/issues/307)). Since
+2026-11-17, in a project folder, it is the project's flow page instead ([P827](https://github.com/xmejkal/spark/issues/1185)):
+each phase of [`flow.py`](../docs/guide/agents/flow.md) with its status word and a mark, then the same three pictures. It adds no
+tick: a phase that is not ok never shows one. It does not know whether the board is wired or flashed. A folder that is no
+project keeps the three tabs. Open it in a browser. It has no script and loads nothing from the web. Its colors are tokens with a dark mode, and its title has two to
 four words (P272), so it also follows the Artifact page rules. Publish it as an Artifact (P272, #308) only if the person says yes; spark never does. Ask first: "Publish this page as an
 Artifact?" On a yes, call the Artifact tool with `file_path` set to the full path of `page.html` and `icon` set to
 `circuit`; the page is private until the person shares it, so give them the link. To update it after a rebuild, call

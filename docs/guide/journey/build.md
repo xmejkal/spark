@@ -192,7 +192,7 @@ writes:
 - for a XIAO ESP32-C6, the same wiring drawn on a Wokwi breadboard ([P267](https://github.com/xmejkal/spark/issues/300)) and as a picture that the sheet shows
   ([P268](https://github.com/xmejkal/spark/issues/302))
 - for a FireBeetle 2 ESP32-S3, a picture alone, drawn from its record ([P412](https://github.com/xmejkal/spark/issues/538))
-- a page with the breadboard, schematic and PCB in three tabs ([P271](https://github.com/xmejkal/spark/issues/307))
+- a page with the breadboard, schematic and PCB in three tabs ([P271](https://github.com/xmejkal/spark/issues/307)). Since 2026-11-17, in a project folder, it is the flow page: each phase with its status word and a mark, then the three pictures ([P827](https://github.com/xmejkal/spark/issues/1185))
 
 A rebuild keeps the parts, jumpers and resistors you moved in `breadboard.json`. It names those it cannot keep
 ([P273](https://github.com/xmejkal/spark/issues/309), [P287](https://github.com/xmejkal/spark/issues/340)). A rebuild lists what to change on the bench, by each jumper's ends and color
