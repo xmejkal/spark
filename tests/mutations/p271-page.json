@@ -14,7 +14,7 @@
   "find": "    why = why_not_built(stages, \"board only: nothing to draw\")\n",
   "replace": "    why = None\n"},
  {"file": "scripts/spark/build/kept_files.py", "name": "a dist that was not kept still draws the page",
-  "find": "and entry[\"did\"] == \"wrote\" for entry in kept):", "replace": "for entry in kept) and False:"},
+  "find": "and entry[\"did\"] == WROTE for entry in kept):", "replace": "for entry in kept) and False:"},
  {"file": "scripts/spark/build/kept_files.py", "name": "a breadboard picture that was not written is read anyway",
-  "find": "    if entry is not None and entry[\"did\"] == \"wrote\":\n", "replace": "    if entry is not None:\n"}
+  "find": "    if entry is not None and entry[\"did\"] == WROTE:\n", "replace": "    if entry is not None:\n"}
 ]
