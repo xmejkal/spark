@@ -383,6 +383,15 @@ class TheCommandTest(unittest.TestCase):
         self.assertEqual({phase["phase"]: phase["status"] for phase in envelope["data"]["phases"]}["build"], COULD_NOT_RUN)
         self.assertIn("is no build record", (project / "page.html").read_text(encoding="utf-8"))
 
+    def test_a_record_with_a_lone_surrogate_is_a_page_that_cannot_be_written_and_no_traceback(self):
+        project = a_built_project()
+        (project / ".spark" / "build.json").write_text('{"status": "ok", "at": "\\ud800"}')
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = flow.main(["page", "--project", str(project)])
+        self.assertEqual(code, 2)
+        self.assertNotIn("Traceback", out.getvalue() + err.getvalue())
+        self.assertIn("page.html was not written", out.getvalue() + err.getvalue())
+
     def test_a_phase_that_holds_problems_does_not_change_the_page_s_status(self):
         result = WriteFlowPage(readers=readers_of(a_phase("one", "problems")), parts=parts_of([]), store=FakeStore()).run(
             Path("."), outside=None)
@@ -845,7 +854,7 @@ class TheKeepStepTest(unittest.TestCase):
 
     def test_an_unreadable_record_still_gets_its_page_from_the_build(self):
         # The refuter's case: a build record whose stages is no list, in a read-only .spark, so the record is not kept and the
-        # flow page reads the malformed one. The build still ends as it ends, with one "no page" line and no traceback.
+        # flow page reads the malformed one. The build still ends as it ends, with the page written and no traceback.
         import argparse
         from fakes import run_build_board
         project = Path(tempfile.mkdtemp()) / "project"

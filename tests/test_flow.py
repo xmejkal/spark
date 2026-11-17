@@ -378,7 +378,8 @@ class TheBuildRecordStoreTest(unittest.TestCase):
         self.assertIsNone(BuildRecordStore(project).read())
         (project / ".spark").mkdir()
         for text in ("{not json", "[]", '{"stages": 5}', '{"stages": [5]}', '{"stages": 0}',
-                     '{"missing_facts": 5}', '{"requirements": 5}'):
+                     '{"missing_facts": 5}', '{"requirements": 5}',
+                     '{"requirements": ["r.json"]}', '{"missing_facts": {"a": 1}}', "[" * 200000):
             (project / BUILD_RECORD_FILE).write_text(text)
             with self.assertRaises(store.StoreError) as refused:
                 BuildRecordStore(project).read()
@@ -401,6 +402,11 @@ class TheBuildRecordStoreTest(unittest.TestCase):
         self.assertEqual(BuildRecordStore(project).written_sha256(), {})
         (project / BUILD_RECORD_FILE).write_text(json.dumps(dict(record, stages=[])))
         self.assertEqual(BuildRecordStore(project).written_sha256(), {"board.tsx": "ab" * 32})
+    def test_a_record_nested_too_deep_holds_no_sha256(self):
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / BUILD_RECORD_FILE).write_text("[" * 200000)
+        self.assertEqual(BuildRecordStore(project).written_sha256(), {})
 
 if __name__ == "__main__":
     unittest.main()
