@@ -1181,6 +1181,15 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         self.assertEqual((entries["board.tsx"]["did"], entries["dist"]["did"]), ("left alone", "not kept"))
         self.assertEqual((self.board.read_text(), self.record()["written_sha256"]), (self.BOARD_A, {"board.tsx": self.sha256(self.BOARD_A)}))
 
+    def test_a_dist_that_is_a_file_is_one_not_kept_entry_that_names_it_beside_the_replaced_board(self):
+        # a plain OSError, not a shutil.Error
+        self.build(self.BOARD_A)
+        shutil.rmtree(self.project / "dist")
+        (self.project / "dist").write_text("a file where the folder goes")
+        entries = self.build_with_dist(self.BOARD_B)
+        self.assertEqual((entries["board.tsx"]["did"], entries["board.tsx"]["sha256"]), ("replaced", self.sha256(self.BOARD_B)))
+        self.assertEqual((entries["dist"]["did"], entries["dist"]["file"]), ("not kept", str(self.project / "dist")))
+
     def test_a_dist_copy_that_fails_still_leaves_no_page(self):
         # pin: no dist entry says wrote, so there is no page
         self.build(self.BOARD_A)
