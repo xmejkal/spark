@@ -1122,6 +1122,87 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         self.assertEqual((entries[0]["did"], entries[0]["previous"]), ("replaced", str(waiting)))
         self.assertEqual((waiting.read_text(), self.board.read_text()), (self.BOARD_A, self.BOARD_B))
 
+    def build_with_dist(self, text, stages=None):
+        """One build run whose work folder holds a `dist/blocked/x.json` too; every kept entry, as {file name: its first entry}."""
+        work = Path(tempfile.mkdtemp())
+        (work / "board.tsx").write_text(text)
+        (work / "dist" / "blocked").mkdir(parents=True)
+        (work / "dist" / "blocked" / "x.json").write_text("{}")
+        args = argparse.Namespace(json=True, keep=self.project, requirements=str(self.project / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            run_build_board(stages or [Stage("build", check_spine.OK, "fine")], args, work)
+        return {Path(entry["file"]).name: entry for entry in reversed(json.loads(out.getvalue())["kept"])}  # the first entry of a file wins
+
+    def block_dist(self):
+        """A file where the folder `dist/blocked` goes: the copy of the work folder's `dist/` cannot be finished."""
+        (self.project / "dist" / "blocked").write_text("a file where the folder goes")
+
+    def test_a_board_replaced_before_a_dist_copy_that_fails_is_unchanged_then_replaced_by_the_next_builds(self):
+        self.build(self.BOARD_A)
+        self.block_dist()
+        self.build_with_dist(self.BOARD_B)
+        (self.project / "dist" / "blocked").unlink()
+        self.assertEqual(self.build_with_dist(self.BOARD_B)["board.tsx"]["did"], "unchanged")
+        self.assertEqual(self.build_with_dist(self.BOARD_C)["board.tsx"]["did"], "replaced")
+        self.assertEqual(self.board.read_text(), self.BOARD_C)
+
+    def test_a_dist_copy_that_fails_is_its_own_not_kept_entry_beside_the_replaced_board(self):
+        self.build(self.BOARD_A)
+        self.block_dist()
+        entries = self.build_with_dist(self.BOARD_B)
+        self.assertEqual((entries["board.tsx"]["did"], entries["board.tsx"]["sha256"]), ("replaced", self.sha256(self.BOARD_B)))
+        self.assertEqual((entries["dist"]["did"], entries["dist"]["file"]), ("not kept", str(self.project / "dist")))
+        self.assertIn("blocked", entries["dist"]["why"])
+        self.assertEqual(self.record()["written_sha256"], {"board.tsx": self.sha256(self.BOARD_B)})
+        self.assertEqual((self.board.read_text(), (self.previous / "board.tsx.txt").read_text()), (self.BOARD_B, self.BOARD_A))
+
+    def test_a_first_board_written_before_a_dist_copy_that_fails_is_recorded_and_later_replaced(self):
+        self.block_dist()
+        entries = self.build_with_dist(self.BOARD_A)
+        self.assertEqual((entries["board.tsx"]["did"], entries["dist"]["did"]), ("wrote", "not kept"))
+        self.assertEqual(self.record()["written_sha256"], {"board.tsx": self.sha256(self.BOARD_A)})
+        (self.project / "dist" / "blocked").unlink()
+        self.assertEqual(self.build_with_dist(self.BOARD_B)["board.tsx"]["did"], "replaced")
+
+    def test_an_unfinished_build_whose_dist_copy_fails_replaces_nothing_and_keeps_the_sha256(self):
+        # pin: the unfinished build never reaches a replace
+        self.build(self.BOARD_A)
+        self.block_dist()
+        entries = self.build_with_dist(self.BOARD_B, stages=[Stage("build", check_spine.COULD_NOT_RUN, "timed out")])
+        self.assertEqual((entries["board.tsx"]["did"], entries["dist"]["did"]), ("left alone", "not kept"))
+        self.assertEqual((self.board.read_text(), self.record()["written_sha256"]), (self.BOARD_A, {"board.tsx": self.sha256(self.BOARD_A)}))
+
+    def test_a_board_that_cannot_be_staged_still_says_left_alone_when_the_dist_copy_fails_too(self):
+        # pin: the failure of the board's own write is not changed
+        self.build(self.BOARD_A)
+        (self.project / "board.tsx.new").mkdir()
+        self.block_dist()
+        entries = self.build_with_dist(self.BOARD_B)
+        self.assertEqual((entries["board.tsx"]["did"], entries["dist"]["did"]), ("left alone", "not kept"))
+        self.assertEqual((self.board.read_text(), self.record()["written_sha256"]), (self.BOARD_A, {"board.tsx": self.sha256(self.BOARD_A)}))
+
+    def test_a_dist_that_is_a_file_is_one_not_kept_entry_that_names_it_beside_the_replaced_board(self):
+        # a plain OSError, not a shutil.Error
+        self.build(self.BOARD_A)
+        shutil.rmtree(self.project / "dist")
+        (self.project / "dist").write_text("a file where the folder goes")
+        entries = self.build_with_dist(self.BOARD_B)
+        self.assertEqual((entries["board.tsx"]["did"], entries["board.tsx"]["sha256"]), ("replaced", self.sha256(self.BOARD_B)))
+        self.assertEqual((entries["dist"]["did"], entries["dist"]["file"]), ("not kept", str(self.project / "dist")))
+
+    def test_a_dist_copy_that_fails_still_leaves_no_page(self):
+        # pin: no dist entry says wrote, so there is no page
+        self.build(self.BOARD_A)
+        self.block_dist()
+        entries = self.build_with_dist(self.BOARD_B)
+        self.assertIn("the build was not kept in this run", entries["page.html"]["why"])
+
+    def test_a_dangling_link_at_board_tsx_is_left_alone_and_nothing_is_written_outside(self):
+        outside = Path(tempfile.mkdtemp()) / "board.tsx"
+        self.board.symlink_to(outside)
+        self.assertEqual(self.build(self.BOARD_A)[0]["did"], "left alone")
+        self.assertEqual((outside.exists(), self.board.is_symlink()), (False, True))
+
 
 class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
     """

@@ -97,14 +97,15 @@ def kept_into(workdir, destination, written=None, finished=True):
     Each file is {file, did, why, line}: `did` is `wrote`, `replaced`, `unchanged` or `left alone`, and `line` what
     stderr says; a `.tsx` carries the `sha256` of the bytes spark made. A .tsx left alone whose traces are not this
     build's is followed by a `traces differ` entry (P660). A board spark wrote is replaced only when `finished` (the build
-    stage ended ok). With --json the report carries the rest under `kept`.
+    stage ended ok). A `dist/` that cannot be copied is its own `not kept` entry; the `.tsx` entries stand (P891).
+    With --json the report carries the rest under `kept`.
     """
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
     written, kept = written or {}, []
     for source in sorted(workdir.glob("*.tsx")):
         target, made = destination / source.name, sha256_of(source)
-        if not target.exists():
+        if not target.exists() and not target.is_symlink():
             shutil.copy2(source, target)
             kept.append({"file": str(target), "did": WROTE, "why": None, "sha256": made, "line": "wrote %s" % target})
         elif _spark_wrote(target, written.get(source.name)):
@@ -114,7 +115,10 @@ def kept_into(workdir, destination, written=None, finished=True):
             kept += _compare_traces(target, source)
     built = workdir / "dist"
     if built.is_dir():
-        shutil.copytree(built, destination / "dist", dirs_exist_ok=True)
+        try:
+            shutil.copytree(built, destination / "dist", dirs_exist_ok=True)
+        except OSError as refused:  # a copy that fails midway is a shutil.Error; the entries above stand, so the record holds what spark wrote (P891)
+            return kept + [{"file": str(destination / "dist"), "did": "not kept", "why": str(refused), "line": "not kept: %s — %s" % (destination / "dist", refused)}]
         kept.append({"file": str(destination / "dist"), "did": WROTE, "why": "this is what every check reads",
                      "line": "wrote %s — this is what every check reads" % (destination / "dist")})
     return kept
@@ -313,7 +317,7 @@ def why_no_page(destination, stages, kept):
     why = why_not_built(stages, "board only: nothing to draw")
     if why:
         return why
-    if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] == "wrote" for entry in kept):
+    if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] == WROTE for entry in kept):
         return "the build was not kept in this run"
     return None
 
@@ -414,7 +418,7 @@ def _breadboard_tab(destination, kept):
     """The breadboard tab: the picture this run wrote, or why it did not."""
     picture = str(Path(destination) / drawing.SvgBreadboardDiagram.FILE_NAME)
     entry = next((entry for entry in kept if entry["file"] == picture), None)
-    if entry is not None and entry["did"] == "wrote":
+    if entry is not None and entry["did"] == WROTE:
         try:
             return tabbed_page.Tab("Breadboard", Path(picture).read_text(encoding="utf-8"), None)
         except (OSError, ValueError) as unread:
