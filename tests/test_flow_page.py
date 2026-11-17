@@ -12,6 +12,7 @@ import html
 import html.parser
 import io
 import json
+import os
 import re
 import shutil
 import sys
@@ -293,7 +294,7 @@ class TheMaskTest(unittest.TestCase):
         phase = a_phase("one", says=[sentence])
         picture = Picture("Breadboard", None, "no file in %s/drawings" % home)
         store = FakeStore()
-        with mock.patch.dict("os.environ", {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
+        with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
             write_page(project, readers_of(phase), lambda _project: [picture], store=store)
         text = store.written[0][2]
         self.assertNotIn(str(home), text)
