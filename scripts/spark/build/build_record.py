@@ -74,6 +74,10 @@ class BuildRecordStore:
         return self.path
 
 
+class StageTakenError(FileExistsError):
+    """Error: a stage's name is already taken by a file, a link or a folder; `filename` is the stage's path."""
+
+
 class StagedFile:
     """
     Adapter: a copy of `source` made beside its target under the name `staged` (P874), then put in place whole by
@@ -86,7 +90,10 @@ class StagedFile:
 
     def make(self):
         """Create the stage and copy the bytes of the source into it. OSError when the name is taken or the copy fails."""
-        descriptor = os.open(self.staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o666)
+        try:
+            descriptor = os.open(self.staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)  # O_EXCL also refuses a link at the name
+        except FileExistsError as taken:
+            raise StageTakenError(taken.errno, taken.strerror, str(self.staged)) from None
         self.made = True
         with os.fdopen(descriptor, "wb") as out:
             out.write(self.source.read_bytes())
@@ -122,6 +129,8 @@ class PreviousVersionFiles:
     def stage(self, file):
         """The StagedFile that holds the bytes of `file` beside its previous-version path. OSError when it cannot be made."""
         path = self.path_of(Path(file).name)
+        if path.parent.is_symlink():
+            raise OSError("%s is a link, so the previous version is not written through it" % path.parent)
         path.parent.mkdir(parents=True, exist_ok=True)
         copy = StagedFile(file, path.with_name(path.name + STAGE_SUFFIX))
         try:
@@ -138,6 +147,7 @@ class PreviousVersionFiles:
         try:
             copy.commit(path)
         except OSError:
+            copy.made = False  # it stays: it holds the old bytes
             return copy.staged
         return path
 # --- end MVP ---

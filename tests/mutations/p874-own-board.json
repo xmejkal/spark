@@ -11,10 +11,14 @@
  {"file": "scripts/spark/build/kept_files.py", "name": "P874: a keep with no requirements file replaces a board", "find": "BuildRecordStore(destination).written_sha256() if recorded and _is_project(destination) else {}", "replace": "BuildRecordStore(destination).written_sha256()"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P874: a build that did not finish replaces a board", "find": "return any(stage.name == \"build\" and stage.status == OK for stage in stages)", "replace": "return True"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P874: a failed previous version is said as a failed write", "find": "sentence = KEEP_FAILED", "replace": "sentence = WRITE_FAILED"},
- {"file": "scripts/spark/build/build_record.py", "name": "P874: a stage is written through a link or over a file", "find": "os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, \"O_NOFOLLOW\", 0)", "replace": "os.O_WRONLY | os.O_CREAT | os.O_TRUNC"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: a stage is written over a file or through a link", "find": "os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666", "replace": "os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o666"},
  {"file": "scripts/spark/build/build_record.py", "name": "P874: a stage a person made is removed", "find": "        if self.made:\n            self.made = False", "replace": "        if True:\n            self.made = False"},
  {"file": "scripts/spark/build/build_record.py", "name": "P874: a stage is copied over the target and left behind", "find": "os.replace(self.staged, target)", "replace": "target.write_bytes(self.staged.read_bytes())"},
  {"file": "scripts/spark/build/build_record.py", "name": "P874: the previous version is a name tscircuit can read", "find": "(name + \".txt\")", "replace": "name"},
  {"file": "scripts/spark/build/build_record.py", "name": "P874: a record with no sha256 map is read as one", "find": "if isinstance(held, dict) else {}", "replace": "if held else {}"},
- {"file": "scripts/spark/build/build_record.py", "name": "P874: a record that is not JSON stops the build", "find": "except (store.StoreError, OSError):", "replace": "except OSError:"}
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: a record that is not JSON stops the build", "find": "except (store.StoreError, OSError):", "replace": "except OSError:"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: a previous folder that is a link is written through", "find": "if path.parent.is_symlink():", "replace": "if False:"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: an unfinished build replaces a board spark wrote", "find": "if finished else _unfinished(source, target)", "replace": "if True else _unfinished(source, target)"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a leftover stage is not named in the why", "find": "STAGE_IN_THE_WAY % refused.filename if isinstance(refused, StageTakenError) else sentence % refused", "replace": "sentence % refused"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: a previous version that waits is removed", "find": "            copy.made = False  # it stays: it holds the old bytes\n", "replace": ""}
 ]

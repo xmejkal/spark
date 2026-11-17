@@ -1015,7 +1015,7 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         (self.project / "board.tsx.new").symlink_to(outside)
         entries = self.build(self.BOARD_B)
         self.assertEqual(entries[0]["did"], "left alone")
-        self.assertIn("could not write the new board", entries[0]["why"])
+        self.assertIn("board.tsx.new is in the way", entries[0]["why"])
         self.assertEqual((outside.read_text(), self.board.is_symlink(), self.board.read_text()), ("outside", False, self.BOARD_A))
         self.assertTrue((self.project / "board.tsx.new").is_symlink())
 
