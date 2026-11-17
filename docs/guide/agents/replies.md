@@ -52,15 +52,15 @@ a prompt. The template is written for what stays open, as in run 1.
 
 Before `look.py` reads a board, it asks the person, because the read restarts the board. It asks once per board, and
 then remembers the board for the project in the person's store, never in the project. The key is
-`look.read_board.<id>`, or `look.switch_board.<id>` for a board that is not the kept one. `<id>` is 4 hex digits of the
-board's USB serial. The text names the port and the restart. `data.known_board` holds the `state` and the kept board's
+`look.read_board.<id>`, or `look.switch_board.<id>` for a board that is not the kept one. `<id>` is an id made from the
+serial: copy the key from `data.open`. The text names the port and the restart. `data.known_board` holds the `state` and the kept board's
 `mac_ends`. A MAC is the board's own address, six bytes; spark shows only the last two.
 
 Ask the person in this conversation. Name the port and say that the board restarts. Write `true` only after they say
 yes to that message, in a file of your own outside the project, never in research's file:
-`{"replies": {"look.read_board.1a2b": true}}`. Then run `look.py --project <p> --replies <that file> --json`. One yes is
-for one look: the look sets every `look.` key of the file back to null before it reads. A `false` is a no: code
-`answered_no`, and nothing is read. Never add `--port` to avoid the question: a `--port` the look cannot identify reads
+`{"replies": {"look.read_board.1a2b": true}}`. Only the JSON value `true` is a yes. Then run the `next[0]` step, with your
+file in place of `<your replies file>`. One yes is for one look: the look sets every `look.` key of the file back to null
+right after it starts, also when it then stops. A `false` is a no: code `answered_no`, and nothing is read. Never add `--port` to avoid the question: a `--port` the look cannot identify reads
 as before, and keeps nothing.
 
 | What is on USB | The look |
@@ -69,11 +69,12 @@ as before, and keeps nothing.
 | the kept board | reads it with no question |
 | another board | stops before the read with `other_board`, names both as `MAC ends 34:56`, and asks `switch_board` |
 | a bridge chip's board (CP2104, CH340) with a serial | asks once: the bridge's serial names the board |
-| a native USB board whose firmware set its serial | asks on every look: a custom build gives every board one serial |
+| a native USB board whose firmware set its serial | asks on every look: a custom build gives every board one serial. A yes to another board makes it the project's |
 | a board with no serial, or no `--port` row | asks on every look, or with `--port` reads as before |
+| such a board named with `--port`, and a kept board | reads with no yes, then stops as `other_board` when the MAC differs |
 
 Two bridge clones with one serial cannot be told apart before a read. The read then finds another MAC: `other_board`,
-and the sentence says that the board did restart. With no MAC read nothing is kept, and a note says so. A kept record
+and the sentence says that the board did restart. `other_board` after a read gives no token and no deploy step. With no MAC read nothing is kept, and a note says so. A kept record
 that cannot be read is `known_board_unreadable`: repair or remove the file that the `fix` names.
 
 ## The research run
@@ -100,7 +101,7 @@ same value is settled and flags nothing. A run with no gaps is `ok` and writes n
 
 | code | what it is | what to do |
 | --- | --- | --- |
-| `needs_reply` | an `unchecked` item per question that the run did not answer itself. `subject` is the key, the question is in `data.open` | answer it in the replies file, then run the `next[0]` step. Exit 2 here means "run again with replies", not "broken". Relay a `person` question to the person |
+| `needs_reply` | an `unchecked` item per question that the run did not answer itself. `subject` is the key, the question is in `data.open` | answer it in the replies file (for the look, see [the look's question](#the-looks-question)), then run the `next[0]` step. Exit 2 here means "run again with replies", not "broken". Relay a `person` question to the person |
 | `unknown_reply` | a `problems` item: a reply to a key that no open question has, and the `fix` names the nearest. Also a reply to a fact that the record holds with another value | fix the key in the replies file. Never reply to a fact that is not open |
 | `bad_reply` | a `problems` item: a reply that does not fit its question's `kind`. It is not a yes or no, not one of the `choices`, empty, or not a finite number | answer as the question's `answer_form` and `example` say |
 | `part_contract_broken` | a `problems` item of `research.py`: the folded record breaks a rule that the record did not break before, for example a size that is not above 0. Nothing is written, and every typed value is kept in the replies file that the `fix` names | fix the value in that file, then run the `fix` line with `--replies` |

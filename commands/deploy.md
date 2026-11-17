@@ -32,9 +32,11 @@ Read the board on USB without changing it, compare it with the project's board r
 
 The look asks the person before it reads a board it does not know (P865). Then it exits 2 with one `needs_reply` item and
 reads nothing. Ask the person in this conversation. Name the port and say that the board restarts. Only after their yes
-to that message, write `{"replies": {"<key>": true}}` to a file of your own outside the project, and run the look again
-with `--replies <that file>`. One yes is for one look. Then the look keeps the board in the person's store and asks no
-more for it. Another board stops with `other_board` before any read. Never add `--port` to avoid the question
+to that message, write `{"replies": {"<key>": true}}` to a file of your own outside the project. The value must be the
+JSON `true`. Run the look's `next[0]` step, with your file in place of the placeholder `<your replies file>`. One yes is
+for one look. Then the look keeps the board in the person's store and asks no more for it. Another board stops with
+`other_board` before any read, and asks `switch_board`: a yes makes it the project's board. `other_board` can also come
+after a read: the board did restart, and there is no token. Never add `--port` to avoid the question
 (`docs/guide/agents/replies.md`, "The look's question").
 
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
