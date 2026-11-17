@@ -442,7 +442,7 @@ class TheDesignAreaTest(unittest.TestCase):
     `scripts/` keeps the three CLIs."""
     DESIGN = ROOT / "scripts" / "spark" / "design"
     #: The modules of the area so far, by the names of its page (`areas/design.md`).
-    MODULES = ["audit_records", "board_components", "board_emitter", "board_sections", "copper", "design_codes", "design_operations", "fab",
+    MODULES = ["audit_records", "board_components", "board_emitter", "board_sections", "copper", "design_codes", "design_operations", "entry_origin", "fab",
                "find_offers", "footprint_emitter", "list_boards", "list_needs", "loader", "match_needs", "need_requirements",
                "needs", "netlist", "pick_parts", "pin_assigner", "power_rails", "restricted_pins", "set_needs", "show_offer", "tally_cost",
                "write_requirements"]
