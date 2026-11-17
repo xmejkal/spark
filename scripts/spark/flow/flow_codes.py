@@ -58,7 +58,7 @@ REQUIREMENTS_MESSAGE = "writes requirements.json; may shelve catalog records in 
 BUILD_MESSAGE = "builds the board and keeps its files in the project"
 
 #: The page of the project (P827): its code when the file cannot be written, the words a status has no word for, and the
-#: bench note. Spark does not look at the board, so the page says so and never "none recorded".
+#: bench note. This page does not look at the board, and the note says so.
 PAGE_NOT_WRITTEN = "page_not_written"
 OK_WORD = "ok"
 NOT_CHECKED_WORD = "not checked by spark"
@@ -66,6 +66,8 @@ NOT_CHECKED_LEGEND = "spark does not judge this phase, so no mark says it is don
 BENCH_NOTE = "This page reads the project's files. It does not know whether the board is wired or flashed."
 STANDS_AT_LINE = "The project stands at: %s."
 NOTHING_OPEN_LINE = "No phase is open."
-NOT_DRAWN_HERE = "this command does not draw it: run the build with --keep"
-NO_PICTURE_FILE = "%s is not in the project"
+NOT_DRAWN_HERE = "Not drawn here. The build draws it: run /spark:build --keep."
+NO_PICTURE_FILE = "Not drawn: %s is not in the project yet. The build with --keep writes it."
+UNREADABLE_PICTURE = "Not drawn: %s cannot be read."
+NOT_DRAWN_BECAUSE = "Not drawn, because %s."
 # --- end MVP ---

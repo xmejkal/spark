@@ -48,10 +48,6 @@ def _text(value):
     return html.escape(str(value))
 
 
-def _attr(value):
-    return html.escape(str(value), quote=True)
-
-
 def _mark(shown):
     return '<span aria-hidden="true">%s</span>' % _text(shown.mark)
 
@@ -74,18 +70,16 @@ class FlowHtmlPage:
              "img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}")
 
     def text(self, page):
-        pictures = list(page.pictures)
-        head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._rail(page.phases), self._stands_at(page)]
-        body = [self._picture(each) for each in pictures[:1]] + [self._phase(phase) for phase in page.phases]
-        body += [self._picture(each) for each in pictures[1:]] + [self._legend(), self._notes(page.notes)]
-        return "\n".join(head + body + ["</body>", "</html>"]) + "\n"
+        head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._rail(page), self._stands_at(page)]
+        body = [self._phase(phase) for phase in page.phases] + [self._pictures(page.pictures), self._legend(), self._notes(page.notes)]
+        return "\n".join(head + [part for part in body if part] + ["</body>", "</html>"]) + "\n"
 
     def _open(self, page):
-        style = TabbedHtmlPage._token_styles() + self.STYLE
+        style = TabbedHtmlPage.token_styles() + self.STYLE
         return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
                           '<meta name="viewport" content="width=device-width, initial-scale=1">',
                           '<title>%s</title>' % _text(page.title), '<style>%s</style>' % style, '</head>',
-                          '<body data-stands-at="%s">' % _attr(page.stands_at or "none")])
+                          '<body data-stands-at="%s">' % _text(page.stands_at or "none")])
 
     @staticmethod
     def _stands_at(page):
@@ -93,33 +87,39 @@ class FlowHtmlPage:
 
     @staticmethod
     def _data(phase):
-        return 'data-phase="%s" data-status="%s"' % (_attr(phase["phase"]), _attr("none" if phase["status"] is None else phase["status"]))
+        return 'data-phase="%s" data-status="%s"' % (_text(phase["phase"]), _text("none" if phase["status"] is None else phase["status"]))
 
-    def _rail(self, phases):
+    def _rail(self, page):
         entries = []
-        for phase in phases:
+        for phase in page.phases:
             shown = shown_phase(phase)
             entries.append('<li %s><a href="#phase-%s">%s %s <span>%s</span></a></li>' % (
-                self._data(phase), _attr(phase["phase"]), _mark(shown), _text(phase["phase"]), _text(shown.word)))
-        return '<nav aria-label="Phases"><ol>\n%s\n</ol></nav>' % "\n".join(entries)
+                self._data(phase), _text(phase["phase"]), _mark(shown), _text(phase["phase"]), _text(shown.word)))
+        pictures = '<a href="#pictures">Pictures</a>' if page.pictures else ""
+        return '<nav aria-label="Phases"><ol>\n%s\n</ol>%s</nav>' % ("\n".join(entries), pictures)
 
     def _phase(self, phase):
         shown = shown_phase(phase)
-        lines = ['<section class="phase" id="phase-%s" %s>' % (_attr(phase["phase"]), self._data(phase)),
+        lines = ['<section class="phase" id="phase-%s" %s>' % (_text(phase["phase"]), self._data(phase)),
                  "<h2>%s %s <span>%s</span></h2>" % (_mark(shown), _text(phase["phase"]), _text(shown.word)),
                  "<p>Done by: %s</p>" % _text(phase["by"])]
         lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
         offers = ["<li><code>%s</code>: %s</li>" % (_text(offer["key"]), _text(offer["effect"])) for offer in phase["offers"]]
         return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</section>"])
 
+    def _pictures(self, pictures):
+        """All the pictures in one section, in the order the page was given them, or nothing when there are none."""
+        if not pictures:
+            return ""
+        return '<section id="pictures"><h2>Pictures</h2>\n%s\n</section>' % "\n".join(self._picture(each) for each in pictures)
+
     @staticmethod
     def _picture(picture):
         title = _text(picture.title)
         if picture.svg is None:
-            return '<section class="picture"><h2>%s</h2><p>Not drawn, because %s.</p></section>' % (title, _text(picture.why_missing))
+            return '<div class="picture"><h3>%s</h3><p>%s</p></div>' % (title, _text(picture.why_missing))
         data = base64.b64encode(picture.svg.encode("utf-8")).decode("ascii")
-        return '<section class="picture"><h2>%s</h2><img src="data:image/svg+xml;base64,%s" alt="%s"></section>' % (
-            title, data, _attr(picture.title))
+        return '<div class="picture"><h3>%s</h3><img src="data:image/svg+xml;base64,%s" alt="%s"></div>' % (title, data, title)
 
     @staticmethod
     def _legend():

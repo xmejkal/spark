@@ -94,7 +94,7 @@ class TabbedHtmlPage:
              "background:var(--backdrop)}")
 
     @classmethod
-    def _token_styles(cls):
+    def token_styles(cls):
         """The token blocks the Artifact rules ask for: light on :root, dark under the media query (unless the viewer
         chose light) and under :root[data-theme="dark"], so a chosen theme wins both ways."""
         def block(values, scheme):
@@ -115,7 +115,7 @@ class TabbedHtmlPage:
         return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
                           '<meta name="viewport" content="width=device-width, initial-scale=1">',
                           '<title>%s</title>' % html.escape(title),
-                          '<style>%s</style>' % (self._token_styles() + self.STYLE + "".join(shown)), '</head>', '<body>']
+                          '<style>%s</style>' % (self.token_styles() + self.STYLE + "".join(shown)), '</head>', '<body>']
                          + radios + ['<nav>' + "".join(labels) + '</nav>'] + panels + ['</body>', '</html>']) + "\n"
 
     @staticmethod

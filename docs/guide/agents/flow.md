@@ -50,7 +50,9 @@ same phases as `show`, so a person reads them from the disk, in a browser, with 
 for each phase, then one section for each phase. Each has the phase name, a mark and a status word, who does it, what it
 says and its offers as plain text. A picture of the breadboard comes first when the project holds `breadboard.svg`. The
 schematic and the PCB say why they are not drawn here, because only `check_spine.py --keep` draws them. In a project, that
-build writes the same page with all three pictures, after it kept the simulation project.
+build writes the same page with all three pictures, after it kept the simulation project. A build that did not finish
+removes `page.html` in a project, and `flow.py page` writes it again. If the flow page cannot be written, the build keeps
+its own result and lists one `not written` entry.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json
@@ -60,6 +62,10 @@ With `--json` it prints the envelope with `op` `write-flow-page`. Its `data` hol
 project), `did` (`wrote`), `stands_at` and `phases`, each only `{phase, status}`. A page that cannot be written is one
 `unchecked` item with the code `page_not_written`, and the exit is 2. A phase that holds problems does not change this
 status. Read it with `show`.
+
+For an agent or a later script, the page has hooks. Each rail entry and each section has `data-phase` (the phase name) and
+`data-status` (the flow's code, or `none` for no status). The `<body>` has `data-stands-at` (the first open phase, or `none`
+when no phase is open). All the pictures stand together in the section `id="pictures"`, which the rail links to.
 
 The words on the page:
 

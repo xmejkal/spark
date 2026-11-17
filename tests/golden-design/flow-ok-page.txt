@@ -20,9 +20,8 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <li data-phase="firmware" data-status="none"><a href="#phase-firmware"><span aria-hidden="true">·</span> firmware <span>not checked by spark</span></a></li>
 <li data-phase="simulate" data-status="not-started"><a href="#phase-simulate"><span aria-hidden="true">○</span> simulate <span>not started</span></a></li>
 <li data-phase="deploy" data-status="not-started"><a href="#phase-deploy"><span aria-hidden="true">○</span> deploy <span>not started</span></a></li>
-</ol></nav>
+</ol><a href="#pictures">Pictures</a></nav>
 <p>The project stands at: build.</p>
-<section class="picture"><h2>Breadboard</h2><p>Not drawn, because breadboard.svg is not in the project.</p></section>
 <section class="phase" id="phase-idea" data-phase="idea" data-status="none">
 <h2><span aria-hidden="true">·</span> idea <span>not checked by spark</span></h2>
 <p>Done by: you</p>
@@ -71,8 +70,11 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <p>ask Claude to look at the board first</p>
 <p>then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in your terminal</p>
 </section>
-<section class="picture"><h2>Schematic</h2><p>Not drawn, because this command does not draw it: run the build with --keep.</p></section>
-<section class="picture"><h2>PCB</h2><p>Not drawn, because this command does not draw it: run the build with --keep.</p></section>
+<section id="pictures"><h2>Pictures</h2>
+<div class="picture"><h3>Breadboard</h3><p>Not drawn: breadboard.svg is not in the project yet. The build with --keep writes it.</p></div>
+<div class="picture"><h3>Schematic</h3><p>Not drawn here. The build draws it: run /spark:build --keep.</p></div>
+<div class="picture"><h3>PCB</h3><p>Not drawn here. The build draws it: run /spark:build --keep.</p></div>
+</section>
 <section class="legend"><h2>Marks</h2><ul><li><span aria-hidden="true">✓</span> ok</li><li><span aria-hidden="true">✗</span> problems</li><li><span aria-hidden="true">?</span> could not run</li><li><span aria-hidden="true">○</span> not started</li><li><span aria-hidden="true">◐</span> partly done</li><li><span aria-hidden="true">↻</span> out of date</li><li><span aria-hidden="true">·</span> not checked by spark: spark does not judge this phase, so no mark says it is done</li></ul></section>
 <section class="notes"><h2>Notes</h2><p>This page reads the project&#x27;s files. It does not know whether the board is wired or flashed.</p></section>
 </body>

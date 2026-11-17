@@ -18,7 +18,7 @@ from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, 
 from spark.core.renderers import FlatJsonLine
 from spark.core.result import OperationResult
 from spark.core.text_guards import guard_lines
-from spark.flow.write_flow_page import KeptFlowPage
+from spark.flow.write_flow_page import write_kept_page
 
 #: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
 EVERY_PART_SKIPPED_LINE = "; every part is skipped from the simulation, so the diagram holds none of the project's parts"
@@ -99,7 +99,7 @@ class BuildBoard(Operation):
         try:
             code = verdict(built.stages)
             following = board_envelope.firmware_next_steps(code == EXIT_OK, requirements)  # P517: write the firmware next
-            kept = keep_all(built.stages, built.workdir, KeepAsked(requirements, keep, sim_dir), tabbed_page.TscircuitExport(built.toolchain), KeptFlowPage())
+            kept = keep_all(built.stages, built.workdir, KeepAsked(requirements, keep, sim_dir), tabbed_page.TscircuitExport(built.toolchain), write_kept_page)
             text = guard_lines(render(built.stages, code, left_off(built.requirements)) + board_envelope.next_text(following))
             return OperationResult(said_of(built.stages, code, built.requirements, following, kept), findings_of(built.stages),
                                    lines=text[:-1].split("\n"),  # the one final newline is `print`'s

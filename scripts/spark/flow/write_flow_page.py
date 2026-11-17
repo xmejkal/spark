@@ -43,7 +43,8 @@ def kept_pictures(project):
     try:
         breadboard = Picture(BREADBOARD_TITLE, (Path(project) / name).read_text(encoding="utf-8"), None)
     except (OSError, ValueError):
-        breadboard = Picture(BREADBOARD_TITLE, None, flow_codes.NO_PICTURE_FILE % name)
+        said = flow_codes.UNREADABLE_PICTURE if (Path(project) / name).exists() else flow_codes.NO_PICTURE_FILE
+        breadboard = Picture(BREADBOARD_TITLE, None, said % name)
     return [breadboard] + [Picture(title, None, flow_codes.NOT_DRAWN_HERE) for title in (SCHEMATIC_TITLE, PCB_TITLE)]
 
 
@@ -57,8 +58,9 @@ def masked_page(page, privacy):
 def write_page(project, readers=None, pictures=None, renderer=None, store=None):
     """
     Read the flow of `project`, build its FlowPage, mask it, render it and write it: a Written. `pictures` is a function
-    `project -> [Picture]` (None: `kept_pictures`), `renderer` a FlowHtmlPage, `store` a FlowPageStore. An OSError from the
-    store is the caller's.
+    `project -> [Picture]` (None: `kept_pictures`), `store` a FlowPageStore. A `renderer` has `FILE_NAME`, `PURPOSE_MESSAGE`
+    and `text(page)`: the page's phases are dicts, its pictures Pictures, and a renderer shows a phase through
+    `flow_page.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
     """
     phases, stands_at = read_flow(project, readers)
     page = FlowPage(page_title(Path(project).resolve().name), [phase.to_dict() for phase in phases], stands_at,
@@ -69,16 +71,12 @@ def write_page(project, readers=None, pictures=None, renderer=None, store=None):
     return Written(path, page.phases, page.stands_at)
 
 
-class KeptFlowPage:
-    """Service: the page a build with --keep writes in a project, with the pictures it drew (tabs: a title, an SVG or None,
-    and why none). The build hands it in, so the build area imports nothing of the flow."""
-
-    NOUN = FlowHtmlPage.NOUN
-    PURPOSE_MESSAGE = FlowHtmlPage.PURPOSE_MESSAGE
-
-    def write(self, project, tabs):
-        """The path of the page written in `project`. An OSError is the caller's."""
-        return write_page(project, pictures=lambda _project: [Picture(*tab) for tab in tabs]).path
+def write_kept_page(project, tabs):
+    """(the path of the page written in `project`, what it is for): the page a build with --keep writes, with the pictures it
+    drew (`tabs`: a title, an SVG or None, and why none). The build is handed this function, and `kept_files` imports
+    nothing of the flow. An OSError is the caller's."""
+    pictures = [Picture(title, svg, None if svg else flow_codes.NOT_DRAWN_BECAUSE % why) for title, svg, why in tabs]
+    return write_page(project, pictures=lambda _project: pictures).path, FlowHtmlPage.PURPOSE_MESSAGE
 
 
 class WriteFlowPage(Operation):
@@ -104,8 +102,9 @@ class WriteFlowPage(Operation):
         try:
             written = write_page(project, self.readers, self.pictures, renderer, self.store)
         except OSError as refused:
-            return OperationResult(findings=[Finding(COULD_NOT_RUN, renderer.FILE_NAME, flow_codes.PAGE_NOT_WRITTEN,
-                                                     PAGE_SENTENCE % (renderer.FILE_NAME, refused), PAGE_FIX)])
+            said = PAGE_SENTENCE % (renderer.FILE_NAME, refused)
+            return OperationResult(findings=[Finding(COULD_NOT_RUN, renderer.FILE_NAME, flow_codes.PAGE_NOT_WRITTEN, said, PAGE_FIX)],
+                                   lines=[said])
         data = {"file": renderer.FILE_NAME, "did": "wrote", "stands_at": written.stands_at,
                 "phases": [{"phase": phase["phase"], "status": phase["status"]} for phase in written.phases]}
         return OperationResult(data, lines=["wrote %s: %s" % (renderer.FILE_NAME, renderer.PURPOSE_MESSAGE)])

@@ -261,7 +261,7 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     """
     The page beside the kept board (P271, #307): the breadboard picture the sheet's step just wrote, and tscircuit's
     schematic and PCB of the same kept circuit.json, as one kept entry {file, did, why, line}. In a project, `flow_page`
-    (P827; its `write(project, tabs)` gives the path) writes the flow page with those three pictures; without it, or in a
+    (P827; `flow_page(project, tabs)` gives the path and what it is for) writes the flow page with those three pictures; without it, or in a
     folder that is no project, the tabbed page. A page left from an earlier build is removed when this run cannot draw one,
     since it describes another board.
     """
@@ -274,9 +274,10 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
             tabbed_page.exported_tab("Schematic", exporter.export_svg(circuit, "schematic-svg")),
             tabbed_page.exported_tab("PCB", exporter.export_svg(circuit, "pcb-svg"))]
     flow = flow_page if flow_page is not None and _is_project(destination) else None
+    why = tabbed_page.TabbedHtmlPage.PURPOSE_MESSAGE
     try:
         if flow is not None:
-            page = flow.write(destination, tabs)
+            page, why = flow(destination, tabs)
         else:
             title = tabbed_page.page_title(Path(destination).resolve().name)
             page.write_text(tabbed_page.TabbedHtmlPage().text(tabs, title=title), encoding="utf-8")
@@ -285,7 +286,6 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     except Exception as failed:  # noqa: BLE001  the flow page reads the project's files: whatever they hold, the build ends as it ends
         why = FLOW_PAGE_FAILED % type(failed).__name__
         return {"file": str(page), "did": "not written", "why": why, "line": "no page: %s" % why}
-    why = (flow or tabbed_page.TabbedHtmlPage).PURPOSE_MESSAGE
     return {"file": str(page), "did": "wrote", "why": why, "line": "wrote %s — %s" % (page, why)}
 
 

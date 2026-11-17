@@ -36,7 +36,7 @@ from spark.core.outcomes import COULD_NOT_RUN, OK, SKIPPED  # noqa: E402
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, Picture, TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
-from spark.flow.write_flow_page import FlowPageStore, KeptFlowPage, WriteFlowPage, kept_pictures, write_page  # noqa: E402
+from spark.flow.write_flow_page import FlowPageStore, write_kept_page, WriteFlowPage, kept_pictures, write_page  # noqa: E402
 
 #: The built fixture test_flow.py builds its projects from.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -46,8 +46,8 @@ NINE = ["idea", "needs", "parts", "requirements", "build", "breadboard", "firmwa
 NOT_CHECKED = "not checked by spark"
 BENCH = "This page reads the project's files. It does not know whether the board is wired or flashed."
 NOT_WRITTEN = "page_not_written"
-NOT_DRAWN_HERE = "this command does not draw it: run the build with --keep"
-NO_BREADBOARD_FILE = "breadboard.svg is not in the project"
+NOT_DRAWN_HERE = "Not drawn here. The build draws it: run /spark:build --keep."
+NO_BREADBOARD_FILE = "Not drawn: breadboard.svg is not in the project yet. The build with --keep writes it."
 
 
 class FakeReader:
@@ -259,12 +259,22 @@ class TheDocumentTest(unittest.TestCase):
         self.assertIn("<code>build</code>: builds the board", text)
         self.assertNotIn("<button", text)
 
-    def test_the_first_picture_comes_before_the_phases_and_the_rest_after(self):
-        pictures = [Picture("Breadboard", "<svg/>", None), Picture("Schematic", None, "no tsci")]
+    def test_the_pictures_stand_together_after_the_phases_and_before_the_legend_with_a_link_in_the_rail(self):
+        pictures = [Picture("Breadboard", "<svg/>", None), Picture("Schematic", None, "Not drawn, because no tsci.")]
         text = page_of(a_phase("one"), pictures=pictures)
-        self.assertLess(text.index("<h2>Breadboard</h2>"), text.index('id="phase-one"'))
-        self.assertLess(text.index('id="phase-one"'), text.index("<h2>Schematic</h2>"))
+        self.assertEqual(text.count('<section id="pictures">'), 1)
+        order = [text.index(mark) for mark in ('id="phase-one"', '<section id="pictures">', "<h3>Breadboard</h3>", "<h3>Schematic</h3>",
+                                                '<section class="legend">')]
+        self.assertEqual(order, sorted(order))
         self.assertIn("Not drawn, because no tsci.", text)
+        parsed = Parsed(text)
+        self.assertIn("#pictures", parsed.hrefs)
+        self.assertEqual(len(parsed.rail), 1)
+        self.assertLess(text.index('</ol><a href="#pictures">Pictures</a></nav>'), text.index('id="phase-one"'))
+
+    def test_a_page_with_no_pictures_has_no_pictures_section_and_no_link(self):
+        text = page_of(a_phase("one"))
+        self.assertNotIn("pictures", text)
 
 
 class TheBenchLineTest(unittest.TestCase):
@@ -343,6 +353,14 @@ class TheCommandTest(unittest.TestCase):
         self.assertEqual((code, envelope["status"]), (2, COULD_NOT_RUN))
         self.assertEqual([item["code"] for item in envelope["unchecked"]], [NOT_WRITTEN])
 
+    def test_a_page_that_cannot_be_written_says_why_in_text_mode_too(self):
+        project = Path(tempfile.mkdtemp())
+        (project / "page.html").mkdir()
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = flow.main(["page", "--project", str(project)])
+        self.assertEqual(code, 2)
+        self.assertIn("page.html was not written", out.getvalue() + err.getvalue())
+
     def test_a_page_that_a_store_refuses_is_one_could_not_run_finding(self):
         class Refusing:
             def write(self, project, file_name, text):
@@ -392,6 +410,17 @@ class ThePicturesTest(unittest.TestCase):
         for picture in (schematic, pcb):
             self.assertEqual((picture.svg, picture.why_missing), (None, NOT_DRAWN_HERE))
 
+    @unittest.skipIf(os.geteuid() == 0, "root reads any file")
+    def test_a_breadboard_file_that_cannot_be_read_says_so(self):
+        project = Path(tempfile.mkdtemp())
+        picture = project / "breadboard.svg"
+        picture.write_text("<svg/>")
+        picture.chmod(0)
+        self.addCleanup(picture.chmod, 0o644)
+        breadboard = kept_pictures(project)[0]
+        self.assertIsNone(breadboard.svg)
+        self.assertIn("cannot be read", breadboard.why_missing)
+
     def test_a_breadboard_file_that_is_missing_is_not_drawn_and_says_why(self):
         breadboard = kept_pictures(Path(tempfile.mkdtemp()))[0]
         self.assertEqual((breadboard.svg, breadboard.why_missing), (None, NO_BREADBOARD_FILE))
@@ -409,7 +438,7 @@ class TheKeepStepTest(unittest.TestCase):
         self.page = self.project / "page.html"
 
     def keep(self):
-        return kept_files.keep_tabbed_page(self.project, [Stage("build", OK)], self.kept, FakeTscircuitExport(), KeptFlowPage())
+        return kept_files.keep_tabbed_page(self.project, [Stage("build", OK)], self.kept, FakeTscircuitExport(), write_kept_page)
 
     def test_in_a_project_the_page_is_the_flow_page_with_three_pictures(self):
         (self.project / ".spark").mkdir()
@@ -432,7 +461,7 @@ class TheKeepStepTest(unittest.TestCase):
         (workdir / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\n")
         asked = kept_files.KeepAsked(str(self.project / "requirements.json"), self.project, None)
         (self.project / "requirements.json").write_text(json.dumps({"board": "x", "parts": []}))
-        entries = kept_files.keep_all([Stage("build", OK)], workdir, asked, FakeTscircuitExport(), KeptFlowPage())
+        entries = kept_files.keep_all([Stage("build", OK)], workdir, asked, FakeTscircuitExport(), write_kept_page)
         files = [Path(entry["file"]).name for entry in entries]
         self.assertGreater(files.index("page.html"), files.index("sim"))
 
