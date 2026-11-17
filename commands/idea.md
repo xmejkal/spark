@@ -177,15 +177,20 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements <project> --dry-run
 and without `--dry-run`. It writes `requirements.json`: the board and every part pick with a record. A later run changes
 only what the picks decide: the parts you wrote stay — a part you added, a `name`, `rails` — as does `signals`, and the
 board follows the pick. It adds only the parts your picks still lack, and says which entries no pick explains (`kept,
-not from a pick`), for you to remove if you changed a pick. It also names each entry that spark wrote for a pick that is
-gone (`written for a pick that is gone`), with its need and a key. Ask the person; they can also delete the line by hand.
-A yes in your own replies file, for the key the run printed, removes them: write `{"replies": {"<remove_key>": true}}` to
-a file of your own and run `--requirements <project> --replies <file>`. The file before is kept, once, as
-`.spark/previous/requirements.json.txt`. A `false` keeps the entries as the person's; no answer names them again. A pick with no
+not from a pick`), for you to remove if you changed a pick. A pick with no
 record (the speaker, the battery) is reserved, not placed. A board picked from the drawer with no board file stops it,
 naming the boards spark has a file for that builds, and those that stop at the footprint stage (P121): say so — the
 person picks one that builds, or a board file is written first (docs/guide/how-it-works.md, "Your own dev board"). A
 pick from the catalog goes onto the shelf, so every project builds with it. `/spark:build` takes it from there.
+
+The same run names each entry that spark wrote for a pick that is gone (`written for a pick that is gone`), with its need.
+It removes none of them by itself. Ask the person in this conversation, and name the entries and their needs. Write `true`
+only after their yes, as `{"replies": {"<remove_key>": true}}` in a file of your own, outside the project, and run
+`--requirements <project> --replies <file>`. Read `remove_key` again from the newest answer, because it changes with the
+file. One yes is for one run: the run sets it back to null. A yes removes the entries and keeps the file before as
+`.spark/previous/requirements.json.txt`, the previous version before it is replaced (a second removal replaces it). A `false` keeps the entries as the person's, and
+the run says `kept as yours`. With no answer, the next run names them again. A note that a reply fits no key names the key that
+fits now: ask the person again with that key. A person at a terminal can also delete the entry by hand.
 
 The answer can carry notes after its first line. Say each to the person as it is printed; none of them refuses, and the
 file is written:
