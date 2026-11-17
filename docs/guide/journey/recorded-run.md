@@ -271,7 +271,7 @@ the screen names it, for example `jumper 6b.j-15t.a: …`. A build that fails le
 **A rebuild says what to change.** Since 2026-10-18 ([P300](https://github.com/xmejkal/spark/issues/366)) a rebuild
 tells you what to change on your breadboard, so you do not read the whole sheet again. Say you built the button and the
 LED, wired them, and then add a second LED. The sheet gets this section before its steps, and the screen prints the same
-lines:
+lines. This recorded output is from 2026-10-18: today the heading names the time of the earlier sheet, and a line under it says to use the list only if you wired that sheet:
 
 <!-- output: run 2026-10-18, spark 0.9.0 -->
 ```text
