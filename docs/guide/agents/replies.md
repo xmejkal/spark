@@ -60,8 +60,8 @@ Ask the person in this conversation. Name the port and say that the board restar
 yes to that message, in a file of your own outside the project, never in research's file:
 `{"replies": {"look.read_board.1a2b": true}}`. Only the JSON value `true` is a yes. Then run the `next[0]` step, with your
 file in place of `<your replies file>`. One yes is for one look: the look sets every `look.` key of the file back to null
-right after it starts, also when it then stops. A `false` is a no: code `answered_no`, and nothing is read. Never add `--port` to avoid the question: a `--port` the look cannot identify reads
-as before, and keeps nothing.
+right after it starts, also when it then stops. A `false` is a no: code `answered_no`, and nothing is read. Never add `--port` to avoid the question:
+a `--port` that names a port the list does not hold, or a listed port with no USB serial, is read as before, with no question; every other board is asked as without `--port`. Such a read keeps nothing.
 
 | What is on USB | The look |
 | --- | --- |
@@ -71,7 +71,7 @@ as before, and keeps nothing.
 | a bridge chip's board (CP2104, CH340) with a serial | asks once: the bridge's serial names the board |
 | a native USB board whose firmware set its serial | asks on every look: a custom build gives every board one serial. A yes to another board makes it the project's |
 | a board with no serial, or no `--port` row | asks on every look, or with `--port` reads as before |
-| such a board named with `--port`, and a kept board | reads with no yes, then stops as `other_board` when the MAC differs |
+| a board with no serial named with `--port`, and a kept board | reads with no yes, then stops as `other_board` when the MAC differs |
 
 Two bridge clones with one serial cannot be told apart before a read. The read then finds another MAC: `other_board`,
 and the sentence says that the board did restart. `other_board` after a read gives no token and no deploy step. With no MAC read nothing is kept, and a note says so. A kept record

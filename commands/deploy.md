@@ -36,7 +36,7 @@ to that message, write `{"replies": {"<key>": true}}` to a file of your own outs
 JSON `true`. Run the look's `next[0]` step, with your file in place of the placeholder `<your replies file>`. One yes is
 for one look. Then the look keeps the board in the person's store and asks no more for it. Another board stops with
 `other_board` before any read, and asks `switch_board`: a yes makes it the project's board. `other_board` can also come
-after a read: the board did restart, and there is no token. Never add `--port` to avoid the question
+after a read: the board did restart, and there is no token. Never add `--port` to avoid the question: a `--port` that names a port the list does not hold, or a listed port with no USB serial, is read as before, with no question; every other board is asked as without `--port`
 (`docs/guide/agents/replies.md`, "The look's question").
 
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and

@@ -74,7 +74,8 @@ log cannot say, a caveat that contains "not checked:" says so.
 The first look on a board asks the person before it reads (P865): a question that names the port and the restart. A yes
 in a terminal, or `true` in the --replies file, reads the board once and keeps it for this project in spark's store. A later
 look reads that board with no question, and stops before the read when another board is on USB. A board with no USB
-serial, or with a serial that its firmware set, is asked on every look. A --port that the list does not hold is read as before.
+serial, or with a serial that its firmware set, is asked on every look. A --port that the list does not hold, or that it
+shows with no USB serial, is read as before, with no question. Every other board is asked, with --port too.
 
 With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a token
 even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it. --no-simulation gives a
@@ -140,13 +141,14 @@ class LookAtBoard(Operation):
 
     def _gate(self, look, row, outside):
         """The person's yes before a read (P865): a Passed, or the OperationResult that ends the look before any read. A board
-        that `tell` names SAME is read with no question, and so is a --port that the look cannot identify (the person named
-        it). Every other board is asked. An open question, a no, or a record that cannot be read ends the look. Only the JSON
+        that `tell` names SAME is read with no question, and so is a --port that the list does not hold or that shows no USB
+        serial (the person named it). Every other board is asked, with --port too. An open question, a no, or a record that cannot be read ends the look. Only the JSON
         value true is a yes; any other value leaves the question open. `look` is the run's LookRun."""
         try:
             known = self.known.read(look.project)
             state = known_board.tell(row, known)
-            asked = None if state == SAME or (state == CANNOT_TELL and look.port) else known_board.question_for(state, row, look.port or row.device, known)
+            unseen = look.port and not known_board.serial_key(row)  # a named port that the list holds with no serial, or not at all
+            asked = None if state == SAME or unseen else known_board.question_for(state, row, look.port or row.device, known)
             reply = outside.replies(asked) if asked else None
         except SparkError as refused:
             return self._said([Finding(refused.status, None, refused.code, str(refused), refused.fix)])

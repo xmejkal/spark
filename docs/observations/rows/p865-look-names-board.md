@@ -18,17 +18,17 @@ only (rules.md). 2026-11-17.
 | 10 | a yes file must not answer the next look, and only `true` reads | plan council, round 2 S7 | acted | every `look.` key is cleared at the gate; `false` is `answered_no` and any other value leaves the question open |
 | 11 | a store that refuses the write must not fail the look | plan council, round 2 S8 | acted | a refused write is a `not kept:` note on a report that stands |
 | 12 | the store's places in how-it-works.md lack `known-boards/` | plan council, round 2 S9 | acted | the line names it, edited in place |
-| 13 | `deploy.py`'s own look restarts any one board before the token is compared (`deploy_service.py:93`) | plan, section 8 | raised | a card, filed by the coordinator before the merge |
-| 14 | `grant.py` reads the board before its question (`board_grant.py:234`, `:240-241`) | plan, section 8 | raised | a card, filed by the coordinator before the merge |
-| 15 | `reach.py` connects to whichever board is on USB (`reach_board.py:83-90`) | plan, section 8 | raised | a card, filed by the coordinator before the merge |
-| 16 | the board doctor's console read can restart a board with no question (`look_at_board.py`'s DETAILS) | plan, section 8 | raised | a card, filed by the coordinator before the merge |
-| 17 | the look's old `mac` line and `data.mac` still print the full MAC | plan, section 8 | raised | a card, filed by the coordinator before the merge |
-| 18 | the replies file's name, `research-replies.json`, is research's, and the look's file is the agent's own | plan, section 8 | raised | a card, filed by the coordinator before the merge |
-| 19 | a port that comes back late (walk 2 row 5), and one read between the look and the deploy (walk 3 row 14) | plan, section 8, from the card's first comment | raised | a card, filed by the coordinator before the merge |
-| 20 | a moved or copied project leaves an orphan record in `known-boards/` | plan, section 8 | raised | a card, filed by the coordinator before the merge |
-| 21 | an unlisted alias of a listed port (`/dev/tty.*` for a listed `/dev/cu.*`) reads as before, with no question | plan council, round 2 S6 | raised | a card, filed by the coordinator before the merge |
-| 22 | the last-deploy line does not say that it is spark's own record and that a flash outside spark is not seen (walk 2 row 6) | plan council, round 2 S9 | raised | a card, filed by the coordinator before the merge |
-| 23 | the CH340 `--port` path (no serial) reads with no question, as the deploy does | plan council, round 2 S9 | raised | a card, filed by the coordinator before the merge, with the deploy's card |
+| 13 | `deploy.py`'s own look restarts any one board before the token is compared (`deploy_service.py:93`) | plan, section 8 | raised | card [P892 #1266](https://github.com/xmejkal/spark/issues/1266) |
+| 14 | `grant.py` reads the board before its question (`board_grant.py:234`, `:240-241`) | plan, section 8 | raised | card [P892 #1266](https://github.com/xmejkal/spark/issues/1266) |
+| 15 | `reach.py` connects to whichever board is on USB (`reach_board.py:83-90`) | plan, section 8 | raised | card [P892 #1266](https://github.com/xmejkal/spark/issues/1266) |
+| 16 | the board doctor's console read can restart a board with no question (`look_at_board.py`'s DETAILS) | plan, section 8 | raised | card [P892 #1266](https://github.com/xmejkal/spark/issues/1266) |
+| 17 | the look's old `mac` line and `data.mac` still print the full MAC | plan, section 8 | raised | card [P893 #1267](https://github.com/xmejkal/spark/issues/1267) |
+| 18 | the replies file's name, `research-replies.json`, is research's, and the look's file is the agent's own | plan, section 8 | raised | a line on [P883 #1251](https://github.com/xmejkal/spark/issues/1251) |
+| 19 | a port that comes back late (walk 2 row 5), and one read between the look and the deploy (walk 3 row 14) | plan, section 8, from the card's first comment | raised | card [P892 #1266](https://github.com/xmejkal/spark/issues/1266) (the deploy's part) |
+| 20 | a moved or copied project leaves an orphan record in `known-boards/` | plan, section 8 | rejected | dropped because the record is small, private and harmless; the look asks once more |
+| 21 | an unlisted alias of a listed port (`/dev/tty.*` for a listed `/dev/cu.*`) reads as before, with no question | plan council, round 2 S6 | raised | card [P892 #1266](https://github.com/xmejkal/spark/issues/1266) |
+| 22 | the last-deploy line does not say that it is spark's own record and that a flash outside spark is not seen (walk 2 row 6) | plan council, round 2 S9 | raised | card [P892 #1266](https://github.com/xmejkal/spark/issues/1266) (the deploy's part) |
+| 23 | the CH340 `--port` path (no serial) reads with no question, as the deploy does | plan council, round 2 S9 | raised | card [P892 #1266](https://github.com/xmejkal/spark/issues/1266) |
 | 24 | a record kept while a fixed-serial firmware ran locks the project to that board: a yes reads another board and ends `other_board` for ever (H1) | PR refuter | acted | a yes to a `cannot_tell` board replaces the record when the read finds another MAC; the question says so first; a named `--port` with no yes still stops and names the way out |
 | 25 | mutation row 13 was an equivalent mutant: the raise was swallowed (H2) | PR refuter | acted | the row now lists every board under `--port`; planted by hand, test 9 fails |
 | 26 | the open question's next step dropped `--port` and the evidence flags (H3) | PR refuter | acted | `LookRun` carries them into `next[0].argv`; a test holds it |
@@ -38,5 +38,6 @@ only (rules.md). 2026-11-17.
 | 30 | the words: the first-look `why` on a firmware serial, the no, the kept dates, the unreadable fix, `named()` for a bridge serial, the answer fix (W1 to W6) | PR lens | acted | each sentence says only what holds where it prints; the docs pages follow (D1) |
 | 31 | `_key` was a private import across modules (K1) | PR lens | acted | `comparable_key`; measure's private imports are back at 5 |
 | 32 | `PLACE` repeats the store's place name (K2) | PR lens | rejected | dropped because store.py has no constant per place; `DeployRecordStore` and `GrantStore` spell theirs the same way |
-| 33 | the look's sentences live in two modules, `known_board.py` and `board_look.py` (K3) | PR lens | raised | a card, filed by the coordinator before the merge |
+| 33 | the look's sentences live in two modules, `known_board.py` and `board_look.py` (K3) | PR lens | raised | card [P892 #1266](https://github.com/xmejkal/spark/issues/1266) |
 | 34 | a firmware serial of 12 hex digits looks like a MAC, so its first look still says "asks no more for it" | the builder, W1 | raised | a card, filed by the coordinator before the merge |
+| 35 | `--port` skipped the question for a listed board whose firmware set its serial, so an agent could restart another session's board (N1) | the council on `_gate` | acted | a named port is read with no question only when the list does not hold it or shows it with no USB serial; every other board is asked; a test and a mutation row |

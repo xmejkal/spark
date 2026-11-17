@@ -172,5 +172,11 @@
   "name": "T9: the kept boards are not private",
   "find": "\"grants\", \"known-boards\")",
   "replace": "\"grants\")"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "N1: any named --port skips the question again, a listed firmware serial too",
+  "find": "            unseen = look.port and not known_board.serial_key(row)",
+  "replace": "            unseen = look.port and state == CANNOT_TELL"
  }
 ]

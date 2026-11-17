@@ -247,12 +247,21 @@ class TheReviewOfPullRequest1264Test(KnownBoardCase):
         self.assertTrue(envelope["data"]["token"], envelope)
         self.assertEqual([step["op"] for step in envelope["next"]], ["deploy"])
 
-    def test_h1_a_named_port_with_no_yes_still_stops_as_another_board_and_names_the_way_out(self):
-        self.keep(FIRMWARE_SERIAL)
-        code, envelope, read = self.envelope(FIRMWARE_SERIAL, "--port", PORT, mac=MAC_B, ask=False)
+    def test_h1_a_named_port_with_no_serial_reads_with_no_yes_and_then_stops_as_another_board_and_names_the_way_out(self):
+        self.keep(NATIVE_A)
+        code, envelope, read = self.envelope(NO_SERIAL, "--port", "/dev/cu.usbserial-1410", mac=MAC_B, ask=False)
         other = [item for item in envelope["unchecked"] if item["code"] == "other_board"]
         self.assertEqual((code, len(read), self.kept().mac), (2, 1, MAC_A))
         self.assertIn("without --port", other[0]["fix"])
+
+    def test_n1_a_named_port_of_another_box_with_the_same_firmware_serial_is_asked(self):
+        self.keep(FIRMWARE_SERIAL)
+        code, envelope, read = self.envelope(FIRMWARE_SERIAL, "--port", PORT, mac=MAC_B)
+        self.assertEqual((code, read, self.codes(envelope)), (2, [], ["needs_reply"]))
+
+    def test_n1_a_named_port_of_a_firmware_serial_with_no_kept_board_is_asked(self):
+        code, envelope, read = self.envelope(FIRMWARE_SERIAL, "--port", PORT)
+        self.assertEqual((code, read, self.codes(envelope)), (2, [], ["needs_reply"]))
 
     def test_h3_the_next_step_keeps_the_port_and_the_evidence_flag(self):
         argv = self.envelope(NATIVE_A, "--port", PORT, "--no-simulation")[1]["next"][0]["argv"]
