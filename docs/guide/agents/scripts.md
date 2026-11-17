@@ -221,10 +221,7 @@ These write:
   written and the exit code does not change: wire from the steps, not from the drawing. A pin of the contact a point
   names (the pushbutton's other side) counts as that point's. Only the drawn layout is checked, not a breadboard on the bench.
   A rebuild lists what to change on the bench (P300, `spark/breadboard/bench_changes.py`). `sheet.write()` reads
-  `wiring-record.json`, which holds each step of the last sheet, before it writes anything. It compares the record with the
-  new steps, writes the sheet, and then writes the new record. The sheet gets a section `### Changes since the last build`
-  before `### Steps`: one bullet for each change, `- Nothing to change on the bench.` when there is none, and one line with the
-  reason when the record cannot be read. A first build has no section. `WriteResult.changes` lists `WiringChange(code, kind,
+  `wiring-record.json`, before it writes anything: each step of the last sheet, its time `at` and its `base` (P875), the steps and `at` of the last sheet for another wiring. The base is the earlier sheet when its wiring differs from this one, else the base the record had, so a second build of one design lists the same changes. A record with no `at` or `base` has an unknown time. It writes the new record beside the sheet as `.new`, writes the sheet, and puts the record in place; a `.new` in the way stops the sheet. The sheet gets `### Changes since the sheet spark wrote on <time>` before `### Steps` (`WriteResult.since` and the `wrote` entry's `since` hold the time, `null` or absent when unknown), a line that says to count from that sheet only if you wired it, and one bullet for each change. A first design built again says `- Nothing to change on the bench.` under `### Changes since the last build`, as does a record that cannot be read, with its reason. `WriteResult.changes` lists `WiringChange(code, kind,
   name, color, before, after, marks)`. The codes are `added`, `removed`, `rerouted` (a connection joins another row, rail or free
   row) and `swapped` (a resistor with a new value). A resistor that goes is one `removed` line, not one for each end. `breadboard.py` prints each as `change: …` on stderr.
   `check_spine --keep` adds one kept entry for each: `{file, did: "changed", code, subject, color, why}`, and `why` is the
@@ -234,7 +231,7 @@ These write:
   then it shows none. `color` is `null` when no drawing showed one, or when it would clash. Spark writes
   `wiring-record.json` whole or not at all. A project built before the record has none: the first rebuild counts a jumper
   that equals the fresh plan's as spark's. A failed build never removes
-  `wiring-record.json`. Never read an empty list as proof that nothing changed on the bench: read the sheet.
+  `wiring-record.json`. Never read an empty list as proof that nothing changed on the bench: read the sheet. The list stays until another design is built.
   Each drawing is one entry of `sheet.DRAWING_RENDERERS`, all from one plan of the layout (P270). The second,
   `breadboard.svg` (P268), is a picture of the same layout that `breadboard.md` shows inline. Its part pictures come
   from `part_pictures.PictogramPartPictures` (`data/pictograms/<wokwi type>.svg`, else `module.svg`).

@@ -291,8 +291,8 @@ the wire you wired. A new jumper has the color it has on the new sheet, unless a
 on your bench. Then it has no color, so no two wires in the list share one. A resistor is named by its job too, because
 its tag can renumber. A line never names a hole, because you pick your own free rows. A resistor with a new value reads
 `Swap R1, 330Ω, for a 1kΩ resistor in the same rows.` A resistor that goes is one line:
-`Take out R1, 330Ω in series with LedRed5mm A.` When nothing changed, the section says
-`- Nothing to change on the bench.` The first build has no section. Spark keeps what the last sheet said in
+`Take out R1, 330Ω in series with LedRed5mm A.` When a first design is built again, the section says
+`- Nothing to change on the bench.` Only a first design built again says it: a rebuild of a design you changed lists the same changes until you build another. Spark keeps what the last sheet said in
 `wiring-record.json`, beside the sheet. Do not edit it.
 
 Two boards are drawn, and only when no point needs a rail or a supply from off the board. The Seeed Studio XIAO ESP32-C6

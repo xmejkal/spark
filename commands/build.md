@@ -154,7 +154,7 @@ Spark never names a jumper it drew itself. The build also makes sure that the dr
 After a rebuild, the sheet and the screen list what to change on the bench
 ([P300](https://github.com/xmejkal/spark/issues/366)): one line for each part to put in or take out, each jumper to run,
 move or take out (by its two ends and its color), and each resistor to swap. With `--json`, each line is a `kept` entry with
-`did` `changed`. Read these lines to the person before they touch the breadboard.
+`did` `changed`, and the sheet's `wrote` entry has `since`. The lines stay until another design is built: say the time in `since`, and read them only if the person wired that sheet.
 A build that did not finish (a failed build, or requirements the build refuses) leaves a `breadboard.json` that holds
 parts, with a `left alone` entry, so a typo does not wipe your moves. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
 the line `no drawn breadboard: …` names what is missing. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it

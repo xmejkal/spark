@@ -121,7 +121,7 @@ check_all reads the last build in `dist/`; it neither rebuilds nor compares that
 `npx --no tsci build board.tsx` ([commands/build.md](../../../commands/build.md#the-steps-when-one-is-wanted-on-its-own)).
 `--no` refuses to fetch anything. Without it, a project with no `node_modules` makes npx look up `tsci` in the npm
 registry, where that name belongs to an unrelated package, and run it.
-Otherwise, tell the person the answer is about the last build.
+Otherwise, tell the person the answer is about the last build. A `changed` list counts from the sheet its `since` names, not from the breadboard: ask whether the person wired that sheet.
 
 ## 6. check_all is not the whole answer
 

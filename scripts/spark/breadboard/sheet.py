@@ -54,7 +54,7 @@ DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(STEP_COLORS),
                      drawing.SvgBreadboardDiagram(STEP_COLORS))
 #: What the sheet says before power is applied, from `wiring_data`'s before_power.
 BEFORE_POWER_LIST = before_power.BeforePowerList()
-#: What the sheet says of the bench: one line per change since the last build, in these words.
+#: What the sheet says of the bench: one line per change since the last sheet for another design, in these words.
 CHANGE_LIST = bench_changes.ChangeList()
 #: The heading of the section on a design with no earlier sheet for another design (P300), and the line a heading with a base has under it (P875).
 FIRST_DESIGN_HEADING = "### Changes since the last build"
@@ -367,7 +367,7 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
 
 #: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, a NotWritten for each one not
 #: written (with its code and subject), the [NotKeptResult] of the
-#: earlier parts not kept, the [WiringChange] since the last build (none on a first build), each end the drawing joins
+#: earlier parts not kept, the [WiringChange] since the last sheet for another design (none on a first design), `since`, its time (None when unknown), each end the drawing joins
 #: differently from the points ([DrawingDiffersResult], P279), and what a board's drawing was made from (`record`, or
 #: None for Wokwi's own geometry).
 WriteResult = collections.namedtuple("WriteResult", "sheet drawings not_written not_kept changes differs drawn_from since",

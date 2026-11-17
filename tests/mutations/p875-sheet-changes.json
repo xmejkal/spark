@@ -1,0 +1,18 @@
+[
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "P875: the base is always the earlier record", "find": "if usable and changes_between(usable, seated, colors):", "replace": "if usable:"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "P875: the base is the record before last", "find": "base = SheetBase(usable.steps, usable.at)", "replace": "base = usable.base or SheetBase(usable.steps, usable.at)"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "P875: the base's time is this build's time", "find": "base = SheetBase(usable.steps, usable.at)", "replace": "base = SheetBase(usable.steps, at)"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "P875: a carry-on takes this build's time", "find": "base = usable.base if usable else None", "replace": "base = usable.base._replace(at=at) if usable and usable.base else None"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "P875: a first design built twice gets a base", "find": "base = usable.base if usable else None", "replace": "base = SheetBase(usable.steps, usable.at) if usable else None"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "P875: a broken base is read as no base", "find": "held = data.get(\"base\")", "replace": "held = None"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "P875: an old record's missing time stops the read", "find": "_time(data.get(\"at\")), base)", "replace": "_time(data[\"at\"]), base)"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "P875: an unknown time is named in the heading", "find": "if since is None:", "replace": "if False:"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P875: the stage is written with its data ignored", "find": "self.source.read_bytes() if self.data is None else self.data", "replace": "self.source.read_bytes()"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P875: a stage in the way says no sentence", "find": "return STAGE_IN_THE_WAY % self.filename", "replace": "return super().__str__()"},
+ {"file": "scripts/spark/breadboard/sheet.py", "name": "P875: the record is committed before the sheet is written", "find": "        Path(out).write_text(sheet(requirements_path, read=read, planned=planned, change_lines=_change_lines(record, new_record, changes)))\n        store.commit(staged)\n", "replace": "        store.commit(staged)\n        Path(out).write_text(sheet(requirements_path, read=read, planned=planned, change_lines=_change_lines(record, new_record, changes)))\n"},
+ {"file": "scripts/spark/breadboard/sheet.py", "name": "P875: a stage this run made is left behind", "find": "    finally:\n        staged.remove()\n", "replace": "    finally:\n        pass\n"},
+ {"file": "scripts/spark/breadboard/sheet.py", "name": "P875: a missing folder of out names the record's stage", "find": "if not Path(out).parent.is_dir():", "replace": "if False:"},
+ {"file": "scripts/spark/breadboard/sheet.py", "name": "P875: the note under a heading with a base is left out", "find": "COUNT_FROM_NOTE, \"\"] + lines", "replace": "\"\"] + lines"},
+ {"file": "scripts/spark/breadboard/sheet.py", "name": "P875: the base is never listed", "find": "colors) if new_record.base else []", "replace": "colors) if False else []"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P875: the sheet's entry leaves out since", "find": ", **({\"since\": written.since} if written.since else {})}]", "replace": "}]"}
+]

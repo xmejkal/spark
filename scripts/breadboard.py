@@ -27,10 +27,10 @@ wiring-record.json, which it keeps beside the sheet):
     not its color). What it cannot keep is named on stderr, with why. The XIAO ESP32-C6 is drawn on a half breadboard. A board with a
     complete record (the FireBeetle) is drawn from the record on 63 columns, as breadboard.svg alone (P412). Rails are not drawn.
     Otherwise the sheet says why, and an old drawing is removed. The code is in check_spine's kept entries and in WriteResult;
-  - after a rebuild (P300), "Changes since the last build" before the steps: one line for each thing to change on
+  - after a rebuild (P300), "Changes since the sheet spark wrote on <time>" before the steps: one line for each thing to change on
     the bench, so you do not read the whole sheet again. A line says what to put in, take out, move or swap, and names
     a jumper by its two ends and the color the earlier sheet showed. It never names holes: you pick your own free rows.
-    The same lines go to stderr as `change: …`. `wiring-record.json` holds what the last sheet said, and which jumpers
+    The same lines go to stderr as `change: …`. `wiring-record.json` holds what the last sheet said, the sheet the list counts from, and which jumpers
     spark drew itself. Spark never names a jumper it drew itself when a new circuit leaves it out. A jumper you moved
     is named when the build cannot keep it. A first build has no such section;
   - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.

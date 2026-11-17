@@ -1,12 +1,13 @@
 """
-What a rebuild asks a person to change on the bench (P300, #366). The earlier sheet told the person to wire some steps.
-This library keeps what that sheet said in `wiring-record.json`, compares it with the new steps, and says each
-difference as one bench action. It names jumpers by their ends and colors, never by holes: the person picks their own
+What a rebuild asks a person to change on the bench (P300, #366). The last sheet for another design told the person to
+wire some steps. This library keeps what that sheet said, with its time, as the base of `wiring-record.json` (P875),
+compares it with the new steps, and says each difference as one bench action. It names jumpers by their ends and colors, never by holes: the person picks their own
 free rows. `sheet` calls it; nothing here knows a circuit.
 
     describe(seated, colors)                       [RecordedStep], one per step of a sheet
-    WiringLog.from_build(seated, colors, earlier, drawn)   the log of a sheet; kept connections keep their color
+    WiringLog.from_build(seated, colors, earlier, drawn, at)   the log of a sheet; kept connections keep their color
     WiringLog.read(path)                           the log on disk, None when there is none
+    WiringLogStore(folder).stage(log) / .commit(staged)   the log put in place whole, after the sheet is written
     changes_between(record, seated, colors)        [WiringChange], in the order a person acts
     ChangeList().line(change) / .render(changes)   the words
 
