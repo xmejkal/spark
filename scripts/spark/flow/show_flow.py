@@ -41,6 +41,14 @@ def phase_line(phase):
     return [printable(line) for line in lines]
 
 
+def read_flow(project, readers=None):
+    """(the Phases of `project`, one per reader in the readers' order, and `stands_at`: the first phase whose status is
+    neither ok nor None, else None). The one source of the phases, for `show` and for the page (P827). `readers` are
+    the PhaseReaders a test swaps (None: `READERS`)."""
+    phases = [reader.answer(project) for reader in readers or READERS]
+    return phases, next((phase.phase for phase in phases if phase.status not in (OK, None)), None)
+
+
 class ShowFlow(Operation):
     """
     Operation: where a project stands. It asks each PhaseReader in order and answers `data.phases` (each Phase as a dict)
@@ -60,8 +68,7 @@ class ShowFlow(Operation):
         self.readers = readers or READERS
 
     def run(self, project, *, outside):
-        phases = [reader.answer(project) for reader in self.readers]
-        stands_at = next((phase.phase for phase in phases if phase.status not in (OK, None)), None)
+        phases, stands_at = read_flow(project, self.readers)
         findings = [Finding(phase.status, phase.phase, flow_codes.PHASE_PROBLEMS if phase.status == PROBLEMS else flow_codes.PHASE_COULD_NOT_RUN,
                             PHASE_SENTENCE % (phase.phase, phase.says[0]), PHASE_FIX)
                     for phase in phases if phase.status in (PROBLEMS, COULD_NOT_RUN)]
