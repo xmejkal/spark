@@ -30,6 +30,13 @@ Read the board on USB without changing it, compare it with the project's board r
 
 <!-- /spark:operation look -->
 
+The look asks the person before it reads a board it does not know (P865). Then it exits 2 with one `needs_reply` item and
+reads nothing. Ask the person in this conversation. Name the port and say that the board restarts. Only after their yes
+to that message, write `{"replies": {"<key>": true}}` to a file of your own outside the project, and run the look again
+with `--replies <that file>`. One yes is for one look. Then the look keeps the board in the person's store and asks no
+more for it. Another board stops with `other_board` before any read. Never add `--port` to avoid the question
+(`docs/guide/agents/replies.md`, "The look's question").
+
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
 changes no flash. It compares the board's chip and flash size with the board in `requirements.json` and prints each as
 `same`, `differs` or `unknown`, with the board's MAC, the last deploy that spark's store record names for it, and a token.
@@ -51,7 +58,7 @@ the board's flash. The second writes the image at `0x0`, where the simulator loa
 order: the look, its token, then the person's yes. When each stage starts, deploy.py prints a `why:` line that says why
 it happens. With `--json` these lines go to stderr. Relay them.
 
-1. Run `look.py` and relay its lines. A stop means do not propose the flash.
+1. Run `look.py` and relay its lines. A `needs_reply` is the look's question: ask the person as above. A stop means do not propose the flash.
 2. Run `deploy.py --json --token <the token>`, with `--port` only when two boards are on USB. The look's next step and the
    terminal line name `--port` even with one board on USB. Run or give that line as printed. If deploy.py prints
    `yes: standing yes typed by ...`, the person's deploy grant is the yes and it erases at once. Relay that line.

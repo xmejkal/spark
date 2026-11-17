@@ -2,7 +2,8 @@
 
 Part of the [guide for AI agents](../agents.md). An Operation that cannot answer a question itself puts the question
 on the run's open list. This is [P737](https://github.com/xmejkal/spark/issues/1013). The shape is the core's, so
-it reads the same in every script that asks. The first script that asks is `research.py` (below).
+it reads the same in every script that asks. `research.py` asks (below), and `look.py` asks before it reads a board
+([P865](https://github.com/xmejkal/spark/issues/1231), [the look's question](#the-looks-question)).
 
 ## What a run with open questions prints
 
@@ -11,7 +12,8 @@ it reads the same in every script that asks. The first script that asks is `rese
 - `kind` is `yes_no`, `value` or `choice`. A `choice` question lists its `choices`.
 - `asked_of` is `agent`, `person` or `either`. You answer an `agent` question. Never put it to a person in a terminal.
   A `person` question needs the person's hands or eyes, and comes first in the list. An `either` question goes to whoever
-  is there: a person at the terminal, or you under `--json`. Every question `research.py` asks today is `either`.
+  is there: a person at the terminal, or you under `--json`. Every question `research.py` asks today is `either`, and the
+  look's question is `person`.
 - `answer_form` says the shape of the answer in words. `example` holds placeholders, never a value to copy.
 - `cites` is `{document, at}`: the kept document and the page that hold the answer, `at` in the words `page 1`, as the
   prompt and the source repeat it. Read that document and nothing else.
@@ -45,6 +47,34 @@ problem asks nobody. A question with `cites` is asked live too, with the line `s
 reads the kept drawing at that page ([P763](https://github.com/xmejkal/spark/issues/1050)). The value they type gets the
 source `read from <document> <at>, typed in a terminal by <login>`. You run with `--json`, or with no tty, so you never see
 a prompt. The template is written for what stays open, as in run 1.
+
+## The look's question
+
+Before `look.py` reads a board, it asks the person, because the read restarts the board. It asks once per board, and
+then remembers the board for the project in the person's store, never in the project. The key is
+`look.read_board.<id>`, or `look.switch_board.<id>` for a board that is not the kept one. `<id>` is 4 hex digits of the
+board's USB serial. The text names the port and the restart. `data.known_board` holds the `state` and the kept board's
+`mac_ends`. A MAC is the board's own address, six bytes; spark shows only the last two.
+
+Ask the person in this conversation. Name the port and say that the board restarts. Write `true` only after they say
+yes to that message, in a file of your own outside the project, never in research's file:
+`{"replies": {"look.read_board.1a2b": true}}`. Then run `look.py --project <p> --replies <that file> --json`. One yes is
+for one look: the look sets every `look.` key of the file back to null before it reads. A `false` is a no: code
+`answered_no`, and nothing is read. Never add `--port` to avoid the question: a `--port` the look cannot identify reads
+as before, and keeps nothing.
+
+| What is on USB | The look |
+| --- | --- |
+| no kept board | asks once, and keeps the board after the yes and the read |
+| the kept board | reads it with no question |
+| another board | stops before the read with `other_board`, names both as `MAC ends 34:56`, and asks `switch_board` |
+| a bridge chip's board (CP2104, CH340) with a serial | asks once: the bridge's serial names the board |
+| a native USB board whose firmware set its serial | asks on every look: a custom build gives every board one serial |
+| a board with no serial, or no `--port` row | asks on every look, or with `--port` reads as before |
+
+Two bridge clones with one serial cannot be told apart before a read. The read then finds another MAC: `other_board`,
+and the sentence says that the board did restart. With no MAC read nothing is kept, and a note says so. A kept record
+that cannot be read is `known_board_unreadable`: repair or remove the file that the `fix` names.
 
 ## The research run
 

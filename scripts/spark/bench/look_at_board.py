@@ -68,6 +68,11 @@ Under "no scenario named these must lines, so test them on the board:" it lists 
 scenario named in a step's own name: key (--json: data.unnamed_must); with --no-simulation, every must line. [] is not a pass: when a
 log cannot say, a caveat that contains "not checked:" says so.
 
+The first look on a board asks the person before it reads (P865): a question that names the port and the restart. A yes
+in a terminal, or `true` in the --replies file, reads the board once and keeps it for this project in spark's store. A later
+look reads that board with no question, and stops before the read when another board is on USB. A board with no USB
+serial, or with a serial that its firmware set, is asked on every look. A --port that the list does not hold is read as before.
+
 With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a token
 even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it. --no-simulation gives a
 token for an image that no simulation tested: firmware/ has a main.py, every .py file compiles, no run in sim/runs/ failed on the image and the image holds
@@ -80,7 +85,9 @@ and one next step for your hands, as the last line. Its look at the console can 
 
 class LookAtBoard(Operation):
     """
-    Operation: the look. It builds the evidence (image_evidence), the LookService (board_look.looker) and runs it, and
+    Operation: the look. It builds the evidence (image_evidence) and the LookService (board_look.looker), lists the boards,
+    asks the person's yes before it reads a board it does not know (P865, `known` the KnownBoardStore, None: the store's
+    own), runs the service, and
     returns the LookReport as an OperationResult: its stops and warnings are problems, its unknown fields, a missing token
     and a last deploy it could not check are unchecked, and a token brings the deploy step. A LookStopError is one unchecked
     Finding with the stop's reason, and the board doctor's lines are the diagnostics. It writes nothing on the board. It

@@ -382,7 +382,8 @@ that runs on Node, with nothing else to install; a project's own `cli.ts` runs w
 
 `/spark:deploy` puts the image that passed on the board ([`commands/deploy.md`](deploy.md)). The order is the look
 (`look.py --json`, and say first that the board restarts while it is read), its token, then the person's yes in their
-own terminal or their deploy grant, then `deploy.py --json --token <the token>`. Relay a refusal word for word.
+own terminal or their deploy grant, then `deploy.py --json --token <the token>`. Relay a refusal word for word. The
+first look on a board asks the person before it reads (`needs_reply`): `commands/deploy.md` says how to ask.
 
 ## After it builds
 
