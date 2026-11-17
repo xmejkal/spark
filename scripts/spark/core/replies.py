@@ -271,6 +271,18 @@ class RepliesStore:
         return {key: Reply(key, entry["value"], FROM_FILE % self.path.name, None, entry.get("note"), entry.get("cites"))
                 for key, entry in entries.items() if entry.get("value") is not None}
 
+    def clear(self, prefix):
+        """Set to null the value of every key that starts with `prefix`, so a reply given ahead answers one run only (P865).
+        It writes only when a key had a value. Returns the keys it cleared. A file that cannot be read is `_read`'s SparkError."""
+        held = self._read()
+        cleared = sorted(key for key, entry in held.items() if key.startswith(prefix)
+                         and (entry.get("value") if isinstance(entry, dict) else entry) is not None)
+        for key in cleared:
+            held[key] = dict(held[key], value=None) if isinstance(held[key], dict) else None
+        if cleared:
+            TextFileWriter().write(self.path, json.dumps({REPLIES_KEY: held}, indent=1, ensure_ascii=False) + "\n")
+        return cleared
+
     def dump(self, questions, answers=None):
         """Write the template: the file's entries as they are, plus `{"value": null, "note": "", "cites"}` per open key it lacks. With
         `answers` (key to Reply or None), a key answered this run gets that value instead of null, so a typed answer survives a run
@@ -280,6 +292,14 @@ class RepliesStore:
             reply = (answers or {}).get(question.key)
             held.setdefault(question.key, {"value": reply.value if reply else None, "note": "", "cites": question.cites})
         TextFileWriter().write(self.path, json.dumps({REPLIES_KEY: held}, indent=1, ensure_ascii=False) + "\n")
+
+
+def reply_strategy_for(path, terminal=None):
+    """The replies given ahead in the file at `path`, then the person at `terminal` when it is live, chained in that order; with
+    neither, nothing answered now. Research's frontend and the bench's build it (P737, P865)."""
+    parts = [GivenReplyStrategy(RepliesStore(path).load())] if path else []
+    parts += [TerminalReplyStrategy(terminal)] if terminal is not None and terminal.live else []
+    return ChainedReplyStrategy(parts) if parts else DeferringReplyStrategy()
 
 
 def order_open(questions):

@@ -10,7 +10,7 @@ from spark.core.errors import SparkError
 from spark.core.events import Event
 from spark.core.operation import JSON_DEST
 from spark.core.outside import build_outside_world
-from spark.core.replies import ChainedReplyStrategy, DeferringReplyStrategy, GivenReplyStrategy, RepliesStore, Terminal, TerminalReplyStrategy
+from spark.core.replies import Terminal, reply_strategy_for
 from spark.records import store
 
 #: The code of a research run's Events, and the line a refusal says before it is raised (the bench's pattern: a text run
@@ -19,14 +19,6 @@ PHASE, REFUSED_LINE = "research", "%s: %s. %s"
 
 
 # --- MVP ---
-def reply_strategy_for(path, terminal=None):
-    """The replies given ahead in the file at `path`, then the person at `terminal` when it is live, chained in that order; with
-    neither, nothing answered now."""
-    parts = [GivenReplyStrategy(RepliesStore(path).load())] if path else []
-    parts += [TerminalReplyStrategy(terminal)] if terminal is not None and terminal.live else []
-    return ChainedReplyStrategy(parts) if parts else DeferringReplyStrategy()
-
-
 def build_research_outside_world(project, effects, reporter, values):
     """Core's OutsideWorld for a research run: `replies` answers from the `--replies` file in `values`, then live in the
     terminal (the Reporter's stream, a tty, and no `--json` in `values`), and `fetch` is the store's one door to the network
