@@ -677,7 +677,7 @@ class TheFlowAreaTest(unittest.TestCase):
     alone, and `flow_operations.OPERATIONS` maps each op to its Operation. `scripts/` keeps the CLI `flow.py`."""
     FLOW = ROOT / "scripts" / "spark" / "flow"
     #: The modules of the area, by the names of its page (`areas/flow.md`).
-    MODULES = ["flow_codes", "flow_operations", "phase_readers", "show_flow"]
+    MODULES = ["flow_codes", "flow_operations", "flow_page", "phase_readers", "show_flow", "write_flow_page"]
 
     def test_the_area_holds_its_modules_and_scripts_holds_no_copy(self):
         self.assertEqual(sorted(path.stem for path in self.FLOW.glob("*.py") if path.name != "__init__.py"), self.MODULES)
@@ -694,7 +694,7 @@ class TheFlowAreaTest(unittest.TestCase):
         code = ("from spark.core.operation import Operation; from spark.flow import flow_operations as f; "
                 "print(sorted(f.OPERATIONS)); print([op for op, cls in f.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-        self.assertEqual(run.stdout.split("\n")[:2], ["['show-flow']", "[]"], run.stderr)
+        self.assertEqual(run.stdout.split("\n")[:2], ["['show-flow', 'write-flow-page']", "[]"], run.stderr)
 # --- end MVP ---
 
 

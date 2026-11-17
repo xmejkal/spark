@@ -2,7 +2,7 @@
 
 Part of the [guide for AI agents](../agents.md). `flow.py show` says where a project stands, phase by phase
 ([P825](https://github.com/xmejkal/spark/issues/1183)). The phases go from the idea to the deploy. It reads the project's
-files and the store, and writes nothing. `flow.py` with no verb shows too.
+files and the store, and writes nothing. `flow.py` with no verb shows too. `flow.py page` writes the same phases as a page ([below](#the-page)).
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" show --project . --json
@@ -42,6 +42,46 @@ one item to `unchecked`, with the code `phase_could_not_run`. A build that ended
 subject of each item is the phase. The exit is 0, 1 or 2 by those items. If both kinds are there, the status is
 `problems` and the exit is 1, and the phase that could not run is still under `unchecked`. Every phase answers either way. For example,
 a broken `.spark/needs.json` makes the needs, parts and requirements phases `could-not-run`, and the others still answer.
+
+## The page
+
+`flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It reads the
+same phases as `show`, so a person reads them from the disk, in a browser, with no script. It has a rail of links, one
+for each phase, then one section for each phase. Each has the phase name, a mark and a status word, who does it, what it
+says and its offers as plain text. A picture of the breadboard comes first when the project holds `breadboard.svg`. The
+schematic and the PCB say why they are not drawn here, because only `check_spine.py --keep` draws them. In a project, that
+build writes the same page with all three pictures, after it kept the simulation project. A build that did not finish
+removes `page.html` in a project, and `flow.py page` writes it again. If the flow page cannot be written, the build keeps
+its own result and lists one `not written` entry.
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json
+```
+
+With `--json` it prints the envelope with `op` `write-flow-page`. Its `data` holds `file` (`page.html`, relative to the
+project), `did` (`wrote`), `stands_at` and `phases`, each only `{phase, status}`. A page that cannot be written is one
+`unchecked` item with the code `page_not_written`, and the exit is 2. A phase that holds problems does not change this
+status. Read it with `show`.
+
+For an agent or a later script, the page has hooks. Each rail entry and each section has `data-phase` (the phase name) and
+`data-status` (the flow's code, or `none` for no status). The `<body>` has `data-stands-at` (the first open phase, or `none`
+when no phase is open). All the pictures stand together in the section `id="pictures"`, which the rail links to.
+
+The words on the page:
+
+| status | word |
+| --- | --- |
+| `ok` | ok |
+| `problems` | problems |
+| `could-not-run` | could not run |
+| `not-started` | not started |
+| `partial` | partly done |
+| `stale` | out of date |
+| `null` | not checked by spark |
+
+The page adds no tick. A phase that is not `ok` never shows the tick, whatever mark it carries. It shows the could-not-run
+mark. A code that the flow does not know shows as itself. No color says a status. The page does not know whether the board is
+wired or flashed, and says so in one line. Every text on it is masked, so no path of the home folder reaches the file.
 
 Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect
 line says and ask the person first.

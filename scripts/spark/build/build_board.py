@@ -18,6 +18,7 @@ from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, 
 from spark.core.renderers import FlatJsonLine
 from spark.core.result import OperationResult
 from spark.core.text_guards import guard_lines
+from spark.flow.write_flow_page import write_kept_page
 
 #: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
 EVERY_PART_SKIPPED_LINE = "; every part is skipped from the simulation, so the diagram holds none of the project's parts"
@@ -77,8 +78,8 @@ class BuildBoard(Operation):
                           "you moved in it, a resistor or a jumper too, stays where you put it, or the build names it as "
                           "`move not kept`; an end the drawing joins differently from the points is a `drawing differs` entry), "
                           "breadboard.svg, that drawing as a picture, "
-                          "a rebuild also lists what to change on the bench (one `changed` entry for each line), page.html, the breadboard, schematic and PCB "
-                          "in three tabs to open in a browser or to publish as an Artifact, firmware/pins.py, the pins the firmware imports, with one "
+                          "a rebuild also lists what to change on the bench (one `changed` entry for each line), page.html, in a project the flow's phases "
+                          "with their status words and the breadboard, schematic and PCB, else the three in tabs, to open in a browser, firmware/pins.py, the pins the firmware imports, with one "
                           "`missing_facts` item for each fact the board record lacks, and in a project .spark/build.json, which flow.py reads. "
                           "The simulation project goes to DIR/sim", metavar="DIR"),
                  Argument(("--sim-dir",), "sim_dir", Path, "keep the simulation project here instead of DIR/sim: diagram.json, "
@@ -98,7 +99,7 @@ class BuildBoard(Operation):
         try:
             code = verdict(built.stages)
             following = board_envelope.firmware_next_steps(code == EXIT_OK, requirements)  # P517: write the firmware next
-            kept = keep_all(built.stages, built.workdir, KeepAsked(requirements, keep, sim_dir), tabbed_page.TscircuitExport(built.toolchain))
+            kept = keep_all(built.stages, built.workdir, KeepAsked(requirements, keep, sim_dir), tabbed_page.TscircuitExport(built.toolchain), write_kept_page)
             text = guard_lines(render(built.stages, code, left_off(built.requirements)) + board_envelope.next_text(following))
             return OperationResult(said_of(built.stages, code, built.requirements, following, kept), findings_of(built.stages),
                                    lines=text[:-1].split("\n"),  # the one final newline is `print`'s

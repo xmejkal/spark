@@ -253,11 +253,17 @@ def why_no_page(destination, stages, kept):
     return None
 
 
-def keep_tabbed_page(destination, stages, kept, exporter):
+#: Why the flow page was not written when reading the project's files for it failed: the class of the failure, no traceback.
+FLOW_PAGE_FAILED = "the flow page could not be written (%s)"
+
+
+def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     """
     The page beside the kept board (P271, #307): the breadboard picture the sheet's step just wrote, and tscircuit's
-    schematic and PCB of the same kept circuit.json, as one kept entry {file, did, why, line}. A page left from an
-    earlier build is removed when this run cannot draw one, since it describes another board.
+    schematic and PCB of the same kept circuit.json, as one kept entry {file, did, why, line}. In a project, `flow_page`
+    (P827; `flow_page(project, tabs)` gives the path and what it is for) writes the flow page with those three pictures; without it, or in a
+    folder that is no project, the tabbed page. A page left from an earlier build is removed when this run cannot draw one,
+    since it describes another board.
     """
     page = Path(destination) / tabbed_page.TabbedHtmlPage.FILE_NAME
     why = why_no_page(destination, stages, kept)
@@ -267,12 +273,19 @@ def keep_tabbed_page(destination, stages, kept, exporter):
     tabs = [_breadboard_tab(destination, kept),
             tabbed_page.exported_tab("Schematic", exporter.export_svg(circuit, "schematic-svg")),
             tabbed_page.exported_tab("PCB", exporter.export_svg(circuit, "pcb-svg"))]
+    flow = flow_page if flow_page is not None and _is_project(destination) else None
+    why = tabbed_page.TabbedHtmlPage.PURPOSE_MESSAGE
     try:
-        title = tabbed_page.page_title(Path(destination).resolve().name)
-        page.write_text(tabbed_page.TabbedHtmlPage().text(tabs, title=title), encoding="utf-8")
+        if flow is not None:
+            page, why = flow(destination, tabs)
+        else:
+            title = tabbed_page.page_title(Path(destination).resolve().name)
+            page.write_text(tabbed_page.TabbedHtmlPage().text(tabs, title=title), encoding="utf-8")
     except OSError as refused:
         return {"file": str(page), "did": "not written", "why": str(refused), "line": "no page: %s" % refused}
-    why = tabbed_page.TabbedHtmlPage.PURPOSE_MESSAGE
+    except Exception as failed:  # noqa: BLE001  the flow page reads the project's files: whatever they hold, the build ends as it ends
+        why = FLOW_PAGE_FAILED % type(failed).__name__
+        return {"file": str(page), "did": "not written", "why": why, "line": "no page: %s" % why}
     return {"file": str(page), "did": "wrote", "why": why, "line": "wrote %s — %s" % (page, why)}
 
 
@@ -357,10 +370,7 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
     pin map's missing facts. `records` is the BuildRecordStore a test gives.
     """
     destination = Path(destination)
-    try:
-        if board_records.project_root(destination) != destination.resolve():
-            return []
-    except board_records.BoardError:
+    if not _is_project(destination):
         return []
     records = records or BuildRecordStore(destination)
     try:
@@ -371,6 +381,14 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
     except OSError as refused:
         return [{"file": str(records.path), "did": "not kept", "why": str(refused), "line": "not kept: %s — %s" % (records.path, refused)}]
     return [{"file": str(path), "did": "wrote", "why": BUILD_RECORD_WHY, "line": "wrote %s — %s" % (path, BUILD_RECORD_WHY)}]
+
+
+def _is_project(destination):
+    """Whether `destination` is a project folder itself (`board_records.project_root`)."""
+    try:
+        return board_records.project_root(destination) == Path(destination).resolve()
+    except board_records.BoardError:
+        return False
 
 
 def _named_from(requirements, project):
@@ -398,11 +416,12 @@ def simulation_dir(sim_dir, keep):
 KeepAsked = namedtuple("KeepAsked", "requirements_file keep sim_dir")
 
 
-def keep_all(stages, workdir, asked, exporter):
+def keep_all(stages, workdir, asked, exporter, flow_page=None):
     """
     What a build run keeps (P804), as kept entries {file, did, why, line}: the built board in `asked.keep` (`_kept`); with
-    a requirements file also the breadboard sheet, the pin map, the page (its tabs drawn by `exporter`) and the build
-    record; and the simulation project in `simulation_dir`. None when --keep was not given, or was given with no work
+    a requirements file also the breadboard sheet, the pin map and the build record; the simulation project in
+    `simulation_dir`; and last the page (its tabs drawn by `exporter`; in a project the flow page `flow_page` writes, P827),
+    since the flow page reads what the others kept. None when --keep was not given, or was given with no work
     folder and no requirements file that is there. Even then, a kept simulation project is one entry. With no work folder, a refused
     requirements file that is there still removes what an earlier build left (P280); a missing one, which can be a typo,
     removes nothing. It removes no work folder: the caller does.
@@ -413,11 +432,14 @@ def keep_all(stages, workdir, asked, exporter):
     if kept is not None and requirements_file:
         kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + drop_an_older_build(Path(keep), stages)
         kept.append(_kept_pins(Path(requirements_file), Path(keep)))
-        kept.append(keep_tabbed_page(Path(keep), stages, kept, exporter or tabbed_page.TscircuitExport(None)))
         kept += keep_build_record(Path(keep), Path(requirements_file), stages, kept)  # P825: what flow.py reads
     simulation_folder = simulation_dir(asked.sim_dir, keep)
     simulation = keep_simulation(workdir, simulation_folder, stages) if workdir is not None and simulation_folder else None
-    return (kept or []) + [simulation] if simulation is not None else kept
+    if simulation is not None:
+        kept = (kept or []) + [simulation]
+    if keeps and requirements_file:
+        kept.append(keep_tabbed_page(Path(keep), stages, kept, exporter or tabbed_page.TscircuitExport(None), flow_page))
+    return kept
 # --- end MVP ---
 
 

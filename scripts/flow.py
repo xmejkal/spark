@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Say where a project stands, phase by phase from the idea to the deploy, and what each phase offers next (P825)."""
+"""Say where a project stands, phase by phase from the idea to the deploy, and what each phase offers next (P825), or write
+that as the project's page.html (P827)."""
 
 import sys
 from pathlib import Path
@@ -8,18 +9,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.cli import HelpText, run_cli
 from spark.core.outside import build_bare_outside_world
 from spark.flow.show_flow import ShowFlow
+from spark.flow.write_flow_page import WriteFlowPage
 
-#: The verbs, each the Operation it runs. With no verb word, flow.py shows. `page` and `run-request` come with P827 and P829.
-VERBS = {"show": ShowFlow}
+#: The verbs, each the Operation it runs. With no verb word, flow.py shows. `run-request` comes with P829.
+VERBS = {"show": ShowFlow, "page": WriteFlowPage}
 DEFAULT_VERB = "show"
 
-EPILOG = """flow.py show reads the project's files and the store, and writes nothing. It says nine phases in order: idea,
+EPILOG = """flow.py show reads the project's files and the store, and writes nothing. It says each phase in order: idea,
 needs, parts, requirements, build, breadboard, firmware, simulate and deploy. Each phase has a status (ok, problems,
 could-not-run, not-started, partial or stale, or none), who does it (you, claude or your terminal), what it says and its
 offers. The idea has no status. A hand-written project (requirements.json and no needs) has none for its needs and
 parts. Written firmware and a simulated image have none, because what their sentences say is for you to judge. An offer
 is a key, such as pick:soil:x-led, with one line that says what taking it does. flow.py runs no offer. The last line
 names the first phase that is not done.
+
+flow.py page writes page.html in the project: the same phases, each with its status word and a mark, and the breadboard
+picture the project holds. The page adds no tick of its own: a phase that is not ok never shows one. The schematic and the
+PCB are drawn only by the build with --keep, which in a project writes the page with all three pictures. The page does not know
+whether the board is wired or flashed. With --json it prints data.file, data.did, data.stands_at and data.phases (each
+phase and its status).
 
 The build phase reads .spark/build.json, which check_spine.py --keep writes when its folder is a project. It is stale when
 requirements.json changed after that build.
@@ -29,7 +37,9 @@ With --json it prints one envelope: data.phases and data.stands_at (docs/guide/a
 Exit codes: 0 no phase holds problems or could not run, 1 a phase holds problems (a need that cannot be matched,
 requirements the picks cannot give, a build that failed, a firmware line in sim/wokwi.toml that spark cannot use), 2 a
 phase could not be read or its last build could not run, or an argument is wrong. Problems win: with both, the status is
-problems and the exit 1, and the phase that could not run is listed under unchecked. Every phase answers either way."""
+problems and the exit 1, and the phase that could not run is listed under unchecked. Every phase answers either way.
+For page, 0 means the page was written and 2 that it could not be written or an argument is wrong. A phase's own
+problems do not change them."""
 
 
 def operation_for(argv):

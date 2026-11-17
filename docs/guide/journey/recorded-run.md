@@ -325,8 +325,8 @@ and the PCB ([P271](https://github.com/xmejkal/spark/issues/307)). Open it in a 
 The schematic and the PCB are tscircuit's own pictures, from `tsci export` on the kept circuit. Since 2026-10-17 the page
 also follows the Artifact page rules ([P272](https://github.com/xmejkal/spark/issues/308)): colors are tokens with a
 dark mode that follows your system, the side gutter is 16 px, and the title is the first three words of the folder's name and "circuit". Claude can
-publish the same file as a private Artifact when you say yes. The PCB tab of the
-same project:
+publish the same file as a private Artifact when you say yes. Since 2026-11-17, in a project folder, `page.html` is the flow page instead, each phase of `flow.py` with its status word and a mark, then the three pictures ([P827](https://github.com/xmejkal/spark/issues/1185)). The PCB tab of the
+same project, as the earlier page showed it:
 
 ![The PCB tab of page.html for the button-and-LED project](../../discovery/2026-10-16-p271-page/tab-pcb.jpg)
 
