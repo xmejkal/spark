@@ -176,6 +176,7 @@ CASES = [
     Case("check-spine-ok-board-only.json", "check_spine.py", [REQUIREMENTS, "--json"], 0, requirements(board_only=True)),
     Case("check-spine-could-not-run-reference.json", "check_spine.py", ["--json"], 2,
          env={"FAKE_TSCI_CIRCUIT": FAKES_TOKEN + "/" + REFERENCE_CIRCUIT}),
+    Case("flow-ok-page.txt", "flow.py", ["page", "--project", PROJECT], 0, written=("page.html",)),
     Case("init-project-ok.txt", "init_project.py", ["--project", PROJECT, "--board", BOARD_ID, "--circuit", CIRCUIT], 0,
          fresh=True),
     Case("init-project-nothing-to-do.txt", "init_project.py", ["--project", PROJECT], 1),
