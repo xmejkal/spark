@@ -1,7 +1,7 @@
 """
 What must be true before power is applied to one build (P191, P826): each supply from off the board, whose voltage the
 sheet does not set, and what each part's record says: its CONFLICTs, the pins the firmware must pull up (P204), the pins
-that must not float and its host requirements, in the record's own words. `BeforePower` holds them as facts, which a
+that must not float, the outputs that end in its own socket (P864) and its host requirements, in the record's own words. `BeforePower` holds them as facts, which a
 page reads; `BeforePowerList` gives the sheet's "Before you power it" lines from them and decides nothing again.
 """
 
@@ -9,21 +9,31 @@ import collections
 import html
 import re
 
-from spark.design import board_components
+from spark.design import board_components, power_rails
 from spark.sourcing import part_rules
 
 #: What one item is: a supply from off the board, a CONFLICT, a pin the firmware must pull up, a pin that must not float,
-#: or one of a record's host requirements.
-OFF_BOARD_SUPPLY, CONFLICT, FIRMWARE_PULL, UNUSED_PIN, HOST_REQUIREMENT = (
-    "off-board-supply", "conflict", "firmware-pull", "unused-pin", "host-requirement")
+#: the outputs that end in the part's own socket (as the record says, with and without a look at a real module), or one of
+#: a record's host requirements.
+OFF_BOARD_SUPPLY, CONFLICT, FIRMWARE_PULL, UNUSED_PIN, OWN_SOCKET, OWN_SOCKET_UNVERIFIED, HOST_REQUIREMENT = (
+    "off-board-supply", "conflict", "firmware-pull", "unused-pin", "own-socket", "own-socket-unverified", "host-requirement")
 #: One item: its kind; its subject, the name its line opens with (a supply's net, the component of a CONFLICT, a firmware
 #: pull or an unused pin, the record's name for a host requirement); its pin (None for a supply and a host requirement);
 #: its record id (None for a supply, which the circuit gives); the record's own words (the CONFLICT's line, the pin's note
-#: or "" with none, the requirement; None for a supply and a firmware pull); and a supply's users, the components on it,
+#: or "" with none, the requirement, the rail of the pins of an own socket; None for a supply and a firmware pull); and a supply's users, the components on it,
 #: sorted (() for every other kind).
 BeforePowerItem = collections.namedtuple("BeforePowerItem", "kind subject pin record said users")
 #: The heading over the lines, on the sheet and on a page.
 HEADING = "Before you power it"
+
+
+def own_socket_items(part, ends):
+    """The one item for the pins of `part` that end in its own socket (`ends`, from `power_rails.own_socket_ends`), or none."""
+    pins = [(supply["pin"], supply.get("rail")) for owner, supply, _ in ends if owner is part]
+    if not pins:
+        return []
+    kind = OWN_SOCKET if part["own_socket"].get("verified") is True else OWN_SOCKET_UNVERIFIED
+    return [BeforePowerItem(kind, board_components.component_name(part), ", ".join(pin for pin, _ in pins), part["id"], pins[0][1], ())]
 
 
 class BeforePower:
@@ -40,7 +50,7 @@ class BeforePower:
         its CONFLICTs, its firmware pulls and its unused pins, and its record's host requirements once per record."""
         items = [BeforePowerItem(OFF_BOARD_SUPPLY, net, None, None, None, tuple(sorted(users)))
                  for net, users in supplies.items()]
-        seen = set()
+        seen, ends = set(), power_rails.own_socket_ends(design_parts)
         for part in design_parts:
             name = board_components.component_name(part)
             items += [BeforePowerItem(CONFLICT, name, conflict["pin"], part["id"], conflict["line"], ())
@@ -49,6 +59,7 @@ class BeforePower:
                       for pin in part.get("_firmware_pulls", [])]
             items += [BeforePowerItem(UNUSED_PIN, name, pin["pin"], part["id"], pin.get("note", ""), ())
                       for pin in part.get("unused_pins") or []]
+            items += own_socket_items(part, ends)
             if part["id"] not in seen:
                 seen.add(part["id"])
                 items += [BeforePowerItem(HOST_REQUIREMENT, part.get("name"), None, part["id"], requirement, ())
@@ -67,6 +78,10 @@ class BeforePowerList:
         FIRMWARE_PULL: "- {subject} {pin} has no resistor: the firmware must pull it up with Pin.PULL_UP, as `pins.py` "
                        "says (P204)",
         UNUSED_PIN: "- {subject} {pin}: {said}",
+        OWN_SOCKET_UNVERIFIED: "- {subject} {pin}: the record says that the module has its own socket for the {said}, and nobody "
+                               "has looked at a real module yet. Look for it first. If it is there, plug only the {said} into it: "
+                               "never a supply, and never ground. If it is not there, wire the {said} to the pads {pin}.",
+        OWN_SOCKET: "- {subject} {pin}: in the module's own socket. Plug only the {said} into it, never a supply and never ground.",
         HOST_REQUIREMENT: "- {subject}: {said}",
     }
 

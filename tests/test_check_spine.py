@@ -73,7 +73,7 @@ def build_stages(requirements, workdir, toolchain=None, find_tool=None, **inputs
     """The build as `main` runs it: the real engine over `toolchain` (None: found from the project) and the real emitter,
     with `find_tool` (a test's finder; None: the real one), on `BuildInputs(requirements, workdir, **inputs)`; the stages."""
     return build_service.BuildService.for_toolchain(toolchain, find_tool).build(build_service.BuildInputs(requirements, workdir, **inputs))
-from fakes import FakeTscircuitExport, fake_tsci  # noqa: E402
+from fakes import FakeTscircuitExport, amplifier_alone, fake_tsci  # noqa: E402
 
 
 def stage(name, status):
@@ -1734,6 +1734,26 @@ class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
         self.assertRegex(pin_assigner.pin_module_for(self.requirements).module, r"(?m)^TFT_DC = 11\b")
 
 
+@unittest.skipUnless(test_converter.node() and board_engine.find_toolchain(ROOT), "needs the board engine and Node")
+class TheAmplifierAloneBuildsForRealTest(unittest.TestCase):
+    """P864 (#1230): the board and the DFR0954 with no speaker terminal build with the real board engine, with no fake."""
+
+    def test_the_amplifier_alone_builds_with_no_terminal_and_no_speaker_net(self):
+        project = Path(tempfile.mkdtemp()) / "project"
+        project.mkdir()
+        (project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["max98357a-dfr0954"]}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(project / "requirements.json"), "--keep", str(project), "--json"])
+        stages = json.loads(out.getvalue())["stages"]
+        build = next(stage for stage in stages if stage["name"] == "build")
+        self.assertEqual(build["status"], check_spine.OK, build["detail"])
+        self.assertEqual([stage["name"] for stage in stages if stage["status"] not in (check_spine.OK, check_spine.SKIPPED)], [], stages)
+        circuit = (project / "dist" / "board" / "circuit.json").read_text()
+        self.assertNotIn("SpeakerTerminal", circuit)
+        self.assertNotIn("SPEAKER", circuit)
+
+
 class OnlyAProjectsOwnModulesAreLinkedTest(unittest.TestCase):
     """
     Audit A9, at its cause. The spine linked `toolchain.parent.parent` into the working
@@ -2784,6 +2804,32 @@ class ALoadAcrossAPairNeedsNoGroundTest(unittest.TestCase):
         with mock.patch.object(build_service, "islands_in", return_value=[]) as islands:
             build_stages(requirements, workdir, toolchain=fake_tsci(root, "true"), from_library=True)
         self.assertEqual(islands.call_args.kwargs["across"], ["SpeakerTerminal"])
+
+
+class TheAmplifierAloneTest(unittest.TestCase):
+    """
+    P864 (#1230): the DFR0954 alone, with no speaker terminal. The circuit of its build is the amplifier fixture's real build
+    cut by hand (`fakes.amplifier_alone`), and `fake_tsci` routes nothing: a real tscircuit build of the amplifier alone is not
+    proved here, so these tests read the schematic stage and the cut circuit, never the build's exit.
+    """
+
+    REQUIREMENTS = {"board": "firebeetle2-esp32s3", "parts": ["max98357a-dfr0954"]}
+
+    def cut_circuit(self):
+        return amplifier_alone(json.loads((ROOT / "tests" / "data" / "breadboard" / "amplifier" / "dist" / "board" / "circuit.json").read_text()))
+
+    def test_the_schematic_stage_writes_no_speaker_trace_and_no_note_for_the_amplifier_alone(self):
+        root = Path(tempfile.mkdtemp())
+        workdir = root / "work"
+        workdir.mkdir()
+        (workdir / "requirements.json").write_text(json.dumps(self.REQUIREMENTS))
+        stages = build_stages(self.REQUIREMENTS, workdir, toolchain=fake_tsci(root, "true", self.cut_circuit()), from_library=True)
+        self.assertEqual([(s.name, s.status) for s in stages if s.name in ("schematic", "schematic-notes")], [("schematic", check_spine.OK)])
+        self.assertNotIn("net.SPEAKER", (workdir / "board.tsx").read_text())
+
+    def test_the_cut_circuit_strands_no_chip(self):
+        # a pin: the island check finds nothing in the cut circuit on main as well
+        self.assertEqual(build_service.islands_in(self.cut_circuit()), [])
 
 
 class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):

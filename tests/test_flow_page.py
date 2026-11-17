@@ -689,7 +689,7 @@ class TheWiringWordsTest(unittest.TestCase):
     """The fixed words of the section never say the board is wired, done or flashed, and a page with wiring runs nothing."""
 
     ITEMS = [an_item(kind, said="a neutral note") for kind in
-             ("off-board-supply", "conflict", "firmware-pull", "unused-pin", "host-requirement")]
+             ("off-board-supply", "conflict", "firmware-pull", "unused-pin", "own-socket", "own-socket-unverified", "host-requirement")]
 
     def test_no_fixed_word_of_the_wiring_says_wired_done_or_flashed(self):
         text = page_of_wiring(PageWiring(THREE, self.ITEMS, ["rec"], None), THREE_PICTURES)

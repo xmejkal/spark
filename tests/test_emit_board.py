@@ -1630,5 +1630,84 @@ class WhatARailCarries(unittest.TestCase):
         filled = board_sections.rules_with_record_currents({}, {"SERVO": {"amps": 0.7, "complete": False}})
         self.assertNotIn("SERVO", filled["physics"]["rails"], "a partial sum would size it too thin")
 
+
+class AnOutputThatEndsInTheModulesOwnSocketTest(unittest.TestCase):
+    """P864 (#1230): the DFR0954's record says that SPK_P and SPK_N end in its own socket, so the board file gives them no trace
+    and says why, and the build is not stopped on a net with one member."""
+
+    def tsx_of(self, part_list):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        assignments, _ = pin_assigner.assign(board, part_facts.signals_for([part["id"] for part in part_list]))
+        placements, width, height = board_components.place(board, part_list)
+        return board_sections.emit(board, part_list, assignments, placements, width, height)
+
+    def amplifier(self, own_socket=True):
+        record = part_records.load("max98357a-dfr0954")
+        return record if own_socket else {key: value for key, value in record.items() if key != "own_socket"}
+
+    def test_a_pin_that_ends_in_its_own_socket_gets_no_trace_and_the_file_says_so(self):
+        tsx = self.tsx_of([self.amplifier()])
+        for net in ("SPEAKER_P", "SPEAKER_N"):
+            self.assertNotIn('to="net.%s"' % net, tsx)
+        for pin in ("SPK_P", "SPK_N"):
+            self.assertIn("Max98357aDfr0954.%s: the record says it ends in the part's own socket (unverified): no trace here; "
+                          "what it drives plugs in there" % pin, tsx)
+        self.assertNotIn("NOTHING ON THIS BOARD RECEIVES IT", tsx)
+
+    def test_a_verified_socket_is_said_as_a_fact_and_a_verified_that_is_no_bool_gives_no_socket(self):
+        record = self.amplifier()
+        record["own_socket"] = dict(record["own_socket"], verified=True)
+        self.assertIn("Max98357aDfr0954.SPK_P ends in the part's own socket: no trace here",
+                      "\n".join(board_sections.module_power_lines([record], {}, set())))
+        record["own_socket"] = dict(record["own_socket"], verified="yes")
+        lines = "\n".join(board_sections.module_power_lines([record], {}, set()))
+        self.assertIn('<trace from=".Max98357aDfr0954 > .SPK_P" to="net.SPEAKER_P"', lines)
+        self.assertNotIn("own socket", lines)
+
+    def test_a_second_part_with_an_output_of_the_same_name_and_no_block_keeps_its_gap_and_its_trace(self):
+        other = dict(self.amplifier(own_socket=False), id="x-amp", name="X amp")
+        part_list = [self.amplifier(), other]
+        self.assertEqual([(net, name, pin) for net, name, pin in power_rails.outputs_with_nothing_on_them(part_list)],
+                         [("SPEAKER_N", "X amp", "SPK_N"), ("SPEAKER_P", "X amp", "SPK_P")])
+        lines = "\n".join(board_sections.module_power_lines(part_list, {}, set()))
+        self.assertIn('<trace from=".XAmp > .SPK_P" to="net.SPEAKER_P"', lines)
+        self.assertNotIn('.Max98357aDfr0954 > .SPK_P" to=', lines)
+
+    def test_an_output_on_a_rail_the_host_provides_is_no_gap(self):
+        # a pin: the V33 and GND rails are the module's own, so an output on them is received
+        part = {"id": "x-reg", "name": "X reg", "power": [{"pin": "OUT", "rail": "logic", "direction": "out"}]}
+        self.assertEqual(power_rails.outputs_with_nothing_on_them([part]), [])
+
+    def test_the_notes_of_the_amplifier_alone_hold_nothing_about_its_outputs(self):
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["max98357a-dfr0954"]}))
+        notes = board_emitter.design_notes(board_emitter.read_inputs(root / "requirements.json", root))
+        self.assertEqual(notes, [])
+
+    def test_without_the_fact_the_output_is_still_a_gap_and_still_has_its_trace(self):
+        # a pin: the same on main before the change
+        part_list = [self.amplifier(own_socket=False)]
+        tsx = self.tsx_of(part_list)
+        self.assertEqual([net for net, _, _ in power_rails.outputs_with_nothing_on_them(part_list)], ["SPEAKER_N", "SPEAKER_P"])
+        self.assertIn('to="net.SPEAKER_P"', tsx)
+        self.assertIn("NOTHING ON THIS BOARD RECEIVES IT", tsx)
+
+    def test_the_ends_are_the_outputs_that_nothing_listed_receives_and_the_record_puts_in_its_own_socket(self):
+        ends = power_rails.own_socket_ends([self.amplifier()])
+        self.assertEqual([(part["id"], supply["pin"], net) for part, supply, net in ends],
+                         [("max98357a-dfr0954", "SPK_P", "SPEAKER_P"), ("max98357a-dfr0954", "SPK_N", "SPEAKER_N")])
+        self.assertEqual(power_rails.own_socket_ends([self.amplifier(), part_records.load("speaker-terminal")]), [])
+        self.assertEqual(power_rails.own_socket_ends([self.amplifier(own_socket=False)]), [])
+        self.assertEqual(power_rails.outputs_with_nothing_on_them([self.amplifier()]), [])
+
+    def test_with_a_speaker_terminal_listed_both_traces_are_emitted_and_no_pin_ends_in_a_socket(self):
+        # a pin: the terminal receives both nets, so the fact changes nothing for it
+        part_list = [self.amplifier(), part_records.load("speaker-terminal")]
+        tsx = self.tsx_of(part_list)
+        for net in ("SPEAKER_P", "SPEAKER_N"):
+            self.assertEqual(tsx.count('to="net.%s"' % net), 2)
+        self.assertNotIn("own socket", tsx)
+
 if __name__ == "__main__":
     unittest.main()

@@ -204,7 +204,7 @@ file is written:
 - `board only: nothing to build but the board; …`: the board serves every need, so the file says `"board_only": true`
   and the build makes the board alone (P387). `board_only removed: the file lists parts`: a part came, so the key went;
 - `rail … has no supply — …`: a part draws from a rail nothing listed supplies; pick a power inlet or a supply;
-- `net … is driven by … and nothing listed receives it — …`: an output with no receiver; pick what it drives;
+- `net … is driven by … and nothing listed receives it — …`: an output with no receiver (not one that the part's record says ends in its own socket); pick what it drives;
 - `net … is one side of a driven pair and nothing listed drives it — …`: a speaker terminal with nothing driving it;
   pick what drives the pair (the amplifier the terminal hangs off), never a supply;
 - `not on the board: … — …`: a need nothing on the board serves — no pick, a gap, or only picks with no record. The file

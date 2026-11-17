@@ -112,6 +112,10 @@ under a name is worse than no record.
   names the part instead of summing a zero.
 - `needs`, `power`, `unused_pins` — each pin's `pin` is a wiring name of letters, digits and _ (`VCC`, `GND2`, `3V3`);
   what the silkscreen prints goes in `printed` (`"pin": "VCC", "printed": "+5V"`). The validator refuses the rest.
+- `own_socket` — `{pins, verified, source, cites}`: the `power` outputs that end in a socket on the module itself, so nobody
+  lists a separate terminal for them (P864). Read it off a drawing or a photo, never guess it, and keep `verified` false until
+  a person has looked at the real module. All its pins share one `rail`, and the sheet prints that rail's word as what plugs in.
+  `cites` is `{document, at}` and names an entry of `documents`; `source` says what the drawing shows and what it does not.
 - `pin_order` — pad 1..N by name, unused pads `null`. **Pads, not pins**: a record saying `pinrow5`
   beside seven names shipped boards with no routing. With it, `pin_order_proof` `{verified, source}`
   — how and where the order was read; a pin order read wrong reverses a supply (P81). Optionally `legs`,

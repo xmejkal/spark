@@ -241,6 +241,19 @@ def body_problems(part, validation):
     return problems
 
 
+def own_socket_problems(part, validation):
+    """An `own_socket` that names no pin, lacks `verified`, `source` or `cites`, or names a pin that is no output of this part (P864)."""
+    block = part.get("own_socket")
+    if block is None:
+        return []
+    outputs = {supply.get("pin") for supply in part.get("power") or [] if supply.get("direction") == "out"}
+    problems = ["own_socket has no %r" % key for key in ("pins", "verified", "source", "cites") if not block.get(key) and block.get(key) is not False]
+    problems += provenance.list_type_problems("own_socket", block)
+    problems += ["own_socket names %s, which is no output of this part" % pin for pin in block.get("pins") or [] if pin not in outputs]
+    rails = {supply.get("rail") for supply in part.get("power") or [] if supply.get("pin") in (block.get("pins") or [])}
+    return problems + (["own_socket names pins on different rails, and the sheet names one: %s" % ", ".join(sorted(map(str, rails)))] if len(rails) > 1 else [])
+
+
 #: What `physical` holds beside the outline in `body_mm` (P737): bare values under the board record's key names. A key
 #: the vendor did not publish is left out and named in `physical_proof.not_published`, never null and never an empty list.
 PHYSICAL_KEYS = ("thickness_mm", "mounting_holes", "header")
@@ -505,7 +518,7 @@ RULES = (id_problems, field_type_problems, retired_key_problems, need_problems, 
          selector_pin_problems, rail_and_signal_problems, body_problems, physical_problems, placeholder_problems,
          footprint_name_problems,
          pin_order_pad_problems, pad_count_problems, power_direction_problems, part_fact_problems,
-         part_host_part_problems, part_i2c_pullup_problems, part_document_problems, pin_order_proof_problems,
+         part_host_part_problems, part_i2c_pullup_problems, part_document_problems, pin_order_proof_problems, own_socket_problems,
          part_simulation_problems, part_function_problems)
 #: The part kind (P724). `field_type_problems` stops the rules after it: they read the fields it checks, so they run
 #: only on a record whose types are right.
