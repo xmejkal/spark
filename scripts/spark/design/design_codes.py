@@ -17,6 +17,8 @@ NO_REQUIREMENTS, REQUIREMENTS_UNREADABLE = "no_requirements", "requirements_unre
 REQUIREMENTS_FIELD_WRONG, NAME_USED_TWICE = "requirements_field_wrong", "name_used_twice"
 NO_PROJECT_FOLDER, PART_UNUSABLE, BOARD_UNUSABLE = "no_project_folder", "part_unusable", "board_unusable"
 RULES_REFUSED = "rules_refused"
+#: `parts.py --requirements` (P877): an entry that spark wrote for a pick that is gone, in `data.unexplained`.
+ENTRY_PICK_GONE = "entry_pick_gone"
 #: assign_pins: an ImpossibleError, a signal no pin can take.
 UNKNOWN_BUS, NOT_A_BUS_LINE, BUS_LINE_NOT_ON_BOARD = "unknown_bus", "not_a_bus_line", "bus_line_not_on_board"
 UNKNOWN_NEED, NO_SUCH_PIN, NAMED_PIN_UNSUITABLE = "unknown_need", "no_such_pin", "named_pin_unsuitable"
@@ -37,6 +39,7 @@ CODES = {
     REQUIREMENTS_UNREADABLE: "the requirements file is not JSON, or it cannot be read",
     REQUIREMENTS_FIELD_WRONG: "a field of the requirements file is of the wrong kind, or names what no part or board has",
     NAME_USED_TWICE: "two parts or two signals of the design have one name, so the build would make them one",
+    ENTRY_PICK_GONE: "an entry of the requirements file that spark wrote for a pick that is gone: said by --requirements, removed only on the person's yes",
     NO_PROJECT_FOLDER: "--project names no folder, or the folder a project is looked for from is gone",
     PART_UNUSABLE: "a part the design names is unknown, or its record cannot be read or breaks the part contract",
     BOARD_UNUSABLE: "the board the design names is unknown, or its record cannot be read or breaks the board contract",

@@ -7,6 +7,7 @@ import collections
 import json
 from pathlib import Path
 
+from spark.design import entry_origin
 from spark.design import loader
 from spark.design import power_rails
 from spark.design import footprint_emitter
@@ -40,9 +41,13 @@ def parts_left_listed(project, dropped, after):
 REQUIREMENTS = "requirements.json"
 #: What `requirements` works out (§5.3, §8 L): the file as it would be, the records to shelve, the picks with no record to place,
 #: the entries already in the file that no pick explains, the board the file named before, what refuses it, the picks laid out
-#: at a placeholder outline, the needs nothing on the board serves, and what the board's power would lack (`_power_gaps`).
+#: at a placeholder outline, the needs nothing on the board serves, what the board's power would lack (`_power_gaps`), and which
+#: of the entries no pick explains spark wrote for a pick that is gone (`entry_origin.UnexplainedEntries`, P877).
 Requirements = collections.namedtuple("Requirements", "content shelving unplaced kept board_was problems placeholder unserved "
-                                                      "no_supply no_receiver no_driver")
+                                                      "no_supply no_receiver no_driver unexplained")
+#: Value: what `_merge_parts` gives: the parts after, the entries no pick explains (as {part, name}), the problems, the indexes of
+#: the entries a pick explains, and the `WrittenEntry` of each entry it added.
+Merged = collections.namedtuple("Merged", "parts kept problems explained written")
 #: The note a requirements file keeps of the needs it leaves off the board (C-2): `check_spine` reads it into its verdict.
 UNSERVED = "unserved"
 #: The key a requirements file says the board alone with (P236): `--requirements` writes it, `check_spine` reads it.
@@ -128,7 +133,7 @@ def _serve_picks(existing, picked_by):
 
 def _merge_parts(existing, wanted):
     """
-    (the parts after, the entries no pick explains, problems): the file's `parts` with its picks read into them (the PO,
+    A `Merged` (the parts after, the entries no pick explains, problems, ...): the file's `parts` with its picks read into them (the PO,
     2026-10-08). What is there stays, unchanged and in its order — a name, `rails` and any other key are the person's — and an
     entry is added at the end for each pick it lacks. `wanted` is [(need id, part id)], one per pick, in pick order; a part
     picked n times needs n entries (`_serve_picks` says which are there). What no pick explains — added by hand, or left by a
@@ -145,7 +150,7 @@ def _merge_parts(existing, wanted):
         if _part_of(entry):
             called = _called(_part_of(entry), _name_of(entry))
             held_by.setdefault(_one_name(called), ("%s in requirements.json" % _part_of(entry), called))
-    added, problems = [], []
+    added, problems, written = [], [], []
     for _, need_id, part_id in sorted(unserved):
         name = _name_after(need_id) if len(picked_by[part_id]) >= 2 else None
         called = _called(part_id, name)
@@ -157,8 +162,9 @@ def _merge_parts(existing, wanted):
             continue
         held_by[_one_name(called)] = ("need %s's %s" % (need_id, part_id), called)
         added.append(part_id if name is None else {"part": part_id, "name": name})
+        written.append(entry_origin.WrittenEntry(need_id, added[-1]))
     kept = [{"part": _part_of(entry), "name": _name_of(entry)} for number, entry in enumerate(existing) if number not in explained]
-    return list(existing) + added, kept, problems
+    return Merged(list(existing) + added, kept, problems, explained, written)
 
 
 def _board_problems(board_picks, unfiled, project):
@@ -276,7 +282,7 @@ def _held_file(project):
     return held, existing
 
 
-def requirements(project):
+def requirements(project, removing=None):
     """
     The picks read into the project's requirements file (§5.3, §8 L): a `Requirements` of (the file as it would be, the records
     to shelve, the picks not placed, the entries it keeps that no pick explains, the board it named before, the problems, the
@@ -285,7 +291,8 @@ def requirements(project):
     another project goes onto the shelf, so the build finds it; a pick with no record is reserved, not placed. A pick of a drawer
     entry is read as the record that entry is, when spark knows it (`as_record`). The file's own `parts` stay as they are and
     gain an entry for each pick they lack (`_merge_parts`); the keys the person added to the file (signals) stay. The file
-    says `board_only` when it lists no part and every need is served (P387), and loses it when it lists a part.
+    says `board_only` when it lists no part and every need is served (P387), and loses it when it lists a part. `removing` is
+    the `unexplained` of an earlier call whose entries the person said yes to: the file is read as without them (P877).
     """
     known, entries, needs = {row[:2]: row for row in drawer.linkable(project)}, drawer.entries(), read(project)
     picks = [(need["id"], next(iter(as_record(pick, known, entries).items()))) for need in needs for pick in need.get("pick") or []]
@@ -294,7 +301,10 @@ def requirements(project):
     shelve, wanted, placeholder, wrong = _part_picks(picks, known)
     problems += wrong
     held, existing = _held_file(project)
-    after, kept, naming = _merge_parts(existing, wanted)
+    rows, note = entry_origin.EntryOriginStore(project).rows_of(existing)
+    existing, rows = removing.settle(existing) if removing else (existing, rows)  # P877: what a yes removed is not read in again
+    merged = _merge_parts(existing, wanted)
+    after, kept, naming = merged.parts, merged.kept, merged.problems
     content = dict(held, board=board_picks[0] if board_picks else None, parts=after)
     unserved = _unserved(needs, known, entries)
     if unserved:
@@ -309,5 +319,6 @@ def requirements(project):
     problems += naming
     problems = [problem for number, problem in enumerate(problems) if problem not in problems[:number]]  # a part picked twice is refused once
     return Requirements(content, list(dict.fromkeys(shelve)), list(dict.fromkeys(key for _, (kind, key) in picks if kind == "entry")),
-                        kept, held.get("board"), problems, list(dict.fromkeys(placeholder)), unserved, *_power_gaps(after, known))
+                        kept, held.get("board"), problems, list(dict.fromkeys(placeholder)), unserved, *_power_gaps(after, known),
+                        entry_origin.UnexplainedEntries.find(existing, merged, rows, note))
 # --- end MVP ---
