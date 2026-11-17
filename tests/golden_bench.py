@@ -247,6 +247,9 @@ MOMENT = re.compile(r'"at": "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d{4}"')
 #: (P508). The grant is made at run time, so only the shape can match, and a changed shape still fails.
 CLOCK = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d")
 
+#: The time the breadboard sheet's changes heading and the line under it name (P875): the time of a sheet spark wrote at run time, to the minute.
+SHEET_TIME = re.compile(r"((?:Changes since the sheet spark wrote on|wired the sheet from) )\d{4}-\d\d-\d\d \d\d:\d\d")
+
 
 #: The name of a board log, a moment of the run (sim/runs/board/<moment>.log), which CLOCK does not match (P383).
 BOARD_LOG = re.compile(r"\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d\.log")
@@ -264,7 +267,8 @@ def scrub(text, places):
     dropped, reach's moment replaced by `<at>` and a grant's clock times by `<time>`."""
     pattern = re.compile("|".join(re.escape(place) for place in places))
     placed = QUOTED_PLACE.sub(r"\1", pattern.sub(lambda found: places[found.group(0)], text))
-    return FACTS_SHA.sub(r"\1<facts-sha256>", BOARD_LOG.sub("<time>.log", CLOCK.sub("<time>", MOMENT.sub('"at": "<at>"', placed))))
+    timed = CLOCK.sub("<time>", MOMENT.sub('"at": "<at>"', placed))
+    return FACTS_SHA.sub(r"\1<facts-sha256>", BOARD_LOG.sub("<time>.log", SHEET_TIME.sub(r"\1<time>", timed)))
 
 
 def check_golden(case, text, name=None, golden_dir=GOLDEN_DIR):

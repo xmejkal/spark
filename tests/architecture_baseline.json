@@ -100,7 +100,6 @@
 "T1:scripts/spark/bench/deploy_service.py:file-write": 1,
 "T1:scripts/spark/bench/deploy_service.py:subprocess": 2,
 "T1:scripts/spark/bench/image_evidence.py:subprocess": 1,
-"T1:scripts/spark/breadboard/bench_changes.py:file-write": 1,
 "T1:scripts/spark/breadboard/sheet.py:file-write": 3,
 "T1:scripts/spark/build/board_engine.py:os.environ": 1,
 "T1:scripts/spark/build/build_service.py:file-write": 6,

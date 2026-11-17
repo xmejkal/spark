@@ -10,7 +10,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.build import build_codes
-from spark.build.build_record import OWN_FILES, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, StageTakenError, sha256_of
+from spark.build.build_record import OWN_FILES, STAGE_IN_THE_WAY, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, StageTakenError, sha256_of
 from spark.build.build_service import verdict
 from spark.build.stages import skipped_the_build
 from spark.breadboard import drawing, sheet, tabbed_page
@@ -49,7 +49,6 @@ UNCHANGED = "unchanged"
 LEFT_ALONE = "left alone"
 #: Why a board is left alone when the replace failed: its first step is the new board, its second the previous version.
 WRITE_FAILED = "spark could not write the new board, so it is left as it was: %s"
-STAGE_IN_THE_WAY = "%s is in the way: delete it if it is not yours"
 #: Why a board spark wrote and nobody changed is left alone: the build did not finish, so its board is not to be trusted.
 NOT_FINISHED = "this build did not finish, so spark did not replace it"
 KEEP_FAILED = "spark could not keep the previous version, so the board is left as it was: %s"
@@ -266,7 +265,7 @@ def keep_breadboard(requirements, destination, stages=()):
                  "line": "no breadboard sheet: %s" % stopped}] + [
             _left_from_earlier_drawing(path, renderer, "the sheet was not written") for path, renderer in drawings]
     why = "the parts and how to wire them on a breadboard"
-    kept = [{"file": str(written.sheet), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written.sheet, why)}]
+    kept = [{"file": str(written.sheet), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written.sheet, why), **({"since": written.since} if written.since else {})}]
     kept += [{"file": str(path), "did": "wrote", "why": renderer.PURPOSE_MESSAGE, "line": "wrote %s — %s" % (path, renderer.PURPOSE_MESSAGE),
               **({"drawn_from": written.drawn_from} if written.drawn_from else {})} for path, renderer in written.drawings]
     kept += [not_written_entry(one) for one in written.not_written]

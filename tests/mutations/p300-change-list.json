@@ -37,8 +37,8 @@
 {
 "file": "scripts/spark/breadboard/sheet.py",
 "name": "changes-never",
-"find": "if record and not record.why_unread else [])",
-"replace": "if False else [])"},
+"find": "colors) if new_record.base else []",
+"replace": "colors) if False else []"},
 {
 "file": "scripts/spark/breadboard/sheet.py",
 "name": "drawn-ignores-record",
