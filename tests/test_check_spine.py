@@ -1748,7 +1748,7 @@ class TheAmplifierAloneBuildsForRealTest(unittest.TestCase):
         stages = json.loads(out.getvalue())["stages"]
         build = next(stage for stage in stages if stage["name"] == "build")
         self.assertEqual(build["status"], check_spine.OK, build["detail"])
-        self.assertEqual([stage["name"] for stage in stages if stage["status"] not in (check_spine.OK, outcomes.SKIPPED)], [], stages)
+        self.assertEqual([stage["name"] for stage in stages if stage["status"] not in (check_spine.OK, check_spine.SKIPPED)], [], stages)
         circuit = (project / "dist" / "board" / "circuit.json").read_text()
         self.assertNotIn("SpeakerTerminal", circuit)
         self.assertNotIn("SPEAKER", circuit)
@@ -1885,7 +1885,7 @@ class TheTabbedPageTest(unittest.TestCase):
 
     def test_a_board_only_build_removes_an_earlier_page(self):
         self.page.write_text("old")
-        entry = self.keep(stages=[Stage("build", outcomes.SKIPPED)])
+        entry = self.keep(stages=[Stage("build", check_spine.SKIPPED)])
         self.assertEqual((entry["did"], entry["line"].split(";")[0]), ("removed", "no page: board only: nothing to draw"))
 
     def test_a_dist_that_was_not_kept_removes_an_earlier_page(self):
@@ -1948,7 +1948,7 @@ class TheBoardAloneTest(unittest.TestCase):
             raise subprocess.TimeoutExpired(command, named["timeout"])
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         stages = build_service.board_alone(board, Path(tempfile.mkdtemp()), runner=late)
-        self.assertEqual([stage.status for stage in stages[:-1]], [outcomes.SKIPPED] * 4)
+        self.assertEqual([stage.status for stage in stages[:-1]], [check_spine.SKIPPED] * 4)
         self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].code), ("simulation", check_spine.COULD_NOT_RUN, "stage_timed_out"))
         self.assertIn("did not finish in 120s", stages[-1].detail)
 
@@ -3120,8 +3120,8 @@ class AnAllSkippedSimulationKeepsTheBuildTest(unittest.TestCase):
     board, so the kept dist/ stays, the page is drawn and the closing line says what happened; only a board-only build
     (its build stage skipped) drops an older dist/."""
 
-    FULL = [Stage("build", check_spine.OK, "3 trace(s)"), Stage("simulation", outcomes.SKIPPED, "every part is skipped")]
-    ALONE = [Stage("build", outcomes.SKIPPED, "board only: nothing to wire"), Stage("simulation", check_spine.OK, "4 wire(s)")]
+    FULL = [Stage("build", check_spine.OK, "3 trace(s)"), Stage("simulation", check_spine.SKIPPED, "every part is skipped")]
+    ALONE = [Stage("build", check_spine.SKIPPED, "board only: nothing to wire"), Stage("simulation", check_spine.OK, "4 wire(s)")]
 
     def test_the_kept_dist_stays_and_nothing_says_no_board_was_built(self):
         workdir = Path(tempfile.mkdtemp())
@@ -3252,7 +3252,7 @@ class TheBuildIsAnOperationTest(unittest.TestCase):
 
     def test_the_findings_answer_what_verdict_answers(self):
         cases = {"ok": [Stage("build", check_spine.OK, "fine")],
-                 "skipped": [Stage("build", outcomes.SKIPPED, "board only"), Stage("simulation", check_spine.OK, "ran")],
+                 "skipped": [Stage("build", check_spine.SKIPPED, "board only"), Stage("simulation", check_spine.OK, "ran")],
                  "could not run": [Stage("build", check_spine.COULD_NOT_RUN, "no tsci", "tool_missing")],
                  "problems and could not run": [Stage("schematic-notes", check_spine.PROBLEMS, "a size", "schematic_noted"),
                                                 Stage("build", check_spine.COULD_NOT_RUN, "no tsci", "tool_missing")]}
