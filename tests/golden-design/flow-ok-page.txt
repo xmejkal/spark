@@ -6,7 +6,7 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>button light circuit</title>
-<style>:root{--paper:#f6f3ee;--ink:#222;--backdrop:#fff;--accent:#c33;color-scheme:light}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#1d1c1a;--ink:#e8e4dc;--backdrop:#fff;--accent:#ff7a70;color-scheme:dark}}:root[data-theme="dark"]{--paper:#1d1c1a;--ink:#e8e4dc;--backdrop:#fff;--accent:#ff7a70;color-scheme:dark}body{margin:0;padding:12px 16px;font:15px system-ui,sans-serif;background:var(--paper);color:var(--ink)}nav ol{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:0;padding:0}a{color:var(--ink)}a:focus-visible{outline:2px solid var(--accent)}.phase{border-top:1px solid var(--ink);padding:4px 0}p,li{overflow-wrap:anywhere}img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}</style>
+<style>:root{--paper:#f6f3ee;--ink:#222;--backdrop:#fff;--accent:#c33;color-scheme:light}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#1d1c1a;--ink:#e8e4dc;--backdrop:#fff;--accent:#ff7a70;color-scheme:dark}}:root[data-theme="dark"]{--paper:#1d1c1a;--ink:#e8e4dc;--backdrop:#fff;--accent:#ff7a70;color-scheme:dark}body{margin:0;padding:12px 16px;font:15px system-ui,sans-serif;background:var(--paper);color:var(--ink)}nav ol{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:0;padding:0}a{color:var(--ink)}a:focus-visible{outline:2px solid var(--accent)}.phase{border-top:1px solid var(--ink);padding:4px 0}p,li{overflow-wrap:anywhere}img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}#steps>li .nav{display:none}#steps>li:target .nav{display:block}#steps:has(>li:target)>li:not(:target){display:none}@media print{#steps>li{display:list-item!important}#steps .nav{display:none!important}}</style>
 </head>
 <body data-stands-at="build">
 <h1>button light circuit</h1>
@@ -20,7 +20,7 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <li data-phase="firmware" data-status="none"><a href="#phase-firmware"><span aria-hidden="true">·</span> firmware <span>not checked by spark</span></a></li>
 <li data-phase="simulate" data-status="not-started"><a href="#phase-simulate"><span aria-hidden="true">○</span> simulate <span>not started</span></a></li>
 <li data-phase="deploy" data-status="not-started"><a href="#phase-deploy"><span aria-hidden="true">○</span> deploy <span>not started</span></a></li>
-</ol><a href="#pictures">Pictures</a></nav>
+</ol><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a></nav>
 <p>The project stands at: build.</p>
 <section class="phase" id="phase-idea" data-phase="idea" data-status="none">
 <h2><span aria-hidden="true">·</span> idea <span>not checked by spark</span></h2>
@@ -69,6 +69,32 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <p>Done by: your terminal</p>
 <p>ask Claude to look at the board first</p>
 <p>then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in your terminal</p>
+</section>
+<section id="wiring">
+<h2>Wiring</h2>
+<p>Read the lines before power first. In the Breadboard picture below, each jumper has its step&#x27;s number and colour: find the holes there.</p>
+<h3>Before you power it</h3>
+<ul>
+<li>TactileButton A has no resistor: the firmware must pull it up with Pin.PULL_UP, as <code>pins.py</code> says (P204)</li>
+<li>6x6 mm tactile push button: Decide the polarity against deep sleep, not convenience. MicroPython&#x27;s esp32.wake_on_ext1(pins, level) takes ONE level for every pin in the mask, on every chip (ports/esp32/modesp32.c, v1.29.0), so a board with two wake sources must have them assert in the same direction. Both directions are an OR on the S3 and C6: WAKEUP_ALL_LOW is a true AND only on the original ESP32, and ESP-IDF aliases it to ANY_LOW on every later chip (components/esp_hw_support/include/esp_sleep.h, v5.5.2). Prefer wiring a wake button to 3V3 behind a pull-down and arming WAKEUP_ANY_HIGH: low-level wake has an open MicroPython bug, micropython#17334 (&#x27;stuck pin&#x27;, reported on a C6, v1.25.0). Corrected 2026-10-01 (spark P63): this line used to say ALL_LOW is an AND here, which is false on these chips.</li>
+<li>6x6 mm tactile push button: Debounce in firmware, not hardware, unless the button is also a wake source — a wake pin&#x27;s first edge is the one that matters and it is not debounced by anything.</li>
+<li>Kingbright L-7113ID 5 mm red LED: A series resistor between the GPIO and the anode, always: without it the LED&#x27;s current is set only by the pin&#x27;s drive strength, and it either runs far past 30 mA or droops the pin&#x27;s level.</li>
+<li>Kingbright L-7113ID 5 mm red LED: Keep it off the chip&#x27;s strapping pins: an LED and resistor to ground load the pin while the chip samples its straps at reset, and can change how it boots. (Reasoned from the circuit, not from this datasheet.)</li>
+<li>Kingbright L-7113ID 5 mm red LED: On a breadboard: the LONG lead (anode) goes to the resistor; the short lead, on the side of the flat in the rim, goes to ground. Once the leads are trimmed equal, the flat is the mark that survives.</li>
+</ul>
+<p>Each record whole, with what it asks of the board: <code>parts.py --show led-red-5mm</code>, <code>parts.py --show tactile-button</code>.</p>
+<p><a href="#step-1">One at a time: start at step 1</a></p>
+<ol id="steps">
+<li id="step-1" value="1" tabindex="-1">Put the board in the breadboard, each pin in its own row.<div class="nav">Step 1 of 9 <a href="#step-2" aria-label="Next: step 2">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
+<li id="step-2" value="2" tabindex="-1">Put TactileButton in the breadboard, each pin in its own row.<div class="nav">Step 2 of 9 <a href="#step-1" aria-label="Back to step 1">Back</a> <a href="#step-3" aria-label="Next: step 3">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
+<li id="step-3" value="3" tabindex="-1">Put LedRed5mm in the breadboard, each pin in its own row.<div class="nav">Step 3 of 9 <a href="#step-2" aria-label="Back to step 2">Back</a> <a href="#step-4" aria-label="Next: step 4">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
+<li id="step-4" value="4" tabindex="-1">Put R1 (330Ω in series with LedRed5mm A), end 1, in a free row.<div class="nav">Step 4 of 9 <a href="#step-3" aria-label="Back to step 3">Back</a> <a href="#step-5" aria-label="Next: step 5">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
+<li id="step-5" value="5" tabindex="-1">Run a jumper from board A5 to the row of R1 end 1.<div class="nav">Step 5 of 9 <a href="#step-4" aria-label="Back to step 4">Back</a> <a href="#step-6" aria-label="Next: step 6">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
+<li id="step-6" value="6" tabindex="-1">Run a jumper from board D3 to the row of TactileButton A.<div class="nav">Step 6 of 9 <a href="#step-5" aria-label="Back to step 5">Back</a> <a href="#step-7" aria-label="Next: step 7">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
+<li id="step-7" value="7" tabindex="-1">Run a jumper from board GND to the row of LedRed5mm K.<div class="nav">Step 7 of 9 <a href="#step-6" aria-label="Back to step 6">Back</a> <a href="#step-8" aria-label="Next: step 8">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
+<li id="step-8" value="8" tabindex="-1">Run a jumper from the row of TactileButton B (either leg of the other pair) to the row of LedRed5mm K.<div class="nav">Step 8 of 9 <a href="#step-7" aria-label="Back to step 7">Back</a> <a href="#step-9" aria-label="Next: step 9">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
+<li id="step-9" value="9" tabindex="-1">Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A.<div class="nav">Step 9 of 9 <a href="#step-8" aria-label="Back to step 8">Back</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
+</ol>
 </section>
 <section id="pictures"><h2>Pictures</h2>
 <div class="picture"><h3>Breadboard</h3><p>Not drawn: breadboard.svg is not in the project yet. The build with --keep writes it.</p></div>

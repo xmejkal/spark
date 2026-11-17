@@ -257,25 +257,57 @@ def why_no_page(destination, stages, kept):
 FLOW_PAGE_FAILED = "the flow page could not be written (%s)"
 
 
+class KeptPictureFiles:
+    """
+    Adapter: the schematic and the PCB that `tsci export` drew, as files of the project beside circuit.json (P828): the
+    flow page reads them when it runs alone. An export that gave nothing removes the file an earlier build left, since
+    that file describes another design.
+    """
+
+    FILES = (tabbed_page.SCHEMATIC_FILE, tabbed_page.PCB_FILE)
+
+    def __init__(self, destination):
+        self.destination = Path(destination)
+
+    def keep(self, exports):
+        """Write each export's SVG to its file, or remove the file when the export gave none: `exports` are
+        `tabbed_page.SvgExportResult`s in the order of `FILES`."""
+        for name, export in zip(self.FILES, exports):
+            path = self.destination / name
+            if export.svg is None:
+                if path.exists():  # a path under a file is no path: it is not there
+                    path.unlink()
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(export.svg, encoding="utf-8")
+
+    def drop(self):
+        """Remove both files: a run that drew no page leaves no picture of an earlier design."""
+        self.keep([tabbed_page.SvgExportResult(None, None)] * len(self.FILES))
+
+
 def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     """
     The page beside the kept board (P271, #307): the breadboard picture the sheet's step just wrote, and tscircuit's
-    schematic and PCB of the same kept circuit.json, as one kept entry {file, did, why, line}. In a project, `flow_page`
+    schematic and PCB of the same kept circuit.json (also kept as files, P828), as one kept entry {file, did, why, line}. In a project, `flow_page`
     (P827; `flow_page(project, tabs)` gives the path and what it is for) writes the flow page with those three pictures; without it, or in a
     folder that is no project, the tabbed page. A page left from an earlier build is removed when this run cannot draw one,
     since it describes another board.
     """
     page = Path(destination) / tabbed_page.TabbedHtmlPage.FILE_NAME
     why = why_no_page(destination, stages, kept)
+    pictures = KeptPictureFiles(destination)
     if why:
+        pictures.drop()
         return _left_from_earlier(page, tabbed_page.TabbedHtmlPage.NOUN, why)
     circuit = Path(destination) / sheet.CIRCUIT
-    tabs = [_breadboard_tab(destination, kept),
-            tabbed_page.exported_tab("Schematic", exporter.export_svg(circuit, "schematic-svg")),
-            tabbed_page.exported_tab("PCB", exporter.export_svg(circuit, "pcb-svg"))]
+    exports = [exporter.export_svg(circuit, form) for form in ("schematic-svg", "pcb-svg")]
+    tabs = [_breadboard_tab(destination, kept), tabbed_page.exported_tab("Schematic", exports[0]),
+            tabbed_page.exported_tab("PCB", exports[1])]
     flow = flow_page if flow_page is not None and _is_project(destination) else None
     why = tabbed_page.TabbedHtmlPage.PURPOSE_MESSAGE
     try:
+        pictures.keep(exports)
         if flow is not None:
             page, why = flow(destination, tabs)
         else:

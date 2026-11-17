@@ -9,6 +9,7 @@ import base64
 import html
 from collections import namedtuple
 
+from spark.breadboard import before_power
 from spark.breadboard.tabbed_page import TabbedHtmlPage
 from spark.flow import flow_codes
 from spark.flow.phase_readers import MARKS
@@ -20,9 +21,13 @@ from spark.core.outcomes import COULD_NOT_RUN, OK
 Picture = namedtuple("Picture", "title svg why_missing")
 #: Value: what the page shows of a phase: its mark and its status word.
 ShownPhase = namedtuple("ShownPhase", "mark word")
+#: Value: the wiring of a build as plain values, so that one call of the project's mask covers it: `steps` are (number, words),
+#: `before_power` the dicts of a BeforePowerItem's fields, `records` the record ids, and `why_missing` says why there is no
+#: wiring to show (None when there is).
+PageWiring = namedtuple("PageWiring", "steps before_power records why_missing")
 #: Value: what a page holds. `phases` are the Phase dicts of the flow, `stands_at` the first open phase or None, `pictures`
-#: Pictures and `notes` fixed lines. A page is masked before it is rendered.
-FlowPage = namedtuple("FlowPage", "title phases stands_at pictures notes")
+#: Pictures, `notes` fixed lines and `wiring` a PageWiring or None (no section). A page is masked before it is rendered.
+FlowPage = namedtuple("FlowPage", "title phases stands_at pictures notes wiring", defaults=(None,))
 
 TICK = MARKS[OK][1]
 
@@ -52,6 +57,60 @@ def _mark(shown):
     return '<span aria-hidden="true">%s</span>' % _text(shown.mark)
 
 
+class WiringHtmlSection:
+    """
+    Renderer: the wiring of a page (P828) as one `<section id="wiring">`: the lines before power in a list of their own, then
+    the steps in `<ol id="steps">`. One at a time is the URL's fragment: the style hides every step but the target, and a
+    browser without `:has()` shows them all. It decides nothing: the steps and the lines are given.
+    """
+
+    STYLE = ("#steps>li .nav{display:none}#steps>li:target .nav{display:block}"
+             "#steps:has(>li:target)>li:not(:target){display:none}"
+             "@media print{#steps>li{display:list-item!important}#steps .nav{display:none!important}}")
+
+    def __init__(self):
+        self.before_power = before_power.BeforePowerHtmlList()
+
+    def text(self, wiring, with_pictures):
+        """The section: its heading, then the reason there is nothing to show, or the sentence, the lines and the steps."""
+        lines = ['<section id="wiring">', "<h2>%s</h2>" % _text(flow_codes.WIRING_HEADING)]
+        if wiring.why_missing:
+            return "\n".join(lines + ["<p>%s</p>" % _text(wiring.why_missing), "</section>"])
+        lines.append("<p>%s</p>" % _text(flow_codes.WIRING_INTRO))
+        lines += self._before_power(wiring) + self._steps(wiring.steps, with_pictures)
+        return "\n".join(lines + ["</section>"])
+
+    def _before_power(self, wiring):
+        if not wiring.before_power:
+            return []
+        return (["<h3>%s</h3>" % _text(before_power.HEADING), "<ul>"] + self.before_power.items(wiring.before_power) + ["</ul>"]
+                + [self.before_power.records_line(wiring.records)])
+
+    def _steps(self, steps, with_pictures):
+        if not steps:
+            return []
+        start = '<p><a href="#step-%d">%s</a></p>' % (steps[0][0], _text(flow_codes.ONE_AT_A_TIME))
+        return [start, '<ol id="steps">'] + [self._step(each, steps, with_pictures) for each in steps] + ["</ol>"]
+
+    def _step(self, step, steps, with_pictures):
+        number, words = step
+        return '<li id="step-%d" value="%d" tabindex="-1">%s%s</li>' % (number, number, _text(words), self._nav(step, steps, with_pictures))
+
+    @staticmethod
+    def _nav(step, steps, with_pictures):
+        """The nav line of one step: where it stands, Back and Next (not on the first and the last), the list and the pictures."""
+        numbers = [number for number, _words in steps]
+        number, at = step[0], numbers.index(step[0])
+        links = []
+        if at > 0:
+            links.append('<a href="#step-%d" aria-label="%s">%s</a>' % (numbers[at - 1], flow_codes.BACK_LABEL % numbers[at - 1], flow_codes.BACK))
+        if at < len(numbers) - 1:
+            links.append('<a href="#step-%d" aria-label="%s">%s</a>' % (numbers[at + 1], flow_codes.NEXT_LABEL % numbers[at + 1], flow_codes.NEXT))
+        links.append('<a href="#wiring">%s</a>' % _text(flow_codes.ALL_STEPS))
+        links += ['<a href="#pictures">%s</a>' % _text(flow_codes.PICTURE)] if with_pictures else []
+        return '<div class="nav">%s %s</div>' % (_text(flow_codes.STEP_OF % (at + 1, len(numbers))), " ".join(links))
+
+
 class FlowHtmlPage:
     """
     Renderer: a FlowPage as one HTML document, the same bytes for the same page. It loops over the page's phases and holds
@@ -68,14 +127,16 @@ class FlowHtmlPage:
              ".phase{border-top:1px solid var(--ink);padding:4px 0}"
              "p,li{overflow-wrap:anywhere}"
              "img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}")
+    WIRING = WiringHtmlSection()
 
     def text(self, page):
         head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._rail(page), self._stands_at(page)]
-        body = [self._phase(phase) for phase in page.phases] + [self._pictures(page.pictures), self._legend(), self._notes(page.notes)]
+        body = [self._phase(phase) for phase in page.phases] + [self._wiring(page), self._pictures(page.pictures), self._legend(),
+                                                                  self._notes(page.notes)]
         return "\n".join(head + [part for part in body if part] + ["</body>", "</html>"]) + "\n"
 
     def _open(self, page):
-        style = TabbedHtmlPage.token_styles() + self.STYLE
+        style = TabbedHtmlPage.token_styles() + self.STYLE + (WiringHtmlSection.STYLE if page.wiring else "")
         return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
                           '<meta name="viewport" content="width=device-width, initial-scale=1">',
                           '<title>%s</title>' % _text(page.title), '<style>%s</style>' % style, '</head>',
@@ -95,8 +156,9 @@ class FlowHtmlPage:
             shown = shown_phase(phase)
             entries.append('<li %s><a href="#phase-%s">%s %s <span>%s</span></a></li>' % (
                 self._data(phase), _text(phase["phase"]), _mark(shown), _text(phase["phase"]), _text(shown.word)))
-        pictures = '<a href="#pictures">Pictures</a>' if page.pictures else ""
-        return '<nav aria-label="Phases"><ol>\n%s\n</ol>%s</nav>' % ("\n".join(entries), pictures)
+        links = ['<a href="#wiring">%s</a>' % _text(flow_codes.WIRING_HEADING)] if page.wiring else []
+        links += ['<a href="#pictures">Pictures</a>'] if page.pictures else []
+        return '<nav aria-label="Phases"><ol>\n%s\n</ol>%s</nav>' % ("\n".join(entries), " ".join(links))
 
     def _phase(self, phase):
         shown = shown_phase(phase)
@@ -106,6 +168,9 @@ class FlowHtmlPage:
         lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
         offers = ["<li><code>%s</code>: %s</li>" % (_text(offer["key"]), _text(offer["effect"])) for offer in phase["offers"]]
         return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</section>"])
+
+    def _wiring(self, page):
+        return self.WIRING.text(page.wiring, bool(page.pictures)) if page.wiring else ""
 
     def _pictures(self, pictures):
         """All the pictures in one section, in the order the page was given them, or nothing when there are none."""
