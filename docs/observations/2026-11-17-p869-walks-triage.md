@@ -1,12 +1,12 @@
 # P869: the triage of P711's three walks and P867's items
 
 > 32 walk rows, one more row (D14), 3 page notes that are in no rows file, 8 proposed items and 10 "Later" lines
-> are triaged here. 17 rows join open cards, 4 become new cards, 2 are dropped and 9 stay rows. There are 10 cards
+> are triaged here. 16 rows join open cards, 5 become new cards, 2 are dropped and 9 stay rows. There are 11 cards
 > to file. Six cards stand before the new walks. Two of them are recommended for the top of Ready, above P827 and P828.
 
 The card is P869 ([#1236](https://github.com/xmejkal/spark/issues/1236)), under the walks epic P365 (#467). P480 (#658,
 `2026-11-01-p480-walk3-council/`) and P510 (#705, `2026-11-01-p510-walk4-council/`) did the same for earlier walks.
-This file is the triage on Fable 5.2, 2026-11-17 (Europe/Prague), revised after one lens and the refuter. Each of
+This file is the triage on Fable 5.2, 2026-11-17 (Europe/Prague), revised after one lens and two rounds of the refuter. Each of
 their rulings was checked in the code first. Where a ruling and the code differ, the code stands, and section 7
 says so. Nothing is filed, moved or commented: section 4 is filing text for the PO's yes.
 
@@ -25,12 +25,12 @@ says so. Nothing is filed, moved or commented: section 4 is filing text for the 
 The bar is `scrum/VISION.md` and AGENTS.md: does the card move a basic project closer to a breadboard with working
 firmware? Codes in this file: A is walk 1 (the amplifier's picture), B is walk 2 (the button and the LED), C is
 walk 3 (the sound demo), I is an item of `items.md`, L is a "Later" line, N is a card of this triage. The N codes
-keep their first numbers, so the council's reports still match: N3 is now a join, N2 is N2a, and N8 is N8a.
+keep their first numbers, so the council's reports still match: N2 is N2a, and N8 is N8a.
 
 | input | JOINED | NEW | DROPPED | STAYS A ROW |
 | --- | --- | --- | --- | --- |
-| the 32 walk rows | 17 | 4 | 2 | 9 |
-| the D14 row | 1 | 0 | 0 | 0 |
+| the 32 walk rows | 16 | 5 | 2 | 9 |
+| the D14 row | 0 | 1 | 0 | 0 |
 | the 3 page notes in no rows file | 0 | 0 | 0 | 3 |
 | the 8 items | 0 | 7 | 0 | 1 |
 | the 10 "Later" lines | 3 | 3 | 0 | 4 |
@@ -63,7 +63,7 @@ So 12 lines of the walks stay a row: 9 rows and 3 page notes.
 | B4 | spark cannot say how many free Wokwi minutes are left | JOINED | P413 (#539, a count of the Wokwi minutes). Add: "`run_scenario.py` shows the month's total before it asks for a run (walk 2 of P711, row 4)". The card's own caveat stands: spark does not know Wokwi's balance, so the line names no plan figure. |
 | B5 | reads in a row flip between failing and passing | JOINED | P865 (#1231). Every read restarts the board (`board_look.py:54`, `:201`). Section 5 has its line. |
 | B6 | "spark's last deploy here: walk4" reads as the box's state | JOINED | P865 (#1231). Add: "the last-deploy line (`board_look.py:392`) says it is spark's own record and that a flash outside spark is not seen (P867's D8: a witness has a source and a time)". |
-| B7 | no way to watch the firmware's lines while it runs | JOINED | P248 (#270, a bounded console read), with the D14 row. Section 5. This was N3. |
+| B7 | no way to watch the firmware's lines while it runs | NEW | N3, with the D14 row. |
 
 ### Walk 3, the sound demo on the game box (16 rows)
 
@@ -88,7 +88,9 @@ So 12 lines of the walks stay a row: 9 rows and 3 page notes.
 
 ### The D14 row
 
-A read that leaves the firmware running goes before the new walks (brief.md D14). JOINED to P248 (#270), with B7.
+A read that leaves the firmware running goes before the new walks (brief.md D14). NEW, N3, with B7. P248 (#270) is
+a timed read at boot and names download mode. It is not a watch of firmware that keeps running, so it gets one
+pointer to N3.
 
 ### The page notes (9 notes)
 
@@ -121,8 +123,8 @@ in a browser. Note 8: `flow.py show` lists pick offers when every need is picked
 | L10 | module images drawn after the real module (P867's D13) | JOINED | P734 (#1005). Add the PO's words: "How nice the module images were, noty just some basic shapes but really drawn by a photo or web serach, so it looks really nice." No vendor file enters the repository. |
 
 How each decision of P867's brief is met: D5 by N1, N2a and N4. D6 by N7 (the cause) and half by N1: the sheet,
-`pins.py` and `dist/` are still removed under P280's rule (Q9). D7 by N8a and the lines on P868. D8 by the lines
-on P873 and P248. D9 by P873. D10 by N10, and by the yes in N4. D11 in section 6. D12 by N11. D13 by P734.
+`pins.py` and `dist/` are still removed under P280's rule (Q9). D7 by N8a and the lines on P868. D8 by the line
+on P873, and N3 notes it. D9 by P873. D10 by N10, and by the yes in N4. D11 in section 6. D12 by N11. D13 by P734.
 P829 (#1187) has a "D10" of its own, from P820's plan. In this file "P867's D10" is the plan before a change.
 
 ## 4. The cards to file
@@ -135,6 +137,7 @@ and the page call one piece. Each names the decision that its plan must take.
 | --- | --- | --- | --- | --- |
 | N1 board.tsx replaced | story | P365 #467 | v0.10 The basic journey | S |
 | N2a the list of bench changes stays | story | P365 #467 | v0.10 The basic journey | S |
+| N3 a console read that leaves the firmware running | story | P365 #467 | v0.10 The basic journey | S |
 | N4 the requirements' entries | story | P365 #467 | v0.10 The basic journey | S |
 | N5 the true marks | bug | P820 #1173 | Views and editors | S |
 | N6 the schematic's net names | spike | P820 #1173 | Views and editors | XS |
@@ -148,7 +151,7 @@ and the page call one piece. Each names the decision that its plan must take.
 
 ### Needed by
 
-The PO, 2026-11-17, #1234's comment:
+The PO, 2026-11-17, #1234's comment. An excerpt: the dots mark words left out, and the rest is exact.
 
 ```text
 what happens when we ... go on, create the goal, the needs, the parts, the schema, even the software maybe, and then I would say, 'Well, let's add another joystick.' What would happen, actually
@@ -162,7 +165,7 @@ Walk 3 of P711, row 13. P867's D5 (the command fixes first) and D6 (nothing dele
   (`scripts/spark/build/kept_files.py:99-101`). It does not know who wrote the file.
 - The build record `.spark/build.json` holds the requirements' sha256 and no sha256 of board.tsx
   (`kept_files.py:367-369`, `scripts/spark/build/build_record.py`).
-- The "left alone" tests are in `tests/test_check_spine.py` and `tests/test_breadboard_keep.py`.
+- The "left alone" tests of board.tsx are in `tests/test_check_spine.py` (`:358`, and near `:810`).
 
 ### Done when
 
@@ -186,7 +189,8 @@ Walk 3 of P711, row 13. P867's D5 (the command fixes first) and D6 (nothing dele
 
 ### Needed by
 
-The PO's words as in N1. Item 8 of `items.md`, and walk 3 of P711, row 6. P867's D5.
+The PO's words as in N1. Item 8 of `items.md`, and P867's D5 (the erased change list is a command fix that goes
+first). No walk row shows the erasure: the discovery's dry change found it.
 
 ### What is true today
 
@@ -198,8 +202,8 @@ The PO's words as in N1. Item 8 of `items.md`, and walk 3 of P711, row 6. P867's
 
 ### Done when
 
-- A test in `tests/test_breadboard_record.py`: a design is changed and built twice. The second sheet still shows
-  the list of the first rebuild, with the time of the sheet it counts from.
+- If Q10 is answered as recommended: a test in `tests/test_breadboard_record.py`. A design is changed and built
+  twice. The second sheet still shows the list of the first rebuild, with the time of the sheet it counts from.
 - A test: a build of a third design lists the changes from the second design's sheet only.
 - The section's words say "since the sheet spark wrote on <time>". They never say what is on the bench.
 - The expectation at `tests/test_breadboard_record.py:64` changes only with the PO's answer to Q10.
@@ -211,6 +215,49 @@ The PO's words as in N1. Item 8 of `items.md`, and walk 3 of P711, row 6. P867's
   the plan touches it.
 - The plan decides when the list is cleared (Q10).
 - Not in this card: a baseline that a witness moves. Spark has no witness of the wiring today (section 5, P873).
+
+### N3: after a deploy, reading the console stops the firmware or needs keys → one read of the console that leaves the firmware running, after a bench row names the cause
+
+### Needed by
+
+The PO stopped walk 3 on 2026-11-17:
+
+```text
+No, actually, let's start over with a new walk when  we fix the gaps and bugs from these runs
+```
+
+Walk 2 of P711, row 7: a walk that checks a must line on the bench needs a read that leaves the firmware running.
+D14 of P867's brief (the facilitator's answer on the PO's delegation, confirmed in D20): that read goes before the
+new walks, after a bench row says which cause stops `main.py`.
+
+### What is true today
+
+- The deploy's last line tells the person to open mpremote's console and press Ctrl-C, then Ctrl-D
+  (`scripts/spark/bench/deploy_image.py:47-48`). Ctrl-D restarts `main.py`.
+- `scripts/spark/bench/board_console.py:5-7` says that the port's open itself restarted a XIAO C6. So the cause is
+  not known, and the first bench row decides it.
+- `ConsoleProbe.console()` reads with DTR and RTS off and takes no seconds today (`board_console.py:97`, `READ_S`
+  at `:20`). `FakeConsoleProbe.console()` (`tests/fakes.py:169`) has the same form.
+- `live.py` stops the firmware and resets the board (its `--help`).
+
+### Done when
+
+- First, a bench row by the PO: on one board with a firmware that prints a line each second, which step stops the
+  lines (the open, Ctrl-C, or Ctrl-D). The row is in the PR's rows file.
+- A test with `FakeConsoleProbe`: the read takes N seconds, prints each line, and sends nothing to the board.
+  `ConsoleProbe.console()` and the fake get the same seconds parameter.
+- A test: a busy port gives could-not-run from the probe's `KIND_BUSY`.
+- `--json` carries the lines, the port and the start time with its zone.
+- The deploy's last line names this read first.
+- A second bench row: the PO presses the button, and the firmware's line appears while the firmware goes on.
+
+### Notes
+
+- Type: story, size S. Parent: P365 #467. Slice: v0.10 The basic journey. It needs the PO's bench twice.
+- The core: a `WatchConsole` Operation on `ConsoleProbe`. `main()` only parses and prints.
+- Related: P248 #270 (a timed read at boot on the XIAO C6, and naming download mode), P520 #716 (later console
+  lines after a deploy) and P870 #1237 (a spike on streaming).
+- What the read saw is a witness (P867's D8) only if spark writes it down. That is not in this card.
 
 ### N4: `--requirements` keeps an entry that an earlier pick wrote and no pick explains now → it names each such entry and removes it on the person's yes
 
@@ -298,7 +345,7 @@ Walk 3 of P711, row 8, and page note 2.
 - A signal's trace is written pin to pin, and the signal's name is only in a comment
   (`scripts/spark/design/board_sections.py:266`, and walk 3's board.tsx, lines 41 to 55). tscircuit then names the net
   itself. Walk 3's `dist/board/circuit.json` holds `Mcu_pin` names.
-- `_TRACE` reads a trace as `from="…" to="…"` only (`scripts/spark/build/kept_files.py:44-48`).
+- `_TRACE` reads a trace as `from="…" to="…"` only (`scripts/spark/build/kept_files.py:48-49`).
 
 ### Done when
 
@@ -348,14 +395,15 @@ The PO's words as in N1. P867's D7: spark always names every pin that moves, and
 
 ### What is true today
 
-- The council measured it on the sound demo: a second joystick named JoyTwo moves 2 of 15 signals
-  (AUDIO_SHUTDOWN, JOY_SW). An added button moves 0 of 15, so it cannot be the fixture. Not run again here.
+- The council reproduced it on the sound demo: a second joystick named JoyTwo moves 2 of 15 signals
+  (AUDIO_SHUTDOWN from 6 to 8, JOY_SW from 7 to 47). An added button moves 0 of 15, so it cannot be the fixture. Not run again here.
 - The assigner already honours a pin asked by name (`placed_by_name`, `scripts/spark/design/pin_assigner.py:240-260`).
 - Nothing reads an earlier `pins.py` back. Only its header is known (`pin_assigner.py:511`, `kept_files.py:318`).
 
 ### Done when
 
-- A test on the sound demo's fixture with JoyTwo added: AUDIO_SHUTDOWN and JOY_SW have their pins of before.
+- A new fixture of the sound demo: the suite has none today (`tests/data/breadboard/` holds only `amplifier` of
+  that design). A test on it with JoyTwo added: AUDIO_SHUTDOWN and JOY_SW have their pins of before.
 - A test: when a pin must move, the answer lists `signal, from, to, why` for each one, in the lines and in
   `--json`. The count equals the pins that differ between the two `pins.py` files.
 - A test: a first build, with no earlier pin map, places as today.
@@ -457,11 +505,16 @@ P867's D12: a small view now, from the records only, with no price, no stock and
 
 ## 5. The lines to add to open cards
 
+### Proposed by P869's triage, for the PO's refinement
+
+P865, P864 and P868 each say "To refine with the PO". The lines below are proposals for that refinement. They are
+not Done-when lines yet.
+
 **P865 (#1231), the look reads any board.** Rows B3, B5, B6, C14. True today: with one board on USB,
 `LookService.run` takes it and reads at once (`scripts/spark/bench/board_look.py:456-460`). `mpremote devs` lists a
 USB serial without opening the port (`board_look.py:106`, `:154-163`). The store keys a deploy by the board's MAC
 (`scripts/spark/records/deploy_record_store.py:73`). Whether the USB serial equals the MAC on the ESP32-S3 is not
-checked. If it does not, the check needs a read. Add to Done when:
+checked. If it does not, the check needs a read. Proposed:
 
 - A test with a fake finder and a fake reader: the store names another project for the board that is listed. The
   look stops with exit 2, names the port, says that a read restarts the board, and `read` is never called.
@@ -477,7 +530,7 @@ checked. If it does not, the check needs a read. Add to Done when:
 
 **P864 (#1230), the amplifier's own speaker socket.** Rows A6, A9, C2. It is not XS: it needs a record key, a
 change where the gap is found (`power_rails`, called at `scripts/spark/design/need_requirements.py:230`), and a
-change of the board emitter, which stops on a net with one member. Add to Done when:
+change of the board emitter, which stops on a net with one member. Proposed:
 
 - The record says that SPK_P and SPK_N end in the module's own 2-pin socket, with the drawing as the source (page
   1, its sha256) and `verified: false`. P735 (#1010) is in Design: use its key for a connector if it has one.
@@ -487,7 +540,7 @@ change of the board emitter, which stops on a net with one member. Add to Done w
 
 **P868 (#1235), a pin on a bus line.** Row C12, and the bus-line half of item I5. True today: the loader refuses it
 for every bus (`scripts/spark/design/loader.py:381-384`). The reason given there is a second part on the same bus.
-Add to Done when:
+Proposed:
 
 - A test with the game box's pins (BCLK D12, LRC D11, DIN D10): the build runs, and `pins.py` names the three with
   the reason "asked for by name".
@@ -498,31 +551,21 @@ Add to Done when:
   demo, three of them I2S lines. P663 (#892) holds the conflict model for that question.
 - The core: the refusal moves from the loader to the assigner's bus placement, which knows what the board routes.
 
-**P248 (#270), a bounded console read.** Rows B7 and D14. This was N3. Beside it: P520 (#716) and P870 (#1237).
-Its body was not read. Add:
+### Other lines
 
-- Needed by: brief.md D14 of P867 (a read that leaves the firmware running goes before the new walks) and walk 2
-  of P711, row 7.
-- True today: `scripts/spark/bench/deploy_image.py:47-48` tells the person to press Ctrl-C, then Ctrl-D, which
-  restarts `main.py`. `scripts/spark/bench/board_console.py:5-7` says that the port's open itself restarted a
-  XIAO C6. So the first bench row decides the cause.
-- `ConsoleProbe.console()` takes no seconds today (`board_console.py:97`, `READ_S` at `:20`).
-  `FakeConsoleProbe.console()` (`tests/fakes.py:169`) needs the same parameter.
-- Done when: a bench row by the PO names which step stops the lines. A test with the fake probe reads N seconds
-  and prints each line. A busy port gives the probe's `KIND_BUSY`. `--json` carries the lines, the port and the
-  start time with its zone. A second bench row shows a line while the firmware goes on.
-- The core: a `WatchConsole` Operation on `ConsoleProbe`. It needs the PO's bench (Q6).
+**P248 (#270), a bounded console read.** One pointer: "N3 is the read of a firmware that keeps running. This card
+stays the timed read at boot and the naming of download mode. Both use `ConsoleProbe`."
 
 **P873 (#1241), the table and the page.** Add: the C16 line of section 2. Add also: "the witness of the wiring
 has no source today. A deploy record holds the project, the time and the verdict of one board's MAC, and nothing
 of the sheet. Walk 3 deployed to a box wired for another project. Whether wiring comes before flashing is Q11 of
 P867's brief. The bench step (D9) is where a witness of the wiring is written (D8)."
 
-**P816 (#1168), an unfinished build leaves the earlier dist/.** It asks for more removal, and P867's D6 says that
-nothing is deleted. Add a line that names the conflict, and wait for Q9.
+**P816 (#1168), an unfinished build leaves the earlier dist/.** Its Done-when allows two ways: removed and said,
+or "kept and named as an earlier build's". Add: "P867's D6 (nothing is deleted) picks the second way".
 
 **P413 (#539), P735 (#1010), P340 (#434), P734 (#1005), P520 (#716):** the lines in sections 2 and 3. For P520:
-"its watch step calls P248's `WatchConsole`".
+"its watch step calls N3's `WatchConsole`".
 
 P871 (#1238, the board doctor, a spike) stays where it is. It concerns only a walk on the game box.
 
@@ -530,14 +573,17 @@ P871 (#1238, the board doctor, a spike) stays where it is. It concerns only a wa
 
 **(a) What stands before the new walks.** Six cards, by the walk each one stops:
 
-| card | which walk it stops |
-| --- | --- |
-| P865 (#1231) the look names the board | every walk with a board: bench safety |
-| P248 (#270) the console read | every walk that checks a must line on the bench (D14) |
-| N1 board.tsx replaced | a walk that changes its design |
-| N2a the list of bench changes | a walk that changes its design |
-| N4 the requirements' entries | a walk that drops a part |
-| P864 (#1230) the speaker socket | the sound walk, on any board |
+| card | which walk it stops | what it stands on |
+| --- | --- | --- |
+| P865 (#1231) the look names the board | every walk with a board: bench safety | a walk row: walk 2, row 3 |
+| P864 (#1230) the speaker socket | the sound walk, on any board | a walk row: walk 3, row 2. A workaround exists: a separate speaker terminal. |
+| N1 board.tsx replaced | a walk that changes its design | rework on the PO's D5. Walk 3, row 13 shows it. |
+| N2a the list of bench changes | a walk that changes its design | rework on the PO's D5. No walk row shows it. |
+| N4 the requirements' entries | a walk that drops a part | rework on the PO's D5. No walk row shows it. |
+| N3 the console read | a walk that checks a must line on the bench | D14, and walk 2, row 7 |
+
+Only P865 stopped a walk with no way around. The other five stand on the PO's words "when we fix the gaps and
+bugs from these runs" and on D5 and D14.
 
 P868 (#1235, a pin on a bus line) stops no basic walk. It stops only a walk that describes wiring that exists,
 which is the sound walk on the game box. It follows the six, and N8a follows it.
@@ -551,7 +597,7 @@ Ready holds 4 cards of spark's lane. The recommended top of Ready:
 | 3 | P827 (#1185) | The PO's D11 of P867. N5 (the true marks) goes just before it. |
 | 4 | P828 (#1186) | The PO's D11 of P867. N6 (the spike) goes before it. |
 
-Next, each entering on top when a place frees: P248 (#270, after its bench row), N2a, N4, P864, then P868.
+Next, each entering on top when a place frees: N3 (after its first bench row), N2a, N4, P864, then P868.
 N7 to N11 follow P828. P862 (#1228) and P863 (#1229) stop no walk and stay in Idea.
 
 **(b) Ready today** holds P711 (#960), P827 (#1185), P828 (#1186) and P829 (#1187). Both moves below are the
@@ -564,20 +610,20 @@ PO's to order (brief.md D11: "P829's place in Ready is his to order"). They are 
 
 - Q1. Ready: do P711 and P829 leave Ready, and do P827 and P828 keep places 3 and 4 under two blockers?
   Recommended: yes to both. Nothing is moved before his word.
-- Q2. May the 10 cards be filed as written, and the open cards get the lines of section 5? Recommended: yes.
+- Q2. May the 11 cards be filed as written, and the open cards get the lines of section 5? Recommended: yes.
 - Q3. The slices. Recommended: "v0.10 The basic journey" for the fixes to a command (N1, N2a, N4), and "Views and
   editors", where P867 and P873 sit, for the flow's new behaviour (N5 to N11). No slice is widened (brief.md D15).
 - Q4. Is a deploy by spark a witness that the sheet before it was wired? Recommended: no. The deploy record says
   nothing of the sheet, and walk 3 deployed to a box wired for another project. The witness goes to P873.
 - Q5. Row C10: do the flow's commands keep `${CLAUDE_PLUGIN_ROOT}`? Recommended: yes for now.
-- Q6. P248 needs his bench twice, about ten minutes each: the row that names the cause, then the watch itself.
+- Q6. N3 needs his bench twice, about ten minutes each: the row that names the cause, then the watch itself.
   Recommended: both at the start of the first new walk's session.
 - Q7. A start step for every walk, which does not exist today: free the earlier walks' holds with `/spark:drawer`
   and say which. Recommended: yes, as a line on P365 (#467). It does not free a hold of a project that is no walk.
 - Q8. N8a: a kept pin no longer fits a new signal's needs. Recommended: move the fewest pins and name each (D7).
-- Q9. P816 (#1168) asks to remove more after an unfinished build, and P867's D6 says nothing is deleted and one
-  previous version is kept. Recommended: D6 stands, P816 becomes "named and marked out of date", and both are
-  decided with L2 when P873 is refined. Until then N1 covers board.tsx only.
+- Q9. P280's rule removes the sheet, `pins.py` and `dist/` of an earlier build, and P867's D6 says nothing is
+  deleted. Recommended: D6 stands. P816 (#1168) takes its "kept and named" way, and P280's rule is decided with L2
+  when P873 is refined. Until then N1 covers board.tsx only.
 - Q10. N2a: when is the list of bench changes cleared? Recommended: the sheet keeps the last list with the time
   of the sheet it counts from, until a build of another design replaces it. A second build of one design then no
   longer says "Nothing to change on the bench.", so the test at `tests/test_breadboard_record.py:64` changes with
@@ -588,7 +634,7 @@ PO's to order (brief.md D11: "P829's place in Ready is his to order"). They are 
 - No bench claim: which step stops `main.py`, the restarts per read, download mode after a look, and whether the
   USB serial is the MAC.
 - The council's counts were not run again: 2 of 15 and 6 of 15 moved signals, and 18 of 18 store records.
-- The bodies of P248 (#270), P816 (#1168), P663 (#892), P665 (#894), P309 (#375), P209 (#178), P340 (#434),
+- The bodies of P663 (#892), P665 (#894), P309 (#375), P209 (#178), P340 (#434),
   P734 (#1005), P735 (#1010), P827, P828 and P829. Their titles and states were read. Of P413 (#539) only the
   caveat lines were read.
 - Whether the deploy's question names the project folder (C15), and why the tally gave three answers (B2, C3).
