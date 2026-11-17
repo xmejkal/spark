@@ -261,29 +261,51 @@ class KeptPictureFiles:
     """
     Adapter: the schematic and the PCB that `tsci export` drew, as files of the project beside circuit.json (P828): the
     flow page reads them when it runs alone. An export that gave nothing removes the file an earlier build left, since
-    that file describes another design.
+    that file describes another design. Only a project keeps them (`active`). A file that cannot be written or removed
+    never stops the build or the page: it is one entry in `problems`, and the page shows that picture as not kept.
     """
 
     FILES = (tabbed_page.SCHEMATIC_FILE, tabbed_page.PCB_FILE)
 
-    def __init__(self, destination):
-        self.destination = Path(destination)
+    def __init__(self, destination, active=True):
+        self.destination, self.active, self.problems = Path(destination), active, []
 
     def keep(self, exports):
         """Write each export's SVG to its file, or remove the file when the export gave none: `exports` are
-        `tabbed_page.SvgExportResult`s in the order of `FILES`."""
-        for name, export in zip(self.FILES, exports):
-            path = self.destination / name
-            if export.svg is None:
-                if path.exists():  # a path under a file is no path: it is not there
-                    path.unlink()
-                continue
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(export.svg, encoding="utf-8")
+        `tabbed_page.SvgExportResult`s in the order of `FILES`. They come back as the page may show them: one whose file
+        could not be kept says why instead of its SVG."""
+        if not self.active:
+            return list(exports)
+        return [self._keep_one(self.destination / name, export) for name, export in zip(self.FILES, exports)]
 
     def drop(self):
         """Remove both files: a run that drew no page leaves no picture of an earlier design."""
-        self.keep([tabbed_page.SvgExportResult(None, None)] * len(self.FILES))
+        for name in self.FILES if self.active else ():
+            self._remove(self.destination / name)
+
+    def _keep_one(self, path, export):
+        if export.svg is None:
+            self._remove(path)
+            return export
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(export.svg, encoding="utf-8")
+        except OSError as refused:
+            return tabbed_page.SvgExportResult(None, self._problem(path, refused))
+        return export
+
+    def _remove(self, path):
+        try:
+            if path.exists():  # a path under a file is no path: it is not there
+                path.unlink()
+        except OSError as refused:
+            self._problem(path, refused)
+
+    def _problem(self, path, refused):
+        """Note one file that could not be kept, as a kept entry; the sentence is what the page says of its picture."""
+        why = "its file cannot be kept (%s)" % (refused.strerror or type(refused).__name__)
+        self.problems.append({"file": str(path), "did": "not kept", "why": why, "line": "not kept: %s (%s)" % (path, why)})
+        return why
 
 
 def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
@@ -296,18 +318,20 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     """
     page = Path(destination) / tabbed_page.TabbedHtmlPage.FILE_NAME
     why = why_no_page(destination, stages, kept)
-    pictures = KeptPictureFiles(destination)
+    project = _is_project(destination)
+    pictures = KeptPictureFiles(destination, project)
     if why:
         pictures.drop()
+        kept.extend(pictures.problems)
         return _left_from_earlier(page, tabbed_page.TabbedHtmlPage.NOUN, why)
     circuit = Path(destination) / sheet.CIRCUIT
-    exports = [exporter.export_svg(circuit, form) for form in ("schematic-svg", "pcb-svg")]
+    exports = pictures.keep([exporter.export_svg(circuit, form) for form in ("schematic-svg", "pcb-svg")])
+    kept.extend(pictures.problems)
     tabs = [_breadboard_tab(destination, kept), tabbed_page.exported_tab("Schematic", exports[0]),
             tabbed_page.exported_tab("PCB", exports[1])]
-    flow = flow_page if flow_page is not None and _is_project(destination) else None
+    flow = flow_page if flow_page is not None and project else None
     why = tabbed_page.TabbedHtmlPage.PURPOSE_MESSAGE
     try:
-        pictures.keep(exports)
         if flow is not None:
             page, why = flow(destination, tabs)
         else:

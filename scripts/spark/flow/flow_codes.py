@@ -74,8 +74,11 @@ NOT_DRAWN_BECAUSE = "Not drawn, because %s."
 #: The wiring section of the page (P828, #1186): its heading, the sentence under it, and the words of the step links. A
 #: step's label says where it goes, for a screen reader.
 WIRING_HEADING = "Wiring"
-WIRING_INTRO = ("Read the lines before power first. In the Breadboard picture below, each jumper has its step's number "
-                "and colour: find the holes there.")
+WIRING_INTRO = "Read the lines before power first."
+#: Said only when the breadboard picture is drawn: its jumpers carry their step's number and color (SvgBreadboardDiagram).
+WIRING_PICTURE_INTRO = "In the Breadboard picture below, each jumper has its step's number and color: find the holes there."
+WIRING_UNREADABLE = "The wiring could not be read from the build's files. Run the build again with --keep."
+BREADBOARD_TITLE = "Breadboard"
 ONE_AT_A_TIME = "One at a time: start at step 1"
 STEP_OF = "Step %d of %d"
 BACK, NEXT, ALL_STEPS, PICTURE = "Back", "Next", "All steps", "Picture"

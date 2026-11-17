@@ -26,19 +26,17 @@ PAGE_FIX = "make the project folder writable and run it again"
 #: Value: what `write_page` wrote: the path, the masked phases and where the project stands.
 Written = namedtuple("Written", "path phases stands_at")
 #: The titles of the pictures, in the order of a build's three tabs.
-BREADBOARD_TITLE, SCHEMATIC_TITLE, PCB_TITLE = "Breadboard", "Schematic", "PCB"
+BREADBOARD_TITLE, SCHEMATIC_TITLE, PCB_TITLE = flow_codes.BREADBOARD_TITLE, "Schematic", "PCB"
 #: Value: what a page shows of the project besides its phases: its pictures and its wiring (a PageWiring or None).
 PageParts = namedtuple("PageParts", "pictures wiring")
 #: Value: one picture the project keeps as a file: its title, the file (in the project) and what to say when it is not there.
 KeptPicture = namedtuple("KeptPicture", "title file missing")
 #: The pictures a project keeps, in the order of a build's three tabs: the sheet's step writes the first, the build's keep
-#: step the other two (`tabbed_page.KEPT_EXPORTS`).
+#: step the other two (`tabbed_page.SCHEMATIC_FILE` and `PCB_FILE`).
 KEPT_PICTURES = (KeptPicture(BREADBOARD_TITLE, Path(SvgBreadboardDiagram.FILE_NAME),
                              flow_codes.NO_PICTURE_FILE % SvgBreadboardDiagram.FILE_NAME),
                  KeptPicture(SCHEMATIC_TITLE, tabbed_page.SCHEMATIC_FILE, flow_codes.NOT_DRAWN_HERE),
                  KeptPicture(PCB_TITLE, tabbed_page.PCB_FILE, flow_codes.NOT_DRAWN_HERE))
-#: What stops the wiring from being read: a refusal of the sheet, and what a circuit.json that is no circuit raises.
-WIRING_REFUSALS = sheet.REFUSALS + (ValueError, KeyError, TypeError)
 
 
 class FlowPageStore:
@@ -64,15 +62,15 @@ def kept_pictures(project):
 
 
 def kept_wiring(project):
-    """The PageWiring of a built project, or why there is none (a refusal's own words, or whatever a broken circuit.json
-    raises). None when the project has no requirements.json: there is nothing to wire."""
+    """The PageWiring of a built project, or why there is none: a refusal of the sheet in its own words, anything else (a
+    broken circuit.json) in one fixed sentence. None when the project has no requirements.json: there is nothing to wire."""
     requirements = Path(project) / REQUIREMENTS_FILE
     if not requirements.is_file():
         return None
     try:
         data = sheet.wiring_data(requirements)
-    except WIRING_REFUSALS as stopped:
-        return PageWiring([], [], [], str(stopped))
+    except Exception as stopped:  # noqa: BLE001  a circuit.json can hold anything: whatever it raises, the page is written
+        return PageWiring([], [], [], str(stopped) if isinstance(stopped, sheet.REFUSALS) else flow_codes.WIRING_UNREADABLE)
     return PageWiring([(step.number, step.words) for step in data.steps], [item._asdict() for item in data.before_power.items],
                       list(data.before_power.records), None)
 

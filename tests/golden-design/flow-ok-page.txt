@@ -72,7 +72,7 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 </section>
 <section id="wiring">
 <h2>Wiring</h2>
-<p>Read the lines before power first. In the Breadboard picture below, each jumper has its step&#x27;s number and colour: find the holes there.</p>
+<p>Read the lines before power first.</p>
 <h3>Before you power it</h3>
 <ul>
 <li>TactileButton A has no resistor: the firmware must pull it up with Pin.PULL_UP, as <code>pins.py</code> says (P204)</li>
@@ -85,15 +85,15 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <p>Each record whole, with what it asks of the board: <code>parts.py --show led-red-5mm</code>, <code>parts.py --show tactile-button</code>.</p>
 <p><a href="#step-1">One at a time: start at step 1</a></p>
 <ol id="steps">
-<li id="step-1" value="1" tabindex="-1">Put the board in the breadboard, each pin in its own row.<div class="nav">Step 1 of 9 <a href="#step-2" aria-label="Next: step 2">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
-<li id="step-2" value="2" tabindex="-1">Put TactileButton in the breadboard, each pin in its own row.<div class="nav">Step 2 of 9 <a href="#step-1" aria-label="Back to step 1">Back</a> <a href="#step-3" aria-label="Next: step 3">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
-<li id="step-3" value="3" tabindex="-1">Put LedRed5mm in the breadboard, each pin in its own row.<div class="nav">Step 3 of 9 <a href="#step-2" aria-label="Back to step 2">Back</a> <a href="#step-4" aria-label="Next: step 4">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
-<li id="step-4" value="4" tabindex="-1">Put R1 (330Ω in series with LedRed5mm A), end 1, in a free row.<div class="nav">Step 4 of 9 <a href="#step-3" aria-label="Back to step 3">Back</a> <a href="#step-5" aria-label="Next: step 5">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
-<li id="step-5" value="5" tabindex="-1">Run a jumper from board A5 to the row of R1 end 1.<div class="nav">Step 5 of 9 <a href="#step-4" aria-label="Back to step 4">Back</a> <a href="#step-6" aria-label="Next: step 6">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
-<li id="step-6" value="6" tabindex="-1">Run a jumper from board D3 to the row of TactileButton A.<div class="nav">Step 6 of 9 <a href="#step-5" aria-label="Back to step 5">Back</a> <a href="#step-7" aria-label="Next: step 7">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
-<li id="step-7" value="7" tabindex="-1">Run a jumper from board GND to the row of LedRed5mm K.<div class="nav">Step 7 of 9 <a href="#step-6" aria-label="Back to step 6">Back</a> <a href="#step-8" aria-label="Next: step 8">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
-<li id="step-8" value="8" tabindex="-1">Run a jumper from the row of TactileButton B (either leg of the other pair) to the row of LedRed5mm K.<div class="nav">Step 8 of 9 <a href="#step-7" aria-label="Back to step 7">Back</a> <a href="#step-9" aria-label="Next: step 9">Next</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
-<li id="step-9" value="9" tabindex="-1">Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A.<div class="nav">Step 9 of 9 <a href="#step-8" aria-label="Back to step 8">Back</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
+<li id="step-1" value="1" tabindex="-1">Put the board in the breadboard, each pin in its own row.<div class="nav">Step 1 of 9 <a href="#step-2" aria-label="Next: step 2">Next</a> <a href="#wiring">All steps</a></div></li>
+<li id="step-2" value="2" tabindex="-1">Put TactileButton in the breadboard, each pin in its own row.<div class="nav">Step 2 of 9 <a href="#step-1" aria-label="Back to step 1">Back</a> <a href="#step-3" aria-label="Next: step 3">Next</a> <a href="#wiring">All steps</a></div></li>
+<li id="step-3" value="3" tabindex="-1">Put LedRed5mm in the breadboard, each pin in its own row.<div class="nav">Step 3 of 9 <a href="#step-2" aria-label="Back to step 2">Back</a> <a href="#step-4" aria-label="Next: step 4">Next</a> <a href="#wiring">All steps</a></div></li>
+<li id="step-4" value="4" tabindex="-1">Put R1 (330Ω in series with LedRed5mm A), end 1, in a free row.<div class="nav">Step 4 of 9 <a href="#step-3" aria-label="Back to step 3">Back</a> <a href="#step-5" aria-label="Next: step 5">Next</a> <a href="#wiring">All steps</a></div></li>
+<li id="step-5" value="5" tabindex="-1">Run a jumper from board A5 to the row of R1 end 1.<div class="nav">Step 5 of 9 <a href="#step-4" aria-label="Back to step 4">Back</a> <a href="#step-6" aria-label="Next: step 6">Next</a> <a href="#wiring">All steps</a></div></li>
+<li id="step-6" value="6" tabindex="-1">Run a jumper from board D3 to the row of TactileButton A.<div class="nav">Step 6 of 9 <a href="#step-5" aria-label="Back to step 5">Back</a> <a href="#step-7" aria-label="Next: step 7">Next</a> <a href="#wiring">All steps</a></div></li>
+<li id="step-7" value="7" tabindex="-1">Run a jumper from board GND to the row of LedRed5mm K.<div class="nav">Step 7 of 9 <a href="#step-6" aria-label="Back to step 6">Back</a> <a href="#step-8" aria-label="Next: step 8">Next</a> <a href="#wiring">All steps</a></div></li>
+<li id="step-8" value="8" tabindex="-1">Run a jumper from the row of TactileButton B (either leg of the other pair) to the row of LedRed5mm K.<div class="nav">Step 8 of 9 <a href="#step-7" aria-label="Back to step 7">Back</a> <a href="#step-9" aria-label="Next: step 9">Next</a> <a href="#wiring">All steps</a></div></li>
+<li id="step-9" value="9" tabindex="-1">Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A.<div class="nav">Step 9 of 9 <a href="#step-8" aria-label="Back to step 8">Back</a> <a href="#wiring">All steps</a></div></li>
 </ol>
 </section>
 <section id="pictures"><h2>Pictures</h2>

@@ -557,12 +557,23 @@ class TheWiringTest(unittest.TestCase):
         self.assertEqual(len(Parsed(text).rail), 1)
 
     def test_the_section_holds_its_heading_the_fixed_sentence_the_lines_the_link_and_the_steps_in_that_order(self):
-        text = page_of_wiring(PageWiring(THREE, [an_item()], ["rec"], None))
+        text = page_of_wiring(PageWiring(THREE, [an_item()], ["rec"], None), THREE_PICTURES)
         marks = ["<h2>Wiring</h2>", "<p>Read the lines before power first. In the Breadboard picture below, each jumper has its "
-                 "step&#x27;s number and colour: find the holes there.</p>", "<h3>Before you power it</h3>", "<ul>", "</ul>",
+                 "step&#x27;s number and color: find the holes there.</p>", "<h3>Before you power it</h3>", "<ul>", "</ul>",
                  "Each record whole", "One at a time: start at step 1", '<ol id="steps">']
         order = [text.index(mark) for mark in marks]
         self.assertEqual(order, sorted(order))
+
+    def test_the_picture_sentence_and_the_picture_links_need_a_drawn_breadboard(self):
+        undrawn = [Picture("Breadboard", None, "Not drawn"), Picture("Schematic", "<svg/>", None)]
+        for pictures, drawn in ((THREE_PICTURES, True), (undrawn, False), ([], False)):
+            with self.subTest(drawn=drawn, pictures=len(pictures)):
+                text = wiring_page(THREE, pictures=pictures)
+                section = wiring_section(text)
+                self.assertEqual("Breadboard picture below" in section, drawn)
+                self.assertEqual(">Picture</a>" in section, drawn)
+                self.assertIn("<p>Read the lines before power first.", section)
+                self.assertNotIn("Breadboard picture" if not drawn else "colour", section)
 
     def test_a_project_with_no_requirements_has_no_wiring_section_and_no_link(self):
         text = wiring_text_of(Path(tempfile.mkdtemp()))
@@ -648,6 +659,21 @@ class TheMissingWiringTest(unittest.TestCase):
                 text = self.says_why(a_project_with_circuit(broken))
                 self.assertIn('id="phase-build"', text)
 
+    def test_a_reason_that_is_not_the_sheet_s_is_one_fixed_sentence(self):
+        sentence = "The wiring could not be read from the build&#x27;s files. Run the build again with --keep."
+        for broken in ('[{"type": 5}]', '[{"type": "source_component", "ftype": "simple_chip"}]'):
+            with self.subTest(circuit=broken):
+                said = wiring_section(self.says_why(a_project_with_circuit(broken), sentence))
+                self.assertNotIn("expected string", said)
+                self.assertNotIn("&#x27;name&#x27;", said)
+
+    def test_a_refusal_of_the_sheet_keeps_its_own_words(self):
+        self.says_why(a_project_with_circuit("{}"), "is not a built circuit")
+
+    def test_a_circuit_json_nested_beyond_the_recursion_limit_never_stops_the_page(self):
+        text = self.says_why(a_project_with_circuit("[" * 100000 + "]" * 100000), "Run the build again with --keep.")
+        self.assertIn('id="phase-build"', text)
+
     def test_the_why_holds_no_absolute_path_of_the_project(self):
         project = a_built_project()
         shutil.rmtree(project / "dist")
@@ -722,6 +748,7 @@ class TheKeepStepTest(unittest.TestCase):
         self.assertEqual(len(Parsed(text).sections), 9)
 
     def test_the_keep_step_writes_the_schematic_and_pcb_files(self):
+        (self.project / ".spark").mkdir()
         self.keep()
         board = self.project / "dist" / "board"
         self.assertEqual((board / "schematic.svg").read_text(), FakeTscircuitExport().export_svg("c", "schematic-svg").svg)
@@ -729,6 +756,7 @@ class TheKeepStepTest(unittest.TestCase):
         self.assertNotEqual((board / "schematic.svg").read_text(), (board / "pcb.svg").read_text())
 
     def test_an_export_that_gave_nothing_removes_the_earlier_file(self):
+        (self.project / ".spark").mkdir()
         board = self.project / "dist" / "board"
         board.mkdir(parents=True)
         (board / "schematic.svg").write_text("<svg>of an earlier design</svg>")
@@ -740,12 +768,47 @@ class TheKeepStepTest(unittest.TestCase):
         self.assertIn("fake pcb-svg", (board / "pcb.svg").read_text())
 
     def test_a_build_that_did_not_finish_removes_both_files(self):
+        (self.project / ".spark").mkdir()
         board = self.project / "dist" / "board"
         board.mkdir(parents=True)
         for name in ("schematic.svg", "pcb.svg"):
             (board / name).write_text("<svg>of an earlier design</svg>")
         kept_files.keep_tabbed_page(self.project, [Stage("build", COULD_NOT_RUN)], self.kept, FakeTscircuitExport(), write_kept_page)
         self.assertEqual(sorted(path.name for path in board.iterdir()), [])
+
+    def test_a_picture_file_that_cannot_be_removed_never_stops_the_build(self):
+        board = self.project / "dist" / "board"
+        board.mkdir(parents=True)
+        (board / "schematic.svg").write_text("<svg>of an earlier design</svg>")
+        (self.project / ".spark").mkdir()
+        board.chmod(0o555)
+        self.addCleanup(board.chmod, 0o755)
+        entry = kept_files.keep_tabbed_page(self.project, [Stage("build", COULD_NOT_RUN)], self.kept, FakeTscircuitExport(), write_kept_page)
+        self.assertIn("did not finish", entry["why"])
+        problem = [each for each in self.kept if each["file"] == str(board / "schematic.svg")]
+        self.assertEqual([each["did"] for each in problem], ["not kept"])
+        self.assertIn("cannot be kept", problem[0]["line"])
+
+    def test_a_picture_file_that_cannot_be_written_never_blocks_the_page(self):
+        board = self.project / "dist" / "board"
+        (board / "schematic.svg").mkdir(parents=True)
+        (self.project / ".spark").mkdir()
+        entry = self.keep()
+        self.assertEqual(entry["did"], "wrote")
+        text = self.page.read_text()
+        self.assertEqual(text.count("data:image/svg+xml;base64,"), 2)
+        self.assertIn("its file cannot be kept", text)
+        self.assertEqual([each["did"] for each in self.kept if each["file"] == str(board / "schematic.svg")], ["not kept"])
+        self.assertIn("fake pcb-svg", (board / "pcb.svg").read_text())
+
+    def test_a_folder_that_is_no_project_keeps_no_picture_file_and_removes_none(self):
+        board = self.project / "dist" / "board"
+        board.mkdir(parents=True)
+        (board / "pcb.svg").write_text("<svg>of an earlier design</svg>")
+        self.keep()
+        kept_files.keep_tabbed_page(self.project, [Stage("build", COULD_NOT_RUN)], self.kept, FakeTscircuitExport(), write_kept_page)
+        self.assertEqual(sorted(path.name for path in board.iterdir()), ["pcb.svg"])
+        self.assertEqual((board / "pcb.svg").read_text(), "<svg>of an earlier design</svg>")
 
     def test_in_a_folder_that_is_no_project_the_page_stays_the_tabbed_one(self):
         entry = self.keep()

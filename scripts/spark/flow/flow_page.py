@@ -71,13 +71,14 @@ class WiringHtmlSection:
     def __init__(self):
         self.before_power = before_power.BeforePowerHtmlList()
 
-    def text(self, wiring, with_pictures):
+    def text(self, wiring, with_picture):
         """The section: its heading, then the reason there is nothing to show, or the sentence, the lines and the steps."""
         lines = ['<section id="wiring">', "<h2>%s</h2>" % _text(flow_codes.WIRING_HEADING)]
         if wiring.why_missing:
             return "\n".join(lines + ["<p>%s</p>" % _text(wiring.why_missing), "</section>"])
-        lines.append("<p>%s</p>" % _text(flow_codes.WIRING_INTRO))
-        lines += self._before_power(wiring) + self._steps(wiring.steps, with_pictures)
+        intro = flow_codes.WIRING_INTRO + (" " + flow_codes.WIRING_PICTURE_INTRO if with_picture else "")
+        lines.append("<p>%s</p>" % _text(intro))
+        lines += self._before_power(wiring) + self._steps(wiring.steps, with_picture)
         return "\n".join(lines + ["</section>"])
 
     def _before_power(self, wiring):
@@ -86,18 +87,18 @@ class WiringHtmlSection:
         return (["<h3>%s</h3>" % _text(before_power.HEADING), "<ul>"] + self.before_power.items(wiring.before_power) + ["</ul>"]
                 + [self.before_power.records_line(wiring.records)])
 
-    def _steps(self, steps, with_pictures):
+    def _steps(self, steps, with_picture):
         if not steps:
             return []
         start = '<p><a href="#step-%d">%s</a></p>' % (steps[0][0], _text(flow_codes.ONE_AT_A_TIME))
-        return [start, '<ol id="steps">'] + [self._step(each, steps, with_pictures) for each in steps] + ["</ol>"]
+        return [start, '<ol id="steps">'] + [self._step(each, steps, with_picture) for each in steps] + ["</ol>"]
 
-    def _step(self, step, steps, with_pictures):
+    def _step(self, step, steps, with_picture):
         number, words = step
-        return '<li id="step-%d" value="%d" tabindex="-1">%s%s</li>' % (number, number, _text(words), self._nav(step, steps, with_pictures))
+        return '<li id="step-%d" value="%d" tabindex="-1">%s%s</li>' % (number, number, _text(words), self._nav(step, steps, with_picture))
 
     @staticmethod
-    def _nav(step, steps, with_pictures):
+    def _nav(step, steps, with_picture):
         """The nav line of one step: where it stands, Back and Next (not on the first and the last), the list and the pictures."""
         numbers = [number for number, _words in steps]
         at = numbers.index(step[0])
@@ -107,7 +108,7 @@ class WiringHtmlSection:
         if at < len(numbers) - 1:
             links.append('<a href="#step-%d" aria-label="%s">%s</a>' % (numbers[at + 1], flow_codes.NEXT_LABEL % numbers[at + 1], flow_codes.NEXT))
         links.append('<a href="#wiring">%s</a>' % _text(flow_codes.ALL_STEPS))
-        links += ['<a href="#pictures">%s</a>' % _text(flow_codes.PICTURE)] if with_pictures else []
+        links += ['<a href="#pictures">%s</a>' % _text(flow_codes.PICTURE)] if with_picture else []
         return '<div class="nav">%s %s</div>' % (_text(flow_codes.STEP_OF % (at + 1, len(numbers))), " ".join(links))
 
 
@@ -136,7 +137,7 @@ class FlowHtmlPage:
         return "\n".join(head + [part for part in body if part] + ["</body>", "</html>"]) + "\n"
 
     def _open(self, page):
-        style = TabbedHtmlPage.token_styles() + self.STYLE + (WiringHtmlSection.STYLE if page.wiring else "")
+        style = TabbedHtmlPage.token_styles() + self.STYLE + (self.WIRING.STYLE if page.wiring else "")
         return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
                           '<meta name="viewport" content="width=device-width, initial-scale=1">',
                           '<title>%s</title>' % _text(page.title), '<style>%s</style>' % style, '</head>',
@@ -170,7 +171,8 @@ class FlowHtmlPage:
         return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</section>"])
 
     def _wiring(self, page):
-        return self.WIRING.text(page.wiring, bool(page.pictures)) if page.wiring else ""
+        drawn = any(each.title == flow_codes.BREADBOARD_TITLE and each.svg for each in page.pictures)
+        return self.WIRING.text(page.wiring, drawn) if page.wiring else ""
 
     def _pictures(self, pictures):
         """All the pictures in one section, in the order the page was given them, or nothing when there are none."""
