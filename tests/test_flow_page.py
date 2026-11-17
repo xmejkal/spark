@@ -436,6 +436,30 @@ class TheKeepStepTest(unittest.TestCase):
         files = [Path(entry["file"]).name for entry in entries]
         self.assertGreater(files.index("page.html"), files.index("sim"))
 
+    def test_a_flow_page_that_fails_leaves_the_build_s_exit_code_and_adds_one_entry(self):
+        # The refuter's case: a build record whose stages is no list, in a read-only .spark, so the record is not kept and the
+        # flow page reads the malformed one. The build still ends as it ends, with one "no page" line and no traceback.
+        import argparse
+        from fakes import run_build_board
+        project = Path(tempfile.mkdtemp()) / "project"
+        (project / ".spark").mkdir(parents=True)
+        shutil.copy(BUILT / "requirements.json", project / "requirements.json")
+        record = project / ".spark" / "build.json"
+        record.write_text('{"status": "ok", "stages": 5}')
+        work = Path(tempfile.mkdtemp())
+        (work / "dist" / "board").mkdir(parents=True)
+        (work / "dist" / "board" / "circuit.json").write_text("[]")
+        record.chmod(0o444)
+        (project / ".spark").chmod(0o555)
+        self.addCleanup((project / ".spark").chmod, 0o755)
+        args = argparse.Namespace(json=False, keep=project, requirements=project / "requirements.json")
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            code = run_build_board([Stage("build", OK, "fine")], args, work)
+        self.assertEqual(code, 0)
+        self.assertNotIn("Traceback", err.getvalue())
+        self.assertIn("not kept: ", err.getvalue())
+        self.assertEqual(err.getvalue().count("no page: the flow page could not be written (TypeError)"), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

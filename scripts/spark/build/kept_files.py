@@ -253,6 +253,10 @@ def why_no_page(destination, stages, kept):
     return None
 
 
+#: Why the flow page was not written when reading the project's files for it failed: the class of the failure, no traceback.
+FLOW_PAGE_FAILED = "the flow page could not be written (%s)"
+
+
 def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     """
     The page beside the kept board (P271, #307): the breadboard picture the sheet's step just wrote, and tscircuit's
@@ -278,6 +282,9 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
             page.write_text(tabbed_page.TabbedHtmlPage().text(tabs, title=title), encoding="utf-8")
     except OSError as refused:
         return {"file": str(page), "did": "not written", "why": str(refused), "line": "no page: %s" % refused}
+    except Exception as failed:  # noqa: BLE001  the flow page reads the project's files: whatever they hold, the build ends as it ends
+        why = FLOW_PAGE_FAILED % type(failed).__name__
+        return {"file": str(page), "did": "not written", "why": why, "line": "no page: %s" % why}
     why = (flow or tabbed_page.TabbedHtmlPage).PURPOSE_MESSAGE
     return {"file": str(page), "did": "wrote", "why": why, "line": "wrote %s — %s" % (page, why)}
 
