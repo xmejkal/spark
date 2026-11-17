@@ -187,7 +187,8 @@ class LookAtBoard(Operation):
         differs = bool(known and mac) and known_board.comparable_key(mac) != known_board.comparable_key(known.mac)
         if differs and not switch:
             other = known_board.OTHER_AFTER_MESSAGE % (report.port, known_board.mac_ends(mac), known_board.mac_ends(known.mac), known.at[:10])
-            fix = known_board.OTHER_AFTER_PORT_FIX if passed.state == CANNOT_TELL else known_board.OTHER_AFTER_FIX
+            fix = known_board.OTHER_AFTER_FIX if passed.state != CANNOT_TELL else known_board.OTHER_AFTER_PORT_FIX if passed.row \
+                else known_board.OTHER_AFTER_UNLISTED_FIX % self.known.find_path(project)
             found = Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, other, fix)
             return result._replace(data=dict(result.data, token=None), findings=list(result.findings) + [found], next=[],
                                    lines=board_look.report_lines(report, token=False) + [INDENT + printable(other)])

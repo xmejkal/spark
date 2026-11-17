@@ -103,6 +103,15 @@ def esptool_said(stderr):
     return next((line.strip() for line in (stderr or "").splitlines() if line.startswith(ESPTOOL_ERROR)), None)
 
 
+#: macOS lists a USB serial port twice, as /dev/cu.<name> (the one mpremote lists) and /dev/tty.<name>.
+TTY_PREFIX, CU_PREFIX = "/dev/tty.", "/dev/cu."
+
+
+def node_name(device):
+    """`device` as the list names it: a macOS /dev/tty.<name> becomes /dev/cu.<name>, the same port (P865, the alias)."""
+    return CU_PREFIX + device[len(TTY_PREFIX):] if device.startswith(TTY_PREFIX) else device
+
+
 class PortFinder:
     """The boards on USB. It runs mpremote's `devs`, which only lists, never opens a port or runs code on a board."""
 
@@ -136,7 +145,7 @@ class PortFinder:
         if not port:
             return self.require_one_board("look.py")
         try:
-            return next((row for row in self.nodes() if row.device == port), None)
+            return next((row for row in self.nodes() if node_name(row.device) == node_name(port)), None)
         except LookStopError:
             return None
 

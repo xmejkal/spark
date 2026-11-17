@@ -49,6 +49,7 @@ REPLACE_WHY = " If it is another board, spark makes it this project's board in p
 NO_SERIAL_WHY = "This board reports no USB serial, so spark cannot tell it from another board before it reads it. It asks every time."
 FIRMWARE_WHY = ("This board's USB serial is set by its firmware, so spark cannot tell it from another board before it reads it. "
                 "It asks every time.")
+KEPT_FIRMWARE_WHY = "The kept board's USB serial was set by its firmware, so spark cannot tell this board from it before it reads it."
 SWITCH_WHY = "After you say yes, spark reads this board and keeps it as this project's board, in place of the kept one."
 ANSWER_FIX = ('ask the person in this conversation, and name the port and the restart. Only after their yes to that, write '
               '{"replies": {"%s": true}} (the JSON value true) to a file of your own outside the project, and run the next step '
@@ -60,9 +61,11 @@ OTHER_BEFORE_FIX = "plug in this project's board, or say yes to read this board"
 OTHER_AFTER_MESSAGE = ("The board on %s (MAC ends %s) is not the kept board (its MAC ends %s, kept since %s). "
                        "It did restart: a read restarts the board.")
 OTHER_AFTER_FIX = "plug in this project's board, then run look.py again"
-#: The fix after a read on a --port that the list does not hold or that shows no USB serial: the look without --port asks,
-#: and a yes replaces the board.
+#: The fix after a read on a listed --port that shows no USB serial: the look without --port asks, and a yes replaces the
+#: board. On a port the list does not hold, the record to remove is named instead (OTHER_AFTER_UNLISTED_FIX).
 OTHER_AFTER_PORT_FIX = "run look.py without --port and say yes to make this board the project's"
+OTHER_AFTER_UNLISTED_FIX = ("plug in this project's board, then run look.py again. If this board replaces it, remove spark's "
+                            "record of the old one, %s, then run look.py again and say yes")
 NO_MESSAGE, NO_FIX = "You said no. The board was not read and nothing was kept.", "run look.py again when you want to read it"
 KEPT_MESSAGE = "kept: spark remembers the board on %s (MAC ends %s) as this project's board"
 REPLACED_MESSAGE = "kept: the board on %s (MAC ends %s) is now this project's board, in place of the old one (MAC ended %s)"
@@ -99,14 +102,24 @@ def _firmware_set(row):
     return _vendor(row) == ESPRESSIF_VENDOR and not re.fullmatch(MAC_PART, serial_key(row)[:MAC_KEY_LENGTH])
 
 
+def _why(state, row):
+    """Why the look asks about the board on `row` in `state`: another board, no serial, a serial its firmware set, a first
+    look, or (CANNOT_TELL with a MAC-shaped serial) a kept board whose serial its firmware set."""
+    if state == OTHER:
+        return SWITCH_WHY
+    if not serial_key(row):
+        return NO_SERIAL_WHY
+    if _firmware_set(row):
+        return FIRMWARE_WHY
+    return FIRST_WHY if state == NONE else KEPT_FIRMWARE_WHY
+
+
 def question_for(state, row, port, known):
     """The look's Question before it reads the board on `port`, listed as `row`: SWITCH_BOARD when `state` is OTHER, else
     READ_BOARD. Its `why` says why the look asks: a first look, no serial, or a serial that the board's firmware set; with a
     board `known`, a CANNOT_TELL `why` says that a yes to another board makes it the project's board."""
     key = serial_key(row)
-    why = SWITCH_WHY if state == OTHER else FIRMWARE_WHY if key and (state != NONE or _firmware_set(row)) \
-        else FIRST_WHY if state == NONE else NO_SERIAL_WHY
-    why += REPLACE_WHY if state == CANNOT_TELL and known else ""
+    why = _why(state, row) + (REPLACE_WHY if state == CANNOT_TELL and known else "")
     text = (SWITCH_QUESTION if state == OTHER else READ_QUESTION) % (port, row.product, named(row))
     return Question((SWITCH_BOARD if state == OTHER else READ_BOARD) % board_token(key or port), text, YES_NO, PERSON, why)
 

@@ -104,14 +104,14 @@
  {
   "file": "scripts/spark/bench/known_board.py",
   "name": "H1: the cannot-tell question does not say that a yes replaces the kept board",
-  "find": "    why += REPLACE_WHY if state == CANNOT_TELL and known else \"\"",
-  "replace": "    why += \"\""
+  "find": "(REPLACE_WHY if state == CANNOT_TELL and known else \"\")",
+  "replace": "(\"\")"
  },
  {
   "file": "scripts/spark/bench/look_at_board.py",
   "name": "H1: a named port that stops as another board does not name the way out",
-  "find": "            fix = known_board.OTHER_AFTER_PORT_FIX if passed.state == CANNOT_TELL else known_board.OTHER_AFTER_FIX",
-  "replace": "            fix = known_board.OTHER_AFTER_FIX"
+  "find": "known_board.OTHER_AFTER_FIX if passed.state != CANNOT_TELL else",
+  "replace": "known_board.OTHER_AFTER_FIX if True else"
  },
  {
   "file": "scripts/spark/bench/look_at_board.py",
@@ -178,5 +178,59 @@
   "name": "N1: any named --port skips the question again, a listed firmware serial too",
   "find": "            unseen = look.port and not known_board.serial_key(row)",
   "replace": "            unseen = look.port and state == CANNOT_TELL"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "R1: a MAC-shaped serial with a firmware-serial record is told that its own firmware set it",
+  "find": "    if _firmware_set(row):\n        return FIRMWARE_WHY",
+  "replace": "    if True:\n        return FIRMWARE_WHY"
+ },
+ {
+  "file": "scripts/spark/bench/board_look.py",
+  "name": "R2: a /dev/tty. alias of a listed port counts as unlisted again",
+  "find": "if node_name(row.device) == node_name(port)), None)",
+  "replace": "if row.device == port), None)"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "R3: an unlisted port is sent to a look without --port",
+  "find": "known_board.OTHER_AFTER_PORT_FIX if passed.row \\",
+  "replace": "known_board.OTHER_AFTER_PORT_FIX if True \\"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "E1: a look with --port leaves the yes in the file",
+  "find": "            if replies:\n                RepliesStore(replies).clear(known_board.KEY_PREFIX)",
+  "replace": "            if replies and not port:\n                RepliesStore(replies).clear(known_board.KEY_PREFIX)"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "E2: any serial of 12 characters or more is named as a MAC",
+  "find": "_vendor(row) == ESPRESSIF_VENDOR and len(key) >= MAC_KEY_LENGTH",
+  "replace": "len(key) >= MAC_KEY_LENGTH"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "E3: the next step drops --ignore-older-runs",
+  "find": "((IGNORE_OLDER_RUNS_FLAG, \"ignore_older_runs\"), (NO_SIMULATION_FLAG, \"no_simulation\"))",
+  "replace": "((NO_SIMULATION_FLAG, \"no_simulation\"),)"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "E4: the replace sentence comes with no kept board",
+  "find": "(REPLACE_WHY if state == CANNOT_TELL and known else \"\")",
+  "replace": "(REPLACE_WHY if state == CANNOT_TELL else \"\")"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "E5: the replace sentence comes on every question about a kept board",
+  "find": "(REPLACE_WHY if state == CANNOT_TELL and known else \"\")",
+  "replace": "(REPLACE_WHY if known else \"\")"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "E6: the envelope drops the kept board's two bytes",
+  "find": "\"mac_ends\": known_board.mac_ends(known.mac) if known else None",
+  "replace": "\"mac_ends\": None"
  }
 ]

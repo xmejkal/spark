@@ -358,6 +358,53 @@ class TheReviewOfPullRequest1264Test(KnownBoardCase):
         self.assertEqual((stat.S_IMODE(path.stat().st_mode), stat.S_IMODE(path.parent.stat().st_mode)), (0o600, 0o700))
 
 
+class TheLastReviewRoundTest(KnownBoardCase):
+    """P865's last review round: a true `why` (R1), a tty alias of a listed port (R2), a true fix (R3), and six pins (E1 to E6)."""
+
+    def test_r1_a_board_with_a_mac_shaped_serial_is_not_told_that_its_firmware_set_it(self):
+        self.write_record(usb_key=None)
+        question = self.envelope(NATIVE_B, mac=MAC_B)[1]["data"]["open"][0]
+        self.assertIn("MAC ends 12:34", question["text"])
+        self.assertNotIn("This board's USB serial is set by its firmware", question["why"])
+        self.assertNotIn("asks every time", question["why"])
+
+    def test_r2_a_tty_alias_of_a_listed_port_is_asked(self):
+        code, envelope, read = self.envelope(NATIVE_A, "--port", "/dev/tty.usbmodem101")
+        self.assertEqual((code, read, self.codes(envelope)), (2, [], ["needs_reply"]))
+
+    def test_r3_another_board_on_an_unlisted_port_is_not_sent_to_a_look_without_port(self):
+        self.keep(NATIVE_A)
+        envelope = self.envelope(NATIVE_A, "--port", "/dev/cu.nowhere", mac=MAC_B, ask=False)[1]
+        other = [item for item in envelope["unchecked"] if item["code"] == "other_board"]
+        self.assertNotIn("without --port", other[0]["fix"])
+
+    def test_e1_the_yes_is_used_also_by_a_look_with_port(self):
+        yes = self.say_yes(self.envelope(NATIVE_A, "--port", PORT)[1])
+        self.assertEqual(len(self.envelope(NATIVE_A, "--port", PORT, replies_file=yes)[2]), 1)
+        self.assertEqual(list(json.loads(yes.read_text())["replies"].values()), [None])
+
+    def test_e2_a_bridge_serial_of_twelve_characters_or_more_is_no_mac(self):
+        row = Port("/dev/cu.usbserial-0123", "0123456789ABCDEF", "10c4:ea60", "CP2102N USB to UART Bridge Controller")
+        self.assertEqual(known_board.named(row), "USB serial ends CDEF")
+
+    def test_e3_the_next_step_keeps_ignore_older_runs(self):
+        self.assertIn("--ignore-older-runs", self.envelope(NATIVE_A, "--ignore-older-runs")[1]["next"][0]["argv"])
+
+    def test_e4_no_replace_sentence_when_no_board_is_kept(self):
+        self.assertNotIn("in place of", self.envelope(NO_SERIAL)[1]["data"]["open"][0]["why"])
+
+    def test_e5_no_replace_sentence_on_a_first_question_or_a_kept_board(self):
+        row = Port(PORT, MAC_A, "303a:1001", "Espressif USB JTAG/serial debug unit")
+        known = known_board.KnownBoard("/p", MAC_A, None, "xiao-esp32-c6", "a test", "2026-11-17T18:00:00+01:00")
+        for state, kept in (("none", None), ("same", known)):
+            with self.subTest(state=state):
+                self.assertNotIn("in place of", known_board.question_for(state, row, PORT, kept).why)
+
+    def test_e6_the_envelope_names_the_kept_board_by_its_last_two_bytes(self):
+        self.keep(NATIVE_A)
+        self.assertEqual(self.envelope(NATIVE_B, mac=MAC_B)[1]["data"]["known_board"], {"state": "other", "mac_ends": "ee:ff"})
+
+
 class TheBenchBuilderTest(unittest.TestCase):
     """The bench's builder answers from the --replies file, as research's does (P865)."""
 

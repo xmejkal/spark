@@ -50,10 +50,10 @@ a prompt. The template is written for what stays open, as in run 1.
 
 ## The look's question
 
-Before `look.py` reads a board, it asks the person, because the read restarts the board. It asks once per board, and
-then remembers the board for the project in the person's store, never in the project. The key is
+Before `look.py` reads a board, it asks the person, because the read restarts the board. It asks once per board, except for the two rows of
+the table below that are asked every time, and then remembers the board for the project in the person's store, never in the project. The key is
 `look.read_board.<id>`, or `look.switch_board.<id>` for a board that is not the kept one. `<id>` is an id made from the
-serial: copy the key from `data.open`. The text names the port and the restart. `data.known_board` holds the `state` and the kept board's
+serial, or from the port when the board has no serial: copy the key from `data.open`. The text names the port and the restart. `data.known_board` holds the `state` and the kept board's
 `mac_ends`. A MAC is the board's own address, six bytes; spark shows only the last two.
 
 Ask the person in this conversation. Name the port and say that the board restarts. Write `true` only after they say
