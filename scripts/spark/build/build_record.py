@@ -28,6 +28,8 @@ OWN_FILES = ("board.tsx",)
 PREVIOUS_DIR = Path(".spark") / "previous"
 #: The end of the name of a file made beside its target before it is put in place.
 STAGE_SUFFIX = ".new"
+#: What a stage that is in the way says: the file's path and what to do (P874).
+STAGE_IN_THE_WAY = "%s is in the way: delete it if it is not yours"
 
 
 def sha256_of(path):
@@ -75,18 +77,27 @@ class BuildRecordStore:
 
 
 class StageTakenError(FileExistsError):
-    """Error: a stage's name is already taken by a file, a link or a folder; `filename` is the stage's path."""
+    """Error: a stage's name is already taken by a file, a link or a folder; `filename` is the stage's path, and it says so."""
+
+    def __str__(self):
+        return STAGE_IN_THE_WAY % self.filename
 
 
 class StagedFile:
     """
     Adapter: a copy of `source` made beside its target under the name `staged` (P874), then put in place whole by
     `commit`. `make` creates the stage exclusively and follows no link, so a file or a link already at that name is
-    never written through or removed: it raises OSError. `remove` takes away only a stage this object made.
+    never written through or removed: it raises OSError. `remove` takes away only a stage this object made. `from_bytes`
+    makes a stage from bytes in hand (P875): it has no source.
     """
 
-    def __init__(self, source, staged):
-        self.source, self.staged, self.made = Path(source), Path(staged), False
+    def __init__(self, source, staged, data=None):
+        self.source, self.staged, self.data, self.made = source and Path(source), Path(staged), data, False
+
+    @classmethod
+    def from_bytes(cls, staged, data):
+        """A stage that holds `data` once made."""
+        return cls(None, staged, data)
 
     def make(self):
         """Create the stage and copy the bytes of the source into it. OSError when the name is taken or the copy fails."""
@@ -96,7 +107,7 @@ class StagedFile:
             raise StageTakenError(taken.errno, taken.strerror, str(self.staged)) from None
         self.made = True
         with os.fdopen(descriptor, "wb") as out:
-            out.write(self.source.read_bytes())
+            out.write(self.source.read_bytes() if self.data is None else self.data)
 
     def commit(self, target):
         """Replace `target` with the stage in one step. OSError leaves both as they were."""

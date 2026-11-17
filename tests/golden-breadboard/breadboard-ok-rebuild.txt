@@ -12,7 +12,9 @@
 
 ## Wiring
 
-### Changes since the last build
+### Changes since the sheet spark wrote on <time>
+
+Count from that sheet only if you wired it. If you did not, follow the steps below: they are the whole wiring.
 
 - Take out LedRed5mm.
 - Take out R1, 330Ω in series with LedRed5mm A.
@@ -223,5 +225,174 @@ not kept: R1: it is not in the new circuit
    "14t.a",
    "6b.j"
   ]
- ]
+ ],
+ "at": "<time>",
+ "base": {
+  "steps": [
+   {
+    "key": [
+     "place",
+     "board"
+    ],
+    "anchor": null,
+    "kind": "place",
+    "source": "the board",
+    "to": "",
+    "tag": "",
+    "value": "",
+    "job": "",
+    "color": null,
+    "marks": ""
+   },
+   {
+    "key": [
+     "place",
+     "TactileButton"
+    ],
+    "anchor": null,
+    "kind": "place",
+    "source": "TactileButton",
+    "to": "",
+    "tag": "",
+    "value": "",
+    "job": "",
+    "color": null,
+    "marks": ""
+   },
+   {
+    "key": [
+     "place",
+     "LedRed5mm"
+    ],
+    "anchor": null,
+    "kind": "place",
+    "source": "LedRed5mm",
+    "to": "",
+    "tag": "",
+    "value": "",
+    "job": "",
+    "color": null,
+    "marks": ""
+   },
+   {
+    "key": [
+     "resistor",
+     "in series with LedRed5mm A",
+     "1"
+    ],
+    "anchor": [
+     "row",
+     "resistor",
+     "in series with LedRed5mm A",
+     "1"
+    ],
+    "kind": "leg",
+    "source": "R1 end 1 (in series with LedRed5mm A)",
+    "to": "a free row",
+    "tag": "R1",
+    "value": "330\u03a9",
+    "job": "in series with LedRed5mm A",
+    "color": null,
+    "marks": ""
+   },
+   {
+    "key": [
+     "board",
+     "board D8"
+    ],
+    "anchor": [
+     "row",
+     "resistor",
+     "in series with LedRed5mm A",
+     "1"
+    ],
+    "kind": "jumper",
+    "source": "board D8",
+    "to": "the row of R1 end 1 (in series with LedRed5mm A)",
+    "tag": "",
+    "value": "",
+    "job": "",
+    "color": "cyan",
+    "marks": ""
+   },
+   {
+    "key": [
+     "board",
+     "board D10"
+    ],
+    "anchor": [
+     "row",
+     "part",
+     "TactileButton A (either leg of one joined pair; a meter on continuity shows which legs are joined)"
+    ],
+    "kind": "jumper",
+    "source": "board D10",
+    "to": "the row of TactileButton A",
+    "tag": "",
+    "value": "",
+    "job": "",
+    "color": "blue",
+    "marks": ""
+   },
+   {
+    "key": [
+     "board",
+     "board GND"
+    ],
+    "anchor": [
+     "row",
+     "part",
+     "LedRed5mm K (the cathode, the shorter leg, by the flat of the rim)"
+    ],
+    "kind": "jumper",
+    "source": "board GND",
+    "to": "the row of LedRed5mm K",
+    "tag": "",
+    "value": "",
+    "job": "",
+    "color": "purple",
+    "marks": ""
+   },
+   {
+    "key": [
+     "part",
+     "TactileButton B (either leg of the other pair)"
+    ],
+    "anchor": [
+     "row",
+     "part",
+     "LedRed5mm K (the cathode, the shorter leg, by the flat of the rim)"
+    ],
+    "kind": "jumper",
+    "source": "the row of TactileButton B",
+    "to": "the row of LedRed5mm K",
+    "tag": "",
+    "value": "",
+    "job": "",
+    "color": "magenta",
+    "marks": ""
+   },
+   {
+    "key": [
+     "resistor",
+     "in series with LedRed5mm A",
+     "2"
+    ],
+    "anchor": [
+     "row",
+     "part",
+     "LedRed5mm A (the anode, the longer leg)"
+    ],
+    "kind": "leg",
+    "source": "R1 end 2 (in series with LedRed5mm A)",
+    "to": "the row of LedRed5mm A",
+    "tag": "R1",
+    "value": "330\u03a9",
+    "job": "in series with LedRed5mm A",
+    "color": null,
+    "marks": ""
+   }
+  ],
+  "at": "<time>"
+ }
 }

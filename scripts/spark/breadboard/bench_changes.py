@@ -16,12 +16,15 @@ been swapped when its value differs. A line names a resistor end by its job too,
 """
 
 import collections
+import datetime
 import json
-import os
 import re
 from pathlib import Path
 
 from spark.breadboard import wiring_steps
+from spark.build.build_record import STAGE_SUFFIX, StagedFile
+from spark.core import zone_time
+from spark.core.clock import SystemClock
 
 #: The codes of WiringChange. A code decides; ChangeList writes the words.
 ADDED, REMOVED, REROUTED, SWAPPED = "added", "removed", "rerouted", "swapped"
@@ -100,60 +103,110 @@ def describe(seated, colors=None):
     return found
 
 
+#: The steps of the last sheet whose wiring differed from the one after it, and the time spark wrote that sheet (None when
+#: an old record did not say): what a list of changes counts from.
+SheetBase = collections.namedtuple("SheetBase", "steps at")
+
+
+def _step(one):
+    """One RecordedStep from its dict in the file. KeyError, TypeError or ValueError when it is none."""
+    step = RecordedStep(tuple(one["key"]), tuple(one["anchor"]) if one["anchor"] else None, one["kind"], one["source"],
+                        one["to"], one["tag"], one["value"], one["job"], one["color"], one["marks"])
+    if not all(isinstance(part, str) for part in step.key + (step.anchor or ())):
+        raise ValueError("a key that is not a list of strings")
+    return step
+
+
+def _time(value):
+    """`value` when it is a time as `zone_time.stamp` writes it, or None; ValueError for anything else."""
+    if value is not None:
+        datetime.datetime.fromisoformat(value)
+    return value
+
+
 class WiringLog:
     """
     Value: what the last sheet told the person to wire, `steps` as [RecordedStep], and `drawn_jumpers`, the pairs of
-    holes (frozensets of two hole names) that spark drew itself in breadboard.json, not a jumper the person kept.
-    `why_unread` says why the file cannot be used, else None.
+    holes (frozensets of two hole names) that spark drew itself in breadboard.json, not a jumper the person kept. `at` is
+    the time of that sheet and `base` the SheetBase the list on it counts from, None for a first wiring built again
+    (P875). `why_unread` says why the file cannot be used, else None.
     """
 
     FILE_NAME = "wiring-record.json"
 
-    def __init__(self, steps, drawn_jumpers=(), why_unread=None):
+    def __init__(self, steps, drawn_jumpers=(), why_unread=None, at=None, base=None):
         self.steps = list(steps)
         self.drawn_jumpers = {frozenset(pair) for pair in drawn_jumpers}
-        self.why_unread = why_unread
+        self.why_unread, self.at, self.base = why_unread, at, base
 
     @classmethod
-    def from_build(cls, seated, colors, earlier, drawn):
-        """The record of a sheet built from `seated`. A connection the earlier record also had keeps the color the
-        person wired, so a later line names a color the bench shows."""
-        before = {one.key: one for one in earlier.steps} if earlier and not earlier.why_unread else {}
+    def from_build(cls, seated, colors, earlier, drawn, at=None):
+        """The record of a sheet built from `seated` at the time `at`. A connection the earlier record also had keeps the
+        color the person wired, so a later line names a color the bench shows. The base is the earlier sheet when its
+        wiring differs from this one, else the earlier sheet's own base: the list stays until another design is built."""
+        usable = earlier if earlier and not earlier.why_unread else None
+        before = {one.key: one for one in usable.steps} if usable else {}
         steps = []
         for one in describe(seated, colors):
             old = before.get(one.key)
             steps.append(one._replace(color=old.color) if old and old.color else one)
-        return cls(steps, drawn)
+        base = usable.base if usable else None
+        if usable and changes_between(usable, seated, colors):
+            base = SheetBase(usable.steps, usable.at)
+        return cls(steps, drawn, None, at, base)
 
     @classmethod
     def read(cls, path):
-        """The record in the file, None when there is no file. A file that is not a record gives one with `why_unread`."""
+        """The record in the file, None when there is no file. A file that is not a record gives one with `why_unread`.
+        A file with no `at` and no `base` is one from before them."""
         path = Path(path)
         if not path.is_file():
             return None
         try:
             data = json.loads(path.read_text())
-            steps = [RecordedStep(tuple(one["key"]), tuple(one["anchor"]) if one["anchor"] else None, one["kind"],
-                                  one["source"], one["to"], one["tag"], one["value"], one["job"], one["color"],
-                                  one["marks"]) for one in data["steps"]]
-            for one in steps:
-                if not all(isinstance(part, str) for part in one.key + (one.anchor or ())):
-                    raise ValueError("a key that is not a list of strings")
-            return cls(steps, [pair for pair in data["drawn_jumpers"]])
-        except (OSError, UnicodeDecodeError, ValueError, KeyError, TypeError) as broken:
+            held = data.get("base")
+            base = SheetBase([_step(one) for one in held["steps"]], _time(held["at"])) if held is not None else None
+            return cls([_step(one) for one in data["steps"]], [pair for pair in data["drawn_jumpers"]], None,
+                       _time(data.get("at")), base)
+        except (OSError, UnicodeDecodeError, ValueError, KeyError, TypeError, AttributeError) as broken:
             return cls([], (), "cannot be read (%s: %s)" % (type(broken).__name__, broken))
 
     def to_dict(self):
-        return {"steps": [dict(one._asdict(), key=list(one.key), anchor=list(one.anchor) if one.anchor else None)
-                          for one in self.steps],
-                "drawn_jumpers": sorted(sorted(pair) for pair in self.drawn_jumpers)}
+        return {"steps": _step_dicts(self.steps), "drawn_jumpers": sorted(sorted(pair) for pair in self.drawn_jumpers),
+                "at": self.at, "base": {"steps": _step_dicts(self.base.steps), "at": self.base.at} if self.base else None}
 
-    def write(self, path):
-        """Write the file whole or not at all: a temporary file beside it, then a replace."""
-        path = Path(path)
-        temporary = path.with_name(path.name + ".tmp")
-        temporary.write_text(json.dumps(self.to_dict(), indent=1) + "\n")
-        os.replace(temporary, path)
+
+def _step_dicts(steps):
+    return [dict(one._asdict(), key=list(one.key), anchor=list(one.anchor) if one.anchor else None) for one in steps]
+
+
+class WiringLogStore:
+    """
+    Store: the wiring record beside the sheet, `<folder>/wiring-record.json`, put in place in two steps (P875): `stage` makes
+    `wiring-record.json.new` exclusively, `commit` replaces the record with it in one step. The record has two states, the
+    old and the new one. `now` is the time of a sheet, from `clock` (SystemClock).
+    """
+
+    def __init__(self, folder, clock=None):
+        self.path = Path(folder) / WiringLog.FILE_NAME
+        self.clock = clock or SystemClock()
+
+    def now(self):
+        return zone_time.stamp(self.clock.now())
+
+    def stage(self, log):
+        """The StagedFile that holds `log`, made. OSError when the stage's name is taken (StageTakenError) or the write fails."""
+        staged = StagedFile.from_bytes(self.path.with_name(self.path.name + STAGE_SUFFIX), (json.dumps(log.to_dict(), indent=1) + "\n").encode())
+        try:
+            staged.make()
+        except OSError:
+            staged.remove()
+            raise
+        return staged
+
+    def commit(self, staged):
+        """Replace the record with the stage. OSError leaves both as they were."""
+        staged.commit(self.path)
 
 
 def changes_between(record, seated, colors=None):
@@ -203,6 +256,12 @@ def _article(word):
 
 class ChangeList:
     """Renderer: one bench action per change, the words a person reads."""
+
+    def heading(self, since):
+        """The heading of the list: it names the time of the sheet it counts from (local, to the minute), else says none is known."""
+        if since is None:
+            return "Changes since the last sheet spark wrote"
+        return "Changes since the sheet spark wrote on " + datetime.datetime.fromisoformat(since).astimezone().strftime("%Y-%m-%d %H:%M")
 
     def line(self, change):
         jumper = "%s jumper" % change.color if change.color else "jumper"
