@@ -864,6 +864,146 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertIn("expected one argument", out.getvalue())
 
 
+class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
+    """
+    P874: a build replaces the `board.tsx` that spark wrote when nobody changed it since (the build record holds the sha256
+    of the bytes spark wrote), keeps one previous version in `.spark/previous/board.tsx.txt`, and leaves any other
+    `board.tsx` alone. Four words: wrote, replaced, unchanged, left alone.
+    """
+
+    FIXTURE = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light-xiao"
+    BOARD_A = '<board>\n  <trace from="A.1" to="B.1" />\n</board>\n'
+    BOARD_B = '<board>\n  <trace from="A.1" to="B.2" />\n</board>\n'
+    BOARD_C = '<board>\n  <trace from="A.1" to="B.3" />\n</board>\n'
+
+    def setUp(self):
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.project = Path(tempfile.mkdtemp()) / "xiao"
+        shutil.copytree(self.FIXTURE, self.project)
+        self.board = self.project / "board.tsx"
+        self.previous = self.project / ".spark" / "previous"
+
+    def build(self, text, requirements=True):
+        """One build run into the project with a work folder that holds `text` as board.tsx; the entries of board.tsx."""
+        work = Path(tempfile.mkdtemp())
+        (work / "board.tsx").write_text(text)
+        args = argparse.Namespace(json=True, keep=self.project, requirements=str(self.project / "requirements.json") if requirements else None)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
+        return [entry for entry in json.loads(out.getvalue())["kept"] if Path(entry["file"]).name == "board.tsx"]
+
+    def record(self):
+        return json.loads((self.project / ".spark" / "build.json").read_text())
+
+    @staticmethod
+    def sha256(text):
+        return hashlib.sha256(text.encode()).hexdigest()
+
+    def test_a_second_build_over_the_board_spark_wrote_replaces_it_and_names_no_traces_differ(self):
+        self.assertEqual([entry["did"] for entry in self.build(self.BOARD_A)], ["wrote"])
+        entries = self.build(self.BOARD_B)
+        self.assertEqual([entry["did"] for entry in entries], ["replaced"])
+        self.assertEqual(self.board.read_text(), self.BOARD_B)
+
+    def test_the_replaced_board_is_the_one_previous_version_and_a_third_build_keeps_only_the_newest(self):
+        self.assertNotEqual(self.BOARD_A, self.BOARD_B)
+        self.build(self.BOARD_A)
+        entries = self.build(self.BOARD_B)
+        self.assertEqual([path.name for path in self.previous.iterdir()], ["board.tsx.txt"])
+        self.assertEqual((self.previous / "board.tsx.txt").read_text(), self.BOARD_A)
+        self.assertEqual(entries[0]["previous"], str(self.previous / "board.tsx.txt"))
+        self.build(self.BOARD_C)
+        self.assertEqual([path.name for path in self.previous.iterdir()], ["board.tsx.txt"])
+        self.assertEqual((self.previous / "board.tsx.txt").read_text(), self.BOARD_B)
+
+    def test_a_board_with_one_byte_changed_is_left_alone_and_its_other_traces_are_named(self):
+        self.build(self.BOARD_A)
+        mine = self.BOARD_C + "\n"
+        self.board.write_text(mine)
+        for _ in range(2):
+            entries = self.build(self.BOARD_B)
+            self.assertEqual([entry["did"] for entry in entries], ["left alone", "traces differ"])
+            self.assertEqual(self.board.read_text(), mine)
+        self.assertFalse(self.previous.exists())
+
+    def test_a_project_built_before_the_record_held_a_sha256_is_left_alone(self):
+        self.build(self.BOARD_A)
+        record = {key: value for key, value in self.record().items() if key != "written_sha256"}
+        for held in (None, ["a list"], 7):
+            with self.subTest(held=held):
+                self.board.write_text(self.BOARD_A)
+                (self.project / ".spark" / "build.json").write_text(json.dumps(dict(record, **({} if held is None else {"written_sha256": held}))))
+                self.assertEqual([entry["did"] for entry in self.build(self.BOARD_B)], ["left alone", "traces differ"])
+                self.assertEqual(self.board.read_text(), self.BOARD_A)
+
+    def test_the_build_page_and_the_help_say_the_four_words(self):
+        page = (ROOT / "commands" / "build.md").read_text()
+        keep_help = next(argument.help for argument in build_board.BuildBoard.arguments if "--keep" in argument.flags)
+        for text in (page, keep_help):
+            for phrase in ("replaced", "unchanged", ".spark/previous/board.tsx.txt"):
+                self.assertIn(phrase, text)
+
+    def test_a_build_that_made_no_board_keeps_the_sha256_so_the_next_build_replaces(self):
+        self.build(self.BOARD_A)
+        args = argparse.Namespace(json=True, keep=self.project, requirements=str(self.project / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            run_build_board([Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")], args)
+        self.assertEqual(self.record()["written_sha256"], {"board.tsx": self.sha256(self.BOARD_A)})
+        self.assertEqual([entry["did"] for entry in self.build(self.BOARD_B)], ["replaced"])
+
+    def test_a_build_that_made_the_same_board_writes_nothing_and_keeps_the_last_different_previous_version(self):
+        self.build(self.BOARD_A)
+        entries = self.build(self.BOARD_A)
+        self.assertEqual(([entry["did"] for entry in entries], entries[0]["sha256"]), (["unchanged"], self.sha256(self.BOARD_A)))
+        self.assertFalse(self.previous.exists())
+        self.build(self.BOARD_B)
+        self.assertEqual([entry["did"] for entry in self.build(self.BOARD_B)], ["unchanged"])
+        self.assertEqual((self.previous / "board.tsx.txt").read_text(), self.BOARD_A)
+
+    def test_a_board_that_is_a_link_is_left_alone_and_the_file_outside_is_unchanged(self):
+        self.build(self.BOARD_A)
+        outside = Path(tempfile.mkdtemp()) / "board.tsx"
+        outside.write_text(self.BOARD_A)
+        self.board.unlink()
+        self.board.symlink_to(outside)
+        self.assertEqual([entry["did"] for entry in self.build(self.BOARD_B)], ["left alone", "traces differ"])
+        self.assertEqual(outside.read_text(), self.BOARD_A)
+
+    def test_a_previous_version_that_cannot_be_kept_leaves_the_board_and_dist_as_they_were(self):
+        self.build(self.BOARD_A)
+        (self.project / ".spark" / "previous").write_text("a file where the folder goes")
+        entries = self.build(self.BOARD_B)
+        self.assertEqual(entries[0]["did"], "left alone")
+        self.assertIn("previous version", entries[0]["why"])
+        self.assertEqual(self.board.read_text(), self.BOARD_A)
+        self.assertFalse((self.project / "board.tsx.new").exists())
+        self.assertEqual(self.record()["written_sha256"], {"board.tsx": self.sha256(self.BOARD_A)})
+
+    def test_a_new_board_that_cannot_be_staged_leaves_the_board_and_writes_no_previous_version(self):
+        self.build(self.BOARD_A)
+        (self.project / "board.tsx.new").mkdir()
+        entries = self.build(self.BOARD_B)
+        self.assertEqual(entries[0]["did"], "left alone")
+        self.assertEqual(self.board.read_text(), self.BOARD_A)
+        self.assertFalse(self.previous.exists())
+        self.assertTrue((self.project / "board.tsx.new").is_dir())
+
+    def test_a_keep_with_no_requirements_file_writes_no_record_so_it_replaces_nothing(self):
+        self.build(self.BOARD_A)
+        self.assertEqual([entry["did"] for entry in self.build(self.BOARD_B, requirements=False)], ["left alone", "traces differ"])
+        self.assertEqual(self.board.read_text(), self.BOARD_A)
+
+    def test_a_save_between_the_board_write_and_the_record_write_leaves_the_record_with_the_bytes_spark_wrote(self):
+        work = Path(tempfile.mkdtemp())
+        (work / "board.tsx").write_text(self.BOARD_A)
+        kept = kept_files.kept_into(work, self.project)
+        self.board.write_text("// a person saved here")
+        kept_files.keep_build_record(self.project, self.project / "requirements.json", [Stage("build", check_spine.OK, "fine")], kept)
+        self.assertEqual(self.record()["written_sha256"], {"board.tsx": self.sha256(self.BOARD_A)})
+
+
 class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
     """
     P660 (#886): on the P581 bench a kept board.tsx still joined the amplifier to the screen's pins after the pin map
