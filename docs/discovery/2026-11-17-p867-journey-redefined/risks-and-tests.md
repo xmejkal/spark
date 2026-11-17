@@ -1,0 +1,66 @@
+# Risks and tests
+
+## Risks
+<!-- One row per type; an active extension adds its own rows. evidence now: tag and ids (★C<n>, A<n>).
+status: open · retired · n/a because ….
+e.g. `| usability | H no test yet (A2) | a five-person prototype test | open |` -->
+| risk | evidence now | cheapest way to retire it | status |
+| --- | --- | --- | --- |
+| value <!-- REQUIRED:risk-value --> | E ★C16 (no card is blocked): no card is blocked, and the walks are stopped on the PO's order; the need is his wish and three walks' rows (n = 1) | the PO's answers D6 to D11; the walks run again after the command fixes | open |
+| usability <!-- REQUIRED:risk-usability --> | E ★C10 (a tick for skipped stages), ★C1 (one project); E two sentences read wrong in walk 3 (rows 5, 6) and one in walk 2 (row 6) | the PO reads the output on a scratch copy of a walk project with a real change, not on the sound demo's folder, before more is built | open |
+| feasibility <!-- REQUIRED:risk-feasibility --> | H A1: one rule over recorded inputs for every phase; E ★C3 (four mechanisms today) | the dry change in the middle, which ran (D4, D5) | open |
+| viability <!-- REQUIRED:risk-viability --> | H A6: more phases must not slow a basic project (AGENTS.md's one bar); E ★C16 (rework, not a stop) | the button-and-LED walk again after the command fixes, by the clock | open |
+| ethics and safety <!-- REQUIRED:risk-ethics --> | E ★C6 (not measured): a 3.3 V output on a new part's signal pin when a person wires before flashing; E walk rows on a look that restarts another project's board (P865 #1231) | Q11's order line; a meter check named on the sheet | open |
+| power and battery <!-- REQUIRED:electronics-firmware:power --> | E C28: the 3V3 budget of the sound project has unknown values before any change (council/physics.md:17); found on the way | R1 once the values are measured (R6) | n/a because this item defines spark's journey and ships no hardware; the gap is a found-on-the-way row |
+| current and stall <!-- REQUIRED:electronics-firmware:stall --> | — | — | n/a because no motor is in the item or in the walk projects |
+| thermal <!-- REQUIRED:electronics-firmware:thermal --> | — | — | n/a because this item defines spark's journey and ships no hardware |
+| EMC and ESD <!-- REQUIRED:electronics-firmware:emc-esd --> | — | — | n/a because this item defines spark's journey and ships no hardware |
+| sensor drift and calibration <!-- REQUIRED:electronics-firmware:sensor-drift --> | E C22: the joystick's top range clips at 2900 mV, datasheet-typ as the lens read it | R0: re-read the datasheet page; R6 on the stick | open, found on the way |
+| brown-out <!-- REQUIRED:electronics-firmware:brown-out --> | — | — | n/a because this item defines spark's journey and ships no hardware |
+| wake and low power <!-- REQUIRED:electronics-firmware:wake --> | — | — | n/a because this item defines spark's journey and ships no hardware |
+| the firmware–hardware contract <!-- REQUIRED:electronics-firmware:contract --> | E ★C4: 2 of 15 kept signals move with a second joystick and 6 of 15 with an I2C part, bus lines among them, simulated, one board model; E ★C6 (not measured); E C25: a switch lands on the board's own button | R0 and R1: the assigner run on more designs; R6 for what the old image does on the new wiring | open |
+| supply and documents <!-- REQUIRED:electronics-firmware:supply --> | E C23, C24: a record names another chip; the display's DC pin differs between the cable and the pin map | R0: a review of the two records | open, found on the way |
+<!-- EXTEND:risk-rows --><!-- EXTEND:pair-rows -->
+
+## Assumptions
+<!-- About ten at most. type: value, usability, feasibility, viability or ethics. importance: "— (decider)" until
+the decider rates it, then "high D<n>" or "low D<n>". pass line: written, with its date, before any result.
+status: open, or retired with the date of its Results row.
+e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | query opened-within-48h | under 50 %, set 2026-10-06 | over 80 % | open |` -->
+| id | belief | type | evidence now | importance | cheapest test | pass line, dated | result that would change the decision | status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 <!-- REQUIRED:assumptions --> | One rule over recorded inputs gives the state of every phase that matters, also of the firmware and of the bench | feasibility | H council/architecture.md:138 (AR-13); E ★C3 (read by the lens) | medium (the facilitator, delegated D18) | the paper table of the first proposal, which the refuter showed can hardly fail; folded into A11's dry change | at least 5 of the 7 things of #1234's comment named from files and records alone, proposed 2026-11-17 and kept only as a side result | fewer than 5: the graph does not carry the journey, and the line or the table is the shape | open |
+| A2 | The PO's phase order is what a person needs | value | D-h: his guess, asked as a question; n = 1, and he is the decider | medium (the facilitator, delegated D18) | Q6 and Q9; then a walk on the result | not set, noted 2026-11-17; D18 rated the importance and set no pass line | he reads the proposed table and reorders it | open |
+| A3 | A person wants the pins of the parts that stay kept, also at the cost of a worse placement | value | H council/feasibility.md:81 (Q-F2); E ★C4 (simulated; one board model) | high; D7 is the PO's own wish, n = 1 (the facilitator, delegated D18) | Q3 | not set, noted 2026-11-17; D18 rated the importance and set no pass line | "fresh each time": slice 1's first row falls away | open |
+| A4 | The bench can be shown as witnesses without being read as the bench's real state | usability | E p711-walk4-button-led/rows.md row 6: "last deploy here" was read as the box's state | high (the facilitator, delegated D18) | the PO reads slice 2's sentences on his game box's project | not set, noted 2026-11-17; D18 rated the importance and set no pass line | he reads "recorded" as "is" | open |
+| A5 | One definition serves the CLI, the agents, the page and a later framework | feasibility | H; no framework exists (council/user.md:85, US-52 as the lens names it); E ★C13 (a contract) | low (the facilitator, delegated D18) | none cheap before a framework is chosen (P417) | not set, noted 2026-11-17; D18 rated the importance and set no pass line | a framework needs a stored state | open |
+| A6 | More phases and more "out of date" marks do not slow a basic project | viability | H AGENTS.md's one bar; E ★C16 (rework, not a stop) | medium (the facilitator, delegated D18) | the button-and-LED walk again, by the clock | not set, noted 2026-11-17; D18 rated the importance and set no pass line | the basic walk takes longer than before | open |
+| A7 | A person wants a plan before a change is applied | usability | H council/ux.md:66 (UX-24, Terraform's plan) | medium; D10 is the PO's own wish, n = 1 (the facilitator, delegated D18) | Q7 | not set, noted 2026-11-17; D18 rated the importance and set no pass line | "change first" | open |
+| A8 | P827 and P828 survive the redefinition when the rail renders the phases it is given | feasibility | H ★C15 (the lens's reading) | high (the facilitator, delegated D18) | a read of P827's plan against the phase table before it is built | not set, noted 2026-11-17; D18 rated the importance and set no pass line | the plan hard-codes nine panels | open |
+| A9 | A person follows an order line at the bench | ethics | H ★C6 (not measured); council/physics.md:25 (PH-12) | medium (the facilitator, delegated D18) | Q11; then the next walk's rows | not set, noted 2026-11-17; D18 rated the importance and set no pass line | the walk shows the line skipped | open |
+| A10 | The shops have data to show | feasibility | E ★C12 (counted by the lens): all 18 catalog records of the PO's store hold `vendor` and `sku` (the store's count is the facilitator's; 3 of the 18 hold `null`), and 2 of the 8 library files hold `vendor`; no `sourcing` field anywhere | low (the facilitator, delegated D18) | a count over the store's catalog records | not set, noted 2026-11-17; D18 rated the importance and set no pass line | most records name a shop | open |
+| A11 | A redefinition (phases, states, a rule for what goes out of date) is what a change in the middle lacks, and not fixed commands | value | E against it: ★C29 (counted by the refuter): no row is about a wrong mark, and the hand work is in commands | high D4 | the dry change in the middle on scratch copies of two walk projects, hand actions counted | at least 3 hand actions need a rule that spans phases, set by D4 on 2026-11-17 | fewer than 3: command fixes first, through P869 #1236; the definition is a table and a page | retired 2026-11-17: the pass line was missed, as the PO read it (D5) |
+| A12 | The PO (n = 1, the decider, who directs Claude and does not type commands) stands in for the hobbyist | value | H scrum/VISION.md:38 ("Hypothesis ... no person outside the project has installed spark"); every value row here is tested by asking him | high (the facilitator, delegated D18) | none inside this item; the vision's slice 5 (a real stranger) | not set, noted 2026-11-17; D18 rated the importance and set no pass line | a stranger's walk shows other frictions | open |
+
+## Collection plan
+<!-- One row per gap. e.g. `| Do assignees open new tasks? | Q2 | Lena, from analytics | one query | this week |` -->
+| question | decision it blocks | who can answer | how | when |
+| --- | --- | --- | --- | --- |
+| How many hand actions does a change in the middle cost, and which need a rule that spans phases? <!-- REQUIRED:collection --> | Q5, A11 | the facilitator, on scratch copies of two walk projects | the dry change in the middle, with no board | done 2026-11-17 (D4, D5) |
+| Do kept pins move on other designs and boards? | Q3, A3 | the facilitator | the assigner on scratch copies of the other walk projects | with the spike |
+| What damage does the wire-before-flash state do? | Q11, A9 | nobody from files; the vendor's absolute maximum ratings, or a bench measurement | R0: the datasheet's ratings page | when Q11 is asked |
+| How many store catalog records name a shop? | Q9, A10 | the facilitator | done 2026-11-17: 18 of 18 hold `vendor` and `sku`; 15 name a maker, and 3 hold `null` (the Hadex and LaskaKit records, whose `sku` is the shop's code), read for D12 | done |
+| Which page did the PO praise? | Q10 | the PO | Q10 | answered D13: the encoder page |
+
+## Results
+<!-- Filled on a return; may stay empty until then. One row per result: what was tested, what was seen (verbatim,
+with its pointer), the pass line met or missed, what it changes. -->
+| date | source and pointer | what was seen | pass line met or missed | what it changes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | council/dry-change.md (the run, DC-1 to DC-5) and council/refuter-3.md (the check, all four runs repeated) | 5 hand actions in four changes on scratch copies, of two kinds: "traces differ: board.tsx ... delete it to have it regenerated" (3 times; the build passes without the deletion, and only the kept board.tsx is stale) and "kept, not from a pick" (2 times; without the edit the build passes with the dropped or replaced part still on the board, and `flow.py show` reads ✓). The check found one action the run missed: the rebuild after the deletion replaces the sheet's change list with "Nothing to change on the bench." (11 lines lost in run B, 5 in D, seen by the refuter's run, not by the facilitator) | missed on the run's own 5 actions under any fair reading: 0 (strict) to 2 (loose) need a rule that spans phases; with the missed action counted in A, B and D the range is 0 to 5, and "at least 3" is met only under the loose reading of that one action. The run's brief did not settle whether the lost change list is a desk action or a bench action | under the missed reading: the first slices are command fixes through P869 #1236, and the definition is a table of phases and a page; under the loose reading: the lost change list is the one case that needs a fact from one phase in another (what the person wired against what the sheet says), which is the bench question OQ9. The PO read the result as missed (D5, 2026-11-17). Not shown by the test: anything on a board, a hand-edited board.tsx, a person in place of an agent |
+
+## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
+<!-- Energy per mode · peaks per rail against the source · dissipation per part, each number with its provenance and
+the rung that would settle it (electronics-firmware:R<n>). "n/a — no battery, motor, radio or regulator" is allowed. -->
+n/a for the item itself: it defines a journey and adds no battery, motor, radio or regulator. One number from the walk projects bears on it: the sound project's 3V3 budget is incomplete (C28: the amplifier names no current fact and the display's peak is null; a null is an unknown), and the physics lens's hand sum of about 0.6 A against a 1.5 A regulator figure is calculated from unverified values (council/physics.md:17). The rung that settles it is electronics-firmware:R6, a bench measurement.
+<!-- EXTEND:risks-sections -->
