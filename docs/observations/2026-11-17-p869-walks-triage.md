@@ -8,7 +8,32 @@ The card is P869 ([#1236](https://github.com/xmejkal/spark/issues/1236)), under 
 `2026-11-01-p480-walk3-council/`) and P510 (#705, `2026-11-01-p510-walk4-council/`) did the same for earlier walks.
 This file is the triage on Fable 5.2, 2026-11-17 (Europe/Prague), revised after one lens and two rounds of the refuter. Each of
 their rulings was checked in the code first. Where a ruling and the code differ, the code stands, and section 7
-says so. Nothing is filed, moved or commented: section 4 is filing text for the PO's yes.
+says so. The section "Filed" below says what was filed and posted from it on 2026-11-17.
+
+## Filed
+
+The PO said yes to the cards on 2026-11-17 ("after a thorough analysis, we should create the cards, refine it, so its
+well testable, exchangable, reusable"), and the session filed them in his auto mode after the last refuter round.
+Each card is in Idea, under its epic, with its slice. Sections 4 and 5 keep the ids N1 to N11.
+
+| id | card | result |
+| --- | --- | --- |
+| N1 | P874 ([#1242](https://github.com/xmejkal/spark/issues/1242)) | the build replaces its own board.tsx, keeps one previous version, and still leaves a person's edits alone |
+| N2a | P875 ([#1243](https://github.com/xmejkal/spark/issues/1243)) | the sheet keeps the list of changes since the last sheet spark wrote for another design |
+| N3 | P876 ([#1244](https://github.com/xmejkal/spark/issues/1244)) | one read of the console that leaves the firmware running, after a bench row names the cause |
+| N4 | P877 ([#1245](https://github.com/xmejkal/spark/issues/1245)) | it names each such entry and removes it on the person's yes |
+| N5 | P878 ([#1246](https://github.com/xmejkal/spark/issues/1246)) | a tick only for a judged pass, and the reason that is true |
+| N6 | P879 ([#1247](https://github.com/xmejkal/spark/issues/1247)) | a finding: can a trace between two pins carry the signal's name? |
+| N7 | P880 ([#1248](https://github.com/xmejkal/spark/issues/1248)) | every phase made from a changed thing reads out of date, with its cause |
+| N8a | P881 ([#1249](https://github.com/xmejkal/spark/issues/1249)) | a signal on no bus keeps its pin, and every moved pin is named |
+| N9 | P882 ([#1250](https://github.com/xmejkal/spark/issues/1250)) | a name the pin map lacks reads as a problem in the firmware phase |
+| N10 | P883 ([#1251](https://github.com/xmejkal/spark/issues/1251)) | spark prints a plan (what goes out of date, which wires move, what is lost) and changes nothing until the yes |
+| N11 | P884 ([#1252](https://github.com/xmejkal/spark/issues/1252)) | buy lines from what the records hold: the maker, the product code, and whether the drawer has it |
+
+The lines of section 5 are comments on #1231, #1230, #1235, #270, #1241, #1168, #539, #1010, #434, #1005 and #716.
+
+Ready is unchanged. The order of section 6 is a recommendation, and the place of each card in Ready is the PO's to
+order. No card was moved into or out of Ready.
 
 ## 1. What was read, and how
 
