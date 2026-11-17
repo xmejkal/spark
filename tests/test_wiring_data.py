@@ -175,8 +175,8 @@ class TheAmplifierAloneTest(unittest.TestCase):
 
     UNVERIFIED = ("- Max98357aDfr0954 SPK_P, SPK_N: the record says that the module has its own socket for the speaker, and nobody "
                   "has looked at a real module yet. Look for it first. If it is there, plug only the speaker into it: never a supply, "
-                  "and never ground. If it is not there, wire the speaker to the SPK_P, SPK_N pads.")
-    VERIFIED = ("- Max98357aDfr0954 SPK_P, SPK_N end in the module's own socket: plug only the speaker into it, never a supply "
+                  "and never ground. If it is not there, wire the speaker to the pads SPK_P, SPK_N.")
+    VERIFIED = ("- Max98357aDfr0954 SPK_P, SPK_N: in the module's own socket. Plug only the speaker into it, never a supply "
                 "and never ground.")
 
     def alone(self, part_id="max98357a-dfr0954"):
@@ -214,6 +214,23 @@ class TheAmplifierAloneTest(unittest.TestCase):
             text = sheet.sheet(project / "requirements.json")
         self.assertIn(self.VERIFIED, expected_before_power(text))
         self.assertNotIn("nobody has looked", text)
+
+    def test_a_verified_that_is_not_the_json_true_or_false_prints_no_socket_line(self):
+        for verified in ("yes", 1):
+            with self.subTest(verified=verified):
+                part = {"id": "x-amp", "name": "X amp", "own_socket": {"pins": ["OUT"], "verified": verified},
+                        "power": [{"pin": "OUT", "rail": "speaker", "direction": "out"}]}
+                self.assertEqual(before_power.BeforePower.of([part], {}).items, [])
+        part["own_socket"]["verified"] = False
+        self.assertEqual([item.kind for item in before_power.BeforePower.of([part], {}).items], ["own-socket-unverified"])
+        part["own_socket"]["verified"] = True
+        self.assertEqual([item.kind for item in before_power.BeforePower.of([part], {}).items], ["own-socket"])
+
+    def test_the_verified_line_is_true_for_one_pin_as_for_two(self):
+        part = {"id": "x-amp", "name": "X amp", "own_socket": {"pins": ["OUT"], "verified": True},
+                "power": [{"pin": "OUT", "rail": "speaker", "direction": "out"}]}
+        line = before_power.BeforePowerList().render(before_power.BeforePower.of([part], {}))[0]
+        self.assertEqual(line, "- XAmp OUT: in the module's own socket. Plug only the speaker into it, never a supply and never ground.")
 
     def test_with_a_speaker_terminal_listed_the_sheet_has_no_line_about_a_socket(self):
         # a pin: the terminal receives both outputs, so the record's fact adds nothing for it

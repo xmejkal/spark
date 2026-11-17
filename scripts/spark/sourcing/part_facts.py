@@ -31,7 +31,7 @@ def printed_names(part):
 def own_socket_pins(part):
     """The pins that end in the part's own socket (P864), as a set: empty for a record with no `own_socket` or a malformed one."""
     block = part.get("own_socket")
-    pins = block.get("pins") if isinstance(block, dict) else None
+    pins = block.get("pins") if isinstance(block, dict) and isinstance(block.get("verified"), bool) else None
     return frozenset(pin for pin in pins if isinstance(pin, str)) if isinstance(pins, list) else frozenset()
 
 

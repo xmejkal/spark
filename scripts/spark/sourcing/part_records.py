@@ -249,7 +249,9 @@ def own_socket_problems(part, validation):
     outputs = {supply.get("pin") for supply in part.get("power") or [] if supply.get("direction") == "out"}
     problems = ["own_socket has no %r" % key for key in ("pins", "verified", "source", "cites") if not block.get(key) and block.get(key) is not False]
     problems += provenance.list_type_problems("own_socket", block)
-    return problems + ["own_socket names %s, which is no output of this part" % pin for pin in block.get("pins") or [] if pin not in outputs]
+    problems += ["own_socket names %s, which is no output of this part" % pin for pin in block.get("pins") or [] if pin not in outputs]
+    rails = {supply.get("rail") for supply in part.get("power") or [] if supply.get("pin") in (block.get("pins") or [])}
+    return problems + (["own_socket names pins on different rails, and the sheet names one: %s" % ", ".join(sorted(map(str, rails)))] if len(rails) > 1 else [])
 
 
 #: What `physical` holds beside the outline in `body_mm` (P737): bare values under the board record's key names. A key

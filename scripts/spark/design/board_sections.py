@@ -378,12 +378,20 @@ def power_note_lines(part_list):
     return lines
 
 
+#: The comment in place of a trace for a pin in the part's own socket (P864), by the record's `verified`: unverified, it is
+#: what the record says and no more.
+OWN_SOCKET_COMMENTS = {
+    True: "    {/* %s.%s ends in the part's own socket: no trace here; what it drives plugs in there */}",
+    False: "    {/* %s.%s: the record says it ends in the part's own socket (unverified): no trace here; "
+           "what it drives plugs in there */}"}
+
+
 def module_power_lines(part_list, rules, unjustified):
     """Each module power pin on its rail's net, through the one walk of the power lists. A pin that ends in the part's own
     socket (P864) gets a comment in place of its trace: what it drives plugs in there."""
-    ends = {(id(part), supply["pin"]) for part, supply, _ in own_socket_ends(part_list)}
-    return ["    {/* %s.%s ends in the part's own socket: no trace here; what it drives plugs in there */}"
-            % (inert(component_name(part)), inert(supply["pin"])) if (id(part), supply["pin"]) in ends else
+    ends = {(id(part), supply["pin"]): part["own_socket"].get("verified") is True for part, supply, _ in own_socket_ends(part_list)}
+    return [OWN_SOCKET_COMMENTS[ends[id(part), supply["pin"]]] % (inert(component_name(part)), inert(supply["pin"]))
+            if (id(part), supply["pin"]) in ends else
             power_trace(component_name(part), supply["pin"], net, rules, supply.get("note") or "", unjustified)
             for part, supply, net in power_connections(part_list)]
 

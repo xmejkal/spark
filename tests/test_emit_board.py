@@ -1650,8 +1650,33 @@ class AnOutputThatEndsInTheModulesOwnSocketTest(unittest.TestCase):
         for net in ("SPEAKER_P", "SPEAKER_N"):
             self.assertNotIn('to="net.%s"' % net, tsx)
         for pin in ("SPK_P", "SPK_N"):
-            self.assertIn("Max98357aDfr0954.%s ends in the part's own socket: no trace here; what it drives plugs in there" % pin, tsx)
+            self.assertIn("Max98357aDfr0954.%s: the record says it ends in the part's own socket (unverified): no trace here; "
+                          "what it drives plugs in there" % pin, tsx)
         self.assertNotIn("NOTHING ON THIS BOARD RECEIVES IT", tsx)
+
+    def test_a_verified_socket_is_said_as_a_fact_and_a_verified_that_is_no_bool_gives_no_socket(self):
+        record = self.amplifier()
+        record["own_socket"] = dict(record["own_socket"], verified=True)
+        self.assertIn("Max98357aDfr0954.SPK_P ends in the part's own socket: no trace here",
+                      "\n".join(board_sections.module_power_lines([record], {}, set())))
+        record["own_socket"] = dict(record["own_socket"], verified="yes")
+        lines = "\n".join(board_sections.module_power_lines([record], {}, set()))
+        self.assertIn('<trace from=".Max98357aDfr0954 > .SPK_P" to="net.SPEAKER_P"', lines)
+        self.assertNotIn("own socket", lines)
+
+    def test_a_second_part_with_an_output_of_the_same_name_and_no_block_keeps_its_gap_and_its_trace(self):
+        other = dict(self.amplifier(own_socket=False), id="x-amp", name="X amp")
+        part_list = [self.amplifier(), other]
+        self.assertEqual([(net, name, pin) for net, name, pin in power_rails.outputs_with_nothing_on_them(part_list)],
+                         [("SPEAKER_N", "X amp", "SPK_N"), ("SPEAKER_P", "X amp", "SPK_P")])
+        lines = "\n".join(board_sections.module_power_lines(part_list, {}, set()))
+        self.assertIn('<trace from=".XAmp > .SPK_P" to="net.SPEAKER_P"', lines)
+        self.assertNotIn('.Max98357aDfr0954 > .SPK_P" to=', lines)
+
+    def test_an_output_on_a_rail_the_host_provides_is_no_gap(self):
+        # a pin: the V33 and GND rails are the module's own, so an output on them is received
+        part = {"id": "x-reg", "name": "X reg", "power": [{"pin": "OUT", "rail": "logic", "direction": "out"}]}
+        self.assertEqual(power_rails.outputs_with_nothing_on_them([part]), [])
 
     def test_the_notes_of_the_amplifier_alone_hold_nothing_about_its_outputs(self):
         root = Path(tempfile.mkdtemp())

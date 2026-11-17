@@ -80,8 +80,8 @@ class BeforePowerList:
         UNUSED_PIN: "- {subject} {pin}: {said}",
         OWN_SOCKET_UNVERIFIED: "- {subject} {pin}: the record says that the module has its own socket for the {said}, and nobody "
                                "has looked at a real module yet. Look for it first. If it is there, plug only the {said} into it: "
-                               "never a supply, and never ground. If it is not there, wire the {said} to the {pin} pads.",
-        OWN_SOCKET: "- {subject} {pin} end in the module's own socket: plug only the {said} into it, never a supply and never ground.",
+                               "never a supply, and never ground. If it is not there, wire the {said} to the pads {pin}.",
+        OWN_SOCKET: "- {subject} {pin}: in the module's own socket. Plug only the {said} into it, never a supply and never ground.",
         HOST_REQUIREMENT: "- {subject}: {said}",
     }
 

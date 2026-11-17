@@ -3856,7 +3856,7 @@ class AnOwnSocketIsAFactWithItsSourceTest(unittest.TestCase):
         for pin in ("VCC", "NO_SUCH_PIN"):
             with self.subTest(pin=pin):
                 block = dict(self.amplifier()["own_socket"], pins=["SPK_P", pin])
-                self.assertEqual(self.problems(self.amplifier(own_socket=block)),
+                self.assertEqual([p for p in self.problems(self.amplifier(own_socket=block)) if "no output" in p],
                                  ["own_socket names %s, which is no output of this part" % pin])
 
     def test_an_own_socket_with_no_pins_no_verified_no_source_or_no_cites_is_a_problem(self):
@@ -3868,13 +3868,20 @@ class AnOwnSocketIsAFactWithItsSourceTest(unittest.TestCase):
         self.assertTrue(self.problems(self.amplifier(own_socket=block)))
 
     def test_a_malformed_own_socket_is_a_problem_and_crashes_no_reader(self):
-        for block in (["SPK_P", "SPK_N"], "SPK_P", {"pins": "SPK_P"}, {"pins": [1]}):
+        good = self.amplifier()["own_socket"]
+        for block in (["SPK_P", "SPK_N"], "SPK_P", {"pins": "SPK_P"}, {"pins": [1]}, dict(good, verified="false"), dict(good, verified=1)):
             with self.subTest(block=block):
                 record = self.amplifier(own_socket=block)
                 self.assertTrue(self.problems(record))
                 self.assertEqual(part_facts.own_socket_pins(record), frozenset())
                 self.assertEqual([net for net, _, _ in power_rails.outputs_with_nothing_on_them([dict(record, name="X")])],
                                  ["SPEAKER_N", "SPEAKER_P"])
+
+    def test_own_socket_pins_on_different_rails_are_a_problem(self):
+        record = self.amplifier()
+        record["power"] = [dict(supply, rail="other") if supply["pin"] == "SPK_N" else supply for supply in record["power"]]
+        self.assertEqual([p for p in self.problems(record) if "own_socket" in p],
+                         ["own_socket names pins on different rails, and the sheet names one: other, speaker"])
 
     def test_unverified_lists_the_own_socket_with_why_it_matters_and_where_the_result_goes(self):
         said, code = run_json(["--unverified", "max98357a-dfr0954"])
