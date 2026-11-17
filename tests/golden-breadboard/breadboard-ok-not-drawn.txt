@@ -496,5 +496,7 @@ breadboard.svg not written: nothing says how to draw L9110sModule in Wokwi
    "marks": ""
   }
  ],
- "drawn_jumpers": []
+ "drawn_jumpers": [],
+ "at": "<time>",
+ "base": null
 }

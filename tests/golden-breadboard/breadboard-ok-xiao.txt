@@ -376,5 +376,7 @@ wrote <project-dir>/breadboard.svg — a picture of the same layout, which bread
    "24b.f",
    "4b.j"
   ]
- ]
+ ],
+ "at": "<time>",
+ "base": null
 }
