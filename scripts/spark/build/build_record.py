@@ -37,12 +37,23 @@ def sha256_of(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def is_build_record(record):
+    """Whether `record` has the shape a reader may use (P886): an object whose `stages`, when there, is a list of objects, whose
+    `missing_facts` is a list and whose `requirements` is a string. A key that is missing or null is fine."""
+    if not isinstance(record, dict):
+        return False
+    stages, facts, named = record.get("stages"), record.get("missing_facts"), record.get("requirements")
+    return (stages is None or (isinstance(stages, list) and all(isinstance(stage, dict) for stage in stages))) \
+        and (facts is None or isinstance(facts, list)) \
+        and (named is None or isinstance(named, str))
+
+
 class BuildRecordStore:
     """
     Store: the record of a project's last build, `<project>/.spark/build.json`: `{"schema", "status", "stages": [{name,
     status}], "missing_facts", "requirements", "requirements_sha256", "written_sha256", "at"}`. `write` adds the schema and the time, from
     `clock` (SystemClock), through `writer` (TextFileWriter); a test gives a fake of each. `read` raises store.StoreError
-    for a file that is no JSON object, and OSError for one it cannot open.
+    for a file that is no JSON or is no build record (`is_build_record`), and OSError for one it cannot open.
     """
 
     def __init__(self, project, writer=None, clock=None):
@@ -57,7 +68,7 @@ class BuildRecordStore:
             record = json.loads(self.path.read_text(encoding="utf-8"))
         except ValueError as broken:
             raise store.StoreError("%s is not JSON (%s): build again with --keep", self.path, broken, code=records_codes.RECORD_FILE_BROKEN)
-        if not isinstance(record, dict):
+        if not is_build_record(record):
             raise store.StoreError("%s is no build record: build again with --keep", self.path, code=records_codes.RECORD_FILE_BROKEN)
         return record
 
