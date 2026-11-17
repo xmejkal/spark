@@ -22,9 +22,9 @@ e.g. `- ★C3 · STATUS.md:84 · refuter: partly — "Shown on the C6, assumed f
 - ★C17 · #1234; mvp-plan.md's Decisions · refuter: holds · reproduced how: read both texts 2026-11-17 · result: reproduced · keep: his list is a question
 - ★C18 · council/user.md:13, :85; p711-sound-demo/rows.md row 10 · refuter: partly — a diary reading by one lens · reproduced how: row 10 read; "Claude typed every command" not re-checked · result: reproduced in part · keep: n = 1
 - ★C19 · council/existing.md:45-50 · refuter: partly for Bazel and GOV.UK; could not open the other three · reproduced how: not re-read · result: not reproduced · keep: licences were not read
-- ★C29 · spark-walks/p711-*/rows.md; council/refuter.md:9-16 · refuter: its own finding (R-0a) · reproduced how: the three rows files read once by the facilitator at the start of the session; no row about a wrong tick recalled, not counted again · result: reproduced in part · keep: counted by the refuter
-- ★C30 · spark-walks/p711-sound-demo/rows.md row 12; council/refuter.md:17-26 · refuter: its own finding (R-0b) · reproduced how: read row 12 and the folder's requirements.json 2026-11-17 (display, amplifier, joystick, speaker terminal); `flow.py show` names four needs (board, amp, speaker, volume) · result: reproduced · keep: a hand-written file
-- ★C31 · council/live.md:224, :11-75 · refuter: pending (second pass) · reproduced how: read the lens's proposals (council/live.md:222-256) and its not-checked list 2026-11-17; the cards, the code and the pages not re-read by the facilitator · result: not reproduced · keep: not tested
+- ★C29 · spark-walks/p711-*/rows.md; council/refuter.md:9-16 · refuter: its own finding (R-0a); second pass: partly — the hand work is 2 rows of 32 and one comment · reproduced how: the three rows files read once by the facilitator at the start of the session; no row about a wrong tick recalled, not counted again · result: reproduced in part · keep: counted by the refuter
+- ★C30 · spark-walks/p711-sound-demo/rows.md row 12; council/refuter.md:17-26 · refuter: its own finding (R-0b); second pass: holds · reproduced how: read row 12 and the folder's requirements.json 2026-11-17 (display, amplifier, joystick, speaker terminal); `flow.py show` names four needs (board, amp, speaker, volume) · result: reproduced · keep: a hand-written file
+- ★C31 · council/live.md:224, :11-75 · refuter: partly, one part refuted — "my read (DTR off) saw no line, because MicroPython's USB sends nothing to a host with DTR off" (diary.md:42) · reproduced how: read the lens's proposals (council/live.md:222-256) and its not-checked list 2026-11-17; the facilitator re-read diary.md:42, deploy_image.py:47 and card #270's stage (Idea) after the second pass; the cards and the pages not re-read · result: reproduced in part, after the wording changed · keep: not tested
 
 ## Agree / split
 <!-- Where the lenses and the refuter agree, and where they split; each split becomes a question.
@@ -40,3 +40,6 @@ e.g. `- Split: Feasibility says a day, Risks says a week · Q4` -->
 - Split: the architecture lens (P829 exposed) against the risks lens (P827 high, P829 low) · Q8
 - Split: the facilitator's opinion on the witnesses against walk 2's row 6, where a record was read as the state · Q4
 - Not checked by the refuter (never "holds"): the Terraform, LangGraph and KiCad pages, the datasheet page, need_requirements.py, project_image.py, the two witness-record readers, the three diaries in full, P820's brief.md
+- Second pass (council/refuter-2.md): four of the first pass's fixes were applied only in part (Q5's and Q3's opinions, Q6's wording, OQ6 (2)'s "proves") · applied 2026-11-17
+- Split: the live lens (P248 #270 answers row 7) against the second refuter (P248 is about a boot read on another board) · Q16
+- Not checked by the second refuter (never "holds"): the comments of the three cards, P235's decisions in full, three of the live lens's four fetched sources, ★C4's counts
