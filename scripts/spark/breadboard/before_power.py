@@ -6,6 +6,8 @@ page reads; `BeforePowerList` gives the sheet's "Before you power it" lines from
 """
 
 import collections
+import html
+import re
 
 from spark.design import board_components
 from spark.sourcing import part_rules
@@ -20,6 +22,8 @@ OFF_BOARD_SUPPLY, CONFLICT, FIRMWARE_PULL, UNUSED_PIN, HOST_REQUIREMENT = (
 #: or "" with none, the requirement; None for a supply and a firmware pull); and a supply's users, the components on it,
 #: sorted (() for every other kind).
 BeforePowerItem = collections.namedtuple("BeforePowerItem", "kind subject pin record said users")
+#: The heading over the lines, on the sheet and on a page.
+HEADING = "Before you power it"
 
 
 class BeforePower:
@@ -71,3 +75,38 @@ class BeforePowerList:
                  for item in before_power.items]
         shows = ", ".join("`parts.py --show %s`" % record for record in before_power.records)
         return lines + ["", "Each record whole, with what it asks of the board: %s." % shows]
+
+
+class BeforePowerHtmlList:
+    """
+    Renderer: the items as HTML, the same words as `BeforePowerList`: its TEMPLATES, turned into HTML once (the leading
+    "- " goes, `**x**` becomes `<strong>`, a backticked word `<code>`), and then each html-escaped field is formatted into
+    them. A mark is never converted on a filled line, so a record's own `2**8 or 2**9` or a lone backtick stays text. It takes
+    the items as plain dicts with the fields of a BeforePowerItem, as a page holds them.
+    """
+
+    MARKS = ((re.compile(r"\*\*(.+?)\*\*"), r"<strong>\1</strong>"), (re.compile(r"`([^`]+)`"), r"<code>\1</code>"))
+
+    def __init__(self):
+        self.templates = {kind: self._html(template) for kind, template in BeforePowerList.TEMPLATES.items()}
+
+    def _html(self, template):
+        text = html.escape(template.removeprefix("- "))
+        for mark, tag in self.MARKS:
+            text = mark.sub(tag, text)
+        return "<li>%s</li>" % text
+
+    def items(self, items):
+        """One `<li>` line for each item (a dict), in the order given."""
+        return [self.templates[item["kind"]].format(**self._fields(item)) for item in items]
+
+    @staticmethod
+    def _fields(item):
+        """The item's fields as html-escaped text, a supply's users joined by commas."""
+        return {key: html.escape(str(value)) for key, value in dict(item, users=", ".join(item["users"])).items()}
+
+    @staticmethod
+    def records_line(records):
+        """The paragraph that names each record whole, as the sheet's last line does."""
+        shows = ", ".join("<code>parts.py --show %s</code>" % html.escape(str(record)) for record in records)
+        return "<p>Each record whole, with what it asks of the board: %s.</p>" % shows

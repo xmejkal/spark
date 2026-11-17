@@ -355,7 +355,7 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
     lines += read.point_lines
     unwired = _unwired(built.board, built)
     lines += (["", "Not wired:", ""] + unwired) if unwired else []
-    lines += ["", "## Before you power it", ""]
+    lines += ["", "## " + before_power.HEADING, ""]
     lines += BEFORE_POWER_LIST.render(wiring_data(requirements_path, read=read).before_power)
     return "\n".join(lines) + "\n"
 
