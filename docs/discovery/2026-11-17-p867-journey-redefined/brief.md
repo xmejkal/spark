@@ -7,7 +7,7 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 → the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
-**Ready for:** collecting evidence: the frame (D1) and a direction (D5) are confirmed; Q2 to Q4 and Q6 to Q10 are answered by the PO (D6 to D13); Q12, Q13, Q14, Q16 and the importance of the assumptions are answered by the facilitator on the PO's delegation (D14 to D18) and are his to change; the jobs, Q11 (no evidence, it waits for a bench row) and items.md are not confirmed <!-- REQUIRED:ready -->
+**Ready for:** collecting evidence: the frame (D1) and a direction (D5) are confirmed; Q2 to Q4 and Q6 to Q10 are answered by the PO (D6 to D13); Q12, Q13, Q14, Q16 and the importance of the assumptions were answered by the facilitator on the PO's delegation (D14 to D18) and the PO confirmed them (D20); the jobs are confirmed (D19); items.md goes to P869's triage (D21); Q11 (no evidence) waits for a bench row <!-- REQUIRED:ready -->
 **Stands on:** 11 H, 4 of which would change the decision (A3, A4, A8 and A12, rated high by the facilitator on the PO's delegation, D18, and his to change) <!-- REQUIRED:debt -->
 **Decision needed:** Q2, what going back means; then Q3, Q4, Q6 to Q14 and Q16, one at a time <!-- REQUIRED:decision-needed -->
 
@@ -146,6 +146,9 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D16 · delegated (D14), Q13: a table that says which step comes next in spark's own flow is allowed, because it describes spark and not the gadget's firmware; it holds no threshold, no timing and no state table of a gadget; the principle is the PO's (AGENTS.md), so this reading is his to change first · the facilitator · 2026-11-17 · this session · options considered: no table
 - D17 · delegated (D14), Q14: this discovery hands off the phases and the rules decided here (D6 to D10) as a table and a page; each phase's states and screens are refined when its card nears Ready (AGENTS.md, "Plans shrink with distance") · the facilitator · 2026-11-17 · this session · options considered: also each phase's states and screens now
 - D18 · delegated (D14), the importance of the assumptions: high A4, A8 and A12; medium A1, A2, A6 and A9; low A5 and A10; A3 and A7 are answered by D7 and D10 as the PO's wish (n = 1); no pass line is set by this · the facilitator · 2026-11-17 · this session; risks-and-tests.md holds each rating · options considered: none
+- D19 · the jobs: J1 to J6 stand as written in jobs-and-journeys.md (where the project stands, a change in the middle, going back, where to get and test and replace a part, the praised breadboard screen, an agent sees the same phases) · the PO · 2026-11-17 · AskUserQuestion in this session ("Yes, all six") · options considered: drop J4; drop J6; drop both
+- D20 · the delegated answers D15 to D18 (no new slice now; a table of spark's own next steps is allowed; the hand-off is the phases and D6 to D10, each phase refined near Ready; the risk ratings) stand as the PO's decisions · the PO · 2026-11-17 · AskUserQuestion in this session ("All stand") · options considered: not D16; not D17; read them first
+- D21 · items.md: no card is filed from this discovery; the dry-change spike already ran (D4, D5), and the eight command fixes go to P869 #1236's triage as input beside the 32 walk rows, which files and orders the cards once · the PO · 2026-11-17 · AskUserQuestion in this session ("To P869's triage") · options considered: file all eight now; read items.md first
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
@@ -172,7 +175,7 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the PO confirmed the frame (D1), a direction (D5) and the answers D6 to D13; the jobs, the delegated answers (D14 to D18), Q11 and items.md are unconfirmed, and he did not yet confirm the understanding as a whole <!-- REQUIRED:handoff -->
+not yet: the PO confirmed the frame (D1), a direction (D5), the answers D6 to D13 the jobs (D19) and the delegated answers (D20) and items.md's route (D21); Q11 waits for a bench row, and he did not yet confirm the understanding as a whole <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/

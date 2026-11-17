@@ -96,5 +96,5 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 
 ## Board actions
 <!-- Each action, taken or pending, with its D. e.g. `- move the item to Discovery · pending` -->
-- file the nine items above · pending, needs the PO's yes to this list (a D that names items.md) <!-- REQUIRED:board-actions -->
+- file the nine items above · not taken: the spike ran (D4, D5), and the eight command fixes go to P869 #1236's triage as input, which files them (D21) <!-- REQUIRED:board-actions -->
 - Later, one line each, not items yet (plans shrink with distance): the bench witnesses in the flow (a witness is a value with what it says, its source and its time, so a third witness, seen live, needs no new status word: council/live.md:229); a refused build keeps the last good outputs; the facts to test as a phase; one value for an offer and a `next` step.
