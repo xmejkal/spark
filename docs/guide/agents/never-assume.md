@@ -109,7 +109,7 @@ It needs a Wokwi account's token in `WOKWI_CLI_TOKEN`. In [`commands/build.md`](
 spends Wokwi CI minutes"*. The build's own simulation stage writes the diagram and chips, kept in `sim/` with
 `--keep` or in DIR with `--sim-dir DIR`, and runs no simulation. Ask the person before running one.
 
-## 5. An existing `board.tsx` is never overwritten, edited or not; delete it to have it generated again
+## 5. A `board.tsx` you changed is never overwritten; delete it to have it generated again
 
 But `--keep .` still replaces `dist/`, which every check reads, with a build of the freshly generated board
 ([P110](https://github.com/xmejkal/spark/issues/44)). So after you edit `board.tsx` or change `requirements.json`,

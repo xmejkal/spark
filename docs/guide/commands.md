@@ -193,8 +193,8 @@ stopped it. It runs no simulation. It runs in seconds, with no agents ([journey:
 
 With `--keep .` it writes `board.tsx`, its footprint, `dist/`, `breadboard.md` (the parts and how to wire them), `breadboard.json` (the same wiring on a Wokwi breadboard, for the
 XIAO ESP32-C6 today),
-`firmware/pins.py` (the pins the firmware imports) and `sim/` (the Wokwi project) into the project. An existing `board.tsx` is left
-alone, edited or not, and `dist/` is then built from the requirements file, not from your `board.tsx`
+`firmware/pins.py` (the pins the firmware imports) and `sim/` (the Wokwi project) into the project. A `board.tsx` that spark wrote and nobody changed is `replaced` (`unchanged` when the board is the same, the previous version in `.spark/previous/board.tsx.txt`); any other is left
+alone, and `dist/` is then built from the requirements file, not from your `board.tsx`
 ([P110](https://github.com/xmejkal/spark/issues/44)). To check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`; to regenerate it, delete it. When its traces join other pins than this build's, a `traces differ` line names each one (P660). `--sim-dir DIR` keeps the Wokwi project in DIR instead
 of `sim/` ([P116](https://github.com/xmejkal/spark/issues/50)).
