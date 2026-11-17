@@ -84,7 +84,17 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12)
 
+## A second build no longer erases the first build's list of bench changes
+- type: story
+- needed by: "what happens when we ... go on, create the goal, the needs, the parts, the schema, even the software maybe, and then I would say, 'Well, let's add another joystick.' What would happen, actually" (the PO, 2026-11-17, #1234's comment)
+- value proven by: after a changed design is built twice, breadboard.md still lists what to rewire since the last sheet the person wired from, and never "Nothing to change on the bench." for a change nobody wired (★C32, no board)
+- depends on: Q4 (what spark may say about the bench); a candidate for P869 #1236's triage
+- status: proposed
+- label (the repository's type label): story
+- parent (the epic, as a sub-issue): P867 #1234's parent, P820 #1173
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider: "v0.11 Change it and put it on again" widened, or "Views and editors" (Q12)
+
 ## Board actions
 <!-- Each action, taken or pending, with its D. e.g. `- move the item to Discovery · pending` -->
-- file the eight items above · pending, needs the PO's yes to this list (a D that names items.md) <!-- REQUIRED:board-actions -->
+- file the nine items above · pending, needs the PO's yes to this list (a D that names items.md) <!-- REQUIRED:board-actions -->
 - Later, one line each, not items yet (plans shrink with distance): the bench witnesses in the flow (a witness is a value with what it says, its source and its time, so a third witness, seen live, needs no new status word: council/live.md:229); a refused build keeps the last good outputs; the facts to test as a phase; one value for an offer and a `next` step.
