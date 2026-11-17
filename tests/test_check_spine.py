@@ -1021,11 +1021,15 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
 
     def test_a_leftover_stage_file_of_a_person_keeps_its_bytes_and_is_not_removed(self):
         self.build(self.BOARD_A)
-        (self.project / "board.tsx.new").write_text("mine")
-        (self.project / "board.tsx.new").chmod(0o444)
-        entries = self.build(self.BOARD_B)
-        self.assertEqual(entries[0]["did"], "left alone")
-        self.assertEqual(((self.project / "board.tsx.new").read_text(), self.board.read_text()), ("mine", self.BOARD_A))
+        for mode in (0o444, 0o644):
+            with self.subTest(mode=oct(mode)):
+                (self.project / "board.tsx.new").write_text("mine")
+                (self.project / "board.tsx.new").chmod(mode)
+                entries = self.build(self.BOARD_B)
+                self.assertEqual(entries[0]["did"], "left alone")
+                self.assertIn("board.tsx.new is in the way: delete it if it is not yours", entries[0]["why"])
+                self.assertEqual(((self.project / "board.tsx.new").read_text(), self.board.read_text()), ("mine", self.BOARD_A))
+                (self.project / "board.tsx.new").unlink()
 
     def test_a_previous_version_stage_that_is_a_link_is_never_written_through(self):
         # F2
@@ -1088,9 +1092,35 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         self.build(self.BOARD_A)
         self.board.chmod(0)
         self.addCleanup(self.board.chmod, 0o644)
-        self.assertEqual(self.build(self.BOARD_B)[0]["did"], "left alone")
+        entries = self.build(self.BOARD_B)
+        self.assertEqual((entries[0]["did"], entries[0]["why"]), ("left alone", "delete it to have it regenerated"))
         self.board.chmod(0o644)
         self.assertEqual(self.board.read_text(), self.BOARD_A)
+
+    def test_a_previous_folder_that_is_a_link_is_never_written_through(self):
+        # G1
+        self.build(self.BOARD_A)
+        outside = Path(tempfile.mkdtemp())
+        (self.project / ".spark" / "previous").symlink_to(outside)
+        entries = self.build(self.BOARD_B)
+        self.assertEqual(entries[0]["did"], "left alone")
+        self.assertEqual((list(outside.iterdir()), self.board.read_text()), ([], self.BOARD_A))
+
+    def test_an_unfinished_build_says_why_it_did_not_replace_the_board(self):
+        # G3
+        self.build(self.BOARD_A)
+        entries = self.build(self.BOARD_B, stages=[Stage("build", check_spine.COULD_NOT_RUN, "timed out")])
+        self.assertEqual((entries[0]["did"], entries[0]["why"]), ("left alone", "this build did not finish, so spark did not replace it"))
+
+    def test_a_previous_version_that_cannot_be_put_in_place_is_named_where_it_waits(self):
+        # G4: step 4 fails after the swap; the old board is not lost
+        self.build(self.BOARD_A)
+        self.previous.mkdir(parents=True)
+        (self.previous / "board.tsx.txt").mkdir()
+        entries = self.build(self.BOARD_B)
+        waiting = self.previous / "board.tsx.txt.new"
+        self.assertEqual((entries[0]["did"], entries[0]["previous"]), ("replaced", str(waiting)))
+        self.assertEqual((waiting.read_text(), self.board.read_text()), (self.BOARD_A, self.BOARD_B))
 
 
 class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
