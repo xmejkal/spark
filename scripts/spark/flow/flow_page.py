@@ -100,7 +100,7 @@ class WiringHtmlSection:
     def _nav(step, steps, with_pictures):
         """The nav line of one step: where it stands, Back and Next (not on the first and the last), the list and the pictures."""
         numbers = [number for number, _words in steps]
-        number, at = step[0], numbers.index(step[0])
+        at = numbers.index(step[0])
         links = []
         if at > 0:
             links.append('<a href="#step-%d" aria-label="%s">%s</a>' % (numbers[at - 1], flow_codes.BACK_LABEL % numbers[at - 1], flow_codes.BACK))

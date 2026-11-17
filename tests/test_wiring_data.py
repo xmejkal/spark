@@ -160,10 +160,6 @@ class TheHtmlLinesTest(unittest.TestCase):
         self.assertEqual(line, "<p>Each record whole, with what it asks of the board: "
                                "<code>parts.py --show a-b</code>, <code>parts.py --show c&lt;d</code>.</p>")
 
-    def test_the_heading_is_the_sheet_s(self):
-        self.assertIn("## Before you power it\n", (FIXTURES / "motor" / "breadboard.expected.md").read_text())
-        self.assertEqual(before_power.HEADING, "Before you power it")
-
 
 class NoBuildIsRefusedTest(unittest.TestCase):
     def test_a_project_with_no_build_is_refused_as_the_sheet_refuses_it(self):

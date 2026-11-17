@@ -85,13 +85,15 @@ class BeforePowerHtmlList:
     the items as plain dicts with the fields of a BeforePowerItem, as a page holds them.
     """
 
+    #: What each template starts with: a Markdown bullet.
+    BULLET = "- "
     MARKS = ((re.compile(r"\*\*(.+?)\*\*"), r"<strong>\1</strong>"), (re.compile(r"`([^`]+)`"), r"<code>\1</code>"))
 
     def __init__(self):
         self.templates = {kind: self._html(template) for kind, template in BeforePowerList.TEMPLATES.items()}
 
     def _html(self, template):
-        text = html.escape(template.removeprefix("- "))
+        text = html.escape(template.removeprefix(self.BULLET))
         for mark, tag in self.MARKS:
             text = mark.sub(tag, text)
         return "<li>%s</li>" % text
