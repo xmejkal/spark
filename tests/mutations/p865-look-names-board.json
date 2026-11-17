@@ -2,20 +2,20 @@
  {
   "file": "scripts/spark/bench/look_at_board.py",
   "name": "the look skips its gate and reads any board with no question",
-  "find": "            passed = self._gate(project, port, row, replies, outside)",
+  "find": "            passed = self._gate(LookRun(project, port, evidence), row, outside)",
   "replace": "            passed = Passed(SAME, None, None, row)"
  },
  {
   "file": "scripts/spark/bench/known_board.py",
   "name": "tell says same for any serial",
-  "find": "    if key == known.usb_key or key[:MAC_KEY_LENGTH] == _key(known.mac):",
+  "find": "    if key == known.usb_key or key[:MAC_KEY_LENGTH] == comparable_key(known.mac):",
   "replace": "    if key:"
  },
  {
   "file": "scripts/spark/bench/known_board.py",
   "name": "the MAC part of a serial is not cut to 12 characters, so a MicroPython serial is another board",
-  "find": "    if key == known.usb_key or key[:MAC_KEY_LENGTH] == _key(known.mac):",
-  "replace": "    if key == known.usb_key or key == _key(known.mac):"
+  "find": "    if key == known.usb_key or key[:MAC_KEY_LENGTH] == comparable_key(known.mac):",
+  "replace": "    if key == known.usb_key or key == comparable_key(known.mac):"
  },
  {
   "file": "scripts/spark/bench/known_board.py",
@@ -32,7 +32,7 @@
  {
   "file": "scripts/spark/bench/known_board.py",
   "name": "a serial that a native board's firmware set is trusted",
-  "find": "    return key if key and (key[:MAC_KEY_LENGTH] == _key(mac) or _vendor(row) != ESPRESSIF_VENDOR) else None",
+  "find": "    return key if key and (key[:MAC_KEY_LENGTH] == comparable_key(mac) or _vendor(row) != ESPRESSIF_VENDOR) else None",
   "replace": "    return key or None"
  },
  {
@@ -62,7 +62,7 @@
  {
   "file": "scripts/spark/bench/look_at_board.py",
   "name": "a kept board whose MAC is not the MAC read goes on as the same board",
-  "find": "        if known and mac and not switch and known_board._key(mac) != known_board._key(known.mac):",
+  "find": "        if differs and not switch:",
   "replace": "        if False:"
  },
  {
@@ -73,9 +73,9 @@
  },
  {
   "file": "scripts/spark/bench/board_look.py",
-  "name": "a named port that the list does not hold stops the look again",
-  "find": "            return next((row for row in self.nodes() if row.device == port), None)",
-  "replace": "            return self.require_one_board(\"look.py\", port)"
+  "name": "the look lists every board even with a named port, and an unlisted port stops it again",
+  "find": "        if not port:\n            return self.require_one_board(\"look.py\")",
+  "replace": "        if True:\n            return self.require_one_board(\"look.py\", port)"
  },
  {
   "file": "scripts/spark/bench/__init__.py",
@@ -88,5 +88,89 @@
   "name": "after the move, the replies file no longer comes before the terminal",
   "find": "    parts = [GivenReplyStrategy(RepliesStore(path).load())] if path else []",
   "replace": "    parts = []"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "H1: a yes to a board the look could not tell is no yes to switch, so a firmware-serial record locks the project",
+  "find": "        switch = passed.state == OTHER or (passed.state == CANNOT_TELL and passed.reply is not None)",
+  "replace": "        switch = passed.state == OTHER"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "T5: a yes to switch_board does not replace the record",
+  "find": "        switch = passed.state == OTHER or (passed.state == CANNOT_TELL and passed.reply is not None)",
+  "replace": "        switch = passed.state == CANNOT_TELL and passed.reply is not None"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "H1: the cannot-tell question does not say that a yes replaces the kept board",
+  "find": "    why += REPLACE_WHY if state == CANNOT_TELL and known else \"\"",
+  "replace": "    why += \"\""
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "H1: a named port that stops as another board does not name the way out",
+  "find": "            fix = known_board.OTHER_AFTER_PORT_FIX if passed.state == CANNOT_TELL else known_board.OTHER_AFTER_FIX",
+  "replace": "            fix = known_board.OTHER_AFTER_FIX"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "H3: the open question's next step drops the --port",
+  "find": "([\"--port\", look.port] if look.port else []) + flags",
+  "replace": "flags"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "H4: a replies file that cannot be written crashes the look",
+  "find": "            except OSError as why:",
+  "replace": "            except ZeroDivisionError as why:"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "H4: a record with no time is read, and the other-board sentence crashes",
+  "find": "                    or not isinstance(known.at, str):",
+  "replace": "                    or False:"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "T1: any value that is not a bool, such as \"yes\", is read as a no",
+  "find": "        if asked and (reply is None or not isinstance(reply.value, bool)):",
+  "replace": "        if asked and reply is None:"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "T2: the clear sets every key of the file to null, research's too",
+  "find": "held.items() if key.startswith(prefix)",
+  "replace": "held.items() if True"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "T4: a record with an empty MAC is read",
+  "find": "if not isinstance(known.mac, str) or not comparable_key(known.mac) or",
+  "replace": "if not isinstance(known.mac, str) or"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "T6: a store that refuses the write crashes the look",
+  "find": "        except store.StoreError as refused:",
+  "replace": "        except ZeroDivisionError as refused:"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "T7: another board after the read keeps the deploy step",
+  "find": "findings=list(result.findings) + [found], next=[],",
+  "replace": "findings=list(result.findings) + [found],"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "T8: a project with no board record is asked before it stops",
+  "find": "            service.record_of(project)  # P865: a project with no board record stops before any question",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "T9: the kept boards are not private",
+  "find": "\"grants\", \"known-boards\")",
+  "replace": "\"grants\")"
  }
 ]

@@ -58,7 +58,7 @@ class LookScriptCase(LookCase):
 
         if self.KNOWS_THE_BOARD:  # P865: the store keeps the board this call reads, by the serial of the first row listed
             rows = data(devs).split()
-            self.know_the_board(board_look.EsptoolReader.parse(text or data(esptool)).mac or MAC, known_board._key(rows[1]) if rows else None)
+            self.know_the_board(board_look.EsptoolReader.parse(text or data(esptool)).mac or MAC, known_board.comparable_key(rows[1]) if rows else None)
         return self.go_with(FakeOutsideWorld(run=RealChildRun(run), find_tool=found), *argv)  # P458: the compile child is real
 
     def go_with(self, outside, *argv):

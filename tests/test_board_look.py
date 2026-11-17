@@ -76,7 +76,7 @@ class LookCase(ProjectCase):
         self.board("xiao-esp32-c6")
         self.ran = []
         if self.KNOWS_THE_BOARD:
-            self.know_the_board(C6_MAC, known_board._key(C6_MAC))
+            self.know_the_board(C6_MAC, known_board.comparable_key(C6_MAC))
 
     def know_the_board(self, mac, usb_key):
         """P865: the store keeps the board `mac` for this project, as a yes on an earlier look keeps it."""

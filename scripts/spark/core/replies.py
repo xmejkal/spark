@@ -65,6 +65,7 @@ MISFIT_FORM_FIX = "answer as the question asks: %s"
 #: What a kind takes, for a question with no `answer_form` and no `example`.
 KIND_FORMS = {YES_NO: "true or false", VALUE: "a value that is not empty", CHOICE: "one of the choices"}
 UNREADABLE_FIX = "run once without --replies to write the template, then fill its values"
+UNWRITABLE_FIX = "make the file writable, so that spark can mark the reply as used, then run again"
 WRONG_SHAPE = 'a replies file is {"replies": {"<key>": {"value": ..., "note": "...", "cites": {...}}}}, or a bare "<key>": value'
 
 
@@ -273,14 +274,18 @@ class RepliesStore:
 
     def clear(self, prefix):
         """Set to null the value of every key that starts with `prefix`, so a reply given ahead answers one run only (P865).
-        It writes only when a key had a value. Returns the keys it cleared. A file that cannot be read is `_read`'s SparkError."""
+        It writes only when a key had a value. Returns the keys it cleared. A file that cannot be read is `_read`'s SparkError,
+        and one that cannot be written is a SparkError `bad_argument` too."""
         held = self._read()
         cleared = sorted(key for key, entry in held.items() if key.startswith(prefix)
                          and (entry.get("value") if isinstance(entry, dict) else entry) is not None)
         for key in cleared:
             held[key] = dict(held[key], value=None) if isinstance(held[key], dict) else None
         if cleared:
-            TextFileWriter().write(self.path, json.dumps({REPLIES_KEY: held}, indent=1, ensure_ascii=False) + "\n")
+            try:
+                TextFileWriter().write(self.path, json.dumps({REPLIES_KEY: held}, indent=1, ensure_ascii=False) + "\n")
+            except OSError as why:
+                raise SparkError("the replies file %s cannot be written: %s", self.path, why, code=BAD_ARGUMENT, fix=UNWRITABLE_FIX)
         return cleared
 
     def dump(self, questions, answers=None):

@@ -189,7 +189,7 @@ def plant_known_board(store, project, devs_file):
     """P865: `store` keeps the canned board as the board of `project`, as a yes on an earlier look keeps it, by the serial
     of the first row of `devs_file`, so that a look reads it with no question. Written through the store, as the look writes."""
     rows = (CANNED / devs_file).read_text().split()
-    known = known_board.KnownBoard(str(Path(project).resolve()), BOARD_MAC, known_board._key(rows[1]) if rows else None, BOARD_ID,
+    known = known_board.KnownBoard(str(Path(project).resolve()), BOARD_MAC, known_board.comparable_key(rows[1]) if rows else None, BOARD_ID,
                                    "tester", "2026-11-17T18:00:00+01:00")
     with mock.patch.dict(os.environ, {"SPARK_HOME": str(store)}):
         known_board.KnownBoardStore().write(known)

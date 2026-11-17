@@ -14,7 +14,7 @@ from spark.bench import board_codes
 from spark.bench.deploy_stages import DeployPhase
 from spark.bench import board_look
 from spark.bench import download_mode
-from spark.bench.known_board import _key
+from spark.bench.known_board import comparable_key as _key  # the name this module's mutation rows anchor on
 from spark.core.events import Event
 
 #: How long the port may take to be listed after the write, in seconds. One bench observation: after esptool's restart
