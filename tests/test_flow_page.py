@@ -33,15 +33,21 @@ from spark.build import kept_files  # noqa: E402
 from spark.build.build_record import BuildRecordStore, sha256_of  # noqa: E402
 from spark.build.stages import Stage  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, OK, SKIPPED  # noqa: E402
-from spark.flow import flow_codes  # noqa: E402
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, Picture, TICK, shown_phase, word_of  # noqa: E402
-from spark.flow.phase_readers import MARKS, Phase  # noqa: E402
+from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
 from spark.flow.write_flow_page import FlowPageStore, KeptFlowPage, WriteFlowPage, kept_pictures, write_page  # noqa: E402
 
 #: The built fixture test_flow.py builds its projects from.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 UNKNOWN_CODE = "a-new-code"
+#: The nine phases of a real flow, the words of the page and its codes, as the card says them: literals, not the code's own.
+NINE = ["idea", "needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"]
+NOT_CHECKED = "not checked by spark"
+BENCH = "This page reads the project's files. It does not know whether the board is wired or flashed."
+NOT_WRITTEN = "page_not_written"
+NOT_DRAWN_HERE = "this command does not draw it: run the build with --keep"
+NO_BREADBOARD_FILE = "breadboard.svg is not in the project"
 
 
 class FakeReader:
@@ -124,7 +130,7 @@ class FlowOfNPhasesTest(unittest.TestCase):
     """The page has one entry and one section for each phase the flow gives it, in the flow's order, and no other."""
 
     def test_a_flow_of_ten_phases_gives_ten_rail_entries_and_ten_sections_in_order(self):
-        names = list(flow_codes.PHASES) + ["bench-test"]
+        names = NINE + ["bench-test"]
         parsed = Parsed(page_of(*[a_phase(name) for name in names]))
         self.assertEqual([attrs["data-phase"] for attrs, _ in parsed.rail], names)
         self.assertEqual([attrs["data-phase"] for attrs, _ in parsed.sections], names)
@@ -135,11 +141,11 @@ class FlowOfNPhasesTest(unittest.TestCase):
 
     def test_the_page_holds_no_phase_name_the_flow_did_not_give(self):
         text = page_of(a_phase("alpha"), a_phase("beta")).lower()
-        for name in flow_codes.PHASES:
+        for name in NINE:
             self.assertNotIn(name, text)
 
     def test_show_and_page_read_the_same_phases(self):
-        phases = readers_of(a_phase("one", flow_codes.STALE), a_phase("two", None))
+        phases = readers_of(a_phase("one", "stale"), a_phase("two", None))
         shown, shown_at = read_flow("project", phases)
         written = write_page("project", phases, lambda _project: [], store=FakeStore())
         self.assertEqual([(phase.phase, phase.status) for phase in shown], [(phase["phase"], phase["status"]) for phase in written.phases])
@@ -166,8 +172,8 @@ class TheMarkTest(unittest.TestCase):
         self.assertIn(TICK, parsed.sections[0][1])
 
     def test_the_word_of_each_status(self):
-        self.assertEqual(word_of(OK), flow_codes.OK_WORD)
-        self.assertEqual(word_of(None), flow_codes.NOT_CHECKED_WORD)
+        self.assertEqual(word_of(OK), "ok")
+        self.assertEqual(word_of(None), NOT_CHECKED)
         self.assertEqual(word_of(UNKNOWN_CODE), UNKNOWN_CODE)
         for status, (word, _glyph) in MARKS.items():
             if status not in (OK, None):
@@ -179,7 +185,7 @@ class TheMarkTest(unittest.TestCase):
                 parsed = Parsed(page_of(a_phase("one", status)))
                 for _attrs, said in (parsed.rail[0], parsed.sections[0]):
                     self.assertIn(word_of(status), said)
-        self.assertEqual(shown_phase(a_phase("one", None).to_dict()).word, flow_codes.NOT_CHECKED_WORD)
+        self.assertEqual(shown_phase(a_phase("one", None).to_dict()).word, NOT_CHECKED)
 
     def test_every_mark_is_hidden_from_a_screen_reader(self):
         parsed = Parsed(page_of(*[a_phase("p%d" % number, status) for number, status in enumerate(MARKS)]))
@@ -191,7 +197,7 @@ class TheMarkTest(unittest.TestCase):
         legend = Parsed(page_of(a_phase("one"))).legend
         for status, (_word, glyph) in MARKS.items():
             self.assertIn("%s %s" % (glyph, word_of(status)), legend)
-        self.assertIn(flow_codes.NOT_CHECKED_LEGEND, legend)
+        self.assertIn("does not judge this phase", legend)
 
     def test_the_style_names_no_status_code(self):
         style = Parsed(page_of(a_phase("one"))).style
@@ -238,7 +244,7 @@ class TheDocumentTest(unittest.TestCase):
             self.assertNotIn("http", text.lower())
 
     def test_a_sentence_with_an_angle_bracket_is_escaped(self):
-        text = page_of(a_phase("one", says=["<b>bold</b> & more"], offers=[flow_codes_offer("a<b", "<i>x</i>")]), project="<p>")
+        text = page_of(a_phase("one", says=["<b>bold</b> & more"], offers=[Offer("a<b", "<i>x</i>")]), project="<p>")
         self.assertNotIn("<b>", text)
         self.assertNotIn("<i>", text)
         self.assertIn("&lt;b&gt;bold&lt;/b&gt; &amp; more", text)
@@ -249,7 +255,7 @@ class TheDocumentTest(unittest.TestCase):
         self.assertEqual(page_of(*phases), page_of(*phases))
 
     def test_an_offer_is_plain_text_with_no_button(self):
-        text = page_of(a_phase("one", offers=[flow_codes_offer("build", "builds the board")]))
+        text = page_of(a_phase("one", offers=[Offer("build", "builds the board")]))
         self.assertIn("<code>build</code>: builds the board", text)
         self.assertNotIn("<button", text)
 
@@ -261,15 +267,10 @@ class TheDocumentTest(unittest.TestCase):
         self.assertIn("Not drawn, because no tsci.", text)
 
 
-def flow_codes_offer(key, effect):
-    from spark.flow.phase_readers import Offer
-    return Offer(key, effect)
-
-
 class TheBenchLineTest(unittest.TestCase):
     def test_the_bench_line_is_there_and_wired_and_flashed_appear_only_in_it(self):
-        text = page_of(a_phase("deploy", flow_codes.NOT_STARTED))
-        bench = html.escape(flow_codes.BENCH_NOTE)
+        text = page_of(a_phase("deploy", "not-started"))
+        bench = html.escape(BENCH)
         self.assertEqual(text.count(bench), 1)
         rest = text.replace(bench, "")
         for word in ("wired", "flashed", "none recorded"):
@@ -340,14 +341,14 @@ class TheCommandTest(unittest.TestCase):
         not_a_folder.write_text("x")
         envelope, code = run_flow("page", "--project", str(not_a_folder), "--json")
         self.assertEqual((code, envelope["status"]), (2, COULD_NOT_RUN))
-        self.assertEqual([item["code"] for item in envelope["unchecked"]], [flow_codes.PAGE_NOT_WRITTEN])
+        self.assertEqual([item["code"] for item in envelope["unchecked"]], [NOT_WRITTEN])
 
     def test_a_page_that_a_store_refuses_is_one_could_not_run_finding(self):
         class Refusing:
             def write(self, project, file_name, text):
                 raise PermissionError("read-only")
         result = WriteFlowPage(readers=readers_of(a_phase("one")), pictures=lambda _project: [], store=Refusing()).run(Path("."), outside=None)
-        self.assertEqual([(finding.severity, finding.code) for finding in result.findings], [(COULD_NOT_RUN, flow_codes.PAGE_NOT_WRITTEN)])
+        self.assertEqual([(finding.severity, finding.code) for finding in result.findings], [(COULD_NOT_RUN, NOT_WRITTEN)])
 
     def test_a_phase_that_holds_problems_does_not_change_the_page_s_status(self):
         result = WriteFlowPage(readers=readers_of(a_phase("one", "problems")), pictures=lambda _project: [], store=FakeStore()).run(
@@ -389,11 +390,11 @@ class ThePicturesTest(unittest.TestCase):
         breadboard, schematic, pcb = kept_pictures(project)
         self.assertEqual((breadboard.title, breadboard.svg, breadboard.why_missing), ("Breadboard", "<svg/>", None))
         for picture in (schematic, pcb):
-            self.assertEqual((picture.svg, picture.why_missing), (None, flow_codes.NOT_DRAWN_HERE))
+            self.assertEqual((picture.svg, picture.why_missing), (None, NOT_DRAWN_HERE))
 
     def test_a_breadboard_file_that_is_missing_is_not_drawn_and_says_why(self):
         breadboard = kept_pictures(Path(tempfile.mkdtemp()))[0]
-        self.assertEqual((breadboard.svg, breadboard.why_missing), (None, flow_codes.NO_PICTURE_FILE % "breadboard.svg"))
+        self.assertEqual((breadboard.svg, breadboard.why_missing), (None, NO_BREADBOARD_FILE))
 
 
 class TheKeepStepTest(unittest.TestCase):
