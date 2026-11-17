@@ -1,0 +1,92 @@
+[
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "the look skips its gate and reads any board with no question",
+  "find": "            passed = self._gate(project, port, row, replies, outside)",
+  "replace": "            passed = Passed(SAME, None, None, row)"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "tell says same for any serial",
+  "find": "    if key == known.usb_key or key[:MAC_KEY_LENGTH] == _key(known.mac):",
+  "replace": "    if key:"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "the MAC part of a serial is not cut to 12 characters, so a MicroPython serial is another board",
+  "find": "    if key == known.usb_key or key[:MAC_KEY_LENGTH] == _key(known.mac):",
+  "replace": "    if key == known.usb_key or key == _key(known.mac):"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "a serial that a native board's firmware set counts as another board, not as cannot tell",
+  "find": "    return CANNOT_TELL if _vendor(row) == ESPRESSIF_VENDOR and known.usb_key is None else OTHER",
+  "replace": "    return OTHER"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "a board with no serial is told apart before a read",
+  "find": "    if not key:\n        return CANNOT_TELL\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "a serial that a native board's firmware set is trusted",
+  "find": "    return key if key and (key[:MAC_KEY_LENGTH] == _key(mac) or _vendor(row) != ESPRESSIF_VENDOR) else None",
+  "replace": "    return key or None"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "mac_ends prints the whole MAC",
+  "find": "    return \"%s:%s\" % (key[8:10], key[10:12])",
+  "replace": "    return text"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "the record's project folder is not compared",
+  "find": "        return known if known.project == str(Path(project).resolve()) else None",
+  "replace": "        return known"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "the yes is not cleared, so one yes answers every later look",
+  "find": "                RepliesStore(replies).clear(known_board.KEY_PREFIX)",
+  "replace": "                pass"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "a no is read as a yes",
+  "find": "        if asked and reply.value is not YES:",
+  "replace": "        if asked and reply.value is None:"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "a kept board whose MAC is not the MAC read goes on as the same board",
+  "find": "        if known and mac and not switch and known_board._key(mac) != known_board._key(known.mac):",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "a board is kept with no MAC",
+  "find": "        if not mac:\n            return known_board.NOT_KEPT_NO_MAC_MESSAGE",
+  "replace": "        if False:\n            return known_board.NOT_KEPT_NO_MAC_MESSAGE"
+ },
+ {
+  "file": "scripts/spark/bench/board_look.py",
+  "name": "a named port that the list does not hold stops the look again",
+  "find": "            return next((row for row in self.nodes() if row.device == port), None)",
+  "replace": "            return self.require_one_board(\"look.py\", port)"
+ },
+ {
+  "file": "scripts/spark/bench/__init__.py",
+  "name": "the bench's builder drops the replies",
+  "find": "                               replies=replies)",
+  "replace": "                               replies=None)"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "after the move, the replies file no longer comes before the terminal",
+  "find": "    parts = [GivenReplyStrategy(RepliesStore(path).load())] if path else []",
+  "replace": "    parts = []"
+ }
+]

@@ -173,6 +173,12 @@ class TheLookAsksOnceTest(LookScriptCase):
         self.assertEqual((outside.reporter.events, at_the_begin), ([Event.begin("look")], [[]]))
         self.assertIn("devs", outside.ran[0])
 
+    def test_the_kept_board_under_micropython_is_known_by_the_mac_part_of_its_serial(self):
+        # the P472 bench: the same S3 shows its MAC in ROM download mode and the MAC plus two bytes under MicroPython
+        self.envelope(NATIVE_A, replies_file=self.say_yes(self.envelope(NATIVE_A)[1]))
+        micropython = "%s aabbccddeeff0001 303a:4001 Espressif Device" % PORT
+        self.assertEqual(len(self.envelope(micropython, ask=False)[2]), 1)
+
     def test_a_no_reads_nothing_and_keeps_nothing(self):
         key = self.envelope(NATIVE_A)[1]["data"]["open"][0]["key"]
         self.yes_file.write_text(json.dumps({"replies": {key: False}}))
