@@ -50,6 +50,7 @@ from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
 from spark.records.answer_operation import AnswerOperation  # noqa: E402
 from spark.sourcing import part_rules  # noqa: E402
+from spark.design import power_rails  # noqa: E402
 from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -3829,6 +3830,70 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         self.assertIn("--match PROJECT", out.getvalue())
         self.assertIn("--from N", out.getvalue())
         self.assertNotIn("--list", out.getvalue())
+
+
+class AnOwnSocketIsAFactWithItsSourceTest(unittest.TestCase):
+    """P864 (#1230): a part says that some of its output pins end in its own socket, as a block with its source (`own_socket`)."""
+
+    def amplifier(self, **change):
+        record = json.loads((ROOT / "parts" / "max98357a-dfr0954.json").read_text())
+        return dict(record, **change)
+
+    def problems(self, record):
+        return part_records.validate(record, Path(tempfile.mkdtemp()) / (record["id"] + ".json"))
+
+    def test_the_dfr0954_says_its_speaker_outputs_end_in_its_own_socket_unverified_and_cites_page_1_of_the_drawing(self):
+        record = self.amplifier()
+        block = record["own_socket"]
+        self.assertEqual((block["pins"], block["verified"], block["cites"]),
+                         (["SPK_P", "SPK_N"], False, {"document": "dfr0954-max98357a-i2s-dimension-1-0", "at": "page 1"}))
+        self.assertRegex(record["documents"][block["cites"]["document"]]["sha256"], r"[0-9a-f]{64}")
+        self.assertTrue(block["source"] and block["why_it_matters"])
+        self.assertEqual(self.problems(record), [])
+        self.assertEqual(part_facts.own_socket_pins(record), {"SPK_P", "SPK_N"})
+
+    def test_an_own_socket_pin_that_is_no_output_of_the_part_is_a_problem(self):
+        for pin in ("VCC", "NO_SUCH_PIN"):
+            with self.subTest(pin=pin):
+                block = dict(self.amplifier()["own_socket"], pins=["SPK_P", pin])
+                self.assertEqual(self.problems(self.amplifier(own_socket=block)),
+                                 ["own_socket names %s, which is no output of this part" % pin])
+
+    def test_an_own_socket_with_no_pins_no_verified_no_source_or_no_cites_is_a_problem(self):
+        for key in ("pins", "verified", "source", "cites"):
+            with self.subTest(missing=key):
+                block = {k: v for k, v in self.amplifier()["own_socket"].items() if k != key}
+                self.assertTrue([p for p in self.problems(self.amplifier(own_socket=block)) if "own_socket" in p])
+        block = dict(self.amplifier()["own_socket"], pins=[])
+        self.assertTrue(self.problems(self.amplifier(own_socket=block)))
+
+    def test_a_malformed_own_socket_is_a_problem_and_crashes_no_reader(self):
+        for block in (["SPK_P", "SPK_N"], "SPK_P", {"pins": "SPK_P"}, {"pins": [1]}):
+            with self.subTest(block=block):
+                record = self.amplifier(own_socket=block)
+                self.assertTrue(self.problems(record))
+                self.assertEqual(part_facts.own_socket_pins(record), frozenset())
+                self.assertEqual([net for net, _, _ in power_rails.outputs_with_nothing_on_them([dict(record, name="X")])],
+                                 ["SPEAKER_N", "SPEAKER_P"])
+
+    def test_unverified_lists_the_own_socket_with_why_it_matters_and_where_the_result_goes(self):
+        said, code = run_json(["--unverified", "max98357a-dfr0954"])
+        row = next(row for row in said["assumptions"] if row["write"] == "own_socket")
+        self.assertEqual((code, row["basis"], row["fact"]), (0, "unverified", "max98357a-dfr0954.own_socket"))
+        self.assertTrue(row["sentence"] and row["source"])
+
+    def test_a_fact_write_of_own_socket_is_accepted_and_makes_it_verified(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-amp.json").write_text(json.dumps(self.amplifier(id="x-amp")))
+        bench = dict(self.amplifier()["own_socket"], verified=True, source="bench, 2026-11-20, meter on the owned module, Petr Smejkal")
+        given = Path(tempfile.mkdtemp()) / "facts.json"
+        given.write_text(json.dumps({"own_socket": bench}))
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-amp", str(given)])
+            left = [row["write"] for row in run_json(["--unverified", "x-amp"])[0]["assumptions"]]
+        record = json.loads((home / "catalog" / "x-amp.json").read_text())
+        self.assertEqual((code, record["own_socket"]["verified"], "own_socket" in left), (0, True, False), said["problems"])
 
 
 if __name__ == "__main__":

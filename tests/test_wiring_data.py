@@ -7,6 +7,7 @@ renderer's output.
 """
 
 import html
+import json
 import os
 import re
 import shutil
@@ -18,12 +19,14 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from fakes import amplifier_alone  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.breadboard import before_power  # noqa: E402
 from spark.breadboard import sheet  # noqa: E402
+import parts  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "data" / "breadboard"
 
@@ -159,6 +162,65 @@ class TheHtmlLinesTest(unittest.TestCase):
         line = before_power.BeforePowerHtmlList().records_line(["a-b", "c<d"])
         self.assertEqual(line, "<p>Each record whole, with what it asks of the board: "
                                "<code>parts.py --show a-b</code>, <code>parts.py --show c&lt;d</code>.</p>")
+
+
+class TheAmplifierAloneTest(unittest.TestCase):
+    """
+    P864 (#1230): the DFR0954 with no speaker terminal listed. Its circuit is the amplifier fixture's real build, cut by hand
+    (`fakes.amplifier_alone`): no real build of the amplifier alone is proved. The sheet tells the person about the module's own
+    socket, in the record's own state of proof.
+    """
+
+    UNVERIFIED = ("- Max98357aDfr0954 SPK_P, SPK_N: the record says that the module has its own socket for the speaker, and nobody "
+                  "has looked at a real module yet. Look for it first. If it is there, plug only the speaker into it: never a supply, "
+                  "and never ground. If it is not there, wire the speaker to the SPK_P, SPK_N pads.")
+    VERIFIED = ("- Max98357aDfr0954 SPK_P, SPK_N end in the module's own socket: plug only the speaker into it, never a supply "
+                "and never ground.")
+
+    def alone(self, part_id="max98357a-dfr0954"):
+        project = a_copy("amplifier")
+        requirements = {"board": "firebeetle2-esp32s3", "parts": [part_id]}
+        (project / "requirements.json").write_text(json.dumps(requirements))
+        (project / "dist" / "board" / "built-from.json").write_text(json.dumps({"requirements": requirements}))
+        circuit = project / "dist" / "board" / "circuit.json"
+        circuit.write_text(json.dumps(amplifier_alone(json.loads(circuit.read_text()))))
+        return project
+
+    def test_the_sheet_says_to_plug_the_speaker_into_the_module_s_own_socket_and_never_a_supply(self):
+        project = self.alone()
+        with in_store(Path(tempfile.mkdtemp())):
+            text = sheet.sheet(project / "requirements.json")
+            data = sheet.wiring_data(project / "requirements.json")
+        self.assertIn(self.UNVERIFIED, expected_before_power(text))
+        self.assertEqual(before_power.BeforePowerList().render(data.before_power)[:-2], expected_before_power(text)[:-2])
+        html_lines = before_power.BeforePowerHtmlList().items([item._asdict() for item in data.before_power.items])
+        self.assertIn(self.UNVERIFIED.removeprefix("- "), [html.unescape(re.sub(r"<[^>]+>", "", line)) for line in html_lines])
+        for net in ("SPEAKER_P", "SPEAKER_N"):
+            self.assertNotIn("%s comes from off the board" % net, text)
+
+    def test_a_fact_write_of_own_socket_makes_the_sheet_say_it_as_a_fact(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        record = json.loads((ROOT / "parts" / "max98357a-dfr0954.json").read_text())
+        (home / "catalog" / "x-amp.json").write_text(json.dumps(dict(record, id="x-amp")))
+        bench = dict(record["own_socket"], verified=True, source="bench, 2026-11-20, meter on the owned module, Petr Smejkal")
+        given = Path(tempfile.mkdtemp()) / "facts.json"
+        given.write_text(json.dumps({"own_socket": bench}))
+        project = self.alone("x-amp")
+        with in_store(home):
+            self.assertEqual(parts.main(["--fact-set", "x-amp", str(given), "--json"]), 0)
+            text = sheet.sheet(project / "requirements.json")
+        self.assertIn(self.VERIFIED, expected_before_power(text))
+        self.assertNotIn("nobody has looked", text)
+
+    def test_with_a_speaker_terminal_listed_the_sheet_has_no_line_about_a_socket(self):
+        # a pin: the terminal receives both outputs, so the record's fact adds nothing for it
+        project = a_copy("amplifier")
+        with in_store(Path(tempfile.mkdtemp())):
+            text = sheet.sheet(project / "requirements.json")
+            data = sheet.wiring_data(project / "requirements.json")
+        self.assertNotIn("own socket", text)
+        self.assertEqual({item.kind for item in data.before_power.items}, {"unused-pin", "host-requirement"})
 
 
 class NoBuildIsRefusedTest(unittest.TestCase):

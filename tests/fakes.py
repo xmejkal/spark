@@ -304,6 +304,21 @@ class FakePartPictures:
                                      "fake picture of %s" % wokwi_type)
 
 
+def amplifier_alone(circuit):
+    """
+    `circuit`, the elements of the amplifier fixture's real build (tests/data/breadboard/amplifier), cut by hand to the board and
+    the DFR0954 alone: the speaker terminal, its ports, both SPEAKER nets and the traces on them are gone (P864). It is no real
+    build of the amplifier alone, and the real tscircuit build of that board is not proved.
+    """
+    terminal = next(element["source_component_id"] for element in circuit if element.get("name") == "SpeakerTerminal")
+    nets = {element["source_net_id"] for element in circuit if element["type"] == "source_net" and element["name"].startswith("SPEAKER_")}
+    traces = {element["source_trace_id"] for element in circuit
+              if element["type"] == "source_trace" and nets & set(element["connected_source_net_ids"])}
+    return [element for element in circuit
+            if element.get("source_component_id") != terminal
+            and element.get("source_net_id") not in nets and element.get("source_trace_id") not in traces]
+
+
 def fake_tsci(root, builds_when, circuit=(), binary=None):
     """
     A `tsci` (at `binary`, or root/fake-tsci) that answers `--version` and builds — writes a circuit.json holding the

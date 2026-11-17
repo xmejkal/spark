@@ -2879,16 +2879,28 @@ class TheRequirementsFileTest(unittest.TestCase):
                           [{"net": "MOTOR6V", "driven_by": "jst-ph-2-power-inlet.VCC"}]))
 
     def test_an_output_nothing_listed_receives_is_said_and_a_speaker_terminal_answers_it(self):
-        _, project = self.project([self.BOARD, ("alarm", [{"part": "max98357a-dfr0954"}])])
+        home, project = self.project([self.BOARD, ("alarm", [{"part": "x-amp"}])])
+        amplifier = json.loads((ROOT / "parts" / "max98357a-dfr0954.json").read_text())  # P864: the record without its own socket
+        (home / "catalog" / "x-amp.json").write_text(json.dumps(dict({k: v for k, v in amplifier.items() if k != "own_socket"}, id="x-amp")))
         dry = self.text(["--requirements", str(project), "--dry-run"])
         said, code = run(["--requirements", str(project)])
-        self.assertEqual((code, said["data"]["no_receiver"]), (0, [{"net": "SPEAKER_N", "driven_by": "max98357a-dfr0954.SPK_N"},
-                                                                  {"net": "SPEAKER_P", "driven_by": "max98357a-dfr0954.SPK_P"}]))
-        self.assertIn("  net SPEAKER_P is driven by max98357a-dfr0954.SPK_P and nothing listed receives it — pick what it drives "
+        self.assertEqual((code, said["data"]["no_receiver"]), (0, [{"net": "SPEAKER_N", "driven_by": "x-amp.SPK_N"},
+                                                                  {"net": "SPEAKER_P", "driven_by": "x-amp.SPK_P"}]))
+        self.assertIn("  net SPEAKER_P is driven by x-amp.SPK_P and nothing listed receives it — pick what it drives "
                       "(a speaker terminal, a motor, a connector)\n", dry)
         _, project = self.project([self.BOARD, ("alarm", [{"part": "max98357a-dfr0954"}, {"part": "speaker-terminal"}])])
         said, code = run(["--requirements", str(project)])
         self.assertEqual((code, said["data"]["no_receiver"], said["data"]["no_supply"]), (0, [], []))
+
+    def test_an_output_that_ends_in_the_part_s_own_socket_is_no_gap(self):
+        # P864 (#1230): P711's walk 1 printed "nothing listed receives it" for the DFR0954 and a speaker with no record, and the
+        # build stopped on `speaker-terminal`; the record says the outputs end in the module's own socket.
+        _, project = self.project([self.BOARD, ("alarm", [{"part": "max98357a-dfr0954"}, {"entry": "speaker"}])])
+        dry = self.text(["--requirements", str(project), "--dry-run"])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["data"]["no_receiver"], said["data"]["no_supply"]), (0, [], []))
+        self.assertNotIn("nothing listed receives it", dry)
+        self.assertNotIn("speaker-terminal", self.written(project)["parts"])
 
     def test_a_part_in_the_file_whose_record_is_broken_is_left_to_the_build_never_a_traceback(self):
         home, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
