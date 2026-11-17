@@ -103,6 +103,15 @@ def esptool_said(stderr):
     return next((line.strip() for line in (stderr or "").splitlines() if line.startswith(ESPTOOL_ERROR)), None)
 
 
+#: macOS lists a USB serial port twice, as /dev/cu.<name> (the one mpremote lists) and /dev/tty.<name>.
+TTY_PREFIX, CU_PREFIX = "/dev/tty.", "/dev/cu."
+
+
+def node_name(device):
+    """`device` as the list names it: a macOS /dev/tty.<name> becomes /dev/cu.<name>, the same port (P865, the alias)."""
+    return CU_PREFIX + device[len(TTY_PREFIX):] if device.startswith(TTY_PREFIX) else device
+
+
 class PortFinder:
     """The boards on USB. It runs mpremote's `devs`, which only lists, never opens a port or runs code on a board."""
 
@@ -129,6 +138,16 @@ class PortFinder:
         """The port of the one board on USB. LookStopError when there is none, or when there are two or more: it lists them
         and names `script`'s --port (P218's D25)."""
         return self.require_one_board(script).device
+
+    def find_row(self, port):
+        """The Port row the look reads (P865): the one board on USB as require_one_board gives it, or the row of `port` when
+        it is named. A named port is found softly: None when the list does not hold it or cannot be read, and it is read as before."""
+        if not port:
+            return self.require_one_board("look.py")
+        try:
+            return next((row for row in self.nodes() if node_name(row.device) == node_name(port)), None)
+        except LookStopError:
+            return None
 
     def require_one_board(self, script, port=None):
         """The Port row of the one board on USB, or of `port` when it is given. LookStopError as require_one_port says, and
@@ -453,10 +472,12 @@ class LookService:
     def __init__(self, finder, reader, records):
         self.finder, self.reader, self.records = finder, reader, records
 
-    def run(self, project, port, evidence):
-        """A LookReport. LookStopError says why not: no record, no board, two boards without a port, a read that failed."""
+    def run(self, project, port, evidence, listed=None):
+        """A LookReport. LookStopError says why not: no record, no board, two boards without a port, a read that failed.
+        `listed` is the Port row of the one board when the caller listed it already (the look's gate, P865); with a named
+        `port` no list is read and none is used."""
         record = self.record_of(project)
-        listed = None if port else self.finder.require_one_board("look.py")
+        listed = None if port else listed or self.finder.require_one_board("look.py")
         port = port or listed.device
         reading = self.reader.read(port)
         image, why, code, gaps = None, None, board_codes.EVIDENCE_REFUSES, RunGaps()

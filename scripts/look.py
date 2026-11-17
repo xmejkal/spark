@@ -17,7 +17,8 @@ code bad_argument, exit 2); without --json it prints the usage and the error on 
 change; the envelope's status is the exit code's.
 
 Exit codes: 0 every field matches, there is a token and the last deploy was checked, 1 a field differs or the look found a stop, 2 it could not run
-or could not check something (a field unknown, no token, a last deploy it could not check), and the sentence says why. A crash is 2 too: with --json
+or could not check something (a field unknown, no token, a last deploy it could not check), or it asks the person's yes before it reads
+(needs_reply), the person said no (answered_no), or another board is on USB (other_board), and the sentence says why. A crash is 2 too: with --json
 an envelope with one unchecked item, code crash; on stderr `look: crashed, <class>`, what to do, and the traceback. Without --json the same
 on stderr and nothing on stdout."""
 

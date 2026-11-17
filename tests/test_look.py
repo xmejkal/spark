@@ -17,7 +17,9 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from spark.bench import board_look  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
+from spark.bench import known_board  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 import look  # noqa: E402
@@ -54,6 +56,9 @@ class LookScriptCase(LookCase):
             self.ran.append(command)
             return done(data(devs)) if "devs" in command else done(text or data(esptool), 1 if fail else 0)
 
+        if self.KNOWS_THE_BOARD:  # P865: the store keeps the board this call reads, by the serial of the first row listed
+            rows = data(devs).split()
+            self.know_the_board(board_look.EsptoolReader.parse(text or data(esptool)).mac or MAC, known_board.comparable_key(rows[1]) if rows else None)
         return self.go_with(FakeOutsideWorld(run=RealChildRun(run), find_tool=found), *argv)  # P458: the compile child is real
 
     def go_with(self, outside, *argv):
@@ -532,9 +537,9 @@ class TheOperationTest(LookScriptCase):
         import inspect
         schema = look_at_board.LookAtBoard().input_schema()
         keywords = [name for name, kind in inspect.signature(look_at_board.LookAtBoard.run).parameters.items()
-                    if kind.kind == kind.POSITIONAL_OR_KEYWORD and name != "self"]
+                    if kind.kind == kind.POSITIONAL_OR_KEYWORD and name != "self"] + ["ignore_older_runs", "no_simulation"]  # P865: **evidence
         self.assertEqual(list(schema["properties"]), keywords)
-        self.assertEqual([schema["properties"][name].get("default") for name in keywords], [".", None, False, False])
+        self.assertEqual([schema["properties"][name].get("default") for name in keywords], [".", None, None, False, False])
 
     @needs_littlefs
     def test_run_operation_gives_the_lines_the_findings_and_the_deploy_step_with_no_stdout(self):

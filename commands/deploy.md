@@ -24,10 +24,21 @@ Read the board on USB without changing it, compare it with the project's board r
 |---|---|---|
 | `--project` | `PROJECT` | the project folder with requirements.json and sim/ (default: here) |
 | `--port` | `PORT` | the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB (one board on two nodes named by its serial counts once) |
+| `--replies` | `REPLIES` | a file of your own with the person's yes to the look's open question, {"replies": {"<key>": true}}. One yes answers one look: the look sets it back to null before it reads |
 | `--ignore-older-runs` |  | give a token even when a log in sim/runs/ tested another image (default: no token) |
 | `--no-simulation` |  | give a token for an image that no simulation tested, when firmware/ has a main.py, compiles and is what the image holds (default: a passed run must name the image) |
 
 <!-- /spark:operation look -->
+
+The look asks the person before it reads a board it does not know (P865). Then it exits 2 with one `needs_reply` item and
+reads nothing. Ask the person in this conversation. Name the port and say that the board restarts. Only after their yes
+to that message, write `{"replies": {"<key>": true}}` to a file of your own outside the project. The value must be the
+JSON `true`. Run the look's `next[0]` step, with your file in place of the placeholder `<your replies file>`. One yes is
+for one look. Then the look keeps the board in the person's store and asks no more for it, except for a board with no USB serial or
+with a serial that its firmware set: those are asked every time. Another board stops with
+`other_board` before any read, and asks `switch_board`: a yes makes it the project's board. `other_board` can also come
+after a read: the board did restart, and there is no token. Never add `--port` to avoid the question: a `--port` that names a port the list does not hold, or a listed port with no USB serial, is read as before, with no question; every other board is asked as without `--port`
+(`docs/guide/agents/replies.md`, "The look's question").
 
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
 changes no flash. It compares the board's chip and flash size with the board in `requirements.json` and prints each as
@@ -50,7 +61,7 @@ the board's flash. The second writes the image at `0x0`, where the simulator loa
 order: the look, its token, then the person's yes. When each stage starts, deploy.py prints a `why:` line that says why
 it happens. With `--json` these lines go to stderr. Relay them.
 
-1. Run `look.py` and relay its lines. A stop means do not propose the flash.
+1. Run `look.py` and relay its lines. A `needs_reply` is the look's question: ask the person as above. A stop means do not propose the flash.
 2. Run `deploy.py --json --token <the token>`, with `--port` only when two boards are on USB. The look's next step and the
    terminal line name `--port` even with one board on USB. Run or give that line as printed. If deploy.py prints
    `yes: standing yes typed by ...`, the person's deploy grant is the yes and it erases at once. Relay that line.

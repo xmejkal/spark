@@ -5,20 +5,28 @@ look.py printed before it (board_look.report_lines and board_envelope's look ite
 `crash` envelope and exit 2, is the one new output.
 """
 
+from collections import namedtuple
+
 from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_envelope
 from spark.bench import board_look
+from spark.bench import known_board
+from spark.bench.known_board import CANNOT_TELL, NONE, OTHER, SAME
 from spark.bench.deploy_stages import DeployPhase
 from spark.records import board_records
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from spark.bench import bench_privacy
+from spark.core import codes
 from spark.core import outcomes
-from spark.core.events import Event
-from spark.core.operation import BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
+from spark.core.errors import SparkError
+from spark.core.events import INDENT, Event
+from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
+from spark.core.replies import RepliesStore
 from spark.core.result import Finding, NextStep, OperationResult
-from spark.core.text_guards import guard_sentence
+from spark.core.text_guards import guard_sentence, printable
+from spark.records import store
 
 # --- MVP ---
 #: The lines of a stop name the script that printed them before the core (board_doctor.stop_answer), so they read the
@@ -26,6 +34,19 @@ from spark.core.text_guards import guard_sentence
 SCRIPT = "look.py"
 #: The group of the two flags that pick the evidence: they exclude each other.
 EVIDENCE_GROUP = "evidence"
+#: The help of the look's --replies (P865): the agent's own file, after the person's yes in the conversation.
+REPLIES_HELP = ('a file of your own with the person\'s yes to the look\'s open question, {"replies": {"<key>": true}}. One yes '
+                "answers one look: the look sets it back to null before it reads")
+#: Value: what the gate lets through to the read (P865): the `tell` state, the KnownBoard or None, the Reply of the yes or
+#: None when nobody was asked, and the listed Port row or None.
+Passed = namedtuple("Passed", "state known reply row")
+#: Value: the values one look was run with that its next step runs again (P865): the project, the --port or None, and the
+#: evidence flags by name.
+LookRun = namedtuple("LookRun", "project port evidence")
+#: What the open question's next step is.
+ASK_AGAIN_WHY = "the same look, after the person's yes in the conversation"
+#: The one answer that reads the board: a yes, `true` in a replies file.
+YES = True
 #: What the look does, the paragraphs of look.py's `--help` before its `--json` and exit codes, line breaks and all
 #: (P481). Its two `--json` mentions stay until the other CLIs move (P481 PR 2).
 DETAILS = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash-id`. It writes nothing,
@@ -50,6 +71,12 @@ Under "no scenario named these must lines, so test them on the board:" it lists 
 scenario named in a step's own name: key (--json: data.unnamed_must); with --no-simulation, every must line. [] is not a pass: when a
 log cannot say, a caveat that contains "not checked:" says so.
 
+The first look on a board asks the person before it reads (P865): a question that names the port and the restart. A yes
+in a terminal, or `true` in the --replies file, reads the board once and keeps it for this project in spark's store. A later
+look reads that board with no question, and stops before the read when another board is on USB. A board with no USB
+serial, or with a serial that its firmware set, is asked on every look. A --port that the list does not hold, or that it
+shows with no USB serial, is read as before, with no question. Every other board is asked, with --port too.
+
 With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a token
 even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it. --no-simulation gives a
 token for an image that no simulation tested: firmware/ has a main.py, every .py file compiles, no run in sim/runs/ failed on the image and the image holds
@@ -62,7 +89,9 @@ and one next step for your hands, as the last line. Its look at the console can 
 
 class LookAtBoard(Operation):
     """
-    Operation: the look. It builds the evidence (image_evidence), the LookService (board_look.looker) and runs it, and
+    Operation: the look. It builds the evidence (image_evidence) and the LookService (board_look.looker), lists the boards,
+    asks the person's yes before it reads a board it does not know (P865, `known` the KnownBoardStore, None: the store's
+    own), runs the service, and
     returns the LookReport as an OperationResult: its stops and warnings are problems, its unknown fields, a missing token
     and a last deploy it could not check are unchecked, and a token brings the deploy step. A LookStopError is one unchecked
     Finding with the stop's reason, and the board doctor's lines are the diagnostics. It writes nothing on the board. It
@@ -74,29 +103,115 @@ class LookAtBoard(Operation):
     name = "look"
     summary = "Read the board on USB without changing it, compare it with the project's board record, and print a token (P219)."
     details = DETAILS
-    arguments = (COMMON_ARGUMENTS["project"], COMMON_ARGUMENTS["port"],
+    arguments = (COMMON_ARGUMENTS["project"], COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP),
                  Argument((IGNORE_OLDER_RUNS_FLAG,), "ignore_older_runs", bool,
                           "give a token even when a log in sim/runs/ tested another image (default: no token)", group=EVIDENCE_GROUP),
                  Argument((NO_SIMULATION_FLAG,), "no_simulation", bool,
                           "give a token for an image that no simulation tested, when firmware/ has a main.py, "
                           "compiles and is what the image holds (default: a passed run must name the image)", group=EVIDENCE_GROUP),
                  COMMON_ARGUMENTS["json"])
-    effects = (READS, RUNS, BOARD)
+    effects = (READS, RUNS, BOARD, ASKS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
 
-    def __init__(self, records=None):
-        self.records = records
+    def __init__(self, records=None, known=None):
+        self.records, self.known = records, known or known_board.KnownBoardStore()
 
-    def run(self, project, port, ignore_older_runs, no_simulation, *, outside):
-        evidence = evidence_for(project, no_simulation, ignore_older_runs, find_tool=outside.find_tool, run=outside.run)
+    def run(self, project, port, replies=None, *, outside, **evidence):
+        """`evidence` holds the two flags of EVIDENCE_GROUP, `ignore_older_runs` and `no_simulation`."""
+        picked = evidence_for(project, evidence["no_simulation"], evidence["ignore_older_runs"], find_tool=outside.find_tool, run=outside.run)
         platform = MicroPythonPlatform(project, outside.find_tool)
-        # P507: after the evidence and the platform, which touch no board, and right before the esptool read
+        # P507: after the evidence and the platform, which touch no board, and before the list and the esptool read
         outside.report(Event.begin(DeployPhase.LOOK))
+        try:  # P865: one yes answers one look, also a look that stops before its question
+            if replies:
+                RepliesStore(replies).clear(known_board.KEY_PREFIX)
+        except SparkError as refused:
+            return self._said([Finding(refused.status, None, refused.code, str(refused), refused.fix)])
         try:
-            report = board_look.looker(platform, outside.run, self.records).run(project, port, evidence)
+            service = board_look.looker(platform, outside.run, self.records)
+            service.record_of(project)  # P865: a project with no board record stops before any question
+            row = service.finder.find_row(port)
+            passed = self._gate(LookRun(project, port, evidence), row, outside)
+            if isinstance(passed, OperationResult):
+                return passed
+            report = service.run(project, port, picked, listed=row)
         except board_look.LookStopError as stop:
             return self._stopped(stop, platform, port, outside)
-        return self._found(report, project.resolve(), evidence)
+        return self._after_read(self._found(report, project.resolve(), picked), report, passed, project, outside)
+
+    def _gate(self, look, row, outside):
+        """The person's yes before a read (P865): a Passed, or the OperationResult that ends the look before any read. A board
+        that `tell` names SAME is read with no question, and so is a --port that the list does not hold or that shows no USB
+        serial (the person named it). Every other board is asked, with --port too. An open question, a no, or a record that cannot be read ends the look. Only the JSON
+        value true is a yes; any other value leaves the question open. `look` is the run's LookRun."""
+        try:
+            known = self.known.read(look.project)
+            state = known_board.tell(row, known)
+            unseen = look.port and not known_board.serial_key(row)  # a named port that the list holds with no serial, or not at all
+            asked = None if state == SAME or unseen else known_board.question_for(state, row, look.port or row.device, known)
+            reply = outside.replies(asked) if asked else None
+        except SparkError as refused:
+            return self._said([Finding(refused.status, None, refused.code, str(refused), refused.fix)])
+        if asked and (reply is None or not isinstance(reply.value, bool)):
+            return self._open(asked, state, row, known, look)
+        if asked and reply.value is not YES:
+            return self._said([Finding(outcomes.COULD_NOT_RUN, asked.key, board_codes.ANSWERED_NO, known_board.NO_MESSAGE, known_board.NO_FIX)])
+        return Passed(state, known, reply, row)
+
+    def _open(self, question, state, row, known, look):
+        """The result of an open question: unchecked `needs_reply` (after `other_board` for another board), the question in
+        `data.open`, and the same look, with its --port and evidence flags, as the next step, which needs the person."""
+        findings = [Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, known_board.OTHER_BEFORE_MESSAGE % (
+            row.device, known_board.named(row), known_board.mac_ends(known.mac), known.at[:10]), known_board.OTHER_BEFORE_FIX)] if state == OTHER else []
+        findings.append(Finding(outcomes.COULD_NOT_RUN, question.key, codes.NEEDS_REPLY, question.text, known_board.ANSWER_FIX % question.key))
+        data = {"open": [question.to_dict()], "port": row.device, "product": row.product,
+                "known_board": {"state": state, "mac_ends": known_board.mac_ends(known.mac) if known else None}}
+        flags = [flag for flag, dest in ((IGNORE_OLDER_RUNS_FLAG, "ignore_older_runs"), (NO_SIMULATION_FLAG, "no_simulation")) if look.evidence.get(dest)]
+        argv = [SCRIPT, "--project", str(look.project)] + (["--port", look.port] if look.port else []) + flags + ["--replies", "<your replies file>"]
+        step = NextStep("look", argv, ASK_AGAIN_WHY, [READS, RUNS, BOARD], needs_person=True)
+        return self._said(findings, data, [step], [question.why])
+
+    @staticmethod
+    def _said(findings, data=None, following=(), more=()):
+        """An OperationResult that ends the look before a read: each Finding's sentence and fix, then `more`, as its lines."""
+        lines = [line for found in findings for line in (found.sentence, found.fix)] + list(more)
+        return OperationResult(data, findings, list(following), [INDENT + printable(line) for line in lines if line])
+
+    def _after_read(self, result, report, passed, project, outside):
+        """The result after the read, and what it keeps (P865). A kept board whose MAC is not the MAC read is `other_board`:
+        no deploy step, no token, and the record stays. A yes to a first look or to another board keeps the board read; with
+        no MAC read nothing is kept, and a note says so. A yes to a board the look could not tell (a serial that its firmware
+        set) is a yes to switch too: another MAC read replaces the record. A store that refuses the write is a note, never a failure."""
+        mac, known = report.reading.mac, passed.known
+        switch = passed.state == OTHER or (passed.state == CANNOT_TELL and passed.reply is not None)
+        differs = bool(known and mac) and known_board.comparable_key(mac) != known_board.comparable_key(known.mac)
+        if differs and not switch:
+            other = known_board.OTHER_AFTER_MESSAGE % (report.port, known_board.mac_ends(mac), known_board.mac_ends(known.mac), known.at[:10])
+            fix = known_board.OTHER_AFTER_FIX if passed.state != CANNOT_TELL else known_board.OTHER_AFTER_PORT_FIX if passed.row \
+                else known_board.OTHER_AFTER_UNLISTED_FIX % self.known.find_path(project)
+            found = Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, other, fix)
+            return result._replace(data=dict(result.data, token=None), findings=list(result.findings) + [found], next=[],
+                                   lines=board_look.report_lines(report, token=False) + [INDENT + printable(other)])
+        if passed.reply is None or not (passed.state in (NONE, OTHER) or differs):
+            return result
+        note = self._keep(report, passed, project, outside)
+        return result._replace(notes=[note], lines=list(result.lines) + [INDENT + printable(note)])
+
+    def _keep(self, report, passed, project, outside):
+        """Keep the board just read as the project's board, and return the note that says so, or why it was not kept."""
+        mac = report.reading.mac
+        if not mac:
+            return known_board.NOT_KEPT_NO_MAC_MESSAGE
+        kept = known_board.KnownBoard(str(project.resolve()), mac, known_board.usb_key_to_keep(passed.row, mac), report.record["id"],
+                                      passed.reply.answered_by, outside.clock.now().isoformat(timespec="seconds"))
+        try:
+            self.known.write(kept)
+        except store.StoreError as refused:
+            return known_board.NOT_KEPT_MESSAGE % refused
+        old = passed.known
+        if old and known_board.comparable_key(old.mac) != known_board.comparable_key(mac):
+            return known_board.REPLACED_MESSAGE % (report.port, known_board.mac_ends(mac), known_board.mac_ends(old.mac))
+        return known_board.KEPT_MESSAGE % (report.port, known_board.mac_ends(mac))
 
     @staticmethod
     def _found(report, project, evidence):

@@ -2,7 +2,8 @@
 
 Part of the [guide for AI agents](../agents.md). An Operation that cannot answer a question itself puts the question
 on the run's open list. This is [P737](https://github.com/xmejkal/spark/issues/1013). The shape is the core's, so
-it reads the same in every script that asks. The first script that asks is `research.py` (below).
+it reads the same in every script that asks. `research.py` asks (below), and `look.py` asks before it reads a board
+([P865](https://github.com/xmejkal/spark/issues/1231), [the look's question](#the-looks-question)).
 
 ## What a run with open questions prints
 
@@ -11,7 +12,8 @@ it reads the same in every script that asks. The first script that asks is `rese
 - `kind` is `yes_no`, `value` or `choice`. A `choice` question lists its `choices`.
 - `asked_of` is `agent`, `person` or `either`. You answer an `agent` question. Never put it to a person in a terminal.
   A `person` question needs the person's hands or eyes, and comes first in the list. An `either` question goes to whoever
-  is there: a person at the terminal, or you under `--json`. Every question `research.py` asks today is `either`.
+  is there: a person at the terminal, or you under `--json`. Every question `research.py` asks today is `either`, and the
+  look's question is `person`.
 - `answer_form` says the shape of the answer in words. `example` holds placeholders, never a value to copy.
 - `cites` is `{document, at}`: the kept document and the page that hold the answer, `at` in the words `page 1`, as the
   prompt and the source repeat it. Read that document and nothing else.
@@ -46,6 +48,35 @@ reads the kept drawing at that page ([P763](https://github.com/xmejkal/spark/iss
 source `read from <document> <at>, typed in a terminal by <login>`. You run with `--json`, or with no tty, so you never see
 a prompt. The template is written for what stays open, as in run 1.
 
+## The look's question
+
+Before `look.py` reads a board, it asks the person, because the read restarts the board. It asks once per board, except for the two rows of
+the table below that are asked every time, and then remembers the board for the project in the person's store, never in the project. The key is
+`look.read_board.<id>`, or `look.switch_board.<id>` for a board that is not the kept one. `<id>` is an id made from the
+serial, or from the port when the board has no serial: copy the key from `data.open`. The text names the port and the restart. `data.known_board` holds the `state` and the kept board's
+`mac_ends`. A MAC is the board's own address, six bytes; spark shows only the last two.
+
+Ask the person in this conversation. Name the port and say that the board restarts. Write `true` only after they say
+yes to that message, in a file of your own outside the project, never in research's file:
+`{"replies": {"look.read_board.1a2b": true}}`. Only the JSON value `true` is a yes. Then run the `next[0]` step, with your
+file in place of `<your replies file>`. One yes is for one look: the look sets every `look.` key of the file back to null
+right after it starts, also when it then stops. A `false` is a no: code `answered_no`, and nothing is read. Never add `--port` to avoid the question:
+a `--port` that names a port the list does not hold, or a listed port with no USB serial, is read as before, with no question; every other board is asked as without `--port`. Such a read keeps nothing.
+
+| What is on USB | The look |
+| --- | --- |
+| no kept board | asks once, and keeps the board after the yes and the read |
+| the kept board | reads it with no question |
+| another board | stops before the read with `other_board`, names both as `MAC ends 34:56`, and asks `switch_board` |
+| a bridge chip's board (CP2104, CH340) with a serial | asks once: the bridge's serial names the board |
+| a native USB board whose firmware set its serial | asks on every look: a custom build gives every board one serial. A yes to another board makes it the project's |
+| a board with no serial, or no `--port` row | asks on every look, or with `--port` reads as before |
+| a board with no serial named with `--port`, and a kept board | reads with no yes, then stops as `other_board` when the MAC differs |
+
+Two bridge clones with one serial cannot be told apart before a read. The read then finds another MAC: `other_board`,
+and the sentence says that the board did restart. `other_board` after a read gives no token and no deploy step. With no MAC read nothing is kept, and a note says so. A kept record
+that cannot be read is `known_board_unreadable`: repair or remove the file that the `fix` names.
+
 ## The research run
 
 ```
@@ -70,7 +101,7 @@ same value is settled and flags nothing. A run with no gaps is `ok` and writes n
 
 | code | what it is | what to do |
 | --- | --- | --- |
-| `needs_reply` | an `unchecked` item per question that the run did not answer itself. `subject` is the key, the question is in `data.open` | answer it in the replies file, then run the `next[0]` step. Exit 2 here means "run again with replies", not "broken". Relay a `person` question to the person |
+| `needs_reply` | an `unchecked` item per question that the run did not answer itself. `subject` is the key, the question is in `data.open` | answer it in the replies file (for the look, see [the look's question](#the-looks-question)), then run the `next[0]` step. Exit 2 here means "run again with replies", not "broken". Relay a `person` question to the person |
 | `unknown_reply` | a `problems` item: a reply to a key that no open question has, and the `fix` names the nearest. Also a reply to a fact that the record holds with another value | fix the key in the replies file. Never reply to a fact that is not open |
 | `bad_reply` | a `problems` item: a reply that does not fit its question's `kind`. It is not a yes or no, not one of the `choices`, empty, or not a finite number | answer as the question's `answer_form` and `example` say |
 | `part_contract_broken` | a `problems` item of `research.py`: the folded record breaks a rule that the record did not break before, for example a size that is not above 0. Nothing is written, and every typed value is kept in the replies file that the `fix` names | fix the value in that file, then run the `fix` line with `--replies` |

@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 from spark.bench import board_look  # noqa: E402
+from spark.bench import known_board  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.firmware import scenario_run  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
@@ -184,6 +185,16 @@ def run_child(script, argv, project, env):
                           capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
 
 
+def plant_known_board(store, project, devs_file):
+    """P865: `store` keeps the canned board as the board of `project`, as a yes on an earlier look keeps it, by the serial
+    of the first row of `devs_file`, so that a look reads it with no question. Written through the store, as the look writes."""
+    rows = (CANNED / devs_file).read_text().split()
+    known = known_board.KnownBoard(str(Path(project).resolve()), BOARD_MAC, known_board.comparable_key(rows[1]) if rows else None, BOARD_ID,
+                                   "tester", "2026-11-17T18:00:00+01:00")
+    with mock.patch.dict(os.environ, {"SPARK_HOME": str(store)}):
+        known_board.KnownBoardStore().write(known)
+
+
 def run_script(case, project, store, token=None):
     """(exit code, stdout, stderr) of `case`'s script run as a child in `project`, with `store` as its SPARK_HOME. stdin is
     closed and stdout is a pipe, so the script sees no terminal. `token` replaces LOOK_TOKEN in the arguments."""
@@ -191,6 +202,8 @@ def run_script(case, project, store, token=None):
     for place, text in case.plant:
         (Path(store) / place).parent.mkdir(parents=True, exist_ok=True)
         (Path(store) / place).write_text(text() if callable(text) else text)
+    if op_of(case) == "look":
+        plant_known_board(store, project, case.devs_file)
     env = child_env(store, case.flash_id_file, case.devs_file)
     if case.fake_board:
         env["FAKE_BOARD"] = str(Path(store) / "fake-board")

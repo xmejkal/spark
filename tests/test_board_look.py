@@ -21,6 +21,7 @@ from spark.records import deploy_record_store  # noqa: E402
 from fakes import FakeFirmwarePlatform, pin_time_zone  # noqa: E402
 from spark.bench.firmware_platform import MicroPythonPlatform  # noqa: E402
 from spark.bench import board_look  # noqa: E402
+from spark.bench import known_board  # noqa: E402
 from spark.firmware import project_image  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.core import outcomes  # noqa: E402
@@ -61,6 +62,9 @@ def done(text, code=0):
 class LookCase(ProjectCase):
     """A project on the C6 whose image passed, and a fake `run` that answers mpremote devs and esptool from fixtures."""
 
+    #: P865: the store keeps the C6 as the project's board, so a look reads it with no question. A Case of the question sets False.
+    KNOWS_THE_BOARD = True
+
     def setUp(self):
         super().setUp()
         home = Path(tempfile.mkdtemp())  # a store of its own: the suite's one scratch store holds what other tests recorded (P401)
@@ -71,6 +75,13 @@ class LookCase(ProjectCase):
         pin_time_zone(self)  # a stored time is said in the machine's zone: one zone on every machine
         self.board("xiao-esp32-c6")
         self.ran = []
+        if self.KNOWS_THE_BOARD:
+            self.know_the_board(C6_MAC, known_board.comparable_key(C6_MAC))
+
+    def know_the_board(self, mac, usb_key):
+        """P865: the store keeps the board `mac` for this project, as a yes on an earlier look keeps it."""
+        known_board.KnownBoardStore().write(known_board.KnownBoard(str(self.project.resolve()), mac, usb_key, "xiao-esp32-c6",
+                                                                   "a test", "2026-11-17T18:00:00+01:00"))
 
     def record_a_deploy(self, project="blink-c6", verdict="ready seen", **banner):
         """A deploy of this look's board in the store, as write_deploy writes it; `micropython_banner=` adds the image's (P779)."""
