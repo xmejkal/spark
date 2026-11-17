@@ -232,7 +232,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
   is not empty. Each entry says what it is about (`fact`), why nobody has checked it (`basis`) and what depends on it (`sentence`).
   - `--unverified` lists one per fact whose `verified` is not true: `fact` is `<part>.<fact>`, `basis` is `unverified`,
     `assumed` is the value taken for now, `source` is where it came from, and `write` is the key a result goes back to
-    with `--fact-set`: `facts.<name>`, `pin_order_proof`, `body_mm` or `physical_proof` (it vouches for `physical`, a
+    with `--fact-set`: `facts.<name>`, `pin_order_proof`, `body_mm`, `own_socket` or `physical_proof` (it vouches for `physical`, a
     module's thickness, holes and header; a key the vendor did not publish is in its `not_published`). A guessed outline
     is listed with its width and height as `assumed`; a skeleton outline with nulls, never a value to copy back.
     `read_by` lists who reads the fact (`data/fact-needs.json`):
