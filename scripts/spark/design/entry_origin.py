@@ -28,9 +28,9 @@ REMOVE_KEY = KEY_PREFIX + "remove_entries."
 NOTE_CHANGED = "requirements-origin.json does not fit the parts of requirements.json as spark wrote them, so every entry is read as yours"
 NOTE_BROKEN = "requirements-origin.json cannot be read as spark writes it, so every entry is read as yours"
 NOTE_OTHER_KEY = "the replies file holds an answer for other entries or other bytes, so nothing was removed: the answer for these entries is %s"
-#: The line of an entry kept because the previous version could not be staged, with its file and why.
-LEFT_ALONE_LINE = "  left alone: %s (%s)"
-KEEP_FAILED = "spark could not keep the previous version, so the entries are left as they were: %s"
+NOTE_UNWRITTEN = "requirements-origin.json could not be written, so every entry is read as yours from the next run"
+#: Why the previous version could not be kept, with the path from the project's folder.
+KEEP_FAILED = "the previous version could not be kept: %s (%s)"
 REPLIES_FIX = 'write the replies file as {"replies": {"<key>": true}} with the key of the run before, or leave out --replies'
 
 #: Value: one row of the record, the need an entry was added for and the entry as spark wrote it (a bare part id, or {part, name}).
@@ -87,7 +87,7 @@ class UnexplainedEntries(collections.namedtuple("UnexplainedEntries", "removable
         taken = {each.index for each in gone}
         return cls(tuple(gone), [shown[number] for number in unexplained if number not in taken], tuple(rows), tuple(merged.written), note)
 
-    def settle(self, existing):
+    def without_removable(self, existing):
         """(the file's entries without the removable ones, the rows without theirs): what a yes leaves to merge the picks into."""
         gone = {each.index for each in self.removable}
         return [entry for number, entry in enumerate(existing) if number not in gone], self.rows_left()
@@ -98,6 +98,10 @@ class UnexplainedEntries(collections.namedtuple("UnexplainedEntries", "removable
         for each in self.removable:
             left.remove(each.row)
         return left
+
+    def disowned(self):
+        """The value after a no: no entry is removable, and the rows of those entries are gone, so they are the person's."""
+        return self._replace(removable=(), rows=tuple(self.rows_left()))
 
     def to_dicts(self):
         """`data.unexplained`: {part, name, need, code} for each removable entry."""
@@ -146,14 +150,14 @@ class EntryRemoval:
     the `--replies` file the agent wrote, with `PreviousVersionFiles` and `RepliesStore` doing the writing. It reads nothing on a
     dry run, on a refused run, or when no entry is removable. Only the JSON `true` for `check` is a yes and `false` a no; a yes or a no
     sets every `requirements.` key back to null before anything changes. A yes stages the previous version at once; `agreed`
-    says it worked, and `left` the line when it did not. `settle` puts the previous version in place and writes the record last,
+    says it worked, and `left` the why when it did not. `settle` puts the previous version in place and writes the record last,
     and `release` takes a stage away that no commit used.
     """
 
     def __init__(self, path, found, replies, dry_run):
         self.path, self.unexplained, self.held, self.previous = Path(path), found.unexplained, None, None
         self.check = None if found.problems or dry_run else found.unexplained.key(self.path.read_bytes() if self.path.is_file() else b"")
-        self.verdict, self.note, self.left = None, None, None
+        self.verdict, self.stale, self.left, self.unwritten = None, False, None, False
         if self.check and replies:
             self._answer(replies)
         self.agreed = self.held is not None
@@ -163,7 +167,7 @@ class EntryRemoval:
         given = {key: reply for key, reply in self._load(replies).items() if key.startswith(REMOVE_KEY)}
         reply = given.get(self.check)
         if reply is None or not isinstance(reply.value, bool):
-            self.note = NOTE_OTHER_KEY % self.check if [key for key in given if key != self.check] else None
+            self.stale = bool([key for key in given if key != self.check])
             return
         RepliesStore(replies).clear(KEY_PREFIX)
         self.verdict = reply.value
@@ -171,8 +175,15 @@ class EntryRemoval:
             try:
                 self.held = PreviousVersionFiles(self.path.parent).stage(self.path)
             except OSError as refused:
-                why = STAGE_IN_THE_WAY % refused.filename if isinstance(refused, StageTakenError) else KEEP_FAILED % refused
-                self.left = LEFT_ALONE_LINE % (self.path, why)
+                where = self._relative(refused.filename)
+                self.left = STAGE_IN_THE_WAY % where if isinstance(refused, StageTakenError) else KEEP_FAILED % (refused.strerror, where)
+
+    def _relative(self, name):
+        """`name` from the project's folder, as the previous version's path is said; as it is when it is not under it."""
+        try:
+            return str(Path(name).relative_to(self.path.parent))
+        except ValueError:
+            return str(name)
 
     @staticmethod
     def _load(replies):
@@ -191,8 +202,10 @@ class EntryRemoval:
             kept, self.held = PreviousVersionFiles(self.path.parent).commit(self.held), None
             self.previous = str(Path(kept).relative_to(self.path.parent))
         now = found.unexplained
-        rows = now.rows_left() if self.verdict is False else list(now.rows)
-        EntryOriginStore(self.path.parent).save(found.content["parts"], rows_present(rows + list(now.written), found.content["parts"]))
+        try:
+            EntryOriginStore(self.path.parent).save(found.content["parts"], rows_present(list(now.rows) + list(now.written), found.content["parts"]))
+        except (OSError, ValueError):  # the record never fails the run: the file is written, and the entries read as the person's
+            self.unwritten = True
 
     def release(self):
         """Remove the staged previous version when no commit used it; no error."""

@@ -302,7 +302,7 @@ def requirements(project, removing=None):
     problems += wrong
     held, existing = _held_file(project)
     rows, note = entry_origin.EntryOriginStore(project).rows_of(existing)
-    existing, rows = removing.settle(existing) if removing else (existing, rows)  # P877: what a yes removed is not read in again
+    existing, rows = removing.without_removable(existing) if removing else (existing, rows)  # P877: what a yes removed is not read in again
     merged = _merge_parts(existing, wanted)
     after, kept, naming = merged.parts, merged.kept, merged.problems
     content = dict(held, board=board_picks[0] if board_picks else None, parts=after)

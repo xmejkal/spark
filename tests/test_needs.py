@@ -2275,13 +2275,21 @@ class TheRequirementsFileTest(unittest.TestCase):
         key = self.named(project)["data"]["remove_key"]
         replies = self.replying(project, {key: False})
         said, code = run(["--requirements", str(project), "--replies", str(replies)])
-        self.assertEqual((code, self.written(project)["parts"], said["data"]["unexplained"], said["data"]["remove_key"]),
-                         (0, ["led-red-5mm", "x-led"], [self.GONE], key))
+        self.assertEqual((code, self.written(project)["parts"], said["data"]["unexplained"], said["data"]["remove_key"], said["next"]),
+                         (0, ["led-red-5mm", "x-led"], [], None, []))
         self.assertEqual(json.loads(replies.read_text()), {"replies": {key: None}})
         again, _ = run(["--requirements", str(project), "--dry-run"])
         self.assertEqual((again["data"]["unexplained"], again["data"]["remove_key"], again["data"]["kept"]),
                          ([], None, [{"part": "led-red-5mm", "name": None}]))
         self.assertIn("  kept, not from a pick: led-red-5mm\n", self.text(["--requirements", str(project), "--dry-run"]))
+
+    def test_a_no_is_said_once_and_the_entries_are_not_named_again(self):
+        project = self.repicked()
+        key = self.named(project)["data"]["remove_key"]
+        text = self.text(["--requirements", str(project), "--replies", str(self.replying(project, {key: False}))])
+        self.assertIn("  kept as yours: led-red-5mm (you said no)\n", text)
+        self.assertNotIn("written for a pick that is gone", text)
+        self.assertNotIn("answer yes", text)
 
     def test_only_the_json_true_is_a_yes(self):
         project = self.repicked()
@@ -2383,11 +2391,72 @@ class TheRequirementsFileTest(unittest.TestCase):
         previous.mkdir(parents=True)
         (previous / "requirements.json.txt.new").write_text("not spark's")
         said = self.text(["--requirements", str(project), "--replies", str(self.replying(project, {key: True}))])
-        self.assertIn("  left alone: %s (%s is in the way: delete it if it is not yours)\n"
-                      % (project / "requirements.json", previous / "requirements.json.txt.new"), said)
+        self.assertIn("  left alone: led-red-5mm (.spark/previous/requirements.json.txt.new is in the way: delete it if it is not yours; "
+                      "your yes is used up, write it again to try again)\n", said)
         self.assertEqual((self.written(project)["parts"], (previous / "requirements.json.txt.new").read_text(), (previous / "requirements.json.txt").exists()),
                          (["led-red-5mm", "x-led"], "not spark's", False))
         self.assertEqual(run(["--requirements", str(project), "--dry-run"])[0]["data"]["unexplained"], [self.GONE])
+
+    def test_a_previous_folder_that_is_a_file_is_said_with_paths_from_the_project(self):
+        project = self.repicked()
+        key = self.named(project)["data"]["remove_key"]
+        (project / ".spark" / "previous").write_text("not a folder")
+        said = self.text(["--requirements", str(project), "--replies", str(self.replying(project, {key: True}))])
+        line = next(each for each in said.splitlines() if "left alone" in each)
+        self.assertRegex(line, r"^  left alone: led-red-5mm \(the previous version could not be kept: .+ \(\.spark/previous\); "
+                               r"your yes is used up, write it again to try again\)$")
+        self.assertNotIn(str(project), line)
+        self.assertEqual(self.written(project)["parts"], ["led-red-5mm", "x-led"])
+
+    def test_a_record_that_cannot_be_read_as_text_does_not_stop_a_real_run(self):
+        project = self.repicked()
+        (project / ".spark" / "requirements-origin.json").write_bytes(b"\xff\xfe\x00")
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["status"], self.written(project)["parts"]), (0, "ok", ["led-red-5mm", "x-led"]))
+        self.assertIn("requirements-origin.json could not be written, so every entry is read as yours from the next run",
+                      [note["sentence"] for note in said["notes"]])
+
+    def test_a_record_path_that_is_a_folder_does_not_stop_a_run_that_adds_an_entry(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        (project / ".spark" / "requirements-origin.json").mkdir()
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["status"], self.written(project)["parts"]), (0, "ok", ["led-red-5mm"]))
+        self.assertIn("requirements-origin.json could not be written, so every entry is read as yours from the next run",
+                      [note["sentence"] for note in said["notes"]])
+
+    def test_the_note_of_a_yes_that_fits_no_key_names_the_key_the_run_prints(self):
+        project = self.repicked()
+        self.named(project)
+        self.picking(project, [self.BOARD, ("light", [{"part": "x-led"}]), ("inlet", [{"part": "jst-ph-2-power-inlet"}])])
+        other = "requirements.remove_entries.00000000"
+        said, _ = run(["--requirements", str(project), "--replies", str(self.replying(project, {other: True}))])
+        self.assertEqual(self.written(project)["parts"], ["led-red-5mm", "x-led", "jst-ph-2-power-inlet"])
+        self.assertEqual([note["sentence"] for note in said["notes"] if note["subject"] == "replies"],
+                         ["the replies file holds an answer for other entries or other bytes, so nothing was removed: the answer for "
+                          "these entries is %s" % said["data"]["remove_key"]])
+
+    def test_a_dropped_need_s_entry_is_named_by_the_dry_run_with_a_code_and_no_byte_changes(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}]), ("alarm", [{"part": "x-led"}])])
+        run(["--requirements", str(project)])
+        run(["--needs-drop", str(project), "light"])
+        replies = self.replying(project, {"requirements.remove_entries.00000000": True})
+        before = dict(self.digest(project), replies=replies.read_bytes())
+        said, code = run(["--requirements", str(project), "--replies", str(replies), "--dry-run"])
+        self.assertEqual((code, said["data"]["unexplained"], said["data"]["written"]), (0, [self.GONE], False))
+        self.assertIn(self.GONE_LINE, self.text(["--requirements", str(project), "--dry-run"]))
+        self.assertEqual(dict(self.digest(project), replies=replies.read_bytes()), before)
+
+    def test_a_yes_sets_back_only_the_requirements_keys(self):
+        project = self.repicked()
+        key = self.named(project)["data"]["remove_key"]
+        replies = self.replying(project, {key: True, "research.x": 5, "look.read_board.1a2b": True})
+        run(["--requirements", str(project), "--replies", str(replies)])
+        self.assertEqual(json.loads(replies.read_text()), {"replies": {key: None, "research.x": 5, "look.read_board.1a2b": True}})
+
+    def test_the_entries_are_told_how_to_be_removed_by_hand_or_by_a_yes(self):
+        project = self.repicked()
+        self.assertIn(self.GONE_LINE + "  to remove one, delete it from requirements.json by hand, or answer yes (see next)\n",
+                      self.text(["--requirements", str(project)]))
 
     def test_a_write_that_fails_after_the_yes_leaves_the_file_and_no_previous_version_and_no_record_change(self):
         project = self.repicked()
@@ -2444,7 +2513,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertIn("names each entry that spark wrote for a pick that is gone", helped)
         self.assertIn("--replies", helped)
         idea = " ".join((ROOT / "commands" / "idea.md").read_text().split())
-        self.assertIn("A yes in your own replies file, for the key the run printed, removes them", idea)
+        self.assertIn("Write `true` only after their yes, as `{\"replies\": {\"<remove_key>\": true}}` in a file of your own", idea)
 
     def test_a_part_picked_for_two_needs_when_the_file_holds_one_of_it_adds_only_the_other(self):
         for held in ({"part": "tactile-button", "name": "BtnOpen"}, "tactile-button"):

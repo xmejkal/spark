@@ -21,6 +21,11 @@ from spark.design import board_components, entry_origin, footprint_emitter, need
 # --- MVP ---
 #: The line of an entry spark wrote for a pick that is gone (P877): the entry and the need it was written for.
 GONE_LINE = "  written for a pick that is gone: %s (need %s)"
+#: What a person at a terminal can do instead of the yes, after the entries are named.
+BY_HAND_LINE = "  to remove one, delete it from requirements.json by hand, or answer yes (see next)"
+#: The line of a no, and of a yes whose previous version could not be kept (so nothing was removed and the yes is spent).
+NO_LINE = "  kept as yours: %s (you said no)"
+LEFT_ALONE_LINE = "  left alone: %s (%s; your yes is used up, write it again to try again)"
 #: The help of `--replies`, and the `why` of the step that removes the entries: the agent's own file, after the person's yes.
 REPLIES_HELP = ('a file of your own with the person\'s yes to the removal of the entries data.unexplained names, {"replies": {"<remove_key>": true}}. '
                 "One yes removes those entries once: the run sets it back to null. A person at a terminal can delete the lines by hand")
@@ -65,6 +70,7 @@ class WriteRequirements(AnswerOperation):
     def build_answer(self, project, dry_run, replies=None):
         found = need_requirements.requirements(project)
         removal = entry_origin.EntryRemoval(Path(project) / need_requirements.REQUIREMENTS, found, replies, dry_run)
+        found = found._replace(unexplained=found.unexplained.disowned()) if removal.verdict is False else found  # a no is not asked again
         try:
             if removal.agreed:  # P877: the yes was read and the previous version staged; the file is merged again without the entries
                 found = need_requirements.requirements(project, removing=found.unexplained)
@@ -117,7 +123,8 @@ class WriteRequirements(AnswerOperation):
 
 def _gone_lines(unexplained):
     """One line per entry spark wrote for a pick that is gone (P877): `  written for a pick that is gone: led-red-5mm (need light)`."""
-    return [GONE_LINE % (need_requirements.entry_label(each.shown), each.row.need) for each in unexplained.removable]
+    said = [GONE_LINE % (need_requirements.entry_label(each.shown), each.row.need) for each in unexplained.removable]
+    return said + [BY_HAND_LINE] if said else said
 
 
 def _with_origin(answer, found, removal, path):
@@ -131,8 +138,13 @@ def _with_origin(answer, found, removal, path):
     data = dict(answer.data, unexplained=[] if found.problems else gone.to_dicts(), remove_key=key, previous=removal.previous)
     count = len(removal.unexplained.removable)
     said = ["  removed %d %s (the previous version is %s)" % (count, "entry" if count == 1 else "entries", removal.previous)] if removal.previous else []
-    said += [removal.left] if removal.left else []
-    notes = [{"subject": subject, "sentence": sentence} for subject, sentence in ((entry_origin.ORIGIN_FILE.name, gone.note), ("replies", removal.note)) if sentence]
+    labels = ", ".join(need_requirements.entry_label(each.shown) for each in removal.unexplained.removable)
+    said += [LEFT_ALONE_LINE % (labels, removal.left)] if removal.left else []
+    said += [NO_LINE % labels] if removal.verdict is False else []
+    other = entry_origin.NOTE_OTHER_KEY % key if removal.stale and key else None
+    unwritten = entry_origin.NOTE_UNWRITTEN if removal.unwritten else None
+    notes = [{"subject": subject, "sentence": sentence} for subject, sentence in
+             ((entry_origin.ORIGIN_FILE.name, gone.note), ("replies", other), (entry_origin.ORIGIN_FILE.name, unwritten)) if sentence]
     follow = [step("requirements", ["--requirements", str(path.parent), "--replies", "<your replies file>"],
                    REMOVE_WHY % key, [WRITES], needs_person=True)] if key else []
     return answer._replace(data=data, lines=list(answer.lines) + said, notes=list(answer.notes) + notes, next=list(answer.next) + follow)

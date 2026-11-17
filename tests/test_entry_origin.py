@@ -74,7 +74,7 @@ class TheCountRuleTest(unittest.TestCase):
 
     def test_a_yes_settles_the_file_and_the_rows_without_the_entries(self):
         value = found(["gone", "kept"], [1], [WrittenEntry("light", "gone"), WrittenEntry("alarm", "kept")])
-        self.assertEqual(value.settle(["gone", "kept"]), (["kept"], [WrittenEntry("alarm", "kept")]))
+        self.assertEqual(value.without_removable(["gone", "kept"]), (["kept"], [WrittenEntry("alarm", "kept")]))
 
     def test_the_data_names_the_part_the_name_the_need_and_the_code(self):
         value = found([{"part": "tactile-button", "name": "OpenLid"}], [], [WrittenEntry("open-lid", {"part": "tactile-button", "name": "OpenLid"})])
