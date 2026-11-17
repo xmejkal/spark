@@ -5,5 +5,7 @@
  {"file": "scripts/spark/build/build_record.py", "name": "P886: a stages of 0 reads as no stages", "find": "return (stages is None or (", "replace": "return (not stages or ("},
  {"file": "scripts/spark/build/build_record.py", "name": "P886: a missing_facts that is no list is read", "find": "(facts is None or isinstance(facts, list))", "replace": "True"},
  {"file": "scripts/spark/build/build_record.py", "name": "P886: a requirements that is no string is read", "find": "(named is None or isinstance(named, str))", "replace": "True"},
- {"file": "scripts/spark/build/build_record.py", "name": "P886: the store reads a record of any shape that is an object", "find": "if not is_build_record(record):", "replace": "if not isinstance(record, dict):"}
+ {"file": "scripts/spark/build/build_record.py", "name": "P886: the store reads a record of any shape that is an object", "find": "if not is_build_record(record):", "replace": "if not isinstance(record, dict):"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P886: a record nested too deep crashes the reader", "find": "except (ValueError, RecursionError) as broken:", "replace": "except ValueError as broken:"},
+ {"file": "scripts/spark/flow/write_flow_page.py", "name": "P886: a page that cannot be encoded crashes the command", "find": "except (OSError, UnicodeError) as refused:", "replace": "except OSError as refused:"}
 ]

@@ -66,7 +66,7 @@ class BuildRecordStore:
             return None
         try:
             record = json.loads(self.path.read_text(encoding="utf-8"))
-        except ValueError as broken:
+        except (ValueError, RecursionError) as broken:  # a record nested too deep is no JSON a reader can use
             raise store.StoreError("%s is not JSON (%s): build again with --keep", self.path, broken, code=records_codes.RECORD_FILE_BROKEN)
         if not is_build_record(record):
             raise store.StoreError("%s is no build record: build again with --keep", self.path, code=records_codes.RECORD_FILE_BROKEN)
