@@ -10,7 +10,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.build import build_codes
-from spark.build.build_record import BuildRecordStore, sha256_of
+from spark.build.build_record import OWN_FILES, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, StageTakenError, sha256_of
 from spark.build.build_service import verdict
 from spark.build.stages import skipped_the_build
 from spark.breadboard import drawing, sheet, tabbed_page
@@ -39,6 +39,20 @@ DRAWING_DIFFERS = "drawing differs"
 TRACES_DIFFER = "traces differ"
 #: The `did` of a kept entry for a .tsx left alone with a trace in a form spark does not read, so it was not compared.
 TRACES_NOT_COMPARED = "traces not compared"
+#: The `did` of a kept entry for a file spark made now: a `.tsx` that was not there, or `dist/`.
+WROTE = "wrote"
+#: The `did` of a kept entry for a `board.tsx` spark wrote earlier, nobody changed, and this build made again as another board (P874).
+REPLACED = "replaced"
+#: The `did` of a kept entry for a `board.tsx` spark wrote earlier and this build made the same board: nothing is written.
+UNCHANGED = "unchanged"
+#: The `did` of a kept entry for a .tsx that is not touched.
+LEFT_ALONE = "left alone"
+#: Why a board is left alone when the replace failed: its first step is the new board, its second the previous version.
+WRITE_FAILED = "spark could not write the new board, so it is left as it was: %s"
+STAGE_IN_THE_WAY = "%s is in the way: delete it if it is not yours"
+#: Why a board spark wrote and nobody changed is left alone: the build did not finish, so its board is not to be trusted.
+NOT_FINISHED = "this build did not finish, so spark did not replace it"
+KEEP_FAILED = "spark could not keep the previous version, so the board is left as it was: %s"
 #: How many traces of each side the stderr line names; --json lists them all.
 TRACES_SHOWN = 10
 #: A comment in a board file: JSX's `{/* … */}` and a line's `// …`. A trace in one is not a trace.
@@ -73,42 +87,88 @@ def design_handed_to(workdir, project):
         return None
 
 
-def kept_into(workdir, destination):
+def kept_into(workdir, destination, written=None, finished=True):
     """
-    Put the built board where a person — and every check — will look for it.
+    Put the built board where a person — and every check — will look for it. `dist/` is pure build output and is
+    replaced. A `.tsx` is a person's to edit, so one that is there is left alone and named, unless `written` (the
+    build record's `{name: sha256}` of what spark wrote, P874) holds its bytes: then it is `replaced`, or `unchanged`
+    when this build made the same board (`_replaced`). Without `written` (an old project, no requirements file) nothing
+    is replaced: delete the file to have it regenerated.
 
-    The chain builds in a temp directory and deletes it, which is right for a check and wrong for
-    the one command a stranger is told to run: after `/spark:build` their project held only
-    `requirements.json`, so `check_all --project .` answered "not asked for" and the word
-    **checked** was unreachable from the documented path. `--keep` used to print the temp path
-    instead, which is not a place anyone looks, and was documented nowhere (backlog P51).
-
-    `dist/` is pure build output and is replaced. A `.tsx` file is NOT: `board.tsx` is the thing a
-    person edits — the smart bin's is hand-maintained — so an existing one is left alone and
-    named. Delete it to have it regenerated. One behaviour, no flag to get it wrong with.
-
-    Each file is {file, did, why, line}: `did` is `wrote` or `left alone`, and `line` what stderr says. A .tsx left
-    alone whose traces are not this build's is followed by a `traces differ` entry (P660). With --json the
-    report carries the rest under `kept` (P124, #58), so an agent reads what a person reads.
+    Each file is {file, did, why, line}: `did` is `wrote`, `replaced`, `unchanged` or `left alone`, and `line` what
+    stderr says; a `.tsx` carries the `sha256` of the bytes spark made. A .tsx left alone whose traces are not this
+    build's is followed by a `traces differ` entry (P660). A board spark wrote is replaced only when `finished` (the build
+    stage ended ok). With --json the report carries the rest under `kept`.
     """
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
-    kept = []
+    written, kept = written or {}, []
     for source in sorted(workdir.glob("*.tsx")):
-        target = destination / source.name
-        if target.exists():
-            kept.append({"file": str(target), "did": "left alone", "why": "delete it to have it regenerated",
-                         "line": "left alone: %s (delete it to have it regenerated)" % target})
-            kept += _compare_traces(target, source)
-        else:
+        target, made = destination / source.name, sha256_of(source)
+        if not target.exists():
             shutil.copy2(source, target)
-            kept.append({"file": str(target), "did": "wrote", "why": None, "line": "wrote %s" % target})
+            kept.append({"file": str(target), "did": WROTE, "why": None, "sha256": made, "line": "wrote %s" % target})
+        elif _spark_wrote(target, written.get(source.name)):
+            kept += _replaced(source, target, made, written[source.name]) if finished else _unfinished(source, target)
+        else:
+            kept.append(_left_alone(target, "delete it to have it regenerated"))
+            kept += _compare_traces(target, source)
     built = workdir / "dist"
     if built.is_dir():
         shutil.copytree(built, destination / "dist", dirs_exist_ok=True)
-        kept.append({"file": str(destination / "dist"), "did": "wrote", "why": "this is what every check reads",
+        kept.append({"file": str(destination / "dist"), "did": WROTE, "why": "this is what every check reads",
                      "line": "wrote %s — this is what every check reads" % (destination / "dist")})
     return kept
+
+
+def _left_alone(target, why):
+    """The kept entry for a .tsx that is not touched."""
+    return {"file": str(target), "did": LEFT_ALONE, "why": why, "line": "%s: %s (%s)" % (LEFT_ALONE, target, why)}
+
+
+def _unfinished(source, target):
+    """The kept entries for a board spark wrote and nobody changed, left alone because this build did not finish."""
+    return [_left_alone(target, NOT_FINISHED)] + _compare_traces(target, source)
+
+
+def _spark_wrote(target, recorded):
+    """Whether `target` is a plain file whose bytes are `recorded`, the sha256 of what spark wrote. None (nothing recorded)
+    and a link are no."""
+    if recorded is None or target.is_symlink() or not target.is_file():
+        return False
+    try:
+        return sha256_of(target) == recorded
+    except OSError:
+        return False
+
+
+def _replaced(source, target, made, recorded):
+    """
+    The kept entries for a board spark wrote that nobody changed (P874): `unchanged` when this build made the same
+    board. Else the new board is staged beside the target, the previous version is staged too, the board is swapped in,
+    and only then the previous version is put in place, so a failure leaves both as they were. A failure of the file
+    system is a `left alone` entry, and it removes the stages this run made.
+    """
+    if made == recorded:
+        why = "spark wrote it and this build made the same board"
+        return [{"file": str(target), "did": UNCHANGED, "why": why, "sha256": made, "line": "unchanged %s (this build made the same board)" % target}]
+    board, previous, held, sentence = StagedFile(source, target.with_name(target.name + STAGE_SUFFIX)), PreviousVersionFiles(target.parent), None, WRITE_FAILED
+    try:
+        board.make()
+        sentence = KEEP_FAILED
+        held = previous.stage(target)
+        sentence = WRITE_FAILED
+        board.commit(target)
+        kept = previous.commit(held)
+    except OSError as refused:
+        why = STAGE_IN_THE_WAY % refused.filename if isinstance(refused, StageTakenError) else sentence % refused
+        return [_left_alone(target, why)] + _compare_traces(target, source)
+    finally:
+        board.remove()
+        if held:
+            held.remove()
+    return [{"file": str(target), "did": REPLACED, "why": "spark wrote it and it was not changed since", "previous": str(kept),
+             "sha256": made, "line": "replaced %s (the previous version is %s)" % (target, kept)}]
 
 
 def _traces(text):
@@ -157,10 +217,16 @@ def _show_traces(side, traces):
     return lines + ("\n  %s: %d more not shown" % (side, more) if more > 0 else "")
 
 
-def _kept(workdir, destination):
-    """`kept_into`, or one entry saying why nothing could be kept: the verdict is printed either way."""
+def _built(stages):
+    """Whether the chain's build stage ended ok: a board that was not built, or that has problems, replaces no board."""
+    return any(stage.name == "build" and stage.status == OK for stage in stages)
+
+
+def _kept(workdir, destination, recorded, finished):
+    """`kept_into`, or one entry saying why nothing could be kept: the verdict is printed either way. It may replace a
+    board spark wrote only when `recorded` (a requirements file is given) and the build record will be written, and `finished` (P874)."""
     try:
-        return kept_into(workdir, destination)
+        return kept_into(workdir, destination, BuildRecordStore(destination).written_sha256() if recorded and _is_project(destination) else {}, finished)
     except OSError as refused:
         return [{"file": str(destination), "did": "not kept", "why": str(refused),
                  "line": "not kept: %s — %s" % (destination, refused)}]
@@ -387,7 +453,7 @@ def keep_pins(requirements, destination):
     ours = target.is_file() and target.read_bytes().startswith(pin_assigner.PIN_MODULE_HEADER.encode())
     if target.exists() and not ours:
         why = "spark did not write it; delete it to have it written"
-        return {"file": str(target), "did": "left alone", "why": why, "line": "left alone: %s (%s)" % (target, why)}
+        return {"file": str(target), "did": LEFT_ALONE, "why": why, "line": "%s: %s (%s)" % (LEFT_ALONE, target, why)}
     try:
         module = pin_assigner.pin_module_for(str(requirements))
     except PIN_MAP_REFUSALS as stopped:
@@ -432,11 +498,21 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
     try:
         record = {"status": STATUS_FOR[verdict(stages)], "stages": [{"name": stage.name, "status": stage.status} for stage in stages],
                   "missing_facts": [item for entry in kept for item in entry.get("missing_facts", [])],
-                  "requirements": _named_from(Path(requirements), destination), "requirements_sha256": sha256_of(requirements)}
+                  "requirements": _named_from(Path(requirements), destination), "requirements_sha256": sha256_of(requirements),
+                  WRITTEN_SHA256: _written_sha256(records, kept)}
         path = records.write(record)
     except OSError as refused:
         return [{"file": str(records.path), "did": "not kept", "why": str(refused), "line": "not kept: %s — %s" % (records.path, refused)}]
     return [{"file": str(path), "did": "wrote", "why": BUILD_RECORD_WHY, "line": "wrote %s — %s" % (path, BUILD_RECORD_WHY)}]
+
+
+def _written_sha256(records, kept):
+    """What the record holds of the files spark wrote (P874): the sha256 a `wrote`, `replaced` or `unchanged` entry carries, which
+    is of the bytes spark made and never of the file on disk (a person may have saved since); else the record's earlier value,
+    since a build that stopped before the board, or left it alone, still rewrites the record."""
+    now = {Path(item["file"]).name: item["sha256"] for item in kept if item.get("sha256")}
+    before = records.written_sha256()
+    return {name: now.get(name, before.get(name)) for name in OWN_FILES if name in now or name in before}
 
 
 def _is_project(destination):
@@ -484,7 +560,7 @@ def keep_all(stages, workdir, asked, exporter, flow_page=None):
     """
     requirements_file, keep = asked.requirements_file, asked.keep
     keeps = keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())
-    kept = (_kept(workdir, keep) if workdir is not None else []) if keeps else None
+    kept = (_kept(workdir, keep, bool(requirements_file), _built(stages)) if workdir is not None else []) if keeps else None
     if kept is not None and requirements_file:
         kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + drop_an_older_build(Path(keep), stages)
         kept.append(_kept_pins(Path(requirements_file), Path(keep)))
