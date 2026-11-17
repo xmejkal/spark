@@ -135,7 +135,7 @@ class WriteFlowPage(Operation):
         renderer = self.renderer or FlowHtmlPage()
         try:
             written = write_page(project, self.readers, self.parts, renderer, self.store)
-        except OSError as refused:
+        except (OSError, UnicodeError) as refused:  # a text the file cannot hold (a lone surrogate) is a page not written
             said = PAGE_SENTENCE % (renderer.FILE_NAME, refused)
             return OperationResult(findings=[Finding(COULD_NOT_RUN, renderer.FILE_NAME, flow_codes.PAGE_NOT_WRITTEN, said, PAGE_FIX)],
                                    lines=[said])

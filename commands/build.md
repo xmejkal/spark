@@ -133,7 +133,7 @@ a board that built perfectly (backlog P51). If the folder has no `.spark/`, the 
 read the rules and the parts of the nearest project up from it (P319). After a build whose build stage ended ok, a `board.tsx` that spark wrote and nobody changed is
 `replaced`, and the previous version is the one file `.spark/previous/board.tsx.txt`. The same board is `unchanged`: nothing is
 written. A person who restores spark's old bytes gets `replaced`. Any other `.tsx` is left alone and named. So is one when the build did not finish, one from a build
-before the record held its sha256, and one whose replace failed; delete it to have it regenerated. If its traces join other pins
+before the record held its sha256, one whose replace failed, and one whose build record could not be read; delete it to have it regenerated. If its traces join other pins
 than this build's board, a `traces differ` line
 follows and names each trace on each side (P660). Tell the person: the status stays what it was, but they must not wire or
 build from that file until they delete it or carry this build's pins into it. A `traces not compared` line means the
