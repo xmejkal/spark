@@ -1,5 +1,5 @@
 [
- {"file": "scripts/spark/build/kept_files.py", "name": "P825: a keep folder that is no project gets a build record", "find": "if board_records.project_root(destination) != destination.resolve():", "replace": "if False:"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P825: a keep folder that is no project gets a build record", "find": "return board_records.project_root(destination) == Path(destination).resolve()", "replace": "return True"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P825: a requirements file inside the project is recorded by its whole path", "find": "return str(whole.relative_to(project.resolve()))", "replace": "return str(whole)"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P825: a requirements file outside the project is recorded as typed, relative to where the build ran", "find": "        return str(whole)\n", "replace": "        return str(requirements)\n"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P825: a build that could not run is recorded as ok", "find": "\"status\": STATUS_FOR[verdict(stages)]", "replace": "\"status\": \"ok\""},

@@ -1,0 +1,15 @@
+[
+ {"file": "scripts/spark/flow/flow_page.py", "name": "P827: a phase that is not ok shows the tick", "find": "if mark == TICK and phase[\"status\"] != OK:", "replace": "if False:"},
+ {"file": "scripts/spark/flow/flow_page.py", "name": "P827: the guard also strips the tick of an ok phase", "find": "if mark == TICK and phase[\"status\"] != OK:", "replace": "if mark == TICK:"},
+ {"file": "scripts/spark/flow/flow_page.py", "name": "P827: the word of a code the flow does not know is empty", "find": "if status in MARKS else str(status)", "replace": "if status in MARKS else \"\""},
+ {"file": "scripts/spark/flow/flow_page.py", "name": "P827: the word of a phase with no status is empty", "find": "return flow_codes.NOT_CHECKED_WORD", "replace": "return \"\""},
+ {"file": "scripts/spark/flow/flow_page.py", "name": "P827: the rail loops over the flow's own phase names, not the page's", "find": "self._rail(page.phases)", "replace": "self._rail([{\"phase\": name, \"status\": None, \"mark\": \"·\"} for name in flow_codes.PHASES])"},
+ {"file": "scripts/spark/flow/flow_page.py", "name": "P827: the rail is cut to nine entries", "find": "self._rail(page.phases)", "replace": "self._rail(page.phases[:9])"},
+ {"file": "scripts/spark/flow/flow_page.py", "name": "P827: a mark is read aloud by a screen reader", "find": "return '<span aria-hidden=\"true\">%s</span>' % _text(shown.mark)", "replace": "return '<span>%s</span>' % _text(shown.mark)"},
+ {"file": "scripts/spark/flow/flow_page.py", "name": "P827: a sentence is not escaped", "find": "    return html.escape(str(value))\n", "replace": "    return str(value)\n"},
+ {"file": "scripts/spark/flow/write_flow_page.py", "name": "P827: the page is written without the mask", "find": "page = masked_page(page, privacy_for(project))", "replace": "page = page"},
+ {"file": "scripts/spark/flow/write_flow_page.py", "name": "P827: the bench note is left out of the page", "find": "(pictures or kept_pictures)(project), (flow_codes.BENCH_NOTE,))", "replace": "(pictures or kept_pictures)(project), ())"},
+ {"file": "scripts/spark/flow/write_flow_page.py", "name": "P827: a breadboard picture that is missing is said to be drawn", "find": "breadboard = Picture(BREADBOARD_TITLE, None, flow_codes.NO_PICTURE_FILE % name)", "replace": "breadboard = Picture(BREADBOARD_TITLE, \"<svg/>\", None)"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P827: the page is written before the simulation folder is kept", "find": "    simulation_folder = simulation_dir(asked.sim_dir, keep)\n", "replace": "    if keeps and requirements_file:\n        kept.append(keep_tabbed_page(Path(keep), stages, kept, exporter or tabbed_page.TscircuitExport(None), flow_page))\n    simulation_folder = simulation_dir(asked.sim_dir, keep)\n"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P827: a keep folder that is no project gets the flow page", "find": "flow = flow_page if flow_page is not None and _is_project(destination) else None", "replace": "flow = flow_page"}
+]
