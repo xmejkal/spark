@@ -23,6 +23,7 @@ import os
 import re
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -41,6 +42,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.design import pin_assigner  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.build import build_codes  # noqa: E402
+from spark.build import build_record  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 from spark.build import build_service  # noqa: E402
@@ -885,13 +887,13 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         self.board = self.project / "board.tsx"
         self.previous = self.project / ".spark" / "previous"
 
-    def build(self, text, requirements=True):
+    def build(self, text, requirements=True, stages=None):
         """One build run into the project with a work folder that holds `text` as board.tsx; the entries of board.tsx."""
         work = Path(tempfile.mkdtemp())
         (work / "board.tsx").write_text(text)
         args = argparse.Namespace(json=True, keep=self.project, requirements=str(self.project / "requirements.json") if requirements else None)
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
-            run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
+            run_build_board(stages or [Stage("build", check_spine.OK, "fine")], args, work)
         return [entry for entry in json.loads(out.getvalue())["kept"] if Path(entry["file"]).name == "board.tsx"]
 
     def record(self):
@@ -914,6 +916,7 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         self.assertEqual([path.name for path in self.previous.iterdir()], ["board.tsx.txt"])
         self.assertEqual((self.previous / "board.tsx.txt").read_text(), self.BOARD_A)
         self.assertEqual(entries[0]["previous"], str(self.previous / "board.tsx.txt"))
+        self.assertEqual(sorted(path.name for path in self.project.glob("*.new")), [])
         self.build(self.BOARD_C)
         self.assertEqual([path.name for path in self.previous.iterdir()], ["board.tsx.txt"])
         self.assertEqual((self.previous / "board.tsx.txt").read_text(), self.BOARD_B)
@@ -938,7 +941,7 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
                 self.assertEqual([entry["did"] for entry in self.build(self.BOARD_B)], ["left alone", "traces differ"])
                 self.assertEqual(self.board.read_text(), self.BOARD_A)
 
-    def test_the_build_page_and_the_help_say_the_four_words(self):
+    def test_the_build_page_and_the_help_say_replaced_unchanged_and_where_the_previous_version_is(self):
         page = (ROOT / "commands" / "build.md").read_text()
         keep_help = next(argument.help for argument in build_board.BuildBoard.arguments if "--keep" in argument.flags)
         for text in (page, keep_help):
@@ -1002,6 +1005,92 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         self.board.write_text("// a person saved here")
         kept_files.keep_build_record(self.project, self.project / "requirements.json", [Stage("build", check_spine.OK, "fine")], kept)
         self.assertEqual(self.record()["written_sha256"], {"board.tsx": self.sha256(self.BOARD_A)})
+
+
+    def test_a_stage_name_that_is_a_link_is_never_written_through(self):
+        # F1: the staged copy is made exclusively and without following a link
+        self.build(self.BOARD_A)
+        outside = Path(tempfile.mkdtemp()) / "outside.txt"
+        outside.write_text("outside")
+        (self.project / "board.tsx.new").symlink_to(outside)
+        entries = self.build(self.BOARD_B)
+        self.assertEqual(entries[0]["did"], "left alone")
+        self.assertIn("could not write the new board", entries[0]["why"])
+        self.assertEqual((outside.read_text(), self.board.is_symlink(), self.board.read_text()), ("outside", False, self.BOARD_A))
+        self.assertTrue((self.project / "board.tsx.new").is_symlink())
+
+    def test_a_leftover_stage_file_of_a_person_keeps_its_bytes_and_is_not_removed(self):
+        self.build(self.BOARD_A)
+        (self.project / "board.tsx.new").write_text("mine")
+        (self.project / "board.tsx.new").chmod(0o444)
+        entries = self.build(self.BOARD_B)
+        self.assertEqual(entries[0]["did"], "left alone")
+        self.assertEqual(((self.project / "board.tsx.new").read_text(), self.board.read_text()), ("mine", self.BOARD_A))
+
+    def test_a_previous_version_stage_that_is_a_link_is_never_written_through(self):
+        # F2
+        self.build(self.BOARD_A)
+        outside = Path(tempfile.mkdtemp()) / "outside.txt"
+        outside.write_text("outside")
+        self.previous.mkdir(parents=True)
+        (self.previous / "board.tsx.txt.new").symlink_to(outside)
+        entries = self.build(self.BOARD_B)
+        self.assertEqual(entries[0]["did"], "left alone")
+        self.assertEqual((outside.read_text(), self.board.read_text()), ("outside", self.BOARD_A))
+        self.assertFalse((self.previous / "board.tsx.txt").exists())
+
+    @unittest.skipUnless(hasattr(os, "chflags"), "needs a file that can be locked against a replace")
+    def test_a_board_that_cannot_be_swapped_in_leaves_the_previous_version_as_it_was(self):
+        # F3: the previous version is committed only after the board is swapped in
+        self.build(self.BOARD_A)
+        self.build(self.BOARD_B)
+        os.chflags(self.board, stat.UF_IMMUTABLE)
+        self.addCleanup(os.chflags, self.board, 0)
+        entries = self.build(self.BOARD_C)
+        self.assertEqual(entries[0]["did"], "left alone")
+        self.assertEqual(((self.previous / "board.tsx.txt").read_text(), self.board.read_text()), (self.BOARD_A, self.BOARD_B))
+        self.assertEqual([path.name for path in self.previous.iterdir()], ["board.tsx.txt"])
+        self.assertEqual(sorted(path.name for path in self.project.glob("*.new")), [])
+
+    def test_a_build_that_did_not_finish_replaces_no_board(self):
+        # F4
+        self.build(self.BOARD_A)
+        for _ in range(2):
+            entries = self.build(self.BOARD_B, stages=[Stage("build", check_spine.COULD_NOT_RUN, "timed out")])
+            self.assertEqual(entries[0]["did"], "left alone")
+            self.assertEqual(self.board.read_text(), self.BOARD_A)
+        self.assertFalse(self.previous.exists())
+
+    def test_a_footprint_is_not_recorded_and_is_left_alone(self):
+        # F5: the record holds board.tsx only
+        def build(footprint):
+            work = Path(tempfile.mkdtemp())
+            (work / "board.tsx").write_text(self.BOARD_A)
+            (work / "Chip.tsx").write_text(footprint)
+            kept = kept_files.kept_into(work, self.project, build_record.BuildRecordStore(self.project).written_sha256())
+            kept_files.keep_build_record(self.project, self.project / "requirements.json", [Stage("build", check_spine.OK, "fine")], kept)
+            return {Path(entry["file"]).name: entry["did"] for entry in kept if entry["file"].endswith(".tsx")}
+        self.assertEqual(build("// one"), {"board.tsx": "wrote", "Chip.tsx": "wrote"})
+        self.assertEqual(list(self.record()["written_sha256"]), ["board.tsx"])
+        self.assertEqual(build("// two"), {"board.tsx": "unchanged", "Chip.tsx": "left alone"})
+
+    def test_a_record_that_is_not_json_leaves_the_board_alone(self):
+        # F6
+        self.build(self.BOARD_A)
+        (self.project / ".spark" / "build.json").write_text("not json")
+        self.assertEqual([entry["did"] for entry in self.build(self.BOARD_B)], ["left alone", "traces differ"])
+        self.assertEqual(self.board.read_text(), self.BOARD_A)
+
+    def test_a_board_that_cannot_be_read_is_left_alone(self):
+        # F8
+        if os.geteuid() == 0:
+            self.skipTest("root reads a file whatever its mode")
+        self.build(self.BOARD_A)
+        self.board.chmod(0)
+        self.addCleanup(self.board.chmod, 0o644)
+        self.assertEqual(self.build(self.BOARD_B)[0]["did"], "left alone")
+        self.board.chmod(0o644)
+        self.assertEqual(self.board.read_text(), self.BOARD_A)
 
 
 class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
