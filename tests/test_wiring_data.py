@@ -6,6 +6,7 @@ renderer's output.
     python3 -m unittest tests.test_wiring_data
 """
 
+import html
 import os
 import re
 import shutil
@@ -126,6 +127,38 @@ class AnUnusedPinWithNoNoteTest(unittest.TestCase):
         self.assertEqual([item.said for item in data.items], [""])
         line = before_power.BeforePowerList().render(data)[0]
         self.assertTrue(line.endswith(" EN: "), line)
+
+
+class TheHtmlLinesTest(unittest.TestCase):
+    """The page's lines (P828): the sheet's words in HTML, and a record's own words stay text."""
+
+    @staticmethod
+    def as_text(line):
+        return html.unescape(re.sub(r"<[^>]+>", "", line))
+
+    def test_the_html_before_power_line_holds_the_sheet_s_words_for_every_kind(self):
+        with in_store(Path(tempfile.mkdtemp())):
+            data = sheet.wiring_data(a_copy("motor") / "requirements.json")
+        self.assertEqual({item.kind for item in data.before_power.items}, {
+            "off-board-supply", "conflict", "firmware-pull", "unused-pin", "host-requirement"})
+        markdown = before_power.BeforePowerList().render(data.before_power)[:len(data.before_power.items)]
+        lines = before_power.BeforePowerHtmlList().items([item._asdict() for item in data.before_power.items])
+        self.assertEqual([self.as_text(line) for line in lines],
+                         [line.removeprefix("- ").replace("**", "").replace("`", "") for line in markdown])
+        self.assertTrue(all(line.startswith("<li>") and line.endswith("</li>") for line in lines))
+        self.assertIn("<strong>CONFLICT</strong>", "".join(lines))
+        self.assertIn("<code>parts.py --show</code>", "".join(lines))
+
+    def test_a_record_s_own_marks_and_signs_come_out_as_text(self):
+        said = "2**8 or 2**9, a lone ` tick, a & b and x <= y <b>"
+        item = {"kind": "conflict", "subject": "A&B", "pin": "X", "record": "r", "said": said, "users": ()}
+        line = before_power.BeforePowerHtmlList().items([item])[0]
+        self.assertEqual(line, "<li><strong>CONFLICT</strong> on A&amp;B: 2**8 or 2**9, a lone ` tick, a &amp; b and x &lt;= y &lt;b&gt;</li>")
+
+    def test_the_records_line_names_each_record_whole(self):
+        line = before_power.BeforePowerHtmlList().records_line(["a-b", "c<d"])
+        self.assertEqual(line, "<p>Each record whole, with what it asks of the board: "
+                               "<code>parts.py --show a-b</code>, <code>parts.py --show c&lt;d</code>.</p>")
 
 
 class NoBuildIsRefusedTest(unittest.TestCase):

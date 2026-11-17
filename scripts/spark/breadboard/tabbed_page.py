@@ -22,6 +22,9 @@ from pathlib import Path
 #: Result: what one `tsci export` gave, its SVG text, or None and why there is none.
 SvgExportResult = collections.namedtuple("SvgExportResult", "svg why_missing")
 
+#: Where the build's keep step puts the two pictures `tsci export` draws, in the project (P828): the schematic and the PCB.
+SCHEMATIC_FILE, PCB_FILE = Path("dist") / "board" / "schematic.svg", Path("dist") / "board" / "pcb.svg"
+
 #: Value: one tab of the page, its title, its SVG text or None, and why it is missing.
 Tab = collections.namedtuple("Tab", "title svg why_missing")
 

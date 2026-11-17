@@ -23,9 +23,10 @@ parts. Written firmware and a simulated image have none, because what their sent
 is a key, such as pick:soil:x-led, with one line that says what taking it does. flow.py runs no offer. The last line
 names the first phase that is not done.
 
-flow.py page writes page.html in the project: the same phases, each with its status word and a mark, and the breadboard
-picture the project holds. The page adds no tick of its own: a phase that is not ok never shows one. The schematic and the
-PCB are drawn only by the build with --keep, which in a project writes the page with all three pictures. The page does not know
+flow.py page writes page.html in the project: the same phases, each with its status word and a mark, the wiring of a built
+project (the lines before power, then the steps, one at a time or all at once) and the pictures the project holds: the
+breadboard, and the schematic and the PCB that the build with --keep kept as files. The page adds no tick of its own: a
+phase that is not ok never shows one. Only the build with --keep draws the schematic and the PCB. The page does not know
 whether the board is wired or flashed. With --json it prints data.file, data.did, data.stands_at and data.phases (each
 phase and its status).
 

@@ -155,10 +155,12 @@ move or take out (by its two ends and its color), and each resistor to swap. Wit
 A build that did not finish (a failed build, or requirements the build refuses) leaves a `breadboard.json` that holds
 parts, with a `left alone` entry, so a typo does not wipe your moves. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
 the line `no drawn breadboard: …` names what is missing. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
-again after a build. `page.html` shows the same circuit in three tabs: the breadboard picture, and tscircuit's
+again after a build. The build also keeps tscircuit's schematic and PCB as `dist/board/schematic.svg` and `dist/board/pcb.svg`
+(an export that gave nothing removes the earlier file, and a build that did not finish removes both)
+([P828](https://github.com/xmejkal/spark/issues/1186)). `page.html` shows the same circuit in three tabs: the breadboard picture, and tscircuit's
 schematic and PCB of the kept `dist/board/circuit.json` ([P271](https://github.com/xmejkal/spark/issues/307)). Since
 2026-11-17, in a project folder, it is the project's flow page instead ([P827](https://github.com/xmejkal/spark/issues/1185)):
-each phase of [`flow.py`](../docs/guide/agents/flow.md) with its status word and a mark, then the same three pictures. It adds no
+each phase of [`flow.py`](../docs/guide/agents/flow.md) with its status word and a mark, then the wiring (the lines before power, then the steps, one at a time or all at once), then the same three pictures. It adds no
 tick: a phase that is not ok never shows one. It does not know whether the board is wired or flashed. A folder that is no
 project keeps the three tabs. Open it in a browser. It has no script and loads nothing from the web. Its colors are tokens with a dark mode, and its title has two to
 four words (P272), so it also follows the Artifact page rules. Publish it as an Artifact (P272, #308) only if the person says yes; spark never does. Ask first: "Publish this page as an
@@ -175,7 +177,7 @@ The one command also writes `firmware/pins.py`, the pin map that the firmware im
 does not need a finished build ([P196](https://github.com/xmejkal/spark/issues/155)). The build writes it again each time. If a
 `pins.py` that spark did not write is there, the build leaves it alone and names it. If the pins cannot be placed, the
 build removes the `pins.py` that it wrote earlier, because that file describes another design. If spark refuses the
-requirements file, the build removes the earlier sheet, drawings, `page.html` and the `pins.py` that it wrote, and
+requirements file, the build removes the earlier sheet, drawings, `page.html`, the kept schematic and PCB files and the `pins.py` that it wrote, and
 says why. If the requirements file is missing, it removes nothing. The one command also keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml` and the chips. `--sim-dir DIR` keeps it in DIR. A rebuild merges into the kept `sim/diagram.json` (P482): the part positions by id, the wire routes whose two ends are still generated, and the parts marked `"handAdded": "true"` in `attrs` with the wires that touch them stay. A hand-added part of a type Wokwi knows passes the converter's lint, and one with no wire yet is a warning in the build output, not a stop; a part type the converter does not know still stops (`unknown-part-type`) ([P497](https://github.com/xmejkal/spark/issues/681)). A hand-drawn wire between two generated parts does not stay, a generated part that the person deleted comes back, and a position whose generated id changed is lost. The verdict's simulation stage says `kept from your diagram: ...` when it kept anything.
 A rebuild keeps the flash image that `sim/wokwi.toml` already names, unless `--firmware` names another. Spark reads that line only as `firmware = "name.bin"` (a JSON string); a line in another form (indented, `firmware="x.bin"`, a number, an empty name) is not kept, and the build says so on stderr: the rebuild then names no image.
 
