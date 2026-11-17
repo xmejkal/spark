@@ -11,7 +11,7 @@ from spark.sourcing import part_facts, part_rules
 from spark.design.board_components import (component_name, DEFAULT_BODY_MM, host_part_names,
                                            parts_without_an_outline, placeholders)
 from spark.design.power_rails import (mcu_power_nets, outputs_in_contention, outputs_with_nothing_on_them,
-                                      pair_sides_without_a_driver, power_connections, power_pins_with_no_rail,
+                                      own_socket_ends, pair_sides_without_a_driver, power_connections, power_pins_with_no_rail,
                                       rail_loads, rails_not_established, rails_without_a_source, supply_net_of)
 
 
@@ -379,9 +379,12 @@ def power_note_lines(part_list):
 
 
 def module_power_lines(part_list, rules, unjustified):
-    """Each module power pin on its rail's net, through the one walk of the power lists."""
-    return [power_trace(component_name(part), supply["pin"], net, rules,
-                        supply.get("note") or "", unjustified)
+    """Each module power pin on its rail's net, through the one walk of the power lists. A pin that ends in the part's own
+    socket (P864) gets a comment in place of its trace: what it drives plugs in there."""
+    ends = {(id(part), supply["pin"]) for part, supply, _ in own_socket_ends(part_list)}
+    return ["    {/* %s.%s ends in the part's own socket: no trace here; what it drives plugs in there */}"
+            % (inert(component_name(part)), inert(supply["pin"])) if (id(part), supply["pin"]) in ends else
+            power_trace(component_name(part), supply["pin"], net, rules, supply.get("note") or "", unjustified)
             for part, supply, net in power_connections(part_list)]
 
 

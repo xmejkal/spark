@@ -4,6 +4,7 @@ outputs meet or stand alone. It decides nothing about the file: `board_sections`
 """
 
 from spark.design.board_components import component_name
+from spark.sourcing.part_facts import own_socket_pins
 
 
 # --- MVP ---
@@ -317,18 +318,28 @@ def outputs_with_nothing_on_them(part_list):
     checked — and the errors a build then reports should be the ones this file predicted rather
     than a surprise.
     """
-    driven, received = [], set(RAILS_THE_MODULE_PROVIDES)
-    for part, power, net in power_connections(part_list):
-        if power.get("direction") == "out":
-            driven.append((net, part["name"], power["pin"]))
-        else:
-            received.add(net)
+    return sorted((net, part["name"], power["pin"]) for part, power, net in _unreceived(part_list)
+                  if power["pin"] not in own_socket_pins(part))
+
+
+def own_socket_ends(part_list):
+    """
+    The outputs that nothing on this board receives and that end in their part's own socket (P864), as (part, supply, net):
+    what they drive plugs in there, so they are no gap and the board file gives them no trace.
+    """
+    return [(part, power, net) for part, power, net in _unreceived(part_list) if power["pin"] in own_socket_pins(part)]
+
+
+def _unreceived(part_list):
+    """(part, supply, net) of each output whose net no input on this board is on, a rail the host provides aside."""
+    received = set(RAILS_THE_MODULE_PROVIDES) | {net for _, power, net in power_connections(part_list) if power.get("direction") != "out"}
     # Same omission this function's twin had: it listed every driven net without ever asking
     # whether something on the board receives it. Adding the power inlet that feeds the motor
     # driver then produced a warning that the motor rail goes nowhere, naming the part it goes
     # to. A warning that fires on a correct design is worse than none — it is the reason people
     # stop reading them.
-    return sorted(entry for entry in driven if entry[0] not in received)
+    return [(part, power, net) for part, power, net in power_connections(part_list)
+            if power.get("direction") == "out" and net not in received]
 
 
 def supply_net_of(part):

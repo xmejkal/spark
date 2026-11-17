@@ -6,7 +6,9 @@ renderer's output.
     python3 -m unittest tests.test_wiring_data
 """
 
+import contextlib
 import html
+import io
 import json
 import os
 import re
@@ -199,16 +201,16 @@ class TheAmplifierAloneTest(unittest.TestCase):
             self.assertNotIn("%s comes from off the board" % net, text)
 
     def test_a_fact_write_of_own_socket_makes_the_sheet_say_it_as_a_fact(self):
-        home = Path(tempfile.mkdtemp())
-        (home / "catalog").mkdir()
         record = json.loads((ROOT / "parts" / "max98357a-dfr0954.json").read_text())
-        (home / "catalog" / "x-amp.json").write_text(json.dumps(dict(record, id="x-amp")))
+        project = self.alone()
+        (project / ".spark").mkdir()  # the project's own copy of the record, which a fact write changes and the library keeps
+        (project / "parts").mkdir()
+        (project / "parts" / "max98357a-dfr0954.json").write_text(json.dumps(record))
         bench = dict(record["own_socket"], verified=True, source="bench, 2026-11-20, meter on the owned module, Petr Smejkal")
         given = Path(tempfile.mkdtemp()) / "facts.json"
         given.write_text(json.dumps({"own_socket": bench}))
-        project = self.alone("x-amp")
-        with in_store(home):
-            self.assertEqual(parts.main(["--fact-set", "x-amp", str(given), "--json"]), 0)
+        with in_store(Path(tempfile.mkdtemp())), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(parts.main(["--fact-set", "max98357a-dfr0954", str(given), "--project", str(project), "--json"]), 0)
             text = sheet.sheet(project / "requirements.json")
         self.assertIn(self.VERIFIED, expected_before_power(text))
         self.assertNotIn("nobody has looked", text)
