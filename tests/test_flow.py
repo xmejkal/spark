@@ -180,6 +180,41 @@ class ThePhasesTest(FlowTest):
         self.assertEqual((code, said["status"], statuses(said)["build"]), (1, "problems", "could-not-run"))
         self.assertEqual([item["subject"] for item in said["unchecked"]], ["build"])
 
+    def an_unreadable_record_is_one_sentence(self, text):
+        """Show a built project whose build record holds `text`; assert the build phase is could-not-run with the one sentence."""
+        project = a_built_project()
+        (project / BUILD_RECORD_FILE).write_text(text)
+        said, code = show(project)
+        self.assertEqual((code, said["status"]), (2, "could-not-run"), text)
+        self.assertEqual(len(said["data"]["phases"]), 9, text)
+        self.assertEqual(statuses(said)["build"], "could-not-run", text)
+        self.assertEqual(len(says(said, "build")), 1, text)
+        self.assertEqual(says(said, "build"), [".spark/build.json is no build record: build again with --keep"], text)
+        self.assertEqual({item["code"] for item in said["unchecked"]}, {"phase_could_not_run"}, text)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            flow.main(["show", "--project", str(project)])
+        self.assertNotIn("Traceback", out.getvalue() + err.getvalue(), text)
+
+    def test_a_record_whose_stages_is_no_list_is_could_not_run_in_one_sentence(self):
+        self.an_unreadable_record_is_one_sentence('{"status": "ok", "stages": 5}')
+
+    def test_a_stages_entry_that_is_no_object_is_the_same_sentence(self):
+        for text in ('{"stages": [5]}', '{"stages": "ab"}', '{"stages": {"a": 1}}'):
+            with self.subTest(text=text):
+                self.an_unreadable_record_is_one_sentence(text)
+
+    def test_a_missing_facts_that_is_no_list_is_the_same_sentence(self):
+        self.an_unreadable_record_is_one_sentence('{"status": "ok", "missing_facts": 5}')
+
+    def test_a_requirements_that_is_no_string_is_the_same_sentence(self):
+        self.an_unreadable_record_is_one_sentence('{"status": "ok", "requirements": 5}')
+
+    def test_a_record_that_is_no_object_is_the_same_sentence(self):
+        # A pin: the shape was refused before P886; it is here for the same sentence at the flow's level.
+        for text in ("[]", '"text"', "5"):
+            with self.subTest(text=text):
+                self.an_unreadable_record_is_one_sentence(text)
+
     def test_a_project_built_by_hand_with_no_needs_stands_at_the_firmware(self):
         said, code = show(a_built_project())
         self.assertEqual(code, 0)
@@ -342,12 +377,30 @@ class TheBuildRecordStoreTest(unittest.TestCase):
         project = Path(tempfile.mkdtemp())
         self.assertIsNone(BuildRecordStore(project).read())
         (project / ".spark").mkdir()
-        for text in ("{not json", "[]"):
+        for text in ("{not json", "[]", '{"stages": 5}', '{"stages": [5]}', '{"stages": 0}',
+                     '{"missing_facts": 5}', '{"requirements": 5}'):
             (project / BUILD_RECORD_FILE).write_text(text)
             with self.assertRaises(store.StoreError) as refused:
                 BuildRecordStore(project).read()
             self.assertEqual(refused.exception.code, "record_file_broken")
 
+    def test_a_record_with_a_shape_the_readers_can_use_is_read(self):
+        # Pins: the shapes that were readable before P886 stay readable.
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        for text in ('{"status": "ok"}', '{"stages": null}', '{"stages": [{}]}', '{"stages": []}',
+                     '{"missing_facts": ["x"], "requirements": "r.json"}'):
+            (project / BUILD_RECORD_FILE).write_text(text)
+            self.assertEqual(BuildRecordStore(project).read(), json.loads(text), text)
+
+    def test_an_unreadable_record_holds_no_sha256(self):
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        record = {"stages": 5, "written_sha256": {"board.tsx": "ab" * 32}}
+        (project / BUILD_RECORD_FILE).write_text(json.dumps(record))
+        self.assertEqual(BuildRecordStore(project).written_sha256(), {})
+        (project / BUILD_RECORD_FILE).write_text(json.dumps(dict(record, stages=[])))
+        self.assertEqual(BuildRecordStore(project).written_sha256(), {"board.tsx": "ab" * 32})
 
 if __name__ == "__main__":
     unittest.main()

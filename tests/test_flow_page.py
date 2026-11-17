@@ -375,6 +375,14 @@ class TheCommandTest(unittest.TestCase):
         result = WriteFlowPage(readers=readers_of(a_phase("one")), parts=parts_of([]), store=Refusing()).run(Path("."), outside=None)
         self.assertEqual([(finding.severity, finding.code) for finding in result.findings], [(COULD_NOT_RUN, NOT_WRITTEN)])
 
+    def test_page_on_a_record_whose_stages_is_no_list_writes_the_page_with_the_sentence(self):
+        project = a_built_project()
+        (project / ".spark" / "build.json").write_text('{"status": "ok", "stages": 5}')
+        envelope, code = run_flow("page", "--project", str(project), "--json")
+        self.assertEqual((code, envelope["data"]["did"]), (0, "wrote"))
+        self.assertEqual({phase["phase"]: phase["status"] for phase in envelope["data"]["phases"]}["build"], COULD_NOT_RUN)
+        self.assertIn("is no build record", (project / "page.html").read_text(encoding="utf-8"))
+
     def test_a_phase_that_holds_problems_does_not_change_the_page_s_status(self):
         result = WriteFlowPage(readers=readers_of(a_phase("one", "problems")), parts=parts_of([]), store=FakeStore()).run(
             Path("."), outside=None)
@@ -747,6 +755,14 @@ class TheKeepStepTest(unittest.TestCase):
         self.assertEqual(3, text.count("data:image/svg+xml;base64,"))
         self.assertEqual(len(Parsed(text).sections), 9)
 
+    def test_a_flow_page_that_raises_is_one_no_page_entry(self):
+        # A pin: whatever the flow page raises, the keep step answers one "not written" entry and the build goes on.
+        def raising(project, tabs):
+            raise TypeError("a record of a shape nobody foresaw")
+        (self.project / ".spark").mkdir()
+        entry = kept_files.keep_tabbed_page(self.project, [Stage("build", OK)], self.kept, FakeTscircuitExport(), raising)
+        self.assertEqual((entry["did"], entry["why"]), ("not written", "the flow page could not be written (TypeError)"))
+
     def test_the_keep_step_writes_the_schematic_and_pcb_files(self):
         (self.project / ".spark").mkdir()
         self.keep()
@@ -827,7 +843,7 @@ class TheKeepStepTest(unittest.TestCase):
         files = [Path(entry["file"]).name for entry in entries]
         self.assertGreater(files.index("page.html"), files.index("sim"))
 
-    def test_a_flow_page_that_fails_leaves_the_build_s_exit_code_and_adds_one_entry(self):
+    def test_an_unreadable_record_still_gets_its_page_from_the_build(self):
         # The refuter's case: a build record whose stages is no list, in a read-only .spark, so the record is not kept and the
         # flow page reads the malformed one. The build still ends as it ends, with one "no page" line and no traceback.
         import argparse
@@ -849,7 +865,9 @@ class TheKeepStepTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertNotIn("Traceback", err.getvalue())
         self.assertIn("not kept: ", err.getvalue())
-        self.assertEqual(err.getvalue().count("no page: the flow page could not be written (TypeError)"), 1)
+        self.assertEqual(err.getvalue().count("no page: the flow page could not be written (TypeError)"), 0)
+        self.assertIn("wrote " + str(project / "page.html"), err.getvalue())
+        self.assertIn("is no build record", (project / "page.html").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
