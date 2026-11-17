@@ -305,7 +305,7 @@ class TheReviewOfPullRequest1264Test(KnownBoardCase):
     def test_t4_an_empty_serial_never_matches_an_empty_usb_key(self):
         row = Port("/dev/cu.usbserial-1410", "None", "1a86:7523", "USB Serial")
         known = known_board.KnownBoard("/p", MAC_A, "", "xiao-esp32-c6", "a test", "2026-11-17T18:00:00+01:00")
-        self.assertEqual(known_board.tell(row, known), known_board.CANNOT_TELL)
+        self.assertEqual(known_board.tell(row, known), "cannot_tell")
 
     def test_t5_a_yes_to_switch_board_replaces_the_record(self):
         self.keep(NATIVE_A)
