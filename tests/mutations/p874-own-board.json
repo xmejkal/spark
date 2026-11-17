@@ -1,14 +1,20 @@
 [
  {"file": "scripts/spark/build/kept_files.py", "name": "P874: a board a person changed is replaced", "find": "return sha256_of(target) == recorded", "replace": "return True"},
- {"file": "scripts/spark/build/kept_files.py", "name": "P874: a replaced board is said as left alone", "find": "\"did\": REPLACED,", "replace": "\"did\": \"left alone\","},
- {"file": "scripts/spark/build/kept_files.py", "name": "P874: the new board is swapped in before its previous version is kept", "find": "previous = PreviousVersionFiles(target.parent).keep(target)\n        sentence = WRITE_FAILED\n        os.replace(staged, target)", "replace": "os.replace(staged, target)\n        sentence = WRITE_FAILED\n        previous = PreviousVersionFiles(target.parent).keep(target)"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a board that cannot be read is replaced", "find": "return sha256_of(target) == recorded\n    except OSError:\n        return False", "replace": "return sha256_of(target) == recorded\n    except OSError:\n        return True"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a replaced board is said as left alone", "find": "\"did\": REPLACED,", "replace": "\"did\": LEFT_ALONE,"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: the previous version is committed before the board is swapped in", "find": "        sentence = WRITE_FAILED\n        board.commit(target)\n", "replace": "        sentence = WRITE_FAILED\n        previous.commit(held)\n        board.commit(target)\n"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P874: the record holds the sha256 of the file on disk and not of the bytes spark wrote", "find": "item[\"sha256\"] for", "replace": "sha256_of(item[\"file\"]) for"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P874: a build that made no board forgets the sha256", "find": "now.get(name, before.get(name))", "replace": "now.get(name)"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a footprint is recorded and later replaced", "find": "for name in OWN_FILES if name in now or name in before}", "replace": "for name in {**before, **now}}"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P874: a build that made the same board replaces it again", "find": "if made == recorded:", "replace": "if False:"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P874: a board that is a link is replaced", "find": "if recorded is None or target.is_symlink() or not target.is_file():", "replace": "if recorded is None or not target.is_file():"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P874: a keep with no requirements file replaces a board", "find": "BuildRecordStore(destination).written_sha256() if recorded and _is_project(destination) else {}", "replace": "BuildRecordStore(destination).written_sha256()"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a build that did not finish replaces a board", "find": "return any(stage.name == \"build\" and stage.status == OK for stage in stages)", "replace": "return True"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P874: a failed previous version is said as a failed write", "find": "sentence = KEEP_FAILED", "replace": "sentence = WRITE_FAILED"},
- {"file": "scripts/spark/build/kept_files.py", "name": "P874: a failed replace leaves its staged file", "find": "            staged.unlink(missing_ok=True)\n        return [_left_alone", "replace": "            pass\n        return [_left_alone"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: a stage is written through a link or over a file", "find": "os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, \"O_NOFOLLOW\", 0)", "replace": "os.O_WRONLY | os.O_CREAT | os.O_TRUNC"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: a stage a person made is removed", "find": "        if self.made:\n            self.made = False", "replace": "        if True:\n            self.made = False"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: a stage is copied over the target and left behind", "find": "os.replace(self.staged, target)", "replace": "target.write_bytes(self.staged.read_bytes())"},
  {"file": "scripts/spark/build/build_record.py", "name": "P874: the previous version is a name tscircuit can read", "find": "(name + \".txt\")", "replace": "name"},
- {"file": "scripts/spark/build/build_record.py", "name": "P874: a record with no sha256 map is read as one", "find": "if isinstance(held, dict) else {}", "replace": "if held else {}"}
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: a record with no sha256 map is read as one", "find": "if isinstance(held, dict) else {}", "replace": "if held else {}"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: a record that is not JSON stops the build", "find": "except (store.StoreError, OSError):", "replace": "except OSError:"}
 ]

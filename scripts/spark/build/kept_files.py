@@ -4,15 +4,13 @@ the breadboard sheet and its drawings, the page, the pin map and the simulation 
 why, line}. One meaning of `kept_`: what a run keeps between runs, as `kept_moves`' moves are.
 """
 
-import contextlib
-import os
 import re
 import shutil
 from collections import namedtuple
 from pathlib import Path
 
 from spark.build import build_codes
-from spark.build.build_record import OWN_FILES, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, sha256_of
+from spark.build.build_record import OWN_FILES, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, sha256_of
 from spark.build.build_service import verdict
 from spark.build.stages import skipped_the_build
 from spark.breadboard import drawing, sheet, tabbed_page
@@ -47,6 +45,8 @@ WROTE = "wrote"
 REPLACED = "replaced"
 #: The `did` of a kept entry for a `board.tsx` spark wrote earlier and this build made the same board: nothing is written.
 UNCHANGED = "unchanged"
+#: The `did` of a kept entry for a .tsx that is not touched.
+LEFT_ALONE = "left alone"
 #: Why a board is left alone when the replace failed: its first step is the new board, its second the previous version.
 WRITE_FAILED = "spark could not write the new board, so it is left as it was: %s"
 KEEP_FAILED = "spark could not keep the previous version, so the board is left as it was: %s"
@@ -119,7 +119,7 @@ def kept_into(workdir, destination, written=None):
 
 def _left_alone(target, why):
     """The kept entry for a .tsx that is not touched."""
-    return {"file": str(target), "did": "left alone", "why": why, "line": "left alone: %s (%s)" % (target, why)}
+    return {"file": str(target), "did": LEFT_ALONE, "why": why, "line": "%s: %s (%s)" % (LEFT_ALONE, target, why)}
 
 
 def _spark_wrote(target, recorded):
@@ -136,25 +136,28 @@ def _spark_wrote(target, recorded):
 def _replaced(source, target, made, recorded):
     """
     The kept entries for a board spark wrote that nobody changed (P874): `unchanged` when this build made the same
-    board, else it is staged beside the target, the previous version is kept, and the stage is swapped in, so the board
-    is whole at every moment. A failure of the file system leaves the board as it was and is a `left alone` entry.
+    board. Else the new board is staged beside the target, the previous version is staged too, the board is swapped in,
+    and only then the previous version is put in place, so a failure leaves both as they were. A failure of the file
+    system is a `left alone` entry, and it removes the stages this run made.
     """
     if made == recorded:
         why = "spark wrote it and this build made the same board"
         return [{"file": str(target), "did": UNCHANGED, "why": why, "sha256": made, "line": "unchanged %s (this build made the same board)" % target}]
-    staged, sentence = target.with_name(target.name + ".new"), WRITE_FAILED
+    board, previous, held, sentence = StagedFile(source, target.with_name(target.name + STAGE_SUFFIX)), PreviousVersionFiles(target.parent), None, WRITE_FAILED
     try:
-        shutil.copyfile(source, staged)
+        board.make()
         sentence = KEEP_FAILED
-        previous = PreviousVersionFiles(target.parent).keep(target)
+        held = previous.stage(target)
         sentence = WRITE_FAILED
-        os.replace(staged, target)
+        board.commit(target)
     except OSError as refused:
-        with contextlib.suppress(OSError):
-            staged.unlink(missing_ok=True)
+        board.remove()
+        if held:
+            held.remove()
         return [_left_alone(target, sentence % refused)] + _compare_traces(target, source)
-    return [{"file": str(target), "did": REPLACED, "why": "spark wrote it and it was not changed since", "previous": str(previous),
-             "sha256": made, "line": "replaced %s (the previous version is %s)" % (target, previous)}]
+    kept = previous.commit(held)
+    return [{"file": str(target), "did": REPLACED, "why": "spark wrote it and it was not changed since", "previous": str(kept),
+             "sha256": made, "line": "replaced %s (the previous version is %s)" % (target, kept)}]
 
 
 def _traces(text):
@@ -203,9 +206,14 @@ def _show_traces(side, traces):
     return lines + ("\n  %s: %d more not shown" % (side, more) if more > 0 else "")
 
 
+def _built(stages):
+    """Whether the chain's build stage ended ok: a board that was not built, or that has problems, replaces no board."""
+    return any(stage.name == "build" and stage.status == OK for stage in stages)
+
+
 def _kept(workdir, destination, recorded):
     """`kept_into`, or one entry saying why nothing could be kept: the verdict is printed either way. It may replace a
-    board spark wrote only when `recorded` (a requirements file is given) and the build record will be written (P874)."""
+    board spark wrote only when `recorded` (a requirements file is given and the build stage ended ok) and the build record will be written (P874)."""
     try:
         return kept_into(workdir, destination, BuildRecordStore(destination).written_sha256() if recorded and _is_project(destination) else {})
     except OSError as refused:
@@ -434,7 +442,7 @@ def keep_pins(requirements, destination):
     ours = target.is_file() and target.read_bytes().startswith(pin_assigner.PIN_MODULE_HEADER.encode())
     if target.exists() and not ours:
         why = "spark did not write it; delete it to have it written"
-        return {"file": str(target), "did": "left alone", "why": why, "line": "left alone: %s (%s)" % (target, why)}
+        return {"file": str(target), "did": LEFT_ALONE, "why": why, "line": "%s: %s (%s)" % (LEFT_ALONE, target, why)}
     try:
         module = pin_assigner.pin_module_for(str(requirements))
     except PIN_MAP_REFUSALS as stopped:
@@ -541,7 +549,7 @@ def keep_all(stages, workdir, asked, exporter, flow_page=None):
     """
     requirements_file, keep = asked.requirements_file, asked.keep
     keeps = keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())
-    kept = (_kept(workdir, keep, bool(requirements_file)) if workdir is not None else []) if keeps else None
+    kept = (_kept(workdir, keep, bool(requirements_file) and _built(stages)) if workdir is not None else []) if keeps else None
     if kept is not None and requirements_file:
         kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + drop_an_older_build(Path(keep), stages)
         kept.append(_kept_pins(Path(requirements_file), Path(keep)))
