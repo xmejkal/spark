@@ -1,0 +1,14 @@
+[
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a board a person changed is replaced", "find": "return sha256_of(target) == recorded", "replace": "return True"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a replaced board is said as left alone", "find": "\"did\": REPLACED,", "replace": "\"did\": \"left alone\","},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: the new board is swapped in before its previous version is kept", "find": "previous = PreviousVersionFiles(target.parent).keep(target)\n        sentence = WRITE_FAILED\n        os.replace(staged, target)", "replace": "os.replace(staged, target)\n        sentence = WRITE_FAILED\n        previous = PreviousVersionFiles(target.parent).keep(target)"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: the record holds the sha256 of the file on disk and not of the bytes spark wrote", "find": "item[\"sha256\"] for", "replace": "sha256_of(item[\"file\"]) for"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a build that made no board forgets the sha256", "find": "now.get(name, before.get(name))", "replace": "now.get(name)"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a build that made the same board replaces it again", "find": "if made == recorded:", "replace": "if False:"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a board that is a link is replaced", "find": "if recorded is None or target.is_symlink() or not target.is_file():", "replace": "if recorded is None or not target.is_file():"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a keep with no requirements file replaces a board", "find": "BuildRecordStore(destination).written_sha256() if recorded and _is_project(destination) else {}", "replace": "BuildRecordStore(destination).written_sha256()"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a failed previous version is said as a failed write", "find": "sentence = KEEP_FAILED", "replace": "sentence = WRITE_FAILED"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P874: a failed replace leaves its staged file", "find": "            staged.unlink(missing_ok=True)\n        return [_left_alone", "replace": "            pass\n        return [_left_alone"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: the previous version is a name tscircuit can read", "find": "(name + \".txt\")", "replace": "name"},
+ {"file": "scripts/spark/build/build_record.py", "name": "P874: a record with no sha256 map is read as one", "find": "if isinstance(held, dict) else {}", "replace": "if held else {}"}
+]
