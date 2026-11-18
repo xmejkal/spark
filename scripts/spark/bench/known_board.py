@@ -1,13 +1,18 @@
 """
-The board that a project's looks read before, kept in the person's store (P865, #1231). A library for
-`look_at_board.LookAtBoard`: before a read, `tell` compares the board on USB with the kept board, so that the look never
-restarts another board without the person's yes. After a yes and a read, `KnownBoardStore.write` keeps the board.
-`board_start` takes `comparable_key` from here.
+The board that a project's looks read before, kept in the person's store (P865, #1231), and the board question that a
+touch asks before its read restarts the board (P892, #1266). The card calls that question a gate. Here it is "the board
+question", because "the gate" is the deploy's token and yes (`deploy_gate`). Before a read, `tell` compares the board on
+USB with the kept board, so that a touch never restarts another board without the person's yes. After a yes and a read,
+the look keeps the board with `KnownBoardStore.write`. The deploy never keeps or replaces a board. `board_start` takes
+`comparable_key` from here.
 
-    KnownBoard        the kept board: its MAC as esptool printed it, and the key of a USB serial that names it
-    KnownBoardStore   one record per project folder, in the store's `known-boards/`
-    tell              same, other, none or cannot_tell, before a read
-    usb_key_to_keep   the key of the USB serial that a record may trust, after a read
+    KnownBoard          the kept board: its MAC as esptool printed it, and the key of a USB serial that names it
+    KnownBoardStore     one record per project folder, in the store's `known-boards/`
+    tell                same, other, none or cannot_tell, before a read
+    Touch               the rules and the words of one touch: LOOK asks in three states, DEPLOY in cannot_tell only
+    KnownBoardService   `judge`: read, stop, or ask the board question, by the state and the touch
+    differs             after a read: the MAC read is not the kept board's
+    usb_key_to_keep     the key of the USB serial that a record may trust, after a read
 
 Spark prints only the last two bytes of a MAC (`mac_ends`). The record holds the whole MAC, in the private store.
 """
@@ -20,8 +25,10 @@ from pathlib import Path
 
 from spark.bench import board_codes
 from spark.bench.board_look import NO_SERIAL, board_token
+from spark.core import codes, outcomes
 from spark.core.errors import SparkError
 from spark.core.replies import PERSON, YES_NO, Question
+from spark.core.result import Finding
 from spark.records import store
 
 # --- MVP ---
@@ -37,19 +44,24 @@ MAC_PART = "[0-9a-f]{12}"
 #: The store's place of the records, and the version of a record's shape.
 PLACE, SCHEMA = "known-boards", 1
 UNREADABLE_FIX = "repair or remove that file (spark then asks once more), then run look.py again"
-#: The keys of the look's questions, by the first 4 hex of sha256 of the serial's key (or of the port with no serial): a yes
-#: to read a board, and a yes to read a board that is not the kept one. A replies file's look keys answer one look only.
-READ_BOARD, SWITCH_BOARD, KEY_PREFIX = "look.read_board.%s", "look.switch_board.%s", "look."
-READ_QUESTION = "Read the board on %s (%s, %s)? It will restart: a running program stops, then starts again. Nothing is erased or written."
-SWITCH_QUESTION = ("Read the board on %s (%s, %s) in place of the kept board? It will restart: a running program stops, "
+#: The keys of a touch's questions, under the touch's name, by the first 4 hex of sha256 of the serial's key (or of the port
+#: with no serial): a yes to read a board, and a yes to read a board that is not the kept one. A replies file's keys of one
+#: touch answer one run of it only.
+READ_BOARD, SWITCH_BOARD = "%s.read_board.%s", "%s.switch_board.%s"
+#: The questions name the board as `port (product, MAC ends 34:56)`, or by its port alone when the list does not hold it.
+READ_QUESTION = "Read the board on %s? It will restart: a running program stops, then starts again. Nothing is erased or written."
+SWITCH_QUESTION = ("Read the board on %s in place of the kept board? It will restart: a running program stops, "
                    "then starts again. Nothing is erased or written.")
+DEPLOY_QUESTION = "Read the board on %s? It will restart: a running program stops, then starts again. The erase asks its own yes later."
 FIRST_WHY = "Spark has not read a board for this project before. After you say yes, it remembers this board and asks no more for it."
 #: The sentence a CANNOT_TELL question adds when a board is kept: a yes to another board makes it the project's board.
 REPLACE_WHY = " If it is another board, spark makes it this project's board in place of the old one."
 NO_SERIAL_WHY = "This board reports no USB serial, so spark cannot tell it from another board before it reads it. It asks every time."
 FIRMWARE_WHY = ("This board's USB serial is set by its firmware, so spark cannot tell it from another board before it reads it. "
                 "It asks every time.")
-KEPT_FIRMWARE_WHY = "The kept board's USB serial was set by its firmware, so spark cannot tell this board from it before it reads it."
+UNLISTED_WHY = ("The list of boards on USB does not hold this port, so spark cannot tell this board from another board before "
+                "it reads it. It asks every time.")
+KEPT_FIRMWARE_WHY ="The kept board's USB serial was set by its firmware, so spark cannot tell this board from it before it reads it."
 SWITCH_WHY = "After you say yes, spark reads this board and keeps it as this project's board, in place of the kept one."
 ANSWER_FIX = ('ask the person in this conversation, and name the port and the restart. Only after their yes to that, write '
               '{"replies": {"%s": true}} (the JSON value true) to a file of your own outside the project, and run the next step '
@@ -58,7 +70,17 @@ ANSWER_FIX = ('ask the person in this conversation, and name the port and the re
 OTHER_BEFORE_MESSAGE = ("Not read. The board on %s (%s): its USB serial is not the kept board's (its MAC ends %s, kept since %s). "
                         "It did not restart.")
 OTHER_BEFORE_FIX = "plug in this project's board, or say yes to read this board"
-OTHER_AFTER_MESSAGE = ("The board on %s (MAC ends %s) is not the kept board (its MAC ends %s, kept since %s). "
+#: The deploy's fixes (P892): the deploy asks only for a board it cannot tell, and sends another board to the look.
+DEPLOY_ANSWER_FIX = ('ask the person in this conversation, and name the port and the restart. Only after their yes to that, write '
+                     '{"replies": {"%s": true}} (the JSON value true) to a file of your own outside the project, and run the next '
+                     'step with that file in place of the placeholder <your replies file>. One yes is for one deploy, and the erase '
+                     'asks its own yes after the read. Never add --port to avoid the question: it asks all the same')
+DEPLOY_OTHER_FIX = "plug in this project's board and run deploy.py again, or run look.py to read this board first"
+DEPLOY_NO_FIX = "run deploy.py again when you want to deploy to this board"
+#: A deploy with no board kept for the project stops before the read and sends the person to the look, which keeps one.
+NO_KNOWN_MESSAGE = "Not read. The board on %s (%s): spark keeps no board for this project yet. It did not restart."
+NO_KNOWN_FIX = "run look.py: it asks once and keeps this board. If the look says `not kept`, repair what it names first"
+OTHER_AFTER_MESSAGE =("The board on %s (MAC ends %s) is not the kept board (its MAC ends %s, kept since %s). "
                        "It did restart: a read restarts the board.")
 OTHER_AFTER_FIX = "plug in this project's board, then run look.py again"
 #: The fix after a read on a listed --port that shows no USB serial: the look without --port asks, and a yes replaces the
@@ -70,6 +92,29 @@ NO_MESSAGE, NO_FIX = "You said no. The board was not read and nothing was kept."
 KEPT_MESSAGE = "kept: spark remembers the board on %s (MAC ends %s) as this project's board"
 REPLACED_MESSAGE = "kept: the board on %s (MAC ends %s) is now this project's board, in place of the old one (MAC ended %s)"
 NOT_KEPT_NO_MAC_MESSAGE, NOT_KEPT_MESSAGE = "not kept: the board's MAC could not be read", "not kept: %s"
+#: The one answer that reads the board: a yes, `true` in a replies file.
+YES = True
+
+
+class Touch(namedtuple("Touch", "name asks trusts_port question no_fix other_fix answer_fix")):
+    """Value: one touch of a board that asks the board question before its read (P892). `name` is the first word of its
+    keys, `asks` the `tell` states it asks in (any other state but SAME stops with no question), and `trusts_port` reads a
+    named --port that shows no USB serial with no question. The rest are its words: the question's text, and the fixes of
+    a no, of another board and of an open question."""
+
+    @property
+    def prefix(self):
+        """The prefix of every key of this touch's questions: a run clears its keys in the replies file before it asks."""
+        return self.name + "."
+
+
+#: The look asks before every read of a board it does not know, and reads a named port with no serial as before. The
+#: deploy asks only for a board it cannot tell before a read: another board, and no kept board, go to the look.
+LOOK = Touch("look", (NONE, OTHER, CANNOT_TELL), True, READ_QUESTION, NO_FIX, OTHER_BEFORE_FIX, ANSWER_FIX)
+DEPLOY = Touch("deploy", (CANNOT_TELL,), False, DEPLOY_QUESTION, DEPLOY_NO_FIX, DEPLOY_OTHER_FIX, DEPLOY_ANSWER_FIX)
+KEY_PREFIX = LOOK.prefix
+#: The code of a state that a touch does not ask in: it stops before any read.
+STOP_FOR = {OTHER: board_codes.OTHER_BOARD, NONE: board_codes.NO_KNOWN_BOARD}
 
 
 def comparable_key(text):
@@ -103,10 +148,13 @@ def _firmware_set(row):
 
 
 def _why(state, row):
-    """Why the look asks about the board on `row` in `state`: another board, no serial, a serial its firmware set, a first
-    look, or (CANNOT_TELL with a MAC-shaped serial) a kept board whose serial its firmware set."""
+    """Why a touch asks about the board on `row` in `state`: another board, a port the list does not hold (no `row`), no
+    serial, a serial its firmware set, a first look, or (CANNOT_TELL with a MAC-shaped serial) a kept board whose serial
+    its firmware set."""
     if state == OTHER:
         return SWITCH_WHY
+    if row is None:
+        return UNLISTED_WHY
     if not serial_key(row):
         return NO_SERIAL_WHY
     if _firmware_set(row):
@@ -114,14 +162,16 @@ def _why(state, row):
     return FIRST_WHY if state == NONE else KEPT_FIRMWARE_WHY
 
 
-def question_for(state, row, port, known):
-    """The look's Question before it reads the board on `port`, listed as `row`: SWITCH_BOARD when `state` is OTHER, else
-    READ_BOARD. Its `why` says why the look asks: a first look, no serial, or a serial that the board's firmware set; with a
-    board `known`, a CANNOT_TELL `why` says that a yes to another board makes it the project's board."""
+def question_for(state, row, port, known, touch=LOOK):
+    """The Question of `touch` before it reads the board on `port`, listed as `row` (None: a port the list does not hold, which
+    the question names alone): SWITCH_BOARD when `state` is OTHER, else READ_BOARD, under the touch's name. Its `why` says why
+    it asks: a first look, no serial, a serial that the board's firmware set, or a port the list does not hold. With a board
+    `known`, a CANNOT_TELL `why` of a touch that asks for another board says that a yes to another board makes it the
+    project's board."""
     key = serial_key(row)
-    why = _why(state, row) + (REPLACE_WHY if state == CANNOT_TELL and known else "")
-    text = (SWITCH_QUESTION if state == OTHER else READ_QUESTION) % (port, row.product, named(row))
-    return Question((SWITCH_BOARD if state == OTHER else READ_BOARD) % board_token(key or port), text, YES_NO, PERSON, why)
+    why = _why(state, row) + ((REPLACE_WHY if state == CANNOT_TELL and known else "") if OTHER in touch.asks else "")
+    text = (SWITCH_QUESTION if state == OTHER else touch.question) % ("%s (%s, %s)" % (port, row.product, named(row)) if row else port)
+    return Question((SWITCH_BOARD if state == OTHER else READ_BOARD) % (touch.name, board_token(key or port)), text, YES_NO, PERSON, why)
 
 
 def _vendor(row):
@@ -150,6 +200,69 @@ def tell(row, known):
     if key == known.usb_key or key[:MAC_KEY_LENGTH] == comparable_key(known.mac):
         return SAME
     return CANNOT_TELL if _vendor(row) == ESPRESSIF_VENDOR and known.usb_key is None else OTHER
+
+
+def differs(known, mac):
+    """After a read: True when a board is kept, a MAC was read, and the MAC is not the kept board's."""
+    return bool(known and mac) and comparable_key(mac) != comparable_key(known.mac)
+
+
+class KnownBoardResult(namedtuple("KnownBoardResult", "code state known reply question row")):
+    """Value: what the board question let through (P892). `code` None: read the board. Else it is `needs_reply`,
+    `answered_no`, `other_board` or `no_known_board`, and the touch stops before any read. `state` is `tell`'s, `known` the
+    KnownBoard or None, `reply` the Reply of the yes or None when nobody was asked, `question` the Question asked or None,
+    and `row` the listed Port or None."""
+
+    def findings(self, touch):
+        """The Findings of a stop, in the words of `touch`: a no, no kept board, or another board before the read, then the
+        open question when there is one."""
+        if self.code == board_codes.ANSWERED_NO:
+            return [Finding(outcomes.COULD_NOT_RUN, self.question.key, board_codes.ANSWERED_NO, NO_MESSAGE, touch.no_fix)]
+        if self.code == board_codes.NO_KNOWN_BOARD:
+            return [Finding(outcomes.COULD_NOT_RUN, "board", board_codes.NO_KNOWN_BOARD, NO_KNOWN_MESSAGE % (self.row.device, named(self.row)),
+                            NO_KNOWN_FIX)]
+        found = [Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, OTHER_BEFORE_MESSAGE % (
+            self.row.device, named(self.row), mac_ends(self.known.mac), self.known.at[:10]), touch.other_fix)] if self.state == OTHER else []
+        if self.code == codes.NEEDS_REPLY:
+            found.append(Finding(outcomes.COULD_NOT_RUN, self.question.key, codes.NEEDS_REPLY, self.question.text, touch.answer_fix % self.question.key))
+        return found
+
+    def data(self, port):
+        """The data of a stop on `port`: the open question, the port, the board's product (None with no row) and the kept board
+        by its last two bytes."""
+        return {"open": [self.question.to_dict()] if self.code == codes.NEEDS_REPLY else [], "port": port,
+                "product": self.row.product if self.row else None,
+                "known_board": {"state": self.state, "mac_ends": mac_ends(self.known.mac) if self.known else None}}
+
+
+class KnownBoardService:
+    """
+    Service: the board question (P892), before a touch reads the board on USB, which restarts it. `known_store` is the
+    KnownBoardStore, `touch` the Touch whose rules and words it uses. `judge` reads the kept board, tells the board on USB,
+    and lets the read go on, stops with no question, or asks.
+    """
+
+    def __init__(self, known_store, touch):
+        self.known_store, self.touch = known_store, touch
+
+    def judge(self, project, port, row, replies):
+        """A KnownBoardResult for the board on `port` (None: the one board on USB), listed as the Port `row` (None: a --port
+        that the list does not hold). SAME reads with no question, and so does a named port with no serial for a touch that
+        trusts it. A state that the touch does not ask in stops with no question. Else `replies` (a ReplyStrategy's `reply`)
+        answers: only the JSON value true is a yes, and any value that is no boolean leaves the question open. The SparkError
+        of a kept record that cannot be read passes up."""
+        known = self.known_store.read(project)
+        state = tell(row, known)
+        unseen = self.touch.trusts_port and port and not serial_key(row)  # a named port that the list holds with no serial, or not at all
+        if state == SAME or unseen:
+            return KnownBoardResult(None, state, known, None, None, row)
+        if state not in self.touch.asks:
+            return KnownBoardResult(STOP_FOR[state], state, known, None, None, row)
+        asked = question_for(state, row, port or row.device, known, self.touch)
+        reply = replies(asked)
+        if reply is None or not isinstance(reply.value, bool):
+            return KnownBoardResult(codes.NEEDS_REPLY, state, known, None, asked, row)
+        return KnownBoardResult(None if reply.value is YES else board_codes.ANSWERED_NO, state, known, reply, asked, row)
 # --- end MVP ---
 
 

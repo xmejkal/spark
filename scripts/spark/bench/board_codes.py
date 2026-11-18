@@ -53,8 +53,9 @@ NO_GRANT, GRANT_EXPIRED, GRANT_NO_ZONE = "no_grant", "grant_expired", "grant_no_
 #: What reach.py and live.py answer (P657). The answer codes of live.py (board_live.RAN is no finding) are the codes of its findings.
 NOT_REACHED, RESET_FAILED, NO_PROBE = "not_reached", "reset_failed", "no_probe"
 RAISED, REFUSED_NO_GRANT, REFUSED_PIN, REFUSED_NO_PARSE = "raised", "refused_no_grant", "refused_pin", "refused_no_parse"
-#: The look's gate (P865): the board on USB is not the board kept for the project, or spark's record of that board cannot be read.
-OTHER_BOARD, KNOWN_BOARD_UNREADABLE = "other_board", "known_board_unreadable"
+#: The board question (P865, P892): the board on USB is not the board kept for the project, spark's record of that board
+#: cannot be read, or the deploy found no board kept for the project.
+OTHER_BOARD, KNOWN_BOARD_UNREADABLE, NO_KNOWN_BOARD = "other_board", "known_board_unreadable", "no_known_board"
 #: A stop that is no look's: the store cannot be used, or the board record or its pin roles cannot.
 STORE_PROBLEM, BOARD_RECORD_UNUSABLE = "store_problem", "board_record_unusable"
 
@@ -113,12 +114,14 @@ CODES = {
     REFUSED_NO_PARSE: "live.py sent nothing to the board: Python cannot read the code",
     OTHER_BOARD: "the board on USB is not the board spark keeps for this project",
     KNOWN_BOARD_UNREADABLE: "spark's record of the board it keeps for this project cannot be read",
+    NO_KNOWN_BOARD: "spark keeps no board for this project yet, so the deploy did not read the board on USB",
     STORE_PROBLEM: "spark's store cannot be read or written",
     BOARD_RECORD_UNUSABLE: "the project's board record, or its pin roles, cannot be used",
 }
 #: The codes whose sentence or fix holds a line a person pastes or a file they open, so Privacy leaves it, and each line
 #: that holds it, as it is (P677): the line to run with no terminal, the grant line, the line that builds the image, and
-#: the store record to repair (the last deploy's, and the kept board's, also the one another board replaces).
+#: the store record to repair (the last deploy's, and the kept board's, also the one another board replaces). P892 keeps
+#: `no_known_board` beside `other_board`: both stop a deploy before the read and send the person to the look.
 PASTED_CODES = frozenset((NO_TERMINAL, NO_GRANT, GRANT_EXPIRED, GRANT_NO_ZONE, REFUSED_NO_GRANT, NO_IMAGE, EVIDENCE_REFUSES,
-                          LAST_DEPLOY_NOT_CHECKED, KNOWN_BOARD_UNREADABLE, OTHER_BOARD))
+                          LAST_DEPLOY_NOT_CHECKED, KNOWN_BOARD_UNREADABLE, OTHER_BOARD, NO_KNOWN_BOARD))
 # --- end MVP ---
