@@ -36,8 +36,8 @@ refuter, twice) and a build to the plan's version 3. This file holds the acted, 
 | 28 | fifteen rows of other tables are refused by `--anchors` on main too | `mutate.py --anchors` | raised | P897 #1273 owns them; this change adds none |
 | 29 | `grant.py --help` and `replies.md`'s table said that a board with no serial, or a serial that a firmware set, is asked on every run; for a live grant it is refused first with `serial_not_mac`, exit 1, with no question | PR lens | acted | the help and the table say that only `--scope deploy` asks; `test_11_a_live_grant_on_a_serial_that_cannot_be_the_mac_is_refused_from_the_list_alone` |
 | 30 | `scripts.md` read as if a board that the grant refuses is then asked | PR lens | acted | refused with no question, and a board that passes goes to the board question |
-| 31 | `scripts.md` said reach's `--json` prints a line only for an open question, false for a reach that ran | PR lens | acted | "Of its stops" |
-| 32 | the grant has two no's with one code: the board question's (exit 2, not read) and its own (exit 1, after the restart) | PR refuter | acted | the help and `replies.md` say which is which |
+| 31 | `scripts.md` said reach's `--json` prints a line only for an open question, false for a reach that ran | PR refuter | acted | "Of its stops" |
+| 32 | the grant has two no's with one code: the board question's (exit 2, not read) and its own (exit 1, after the restart) | PR lens | acted | the help and `replies.md` say which is which |
 | 33 | the stop "Nothing ran on it. The board on ..." uses "it" before it names the board | PR lens | acted | "Nothing ran on the board."; the look's and the deploy's words stay byte-equal (`test_19`, `test_deploy_known_board`) |
 | 34 | `live.py --help` said live does not match "the record" against the board, beside a paragraph that compares the kept board | PR lens | acted | the help names the board record and the kept board's record |
 | 35 | `replies.md`'s first lines named only `research.py` and `look.py` as scripts that ask | PR lens | acted | the deploy, the grant, reach and live, with links |
