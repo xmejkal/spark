@@ -29,6 +29,7 @@ from spark.bench import known_board  # noqa: E402
 from spark.bench.board_look import Port  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from spark.records.deploy_record_store import DeployRecordStore  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from fakes import FakeClock, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld, FakePortFinder, pin_time_zone  # noqa: E402
@@ -400,9 +401,10 @@ class TheShowTest(ShowCase):
         self.assertNotIn(str(Path.home()), out + json.dumps(said))
 
     def test_it_runs_from_a_folder_that_is_no_spark_project(self):
-        empty = Path(tempfile.mkdtemp())
-        code, said = self.envelope("--project", str(empty))
-        self.assertEqual((code, len(said["data"]["boards"])), (0, 1))
+        empty = Path(tempfile.mkdtemp())  # no .spark/tools.json: the shared tools lists name mpremote
+        code, out, _ = self.bench("--project", str(empty), "--json", find_tool=tool_finder.ToolFinder(empty).find)
+        self.assertEqual((code, len(json.loads(out)["data"]["boards"])), (0, 1))
+        self.assertEqual([argv[-1] for argv in self.ran], ["devs"])
 
     def test_it_runs_mpremote_devs_only(self):
         self.bench("show", "--json")

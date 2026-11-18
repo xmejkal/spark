@@ -12,7 +12,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from spark.records import records_codes, store, tool_finder  # noqa: E402
-from spark.records.deploy_record_store import LastDeploy  # noqa: E402
+from spark.records.deploy_record_store import Deploys, LastDeploy  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.build.board_engine import BuildResult  # noqa: E402
 from spark.bench.firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
@@ -275,11 +275,13 @@ class FakeDeployRecordStore:
     """A fake deploy_record_store.DeployRecordStore: `write_deploy` keeps each call in `written` and gives `path`, or raises
     `raises` (for example store.StoreError); `read_last_deploy(mac)` keeps each `mac` in `asked` and gives `last` (default: a
     LastDeploy with nothing recorded) (P458). It goes in as `LookAtBoard(records=)`,
-    `DeployImage(records=)` or `DeployService(records=)`."""
+    `DeployImage(records=)` or `DeployService(records=)`. `read_deploys(mac)` keeps each `mac` in `asked_deploys` and gives
+    `deploys` (default: none recorded), for `ShowBench(records=)` (P919)."""
 
-    def __init__(self, path=Path("record.json"), raises=None, last=None):
+    def __init__(self, path=Path("record.json"), raises=None, last=None, deploys=None):
         self.path, self.raises, self.written = path, raises, []
         self.last, self.asked = last or LastDeploy(outcomes.NONE_RECORDED), []
+        self.deploys, self.asked_deploys = deploys or Deploys(outcomes.NONE_RECORDED), []
 
     def write_deploy(self, facts, verdict, who):
         if self.raises:
@@ -290,6 +292,10 @@ class FakeDeployRecordStore:
     def read_last_deploy(self, mac):
         self.asked.append(mac)
         return self.last
+
+    def read_deploys(self, mac):
+        self.asked_deploys.append(mac)
+        return self.deploys
 
 
 class FakeTextFileWriter:
