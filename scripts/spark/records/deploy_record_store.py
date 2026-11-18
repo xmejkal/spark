@@ -24,6 +24,14 @@ from spark.core import zone_time
 WHY_NO_MAC = "the board's MAC was not read"
 WHY_UNREADABLE = "spark's record of it cannot be read"
 ZONE_NOT_STORED = "(zone not stored)"
+#: append_deploy's board when the record keeps its own: an outside deploy names no board (P920).
+KEEP_BOARD = object()
+
+
+def made_by_of(entry):
+    """The tool that recorded the deploy `entry` (P920), or None for spark's own deploy and for a maker that is no text."""
+    made_by = entry.get("made_by")
+    return made_by if isinstance(made_by, str) and made_by.strip() else None
 
 
 class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict deployed why record_path micropython_banner made_by",
@@ -95,10 +103,10 @@ class DeployRecordStore:
         kept = [newest.get(key) for key in ("project", "verdict", "deployed")] if isinstance(newest, dict) else []
         if not kept or not all(isinstance(each, str) and each.strip() for each in kept):
             return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE, record_path=path)
-        banner, made_by = (newest.get(key) for key in ("micropython_banner", "made_by"))  # P779, P920: an older deploy kept none
+        banner = newest.get("micropython_banner")  # P779: a deploy before it kept none, and that is no unreadable record
         return LastDeploy(outcomes.RECORDED, *kept, record_path=path,
                           micropython_banner=banner if isinstance(banner, str) and banner.strip() else None,
-                          made_by=made_by if isinstance(made_by, str) and made_by.strip() else None)
+                          made_by=made_by_of(newest))
 
     def read_deploys(self, mac):
         """The Deploys of the board with this `mac`. It never raises, as `read_last_deploy`: a record it cannot read, and a
@@ -132,19 +140,21 @@ class DeployRecordStore:
                   "micropython_banner": facts.get("micropython_banner")}
         return self.append_deploy(facts["mac"], deploy, facts["board"])
 
-    def append_deploy(self, mac, deploy, board=None):
+    def append_deploy(self, mac, deploy, board=KEEP_BOARD):
         """The store's record of the board `mac` with the entry `deploy` added, under the store's lock, and `board` as its
-        board id; None keeps the record's own (P920: a recorded deploy names no board). Returns the record's path.
-        store.StoreError when the file there is no board record: it is left as it is."""
+        board id, None too, as spark's own deploy writes it. KEEP_BOARD keeps the record's own: a recorded deploy names no
+        board (P920). Returns the record's path. store.StoreError when what is there is no board record (a folder, a
+        broken link or a file that is no record): it is left as it is."""
         with store.locked():
             path = self.find_path(mac)
             try:
-                record = json.loads(path.read_text()) if path.is_file() else {"mac": mac, "deploys": []}
+                record = json.loads(path.read_text()) if path.is_file() else (
+                    None if path.exists() or path.is_symlink() else {"mac": mac, "deploys": []})
             except ValueError:
                 record = None
             if not isinstance(record, dict) or not isinstance(record.get("deploys"), list):
                 raise store.StoreError("%s is not a board record, so it was left as it is", path, code=records_codes.NOT_A_BOARD_RECORD)
-            if board is not None:
+            if board is not KEEP_BOARD:
                 record["board"] = board
             record["deploys"].append(deploy)
             store.write_json("boards", self._key(mac), record)

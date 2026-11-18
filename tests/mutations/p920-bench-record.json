@@ -44,8 +44,8 @@
  {
   "file": "scripts/spark/bench/register_project.py",
   "name": "a store that refuses a registration is a crash",
-  "find": "        except store.StoreError as cannot:",
-  "replace": "        except KeyError as cannot:"
+  "find": "        except store.StoreError as cannot:\n            return self._stopped(cannot, NOT_REGISTERED_YET",
+  "replace": "        except KeyError as cannot:\n            return self._stopped(cannot, NOT_REGISTERED_YET"
  },
  {
   "file": "scripts/spark/bench/record_deploy.py",
@@ -86,20 +86,20 @@
  {
   "file": "scripts/spark/records/deploy_record_store.py",
   "name": "a recorded deploy with no board drops the record's board",
-  "find": "            if board is not None:",
+  "find": "            if board is not KEEP_BOARD:",
   "replace": "            if True:"
  },
  {
   "file": "scripts/spark/records/deploy_record_store.py",
   "name": "the last deploy never says who made it",
-  "find": "                          made_by=made_by if isinstance(made_by, str) and made_by.strip() else None)",
+  "find": "                          made_by=made_by_of(newest))",
   "replace": "                          made_by=None)"
  },
  {
   "file": "scripts/spark/records/deploy_record_store.py",
   "name": "a maker that is no text is kept",
-  "find": "                          made_by=made_by if isinstance(made_by, str) and made_by.strip() else None)",
-  "replace": "                          made_by=made_by)"
+  "find": "    return made_by if isinstance(made_by, str) and made_by.strip() else None",
+  "replace": "    return made_by"
  },
  {
   "file": "scripts/spark/records/store.py",
@@ -122,7 +122,7 @@
  {
   "file": "scripts/spark/bench/bench_service.py",
   "name": "a folder name and a registered name of one name merge into one group",
-  "find": "    return entry[\"project\"], entry.get(\"made_by\")",
+  "find": "    return entry[\"project\"], made_by_of(entry)",
   "replace": "    return entry[\"project\"], None"
  },
  {
@@ -142,5 +142,101 @@
   "name": "the view leaves out the tool of a registered name",
   "find": "\", by %s\" % each[\"made_by\"] if each[\"made_by\"] else \"\"",
   "replace": "\"\""
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a blank or unprintable origin or tool is registered, so a recorded deploy reads as spark's own",
+  "find": "        if any(not value.strip() or CONTROL.search(value) for value in (origin, tool)):",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a tool with a control character is registered",
+  "find": "        if any(not value.strip() or CONTROL.search(value) for value in (origin, tool)):",
+  "replace": "        if any(not value.strip() for value in (origin, tool)):"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a registration takes no lock, so two writers can each lose the other's name",
+  "find": "        with store.locked():",
+  "replace": "        if True:"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a registration drops the other registered names",
+  "find": "            listed[name] = dict(zip(FIELDS, (origin, tool, at)))",
+  "replace": "            listed = {name: dict(zip(FIELDS, (origin, tool, at)))}"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a registrations file that cannot be read is a crash",
+  "find": "        except OSError as cannot:  # a folder in its place, or a file spark may not read",
+  "replace": "        except KeyError as cannot:  # a folder in its place, or a file spark may not read"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a folder in the place of the registrations file reads as no registration",
+  "find": "        if not path.exists() and not path.is_symlink():\n            return {}",
+  "replace": "        if not path.is_file():\n            return {}"
+ },
+ {
+  "file": "scripts/spark/bench/register_project.py",
+  "name": "a launcher that cannot be written says that nothing was registered",
+  "find": "            return self._stopped(cannot, NO_LAUNCHER % name, AGAIN_FIX % again)._replace(data=dict(registered, launcher=None))",
+  "replace": "            return self._stopped(cannot, NOT_REGISTERED_YET, AGAIN_FIX % again)"
+ },
+ {
+  "file": "scripts/spark/bench/register_project.py",
+  "name": "a store stop of register names no next command",
+  "find": "        return stopped._replace(findings=[found._replace(fix=fix) for found in stopped.findings],",
+  "replace": "        return stopped._replace(findings=list(stopped.findings),"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "a projects list that cannot be read is a crash",
+  "find": "    except OSError as cannot:  # P920: a file spark may not read",
+  "replace": "    except KeyError as cannot:  # P920: a file spark may not read"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "the grouping reads a maker that is no text, so show raises on an unhashable one",
+  "find": "    return entry[\"project\"], made_by_of(entry)",
+  "replace": "    return entry[\"project\"], entry.get(\"made_by\")"
+ },
+ {
+  "file": "scripts/spark/records/deploy_record_store.py",
+  "name": "a folder in the place of a board record is a crash at the rename",
+  "find": "                    None if path.exists() or path.is_symlink() else {\"mac\": mac, \"deploys\": []})",
+  "replace": "                    {\"mac\": mac, \"deploys\": []})"
+ },
+ {
+  "file": "scripts/spark/records/deploy_record_store.py",
+  "name": "spark's own deploy with no board keeps the record's board, unlike main",
+  "find": "        return self.append_deploy(facts[\"mac\"], deploy, facts[\"board\"])",
+  "replace": "        return self.append_deploy(facts[\"mac\"], deploy)"
+ },
+ {
+  "file": "scripts/spark/records/launcher.py",
+  "name": "the launcher passes the caller's store on, so it can write into another store",
+  "find": "sys.exit(subprocess.call([PYTHON, SCRIPT] + sys.argv[1:], env=dict(os.environ, SPARK_HOME=STORE)))",
+  "replace": "sys.exit(subprocess.call([PYTHON, SCRIPT] + sys.argv[1:]))"
+ },
+ {
+  "file": "scripts/spark/records/launcher.py",
+  "name": "the launcher runs another Python than the one that registered",
+  "find": "def write_launcher(python=sys.executable, script=BENCH_SCRIPT):",
+  "replace": "def write_launcher(python=\"/usr/bin/python3\", script=BENCH_SCRIPT):"
+ },
+ {
+  "file": "scripts/spark/bench/board_look.py",
+  "name": "the look's maker line says the stored time, not the machine's zone",
+  "find": "            last.project, last.made_by, last.time_said()))",
+  "replace": "            last.project, last.made_by, last.deployed))"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_gate.py",
+  "name": "the deploy question's maker line says the stored time, not the machine's zone",
+  "find": "            last.project, last.time_said(), last.made_by))",
+  "replace": "            last.project, last.deployed, last.made_by))"
  }
 ]

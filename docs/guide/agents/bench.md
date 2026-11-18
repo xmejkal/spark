@@ -61,8 +61,12 @@ python3 $CLAUDE_PLUGIN_ROOT/scripts/bench.py register pixel-games --origin https
 `--origin` is any text that every worktree of the project shares: the origin remote, or the git common folder of a project
 with no remote. The same name with the same origin changes nothing and exits 0. With another `--tool` it replaces the
 tool. A name with another origin, or a name on spark's projects list (also when its folder is gone), is `name_taken`. A
-name that is not plain is `key_not_plain`. Each refusal says "Not registered." and exits 2. The envelope has `op`
-`register-project` and `data` `{registered: {name, origin, tool, registered}, changed, launcher}`.
+name that is not plain is `key_not_plain`. A blank, space-only or unprintable `--origin` or `--tool` is `blank_value`.
+These refusals say "Not registered." in their sentence and exit 2. A store that refuses is `store_problem`, and its last
+line on stderr says "Not registered." Each fix names the next command. The envelope has `op` `register-project` and
+`data` `{registered: {name, origin, tool, registered}, changed, launcher}`. When the name was written and the launcher
+was not, the exit is 2, `data` holds the registration with `launcher` `null`, and stderr says that the name is
+registered and the launcher was not written. Run the same command again after the repair.
 
 ## Record a deploy
 
@@ -76,13 +80,16 @@ python3 $CLAUDE_PLUGIN_ROOT/scripts/bench.py record pixel-games --json
 
 The envelope has `op` `record-deploy` and `data` `{entry, mac, device}`. The entry is
 `{project, made_by, deployed, verdict, image_sha256, simulation, yes, micropython_banner}`. `deployed` is spark's clock
-at the call, with its zone. `verdict` is `ready not read`. Each `null` means that spark read nothing. Each stop says
-"Nothing was written.", exits 2, and its fix names the next command: `not_registered`, `no_port`, `two_boards` (give
-`--port`), `port_not_listed`, `cannot_tell_board`, `tool_missing`, `list_failed` or `store_problem`.
+at the call, with its zone. `verdict` is `ready not read`. Each `null` means that spark read nothing. Each stop writes
+nothing, exits 2, and its fix names the next command. The sentence of `not_registered` and `cannot_tell_board` says
+"Nothing was written." For `no_port`, `two_boards` (give `--port`), `port_not_listed`, `tool_missing`, `list_failed` and
+`store_problem`, the last line on stderr says it.
 
 ## The launcher, for a tool outside spark
 
-`register` writes `<store>/launcher/bench.py`. The store is `SPARK_HOME`, else `~/.local/share/spark`. A tool outside
+`register` writes `<store>/launcher/bench.py`. The store is `SPARK_HOME`, else `XDG_DATA_HOME/spark`, else
+`~/.local/share/spark`. The launcher always runs `bench.py` on the store it lives in, whatever store the caller's
+environment names. A tool outside
 spark runs it with any `python3`, from any folder, with the same arguments as `bench.py`:
 
 ```sh
@@ -91,7 +98,7 @@ python3 ~/.local/share/spark/launcher/bench.py record pixel-games --json
 
 It answers in about one second, as `bench.py` does. When the Python or the `bench.py` it runs is gone, it prints one
 envelope line with the code `launcher_stale` and exits 2. Its fix is to run `register` again. No JSON on stdout means
-that the launcher itself is missing. A stale launcher is a could-not-run, and the tool's deploy goes on.
+that the launcher itself is missing, or the Python that runs it is gone. A stale launcher is a could-not-run, and the tool's deploy goes on.
 
 Known limits: no path to spark's code stays valid after a plugin update or a removed worktree, so register from a
 checkout that stays. A serial that a firmware set and that starts with 12 hex digits passes as a MAC. The store's lock

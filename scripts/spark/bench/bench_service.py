@@ -18,7 +18,7 @@ from spark.bench import board_grant
 from spark.bench import known_board
 from spark.bench.board_look import boards_of, port_of
 from spark.core import outcomes
-from spark.records.deploy_record_store import DeployRecordStore, LastDeploy
+from spark.records.deploy_record_store import DeployRecordStore, LastDeploy, made_by_of
 
 # --- MVP ---
 #: Where the MAC came from: the USB serial's MAC part, or the kept record that names the board.
@@ -61,7 +61,7 @@ def identify(row, kept):
 def _group(entry):
     """The key of the group an entry is counted in: its project and its maker (P920), so that a folder name and a
     registered name never merge."""
-    return entry["project"], entry.get("made_by")
+    return entry["project"], made_by_of(entry)
 
 
 def deploys_from(entries):

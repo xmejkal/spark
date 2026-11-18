@@ -289,6 +289,8 @@ def projects():
         return {}
     try:
         listed = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as cannot:  # P920: a file spark may not read
+        raise StoreError("%s cannot be read (%s) — fix its permissions", path, cannot, code=records_codes.FILE_REFUSED)
     except ValueError as broken:
         raise StoreError("%s is not JSON (%s) — fix it, or delete it and run /spark:init in each project", path, broken, code=records_codes.RECORD_FILE_BROKEN)
     if not isinstance(listed, dict) or not all(isinstance(folder, str) for folder in listed.values()):

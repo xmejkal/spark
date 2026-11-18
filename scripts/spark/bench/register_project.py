@@ -4,6 +4,7 @@ store once, so that its own tool can record its deploys with `bench.py record`. 
 writes the launcher again, also when the registration is unchanged: that is the launcher's repair. It touches no board.
 """
 
+import shlex
 from pathlib import Path
 
 from spark.bench import bench_privacy
@@ -27,6 +28,11 @@ TOOL_HELP = 'the name of the tool that deploys the project, such as box.py: benc
 #: The lines of a registration: what the store holds now, and where the launcher is.
 REGISTERED_LINES = {True: "registered: %s, made by %s, from %s", False: "registered already, nothing changed: %s, made by %s, from %s"}
 LAUNCHER_LINE = "launcher: %s"
+#: The command that runs this registration again: the next command of every stop, for its values.
+AGAIN = "bench.py register %s --origin %s --tool %s"
+AGAIN_FIX = "repair the file or the folder that the sentence names, then run %s again"
+#: What a stop after the registration says: the name is in the store, and the launcher is not.
+NO_LAUNCHER = "%s is registered, but the launcher was not written."
 
 
 class RegisterProject(Operation):
@@ -51,15 +57,25 @@ class RegisterProject(Operation):
         self.registered, self.write_launcher = registered or RegisteredProjectStore(), write_launcher
 
     def run(self, name, origin, tool, *, outside):
+        again = AGAIN % tuple(shlex.quote(value) for value in (name, origin, tool))
         try:
             project, changed = self.registered.register(name, origin, tool, outside.clock.now().isoformat(timespec="seconds"))
-            path = self.write_launcher()
         except SparkError as refused:
             return stop_result(refused, SCRIPT, HERE, None)
         except store.StoreError as cannot:
-            stopped = stop_result(cannot, SCRIPT, HERE, None)
-            return stopped._replace(diagnostics=list(stopped.diagnostics) + ["%s: %s" % (SCRIPT, NOT_REGISTERED_YET)])
+            return self._stopped(cannot, NOT_REGISTERED_YET, AGAIN_FIX % again)
+        registered = {"registered": project._asdict(), "changed": changed}
+        try:
+            path = self.write_launcher()
+        except store.StoreError as cannot:  # the name is in the store: the same command again writes the launcher
+            return self._stopped(cannot, NO_LAUNCHER % name, AGAIN_FIX % again)._replace(data=dict(registered, launcher=None))
         lines = [REGISTERED_LINES[changed] % (project.name, project.tool, project.origin), LAUNCHER_LINE % path]
-        return OperationResult({"registered": project._asdict(), "changed": changed, "launcher": str(path)},
-                               lines=[printable(line) for line in lines])
+        return OperationResult(dict(registered, launcher=str(path)), lines=[printable(line) for line in lines])
+
+    @staticmethod
+    def _stopped(cannot, said, fix):
+        """stop_result's answer for a store that refused, with `fix`, and a last line: what the store holds now, and `fix`."""
+        stopped = stop_result(cannot, SCRIPT, HERE, None)
+        return stopped._replace(findings=[found._replace(fix=fix) for found in stopped.findings],
+                                diagnostics=list(stopped.diagnostics) + ["%s: %s %s" % (SCRIPT, said, fix)])
 # --- end MVP ---

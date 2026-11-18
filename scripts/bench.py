@@ -40,15 +40,16 @@ was read), or an argument is wrong. Never 1: the view finds no problem."""
 
 REGISTER_NOTES = """bench.py register writes the name once into spark's store (registered-projects.json), with its origin and its
 tool, and writes the launcher (launcher/bench.py in the store). A tool outside spark runs the launcher with any python3
-to reach bench.py record. Run it from a spark checkout that stays: the launcher runs this Python and this bench.py.
+to reach bench.py record, always on the store the launcher lives in. Run it from a spark checkout that stays: the launcher runs this Python and this bench.py.
 
 The same name with the same origin changes nothing, and with another --tool it replaces the tool. A name with another
 origin, or a name on spark's projects list, is taken. Every run writes the launcher again, which repairs it.
 
 With --json it prints one envelope: data.registered, data.changed and data.launcher (docs/guide/agents/bench.md).
 
-Exit codes: 0 registered, or nothing changed; 2 not registered: the name is not plain or is taken, the store refused,
-or an argument is wrong. Never 1."""
+Exit codes: 0 registered, or nothing changed; 2 not registered: the name is not plain or is taken, the origin or the
+tool is blank, the store refused, or an argument is wrong; 2 also when the name was registered and the launcher was not
+written (data.launcher is null): run the same command again. Never 1."""
 
 RECORD_NOTES = """bench.py record adds one deploy of a registered project to the store's record of the board on USB (boards/).
 It runs only `mpremote devs`, which never opens a port, and reads nothing from the board. The MAC is the first 12 hex

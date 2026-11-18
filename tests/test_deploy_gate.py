@@ -950,7 +950,7 @@ class TheFactsAfterTheFlashTest(GateCase):
         code, said, _ = self.flash()
         self.assertEqual(code, 0)
         place = deploy_record_store.DeployRecordStore().find_path(self.look().reading.mac)
-        self.assertIn("store record: not written: [Errno 21] Is a directory: '%s.part' -> '%s'" % (place, place), said)
+        self.assertIn("store record: not written: %s is not a board record, so it was left as it is" % place, said)
 
 
 class SayLastDeployInQuestionTest(unittest.TestCase):

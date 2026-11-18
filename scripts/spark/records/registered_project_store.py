@@ -11,6 +11,7 @@ import json
 from collections import namedtuple
 
 from spark.core.errors import SparkError
+from spark.core.text_guards import CONTROL
 from spark.records import records_codes
 from spark.records import store
 
@@ -20,6 +21,7 @@ PLACE = "registered-projects"
 FIELDS = ("origin", "tool", "registered")
 NOT_REGISTERED_YET = "Not registered."
 TAKEN_FIX = "pick another name, then run bench.py register again"
+BLANK_FIX = "give the origin and the tool as text, such as --origin <the origin remote> --tool box.py, then run bench.py register again"
 
 
 class RegisteredProject(namedtuple("RegisteredProject", "name origin tool registered")):
@@ -45,6 +47,9 @@ class RegisteredProjectStore:
         if not store.PLAIN.fullmatch(name):
             raise SparkError("%r is not a plain name (lower-case letters, digits and '-'). %s", name, NOT_REGISTERED_YET,
                              code=records_codes.KEY_NOT_PLAIN, fix="register a name such as pixel-games")
+        if any(not value.strip() or CONTROL.search(value) for value in (origin, tool)):  # a blank tool reads as spark's own deploy
+            raise SparkError("the origin and the tool must be printable text, not blank. %s", NOT_REGISTERED_YET,
+                             code=records_codes.BLANK_VALUE, fix=BLANK_FIX)
         with store.locked():
             listed = self._read_all()
             kept = listed.get(name)
@@ -65,8 +70,10 @@ class RegisteredProjectStore:
             return {}
         try:
             listed = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError, RecursionError) as broken:
-            raise store.StoreError("%s cannot be read (%s): fix it by hand", path, broken, code=records_codes.RECORD_FILE_BROKEN)
+        except OSError as cannot:  # a folder in its place, or a file spark may not read
+            raise store.StoreError("%s cannot be read (%s): fix it by hand", path, cannot, code=records_codes.FILE_REFUSED)
+        except (ValueError, RecursionError) as broken:
+            raise store.StoreError("%s is not JSON (%s): fix it by hand", path, broken, code=records_codes.RECORD_FILE_BROKEN)
         if not isinstance(listed, dict) or not all(isinstance(entry, dict) and all(isinstance(entry.get(field), str) for field in FIELDS)
                                                    for entry in listed.values()):
             raise store.StoreError("%s is not an object of registered projects: fix it by hand", path,
