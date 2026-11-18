@@ -1,7 +1,8 @@
 """
 The outcome of one stage of the build (P705): `Stage`, which `board_engine` and `build_service` both make, so neither
-imports the other for it, and the hint a build stopped at the footprint still gives. Every importer imports the two
-names, never the module: `stages` is a list of them in `run`, `main` and the tests.
+imports the other for it, the names of the two stages a reader of the build record asks about, and the hint a build
+stopped at the footprint still gives. Every importer imports the names, never the module: `stages` is a list of
+Stages in `run`, `main` and the tests.
 """
 
 from spark.core.outcomes import SKIPPED

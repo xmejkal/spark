@@ -30,13 +30,13 @@ hand-written project (requirements.json and no needs) has `null` for its needs a
 simulated image have `null`, because you judge them. Without firmware/main.py, or without an image, they are
 `not-started`. A firmware line in sim/wokwi.toml that spark cannot use gives the simulate phase `problems`.
 
-A skipped stage is never a pass ([P878](https://github.com/xmejkal/spark/issues/1246)). These phases have `null` too,
-and their mark is the dot, not the tick:
+A phase that spark did not judge is never a pass, and a skipped stage is not one either
+([P878](https://github.com/xmejkal/spark/issues/1246)). These phases have `null` too, and their mark is the dot, not the tick:
 
 - A requirements file with no needs beside it. Spark compared it with nothing.
 - A breadboard sheet that is current. Spark does not judge the wiring.
 - A build on the board alone, whose `build` stage is skipped. No board was built, and the breadboard phase has
-  nothing to wire. A rebuild skips the same stages, so `stands_at` passes both phases.
+  nothing to wire. A rebuild skips the same stages, so `stands_at` passes both phases and the build phase has no offer.
 - A build that ended `ok` and skipped only its `simulation` stage, because every part is skipped from the simulation.
 
 A build that ended `ok` and skipped any other stage is `partial`. No build does that today. With no log in

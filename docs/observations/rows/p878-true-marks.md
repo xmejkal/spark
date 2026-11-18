@@ -18,3 +18,9 @@ refuter, then the refuter again) and a build to the plan. This file holds the ac
 | 10 | after a `dist/` copy that fails midway the record says ok and the build gets the tick (row 7 of `p891-dist-failure.md`) | PR refuter of P891, the card's comment | raised | P899 #1277: it needs a new fact in the build record, after P898 #1276 |
 | 11 | `SIMULATION_SKIPPED_MESSAGE` names the one cause of a skipped simulation from the stage's status alone | plan refuter, round 2 | raised | dropped because the record keeps no stage detail and the build has one cause today; the PR and the constant's comment say it |
 | 12 | fifteen rows of other tables are refused by `--anchors` on main too | `mutate.py --anchors` on a copy of main | raised | P897 #1273 owns them; this change adds none |
+| 13 | the docstring of `build/stages.py` said every importer imports "the two names" | PR refuter | acted | it names the stage names too |
+| 14 | the breadboard's board-only reading does not look at the record's status, and no test pinned it | PR refuter | acted | kept: nothing is there to wire, however the simulation ended. The could-not-run test pins the breadboard's words, and the docstring says it |
+| 15 | row 1 of `p878-true-marks.json` was named "gets the tick again", but the mutant reads partly done | PR refuter | acted | the row has a true name |
+| 16 | a board-only build offered `build`, which changes nothing | PR refuter (optional), row 1 | acted | no offer on that reading; a build that could not run keeps its offer |
+| 17 | the guide's new paragraph opened with "A skipped stage is never a pass" over a list that also holds the sheet and the requirements file | PR lens | acted | the opening names both |
+| 18 | "board only: nothing to wire" is a literal in `build_service.board_alone` and a sentence in `flow_codes` | PR lens | raised | dropped because nothing decides on the text and the record keeps no stage detail; P899 #1277's plan may put the detail in the record |

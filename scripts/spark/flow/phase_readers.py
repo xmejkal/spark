@@ -212,7 +212,7 @@ class BuildReader(PhaseReader):
             return self.phase(flow_codes.STALE, [stale] + says, offers)
         skipped = skipped_stages(record) if record.get("status") == OK else []
         if BUILD_STAGE in skipped:
-            return self.phase(None, [flow_codes.BOARD_ONLY_BUILD_MESSAGE], offers)
+            return self.phase(None, [flow_codes.BOARD_ONLY_BUILD_MESSAGE])  # no offer: a rebuild skips the same stages
         if skipped == [SIMULATION_STAGE]:
             return self.phase(None, says + [flow_codes.SIMULATION_SKIPPED_MESSAGE], offers)
         if skipped:
@@ -223,7 +223,7 @@ class BuildReader(PhaseReader):
 class BreadboardReader(PhaseReader):
     """Strategy: the breadboard sheet: stale when the build is, or when the requirements it was built from
     (`dist/board/built-from.json`) are not the file's now. A current sheet has no status, because spark does not judge
-    the wiring, and a current build on the board alone has nothing to wire (P878)."""
+    the wiring, and a current build on the board alone has nothing to wire, however its simulation ended (P878)."""
 
     PHASE, BY = flow_codes.BREADBOARD, flow_codes.BY_YOU
 
@@ -235,7 +235,7 @@ class BreadboardReader(PhaseReader):
             if kept:
                 raise
             record = None  # no sheet and no record to read: not started, and the build phase says the record's sentence
-        stale = record and why_build_stale(project, record)
+        stale = why_build_stale(project, record) if record else None
         if record and not stale and BUILD_STAGE in skipped_stages(record):
             return self.phase(None, [flow_codes.BOARD_ONLY_MESSAGE])
         if not kept:

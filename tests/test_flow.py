@@ -277,7 +277,7 @@ class ThePhasesTest(FlowTest):
         project = a_board_only_project()
         said, code = show(project)
         self.assertEqual(code, 0)
-        self.assertEqual((table(said)["build"], table(said)["breadboard"]), ((None, ["build"]), (None, [])))
+        self.assertEqual((table(said)["build"], table(said)["breadboard"]), ((None, []), (None, [])))
         self.assertEqual((marks(said)["build"], marks(said)["breadboard"]), ("·", "·"))
         self.assertEqual(says(said, "build"), ["board only: nothing to wire, no board was built"])
         self.assertEqual(says(said, "breadboard"), ["board only: nothing to wire"])
@@ -295,6 +295,8 @@ class ThePhasesTest(FlowTest):
         said, code = show(a_board_only_project("could-not-run"))
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "build"))
         self.assertIn("simulation: could-not-run", says(said, "build"))
+        self.assertEqual(offers(said, "build"), ["build"])
+        self.assertEqual((statuses(said)["breadboard"], says(said, "breadboard")), (None, ["board only: nothing to wire"]))
 
     def test_a_build_whose_simulation_alone_was_skipped_gets_no_tick_and_says_why(self):
         project = a_built_project(stages={"board": "ok", "build": "ok", "simulation": "skipped"})
