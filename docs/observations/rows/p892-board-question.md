@@ -22,3 +22,4 @@ refuter, twice) and a build to the plan's version 3. This file holds the acted, 
 | 14 | the plan calls `KnownBoardResult` a Value, and the names table says a returned namedtuple is a Result | build | acted | its docstring says Result, and the names table lists it under Result |
 | 15 | `no_known_board` sits in `PASTED_CODES` beside `other_board`, as the plan says, but its sentence and fix hold no line to paste | build | raised | for the PR review: keep it as the plan says, or take it out |
 | 16 | fifteen rows of other tables are refused by `--anchors` on main too | `mutate.py --anchors` | raised | P897 #1273 owns them; this change adds none |
+| 17 | the full run found the new tests reading `known_board.LOOK` and `known_board.DEPLOY`, which `tests/test_self_confirmation.py` did not list, and `docs/guide/map.md` stale | build, the full run | acted | two `MAY_READ` entries with their reason (no assertion changed), and `tools/map.py --write` |
