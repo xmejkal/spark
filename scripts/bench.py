@@ -16,7 +16,7 @@ from spark.core.cli import HelpText, run_cli
 VERBS = {"show": ShowBench, "register": RegisterProject, "record": RecordDeploy}
 DEFAULT_VERB = "show"
 #: The last paragraph of every verb's help.
-VERBS_LINE = 'The verbs: show (the default), register, record. "bench.py <verb> --help" prints that verb\'s own help.'
+VERBS_LINE = 'The verbs: bench.py {show,register,record}, show the default. "bench.py <verb> --help" prints that verb\'s own help.'
 
 SHOW_NOTES = """bench.py show runs only `mpremote devs`, which lists the boards on USB and never opens a port, so a running
 program goes on. It asks no question and writes nothing. For each board it reads three records in spark's store: the

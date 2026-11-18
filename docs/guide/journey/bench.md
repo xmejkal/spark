@@ -6,7 +6,7 @@ Step 8 of 8 in [the journey](../journey.md). Previous: [Simulate](simulate.md).
 
 ### Which projects use a board
 
-`bench.py show` lists each board on USB with the projects that deployed to it, its last deploy, the projects that keep it and its grants, from spark's store ([P919](https://github.com/xmejkal/spark/issues/1301)). It runs only `mpremote devs`, so no board restarts. A board on native USB is known by its USB serial. Two clone boards with one bridge chip's serial are named alike. A board that spark cannot tell (no serial, or one its firmware set) shows its port and product, with its store parts not checked.
+`bench.py show` lists each board on USB with the projects that deployed to it, its last deploy, the projects that keep it and its grants, from spark's store ([P919](https://github.com/xmejkal/spark/issues/1301)). It runs only `mpremote devs`, so no board restarts. A board on native USB is known by its USB serial. Two clone boards with one bridge chip's serial are named alike. A board that spark cannot tell (no serial, or one its firmware set) shows its port and product, with its store parts not checked. A project that is not spark's, such as pixel-games with its own deploy tool, registers once with `bench.py register` and then records each deploy with `bench.py record` ([P920](https://github.com/xmejkal/spark/issues/1302)). The view then names it with its tool, for example `pixel-games, by <its tool> (1, last 2026-11-18)`, and the look says that spark did not make that deploy. Its own tool reaches spark through the launcher in the store ([the agents' page](../agents/bench.md)).
 
 ### Look at the board
 

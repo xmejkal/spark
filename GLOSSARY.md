@@ -405,6 +405,15 @@ so the tests kept away from the real store only by patching sixteen constants by
 forgot one would have written into the person's store (P88). Now it is read on every call, and a
 process running the tests gets a scratch one.
 
+### Registered project, launcher, and recording a deploy
+
+A **registered project** is a project that is not spark's and deploys with its own tool, such as pixel-games with
+its own deploy tool. `bench.py register` writes its name once into the store, with its origin and its tool. A taken name is
+refused. The **launcher** is the file `launcher/bench.py` in the store, which such a tool runs with any `python3` to
+reach `bench.py`. To **record a deploy** is `bench.py record`: one entry in the record of the board on USB, with
+`made_by` (the tool) and the verdict `ready not read`, because spark read nothing from the board. spark's own deploys
+are written by `deploy.py` and carry no `made_by` ([P920](https://github.com/xmejkal/spark/issues/1302)).
+
 ### The drawer
 
 What you own: one small file per item in the store's `drawer/` folder, and a label is enough. It is an

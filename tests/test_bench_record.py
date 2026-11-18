@@ -254,7 +254,7 @@ class TheHelpTest(RecordCase):
             self.assertNotIn("writes nothing", said, verb)
             self.assertIn("usage: bench.py %s" % verb, said, verb)
         for said in (shown, register, record):
-            self.assertIn("The verbs: show (the default), register, record.", said)
+            self.assertIn("The verbs: bench.py {show,register,record}, show the default.", said)
         self.assertIn("--origin", register)
         self.assertNotIn("--origin", record)
 
