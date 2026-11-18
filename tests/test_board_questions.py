@@ -252,6 +252,14 @@ class TheThreeAskTest(BoardQuestionCase):
         result = self.operation(REACH).run(project=self.project, port=None, cure_first=True, replies=None, outside=self.outside())
         self.assertEqual((self.codes(result), self.replies.asked, [command for command in self.ran if "exec" in command]), (["no_probe"], [], []))
 
+    def test_17_a_named_tty_port_is_the_kept_board_on_its_cu_port_and_the_touch_uses_the_named_port(self):
+        for script in SCRIPTS:
+            with self.subTest(script=script):
+                self.ran = []
+                result = self.result(script, "/dev/tty.usbmodem101", scope=LIVE_SCOPE)
+                self.assertEqual((result.status(), self.replies.asked), ("ok", []))
+                self.assertTrue(all("/dev/tty.usbmodem101" in command for command in self.touched()), self.touched())
+
     def test_13_no_stop_of_the_board_question_calls_the_doctors_console_probe(self):
         for script in SCRIPTS:
             for state in ("other", "none", "cannot_tell", "no"):

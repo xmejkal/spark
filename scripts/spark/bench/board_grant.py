@@ -245,7 +245,7 @@ class GrantService:
             raise GrantRefusedError(WHY_SERIAL_NOT_MAC)
         consent.require_ready()
         before_look(board)
-        mac = mac_key(self.reader.read(board.device).mac)
+        mac = mac_key(self.reader.read(port or board.device).mac)  # P892: the port the person named, a tty. one too
         if not mac:
             raise GrantRefusedError(WHY_NO_MAC)
         if scope == SCOPE_LIVE and mac_key(board.serial) != mac:  # a deploy grant is found by the look's MAC instead
