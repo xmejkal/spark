@@ -38,8 +38,8 @@
  {
   "file": "scripts/spark/bench/bench_service.py",
   "name": "a store that keeps no board still makes kept_for not known for a board with no serial",
-  "find": "    untrusted = kept.records and known_board.usb_key_to_keep",
-  "replace": "    untrusted = known_board.usb_key_to_keep"
+  "find": "    untrusted = bool(kept.records) and not known_board.serial_trusted(row)",
+  "replace": "    untrusted = not known_board.serial_trusted(row)"
  },
  {
   "file": "scripts/spark/bench/bench_service.py",
@@ -61,7 +61,7 @@
  },
  {
   "file": "scripts/spark/bench/bench_service.py",
-  "name": "a deploy record that cannot be read gives deploys_from none, not null",
+  "name": "a deploy record that cannot be read gives deploys_from [], as for no deploy, in place of null",
   "find": "{outcomes.RECORDED: deploys_from(deploys.entries), outcomes.NONE_RECORDED: []}.get(deploys.state)",
   "replace": "deploys_from(deploys.entries)"
  },
@@ -112,5 +112,71 @@
   "name": "a list that failed says boards is empty, not null",
   "find": "._replace(data={\"boards\": None})",
   "replace": "._replace(data={\"boards\": []})"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "a kept place that cannot be listed is nothing unreadable",
+  "find": "            return KeptBoards([], [place])",
+  "replace": "            return KeptBoards([], [])"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "read_all gives the kept records in no fixed order",
+  "find": "            names = sorted(os.listdir(place))",
+  "replace": "            names = sorted(os.listdir(place), reverse=True)"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "read_all reads every file of the place, not only the records",
+  "find": "for name in names if name.endswith(\".json\")",
+  "replace": "for name in names"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "a serial that its firmware set is trusted",
+  "find": "    return bool(serial_key(row)) and not _firmware_set(row)",
+  "replace": "    return bool(serial_key(row))"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "a grant time with no zone says the grant holds",
+  "find": "board_grant.WHY_NO_ZONE: NO_ZONE",
+  "replace": "board_grant.WHY_NO_ZONE: LIVE"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "a bad live grant file is named by the MAC, not by the serial",
+  "find": "board_grant.GrantStore.path_of(key, grant.scope)",
+  "replace": "board_grant.GrantStore.path_of(mac, grant.scope)"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "the deploy record's board id wins over the kept record's",
+  "find": "identity._replace(board=identity.board or board)",
+  "replace": "identity._replace(board=board or identity.board)"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "a board with no USB serial shows the text None as its serial",
+  "find": "\"usb_serial\": self.row.serial if known_board.serial_key(self.row) else None",
+  "replace": "\"usb_serial\": self.row.serial"
+ },
+ {
+  "file": "scripts/spark/bench/show_bench.py",
+  "name": "a kept_for that is not known reads as no project",
+  "find": "        return _not_checked(board, bench_service.KEPT_FOR)",
+  "replace": "        return NO_PROJECT"
+ },
+ {
+  "file": "scripts/spark/bench/show_bench.py",
+  "name": "a store that cannot be read crashes the view",
+  "find": "except (tool_finder.ToolError, board_look.LookStopError, store.StoreError) as cannot:",
+  "replace": "except (tool_finder.ToolError, board_look.LookStopError) as cannot:"
+ },
+ {
+  "file": "scripts/spark/bench/show_bench.py",
+  "name": "a grant that holds reads as ended",
+  "find": "bench_service.LIVE: \"holds until %s\"",
+  "replace": "bench_service.LIVE: \"ended %s\""
  }
 ]

@@ -11,6 +11,7 @@ read, the look keeps the board with `KnownBoardStore.write`. No other touch keep
     KnownBoardStore     one record per project folder, in the store's `known-boards/`; `read_all` gives KeptBoards
     tell                same, other, none or cannot_tell, before a touch
     mac_part_of         the MAC part of a USB serial, in the stores' form (P919)
+    serial_trusted      the board shows a USB serial that a record may trust (P919)
     Touch               the rules and the words of one touch: LOOK asks in three states, the others in cannot_tell only
     KnownBoardService   `judge`: touch, stop, or ask the board question, by the state and the touch; `require` stops by an error
     BoardQuestionError  a stop of the board question: its Findings, its data and the lines after them
@@ -24,6 +25,7 @@ Spark prints only the last two bytes of a MAC (`mac_ends`). The record holds the
 
 import hashlib
 import json
+import os
 import re
 from collections import namedtuple
 from pathlib import Path
@@ -198,6 +200,12 @@ def mac_part_of(row):
     if _vendor(row) != ESPRESSIF_VENDOR or not re.fullmatch(MAC_PART, key):
         return None
     return ":".join(key[at:at + 2] for at in range(0, MAC_KEY_LENGTH, 2))
+
+
+def serial_trusted(row):
+    """True when the board on `row` shows a USB serial that a record may trust: there is one, and its firmware did not set
+    it (P919). The same truth as `usb_key_to_keep(row, mac_part_of(row))` giving a key."""
+    return bool(serial_key(row)) and not _firmware_set(row)
 
 
 def _firmware_set(row):
@@ -422,10 +430,15 @@ class KnownBoardStore:
         return known if known.project == str(Path(project).resolve()) else None
 
     def read_all(self):
-        """KeptBoards: the board kept for every folder, with no folder compared, and each file that cannot be used."""
+        """KeptBoards: the board kept for every folder, in the order of the file names, with no folder compared, and each
+        file that cannot be used. A place that cannot be listed, or that is no folder, is itself unreadable."""
         records, unreadable = [], []
         place = store.place(PLACE)
-        for path in sorted(place.glob("*.json")) if place.is_dir() else []:
+        try:
+            names = sorted(os.listdir(place)) if place.exists() or place.is_symlink() else []
+        except OSError:
+            return KeptBoards([], [place])
+        for path in (place / name for name in names if name.endswith(".json")):
             try:
                 records.append(self._load(path))
             except SparkError:

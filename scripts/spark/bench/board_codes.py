@@ -117,7 +117,7 @@ CODES = {
     OTHER_BOARD: "the board on USB is not the board spark keeps for this project",
     KNOWN_BOARD_UNREADABLE: "spark's record of the board it keeps for this project cannot be read",
     NO_KNOWN_BOARD: "spark keeps no board for this project yet, so the script did not touch the board on USB",
-    CANNOT_TELL_BOARD: "spark cannot tell the board on USB by its USB serial, so it read none of its store records",
+    CANNOT_TELL_BOARD: "spark cannot tell the board on USB by its USB serial",
     STORE_PROBLEM: "spark's store cannot be read or written",
     BOARD_RECORD_UNUSABLE: "the project's board record, or its pin roles, cannot be used",
 }

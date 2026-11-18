@@ -12,7 +12,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/bench.py" show --json
 
 With `--json` it prints the envelope, as `parts.py` does, with `tool` `bench` and `op` `show-bench`. Its `data` holds
 `boards`: one row per board, in the order `mpremote devs` lists them. `[]` is no board on USB, a complete answer.
-`null` is a list that did not run (`unchecked` holds `list_failed` or `tool_missing`), never "no board".
+`null` is a list that did not run, or a store that cannot be read (`unchecked` holds `list_failed`, `tool_missing` or
+`store_problem`), never "no board".
 
 | key | holds |
 | --- | --- |
@@ -25,6 +26,9 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `bench` an
 | `deploys_from` | `[{project, deploys, last}]`: each project name the deploys recorded, the newest first, with its count and the `deployed` text of its last entry, as stored. `[]` is no deploy. `null` is not checked |
 | `grants` | `[{scope, state, granted_by, granted_at, expires_at}]`, the `deploy` scope then the `live` one. `state` is `live`, `ended`, `none`, `not_a_grant`, `no_zone` or `not_checked` |
 | `unchecked` | the keys of the parts that were not checked |
+
+A grant row's state says `not_checked`, with an underscore. `last_deploy.state` says `not-checked`, with a hyphen, as in
+the look's envelope.
 
 The deploy grant is found by the MAC and the live grant by the USB serial, as `grant.py --check` finds it. A project name
 is the folder name as each deploy recorded it, so a worktree shows under its own name. Two clone boards with one bridge

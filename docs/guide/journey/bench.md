@@ -6,7 +6,7 @@ Step 8 of 8 in [the journey](../journey.md). Previous: [Simulate](simulate.md).
 
 ### Which projects use a board
 
-`bench.py show` lists each board on USB with the projects that deployed to it, its last deploy, the projects that keep it and its grants, from spark's store ([P919](https://github.com/xmejkal/spark/issues/1301)). It runs only `mpremote devs`, so no board restarts. A board on native USB is known by its USB serial. Two clone boards with one bridge chip's serial look like one board to it; a board with no serial, or one its firmware set, shows its port only.
+`bench.py show` lists each board on USB with the projects that deployed to it, its last deploy, the projects that keep it and its grants, from spark's store ([P919](https://github.com/xmejkal/spark/issues/1301)). It runs only `mpremote devs`, so no board restarts. A board on native USB is known by its USB serial. Two clone boards with one bridge chip's serial are named alike. A board that spark cannot tell (no serial, or one its firmware set) shows its port and product, with its store parts not checked.
 
 ### Look at the board
 

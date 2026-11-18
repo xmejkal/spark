@@ -30,8 +30,6 @@ LIVE, ENDED, NONE, NOT_A_GRANT, NO_ZONE, NOT_CHECKED = "live", "ended", "none", 
 #: The state for each answer of `Grant.why_not_valid`.
 STATE_FOR_WHY = {None: LIVE, board_grant.WHY_EXPIRED: ENDED, board_grant.WHY_NO_ZONE: NO_ZONE,
                  board_grant.WHY_NOT_A_GRANT: NOT_A_GRANT}
-#: The reason of a last deploy that was not read, because spark cannot tell the board.
-CANNOT_TELL_WHY = "spark cannot tell this board by its USB serial"
 
 #: Value: who the board on USB is. `mac` in the stores' form or None, `mac_from` USB_SERIAL, KEPT_BOARD or None, `board`
 #: the kept record's board id or None, `kept_for` the KnownBoards that name it ([] none, None not known).
@@ -48,9 +46,10 @@ def identify(row, kept):
     """The Identity of the board on the Port `row`, from KeptBoards `kept`, with known_board's rules only. Each kept record
     that `tell` calls SAME names it. Two such records with two MACs (two clones with one serial) name no MAC. Else the
     MAC is the serial's MAC part (`mac_part_of`). `kept_for` is None when a kept file cannot be read, or when the store
-    keeps boards and the serial is none or one its firmware set (no key a record may trust), else the matches."""
+    keeps boards, no record names this one, and its serial is none or one its firmware set (`serial_trusted` is False),
+    else the matches."""
     matches = [known for known in kept.records if known_board.tell(row, known) == known_board.SAME]
-    untrusted = kept.records and known_board.usb_key_to_keep(row, known_board.mac_part_of(row)) is None
+    untrusted = bool(kept.records) and not known_board.serial_trusted(row)
     kept_for = None if kept.unreadable or (untrusted and not matches) else matches
     if matches:
         one = len({known_board.comparable_key(known.mac) for known in matches}) == 1
@@ -79,9 +78,9 @@ class ConnectedBoard(namedtuple("ConnectedBoard", "row identity last_deploy depl
         return {"device": self.row.device, "also_on": list(self.row.also_on),
                 "usb_serial": self.row.serial if known_board.serial_key(self.row) else None, "usb_id": self.row.usb,
                 "product": self.row.product, "mac": mac, "mac_from": mac_from, "board": board,
-                "kept_for": None if kept_for is None else [{"project": known.project, "at": known.at} for known in kept_for],
-                "last_deploy": self.last_deploy.to_dict(), "deploys_from": self.deploys_from,
-                "grants": [grant._asdict() for grant in self.grants], "unchecked": [item.part for item in self.unchecked]}
+                KEPT_FOR: None if kept_for is None else [{"project": known.project, "at": known.at} for known in kept_for],
+                LAST_DEPLOY: self.last_deploy.to_dict(), DEPLOYS_FROM: self.deploys_from,
+                GRANTS: [grant._asdict() for grant in self.grants], "unchecked": [item.part for item in self.unchecked]}
 
 
 class BenchResult(namedtuple("BenchResult", "boards kept_unreadable")):
@@ -111,17 +110,23 @@ class BenchService:
         mac = identity.mac
         if mac is None:
             unchecked += [Unchecked(part, board_codes.CANNOT_TELL_BOARD) for part in (LAST_DEPLOY, DEPLOYS_FROM, GRANTS)]
-            last, grouped = LastDeploy(outcomes.NOT_CHECKED, why=CANNOT_TELL_WHY), None
+            last, grouped = LastDeploy(outcomes.NOT_CHECKED, why=board_codes.CODES[board_codes.CANNOT_TELL_BOARD]), None
         else:
-            last, deploys = self.records.read_last_deploy(mac), self.records.read_deploys(mac)
-            grouped = {outcomes.RECORDED: deploys_from(deploys.entries), outcomes.NONE_RECORDED: []}.get(deploys.state)
-            unchecked += [Unchecked(part, board_codes.LAST_DEPLOY_NOT_CHECKED, self.records.find_path(mac))
-                          for part, state in ((LAST_DEPLOY, last.state), (DEPLOYS_FROM, deploys.state)) if state == outcomes.NOT_CHECKED]
-            identity = identity._replace(board=identity.board or deploys.board)
+            last, grouped, board, not_read = self._deploys(mac)
+            unchecked += not_read
+            identity = identity._replace(board=identity.board or board)
         grants = [self._grant(mac, board_grant.SCOPE_DEPLOY), self._grant(row.serial, board_grant.SCOPE_LIVE)]
         unchecked += [Unchecked(GRANTS, board_codes.NOT_A_GRANT, board_grant.GrantStore.path_of(key, grant.scope))
                       for key, grant in zip((mac, row.serial), grants) if grant.state == NOT_A_GRANT]
         return ConnectedBoard(row, identity, last, grouped, grants, unchecked)
+
+    def _deploys(self, mac):
+        """(the LastDeploy, the deploys by project or None, the deploy record's board id, the Unchecked parts) of `mac`."""
+        last, deploys = self.records.read_last_deploy(mac), self.records.read_deploys(mac)
+        grouped = {outcomes.RECORDED: deploys_from(deploys.entries), outcomes.NONE_RECORDED: []}.get(deploys.state)
+        not_read = [Unchecked(part, board_codes.LAST_DEPLOY_NOT_CHECKED, self.records.find_path(mac))
+                    for part, state in ((LAST_DEPLOY, last.state), (DEPLOYS_FROM, deploys.state)) if state == outcomes.NOT_CHECKED]
+        return last, grouped, deploys.board, not_read
 
     def _grant(self, key, scope):
         """The GrantRow of `scope` kept under `key` (the MAC, or the USB serial for the live grant, as grant.py --check asks)."""

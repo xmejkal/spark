@@ -373,7 +373,7 @@ class TheShowTest(ShowCase):
         code, out, _ = self.bench()
         self.assertEqual(code, 2)
         self.assertIn("/dev/cu.usbserial-1410   USB Serial", out.splitlines())
-        self.assertIn("  deploys from  not checked: spark cannot tell this board by its USB serial", out.splitlines())
+        self.assertIn("  deploys from  not checked: spark cannot tell the board on USB by its USB serial", out.splitlines())
         self.assertIn("  kept for      no project (look.py keeps a board for a project)", out.splitlines())
         code, said = self.envelope()
         self.assertEqual((code, said["status"], said["data"]["boards"][0]["mac"]), (2, "could-not-run", None))

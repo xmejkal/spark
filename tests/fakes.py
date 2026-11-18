@@ -276,7 +276,7 @@ class FakeDeployRecordStore:
     `raises` (for example store.StoreError); `read_last_deploy(mac)` keeps each `mac` in `asked` and gives `last` (default: a
     LastDeploy with nothing recorded) (P458). It goes in as `LookAtBoard(records=)`,
     `DeployImage(records=)` or `DeployService(records=)`. `read_deploys(mac)` keeps each `mac` in `asked_deploys` and gives
-    `deploys` (default: none recorded), for `ShowBench(records=)` (P919)."""
+    `deploys` (default: none recorded), for `ShowBench(records=)`, and `find_path(mac)` a path (P919)."""
 
     def __init__(self, path=Path("record.json"), raises=None, last=None, deploys=None):
         self.path, self.raises, self.written = path, raises, []
@@ -296,6 +296,11 @@ class FakeDeployRecordStore:
     def read_deploys(self, mac):
         self.asked_deploys.append(mac)
         return self.deploys
+
+    @staticmethod
+    def find_path(mac):
+        """Where the record of `mac` would be: the view names it for a state that is not checked."""
+        return Path("boards") / (mac + ".json")
 
 
 class FakeTextFileWriter:
