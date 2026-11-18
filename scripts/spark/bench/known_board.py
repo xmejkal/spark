@@ -8,8 +8,10 @@ read, the look keeps the board with `KnownBoardStore.write`. No other touch keep
 `comparable_key` from here.
 
     KnownBoard          the kept board: its MAC as esptool printed it, and the key of a USB serial that names it
-    KnownBoardStore     one record per project folder, in the store's `known-boards/`
+    KnownBoardStore     one record per project folder, in the store's `known-boards/`; `read_all` gives KeptBoards
     tell                same, other, none or cannot_tell, before a touch
+    mac_part_of         the MAC part of a USB serial, in the stores' form (P919)
+    serial_trusted      the board shows a USB serial that a record may trust (P919)
     Touch               the rules and the words of one touch: LOOK asks in three states, the others in cannot_tell only
     KnownBoardService   `judge`: touch, stop, or ask the board question, by the state and the touch; `require` stops by an error
     BoardQuestionError  a stop of the board question: its Findings, its data and the lines after them
@@ -23,6 +25,7 @@ Spark prints only the last two bytes of a MAC (`mac_ends`). The record holds the
 
 import hashlib
 import json
+import os
 import re
 from collections import namedtuple
 from pathlib import Path
@@ -189,9 +192,25 @@ def named(row):
     return "MAC ends %s" % mac_ends(key) if _vendor(row) == ESPRESSIF_VENDOR and len(key) >= MAC_KEY_LENGTH else "USB serial ends %s" % row.serial[-4:]
 
 
+def mac_part_of(row):
+    """The MAC part of the USB serial of `row` as the stores key a board, lower case with colons (`34:85:18:...` from
+    `348518...`), when the serial is on Espressif's own USB and starts with 12 hex digits; else None (P919). It is the
+    serial's, not read from the chip."""
+    key = serial_key(row)[:MAC_KEY_LENGTH]
+    if _vendor(row) != ESPRESSIF_VENDOR or not re.fullmatch(MAC_PART, key):
+        return None
+    return ":".join(key[at:at + 2] for at in range(0, MAC_KEY_LENGTH, 2))
+
+
+def serial_trusted(row):
+    """True when the board on `row` shows a USB serial that a record may trust: there is one, and its firmware did not set
+    it (P919). The same truth as `usb_key_to_keep(row, mac_part_of(row))` giving a key."""
+    return bool(serial_key(row)) and not _firmware_set(row)
+
+
 def _firmware_set(row):
     """True when the serial of `row` is on Espressif's own USB and cannot be a MAC (not 12 hex digits first): its firmware set it."""
-    return _vendor(row) == ESPRESSIF_VENDOR and not re.fullmatch(MAC_PART, serial_key(row)[:MAC_KEY_LENGTH])
+    return _vendor(row) == ESPRESSIF_VENDOR and mac_part_of(row) is None
 
 
 def _why(state, row, verb):
@@ -383,12 +402,18 @@ def usb_key_to_keep(row, mac):
     return key if key and (key[:MAC_KEY_LENGTH] == comparable_key(mac) or _vendor(row) != ESPRESSIF_VENDOR) else None
 
 
+class KeptBoards(namedtuple("KeptBoards", "records unreadable")):
+    """Value: what `KnownBoardStore.read_all` gives (P919): the KnownBoard of every file it could use, and the path of
+    each file it could not."""
+
+
 class KnownBoardStore:
     """
     Store: the board kept for each project folder, one JSON file per folder in the store's private `known-boards/` (0600,
     never inside a git work tree). The file's name is 16 hex of sha256 of the resolved folder, so a moved project asks once
     more. `read` raises SparkError `known_board_unreadable` for a file it cannot use, and `write` raises store.StoreError
-    when the store refuses the write. It writes through the store, under its lock, as DeployRecordStore does.
+    when the store refuses the write. It writes through the store, under its lock, as DeployRecordStore does. `read_all`
+    reads every file (P919).
     """
 
     @staticmethod
@@ -401,6 +426,28 @@ class KnownBoardStore:
         path = self.find_path(project)
         if not path.exists() and not path.is_symlink():
             return None
+        known = self._load(path)
+        return known if known.project == str(Path(project).resolve()) else None
+
+    def read_all(self):
+        """KeptBoards: the board kept for every folder, in the order of the file names, with no folder compared, and each
+        file that cannot be used. A place that cannot be listed, or that is no folder, is itself unreadable."""
+        records, unreadable = [], []
+        place = store.place(PLACE)
+        try:
+            names = sorted(os.listdir(place)) if place.exists() or place.is_symlink() else []
+        except OSError:
+            return KeptBoards([], [place])
+        for path in (place / name for name in names if name.endswith(".json")):
+            try:
+                records.append(self._load(path))
+            except SparkError:
+                unreadable.append(path)
+        return KeptBoards(records, unreadable)
+
+    @staticmethod
+    def _load(path):
+        """The KnownBoard in the file at `path`, or SparkError `known_board_unreadable` when it cannot be used."""
         try:
             kept = json.loads(path.read_text(encoding="utf-8"))
             known = KnownBoard(*(kept[field] for field in KnownBoard._fields))
@@ -409,7 +456,7 @@ class KnownBoardStore:
                 raise TypeError(known)
         except (OSError, ValueError, RecursionError, KeyError, TypeError):
             raise SparkError("spark's record of this project's board cannot be read: %s", path, code=board_codes.KNOWN_BOARD_UNREADABLE, fix=UNREADABLE_FIX)
-        return known if known.project == str(Path(project).resolve()) else None
+        return known
 
     def write(self, known):
         """Keep `known` as the board of its project, in place of the one kept before. Returns the record's path."""

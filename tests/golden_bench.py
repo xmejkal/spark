@@ -1,5 +1,5 @@
 """
-The bench goldens (P380, #487): what look, deploy, grant --check, live and reach print today, kept in tests/golden/.
+The bench goldens (P380, #487): what look, deploy, grant --check, live, reach and bench show print today, kept in tests/golden/.
 
 A helper module, no tests in it: tests/test_golden_bench.py runs each Case. A Case runs one script as a child process,
 in a project built at test time, with the fake esptool, mpremote and serial of tests/fake_modules first on its
@@ -82,6 +82,12 @@ def live_grant_text():
 DEPLOY_GRANT = (("grants/dc-da-0c-xx-xx-xx-deploy.json", deploy_grant_text),)
 #: A live grant in the store, found by the serial of the canned device list.
 LIVE_GRANT = (("grants/8c-bf-ea-xx-xx-xx.json", live_grant_text),)
+#: Two deploys of the canned board from two project folders, as write_deploy appends them (P919).
+DEPLOYS = (("boards/dc-da-0c-xx-xx-xx.json", json.dumps({"mac": BOARD_MAC, "board": BOARD_ID, "deploys": [
+    {"project": "blink", "image_sha256": "0" * 64, "deployed": "2026-11-02T10:00:00+01:00", "verdict": "ready seen",
+     "simulation": None, "yes": "typed by tester", "micropython_banner": None},
+    {"project": "bench s3", "image_sha256": "0" * 64, "deployed": "2026-11-17T08:04:00+01:00", "verdict": "ready seen",
+     "simulation": None, "yes": "typed by tester", "micropython_banner": None}]})),)
 CASES = [
     Case("look-ok.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("look-ok.txt", "look.py", [], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
@@ -120,6 +126,8 @@ CASES = [
          LIVE_GRANT),
     Case("deploy-ok-ready-seen.json", "deploy.py", ["--json", "--token", LOOK_TOKEN], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0,
          DEPLOY_GRANT, "deploy-ok-ready-seen.json.stderr", True),
+    # P919: the board kept for the project, its deploys and its two grants; it runs only mpremote devs
+    Case("bench-ok.json", "bench.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0, DEPLOYS + LIVE_GRANT + DEPLOY_GRANT),
 ]
 
 
@@ -202,7 +210,7 @@ def run_script(case, project, store, token=None):
     for place, text in case.plant:
         (Path(store) / place).parent.mkdir(parents=True, exist_ok=True)
         (Path(store) / place).write_text(text() if callable(text) else text)
-    if op_of(case) in ("look", "deploy", "reach", "live"):  # P892: they touch the kept board with no question, as the look does
+    if op_of(case) in ("look", "deploy", "reach", "live", "bench"):  # P892: they touch the kept board with no question; P919 lists it
         plant_known_board(store, project, case.devs_file)
     env = child_env(store, case.flash_id_file, case.devs_file)
     if case.fake_board:

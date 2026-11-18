@@ -1,6 +1,7 @@
 """
 The bench area: the Operations on a board on USB, and the outside they reach. `look` is the first on the core (P442,
-W3-3), `deploy` the second (P655, W4-2), the grant, live and reach Operations (`issue-grant`, `check-grant`, `live`, `reach`) the rest (P657). `OPERATIONS` maps each printed `op` to its class, for the frontends.
+W3-3), `deploy` the second (P655, W4-2), the grant, live and reach Operations (`issue-grant`, `check-grant`, `live`, `reach`) the next (P657), and `show-bench`,
+the bench's show, the last (P919). `OPERATIONS` maps each printed `op` to its class, for the frontends.
 """
 
 from spark.bench import deploy_gate
@@ -11,12 +12,14 @@ from spark.bench.issue_grant import IssueGrant
 from spark.bench.look_at_board import LookAtBoard
 from spark.bench.reach_board import ReachBoard
 from spark.bench.run_live_code import RunLiveCode
+from spark.bench.show_bench import ShowBench
 from spark.core.operation import JSON_DEST
 from spark.core.outside import build_outside_world
 from spark.core.replies import Terminal, reply_strategy_for
 
 # --- MVP ---
-OPERATIONS = {operation.name: operation for operation in (LookAtBoard, DeployImage, IssueGrant, CheckGrant, RunLiveCode, ReachBoard)}
+OPERATIONS = {operation.name: operation for operation in (LookAtBoard, DeployImage, IssueGrant, CheckGrant, RunLiveCode, ReachBoard,
+                                                            ShowBench)}
 
 
 def build_project_outside_world(project, effects, reporter, values=None):

@@ -4,13 +4,16 @@ Step 8 of 8 in [the journey](../journey.md). Previous: [Simulate](simulate.md).
 
 **Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). With `--no-simulation` it also flashes an image of `firmware/` that no simulation tested, but only on a typed yes that starts with "no simulation tested this image" ([P337](https://github.com/xmejkal/spark/issues/431)). When each stage starts, it prints one `why:` line that says why it happens ([P476](https://github.com/xmejkal/spark/issues/652)). Its dry run prints the plan's `why:` line, then the esptool commands, and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:deploy`'s page ([`commands/deploy.md`](../../../commands/deploy.md), P213).
 
+### Which projects use a board
+
+`bench.py show` lists each board on USB with the projects that deployed to it, its last deploy, the projects that keep it and its grants, from spark's store ([P919](https://github.com/xmejkal/spark/issues/1301)). It runs only `mpremote devs`, so no board restarts. A board on native USB is known by its USB serial. Two clone boards with one bridge chip's serial are named alike. A board that spark cannot tell (no serial, or one its firmware set) shows its port and product, with its store parts not checked.
+
 ### Look at the board
 
 `look.py` reads the board on USB without changing it and compares it with the board in `requirements.json`
 ([P219](https://github.com/xmejkal/spark/issues/201)). The board restarts while it is read, and nothing is erased or
 written. It prints each field as `same`, `differs` or `unknown`, the board's MAC, the last deploy that spark's store record names
-for it (P401, after this run) with its image's MicroPython banner, the banner of the image it would flash (P779), and a token when a passed run names the image. This run was on a XIAO ESP32-C6 on USB, in a project that had no build yet, so it has no token. The MAC is
-masked here.
+for it (P401, after this run) with its image's MicroPython banner, the banner of the image it would flash (P779), and a token when a passed run names the image. This run was on a XIAO ESP32-C6 on USB, in a project that had no build yet, so it has no token. The MAC is masked here.
 
 <!-- output: run 2026-10-13, spark 0.9.0 -->
 ```text
@@ -24,8 +27,7 @@ $ look.py --project <project>
   no token: no sim/wokwi.toml in <project>: build with /spark:build --keep . first
 ```
 
-The exit code was 2: the fields matched, but the look could not give a token. With a build and a passed scenario, the last
-line is the token.
+The exit code was 2: the fields matched, but the look could not give a token. With a build and a passed scenario, the last line is the token.
 
 With a passed scenario, the look also prints what the run did not test: its caveats, the limits of the simulation, and
 under "no scenario named these must lines, so test them on the board:" each must line of the brief that no passed
@@ -68,8 +70,7 @@ the board record with its source. Since [P464](https://github.com/xmejkal/spark/
 `pins.py` names a display's pins and size when the record holds them. A pin that reads the battery is
 `ONBOARD_BATTERY_SENSE` in `pins.py`, with its divider.
 A number typed in the board's console sets the period in milliseconds, and `steady`, `heartbeat` or `random` picks the
-pattern. Its scenario passed in Wokwi. The PO ran deploy.py in his own terminal and typed yes. The esptool lines are cut
-here.
+pattern. Its scenario passed in Wokwi. The PO ran deploy.py in his own terminal and typed yes. The esptool lines are cut here.
 
 <!-- output: run 2026-10-14, spark 0.9.0 -->
 ```text
@@ -171,8 +172,7 @@ After that walk, a bench session that leaves a verdict a command can read is pla
 brain. That plan is [P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2), first used in the bin's
 bring-up, [B14](https://github.com/xmejkal/sisuo-brain-transplant/issues/8).
 
-The `spark-reverse-engineer` skill writes a bench protocol, but for a board reverse-engineered from photos, not for a
-board spark generated.
+The `spark-reverse-engineer` skill writes a bench protocol, but for a board reverse-engineered from photos, not for a board spark generated.
 
 **Today, in full.** These bench runs are not in the sections above:
 
@@ -187,8 +187,7 @@ board spark generated.
   [P290](https://github.com/xmejkal/spark/issues/347), `deploy.py` makes one retry of an erase that stops with exit 2, after 5 s, and prints
   `retry in 5 s: ...`. Later that day, 3 deploys of 3 with a grant went through on the first call, each with
   `ready seen`, and none needed the retry.
-- On 2026-10-19 two more deploys with a standing yes passed the scenario
-  ([P213](https://github.com/xmejkal/spark/issues/192)).
+- On 2026-10-19 two more deploys with a standing yes passed the scenario ([P213](https://github.com/xmejkal/spark/issues/192)).
 - On 2026-10-17 the live try passed one bench run on the XIAO ESP32-C6
   ([the log](../../observations/2026-10-17-p282-p247-bench.md)).
 

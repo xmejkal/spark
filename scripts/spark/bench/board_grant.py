@@ -164,6 +164,11 @@ class GrantStore:
     def key(mac, scope=SCOPE_LIVE):
         return store.slug(mac_key(mac)) + ("-deploy" if scope == SCOPE_DEPLOY else "")
 
+    @classmethod
+    def path_of(cls, mac, scope=SCOPE_LIVE):
+        """The path of the file of `scope` for this MAC, there or not (P919: the bench names a file it cannot use)."""
+        return store.place("grants") / (cls.key(mac, scope) + ".json")
+
     def save(self, grant):
         """Keep `grant`. Returns the file's path."""
         with store.locked():
@@ -173,12 +178,12 @@ class GrantStore:
     def find(self, mac, scope=SCOPE_LIVE):
         """The Grant of this `scope` kept for this MAC, or None when there is none. GrantRefusedError(WHY_NOT_A_GRANT)
         when the file is there but holds no grant of this scope for this MAC."""
-        path = store.place("grants") / (self.key(mac, scope) + ".json")
+        path = self.path_of(mac, scope)
         if not mac_key(mac) or not path.is_file():
             return None
         try:
             grant = Grant(**json.loads(path.read_text()))
-        except (OSError, ValueError, TypeError):
+        except (OSError, ValueError, TypeError, RecursionError):  # P919: a deeply nested file is refused, not a crash
             raise GrantRefusedError(WHY_NOT_A_GRANT)
         if not isinstance(grant.mac, str) or grant.scope != scope or mac_key(grant.mac) != mac_key(mac) \
                 or grant.board_token != board_look.board_token(mac_key(mac)):
