@@ -27,12 +27,22 @@ e.g. `- Job 1 · paste each task into Slack by hand · E tickets.csv:7` -->
 <!-- One ### per actor and scenario: the table, then a Mermaid flowchart of the same steps. Never a Mermaid
 journey block: it forces a score on every task. "n/a — a one-step job" may replace both.
 e.g. `| 2 | opens the app | E analytics, 90 days | never sees the task | not yet | Do they read email? |` -->
-### ⟨actor⟩ — ⟨scenario⟩ <!-- REQUIRED:journey -->
+### A Claude session — it takes the game box for step 2c of P904 <!-- REQUIRED:journey -->
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
-| 1 | ⟨fill⟩ | ⟨tag and pointer⟩ | ⟨fill⟩ | ⟨works, partly, not yet or —⟩ | ⟨fill or —⟩ |
+| 1 | wants to know who uses the board now | E brief ★C9 | no record says it, and a read of the box stops a running game | not yet | Q3 |
+| 2 | sends a message to the other session and waits for "free" | E the card #1298, the agreement, item 2 | the other session can be busy, and silence is not a yes | partly | — |
+| 3 | writes the take line on the card with an end time | E the agreement, item 3. E brief C20: not used yet | the end time is a guess (C11) | partly | Q6 |
+| 4 | deploys and reads the console, about 10 to 15 restarts | E brief C11, ★C15 | each touch restarts the board, and `box.py` passes no spark gate (★C6) | works | Q5 |
+| 5 | gives the board back and writes "The board is free" | E the agreement, item 3 | the box holds a test lineup, and nothing names the old one (C10) | not yet | — |
+| 6 | stops with no release (a clear, a restart near 100k) | H council/user.md USER-12 | the next session reads the card, and the hold ends at its time | partly | Q6 |
 
 ```mermaid
 flowchart LR
-  s1["⟨step 1⟩"] --> s2["⟨step 2⟩"]
+  s1["Who uses the board?"] --> s2["Message, wait for free"]
+  s2 --> s3["Take line with an end time"]
+  s3 --> s4["Deploys and console reads"]
+  s4 --> s5["Give back, the board is free"]
+  s4 --> s6["Stop with no release"]
+  s6 --> s1
 ```

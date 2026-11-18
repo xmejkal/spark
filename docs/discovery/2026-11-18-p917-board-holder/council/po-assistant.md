@@ -42,7 +42,7 @@ Risks and assumptions
 - Whether a `store.write_json` write is atomic against a reader: not read.
 - How `drawer.py` uses "hold" (cited from the body of #634 only).
 - Usage by anyone other than the PO and the two sessions: no analytics (brief).
-- The brief's file for the other lenses and `risks-and-tests.md`: not read (they are template files with ⟨fill⟩ in the brief).
+- The brief's file for the other lenses and `risks-and-tests.md`: not read (they are template files with the fill marker in the brief).
 
 ## Questions for the decider
 
