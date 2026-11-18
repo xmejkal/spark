@@ -1,6 +1,7 @@
 """
 The stops of the bench Operations (P657, W4-3): the board_codes code that a refusal is answered with, so grant, live, reach
-and deploy name one stop by one code, and the result of a stop before the board answered. An Operation puts the code in its Finding.
+and deploy name one stop by one code, the result of a stop before the board answered, and the result of a stop of the board
+question (P892). An Operation puts the code in its Finding.
 """
 
 from spark.bench import board_codes

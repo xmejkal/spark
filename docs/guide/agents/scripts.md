@@ -114,8 +114,8 @@ These only read:
   or `--scope deploy`): that is the person's yes, typed in their own terminal. `--check` looks for a live grant only. `--scope deploy` refuses a yes that another program relayed, with `relayed_yes_refused` and exit 1 ([its row](json.md)). Give the person the line that `live.py` or `grant.py --check`
   printed, which names `grant.py` by its whole path. Fill in the minutes for `N`, and add `--project` with the project's
   absolute path, and `--port` when two boards are on USB. Never give a bare `grant.py`, because
-  it is not on the person's PATH, and `$CLAUDE_PLUGIN_ROOT` is not set in their terminal ([P283](https://github.com/xmejkal/spark/issues/329)). While the board has a grant, you can run `live.py` (below). The
-  grant works only on a board whose USB serial is its MAC (a built-in USB port, like the ESP32-C6's). The person ends a
+  it is not on the person's PATH, and `$CLAUDE_PLUGIN_ROOT` is not set in their terminal ([P283](https://github.com/xmejkal/spark/issues/329)). While the board has a grant, you can run `live.py` (below). A live
+  grant works only on a board whose USB serial is its MAC (a built-in USB port, like the ESP32-C6's): `grant.py --minutes` refuses any other from the list alone, then asks [the board question](replies.md#the-question-of-the-grant-reach-and-live) in the person's terminal. The person ends a
   grant early by deleting its file in the store, named by the MAC with dashes (`grants/8c-bf-ea-xx-xx-xx.json`). The grant is a file in the person's store, and you can
   write that file. The PO accepts that risk, as for every store record. Never write or change a grant file;
 - `live.py --code '...'` runs a short piece of code on the running board and ends with `mpremote reset`, so the
@@ -123,7 +123,7 @@ These only read:
   `grant.py --check` says granted, and say first that the firmware stops while the code runs. Before it sends
   anything, it checks the grant and refuses code that writes a number of the board's USB or flash pins
   ([P254](https://github.com/xmejkal/spark/issues/266)): any such number anywhere in the code, `time.sleep(12)` too.
-  A number computed at run time passes. Only the XIAO C6 record names these pins so far. `--json` gives `answer`
+  A number computed at run time passes. Only the XIAO C6 record names these pins so far. Then it asks [the board question](replies.md#the-question-of-the-grant-reach-and-live): a stop of it is exit 2, and its `--json` line adds `open`, `product` and `known_board`. `--json` gives `answer`
   (`ran`, `raised`, `not_reached`, `refused_no_grant`, `refused_pin`, `refused_no_parse`, or `could-not-run`),
   `grant_why`, `why`, `output`, `cure`, `reset` (`done`, `failed` or null), `pins_checked`, `gpio_numbers_in_code`
   and `port`. Exit 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset
@@ -132,7 +132,7 @@ These only read:
   after a refusal, or after a `not_reached` where mpremote could not open the port or enter the raw REPL, so the code
   never ran. `pins_checked: false` means the record names no restricted pin, so nothing was refused. A pin that the
   code set and the firmware never sets can keep its value through the reset; `gpio_numbers_in_code` lists the
-  candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool;
+  candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool. It asks the board question too, and with `--json` it prints a line only for an open question;
 - the board doctor ([P282](https://github.com/xmejkal/spark/issues/326)). When esptool's read fails
   (`look.py`, `grant.py --minutes`, `deploy.py`) or mpremote cannot open the port or enter the REPL (`reach.py`, `live.py`), the script adds the doctor's lines:
   `said` (the tool's own error line, a fact you show and never decide on), one `check` line per check

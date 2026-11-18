@@ -20,9 +20,21 @@ MAC with dashes, for example grants/8c-bf-ea-xx-xx-xx.json, with the MAC, the bo
 token), who said yes and when it ends. A new grant replaces the old one. To end a grant early, delete that file. The
 file is a plain file in your store: anything that can write your store can write it.
 
+Before the read, grant.py asks the board question (P892), after its check of your terminal. On the board that spark
+keeps for the project it asks nothing. Another board stops with other_board, and a board with a USB serial in a project
+that keeps no board stops with no_known_board. Both name look.py, and the board did not restart. A board that spark
+cannot tell by its USB serial (no serial, or a serial that a firmware set when the kept board's serial was set by one
+too) is asked on every run, in your terminal, or by --replies with your own file that holds
+{"replies": {"grant.read_board.<id>": true}}. A yes there lets grant.py read the board, and the grant still asks its own
+yes. After the read, a MAC that is not the kept board's stops with other_board before that yes, and no grant is kept.
+With no kept board and a board with no USB serial, a yes and a read give a deploy grant for a board that no project
+keeps. A --port that the list does not hold stops with port_not_listed, and a /dev/tty. port is its /dev/cu. port.
+
 grant.py --check says whether the board on USB has a grant now. It runs only `mpremote devs`, which lists the boards and
-never opens a port, so the running program goes on. It knows the board by its USB serial, which is the MAC on a board
-with a built-in USB port, like the ESP32-C6's. A board on a USB bridge chip gets no grant, and the sentence says why.
+never opens a port, so the running program goes on. It asks no board question. It knows the board by its USB serial,
+which is the MAC on a board with a built-in USB port, like the ESP32-C6's. A board whose USB serial cannot be its MAC
+(no serial, a USB bridge chip's serial, or a serial that a firmware set) gets no live grant: grant.py --minutes refuses
+it from the list alone, before any question or read, and the sentence says why.
 
 While the grant lasts, live.py runs Claude's code on the board (P247). With two or more boards on USB, --port is
 needed.
@@ -39,8 +51,9 @@ port, and two seconds of the console with the port's lock. It prints esptool's o
 and one next step for your hands, as the last line. Its look at the console can restart the board.
 
 Exit codes: 0 the grant was given or is valid, 1 refused (no grant, it ended, the person answered no, the serial is not
-the MAC), 2 grant.py could not run (no board, two boards, the MAC not read, --minutes out of range, no terminal), and the
-last line says why. With --check --json, a run that could not look prints why "could not run" too."""
+the MAC), 2 grant.py could not run (no board, two boards, the MAC not read, --minutes out of range, no terminal) or the
+board question stopped it (other_board, no_known_board, needs_reply, answered_no), and the last line says why. With
+--check --json, a run that could not look prints why "could not run" too."""
 
 
 def operation_for(argv):

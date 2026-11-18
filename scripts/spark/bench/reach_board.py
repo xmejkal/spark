@@ -1,7 +1,8 @@
 """
 The reach as an Operation on the core (P657, W4-3): run one line on the board on USB, cure it once when its USB output died at
 power-on, and say whether the board answered. reach.py is its CLI, and its `--json` line is the flat one the bench log reads
-(`FlatJsonLine`), so no golden changed. The time of `at` is the outside's clock, and a stop has no data, so no line.
+(`FlatJsonLine`), so no golden changed. The time of `at` is the outside's clock, and a stop has no data, so no line, but
+an open board question (P892), whose line holds `reached` false, the port, the product, `open` and `known_board`.
 """
 
 from spark.bench import board_codes
@@ -64,10 +65,13 @@ def data_of(port, result, cure_first, doctor, at):
 
 class ReachBoard(Operation):
     """
-    Operation: the reach. It finds the one board on USB (or takes `--port`), runs `board_reach.reach` and, when mpremote
-    never got in, asks the board doctor. `platform_for(project, find_tool)` builds the FirmwarePlatform (default:
-    MicroPythonPlatform). A board that answered is no Finding; one that did not, a cure that cannot run, a tool problem and
-    a look that stopped are one unchecked Finding each, and the data of a stop is None (nothing on stdout).
+    Operation: the reach. It lists the boards and finds the one on USB, or the row of `--port` (P892: None when the list does
+    not hold it). After its refusal of `--cure-first` with no probe it asks the board question by the REACH touch (`known`
+    is the KnownBoardStore, None: the store's own), runs `board_reach.reach` and, when mpremote never got in, asks the
+    board doctor. `platform_for(project, find_tool)` builds the FirmwarePlatform (default: MicroPythonPlatform). A board
+    that answered is no Finding; one that did not, a cure that cannot run, a tool problem, a look that stopped and a stop
+    of the board question are one unchecked Finding each. The data of a stop is None (nothing on stdout), but for an open
+    board question.
     """
 
     name = "reach"

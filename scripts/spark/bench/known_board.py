@@ -106,7 +106,7 @@ GRANT_NO_FIX = "run grant.py again when you want a grant for this board"
 GRANT_OTHER_FIX = "plug in this project's board and run grant.py again, or run look.py to read this board first"
 GRANT_ANSWER_FIX = ('answer yes when grant.py asks in your terminal, or write {"replies": {"%s": true}} (the JSON value true) to a '
                     'file of your own outside the project and run grant.py again with --replies and that file. One yes is for '
-                    'one grant, and the grant asks its own yes after the read. --port asks all the same')
+                    'one grant, and the grant asks its own yes after the read. --port does not avoid the question')
 GRANT_AFTER_FIX = "plug in this project's board and run grant.py again, or run look.py to make this board the project's"
 #: The words of reach and live, which run code on the board and stop its firmware.
 REACH_QUESTION = ('Run print("reached") on the board on %s? Its firmware stops, and it runs again only after you press R or '
@@ -120,8 +120,7 @@ LIVE_OTHER_FIX = "plug in this project's board and run live.py again, or run loo
 #: %s is the script, then %%s the key.
 RUN_ANSWER_FIX = ("ask the person in this conversation, and name the port and that the board's firmware stops. Only after their "
                   'yes to that, write {"replies": {"%%s": true}} (the JSON value true) to a file of your own outside the project, '
-                  "and run %s again with --replies and that file. One yes is for one run. Never add --port to avoid the "
-                  "question: it asks all the same")
+                  "and run %s again with --replies and that file. One yes is for one run. --port does not avoid the question")
 KEPT_MESSAGE = "kept: spark remembers the board on %s (MAC ends %s) as this project's board"
 REPLACED_MESSAGE = "kept: the board on %s (MAC ends %s) is now this project's board, in place of the old one (MAC ended %s)"
 NOT_KEPT_NO_MAC_MESSAGE, NOT_KEPT_MESSAGE = "not kept: the board's MAC could not be read", "not kept: %s"

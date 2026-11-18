@@ -59,10 +59,13 @@ def data_of(port, result):
 class RunLiveCode(Operation):
     """
     Operation: the live try. `platform_for(project, find_tool)` builds the FirmwarePlatform (default: MicroPythonPlatform).
-    It builds the LiveTryService over the grant check (the outside's clock), the connection, the probe and the board record,
-    and runs it. An answer that is no `ran`, or a reset that failed, is one Finding of the status of `board_live.exit_code`,
-    with the answer for its code (`reset_failed` after a failed reset). A tool, the look or the board record that stops
-    is one unchecked item, and its data holds the empty fields.
+    It lists the boards once and keeps the row, builds the LiveTryService over the grant check (the outside's clock), the
+    connection, the probe and the board record, and runs it with the board question of the LIVE touch (P892, `known` the
+    KnownBoardStore, None: the store's own), which the service asks just before the code runs. An answer that is no `ran`,
+    or a reset that failed, is one Finding of the status of `board_live.exit_code`, with the answer for its code
+    (`reset_failed` after a failed reset). A tool, the look, the board record, the kept board's record or the board
+    question that stops is one unchecked item, and its data holds the empty fields. A stop of the board question adds
+    `open`, `port`, `product` and `known_board`.
     """
 
     name = "live"

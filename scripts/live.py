@@ -25,16 +25,25 @@ over-claims: print(1) lists GPIO1.
 
 The record is the project's active board (boards/active.json). live.py does not match it against the board on USB.
 
+After the two checks and just before the code runs, live.py asks the board question (P892). A board with no grant is
+refused first, with no question. On the board that spark keeps for the project it asks nothing. Another board stops
+with other_board, and a board with a USB serial in a project that keeps no board stops with no_known_board. Both name
+look.py, and nothing ran on the board. A board that spark cannot tell by its USB serial is asked on every run, in your
+terminal, or by --replies with your own file that holds {"replies": {"live.run_on_board.<id>": true}}. One yes is for
+one run. A --port that the list does not hold stops with port_not_listed, and a /dev/tty. port is its /dev/cu. port.
+
 --json prints one line with every field, null where it has none: answer (ran, raised, not_reached, refused_no_grant,
 refused_pin, refused_no_parse, or could-not-run, the word outcomes.py shares), grant_why (grant.py's code when the grant refused), why, output, cure, reset (done, failed or null),
-pins_checked (false when the record names no usb or flash pin) and gpio_numbers_in_code, with port.
+pins_checked (false when the record names no usb or flash pin) and gpio_numbers_in_code, with port. A stop of the board
+question adds open, product and known_board.
 
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
 and one next step for your hands, as the last line. Its look at the console can restart the board. --json carries it as doctor.
 
-Exit codes: 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset failed, or
-live.py could not run, and the last line says why. With two or more boards on USB, --port is needed.""" % board_grant.GRANT_COMMAND
+Exit codes: 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset failed,
+live.py could not run, or the board question stopped it (other_board, no_known_board, needs_reply, answered_no), and
+the last line says why. With two or more boards on USB, --port is needed.""" % board_grant.GRANT_COMMAND
 
 
 def main(argv=None, outside=None, operation=None):

@@ -47,10 +47,12 @@ DEPLOY_NOTICE = ("  Claude can now run deploy.py on this board with no yes from 
 
 class IssueGrant(Operation):
     """
-    Operation: the grant. `platform_for(project, find_tool)` builds the FirmwarePlatform (default: MicroPythonPlatform). It reads
-    the board once (the board restarts, and an Event says so), asks `outside.make_consent(line)` and keeps the grant. A closed
-    gate is one Finding of the gate's exit code: a problem for 1, an unchecked item for 2; a tool, the store or the look that stops is
-    one unchecked item. It has no `--json`, so its data (the grant) is for an agent or an MCP tool.
+    Operation: the grant. `platform_for(project, find_tool)` builds the FirmwarePlatform (default: MicroPythonPlatform). It asks
+    the board question of the GRANT touch before the read (P892, `known` the KnownBoardStore, None: the store's own), reads the
+    board once through a ComparingBoardReader (the board restarts, and an Event says so), asks `outside.make_consent(line)`
+    and keeps the grant. A closed gate is one Finding of the gate's exit code: a problem for 1, an unchecked item for 2; a
+    tool, the store, the kept board's record, the look or the board question that stops is one unchecked item. It has no
+    `--json`, so its data (the grant) is for an agent or an MCP tool.
     """
 
     name = "issue-grant"

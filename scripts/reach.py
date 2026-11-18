@@ -17,11 +17,21 @@ the board printed during it. The exec stops the firmware that ran: press R or re
 It is the PO's bench tool for P251. Claude's live try, behind a grant and with a reset at the end, is live.py (P247).
 With --cure-first it opens the port with DTR and RTS off before the only try: the bench's cold arm. With two or more boards on USB, --port is needed.
 
+Before the line runs, reach.py asks the board question (P892). It lists the boards with `mpremote devs`, also for a
+--port, and a /dev/tty. port is its /dev/cu. port. On the board that spark keeps for the project it asks nothing.
+Another board stops with other_board, and a board with a USB serial in a project that keeps no board stops with
+no_known_board. Both name look.py, and nothing ran on the board. A board that spark cannot tell by its USB serial (no
+serial, a --port that the list does not hold, or a serial that a firmware set when the kept board's serial was set by
+one too) is asked on every run, in your terminal, or by --replies with your own file that holds
+{"replies": {"reach.run_on_board.<id>": true}}. One yes is for one run. With --json an open question prints one line:
+reached false, port, product, open and known_board. Every other stop prints nothing on stdout.
+
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
 and one next step for your hands, as the last line. Its look at the console can restart the board.
 
-Exit codes: 0 the board answered, 2 it did not, or reach.py could not run, and the last line says why."""
+Exit codes: 0 the board answered, 2 it did not, reach.py could not run, or the board question stopped it
+(other_board, no_known_board, needs_reply, answered_no), and the last line says why."""
 
 
 def main(argv=None, outside=None, operation=None):
