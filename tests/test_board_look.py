@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.records import deploy_record_store  # noqa: E402
-from fakes import FakeFirmwarePlatform, pin_time_zone  # noqa: E402
+from fakes import FakeFirmwarePlatform, know_the_board, pin_time_zone  # noqa: E402
 from spark.bench.firmware_platform import MicroPythonPlatform  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.bench import known_board  # noqa: E402
@@ -80,8 +80,7 @@ class LookCase(ProjectCase):
 
     def know_the_board(self, mac, usb_key):
         """P865: the store keeps the board `mac` for this project, as a yes on an earlier look keeps it."""
-        known_board.KnownBoardStore().write(known_board.KnownBoard(str(self.project.resolve()), mac, usb_key, "xiao-esp32-c6",
-                                                                   "a test", "2026-11-17T18:00:00+01:00"))
+        know_the_board(self.project, mac, usb_key)
 
     def record_a_deploy(self, project="blink-c6", verdict="ready seen", **banner):
         """A deploy of this look's board in the store, as write_deploy writes it; `micropython_banner=` adds the image's (P779)."""

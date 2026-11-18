@@ -27,15 +27,17 @@ from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
+from spark.bench import known_board  # noqa: E402
 import grant  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from fakes import FakeClock, FakeConsent, FakeOutsideWorld, FakeProbePlatform, line_made_at_import, pin_time_zone  # noqa: E402
+from fakes import FakeClock, FakeConsent, FakeOutsideWorld, FakeProbePlatform, know_the_board, line_made_at_import, pin_time_zone  # noqa: E402
 from spark.bench.check_grant import CheckGrant  # noqa: E402
 from spark.bench.issue_grant import IssueGrant  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import BEGIN, LINE, TerminalReporter  # noqa: E402
 from spark.core.outside import build_outside_world  # noqa: E402
+from spark.core.replies import Reply  # noqa: E402
 from test_board_look import data, done  # noqa: E402
 from test_deploy import found  # noqa: E402
 
@@ -54,6 +56,13 @@ class NoTerminal(io.StringIO):
         return False
 
 
+class YesToAll:
+    """A fake ReplyStrategy: the person said yes to every question (P892: the board question of a board with no serial)."""
+
+    def reply(self, question):
+        return Reply(question.key, True, "a test")
+
+
 class GrantCase(unittest.TestCase):
     """A scratch store, a fake clock, and fake mpremote and esptool that answer from P228's fixtures."""
 
@@ -67,18 +76,20 @@ class GrantCase(unittest.TestCase):
         self.clock = FakeClock()
         self.clock.now = lambda: self.now  # a test moves the time by setting self.now
         self.devs, self.esptool = data("mpremote-devs-one.txt"), data("c6-flash-id.txt")
+        know_the_board(Path("."), MAC, known_board.comparable_key(MAC))  # P892: the grant reads the kept board with no question
 
     def run_tool(self, argv, **kw):
         self.ran.append(argv)
         return done(self.devs if "devs" in argv else self.esptool)
 
-    def grant(self, *argv, consent=None, platform=None, find_tool=found):
+    def grant(self, *argv, consent=None, platform=None, find_tool=found, replies=None):
         """(exit code, stdout, stderr) of grant.py with the fakes. `consent` is the yes (None: a real terminal's), `platform` the
-        FirmwarePlatform of the run (None: MicroPythonPlatform over `find_tool`)."""
+        FirmwarePlatform of the run (None: MicroPythonPlatform over `find_tool`), `replies` the ReplyStrategy that answers the
+        board question (P892; None: nothing may ask it)."""
         out, err = io.StringIO(), io.StringIO()
         make_consent = (lambda line: consent) if consent else (lambda line: deploy_gate.TerminalConsentStrategy(line, stdin=NoTerminal(), stdout=out))
         outside = FakeOutsideWorld(run=self.run_tool, find_tool=find_tool, reporter=TerminalReporter(out), clock=self.clock,
-                                   make_consent=make_consent)
+                                   make_consent=make_consent, replies=replies)
         operation = grant.operation_for(argv)(platform_for=(lambda project, find: platform) if platform else None)
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = grant.main(list(argv), outside=outside, operation=operation)
@@ -91,6 +102,7 @@ class GrantCase(unittest.TestCase):
         (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
         record = dict(board_records.load(Path("."), "xiao-esp32-c6"), physical={"buttons": buttons})
         (project / "boards" / "xiao-esp32-c6.json").write_text(json.dumps(record))
+        know_the_board(project, MAC, known_board.comparable_key(MAC))  # P892
         return str(project)
 
     def kept(self):
@@ -423,7 +435,7 @@ class DeployGrantTest(GrantCase):
     def test_a_board_whose_serial_is_not_its_mac_gets_a_deploy_grant_but_no_live_one(self):
         self.devs = "/dev/cu.usbserial-1410 None 1a86:7523 USB Serial\n"
         self.assertEqual(self.grant("--minutes", "30", consent=FakeConsent(True))[0], 1)
-        self.assertEqual(self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True))[0], 0)
+        self.assertEqual(self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True), replies=YesToAll())[0], 0)
 
     def test_minutes_out_of_range_are_refused_for_a_deploy_grant_too(self):
         for minutes in ("0", "1441"):
@@ -468,6 +480,7 @@ class GuardedPrintsTest(GrantCase):
     def with_bidi_mac(self):
         self.esptool = data("c6-flash-id.txt").replace("8c:bf:ea:xx:xx:xx", self.BIDI_MAC)
         self.devs = data("mpremote-devs-one.txt").replace("8c:bf:ea:xx:xx:xx", self.BIDI_MAC)
+        know_the_board(Path("."), self.BIDI_MAC, known_board.comparable_key(self.BIDI_MAC))  # P892: kept under that serial's key
 
     def test_the_granted_line_shows_a_mac_with_a_bidi_character_guarded_and_the_file_keeps_it_raw(self):
         self.with_bidi_mac()

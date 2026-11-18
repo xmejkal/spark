@@ -143,6 +143,14 @@ class FakePortFinder:
         return look
 
 
+def know_the_board(project, mac, usb_key):
+    """P865, P892: the store keeps the board `mac` for `project`, as a yes on an earlier look keeps it. The look's, the deploy's,
+    the grant's, live's and reach's tests share it."""
+    from spark.bench import known_board  # a late import, as the board area imports this module's neighbours
+    known_board.KnownBoardStore().write(known_board.KnownBoard(str(Path(project).resolve()), mac, usb_key, "xiao-esp32-c6",
+                                                               "a test", "2026-11-17T18:00:00+01:00"))
+
+
 def pin_time_zone(case, zone="Europe/Prague"):
     """Run `case` in one time zone, so a time said in the machine's zone reads the same on every machine (P291)."""
     before = os.environ.get("TZ")
