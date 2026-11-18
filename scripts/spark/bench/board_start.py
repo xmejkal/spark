@@ -39,8 +39,9 @@ BoardStartResult = collections.namedtuple("BoardStartResult", "code port sentenc
 
 
 def console_may_be_read(row, looked_port):
-    """True when the console of the Port `row` may be read: it is on the port the look used, and not MicroPython's own."""
-    return row.device == looked_port and row.usb != MICROPYTHON_USB
+    """True when the console of the Port `row` may be read: it is on the port the look used (a tty. port is its cu. port,
+    P892), and not MicroPython's own."""
+    return bool(looked_port) and board_look.node_name(row.device) == board_look.node_name(looked_port) and row.usb != MICROPYTHON_USB
 
 
 class BoardStartService:
@@ -63,7 +64,7 @@ class BoardStartService:
             self.failed = True
             return None
         by_mac = [row for row in rows if self.mac and _key(row.serial).startswith(self.mac)]
-        return (by_mac or [row for row in rows if row.device == hint] or [None])[0]
+        return (by_mac or [row for row in rows if hint and board_look.node_name(row.device) == board_look.node_name(hint)] or [None])[0]
 
     def find_port(self, hint):
         """The Port row the board is listed on, waiting at most PORT_WAIT_S for it. None when it is not listed in that time."""

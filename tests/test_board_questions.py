@@ -41,6 +41,8 @@ from test_deploy_known_board import RecordingReplies  # noqa: E402
 from test_grant import NoTerminal  # noqa: E402
 
 GRANT, REACH, LIVE = "grant.py", "reach.py", "live.py"
+#: The grant's two scopes, as a person types them after --scope.
+LIVE_SCOPE, DEPLOY_SCOPE = "live", "deploy"
 SCRIPTS = (GRANT, REACH, LIVE)
 NOW = datetime.datetime(2026, 10, 17, 9, 0, tzinfo=datetime.timezone.utc)
 RESTART = Cure("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n", None, True, True)
@@ -117,7 +119,7 @@ class BoardQuestionCase(unittest.TestCase):
         platform_for = lambda project, find_tool: FakeProbePlatform(project, self.probe, find_tool)  # noqa: E731
         return {GRANT: IssueGrant, REACH: ReachBoard, LIVE: RunLiveCode}[script](platform_for=platform_for)
 
-    def result(self, script, port=None, scope=board_grant.SCOPE_DEPLOY):
+    def result(self, script, port=None, scope=DEPLOY_SCOPE):
         """The OperationResult of the script's Operation, with the agent's file once it exists. `scope` is the grant's."""
         values = {GRANT: dict(minutes=30, scope=scope), REACH: dict(cure_first=False), LIVE: dict(code="print(1)")}[script]
         replies = self.yes_file if self.yes_file.exists() else None
@@ -156,7 +158,7 @@ class TheThreeAskTest(BoardQuestionCase):
                     if given:
                         self.yes_file.write_text(json.dumps({"replies": {"other.key": True}}))
                     self.ran = []
-                    result = self.result(script, scope=board_grant.SCOPE_LIVE)
+                    result = self.result(script, scope=LIVE_SCOPE)
                     self.assertEqual((result.status(), self.codes(result), self.replies.asked), ("ok", [], []))
                     self.assertTrue(self.touched())
 
@@ -165,7 +167,7 @@ class TheThreeAskTest(BoardQuestionCase):
         self.give_live_grant(OTHER_MAC)
         for script in SCRIPTS:
             with self.subTest(script=script):
-                result = self.result(script, scope=board_grant.SCOPE_LIVE)
+                result = self.result(script, scope=LIVE_SCOPE)
                 self.assertEqual((self.codes(result), result.status(), self.touched(), self.replies.asked),
                                  (["other_board"], "could-not-run", [], []))
                 self.assertIn("look.py", result.findings[0].fix)
@@ -174,7 +176,7 @@ class TheThreeAskTest(BoardQuestionCase):
         self.forget()
         for script in SCRIPTS:
             with self.subTest(script=script):
-                result = self.result(script, scope=board_grant.SCOPE_LIVE)
+                result = self.result(script, scope=LIVE_SCOPE)
                 self.assertEqual((self.codes(result), self.touched(), self.replies.asked), (["no_known_board"], [], []))
                 self.assertIn("look.py", result.findings[0].fix)
 
@@ -259,7 +261,7 @@ class TheThreeAskTest(BoardQuestionCase):
                         self.yes_file.write_text(json.dumps({"replies": {}}))
                         self.result(script)
                         self.answer(False)
-                    result = self.result(script, scope=board_grant.SCOPE_LIVE if state in ("other", "none") else board_grant.SCOPE_DEPLOY)
+                    result = self.result(script, scope=LIVE_SCOPE if state in ("other", "none") else DEPLOY_SCOPE)
                     self.assertEqual(result.status(), "could-not-run")
                     self.assertEqual(self.probe.asked, [])
 
@@ -277,7 +279,7 @@ class TheLiveAndTheGrantTest(BoardQuestionCase):
     def test_10_another_mac_after_the_grants_read_stops_before_its_own_yes(self):
         (self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").unlink()
         self.esptool = data("c6-flash-id.txt").replace(C6_MAC, OTHER_MAC)
-        result = self.result(GRANT, scope=board_grant.SCOPE_LIVE)  # on the kept board's serial
+        result = self.result(GRANT, scope=LIVE_SCOPE)  # on the kept board's serial
         self.assertEqual((self.codes(result), self.consent.asked, list((self.home / "grants").iterdir())), (["other_board"], [], []))
         self.assertIn("did restart", result.findings[0].sentence)
         self.devs = NO_SERIAL_ROW
@@ -300,9 +302,9 @@ class TheLiveAndTheGrantTest(BoardQuestionCase):
             with self.subTest(row=row):
                 self.keep(C6_MAC, None)
                 self.devs, self.ran = row, []
-                result = self.result(GRANT, scope=board_grant.SCOPE_LIVE)
+                result = self.result(GRANT, scope=LIVE_SCOPE)
                 self.assertEqual((self.codes(result), result.status(), self.touched(), self.replies.asked), (["serial_not_mac"], "problems", [], []))
-                result = self.result(GRANT, scope=board_grant.SCOPE_DEPLOY)
+                result = self.result(GRANT, scope=DEPLOY_SCOPE)
                 self.assertEqual((self.codes(result), self.touched(), len(self.replies.asked)), (["needs_reply"], [], 1))
 
     def test_12_the_check_asks_nothing_and_opens_no_port(self):
@@ -324,7 +326,7 @@ class TheStopsTest(BoardQuestionCase):
         known_board.KnownBoardStore.find_path(self.project).write_text("{not json")
         for script in SCRIPTS:
             with self.subTest(script=script):
-                result = self.result(script, scope=board_grant.SCOPE_LIVE)
+                result = self.result(script, scope=LIVE_SCOPE)
                 self.assertEqual((self.codes(result), self.touched()), (["known_board_unreadable"], []))
                 code, _, err = self.main(script)
                 self.assertEqual(code, 2)
@@ -337,7 +339,7 @@ class TheStopsTest(BoardQuestionCase):
         for touch, script in ((known_board.GRANT, GRANT), (known_board.REACH, REACH), (known_board.LIVE, LIVE)):
             said = [touch.no_message]
             for row in rows:
-                question = known_board.question_for(known_board.CANNOT_TELL, row, C6_PORT, kept, touch)
+                question = known_board.question_for("cannot_tell", row, C6_PORT, kept, touch)
                 said += [question.text, question.why]
             for each in said:
                 with self.subTest(touch=touch.name, sentence=each):
@@ -404,7 +406,7 @@ class TheTtyAliasTest(unittest.TestCase):
         self.assertTrue(board_doctor.PortListedDoctorProbe(self.finder()).run(tty, None).passed)
         self.assertTrue(board_start.console_may_be_read(Port(*KEPT_ROW.split(None, 3)), tty))
         row = Port(*NO_SERIAL_ROW.split(None, 3))
-        keys = {known_board.question_for(known_board.CANNOT_TELL, row, port, None, known_board.REACH).key
+        keys = {known_board.question_for("cannot_tell", row, port, None, known_board.REACH).key
                 for port in (NO_SERIAL_PORT, "/dev/tty.usbserial-1410")}
         self.assertEqual(len(keys), 1, keys)
 

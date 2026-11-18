@@ -140,21 +140,28 @@ class PortFinder:
         return self.require_one_board(script).device
 
     def find_row(self, port):
-        """The Port row the look reads (P865): the one board on USB as require_one_board gives it, or the row of `port` when
-        it is named. A named port is found softly: None when the list does not hold it or cannot be read, and it is read as before."""
+        """The Port row the look reads (P865): find_listed's, for look.py. A named port is found softly: None when the list does
+        not hold it or cannot be read, and it is read as before."""
         if not port:
-            return self.require_one_board("look.py")
+            return self.find_listed("look.py")
         try:
-            return next((row for row in self.nodes() if node_name(row.device) == node_name(port)), None)
+            return self.find_listed("look.py", port)
         except LookStopError:
             return None
 
+    def find_listed(self, script, port=None):
+        """The Port row of the one board on USB as require_one_board gives it for `script`, or the row of `port` when it is
+        named (P892): None when the list does not hold it, and LookStopError when the list fails. A tty. port is its cu. port."""
+        if not port:
+            return self.require_one_board(script)
+        return next((row for row in self.nodes() if node_name(row.device) == node_name(port)), None)
+
     def require_one_board(self, script, port=None):
         """The Port row of the one board on USB, or of `port` when it is given. LookStopError as require_one_port says, and
-        when `port` is not in the list."""
+        when `port` is not in the list. A tty. port is its cu. port (P892)."""
         found = self.nodes()
         if port:
-            named = [each for each in found if each.device == port]
+            named = [each for each in found if node_name(each.device) == node_name(port)]
             if not named:
                 raise LookStopError("no board on %s: mpremote devs does not list it.", port, reason=board_codes.PORT_NOT_LISTED)
             return named[0]
