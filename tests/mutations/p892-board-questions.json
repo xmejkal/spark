@@ -1,0 +1,110 @@
+[
+ {
+  "file": "scripts/spark/bench/issue_grant.py",
+  "name": "P892: the grant skips the board question and reads any board",
+  "find": "            self.board_question.require(project, port, board, outside.replies, replies)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/bench/reach_board.py",
+  "name": "P892: reach skips the board question and runs its line on any board",
+  "find": "            self.board_question.require(project, named, row, outside.replies, replies)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/bench/run_live_code.py",
+  "name": "P892: live skips the board question and runs the code on any board",
+  "find": "board_question=lambda: self.board_question.require(project, named, row, outside.replies, replies))",
+  "replace": "board_question=None)"
+ },
+ {
+  "file": "scripts/spark/bench/board_live.py",
+  "name": "P892: live asks the board question before its grant check",
+  "find": "        checked = self.grants.check(port, script)\n",
+  "replace": "        if board_question is not None:\n            board_question()\n        checked = self.grants.check(port, script)\n"
+ },
+ {
+  "file": "scripts/spark/bench/reach_board.py",
+  "name": "P892: reach asks the board question before its refusal of --cure-first with no probe",
+  "find": "        if cure_first and probe is None:\n",
+  "replace": "        self.board_question.require(project, named, row, outside.replies, replies)\n        if cure_first and probe is None:\n"
+ },
+ {
+  "file": "scripts/spark/bench/issue_grant.py",
+  "name": "P892: the grant's reader is not wrapped, so another MAC after the read gets a grant",
+  "find": "            reader = known_board.ComparingBoardReader(",
+  "replace": "            reader = (lambda reader, *rest: reader)("
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: the check after a read is gone, so another MAC goes on",
+  "find": "        found = other_after(self.known_store.read(self.project), port, reading.mac, self.touch.after_fix)",
+  "replace": "        found = None"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: other_after finds no other board, also for another MAC",
+  "find": "    if not differs(known, mac):",
+  "replace": "    if True:"
+ },
+ {
+  "file": "scripts/spark/bench/board_grant.py",
+  "name": "P892: the early live refusal is gone, so a serial that cannot be a MAC is asked and read",
+  "find": "        if scope == SCOPE_LIVE and not may_be_mac(board.serial):",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: the grant asks for another board instead of sending it to the look",
+  "find": "GRANT = Touch(name=\"grant\", asks=(CANNOT_TELL,)",
+  "replace": "GRANT = Touch(name=\"grant\", asks=(OTHER, CANNOT_TELL)"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: reach trusts a named port with no serial and runs its line with no question",
+  "find": "REACH = Touch(name=\"reach\", asks=(CANNOT_TELL,), trusts_port=False,",
+  "replace": "REACH = Touch(name=\"reach\", asks=(CANNOT_TELL,), trusts_port=True,"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: require does not clear the touch's keys, so one yes answers every later run",
+  "find": "            RepliesStore(replies_file).clear(self.touch.prefix)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/bench/board_look.py",
+  "name": "P892: a named tty. port is not its cu. port in require_one_board",
+  "find": "            named = [each for each in found if node_name(each.device) == node_name(port)]",
+  "replace": "            named = [each for each in found if each.device == port]"
+ },
+ {
+  "file": "scripts/spark/bench/board_doctor.py",
+  "name": "P892: the doctor's port check does not find a tty. port as its cu. port",
+  "find": "        listed = [board for board in boards if node_name(board.device) == node_name(port)]",
+  "replace": "        listed = [board for board in boards if board.device == port]"
+ },
+ {
+  "file": "scripts/spark/bench/board_start.py",
+  "name": "P892: the console check after a deploy does not take a tty. port as its cu. port",
+  "find": "board_look.node_name(row.device) == board_look.node_name(looked_port)",
+  "replace": "row.device == looked_port"
+ },
+ {
+  "file": "scripts/spark/bench/board_start.py",
+  "name": "P892: a bridge board's port is not found by its tty. name after a deploy",
+  "find": "if hint and board_look.node_name(row.device) == board_look.node_name(hint)]",
+  "replace": "if row.device == hint]"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: reach's key says read_board",
+  "find": "other_fix=REACH_OTHER_FIX, answer_fix=RUN_ANSWER_FIX % \"reach.py\", key_word=RUN_WORD,",
+  "replace": "other_fix=REACH_OTHER_FIX, answer_fix=RUN_ANSWER_FIX % \"reach.py\", key_word=READ_WORD,"
+ },
+ {
+  "file": "scripts/spark/bench/reach_board.py",
+  "name": "P892: reach prints its --json line for every stop of the board question",
+  "find": "dict(stopped.data, reached=False) if stopped.code == codes.NEEDS_REPLY else None)",
+  "replace": "dict(stopped.data, reached=False))"
+ }
+]

@@ -186,8 +186,8 @@
  {
   "file": "scripts/spark/bench/issue_grant.py",
   "name": "scope-not-passed",
-  "find": "before_look=lambda: self._tell_restart(outside, places), scope=scope)",
-  "replace": "before_look=lambda: self._tell_restart(outside, places))"
+  "find": "before_look=ask_then_tell, scope=scope)",
+  "replace": "before_look=ask_then_tell)"
  },
  {
   "file": "scripts/spark/bench/check_grant.py",
@@ -284,7 +284,7 @@
  {
   "file": "scripts/spark/bench/issue_grant.py",
   "name": "deploy-message-dropped",
-  "find": "        if grant.scope == board_grant.SCOPE_DEPLOY:\n            grant_file =",
+  "find": "        if issued.scope == board_grant.SCOPE_DEPLOY:\n            grant_file =",
   "replace": "        if False:\n            grant_file ="
  }
 ]

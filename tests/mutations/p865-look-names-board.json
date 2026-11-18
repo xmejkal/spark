@@ -74,7 +74,7 @@
  {
   "file": "scripts/spark/bench/board_look.py",
   "name": "the look lists every board even with a named port, and an unlisted port stops it again",
-  "find": "        if not port:\n            return self.require_one_board(\"look.py\")",
+  "find": "        if not port:\n            return self.find_listed(\"look.py\")",
   "replace": "        if True:\n            return self.require_one_board(\"look.py\", port)"
  },
  {

@@ -35,6 +35,7 @@ from spark.bench.check_grant import CheckGrant  # noqa: E402
 from spark.bench.issue_grant import IssueGrant  # noqa: E402
 from spark.bench.reach_board import ReachBoard  # noqa: E402
 from spark.bench.run_live_code import RunLiveCode  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from fakes import FakeClock, FakeConsent, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform  # noqa: E402
 from test_board_look import C6_MAC, C6_PORT, data, done, found  # noqa: E402
 from test_deploy_known_board import RecordingReplies  # noqa: E402
@@ -245,6 +246,12 @@ class TheThreeAskTest(BoardQuestionCase):
                 result = self.result(script)
                 self.assertEqual((self.codes(result), self.touched(), self.replies.asked), (["list_failed"], [], []))
 
+    def test_8_reach_refuses_cure_first_with_no_probe_before_the_question(self):
+        self.cannot_tell(REACH)
+        self.probe = None  # mpremote is no Python package: there is no console probe
+        result = self.operation(REACH).run(project=self.project, port=None, cure_first=True, replies=None, outside=self.outside())
+        self.assertEqual((self.codes(result), self.replies.asked, [command for command in self.ran if "exec" in command]), (["no_probe"], [], []))
+
     def test_13_no_stop_of_the_board_question_calls_the_doctors_console_probe(self):
         for script in SCRIPTS:
             for state in ("other", "none", "cannot_tell", "no"):
@@ -405,6 +412,8 @@ class TheTtyAliasTest(unittest.TestCase):
             self.finder(None).find_listed("x", tty)
         self.assertTrue(board_doctor.PortListedDoctorProbe(self.finder()).run(tty, None).passed)
         self.assertTrue(board_start.console_may_be_read(Port(*KEPT_ROW.split(None, 3)), tty))
+        starts = board_start.BoardStartService(self.finder(NO_SERIAL_ROW), C6_MAC, FakeClock(), board_records.ButtonPlaces.EMPTY)
+        self.assertEqual(starts.find_port("/dev/tty.usbserial-1410").device, NO_SERIAL_PORT)  # a bridge's port, found by its name
         row = Port(*NO_SERIAL_ROW.split(None, 3))
         keys = {known_board.question_for("cannot_tell", row, port, None, known_board.REACH).key
                 for port in (NO_SERIAL_PORT, "/dev/tty.usbserial-1410")}

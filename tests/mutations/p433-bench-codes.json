@@ -146,7 +146,7 @@
  {
   "file": "scripts/spark/bench/stops.py",
   "name": "a refusal loses its own reason in deploy",
-  "find": "    return refusal.reason",
+  "find": "    return refusal.code if isinstance(refusal, SparkError) else refusal.reason",
   "replace": "    return board_codes.TOOL_MISSING"
  },
  {
