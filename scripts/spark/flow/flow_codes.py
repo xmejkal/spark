@@ -9,8 +9,8 @@ envelope's `status`, which stays ok, problems or could-not-run.
 PHASES = ("idea", "needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy")
 IDEA, NEEDS, PARTS, REQUIREMENTS, BUILD, BREADBOARD, FIRMWARE, SIMULATE, DEPLOY = PHASES
 
-#: The phase words beside `outcomes`' ok, problems and could-not-run: nothing done yet, some of it done, and done before
-#: something it was made from changed.
+#: The phase words beside `outcomes`' ok, problems and could-not-run: nothing done yet, some of it done (some needs
+#: picked, or a build with a skipped stage), and done before something it was made from changed.
 NOT_STARTED, PARTIAL, STALE = "not-started", "partial", "stale"
 
 #: Who does a phase: the person, Claude in the chat, or the person in their own terminal.
@@ -31,13 +31,19 @@ NO_NEEDS_MESSAGE = "no needs yet: Claude writes them from your goal"
 HAND_WRITTEN_MESSAGE = "a hand-written project: requirements.json and no needs"
 PICKED_MESSAGE = "%d of %d needs picked"
 NO_REQUIREMENTS_MESSAGE = "no requirements.json yet"
-NOTHING_TO_COMPARE_MESSAGE = "requirements.json, with no needs to compare it with"
+NOTHING_TO_COMPARE_MESSAGE = "requirements.json, with no needs to compare it with, so spark did not judge it"
 REQUIREMENTS_STALE_MESSAGE = "requirements.json differs from what the picks give"
 NO_BUILD_MESSAGE = "no build recorded yet"
 BUILT_MESSAGE = "the last build, %s: %s"
 BUILD_STALE_MESSAGE = "%s changed after the build"
 MISSING_FACTS_MESSAGE = "%d fact(s) the board record lacks, named in firmware/pins.py"
+#: A build on the board alone (P878): its four skipped stages are final, so the build and the sheet say so and have no status.
+BOARD_ONLY_BUILD_MESSAGE = "board only: nothing to wire, no board was built"
+BOARD_ONLY_MESSAGE = "board only: nothing to wire"
+#: The one cause of a skipped simulation stage today (`build_service`, P778).
+SIMULATION_SKIPPED_MESSAGE = "every part is skipped from the simulation, so spark did not judge the diagram"
 NO_SHEET_MESSAGE = "no breadboard.md yet"
+SHEET_NOT_JUDGED_MESSAGE = "breadboard.md, spark does not judge the wiring"
 SHEET_STALE_MESSAGE = "breadboard.md is from other requirements than requirements.json"
 FIRMWARE_MESSAGE = "firmware/main.py written %s"
 NO_FIRMWARE_MESSAGE = "no firmware/main.py yet"

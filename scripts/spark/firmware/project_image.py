@@ -81,16 +81,19 @@ class ProjectImage:
     def why_untested(self):
         """
         None when a passed run in the runs folder names this image's sha256 and no run with another verdict does.
-        Else why not.
+        Else why not. It blames an older spark only for a log that names no image, and with no log it says to run a
+        scenario, not to run one again (P878).
         """
-        named = [(log, verdict) for log, verdict, sha256 in self.read_run_logs() if sha256 == self.sha256]
+        logs = self.read_run_logs()
+        named = [(log, verdict) for log, verdict, sha256 in logs if sha256 == self.sha256]
         failed = [(log, verdict) for log, verdict in named if verdict != scenario_steps.PASSED]
         if failed:
             return ("%s did not pass on this image (verdict: %s): deploy.py flashes only an image that passed"
                     % (failed[0][0].name, failed[0][1]))
         if not named:
-            return ("no run in sim/runs/ tested %s as it is now, and a log from an older spark names no image: "
-                    "run its scenario again with run_scenario.py, " % self.path.name + NO_SIMULATION_HINT % "")
+            older = ", and a log from an older spark names no image" if any(sha256 is None for _, _, sha256 in logs) else ""
+            return ("no run in sim/runs/ tested %s as it is now%s: %s with run_scenario.py, "
+                    % (self.path.name, older, "run its scenario again" if logs else "run a scenario") + NO_SIMULATION_HINT % "")
         return None
 
     # --- MVP ---

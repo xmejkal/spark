@@ -14,7 +14,7 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <li data-phase="idea" data-status="none"><a href="#phase-idea"><span aria-hidden="true">·</span> idea <span>not checked by spark</span></a></li>
 <li data-phase="needs" data-status="none"><a href="#phase-needs"><span aria-hidden="true">·</span> needs <span>not checked by spark</span></a></li>
 <li data-phase="parts" data-status="none"><a href="#phase-parts"><span aria-hidden="true">·</span> parts <span>not checked by spark</span></a></li>
-<li data-phase="requirements" data-status="ok"><a href="#phase-requirements"><span aria-hidden="true">✓</span> requirements <span>ok</span></a></li>
+<li data-phase="requirements" data-status="none"><a href="#phase-requirements"><span aria-hidden="true">·</span> requirements <span>not checked by spark</span></a></li>
 <li data-phase="build" data-status="not-started"><a href="#phase-build"><span aria-hidden="true">○</span> build <span>not started</span></a></li>
 <li data-phase="breadboard" data-status="not-started"><a href="#phase-breadboard"><span aria-hidden="true">○</span> breadboard <span>not started</span></a></li>
 <li data-phase="firmware" data-status="none"><a href="#phase-firmware"><span aria-hidden="true">·</span> firmware <span>not checked by spark</span></a></li>
@@ -37,10 +37,10 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <p>Done by: you</p>
 <p>a hand-written project: requirements.json and no needs</p>
 </section>
-<section class="phase" id="phase-requirements" data-phase="requirements" data-status="ok">
-<h2><span aria-hidden="true">✓</span> requirements <span>ok</span></h2>
+<section class="phase" id="phase-requirements" data-phase="requirements" data-status="none">
+<h2><span aria-hidden="true">·</span> requirements <span>not checked by spark</span></h2>
 <p>Done by: claude</p>
-<p>requirements.json, with no needs to compare it with</p>
+<p>requirements.json, with no needs to compare it with, so spark did not judge it</p>
 </section>
 <section class="phase" id="phase-build" data-phase="build" data-status="not-started">
 <h2><span aria-hidden="true">○</span> build <span>not started</span></h2>

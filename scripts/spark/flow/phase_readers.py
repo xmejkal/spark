@@ -10,6 +10,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.build.build_record import BuildRecordStore, sha256_of
+from spark.build.stages import BUILD_STAGE, SIMULATION_STAGE
 from spark.breadboard import sheet
 from spark.design import need_requirements, needs
 from spark.firmware import firmware_codes
@@ -17,7 +18,7 @@ from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import flow_codes
 from spark.records import records_codes, store
 from spark.core.errors import CodedMessageError, SparkError
-from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
+from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS, SKIPPED
 from spark.core.zone_time import stamp
 
 # --- MVP ---
@@ -157,7 +158,8 @@ class PartsReader(PhaseReader):
 
 class RequirementsReader(PhaseReader):
     """Strategy: requirements.json against what the picks give (`need_requirements.requirements`): stale when they differ,
-    problems when the picks cannot give one. A file with no needs beside it was written by hand and is ok."""
+    problems when the picks cannot give one. A file with no needs beside it was written by hand: nothing is compared, so
+    it has no status (P878)."""
 
     PHASE, BY = flow_codes.REQUIREMENTS, flow_codes.BY_CLAUDE
 
@@ -167,7 +169,7 @@ class RequirementsReader(PhaseReader):
         if held is None:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_MESSAGE], offers)
         if not listed:
-            return self.phase(OK, [flow_codes.NOTHING_TO_COMPARE_MESSAGE])
+            return self.phase(None, [flow_codes.NOTHING_TO_COMPARE_MESSAGE])
         given = need_requirements.requirements(project)
         if given.problems:
             return self.phase(PROBLEMS, problem_lines(given.problems), offers)
@@ -185,9 +187,15 @@ def why_build_stale(project, record):
     return None
 
 
+def skipped_stages(record):
+    """The names of the stages the build `record` skipped, in the record's order."""
+    return [stage.get("name") for stage in record.get("stages") or [] if stage.get("status") == SKIPPED]
+
+
 class BuildReader(PhaseReader):
     """Strategy: the record of the last build (`.spark/build.json`): its status, or stale when the requirements file it was
-    built from changed after it."""
+    built from changed after it. A skipped stage is no pass (P878): an ok build on the board alone, or one whose simulation
+    alone was skipped, says so and has no status, because a rebuild skips the same; any other skipped stage is partial."""
 
     PHASE, BY = flow_codes.BUILD, flow_codes.BY_CLAUDE
 
@@ -202,22 +210,39 @@ class BuildReader(PhaseReader):
         stale = why_build_stale(project, record)
         if stale:
             return self.phase(flow_codes.STALE, [stale] + says, offers)
+        skipped = skipped_stages(record) if record.get("status") == OK else []
+        if BUILD_STAGE in skipped:
+            return self.phase(None, [flow_codes.BOARD_ONLY_BUILD_MESSAGE], offers)
+        if skipped == [SIMULATION_STAGE]:
+            return self.phase(None, says + [flow_codes.SIMULATION_SKIPPED_MESSAGE], offers)
+        if skipped:
+            return self.phase(flow_codes.PARTIAL, says, offers)
         return self.phase(record.get("status") if record.get("status") in (OK, PROBLEMS) else COULD_NOT_RUN, says, offers)
 
 
 class BreadboardReader(PhaseReader):
     """Strategy: the breadboard sheet: stale when the build is, or when the requirements it was built from
-    (`dist/board/built-from.json`) are not the file's now."""
+    (`dist/board/built-from.json`) are not the file's now. A current sheet has no status, because spark does not judge
+    the wiring, and a current build on the board alone has nothing to wire (P878)."""
 
     PHASE, BY = flow_codes.BREADBOARD, flow_codes.BY_YOU
 
     def read(self, project):
-        if not (project / sheet.SHEET).is_file():
+        kept = (project / sheet.SHEET).is_file()
+        try:
+            record = BuildRecordStore(project).read()
+        except (CodedMessageError, OSError):
+            if kept:
+                raise
+            record = None  # no sheet and no record to read: not started, and the build phase says the record's sentence
+        stale = record and why_build_stale(project, record)
+        if record and not stale and BUILD_STAGE in skipped_stages(record):
+            return self.phase(None, [flow_codes.BOARD_ONLY_MESSAGE])
+        if not kept:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_SHEET_MESSAGE])
-        record = BuildRecordStore(project).read()
-        if (record and why_build_stale(project, record)) or read_built_from(project) != read_requirements(project):
+        if stale or read_built_from(project) != read_requirements(project):
             return self.phase(flow_codes.STALE, [flow_codes.SHEET_STALE_MESSAGE])
-        return self.phase(OK, [sheet.SHEET])
+        return self.phase(None, [flow_codes.SHEET_NOT_JUDGED_MESSAGE])
 
 
 class FirmwareReader(PhaseReader):
