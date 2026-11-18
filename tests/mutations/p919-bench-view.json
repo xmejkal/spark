@@ -1,0 +1,116 @@
+[
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "the MAC part of a serial keeps no colons, so the stores never find a native S3's records",
+  "find": "    return \":\".join(key[at:at + 2] for at in range(0, MAC_KEY_LENGTH, 2))",
+  "replace": "    return key"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "the MAC part is taken from a bridge's serial too",
+  "find": "    if _vendor(row) != ESPRESSIF_VENDOR or not re.fullmatch(MAC_PART, key):",
+  "replace": "    if not re.fullmatch(MAC_PART, key):"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "read_all leaves out a kept file it cannot use in silence",
+  "find": "                unreadable.append(path)",
+  "replace": "                pass"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "a kept record that tell calls another board names the board too",
+  "find": "known_board.tell(row, known) == known_board.SAME]",
+  "replace": "known_board.tell(row, known) in (known_board.SAME, known_board.OTHER)]"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "two kept records with two MACs for one serial name the first record's MAC",
+  "find": "        one = len({known_board.comparable_key(known.mac) for known in matches}) == 1",
+  "replace": "        one = True"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "kept_for is never null: an unreadable kept file or a serial nobody can trust says none",
+  "find": "    kept_for = None if kept.unreadable or (untrusted and not matches) else matches",
+  "replace": "    kept_for = matches"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "a store that keeps no board still makes kept_for not known for a board with no serial",
+  "find": "    untrusted = kept.records and known_board.usb_key_to_keep",
+  "replace": "    untrusted = known_board.usb_key_to_keep"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "each name counts one deploy",
+  "find": "        counts[each[\"project\"]] = counts.get(each[\"project\"], 0) + 1",
+  "replace": "        counts[each[\"project\"]] = 1"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "a name's last is its first entry",
+  "find": "        last[each[\"project\"]] = each[\"deployed\"]",
+  "replace": "        last.setdefault(each[\"project\"], each[\"deployed\"])"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "the oldest name comes first",
+  "find": "names = dict.fromkeys(each[\"project\"] for each in reversed(entries))",
+  "replace": "names = dict.fromkeys(each[\"project\"] for each in entries)"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "a deploy record that cannot be read gives deploys_from none, not null",
+  "find": "{outcomes.RECORDED: deploys_from(deploys.entries), outcomes.NONE_RECORDED: []}.get(deploys.state)",
+  "replace": "deploys_from(deploys.entries)"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "the live grant is asked by the MAC, so a grant that live.py refuses is called live",
+  "find": "self._grant(row.serial, board_grant.SCOPE_LIVE)",
+  "replace": "self._grant(mac, board_grant.SCOPE_LIVE)"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "a grant file that cannot be used is no unchecked item",
+  "find": "for key, grant in zip((mac, row.serial), grants) if grant.state == NOT_A_GRANT]",
+  "replace": "for key, grant in zip((mac, row.serial), grants) if False]"
+ },
+ {
+  "file": "scripts/spark/records/deploy_record_store.py",
+  "name": "read_deploys crashes on a deeply nested record",
+  "find": "        except (OSError, ValueError, RecursionError):\n            return Deploys(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)",
+  "replace": "        except (OSError, ValueError):\n            return Deploys(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)"
+ },
+ {
+  "file": "scripts/spark/records/deploy_record_store.py",
+  "name": "an entry with no project or no time passes, and the grouping drops or crashes on it",
+  "find": "isinstance(each, dict) and all(isinstance(each.get(key), str) and each[key].strip() for key in (\"project\", \"deployed\"))",
+  "replace": "isinstance(each, dict)"
+ },
+ {
+  "file": "scripts/spark/bench/board_grant.py",
+  "name": "GrantStore.find crashes on a deeply nested grant file",
+  "find": "except (OSError, ValueError, TypeError, RecursionError):  # P919",
+  "replace": "except (OSError, ValueError, TypeError):  # P919"
+ },
+ {
+  "file": "scripts/spark/bench/show_bench.py",
+  "name": "a part that was not checked exits 1 as a problem, not 2",
+  "find": "            found.append(Finding(outcomes.COULD_NOT_RUN, board.row.device, item.code,",
+  "replace": "            found.append(Finding(outcomes.PROBLEMS, board.row.device, item.code,"
+ },
+ {
+  "file": "scripts/spark/bench/show_bench.py",
+  "name": "a part that was not checked gives no item, and the view exits 0",
+  "find": "lines=describe(result))",
+  "replace": "lines=describe(result))._replace(findings=[])"
+ },
+ {
+  "file": "scripts/spark/bench/show_bench.py",
+  "name": "a list that failed says boards is empty, not null",
+  "find": "._replace(data={\"boards\": None})",
+  "replace": "._replace(data={\"boards\": []})"
+ }
+]
