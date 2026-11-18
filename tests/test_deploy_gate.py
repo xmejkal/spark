@@ -1361,7 +1361,7 @@ class TheNoSimulationDeployTest(GateCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.know_the_board(C6_MAC, known_board.comparable_key(C6_MAC))  # P892: the new store keeps the board too
-        self.build_tool =image_builder.build_entry(self.project)[1][0]  # the tools list's entry for the board's build
+        self.build_tool = image_builder.build_entry(self.project)[1][0]  # the tools list's entry for the board's build
         self.build_image()
 
     def find_tool(self, name, **where):
