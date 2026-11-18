@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
+from spark.bench import board_look  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
@@ -25,7 +26,7 @@ from spark.records import tool_finder  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld  # noqa: E402
-from test_board_look import done  # noqa: E402
+from test_board_look import data, done  # noqa: E402
 import test_deploy_gate  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
 from test_look import LookScriptCase  # noqa: E402
@@ -191,7 +192,18 @@ class DeployJsonTest(JsonCase, GateCase):
         # P423: the port is the person's own --port; the report's items are guarded one by one
         self.run_the_scenario()
         port = "/dev/cu.usb\u202emodem\n  FAKE"
-        code, said, err = self.deploy("--token", self.token(), "--port", port, consent=FakeConsent(True))
+
+        class KeptBoardFinder(board_look.PortFinder):
+            """PortFinder whose find_row gives the kept C6 (P892): no `mpremote devs` line can hold a port with a newline."""
+
+            def find_row(self, port):
+                return board_look.Port(*data("mpremote-devs-one.txt").split(None, 3))
+
+        class KeptBoardPlatform(firmware_platform.MicroPythonPlatform):
+            def make_port_finder(self, run):
+                return KeptBoardFinder(self.find_tool("board-shell"), run)
+        code, said, err = self.deploy("--token", self.token(), "--port", port, consent=FakeConsent(True),
+                                      platform=KeptBoardPlatform(self.project, self.find_tool))
         self.assertEqual((code, err), (0, ""))
         self.assertIn("  port   /dev/cu.usb?modem?  FAKE", said.splitlines())
         self.assertNotIn("\u202e", said)

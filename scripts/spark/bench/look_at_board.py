@@ -12,7 +12,7 @@ from spark.bench import board_doctor
 from spark.bench import board_envelope
 from spark.bench import board_look
 from spark.bench import known_board
-from spark.bench.known_board import CANNOT_TELL, NONE, OTHER, SAME
+from spark.bench.known_board import CANNOT_TELL, NONE, OTHER
 from spark.bench.deploy_stages import DeployPhase
 from spark.records import board_records
 from spark.bench.firmware_platform import MicroPythonPlatform
@@ -37,16 +37,11 @@ EVIDENCE_GROUP = "evidence"
 #: The help of the look's --replies (P865): the agent's own file, after the person's yes in the conversation.
 REPLIES_HELP = ('a file of your own with the person\'s yes to the look\'s open question, {"replies": {"<key>": true}}. One yes '
                 "answers one look: the look sets it back to null before it reads")
-#: Value: what the gate lets through to the read (P865): the `tell` state, the KnownBoard or None, the Reply of the yes or
-#: None when nobody was asked, and the listed Port row or None.
-Passed = namedtuple("Passed", "state known reply row")
 #: Value: the values one look was run with that its next step runs again (P865): the project, the --port or None, and the
 #: evidence flags by name.
 LookRun = namedtuple("LookRun", "project port evidence")
 #: What the open question's next step is.
 ASK_AGAIN_WHY = "the same look, after the person's yes in the conversation"
-#: The one answer that reads the board: a yes, `true` in a replies file.
-YES = True
 #: What the look does, the paragraphs of look.py's `--help` before its `--json` and exit codes, line breaks and all
 #: (P481). Its two `--json` mentions stay until the other CLIs move (P481 PR 2).
 DETAILS = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash-id`. It writes nothing,
@@ -115,6 +110,7 @@ class LookAtBoard(Operation):
 
     def __init__(self, records=None, known=None):
         self.records, self.known = records, known or known_board.KnownBoardStore()
+        self.board_question = known_board.KnownBoardService(self.known, known_board.LOOK)  # P892: the look's rules and words
 
     def run(self, project, port, replies=None, *, outside, **evidence):
         """`evidence` holds the two flags of EVIDENCE_GROUP, `ignore_older_runs` and `no_simulation`."""
@@ -140,36 +136,26 @@ class LookAtBoard(Operation):
         return self._after_read(self._found(report, project.resolve(), picked), report, passed, project, outside)
 
     def _gate(self, look, row, outside):
-        """The person's yes before a read (P865): a Passed, or the OperationResult that ends the look before any read. A board
-        that `tell` names SAME is read with no question, and so is a --port that the list does not hold or that shows no USB
-        serial (the person named it). Every other board is asked, with --port too. An open question, a no, or a record that cannot be read ends the look. Only the JSON
-        value true is a yes; any other value leaves the question open. `look` is the run's LookRun."""
+        """The board question before a read (P865, P892): a known_board.KnownBoardResult that lets the read go on, or the
+        OperationResult that ends the look before any read. KnownBoardService judges by the look's Touch: a board that `tell`
+        names SAME is read with no question, and so is a --port that the list does not hold or that shows no USB serial (the
+        person named it). Every other board is asked, with --port too. An open question, a no, or a record that cannot be
+        read ends the look. `look` is the run's LookRun."""
         try:
-            known = self.known.read(look.project)
-            state = known_board.tell(row, known)
-            unseen = look.port and not known_board.serial_key(row)  # a named port that the list holds with no serial, or not at all
-            asked = None if state == SAME or unseen else known_board.question_for(state, row, look.port or row.device, known)
-            reply = outside.replies(asked) if asked else None
+            judged = self.board_question.judge(look.project, look.port, row, outside.replies)
         except SparkError as refused:
             return self._said([Finding(refused.status, None, refused.code, str(refused), refused.fix)])
-        if asked and (reply is None or not isinstance(reply.value, bool)):
-            return self._open(asked, state, row, known, look)
-        if asked and reply.value is not YES:
-            return self._said([Finding(outcomes.COULD_NOT_RUN, asked.key, board_codes.ANSWERED_NO, known_board.NO_MESSAGE, known_board.NO_FIX)])
-        return Passed(state, known, reply, row)
+        if judged.code == codes.NEEDS_REPLY:
+            return self._open(judged, look)
+        return self._said(judged.findings(known_board.LOOK)) if judged.code else judged
 
-    def _open(self, question, state, row, known, look):
-        """The result of an open question: unchecked `needs_reply` (after `other_board` for another board), the question in
-        `data.open`, and the same look, with its --port and evidence flags, as the next step, which needs the person."""
-        findings = [Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, known_board.OTHER_BEFORE_MESSAGE % (
-            row.device, known_board.named(row), known_board.mac_ends(known.mac), known.at[:10]), known_board.OTHER_BEFORE_FIX)] if state == OTHER else []
-        findings.append(Finding(outcomes.COULD_NOT_RUN, question.key, codes.NEEDS_REPLY, question.text, known_board.ANSWER_FIX % question.key))
-        data = {"open": [question.to_dict()], "port": row.device, "product": row.product,
-                "known_board": {"state": state, "mac_ends": known_board.mac_ends(known.mac) if known else None}}
+    def _open(self, judged, look):
+        """The result of an open question: its findings and `data` (known_board.KnownBoardResult), and the same look, with its
+        --port and evidence flags, as the next step, which needs the person."""
         flags = [flag for flag, dest in ((IGNORE_OLDER_RUNS_FLAG, "ignore_older_runs"), (NO_SIMULATION_FLAG, "no_simulation")) if look.evidence.get(dest)]
         argv = [SCRIPT, "--project", str(look.project)] + (["--port", look.port] if look.port else []) + flags + ["--replies", "<your replies file>"]
         step = NextStep("look", argv, ASK_AGAIN_WHY, [READS, RUNS, BOARD], needs_person=True)
-        return self._said(findings, data, [step], [question.why])
+        return self._said(judged.findings(known_board.LOOK), judged.data(judged.row.device), [step], [judged.question.why])
 
     @staticmethod
     def _said(findings, data=None, following=(), more=()):
@@ -184,7 +170,7 @@ class LookAtBoard(Operation):
         set) is a yes to switch too: another MAC read replaces the record. A store that refuses the write is a note, never a failure."""
         mac, known = report.reading.mac, passed.known
         switch = passed.state == OTHER or (passed.state == CANNOT_TELL and passed.reply is not None)
-        differs = bool(known and mac) and known_board.comparable_key(mac) != known_board.comparable_key(known.mac)
+        differs = known_board.differs(known, mac)
         if differs and not switch:
             other = known_board.OTHER_AFTER_MESSAGE % (report.port, known_board.mac_ends(mac), known_board.mac_ends(known.mac), known.at[:10])
             fix = known_board.OTHER_AFTER_FIX if passed.state != CANNOT_TELL else known_board.OTHER_AFTER_PORT_FIX if passed.row \

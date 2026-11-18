@@ -24,7 +24,8 @@ from spark.records import store  # noqa: E402
 from suite_runs import needs_littlefs  # noqa: E402
 from spark.core.events import Event  # noqa: E402
 from spark.core.operation import ASKS  # noqa: E402
-from spark.core.replies import PERSON, YES_NO, Question, reply_strategy_for  # noqa: E402
+from spark.core.errors import SparkError  # noqa: E402
+from spark.core.replies import PERSON, YES_NO, Question, Reply, reply_strategy_for  # noqa: E402
 from fakes import FakeOutsideWorld, FakeReporter  # noqa: E402
 from test_board_look import C6_MAC, data, done, found  # noqa: E402
 from test_look import LookScriptCase  # noqa: E402
@@ -403,6 +404,86 @@ class TheLastReviewRoundTest(KnownBoardCase):
     def test_e6_the_envelope_names_the_kept_board_by_its_last_two_bytes(self):
         self.keep(NATIVE_A)
         self.assertEqual(self.envelope(NATIVE_B, mac=MAC_B)[1]["data"]["known_board"], {"state": "other", "mac_ends": "ee:ff"})
+
+
+class FakeKnownStore:
+    """Fake KnownBoardStore: `read` gives the KnownBoard it was given, for every project."""
+
+    def __init__(self, known):
+        self.known = known
+
+    def read(self, project):
+        return self.known
+
+
+class TheBoardQuestionTest(unittest.TestCase):
+    """P892 (#1266): one class judges the board before a touch that restarts it, by `tell`'s state and the touch."""
+
+    KEPT = known_board.KnownBoard("/p", MAC_A, "aabbccddeeff", "xiao-esp32-c6", "a test", "2026-11-17T18:00:00+01:00")
+
+    def judge(self, touch, row, known, port=None, value=None):
+        """(the KnownBoardResult, the questions asked) of KnownBoardService.judge, the replies answering `value` (None: not now)."""
+        asked = []
+
+        def replies(question):
+            asked.append(question)
+            return None if value is None else Reply(question.key, value, "a test")
+        row = Port(*row.split(None, 3)) if row else None
+        return known_board.KnownBoardService(FakeKnownStore(known), touch).judge(Path("/p"), port, row, replies), asked
+
+    def test_15_judge_by_state_and_touch(self):
+        look, deploy, kept = known_board.LOOK, known_board.DEPLOY, self.KEPT
+        table = (  # touch, the row listed, the board kept, --port, the reply: the code, and whether it asked
+            (look, NATIVE_A, kept, None, None, None, False), (deploy, NATIVE_A, kept, None, None, None, False),
+            (look, NATIVE_B, kept, None, None, "needs_reply", True), (deploy, NATIVE_B, kept, None, True, "other_board", False),
+            (look, NATIVE_A, None, None, None, "needs_reply", True), (deploy, NATIVE_A, None, None, True, "no_known_board", False),
+            (look, NO_SERIAL, kept, "/dev/cu.usbserial-1410", None, None, False),
+            (deploy, NO_SERIAL, kept, "/dev/cu.usbserial-1410", None, "needs_reply", True),
+            (look, None, kept, "/dev/cu.nowhere", None, None, False), (deploy, None, kept, "/dev/cu.nowhere", True, None, True),
+            (look, NO_SERIAL, kept, None, False, "answered_no", True), (deploy, NO_SERIAL, None, None, False, "answered_no", True),
+            (deploy, NO_SERIAL, kept, None, "yes", "needs_reply", True), (deploy, NO_SERIAL, kept, None, True, None, True),
+        )
+        for touch, row, known, port, value, code, asks in table:
+            with self.subTest(touch=touch.name, row=row, known=bool(known), port=port, value=value):
+                judged, asked = self.judge(touch, row, known, port, value)
+                self.assertEqual((judged.code, bool(asked)), (code, asks))
+                self.assertTrue(all(question.key.startswith(touch.name + ".") for question in asked), asked)
+
+    def test_15_a_yes_lets_the_read_go_on_with_the_reply_and_the_row(self):
+        judged, asked = self.judge(known_board.DEPLOY, NO_SERIAL, self.KEPT, value=True)
+        self.assertEqual((judged.code, judged.reply.value, judged.row.device, judged.known), (None, True, "/dev/cu.usbserial-1410", self.KEPT))
+
+    def test_15_a_record_that_cannot_be_read_passes_up(self):
+        class Unreadable(FakeKnownStore):
+            def read(self, project):
+                raise SparkError("cannot be read", code="known_board_unreadable", fix="repair it")
+        with self.assertRaises(SparkError):
+            known_board.KnownBoardService(Unreadable(None), known_board.DEPLOY).judge(Path("/p"), None, Port(*NATIVE_A.split(None, 3)), None)
+
+    def test_15_the_deploy_stop_names_the_port_and_a_null_product_with_no_row(self):
+        judged, _ = self.judge(known_board.DEPLOY, None, self.KEPT, "/dev/cu.nowhere")
+        data = judged.data("/dev/cu.nowhere")
+        self.assertEqual((data["port"], data["product"], data["known_board"]), ("/dev/cu.nowhere", None, {"state": "cannot_tell", "mac_ends": "ee:ff"}))
+        self.assertEqual([found.code for found in judged.findings(known_board.DEPLOY)], ["needs_reply"])
+
+    def test_12_the_deploys_sentences_say_nothing_of_the_looks(self):
+        deploy = known_board.DEPLOY
+        said = [deploy.question, deploy.no_fix, deploy.other_fix, deploy.answer_fix]
+        for row in (NO_SERIAL, FIRMWARE_SERIAL, None):
+            question = known_board.question_for("cannot_tell", Port(*row.split(None, 3)) if row else None, PORT, self.KEPT, deploy)
+            said += [question.text, question.why]
+        for each in said:
+            for words in ("Nothing is erased or written", "run look.py again when you want to read it", "say yes to read this board",
+                          "except for a port the list does not hold"):
+                with self.subTest(sentence=each, words=words):
+                    self.assertNotIn(words, each)
+
+    def test_12_the_deploys_question_on_a_port_the_list_does_not_hold_names_the_port_alone(self):
+        question = known_board.question_for("cannot_tell", None, "/dev/cu.nowhere", self.KEPT, known_board.DEPLOY)
+        self.assertTrue(question.text.startswith("Read the board on /dev/cu.nowhere? "), question.text)
+        self.assertNotIn("reports no USB serial", question.why)
+        self.assertNotIn("in place of", question.why)
+        self.assertTrue(question.key.startswith("deploy.read_board."))
 
 
 class TheBenchBuilderTest(unittest.TestCase):

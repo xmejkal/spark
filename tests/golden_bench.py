@@ -202,7 +202,7 @@ def run_script(case, project, store, token=None):
     for place, text in case.plant:
         (Path(store) / place).parent.mkdir(parents=True, exist_ok=True)
         (Path(store) / place).write_text(text() if callable(text) else text)
-    if op_of(case) == "look":
+    if op_of(case) in ("look", "deploy"):  # P892: the deploy reads the kept board with no question, as the look does
         plant_known_board(store, project, case.devs_file)
     env = child_env(store, case.flash_id_file, case.devs_file)
     if case.fake_board:

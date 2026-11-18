@@ -87,10 +87,16 @@ class DeployService:
         notes = self.evidence.notes(image)
         return DeployPlan(project_flasher, project_flasher.build_commands(image.path, port), shell_command, notes)
 
-    def look(self, port=None):
+    def find_row(self, port=None):
+        """The Port row of the board the deploy reads, found as the look finds it (P892): the one board on USB, or the row of a
+        named `port`, None when the list does not hold it (a /dev/tty. alias is its /dev/cu. port). A named port costs one
+        more `mpremote devs`. Raises LookStopError to say why not: no board on USB, or two with no port named."""
+        return board_look.looker(self.platform, self.run, self.records).finder.find_row(port)
+
+    def look(self, port=None, listed=None):
         """The LookReport of the board on USB, its last deploy read from `records`, the store this service writes to (P458).
-        Raises LookStopError to say why not."""
-        return board_look.looker(self.platform, self.run, self.records).run(self.project, port, self.evidence)
+        `listed` is the row `find_row` gave, so the one board is not listed again. Raises LookStopError to say why not."""
+        return board_look.looker(self.platform, self.run, self.records).run(self.project, port, self.evidence, listed=listed)
 
     def deploy(self, look, token, consent):
         """

@@ -68,8 +68,8 @@
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "look ignores ignore flag",
-  "find": ".run(self.project, port, self.evidence)",
-  "replace": ".run(self.project, port, type(self.evidence)())"
+  "find": ".run(self.project, port, self.evidence, listed=listed)",
+  "replace": ".run(self.project, port, type(self.evidence)(), listed=listed)"
  },
  {
   "file": "scripts/spark/bench/look_at_board.py",

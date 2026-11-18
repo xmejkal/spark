@@ -69,6 +69,14 @@ it happens. With `--json` these lines go to stderr. Relay them.
    `standing yes: not used: <why>`), it erased nothing. Give the person the line
    it printed to run in their own terminal window, word for word, and wait. deploy.py looks at the board again (the
    board restarts), names every warning in its question and erases only after they type `yes`.
+   Before that read, deploy.py asks the board question as the look does (P892), only for a board that spark cannot tell
+   (no USB serial, with a kept board a serial that its firmware set, a `--port` that the list does not hold). Then it exits 2 with
+   `needs_reply` and reads nothing: ask the person as for the look, write `{"replies": {"<the deploy.read_board key>": true}}`
+   to your own file, and run `next[0]`, the same deploy with `--replies`. A `look.` key does not answer it. Another board
+   stops with `other_board`, and a board with a USB serial and no kept board with `no_known_board`, before any read and with no question: run the look
+   (`next[0]`, `needs_person`). After the read, a MAC that is not the kept board's stops with `other_board` before the
+   erase's question, also after a yes. The deploy never keeps a board. With no terminal and no deploy grant, the person's
+   own run asks the board question once more ("The deploy's question" in `docs/guide/agents/replies.md`).
    The question starts with the look's caveats (P345), such as a passed run whose scenario has no `set-control` step, and the look above it lists the limits: what no simulation can show of the project. Relay the limits once; they are not in the question. Relay the caveats too. Both are facts about the run and the project, not a stop.
    The erase sentence then names the last deploy in spark's store record, for example `spark's store record names blink-c6 as its last deploy here,
    2026-10-19T09:24:50+02:00, ready seen, MicroPython v1.29.0 on 2026-08-24`. Relay it. It names the banner of the image spark put there (P779); a deploy before P779 kept none. It says what spark's store record names as its last deploy here. It does not say what is on the board now.
