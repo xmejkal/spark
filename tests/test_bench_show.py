@@ -230,7 +230,7 @@ class TheBenchServiceTest(ServiceCase):
         self.assertEqual([row["state"] for row in self.one(S3).to_dict()["grants"]], ["none", "ended"])
 
     def test_two_boards_come_in_the_order_listed(self):
-        self.assertEqual([board.device for board in self.show(C6, BRIDGE._replace(device="/dev/cu.usbserial-9")).boards],
+        self.assertEqual([board.row.device for board in self.show(C6, BRIDGE._replace(device="/dev/cu.usbserial-9")).boards],
                          [C6.device, "/dev/cu.usbserial-9"])
 
     def test_a_bridge_board_that_a_project_keeps_is_named_by_the_kept_record(self):
