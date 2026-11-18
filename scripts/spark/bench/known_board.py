@@ -61,7 +61,7 @@ FIRMWARE_WHY = ("This board's USB serial is set by its firmware, so spark cannot
                 "It asks every time.")
 UNLISTED_WHY = ("The list of boards on USB does not hold this port, so spark cannot tell this board from another board before "
                 "it reads it. It asks every time.")
-KEPT_FIRMWARE_WHY ="The kept board's USB serial was set by its firmware, so spark cannot tell this board from it before it reads it."
+KEPT_FIRMWARE_WHY = "The kept board's USB serial was set by its firmware, so spark cannot tell this board from it before it reads it."
 SWITCH_WHY = "After you say yes, spark reads this board and keeps it as this project's board, in place of the kept one."
 ANSWER_FIX = ('ask the person in this conversation, and name the port and the restart. Only after their yes to that, write '
               '{"replies": {"%s": true}} (the JSON value true) to a file of your own outside the project, and run the next step '
@@ -80,7 +80,7 @@ DEPLOY_NO_FIX = "run deploy.py again when you want to deploy to this board"
 #: A deploy with no board kept for the project stops before the read and sends the person to the look, which keeps one.
 NO_KNOWN_MESSAGE = "Not read. The board on %s (%s): spark keeps no board for this project yet. It did not restart."
 NO_KNOWN_FIX = "run look.py: it asks once and keeps this board. If the look says `not kept`, repair what it names first"
-OTHER_AFTER_MESSAGE =("The board on %s (MAC ends %s) is not the kept board (its MAC ends %s, kept since %s). "
+OTHER_AFTER_MESSAGE = ("The board on %s (MAC ends %s) is not the kept board (its MAC ends %s, kept since %s). "
                        "It did restart: a read restarts the board.")
 OTHER_AFTER_FIX = "plug in this project's board, then run look.py again"
 #: The fix after a read on a listed --port that shows no USB serial: the look without --port asks, and a yes replaces the
