@@ -80,6 +80,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D1 · the discovery of P917 runs, with the PO, through this skill, and the sessions' agreement holds until it ends · the PO · 2026-11-18 · comment 3 on #1298 ("1 yes, all according yo your recommendations") · options considered: later, or no discovery
 - D2 · the pixel-games session answers for its side, and the PO gets one question at a time · the PO · 2026-11-18 · this session's request · confirms: a message to that session, nothing else
 - D3 · the frame is right as proposed: the decision, the start and reach, the scope with tools that are not spark's as readers, both extensions, TRIO and two searches · the PO · 2026-11-18 · this session, his answer to Q0 ("Yes, as proposed") · options considered: one light lens, only spark's own tools, the view only
+- D4 · the record is mostly spark's own, and a tool that registers can read it, use it and share the board too · the PO · 2026-11-18 · this session, verbatim: "mostly just spark, but tools that register can access and use it and share too" · confirms: a direction for the scope. The facilitator's reading (H): "register" means that a tool that is not spark's makes itself known to the store first, and "use" means that it can take a hold, not only read one. What a registration holds is open.
 - D (standing) · the discovery folder lands by PR · the PO · the extension spark-process, `process.md` · covers: the commits and the PR of this folder
 
 ## Found on the way <!-- CLAIMS -->
@@ -93,6 +94,7 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - a message with four questions to the pixel-games session · taken 2026-11-18, D2
 - set *Waiting on: the PO* on #1298 while Q0 waits · pending
 - an issue comment that links this brief · pending
+- the PO's words of D4 as a comment on #1298 · pending
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
