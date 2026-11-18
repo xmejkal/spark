@@ -55,6 +55,8 @@ MAY_READ = {
     "image_evidence.COMPILE_CHILD": "the compile child's script, which the fake run answers for and the world's `ran` must hold, its flags "
                                    "literals beside it: the code under test, not the expectation (P458)",
     "ready_probe.HASH_FILES": "the board code under test, rendered; the words it must print are literals in the test (P260)",
+    "known_board.LOOK": "the touch a test judges with, its words checked against literals: the code under test, not the expectation (P892)",
+    "known_board.DEPLOY": "the touch a test judges with, its words checked against literals: the code under test, not the expectation (P892)",
     "pin_assigner.BUS_LINES": SAMENESS, "part_rules.BUSES": SAMENESS,
     "pin_assigner.CAPABILITIES": SAMENESS, "part_rules.CAPABILITIES": SAMENESS,
     "build_check.PACKAGE_POWER_W": SAMENESS, "physics_check.PACKAGE_POWER_W": SAMENESS,
