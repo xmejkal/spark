@@ -9,7 +9,7 @@ Stands on: the assumptions not retired in risks-and-tests.md; of which those the
 is unrated. check computes both. -->
 **Ready for:** collecting evidence <!-- REQUIRED:ready -->
 **Stands on:** 5 H, 2 of which would change the decision (A1 and A6, rated high in D5) <!-- REQUIRED:debt -->
-**Decision needed:** Q6, what "tools that register" means in D4 <!-- REQUIRED:decision-needed -->
+**Decision needed:** Q3, what comes first <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked), the PO, 2026-11-18, on the card (https://github.com/xmejkal/spark/issues/1298): "Oh, and that might actually also change something in the Spark store. Maybe that's an interesting functionality for us that would just help us out and might just be good to leave in Spark in general anyway afterwards." And: "Well, at least to see how it's in the projects. Maybe this session is working on one project, so it uses the connected board for that project to build that thing on it. Or the other session uses it for another, so it always has to build the other project." <!-- REQUIRED:request -->
@@ -92,10 +92,10 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D3 <!-- REQUIRED:q0 -->
 - Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: answered D5
 - Q2 · Is the FireBeetle 2 that is on USB now the game box, and did both the walks of spark and pixel-games put firmware on it? · decides: whether A5 holds with a dated case (★C24 (only the PO knows whether it is the game box)) · kind: account · status: answered D6
-- Q3 · What comes first: the view alone, the view with a registered tool's reports, or the view with a holder record? · decides: the first slice · options: the three in Options · opinion (the facilitator's): the second · kind: decision · status: queued
+- Q3 · What comes first: the view alone, the view with a registered tool's reports, or the view with a holder record? · decides: the first slice · options: the three in Options · opinion (the facilitator's): the second · kind: decision · status: asked 2026-11-18
 - Q4 · Is a holder a project? · decides: the record's key · options: a project, a typed label · opinion (the facilitator's): a project · kind: decision · status: queued
 - Q5 · On another holder's board, does a spark tool only say so, or ask? · decides: whether P892's gate changes · opinion (the PO assistant's): only say so · kind: decision · status: queued
-- Q6 · What did "tools that register" mean in D4: a tool that makes itself known to the store, a project listed in `projects.json`, or a tool reached through spark's MCP interface? And does "use" mean the board or the record? · decides: what D4 confirms · kind: decision · status: asked 2026-11-18
+- Q6 · What did "tools that register" mean in D4: a tool that makes itself known to the store, a project listed in `projects.json`, or a tool reached through spark's MCP interface? And does "use" mean the board or the record? · decides: what D4 confirms · kind: decision · status: answered D7
 - Q7 · Which word names the record, given that "hold" is the drawer's word (C18)? · decides: the names · kind: decision · status: queued <!-- REQUIRED:q1 -->
 
 ## Decisions
@@ -108,6 +108,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D4 · the record is mostly spark's own, and a tool that registers can read it, use it and share the board too · the PO · 2026-11-18 · this session, verbatim: "mostly just spark, but tools that register can access and use it and share too" · confirms: a direction for the scope. The reply before it listed four waiting items, and which one he answered is not recorded. The facilitator's reading (H): "register" means that a tool that is not spark's makes itself known to the store first, and "use" means that it can take a hold, not only read one. The refuter names two other readings (council/refuter.md:58), so Q6 asks him.
 - D5 · the ratings and the pass lines: A6, A1 and A5 are high, and A2, A3 and A4 are low. A6 passes with a yes that names the command and a card in pixel-games. A1 passes when every take and every release of step 2c has its line on #1283 · the PO · 2026-11-18 · this session, his answer to Q1 ("Yes, as proposed") · options considered: only A6 high, A1 the highest, the facilitator rates them
 - D6 · the FireBeetle 2 ESP32-S3 on USB (MAC 34:85:18:xx:xx:xx) is the game box that pixel-games uses · the PO · 2026-11-18 · this session, his answer to Q2 ("Yes, the same board") · an account (E, n = 1), not a decision. With ★C24 (only the PO knows whether it is the game box: he says yes) it means that spark's walks and pixel-games put firmware on one board by turns
+- D7 · a tool that is not spark's registers when it tells the store about itself: the tool, or its project, is written once into the store as a known tool. After that it can read who uses a board, write its own use and its deploys, and so share the board with spark's projects · the PO · 2026-11-18 · this session, his answer to Q6 ("It tells the store about itself"), with `box.py` as the example · confirms: the meaning of "register" and "use" in D4 · options considered: a project listed in `projects.json`, a tool reached through spark's MCP interface, the board and not a record
 - D (standing) · the discovery folder lands by PR · the PO · the extension spark-process, `process.md` · covers: the commits and the PR of this folder
 
 ## Found on the way <!-- CLAIMS -->
