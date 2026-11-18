@@ -4,6 +4,8 @@ Fixtures for tests/test_board_look.py.
   (docs/discovery/2026-10-13-p218-deploy-and-board/bench/p228/), trimmed, the MAC masked as xx.
 - mpremote-devs-with-bluetooth.txt, mpremote-devs-two.txt: the real one-board line, with the 0000:0000 rows macOS
   lists, and a second CH340 line in the same format. Hand-written, not a bench output.
+- mpremote-devs-made-up-mac.txt: a native S3 line whose serial is a made-up MAC with no colon, as the game box's
+  serial is its MAC (P920: bench.py record takes the MAC from it). Hand-written.
 - esp32-classic-flash-id.txt, s3-flash-id-*.txt, c6-flash-id-kb.txt: hand-written in esptool's format. No classic ESP32
   or FireBeetle S3 was on the bench.
 - A failed connect ("Failed to connect") has no fixture: the test for it feeds any non-zero exit and reads no output.

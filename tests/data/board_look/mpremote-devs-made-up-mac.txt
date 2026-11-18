@@ -1,0 +1,1 @@
+/dev/cu.usbmodem1101 aabbccddeeff 303a:1001 Espressif USB JTAG/serial debug unit

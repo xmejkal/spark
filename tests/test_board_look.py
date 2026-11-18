@@ -37,7 +37,7 @@ DATA = Path(__file__).resolve().parent / "data" / "board_look"
 C6_PORT = "/dev/cu.usbmodem101"
 C6_MAC = "8c:bf:ea:xx:xx:xx"
 #: What the look says when the store holds no deploy of the board (P401).
-NONE_RECORDED_LINE = "spark's last deploy here: none in its store record (it keeps only its own deploys)"
+NONE_RECORDED_LINE = "spark's last deploy here: none in its store record (it keeps its own deploys and those that a registered project recorded)"
 #: What the passed run of test_deploy's scenario (one wait-serial step, no input, no pin) says before the gate question (P345).
 NO_CONTROL_NO_PIN = ("the passed run's scenario has no set-control step (the step that presses a button or sets a sensor) "
                      "and no expect-pin step (the step that reads a pin)")
@@ -535,7 +535,7 @@ class LookReportToDictTest(LookCase):
             # LookCase's scenario only waits for text (the P345 caveat), so the passed run did not press anything
             "simulation": "passed", "caveats": [NO_CONTROL_NO_PIN], "limits": [], "unnamed_must": [],
             "last_deploy": {"state": "none-recorded", "why": None, "project": None, "verdict": None, "deployed": None,
-                            "micropython_banner": None}})
+                            "micropython_banner": None, "made_by": None}})
         self.assertIsNotNone(as_dict["token"])
         json.dumps(as_dict)
 
@@ -805,7 +805,8 @@ class TheLookStatesTheSimulationTest(LookCase):
     def test_the_json_carries_the_last_deploy(self):
         self.record_a_deploy()
         self.assertEqual(self.look().to_dict()["last_deploy"], {"state": "recorded", "why": None, "project": "blink-c6",
-                         "verdict": "ready seen", "deployed": "2026-10-19T09:24:50+02:00", "micropython_banner": None})
+                         "verdict": "ready seen", "deployed": "2026-10-19T09:24:50+02:00", "micropython_banner": None,
+                         "made_by": None})
 
     def test_the_json_carries_the_image_s_banner_and_the_record_s(self):
         self.micropython.write_bytes(INTERPRETER_WITH_BANNER)
@@ -1022,7 +1023,7 @@ class SayLastDeployTest(unittest.TestCase):
 
     def test_none_recorded(self):
         self.assertEqual(board_look.say_last_deploy(deploy_record_store.LastDeploy("none-recorded")),
-                         "spark's last deploy here: none in its store record (it keeps only its own deploys)")
+                         "spark's last deploy here: none in its store record (it keeps its own deploys and those that a registered project recorded)")
 
     def test_not_checked(self):
         last = deploy_record_store.LastDeploy("not-checked", why="the board's MAC was not read")

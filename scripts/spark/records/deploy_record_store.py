@@ -26,13 +26,14 @@ WHY_UNREADABLE = "spark's record of it cannot be read"
 ZONE_NOT_STORED = "(zone not stored)"
 
 
-class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict deployed why record_path micropython_banner",
-                                         defaults=(None,) * 6)):
+class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict deployed why record_path micropython_banner made_by",
+                                         defaults=(None,) * 7)):
     """Value. What spark's store says of the board on USB. `state` is one of the three words of `outcomes` (the reader rule is
     there). `project`, `verdict` and `deployed` are as `write_deploy` stored them, with outcomes.RECORDED. `why` is the reason,
     with outcomes.NOT_CHECKED. The rest are None. `record_path` is the path of the record the store read (None when no MAC
     named one); it is not in `to_dict` (P458). `micropython_banner` is the MicroPython banner of the image that deploy put
-    there, as the store kept it, or None: a deploy before P779 kept none, and an image may hold none."""
+    there, as the store kept it, or None: a deploy before P779 kept none, and an image may hold none. `made_by` is the tool
+    of the registered project that recorded the deploy, or None for spark's own deploy (P920)."""
 
     def time_said(self):
         """The stored time. With a zone it is said in the machine's zone. With none it is as stored, and says so,
@@ -52,7 +53,7 @@ class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict dep
 
     def to_dict(self):
         return {"state": self.state, "why": self.why, "project": self.project, "verdict": self.verdict,
-                "deployed": self.deployed, "micropython_banner": self.micropython_banner}
+                "deployed": self.deployed, "micropython_banner": self.micropython_banner, "made_by": self.made_by}
 
 
 class Deploys(collections.namedtuple("Deploys", "state entries why board", defaults=((), None, None))):
@@ -94,9 +95,10 @@ class DeployRecordStore:
         kept = [newest.get(key) for key in ("project", "verdict", "deployed")] if isinstance(newest, dict) else []
         if not kept or not all(isinstance(each, str) and each.strip() for each in kept):
             return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE, record_path=path)
-        banner = newest.get("micropython_banner")  # P779: a deploy before it kept none, and that is no unreadable record
+        banner, made_by = (newest.get(key) for key in ("micropython_banner", "made_by"))  # P779, P920: an older deploy kept none
         return LastDeploy(outcomes.RECORDED, *kept, record_path=path,
-                          micropython_banner=banner if isinstance(banner, str) and banner.strip() else None)
+                          micropython_banner=banner if isinstance(banner, str) and banner.strip() else None,
+                          made_by=made_by if isinstance(made_by, str) and made_by.strip() else None)
 
     def read_deploys(self, mac):
         """The Deploys of the board with this `mac`. It never raises, as `read_last_deploy`: a record it cannot read, and a
@@ -128,16 +130,31 @@ class DeployRecordStore:
         deploy = {"project": facts["project"], "image_sha256": facts["image_sha256"], "deployed": facts["deployed"],
                   "verdict": verdict, "simulation": facts["simulation"], "yes": who,
                   "micropython_banner": facts.get("micropython_banner")}
+        return self.append_deploy(facts["mac"], deploy, facts["board"])
+
+    def append_deploy(self, mac, deploy, board=None):
+        """The store's record of the board `mac` with the entry `deploy` added, under the store's lock, and `board` as its
+        board id; None keeps the record's own (P920: a recorded deploy names no board). Returns the record's path.
+        store.StoreError when the file there is no board record: it is left as it is."""
         with store.locked():
-            path = self.find_path(facts["mac"])
+            path = self.find_path(mac)
             try:
-                record = json.loads(path.read_text()) if path.is_file() else {"mac": facts["mac"], "deploys": []}
+                record = json.loads(path.read_text()) if path.is_file() else {"mac": mac, "deploys": []}
             except ValueError:
                 record = None
             if not isinstance(record, dict) or not isinstance(record.get("deploys"), list):
                 raise store.StoreError("%s is not a board record, so it was left as it is", path, code=records_codes.NOT_A_BOARD_RECORD)
-            record["board"] = facts["board"]
+            if board is not None:
+                record["board"] = board
             record["deploys"].append(deploy)
-            store.write_json("boards", self._key(facts["mac"]), record)
+            store.write_json("boards", self._key(mac), record)
         return path
+
+
+def outside_deploy(project, made_by, deployed, verdict):
+    """The entry of a deploy that the registered project `project` recorded with its tool `made_by` (P920), in the shape of
+    `write_deploy`'s entry: `deployed` is spark's clock at the call, with its zone, and `verdict` the bench's word that
+    spark read nothing from the board. The rest is None: spark read no image, no simulation and no yes."""
+    return {"project": project, "made_by": made_by, "deployed": deployed, "verdict": verdict, "image_sha256": None,
+            "simulation": None, "yes": None, "micropython_banner": None}
 # --- end MVP ---

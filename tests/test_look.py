@@ -91,7 +91,7 @@ class WhatThePersonSeesTest(LookScriptCase):
             RESTART,
             "  port   /dev/cu.usbmodem101",
             "  mac    " + MAC,
-            "  spark's last deploy here: none in its store record (it keeps only its own deploys)",
+            "  spark's last deploy here: none in its store record (it keeps its own deploys and those that a registered project recorded)",
             "  micropython  no banner in the image",
             "  chip   same      esp32c6",
             "  flash  same      4 MB",
@@ -381,7 +381,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.run_the_scenario()
         data_ = json.loads(self.go("--json")[1][-1])["data"]
         self.assertEqual(data_["last_deploy"], {"state": "none-recorded", "why": None, "project": None, "verdict": None,
-                                                "deployed": None, "micropython_banner": None})
+                                                "deployed": None, "micropython_banner": None, "made_by": None})
 
     @needs_littlefs
     def test_the_json_look_of_an_image_no_run_tested_says_null_and_no_caveat(self):
@@ -662,7 +662,8 @@ class ACrashTest(LookScriptCase):
 
     def test_the_bench_lists_the_look_for_the_frontends(self):
         from spark import bench
-        self.assertEqual(sorted(bench.OPERATIONS), ["check-grant", "deploy", "issue-grant", "live", "look", "reach", "show-bench"])
+        self.assertEqual(sorted(bench.OPERATIONS), ["check-grant", "deploy", "issue-grant", "live", "look", "reach", "record-deploy",
+                                                    "register-project", "show-bench"])
         self.assertIs(bench.OPERATIONS["look"], bench.look_at_board.LookAtBoard)
         self.assertIs(bench.OPERATIONS["deploy"], bench.deploy_image.DeployImage)
 

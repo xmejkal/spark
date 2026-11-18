@@ -4,7 +4,7 @@ that keep it and its grants. It runs only `mpremote devs` (`PortFinder.nodes`), 
 stores. It writes nothing and gives no verdict: each value comes from a record or from the list.
 
     identify        the board's MAC and the kept records that name it, by known_board's rules
-    deploys_from    the deploys grouped by project, the newest name first
+    deploys_from    the deploys grouped by project and maker, the newest group first
     ConnectedBoard  one board on USB and its store parts
     BenchResult     the boards, and the kept files that cannot be read
     BenchService    `show`: the list, then the stores for each board
@@ -58,15 +58,23 @@ def identify(row, kept):
     return Identity(mac, USB_SERIAL if mac else None, None, kept_for)
 
 
+def _group(entry):
+    """The key of the group an entry is counted in: its project and its maker (P920), so that a folder name and a
+    registered name never merge."""
+    return entry["project"], entry.get("made_by")
+
+
 def deploys_from(entries):
-    """The deploys grouped by `project`: one {project, deploys, last} per name, the name of the newest entry first. A
-    name's `last` is the `deployed` text of its last entry, as stored: no time is parsed or compared."""
+    """The deploys grouped by `project` and `made_by`: one {project, made_by, deploys, last} per group, the group of the
+    newest entry first. `made_by` is None for spark's own deploys (P920). A group's `last` is the `deployed` text of its
+    last entry, as stored: no time is parsed or compared."""
     counts, last = {}, {}
     for each in entries:
-        counts[each["project"]] = counts.get(each["project"], 0) + 1
-        last[each["project"]] = each["deployed"]
-    names = dict.fromkeys(each["project"] for each in reversed(entries))
-    return [{"project": name, "deploys": counts[name], "last": last[name]} for name in names]
+        counts[_group(each)] = counts.get(_group(each), 0) + 1
+        last[_group(each)] = each["deployed"]
+    groups = dict.fromkeys(_group(each) for each in reversed(entries))
+    return [{"project": project, "made_by": made_by, "deploys": counts[project, made_by], "last": last[project, made_by]}
+            for project, made_by in groups]
 
 
 class ConnectedBoard(namedtuple("ConnectedBoard", "row identity last_deploy deploys_from grants unchecked")):

@@ -6,7 +6,6 @@ import contextlib
 import datetime
 import io
 import json
-import os
 import subprocess
 import sys
 import tempfile
