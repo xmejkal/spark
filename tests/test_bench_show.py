@@ -420,11 +420,10 @@ class NoPortIsOpenedTest(StoreCase):
         self.assertEqual([found.code for found in result.findings], [])
         self.assertEqual((records.asked, records.asked_deploys), ([MAC_A], [MAC_A]))
 
-    def test_it_builds_with_no_argument_and_the_bench_lists_it(self):
-        from spark import bench as bench_area
-        self.assertIs(bench_area.OPERATIONS["show-bench"], show_bench.ShowBench)
+    def test_it_builds_with_no_argument_as_the_verb_table_calls_it(self):
         self.assertIsInstance(show_bench.ShowBench(), show_bench.ShowBench)
-        self.assertIs(bench.VERBS["show"], show_bench.ShowBench)
+        self.assertEqual(bench.operation_for(["show", "--json"]), (show_bench.ShowBench, ["--json"]))
+        self.assertEqual(bench.operation_for(["--json"]), (show_bench.ShowBench, ["--json"]))
 
 
 if __name__ == "__main__":
