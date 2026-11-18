@@ -4,6 +4,7 @@ import contextlib
 import datetime
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -18,11 +19,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import reach  # noqa: E402
+from spark.bench import known_board  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.bench.board_console import Cure  # noqa: E402
-from fakes import FakeClock, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform  # noqa: E402
+from fakes import FakeClock, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform, know_the_board  # noqa: E402
 from spark.bench.reach_board import ReachBoard  # noqa: E402
-from test_board_look import C6_PORT, data, done, found  # noqa: E402
+from test_board_look import C6_MAC, C6_PORT, data, done, found  # noqa: E402
 
 MOMENT = datetime.datetime(2026, 10, 17, 9, 0, tzinfo=datetime.timezone.utc)
 REFUSED = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
@@ -30,6 +32,13 @@ RESTART = Cure("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n", None, True, True)
 
 
 class ReachScriptTest(unittest.TestCase):
+    def setUp(self):
+        home = Path(tempfile.mkdtemp())  # P892: a store of its own, which keeps the C6 for the project, here
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        know_the_board(Path("."), C6_MAC, known_board.comparable_key(C6_MAC))
+
     def world(self, answers=("reached\n",), devs="mpremote-devs-one.txt", devs_text=None):
         """A FakeOutsideWorld whose `run` answers mpremote devs from a fixture and the exec of each of `answers` in turn."""
         answers = list(answers)
@@ -92,11 +101,11 @@ class ReachScriptTest(unittest.TestCase):
         self.assertIn("reach.py --port", problems)
         self.assertEqual([command for command in ran if "exec" in command], [])
 
-    def test_a_given_port_is_used_without_listing(self):
-        code, _, _, ran = self.go("--port", "/dev/cu.usbmodem2101")
+    def test_a_given_port_is_listed_once_and_then_used(self):
+        code, _, _, ran = self.go("--port", "/dev/cu.usbmodem2101", devs_text=data("mpremote-devs-one.txt").replace(C6_PORT, "/dev/cu.usbmodem2101"))
         self.assertEqual(code, 0)
-        self.assertEqual([command for command in ran if "devs" in command], [])
-        self.assertIn("/dev/cu.usbmodem2101", ran[0])
+        self.assertEqual(len([command for command in ran if "devs" in command]), 1)
+        self.assertIn("/dev/cu.usbmodem2101", ran[1])
 
     def test_cure_first_cures_before_the_only_try(self):
         probe = FakeConsoleProbe(cured=RESTART)
@@ -111,13 +120,13 @@ class ReachScriptTest(unittest.TestCase):
 
     def test_cure_first_with_mpremote_not_a_python_package_runs_nothing(self):
         command = tool_finder.Tool("mpremote", "board-shell", {"kind": "command"}, ["/usr/local/bin/mpremote"])
-        outside = FakeOutsideWorld(run=lambda c, **kw: None, find_tool=lambda name, **where: command)
+        outside = FakeOutsideWorld(run=lambda c, **kw: done(data("mpremote-devs-one.txt")), find_tool=lambda name, **where: command)
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = reach.main(["--cure-first", "--port", C6_PORT], outside=outside)
         self.assertEqual((code, out.getvalue()), (2, ""))
         self.assertIn("reach.py: no cure: mpremote is not a Python package", err.getvalue())
-        self.assertEqual(outside.ran, [])
+        self.assertEqual([ran[-1] for ran in outside.ran], ["devs"])
         result = ReachBoard().run(project=Path("."), port=C6_PORT, cure_first=True, outside=outside)
         self.assertEqual([(found.severity, found.code) for found in result.findings], [("could-not-run", "no_probe")])
         self.assertIsNone(result.data)
@@ -136,9 +145,10 @@ class ReachScriptTest(unittest.TestCase):
     # --- MVP --- (P430, #569) the printed lines are guarded, the --json values stay raw
     def test_a_port_with_a_bidi_character_shows_guarded_and_json_keeps_it_raw(self):
         port = "/dev/x\u202ey"
-        _, said, _, _ = self.go("--port", port)
+        listed = data("mpremote-devs-one.txt").replace(C6_PORT, port)
+        _, said, _, _ = self.go("--port", port, devs_text=listed)
         self.assertIn("  port    /dev/x?y\n", said)
-        _, said, _, _ = self.go("--port", port, "--json")
+        _, said, _, _ = self.go("--port", port, "--json", devs_text=listed)
         self.assertEqual(json.loads(said)["port"], port)
 
     def test_what_the_cure_heard_and_why_it_failed_show_guarded_and_json_keeps_them_raw(self):

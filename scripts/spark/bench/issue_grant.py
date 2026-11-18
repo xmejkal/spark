@@ -10,6 +10,8 @@ from pathlib import Path
 from spark.bench import board_doctor
 from spark.bench import board_grant
 from spark.bench import board_look
+from spark.bench import known_board
+from spark.bench import stops
 from spark.records import board_records
 from spark.bench import flasher
 from spark.records import store
@@ -20,6 +22,7 @@ from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes
+from spark.core.errors import SparkError
 from spark.core.renderers import FlatJsonLine
 from spark.core.events import Event
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
@@ -36,39 +39,56 @@ RESTART = ("the board restarts while it is read: a running program stops and sta
            "written. If it then waits in download mode, press its %(reset)s once%(orientation)s.")
 SCOPE_HELP = ("with --minutes: what the grant allows. live (default) lets Claude run code on the board. deploy lets Claude "
               "erase it and write a passed image with deploy.py, with no yes typed for each deploy")
+REPLIES_HELP = ("your own file with the yes to the board question (P892): its true value lets grant.py read a board that spark "
+                "cannot tell from another board. One yes is for one grant, and the grant still asks its own yes in your terminal")
 DEPLOY_NOTICE = ("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
                  "flash each time, until that time. To end it sooner, run: rm %s")
 
 
 class IssueGrant(Operation):
     """
-    Operation: the grant. `platform_for(project, find_tool)` builds the FirmwarePlatform (default: MicroPythonPlatform). It reads
-    the board once (the board restarts, and an Event says so), asks `outside.make_consent(line)` and keeps the grant. A closed
-    gate is one Finding of the gate's exit code: a problem for 1, an unchecked item for 2; a tool, the store or the look that stops is
-    one unchecked item. It has no `--json`, so its data (the grant) is for an agent or an MCP tool.
+    Operation: the grant. `platform_for(project, find_tool)` builds the FirmwarePlatform (default: MicroPythonPlatform). It asks
+    the board question of the GRANT touch before the read (P892, `known` the KnownBoardStore, None: the store's own), reads the
+    board once through a ComparingBoardReader (the board restarts, and an Event says so), asks `outside.make_consent(line)`
+    and keeps the grant. A closed gate is one Finding of the gate's exit code: a problem for 1, an unchecked item for 2; a
+    tool, the store, the kept board's record, the look or the board question that stops is one unchecked item. It has no
+    `--json`, so its data (the grant) is for an agent or an MCP tool.
     """
 
     name = "issue-grant"
     arguments = (Argument(("--minutes",), "minutes", int, "give a grant for this many minutes from your yes (1 to 1440)", required=True),
                  Argument(("--scope",), "scope", str, SCOPE_HELP, board_grant.SCOPE_LIVE, choices=board_grant.SCOPES),
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote and esptool (default: here)"),
-                 COMMON_ARGUMENTS["port"])
+                 COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP))
     effects = (READS, RUNS, BOARD, ASKS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
     json_renderer = FlatJsonLine
 
-    def __init__(self, platform_for=None):
+    def __init__(self, platform_for=None, known=None):
         self.platform_for = platform_for or MicroPythonPlatform
+        self.board_question = known_board.KnownBoardService(known or known_board.KnownBoardStore(), known_board.GRANT)  # P892
 
-    def run(self, minutes, scope, project, port, *, outside):
+    def run(self, project, port, replies=None, *, outside, **grant):
+        """`grant` holds the grant's two values, `minutes` and `scope`."""
+        minutes, scope = grant["minutes"], grant["scope"]
         platform = self.platform_for(project, outside.find_tool)
         places = board_records.ButtonPlaces.of_project(project)
+
+        def ask_then_tell(board):
+            """The board question on the listed Port `board`, then the restart notice (P892)."""
+            self.board_question.require(project, port, board, outside.replies, replies)
+            self._tell_restart(outside, places)
         try:
             finder = platform.make_port_finder(outside.run)
-            reader = platform.make_board_reader(outside.run, flasher.EsptoolFlasher.boot_hint_for(places))
-            grant = board_grant.GrantService(finder, reader, now=outside.clock.now).issue(
+            reader = known_board.ComparingBoardReader(platform.make_board_reader(outside.run, flasher.EsptoolFlasher.boot_hint_for(places)),
+                                                      self.board_question.known_store, known_board.GRANT, project)  # P892, decision 10
+            issued = board_grant.GrantService(finder, reader, now=outside.clock.now).issue(
                 port, minutes, outside.make_consent(self._rerun_line(minutes, scope, project, port)),
-                before_look=lambda: self._tell_restart(outside, places), scope=scope)
+                before_look=ask_then_tell, scope=scope)
+        except known_board.BoardQuestionError as stopped:  # P892: before the read, or after a read of another board
+            return stops.question_result(stopped, SCRIPT)
+        except SparkError as unreadable:  # the kept record or the replies file
+            return stop_result(unreadable, SCRIPT, project, port)
         except GateClosedError as closed:
             # P430: the closed gate's sentence holds the rerun line: the project path and the port, quoted as that line quotes them
             said = guard_sentence("%s: %s" % (SCRIPT, closed), shlex.quote(str(project.resolve())), shlex.quote(port) if port else None)
@@ -76,11 +96,11 @@ class IssueGrant(Operation):
         except (tool_finder.ToolError, board_look.LookStopError,
                 store.StoreError) as cannot:  # P499: a store that refuses
             return stop_result(cannot, SCRIPT, project, port, lambda stop: board_doctor.stop_answer(SCRIPT, stop, platform, outside.run))
-        lines = [guard_lines("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))]
-        if grant.scope == board_grant.SCOPE_DEPLOY:
-            grant_file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
+        lines = [guard_lines("  granted (%s): board %s (token %s) until %s" % (issued.scope, issued.mac, issued.board_token, issued.expires_at))]
+        if issued.scope == board_grant.SCOPE_DEPLOY:
+            grant_file = store.place("grants") / (board_grant.GrantStore.key(issued.mac, issued.scope) + ".json")
             lines.append(PastedLine(DEPLOY_NOTICE % shlex.quote(printable(str(grant_file)))))  # P430: one line; P677: its rm line runs
-        return OperationResult(grant._asdict(), lines=lines)
+        return OperationResult(issued._asdict(), lines=lines)
 
     @staticmethod
     def _rerun_line(minutes, scope, project, port):

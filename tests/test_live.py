@@ -20,10 +20,11 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_grant  # noqa: E402
 from spark.bench import board_look  # noqa: E402
+from spark.bench import known_board  # noqa: E402
 import live  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.bench.board_console import Cure  # noqa: E402
-from fakes import FakeClock, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform  # noqa: E402
+from fakes import FakeClock, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform, know_the_board  # noqa: E402
 from spark.bench.run_live_code import RunLiveCode  # noqa: E402
 from test_board_look import C6_PORT, data, done  # noqa: E402
 from test_deploy import found  # noqa: E402
@@ -46,6 +47,7 @@ class LiveScriptTest(unittest.TestCase):
         (self.project / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "xiao-esp32-c6"}))
         board_grant.GrantStore().save(board_grant.Grant(MAC, board_look.board_token(MAC), "petr", NOW.isoformat(),
                                                         (NOW + datetime.timedelta(minutes=30)).isoformat()))
+        know_the_board(self.project, MAC, known_board.comparable_key(MAC))  # P892: live runs on the kept board with no question
 
     def world(self, answers=("1\n", ""), devs="mpremote-devs-one.txt", minutes_later=0):
         """A FakeOutsideWorld whose `run` answers mpremote devs from a fixture, then the exec and the reset from `answers` in turn."""

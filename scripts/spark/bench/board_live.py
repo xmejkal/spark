@@ -63,6 +63,13 @@ def gpio_numbers(board):
     return named
 
 
+def pin_facts(code, board):
+    """The two pin facts of a try of `code` with the board record `board`: `pins_checked` (False when the record names no
+    usb or flash pin) and `gpio_numbers_in_code`. A stop of the board question says them too (P892)."""
+    return dict(pins_checked=not RestrictedPins.from_board(board).has_none(),
+                gpio_numbers_in_code=sorted((whole_numbers_in(code) or set()) & gpio_numbers(board)))
+
+
 class LiveTryService:
     """Service: one live try on the board on one port. `grants` is a board_grant.GrantService, `connection` a bare
     board_connection.BoardConnection on that port, `probe` its board_console.ConsoleProbe (or None for no cure),
@@ -73,11 +80,10 @@ class LiveTryService:
         self.grants, self.connection, self.probe, self.board = grants, connection, probe, board
         self.doctor, self.shell = doctor, shell
 
-    def run(self, code, port, script="live.py"):
-        """The LiveTryResult of running `code` on the board on `port`, after the grant and the pin check."""
-        pins = RestrictedPins.from_board(self.board)
-        facts = dict(pins_checked=not pins.has_none(),
-                     gpio_numbers_in_code=sorted((whole_numbers_in(code) or set()) & gpio_numbers(self.board)))
+    def run(self, code, port, script="live.py", board_question=None):
+        """The LiveTryResult of running `code` on the board on `port`, after the grant and the pin check, and then
+        `board_question()` when it is given (P892): it raises known_board.BoardQuestionError to stop before the run."""
+        pins, facts = RestrictedPins.from_board(self.board), pin_facts(code, self.board)
         checked = self.grants.check(port, script)
         if not checked.granted:
             return LiveTryResult(REFUSED_NO_GRANT, checked.why, MESSAGE_FOR[checked.why], "", None, None, **facts)
@@ -85,6 +91,8 @@ class LiveTryService:
         if refused:
             answer = REFUSED_NO_PARSE if whole_numbers_in(code) is None else REFUSED_PIN
             return LiveTryResult(answer, None, refused, "", None, None, **facts)
+        if board_question is not None:  # after the two refusals, just before the code runs (P892, decision 9)
+            board_question()
         reached = board_reach.reach(self.connection, self.probe, code=code)
         answer = (RAISED if reached.why else RAN) if reached.reached else NOT_REACHED
         reset, why = None, reached.why

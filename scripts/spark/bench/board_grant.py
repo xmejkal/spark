@@ -134,6 +134,17 @@ def mac_key(mac):
     return (mac or "").strip().lower()
 
 
+#: The parts of a MAC as esptool prints it, joined by colons: aa:bb:cc:dd:ee:ff.
+MAC_PARTS = 6
+
+
+def may_be_mac(serial):
+    """True when the USB serial `serial` can equal the MAC that esptool prints: six parts joined by colons, so a live grant
+    can find the board by it (P892, decision 6). No serial (`None`), a bridge's serial such as `0001` and a serial that a
+    firmware set such as `SPARK-S3LCD` cannot. The check after the read compares the whole MAC."""
+    return len(mac_key(serial).split(":")) == MAC_PARTS
+
+
 class GrantRefusedError(GateClosedError):
     """Error: no grant, for one of the WHY_ codes. Its exit code is 1, a refusal, as the deploy gate's stops are, or 2
     for a code in COULD_NOT_RUN_WHYS."""
@@ -218,10 +229,11 @@ class GrantService:
         self.finder, self.reader, self.grants, self.now = finder, reader, grants or GrantStore(), now
         self.user_name = user_name  # who typed the yes: a test gives a name
 
-    def issue(self, port, minutes, consent, before_look=lambda: None, script="grant.py", scope=SCOPE_LIVE):
+    def issue(self, port, minutes, consent, before_look=lambda board: None, script="grant.py", scope=SCOPE_LIVE):
         """The Grant of `scope` kept for the board on USB (or on `port`) for `minutes` from the yes, after one look and
-        a yes from `consent`. `before_look` runs just before the board restarts. Raises GrantRefusedError, board_look.LookStopError, or
-        GateClosedError when consent cannot ask. It saves nothing then."""
+        a yes from `consent`. `before_look(board)` gets the listed Port and runs just before the board restarts. A live grant
+        on a board whose USB serial cannot be its MAC is refused from the list alone, before any read (P892). Raises
+        GrantRefusedError, board_look.LookStopError, or GateClosedError when consent cannot ask. It saves nothing then."""
         if not 1 <= minutes <= MAX_MINUTES:
             raise GrantRefusedError(WHY_BAD_MINUTES)
         if scope not in SCOPES:
@@ -229,9 +241,11 @@ class GrantService:
         if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched
             raise GrantRefusedError(WHY_RELAYED_YES)
         board = self.finder.require_one_board(script, port)
+        if scope == SCOPE_LIVE and not may_be_mac(board.serial):  # P892, decision 6: before the board is touched
+            raise GrantRefusedError(WHY_SERIAL_NOT_MAC)
         consent.require_ready()
-        before_look()
-        mac = mac_key(self.reader.read(board.device).mac)
+        before_look(board)
+        mac = mac_key(self.reader.read(port or board.device).mac)  # P892: the port the person named, a tty. one too
         if not mac:
             raise GrantRefusedError(WHY_NO_MAC)
         if scope == SCOPE_LIVE and mac_key(board.serial) != mac:  # a deploy grant is found by the look's MAC instead

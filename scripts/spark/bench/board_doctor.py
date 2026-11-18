@@ -21,7 +21,7 @@ from collections import namedtuple
 from spark.records import board_records
 from spark.records import tool_finder
 from spark.bench.board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, shows_boot
-from spark.bench.board_look import LookStopError
+from spark.bench.board_look import LookStopError, node_name
 from spark.bench.download_mode import DOWNLOAD_MODE
 
 #: The next steps, one code each. The sources are in MESSAGE_FOR's comments.
@@ -95,7 +95,7 @@ class PortListedDoctorProbe(DoctorProbe):
             boards = self.finder.nodes()
         except LookStopError as cannot:
             return CheckResult(self.name, False, "could not list the boards: %s" % cannot, None)
-        listed = [board for board in boards if board.device == port]
+        listed = [board for board in boards if node_name(board.device) == node_name(port)]  # P892: a tty. port is its cu. port
         if not listed:
             others = ", ".join(board.device for board in boards) or "none"
             return CheckResult(self.name, False, "mpremote devs does not list %s (it lists: %s)" % (port, others),

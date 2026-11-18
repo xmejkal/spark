@@ -127,7 +127,7 @@ that Claude prints. The line below shows its form, and `<spark>` and `<project>`
 It reads the board once with esptool, so the board restarts. Then it asks you to let Claude run code on that board
 for 30 minutes from your yes (one day at most). Type `yes`. Your store keeps the grant in a file named by the MAC with
 dashes, for example `grants/8c-bf-ea-xx-xx-xx.json`. To end it early, delete that file. `grant.py --check` tells Claude whether the board on USB has a grant now, without touching the board.
-The grant works on a board with a built-in USB port, like the XIAO ESP32-C6's.
+The grant works on a board with a built-in USB port, like the XIAO ESP32-C6's. Before its read, grant.py stops when its USB serial shows that the board is not the one your project keeps, as the deploy does, and asks you about a board that spark cannot tell by its serial ([P892](https://github.com/xmejkal/spark/issues/1266)).
 
 ### Let Claude deploy: the deploy grant
 
@@ -160,7 +160,7 @@ the port is listed, what the console said, and one step for your hands, such as 
 ([P282](https://github.com/xmejkal/spark/issues/326)).
 
 It checks the grant without touching the board, and it refuses code that writes a number of the board's USB or flash
-pins. Then it runs the code with mpremote, which stops your firmware. At the end it restarts the chip with
+pins. Unless the USB serial shows that the board is the one your project keeps, it stops or asks first, as grant.py does. Then it runs the code with mpremote, which stops your firmware. At the end it restarts the chip with
 `mpremote reset`, so the firmware starts again from boot. It prints the answer (`ran`, `raised`, `not_reached` or a
 refusal), what the board printed, and the GPIO numbers that the code writes. A pin that the code set and your
 firmware never sets can keep its value through the reset. If the board does not answer, it names the two causes: a

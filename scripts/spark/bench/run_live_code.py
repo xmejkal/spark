@@ -11,6 +11,7 @@ from spark.bench import board_envelope
 from spark.bench import board_grant
 from spark.bench import board_live
 from spark.bench import board_look
+from spark.bench import known_board
 from spark.records import board_records
 from spark.records import tool_finder
 from spark.bench.firmware_platform import MicroPythonPlatform
@@ -18,14 +19,17 @@ from spark.design.restricted_pins import BrokenRecordError
 from spark.bench import bench_privacy
 from spark.bench import stops
 from spark.core import outcomes
+from spark.core.errors import SparkError
 from spark.core.renderers import FlatJsonLine
-from spark.core.operation import BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
+from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
 
 # --- MVP ---
 #: The lines of a stop name the script that printed them before the core, so they read the same from every frontend.
 SCRIPT = "live.py"
+REPLIES_HELP = ("your own file with the yes to the board question (P892): its true value lets live.py run the code on a board "
+                "that spark cannot tell from another board. One yes is for one run")
 
 
 def describe(result, places=board_records.ButtonPlaces.EMPTY):
@@ -55,39 +59,50 @@ def data_of(port, result):
 class RunLiveCode(Operation):
     """
     Operation: the live try. `platform_for(project, find_tool)` builds the FirmwarePlatform (default: MicroPythonPlatform).
-    It builds the LiveTryService over the grant check (the outside's clock), the connection, the probe and the board record,
-    and runs it. An answer that is no `ran`, or a reset that failed, is one Finding of the status of `board_live.exit_code`,
-    with the answer for its code (`reset_failed` after a failed reset). A tool, the look or the board record that stops
-    is one unchecked item, and its data holds the empty fields.
+    It lists the boards once and keeps the row, builds the LiveTryService over the grant check (the outside's clock), the
+    connection, the probe and the board record, and runs it with the board question of the LIVE touch (P892, `known` the
+    KnownBoardStore, None: the store's own), which the service asks just before the code runs. An answer that is no `ran`,
+    or a reset that failed, is one Finding of the status of `board_live.exit_code`, with the answer for its code
+    (`reset_failed` after a failed reset). A tool, the look, the board record, the kept board's record or the board
+    question that stops is one unchecked item, and its data holds the empty fields. A stop of the board question adds
+    `open`, `port`, `product` and `known_board`.
     """
 
     name = "live"
     arguments = (Argument(("--code",), "code", str, "the code to run on the board, e.g. 'print(1)'", required=True),
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose boards/active.json names the board and whose tools list "
                                                       "names mpremote (default: here)"),
-                 COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON"))
-    effects = (READS, RUNS, BOARD)
+                 COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON"),
+                 COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP))
+    effects = (READS, RUNS, BOARD, ASKS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
     json_renderer = FlatJsonLine
 
-    def __init__(self, platform_for=None):
+    def __init__(self, platform_for=None, known=None):
         self.platform_for = platform_for or MicroPythonPlatform
+        self.board_question = known_board.KnownBoardService(known or known_board.KnownBoardStore(), known_board.LIVE)  # P892
 
-    def run(self, code, project, port, *, outside):
+    def run(self, code, project, port, replies=None, *, outside):
         platform = self.platform_for(project, outside.find_tool)
+        empty = dict.fromkeys(board_live.LiveTryResult._fields)
         try:
             finder = platform.make_port_finder(outside.run)
-            port = port or finder.require_one_port(SCRIPT)
+            row = finder.require_one_board(SCRIPT, port)  # P892: the row the board question judges
+            named, port = port, port or row.device
             probe = platform.make_console_probe(port, outside.run)
             service = board_live.LiveTryService(board_grant.GrantService(finder, now=outside.clock.now),
                                                 platform.make_connection(platform.make_shell_command(), port, outside.run), probe,
                                                 board_records.load(project),
                                                 board_doctor.BoardDoctorService.for_board(finder, probe),
                                                 platform.find_tool("board-shell"))
-            result = service.run(code, port)
-        except (tool_finder.ToolError, board_look.LookStopError, board_records.BoardError,
-                BrokenRecordError) as cannot:
-            empty = dict.fromkeys(board_live.LiveTryResult._fields)
+            result = service.run(code, port, board_question=lambda: self.board_question.require(project, named, row, outside.replies, replies))
+        except known_board.BoardQuestionError as stopped:  # P892: after the pin check; the line names the question, the product and the kept board
+            facts = board_live.pin_facts(code, service.board)
+            return stops.question_result(stopped, SCRIPT, dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(stopped), **facts, **stopped.data))
+        except SparkError as unreadable:  # P892: the kept record or the replies file, read in the board question after the pin check
+            return stops.stop_result(unreadable, SCRIPT, project, port)._replace(
+                data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(unreadable), port=port, **board_live.pin_facts(code, service.board)))
+        except (tool_finder.ToolError, board_look.LookStopError, board_records.BoardError, BrokenRecordError) as cannot:
             return stops.stop_result(cannot, SCRIPT, project, port)._replace(
                 data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(cannot), port=port))
         places = board_records.ButtonPlaces.of_project(project)

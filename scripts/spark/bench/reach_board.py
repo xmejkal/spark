@@ -1,21 +1,25 @@
 """
 The reach as an Operation on the core (P657, W4-3): run one line on the board on USB, cure it once when its USB output died at
 power-on, and say whether the board answered. reach.py is its CLI, and its `--json` line is the flat one the bench log reads
-(`FlatJsonLine`), so no golden changed. The time of `at` is the outside's clock, and a stop has no data, so no line.
+(`FlatJsonLine`), so no golden changed. The time of `at` is the outside's clock, and a stop has no data, so no line, but
+an open board question (P892), whose line holds `reached` false, the port, the product, `open` and `known_board`.
 """
 
 from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_look
 from spark.bench import board_reach
+from spark.bench import known_board
+from spark.bench import stops
 from spark.records import board_records
 from spark.records import tool_finder
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
-from spark.core import outcomes
+from spark.core import codes, outcomes
+from spark.core.errors import SparkError
 from spark.core.renderers import FlatJsonLine
-from spark.core.operation import BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
+from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
 
@@ -26,6 +30,8 @@ SCRIPT = "reach.py"
 FIRMWARE_STOPPED_MESSAGE = "the firmware is stopped: press R or replug to run it"
 #: How `at` writes the moment of the run, as `time.strftime` wrote it: the date, the time and the zone as +hhmm.
 AT_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
+REPLIES_HELP = ("your own file with the yes to the board question (P892): its true value lets reach.py run its line on a board "
+                "that spark cannot tell from another board. One yes is for one run")
 
 
 def describe(port, result):
@@ -59,34 +65,46 @@ def data_of(port, result, cure_first, doctor, at):
 
 class ReachBoard(Operation):
     """
-    Operation: the reach. It finds the one board on USB (or takes `--port`), runs `board_reach.reach` and, when mpremote
-    never got in, asks the board doctor. `platform_for(project, find_tool)` builds the FirmwarePlatform (default:
-    MicroPythonPlatform). A board that answered is no Finding; one that did not, a cure that cannot run, a tool problem and
-    a look that stopped are one unchecked Finding each, and the data of a stop is None (nothing on stdout).
+    Operation: the reach. It lists the boards and finds the one on USB, or the row of `--port` (P892: None when the list does
+    not hold it). After its refusal of `--cure-first` with no probe it asks the board question by the REACH touch (`known`
+    is the KnownBoardStore, None: the store's own), runs `board_reach.reach` and, when mpremote never got in, asks the
+    board doctor. `platform_for(project, find_tool)` builds the FirmwarePlatform (default: MicroPythonPlatform). A board
+    that answered is no Finding; one that did not, a cure that cannot run, a tool problem, a look that stopped and a stop
+    of the board question are one unchecked Finding each. The data of a stop is None (nothing on stdout), but for an open
+    board question.
     """
 
     name = "reach"
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote (default: here)"),
                  COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON for the bench log"),
-                 Argument(("--cure-first",), "cure_first", bool, "open the port with DTR and RTS off before the only try (the bench's cold arm)"))
-    effects = (READS, RUNS, BOARD)
+                 Argument(("--cure-first",), "cure_first", bool, "open the port with DTR and RTS off before the only try (the bench's cold arm)"),
+                 COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP))
+    effects = (READS, RUNS, BOARD, ASKS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
     json_renderer = FlatJsonLine
 
-    def __init__(self, platform_for=None):
+    def __init__(self, platform_for=None, known=None):
         self.platform_for = platform_for or MicroPythonPlatform
+        self.board_question = known_board.KnownBoardService(known or known_board.KnownBoardStore(), known_board.REACH)  # P892
 
-    def run(self, project, port, cure_first, *, outside):
+    def run(self, project, port, cure_first, replies=None, *, outside):
         platform = self.platform_for(project, outside.find_tool)
         try:
             finder = platform.make_port_finder(outside.run)
-            port = port or finder.require_one_port(SCRIPT)
+            row = finder.find_listed(SCRIPT, port)  # P892: a named port is listed too, and one the list does not hold is asked
+            named, port = port, port or row.device
             probe = platform.make_console_probe(port, outside.run)
         except (tool_finder.ToolError, board_look.LookStopError) as cannot:
             return stop_result(cannot, SCRIPT, project, port)
         if cure_first and probe is None:
             return OperationResult(None, [Finding(outcomes.COULD_NOT_RUN, None, board_codes.NO_PROBE, board_reach.NO_PROBE_MESSAGE, "")],
                                    diagnostics=["%s: %s" % (SCRIPT, board_reach.NO_PROBE_MESSAGE)])
+        try:
+            self.board_question.require(project, named, row, outside.replies, replies)
+        except known_board.BoardQuestionError as stopped:  # the line of an open question only (P892, decision 5)
+            return stops.question_result(stopped, SCRIPT, dict(stopped.data, reached=False) if stopped.code == codes.NEEDS_REPLY else None)
+        except SparkError as unreadable:  # the kept record or the replies file
+            return stop_result(unreadable, SCRIPT, project, port)
         result = board_reach.reach(platform.make_connection(platform.make_shell_command(), port, outside.run), probe, cure_first=cure_first)
         diagnostics = []
         try:

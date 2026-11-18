@@ -442,7 +442,11 @@ class TheBoardQuestionTest(unittest.TestCase):
             (look, None, kept, "/dev/cu.nowhere", None, None, False), (deploy, None, kept, "/dev/cu.nowhere", True, None, True),
             (look, NO_SERIAL, kept, None, False, "answered_no", True), (deploy, NO_SERIAL, None, None, False, "answered_no", True),
             (deploy, NO_SERIAL, kept, None, "yes", "needs_reply", True), (deploy, NO_SERIAL, kept, None, True, None, True),
-        )
+        ) + tuple(row for touch in (known_board.GRANT, known_board.REACH, known_board.LIVE) for row in (  # P892 part 2, test 18
+            (touch, NATIVE_A, kept, None, None, None, False), (touch, NATIVE_B, kept, None, True, "other_board", False),
+            (touch, NATIVE_A, None, None, True, "no_known_board", False),
+            (touch, NO_SERIAL, kept, "/dev/cu.usbserial-1410", None, "needs_reply", True),
+            (touch, None, kept, "/dev/cu.nowhere", True, None, True), (touch, NO_SERIAL, None, None, False, "answered_no", True)))
         for touch, row, known, port, value, code, asks in table:
             with self.subTest(touch=touch.name, row=row, known=bool(known), port=port, value=value):
                 judged, asked = self.judge(touch, row, known, port, value)

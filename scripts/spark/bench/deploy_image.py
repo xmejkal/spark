@@ -217,9 +217,7 @@ class DeployFlowService:
 
     def other_after_read(self, look):
         """The Finding of a board read that is not the kept board (P892): it did restart, and the deploy keeps nothing."""
-        known = self.judged.known
-        return Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, known_board.OTHER_AFTER_MESSAGE % (
-            look.port, known_board.mac_ends(look.reading.mac), known_board.mac_ends(known.mac), known.at[:10]), known_board.OTHER_AFTER_FIX)
+        return known_board.other_after(self.judged.known, look.port, look.reading.mac, known_board.DEPLOY.after_fix)
 
     def refuse_at_look(self, cannot):
         """The exit code of a refusal at the look or after it, said on stderr: a LookStopError with the doctor's lines (P354), a
