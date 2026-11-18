@@ -405,14 +405,21 @@ class LookReport:
 
 
 # --- MVP ---
+#: The look's words for a board with no deploy in its store record, and what the record keeps (P920).
+NONE_RECORDED_NOTE = "none in its store record (it keeps its own deploys and those that a registered project recorded)"
+
+
 def say_last_deploy(last):
     """The look's line for `last`, a deploy_record_store.LastDeploy. `deploy_gate.say_last_deploy_in_question` says the same
     deploy in the deploy question's words."""
-    if last.state == outcomes.RECORDED:
+    if last.state == outcomes.RECORDED and last.made_by:  # P920: a registered project recorded it, and spark read nothing
+        said = printable("%s, made by %s and not by spark, %s (its store record, not read from the board)" % (
+            last.project, last.made_by, last.time_said()))
+    elif last.state == outcomes.RECORDED:
         said = printable("%s, %s, %s%s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said(),
                                                                                        last.banner_said()))
     elif last.state == outcomes.NONE_RECORDED:
-        said = "none in its store record (it keeps only its own deploys)"
+        said = NONE_RECORDED_NOTE
     else:
         said = outcomes.NOT_CHECKED_MESSAGE % last.why
     return "spark's last deploy here: " + said

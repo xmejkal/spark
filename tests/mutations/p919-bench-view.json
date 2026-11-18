@@ -44,20 +44,20 @@
  {
   "file": "scripts/spark/bench/bench_service.py",
   "name": "each name counts one deploy",
-  "find": "        counts[each[\"project\"]] = counts.get(each[\"project\"], 0) + 1",
-  "replace": "        counts[each[\"project\"]] = 1"
+  "find": "        counts[_group(each)] = counts.get(_group(each), 0) + 1",
+  "replace": "        counts[_group(each)] = 1"
  },
  {
   "file": "scripts/spark/bench/bench_service.py",
   "name": "a name's last is its first entry",
-  "find": "        last[each[\"project\"]] = each[\"deployed\"]",
-  "replace": "        last.setdefault(each[\"project\"], each[\"deployed\"])"
+  "find": "        last[_group(each)] = each[\"deployed\"]",
+  "replace": "        last.setdefault(_group(each), each[\"deployed\"])"
  },
  {
   "file": "scripts/spark/bench/bench_service.py",
   "name": "the oldest name comes first",
-  "find": "names = dict.fromkeys(each[\"project\"] for each in reversed(entries))",
-  "replace": "names = dict.fromkeys(each[\"project\"] for each in entries)"
+  "find": "groups = dict.fromkeys(_group(each) for each in reversed(entries))",
+  "replace": "groups = dict.fromkeys(_group(each) for each in entries)"
  },
  {
   "file": "scripts/spark/bench/bench_service.py",

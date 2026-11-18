@@ -1,0 +1,1 @@
+{"envelope":1,"tool":"bench","op":"record-deploy","status":"ok","data":{"entry":{"project":"pixel-games","made_by":"box.py","deployed":"<time>","verdict":"ready not read","image_sha256":null,"simulation":null,"yes":null,"micropython_banner":null},"mac":"aa:bb:cc:dd:ee:ff","device":"/dev/cu.usbmodem1101"},"problems":[],"unchecked":[],"next":[],"truncated":null}

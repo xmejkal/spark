@@ -513,7 +513,7 @@ class TheBoardAfterTheFlashTest(GateCase):
             "  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.",
             "  port   %s" % port,
             "  mac    8c:bf:ea:xx:xx:xx",
-            "  spark's last deploy here: none in its store record (it keeps only its own deploys)",
+            "  spark's last deploy here: none in its store record (it keeps its own deploys and those that a registered project recorded)",
             "  micropython  no banner in the image",
             "  chip   same      esp32c6",
             "  flash  same      4 MB",
@@ -950,7 +950,7 @@ class TheFactsAfterTheFlashTest(GateCase):
         code, said, _ = self.flash()
         self.assertEqual(code, 0)
         place = deploy_record_store.DeployRecordStore().find_path(self.look().reading.mac)
-        self.assertIn("store record: not written: [Errno 21] Is a directory: '%s.part' -> '%s'" % (place, place), said)
+        self.assertIn("store record: not written: %s is not a board record, so it was left as it is" % place, said)
 
 
 class SayLastDeployInQuestionTest(unittest.TestCase):

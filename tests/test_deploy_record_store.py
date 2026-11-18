@@ -119,7 +119,7 @@ class ReadLastDeployTest(LastDeployCase):
                                               "micropython_banner": None}])
         last = STORE.read_last_deploy(MAC)
         self.assertEqual(last.to_dict(), {"state": "recorded", "why": None, "project": "blink-c6", "verdict": "ready seen",
-                                          "deployed": "2026-10-19T09:24:50+02:00", "micropython_banner": None})
+                                          "deployed": "2026-10-19T09:24:50+02:00", "micropython_banner": None, "made_by": None})
 
     def test_a_record_that_is_no_board_record_is_left_as_it_is(self):
         self.write("[1, 2]")
@@ -129,10 +129,11 @@ class ReadLastDeployTest(LastDeployCase):
 
     def test_none_recorded_and_not_checked_give_their_dicts(self):
         self.assertEqual(STORE.read_last_deploy(MAC).to_dict(), {"state": "none-recorded", "why": None, "project": None,
-                                                                 "verdict": None, "deployed": None, "micropython_banner": None})
+                                                                 "verdict": None, "deployed": None, "micropython_banner": None,
+                                                                 "made_by": None})
         self.assertEqual(STORE.read_last_deploy(None).to_dict(), {"state": "not-checked", "why": "the board's MAC was not read",
                                                                   "project": None, "verdict": None, "deployed": None,
-                                                                  "micropython_banner": None})
+                                                                  "micropython_banner": None, "made_by": None})
 
     def test_the_banner_in_the_facts_is_stored_and_read_back(self):
         STORE.write_deploy(dict(said(), micropython_banner="MicroPython v1.29.0 on 2026-08-24"), "ready seen", "a test")

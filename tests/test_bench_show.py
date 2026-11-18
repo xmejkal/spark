@@ -219,9 +219,9 @@ class TheBenchServiceTest(ServiceCase):
         self.give_grant(MAC_A, "deploy")
         board = self.one(S3)
         said = board.to_dict()
-        self.assertEqual(said["deploys_from"], [{"project": "walk4", "deploys": 2, "last": "2026-11-17T08:04:00+01:00"},
-                                                {"project": "bench", "deploys": 1, "last": "2026-11-10T11:00:00+01:00"},
-                                                {"project": "blink", "deploys": 1, "last": "2026-11-02T10:00:00+01:00"}])
+        self.assertEqual(said["deploys_from"], [{"project": "walk4", "made_by": None, "deploys": 2, "last": "2026-11-17T08:04:00+01:00"},
+                                                {"project": "bench", "made_by": None, "deploys": 1, "last": "2026-11-10T11:00:00+01:00"},
+                                                {"project": "blink", "made_by": None, "deploys": 1, "last": "2026-11-02T10:00:00+01:00"}])
         self.assertEqual((said["mac"], said["mac_from"], said["board"], said["kept_for"], said["unchecked"]),
                          (MAC_A, "usb_serial", "firebeetle2-esp32s3", [], []))
         self.assertEqual((said["last_deploy"]["state"], said["last_deploy"]["project"]), ("recorded", "walk4"))
@@ -300,7 +300,7 @@ class TheBenchServiceTest(ServiceCase):
 
     def test_times_with_and_without_a_zone_under_one_name_give_the_last_entry_as_stored(self):
         self.deploys(MAC_A, [entry("walk4", "2026-11-17T08:04:00+01:00"), entry("walk4", "2026-11-10T09:00:00")])
-        self.assertEqual(self.one(S3).to_dict()["deploys_from"], [{"project": "walk4", "deploys": 2, "last": "2026-11-10T09:00:00"}])
+        self.assertEqual(self.one(S3).to_dict()["deploys_from"], [{"project": "walk4", "made_by": None, "deploys": 2, "last": "2026-11-10T09:00:00"}])
 
 
 def devs_of(*rows):
@@ -346,7 +346,8 @@ class TheShowTest(ShowCase):
             "  spark's last deploy here: walk4, ready seen, 2026-11-17T08:04:00+01:00 (its store record, not read from the board)",
             "  kept for      no project (look.py keeps a board for a project)",
             "  grants        deploy: ended 2026-11-18T12:30:00+01:00; live: none",
-            'The names after "deploys from" are folder names, as each deploy recorded them.'])
+            'The names after "deploys from" are folder names, as spark\'s deploys recorded them, or registered names with "by" '
+            'and the tool that recorded them.'])
 
     def test_no_verb_word_shows_too(self):
         self.assertEqual(self.bench()[:2], self.bench("show")[:2])
@@ -366,7 +367,7 @@ class TheShowTest(ShowCase):
             "device", "also_on", "usb_serial", "usb_id", "product", "mac", "mac_from", "board", "kept_for", "last_deploy",
             "deploys_from", "grants", "unchecked"]))
         self.assertEqual(sorted(said["data"]["boards"][0]["last_deploy"]),
-                         ["deployed", "micropython_banner", "project", "state", "verdict", "why"])
+                         ["deployed", "made_by", "micropython_banner", "project", "state", "verdict", "why"])
 
     def test_a_board_spark_cannot_tell_exits_2_with_its_data_and_one_item_per_part(self):
         self.devs = devs_of(NO_SERIAL)

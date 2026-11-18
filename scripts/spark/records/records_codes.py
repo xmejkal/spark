@@ -30,6 +30,8 @@ FILE_NAME_REFUSED, DOCUMENT_NOT_KEPT = "file_name_refused", "document_not_kept"
 FILE_REFUSED = "file_refused"
 #: missing_facts: a stage needs a fact the record lacks (P464).
 MISSING_FACT = "missing_fact"
+#: registered_project_store and bench.py record (P920): a name another project holds, and a name nobody registered.
+NAME_TAKEN, NOT_REGISTERED, BLANK_VALUE = "name_taken", "not_registered", "blank_value"
 
 #: Each code and the one sentence that says what it means.
 CODES = {
@@ -61,5 +63,8 @@ CODES = {
     FILE_NAME_REFUSED: "a document's file name could leave the sources, holds a control character or is too long to keep",
     DOCUMENT_NOT_KEPT: "what was written into the store is not what was fetched, so it was deleted",
     MISSING_FACT: "a stage needs a fact the record lacks, so it stopped short of guessing it",
+    NAME_TAKEN: "another project holds this name in spark's store, so it was not registered",
+    NOT_REGISTERED: "no project registered this name in spark's store, so nothing was recorded",
+    BLANK_VALUE: "a value the record needs is empty, only spaces, or holds a control character, so nothing was written",
 }
 # --- end MVP ---

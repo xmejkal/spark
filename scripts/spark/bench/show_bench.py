@@ -25,13 +25,14 @@ from spark.records import tool_finder
 SCRIPT = "bench.py"
 NO_BOARD_LINE = "No board on USB."
 COUNT_LINES = ("1 board on USB. No port was opened.", "%d boards on USB. No port was opened.")
-#: The last line: what the names are, until a tool registers its name (P920).
-NAMES_LINE = 'The names after "deploys from" are folder names, as each deploy recorded them.'
+#: The last line: what the names are. A registered project's name comes with its tool (P920).
+NAMES_LINE = ('The names after "deploys from" are folder names, as spark\'s deploys recorded them, or registered names '
+              'with "by" and the tool that recorded them.')
 #: A part's line: its label, padded so that the values stand in one column.
 PART_LINE = "  %-13s %s"
 LABEL = {bench_service.KEPT_FOR: "kept for", bench_service.LAST_DEPLOY: "last deploy",
          bench_service.DEPLOYS_FROM: "deploys from", bench_service.GRANTS: "grants"}
-NO_DEPLOY = "none in its store record (it keeps only its own deploys)"
+NO_DEPLOY = board_look.NONE_RECORDED_NOTE
 NO_PROJECT = "no project (look.py keeps a board for a project)"
 #: What each code says of a part that was not checked: its board_codes sentence, but where that one is another
 #: script's (a kept board "for this project", the "last deploy" alone), and what the person does about it.
@@ -64,7 +65,8 @@ def _deploys_said(board):
     """The deploys by project, NO_DEPLOY for none, or why they were not checked."""
     if board.deploys_from is None:
         return _not_checked(board, bench_service.DEPLOYS_FROM)
-    return ", ".join("%s (%d, last %s)" % (each["project"], each["deploys"], each["last"][:10]) for each in board.deploys_from) or NO_DEPLOY
+    return ", ".join("%s%s (%d, last %s)" % (each["project"], ", by %s" % each["made_by"] if each["made_by"] else "", each["deploys"],
+                                             each["last"][:10]) for each in board.deploys_from) or NO_DEPLOY
 
 
 def _kept_said(board):

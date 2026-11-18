@@ -220,7 +220,7 @@ spark keeps what is yours in one folder outside every repository: `SPARK_HOME`, 
   your projects, or when `parts.py --requirements` writes a file for a pick that came from the catalog or from another
   of your projects (a shelf for every part you choose is [P91](https://github.com/xmejkal/spark/issues/22));
 - your boards, `boards/<MAC>.json`: one private record for each physical board that `deploy.py` flashed, with its
-  type and each deploy (the project, the image's sha256, the date, the verdict and whose yes it was) ([P215](https://github.com/xmejkal/spark/issues/196)), and `known-boards/`: for each project, the board its looks read after your yes ([P865](https://github.com/xmejkal/spark/issues/1231));
+  type and each deploy (the project, the image's sha256, the date, the verdict and whose yes it was) ([P215](https://github.com/xmejkal/spark/issues/196)), and `known-boards/`: for each project, the board its looks read after your yes ([P865](https://github.com/xmejkal/spark/issues/1231)). `registered-projects.json` names each project that is not spark's and records its deploys with `bench.py record`, with its origin and its tool, and `launcher/bench.py` is the file such a tool runs to reach `bench.py`. Both are private ([P920](https://github.com/xmejkal/spark/issues/1302));
 - your history, `history.jsonl`: one line for each event, appended, and private to you (0600 files in 0700 folders,
   refused inside a git work tree). The events are `step` (a project's step started, with the Claude Code session it
   ran in), `reused` (a pick taken from the library, your store or another project), `passed_over` (a part you passed

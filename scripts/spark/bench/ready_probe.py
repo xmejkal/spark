@@ -34,6 +34,8 @@ for p in %%r:
 """ % (HASH_LINE, HASH_LINE)
 
 SEEN, NOT_SEEN, UNKNOWN = "ready seen", "ready not seen", "ready unknown"
+#: The verdict of a deploy that a registered project recorded (P920): spark read nothing from the board.
+NOT_READ = "ready not read"
 
 #: Result: what `ReadyProbe.check` returns. `verdict` is SEEN, NOT_SEEN or UNKNOWN, `sentence` says why, and `log` is
 #: what the board printed (the board's log).

@@ -88,6 +88,9 @@ DEPLOYS = (("boards/dc-da-0c-xx-xx-xx.json", json.dumps({"mac": BOARD_MAC, "boar
      "simulation": None, "yes": "typed by tester", "micropython_banner": None},
     {"project": "bench s3", "image_sha256": "0" * 64, "deployed": "2026-11-17T08:04:00+01:00", "verdict": "ready seen",
      "simulation": None, "yes": "typed by tester", "micropython_banner": None}]})),)
+#: A project that is not spark's, registered in the store (P920).
+REGISTERED = (("registered-projects.json", json.dumps({"pixel-games": {
+    "origin": "https://example.org/someone/pixel-games.git", "tool": "box.py", "registered": "2026-11-18T20:13:42+01:00"}})),)
 CASES = [
     Case("look-ok.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("look-ok.txt", "look.py", [], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
@@ -128,6 +131,9 @@ CASES = [
          DEPLOY_GRANT, "deploy-ok-ready-seen.json.stderr", True),
     # P919: the board kept for the project, its deploys and its two grants; it runs only mpremote devs
     Case("bench-ok.json", "bench.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0, DEPLOYS + LIVE_GRANT + DEPLOY_GRANT),
+    # P920: a registered project records a deploy on a board whose serial is its MAC; it runs only mpremote devs
+    Case("bench-ok-record.json", "bench.py", ["record", "pixel-games", "--json"], "s3-flash-id-16mb.txt",
+         "mpremote-devs-made-up-mac.txt", 0, REGISTERED),
 ]
 
 
@@ -216,7 +222,8 @@ def run_script(case, project, store, token=None):
     if case.fake_board:
         env["FAKE_BOARD"] = str(Path(store) / "fake-board")
         (Path(store) / "fake-board").mkdir(parents=True, exist_ok=True)
-    done = run_child(case.script, ["--project", str(project), *argv], project, env)
+    verb = argv[:1] if argv and not argv[0].startswith("-") else []  # P920: a verb word leads, before --project
+    done = run_child(case.script, [*verb, "--project", str(project), *argv[len(verb):]], project, env)
     return done.returncode, done.stdout, done.stderr
 
 

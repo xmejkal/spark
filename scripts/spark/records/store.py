@@ -101,9 +101,12 @@ def format_rerun_line(script, arguments):
 #: `boards`: one record per physical board the person deployed to, by its MAC (P215, D23, D44).
 #: `grants`: one live grant per physical board, by its MAC: the yes the person typed for a time limit (P253, D12).
 #: `known-boards`: one record per project folder, the board its looks read after the person's yes (P865).
+#: `registered-projects`: the projects that are not spark's and record their deploys, by name (P920).
+#: `launcher`: the file a tool outside spark runs to reach `bench.py` (P920).
 PLACES = {"sources": "sources", "catalog": "catalog", "downloads": "downloads", "tools": "tools.json",
           "drawer": "drawer", "drawer-import": "drawer-import", "shelf": "shelf", "projects": "projects.json",
-          "history": "history.jsonl", "boards": "boards", "grants": "grants", "known-boards": "known-boards"}
+          "history": "history.jsonl", "boards": "boards", "grants": "grants", "known-boards": "known-boards",
+          "registered-projects": "registered-projects.json", "launcher": "launcher/bench.py"}
 
 
 def place(name):
@@ -136,7 +139,8 @@ def records(kind, library, project=None, drafts=False, skip=()):
 
 #: The places only the person should see (§5.8): files 0600 in folders 0700, and never inside a git work tree,
 #: where one `git add .` would publish them.
-PRIVATE = ("drawer", "drawer-import", "shelf", "projects", "history", "boards", "grants", "known-boards")
+PRIVATE = ("drawer", "drawer-import", "shelf", "projects", "history", "boards", "grants", "known-boards",
+           "registered-projects", "launcher")
 
 #: A key names one file inside a place, and only that: lower-case letters, digits and '-'.
 PLAIN = re.compile(r"[a-z0-9][a-z0-9-]*")
@@ -205,6 +209,14 @@ def write_json(name, key, data):
     target = _target(name, key)
     _make_ready(name, target)
     return write_file(target, json.dumps(data, indent=2, ensure_ascii=False) + "\n", name in PRIVATE)
+
+
+def write_place(name, text):
+    """Put `text` into a place that is itself a file (P920: the launcher), as `write_json` puts a JSON file: the git
+    refusal and the 0700 folders first, then a private file 0600. Returns whether it changed."""
+    target = _target(name, None)
+    _make_ready(name, target)
+    return write_file(target, text, name in PRIVATE)
 
 
 #: The stores this process holds, as (thread, lock file) pairs: what makes `locked()` re-entrant for the thread that holds one.
@@ -277,6 +289,8 @@ def projects():
         return {}
     try:
         listed = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as cannot:  # P920: a file spark may not read
+        raise StoreError("%s cannot be read (%s) — fix its permissions", path, cannot, code=records_codes.FILE_REFUSED)
     except ValueError as broken:
         raise StoreError("%s is not JSON (%s) — fix it, or delete it and run /spark:init in each project", path, broken, code=records_codes.RECORD_FILE_BROKEN)
     if not isinstance(listed, dict) or not all(isinstance(folder, str) for folder in listed.values()):

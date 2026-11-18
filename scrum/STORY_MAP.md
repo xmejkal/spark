@@ -53,7 +53,7 @@ items. **Order and status live in the projects:** spark (https://github.com/user
 (https://github.com/users/xmejkal/projects/1), since 2026-10-05 (P102a; Kanban, the stages and limits in
 `docs/2026-10-05-backlog-in-github-design.md`). This map keeps the slices and which items sit in each, as text for
 P102b to draw.
-**Team tools:** **P102** (#24), the tools chore, with its stories P102a–f and **P103** (#32); P919 (#1301), `bench.py show`, which lists each board on USB with the projects that use it (slice 0 of P917 #1298). **Desk lane:** **P72** (#31).
+**Team tools:** **P102** (#24), the tools chore, with its stories P102a–f and **P103** (#32); P919 (#1301), `bench.py show`, which lists each board on USB with the projects that use it (slice 0 of P917 #1298); P920 (#1302), `bench.py register` and `bench.py record`, with which a project that is not spark's records its deploys (slice 1 of P917). **Desk lane:** **P72** (#31).
 **Parked** (each with what pulls it back, in the archive): P66, P68, P49, P50, R10, F1, F2, F5, P64b, P64c, P84, P86.
 **Merged:** P2 into P59, P70 into P102, P101 into P102e. **Deleted:** P17.
 
