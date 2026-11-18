@@ -44,7 +44,7 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 (a folder name) | �
 | What does `mpremote devs` list for the game box? | A2, A3 | this session, after the PO's yes and the pixel-games session's "free" | one command that opens no port | the PO's next bench time |
 | Were the take and release lines written at step 2c? | A1, A4 | both sessions | the comments on #1283 | at step 2c of P904 |
 | Do two Claude sessions get different values of `CLAUDE_CODE_SESSION_ID`? | Q4, ★C14 (session ids not compared) | both sessions | each prints the variable | after Q4 |
-| Can `box.py` call a spark command with `--json`? | A6, Q6 | the pixel-games session and the PO | a message | after Q3 |
+| Can `box.py` call a spark command with `--json`? | A6, Q6 | the pixel-games session and the PO | a message | answered 2026-11-18 (C25). The card in pixel-games waits for the PO's yes to items.md |
 
 ## Results
 <!-- Filled on a return; may stay empty until then. One row per result: what was tested, what was seen (verbatim,
@@ -52,6 +52,7 @@ with its pointer), the pass line met or missed, what it changes. -->
 | date | source and pointer | what was seen | pass line met or missed | what it changes |
 | --- | --- | --- | --- | --- |
 | 2026-11-18 | the PO's answer to Q2 (D6 in brief.md) and the store's `boards/34-85-18-xx-xx-xx.json` | "Yes, the same board": the board with 14 deploys from five spark folders, 2026-11-01 to 2026-11-17, is the game box of pixel-games | A5's pass line met: one dated case | A5 is retired. A holder record has a user beyond step 2c |
+| 2026-11-18 | the pixel-games session's second message, pixel-games-account.md:34 | "yes, box.py can call one spark command before and after a deploy, but today nothing tells it where that command is" | A6's pass line met in part: the yes names a command as a contract, and the card in pixel-games does not exist | A6 stays open until the PO orders that card. The design has to give the command one stable path |
 
 ## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
 <!-- Energy per mode · peaks per rail against the source · dissipation per part, each number with its provenance and

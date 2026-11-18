@@ -27,3 +27,32 @@ One more fact for the discovery: after step 2c the box holds my test lineup and 
 - What a holder owes at release: which lineup to put back.
 
 What follows for P917, as my finding and not a decision: a hold that only spark's own scripts read does not protect the game box, because pixel-games uses box.py. The record helps only if a tool outside spark can read it too, for example through one small command that says who holds which board.
+
+## The second message, 2026-11-18 about 16:50 CET: the answer for A6
+<!-- Copied whole but for its last paragraph on that session's own state. Each home path is replaced by its role. -->
+
+Answer for P917's belief A6: yes, box.py can call one spark command before and after a deploy, but today nothing tells it where that command is.
+
+Read from files on 2026-11-18 about 16:50 Prague, no board touch.
+
+1. Can box.py run a spark script by subprocess: yes.
+- Every external command of tools/box.py already goes through one small class: `Tool.run(args)` is `subprocess.run([self.name] + args, cwd=ROOT, check=True, capture_output=True, text=True).stdout` (lines 106 to 110), and `Mpremote` is a `Tool`. A second `Tool` for spark fits that shape with a few lines.
+- What is missing is the path. `which spark` finds nothing. The installed plugin folder [the plugin cache, spark/0.4.0] holds hooks, README.md and skills at its top, and its path carries the version. SPARK_HOME names the store, not the code.
+- So the least it needs is one stable path to one command. No Python import: box.py runs on the system python3 with the standard library only.
+- The command box.py can call, as a contract (the name is spark's to choose): `python3 <one fixed path> report --json` with its facts as arguments, found through one environment variable or through one launcher that spark keeps at a fixed place under the store. It opens no port, because mpremote holds the port during a deploy. It answers in about a second. A missing command or a failure is said as could-not-run and never fails the deploy.
+- A simpler variant, if you want no command at all: box.py writes one JSON file into a folder of the store whose format spark documents. That needs only the store's path.
+
+2. What box.py can report after a deploy with no extra touch:
+- The project: the origin remote and the commit (`git rev-parse HEAD`, and whether the tree is dirty).
+- The lineup: the ordered names it wrote to :lineup.py, and the --engine setting.
+- The date and time with the zone.
+- The firmware probe's answer: the deploy already runs tools/firmware_probe.py on the board before it copies.
+- Not today: the port and the USB serial. A deploy passes no port, and mpremote's auto takes "the first USB serial port, sorted". box.py has `--port` only on `log`. To report them it must list the ports itself before the deploy and then pass that port to mpremote. Listing reads the USB descriptors and opens no port: I state that from how mpremote and pyserial list ports, I did not run it today. That change also removes the wrong-board risk.
+
+3. One project across worktrees:
+- `git rev-parse --git-common-dir` gives [the main clone firebeetle-games]/.git in pixel-p904 and in pixel-p915, and the origin remote is https://github.com/xmejkal/pixel-games.git in both.
+- So the name is the origin remote's repository, `xmejkal/pixel-games`, with the git common dir as the fallback for a project with no remote. A folder name is wrong: this one project has about 20 worktree folders, and a record keyed by project folder (as `known-boards/` is) counts each as another project.
+
+A correction to my earlier answer 3: [the folder firebeetle-games] is not another project. It is the main clone of pixel-games itself, on the branch p581-spark-walk. So spark's walks and the games deploy to the game box from the same repository.
+
+Noted from your message: each take and each release of step 2c goes as a comment on #1283. I file no card in pixel-games for the box.py change: the PO files or orders it.

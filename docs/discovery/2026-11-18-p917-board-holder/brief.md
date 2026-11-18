@@ -9,7 +9,7 @@ Stands on: the assumptions not retired in risks-and-tests.md; of which those the
 is unrated. check computes both. -->
 **Ready for:** collecting evidence <!-- REQUIRED:ready -->
 **Stands on:** 5 H, 2 of which would change the decision (A1 and A6, rated high in D5) <!-- REQUIRED:debt -->
-**Decision needed:** whether the jobs and the understanding are right, and whether design waits for A6's answer <!-- REQUIRED:decision-needed -->
+**Decision needed:** the PO's yes to the list in items.md. Its third item is the card in pixel-games that A6's pass line names <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked), the PO, 2026-11-18, on the card (https://github.com/xmejkal/spark/issues/1298): "Oh, and that might actually also change something in the Spark store. Maybe that's an interesting functionality for us that would just help us out and might just be good to leave in Spark in general anyway afterwards." And: "Well, at least to see how it's in the projects. Maybe this session is working on one project, so it uses the connected board for that project to build that thing on it. Or the other session uses it for another, so it always has to build the other project." <!-- REQUIRED:request -->
@@ -63,7 +63,8 @@ e.g. `- [★C2 (a folder name)] 13 of 526 tickets ask for recurring tasks · E t
 - [C18] The word "hold" already names the drawer's reservation of a unit (P466 #634) · E council/po-assistant.md:30 (RISK-8) · caveat: none
 - [C19] P519 #715 is open: the deploy grant names no project and no count, and the card asks for both · E `gh issue view 715`, 2026-11-18 · caveat: none
 - [C20] No take line is on #1283 or #1298, so the agreed lines were not used yet · E council/user.md:46 (USER-6) · caveat: read once on 2026-11-18
-- [★C24] One board record in the store, a FireBeetle 2 ESP32-S3, holds 14 deploys from five project names between 2026-11-01 and 2026-11-17, and a board whose USB serial starts with that MAC is on USB now · E `system_profiler SPUSBDataType` and the store's `boards/34-85-18-xx-xx-xx.json`, 2026-11-18, found by council/refuter.md:39 · caveat: only the PO knows whether it is the game box. The five names can be one lane's walks <!-- REQUIRED:findings -->
+- [★C24] One board record in the store, a FireBeetle 2 ESP32-S3, holds 14 deploys from five project names between 2026-11-01 and 2026-11-17, and a board whose USB serial starts with that MAC is on USB now · E `system_profiler SPUSBDataType` and the store's `boards/34-85-18-xx-xx-xx.json`, 2026-11-18, found by council/refuter.md:39 · caveat: only the PO knows whether it is the game box. The five names can be one lane's walks
+- [C25] `box.py` can call one spark command by subprocess, and today nothing tells it where that command is. It can report the project (the origin remote and the commit), the lineup and the date. It cannot report the port or the USB serial without a change · E account, pixel-games-account.md:34, the pixel-games session's message of 2026-11-18 · caveat: read by that session in its files, not run. The card in pixel-games does not exist <!-- REQUIRED:findings -->
 
 ## Options <!-- CLAIMS -->
 <!-- Two or three per open decision: decision · option · cost · what it would prove · opinion (whose), then the tag
@@ -111,6 +112,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D7 · a tool that is not spark's registers when it tells the store about itself: the tool, or its project, is written once into the store as a known tool. After that it can read who uses a board, write its own use and its deploys, and so share the board with spark's projects · the PO · 2026-11-18 · this session, his answer to Q6 ("It tells the store about itself"), with `box.py` as the example · confirms: the meaning of "register" and "use" in D4 · options considered: a project listed in `projects.json`, a tool reached through spark's MCP interface, the board and not a record
 - D8 · a direction: first the view (one command lists each board on USB with its projects, last deploy and grants, and opens no port) together with a registered tool that reports its deploys, so that the view is true for the game box. No holder record yet · the PO · 2026-11-18 · this session, his answer to Q3 ("View plus a registered tool") · confirms: a direction · options considered: the view alone, the view plus a holder record, nothing before step 2c
 - D9 · the view names a project by a name that the tool registers: one name, for example pixel-games, and every worktree reports under it. The registration refuses a name that is taken · the PO · 2026-11-18 · this session, his answer to Q4 ("A name the tool registers") · confirms: the project's key in the first slice · options considered: the folder as today, both the name and the folder
+- D10 · the jobs J1 to J4 and the understanding are right: the first slice is the view and a registered tool, a holder record and the jobs J3 and J4 are not now, and the design starts after A6's answer · the PO · 2026-11-18 · this session, his answer to the closing question ("Right; design after A6's answer") · confirms: the jobs and the understanding · options considered: design now with the risk accepted, the view only first, something is wrong
 - D (standing) · the discovery folder lands by PR · the PO · the extension spark-process, `process.md` · covers: the commits and the PR of this folder
 
 ## Found on the way <!-- CLAIMS -->
@@ -134,7 +136,17 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the jobs, a direction, the ratings of the assumptions and the remaining risk are not confirmed <!-- REQUIRED:handoff -->
+Confirmed by the PO in D10. The remaining risk is not accepted yet, so the brief is not ready for design.
+
+- Outcome: for a connected board, one command names the projects that use it and the last deploy, and opens no port (D8).
+- Who: the PO at his bench, and a Claude session that works on one project (jobs J1 and J2, D10).
+- Success and its proof: after `box.py deploy`, the view names pixel-games for the game box. A test proves that the view opens no port.
+- Constraints: a tool registers by telling the store about itself (D7). A project is named by the name that its tool registers, and a taken name is refused (D9). No holder record, no take and no release in this slice (D8). One project with one kept board gets no new question (D3).
+- What they said (D) against what we assume (H): D3 to D10 above. Assumed: a tool reads the store before a touch (A1, tested at step 2c). `box.py` finds the command through one stable path (A6, C25).
+- For the design to settle: where the command lives so that a tool outside spark finds it, or whether a documented file in the store replaces the command (C25). The pixel-games session names the origin remote as the project's name.
+- Journeys and map: [jobs-and-journeys.md](jobs-and-journeys.md), [story-map.md](story-map.md), slices 0 and 1.
+- Riskiest assumptions and their tests: A6, a yes with the command (met) and a card in pixel-games (missing). A1, every take and release of step 2c has its line on #1283 (not run yet).
+- Options considered: the view alone, the view with a holder record, nothing before step 2c (D8). <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
