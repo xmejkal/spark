@@ -34,7 +34,7 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 (a folder name) | �
 | A3 | The boards that the PO shares have a USB serial that names them with no touch | feasibility | H ★C12 (some serials give cannot tell) | low D5 | `mpremote devs` with each shared board on USB | proposed 2026-11-18: the serial equals the MAC in the store's `boards/` | "cannot tell" for the game box | open |
 | A4 | An end time by the clock is close enough to the real use | usability | H C11, an estimate | low D5 | compare the stated end with the release at step 2c | proposed 2026-11-18: the release comes before the stated end, and the PO sets the margin at Q1 | the use runs past the end | open |
 | A5 | Two projects use one physical board by turns | value | E ★C24 (only the PO knows whether it is the game box): five project names on one board in 17 days. E D6: it is the game box | high D5 | Q2, the PO's account | proposed 2026-11-18: one dated case | no case, only step 2c | retired 2026-11-18 |
-| A6 | The pixel-games tool will call a spark command, so it registers | viability | H D4 | high D5 | ask the pixel-games session and the PO | set 2026-11-18 (D5): a yes that names the command and a card in pixel-games | `box.py` stays outside | open |
+| A6 | The pixel-games tool will call a spark command, so it registers | viability | H D4 | high D5 | ask the pixel-games session and the PO | set 2026-11-18 (D5): a yes that names the command and a card in pixel-games | `box.py` stays outside | retired 2026-11-18 |
 
 ## Collection plan
 <!-- One row per gap. e.g. `| Do assignees open new tasks? | Q2 | Lena, from analytics | one query | this week |` -->
@@ -44,7 +44,7 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 (a folder name) | �
 | What does `mpremote devs` list for the game box? | A2, A3 | this session, after the PO's yes and the pixel-games session's "free" | one command that opens no port | the PO's next bench time |
 | Were the take and release lines written at step 2c? | A1, A4 | both sessions | the comments on #1283 | at step 2c of P904 |
 | Do two Claude sessions get different values of `CLAUDE_CODE_SESSION_ID`? | Q4, ★C14 (session ids not compared) | both sessions | each prints the variable | after Q4 |
-| Can `box.py` call a spark command with `--json`? | A6, Q6 | the pixel-games session and the PO | a message | answered 2026-11-18 (C25). The PO ordered the card in pixel-games (D11), and it is not filed yet |
+| Can `box.py` call a spark command with `--json`? | A6, Q6 | the pixel-games session and the PO | a message | answered 2026-11-18 (C25). The card in pixel-games is P921 #1303 (D11) |
 
 ## Results
 <!-- Filled on a return; may stay empty until then. One row per result: what was tested, what was seen (verbatim,
@@ -53,6 +53,7 @@ with its pointer), the pass line met or missed, what it changes. -->
 | --- | --- | --- | --- | --- |
 | 2026-11-18 | the PO's answer to Q2 (D6 in brief.md) and the store's `boards/34-85-18-xx-xx-xx.json` | "Yes, the same board": the board with 14 deploys from five spark folders, 2026-11-01 to 2026-11-17, is the game box of pixel-games | A5's pass line met: one dated case | A5 is retired. A holder record has a user beyond step 2c |
 | 2026-11-18 | the pixel-games session's second message, pixel-games-account.md:34 | "yes, box.py can call one spark command before and after a deploy, but today nothing tells it where that command is" | A6's pass line met in part: the yes names a command as a contract, and the card in pixel-games does not exist | A6 stays open until that card exists. The PO ordered it (D11). The design has to give the command one stable path |
+| 2026-11-18 | the card P921 (https://github.com/xmejkal/spark/issues/1303), filed on the PO's order (D11) | the card exists: a spark card with the slice pixel-games | A6's pass line met: the yes names the command (the row above), and the card exists | A6 is retired. P921's own proof shows whether `box.py` then reports a deploy |
 
 ## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
 <!-- Energy per mode · peaks per rail against the source · dissipation per part, each number with its provenance and

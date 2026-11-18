@@ -8,8 +8,8 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
 **Ready for:** collecting evidence <!-- REQUIRED:ready -->
-**Stands on:** 5 H, 2 of which would change the decision (A1 and A6, rated high in D5) <!-- REQUIRED:debt -->
-**Decision needed:** none for the list: the PO said yes to items.md (D11). Still his: the epic and the label of the card in pixel-games <!-- REQUIRED:decision-needed -->
+**Stands on:** 4 H, 1 of which would change the decision (A1, rated high in D5) <!-- REQUIRED:debt -->
+**Decision needed:** none for the list: its three items are filed (D11). Still his: the epic of P921 #1303, filed under P365 #467 <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked), the PO, 2026-11-18, on the card (https://github.com/xmejkal/spark/issues/1298): "Oh, and that might actually also change something in the Spark store. Maybe that's an interesting functionality for us that would just help us out and might just be good to leave in Spark in general anyway afterwards." And: "Well, at least to see how it's in the projects. Maybe this session is working on one project, so it uses the connected board for that project to build that thing on it. Or the other session uses it for another, so it always has to build the other project." <!-- REQUIRED:request -->
@@ -82,7 +82,7 @@ and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether 
 - Proposed no-gos and rabbit holes (proposals until the decider confirms): no lock on the serial port itself (C16). No session as the key of a record until someone checks whether its id differs between sessions (★C14 (session ids not compared)). No change inside pixel-games' tools by a spark card. No deletion of an ended record. Rabbit hole: a board that spark cannot tell with no touch (★C12 (some serials give cannot tell)). · H the facilitator's proposals · caveat: none of them is confirmed <!-- REQUIRED:nogos -->
 
 ## Riskiest assumption and its test
-- Riskiest: A6, the pixel-games tool will call a spark command. Every slice after slice 0 that serves the game box needs it, and no evidence exists · proposed — the refuter's opinion, taken up by the facilitator, and rated high by the PO (D5). The PO assistant names A1, also high (D5). A2 is not the riskiest: its evidence already says no (★C3 (one store on one day), C4) <!-- REQUIRED:riskiest -->
+- Riskiest: A6, the pixel-games tool will call a spark command. Every slice after slice 0 that serves the game box needs it. Its pass line is met since the card P921 #1303 exists (risks-and-tests.md, Results), so A1 is the riskiest that is open · proposed — the refuter's opinion, taken up by the facilitator, and rated high by the PO (D5). The PO assistant names A1, also high (D5). A2 is not the riskiest: its evidence already says no (★C3 (one store on one day), C4) <!-- REQUIRED:riskiest -->
 - Test · kind · pass line, dated before any result · proposed | D<n>: for A6, a question to the pixel-games session and the PO: can `box.py` call one spark command with `--json` before a touch, and who owns that change · an account · pass line proposed 2026-11-18: a yes that names the command and the card in pixel-games · D5. For A1, a use log of step 2c on #1283: every take and every release has its line (D5) <!-- REQUIRED:test -->
 
 ## Questions
@@ -128,7 +128,7 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - move #1298 to Discovery · taken before this run, D1
 - a message with four questions to the pixel-games session · taken 2026-11-18, D2
 - set *Waiting on: the PO* on #1298 while Q0 waits · dropped, Q0 was answered in the same session (D3)
-- an issue comment that links this brief · pending, D11. It waits for the push, because the link needs the branch on GitHub
+- an issue comment that links this brief · taken 2026-11-18, D11, with the three filed cards named
 - the PO's words of D4 as a comment on #1298 · pending
 - a message to the pixel-games session with the question of A6 · taken 2026-11-18, D2
 <!-- EXTEND:brief-sections -->
@@ -146,7 +146,7 @@ Confirmed by the PO in D10. The remaining risk is not accepted yet, so the brief
 - What they said (D) against what we assume (H): D3 to D10 above. Assumed: a tool reads the store before a touch (A1, tested at step 2c). `box.py` finds the command through one stable path (A6, C25).
 - For the design to settle: where the command lives so that a tool outside spark finds it, or whether a documented file in the store replaces the command (C25). The pixel-games session names the origin remote as the project's name. How `box.py` names the board of a deploy: the store keys a deploy by the MAC (★C2 (a folder name)), and `box.py` reports no port and no USB serial today (C25).
 - Journeys and map: [jobs-and-journeys.md](jobs-and-journeys.md), [story-map.md](story-map.md), slices 0 and 1.
-- Riskiest assumptions and their tests: A6, met in part: the yes names the command, and the card in pixel-games is ordered (D11) and not filed yet. A1, every take and release of step 2c has its line on #1283 (not run yet).
+- Riskiest assumptions and their tests: A6, met: the yes names the command, and the card in pixel-games is P921 #1303 (D11). A1, every take and release of step 2c has its line on #1283 (not run yet).
 - Options considered: the view alone, the view with a holder record, nothing before step 2c (D8). <!-- REQUIRED:handoff -->
 
 ## Files
