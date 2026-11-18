@@ -5,7 +5,7 @@ status: proposed, or filed D<n>.
 e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)` -->
 
 ## P<next free number> — nothing shows which project uses a connected board → one command lists each board on USB with the projects that keep it, its last deploy and its grants, and opens no port
-<!-- P917 is the highest number on 2026-11-18. Read the highest number again just before filing. -->
+<!-- P918 (#1299) is the highest number on 2026-11-18. Read the highest number again just before filing. -->
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "Well, at least to see how it's in the projects." (the PO, 2026-11-18, comment 1 on #1298) <!-- REQUIRED:needed-by -->
 - value proven by: the command's output with one board on USB, and a test that proves that it opens no port <!-- REQUIRED:value-proven-by -->
@@ -20,7 +20,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "mostly just spark, but tools that register can access and use it and share too" (the PO, 2026-11-18, D4 and D7 in brief.md) <!-- REQUIRED:needed-by -->
 - value proven by: after a registered tool reports a deploy, the view names that tool's project for the board <!-- REQUIRED:value-proven-by -->
-- depends on: the view's item above, and the PO's answer to Q4 <!-- REQUIRED:depends-on -->
+- depends on: the view's item above (the project's name is decided, D9) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P365 #467, the parent of P917 <!-- REQUIRED:spark-process:parent -->
@@ -29,8 +29,8 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 ## In pixel-games: `box.py` registers with the store and reports each deploy
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "It tells the store about itself" (the PO, 2026-11-18, D7 in brief.md, with `box.py` as the example) <!-- REQUIRED:needed-by -->
-- value proven by: after `box.py deploy`, spark's view names pixel-games for the game box <!-- REQUIRED:value-proven-by -->
-- depends on: the item above, and A6's test (the pixel-games session's yes with the command) <!-- REQUIRED:depends-on -->
+- value proven by: after `box.py deploy`, spark's view names pixel-games for the game box. For that, `box.py` names the board of the deploy, and today it reports no port and no USB serial (C25) <!-- REQUIRED:value-proven-by -->
+- depends on: the item above. A6's pass line needs this card, so this card does not wait for A6 <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): — (the pixel-games repository's labels are not read yet) <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — (its epic in pixel-games is the PO's choice) <!-- REQUIRED:spark-process:parent -->
@@ -38,4 +38,4 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 
 ## Board actions
 <!-- Each action, taken or pending, with its D. e.g. `- move the item to Discovery · pending` -->
-- file the three items above · pending, it needs the PO's yes to this list <!-- REQUIRED:board-actions -->
+- file the three items above · pending, the PO's yes is D11. The filing waits for the push and the PR, by his order <!-- REQUIRED:board-actions -->

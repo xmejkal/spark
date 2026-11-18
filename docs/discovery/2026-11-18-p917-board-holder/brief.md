@@ -9,14 +9,14 @@ Stands on: the assumptions not retired in risks-and-tests.md; of which those the
 is unrated. check computes both. -->
 **Ready for:** collecting evidence <!-- REQUIRED:ready -->
 **Stands on:** 5 H, 2 of which would change the decision (A1 and A6, rated high in D5) <!-- REQUIRED:debt -->
-**Decision needed:** the PO's yes to the list in items.md. Its third item is the card in pixel-games that A6's pass line names <!-- REQUIRED:decision-needed -->
+**Decision needed:** none for the list: the PO said yes to items.md (D11). Still his: the epic and the label of the card in pixel-games <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked), the PO, 2026-11-18, on the card (https://github.com/xmejkal/spark/issues/1298): "Oh, and that might actually also change something in the Spark store. Maybe that's an interesting functionality for us that would just help us out and might just be good to leave in Spark in general anyway afterwards." And: "Well, at least to see how it's in the projects. Maybe this session is working on one project, so it uses the connected board for that project to build that thing on it. Or the other session uses it for another, so it always has to build the other project." <!-- REQUIRED:request -->
 - Decision · decider: whether spark keeps a record of who holds a connected board and until when, what a holder is, and which tools read the record · the PO <!-- REQUIRED:decision -->
-- Outcome and how it is observed (a metric with unit and source, a proof command, or a log): proposed (H, the facilitator's): one command names, for a connected board, the project that uses it now and the project that was deployed to it last. A proof command with two project folders and one board shows both lines. The PO did not confirm this outcome yet. <!-- REQUIRED:outcome -->
+- Outcome and how it is observed (a metric with unit and source, a proof command, or a log): for a connected board, one command names the projects that use it and its last deploy, and opens no port (D8, a direction). The command's output with one board on USB shows it. The proposal before D8 (H, the facilitator's) also named the project that uses the board now. That needs a holder record, which is not in the first slice. <!-- REQUIRED:outcome -->
 - Already decided (D · who · when · where; include the product's stated non-goals and earlier decisions the request names): the discovery runs with the PO, and the agreement between the two sessions holds until it ends (D1). The kept board lives in the store and never in the project (D · the PO · 2026-11-17 · P865 #1231). Another board and no kept board stop the deploy, the grant, reach and live, and send to `look.py` (D · the PO · 2026-11-18 · #1266). Spark exports facts and never behaviour, and it uses free and local tools (D · the PO · AGENTS.md). The vision's non-goals: — (not read yet). <!-- REQUIRED:decided -->
-- Open questions: the four on the card. Who is a holder: a session, a project or a person. Which tool writes a hold, which tools read it, and whether a tool stops on another holder's board or only says so. How a hold ends, and what a session that stopped with no release leaves behind. Whether the hold is its own record or a part of the grant. Added here: whether the record names what a holder owes at release (C10), and whether the game box serves a second project (the pixel-games session does not know). <!-- REQUIRED:open -->
+- Open questions: the four on the card. Who is a holder: a session, a project or a person. Which tool writes a hold, which tools read it, and whether a tool stops on another holder's board or only says so. How a hold ends, and what a session that stopped with no release leaves behind. Whether the hold is its own record or a part of the grant. Added here: whether the record names what a holder owes at release (C10). Whether the game box serves a second project is answered: it does (D6). <!-- REQUIRED:open -->
 - Scope · out of scope (proposed): in scope: one Mac, one store, boards on USB, every project on this Mac that touches a board, and the view the PO asked for first. A tool that is not spark's, for example `box.py` of pixel-games (★C6 (read in box.py only)), can read the record through one spark command. Out of scope: a shared store between machines (P178), a change inside pixel-games' own tools, a lock on the serial port itself, and any change to P892's gate for one project with one board. <!-- REQUIRED:scope -->
 - Start and reach (D3): start existing product · decider reachable yes · users the PO, in this session, and the pixel-games session, by message · data and connectors: the store's `boards/` and `grants/` records and the card's comments are readable, and usage analytics are not connected · decider as a user n = 1 · must not get worse: one project with one kept board gets no new question, and `look.py` stays the first board step <!-- REQUIRED:start-reach -->
 - Flags (yes · no · —; asked only when it changes a decision; never legal advice; any date or threshold is read at its source at run time and cited):
@@ -113,6 +113,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D8 · a direction: first the view (one command lists each board on USB with its projects, last deploy and grants, and opens no port) together with a registered tool that reports its deploys, so that the view is true for the game box. No holder record yet · the PO · 2026-11-18 · this session, his answer to Q3 ("View plus a registered tool") · confirms: a direction · options considered: the view alone, the view plus a holder record, nothing before step 2c
 - D9 · the view names a project by a name that the tool registers: one name, for example pixel-games, and every worktree reports under it. The registration refuses a name that is taken · the PO · 2026-11-18 · this session, his answer to Q4 ("A name the tool registers") · confirms: the project's key in the first slice · options considered: the folder as today, both the name and the folder
 - D10 · the jobs J1 to J4 and the understanding are right: the first slice is the view and a registered tool, a holder record and the jobs J3 and J4 are not now, and the design starts after A6's answer · the PO · 2026-11-18 · this session, his answer to the closing question ("Right; design after A6's answer") · confirms: the jobs and the understanding · options considered: design now with the risk accepted, the view only first, something is wrong
+- D11 · the three items of items.md are filed, and #1298 gets a comment with the link to this brief · the PO · 2026-11-18 · this session's request, after the push and the PR ("do what I said yes to: file the three items of items.md, comment on #1298 with the link to the brief") · confirms: items.md and the comment. It orders the card in pixel-games. It does not accept the remaining risk
 - D (standing) · the discovery folder lands by PR · the PO · the extension spark-process, `process.md` · covers: the commits and the PR of this folder
 
 ## Found on the way <!-- CLAIMS -->
@@ -126,8 +127,8 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - move #1298 to Discovery · taken before this run, D1
 - a message with four questions to the pixel-games session · taken 2026-11-18, D2
-- set *Waiting on: the PO* on #1298 while Q0 waits · pending
-- an issue comment that links this brief · pending
+- set *Waiting on: the PO* on #1298 while Q0 waits · dropped, Q0 was answered in the same session (D3)
+- an issue comment that links this brief · pending, D11. It waits for the push, because the link needs the branch on GitHub
 - the PO's words of D4 as a comment on #1298 · pending
 - a message to the pixel-games session with the question of A6 · taken 2026-11-18, D2
 <!-- EXTEND:brief-sections -->
@@ -139,13 +140,13 @@ we assume (H) · links to the journeys and the map · riskiest assumptions and t
 Confirmed by the PO in D10. The remaining risk is not accepted yet, so the brief is not ready for design.
 
 - Outcome: for a connected board, one command names the projects that use it and the last deploy, and opens no port (D8).
-- Who: the PO at his bench, and a Claude session that works on one project (jobs J1 and J2, D10).
+- Who: the PO at his bench, and a Claude session that works on one project (job J1, D10). J2 to J4 need a holder record and are not in this slice (D8).
 - Success and its proof: after `box.py deploy`, the view names pixel-games for the game box. A test proves that the view opens no port.
 - Constraints: a tool registers by telling the store about itself (D7). A project is named by the name that its tool registers, and a taken name is refused (D9). No holder record, no take and no release in this slice (D8). One project with one kept board gets no new question (D3).
 - What they said (D) against what we assume (H): D3 to D10 above. Assumed: a tool reads the store before a touch (A1, tested at step 2c). `box.py` finds the command through one stable path (A6, C25).
-- For the design to settle: where the command lives so that a tool outside spark finds it, or whether a documented file in the store replaces the command (C25). The pixel-games session names the origin remote as the project's name.
+- For the design to settle: where the command lives so that a tool outside spark finds it, or whether a documented file in the store replaces the command (C25). The pixel-games session names the origin remote as the project's name. How `box.py` names the board of a deploy: the store keys a deploy by the MAC (★C2 (a folder name)), and `box.py` reports no port and no USB serial today (C25).
 - Journeys and map: [jobs-and-journeys.md](jobs-and-journeys.md), [story-map.md](story-map.md), slices 0 and 1.
-- Riskiest assumptions and their tests: A6, a yes with the command (met) and a card in pixel-games (missing). A1, every take and release of step 2c has its line on #1283 (not run yet).
+- Riskiest assumptions and their tests: A6, met in part: the yes names the command, and the card in pixel-games is ordered (D11) and not filed yet. A1, every take and release of step 2c has its line on #1283 (not run yet).
 - Options considered: the view alone, the view with a holder record, nothing before step 2c (D8). <!-- REQUIRED:handoff -->
 
 ## Files

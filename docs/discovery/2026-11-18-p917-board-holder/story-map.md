@@ -22,5 +22,5 @@ e.g. `| 0 | Notice | the assignee gets one daily digest | job 1 | H ★C2 (a fol
 ## Delta to the product's map <!-- REQUIRED:spark-process:map-delta -->
 <!-- The rows to add or change in the repository's own story map file, in that file's table shape, with its journey
 step numbers; proposed, not applied. "n/a — no map file" is allowed. -->
-No row of `scrum/STORY_MAP.md` changes yet. If slice 0 is filed, its card joins the line "Team tools" of that file.
+No row of `scrum/STORY_MAP.md` changes yet. The PO ordered the filing of slices 0 and 1 (D11). When they are filed, their cards join the line "Team tools" of that file.
 <!-- EXTEND:map -->
