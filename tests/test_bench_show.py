@@ -402,8 +402,8 @@ class TheShowTest(ShowCase):
 
     def test_it_runs_from_a_folder_that_is_no_spark_project(self):
         empty = Path(tempfile.mkdtemp())  # no .spark/tools.json: the shared tools lists name mpremote
-        with mock.patch.object(tool_finder, "locate", return_value=[sys.executable]):  # mpremote need not be on this host
-            code, out, _ = self.bench("--project", str(empty), "--json", find_tool=tool_finder.ToolFinder(empty).find)
+        self.assertIn("mpremote", tool_finder.merged(empty)["tools"])
+        code, out, _ = self.bench("--project", str(empty), "--json")  # the test's own found tool: no mpremote on this host needed
         self.assertEqual((code, len(json.loads(out)["data"]["boards"])), (0, 1))
         self.assertEqual([argv[-1] for argv in self.ran], ["devs"])
 
