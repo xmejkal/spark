@@ -58,8 +58,8 @@ REPLIES_HELP = ('a file of your own with the person\'s yes to the deploy\'s boar
 LOOK_WHY = {board_codes.OTHER_BOARD: "the board on USB is not this project's kept board: the look asks the person before it reads it",
             board_codes.NO_KNOWN_BOARD: "spark keeps no board for this project yet: the look asks the person once and keeps it"}
 LOOK_WHY_AFTER_READ = "the board read is not this project's kept board: plug in the kept board, or read this one with the look"
-#: The refusals at the look and after it that one handler says (P354, P892).
-LOOK_REFUSALS = (board_look.LookStopError, DeployError, tool_finder.ToolError, SparkError)
+#: The refusals from the look to the flash that one handler says (P354, P892).
+REFUSALS = (board_look.LookStopError, DeployError, tool_finder.ToolError, SparkError)
 
 
 def rerun_line(project, token, port, evidence):
@@ -194,16 +194,16 @@ class DeployFlowService:
             board_look.LookService.record_of(self.service.project)
             row = self.service.find_row(self.asked.port)
             self.judged = self.board_question.judge(self.service.project, self.asked.port, row, self.outside.replies)
-        except LOOK_REFUSALS as cannot:
+        except REFUSALS as cannot:
             return self.refuse_at_look(cannot)
         if not self.judged.code:
             return None
         port, question = self.asked.port or row.device, self.judged.question
-        return self.stop(self.judged.findings(known_board.DEPLOY), [question.why] if self.judged.code == codes.NEEDS_REPLY else [],
+        return self.stop_at_board(self.judged.findings(known_board.DEPLOY), [question.why] if self.judged.code == codes.NEEDS_REPLY else [],
                          port=port, board_question=self.judged.data(port), next_op=deploy_gate.NEXT_LOOK if self.judged.code in LOOK_WHY else None,
                          next_why=LOOK_WHY.get(self.judged.code))
 
-    def stop(self, findings, more=(), **reached):
+    def stop_at_board(self, findings, more=(), **reached):
         """The exit code of a stop at the board (P892): `findings` and `reached` kept for the result, then each sentence and
         fix said as a line of the look, then `more`. The fix of an open question holds the JSON to paste, so its line is raw
         (P677)."""
@@ -219,7 +219,7 @@ class DeployFlowService:
         """The Finding of a board read that is not the kept board (P892): it did restart, and the deploy keeps nothing."""
         known = self.judged.known
         return Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, known_board.OTHER_AFTER_MESSAGE % (
-            look.port, known_board.mac_ends(look.reading.mac), known_board.mac_ends(known.mac), known.at[:10]), known_board.DEPLOY.other_fix)
+            look.port, known_board.mac_ends(look.reading.mac), known_board.mac_ends(known.mac), known.at[:10]), known_board.OTHER_AFTER_FIX)
 
     def refuse_at_look(self, cannot):
         """The exit code of a refusal at the look or after it, said on stderr: a LookStopError with the doctor's lines (P354), a
@@ -230,7 +230,7 @@ class DeployFlowService:
             self.keep_yes()
         reached.update(refusal=str(cannot), reason=cannot.code if isinstance(cannot, SparkError) else reason_of(cannot))
         if isinstance(cannot, SparkError):
-            reached["findings"] = [Finding(cannot.status, DeployPhase.LOOK, cannot.code, str(cannot), cannot.fix)]
+            reached["findings"] = [Finding(cannot.status, self.stages.stage, cannot.code, str(cannot), cannot.fix)]
         lines = ["%s: %s" % (SCRIPT, cannot)]
         if isinstance(cannot, board_look.LookStopError):
             lines, reached["doctor"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)
@@ -247,12 +247,12 @@ class DeployFlowService:
                 self.say(DeployPhase.LOOK, line)
             reached["port"] = look.port
             if known_board.differs(self.judged.known, look.reading.mac):  # whatever the reply was, before the erase's question
-                return self.stop([self.other_after_read(look)], next_op=deploy_gate.NEXT_LOOK, next_why=LOOK_WHY_AFTER_READ)
+                return self.stop_at_board([self.other_after_read(look)], next_op=deploy_gate.NEXT_LOOK, next_why=LOOK_WHY_AFTER_READ)
             self.report(Event.begin(DeployPhase.GATE))  # before the "standing yes" line, which is a gate line
             self.consent = self.choose_consent(look, token)
             self.planned = self.service.deploy(look, token, self.consent)
             self.keep_yes()  # only now is there a yes to report
-        except LOOK_REFUSALS as cannot:
+        except REFUSALS as cannot:
             return self.refuse_at_look(cannot)
         except deploy_gate.GateClosedError as shut:
             reached.update(refusal=str(shut), reason=shut.reason, next_op=shut.next_op)

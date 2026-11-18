@@ -117,7 +117,7 @@ def _steps(reached):
         following = [ask_again_step(project, reached.get("token"), port, evidence)]
     elif next_op == NEXT_LOOK:  # P892: after a stop at the board the look asks the person first
         why = reached.get("next_why")
-        following = [look_step(project, port, evidence, why or "the look is missing or stale", True if why else None)]
+        following = [look_step(project, port, evidence, why or "the look is missing or stale", bool(why) or None)]
     elif next_op == NEXT_DEPLOY:
         following = [deploy_step(project, reached.get("token"), port, evidence,
                                  "the person runs data.run_in_terminal in their own terminal: " + yes_rule(evidence))]

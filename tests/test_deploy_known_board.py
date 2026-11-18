@@ -188,8 +188,7 @@ class TheDeployAsksTheBoardQuestionTest(DeployKnownBoardCase):
         self.know_the_board(C6_MAC, known_board.comparable_key(C6_MAC))
         self.yes_file.write_text("{not json")
         code, envelope, _, read = self.go()
-        self.assertEqual((code, len(self.codes(envelope)), read), (2, 1, []))
-        self.assertNotIn("crash", self.codes(envelope))
+        self.assertEqual((code, self.codes(envelope), read), (2, ["bad_argument"], []))
 
     def test_11_a_dry_run_asks_nothing_and_leaves_the_replies_file_as_it_is(self):
         self.yes_file.write_text(json.dumps({"replies": {"deploy.read_board.abcd": True}}))

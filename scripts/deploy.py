@@ -66,9 +66,9 @@ in a chat is not the yes, and the token is not the yes. --dry-run never touches 
 
 The board question (P892): the read restarts the board, so before it deploy.py judges the board on USB as look.py does,
 and never keeps or replaces a board. The board that look.py kept for this project is read with no question. Another
-board stops with other_board, and a project with no kept board stops with no_known_board: both before any read, with no
-question, and the next step is look.py. A board that spark cannot tell before a read (no USB serial, a serial that its
-firmware set, a --port that the list does not hold) is asked on every deploy, with --port too: in your terminal, or by
+board stops with other_board, and with no kept board a board that shows a USB serial stops with no_known_board: both
+before any read, with no question, and the next step is look.py. A board that spark cannot tell before a read (no USB
+serial, a serial that its firmware set, a --port that the list does not hold) is asked on every deploy, with --port too: in your terminal, or by
 `true` under its deploy.read_board key in the --replies file. One yes answers one deploy: the deploy sets its deploy. keys
 back to null before it reads. A yes to the look's key does not answer it, and a deploy grant does not answer it either.
 After the read, a MAC that is not the kept board's stops with other_board before the erase's question, whatever the

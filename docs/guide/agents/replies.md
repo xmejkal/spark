@@ -81,7 +81,7 @@ that cannot be read is `known_board_unreadable`: repair or remove the file that 
 
 `deploy.py --token` asks the same board question before its own read, with the deploy's own words
 ([P892](https://github.com/xmejkal/spark/issues/1266)). It asks only for a board that spark cannot tell before a read. It never keeps or
-replaces a board: the look does that. A dry run asks nothing and reads no replies file.
+replaces a board: the look does that. A dry run asks nothing and changes no replies file.
 
 | What is on USB | The deploy |
 | --- | --- |

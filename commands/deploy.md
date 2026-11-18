@@ -73,7 +73,7 @@ it happens. With `--json` these lines go to stderr. Relay them.
    (no USB serial, a serial that its firmware set, a `--port` that the list does not hold). Then it exits 2 with
    `needs_reply` and reads nothing: ask the person as for the look, write `{"replies": {"<the deploy.read_board key>": true}}`
    to your own file, and run `next[0]`, the same deploy with `--replies`. A `look.` key does not answer it. Another board
-   stops with `other_board`, and no kept board with `no_known_board`, before any read and with no question: run the look
+   stops with `other_board`, and a board with a USB serial and no kept board with `no_known_board`, before any read and with no question: run the look
    (`next[0]`, `needs_person`). After the read, a MAC that is not the kept board's stops with `other_board` before the
    erase's question, also after a yes. The deploy never keeps a board. With no terminal and no deploy grant, the person's
    own run asks the board question once more ("The deploy's question" in `docs/guide/agents/replies.md`).

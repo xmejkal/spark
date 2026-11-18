@@ -120,8 +120,7 @@ CODES = {
 }
 #: The codes whose sentence or fix holds a line a person pastes or a file they open, so Privacy leaves it, and each line
 #: that holds it, as it is (P677): the line to run with no terminal, the grant line, the line that builds the image, and
-#: the store record to repair (the last deploy's, and the kept board's, also the one another board replaces). P892 keeps
-#: `no_known_board` beside `other_board`: both stop a deploy before the read and send the person to the look.
+#: the store record to repair (the last deploy's, and the kept board's, also the one another board replaces).
 PASTED_CODES = frozenset((NO_TERMINAL, NO_GRANT, GRANT_EXPIRED, GRANT_NO_ZONE, REFUSED_NO_GRANT, NO_IMAGE, EVIDENCE_REFUSES,
-                          LAST_DEPLOY_NOT_CHECKED, KNOWN_BOARD_UNREADABLE, OTHER_BOARD, NO_KNOWN_BOARD))
+                          LAST_DEPLOY_NOT_CHECKED, KNOWN_BOARD_UNREADABLE, OTHER_BOARD))
 # --- end MVP ---
