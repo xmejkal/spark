@@ -9,7 +9,7 @@ Stands on: the assumptions not retired in risks-and-tests.md; of which those the
 is unrated. check computes both. -->
 **Ready for:** collecting evidence <!-- REQUIRED:ready -->
 **Stands on:** 5 H, 2 of which would change the decision (A1 and A6, rated high in D5) <!-- REQUIRED:debt -->
-**Decision needed:** Q4, how a registered tool names its project <!-- REQUIRED:decision-needed -->
+**Decision needed:** whether the jobs and the understanding are right, and whether design waits for A6's answer <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked), the PO, 2026-11-18, on the card (https://github.com/xmejkal/spark/issues/1298): "Oh, and that might actually also change something in the Spark store. Maybe that's an interesting functionality for us that would just help us out and might just be good to leave in Spark in general anyway afterwards." And: "Well, at least to see how it's in the projects. Maybe this session is working on one project, so it uses the connected board for that project to build that thing on it. Or the other session uses it for another, so it always has to build the other project." <!-- REQUIRED:request -->
@@ -93,7 +93,7 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: answered D5
 - Q2 · Is the FireBeetle 2 that is on USB now the game box, and did both the walks of spark and pixel-games put firmware on it? · decides: whether A5 holds with a dated case (★C24 (only the PO knows whether it is the game box)) · kind: account · status: answered D6
 - Q3 · What comes first: the view alone, the view with a registered tool's reports, or the view with a holder record? · decides: the first slice · options: the three in Options · opinion (the facilitator's): the second · kind: decision · status: answered D8
-- Q4 · Is a holder a project? · decides: the record's key · options: a project, a typed label · opinion (the facilitator's): a project · kind: decision · status: asked 2026-11-18
+- Q4 · Is a holder a project? · decides: the record's key · options: a project, a typed label · opinion (the facilitator's): a project · kind: decision · status: answered D9
 - Q5 · On another holder's board, does a spark tool only say so, or ask? · decides: whether P892's gate changes · opinion (the PO assistant's): only say so · kind: decision · status: deferred with the holder record (D8)
 - Q6 · What did "tools that register" mean in D4: a tool that makes itself known to the store, a project listed in `projects.json`, or a tool reached through spark's MCP interface? And does "use" mean the board or the record? · decides: what D4 confirms · kind: decision · status: answered D7
 - Q7 · Which word names the record, given that "hold" is the drawer's word (C18)? · decides: the names · kind: decision · status: deferred with the holder record (D8) <!-- REQUIRED:q1 -->
@@ -110,6 +110,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D6 · the FireBeetle 2 ESP32-S3 on USB (MAC 34:85:18:xx:xx:xx) is the game box that pixel-games uses · the PO · 2026-11-18 · this session, his answer to Q2 ("Yes, the same board") · an account (E, n = 1), not a decision. With ★C24 (only the PO knows whether it is the game box: he says yes) it means that spark's walks and pixel-games put firmware on one board by turns
 - D7 · a tool that is not spark's registers when it tells the store about itself: the tool, or its project, is written once into the store as a known tool. After that it can read who uses a board, write its own use and its deploys, and so share the board with spark's projects · the PO · 2026-11-18 · this session, his answer to Q6 ("It tells the store about itself"), with `box.py` as the example · confirms: the meaning of "register" and "use" in D4 · options considered: a project listed in `projects.json`, a tool reached through spark's MCP interface, the board and not a record
 - D8 · a direction: first the view (one command lists each board on USB with its projects, last deploy and grants, and opens no port) together with a registered tool that reports its deploys, so that the view is true for the game box. No holder record yet · the PO · 2026-11-18 · this session, his answer to Q3 ("View plus a registered tool") · confirms: a direction · options considered: the view alone, the view plus a holder record, nothing before step 2c
+- D9 · the view names a project by a name that the tool registers: one name, for example pixel-games, and every worktree reports under it. The registration refuses a name that is taken · the PO · 2026-11-18 · this session, his answer to Q4 ("A name the tool registers") · confirms: the project's key in the first slice · options considered: the folder as today, both the name and the folder
 - D (standing) · the discovery folder lands by PR · the PO · the extension spark-process, `process.md` · covers: the commits and the PR of this folder
 
 ## Found on the way <!-- CLAIMS -->
