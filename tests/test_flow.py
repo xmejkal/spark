@@ -54,6 +54,10 @@ def statuses(envelope):
     return {phase["phase"]: phase["status"] for phase in envelope["data"]["phases"]}
 
 
+def marks(envelope):
+    return {phase["phase"]: phase["mark"] for phase in envelope["data"]["phases"]}
+
+
 def offers(envelope, phase):
     return [offer["key"] for offer in next(each for each in envelope["data"]["phases"] if each["phase"] == phase)["offers"]]
 
@@ -85,16 +89,33 @@ def with_needs(project, needs):
     return project
 
 
-def a_built_project(status="ok"):
-    """A copy of the built fixture with its breadboard sheet and the record of a build that ended in `status`."""
+def a_built_project(status="ok", stages=None):
+    """A copy of the built fixture with its breadboard sheet and the record of a build that ended in `status`. `stages` are
+    the record's {name: status}, in order (None: a board and a build that ended in `status`)."""
     project = Path(tempfile.mkdtemp()) / "xiao"
     shutil.copytree(BUILT, project)
     (project / "breadboard.md").write_text("# the sheet\n")
-    stages = [{"name": "board", "status": "ok"}, {"name": "build", "status": status}]
+    stages = [{"name": name, "status": ended} for name, ended in (stages or {"board": "ok", "build": status}).items()]
     BuildRecordStore(project, clock=FakeClock()).write({"status": status, "stages": stages, "missing_facts": [],
                                                        "requirements": "requirements.json",
                                                        "requirements_sha256": sha256_of(project / "requirements.json")})
     return project
+
+
+def a_board_only_project(simulation="ok"):
+    """A project built on the board alone, as `build_service.board_alone` records it: four skipped stages and a simulation
+    that ended in `simulation`. A board-only build keeps no sheet."""
+    project = a_built_project(simulation, {"board": "ok", "parts": "skipped", "schematic": "skipped", "footprint": "skipped",
+                                           "build": "skipped", "simulation": simulation})
+    (project / "breadboard.md").unlink()
+    return project
+
+
+def lines_of(project):
+    """The lines `flow.py show` prints for a person."""
+    with contextlib.redirect_stdout(io.StringIO()) as out:
+        flow.main(["show", "--project", str(project)])
+    return out.getvalue().splitlines()
 
 
 def a_built_project_with_a_sheet_from(requirements):
@@ -105,9 +126,10 @@ def a_built_project_with_a_sheet_from(requirements):
 
 
 NS = "not-started"
-#: A project built by hand: requirements.json and no needs, its build and its sheet current, no firmware yet.
-BUILT_TABLE = {"idea": (None, []), "needs": (None, []), "parts": (None, []), "requirements": ("ok", []), "build": ("ok", ["build"]),
-               "breadboard": ("ok", []), "firmware": (NS, []), "simulate": (NS, []), "deploy": (NS, [])}
+#: A project built by hand: requirements.json and no needs, its build and its sheet current, no firmware yet. Spark
+#: compared the requirements with nothing and does not judge the wiring, so neither has a status (P878).
+BUILT_TABLE = {"idea": (None, []), "needs": (None, []), "parts": (None, []), "requirements": (None, []), "build": ("ok", ["build"]),
+               "breadboard": (None, []), "firmware": (NS, []), "simulate": (NS, []), "deploy": (NS, [])}
 
 
 class FlowTest(unittest.TestCase):
@@ -249,7 +271,68 @@ class ThePhasesTest(FlowTest):
         (project / "requirements.json").write_text(json.dumps(written, indent=4))
         said, _ = show(project)
         self.assertEqual({phase: statuses(said)[phase] for phase in ("requirements", "build", "breadboard")},
-                         {"requirements": "ok", "build": "stale", "breadboard": "stale"})
+                         {"requirements": None, "build": "stale", "breadboard": "stale"})
+
+    def test_a_board_only_build_gets_no_tick_and_the_project_stands_at_the_firmware(self):
+        project = a_board_only_project()
+        said, code = show(project)
+        self.assertEqual(code, 0)
+        self.assertEqual((table(said)["build"], table(said)["breadboard"]), ((None, []), (None, [])))
+        self.assertEqual((marks(said)["build"], marks(said)["breadboard"]), ("·", "·"))
+        self.assertEqual(says(said, "build"), ["board only: nothing to wire, no board was built"])
+        self.assertEqual(says(said, "breadboard"), ["board only: nothing to wire"])
+        self.assertEqual(said["data"]["stands_at"], "firmware")
+        self.assertIn("  · build: board only: nothing to wire, no board was built (claude)", lines_of(project))
+
+    def test_a_board_only_build_whose_requirements_changed_is_stale_and_its_sheet_not_started(self):
+        project = a_board_only_project()
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6-fresh", "parts": ["tactile-button"]}))
+        said, _ = show(project)
+        self.assertEqual((statuses(said)["build"], statuses(said)["breadboard"]), ("stale", NS))
+        self.assertEqual(said["data"]["stands_at"], "build")
+
+    def test_a_board_only_build_whose_simulation_could_not_run_stays_could_not_run(self):
+        said, code = show(a_board_only_project("could-not-run"))
+        self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "build"))
+        self.assertIn("simulation: could-not-run", says(said, "build"))
+        self.assertEqual(offers(said, "build"), ["build"])
+        self.assertEqual((statuses(said)["breadboard"], says(said, "breadboard")), (None, ["board only: nothing to wire"]))
+
+    def test_a_build_whose_simulation_alone_was_skipped_gets_no_tick_and_says_why(self):
+        project = a_built_project(stages={"board": "ok", "build": "ok", "simulation": "skipped"})
+        said, code = show(project)
+        self.assertEqual((code, statuses(said)["build"], marks(said)["build"]), (0, None, "·"))
+        self.assertEqual(says(said, "build")[1:], ["simulation: skipped",
+                                                   "every part is skipped from the simulation, so spark did not judge the diagram"])
+        self.assertEqual(said["data"]["stands_at"], "firmware")
+        self.assertFalse([line for line in lines_of(project) if "✓ build" in line])
+
+    def test_any_other_skipped_stage_makes_the_build_partly_done(self):
+        for stages in ({"board": "ok", "footprint": "skipped", "build": "ok"},
+                       {"board": "ok", "footprint": "skipped", "build": "ok", "simulation": "skipped"}):
+            with self.subTest(stages=stages):
+                project = a_built_project(stages=stages)
+                said, code = show(project)
+                self.assertEqual((code, statuses(said)["build"], marks(said)["build"]), (0, "partial", "◐"))
+                self.assertIn("footprint: skipped", says(said, "build"))
+                self.assertEqual(said["data"]["stands_at"], "build")
+                self.assertTrue([line for line in lines_of(project) if line.startswith("  ◐ build: partly done, ")])
+
+    def test_a_current_sheet_gets_no_tick_because_spark_does_not_judge_the_wiring(self):
+        said, _ = show(a_built_project())
+        self.assertEqual((statuses(said)["breadboard"], marks(said)["breadboard"]), (None, "·"))
+        self.assertEqual(says(said, "breadboard"), ["breadboard.md, spark does not judge the wiring"])
+
+    def test_a_missing_sheet_beside_a_build_record_that_cannot_be_read_is_not_started(self):
+        project = a_built_project()
+        (project / "breadboard.md").unlink()
+        (project / BUILD_RECORD_FILE).write_text("{not json")
+        self.assertEqual(statuses(show(project)[0])["breadboard"], NS)
+
+    def test_requirements_with_no_needs_get_no_tick_because_nothing_was_compared(self):
+        said, _ = show(a_built_project())
+        self.assertEqual((statuses(said)["requirements"], marks(said)["requirements"]), (None, "·"))
+        self.assertEqual(says(said, "requirements"), ["requirements.json, with no needs to compare it with, so spark did not judge it"])
 
     def test_requirements_that_are_what_the_picks_give_are_ok(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -311,6 +394,7 @@ class ThePhasesTest(FlowTest):
         (project / "sim" / "image.bin").write_bytes(b"an image")
         said, _ = show(project)
         self.assertIn("no run in sim/runs/ tested image.bin", says(said, "simulate")[0])
+        self.assertNotIn("older spark", says(said, "simulate")[0])  # P878: no log is there to blame
         self.assertIn("run ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml in your terminal: "
                       "it uses Wokwi CI minutes", says(said, "simulate"))
         self.assertIsNone(statuses(said)["simulate"])

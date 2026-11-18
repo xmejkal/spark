@@ -13,7 +13,7 @@ from spark.build import board_engine
 from spark.build import build_codes
 from spark.build import project_setup
 from spark.build.board_engine import convert, converter_stage_problem, find_converter
-from spark.build.stages import Stage, NO_FOOTPRINT_HINT
+from spark.build.stages import BUILD_STAGE, SIMULATION_STAGE, Stage, NO_FOOTPRINT_HINT
 from spark.design import board_emitter  # read by name, so a test's patch of `board_emitter.read_inputs` reaches the emitter
 from spark.design import board_sections
 from spark.design import power_rails
@@ -435,7 +435,7 @@ class BuildService:
         # What the simulation cannot show, in the records' own words, said and kept beside the diagram (P37).
         limits = sim_project.write_limits(sim_dir, loaded, board, found.gpios)
         lead, status = (EVERY_PART_SKIPPED_MESSAGE, SKIPPED) if skipped else ("", OK)
-        stages.append(Stage("simulation", status, lead + simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes + found.note))
+        stages.append(Stage(SIMULATION_STAGE, status, lead + simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes + found.note))
 
     def _sim_folder(self, inputs, board, files, chips, stages):
         """`sim/` in the work folder with `files` ({file name: JSON value}), the board record, the chips staged and wokwi.toml:
@@ -458,7 +458,7 @@ def board_alone(board, workdir, firmware=None, project=None, runner=None):
     SKIPPED, never ok. The converter wires the board's own LED and button that `onboard_parts` gives (P484), as `BuildService` does;
     with none, the diagram holds the board's part alone. The full build adds the same parts to its circuit (P792). A limit "not checked" stays a limit in an ok stage (P396, P37).
     """
-    skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", board_emitter.SCHEMATIC_STAGE, board_emitter.FOOTPRINT_STAGE, "build")]
+    skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", board_emitter.SCHEMATIC_STAGE, board_emitter.FOOTPRINT_STAGE, BUILD_STAGE)]
     if not board.get("wokwi_part_type"):
         return skipped + [Stage("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type", build_codes.SIMULATION_FACT_MISSING)]
     sim_dir, project = workdir / "sim", project or board_records.PLUGIN_ROOT

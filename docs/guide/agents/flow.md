@@ -12,14 +12,14 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
 
 - `phases`: the nine phases in order, `idea`, `needs`, `parts`, `requirements`, `build`, `breadboard`, `firmware`,
   `simulate` and `deploy`. Each is `{phase, status, mark, by, says, offers}`.
-- `stands_at`: the first phase that is not done. A done phase has `status` `ok` or `null`. The deploy is never done
-  here, so `stands_at` always names a phase.
+- `stands_at`: the first phase that is open. It passes a phase whose `status` is `ok` or `null`. Only `ok` is a pass
+  that spark judged. The deploy is never done here, so `stands_at` always names a phase.
 
 The words of a phase:
 
 | key | holds |
 | --- | --- |
-| `status` | `ok`, `problems` or `could-not-run`, a phase word, or `null`. The phase words: `not-started` (nothing done yet), `partial` (some needs have no pick) and `stale` (done, but requirements.json changed after it). See `null` below |
+| `status` | `ok`, `problems` or `could-not-run`, a phase word, or `null`. The phase words: `not-started` (nothing done yet), `partial` (some needs have no pick, or a build skipped a stage) and `stale` (done, but requirements.json changed after it). See `null` below |
 | `mark` | the glyph a page shows for the status |
 | `by` | who does the phase: `you`, `claude` or `your terminal` |
 | `says` | sentences for a person. A value nobody recorded reads `unknown` |
@@ -29,6 +29,18 @@ A `null` status means spark does not judge the phase, and `says` tells where it 
 hand-written project (requirements.json and no needs) has `null` for its needs and parts. Written firmware and a
 simulated image have `null`, because you judge them. Without firmware/main.py, or without an image, they are
 `not-started`. A firmware line in sim/wokwi.toml that spark cannot use gives the simulate phase `problems`.
+
+A phase that spark did not judge is never a pass, and a skipped stage is not one either
+([P878](https://github.com/xmejkal/spark/issues/1246)). These phases have `null` too, and their mark is the dot, not the tick:
+
+- A requirements file with no needs beside it. Spark compared it with nothing.
+- A breadboard sheet that is current. Spark does not judge the wiring.
+- A build on the board alone, whose `build` stage is skipped. No board was built, and the breadboard phase has
+  nothing to wire. A rebuild skips the same stages, so `stands_at` passes both phases and the build phase has no offer.
+- A build that ended `ok` and skipped only its `simulation` stage, because every part is skipped from the simulation.
+
+A build that ended `ok` and skipped any other stage is `partial`. No build does that today. With no log in
+`sim/runs/`, the simulate phase says to run a scenario. It blames an older spark only for a log that names no image.
 
 The offer keys are `needs-drop:<need>`, `pick:<need>:<id or entry>`, `requirements` and `build`. A pick's effect says
 how many the person has. If none is free, it also names the projects that hold them.

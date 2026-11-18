@@ -1,12 +1,15 @@
 """
 The outcome of one stage of the build (P705): `Stage`, which `board_engine` and `build_service` both make, so neither
-imports the other for it, and the hint a build stopped at the footprint still gives. Every importer imports the two
-names, never the module: `stages` is a list of them in `run`, `main` and the tests.
+imports the other for it, the names of the two stages a reader of the build record asks about, and the hint a build
+stopped at the footprint still gives. Every importer imports the names, never the module: `stages` is a list of
+Stages in `run`, `main` and the tests.
 """
 
 from spark.core.outcomes import SKIPPED
 
 # --- MVP ---
+#: The names of the two stages a reader of the build record asks about: the board's own build and its simulation diagram.
+BUILD_STAGE, SIMULATION_STAGE = "build", "simulation"
 #: What a build stopped at the footprint stage still gives, after the gaps `footprint_emitter.why_no_footprint` lists (P407).
 NO_FOOTPRINT_HINT = ("The schematic was not tried. The pin map needs no footprint: with --keep, the kept lines say "
                      "whether firmware/pins.py was written. The breadboard sheet and the simulation read the built "
@@ -16,7 +19,7 @@ NO_FOOTPRINT_HINT = ("The schematic was not tried. The pin map needs no footprin
 def skipped_the_build(stages):
     """Whether `stages` are a board-only build's (`build_service.board_alone`): its build stage is SKIPPED, so no board was built.
     A full build whose simulation stage is SKIPPED (every part skipped, P778) built its board, so it is not."""
-    return any(stage.name == "build" and stage.status == SKIPPED for stage in stages)
+    return any(stage.name == BUILD_STAGE and stage.status == SKIPPED for stage in stages)
 
 
 class Stage:

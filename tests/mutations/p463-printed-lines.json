@@ -8,8 +8,8 @@
  {
   "file": "scripts/spark/firmware/project_image.py",
   "name": "untested-hint-dropped",
-  "find": "% self.path.name + NO_SIMULATION_HINT % \"\")",
-  "replace": "% self.path.name + \"\")"
+  "find": "\"run a scenario\") + NO_SIMULATION_HINT % \"\")",
+  "replace": "\"run a scenario\") + \"\")"
  },
  {
   "file": "scripts/spark/bench/image_evidence.py",
