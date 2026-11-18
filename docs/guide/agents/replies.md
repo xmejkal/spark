@@ -88,7 +88,7 @@ replaces a board: the look does that. A dry run asks nothing and changes no repl
 | the kept board | reads it with no question |
 | another board | stops before the read with `other_board` and asks nothing. The board did not restart. `next[0]` is the look, with `needs_person` |
 | no kept board, and a board with a USB serial | stops before the read with `no_known_board`. `next[0]` is the look, which asks once and keeps the board |
-| a board with no serial, a serial that its firmware set, or a `--port` that the list does not hold | asks on every deploy, with `--port` too |
+| a board with no serial, with a kept board a serial that its firmware set, or a `--port` that the list does not hold | asks on every deploy, with `--port` too |
 | any board whose MAC after the read is not the kept MAC | stops with `other_board` before the erase's question, also after a yes. The board did restart |
 
 The key is `deploy.read_board.<id>`. A yes under a `look.` key does not answer it. The stop holds `data.open`, `data.port`,

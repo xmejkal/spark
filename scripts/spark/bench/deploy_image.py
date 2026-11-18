@@ -200,8 +200,8 @@ class DeployFlowService:
             return None
         port, question = self.asked.port or row.device, self.judged.question
         return self.stop_at_board(self.judged.findings(known_board.DEPLOY), [question.why] if self.judged.code == codes.NEEDS_REPLY else [],
-                         port=port, board_question=self.judged.data(port), next_op=deploy_gate.NEXT_LOOK if self.judged.code in LOOK_WHY else None,
-                         next_why=LOOK_WHY.get(self.judged.code))
+                                  port=port, board_question=self.judged.data(port),
+                                  next_op=deploy_gate.NEXT_LOOK if self.judged.code in LOOK_WHY else None, next_why=LOOK_WHY.get(self.judged.code))
 
     def stop_at_board(self, findings, more=(), **reached):
         """The exit code of a stop at the board (P892): `findings` and `reached` kept for the result, then each sentence and

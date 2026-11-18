@@ -70,7 +70,7 @@ it happens. With `--json` these lines go to stderr. Relay them.
    it printed to run in their own terminal window, word for word, and wait. deploy.py looks at the board again (the
    board restarts), names every warning in its question and erases only after they type `yes`.
    Before that read, deploy.py asks the board question as the look does (P892), only for a board that spark cannot tell
-   (no USB serial, a serial that its firmware set, a `--port` that the list does not hold). Then it exits 2 with
+   (no USB serial, with a kept board a serial that its firmware set, a `--port` that the list does not hold). Then it exits 2 with
    `needs_reply` and reads nothing: ask the person as for the look, write `{"replies": {"<the deploy.read_board key>": true}}`
    to your own file, and run `next[0]`, the same deploy with `--replies`. A `look.` key does not answer it. Another board
    stops with `other_board`, and a board with a USB serial and no kept board with `no_known_board`, before any read and with no question: run the look

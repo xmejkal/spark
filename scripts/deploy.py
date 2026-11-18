@@ -68,12 +68,12 @@ The board question (P892): the read restarts the board, so before it deploy.py j
 and never keeps or replaces a board. The board that look.py kept for this project is read with no question. Another
 board stops with other_board, and with no kept board a board that shows a USB serial stops with no_known_board: both
 before any read, with no question, and the next step is look.py. A board that spark cannot tell before a read (no USB
-serial, a serial that its firmware set, a --port that the list does not hold) is asked on every deploy, with --port too: in your terminal, or by
-`true` under its deploy.read_board key in the --replies file. One yes answers one deploy: the deploy sets its deploy. keys
-back to null before it reads. A yes to the look's key does not answer it, and a deploy grant does not answer it either.
-After the read, a MAC that is not the kept board's stops with other_board before the erase's question, whatever the
-reply was. With no terminal and no deploy grant, the run then stops at the erase's yes, and the line to run in your own
-terminal asks the board question once more.
+serial, with a kept board a serial that its firmware set, a --port that the list does not hold) is asked on every
+deploy, with --port too: in your terminal, or by `true` under its deploy.read_board key in the --replies file. One yes
+answers one deploy: the deploy sets its deploy. keys back to null before it reads. A yes to the look's key does not
+answer it, and a deploy grant does not answer it either. After the read, a MAC that is not the kept board's stops with
+other_board before the erase's question, whatever the reply was. With no terminal and no deploy grant, the run then
+stops at the erase's yes, and the line to run in your own terminal asks the board question once more.
 
 The one other yes is a deploy grant: you ran `grant.py --scope deploy --minutes N` once in your own terminal, for this
 board's MAC. While it lasts, deploy.py takes it as the yes, prints `yes: standing yes typed by ...` and erases with no
