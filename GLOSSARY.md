@@ -405,7 +405,7 @@ so the tests kept away from the real store only by patching sixteen constants by
 forgot one would have written into the person's store (P88). Now it is read on every call, and a
 process running the tests gets a scratch one.
 
-### Registered project, launcher, and recording a deploy
+### Registered project and launcher
 
 A **registered project** is a project that is not spark's and deploys with its own tool, such as pixel-games with
 its own deploy tool. `bench.py register` writes its name once into the store, with its origin and its tool. A taken name is

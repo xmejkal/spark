@@ -49,7 +49,7 @@ def stale_line():
 def write_launcher(python=sys.executable, script=BENCH_SCRIPT):
     """Write the launcher into the store, private, for `python` and `script` (default: this Python and this bench.py), and
     return its path. store.StoreError when the store refuses the write."""
-    store.write_text(PLACE, TEXT % {"python": str(python), "script": str(script), "stale": stale_line(),
+    store.write_place(PLACE, TEXT % {"python": str(python), "script": str(script), "stale": stale_line(),
                                     "exit": outcomes.EXIT_COULD_NOT_RUN})
     return store.place(PLACE)
 # --- end MVP ---

@@ -24,7 +24,6 @@ from spark import bench as bench_area  # noqa: E402
 from spark.bench import bench_service  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
-from spark.bench import ready_probe  # noqa: E402
 from spark.bench.record_deploy import RecordDeploy  # noqa: E402
 from spark.bench.register_project import RegisterProject  # noqa: E402
 from spark.core import outcomes  # noqa: E402
@@ -69,21 +68,21 @@ class RegisteredProjectStoreTest(StoreCase):
         before = store.place("registered-projects").read_text()
         with self.assertRaises(SparkError) as refused:
             RegisteredProjectStore().register("pixel-games", OTHER_ORIGIN, "box.py", REGISTERED_AT)
-        self.assertEqual(refused.exception.code, records_codes.NAME_TAKEN)
+        self.assertEqual(refused.exception.code, "name_taken")
         self.assertEqual(store.place("registered-projects").read_text(), before)
 
     def test_a_name_on_the_projects_list_is_taken_also_when_its_folder_is_gone(self):
         store.write_json("projects", None, {"walk4": str(Path(tempfile.mkdtemp()) / "gone")})
         with self.assertRaises(SparkError) as refused:
             RegisteredProjectStore().register("walk4", ORIGIN, "box.py", REGISTERED_AT)
-        self.assertEqual(refused.exception.code, records_codes.NAME_TAKEN)
+        self.assertEqual(refused.exception.code, "name_taken")
         self.assertFalse(store.place("registered-projects").exists())
 
     def test_a_name_that_is_not_plain_is_refused(self):
         for name in ("Pixel-Games", "../x", "-x", ""):
             with self.assertRaises(SparkError) as refused:
                 RegisteredProjectStore().register(name, ORIGIN, "box.py", REGISTERED_AT)
-            self.assertEqual(refused.exception.code, records_codes.KEY_NOT_PLAIN, name)
+            self.assertEqual(refused.exception.code, "key_not_plain", name)
 
     def test_a_file_that_is_no_object_of_registrations_is_a_store_error(self):
         store.place("registered-projects").parent.mkdir(parents=True, exist_ok=True)
@@ -91,7 +90,7 @@ class RegisteredProjectStoreTest(StoreCase):
             store.place("registered-projects").write_text(text)
             with self.assertRaises(store.StoreError) as refused:
                 RegisteredProjectStore().read("pixel-games")
-            self.assertEqual(refused.exception.code, records_codes.RECORD_FILE_BROKEN, text)
+            self.assertEqual(refused.exception.code, "record_file_broken", text)
 
     def test_the_file_is_private(self):
         RegisteredProjectStore().register("pixel-games", ORIGIN, "box.py", REGISTERED_AT)
@@ -100,20 +99,20 @@ class RegisteredProjectStoreTest(StoreCase):
 
 class TheDeployEntryTest(StoreCase):
     def test_an_outside_deploy_holds_the_keys_of_spark_s_entry_and_made_by(self):
-        self.assertEqual(outside_deploy("pixel-games", "box.py", "2026-11-18T21:40:17+01:00", ready_probe.NOT_READ), {
+        self.assertEqual(outside_deploy("pixel-games", "box.py", "2026-11-18T21:40:17+01:00", "ready not read"), {
             "project": "pixel-games", "made_by": "box.py", "deployed": "2026-11-18T21:40:17+01:00", "verdict": "ready not read",
             "image_sha256": None, "simulation": None, "yes": None, "micropython_banner": None})
 
     def test_append_deploy_with_no_board_keeps_the_record_s_board(self):
         self.deploys(MAC_A, [entry("walk4", "2026-11-17T08:04:00+01:00")], board="firebeetle2-esp32s3")
-        added = outside_deploy("pixel-games", "box.py", "2026-11-18T21:40:17+01:00", ready_probe.NOT_READ)
+        added = outside_deploy("pixel-games", "box.py", "2026-11-18T21:40:17+01:00", "ready not read")
         path = DeployRecordStore().append_deploy(MAC_A, added)
         record = json.loads(path.read_text())
         self.assertEqual((record["board"], [each["project"] for each in record["deploys"]]),
                          ("firebeetle2-esp32s3", ["walk4", "pixel-games"]))
 
     def test_append_deploy_with_a_board_sets_it_and_a_new_record_has_none(self):
-        added = outside_deploy("pixel-games", "box.py", "2026-11-18T21:40:17+01:00", ready_probe.NOT_READ)
+        added = outside_deploy("pixel-games", "box.py", "2026-11-18T21:40:17+01:00", "ready not read")
         record = json.loads(DeployRecordStore().append_deploy(MAC_A, added).read_text())
         self.assertEqual((record["mac"], "board" in record, len(record["deploys"])), (MAC_A, False, 1))
         record = json.loads(DeployRecordStore().append_deploy(MAC_A, added, "xiao-esp32-c6").read_text())
@@ -121,7 +120,7 @@ class TheDeployEntryTest(StoreCase):
 
     def test_both_readers_read_an_entry_with_nulls_as_recorded_with_its_maker(self):
         DeployRecordStore().append_deploy(MAC_A, outside_deploy("pixel-games", "box.py", "2026-11-18T21:40:17+01:00",
-                                                                ready_probe.NOT_READ))
+                                                                "ready not read"))
         last = DeployRecordStore().read_last_deploy(MAC_A)
         self.assertEqual((last.state, last.project, last.verdict, last.made_by, last.micropython_banner),
                          (outcomes.RECORDED, "pixel-games", "ready not read", "box.py", None))
@@ -130,10 +129,6 @@ class TheDeployEntryTest(StoreCase):
     def test_a_maker_that_is_no_text_is_read_as_none(self):
         self.deploys(MAC_A, [dict(entry("walk4", "2026-11-17T08:04:00+01:00"), made_by=7)])
         self.assertIsNone(DeployRecordStore().read_last_deploy(MAC_A).made_by)
-
-    def test_not_read_is_a_fourth_verdict_word(self):
-        self.assertEqual(ready_probe.NOT_READ, "ready not read")
-        self.assertNotIn(ready_probe.NOT_READ, (ready_probe.SEEN, ready_probe.NOT_SEEN, ready_probe.UNKNOWN))
 
 
 class TheGroupsTest(unittest.TestCase):
@@ -168,7 +163,7 @@ class TheLinesTest(unittest.TestCase):
 
 class TheCodesTest(unittest.TestCase):
     def test_each_new_code_has_its_sentence(self):
-        for code in (records_codes.NAME_TAKEN, records_codes.NOT_REGISTERED):
+        for code in ("name_taken", "not_registered"):
             self.assertTrue(records_codes.CODES[code].strip(), code)
 
     def test_the_frontends_list_the_two_operations(self):
@@ -264,7 +259,7 @@ class RecordTest(RecordCase):
         self.register()
         code, said = self.envelope("record", "pixel-games")
         self.assertEqual((code, said["op"], said["status"]), (0, "record-deploy", "ok"))
-        self.assertEqual(said["data"], {"entry": outside_deploy("pixel-games", "box.py", RECORDED_AT.isoformat(), ready_probe.NOT_READ),
+        self.assertEqual(said["data"], {"entry": outside_deploy("pixel-games", "box.py", RECORDED_AT.isoformat(), "ready not read"),
                                         "mac": MAC_A, "device": S3.device})
         code, out, _ = self.bench("show")
         self.assertEqual(code, 0)
@@ -370,7 +365,7 @@ class TheLauncherTest(StoreCase):
 
     def test_a_launcher_whose_script_or_python_is_gone_prints_launcher_stale_and_exits_2(self):
         gone = Path(tempfile.mkdtemp()) / "gone"
-        for python, script in ((sys.executable, gone / "bench.py"), (str(gone / "python3"), launcher.BENCH_SCRIPT)):
+        for python, script in ((sys.executable, gone / "bench.py"), (str(gone / "python3"), ROOT / "scripts" / "bench.py")):
             launcher.write_launcher(python, script)
             done = self.run_launcher("record", "pixel-games", "--json")
             said = json.loads(done.stdout)

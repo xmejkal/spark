@@ -211,7 +211,7 @@ def write_json(name, key, data):
     return write_file(target, json.dumps(data, indent=2, ensure_ascii=False) + "\n", name in PRIVATE)
 
 
-def write_text(name, text):
+def write_place(name, text):
     """Put `text` into a place that is itself a file (P920: the launcher), as `write_json` puts a JSON file: the git
     refusal and the 0700 folders first, then a private file 0600. Returns whether it changed."""
     target = _target(name, None)
