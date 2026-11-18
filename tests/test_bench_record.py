@@ -6,11 +6,13 @@ import contextlib
 import datetime
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
@@ -382,6 +384,168 @@ class TheLauncherTest(StoreCase):
                          (store.place("launcher"), 0o600, 0o700))
         done = self.run_launcher("record", "pixel-games", "--json")
         self.assertEqual((done.returncode, [item["code"] for item in json.loads(done.stdout)["unchecked"]]), (2, ["not_registered"]))
+
+
+class TheFixRoundTest(RecordCase):
+    """The review of PR #1306: the cases that no test held."""
+
+    def test_a_blank_or_unprintable_tool_or_origin_is_refused_before_anything_is_written(self):
+        for origin, tool in ((ORIGIN, ""), (ORIGIN, "  "), (ORIGIN, "box\x1b[2Jpy"), ("", "box.py"), (" \t", "box.py"),
+                             ("https://example.org/a\nb", "box.py")):
+            code, said = self.register(origin=origin, tool=tool)
+            self.assertEqual((code, [item["code"] for item in said["unchecked"]]), (2, ["blank_value"]), (origin, tool))
+            self.assertIn("bench.py register", said["unchecked"][0]["fix"])
+        self.assertEqual((store.place("registered-projects").exists(), store.place("launcher").exists()), (False, False))
+
+    def test_a_launcher_that_cannot_be_written_says_the_name_is_registered(self):
+        store.place("launcher").parent.parent.mkdir(parents=True, exist_ok=True)
+        store.place("launcher").parent.write_text("a file where the launcher's folder goes")
+        code, said = self.register()
+        self.assertEqual((code, [item["code"] for item in said["unchecked"]]), (2, ["store_problem"]))
+        self.assertEqual((said["data"]["registered"]["name"], said["data"]["changed"], said["data"]["launcher"]),
+                         ("pixel-games", True, None))
+        self.assertIn("bench.py register pixel-games", said["unchecked"][0]["fix"])
+        self.assertEqual(RegisteredProjectStore().read("pixel-games").tool, "box.py")
+        _, _, err = self.bench("register", "pixel-games", "--origin", ORIGIN, "--tool", "box.py")
+        self.assertIn("pixel-games is registered, but the launcher was not written.", err)
+        self.assertNotIn("Not registered.", err)
+
+    def test_every_stop_of_register_names_the_next_command(self):
+        store.write_json("projects", None, {})
+        store.place("projects").write_text("{not json")
+        code, said = self.register()
+        self.assertIn("bench.py register pixel-games", said["unchecked"][0]["fix"])
+        _, _, err = self.bench("register", "pixel-games", "--origin", ORIGIN, "--tool", "box.py")
+        self.assertIn("Not registered.", err)
+
+    def test_a_taken_name_writes_no_launcher(self):
+        store.write_json("projects", None, {"pixel-games": "/tmp/somewhere"})
+        self.assertEqual(self.register()[0], 2)
+        self.assertFalse(store.place("launcher").exists())
+
+    def test_a_maker_that_is_no_text_shows_as_spark_s_own_and_no_crash(self):
+        self.deploys(MAC_A, [dict(entry("walk4", "2026-11-17T08:04:00+01:00"), made_by=[1]),
+                             dict(entry("walk4", "2026-11-18T08:04:00+01:00"), made_by={"a": 1})])
+        code, said = self.envelope("show")
+        self.assertEqual((code, said["data"]["boards"][0]["deploys_from"]),
+                         (0, [{"project": "walk4", "made_by": None, "deploys": 2, "last": "2026-11-18T08:04:00+01:00"}]))
+
+    def test_a_board_record_that_is_a_folder_is_refused_and_no_crash(self):
+        self.register()
+        DeployRecordStore().find_path(MAC_A).mkdir(parents=True)
+        code, said = self.envelope("record", "pixel-games")
+        self.assertEqual((code, [item["code"] for item in said["unchecked"]]), (2, ["store_problem"]))
+        self.assertIn("is not a board record", said["unchecked"][0]["sentence"])
+        self.assertTrue(DeployRecordStore().find_path(MAC_A).is_dir())
+
+    def test_spark_s_own_deploy_with_no_board_writes_none_as_on_main(self):
+        self.deploys(MAC_A, [entry("walk4", "2026-11-17T08:04:00+01:00")], board="firebeetle2-esp32s3")
+        facts = {"mac": MAC_A, "project": "blink", "image_sha256": "1" * 64, "deployed": "2026-11-18T09:15:42+01:00",
+                 "simulation": "passed", "board": None}
+        record = json.loads(DeployRecordStore().write_deploy(facts, "ready seen", "typed by a test").read_text())
+        self.assertEqual((record["board"], len(record["deploys"])), (None, 2))
+
+    def test_the_maker_lines_say_the_time_in_the_machine_s_zone(self):
+        last = LastDeploy(outcomes.RECORDED, "pixel-games", "ready not read", "2026-11-18T20:40:17+00:00", made_by="box.py")
+        self.assertIn("box.py and not by spark, 2026-11-18T21:40:17+01:00 (its store", board_look.say_last_deploy(last))
+        self.assertIn("here, 2026-11-18T21:40:17+01:00, made by", deploy_gate.say_last_deploy_in_question(last))
+
+
+class TheStoreFixRoundTest(StoreCase):
+    def test_a_registration_keeps_the_other_names(self):
+        RegisteredProjectStore().register("pixel-games", ORIGIN, "box.py", REGISTERED_AT)
+        RegisteredProjectStore().register("rc-car", OTHER_ORIGIN, "flash.sh", REGISTERED_AT)
+        self.assertEqual([RegisteredProjectStore().read(name).tool for name in ("pixel-games", "rc-car")], ["box.py", "flash.sh"])
+
+    def test_a_registrations_file_that_cannot_be_read_or_is_a_folder_is_a_store_error(self):
+        path = store.place("registered-projects")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}")
+        path.chmod(0)
+        self.addCleanup(path.chmod, 0o600)
+        with self.assertRaises(store.StoreError) as refused:
+            RegisteredProjectStore().read("pixel-games")
+        self.assertEqual(refused.exception.code, "file_refused")
+        path.chmod(0o600)
+        path.unlink()
+        path.mkdir()
+        with self.assertRaises(store.StoreError):
+            RegisteredProjectStore().read("pixel-games")
+
+    def test_a_projects_list_that_cannot_be_read_is_a_store_error(self):
+        store.write_json("projects", None, {})
+        store.place("projects").chmod(0)
+        self.addCleanup(store.place("projects").chmod, 0o600)
+        with self.assertRaises(store.StoreError) as refused:
+            store.projects()
+        self.assertEqual(refused.exception.code, "file_refused")
+
+    def test_register_holds_the_store_s_lock_while_it_reads_and_writes(self):
+        import threading
+        held, release = threading.Event(), threading.Event()
+
+        def hold():
+            with store.locked():
+                held.set()
+                release.wait(10)
+        holder = threading.Thread(target=hold)
+        holder.start()
+        held.wait(10)
+        writer = threading.Thread(target=RegisteredProjectStore().register, args=("pixel-games", ORIGIN, "box.py", REGISTERED_AT))
+        writer.start()
+        writer.join(0.5)
+        written_while_held = store.place("registered-projects").exists()
+        release.set()
+        holder.join(10)
+        writer.join(10)
+        self.assertEqual((written_while_held, store.place("registered-projects").exists()), (False, True))
+
+
+class TheLauncherFixRoundTest(StoreCase):
+    def run_launcher(self, *argv, env=None):
+        env = env or golden_bench.child_env(self.home, "s3-flash-id-16mb.txt", "mpremote-devs-made-up-mac.txt")
+        return subprocess.run([sys.executable, str(store.place("launcher")), *argv], cwd="/", env=env, stdin=subprocess.DEVNULL,
+                              capture_output=True, text=True, timeout=golden_bench.RUN_TIMEOUT_S)
+
+    def test_a_caller_whose_environment_names_another_store_still_records_in_the_launcher_s(self):
+        RegisteredProjectStore().register("pixel-games", ORIGIN, "box.py", REGISTERED_AT)
+        launcher.write_launcher()
+        other = Path(tempfile.mkdtemp())
+        env = golden_bench.child_env(other, "s3-flash-id-16mb.txt", "mpremote-devs-made-up-mac.txt")
+        env["XDG_DATA_HOME"] = str(other)
+        done = self.run_launcher("record", "pixel-games", "--json", env=env)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(len(DeployRecordStore().read_deploys(MAC_A).entries), 1)
+        self.assertEqual(list(other.iterdir()), [])
+
+    def test_the_launcher_runs_the_python_it_was_given_and_returns_its_exit_code(self):
+        wrapper = Path(tempfile.mkdtemp()) / "python"
+        wrapper.write_text("#!/bin/sh\necho ran by the wrapper: \"$2\"\nexit 7\n")
+        wrapper.chmod(0o700)
+        launcher.write_launcher(wrapper)
+        done = self.run_launcher("show", "--json")
+        self.assertEqual((done.returncode, done.stdout), (7, "ran by the wrapper: show\n"))
+
+    def test_the_default_launcher_runs_this_python(self):
+        launcher.write_launcher()
+        site = Path(tempfile.mkdtemp())
+        (site / "sitecustomize.py").write_text("import sys\nsys.stderr.write('python: %s\\n' % sys.executable)\n")
+        env = golden_bench.child_env(self.home, "s3-flash-id-16mb.txt", "mpremote-devs-made-up-mac.txt")
+        env["PYTHONPATH"] = str(site) + ":" + env["PYTHONPATH"]
+        done = self.run_launcher("show", "--json", env=env)
+        said = [line for line in done.stderr.splitlines() if line.startswith("python: ")]
+        self.assertEqual(said, ["python: %s" % sys.executable] * 2, done.stderr)
+
+    def test_a_store_path_with_a_space_and_a_quote_runs(self):
+        home = Path(tempfile.mkdtemp()) / "a store's \"place\""
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            RegisteredProjectStore().register("pixel-games", ORIGIN, "box.py", REGISTERED_AT)
+            path = launcher.write_launcher()
+        env = golden_bench.child_env(Path(tempfile.mkdtemp()), "s3-flash-id-16mb.txt", "mpremote-devs-made-up-mac.txt")
+        done = subprocess.run([sys.executable, str(path), "record", "pixel-games", "--json"], cwd="/", env=env,
+                              stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=golden_bench.RUN_TIMEOUT_S)
+        self.assertEqual((done.returncode, json.loads(done.stdout)["data"]["mac"]), (0, MAC_A), done.stderr)
+        self.assertTrue((home / "boards").is_dir())
 
 
 if __name__ == "__main__":
