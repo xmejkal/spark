@@ -88,7 +88,7 @@ class TheKeptBoardsTest(StoreCase):
 
     def test_a_file_that_cannot_be_used_is_named_and_the_others_still_come_back(self):
         self.keep("/tmp/one", MAC_A, "aabbccddeeff")
-        bad = store.place(known_board.PLACE) / "0123456789abcdef.json"
+        bad = store.place("known-boards") / "0123456789abcdef.json"
         bad.write_text("{not json")
         kept = known_board.KnownBoardStore().read_all()
         self.assertEqual(([known.mac for known in kept.records], kept.unreadable), ([MAC_A], [bad]))
@@ -98,7 +98,7 @@ class TheKeptBoardsTest(StoreCase):
         known_board.KnownBoardStore.find_path("/tmp/one").write_text('{"mac": 1}')
         with self.assertRaises(known_board.SparkError) as refused:
             known_board.KnownBoardStore().read("/tmp/one")
-        self.assertEqual(refused.exception.code, board_codes.KNOWN_BOARD_UNREADABLE)
+        self.assertEqual(refused.exception.code, "known_board_unreadable")
 
 
 class TheDeploysTest(StoreCase):
@@ -135,13 +135,12 @@ class TheDeepGrantFileTest(StoreCase):
         (place / (board_grant.GrantStore.key(MAC_A) + ".json")).write_text("[" * 100000 + "]" * 100000)
         with self.assertRaises(board_grant.GrantRefusedError) as refused:
             board_grant.GrantStore().find(MAC_A)
-        self.assertEqual(refused.exception.why, board_grant.WHY_NOT_A_GRANT)
+        self.assertEqual(refused.exception.why, "not a grant")
 
 
 class TheNewCodeTest(unittest.TestCase):
     def test_cannot_tell_board_has_its_own_sentence(self):
-        self.assertEqual(board_codes.CANNOT_TELL_BOARD, "cannot_tell_board")
-        self.assertIn("USB serial", board_codes.CODES[board_codes.CANNOT_TELL_BOARD])
+        self.assertIn("USB serial", board_codes.CODES["cannot_tell_board"])
 
 
 if __name__ == "__main__":
