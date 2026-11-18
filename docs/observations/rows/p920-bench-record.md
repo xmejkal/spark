@@ -19,4 +19,4 @@ acted, raised and rejected findings only (rules.md). 2026-11-18.
 | 11 | exit 1 for a refused name | the plan council | rejected | dropped because a refusal is a could-not-run with its code, as every store refusal is |
 | 12 | the prefix "spark's last deploy here:" contradicts "not by spark" | the refuter (REF-7) | rejected | dropped because the plan's round 2 chose one prefix for every state |
 | 13 | a 200 character name registers | the refuter | rejected | dropped because the name is a JSON key, and no file is named by it |
-| 14 | show's `last` date is the stored text's first ten characters, not the machine's zone | the refuter | raised | a card, filed by the coordinator: P923, to be filed |
+| 14 | show's `last` date is the stored text's first ten characters, not the machine's zone | the refuter | raised | a card: P923 [#1307](https://github.com/xmejkal/spark/issues/1307) |
