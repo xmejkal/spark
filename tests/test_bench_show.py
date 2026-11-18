@@ -1,10 +1,13 @@
 """P919 (#1301): bench.py show lists each board on USB with its deploys, its kept projects and its grants, and opens no port.
 The stores' new reads first, then the flow and the Operation."""
 
+import contextlib
 import datetime
+import io
 import json
 import os
 import sys
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,7 +20,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_codes  # noqa: E402
+import bench  # noqa: E402
 from spark.bench import bench_service  # noqa: E402
+from spark.bench import show_bench  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.bench import known_board  # noqa: E402
@@ -25,7 +30,9 @@ from spark.bench.board_look import Port  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.records.deploy_record_store import DeployRecordStore  # noqa: E402
-from fakes import FakePortFinder  # noqa: E402
+from spark.core.cli import run_operation  # noqa: E402
+from fakes import FakeClock, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld, FakePortFinder, pin_time_zone  # noqa: E402
+from test_deploy import found  # noqa: E402
 
 #: Invented MACs, never a real board's: board A and board B.
 MAC_A, MAC_B = "aa:bb:cc:dd:ee:ff", "aa:bb:cc:dd:12:34"
@@ -293,6 +300,129 @@ class TheBenchServiceTest(ServiceCase):
     def test_times_with_and_without_a_zone_under_one_name_give_the_last_entry_as_stored(self):
         self.deploys(MAC_A, [entry("walk4", "2026-11-17T08:04:00+01:00"), entry("walk4", "2026-11-10T09:00:00")])
         self.assertEqual(self.one(S3).to_dict()["deploys_from"], [{"project": "walk4", "deploys": 2, "last": "2026-11-10T09:00:00"}])
+
+
+def devs_of(*rows):
+    """mpremote devs' text for these Ports."""
+    return "".join("%s %s %s %s\n" % (row.device, row.serial, row.usb, row.product) for row in rows)
+
+
+class ShowCase(ServiceCase):
+    """bench.py on a fake mpremote: `self.devs` is what `devs` lists, and each command is kept in `self.ran`."""
+
+    def setUp(self):
+        super().setUp()
+        self.devs, self.ran = devs_of(S3), []
+        pin_time_zone(self)
+
+    def bench(self, *argv, find_tool=found):
+        """(exit code, stdout, stderr) of bench.py with `argv`."""
+        def run(command, **kwargs):
+            self.ran.append(command)
+            return subprocess.CompletedProcess(command, 0, self.devs, "")
+        out, err = io.StringIO(), io.StringIO()
+        outside = FakeOutsideWorld(run=run, find_tool=find_tool, clock=FakeClock(NOW))
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = bench.main(list(argv), outside=outside)
+        return code, out.getvalue(), err.getvalue()
+
+    def envelope(self, *argv):
+        code, out, _ = self.bench(*argv, "--json")
+        return code, json.loads(out)
+
+
+class TheShowTest(ShowCase):
+    def test_the_two_lines_that_answer_which_projects_use_the_board_come_first(self):
+        self.deploys(MAC_A, [entry("blink", "2026-11-02T10:00:00+01:00"), entry("walk4", "2026-11-17T08:04:00+01:00")])
+        self.give_grant(MAC_A, "deploy")
+        code, out, _ = self.bench("show")
+        self.assertEqual(code, 0)
+        self.assertEqual(out.splitlines(), [
+            "1 board on USB. No port was opened.",
+            "",
+            "/dev/cu.usbmodem1101   firebeetle2-esp32s3, MAC ends ee:ff",
+            "  deploys from  walk4 (1, last 2026-11-17), blink (1, last 2026-11-02)",
+            "  spark's last deploy here: walk4, ready seen, 2026-11-17T08:04:00+01:00 (its store record, not read from the board)",
+            "  kept for      no project (look.py keeps a board for a project)",
+            "  grants        deploy: ended 2026-11-18T12:30:00+01:00; live: none",
+            'The names after "deploys from" are folder names, as each deploy recorded them.'])
+
+    def test_no_verb_word_shows_too(self):
+        self.assertEqual(self.bench()[:2], self.bench("show")[:2])
+
+    def test_no_board_is_a_complete_answer(self):
+        self.devs = ""
+        code, out, _ = self.bench()
+        self.assertEqual((code, out.splitlines()), (0, ["No board on USB."]))
+        code, said = self.envelope()
+        self.assertEqual((code, said["status"], said["data"], said["unchecked"]), (0, "ok", {"boards": []}, []))
+
+    def test_the_json_keys(self):
+        code, said = self.envelope()
+        self.assertEqual((code, said["tool"], said["op"]), (0, "bench", "show-bench"))
+        self.assertEqual(sorted(said["data"]), ["boards"])
+        self.assertEqual(sorted(said["data"]["boards"][0]), sorted([
+            "device", "also_on", "usb_serial", "usb_id", "product", "mac", "mac_from", "board", "kept_for", "last_deploy",
+            "deploys_from", "grants", "unchecked"]))
+        self.assertEqual(sorted(said["data"]["boards"][0]["last_deploy"]),
+                         ["deployed", "micropython_banner", "project", "state", "verdict", "why"])
+
+    def test_a_board_spark_cannot_tell_exits_2_with_its_data_and_one_item_per_part(self):
+        self.devs = devs_of(NO_SERIAL)
+        code, out, _ = self.bench()
+        self.assertEqual(code, 2)
+        self.assertIn("/dev/cu.usbserial-1410   USB Serial", out.splitlines())
+        self.assertIn("  deploys from  not checked: spark cannot tell this board by its USB serial", out.splitlines())
+        self.assertIn("  kept for      no project (look.py keeps a board for a project)", out.splitlines())
+        code, said = self.envelope()
+        self.assertEqual((code, said["status"], said["data"]["boards"][0]["mac"]), (2, "could-not-run", None))
+        self.assertEqual([(item["subject"], item["code"]) for item in said["unchecked"]], [(NO_SERIAL.device, "cannot_tell_board")] * 3)
+        self.assertIn("look.py", said["unchecked"][0]["fix"])
+
+    def test_a_list_that_fails_exits_2_and_boards_is_null_never_empty(self):
+        def failing(command, **kwargs):
+            self.ran.append(command)
+            return subprocess.CompletedProcess(command, 1, "", "no mpremote here")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = bench.main(["--json"], outside=FakeOutsideWorld(run=failing, find_tool=found, clock=FakeClock(NOW)))
+        said = json.loads(out.getvalue())
+        self.assertEqual((code, said["data"], [item["code"] for item in said["unchecked"]]), (2, {"boards": None}, ["list_failed"]))
+
+    def test_a_kept_folder_under_home_is_masked_in_the_text_and_the_json(self):
+        folder = Path.home() / "p919-a-project-of-the-person"
+        self.keep(folder, MAC_A, "aabbccddeeff")
+        code, out, _ = self.bench()
+        self.assertEqual(code, 0)
+        self.assertIn("  kept for      ~/p919-a-project-of-the-person (since 2026-11-17)", out.splitlines())
+        code, said = self.envelope()
+        self.assertEqual(said["data"]["boards"][0]["kept_for"], [{"project": "~/p919-a-project-of-the-person", "at": "2026-11-17T18:00:00+01:00"}])
+        self.assertNotIn(str(Path.home()), out + json.dumps(said))
+
+    def test_it_runs_from_a_folder_that_is_no_spark_project(self):
+        empty = Path(tempfile.mkdtemp())
+        code, said = self.envelope("--project", str(empty))
+        self.assertEqual((code, len(said["data"]["boards"])), (0, 1))
+
+    def test_it_runs_mpremote_devs_only(self):
+        self.bench("show", "--json")
+        self.assertEqual([argv[-1] for argv in self.ran], ["devs"])
+
+
+class NoPortIsOpenedTest(StoreCase):
+    def test_the_platform_gives_only_the_port_finder_and_no_crash_hides_a_refusal(self):
+        platform = FakeFirmwarePlatform(port_finder=FakePortFinder([S3]))  # any other part fails the test
+        records = FakeDeployRecordStore()
+        operation = show_bench.ShowBench(records=records, platform_for=lambda project, find_tool: platform)
+        result = run_operation(operation, {"project": Path(".")}, FakeOutsideWorld(clock=FakeClock(NOW)))
+        self.assertEqual([found.code for found in result.findings], [])
+        self.assertEqual((records.asked, records.asked_deploys), ([MAC_A], [MAC_A]))
+
+    def test_it_builds_with_no_argument_and_the_bench_lists_it(self):
+        from spark import bench as bench_area
+        self.assertIs(bench_area.OPERATIONS["show-bench"], show_bench.ShowBench)
+        self.assertIsInstance(show_bench.ShowBench(), show_bench.ShowBench)
+        self.assertIs(bench.VERBS["show"], show_bench.ShowBench)
 
 
 if __name__ == "__main__":
