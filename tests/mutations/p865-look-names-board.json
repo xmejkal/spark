@@ -170,8 +170,8 @@
  {
   "file": "scripts/spark/records/store.py",
   "name": "T9: the kept boards are not private",
-  "find": "\"grants\", \"known-boards\")",
-  "replace": "\"grants\")"
+  "find": "\"boards\", \"grants\", \"known-boards\",",
+  "replace": "\"boards\", \"grants\","
  },
  {
   "file": "scripts/spark/bench/known_board.py",

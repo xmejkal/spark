@@ -1,0 +1,146 @@
+[
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a name that is not plain is registered",
+  "find": "        if not store.PLAIN.fullmatch(name):",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a name that another origin holds is registered again",
+  "find": "            if (kept and kept[\"origin\"] != origin) or name in store.projects():",
+  "replace": "            if name in store.projects():"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a name on the projects list is registered",
+  "find": "            if (kept and kept[\"origin\"] != origin) or name in store.projects():",
+  "replace": "            if kept and kept[\"origin\"] != origin:"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "the same name and origin with another tool keeps the old tool",
+  "find": "            if kept and kept[\"tool\"] == tool:",
+  "replace": "            if kept:"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "the same registration again writes the file again and says it changed",
+  "find": "            if kept and kept[\"tool\"] == tool:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a file of registrations that is no object is read as one",
+  "find": "        if not isinstance(listed, dict) or not all(isinstance(entry, dict) and all(isinstance(entry.get(field), str) for field in FIELDS)",
+  "replace": "        if not isinstance(listed, dict) or not all(isinstance(entry, dict) for entry in listed.values()) or not all(True"
+ },
+ {
+  "file": "scripts/spark/bench/register_project.py",
+  "name": "an unchanged registration leaves a gone launcher gone",
+  "find": "            path = self.write_launcher()",
+  "replace": "            path = self.write_launcher() if changed else store.place(launcher.PLACE)"
+ },
+ {
+  "file": "scripts/spark/bench/register_project.py",
+  "name": "a store that refuses a registration is a crash",
+  "find": "        except store.StoreError as cannot:",
+  "replace": "        except KeyError as cannot:"
+ },
+ {
+  "file": "scripts/spark/bench/record_deploy.py",
+  "name": "a name nobody registered is recorded",
+  "find": "            if registered is None:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/spark/bench/record_deploy.py",
+  "name": "a bridge's serial is taken as a MAC, so a deploy can land in another board's record",
+  "find": "            mac = known_board.mac_part_of(row)",
+  "replace": "            mac = known_board.mac_part_of(row) or known_board.comparable_key(row.serial)"
+ },
+ {
+  "file": "scripts/spark/bench/record_deploy.py",
+  "name": "--port is not passed on, so two boards stop the record",
+  "find": "            row = finder.require_one_board(\"%s record %s\" % (SCRIPT, name), port)",
+  "replace": "            row = finder.require_one_board(\"%s record %s\" % (SCRIPT, name))"
+ },
+ {
+  "file": "scripts/spark/bench/record_deploy.py",
+  "name": "a stop of the list or the store is a crash",
+  "find": "        except (tool_finder.ToolError, board_look.LookStopError, store.StoreError) as cannot:",
+  "replace": "        except (tool_finder.ToolError, board_look.LookStopError) as cannot:"
+ },
+ {
+  "file": "scripts/spark/bench/record_deploy.py",
+  "name": "a stop that names no fix names no next command",
+  "find": "        return stopped._replace(findings=[found._replace(fix=found.fix or fix) for found in stopped.findings],",
+  "replace": "        return stopped._replace(findings=list(stopped.findings),"
+ },
+ {
+  "file": "scripts/spark/bench/record_deploy.py",
+  "name": "a stop does not say that nothing was written",
+  "find": "                                diagnostics=list(stopped.diagnostics) + [\"%s: %s %s\" % (SCRIPT, NOTHING_WRITTEN, fix)])",
+  "replace": "                                diagnostics=list(stopped.diagnostics))"
+ },
+ {
+  "file": "scripts/spark/records/deploy_record_store.py",
+  "name": "a recorded deploy with no board drops the record's board",
+  "find": "            if board is not None:",
+  "replace": "            if True:"
+ },
+ {
+  "file": "scripts/spark/records/deploy_record_store.py",
+  "name": "the last deploy never says who made it",
+  "find": "                          made_by=made_by if isinstance(made_by, str) and made_by.strip() else None)",
+  "replace": "                          made_by=None)"
+ },
+ {
+  "file": "scripts/spark/records/deploy_record_store.py",
+  "name": "a maker that is no text is kept",
+  "find": "                          made_by=made_by if isinstance(made_by, str) and made_by.strip() else None)",
+  "replace": "                          made_by=made_by)"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "the launcher is written readable by others",
+  "find": "    return write_file(target, text, name in PRIVATE)",
+  "replace": "    return write_file(target, text)"
+ },
+ {
+  "file": "scripts/spark/records/launcher.py",
+  "name": "a launcher whose bench.py is gone runs it anyway",
+  "find": "if not (os.access(PYTHON, os.X_OK) and os.path.isfile(SCRIPT)):",
+  "replace": "if not os.access(PYTHON, os.X_OK):"
+ },
+ {
+  "file": "scripts/spark/records/launcher.py",
+  "name": "a launcher whose Python is gone runs it anyway",
+  "find": "if not (os.access(PYTHON, os.X_OK) and os.path.isfile(SCRIPT)):",
+  "replace": "if not os.path.isfile(SCRIPT):"
+ },
+ {
+  "file": "scripts/spark/bench/bench_service.py",
+  "name": "a folder name and a registered name of one name merge into one group",
+  "find": "    return entry[\"project\"], entry.get(\"made_by\")",
+  "replace": "    return entry[\"project\"], None"
+ },
+ {
+  "file": "scripts/spark/bench/board_look.py",
+  "name": "the look says a recorded deploy in spark's words, with its verdict",
+  "find": "    if last.state == outcomes.RECORDED and last.made_by:  # P920: a registered project recorded it, and spark read nothing",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_gate.py",
+  "name": "the deploy question says a recorded deploy in spark's words",
+  "find": "    if last.state == outcomes.RECORDED and last.made_by:  # P920: a registered project recorded it",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/bench/show_bench.py",
+  "name": "the view leaves out the tool of a registered name",
+  "find": "\", by %s\" % each[\"made_by\"] if each[\"made_by\"] else \"\"",
+  "replace": "\"\""
+ }
+]
