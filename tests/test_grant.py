@@ -167,7 +167,9 @@ class IssueTest(GrantCase):
         # P499 (#684): a SPARK_HOME that names a file; the patched environment is restored with the case
         (self.home / "afile").write_text("")
         os.environ["SPARK_HOME"] = str(self.home / "afile")
-        code, _, err = self.grant("--minutes", "30", consent=FakeConsent(True))
+        # P892: such a store keeps no board, so the grant reaches the store's write only after a yes for a board with no serial
+        self.devs = "/dev/cu.usbserial-1410 None 1a86:7523 USB Serial\n"
+        code, _, err = self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True), replies=YesToAll())
         self.assertEqual(code, 2)
         self.assertIn("grant.py: cannot make", err)
         self.assertIn("point SPARK_HOME at a folder you can write", err)
@@ -493,6 +495,7 @@ class GuardedPrintsTest(GrantCase):
     def test_the_rm_line_shows_a_store_path_with_a_bidi_character_guarded(self):
         self.home = self.home / "a\u202eb"
         with mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)}):
+            know_the_board(Path("."), MAC, known_board.comparable_key(MAC))  # P892: this store keeps the board too
             _, out, _ = self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True))
         self.assertIn("rm ", out)
         self.assertIn("a?b", out)
@@ -561,6 +564,7 @@ class GuardedPrintsTest(GrantCase):
     def test_a_newline_in_the_store_path_cannot_fake_a_line_of_the_rm_line(self):
         self.home = self.home / "a\nGRANTED: board ok"
         with mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)}):
+            know_the_board(Path("."), MAC, known_board.comparable_key(MAC))  # P892: this store keeps the board too
             _, out, _ = self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True))
         self.assertIn("rm ", out)
         self.assertIn("a?GRANTED: board ok", out)
@@ -675,8 +679,11 @@ class GrantModesTest(GrantCase):
         self.assertEqual([(finding.severity, finding.code) for finding in self.issued().findings], [("problems", "serial_not_mac")])
         (self.home / "afile").write_text("")
         os.environ["SPARK_HOME"] = str(self.home / "afile")
-        self.devs = data("mpremote-devs-one.txt")
-        self.assertEqual([(finding.severity, finding.code) for finding in self.issued().findings], [("could-not-run", "store_problem")])
+        # P892: such a store keeps no board, so the issue reaches the store's write only after a yes for a board with no serial
+        outside = FakeOutsideWorld(run=self.run_tool, find_tool=found, clock=self.clock, make_consent=lambda line: FakeConsent(True),
+                                   replies=YesToAll())
+        result = IssueGrant().run(minutes=30, scope="deploy", project=Path("."), port=None, outside=outside)
+        self.assertEqual([(finding.severity, finding.code) for finding in result.findings], [("could-not-run", "store_problem")])
 
     def test_an_issue_without_the_asks_effect_is_refused_before_the_board_is_touched(self):
         from spark.core.operation import BOARD, READS, RUNS
