@@ -102,6 +102,30 @@
   "replace": "answer_fix=RUN_ANSWER_FIX % (\"\", \"reach.py\"), key_word=READ_WORD,"
  },
  {
+  "file": "scripts/spark/bench/run_live_code.py",
+  "name": "P892: live's stop of the board question says no pin facts, though the pin check passed",
+  "find": "            facts = board_live.pin_facts(code, service.board)",
+  "replace": "            facts = {}"
+ },
+ {
+  "file": "scripts/spark/bench/run_live_code.py",
+  "name": "P892: live's stop for a kept record that cannot be read says no pin facts, though the pin check passed",
+  "find": "port=port, **board_live.pin_facts(code, service.board)))",
+  "replace": "port=port))"
+ },
+ {
+  "file": "scripts/spark/bench/stops.py",
+  "name": "P892: the paste line of an open question is no PastedLine, so Privacy can mask it",
+  "find": "PastedLine(fix) if found.code == codes.NEEDS_REPLY else fix",
+  "replace": "fix"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: live's answer fix does not ask to show the code that runs",
+  "find": "answer_fix=RUN_ANSWER_FIX % (SHOW_THE_CODE, \"live.py\")",
+  "replace": "answer_fix=RUN_ANSWER_FIX % (\"\", \"live.py\")"
+ },
+ {
   "file": "scripts/spark/bench/reach_board.py",
   "name": "P892: reach prints its --json line for every stop of the board question",
   "find": "dict(stopped.data, reached=False) if stopped.code == codes.NEEDS_REPLY else None)",

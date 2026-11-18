@@ -25,13 +25,14 @@ keeps for the project, known by its USB serial, it asks nothing. Another board, 
 other_board, and a board with a USB serial in a project that keeps no board stops with no_known_board. Both name
 look.py, and the board did not restart. A board that spark cannot tell by its USB serial is asked on every run, in your
 terminal, or by --replies with your own file that holds {"replies": {"grant.read_board.<id>": true}}: a board with no
-serial, and, while the kept board's serial was set by a firmware, a board on Espressif's own USB whose serial does not
-start with the kept MAC. For a live grant, a board whose serial cannot be its MAC (no serial, a bridge's serial, or a
-serial that a firmware set) is refused first with serial_not_mac, exit 1, with no question and no read: only
---scope deploy asks for it. A yes there lets grant.py read the board, and the grant still asks its own yes. After the
-read, a MAC that is not the kept board's stops with other_board before that yes, and no grant is kept. With no kept
-board and a board with no USB serial, a yes and a read give a deploy grant for a board that no project keeps. A --port
-that the list does not hold stops with port_not_listed, and a /dev/tty. port is its /dev/cu. port.
+serial, and, while the kept board's record trusts no USB serial (it showed none, or one that its firmware set), a board
+on Espressif's own USB whose serial does not start with the kept MAC. For a live grant, a board whose serial cannot be
+its MAC (no serial, a bridge's serial, or a serial that a firmware set) is refused first with serial_not_mac, exit 1,
+with no question and no read: only --scope deploy asks for it. A yes there lets grant.py read the board, and the grant
+still asks its own yes. After the read, a MAC that is not the kept board's stops with other_board before that yes, and
+no grant is kept. With no kept board and a board with no USB serial, a yes and a read give a deploy grant for a board
+that no project keeps. A --port that the list does not hold stops with port_not_listed, and a /dev/tty. port is its
+/dev/cu. port.
 
 There are two no's. A no to the board question is answered_no with exit 2: the board was not read. A no to the grant's
 own question, after the read, is answered_no with exit 1: the board did restart, and no grant is kept.

@@ -99,8 +99,10 @@ class RunLiveCode(Operation):
         except known_board.BoardQuestionError as stopped:  # P892: after the pin check; the line names the question, the product and the kept board
             facts = board_live.pin_facts(code, service.board)
             return stops.question_result(stopped, SCRIPT, dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(stopped), **facts, **stopped.data))
-        except (tool_finder.ToolError, board_look.LookStopError, board_records.BoardError,
-                BrokenRecordError, SparkError) as cannot:  # SparkError: the kept record or the replies file (P892)
+        except SparkError as unreadable:  # P892: the kept record or the replies file, read in the board question after the pin check
+            return stops.stop_result(unreadable, SCRIPT, project, port)._replace(
+                data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(unreadable), port=port, **board_live.pin_facts(code, service.board)))
+        except (tool_finder.ToolError, board_look.LookStopError, board_records.BoardError, BrokenRecordError) as cannot:
             return stops.stop_result(cannot, SCRIPT, project, port)._replace(
                 data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(cannot), port=port))
         places = board_records.ButtonPlaces.of_project(project)

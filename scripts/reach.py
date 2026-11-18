@@ -23,10 +23,11 @@ serial, it asks nothing. Another board, told apart by its USB serial, stops with
 serial in a project that keeps no board stops with no_known_board. Both name look.py, and nothing ran on the board. A
 board that spark cannot tell by its USB serial is asked on every run, in your terminal, or by --replies with your own
 file that holds {"replies": {"reach.run_on_board.<id>": true}}: a board with no serial, a --port that the list does
-not hold, and, while the kept board's serial was set by a firmware, a board on Espressif's own USB whose serial does
-not start with the kept MAC. One yes or one no is for one run. A no is answered_no, and nothing ran on the board. With
---json an open question prints one line: reached false, port, product, open and known_board. Every other stop prints
-nothing on stdout: then the last line on stderr is the stop's fix, after its sentence.
+not hold, and, while the kept board's record trusts no USB serial (it showed none, or one that its firmware set), a
+board on Espressif's own USB whose serial does not start with the kept MAC. One yes or one no is for one run. A no is
+answered_no, and nothing ran on the board. With --json an open question prints one line: reached false, port,
+product, open and known_board. Every other stop prints nothing on stdout. For other_board, no_known_board and
+answered_no, the last line on stderr is the stop's fix, after its sentence.
 
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,

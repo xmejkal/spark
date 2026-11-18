@@ -36,6 +36,7 @@ from spark.bench.issue_grant import IssueGrant  # noqa: E402
 from spark.bench.reach_board import ReachBoard  # noqa: E402
 from spark.bench.run_live_code import RunLiveCode  # noqa: E402
 from spark.records import board_records  # noqa: E402
+from spark.core.privacy import PastedLine  # noqa: E402
 from fakes import FakeClock, FakeConsent, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform, know_the_board  # noqa: E402
 from test_board_look import C6_MAC, C6_PORT, data, done, found  # noqa: E402
 from test_deploy_known_board import RecordingReplies  # noqa: E402
@@ -347,6 +348,8 @@ class TheStopsTest(BoardQuestionCase):
                 self.assertEqual(code, 2)
                 self.assertIn("spark's record of this project's board cannot be read", err)
                 self.assertNotIn("Traceback", err)
+        line = json.loads(self.main(LIVE, "--json")[1])  # the record is read after the pin check passed
+        self.assertEqual((line["answer"], line["pins_checked"], line["gpio_numbers_in_code"]), ("could-not-run", True, [1]))
 
     def test_15_each_touchs_question_no_and_reasons_hold_no_words_of_another_touch(self):
         kept = known_board.KnownBoard("/p", C6_MAC, None, "xiao-esp32-c6", "a test", "2026-11-17T18:00:00+01:00")
@@ -434,10 +437,19 @@ class TheStopsTest(BoardQuestionCase):
         self.assertIn("show the person the code that runs", result.findings[-1].fix)
         self.assertEqual(self.codes(self.result(REACH)), ["needs_reply"])  # another board, and spark cannot tell it
 
+    def test_9_live_asks_for_its_granted_board_when_the_kept_board_showed_no_serial(self):
+        self.keep("aa:bb:cc:dd:ee:01", None)  # a CH340 board kept by a look: it showed no USB serial, so its record trusts none
+        self.ran = []
+        line = json.loads(self.main(LIVE, "--json")[1])  # on USB: the C6, its MAC as its serial, with a live grant
+        self.assertEqual((line["known_board"]["state"], len(line["open"]), self.touched()), ("cannot_tell", 1, []))
+        self.assertEqual(self.codes(self.result(REACH)), ["needs_reply"])
+
     def test_16_the_paste_line_on_stderr_shows_the_key_whole(self):
         self.cannot_tell(REACH)
         _, _, err = self.main(REACH)
         self.assertIn('{"replies": {"%s": true}}' % self.replies.asked[-1].key, err)
+        pasted = [line for line in self.result(REACH).diagnostics if isinstance(line, PastedLine)]  # chosen by the Finding's code
+        self.assertEqual(pasted, ['reach.py: ' + known_board.REACH.answer_fix % self.replies.asked[-1].key])
 
     def test_19_the_deploys_finding_after_a_read_of_another_board_is_as_before(self):
         known = known_board.KnownBoard("/p", "aa:bb:cc:dd:ee:ff", None, "xiao-esp32-c6", "a test", "2026-11-17T18:00:00+01:00")
