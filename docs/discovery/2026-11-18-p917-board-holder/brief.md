@@ -8,8 +8,8 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
 **Ready for:** collecting evidence <!-- REQUIRED:ready -->
-**Stands on:** 6 H, — of which would change the decision (the PO rates them at Q1) <!-- REQUIRED:debt -->
-**Decision needed:** Q1, the importance of the six assumptions and the pass lines <!-- REQUIRED:decision-needed -->
+**Stands on:** 6 H, 3 of which would change the decision (A1, A5 and A6, rated high in D5) <!-- REQUIRED:debt -->
+**Decision needed:** Q2, whether the board on USB is the game box and which projects put firmware on it <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked), the PO, 2026-11-18, on the card (https://github.com/xmejkal/spark/issues/1298): "Oh, and that might actually also change something in the Spark store. Maybe that's an interesting functionality for us that would just help us out and might just be good to leave in Spark in general anyway afterwards." And: "Well, at least to see how it's in the projects. Maybe this session is working on one project, so it uses the connected board for that project to build that thing on it. Or the other session uses it for another, so it always has to build the other project." <!-- REQUIRED:request -->
@@ -81,8 +81,8 @@ and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether 
 - Proposed no-gos and rabbit holes (proposals until the decider confirms): no lock on the serial port itself (C16). No session as the key of a record until someone checks whether its id differs between sessions (★C14 (session ids not compared)). No change inside pixel-games' tools by a spark card. No deletion of an ended record. Rabbit hole: a board that spark cannot tell with no touch (★C12 (some serials give cannot tell)). · H the facilitator's proposals · caveat: none of them is confirmed <!-- REQUIRED:nogos -->
 
 ## Riskiest assumption and its test
-- Riskiest: A6, the pixel-games tool will call a spark command. Every slice after slice 0 that serves the game box needs it, and no evidence exists · proposed — the refuter's opinion, taken up by the facilitator, pending Q1. The PO assistant names A1. A2 is not the riskiest: its evidence already says no (★C3 (one store on one day), C4) <!-- REQUIRED:riskiest -->
-- Test · kind · pass line, dated before any result · proposed | D<n>: for A6, a question to the pixel-games session and the PO: can `box.py` call one spark command with `--json` before a touch, and who owns that change · an account · pass line proposed 2026-11-18: a yes that names the command and the card in pixel-games · proposed — the facilitator's opinion, pending Q1. For A1, a use log of step 2c on #1283 <!-- REQUIRED:test -->
+- Riskiest: A6, the pixel-games tool will call a spark command. Every slice after slice 0 that serves the game box needs it, and no evidence exists · proposed — the refuter's opinion, taken up by the facilitator, and rated high by the PO (D5). The PO assistant names A1, also high (D5). A2 is not the riskiest: its evidence already says no (★C3 (one store on one day), C4) <!-- REQUIRED:riskiest -->
+- Test · kind · pass line, dated before any result · proposed | D<n>: for A6, a question to the pixel-games session and the PO: can `box.py` call one spark command with `--json` before a touch, and who owns that change · an account · pass line proposed 2026-11-18: a yes that names the command and the card in pixel-games · D5. For A1, a use log of step 2c on #1283: every take and every release has its line (D5) <!-- REQUIRED:test -->
 
 ## Questions
 <!-- A queue; the first open question is asked alone. Each: Q<n> · question · decides: … · options · unblocks ·
@@ -90,8 +90,8 @@ opinion (whose) · kind: decision | account (a past-tense question about the dec
 account, n = 1) · status: queued | asked <date> | answered D<n>.
 If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D3 <!-- REQUIRED:q0 -->
-- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: asked 2026-11-18
-- Q2 · Is the FireBeetle 2 that is on USB now the game box, and did both the walks of spark and pixel-games put firmware on it? · decides: whether A5 holds with a dated case (★C24 (only the PO knows whether it is the game box)) · kind: account · status: queued
+- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: answered D5
+- Q2 · Is the FireBeetle 2 that is on USB now the game box, and did both the walks of spark and pixel-games put firmware on it? · decides: whether A5 holds with a dated case (★C24 (only the PO knows whether it is the game box)) · kind: account · status: asked 2026-11-18
 - Q3 · What comes first: the view alone, the view with a registered tool's reports, or the view with a holder record? · decides: the first slice · options: the three in Options · opinion (the facilitator's): the second · kind: decision · status: queued
 - Q4 · Is a holder a project? · decides: the record's key · options: a project, a typed label · opinion (the facilitator's): a project · kind: decision · status: queued
 - Q5 · On another holder's board, does a spark tool only say so, or ask? · decides: whether P892's gate changes · opinion (the PO assistant's): only say so · kind: decision · status: queued
@@ -106,6 +106,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D2 · the pixel-games session answers for its side, and the PO gets one question at a time · the PO · 2026-11-18 · this session's request · confirms: a message to that session, nothing else
 - D3 · the frame is right as proposed: the decision, the start and reach, the scope with tools that are not spark's as readers, both extensions, TRIO and two searches · the PO · 2026-11-18 · this session, his answer to Q0 ("Yes, as proposed") · options considered: one light lens, only spark's own tools, the view only
 - D4 · the record is mostly spark's own, and a tool that registers can read it, use it and share the board too · the PO · 2026-11-18 · this session, verbatim: "mostly just spark, but tools that register can access and use it and share too" · confirms: a direction for the scope. The reply before it listed four waiting items, and which one he answered is not recorded. The facilitator's reading (H): "register" means that a tool that is not spark's makes itself known to the store first, and "use" means that it can take a hold, not only read one. The refuter names two other readings (council/refuter.md:58), so Q6 asks him.
+- D5 · the ratings and the pass lines: A6, A1 and A5 are high, and A2, A3 and A4 are low. A6 passes with a yes that names the command and a card in pixel-games. A1 passes when every take and every release of step 2c has its line on #1283 · the PO · 2026-11-18 · this session, his answer to Q1 ("Yes, as proposed") · options considered: only A6 high, A1 the highest, the facilitator rates them
 - D (standing) · the discovery folder lands by PR · the PO · the extension spark-process, `process.md` · covers: the commits and the PR of this folder
 
 ## Found on the way <!-- CLAIMS -->
