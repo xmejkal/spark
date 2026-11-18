@@ -208,7 +208,7 @@ def differs(known, mac):
 
 
 class KnownBoardResult(namedtuple("KnownBoardResult", "code state known reply question row")):
-    """Value: what the board question let through (P892). `code` None: read the board. Else it is `needs_reply`,
+    """Result: what `KnownBoardService.judge` returns, what the board question let through (P892). `code` None: read the board. Else it is `needs_reply`,
     `answered_no`, `other_board` or `no_known_board`, and the touch stops before any read. `state` is `tell`'s, `known` the
     KnownBoard or None, `reply` the Reply of the yes or None when nobody was asked, `question` the Question asked or None,
     and `row` the listed Port or None."""

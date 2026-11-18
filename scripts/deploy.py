@@ -16,8 +16,9 @@ P215), and reads the board with mpremote (ready_probe.py): each file's sha256, t
 `ready` (the ready contract, commands/build.md). The board's log goes to sim/runs/board/, and the store keeps a record
 of the board by its MAC.
 
-Before the erase, deploy.py looks at the board as look.py does (P219). It refuses a stop, a token that is not this
-board's and this image's, and a deploy with no yes: one typed in the person's own terminal, or the standing yes of a
+Before the erase, deploy.py looks at the board as look.py does (P219). Before that read it asks the board question of
+look.py for a board that spark cannot tell, and stops for another board or a project that keeps no board (P892). It
+refuses a stop, a token that is not this board's and this image's, and a deploy with no yes: one typed in the person's own terminal, or the standing yes of a
 deploy grant (deploy_gate.py, board_grant.py). The chip comes from
 the project's board (requirements.json's `board`), and esptool refuses a board with another chip too.
 When each of the five stages starts (plan, look, gate, flash, verify), deploy.py prints one `why:` line that says why
@@ -63,6 +64,17 @@ starts with SPARK_HOME=<your store> when this run had one, so the new window fin
 grants. With --json, each step in `next` carries the same store as `env` for a caller to set. "Go ahead"
 in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
 
+The board question (P892): the read restarts the board, so before it deploy.py judges the board on USB as look.py does,
+and never keeps or replaces a board. The board that look.py kept for this project is read with no question. Another
+board stops with other_board, and a project with no kept board stops with no_known_board: both before any read, with no
+question, and the next step is look.py. A board that spark cannot tell before a read (no USB serial, a serial that its
+firmware set, a --port that the list does not hold) is asked on every deploy, with --port too: in your terminal, or by
+`true` under its deploy.read_board key in the --replies file. One yes answers one deploy: the deploy sets its deploy. keys
+back to null before it reads. A yes to the look's key does not answer it, and a deploy grant does not answer it either.
+After the read, a MAC that is not the kept board's stops with other_board before the erase's question, whatever the
+reply was. With no terminal and no deploy grant, the run then stops at the erase's yes, and the line to run in your own
+terminal asks the board question once more.
+
 The one other yes is a deploy grant: you ran `grant.py --scope deploy --minutes N` once in your own terminal, for this
 board's MAC. While it lasts, deploy.py takes it as the yes, prints `yes: standing yes typed by ...` and erases with no
 question, but only when the look matched the board record (no warning, no unknown field, no stop) and neither
@@ -95,7 +107,8 @@ with --json prints an envelope (status could-not-run, code bad_argument, exit 2)
 the error on stderr and exits 2.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
-came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.
+came, 2 it could not run, you answered no, the board question waits for a reply (needs_reply), the board is not the
+kept one (other_board) or none is kept (no_known_board), there was no terminal, or ready is unknown, and the sentence says why.
 
 Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)

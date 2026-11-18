@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P892: the deploy skips the board question and reads any board",
+  "find": "            self.judged = self.board_question.judge(self.service.project, self.asked.port, row, self.outside.replies)",
+  "replace": "            self.judged = known_board.KnownBoardResult(None, known_board.SAME, None, None, None, row)"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: the deploy asks for another board instead of sending it to the look",
+  "find": "DEPLOY = Touch(\"deploy\", (CANNOT_TELL,), False,",
+  "replace": "DEPLOY = Touch(\"deploy\", (OTHER, CANNOT_TELL), False,"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: the deploy trusts a named port with no serial and reads it with no question",
+  "find": "DEPLOY = Touch(\"deploy\", (CANNOT_TELL,), False,",
+  "replace": "DEPLOY = Touch(\"deploy\", (CANNOT_TELL,), True,"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P892: the check after the read is gone, so another MAC goes on to the erase",
+  "find": "            if known_board.differs(self.judged.known, look.reading.mac):",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P892: the check after the read honors a yes to a board spark cannot tell",
+  "find": "            if known_board.differs(self.judged.known, look.reading.mac):",
+  "replace": "            if known_board.differs(self.judged.known, look.reading.mac) and self.judged.reply is None:"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: the deploy's key has the look's prefix",
+  "find": "DEPLOY = Touch(\"deploy\",",
+  "replace": "DEPLOY = Touch(\"look\","
+ },
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P892: the deploy does not clear its keys, so one yes answers every later deploy",
+  "find": "                RepliesStore(self.asked.replies).clear(known_board.DEPLOY.prefix)",
+  "replace": "                pass"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "P892: judge asks in a state that is not in the touch's asks",
+  "find": "        if state not in self.touch.asks:",
+  "replace": "        if False:"
+ }
+]

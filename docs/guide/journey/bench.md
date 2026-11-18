@@ -33,7 +33,7 @@ scenario named (`data.unnamed_must` in `--json`). With `--no-simulation` the lim
 
 ### The gate
 
-`deploy.py --token` looks at the board again, then asks the person in their own terminal (or reads their deploy grant) before it erases
+`deploy.py --token` asks the board question for a board that spark cannot tell (P892), looks at the board again, then asks the person in their own terminal (or reads their deploy grant) before it erases
 ([P219](https://github.com/xmejkal/spark/issues/201)). On 2026-10-14 the same XIAO ran the button-and-LED project,
 whose scenario passed in Wokwi. Its board record `xiao-esp32-c6-fresh` then held no flash size (it does now), so the look gave the flash
 as `unknown` and a token. From Claude Code's shell, which has no terminal, deploy.py printed the look and the line to

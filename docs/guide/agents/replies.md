@@ -77,6 +77,28 @@ Two bridge clones with one serial cannot be told apart before a read. The read t
 and the sentence says that the board did restart. `other_board` after a read gives no token and no deploy step. With no MAC read nothing is kept, and a note says so. A kept record
 that cannot be read is `known_board_unreadable`: repair or remove the file that the `fix` names.
 
+## The deploy's question
+
+`deploy.py --token` asks the same board question before its own read, with the deploy's own words
+([P892](https://github.com/xmejkal/spark/issues/1266)). It asks only for a board that spark cannot tell before a read. It never keeps or
+replaces a board: the look does that. A dry run asks nothing and reads no replies file.
+
+| What is on USB | The deploy |
+| --- | --- |
+| the kept board | reads it with no question |
+| another board | stops before the read with `other_board` and asks nothing. The board did not restart. `next[0]` is the look, with `needs_person` |
+| no kept board, and a board with a USB serial | stops before the read with `no_known_board`. `next[0]` is the look, which asks once and keeps the board |
+| a board with no serial, a serial that its firmware set, or a `--port` that the list does not hold | asks on every deploy, with `--port` too |
+| any board whose MAC after the read is not the kept MAC | stops with `other_board` before the erase's question, also after a yes. The board did restart |
+
+The key is `deploy.read_board.<id>`. A yes under a `look.` key does not answer it. The stop holds `data.open`, `data.port`,
+`data.product` (null for a port that the list does not hold) and `data.known_board`. These keys come only with a stop at the board.
+`next[0]` is the same deploy with `--replies <your replies file>` and `needs_person`. Ask the person in this conversation, write
+`{"replies": {"deploy.read_board.1a2b": true}}` to a file of your own after their yes, and run that step. The deploy sets every
+`deploy.` key of the file back to null before it reads. Its read restarts the board, then the erase asks its own yes, as always. With no
+terminal and no deploy grant, the run stops at that yes, and the person's own run of `data.run_in_terminal` asks the board question once
+more. With the look, such a board restarts three times. A kept board whose USB serial is its MAC, such as a XIAO, is never asked.
+
 ## The requirements' yes
 
 `parts.py --requirements` asks no question that waits: a run after a re-pick or a dropped need writes as today and exits 0. It names each entry that spark

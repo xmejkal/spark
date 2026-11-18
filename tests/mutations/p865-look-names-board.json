@@ -3,7 +3,7 @@
   "file": "scripts/spark/bench/look_at_board.py",
   "name": "the look skips its gate and reads any board with no question",
   "find": "            passed = self._gate(LookRun(project, port, evidence), row, outside)",
-  "replace": "            passed = Passed(SAME, None, None, row)"
+  "replace": "            passed = known_board.KnownBoardResult(None, known_board.SAME, None, None, None, row)"
  },
  {
   "file": "scripts/spark/bench/known_board.py",
@@ -54,10 +54,10 @@
   "replace": "                pass"
  },
  {
-  "file": "scripts/spark/bench/look_at_board.py",
+  "file": "scripts/spark/bench/known_board.py",
   "name": "a no is read as a yes",
-  "find": "        if asked and reply.value is not YES:",
-  "replace": "        if asked and reply.value is None:"
+  "find": "None if reply.value is YES else board_codes.ANSWERED_NO",
+  "replace": "None if reply.value is not None else board_codes.ANSWERED_NO"
  },
  {
   "file": "scripts/spark/bench/look_at_board.py",
@@ -132,10 +132,10 @@
   "replace": "                    or False:"
  },
  {
-  "file": "scripts/spark/bench/look_at_board.py",
+  "file": "scripts/spark/bench/known_board.py",
   "name": "T1: any value that is not a bool, such as \"yes\", is read as a no",
-  "find": "        if asked and (reply is None or not isinstance(reply.value, bool)):",
-  "replace": "        if asked and reply is None:"
+  "find": "        if reply is None or not isinstance(reply.value, bool):",
+  "replace": "        if reply is None:"
  },
  {
   "file": "scripts/spark/core/replies.py",
@@ -174,10 +174,10 @@
   "replace": "\"grants\")"
  },
  {
-  "file": "scripts/spark/bench/look_at_board.py",
+  "file": "scripts/spark/bench/known_board.py",
   "name": "N1: any named --port skips the question again, a listed firmware serial too",
-  "find": "            unseen = look.port and not known_board.serial_key(row)",
-  "replace": "            unseen = look.port and state == CANNOT_TELL"
+  "find": "        unseen = self.touch.trusts_port and port and not serial_key(row)",
+  "replace": "        unseen = self.touch.trusts_port and port and state == CANNOT_TELL"
  },
  {
   "file": "scripts/spark/bench/known_board.py",
@@ -228,9 +228,9 @@
   "replace": "(REPLACE_WHY if known else \"\")"
  },
  {
-  "file": "scripts/spark/bench/look_at_board.py",
+  "file": "scripts/spark/bench/known_board.py",
   "name": "E6: the envelope drops the kept board's two bytes",
-  "find": "\"mac_ends\": known_board.mac_ends(known.mac) if known else None",
+  "find": "\"mac_ends\": mac_ends(self.known.mac) if self.known else None",
   "replace": "\"mac_ends\": None"
  }
 ]

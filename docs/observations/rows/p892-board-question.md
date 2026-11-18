@@ -1,0 +1,24 @@
+# P892: one question before every board touch, PR 1 (the class and the deploy): rows
+
+Card: [P892 #1266](https://github.com/xmejkal/spark/issues/1266). Two plan rounds (one lens on the everyday model and the
+refuter, twice) and a build to the plan's version 3. This file holds the acted, raised and rejected findings only
+(rules.md). 2026-11-18.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | "no existing test changes" was false: about 31 tests stop at the new question | plan refuter, round 1 | acted | the plan's section 5 names each fixture change. The build's run before the fixtures showed 30 failures and 2 errors in 31 tests, all in the classes that section 5 names |
+| 2 | the look's rule "a named `--port` with no serial is read with no question" cannot hold for the deploy, because every deploy line that spark prints carries `--port` | plan refuter, round 1 | acted | `known_board.DEPLOY` does not trust the port; `test_8_a_named_port_with_no_serial_and_a_port_the_list_does_not_hold_are_both_asked` and a mutation row |
+| 3 | the look's sentences are untrue in the deploy ("Nothing is erased or written") | plan lens, round 1 | acted | each `Touch` holds its own question and fixes; `test_12_the_deploys_sentences_say_nothing_of_the_looks` |
+| 4 | "gate" already names the deploy's token and yes, and a returned value ends in `Result` | plan lens, round 1 | acted | `KnownBoardService` and `KnownBoardResult` (a Result, in the names table); the module docstring says "the board question" and explains the card's word once |
+| 5 | `DeployImage.run` is at its parameter limit | plan refuter, round 1 | acted | one new method, `DeployFlowService.ask_for_board`; `run` takes the evidence flags as `**evidence`, and R3 counts 7, the baseline |
+| 6 | the look reads a yes to a board it cannot tell as "make this board the project's": copied into the deploy, a yes and then another MAC would go on to the erase | plan refuter, round 2 | acted | the deploy's check after the read uses `known_board.differs` alone, whatever the reply; `test_9_another_mac_after_the_read_stops_before_the_erase_also_after_a_yes` and two mutation rows |
+| 7 | more tests stop: two with a `--port` that the list does not hold, one subtest, and four deploy goldens with no kept board | plan refuter, round 2 | acted | section 5's fixtures; `tests/golden_bench.py` plants the kept board for the deploy's cases too. Without it the four deploy goldens fail; with it no golden file changes |
+| 8 | spark's own error type would crash the deploy's refusal path (`stops.reason_of` reads `.reason`) | plan refuter, round 2 | acted | one handler, `refuse_at_look`, serves `ask_for_board` and `look_and_flash`: a SparkError is one Finding with its own code and fix; `test_10_a_kept_record_and_a_replies_file_that_cannot_be_read_are_one_finding_each` |
+| 9 | the question for a port that the list does not hold said "this board reports no USB serial" | plan lens, round 2 | acted | `UNLISTED_WHY`, and the question names the port alone; tests 8 and 12 |
+| 10 | `json.md`, `how-it-works.md`, `patterns-and-names.md` and `journey/bench.md` are exactly at their line budgets | plan refuter, round 2 | acted | each edit is inside an existing line: 427, 277, 279 and 198 lines before and after |
+| 11 | nine rows of the P865 mutation table sit on lines that move | plan refuter, round 2 | acted | the build found other rows: five of `p865-look-names-board.json` (the look skips its gate, a no is read as a yes, T1, N1, E6), and one each of `p219-de2.json` (flag-not-passed), `p219-gate.json` (look ignores ignore flag), `p474-seams.json` (the look ignores the service's platform, now on two lines) and `p508-deploy-goldens.json` (a stop's diagnostic goes to stdout). `--anchors` over all tables: 3606 rows in 310 tables, 15 refused, as on main |
+| 12 | decision 5 costs three restarts, not two | plan refuter, round 2 | acted | the open question's next step says why, and `replies.md` and `commands/deploy.md` say it |
+| 13 | section 5's fix for `DeployJsonTest`'s newline port test, "a listing row for that port", cannot work: no `mpremote devs` line holds a port with a newline | build | acted | the smallest change that keeps the test: the project's platform with a port finder whose `find_row` gives the kept C6, through `GateCase.deploy`'s `platform` |
+| 14 | the plan calls `KnownBoardResult` a Value, and the names table says a returned namedtuple is a Result | build | acted | its docstring says Result, and the names table lists it under Result |
+| 15 | `no_known_board` sits in `PASTED_CODES` beside `other_board`, as the plan says, but its sentence and fix hold no line to paste | build | raised | for the PR review: keep it as the plan says, or take it out |
+| 16 | fifteen rows of other tables are refused by `--anchors` on main too | `mutate.py --anchors` | raised | P897 #1273 owns them; this change adds none |

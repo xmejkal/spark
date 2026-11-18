@@ -68,8 +68,8 @@
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "the look ignores the service's platform",
-  "find": "board_look.looker(self.platform, self.run, self.records)",
-  "replace": "board_look.looker(__import__('firmware_platform').MicroPythonPlatform(self.project), self.run, self.records)"
+  "find": "board_look.looker(self.platform, self.run, self.records).run(",
+  "replace": "board_look.looker(__import__('firmware_platform').MicroPythonPlatform(self.project), self.run, self.records).run("
  },
  {
   "file": "scripts/spark/bench/board_doctor.py",

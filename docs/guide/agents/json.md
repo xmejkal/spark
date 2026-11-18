@@ -390,7 +390,7 @@ the sentence if you must tell which. The check is the word `--json` in the argum
   `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),
   `facts_line`, `image_sha256` (the image on the board, null before a flash, P213), `board_log`, `repl_command`, `store_record` (a path, or null with `store_record_error` beside it),
   `board_state` (`may_be_erased` when a flash command failed, or `flashed_not_verified` when a crash came after the flash), `person_action`, `run_in_terminal`, and `simulation` (`passed`, or `none` with `--no-simulation`: no simulation tested the image, P337). Keys not reached are null,
-  and so is `simulation` before a look or when the look refused the image. The caveats of the look are in `data.look.caveats`, its limits in `data.look.limits`, and its last deploy in `data.look.last_deploy`. The erase question names that last deploy.
+  and so is `simulation` before a look or when the look refused the image. `open`, `port`, `product` and `known_board` come only with a stop at the board question (`needs_reply`, `answered_no`, `other_board` before the read, `no_known_board`, P892; [the deploy's question](replies.md#the-deploys-question)). The caveats of the look are in `data.look.caveats`, its limits in `data.look.limits`, and its last deploy in `data.look.last_deploy`. The erase question names that last deploy.
   If the erase stops with exit 2, deploy.py makes one retry after 5 s and prints `retry in 5 s: ...` on stderr
   ([P290](https://github.com/xmejkal/spark/issues/347)). A retry that worked is a normal deploy, with no extra key.
   When mpremote could not enter the raw REPL for the facts copy (seen right after the reset), the copy and its read-back make one
