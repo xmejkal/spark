@@ -161,7 +161,27 @@ class TheRunLogsTest(unittest.TestCase):
 
     def test_the_untested_sentence_names_the_no_simulation_way(self):
         self.assertTrue(self.image.why_untested().endswith(
-            "run its scenario again with run_scenario.py, or, with no simulation, the board is the test: run look.py --no-simulation"))
+            "run a scenario with run_scenario.py, or, with no simulation, the board is the test: run look.py --no-simulation"))
+
+    def test_the_untested_sentence_with_no_log_blames_no_older_spark(self):
+        # P878: the sentence said "a log from an older spark names no image" where sim/runs/ held no log
+        self.assertEqual(self.image.why_untested(),
+                         "no run in sim/runs/ tested %s as it is now: run a scenario with run_scenario.py, or, with no "
+                         "simulation, the board is the test: run look.py --no-simulation" % self.image.path.name)
+
+    def test_the_untested_sentence_for_a_log_of_another_image_blames_no_older_spark(self):
+        write_log(self.project, "a.log", "passed", "0")
+        self.assertEqual(self.image.why_untested(),
+                         "no run in sim/runs/ tested %s as it is now: run its scenario again with run_scenario.py, or, with no "
+                         "simulation, the board is the test: run look.py --no-simulation" % self.image.path.name)
+
+    def test_the_untested_sentence_for_a_log_that_names_no_image_says_an_older_spark_wrote_it(self):
+        write_log(self.project, "a.log", "passed", "0")
+        write_log(self.project, "older.log", "passed", None)
+        self.assertEqual(self.image.why_untested(),
+                         "no run in sim/runs/ tested %s as it is now, and a log from an older spark names no image: run its "
+                         "scenario again with run_scenario.py, or, with no simulation, the board is the test: run look.py "
+                         "--no-simulation" % self.image.path.name)
 
     def test_why_other_runs_is_none_when_every_log_names_this_image(self):
         write_log(self.project, "a.log", "passed")
