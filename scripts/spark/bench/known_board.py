@@ -12,7 +12,7 @@ read, the look keeps the board with `KnownBoardStore.write`. No other touch keep
     tell                same, other, none or cannot_tell, before a touch
     Touch               the rules and the words of one touch: LOOK asks in three states, the others in cannot_tell only
     KnownBoardService   `judge`: touch, stop, or ask the board question, by the state and the touch; `require` stops by an error
-    BoardQuestionError  a stop of the board question: its Findings, its data and its lines
+    BoardQuestionError  a stop of the board question: its Findings, its data and the lines after them
     differs             after a read: the MAC read is not the kept board's
     other_after         after a read: the `other_board` Finding when the MAC read is not the kept board's
     ComparingBoardReader  a BoardReader that stops after a read of a board that is not the kept one
@@ -82,8 +82,11 @@ DEPLOY_ANSWER_FIX = ('ask the person in this conversation, and name the port and
                      '{"replies": {"%s": true}} (the JSON value true) to a file of your own outside the project, and run the next '
                      'step with that file in place of the placeholder <your replies file>. One yes is for one deploy, and the erase '
                      'asks its own yes after the read. Never add --port to avoid the question: it asks all the same')
-DEPLOY_OTHER_FIX = "plug in this project's board and run deploy.py again, or run look.py to read this board first"
-DEPLOY_NO_FIX = "run deploy.py again when you want to deploy to this board"
+#: The fixes of another board and of a no, by the touch's script (P892 part 2): %s is the script, then what the person wants.
+OTHER_FIX = "plug in this project's board and run %s again, or run look.py to read this board first"
+RUN_AGAIN_FIX = "run %s again when you want %s"
+DEPLOY_OTHER_FIX = OTHER_FIX % "deploy.py"
+DEPLOY_NO_FIX = RUN_AGAIN_FIX % ("deploy.py", "to deploy to this board")
 #: A deploy with no board kept for the project stops before the read and sends the person to the look, which keeps one.
 NO_KNOWN_MESSAGE = "%s The board on %s (%s): spark keeps no board for this project yet. %s"
 NO_KNOWN_FIX = "run look.py: it asks once and keeps this board. If the look says `not kept`, repair what it names first"
@@ -97,13 +100,11 @@ OTHER_AFTER_UNLISTED_FIX = ("plug in this project's board, then run look.py agai
                             "record of the old one, %s, then run look.py again and say yes")
 NO_MESSAGE, NO_FIX = "You said no. The board was not read and nothing was kept.", "run look.py again when you want to read it"
 #: The first and last words of a stop before the touch: a touch that reads, and one that runs code on the board.
-NOT_READ, NOTHING_RAN = ("Not read.", "It did not restart."), ("Nothing ran on it.", "Its firmware runs on.")
+NOT_READ, NOTHING_RAN = ("Not read.", "It did not restart."), ("Nothing ran on the board.", "Its firmware runs on.")
 #: The grant's words (P892 part 2): it reads the board, then asks its own yes.
 GRANT_QUESTION = ("Read the board on %s for a grant? It will restart: a running program stops, then starts again. The grant "
                   "asks its own yes after the read.")
 GRANT_NO_MESSAGE = "You said no. The board was not read and no grant was given."
-GRANT_NO_FIX = "run grant.py again when you want a grant for this board"
-GRANT_OTHER_FIX = "plug in this project's board and run grant.py again, or run look.py to read this board first"
 GRANT_ANSWER_FIX = ('answer yes when grant.py asks in your terminal, or write {"replies": {"%s": true}} (the JSON value true) to a '
                     'file of your own outside the project and run grant.py again with --replies and that file. One yes is for '
                     'one grant, and the grant asks its own yes after the read. --port does not avoid the question')
@@ -113,14 +114,11 @@ REACH_QUESTION = ('Run print("reached") on the board on %s? Its firmware stops, 
                   "replug the board.")
 LIVE_QUESTION = "Run the code on the board on %s? Its firmware stops while the code runs, and the board restarts at the end."
 NOTHING_RAN_NO_MESSAGE = "You said no. Nothing ran on the board."
-REACH_NO_FIX = "run reach.py again when you want to run its line on this board"
-LIVE_NO_FIX = "run live.py again when you want to run the code on this board"
-REACH_OTHER_FIX = "plug in this project's board and run reach.py again, or run look.py to read this board first"
-LIVE_OTHER_FIX = "plug in this project's board and run live.py again, or run look.py to read this board first"
-#: %s is the script, then %%s the key.
-RUN_ANSWER_FIX = ("ask the person in this conversation, and name the port and that the board's firmware stops. Only after their "
+#: The first %s is what live adds (the code that runs), the second the script, then %%s the key.
+RUN_ANSWER_FIX = ("ask the person in this conversation, and name the port and that the board's firmware stops%s. Only after their "
                   'yes to that, write {"replies": {"%%s": true}} (the JSON value true) to a file of your own outside the project, '
                   "and run %s again with --replies and that file. One yes is for one run. --port does not avoid the question")
+SHOW_THE_CODE = ", and show the person the code that runs"
 KEPT_MESSAGE = "kept: spark remembers the board on %s (MAC ends %s) as this project's board"
 REPLACED_MESSAGE = "kept: the board on %s (MAC ends %s) is now this project's board, in place of the old one (MAC ended %s)"
 NOT_KEPT_NO_MAC_MESSAGE, NOT_KEPT_MESSAGE = "not kept: the board's MAC could not be read", "not kept: %s"
@@ -149,14 +147,17 @@ LOOK = Touch("look", (NONE, OTHER, CANNOT_TELL), True, READ_QUESTION, NO_FIX, OT
 DEPLOY = Touch("deploy", (CANNOT_TELL,), False, DEPLOY_QUESTION, DEPLOY_NO_FIX, DEPLOY_OTHER_FIX, DEPLOY_ANSWER_FIX,
                READ_WORD, NOT_READ, NO_MESSAGE, "reads it", OTHER_AFTER_FIX)
 #: The grant, reach and live ask as the deploy does (P892 part 2): only for a board they cannot tell, also on a named port.
-GRANT = Touch(name="grant", asks=(CANNOT_TELL,), trusts_port=False, question=GRANT_QUESTION, no_fix=GRANT_NO_FIX,
-              other_fix=GRANT_OTHER_FIX, answer_fix=GRANT_ANSWER_FIX, key_word=READ_WORD, untouched=NOT_READ,
-              no_message=GRANT_NO_MESSAGE, verb="reads it", after_fix=GRANT_AFTER_FIX)
-REACH = Touch(name="reach", asks=(CANNOT_TELL,), trusts_port=False, question=REACH_QUESTION, no_fix=REACH_NO_FIX,
-              other_fix=REACH_OTHER_FIX, answer_fix=RUN_ANSWER_FIX % "reach.py", key_word=RUN_WORD, untouched=NOTHING_RAN,
+GRANT = Touch(name="grant", asks=(CANNOT_TELL,), trusts_port=False, question=GRANT_QUESTION,
+              no_fix=RUN_AGAIN_FIX % ("grant.py", "a grant for this board"), other_fix=OTHER_FIX % "grant.py",
+              answer_fix=GRANT_ANSWER_FIX, key_word=READ_WORD, untouched=NOT_READ, no_message=GRANT_NO_MESSAGE, verb="reads it",
+              after_fix=GRANT_AFTER_FIX)
+REACH = Touch(name="reach", asks=(CANNOT_TELL,), trusts_port=False, question=REACH_QUESTION,
+              no_fix=RUN_AGAIN_FIX % ("reach.py", "to run its line on this board"), other_fix=OTHER_FIX % "reach.py",
+              answer_fix=RUN_ANSWER_FIX % ("", "reach.py"), key_word=RUN_WORD, untouched=NOTHING_RAN,
               no_message=NOTHING_RAN_NO_MESSAGE, verb="runs code on it", after_fix=None)
-LIVE = Touch(name="live", asks=(CANNOT_TELL,), trusts_port=False, question=LIVE_QUESTION, no_fix=LIVE_NO_FIX,
-             other_fix=LIVE_OTHER_FIX, answer_fix=RUN_ANSWER_FIX % "live.py", key_word=RUN_WORD, untouched=NOTHING_RAN,
+LIVE = Touch(name="live", asks=(CANNOT_TELL,), trusts_port=False, question=LIVE_QUESTION,
+             no_fix=RUN_AGAIN_FIX % ("live.py", "to run the code on this board"), other_fix=OTHER_FIX % "live.py",
+             answer_fix=RUN_ANSWER_FIX % (SHOW_THE_CODE, "live.py"), key_word=RUN_WORD, untouched=NOTHING_RAN,
              no_message=NOTHING_RAN_NO_MESSAGE, verb="runs code on it", after_fix=None)
 KEY_PREFIX = LOOK.prefix
 #: The code of a state that a touch does not ask in: it stops before any read.
@@ -338,13 +339,13 @@ class KnownBoardService:
 
 class BoardQuestionError(Exception):
     """Error: a stop of the board question before a touch (P892 part 2). `findings` are its Findings, `data` the open question,
-    the port, the product and the kept board (KnownBoardResult.data, None after a read), and `lines` the sentences and fixes
-    a person reads, then the question's why. It is no board_look.LookStopError and names no port to open, so no board doctor
-    runs for it."""
+    the port, the product and the kept board (KnownBoardResult.data, None after a read), and `more` the lines a person reads
+    after each Finding's sentence and fix: the question's why. It is no board_look.LookStopError and names no port to open,
+    so no board doctor runs for it."""
 
-    def __init__(self, findings, data, lines):
+    def __init__(self, findings, data, more=()):
         super().__init__(findings[-1].sentence)
-        self.findings, self.data, self.lines = findings, data, lines
+        self.findings, self.data, self.more = findings, data, list(more)
 
     @property
     def code(self):
@@ -354,9 +355,7 @@ class BoardQuestionError(Exception):
     @classmethod
     def of(cls, judged, touch, port):
         """The error of the KnownBoardResult `judged` of `touch`, a stop on `port`."""
-        findings = judged.findings(touch)
-        why = [judged.question.why] if judged.code == codes.NEEDS_REPLY else []
-        return cls(findings, judged.data(port), [line for found in findings for line in (found.sentence, found.fix)] + why)
+        return cls(judged.findings(touch), judged.data(port), [judged.question.why] if judged.code == codes.NEEDS_REPLY else [])
 
 
 class ComparingBoardReader:
@@ -371,7 +370,7 @@ class ComparingBoardReader:
         reading = self.reader.read(port)
         found = other_after(self.known_store.read(self.project), port, reading.mac, self.touch.after_fix)
         if found:
-            raise BoardQuestionError([found], None, [found.sentence, found.fix])
+            raise BoardQuestionError([found], None)
         return reading
 # --- end MVP ---
 

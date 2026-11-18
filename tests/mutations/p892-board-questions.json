@@ -98,8 +98,8 @@
  {
   "file": "scripts/spark/bench/known_board.py",
   "name": "P892: reach's key says read_board",
-  "find": "other_fix=REACH_OTHER_FIX, answer_fix=RUN_ANSWER_FIX % \"reach.py\", key_word=RUN_WORD,",
-  "replace": "other_fix=REACH_OTHER_FIX, answer_fix=RUN_ANSWER_FIX % \"reach.py\", key_word=READ_WORD,"
+  "find": "answer_fix=RUN_ANSWER_FIX % (\"\", \"reach.py\"), key_word=RUN_WORD,",
+  "replace": "answer_fix=RUN_ANSWER_FIX % (\"\", \"reach.py\"), key_word=READ_WORD,"
  },
  {
   "file": "scripts/spark/bench/reach_board.py",

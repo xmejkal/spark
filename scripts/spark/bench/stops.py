@@ -52,9 +52,11 @@ def stop_result(cannot, script, project, port, doctor_for=None):
 
 def question_result(stopped, script, data=None):
     """The OperationResult of a known_board.BoardQuestionError `stopped` (P892 part 2): its Findings, `data` (None: nothing on
-    stdout), and its lines on stderr, each after `<script>: `. The line with the JSON to paste is a PastedLine, so Privacy
-    leaves the key and the line whole (P677)."""
-    pasted = [found.fix for found in stopped.findings if found.code == codes.NEEDS_REPLY]
-    lines = [PastedLine("%s: %s" % (script, line)) if line in pasted else "%s: %s" % (script, line) for line in stopped.lines if line]
-    return OperationResult(data, list(stopped.findings), diagnostics=lines)
+    stdout), and its lines on stderr, each after `<script>: `: each Finding's sentence and fix, then the error's `more`. The
+    fix of an open question holds the JSON to paste, so it is a PastedLine, and Privacy leaves the key and the line whole (P677)."""
+    lines = []
+    for found in stopped.findings:
+        fix = "%s: %s" % (script, found.fix)
+        lines += ["%s: %s" % (script, found.sentence)] + ([PastedLine(fix) if found.code == codes.NEEDS_REPLY else fix] if found.fix else [])
+    return OperationResult(data, list(stopped.findings), diagnostics=lines + ["%s: %s" % (script, line) for line in stopped.more])
 # --- end MVP ---

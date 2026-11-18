@@ -63,6 +63,13 @@ def gpio_numbers(board):
     return named
 
 
+def pin_facts(code, board):
+    """The two pin facts of a try of `code` with the board record `board`: `pins_checked` (False when the record names no
+    usb or flash pin) and `gpio_numbers_in_code`. A stop of the board question says them too (P892)."""
+    return dict(pins_checked=not RestrictedPins.from_board(board).has_none(),
+                gpio_numbers_in_code=sorted((whole_numbers_in(code) or set()) & gpio_numbers(board)))
+
+
 class LiveTryService:
     """Service: one live try on the board on one port. `grants` is a board_grant.GrantService, `connection` a bare
     board_connection.BoardConnection on that port, `probe` its board_console.ConsoleProbe (or None for no cure),
@@ -76,9 +83,7 @@ class LiveTryService:
     def run(self, code, port, script="live.py", board_question=None):
         """The LiveTryResult of running `code` on the board on `port`, after the grant and the pin check, and then
         `board_question()` when it is given (P892): it raises known_board.BoardQuestionError to stop before the run."""
-        pins = RestrictedPins.from_board(self.board)
-        facts = dict(pins_checked=not pins.has_none(),
-                     gpio_numbers_in_code=sorted((whole_numbers_in(code) or set()) & gpio_numbers(self.board)))
+        pins, facts = RestrictedPins.from_board(self.board), pin_facts(code, self.board)
         checked = self.grants.check(port, script)
         if not checked.granted:
             return LiveTryResult(REFUSED_NO_GRANT, checked.why, MESSAGE_FOR[checked.why], "", None, None, **facts)

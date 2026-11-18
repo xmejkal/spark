@@ -36,7 +36,7 @@ from spark.bench.issue_grant import IssueGrant  # noqa: E402
 from spark.bench.reach_board import ReachBoard  # noqa: E402
 from spark.bench.run_live_code import RunLiveCode  # noqa: E402
 from spark.records import board_records  # noqa: E402
-from fakes import FakeClock, FakeConsent, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform  # noqa: E402
+from fakes import FakeClock, FakeConsent, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform, know_the_board  # noqa: E402
 from test_board_look import C6_MAC, C6_PORT, data, done, found  # noqa: E402
 from test_deploy_known_board import RecordingReplies  # noqa: E402
 from test_grant import NoTerminal  # noqa: E402
@@ -384,9 +384,55 @@ class TheStopsTest(BoardQuestionCase):
         line = json.loads(self.main(LIVE, "--json")[1])
         self.assertEqual((line["answer"], line["open"], line["product"], line["known_board"]),
                          ("could-not-run", [], "Espressif USB JTAG/serial debug unit", {"state": "other", "mac_ends": "xx:xx"}))
+        self.assertEqual((line["pins_checked"], line["gpio_numbers_in_code"]), (True, [1]))  # the pin check ran before the question
         self.devs = data("mpremote-devs-two.txt")
         line = json.loads(self.main(LIVE, "--json")[1])
         self.assertEqual([key for key in ("open", "product", "known_board") if key in line], [])
+
+    def test_16_the_kept_board_and_the_open_list_name_the_code_and_reachs_stderr_ends_with_the_fix(self):
+        """replies.md's table: known_board.state and open give the code of live's stop line; reach prints no line for them."""
+        def other(script):
+            self.devs = OTHER_ROW
+            self.give_live_grant(OTHER_MAC)
+
+        def answered_no(script):  # one no answers one run, so each run gets its own
+            self.cannot_tell(script)
+            self.yes_file.write_text(json.dumps({"replies": {}}))
+            self.result(script)
+            self.answer(False)
+        no_known_fix = "run look.py: it asks once and keeps this board. If the look says `not kept`, repair what it names first"
+        for state, prepare, opened, code in (("other", other, False, "other_board"), ("none", lambda script: known_board.KnownBoardStore.find_path(self.project).unlink(missing_ok=True), False, "no_known_board"),
+                                             ("cannot_tell", self.cannot_tell, True, "needs_reply"),
+                                             ("cannot_tell", answered_no, False, "answered_no")):
+            with self.subTest(code=code):
+                self.setUp()
+                prepare(LIVE)
+                line = json.loads(self.main(LIVE, "--json")[1])
+                self.assertEqual((line["known_board"]["state"], bool(line["open"])), (state, opened))
+                prepare(LIVE)
+                self.assertEqual(self.codes(self.result(LIVE)), [code])
+                self.setUp()
+                prepare(REACH)
+                exit_code, said, err = self.main(REACH)
+                fix = {"other_board": known_board.REACH.other_fix, "no_known_board": no_known_fix, "answered_no": known_board.REACH.no_fix}.get(code)
+                if fix:
+                    self.assertEqual((exit_code, said, err.splitlines()[-1]), (2, "", "reach.py: " + fix))
+
+    def test_9_live_asks_for_a_board_that_grant_py_granted_in_another_project_when_the_kept_board_trusts_no_serial(self):
+        elsewhere = Path(tempfile.mkdtemp())  # the project that keeps the other board, where the person ran grant.py
+        (elsewhere / "boards").mkdir()
+        (elsewhere / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "xiao-esp32-c6"}))
+        know_the_board(elsewhere, OTHER_MAC, known_board.comparable_key(OTHER_MAC))
+        self.devs, self.esptool = OTHER_ROW, data("c6-flash-id.txt").replace(C6_MAC, OTHER_MAC)
+        granted = self.operation(GRANT).run(project=elsewhere, port=None, replies=None, outside=self.outside(), minutes=30, scope=LIVE_SCOPE)
+        self.assertEqual(granted.status(), "ok")
+        self.keep(C6_MAC, None)  # this project keeps the C6, kept while a firmware set its serial: spark trusts no serial of it
+        self.ran = []
+        result = self.result(LIVE)
+        self.assertEqual((self.codes(result), self.touched()), (["needs_reply"], []))
+        self.assertTrue(self.replies.asked[0].key.startswith("live.run_on_board."))
+        self.assertIn("show the person the code that runs", result.findings[-1].fix)
+        self.assertEqual(self.codes(self.result(REACH)), ["needs_reply"])  # another board, and spark cannot tell it
 
     def test_16_the_paste_line_on_stderr_shows_the_key_whole(self):
         self.cannot_tell(REACH)

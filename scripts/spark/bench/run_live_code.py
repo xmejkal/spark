@@ -96,8 +96,9 @@ class RunLiveCode(Operation):
                                                 board_doctor.BoardDoctorService.for_board(finder, probe),
                                                 platform.find_tool("board-shell"))
             result = service.run(code, port, board_question=lambda: self.board_question.require(project, named, row, outside.replies, replies))
-        except known_board.BoardQuestionError as stopped:  # P892: the stop line names the open question, the product and the kept board
-            return stops.question_result(stopped, SCRIPT, dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(stopped), **stopped.data))
+        except known_board.BoardQuestionError as stopped:  # P892: after the pin check; the line names the question, the product and the kept board
+            facts = board_live.pin_facts(code, service.board)
+            return stops.question_result(stopped, SCRIPT, dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(stopped), **facts, **stopped.data))
         except (tool_finder.ToolError, board_look.LookStopError, board_records.BoardError,
                 BrokenRecordError, SparkError) as cannot:  # SparkError: the kept record or the replies file (P892)
             return stops.stop_result(cannot, SCRIPT, project, port)._replace(
