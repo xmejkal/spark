@@ -3,7 +3,10 @@
 Part of the [guide for AI agents](../agents.md). An Operation that cannot answer a question itself puts the question
 on the run's open list. This is [P737](https://github.com/xmejkal/spark/issues/1013). The shape is the core's, so
 it reads the same in every script that asks. `research.py` asks (below), and `look.py` asks before it reads a board
-([P865](https://github.com/xmejkal/spark/issues/1231), [the look's question](#the-looks-question)).
+([P865](https://github.com/xmejkal/spark/issues/1231), [the look's question](#the-looks-question)). `deploy.py`, `grant.py
+--minutes`, `reach.py` and `live.py` ask the same board question before they touch a board
+([P892](https://github.com/xmejkal/spark/issues/1266), [the deploy's question](#the-deploys-question),
+[the question of the grant, reach and live](#the-question-of-the-grant-reach-and-live)).
 
 ## What a run with open questions prints
 
@@ -108,30 +111,48 @@ serial, and none of them keeps or replaces a board. `grant.py --check` asks noth
 
 | What is on USB | grant.py, reach.py and live.py |
 | --- | --- |
-| the kept board | touch it with no question |
-| another board | stop before the touch with `other_board` and ask nothing. The fix names `look.py`. The board did not restart, and its firmware runs on |
+| the kept board, known by its USB serial | touch it with no question |
+| another board, told apart by its USB serial | stop before the touch with `other_board` and ask nothing. The fix names `look.py`. The board did not restart, and its firmware runs on |
 | no kept board, and a board with a USB serial | stop before the touch with `no_known_board`. The fix names `look.py`, which asks once and keeps the board |
-| a board with no serial, or a serial that a firmware set when the kept board's serial was set by one too | ask on every run, with `--port` too. Live asks only after its grant check passed |
+| a board with no serial | reach asks on every run, with `--port` too. The grant asks for `--scope deploy` only: a live grant is refused first with `serial_not_mac`, exit 1, with no question and no read. Live refuses it with `refused_no_grant`: `grant.py` gives such a board no live grant |
+| a kept board whose serial a firmware set (its record trusts no serial), and a board on Espressif's own USB whose serial does not start with the kept MAC | ask on every run, with `--port` too: spark cannot tell another board from the kept one. More below the table |
 | a `--port` that the list does not hold | reach asks. The grant and live stop with `port_not_listed` |
 
+In the state of the fifth row, a live grant on a serial that a firmware set is refused first with `serial_not_mac`. A board
+whose serial is its MAC is asked, and after a yes the grant's read stops another board with `other_board`. It is the one state
+in which live asks for a board that `grant.py` granted, for example with a grant given in another project.
+
 The keys are `grant.read_board.<id>`, `reach.run_on_board.<id>` and `live.run_on_board.<id>`. A yes under another script's key
-does not answer. Each sets its own keys of the file back to null before it asks, so one yes is for one run. A `false` is a no:
-code `answered_no`, and nothing touched the board. A list of the boards that fails stops all three, with no question. A
+does not answer. Each sets its own keys of the file back to null before it asks, so one yes or one no is for one run. A `false`
+to the board question is a no: code `answered_no`, exit 2, and nothing touched the board. The grant's own yes is another
+question, asked after its read: a no to it is `answered_no` too, but exit 1, the board did restart, and no grant is kept. A
+list of the boards that fails stops all three, with no question. A
 `/dev/tty.` port is its `/dev/cu.` port. Reach and live take `--replies`: ask the person in this conversation, name the port and
 that the firmware stops, write `{"replies": {"reach.run_on_board.1a2b": true}}` to a file of your own after their yes, and run the
 same command again with `--replies` and that file. `reach.py --json` prints one line for an open question only: `reached` false,
 `port`, `product`, `open` and `known_board`. Its other stops print nothing on stdout. `live.py --json` adds `open`, `product`
-and `known_board` to its stop line for a stop of the board question only.
+and `known_board` to its stop line for a stop of the board question only. Live's stop line has `answer` `could-not-run` and
+no `code`, so read the code from `known_board.state` and `open`:
+
+| `known_board.state` | `open` | the code | the next command |
+| --- | --- | --- | --- |
+| `other` | empty | `other_board` | the person plugs in the kept board and you run `live.py` again, or you run `look.py`, which asks the person |
+| `none` | empty | `no_known_board` | `look.py`, which asks the person once and keeps the board |
+| `cannot_tell` | one question | `needs_reply` | ask the person, write the yes to your file, run `live.py` again with `--replies` and that file |
+| `cannot_tell` | empty | `answered_no` | none: run `live.py` again only when the person wants it |
+
+`reach.py` exits 2 with no stdout line for `other_board`, `no_known_board` and `answered_no`. Then read its last stderr line:
+it is the stop's fix, and the line before it is the stop's sentence.
 
 `live.py` asks after its grant check and its pin check, just before the code runs. A board with no grant is refused with
-no question. So with another board on USB that has no grant, `live.py` says `refused_no_grant`, and `grant.py` then stops with
+no question. Its answer fix also asks you to show the person the code that runs. So with another board on USB that has no grant, `live.py` says `refused_no_grant`, and `grant.py` then stops with
 `other_board`: two steps, and no board restarts.
 
 `grant.py` needs the person's own terminal, as always, and says `no_terminal` first when it has none. So its board question and
 its stops show only in that terminal, never to you. It asks the question there, or reads the yes from the person's `--replies`
 file, and the grant still asks its own yes. A live grant on a board whose USB serial cannot be its MAC (no serial, a bridge's
 serial, a serial that a firmware set) is refused with `serial_not_mac` from the list alone, before any question or read. A
-deploy grant on such a board asks. After the read, a MAC that is not the kept board's stops the grant with `other_board`
+deploy grant on such a board goes on to the board question, as the table says. After the read, a MAC that is not the kept board's stops the grant with `other_board`
 before its own yes, and no grant is kept: the board did restart. With no kept board and a board with no USB serial, a yes and a
 read give a deploy grant for a board that no project keeps.
 

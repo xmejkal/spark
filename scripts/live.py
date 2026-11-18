@@ -23,14 +23,20 @@ stops the firmware that ran. So unless mpremote said it could not open the port 
 can keep its value through that reset (P252's bench), so live.py lists the GPIO numbers written in the code. That list
 over-claims: print(1) lists GPIO1.
 
-The record is the project's active board (boards/active.json). live.py does not match it against the board on USB.
+The board record is the project's active board (boards/active.json). live.py does not match that record against the
+board on USB. The board question below compares the board on USB with another record: the board that spark keeps for
+the project in your store, which look.py writes.
 
 After the two checks and just before the code runs, live.py asks the board question (P892). A board with no grant is
-refused first, with no question. On the board that spark keeps for the project it asks nothing. Another board stops
-with other_board, and a board with a USB serial in a project that keeps no board stops with no_known_board. Both name
-look.py, and nothing ran on the board. A board that spark cannot tell by its USB serial is asked on every run, in your
-terminal, or by --replies with your own file that holds {"replies": {"live.run_on_board.<id>": true}}. One yes is for
-one run. A --port that the list does not hold stops with port_not_listed, and a /dev/tty. port is its /dev/cu. port.
+refused first, with no question. On the board that spark keeps for the project, known by its USB serial, it asks
+nothing. Another board, told apart by its USB serial, stops with other_board, and a board with a USB serial in a
+project that keeps no board stops with no_known_board. Both name look.py, and nothing ran on the board. A board that
+spark cannot tell by its USB serial is asked on every run, in your terminal, or by --replies with your own file that
+holds {"replies": {"live.run_on_board.<id>": true}}. With a grant that grant.py gave, that happens only while the kept
+board's serial was set by a firmware and the board on USB is another board on Espressif's own USB, for example one
+granted in another project: grant.py gives no live grant to a board with no serial. One yes or one no is for one run. A
+no is answered_no, and nothing ran on the board. A --port that the list does not hold stops with port_not_listed, and
+a /dev/tty. port is its /dev/cu. port.
 
 --json prints one line with every field, null where it has none: answer (ran, raised, not_reached, refused_no_grant,
 refused_pin, refused_no_parse, or could-not-run, the word outcomes.py shares), grant_why (grant.py's code when the grant refused), why, output, cure, reset (done, failed or null),

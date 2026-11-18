@@ -18,13 +18,15 @@ It is the PO's bench tool for P251. Claude's live try, behind a grant and with a
 With --cure-first it opens the port with DTR and RTS off before the only try: the bench's cold arm. With two or more boards on USB, --port is needed.
 
 Before the line runs, reach.py asks the board question (P892). It lists the boards with `mpremote devs`, also for a
---port, and a /dev/tty. port is its /dev/cu. port. On the board that spark keeps for the project it asks nothing.
-Another board stops with other_board, and a board with a USB serial in a project that keeps no board stops with
-no_known_board. Both name look.py, and nothing ran on the board. A board that spark cannot tell by its USB serial (no
-serial, a --port that the list does not hold, or a serial that a firmware set when the kept board's serial was set by
-one too) is asked on every run, in your terminal, or by --replies with your own file that holds
-{"replies": {"reach.run_on_board.<id>": true}}. One yes is for one run. With --json an open question prints one line:
-reached false, port, product, open and known_board. Every other stop prints nothing on stdout.
+--port, and a /dev/tty. port is its /dev/cu. port. On the board that spark keeps for the project, known by its USB
+serial, it asks nothing. Another board, told apart by its USB serial, stops with other_board, and a board with a USB
+serial in a project that keeps no board stops with no_known_board. Both name look.py, and nothing ran on the board. A
+board that spark cannot tell by its USB serial is asked on every run, in your terminal, or by --replies with your own
+file that holds {"replies": {"reach.run_on_board.<id>": true}}: a board with no serial, a --port that the list does
+not hold, and, while the kept board's serial was set by a firmware, a board on Espressif's own USB whose serial does
+not start with the kept MAC. One yes or one no is for one run. A no is answered_no, and nothing ran on the board. With
+--json an open question prints one line: reached false, port, product, open and known_board. Every other stop prints
+nothing on stdout: then the last line on stderr is the stop's fix, after its sentence.
 
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
