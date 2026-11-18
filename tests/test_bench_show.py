@@ -30,7 +30,7 @@ from spark.bench.board_look import Port  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from spark.records.deploy_record_store import DeployRecordStore  # noqa: E402
+from spark.records.deploy_record_store import DeployRecordStore, LastDeploy  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from fakes import FakeClock, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld, FakePortFinder, pin_time_zone  # noqa: E402
 from test_deploy import found  # noqa: E402
@@ -402,7 +402,8 @@ class TheShowTest(ShowCase):
 
     def test_it_runs_from_a_folder_that_is_no_spark_project(self):
         empty = Path(tempfile.mkdtemp())  # no .spark/tools.json: the shared tools lists name mpremote
-        code, out, _ = self.bench("--project", str(empty), "--json", find_tool=tool_finder.ToolFinder(empty).find)
+        with mock.patch.object(tool_finder, "locate", return_value=[sys.executable]):  # mpremote need not be on this host
+            code, out, _ = self.bench("--project", str(empty), "--json", find_tool=tool_finder.ToolFinder(empty).find)
         self.assertEqual((code, len(json.loads(out)["data"]["boards"])), (0, 1))
         self.assertEqual([argv[-1] for argv in self.ran], ["devs"])
 
@@ -413,17 +414,140 @@ class TheShowTest(ShowCase):
 
 class NoPortIsOpenedTest(StoreCase):
     def test_the_platform_gives_only_the_port_finder_and_no_crash_hides_a_refusal(self):
-        platform = FakeFirmwarePlatform(port_finder=FakePortFinder([S3]))  # any other part fails the test
+        ran = []
+
+        def run(command, **kwargs):
+            ran.append(command)
+            return subprocess.CompletedProcess(command, 0, devs_of(S3), "")
+        finder = board_look.PortFinder(found("board-shell"), run)
+        platform = FakeFirmwarePlatform(port_finder=finder)  # any other part fails the test
         records = FakeDeployRecordStore()
         operation = show_bench.ShowBench(records=records, platform_for=lambda project, find_tool: platform)
         result = run_operation(operation, {"project": Path(".")}, FakeOutsideWorld(clock=FakeClock(NOW)))
-        self.assertEqual([found.code for found in result.findings], [])
+        self.assertEqual([finding.code for finding in result.findings], [])
+        self.assertEqual([argv[-1] for argv in ran], ["devs"])
         self.assertEqual((records.asked, records.asked_deploys), ([MAC_A], [MAC_A]))
 
     def test_it_builds_with_no_argument_as_the_verb_table_calls_it(self):
         self.assertIsInstance(show_bench.ShowBench(), show_bench.ShowBench)
         self.assertEqual(bench.operation_for(["show", "--json"]), (show_bench.ShowBench, ["--json"]))
         self.assertEqual(bench.operation_for(["--json"]), (show_bench.ShowBench, ["--json"]))
+
+
+class TheFixRoundTest(ShowCase):
+    """The review of PR #1304: the cases that no test held."""
+
+    def test_a_kept_place_that_cannot_be_listed_or_is_a_file_is_unreadable(self):
+        place = store.place("known-boards")
+        place.mkdir(parents=True)
+        place.chmod(0)
+        self.addCleanup(place.chmod, 0o700)
+        self.assertEqual(known_board.KnownBoardStore().read_all(), known_board.KeptBoards([], [place]))
+        place.chmod(0o700)
+        place.rmdir()
+        place.write_text("no folder")
+        self.assertEqual(known_board.KnownBoardStore().read_all(), known_board.KeptBoards([], [place]))
+
+    def test_a_kept_place_that_is_a_file_makes_kept_for_unchecked_and_exits_2(self):
+        store.place("known-boards").parent.mkdir(parents=True, exist_ok=True)
+        store.place("known-boards").write_text("no folder")
+        code, said = self.envelope()
+        self.assertEqual((code, said["data"]["boards"][0]["kept_for"]), (2, None))
+        self.assertEqual([item["code"] for item in said["unchecked"]], ["known_board_unreadable"])
+
+    def test_read_all_gives_its_records_in_the_order_of_the_file_names(self):
+        for folder, mac in (("/tmp/one", MAC_A), ("/tmp/two", MAC_B), ("/tmp/three", "aa:bb:cc:dd:00:01")):
+            self.keep(folder, mac, None)
+        names = sorted(path.name for path in store.place("known-boards").glob("*.json"))
+        kept = known_board.KnownBoardStore().read_all()
+        self.assertEqual([known_board.KnownBoardStore.find_path(known.project).name for known in kept.records], names)
+
+    def test_a_deep_kept_file_is_unreadable_and_a_file_that_is_no_json_is_skipped(self):
+        place = store.place("known-boards")
+        place.mkdir(parents=True)
+        (place / "0123456789abcdef.json").write_text("[" * 100000 + "]" * 100000)
+        (place / "notes.txt").write_text("not a record")
+        self.assertEqual(known_board.KnownBoardStore().read_all(), known_board.KeptBoards([], [place / "0123456789abcdef.json"]))
+
+    def test_a_grant_time_with_no_zone_is_no_zone_and_no_unchecked_item(self):
+        self.give_grant(MAC_A, "deploy", ("2026-11-18T11:00:00", "2026-11-18T13:00:00"))
+        board = self.one(S3)
+        self.assertEqual((board.to_dict()["grants"][0]["state"], board.unchecked), ("no_zone", []))
+
+    def test_a_grant_whose_own_times_are_invalid_is_not_a_grant_and_one_unchecked_item(self):
+        self.give_grant(MAC_A, "deploy", ("2026-11-19T11:00:00+00:00", "2026-11-19T12:00:00+00:00"))  # given in the future
+        board = self.one(S3)
+        self.assertEqual(board.to_dict()["grants"][0]["state"], "not_a_grant")
+        self.assertEqual([(item.part, item.code) for item in board.unchecked], [("grants", "not_a_grant")])
+
+    def test_a_bad_live_file_is_named_by_the_serial(self):
+        path = board_grant.GrantStore.path_of(S3.serial)
+        path.parent.mkdir(parents=True)
+        path.write_text("{not json")
+        board = self.one(S3)
+        self.assertEqual([(item.code, item.path) for item in board.unchecked], [("not_a_grant", path)])
+        self.assertNotEqual(path, board_grant.GrantStore.path_of(MAC_A))
+
+    def test_a_native_board_that_no_record_keeps_is_kept_for_none_while_others_are_kept(self):
+        self.keep("/tmp/one", MAC_B, "aabbccdd1234")
+        self.assertEqual(self.one(S3).to_dict()["kept_for"], [])
+
+    def test_no_serial_is_null_and_also_on_holds_the_other_node(self):
+        self.assertIsNone(self.one(NO_SERIAL).to_dict()["usb_serial"])
+        slab = BRIDGE._replace(device="/dev/cu.SLAB_USBtoUART")
+        said = self.show(slab, BRIDGE).boards[0].to_dict()
+        self.assertEqual((said["device"], said["also_on"]), (BRIDGE.device, [slab.device]))
+
+    def test_the_board_comes_from_the_kept_record_first_then_from_the_deploy_record(self):
+        self.keep("/tmp/one", MAC_B, "01a2b3c4")
+        self.deploys(MAC_B, [entry("one", "2026-11-17")], board="other-board")
+        self.deploys(MAC_A, [entry("two", "2026-11-17")], board="deploy-board")
+        self.assertEqual((self.one(BRIDGE).to_dict()["board"], self.one(S3).to_dict()["board"]), ("firebeetle2-esp32s3", "deploy-board"))
+
+    def test_the_text_of_an_unknown_kept_for_two_boards_and_a_live_grant(self):
+        place = store.place("known-boards")
+        place.mkdir(parents=True)
+        (place / "0123456789abcdef.json").write_text("{not json")
+        self.give_grant(MAC_B, "live", ("2026-11-18T11:00:00+00:00", "2026-11-18T13:00:00+00:00"))
+        self.devs = devs_of(S3, C6)
+        code, out, _ = self.bench()
+        lines = out.splitlines()
+        self.assertEqual((code, lines[0]), (2, "2 boards on USB. No port was opened."))
+        self.assertIn("  kept for      not checked: spark's record of a kept board cannot be read", lines)
+        self.assertIn("  grants        deploy: none; live: holds until 2026-11-18T14:00:00+01:00", lines)
+        code, said = self.envelope()
+        self.assertIn(str(place / "0123456789abcdef.json"), said["unchecked"][0]["sentence"])
+
+    def test_a_store_error_gives_exit_2_and_boards_null(self):
+        class RefusingStore:
+            def read_all(self):
+                raise store.StoreError("the store cannot be read: %s", "x", code="not_a_board_record")
+        operation = show_bench.ShowBench(known=RefusingStore(), platform_for=lambda project, find_tool: FakeFirmwarePlatform(
+            port_finder=FakePortFinder([S3])))
+        result = run_operation(operation, {"project": Path(".")}, FakeOutsideWorld(clock=FakeClock(NOW)))
+        self.assertEqual((result.status(), result.data, [finding.code for finding in result.findings]),
+                         ("could-not-run", {"boards": None}, ["store_problem"]))
+
+    def test_read_deploys_gives_no_board_that_is_no_string_and_a_broken_link_is_not_checked(self):
+        self.deploys(MAC_A, [entry("one", "2026-11-17")], board=7)
+        self.assertIsNone(DeployRecordStore().read_deploys(MAC_A).board)
+        path = DeployRecordStore().find_path(MAC_B)
+        path.symlink_to(path.parent / "gone.json")
+        self.assertEqual(DeployRecordStore().read_deploys(MAC_B).state, outcomes.NOT_CHECKED)
+
+    def test_a_fake_record_store_that_is_not_checked_names_a_path(self):
+        records = FakeDeployRecordStore(last=LastDeploy(outcomes.NOT_CHECKED, why="unreadable"))
+        operation = show_bench.ShowBench(records=records, platform_for=lambda project, find_tool: FakeFirmwarePlatform(
+            port_finder=FakePortFinder([S3])))
+        result = run_operation(operation, {"project": Path(".")}, FakeOutsideWorld(clock=FakeClock(NOW)))
+        self.assertEqual([finding.code for finding in result.findings], ["last_deploy_not_checked"])
+
+    def test_serial_trusted_is_usb_key_to_keep_of_the_mac_part(self):
+        for row in (S3, C6, BRIDGE, FIRMWARE_SERIAL, NO_SERIAL, BRIDGE._replace(serial="aabbccddeeff"),
+                    S3._replace(serial="AABBCCDDEEFF-01"), S3._replace(serial=""), S3._replace(usb="")):
+            self.assertEqual(known_board.serial_trusted(row),
+                             known_board.usb_key_to_keep(row, known_board.mac_part_of(row)) is not None, row)
+        self.assertEqual([known_board.serial_trusted(row) for row in (S3, BRIDGE, FIRMWARE_SERIAL, NO_SERIAL)], [True, True, False, False])
 
 
 if __name__ == "__main__":
