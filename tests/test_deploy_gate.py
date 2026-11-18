@@ -36,6 +36,7 @@ from spark.firmware import image_builder  # noqa: E402
 from spark.bench import flasher  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
+from spark.bench import known_board  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform, FakeReporter,  # noqa: E402
                    FakeOutsideWorld, FakeProbePlatform, Stream,
@@ -49,7 +50,7 @@ from spark.core.outside import build_outside_world  # noqa: E402
 from spark.core.privacy import MaskingReporter, Privacy  # noqa: E402
 from spark.core.replies import AGENT, EITHER, PERSON, VALUE, YES_NO, Question, Reply, ReplyStrategy  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
-from test_board_look import BANNER, FOUND, INTERPRETER_WITH_BANNER, LookCase, data, done, found  # noqa: E402
+from test_board_look import BANNER, C6_MAC, FOUND, INTERPRETER_WITH_BANNER, LookCase, data, done, found  # noqa: E402
 
 
 def find_fake_tool(name, **where):
@@ -297,6 +298,7 @@ class TheGateTest(GateCase):
     def test_a_warning_is_named_in_the_question(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
+        self.know_the_board("dc:da:0c:xx:xx:xx", known_board.comparable_key(C6_MAC))  # P892: the S3 that esptool reads, on the listed serial
         token = self.token(esptool="s3-flash-id-8mb.txt")
         consent = FakeConsent(True)
         code, _, _ = self.deploy("--token", token, esptool="s3-flash-id-8mb.txt", consent=consent)
@@ -307,6 +309,7 @@ class TheGateTest(GateCase):
         # P423: the warning carries the record's text, and the question is where the person types yes
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
+        self.know_the_board("dc:da:0c:xx:xx:xx", known_board.comparable_key(C6_MAC))  # P892: the S3 that esptool reads, on the listed serial
         self.own_record(flash_mb="8\u202e\r FAKE")
         shown = Stream()
         token = self.token(esptool="s3-flash-id-8mb.txt")
@@ -398,6 +401,7 @@ class TheGateTest(GateCase):
     def test_a_flash_too_small_for_the_image_stops_before_the_question(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
+        self.know_the_board("dc:da:0c:xx:xx:xx", known_board.comparable_key(C6_MAC))  # P892: the S3 that esptool reads, on the listed serial
         consent = FakeConsent(True)
         code, _, problems = self.deploy("--token", "aaaa-bbbb", esptool="s3-flash-id-2mb.txt", consent=consent)
         self.assertEqual((code, self.flashed(), consent.asked), (1, [], []))
@@ -445,14 +449,21 @@ class TheBusyPortTest(GateCase):
         # P423
         self.run_the_scenario()
         _, _, problems = self.deploy("--token", "aaaa-bbbb", "--port", "/dev/cu.usb\u202emodem", consent=FakeConsent(True),
-                                     look_fails=True, probe=FakeConsoleProbe(""))
+                                     look_fails=True, probe=FakeConsoleProbe(""),
+                                     devs_text="/dev/cu.usb\u202emodem 8c:bf:ea:xx:xx:xx 303a:1001 Espressif USB JTAG/serial debug unit")  # P892
         self.assertTrue(problems.startswith("deploy.py: could not read the board on /dev/cu.usb?modem"), problems)
 
     def test_a_stop_the_doctor_gives_no_result_for_prints_its_own_line_with_the_port_as_a_question_mark(self):
         port = "/dev/cu.usb\u202emodem"
         stop = board_look.LookStopError("could not read the board on %s.", port, reason="board_not_read")  # no port: no doctor
         real = MicroPythonPlatform(self.project, lambda role: found(role))
-        platform = FakeFirmwarePlatform(self.project, flasher=real.make_flasher(), shell_command=real.make_shell_command(), port_finder=object(),
+
+        class KeptBoardFinder:
+            """Fake PortFinder (P892): the list holds the kept C6, whatever the port."""
+
+            def find_row(self, port):
+                return board_look.Port(*data("mpremote-devs-one.txt").split(None, 3))
+        platform = FakeFirmwarePlatform(self.project, flasher=real.make_flasher(), shell_command=real.make_shell_command(), port_finder=KeptBoardFinder(),
                                         board_reader=FakeBoardReader(stop))
         self.run_the_scenario()
         code, _, problems = self.deploy("--token", "aaaa-bbbb", "--port", port, consent=FakeConsent(True), platform=platform)
@@ -1119,6 +1130,7 @@ class TheStandingYesTest(GateCase):
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
         patcher.start()
         self.addCleanup(patcher.stop)
+        self.know_the_board(C6_MAC, known_board.comparable_key(C6_MAC))  # P892: the new store keeps the board too
         pin_time_zone(self)
         self.clock = FakeClock(self.START)
         self.grants = board_grant.GrantService(now=self.clock.now)
@@ -1216,6 +1228,7 @@ class TheStandingYesTest(GateCase):
                                     ("xiao-esp32-c6", "c6-flash-id-garbled.txt", self.MAC)):
             with self.subTest(esptool):
                 self.board(board)
+                self.know_the_board(mac, known_board.comparable_key(C6_MAC))  # P892: the board that esptool reads, on the listed serial
                 self.give(mac=mac)
                 code, said, problems = self.deploy("--token", self.token(esptool=esptool), esptool=esptool,
                                                    grant_service=self.grants)
@@ -1347,7 +1360,8 @@ class TheNoSimulationDeployTest(GateCase):
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.build_tool = image_builder.build_entry(self.project)[1][0]  # the tools list's entry for the board's build
+        self.know_the_board(C6_MAC, known_board.comparable_key(C6_MAC))  # P892: the new store keeps the board too
+        self.build_tool =image_builder.build_entry(self.project)[1][0]  # the tools list's entry for the board's build
         self.build_image()
 
     def find_tool(self, name, **where):

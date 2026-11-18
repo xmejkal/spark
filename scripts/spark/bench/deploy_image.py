@@ -15,6 +15,7 @@ from spark.bench import board_envelope
 from spark.bench import board_grant
 from spark.bench import board_look
 from spark.bench import deploy_gate
+from spark.bench import known_board
 from spark.bench import ready_probe
 from spark.records import store
 from spark.records import tool_finder
@@ -28,9 +29,11 @@ from spark.bench import bench_privacy
 from spark.bench.stops import reason_of
 from spark.core import codes, outcomes
 from spark.core.cli import CRASH_MESSAGE, CRASHED_MESSAGE, traceback_lines
+from spark.core.errors import SparkError
 from spark.core.events import BEGIN, Event, Reporter
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, DELETES, READS, RUNS, WRITES, Argument, Operation
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
+from spark.core.replies import RepliesStore
 from spark.core.result import Finding, NextStep, OperationResult
 
 # --- MVP ---
@@ -48,6 +51,15 @@ WATCH = ("then, to see it start: %%s, press Ctrl-C, then Ctrl-D: the firmware pr
          "console holds the port, and the next deploy cannot open it" % LEAVE_CONSOLE)
 #: What the person did not get told of a grant that was not used: with no grant, the no-terminal text says it all.
 WHY_NOT_SAID = (None, board_grant.WHY_NO_GRANT)
+#: The help of the deploy's --replies (P892): the agent's own file, after the person's yes to the board question.
+REPLIES_HELP = ('a file of your own with the person\'s yes to the deploy\'s board question, {"replies": {"<key>": true}}. One yes '
+                "answers one deploy: the deploy sets it back to null before it reads. The erase asks its own yes")
+#: Why the look is the next step after a stop at the board (P892), by the stop's code, and after a read of another board.
+LOOK_WHY = {board_codes.OTHER_BOARD: "the board on USB is not this project's kept board: the look asks the person before it reads it",
+            board_codes.NO_KNOWN_BOARD: "spark keeps no board for this project yet: the look asks the person once and keeps it"}
+LOOK_WHY_AFTER_READ = "the board read is not this project's kept board: plug in the kept board, or read this one with the look"
+#: The refusals at the look and after it that one handler says (P354, P892).
+LOOK_REFUSALS = (board_look.LookStopError, DeployError, tool_finder.ToolError, SparkError)
 
 
 def rerun_line(project, token, port, evidence):
@@ -103,8 +115,9 @@ class WhyLineReporter(Reporter):
             self.report_on(Event.line(event.code, PHASE_WHY[event.code]))
 
 
-#: Value: what the person asked of this deploy: the port, the token look.py printed, and whether it is a dry run.
-Asked = namedtuple("Asked", "port token dry_run")
+#: Value: what the person asked of this deploy: the port, the token look.py printed, whether it is a dry run, and the
+#: replies file or None.
+Asked = namedtuple("Asked", "port token dry_run replies")
 #: Value: what the result says of the board after a crash in `stage`: `data.board_state`, the words of the sentence, the fix.
 CrashState = namedtuple("CrashState", "board_state words fix")
 CRASH_STATES = {
@@ -121,15 +134,15 @@ class DeployFlowService:
     run goes; its `stage` is the StageTrackingReporter's. `diagnostics` are the stderr lines.
     """
 
-    def __init__(self, service_for, outside, grants, asked):
+    def __init__(self, service_for, outside, grants, asked, board_question):
         """`service_for(world)` builds the DeployService over `world`, the outside whose `report` tracks the stage. `asked`
-        is the Asked of this run."""
-        self.outside, self.grants, self.asked = outside, grants, asked
+        is the Asked of this run, `board_question` the known_board.KnownBoardService that judges the board before the read."""
+        self.outside, self.grants, self.asked, self.board_question = outside, grants, asked, board_question
         self.stages = StageTrackingReporter(WhyLineReporter(outside.report).report)
         self.service = service_for(outside._replace(report=self.stages.report))
         self._reached = {"project": self.service.project.resolve(), "evidence": self.service.evidence,
                          "token": asked.token, "port": asked.port, "dry_run": asked.dry_run}
-        self.diagnostics, self.look, self.consent, self.planned = [], None, None, None
+        self.diagnostics, self.look, self.consent, self.planned, self.judged = [], None, None, None, None
 
     def reached(self):
         """What the run reached so far, with the stage, for `board_envelope.deploy_result`."""
@@ -170,29 +183,77 @@ class DeployFlowService:
                  raw=True)
         return EXIT_OK
 
+    def ask_for_board(self):
+        """The board question before the read (P892), after the BEGIN of the look: the replies file's deploy keys set back to
+        null (one yes answers one deploy), a project with no board record stopped before any question, then the board on
+        USB judged by the deploy's Touch. A stop ends the run; None goes on to the read."""
+        self.report(Event.begin(DeployPhase.LOOK))
+        try:
+            if self.asked.replies:
+                RepliesStore(self.asked.replies).clear(known_board.DEPLOY.prefix)
+            board_look.LookService.record_of(self.service.project)
+            row = self.service.find_row(self.asked.port)
+            self.judged = self.board_question.judge(self.service.project, self.asked.port, row, self.outside.replies)
+        except LOOK_REFUSALS as cannot:
+            return self.refuse_at_look(cannot)
+        if not self.judged.code:
+            return None
+        port, question = self.asked.port or row.device, self.judged.question
+        return self.stop(self.judged.findings(known_board.DEPLOY), [question.why] if self.judged.code == codes.NEEDS_REPLY else [],
+                         port=port, board_question=self.judged.data(port), next_op=deploy_gate.NEXT_LOOK if self.judged.code in LOOK_WHY else None,
+                         next_why=LOOK_WHY.get(self.judged.code))
+
+    def stop(self, findings, more=(), **reached):
+        """The exit code of a stop at the board (P892): `findings` and `reached` kept for the result, then each sentence and
+        fix said as a line of the look, then `more`. The fix of an open question holds the JSON to paste, so its line is raw
+        (P677)."""
+        self._reached.update(reached, findings=findings, refusal=findings[-1].sentence, reason=findings[-1].code)
+        for found in findings:
+            self.say(DeployPhase.LOOK, found.sentence)
+            self.say(DeployPhase.LOOK, found.fix, raw=found.code == codes.NEEDS_REPLY)
+        for line in more:
+            self.say(DeployPhase.LOOK, line)
+        return EXIT_COULD_NOT_RUN
+
+    def other_after_read(self, look):
+        """The Finding of a board read that is not the kept board (P892): it did restart, and the deploy keeps nothing."""
+        known = self.judged.known
+        return Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, known_board.OTHER_AFTER_MESSAGE % (
+            look.port, known_board.mac_ends(look.reading.mac), known_board.mac_ends(known.mac), known.at[:10]), known_board.DEPLOY.other_fix)
+
+    def refuse_at_look(self, cannot):
+        """The exit code of a refusal at the look or after it, said on stderr: a LookStopError with the doctor's lines (P354), a
+        SparkError (the kept record, the replies file) as one Finding with its own code and fix (P892), any other as
+        `deploy.py: <why>`. A FlashError keeps the yes that ran it."""
+        reached = self._reached
+        if isinstance(cannot, FlashError):
+            self.keep_yes()
+        reached.update(refusal=str(cannot), reason=cannot.code if isinstance(cannot, SparkError) else reason_of(cannot))
+        if isinstance(cannot, SparkError):
+            reached["findings"] = [Finding(cannot.status, DeployPhase.LOOK, cannot.code, str(cannot), cannot.fix)]
+        lines = ["%s: %s" % (SCRIPT, cannot)]
+        if isinstance(cannot, board_look.LookStopError):
+            lines, reached["doctor"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)
+        self.diagnostics += lines
+        return EXIT_COULD_NOT_RUN
+
     def look_and_flash(self):
-        """The look and its lines, the yes, the gate, then the flash. A refusal is said on stderr; a failed read gets the
-        doctor (P354); a closed gate gives the line to run in the terminal."""
+        """The read and its lines, the check that the board read is the kept board (P892), the yes, the gate, then the flash. A
+        refusal is said on stderr; a failed read gets the doctor (P354); a closed gate gives the line to run in the terminal."""
         reached, token = self._reached, self.asked.token
         try:
-            self.report(Event.begin(DeployPhase.LOOK))
-            look = self.look = reached["report"] = self.service.look(self.asked.port)
+            look = self.look = reached["report"] = self.service.look(self.asked.port, listed=self.judged.row)
             for line in board_look.report_lines(look, token=False, indent=""):
                 self.say(DeployPhase.LOOK, line)
             reached["port"] = look.port
+            if known_board.differs(self.judged.known, look.reading.mac):  # whatever the reply was, before the erase's question
+                return self.stop([self.other_after_read(look)], next_op=deploy_gate.NEXT_LOOK, next_why=LOOK_WHY_AFTER_READ)
             self.report(Event.begin(DeployPhase.GATE))  # before the "standing yes" line, which is a gate line
             self.consent = self.choose_consent(look, token)
             self.planned = self.service.deploy(look, token, self.consent)
             self.keep_yes()  # only now is there a yes to report
-        except (board_look.LookStopError, DeployError, tool_finder.ToolError) as cannot:
-            if isinstance(cannot, FlashError):
-                self.keep_yes()
-            reached.update(refusal=str(cannot), reason=reason_of(cannot))
-            lines = ["%s: %s" % (SCRIPT, cannot)]
-            if isinstance(cannot, board_look.LookStopError):
-                lines, reached["doctor"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)
-            self.diagnostics += lines
-            return EXIT_COULD_NOT_RUN
+        except LOOK_REFUSALS as cannot:
+            return self.refuse_at_look(cannot)
         except deploy_gate.GateClosedError as shut:
             reached.update(refusal=str(shut), reason=shut.reason, next_op=shut.next_op)
             if shut.next_op == deploy_gate.NEXT_DEPLOY:
@@ -246,9 +307,12 @@ class DeployFlowService:
 class DeployImage(Operation):
     """
     Operation: the deploy. It builds the evidence (image_evidence), the platform and a DeployFlowService, and returns
-    `board_envelope.deploy_result`. `platform_for(project, find_tool)` is a `_for` builder of the FirmwarePlatform
-    (default: MicroPythonPlatform), `grant_service` the board_grant.GrantService that finds a deploy grant and `records`
-    the DeployRecordStore (None for the store's own, built per run): the collaborators a test swaps whole. The dry run
+    `board_envelope.deploy_result`. Before its read it asks the board question by the deploy's Touch (P892): the kept board
+    is read with no question, another board and no kept board stop before any read and send to the look, and a board that
+    spark cannot tell is asked on every deploy, with --port too. `platform_for(project, find_tool)` is a `_for` builder of
+    the FirmwarePlatform (default: MicroPythonPlatform), `grant_service` the board_grant.GrantService that finds a deploy
+    grant, `records` the DeployRecordStore (None for the store's own, built per run) and `known` the KnownBoardStore (None:
+    the store's own): the collaborators a test swaps whole. The dry run
     declares READS alone, so `outside.run` refuses; with --no-simulation it declares RUNS too, and the compile check's child
     runs for real through `outside.run`, in a dry run as well (P458).
     """
@@ -264,26 +328,31 @@ class DeployImage(Operation):
                           "flash an image that no simulation tested: firmware/ must have a main.py, compile and be what the "
                           "image holds. Needs look.py --no-simulation. The person's typed yes names the caveat", group=EVIDENCE_GROUP),
                  Argument(("--dry-run",), "dry_run", bool, "print each command and run nothing"),
+                 COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP),
                  COMMON_ARGUMENTS["json"]._replace(help="print one envelope on stdout, the lines a person reads on stderr (docs/guide/agents/json.md)"))
     effects = (READS, RUNS, BOARD, DELETES, WRITES, ASKS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
 
-    def __init__(self, platform_for=None, grant_service=None, records=None):
+    def __init__(self, platform_for=None, grant_service=None, records=None, known=None):
         self.platform_for = platform_for or MicroPythonPlatform
-        self.grant_service, self.records = grant_service, records
+        self.grant_service, self.records, self.known = grant_service, records, known or known_board.KnownBoardStore()
 
     def effects_of(self, values):
         if not values["dry_run"]:
             return self.effects
         return (READS, RUNS) if values["no_simulation"] else (READS,)
 
-    def run(self, project, port, token, ignore_older_runs, no_simulation, dry_run, *, outside):
-        evidence = evidence_for(project, no_simulation, ignore_older_runs, find_tool=outside.find_tool, run=outside.run)
+    def run(self, project, port, token, dry_run, replies=None, *, outside, **evidence):
+        """`evidence` holds the two flags of EVIDENCE_GROUP, `ignore_older_runs` and `no_simulation`."""
+        picked = evidence_for(project, evidence["no_simulation"], evidence["ignore_older_runs"], find_tool=outside.find_tool, run=outside.run)
         platform = self.platform_for(project, outside.find_tool)
-        flow = DeployFlowService(lambda world: DeployService(project, platform, evidence, world, self.records), outside,
-                                 self.grant_service or board_grant.GrantService(), Asked(port, token, dry_run))
+        flow = DeployFlowService(lambda world: DeployService(project, platform, picked, world, self.records), outside,
+                                 self.grant_service or board_grant.GrantService(), Asked(port, token, dry_run, replies),
+                                 known_board.KnownBoardService(self.known, known_board.DEPLOY))
         code = flow.plan()
         try:
+            if code is None:
+                code = flow.ask_for_board()
             if code is None:
                 code = flow.look_and_flash()
             if code is None:

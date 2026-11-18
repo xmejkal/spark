@@ -15,7 +15,7 @@ from spark.bench import board_doctor
 from spark.records import board_records
 from spark.bench.deploy_stages import DeployPhase
 from spark.design import loader
-from spark.core import outcomes
+from spark.core import codes, outcomes
 from spark.core.result import Finding, NextStep, OperationResult
 from spark.bench import ready_probe
 from spark.records import store
@@ -47,9 +47,10 @@ def look_argv(project, port, evidence):
     return ["--project", str(project)] + (["--port", port] if port else []) + (evidence.argv() if evidence else [])
 
 
-def look_step(project, port, evidence=None, why="read the board first: the board restarts while it is read"):
-    """The step that runs look.py. It writes nothing. With no evidence, its arguments are the project's alone."""
-    return outcomes.add_env(outcomes.step("look", look_argv(project, port, evidence), why), store.read_given_env())
+def look_step(project, port, evidence=None, why="read the board first: the board restarts while it is read", needs_person=None):
+    """The step that runs look.py. It writes nothing. With no evidence, its arguments are the project's alone. `needs_person`
+    is True after a deploy stopped at the board (P892): the look asks the person first."""
+    return outcomes.add_env(outcomes.step("look", look_argv(project, port, evidence), why, needs_person=needs_person), store.read_given_env())
 
 
 #: Why a finished build names the look step next (P517): the board is read, then the conversation writes the firmware.
@@ -72,6 +73,21 @@ def deploy_step(project, token, port, evidence, why):
     """The step that runs deploy.py: it erases ALL of the flash, so it needs the person's yes."""
     return outcomes.add_env(outcomes.step("deploy", deploy_argv(project, token, port, evidence), why,
                                           effects=["deletes", "writes"], needs_yes=True), store.read_given_env())
+
+
+#: The placeholder of the agent's replies file in a step's arguments, and why the same deploy runs again after the person's
+#: yes to the board question (P892, decision 5): it reads the board, then stops at the erase's own yes.
+REPLIES_PLACEHOLDER = "<your replies file>"
+ASK_AGAIN_WHY = ("the same deploy, after the person's yes to the board question in the conversation: it reads the board (a "
+                 "restart), then waits for the erase's own yes. With no terminal and no deploy grant, the person's own run in a "
+                 "terminal asks the board question once more and reads the board again")
+
+
+def ask_again_step(project, token, port, evidence):
+    """The step that runs the same deploy with the person's yes to the board question in a replies file (P892). It needs the
+    person's yes to that question; the erase still asks its own, so it is no `needs_yes` step."""
+    return outcomes.add_env(outcomes.step("deploy", deploy_argv(project, token, port, evidence) + ["--replies", REPLIES_PLACEHOLDER],
+                                          ASK_AGAIN_WHY, effects=["deletes", "writes"], needs_person=True), store.read_given_env())
 
 
 def doctor_fix(doctor, places):
@@ -97,8 +113,11 @@ def _steps(reached):
     following = []
     if reached.get("dry_run"):
         following = [look_step(project, port, evidence, "deploy.py --dry-run did not look at the board")]
-    elif next_op == NEXT_LOOK:
-        following = [look_step(project, port, evidence, "the look is missing or stale")]
+    elif reached.get("reason") == codes.NEEDS_REPLY:  # P892: the board question is open
+        following = [ask_again_step(project, reached.get("token"), port, evidence)]
+    elif next_op == NEXT_LOOK:  # P892: after a stop at the board the look asks the person first
+        why = reached.get("next_why")
+        following = [look_step(project, port, evidence, why or "the look is missing or stale", True if why else None)]
     elif next_op == NEXT_DEPLOY:
         following = [deploy_step(project, reached.get("token"), port, evidence,
                                  "the person runs data.run_in_terminal in their own terminal: " + yes_rule(evidence))]
@@ -144,6 +163,7 @@ def deploy_data(reached):
     }
     if reached.get("doctor"):  # P354: a look that esptool could not read, as look.py's envelope carries it
         data["doctor"] = board_doctor.as_dict(reached["doctor"])
+    data.update(reached.get("board_question") or {})  # P892: open, port, product and known_board, only after a stop at the board
     return data
 
 
@@ -154,5 +174,6 @@ def deploy_result(reached, code, diagnostics=()):
     unchecked, so the status is the code's. The person's lines were Events, so `lines` is empty; `diagnostics` are the stderr lines.
     """
     plan = reached.get("plan")
-    return OperationResult(deploy_data(reached), [] if code == outcomes.EXIT_OK else [_finding(reached, code)], _steps(reached),
+    found = [] if code == outcomes.EXIT_OK else reached.get("findings") or [_finding(reached, code)]  # P892: a stop at the board gives its own
+    return OperationResult(deploy_data(reached), found, _steps(reached),
                            diagnostics=list(diagnostics), notes=((list(plan.notes) if plan else []) + reached.get("notes", [])) or None)
