@@ -6,6 +6,7 @@ deploy). `DeployRecordStore` keeps one record per board, with each deploy, its v
 was and the MicroPython banner of its image (P779). `LastDeploy` is what the store says of the board on USB. It holds the
 reasons (`WHY_NO_MAC`, `WHY_UNREADABLE`) and the zone note of a time, and no line or question words:
 `board_look.say_last_deploy` is the look's line and `deploy_gate.say_last_deploy_in_question` is the deploy question's.
+`Deploys` is every deploy of one board, for `bench.py show` (P919).
 What is on the board itself, the facts file, is `board_facts`.
 """
 
@@ -54,6 +55,12 @@ class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict dep
                 "deployed": self.deployed, "micropython_banner": self.micropython_banner}
 
 
+class Deploys(collections.namedtuple("Deploys", "state entries why board", defaults=((), None, None))):
+    """Value. Every deploy the store keeps of one board (P919): `state` is one of the three words of `outcomes`, `entries`
+    the deploys as `write_deploy` appended them, oldest first, with outcomes.RECORDED, `why` the reason with
+    outcomes.NOT_CHECKED, and `board` the board record's id the record names, or None."""
+
+
 class DeployRecordStore:
     """
     Store. The person's record of each physical board, one file per MAC in `boards/`, written after a deploy (`write_deploy`)
@@ -90,6 +97,27 @@ class DeployRecordStore:
         banner = newest.get("micropython_banner")  # P779: a deploy before it kept none, and that is no unreadable record
         return LastDeploy(outcomes.RECORDED, *kept, record_path=path,
                           micropython_banner=banner if isinstance(banner, str) and banner.strip() else None)
+
+    def read_deploys(self, mac):
+        """The Deploys of the board with this `mac`. It never raises, as `read_last_deploy`: a record it cannot read, and a
+        record with one entry that holds no `project` or no `deployed` text, are outcomes.NOT_CHECKED, so no entry is
+        dropped in silence."""
+        if not mac:
+            return Deploys(outcomes.NOT_CHECKED, why=WHY_NO_MAC)
+        path = self.find_path(mac)
+        try:
+            if not path.exists() and not path.is_symlink():
+                return Deploys(outcomes.NONE_RECORDED)
+            record = json.loads(path.read_text())
+        except (OSError, ValueError, RecursionError):
+            return Deploys(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)
+        deploys = record.get("deploys") if isinstance(record, dict) else None
+        if not isinstance(deploys, list) or not deploys or not all(
+                isinstance(each, dict) and all(isinstance(each.get(key), str) and each[key].strip() for key in ("project", "deployed"))
+                for each in deploys):
+            return Deploys(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)
+        board = record.get("board")
+        return Deploys(outcomes.RECORDED, tuple(deploys), board=board if isinstance(board, str) else None)
 
     def write_deploy(self, facts, verdict, who):
         """

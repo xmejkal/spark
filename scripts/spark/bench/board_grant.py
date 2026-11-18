@@ -178,7 +178,7 @@ class GrantStore:
             return None
         try:
             grant = Grant(**json.loads(path.read_text()))
-        except (OSError, ValueError, TypeError):
+        except (OSError, ValueError, TypeError, RecursionError):  # P919: a deeply nested file is refused, not a crash
             raise GrantRefusedError(WHY_NOT_A_GRANT)
         if not isinstance(grant.mac, str) or grant.scope != scope or mac_key(grant.mac) != mac_key(mac) \
                 or grant.board_token != board_look.board_token(mac_key(mac)):

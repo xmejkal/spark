@@ -119,8 +119,7 @@ could-not-run, both in `status` and in the exit code, so read every `unchecked` 
 
 **In the text output,** `problems` are the `-` lines, `unchecked` the `!` lines and `unmeasured` the `?` lines.
 
-The requirements files, which buildability and physics also read, are not listed in `resolved`. vendor-truth checks
-every board definition available, including the library's.
+The requirements files, which buildability and physics also read, are not listed in `resolved`. vendor-truth checks every board definition available, including the library's.
 
 ## The other scripts' JSON
 
@@ -367,6 +366,7 @@ The column "needs the person" says whether the next step waits on the person's h
 | `port_gone` | deploy, stage `verify` | the board's port was not listed after the flash, or went and did not come back. No mpremote call was made on a dead port, so `data.repl_command` is null and `next` has no `watch` step (mpremote would choose a board of its own) | relay `data.person_action` (press RESET, then unplug and plug in, then `python3 -m mpremote devs` lists the ports). Never deploy again for this | yes |
 | `bad_argument` | both scripts | an argument that the script cannot run with (below) | fix the flag, run again | no |
 | `crash` | `look.py`, `deploy.py` | the look crashed (`grant.py`, `live.py` and `reach.py` print no stdout line for a crash, exit 2, the traceback on stderr): a defect in spark, never in the project. The sentence names the exception class; the traceback is on stderr | report it to the spark maintainers with the stderr traceback; running the look again for it is no use | yes |
+| `cannot_tell_board` | the bench's show, `unchecked`, its subject the port | spark cannot tell the board by its USB serial (it shows none, one its firmware set, or a bridge's that no project keeps), so it read none of that board's deploys and its deploy grant | run look.py in the project that uses the board: it reads the board and keeps it | yes |
 | `undeclared_effect` | no script today: the look declares `runs`. An Operation whose `effects` miss what it reaches | the operation ran a program its effects do not declare: a defect in spark | report it, as for `crash` | yes |
 
 `bad_argument`, `crash`, `undeclared_effect` and `input_unreadable` (a payload file or stdin that is not readable JSON, P726) are the core's codes, in `scripts/spark/core/codes.py`: every operation can write them. So are `needs_reply`, `unknown_reply` and `bad_reply`, the codes of [open questions and replies](replies.md) (P737); the look asks one `person` question before it reads a board, and stops with `other_board` (`unchecked`, both boards as `MAC ends 34:56`) when the board on USB is not the one kept for the project ([the look's question](replies.md#the-looks-question), P865), and `grant.py`, `reach.py` and `live.py` ask it before they touch the board ([their question](replies.md#the-question-of-the-grant-reach-and-live), P892); that page also holds `research.py`'s own codes (`no_sku`, `no_document_list`, `more_documents`, and the store's `url_unreachable` when the wiki page does not answer). The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `serial_not_mac` and `no_mac` are in `scripts/spark/bench/board_codes.py` too. They name the reasons of
