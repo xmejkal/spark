@@ -56,6 +56,38 @@ def data_of(port, result):
     return dict(fields, port=port)
 
 
+#: What the live try does, the paragraphs of live.py's `--help` before its `--json` and exit codes, line breaks and
+#: all (P855).
+DETAILS = """live.py --code 'print(1)' runs the code on the board on USB with mpremote's exec, after two checks that do not
+touch the board. First, the board must have a grant now: the person runs %s in their own terminal,
+and live.py checks it with `mpremote devs` only. Second, the code must not write a number that the project's board
+record names as a usb or flash pin (pin_roles), so time.sleep(12) is refused on a XIAO ESP32-C6 too. A refusal sends
+nothing to the board.
+
+If mpremote cannot enter the board's raw REPL, live.py cures the board once, as reach.py does, and tries again. When
+it still cannot get in, it names both causes: a dead USB output, or firmware that does not read its console. The exec
+stops the firmware that ran. So unless mpremote said it could not open the port or enter the raw REPL, live.py restarts the chip with
+`mpremote reset`, even after code that never ends, and the firmware starts from boot. A pin that the code set and the firmware never sets
+can keep its value through that reset (P252's bench), so live.py lists the GPIO numbers written in the code. That list
+over-claims: print(1) lists GPIO1.
+
+The board record is the project's active board (boards/active.json). live.py does not match that record against the
+board on USB. The board question below compares the board on USB with another record: the board that spark keeps for
+the project in your store, which look.py writes.
+
+After the two checks and just before the code runs, live.py asks the board question (P892). A board with no grant is
+refused first, with no question. On the board that spark keeps for the project, known by its USB serial, it asks
+nothing. Another board, told apart by its USB serial, stops with other_board, and a board with a USB serial in a
+project that keeps no board stops with no_known_board. Both name look.py, and nothing ran on the board. A board that
+spark cannot tell by its USB serial is asked on every run, in your terminal, or by --replies with your own file that
+holds {"replies": {"live.run_on_board.<id>": true}}. With a grant that grant.py gave, that happens only while the kept
+board's record trusts no USB serial (it showed none, or one that its firmware set) and the board on USB is on
+Espressif's own USB with a serial that does not start with the kept MAC, for example a board granted in another
+project: grant.py gives no live grant to a board with no serial. One yes or one no is for one run. A no is
+answered_no, and nothing ran on the board. A --port that the list does not hold stops with port_not_listed, and a
+/dev/tty. port is its /dev/cu. port.""" % board_grant.GRANT_COMMAND
+
+
 class RunLiveCode(Operation):
     """
     Operation: the live try. `platform_for(project, find_tool)` builds the FirmwarePlatform (default: MicroPythonPlatform).
@@ -69,6 +101,8 @@ class RunLiveCode(Operation):
     """
 
     name = "live"
+    summary = "Run a short piece of code on the running board inside a grant, say whether the board ran it, and reset it (P247)."
+    details = DETAILS
     arguments = (Argument(("--code",), "code", str, "the code to run on the board, e.g. 'print(1)'", required=True),
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose boards/active.json names the board and whose tools list "
                                                       "names mpremote (default: here)"),

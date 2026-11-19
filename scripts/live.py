@@ -1,45 +1,17 @@
 #!/usr/bin/env python3
-"""Run a short piece of code on the running board inside a grant, say whether the board ran it, and reset it (P247)."""
+"""The live try's CLI (P247): its `--help` sentence and paragraphs are RunLiveCode's (P855), and EPILOG is the CLI's own text."""
 
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from spark.bench import board_grant
 from spark.bench import build_project_outside_world
 from spark.bench.run_live_code import RunLiveCode
 from spark.core.cli import HelpText, run_cli
 
-EPILOG = """live.py --code 'print(1)' runs the code on the board on USB with mpremote's exec, after two checks that do not
-touch the board. First, the board must have a grant now: the person runs %s in their own terminal,
-and live.py checks it with `mpremote devs` only. Second, the code must not write a number that the project's board
-record names as a usb or flash pin (pin_roles), so time.sleep(12) is refused on a XIAO ESP32-C6 too. A refusal sends
-nothing to the board.
-
-If mpremote cannot enter the board's raw REPL, live.py cures the board once, as reach.py does, and tries again. When
-it still cannot get in, it names both causes: a dead USB output, or firmware that does not read its console. The exec
-stops the firmware that ran. So unless mpremote said it could not open the port or enter the raw REPL, live.py restarts the chip with
-`mpremote reset`, even after code that never ends, and the firmware starts from boot. A pin that the code set and the firmware never sets
-can keep its value through that reset (P252's bench), so live.py lists the GPIO numbers written in the code. That list
-over-claims: print(1) lists GPIO1.
-
-The board record is the project's active board (boards/active.json). live.py does not match that record against the
-board on USB. The board question below compares the board on USB with another record: the board that spark keeps for
-the project in your store, which look.py writes.
-
-After the two checks and just before the code runs, live.py asks the board question (P892). A board with no grant is
-refused first, with no question. On the board that spark keeps for the project, known by its USB serial, it asks
-nothing. Another board, told apart by its USB serial, stops with other_board, and a board with a USB serial in a
-project that keeps no board stops with no_known_board. Both name look.py, and nothing ran on the board. A board that
-spark cannot tell by its USB serial is asked on every run, in your terminal, or by --replies with your own file that
-holds {"replies": {"live.run_on_board.<id>": true}}. With a grant that grant.py gave, that happens only while the kept
-board's record trusts no USB serial (it showed none, or one that its firmware set) and the board on USB is on
-Espressif's own USB with a serial that does not start with the kept MAC, for example a board granted in another
-project: grant.py gives no live grant to a board with no serial. One yes or one no is for one run. A no is
-answered_no, and nothing ran on the board. A --port that the list does not hold stops with port_not_listed, and a
-/dev/tty. port is its /dev/cu. port.
-
---json prints one line with every field, null where it has none: answer (ran, raised, not_reached, refused_no_grant,
+#: The CLI's own text in `--help`, after RunLiveCode's details (P855): its --json, the board doctor's paragraph (it
+#: follows the --json one, so it stays here and `--help` stays as it was), then its exit codes.
+EPILOG = """--json prints one line with every field, null where it has none: answer (ran, raised, not_reached, refused_no_grant,
 refused_pin, refused_no_parse, or could-not-run, the word outcomes.py shares), grant_why (grant.py's code when the grant refused), why, output, cure, reset (done, failed or null),
 pins_checked (false when the record names no usb or flash pin) and gpio_numbers_in_code, with port. A stop of the board
 question adds open, product and known_board.
@@ -50,13 +22,13 @@ and one next step for your hands, as the last line. Its look at the console can 
 
 Exit codes: 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset failed,
 live.py could not run, or the board question stopped it (other_board, no_known_board, needs_reply, answered_no), and
-the last line says why. With two or more boards on USB, --port is needed.""" % board_grant.GRANT_COMMAND
+the last line says why. With two or more boards on USB, --port is needed."""
 
 
 def main(argv=None, outside=None, operation=None):
     """Run one live try and print its lines, or with --json its one line. `outside` is the OutsideWorld a test gives (a run
     builds the project's), `operation` the RunLiveCode a test gives with its Fakes. Returns the exit code."""
-    return run_cli(HelpText("live.py", __doc__.strip(), EPILOG), operation or RunLiveCode(), argv,
+    return run_cli(HelpText("live.py", epilog=EPILOG), operation or RunLiveCode(), argv,
                    outside_builder=build_project_outside_world, outside=outside)
 
 
