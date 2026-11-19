@@ -17,6 +17,7 @@ from spark.core import outcomes
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
+from spark.records import deploy_record_store
 from spark.records import store
 from spark.records import tool_finder
 
@@ -62,11 +63,12 @@ def _grant_said(grant):
 
 
 def _deploys_said(board):
-    """The deploys by project, NO_DEPLOY for none, or why they were not checked."""
+    """The deploys by project, NO_DEPLOY for none, or why they were not checked. A last date is the date of the look's
+    line: in the machine's zone when the stored time has a zone (P923)."""
     if board.deploys_from is None:
         return _not_checked(board, bench_service.DEPLOYS_FROM)
     return ", ".join("%s%s (%d, last %s)" % (each["project"], ", by %s" % each["made_by"] if each["made_by"] else "", each["deploys"],
-                                             each["last"][:10]) for each in board.deploys_from) or NO_DEPLOY
+                                             deploy_record_store.time_said(each["last"])[:10]) for each in board.deploys_from) or NO_DEPLOY
 
 
 def _kept_said(board):

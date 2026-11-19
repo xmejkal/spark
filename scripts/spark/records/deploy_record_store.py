@@ -34,6 +34,19 @@ def made_by_of(entry):
     return made_by if isinstance(made_by, str) and made_by.strip() else None
 
 
+def time_said(deployed):
+    """The stored time `deployed`. With a zone it is said in the machine's zone. With none it is as stored, and says so,
+    because a zone is never given to a time that has none. A time that does not parse is as stored. The look's line,
+    the deploy question and the view's date (P923) share it."""
+    iso = deployed[:-1] + "+00:00" if deployed.endswith("Z") else deployed  # 3.10 reads no Z
+    try:
+        if datetime.datetime.fromisoformat(iso).tzinfo is None:
+            return "%s %s" % (deployed, ZONE_NOT_STORED)
+        return zone_time.say_in_local_zone(iso)
+    except (ValueError, OverflowError):  # a time that does not parse, or one the machine's zone cannot hold
+        return deployed
+
+
 class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict deployed why record_path micropython_banner made_by",
                                          defaults=(None,) * 7)):
     """Value. What spark's store says of the board on USB. `state` is one of the three words of `outcomes` (the reader rule is
@@ -44,15 +57,8 @@ class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict dep
     of the registered project that recorded the deploy, or None for spark's own deploy (P920)."""
 
     def time_said(self):
-        """The stored time. With a zone it is said in the machine's zone. With none it is as stored, and says so,
-        because a zone is never given to a time that has none. A time that does not parse is as stored."""
-        iso = self.deployed[:-1] + "+00:00" if self.deployed.endswith("Z") else self.deployed  # 3.10 reads no Z
-        try:
-            if datetime.datetime.fromisoformat(iso).tzinfo is None:
-                return "%s %s" % (self.deployed, ZONE_NOT_STORED)
-            return zone_time.say_in_local_zone(iso)
-        except (ValueError, OverflowError):  # a time that does not parse, or one the machine's zone cannot hold
-            return self.deployed
+        """The stored time, as `time_said` says it."""
+        return time_said(self.deployed)
 
     def banner_said(self):
         """The banner as the last-deploy line and the deploy question add it after their words: `, <banner>`, or nothing

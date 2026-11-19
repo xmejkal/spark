@@ -24,7 +24,7 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `bench` an
 | `board` | the board record's id that the kept record or the deploy record names, or `null` |
 | `kept_for` | `[{project, at}]`, each project folder whose look kept this board, and when. `[]` is none. `null` is not known: a kept file cannot be read, or the store keeps boards and this one shows no serial or one its firmware set |
 | `last_deploy` | `{state, why, project, verdict, deployed, micropython_banner, made_by}`, as in `look.py`'s envelope |
-| `deploys_from` | `[{project, made_by, deploys, last}]`: each project name and maker the deploys recorded, the newest first, with its count and the `deployed` text of its last entry, as stored. `made_by` is the tool of a registered project, and `null` for spark's own deploys. `[]` is no deploy. `null` is not checked |
+| `deploys_from` | `[{project, made_by, deploys, last}]`: each project name and maker the deploys recorded, the newest first, with its count and the `deployed` text of its last entry, as stored. The text view prints that entry's date in the machine's zone when the stored time has a zone, as the last-deploy line does ([P923](https://github.com/xmejkal/spark/issues/1307)). `made_by` is the tool of a registered project, and `null` for spark's own deploys. `[]` is no deploy. `null` is not checked |
 | `grants` | `[{scope, state, granted_by, granted_at, expires_at}]`, the `deploy` scope then the `live` one. `state` is `live`, `ended`, `none`, `not_a_grant`, `no_zone` or `not_checked` |
 | `unchecked` | the keys of the parts that were not checked |
 
