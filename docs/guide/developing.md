@@ -154,9 +154,8 @@ It reports:
 - the size of `scripts/`;
 - the work board — spark's and the bin's, through your `gh` login ([the board](../../GLOSSARY.md#the-board)). It fails
   the push on:
-  - a stage over its limit, a lane with too many cards in flight, or a lane with too many cards that wait on the PO
-    in a working stage — the numbers and the counting rules
-    are [the flow's table](../../scrum/README.md#the-flow--an-items-stages);
+  - a stage over its limit, or a lane with too many cards in flight or waiting on the PO — the numbers and the counting
+    rules are [the flow's table](../../scrum/README.md#the-flow--an-items-stages);
   - two open cards labelled `expedite`: the expedite lane takes one card at a time;
   - a card that waits on someone (*Waiting on*) with no *Waiting since*, on either board, in any open stage;
   - a card of spark's in Ready, Build or Review with no *Needed by* or no slice.
@@ -218,10 +217,9 @@ A refusal: the gate's rules run on the board as `gh` printed it at the migration
 ```
 
 The other refusals read the same way, one line each, as the suite expects them: `Build (spark) holds 3 (#1, #2, #3) — its
-limit is 2: finish one before starting another`, `In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — its limit is 4: the spark lane finishes one
-before starting another`, `Waiting on the PO (sound) holds 3 (#5, #6, #7) — its limit is 2: the newest (#7) goes back to
-Idea with its wait kept and a comment that names its stage, until the PO answers one`, `2 cards labelled expedite (#1, #2) — one at a time, on the PO's word`, and for a card with no slice
-`#8 P8 — x: on no slice of the story map`. With no `gh` login:
+limit is 2: finish one before starting another`, `In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — its limit is 4: the
+spark lane finishes one before starting another`, `2 cards labelled expedite (#1, #2) — one at a time, on the PO's word`,
+and for a card with no slice `#8 P8 — x: on no slice of the story map`. With no `gh` login:
 
 <!-- output: run 2026-10-09, spark 0.7.0 -->
 ```text
