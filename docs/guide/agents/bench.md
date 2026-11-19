@@ -82,13 +82,15 @@ The envelope has `op` `record-deploy` and `data` `{entry, mac, device}`. The ent
 `{project, made_by, deployed, verdict, image_sha256, simulation, yes, micropython_banner}`. `deployed` is spark's clock
 at the call, with its zone. `verdict` is `ready not read`. Each `null` means that spark read nothing. Each stop writes
 nothing, exits 2, and its fix names the next command. The sentence of `not_registered` and `cannot_tell_board` says
-"Nothing was written". The last line on stderr says it for these codes: `no_port`, `two_boards` (give `--port`),
+"Nothing was written." The last line on stderr says it for these codes: `no_port`, `two_boards` (give `--port`),
 `port_not_listed`, `tool_missing`, `list_failed` and `store_problem`.
 
-The deploy tool of pixel-games records since P921 (#1303). Its deploy runs the launcher once, after the last copy and
-before the reset. It prints one line: `spark's store: recorded pixel-games, <deployed>`, `not recorded (<code>)`, or
-`not known` after its time limit of 30 s. The deploy goes on whatever the line says. `bench.py show` then lists
-`pixel-games` with "by" and that tool's name for the board.
+The deploy tool of pixel-games records since P921 (#1303). When the launcher file is there, its deploy runs the
+launcher once, after the last copy and before the reset. It prints one line that starts with `spark's store:`. The line
+ends with `recorded pixel-games, <deployed>`, `not recorded (<a code or a short reason>)`, or
+`not known (time limit of 30 s)`. With no launcher file, nothing runs and the line says so. The deploy goes on whatever
+the line says. After a recorded line, `bench.py show` lists `pixel-games` with "by" and the `--tool` text of its
+registration, while the board is on USB.
 
 ## The launcher, for a tool outside spark
 
