@@ -280,9 +280,9 @@ exits 1 today, and the baseline holds that. A card that changes an output says w
 
 ## What spark can do
 
-`python3 tools/inventory.py` prints every script in `scripts/` and `tools/` as Markdown. Each row says what the
-script is for, which pages name it, and which of its flags no page names. Scripts that no page names and no script
-imports come first. It runs only `--help` and writes nothing. `--spark DIR` reads another tree (P200, #153).
+`python3 tools/inventory.py` prints every script in `scripts/` and `tools/` as Markdown: what it is for, the pages
+that name it, and the flags of its `--help` (argparse or `run_cli`, P839) that no page names. Scripts that nothing names
+or imports come first. It runs only each command's `--help` and writes nothing. A CLI with several modes has only its default `--help` read, not `bench.py register` and `record` or `grant.py --check`. `--spark DIR` reads another tree (P200, #153).
 
 `python3 tools/measure.py` prints the shape of the code under `scripts/` (every folder in it but the MicroPython
 `stand_in/`), ending in a SCORE line (P322). `--rules` prints each breach of an architecture rule as

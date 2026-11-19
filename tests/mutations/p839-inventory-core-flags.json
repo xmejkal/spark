@@ -1,0 +1,32 @@
+[
+ {
+  "file": "tools/inventory.py",
+  "name": "the inventory reads the flags of an argparse script only, so a CLI on the core has none",
+  "find": "PARSERS = {\"argparse\", \"cli\"}",
+  "replace": "PARSERS = {\"argparse\"}"
+ },
+ {
+  "file": "tools/inventory.py",
+  "name": "the inventory reads the flags of a CLI on the core only, so an argparse script has none",
+  "find": "PARSERS = {\"argparse\", \"cli\"}",
+  "replace": "PARSERS = {\"cli\"}"
+ },
+ {
+  "file": "tools/inventory.py",
+  "name": "the inventory matches run_cli by name only, so a CLI that imports the cli module has no flags",
+  "find": "PARSERS = {\"argparse\", \"cli\"}",
+  "replace": "PARSERS = {\"argparse\", \"run_cli\"}"
+ },
+ {
+  "file": "tools/inventory.py",
+  "name": "a --help past its seconds gives no flags in silence",
+  "find": "            print(NO_FLAGS % (self.rel, \"ran past %d s\" % seconds), file=sys.stderr)\n",
+  "replace": ""
+ },
+ {
+  "file": "tools/inventory.py",
+  "name": "a --help that exits non-zero gives no flags in silence",
+  "find": "            print(NO_FLAGS % (self.rel, \"exited %d\" % shown.returncode), file=sys.stderr)\n",
+  "replace": ""
+ }
+]

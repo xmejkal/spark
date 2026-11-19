@@ -10,8 +10,8 @@ nobody reaches (P200, #153). A script is reached when a page that a person or an
 a skill, an agent, the README, a guide page or a team page. A library is also reached through the scripts that
 import it. A flag counts as named when a page that names its script also names the flag.
 
-It runs only `--help`, and only of the scripts that use argparse, so a parser built at run time counts too. It
-writes nothing.
+It runs only `--help`, and only of the scripts that use argparse or the core's `run_cli` (P839), so a parser built at
+run time counts too. It writes nothing.
 """
 
 import argparse
@@ -26,6 +26,15 @@ ROOT = Path(__file__).resolve().parent.parent
 PAGES = ("commands/*.md", "skills/**/*.md", "agents/*.md", ".claude/agents/*.md", "README.md", "docs/guide/**/*.md",
          "scrum/*.md")
 FLAG = re.compile(r"(?<![\w-])--[a-z][a-z0-9-]*")
+#: What a command imports to parse its flags: argparse, or the core's `cli` module, whose `run_cli` builds the parser
+#: from its Operation's arguments (P839). `cli` matches `from spark.core.cli import run_cli` and `from spark.core
+#: import cli` alike, and not `import spark.core.cli`, which no script writes. A command that imports neither prints
+#: no flags in `--help`.
+PARSERS = {"argparse", "cli"}
+#: How long a command's `--help` may run before the inventory says so and reads no flags of it.
+HELP_SECONDS = 30
+#: The stderr line of a `--help` that gave no flags: the script, then what happened.
+NO_FLAGS = "inventory: %s --help %s, its flags are not read"
 #: How many pages a row names before it says how many more.
 SHOWN = 3
 
@@ -33,7 +42,7 @@ SHOWN = 3
 class Script:
     """One script: what its docstring says it is for, whether it runs as a command, what it imports, its flags."""
 
-    def __init__(self, path, root):
+    def __init__(self, path, root, seconds=HELP_SECONDS):
         source = path.read_text()
         tree = ast.parse(source)
         self.path, self.name, self.stem = path, path.name, path.stem
@@ -46,24 +55,29 @@ class Script:
         self.imports |= {node.module.split(".")[0] for node in froms}
         self.imports |= {node.module.split(".")[-1] for node in froms}  # from spark.core.outcomes import X
         self.imports |= {alias.name for node in froms if node.module.split(".")[0] == "spark" for alias in node.names}
-        self.flags = self._flags() if self.is_command and "argparse" in self.imports else []
+        self.flags = self._flags(seconds) if self.is_command and PARSERS & self.imports else []
 
-    def _flags(self):
-        """The flags its own --help prints."""
+    def _flags(self, seconds):
+        """The flags its own --help prints within `seconds`. A --help that runs longer or exits non-zero gives none,
+        and one stderr line says which and why (the review of P839), so a flag that is not read is never silent."""
         try:
             shown = subprocess.run([sys.executable, str(self.path), "--help"], capture_output=True, text=True,
-                                   timeout=30).stdout
+                                   timeout=seconds)
         except subprocess.TimeoutExpired:
+            print(NO_FLAGS % (self.rel, "ran past %d s" % seconds), file=sys.stderr)
             return []
-        return sorted(set(FLAG.findall(shown)) - {"--help"})
+        if shown.returncode:
+            print(NO_FLAGS % (self.rel, "exited %d" % shown.returncode), file=sys.stderr)
+            return []
+        return sorted(set(FLAG.findall(shown.stdout)) - {"--help"})
 
 
 class Inventory:
     """Every script of one spark tree, with the pages that name it and the scripts that import it."""
 
-    def __init__(self, root=ROOT):
+    def __init__(self, root=ROOT, seconds=HELP_SECONDS):
         self.root = Path(root)
-        self.scripts = [Script(path, self.root) for path in self._files()]
+        self.scripts = [Script(path, self.root, seconds) for path in self._files()]
         self.pages = {path.relative_to(self.root).as_posix(): path.read_text(errors="ignore")
                       for pattern in PAGES for path in sorted(self.root.glob(pattern)) if path.is_file()}
 
