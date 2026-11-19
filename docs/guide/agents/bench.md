@@ -13,8 +13,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/bench.py" show --json
 
 With `--json` it prints the envelope, as `parts.py` does, with `tool` `bench` and `op` `show-bench`. Its `data` holds
 `boards`: one row per board, in the order `mpremote devs` lists them. `[]` is no board on USB, a complete answer.
-`null` is a list that did not run, or a store that cannot be read (`unchecked` holds `list_failed`, `tool_missing` or
-`store_problem`), never "no board".
+`null` is a list that did not run, or a store that cannot be read. It is never "no board", and `unchecked` holds
+`list_failed`, `tool_missing` or `store_problem`.
 
 | key | holds |
 | --- | --- |
@@ -60,13 +60,13 @@ python3 $CLAUDE_PLUGIN_ROOT/scripts/bench.py register pixel-games --origin https
 
 `--origin` is any text that every worktree of the project shares: the origin remote, or the git common folder of a project
 with no remote. The same name with the same origin changes nothing and exits 0. With another `--tool` it replaces the
-tool. A name with another origin, or a name on spark's projects list (also when its folder is gone), is `name_taken`. A
-name that is not plain is `key_not_plain`. A blank, space-only or unprintable `--origin` or `--tool` is `blank_value`.
+tool. A name with another origin is `name_taken`. A name on spark's projects list is `name_taken` too, with or without its
+folder. A name that is not plain is `key_not_plain`. A blank, space-only or unprintable `--origin` or `--tool` is `blank_value`.
 These refusals say "Not registered." in their sentence and exit 2. A store that refuses is `store_problem`, and its last
 line on stderr says "Not registered." Each fix names the next command. The envelope has `op` `register-project` and
 `data` `{registered: {name, origin, tool, registered}, changed, launcher}`. When the name was written and the launcher
-was not, the exit is 2, `data` holds the registration with `launcher` `null`, and stderr says that the name is
-registered and the launcher was not written. Run the same command again after the repair.
+was not, the exit is 2. `data` holds the registration with `launcher` `null`. Stderr says that the name is registered
+and the launcher was not written. Run the same command again after the repair.
 
 ## Record a deploy
 
@@ -82,8 +82,15 @@ The envelope has `op` `record-deploy` and `data` `{entry, mac, device}`. The ent
 `{project, made_by, deployed, verdict, image_sha256, simulation, yes, micropython_banner}`. `deployed` is spark's clock
 at the call, with its zone. `verdict` is `ready not read`. Each `null` means that spark read nothing. Each stop writes
 nothing, exits 2, and its fix names the next command. The sentence of `not_registered` and `cannot_tell_board` says
-"Nothing was written." For `no_port`, `two_boards` (give `--port`), `port_not_listed`, `tool_missing`, `list_failed` and
-`store_problem`, the last line on stderr says it.
+"Nothing was written." The last line on stderr says it for these codes: `no_port`, `two_boards` (give `--port`),
+`port_not_listed`, `tool_missing`, `list_failed` and `store_problem`.
+
+The deploy tool of pixel-games records since P921 (#1303). When the launcher file is there, its deploy runs the
+launcher once, after the last copy and before the reset. It prints one line that starts with `spark's store:`. The line
+ends with `recorded pixel-games, <deployed>`, `not recorded (<a code or a short reason>)`, or
+`not known (time limit of 30 s)`. With no launcher file, nothing runs and the line says so. The deploy goes on whatever
+the line says. After a recorded line, `bench.py show` lists `pixel-games` with "by" and the `--tool` text of its
+registration, while the board is on USB.
 
 ## The launcher, for a tool outside spark
 
