@@ -4,6 +4,8 @@ P200: tools/inventory.py says what each script is for, who reaches it, and which
     python3 -m unittest tests.test_inventory
 """
 
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -82,28 +84,40 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, {scripts!r})
-from spark.core.cli import HelpText, run_cli
+{imports}
 from spark.core.operation import Argument, Operation
 
 
 class CheckBoard(Operation):
     name = "check-board"
-    arguments = (Argument(("--renamed",), "renamed", str, "what the old flag took"),)
+    arguments = (Argument(({flag!r},), "renamed", str, "what the old flag took"),)
 
 
 if __name__ == "__main__":
-    sys.exit(run_cli(HelpText("delta.py"), CheckBoard(), outside_builder=None))
+    {main}
 '''
+#: The ways a core CLI imports `run_cli`, and the ways its `--help` can go wrong (the review of P839).
+BY_NAME, BY_MODULE = "from spark.core.cli import HelpText, run_cli", "from spark.core import cli"
+RUNS = 'sys.exit(run_cli(HelpText("delta.py"), CheckBoard(), outside_builder=None))'
+RUNS_BY_MODULE = 'sys.exit(cli.run_cli(cli.HelpText("epsilon.py"), CheckBoard(), outside_builder=None))'
+FAILS, HANGS = "sys.exit(1)", "import time; time.sleep(30)"
+#: The seconds the test gives a --help: long enough for a CLI to start, far shorter than HANGS.
+SECONDS = 3
+
+
+def core_command(flag="--renamed", imports=BY_NAME, main=RUNS):
+    return CORE_COMMAND.format(scripts=str(ROOT / "scripts"), imports=imports, flag=flag, main=main)
 
 
 class TheFlagsOfACliOnTheCoreTest(unittest.TestCase):
-    """P839: a core CLI whose flag was renamed, and a page that still names the old flag."""
+    """P839: a core CLI whose flag was renamed, and a page that still names the old flag; one that imports the module."""
 
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         (self.root / "scripts").mkdir()
         (self.root / "commands").mkdir()
-        (self.root / "scripts" / "delta.py").write_text(CORE_COMMAND.format(scripts=str(ROOT / "scripts")))
+        (self.root / "scripts" / "delta.py").write_text(core_command())
+        (self.root / "scripts" / "epsilon.py").write_text(core_command("--module", BY_MODULE, RUNS_BY_MODULE))
         (self.root / "commands" / "check.md").write_text("Run `delta.py --old` to check the board.\n")
         self.inventory = inventory.Inventory(self.root)
         self.script = {script.name: script for script in self.inventory.scripts}
@@ -115,6 +129,29 @@ class TheFlagsOfACliOnTheCoreTest(unittest.TestCase):
         self.assertEqual(self.inventory.unnamed_flags(self.script["delta.py"]), ["--renamed"])
         self.assertIn("| `scripts/delta.py` | Delta checks the board. | commands/check.md | --renamed |",
                       self.inventory.markdown())
+
+    def test_a_cli_that_imports_the_module_has_its_flags_read_too(self):
+        self.assertEqual(self.script["epsilon.py"].flags, ["--module"])
+
+
+class AHelpThatGivesNoFlagsTest(unittest.TestCase):
+    """The review of P839: a --help that exits non-zero or runs past its seconds says so on stderr, and the run goes on."""
+
+    def flags_and_said(self, main):
+        root = Path(tempfile.mkdtemp())
+        (root / "scripts").mkdir()
+        (root / "scripts" / "delta.py").write_text(core_command(main=main))
+        said = io.StringIO()
+        with contextlib.redirect_stderr(said):
+            found = inventory.Inventory(root, seconds=SECONDS)
+        return found.scripts[0].flags, said.getvalue()
+
+    def test_a_help_that_exits_non_zero_is_said(self):
+        self.assertEqual(self.flags_and_said(FAILS), ([], "inventory: scripts/delta.py --help exited 1, its flags are not read\n"))
+
+    def test_a_help_past_its_seconds_is_said(self):
+        self.assertEqual(self.flags_and_said(HANGS),
+                         ([], "inventory: scripts/delta.py --help ran past %d s, its flags are not read\n" % SECONDS))
 
 
 if __name__ == "__main__":
