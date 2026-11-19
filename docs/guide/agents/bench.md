@@ -33,7 +33,8 @@ the look's envelope.
 
 `deploys_from[].last` is the stored text. The text view prints the date of `last` as the last-deploy line says it: in
 the machine's zone when the stored time has a zone, and as stored when it has none or does not parse
-([P923](https://github.com/xmejkal/spark/issues/1307)).
+([P923](https://github.com/xmejkal/spark/issues/1307)). The date after "since" of `kept_for[].at` follows the same rule, here and in
+the look's and the deploy's "kept since" sentences ([P933](https://github.com/xmejkal/spark/issues/1322)).
 
 The deploy grant is found by the MAC and the live grant by the USB serial, as `grant.py --check` finds it. A project name
 of spark's own deploy is the folder name as the deploy recorded it, so a worktree shows under its own name. A registered

@@ -32,7 +32,7 @@ board, reads it and keeps it. The live grant is found by the USB serial, as gran
 The names after "deploys from" are the project folder names that spark's deploys recorded, and the registered names
 that bench.py record wrote, each with "by" and its tool. The two never merge. The date after "last" is the date of
 the last-deploy line: in the machine's zone when the stored time has a zone, and as stored when it has none or is no
-time. --json keeps the stored text.
+time. The date after "since" follows the same rule. --json keeps the stored text.
 
 With --json it prints one envelope: data.boards (docs/guide/agents/bench.md).
 

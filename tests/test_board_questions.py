@@ -451,6 +451,14 @@ class TheStopsTest(BoardQuestionCase):
         pasted = [line for line in self.result(REACH).diagnostics if isinstance(line, PastedLine)]  # chosen by the Finding's code
         self.assertEqual(pasted, ['reach.py: ' + known_board.REACH.answer_fix % self.replies.asked[-1].key])
 
+    def test_p933_the_kept_since_date_is_the_machine_s_and_a_time_with_no_zone_is_as_stored(self):
+        for at, said in (("2026-11-17T23:30:00-05:00", "2026-11-18"), ("2026-11-18T00:30:00+09:00", "2026-11-17"),
+                         ("2026-11-10T23:59:00", "2026-11-10"), ("last tuesday at nine", "last tuesd"), ("20261117", "20261117")):
+            with self.subTest(at=at):
+                known = known_board.KnownBoard("/p", "aa:bb:cc:dd:ee:ff", None, "xiao-esp32-c6", "a test", at)
+                self.assertEqual(known.since_said(), said)
+                self.assertIn("kept since %s)" % said, known_board.other_after(known, C6_PORT, OTHER_MAC, "a fix").sentence)
+
     def test_19_the_deploys_finding_after_a_read_of_another_board_is_as_before(self):
         known = known_board.KnownBoard("/p", "aa:bb:cc:dd:ee:ff", None, "xiao-esp32-c6", "a test", "2026-11-17T18:00:00+01:00")
         found = known_board.other_after(known, C6_PORT, OTHER_MAC, known_board.DEPLOY.after_fix)

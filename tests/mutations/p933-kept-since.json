@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "the kept board's since date is the first ten characters of the stored text",
+  "find": "        return deploy_record_store.date_said(self.at)",
+  "replace": "        return self.at[:10]"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "the finding after a read says the stored text's date, not the machine's",
+  "find": "mac_ends(known.mac), known.since_said()), fix)",
+  "replace": "mac_ends(known.mac), known.at[:10]), fix)"
+ },
+ {
+  "file": "scripts/spark/bench/known_board.py",
+  "name": "the stop before a read says the stored text's date, not the machine's",
+  "find": "mac_ends(self.known.mac), self.known.since_said(), last)",
+  "replace": "mac_ends(self.known.mac), self.known.at[:10], last)"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "the look's finding after its read says the stored text's date, not the machine's",
+  "find": "known_board.mac_ends(known.mac), known.since_said())",
+  "replace": "known_board.mac_ends(known.mac), known.at[:10])"
+ },
+ {
+  "file": "scripts/spark/bench/show_bench.py",
+  "name": "the view's kept-for line says the stored text's date, not the machine's",
+  "find": "(known.project, known.since_said())",
+  "replace": "(known.project, known.at[:10])"
+ }
+]

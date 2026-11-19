@@ -172,7 +172,7 @@ class LookAtBoard(Operation):
         switch = passed.state == OTHER or (passed.state == CANNOT_TELL and passed.reply is not None)
         differs = known_board.differs(known, mac)
         if differs and not switch:
-            other = known_board.OTHER_AFTER_MESSAGE % (report.port, known_board.mac_ends(mac), known_board.mac_ends(known.mac), known.at[:10])
+            other = known_board.OTHER_AFTER_MESSAGE % (report.port, known_board.mac_ends(mac), known_board.mac_ends(known.mac), known.since_said())
             fix = known_board.OTHER_AFTER_FIX if passed.state != CANNOT_TELL else known_board.OTHER_AFTER_PORT_FIX if passed.row \
                 else known_board.OTHER_AFTER_UNLISTED_FIX % self.known.find_path(project)
             found = Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, other, fix)
