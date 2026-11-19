@@ -73,5 +73,49 @@ class TheInventoryOfASmallTreeTest(unittest.TestCase):
         self.assertIn("3 scripts: 2 commands, 1 library", page)
 
 
+#: A CLI on the core (P839): it imports no argparse, and `run_cli` builds its parser from its Operation's arguments. The
+#: real spark package is on its path, as each script of scripts/ puts its own.
+CORE_COMMAND = '''"""
+Delta checks the board.
+"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, {scripts!r})
+from spark.core.cli import HelpText, run_cli
+from spark.core.operation import Argument, Operation
+
+
+class CheckBoard(Operation):
+    name = "check-board"
+    arguments = (Argument(("--renamed",), "renamed", str, "what the old flag took"),)
+
+
+if __name__ == "__main__":
+    sys.exit(run_cli(HelpText("delta.py"), CheckBoard(), outside_builder=None))
+'''
+
+
+class TheFlagsOfACliOnTheCoreTest(unittest.TestCase):
+    """P839: a core CLI whose flag was renamed, and a page that still names the old flag."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        (self.root / "scripts").mkdir()
+        (self.root / "commands").mkdir()
+        (self.root / "scripts" / "delta.py").write_text(CORE_COMMAND.format(scripts=str(ROOT / "scripts")))
+        (self.root / "commands" / "check.md").write_text("Run `delta.py --old` to check the board.\n")
+        self.inventory = inventory.Inventory(self.root)
+        self.script = {script.name: script for script in self.inventory.scripts}
+
+    def test_its_flags_are_the_flags_of_its_operation(self):
+        self.assertEqual(self.script["delta.py"].flags, ["--renamed"])
+
+    def test_the_renamed_flag_is_named_on_no_page(self):
+        self.assertEqual(self.inventory.unnamed_flags(self.script["delta.py"]), ["--renamed"])
+        self.assertIn("| `scripts/delta.py` | Delta checks the board. | commands/check.md | --renamed |",
+                      self.inventory.markdown())
+
+
 if __name__ == "__main__":
     unittest.main()

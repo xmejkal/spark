@@ -1,0 +1,14 @@
+[
+ {
+  "file": "tools/inventory.py",
+  "name": "the inventory reads the flags of an argparse script only, so a CLI on the core has none",
+  "find": "PARSERS = {\"argparse\", \"run_cli\"}",
+  "replace": "PARSERS = {\"argparse\"}"
+ },
+ {
+  "file": "tools/inventory.py",
+  "name": "the inventory reads the flags of a CLI on the core only, so an argparse script has none",
+  "find": "PARSERS = {\"argparse\", \"run_cli\"}",
+  "replace": "PARSERS = {\"run_cli\"}"
+ }
+]

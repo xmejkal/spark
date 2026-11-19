@@ -10,8 +10,8 @@ nobody reaches (P200, #153). A script is reached when a page that a person or an
 a skill, an agent, the README, a guide page or a team page. A library is also reached through the scripts that
 import it. A flag counts as named when a page that names its script also names the flag.
 
-It runs only `--help`, and only of the scripts that use argparse, so a parser built at run time counts too. It
-writes nothing.
+It runs only `--help`, and only of the scripts that use argparse or the core's `run_cli` (P839), so a parser built at
+run time counts too. It writes nothing.
 """
 
 import argparse
@@ -26,6 +26,9 @@ ROOT = Path(__file__).resolve().parent.parent
 PAGES = ("commands/*.md", "skills/**/*.md", "agents/*.md", ".claude/agents/*.md", "README.md", "docs/guide/**/*.md",
          "scrum/*.md")
 FLAG = re.compile(r"(?<![\w-])--[a-z][a-z0-9-]*")
+#: What a command imports to parse its flags: argparse, or the core's `run_cli`, which builds the parser from its
+#: Operation's arguments (P839). A command that imports neither prints no flags in `--help`.
+PARSERS = {"argparse", "run_cli"}
 #: How many pages a row names before it says how many more.
 SHOWN = 3
 
@@ -46,7 +49,7 @@ class Script:
         self.imports |= {node.module.split(".")[0] for node in froms}
         self.imports |= {node.module.split(".")[-1] for node in froms}  # from spark.core.outcomes import X
         self.imports |= {alias.name for node in froms if node.module.split(".")[0] == "spark" for alias in node.names}
-        self.flags = self._flags() if self.is_command and "argparse" in self.imports else []
+        self.flags = self._flags() if self.is_command and PARSERS & self.imports else []
 
     def _flags(self):
         """The flags its own --help prints."""
