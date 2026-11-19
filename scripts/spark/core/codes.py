@@ -1,11 +1,28 @@
 """
-The codes the core writes in an envelope item for every Operation (P442, W3-3). A leaf: it imports nothing. An area's
-own codes stay in its table (`spark/bench/board_codes.py` for the bench); these are the ones `run_operation` and
-`run_cli` give whatever the Operation. `CODES` says each in one sentence, as `board_codes.CODES` does, and
-`docs/guide/agents/json.md` names each.
+The codes the core writes in an envelope item for every Operation (P442, W3-3), and `Code`, the value an area's table
+holds a code as (P853). A leaf: it imports nothing. An area's own codes stay in its table (`spark/bench/board_codes.py`
+for the bench); these are the ones `run_operation` and `run_cli` give whatever the Operation. `CODES` says each in one
+sentence, as `board_codes.CODES` does, and `docs/guide/agents/json.md` names each.
 """
 
 # --- MVP ---
+class Code(str):
+    """
+    Value: a code, the word an agent decides on, with its `meaning` (what the code says in one sentence) and its `fix`
+    (what to do), so a Finding and a SparkError take the fix from the code (P853). It is a str, so a key, a comparison
+    and the JSON stay as they were. A Finding's `sentence` is the text of one case, never the code's meaning.
+    """
+
+    def __new__(cls, word, meaning, fix):
+        code = super().__new__(cls, word)
+        code.meaning, code.fix = meaning, fix
+        return code
+
+    def __getnewargs__(self):
+        """The arguments copy, deepcopy and pickle make the Code again with."""
+        return str(self), self.meaning, self.fix
+
+
 #: An argument the Operation cannot run with: `run_cli` answers it for every Operation (it was board_codes.BAD_ARGUMENT).
 BAD_ARGUMENT = "bad_argument"
 #: The Operation raised an exception it did not turn into a Finding: a defect in spark, never in the project.

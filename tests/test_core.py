@@ -1,6 +1,8 @@
 """P442 (#587, W3-3): the core contract, with a toy Operation and no spark area imported: the result, the error, the codes."""
 
+import copy
 import json
+import pickle
 import sys
 import unittest
 from pathlib import Path
@@ -14,6 +16,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.records import deploy_record_store, tool_finder  # noqa: E402
 from fakes import FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
+from spark.core.codes import Code  # noqa: E402
 from spark.core.cli import DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
 from spark.core.renderers import FlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
@@ -26,6 +29,7 @@ from spark.core.result import Finding, NextStep, OperationResult, envelope_item,
 
 PROBLEM = Finding(outcomes.PROBLEMS, "flash", "flash_differs", "the flash differs", "accept it")
 UNCHECKED = Finding(outcomes.COULD_NOT_RUN, None, "field_unknown", "flash unknown", "unknown is not a pass")
+NEED = Code("need_unknown", "the project has no need of that id", "drop a need that --needs lists")
 STEP = NextStep("deploy", ["--project", "p", "--token", "t"], "erases the flash", ["deletes", "writes"], True)
 
 
@@ -104,6 +108,23 @@ class CodesTest(unittest.TestCase):
 
     def test_the_core_codes_are_its_own_crash_bad_argument_undeclared_effect_and_the_reply_codes(self):
         self.assertEqual(sorted(codes.CODES), ["bad_argument", "bad_reply", "crash", "input_unreadable", "needs_reply", "undeclared_effect", "unknown_reply"])
+
+
+class CodeTest(unittest.TestCase):
+    """P853: a Code is its word as a key, in a comparison and in JSON, and it keeps its meaning and its fix."""
+
+    def test_it_is_its_word_as_a_key_in_a_comparison_and_in_json(self):
+        self.assertEqual((NEED, hash(NEED), {NEED: 1}["need_unknown"]), ("need_unknown", hash("need_unknown"), 1))
+        self.assertEqual(json.dumps({NEED: NEED}), '{"need_unknown": "need_unknown"}')
+        self.assertEqual((NEED.meaning, NEED.fix), ("the project has no need of that id", "drop a need that --needs lists"))
+
+    def test_a_copy_a_deepcopy_and_a_pickle_keep_its_meaning_and_its_fix(self):
+        for again in (copy.copy(NEED), copy.deepcopy(NEED), pickle.loads(pickle.dumps(NEED))):
+            self.assertEqual((type(again), again, again.meaning, again.fix), (Code, NEED, NEED.meaning, NEED.fix))
+
+    def test_the_privacy_step_masks_it_as_any_str(self):
+        privacy = Privacy.of("/p", None, "/h", ())
+        self.assertEqual(privacy.masked({"code": NEED, "where": "/p/x"}), {"code": "need_unknown", "where": "x"})
 
 
 class Toy(Operation):
