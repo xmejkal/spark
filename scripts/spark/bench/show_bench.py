@@ -17,6 +17,7 @@ from spark.core import outcomes
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
+from spark.records import deploy_record_store
 from spark.records import store
 from spark.records import tool_finder
 
@@ -61,12 +62,18 @@ def _grant_said(grant):
     return "%s: %s" % (grant.scope, words % board_grant.say_in_local_zone(grant.expires_at) if grant.state in TIMED else words)
 
 
+def _date_said(stored):
+    """The date of a stored deploy time, as the look's line says it (P923): in the machine's zone when the time has a
+    zone, else the stored text's first ten characters, and never a part of the note that `time_said` adds."""
+    return deploy_record_store.time_said(stored)[:min(10, len(stored))]
+
+
 def _deploys_said(board):
     """The deploys by project, NO_DEPLOY for none, or why they were not checked."""
     if board.deploys_from is None:
         return _not_checked(board, bench_service.DEPLOYS_FROM)
     return ", ".join("%s%s (%d, last %s)" % (each["project"], ", by %s" % each["made_by"] if each["made_by"] else "", each["deploys"],
-                                             each["last"][:10]) for each in board.deploys_from) or NO_DEPLOY
+                                             _date_said(each["last"])) for each in board.deploys_from) or NO_DEPLOY
 
 
 def _kept_said(board):

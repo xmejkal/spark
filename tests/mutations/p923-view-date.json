@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/spark/bench/show_bench.py",
+  "name": "the view prints the first ten characters of the stored text, so its date differs from the look's line for another zone",
+  "find": "    return deploy_record_store.time_said(stored)[:min(10, len(stored))]",
+  "replace": "    return stored[:10]"
+ },
+ {
+  "file": "scripts/spark/records/deploy_record_store.py",
+  "name": "the look's line no longer shares the rule of the view's date: LastDeploy.time_said gives the stored text",
+  "find": "        return time_said(self.deployed)",
+  "replace": "        return self.deployed"
+ },
+ {
+  "file": "scripts/spark/records/deploy_record_store.py",
+  "name": "the shared time_said says a time with a zone as stored, not in the machine's zone",
+  "find": "        return zone_time.say_in_local_zone(iso)",
+  "replace": "        return deployed"
+ }
+]

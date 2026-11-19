@@ -71,6 +71,12 @@ class LastDeployCase(unittest.TestCase):
         last = deploy_record_store.LastDeploy("recorded", "p", "ready seen", "2026-10-19T09:24:50")
         self.assertEqual(last.time_said(), "2026-10-19T09:24:50 (zone not stored)")
 
+    def test_the_module_s_time_said_is_the_rule_of_the_method(self):
+        """P923: bench.py show says a date with the same function as the look's line."""
+        self.assertEqual([deploy_record_store.time_said(stored) for stored in (
+            "2026-10-19T07:24:50+00:00", "2026-10-23T04:55:29Z", "2026-10-19T09:24:50", "last tuesday")], [
+            "2026-10-19T09:24:50+02:00", "2026-10-23T06:55:29+02:00", "2026-10-19T09:24:50 (zone not stored)", "last tuesday"])
+
     def test_a_time_that_does_not_parse_is_as_stored(self):
         self.assertEqual(deploy_record_store.LastDeploy("recorded", "p", "ready seen", "last tuesday").time_said(), "last tuesday")
 
