@@ -219,33 +219,60 @@ def write_place(name, text):
     return write_file(target, text, name in PRIVATE)
 
 
-#: The stores this process holds, as (thread, lock file) pairs: what makes `locked()` re-entrant for the thread that holds one.
+#: The stores this process holds, as (thread, home) pairs: what makes `locked()` re-entrant for the thread that holds one.
 _HELD = set()
+
+
+def _hold_home():
+    """The store's folder, open and held with `flock`, and the folders this call made for it, the home first. A folder
+    that another holder removed while this call waited is not the store any more, so the call starts again."""
+    made = []
+    while True:
+        folder = home()
+        try:
+            made += [each for each in (folder, *folder.parents) if not each.exists() and each not in made]
+            folder.mkdir(parents=True, exist_ok=True)
+            held = os.open(folder, os.O_RDONLY)
+        except OSError as cannot:  # as `_make_ready` (P496): a SPARK_HOME that names a file, or a folder spark may not open
+            raise StoreError("cannot hold %s for spark's store (%s): point SPARK_HOME at a folder you can write", folder, cannot,
+                             code=records_codes.STORE_NOT_WRITABLE)
+        fcntl.flock(held, fcntl.LOCK_EX)
+        try:
+            if os.path.samestat(os.fstat(held), os.stat(folder)):
+                return held, made
+        except OSError:
+            pass
+        os.close(held)
 
 
 @contextlib.contextmanager
 def locked():
     """
     One writer at a time (§6.1): the store held from a write's plan to its last byte, so two agents writing at once cannot
-    each write what the other never read — a part reserved twice, a count lost. The lock is a file in the system's temp
-    folder named after this home, never in the store, so it is never a stray file in a repository; the operating system
-    lets go of it when its holder exits. A `locked()` inside a `locked()` of the same store, in the same thread, passes
-    through and only the outermost lets go: a second `flock` on a second open file would wait behind the first for ever.
+    each write what the other never read — a part reserved twice, a count lost. The lock is on the store's own folder
+    and is no file (P922): one store has one lock whatever the process's environment, and no stray file is in a
+    repository. A folder the lock made for a store that did not exist goes again when nothing was written into it, so
+    a dry run and a refused write leave nothing. The operating system lets go of the lock when its holder exits. A
+    `locked()` inside a `locked()` of the same store, in the same thread, passes through and only the outermost lets
+    go: a second `flock` on a second open folder would wait behind the first for ever. Where the system has no
+    `flock`, nothing is held.
     """
-    named = hashlib.sha256(str(home().resolve()).encode()).hexdigest()[:16]
-    lock_file = Path(tempfile.gettempdir()) / ("spark-%s.lock" % named)
-    holder = (threading.get_ident(), lock_file)
-    if holder in _HELD:
+    holder = (threading.get_ident(), str(home().resolve()))
+    if holder in _HELD or not fcntl:
         yield
         return
-    with open(lock_file, "a") as held:
-        if fcntl:
-            fcntl.flock(held, fcntl.LOCK_EX)
-        _HELD.add(holder)
+    held, made = _hold_home()
+    _HELD.add(holder)
+    try:
+        yield
+    finally:
+        _HELD.discard(holder)
         try:
-            yield
-        finally:
-            _HELD.discard(holder)
+            for folder in made:  # each goes only when empty, the home first; under the lock, so a waiter starts again
+                folder.rmdir()
+        except OSError:
+            pass
+        os.close(held)
 
 
 def _target(name, key):

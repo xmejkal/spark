@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "the store's folder is opened and not held, so two writers do not take turns",
+  "find": "        fcntl.flock(held, fcntl.LOCK_EX)",
+  "replace": "        pass"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "a waiter keeps a folder that the holder removed, so it holds no store",
+  "find": "            if os.path.samestat(os.fstat(held), os.stat(folder)):",
+  "replace": "            if True:"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "the folder that the lock made stays after a run that wrote nothing",
+  "find": "                folder.rmdir()",
+  "replace": "                pass"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "only the home that the lock made goes, and the folders made above it stay",
+  "find": "            made += [each for each in (folder, *folder.parents) if not each.exists() and each not in made]",
+  "replace": "            made += [each for each in (folder,) if not each.exists() and each not in made]"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "a home that cannot be held is a bare OSError and not the store's refusal",
+  "find": "        except OSError as cannot:  # as `_make_ready` (P496): a SPARK_HOME that names a file, or a folder spark may not open",
+  "replace": "        except ZeroDivisionError as cannot:"
+ }
+]

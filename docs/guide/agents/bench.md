@@ -112,5 +112,4 @@ envelope line with the code `launcher_stale` and exits 2. Its fix is to run `reg
 that the launcher itself is missing, or the Python that runs it is gone. A stale launcher is a could-not-run, and the tool's deploy goes on.
 
 Known limits: no path to spark's code stays valid after a plugin update or a removed worktree, so register from a
-checkout that stays. A serial that a firmware set and that starts with 12 hex digits passes as a MAC. The store's lock
-file is in the temp folder, so a process with another `TMPDIR` does not share it.
+checkout that stays. A serial that a firmware set and that starts with 12 hex digits passes as a MAC.
