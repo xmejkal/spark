@@ -38,6 +38,9 @@ from spark.core import text_guards  # noqa: E402
 from spark.idea.drop_need import DropNeed  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
+#: The fix of a drop that was not planned or written, as an agent reads it (P853 pins each fix of the idea area).
+UNWRITTEN_FIX = "check the disk and the store folder, then run the same drop again: the drawer is written first and the needs file last"
+
 
 def run(argv):
     with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
@@ -1771,6 +1774,7 @@ class TheNeedsDropTest(unittest.TestCase):
                                          "dropped": None, "released": [], "written": False})
         self.assertIn("no need called light: it was never there or is already dropped. --needs lists them: soil, alarm, input",
                       said["problems"][0]["sentence"])
+        self.assertEqual(said["problems"][0]["fix"], "drop a need that --needs lists")
         run(["--needs-drop", str(self.project), "alarm"])
         again, code = run(["--needs-drop", str(self.project), "alarm"])
         self.assertEqual((again["status"], code, again["data"]["needs"]), ("problems", 1, ["soil", "input"]))
@@ -1780,6 +1784,15 @@ class TheNeedsDropTest(unittest.TestCase):
         said, code = run(["--needs-drop", str(self.project), "alarm"])
         self.assertEqual((said["status"], code), ("could-not-run", 2))
         self.assertIn("needs.json", said["unchecked"][0]["sentence"])
+        self.assertEqual(said["unchecked"][0]["fix"], "drop the need again once the file is fixed")
+
+    def test_a_project_list_that_is_no_json_exits_2_with_the_fix_of_an_unwritten_drop_and_writes_nothing(self):
+        (self.home / "projects.json").write_text("{not json")
+        before = self.digest()
+        said, code = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((said["status"], code, said["unchecked"][0]["code"], self.digest()), ("could-not-run", 2, "drop_unwritten", before))
+        self.assertIn("the project's name could not be read: ", said["unchecked"][0]["sentence"])
+        self.assertEqual(said["unchecked"][0]["fix"], UNWRITTEN_FIX)
 
     def test_requirements_that_still_list_the_dropped_part_get_a_note_that_says_who_runs_what(self):
         (self.project / "requirements.json").write_text(json.dumps({"parts": [{"part": "x-soil"}]}))
@@ -1836,6 +1849,7 @@ class TheNeedsDropTest(unittest.TestCase):
                                build_outside=lambda effects: None)
         self.assertEqual((result.status(), self.need_ids(), self.entry("speaker")["used_in"]), ("could-not-run", ["soil", "alarm", "input"], {}))
         self.assertEqual(result.findings[0].code, "drop_unwritten")
+        self.assertEqual(result.findings[0].fix, UNWRITTEN_FIX)
         run(["--needs-drop", str(self.project), "alarm"])
         self.assertEqual(self.need_ids(), ["soil", "input"])
 
