@@ -488,7 +488,7 @@ class TheBuildAreaTest(unittest.TestCase):
     BUILD = ROOT / "scripts" / "spark" / "build"
     #: The modules of the area, by the names of its page (`areas/build.md`).
     MODULES = ["ai_files", "board_alone_input", "board_engine", "build_board", "build_codes", "build_operations", "build_record",
-               "build_service", "kept_files", "project_setup", "requirements_build", "stages"]
+               "build_service", "kept_files", "project_setup", "requirements_build", "stage_help_table", "stages"]
     #: Each CLI's own top-level functions: `main` alone, since P804 `check_spine.py`'s too (`render` and the keep step moved to
     #: `build_board`). A library function back in a CLI, under any name, fails the check.
     CLIS = {"check_spine.py": ["main"], "init_project.py": ["main"]}
