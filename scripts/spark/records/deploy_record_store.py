@@ -36,8 +36,8 @@ def made_by_of(entry):
 
 def time_said(deployed):
     """The stored time `deployed`. With a zone it is said in the machine's zone. With none it is as stored, and says so,
-    because a zone is never given to a time that has none. A time that does not parse is as stored. The look's line,
-    the deploy question and the view's date (P923) share it."""
+    because a zone is never given to a time that has none. A time that does not parse is as stored. The look's line
+    and the deploy question say it whole, and the view takes its date from it (P923)."""
     iso = deployed[:-1] + "+00:00" if deployed.endswith("Z") else deployed  # 3.10 reads no Z
     try:
         if datetime.datetime.fromisoformat(iso).tzinfo is None:

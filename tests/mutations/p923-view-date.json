@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/bench/show_bench.py",
   "name": "the view prints the first ten characters of the stored text, so its date differs from the look's line for another zone",
-  "find": "deploy_record_store.time_said(each[\"last\"])[:10]) for each in board.deploys_from) or NO_DEPLOY",
-  "replace": "each[\"last\"][:10]) for each in board.deploys_from) or NO_DEPLOY"
+  "find": "    return deploy_record_store.time_said(stored)[:min(10, len(stored))]",
+  "replace": "    return stored[:10]"
  },
  {
   "file": "scripts/spark/records/deploy_record_store.py",

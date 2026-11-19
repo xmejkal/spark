@@ -362,7 +362,9 @@ class TheShowTest(ShowCase):
                 self.assertEqual(self.envelope()[1]["data"]["boards"][0]["deploys_from"][0]["last"], stored)
 
     def test_a_time_with_no_zone_and_a_text_that_is_no_time_keep_their_stored_first_ten_characters(self):
-        for stored, shown in (("2026-11-10T23:59:00", "2026-11-10"), ("last tuesday at nine", "last tuesd")):
+        # "20261117" is a time with no zone to Python 3.11 and later, and its zone note stays out of the date
+        for stored, shown in (("2026-11-10T23:59:00", "2026-11-10"), ("last tuesday at nine", "last tuesd"),
+                              ("20261117", "20261117")):
             with self.subTest(stored=stored):
                 self.deploys(MAC_A, [entry("walk4", stored)])
                 self.assertEqual(self.bench("show")[1].splitlines()[3], "  deploys from  walk4 (1, last %s)" % shown)

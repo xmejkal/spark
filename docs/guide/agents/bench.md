@@ -31,8 +31,9 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `bench` an
 A grant row's state says `not_checked`, with an underscore. `last_deploy.state` says `not-checked`, with a hyphen, as in
 the look's envelope.
 
-`deploys_from[].last` is the stored text. The text view prints its date in the machine's zone when the stored time has
-a zone, as the last-deploy line does ([P923](https://github.com/xmejkal/spark/issues/1307)).
+`deploys_from[].last` is the stored text. The text view prints the date of `last` as the last-deploy line says it: in
+the machine's zone when the stored time has a zone, and as stored when it has none or does not parse
+([P923](https://github.com/xmejkal/spark/issues/1307)).
 
 The deploy grant is found by the MAC and the live grant by the USB serial, as `grant.py --check` finds it. A project name
 of spark's own deploy is the folder name as the deploy recorded it, so a worktree shows under its own name. A registered

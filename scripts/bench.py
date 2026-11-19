@@ -30,8 +30,9 @@ cannot be told apart, so its deploys and its deploy grant are not checked. look.
 board, reads it and keeps it. The live grant is found by the USB serial, as grant.py --check finds it.
 
 The names after "deploys from" are the project folder names that spark's deploys recorded, and the registered names
-that bench.py record wrote, each with "by" and its tool. The two never merge. The date after "last" is in the
-machine's zone, as the last-deploy line says it, when the stored time has a zone. --json keeps the stored text.
+that bench.py record wrote, each with "by" and its tool. The two never merge. The date after "last" is the date of
+the last-deploy line: in the machine's zone when the stored time has a zone, and as stored when it has none or is no
+time. --json keeps the stored text.
 
 With --json it prints one envelope: data.boards (docs/guide/agents/bench.md).
 
