@@ -24,7 +24,7 @@ from spark.core.events import Event, TerminalReporter  # noqa: E402
 from spark.core.cli import HelpText, run_cli  # noqa: E402
 from spark.core.operation import COMMON_ARGUMENTS, Operation  # noqa: E402
 from spark.core.privacy import MaskingReporter, Pasted, PastedLine, Privacy  # noqa: E402
-from spark.core.result import Finding, NextStep, OperationResult  # noqa: E402
+from spark.core.result import Finding, NextStep, OperationResult, Refusal  # noqa: E402
 
 HOME = "/srv/person"
 PROJECT = HOME + "/gadgets/lamp"
@@ -114,6 +114,12 @@ class MaskResultTest(unittest.TestCase):
         line = PastedLine("  rm %s/grants/a.json" % STORE)
         result = OperationResult(None, lines=[line, STORE + "/grants/a.json"])
         self.assertEqual(privacy().mask_result(result).lines, [line, "<store>/grants/a.json"])
+
+    def test_a_str_of_another_type_comes_back_plain_and_a_pasted_line_stays_one(self):
+        # P853: the mask rebuilt every str with its own type, so a Refusal, which needs its code, raised TypeError
+        masked = privacy().masked(Refusal("no %s/x" % PROJECT, "c"))
+        self.assertEqual((masked, type(masked)), ("no x", str))
+        self.assertIs(type(privacy().masked(PastedLine("rm %s --token %s" % (STORE, TOKEN)))), PastedLine)
 
     def test_a_token_is_masked_in_the_raw_places_too(self):
         line = "%s/deploy.py --token %s" % (PROJECT, TOKEN)

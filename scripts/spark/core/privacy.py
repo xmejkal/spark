@@ -44,7 +44,8 @@ class PastedLine(str):
 
 class Replacer:
     """Value: MaskRules compiled into one pattern, the longest place first, so a store inside the project is the store.
-    `sub` replaces each place in one pass; with no rules it changes nothing."""
+    `sub` replaces each place in one pass; with no rules it changes nothing. It gives a plain str back, or a PastedLine for
+    one: a str of another type, such as a Refusal or a Code, is not rebuilt without the fields its type needs (P853)."""
 
     def __init__(self, rules):
         ordered = sorted(rules, key=lambda rule: -len(rule.place))
@@ -54,7 +55,8 @@ class Replacer:
     def sub(self, text):
         if self.pattern is None:
             return text
-        return type(text)(self.pattern.sub(lambda found: self.replacements[found.lastindex - 1], text))
+        masked = self.pattern.sub(lambda found: self.replacements[found.lastindex - 1], text)
+        return PastedLine(masked) if isinstance(text, PastedLine) else masked
 
 
 def forms_of(path):
