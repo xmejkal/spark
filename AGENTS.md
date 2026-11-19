@@ -19,6 +19,28 @@ The rules under what never to assume apply to any work in this repository. To ch
 [`docs/guide/developing.md`](docs/guide/developing.md). Its patterns, names table and role words are in
 [`docs/guide/patterns-and-names.md`](docs/guide/patterns-and-names.md).
 
+## What spark is and where its code is
+
+The vision, shortened from the PO's words of 2026-10-03 ([the vision](scrum/VISION.md)): a person brings a vague
+idea to a conversation. The AI helps them to formulate it and walks them to a circuit of modules on a breadboard,
+with firmware that works. If the person wants it and the circuit is tested, spark then offers a PCB to order. A 3D
+model and a printed enclosure come later. Also later ([P203](https://github.com/xmejkal/spark/issues/163)): the PCB
+with its parts as a 3D model for a CAD program. One conversation then takes a small RC cart from needs to parts,
+firmware, PCB and 3D.
+
+The scripts in `scripts/` are the CLIs. A thin one only parses arguments and prints, and the others get there as
+each area moves onto the core ([#94](https://github.com/xmejkal/spark/issues/94)). The code is in areas, here in
+the journey's order. `scripts/spark/core` holds the contract that every area and frontend shares. An Operation is
+one job that a frontend runs through the core, and the CLI is the only frontend today. `scripts/spark/records`
+holds the JSON records and the person's store. `scripts/spark/idea` holds a project's needs.
+`scripts/spark/sourcing` holds what the person owns and what spark knows of each part. `scripts/spark/design` holds
+the design and the pin of each signal. `scripts/spark/build` holds the run from a requirements file to a board that
+builds. `scripts/spark/checks` holds the checks of a built design against facts in records.
+`scripts/spark/breadboard` holds the sheet that a person wires from. `scripts/spark/firmware` holds the flash
+image, the import check and a scenario's run. `scripts/spark/bench` holds the Operations on a board on USB.
+`scripts/spark/flow` says where a project stands. See [the map](docs/guide/map.md) and [how it
+works](docs/guide/how-it-works.md).
+
 ## Principles for changing spark
 
 These are the PO's standing rules for work on spark itself. Where a decision is written down, its bullet links to it.

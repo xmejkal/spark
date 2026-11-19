@@ -66,8 +66,8 @@ and the ledger `tests/mutations/ledger.jsonl`, which every run that plants rows 
 defines them. A critical mark is written by hand on a row that guards a store write, a deploy, an erase or a refusal that
 protects the person, at most 40 in all (`tests/test_ledger.py` caps it). The sweep's command is `SPARK_HOME=... python3
 tools/mutate.py tests/mutations/*.json --for <the wave's files> --tier critical,new,proving --budget 20 --copy`; a night
-slice takes `--budget 180`; the proven rows run once per release, each 0.x release until 1.0 (`--tier proven`): the PO's
-rule, not a tool fact. A row the budget left is not a pass: the report quotes the left count. A row refused by
+slice takes `--budget 180` and needs the Mac awake, because the budget's clock does not count sleep; the proven rows
+run once per release, each 0.x release until 1.0 (`--tier proven`): the PO's rule, not a tool fact. A row the budget left is not a pass: the report quotes the left count. A row refused by
 `--anchors` in two sweeps is deleted in a pull request with its reason (`--retire` will list them, P787 PR 5); an escape
 never retires, it is a missing test.
 
@@ -96,6 +96,13 @@ breaks or two open cards carry `expedite`, so this holds by command, not by memo
 at the PO's word on 2026-10-06, and again that evening; the counting rules, the expedite lane and the bin's cards built
 by P146 on 2026-10-09). One part no command sees: a card stands in its working stage while any work runs on it (W19).
 [The flow](README.md#the-flow--an-items-stages) has each stage's entry and exit.
+
+**One holder for a board on USB** (proposed by P927 from the agreement that the two sessions made on 2026-11-18 on the
+PO's order, his to change). When two sessions share one board, one of them holds it at a time. Before a take, the
+session tells the other one and waits for its "free", because silence is not a yes. It then writes a take line as a
+comment on its card: the board, the port, the card and the end time. A touch is a look, a grant, a reach, a live try or a deploy. A list of the ports is none. A touch
+needs the PO's yes to the board question, or his grant, in the session that touches. The hold ends at its time by itself, or earlier with the line "The
+board is free". The PO's own bench work comes first: the holder stops at the next safe point and frees the board.
 
 **A card that waits on the PO counts apart** (the first slice of P928, 2026-11-19. The two limits are the plan
 council's, and the PO's to change). A card in a working stage with *Waiting on* set to `the PO` is in no stage's limit
@@ -193,6 +200,12 @@ footprints was killed when 18 of 27 were shown to convert to geometry identical 
 edge: the bin's `circuit-to-wokwi` was tested TypeScript that spark did not have, and it was moved, not rewritten — its
 ~1,307 lines of core (the firmware lens's count) came into spark as `tools/circuit-to-wokwi` (P32a), while the bin's knowledge of its own board
 stayed in the bin.
+
+**A copy needs a license that allows it** (the PO, 2026-11-06: *"or even reuse it or get inspired by it. Copy just a
+piece of it and compile for our case"*). The list is Claude's reading of what fits spark's MIT license, his to change:
+copy a piece only from code under MIT, BSD, zlib, Apache-2.0 or CC0, keep its notice, and cite its URL and version in
+the file. Code under GPL or with no license gives the idea only, written again from the idea or from a published
+description. A whole vendor file is never committed ([AGENTS.md](../AGENTS.md)).
 
 **Origin:** 2026-09-29, when a third of the repository was deleted as unused. Every piece of it
 had been built because it was designed, not because a design needed it.

@@ -247,6 +247,8 @@ Words for a rules file (P454, #615): a *rule* is one `fabrication` entry of a pr
 These rules name a class, a function or a constant:
 
 - Name a thing for what it is to someone who has never seen spark.
+- A name follows a known source where one has it: Box2D, Game Programming Patterns, Unity, Bevy, Godot, the Python
+  and C conventions. The plan names the source (the PO, 2026-11-04: *"always try to stick to insdustry standards"*).
 - A subclass is what varies, then the base's whole name: `TerminalConsentStrategy`, `EsptoolBoardReader`.
 - A function starts with a verb. A function that returns a reason or None starts with `why_`. A function that raises
   in place of returning False says so: `require_open_gate`.
@@ -273,7 +275,5 @@ state and offers several actions on it, or when a test or a caller must swap it.
 
 A fake of a tool's output, such as mpremote's, stays in its test file, not in `tests/fakes.py` (the role table's `Fake`).
 
-The PO's bench tools for live work on a board sit beside the deploy area. The four Operations in `scripts/spark/bench/` (`issue-grant`, `check-grant`, `live`, `reach`) are behind `grant.py`, `live.py` and `reach.py`
-(P657). `reach.py` runs one line on the board and cures it once when its USB output died at power-on (P251,
-[#264](https://github.com/xmejkal/spark/issues/264)).
+The bench area's Operations, the script that each one is behind and what each does are in [the map](map.md).
 

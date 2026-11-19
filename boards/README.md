@@ -64,7 +64,10 @@ re-implementing a lookup.
 3. **Get the chip's capabilities from `soc_caps.h`** in `espressif/esp-idf`:
    `SOC_RTCIO_PIN_COUNT` gives the wake-capable range, `SOC_PM_SUPPORT_EXT0_WAKEUP` says whether
    `esp32.wake_on_ext0` exists, `SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN` whether wake pins may
-   have different polarities. Guessing any of these costs a bench session.
+   have different polarities. Guessing any of these costs a bench session. Type stubs are no source for them. Seen in
+   the stub wheels of `micropython-esp32-*-stubs` for 1.29.0 on 2026-10-01 (P60), not rechecked: they declare
+   `Pin.IRQ_LOW_LEVEL`, and `wake_on_ext0` on the C6. In the runtime at v1.29.0 the only `IRQ_` names of `Pin` are
+   `IRQ_RISING` and `IRQ_FALLING` (`ports/esp32/machine_pin.c`, read on 2026-11-19).
 4. **Check it**: `boards.py --validate`. The contract is enforced, not documented.
 5. **Rework `config.py`'s pin assignments.** Which function sits on which pin is a design
    decision, not a board fact — see below.

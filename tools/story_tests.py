@@ -22,12 +22,12 @@ QUICK_RUN = "quick_run"
 RUN_STORY = "story"
 RUN_QUICK = "quick"
 
-#: These read the whole tree, so no file's name finds them. Together 38 s on 2026-11-09, and test_doc_blocks
-#: adds under a second (2026-11-16).
+#: These read the whole tree, so no file's name finds them. Together 54 s for 306 tests on 2026-11-19, with
+#: test_agents_block (P927), which takes under 2 s.
 ALWAYS_RUN_TESTS = ("test_architecture", "test_self_confirmation", "test_docs", "test_map", "test_journey", "test_doc_blocks",
                     "test_lint", "test_no_magic_strings", "test_no_board_address", "test_observation_rows", "test_orphans",
                     "test_python_floor", "test_scripts_isolated", "test_routes", "test_json_contracts", "test_part_shape",
-                    "test_suite_temp", "test_suite_runs")
+                    "test_suite_temp", "test_suite_runs", "test_agents_block")
 
 #: An area whose golden net has another area's name. Every other area's net is test_golden_<area>. Idea's operation runs in
 #: the records net (`parts.py --needs-drop`, P802).
