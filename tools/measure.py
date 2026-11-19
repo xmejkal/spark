@@ -243,10 +243,14 @@ MODULE_LINES = 600                          # R1: a module
 MAIN_LINES = 15                             # R1: a `main`, which only parses and prints
 NESTING = 3                                 # R2
 PARAMETERS = 5                              # R3, without self or cls
-#: U1: the modules that import nothing of spark, so that every reader can use them without importing another reader.
+#: U1: the modules that import nothing of spark but a leaf of LEAF_PACKAGE, so that every reader can use them without
+#: importing another reader.
 LEAVES = ("board_codes", "breadboard_codes", "build_codes", "check_codes", "codes", "deploy_stages", "design_codes",
           "firmware_codes", "flow_codes", "idea_codes", "outcomes", "provenance", "records_codes", "sourcing_codes", "text_guards",
           "zone_time")
+#: U1: the one package whose leaves a leaf may import, because a test keeps its `__init__.py` and spark's empty: a leaf of
+#: another package would run that package's `__init__`, which may import anything (P853).
+LEAF_PACKAGE = "spark.core"
 #: U1: the names OC8 (P418) moved into `text_guards`, by the module that held them. No script reads them from there again.
 MOVED_GUARDS = {"drawer": {"clean", "CONTROL", "LABEL_MAX", "TEXT_MAX", "TAGS_MAX"}, "parts": {"one_line", "COMMENT_UNSAFE"}}
 #: X2: a class that may print, read and exit in `scripts/spark/`: the Renderers (by role word), the terminal adapter (the one tty
@@ -282,7 +286,8 @@ RULES = {
     "T2": "a test file never adds a mock.patch (mock.patch.dict on os.environ is the exception)",
     "T4": "code never branches on what is imported, as in `\"unittest\" in sys.modules`",
     "X2": "scripts/spark/ holds no main, print, input, stdin, stdout, stderr, exit, quit or os.write, by any name, outside a Renderer, the terminal adapter, the terminal reporter and run_cli",
-    "U1": "a leaf imports nothing of spark, matching imports no drawer, and no script reads a moved guard from its old module",
+    "U1": "a leaf imports nothing of spark but a leaf of %s, matching imports no drawer, and no script reads a moved guard from its old module"
+          % LEAF_PACKAGE,
     "C1": "a file name under scripts/ is unique, and an exception name ends in Error",
     "C3": "an exit code has no second name (no EXIT_ alias)",
     "V1": "a call of a ValueMessageError or a subclass gives a constant string as the template and the values as arguments (P444)",
@@ -326,14 +331,17 @@ def classes_of(tree, prefix=""):
             yield from classes_of(node, prefix)
 
 
-def imports_of(tree):
+def imports_of(tree, unless=lambda node: False):
     """
     Every module the tree imports, at the top or inside a function, by its first name, and a module of spark's packages
     by its own name too (P721): `from spark.sourcing import drawer` names `spark`, `sourcing` and `drawer`, and
-    `from spark.sourcing.drawer import x` and `import spark.sourcing.drawer` name `spark` and `drawer` (and `x`).
+    `from spark.sourcing.drawer import x` and `import spark.sourcing.drawer` name `spark` and `drawer` (and `x`). An
+    import that `unless` holds for is left out.
     """
     found = set()
     for node in ast.walk(tree):
+        if unless(node):
+            continue
         if isinstance(node, ast.Import):
             found |= {part for alias in node.names for part in _first_and_spark_last(alias.name)}
         elif isinstance(node, ast.ImportFrom) and node.module:
@@ -341,6 +349,20 @@ def imports_of(tree):
             if node.module.split(".")[0] == "spark":
                 found |= {alias.name for alias in node.names}
     return found
+
+
+def imports_core_leaves(node):
+    """U1: True for an import of leaves of LEAF_PACKAGE alone, the one import of spark a leaf may make (P853):
+    `from spark.core.codes import Code`, `from spark.core import codes, outcomes`, `import spark.core.text_guards`."""
+    if isinstance(node, ast.Import):
+        modules = [alias.name for alias in node.names]
+    elif isinstance(node, ast.ImportFrom) and node.module == LEAF_PACKAGE:
+        modules = ["%s.%s" % (LEAF_PACKAGE, alias.name) for alias in node.names]
+    elif isinstance(node, ast.ImportFrom):
+        modules = [node.module or ""]
+    else:
+        return False
+    return all(module.rpartition(".")[0] == LEAF_PACKAGE and module.rpartition(".")[2] in LEAVES for module in modules)
 
 
 def _first_and_spark_last(module):
@@ -573,13 +595,14 @@ def _moved_module(module):
 
 
 def leaf_imports(source, known):
-    """U1: a leaf that imports a script or `spark`, `matching` that imports `drawer`, a script that reads a moved guard from its old module."""
+    """U1: a leaf that imports a script or `spark` but a leaf of LEAF_PACKAGE, `matching` that imports `drawer`, a script that
+    reads a moved guard from its old module."""
     stem = pathlib.PurePosixPath(source.file).stem
-    imported = imports_of(source.tree)
     found = []
     if stem in LEAVES:
+        imported = imports_of(source.tree, unless=imports_core_leaves)
         found += [Breach("U1", source.file, "imports-" + name, 1) for name in sorted(imported & (known.stems | {"spark"}) - {stem})]
-    if stem == "matching" and "drawer" in imported:
+    if stem == "matching" and "drawer" in imports_of(source.tree):
         found.append(Breach("U1", source.file, "imports-drawer", 1))
     return found + [Breach("U1", source.file, "reads-" + name, 1) for name in sorted(old_reads(source.tree))]
 

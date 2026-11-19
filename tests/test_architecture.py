@@ -60,7 +60,7 @@ class ArchitectureRules(unittest.TestCase):
     test_t2_no_test_file_adds_a_mock_patch = rule_test("T2")
     test_t4_code_never_branches_on_what_is_imported = rule_test("T4")
     test_x2_spark_holds_no_main_print_or_exit_outside_a_renderer = rule_test("X2")
-    test_u1_the_leaves_import_nothing_of_spark = rule_test("U1")
+    test_u1_the_leaves_import_nothing_of_spark_but_a_leaf_of_the_core = rule_test("U1")
     test_c1_a_file_name_is_unique_and_an_exception_name_ends_in_error = rule_test("C1")
     test_c3_an_exit_code_has_no_second_name = rule_test("C3")
     test_v1_a_value_message_error_is_made_with_a_constant_template = rule_test("V1")
@@ -74,6 +74,24 @@ class ArchitectureRules(unittest.TestCase):
                 if re.search(r"(?i)\ba leaf\b", ast.get_docstring(ast.parse(path.read_text())) or "")}
         self.assertIn("idea_codes", said)
         self.assertEqual(sorted(said - set(measure.LEAVES)), [])
+
+    def test_u1_the_spark_and_core_packages_import_nothing_so_a_leaf_of_the_core_imports_alone(self):
+        # P853: importing spark.core.codes runs spark/__init__.py and spark/core/__init__.py first
+        for init in ("scripts/spark/__init__.py", "scripts/spark/core/__init__.py"):
+            tree = ast.parse((ROOT / init).read_text())
+            self.assertEqual([node.lineno for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [], init)
+
+    def test_u1_the_leaves_that_leaves_import_form_no_cycle(self):
+        # P853: a leaf may import a leaf of spark.core, so two that import each other could not be imported
+        paths = {path.stem: path for path in (ROOT / "scripts").rglob("*.py") if path.stem in measure.LEAVES}
+        imports = {stem: measure.imports_of(ast.parse(path.read_text())) & set(paths) - {stem} for stem, path in paths.items()}
+        for stem in imports:
+            reached, todo = set(), list(imports[stem])
+            while todo:
+                name = todo.pop()
+                todo += [] if name in reached else imports[name]
+                reached.add(name)
+            self.assertNotIn(stem, reached)
 
     def test_every_rule_in_the_table_has_a_test_method_and_no_method_has_none(self):
         held = {method.rule for method in vars(type(self)).values() if hasattr(method, "rule")}
@@ -249,6 +267,22 @@ class PlantedBreachesTest(unittest.TestCase):
             "U1:scripts/spark/sourcing/user.py:reads-drawer.clean": 1,
             "U1:scripts/spark/sourcing/user.py:reads-parts.one_line": 1})
         self.assertEqual(measure.breaches(planted({}, leaves=False))["U1:scripts:no-leaf-outcomes"], 1)
+
+    def test_u1_a_leaf_may_import_leaves_of_the_core_and_nothing_else_of_spark(self):
+        # P853 (council D1, refined): a leaf of another package runs that package's __init__, which may import anything
+        root = planted({
+            "scripts/idea_codes.py": "from spark.core.codes import Code\nfrom spark.core import codes, outcomes\nimport spark.core.text_guards\n",
+            "scripts/flow_codes.py": "from spark.idea import idea_codes\n",
+            "scripts/sourcing_codes.py": "from spark.idea.idea_codes import NEED_UNKNOWN\n",
+            "scripts/records_codes.py": "import spark.idea\n",
+            "scripts/check_codes.py": "from spark.core import codes, cli\n",
+            "scripts/design_codes.py": "from spark.core.privacy import Privacy\n"})
+        self.assertEqual(measure.breaches(root), {
+            "U1:scripts/check_codes.py:imports-codes": 1, "U1:scripts/check_codes.py:imports-spark": 1,
+            "U1:scripts/design_codes.py:imports-spark": 1,
+            "U1:scripts/flow_codes.py:imports-idea_codes": 1, "U1:scripts/flow_codes.py:imports-spark": 1,
+            "U1:scripts/records_codes.py:imports-spark": 1,
+            "U1:scripts/sourcing_codes.py:imports-idea_codes": 1, "U1:scripts/sourcing_codes.py:imports-spark": 1})
 
     def test_c1_a_basename_in_two_folders_and_an_exception_not_ending_in_error(self):
         root = planted({
