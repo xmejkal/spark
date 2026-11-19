@@ -1,8 +1,8 @@
 [
  {
-  "file": "scripts/spark/bench/show_bench.py",
+  "file": "scripts/spark/records/deploy_record_store.py",
   "name": "the view prints the first ten characters of the stored text, so its date differs from the look's line for another zone",
-  "find": "    return deploy_record_store.time_said(stored)[:min(10, len(stored))]",
+  "find": "    return time_said(stored)[:min(10, len(stored))]",
   "replace": "    return stored[:10]"
  },
  {

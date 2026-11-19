@@ -26,7 +26,7 @@ from spark.core.events import Event  # noqa: E402
 from spark.core.operation import ASKS  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.replies import PERSON, YES_NO, Question, Reply, reply_strategy_for  # noqa: E402
-from fakes import FakeOutsideWorld, FakeReporter  # noqa: E402
+from fakes import FakeOutsideWorld, FakeReporter, pin_time_zone  # noqa: E402
 from test_board_look import C6_MAC, data, done, found  # noqa: E402
 from test_look import LookScriptCase  # noqa: E402
 
@@ -129,6 +129,15 @@ class TheLookAsksOnceTest(KnownBoardCase):
                 self.assertIn("MAC ends 12:34", said)
                 self.assertIn("MAC ends ee:ff", said)
         self.assertEqual(self.kept().mac, MAC_A)
+
+    def test_p933_the_look_says_the_kept_since_date_in_the_machine_s_zone_before_and_after_the_read(self):
+        pin_time_zone(self)
+        self.write_record(at="2026-11-17T23:30:00-05:00")
+        before = self.envelope(NATIVE_B, mac=MAC_B)[1]
+        after = self.envelope(NO_SERIAL, "--port", "/dev/cu.usbserial-1410", mac=MAC_B, ask=False)[1]
+        for envelope in (before, after):
+            other = [item for item in envelope["unchecked"] if item["code"] == "other_board"]
+            self.assertIn("kept since 2026-11-18)", other[0]["sentence"])
 
     def test_4_the_same_trusted_serial_with_another_mac_after_the_read_says_it_restarted_and_keeps_the_record(self):
         self.envelope(BRIDGE, replies_file=self.say_yes(self.envelope(BRIDGE)[1]))

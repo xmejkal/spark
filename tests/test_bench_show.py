@@ -411,6 +411,15 @@ class TheShowTest(ShowCase):
         said = json.loads(out.getvalue())
         self.assertEqual((code, said["data"], [item["code"] for item in said["unchecked"]]), (2, {"boards": None}, ["list_failed"]))
 
+    def test_the_kept_since_date_is_in_the_machine_s_zone_as_the_deploy_dates(self):
+        """P933: a board kept with another zone's offset. The date after "since" is the machine's, and --json keeps the text."""
+        stored = "2026-11-17T23:30:00-05:00"
+        self.keep(tempfile.mkdtemp(), MAC_A, "aabbccddeeff", at=stored)
+        kept = [line for line in self.bench()[1].splitlines() if line.startswith("  kept for ")]
+        self.assertEqual(len(kept), 1)
+        self.assertTrue(kept[0].endswith("(since 2026-11-18)"), kept[0])
+        self.assertEqual(self.envelope()[1]["data"]["boards"][0]["kept_for"][0]["at"], stored)
+
     def test_a_kept_folder_under_home_is_masked_in_the_text_and_the_json(self):
         folder = Path.home() / "p919-a-project-of-the-person"
         self.keep(folder, MAC_A, "aabbccddeeff")

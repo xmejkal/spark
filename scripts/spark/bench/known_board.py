@@ -36,6 +36,7 @@ from spark.core import codes, outcomes
 from spark.core.errors import SparkError
 from spark.core.replies import PERSON, YES_NO, Question, RepliesStore
 from spark.core.result import Finding
+from spark.records import deploy_record_store
 from spark.records import store
 
 # --- MVP ---
@@ -252,6 +253,10 @@ class KnownBoard(namedtuple("KnownBoard", "project mac usb_key board answered_by
     `usb_key` the key of the USB serial when it names this board (usb_key_to_keep), else None. `board` is the board record's
     id, `answered_by` who said yes, `at` when it was kept, with its zone."""
 
+    def since_said(self):
+        """The date it was kept, as each line says it after "since": the date of the deploy dates (P933)."""
+        return deploy_record_store.date_said(self.at)
+
     def to_dict(self):
         return dict(schema=SCHEMA, **self._asdict())
 
@@ -282,7 +287,7 @@ def other_after(known, port, mac, fix):
     if not differs(known, mac):
         return None
     return Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, OTHER_AFTER_MESSAGE % (
-        port, mac_ends(mac), mac_ends(known.mac), known.at[:10]), fix)
+        port, mac_ends(mac), mac_ends(known.mac), known.since_said()), fix)
 
 
 class KnownBoardResult(namedtuple("KnownBoardResult", "code state known reply question row")):
@@ -301,7 +306,7 @@ class KnownBoardResult(namedtuple("KnownBoardResult", "code state known reply qu
             return [Finding(outcomes.COULD_NOT_RUN, "board", board_codes.NO_KNOWN_BOARD,
                             NO_KNOWN_MESSAGE % (first, self.row.device, named(self.row), last), NO_KNOWN_FIX)]
         found = [Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, OTHER_BEFORE_MESSAGE % (
-            first, self.row.device, named(self.row), mac_ends(self.known.mac), self.known.at[:10], last), touch.other_fix)] if self.state == OTHER else []
+            first, self.row.device, named(self.row), mac_ends(self.known.mac), self.known.since_said(), last), touch.other_fix)] if self.state == OTHER else []
         if self.code == codes.NEEDS_REPLY:
             found.append(Finding(outcomes.COULD_NOT_RUN, self.question.key, codes.NEEDS_REPLY, self.question.text, touch.answer_fix % self.question.key))
         return found

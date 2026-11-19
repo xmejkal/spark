@@ -47,6 +47,13 @@ def time_said(deployed):
         return deployed
 
 
+def date_said(stored):
+    """The date of the stored time `stored`, as `time_said` says it: in the machine's zone when the time has a zone,
+    else the stored text's first ten characters, and never a part of the note that `time_said` adds. The view's
+    deploy dates (P923) and a kept board's "since" (P933) are this date."""
+    return time_said(stored)[:min(10, len(stored))]
+
+
 class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict deployed why record_path micropython_banner made_by",
                                          defaults=(None,) * 7)):
     """Value. What spark's store says of the board on USB. `state` is one of the three words of `outcomes` (the reader rule is
