@@ -22,7 +22,7 @@ from spark.core.outside import build_bare_outside_world  # noqa: E402
 def main(argv=None, outside=None):
     """Run every check and print the text, or with --json the document. `outside` is the OutsideWorld a test gives.
     Returns the exit code."""
-    return run_cli(HelpText("check_all.py", "Run every deterministic check and answer once.", None), CheckDesign(), argv,
+    return run_cli(HelpText("check_all.py"), CheckDesign(), argv,
                    outside_builder=build_bare_outside_world, outside=outside)
 
 

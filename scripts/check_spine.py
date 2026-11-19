@@ -66,7 +66,7 @@ from spark.core.outside import build_bare_outside_world  # noqa: E402
 def main(argv=None, outside=None):
     """Build the requirements file and print the verdict, or with --json its one line. `outside` is the OutsideWorld a
     test gives. Returns the exit code."""
-    return run_cli(HelpText("check_spine.py", __doc__.strip().splitlines()[0], None), BuildBoard(), argv,
+    return run_cli(HelpText("check_spine.py"), BuildBoard(), argv,
                    outside_builder=build_bare_outside_world, outside=outside)
 
 

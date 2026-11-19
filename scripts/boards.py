@@ -58,10 +58,6 @@ def _validate_all(project: Path, for_fab: bool) -> int:
 
 #: The flag that picks the Operation on the core. argparse takes a prefix of it too (`--li`), so the pick does (P707).
 LIST_FLAG = "--list"
-EPILOG = """--list marks the active board with * and says which board stops the chain at the footprint stage (P121): its
-file lacks what the footprint is drawn from, and it is still a choice for pin-map work. --json prints one envelope
-(docs/guide/agents/json.md): data.boards rows with id, layer (library or project), active and stops_why (the sentence that
-names the missing fields, or null)."""
 
 
 def main(argv=None, outside=None) -> int:
@@ -73,7 +69,7 @@ def main(argv=None, outside=None) -> int:
         from spark.core.cli import HelpText, run_cli
         from spark.core.outside import build_bare_outside_world
         from spark.design.list_boards import ListBoards
-        return run_cli(HelpText("boards.py", "Every board available to switch to.", EPILOG, tool="boards"), ListBoards(), argv,
+        return run_cli(HelpText("boards.py", tool="boards"), ListBoards(), argv,
                        outside_builder=build_bare_outside_world, outside=outside)
     parser = argparse.ArgumentParser(
         prog="boards.py", description="Resolve and check the project's board definitions.")
