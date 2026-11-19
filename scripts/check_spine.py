@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-The one thing that has to work: a module list in, a board that builds out.
+check_spine.py: the CLI of the build.
+
+Its `--help` sentence is BuildBoard's summary (P855).
 
     check_spine.py                       # the reference design that ships with spark
     check_spine.py my-requirements.json  # your own
@@ -66,7 +68,7 @@ from spark.core.outside import build_bare_outside_world  # noqa: E402
 def main(argv=None, outside=None):
     """Build the requirements file and print the verdict, or with --json its one line. `outside` is the OutsideWorld a
     test gives. Returns the exit code."""
-    return run_cli(HelpText("check_spine.py", __doc__.strip().splitlines()[0], None), BuildBoard(), argv,
+    return run_cli(HelpText("check_spine.py"), BuildBoard(), argv,
                    outside_builder=build_bare_outside_world, outside=outside)
 
 

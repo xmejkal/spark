@@ -43,7 +43,7 @@ LookRun = namedtuple("LookRun", "project port evidence")
 #: What the open question's next step is.
 ASK_AGAIN_WHY = "the same look, after the person's yes in the conversation"
 #: What the look does, the paragraphs of look.py's `--help` before its `--json` and exit codes, line breaks and all
-#: (P481). Its two `--json` mentions stay until the other CLIs move (P481 PR 2).
+#: (P481). Its two `--json` mentions stay in it, so that `--help` stays as it was (P855).
 DETAILS = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash-id`. It writes nothing,
 erases nothing and changes no flash. The board restarts while esptool reads it: a running program stops and starts again.
 Nothing else on the board is touched. The board's record is the one requirements.json names. The look compares the chip

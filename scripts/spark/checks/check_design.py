@@ -22,6 +22,7 @@ class CheckDesign(Operation):
     """
 
     name = "check-design"
+    summary = "Run every deterministic check and answer once."
     arguments = (Argument(("--project",), "project", str,
                           "the folder the requirements file and the kept build (--keep) are in; every input is "
                           "discovered by convention and each resolved path is printed. The rules, parts and boards "
