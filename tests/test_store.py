@@ -457,6 +457,25 @@ class OneWriterAtATimeTest(unittest.TestCase):
                 self.assertTrue((root / "deep" / "store").is_dir())
         self.assertEqual((list(root.iterdir()), set(Path(tempfile.gettempdir()).glob("spark-*.lock"))), ([], lock_files))
 
+    def test_six_processes_on_a_store_that_does_not_exist_take_turns_and_leave_nothing(self):
+        """P922, from its review: each process removes the empty folder it made while the others make and open it. None
+        is refused, no two are inside at once (the marker is made new each time), and the store's folder does not stay.
+        An empty folder above it can stay: the one that made it finds another process's folder in it and leaves it."""
+        root, marker = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "inside"
+        rounds = ("import os, sys, time\nfrom spark.records import store\n"
+                  "time.sleep(max(0, float(sys.argv[2]) - time.time()))\n"
+                  "for n in range(150):\n"
+                  "    with store.locked():\n"
+                  "        os.close(os.open(sys.argv[1], os.O_CREAT | os.O_EXCL | os.O_WRONLY))\n"
+                  "        os.unlink(sys.argv[1])")
+        start = str(time.time() + 2)
+        runners = [subprocess.Popen([sys.executable, "-c", rounds, str(marker), start], cwd=SCRIPTS, stderr=subprocess.PIPE, text=True,
+                                    env=dict(os.environ, SPARK_HOME=str(root / "deep" / "store"), TMPDIR=tempfile.mkdtemp()))
+                   for _ in range(6)]
+        ended = [(runner.wait(timeout=120), runner.communicate()[1][-600:]) for runner in runners]
+        self.assertEqual(ended, [(0, "")] * 6)
+        self.assertEqual([each for each in root.rglob("*") if each.name != "deep"], [])
+
     def test_a_lock_keeps_the_folder_that_a_write_filled_and_one_that_was_there(self):
         root = Path(tempfile.mkdtemp())
         (root / "there").mkdir()
