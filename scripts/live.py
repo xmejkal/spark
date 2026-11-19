@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""The live try's CLI (P247): its `--help` sentence and paragraphs are RunLiveCode's (P855), and EPILOG is the CLI's own text."""
+"""
+Run a short piece of code on the board under a grant, then reset it (P247).
+
+Its `--help` sentence and paragraphs are RunLiveCode's (P855), and EPILOG is the CLI's own text.
+"""
 
 import sys
 from pathlib import Path

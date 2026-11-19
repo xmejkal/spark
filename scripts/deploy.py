@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-The deploy's CLI (P192): its `--help` sentence and paragraphs are DeployImage's (P855), and EPILOG is the CLI's own text.
+Put a tested flash image onto the board on USB (P192).
+
+Its `--help` sentence and paragraphs are DeployImage's (P855), and EPILOG is the CLI's own text.
 
     deploy.py --dry-run                          # in the project folder: print what it would run, run nothing
     look.py                                      # read the board on USB and print its token

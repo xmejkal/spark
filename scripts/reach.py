@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""The reach's CLI (P251): its `--help` sentence and paragraphs are ReachBoard's (P855), and EPILOG is the CLI's own text."""
+"""
+Run one line on the board on USB, and cure a dead USB output once: the PO's bench tool (P251).
+
+Its `--help` sentence and paragraphs are ReachBoard's (P855), and EPILOG is the CLI's own text.
+"""
 
 import sys
 from pathlib import Path

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""The research's CLI (P737): its `--help` sentence and paragraphs are ResearchPart's (P855), and EPILOG is the CLI's own text."""
+"""
+Research one part record from ordered sources, and write the replies as facts (P737).
+
+Its `--help` sentence and paragraphs are ResearchPart's (P855), and EPILOG is the CLI's own text.
+"""
 
 import sys
 from pathlib import Path

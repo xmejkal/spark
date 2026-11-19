@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-The one thing that has to work: a module list in, a board that builds out.
+check_spine.py: the CLI of the build.
+
+Its `--help` sentence is BuildBoard's summary (P855).
 
     check_spine.py                       # the reference design that ships with spark
     check_spine.py my-requirements.json  # your own
