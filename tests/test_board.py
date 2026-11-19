@@ -258,7 +258,7 @@ class TheCoreTest(unittest.TestCase):
         lines = board.status_lines([("spark", SPARK_AT_THE_CAP), ("bin", BIN_FIFTH)], [], [], set(), TODAY)
         self.assertEqual(lines[:3], [
             "spark — 4 open, 1 problem(s) · trial check 2026-11-02",
-            "  ! 5 in flight (#1, #2, #3, #4, bin #19) — at most 4: finish one before starting another",
+            "  ! In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — its limit is 4: the spark lane finishes one before starting another",
             "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, bin Build B19 (#19) 2 d"])
 
     def test_the_status_says_when_the_bin_board_was_not_given(self):

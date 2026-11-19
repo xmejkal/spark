@@ -5,15 +5,15 @@ W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05
 A card is asked for its Needed by and slice from Ready on — the commitment — not in Idea, Discovery or Design (P146).
 A card that waits on someone is asked since when, in any open stage and a riding task too: a Waiting on with no Waiting
 since is named (P146).
-One card at a time may carry the label `expedite`, the PO's lane past a limit: it lets its working stage, and the flight,
-hold one over, and Ready none — it enters Build; two open cards labelled so are named (P146, decision 4 of
+One card at a time may carry the label `expedite`, the PO's way past a limit: it lets its working stage, and its own
+lane's flight, hold one over, and Ready none — it enters Build; two open cards labelled so are named (P146, decision 4 of
 docs/2026-10-06-process-design.md).
-The bin's board is read too, for three things: its cards in a working stage fly in the same total as spark's (a session
-labelled `bench` sits outside it), the lane is one lane across both boards, and a card of its that waits on someone is
-asked since when like any (the spec, §1: "The bin's desk cards count in the same three. A bench session is your hands, so
-it sits outside them"). They fill none of spark's stages and are asked for no Needed by or slice (P146).
-Ready and Build are judged per session, by the card's slice: spark's cards and the sound slices' each have their own
-places (P730, the PO, 2026-11-09).
+The bin's board is read too, for three things: its cards in a working stage fly in the spark lane (a bench session,
+labelled `bench`, sits outside it), the expedite is one card across both boards, and a card of its that waits on someone
+is asked since when like any (the spec, §1: "The bin's desk cards count in the same three. A bench session is your hands,
+so it sits outside them"). They fill none of spark's stages and are asked for no Needed by or slice (P146).
+Ready, Build and the flight are judged per lane, by the card's slice: spark's cards and the sound slices' each have their
+own places (LANES; P730, the PO, 2026-11-09, and P918, the PO, 2026-11-18: "A flight total per lane").
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
 must work offline. So does a look that was only partial — not the bin's board (spark's cards are counted alone): a line
 says so with the cause, and the push goes through (W1: said, never read as checked). A bin board that was read is said
@@ -33,14 +33,15 @@ import json
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import board_read  # noqa: E402
 
 OWNER, TITLE = "xmejkal", "spark"
-#: The bin's project. Its cards in a working stage fly in the same total as spark's, and the expedite lane is one lane
-#: across both boards (the spec §1: "The bin's desk cards count in the same three"); they fill none of spark's stages.
+#: The bin's project. Its cards in a working stage fly in the spark lane, and the expedite is one card across both
+#: boards (the spec §1: "The bin's desk cards count in the same three"); they fill none of spark's stages.
 BIN_TITLE = "the bin"
 #: What problems() marks a card of the bin's board with, so a sentence names it apart from spark's: `bin #12`, not `#12`.
 BIN_BOARD = "bin"
@@ -49,13 +50,26 @@ BIN_BOARD = "bin"
 #: through (W1).
 BIN_UNREAD = "the bin's board could not be read (%s) — its cards were not counted or checked"
 # --- MVP ---
-#: The slices of the sound session (P730, the PO, 2026-11-09): "pixel-games" and "graphics library" own 1 place in Ready and
-#: 1 in Build. Every other card, and a card with no slice, is the spark session's.
-SOUND_SLICES = ("pixel-games", "graphics library")
-#: Ready and Build are held per session (P730); the spark session stays at 4 and 2, the sound session takes 1 and 1.
-SESSION_LIMITS = {"spark": {"Ready": 4, "Build": 2}, "sound": {"Ready": 1, "Build": 1}}
+@dataclass(frozen=True)
+class Lane:
+    """
+    A part of the board with its own limits, told by the card's slice: its name as a sentence prints it, the slices that
+    are its (none: every other card), its (stage, limit) pairs, and the most of its cards in flight (IN_FLIGHT).
+    """
+    name: str
+    slices: tuple
+    limits: tuple
+    flight: int
+
+
+#: The two lanes. Spark's is first and takes every card that is not another lane's: one on any other slice, one with no
+#: slice, and every card of the bin (lane_of). Ready and Build since P730 (the PO, 2026-11-09): spark 4 and 2, sound, the
+#: slices "pixel-games" and "graphics library", 1 and 1. The flight since P918 (the PO, 2026-11-18): spark 4, the number
+#: that was the whole board's since 2026-10-06 evening (P146), and sound 2.
+LANES = (Lane("spark", (), (("Ready", 4), ("Build", 2)), 4),
+         Lane("sound", ("pixel-games", "graphics library"), (("Ready", 1), ("Build", 1)), 2))
 #: The stages held across the whole board (§3); Idea and Done carry no limit. Every working stage takes 2, the PO's call of
-#: 2026-10-06 evening (P146). Ready and Build are not here: SESSION_LIMITS holds them (P730).
+#: 2026-10-06 evening (P146). Ready and Build are not here: LANES holds them (P730).
 LIMITS = {"Discovery": 2, "Design": 2, "Review": 2}
 #: Every stage the gate knows (P167), in the board's order.
 STAGES = ("Idea", "Discovery", "Design", "Ready", "Build", "Review", "Done")
@@ -78,14 +92,16 @@ NO_STATUS = "no card of the %d on the spark board has a Status — the field's k
 #: The bin's why in BIN_UNREAD for the same shape: the bin's board is set aside with its cause and spark's cards are
 #: counted alone, as when it was read in part — one convention for the bin's failing, in fetch() and board.gather().
 BIN_NO_STATUS = "no card of its %d has a Status"
-#: The most cards the four working stages may hold together: the PO's call of 2026-10-06 evening, after the first day
-#: at the cap of 3 (P146). Four stages of two would hold eight, so this is the limit that binds first.
-MOST_IN_FLIGHT = 4
-#: The one lane past a limit, on the PO's word only (decision 4): a card labelled so may take its working stage, and the
-#: flight, one over its limit. One card at a time — the gate fails on two (P146).
+#: The one sentence shape of a broken limit: what holds (a stage, or IN_FLIGHT_HOLDS), its lane's mark or none, how many,
+#: which cards, the limit, and what to do.
+HOLDS = "%s%s holds %d (%s) — its limit is %d: %s"
+#: What HOLDS names a lane's flight: the cards of its four working stages together (IN_FLIGHT).
+IN_FLIGHT_HOLDS = "In flight"
+#: The one way past a limit, on the PO's word only (decision 4): a card labelled so may take its working stage, and its
+#: lane's flight, one over its limit. One card at a time — the gate fails on two (P146).
 EXPEDITE = "expedite"
 #: The bin's label for a bench session — the PO's own hands at the bench, which sits outside the limits (the spec, §1: "A
-#: bench session is your hands, so it sits outside them"). A bin card labelled so does not fly in the total (P146).
+#: bench session is your hands, so it sits outside them"). A bin card labelled so flies in no lane (P146).
 BENCH = "bench"
 #: Under this many GraphQL points a whole look stays quiet about its cost (P811): a normal push reads about 9 (a page per
 #: 100 items, the project list); more than this says the cost, as does a look that was not whole.
@@ -160,7 +176,7 @@ def no_stage(items, bin_items=()):
 def rides(entry):
     """
     Whether a card is a task riding on its open story: it is counted nowhere
-    itself, asked for no Needed by or slice, and not the lane's holder — but its wait is asked, like every open card's.
+    itself, asked for no Needed by or slice, and not the expedite's holder — but its wait is asked, like every open card's.
     """
     return "task" in (entry.get("labels") or []) and entry.get("parent") is not None
 
@@ -178,9 +194,16 @@ def counts(entry):
 
 
 # --- MVP ---
-def session_of(entry):
-    """The session a card's places come from (P730): "sound" for a slice in SOUND_SLICES, else "spark" — one with no slice too."""
-    return "sound" if entry.get("slice") in SOUND_SLICES else "spark"
+def lane_of(entry):
+    """
+    The lane a card's places come from (P730): the one whose slices hold the card's, else the first, spark's — a card
+    with no slice too, and every card of the bin whatever its slice (P918; problems() marks those, BIN_BOARD).
+    """
+    if entry.get("board") != BIN_BOARD:
+        for lane in LANES:
+            if entry.get("slice") in lane.slices:
+                return lane
+    return LANES[0]
 
 
 def problems(items, bin_items=()):
@@ -188,19 +211,20 @@ def problems(items, bin_items=()):
     Every sentence the gate fails on: a card with no Needed by or no slice — asked from Ready on, the commitment
     (JUDGED), not in Idea, Discovery or Design — a card that waits on someone (any name) with no Waiting since, in any
     open stage and a riding task included (the status lists every open wait, so the gate asks for every open date), two
-    open cards labelled expedite (whatever their stage or board), and a broken WIP limit. A working stage, or the
+    open cards labelled expedite (whatever their stage or board), and a broken WIP limit. A working stage, or a lane's
     flight, may hold one over its limit while exactly one of the cards it holds is the expedite; Ready, a queue the
     expedite never enters, may not. An epic counts nowhere; a task (a plan's step, a sub-issue of
     its story) rides on its open story and is judged only on its wait — unless it has no open parent story, when it is a card
     like any other (counts()). A Done card is not judged at all. Where a card stands is stage_of()'s word: a card in a
     stage the gate does not know, or a board with no Status on any card, is UnknownStage, and nothing is judged (P167).
     `bin_items` is the bin's board, or None when it could not be read (main() says so; nothing is said here). Its cards
-    in a working stage that count (counts()) fly in the same total as spark's — all but a `bench` session, which sits
-    outside the limits — and its expedite is the same lane; a card of its that waits on someone is asked since when, like
-    any. They fill none of spark's stages and are asked for no Needed by or slice. A sentence names them `bin #12`.
+    in a working stage that count (counts()) fly in the spark lane (lane_of) — all but a `bench` session, which sits
+    outside the limits — and its expedite is the same one card; a card of its that waits on someone is asked since when,
+    like any. They fill none of spark's stages and are asked for no Needed by or slice. A sentence names them `bin #12`.
+    A flight's sentence lists its cards as the boards hold them, spark's first.
     """
     no_stage(items, bin_items)  # a board with no stage on any card is not judged (UnknownStage); its line is main()'s to say
-    said, by_stage = [], {}
+    said, by_stage, flying = [], {}, {lane.name: [] for lane in LANES}
     bin_cards = _marked(bin_items)
     for entry in [*items, *bin_cards]:
         status = stage_of(entry)  # UnknownStage for a stage the gate does not know: nothing is judged (P167)
@@ -215,6 +239,9 @@ def problems(items, bin_items=()):
             continue  # a riding task is its story's; a parentless one is judged like any card
         if from_spark and counts(entry):
             by_stage.setdefault(status, []).append(entry)
+        # A bench session is the PO's hands and sits outside the limits (the spec, §1): a bin card labelled so does not fly.
+        if status in IN_FLIGHT and counts(entry) and (from_spark or BENCH not in (entry.get("labels") or [])):
+            flying[lane_of(entry).name].append(entry)
         if from_spark and status in JUDGED:
             if not _section(entry["content"].get("body"), "Needed by"):
                 said.append("%s: no `Needed by` — W14: an item names the design that needs it" % _name(entry))
@@ -233,22 +260,21 @@ def problems(items, bin_items=()):
         return len(held) > limit + allowance
 
     for stage in STAGES:
-        # Ready and Build are held per session (P730); the other stages are held across the whole board.
-        sessions = [(session, " (%s)" % session, limits[stage]) for session, limits in SESSION_LIMITS.items()
-                    if stage in limits] or ([(None, "", LIMITS[stage])] if stage in LIMITS else [])
-        for session, mark, session_limit in sessions:
-            held = [e for e in by_stage.get(stage, []) if session in (None, session_of(e))]
+        # Ready and Build are held per lane (P730); the other stages are held across the whole board.
+        lanes = [(lane, " (%s)" % lane.name, dict(lane.limits)[stage]) for lane in LANES
+                 if stage in dict(lane.limits)] or ([(None, "", LIMITS[stage])] if stage in LIMITS else [])
+        for lane, mark, lane_limit in lanes:
+            held = [e for e in by_stage.get(stage, []) if lane in (None, lane_of(e))]
             # The expedite enters Build, so it lends a working stage a place; Ready is a queue it never enters: none.
-            if (over(held, session_limit) if stage in IN_FLIGHT else len(held) > session_limit):
-                said.append("%s%s holds %d (%s) — its limit is %d: %s"
-                            % (stage, mark, len(held), ", ".join(_ref(e) for e in held), session_limit,
-                               "the PO moves one back to Idea" if stage == "Ready" else "finish one before starting another"))
-    flying = [e for stage in IN_FLIGHT for e in by_stage.get(stage, [])]
-    # A bench session is the PO's hands and sits outside the limits (the spec, §1): a bin card labelled so does not fly.
-    flying += [e for e in bin_cards if e.get("status") in IN_FLIGHT and counts(e) and BENCH not in (e.get("labels") or [])]
-    if over(flying, MOST_IN_FLIGHT):
-        said.append("%d in flight (%s) — at most %d: finish one before starting another"
-                    % (len(flying), ", ".join(_ref(e) for e in flying), MOST_IN_FLIGHT))
+            if (over(held, lane_limit) if stage in IN_FLIGHT else len(held) > lane_limit):
+                said.append(HOLDS % (stage, mark, len(held), ", ".join(_ref(e) for e in held), lane_limit,
+                                     "the PO moves one back to Idea" if stage == "Ready" else "finish one before starting another"))
+    for lane in LANES:
+        # Each lane flies on its own (P918): one lane's cards never fill the other's flight, and the expedite lends its own.
+        if over(flying[lane.name], lane.flight):
+            said.append(HOLDS % (IN_FLIGHT_HOLDS, " (%s)" % lane.name, len(flying[lane.name]),
+                                 ", ".join(_ref(e) for e in flying[lane.name]), lane.flight,
+                                 "the %s lane finishes one before starting another" % lane.name))
     return said
 
 
@@ -280,7 +306,7 @@ def fetch(spent=None):
     cost is added to `spent` when given. Raised for main(): board_read.Unreadable when gh or the network could not be
     reached or answered no board; LookupError for a spark project gh cannot find — the check must never quietly stop
     looking; PartialRead for a spark board read in part, of which nothing is judged (P168). The bin's board is read for
-    the flight total, the lane and its waits alone, so its failing — no project titled BIN_TITLE, a read that errors,
+    the spark lane's flight, the expedite and its waits alone, so its failing — no project titled BIN_TITLE, a read that errors,
     one read in part, or one with no Status on any card (no_status_on) — costs nothing else: its cards are None and the
     bin's why says what went wrong, for main() to say. board.gather() sets it aside the same way, so the two readers
     cannot disagree over the bin.
@@ -311,19 +337,20 @@ def cost_line(spent):
                         "{:,}".format(spent[-1]["limit"]))
 
 
-#: What `--help` says the gate checks; the limits are filled in from LIMITS and MOST_IN_FLIGHT, and the stages from
+#: What `--help` says the gate checks; the limits are filled in from LIMITS and LANES, and the stages from
 #: KNOWN, so the help cannot drift from the numbers the gate holds a board to or the stages it knows.
 CHECKS = """\
 The pre-push gate over the two GitHub Projects boards, spark's and the bin's, read through the
 PO's own gh login. tools/check_commit.py runs it at every push; it takes no arguments.
 
 It fails on:
-  - a stage over its WIP limit: %(limits)s;
-    Ready and Build are counted per session, by the card's slice: %(sessions)s;
-  - more than %(most)d cards in flight: Discovery, Design, Build and Review together, across both
-    boards;
+  - a stage over its WIP limit: %(limits)s, held across both lanes;
+    Ready and Build are counted per lane, by the card's slice: %(lanes)s;
+  - a lane with too many cards in flight, Discovery, Design, Build and Review together:
+    %(flights)s. A lane is told by the card's slice: %(slices)s; every other
+    card, one with no slice and every card of the bin's are the spark lane's;
   - two open cards labelled `expedite`. One card at a time may carry it, on the PO's word: its
-    working stage, and the flight, may then hold one over their limit. Ready never;
+    working stage, and its lane's flight, may then hold one over their limit. Ready never;
   - a card that waits on someone (Waiting on) with no Waiting since, in any open stage, on either
     board, a task riding on its story included;
   - a card of spark's in Ready, Build or Review with no `Needed by` section or on no slice: the
@@ -335,9 +362,9 @@ bin's board read in part, or with no Status on any card, is set aside and said, 
 are counted alone. A draft or a pull request on a board is no card.
 
 How cards count: an epic counts in no stage, and its stories carry the
-limit (R9's experiment A, to 2026-11-02). A task under an open story rides on it and counts nowhere;
+limit (R9, standing since 2026-11-05). A task under an open story rides on it and counts nowhere;
 a task with no parent story, or only a closed one, is a card of its own. The bin's cards in a
-working stage fly in the same total as spark's (a bin card labelled `bench` sits outside it) and
+working stage fly in the spark lane (a bin card labelled `bench` sits outside it) and
 fill none of spark's stages.
 """
 #: The exit codes `--help` names (W1: a look that could not run says so, and is never read as checked).
@@ -357,9 +384,12 @@ def _parser():
     """The gate's command line: no arguments; `--help` says what it checks and what its exit codes mean, and asks gh nothing."""
     return argparse.ArgumentParser(
         prog="check_backlog.py", formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=CHECKS % {"limits": ", ".join("%s %d" % limit for limit in LIMITS.items()), "most": MOST_IN_FLIGHT,
-                              "sessions": "; ".join("%s: %s" % (session, ", ".join("%s %d" % limit for limit in limits.items()))
-                                                    for session, limits in SESSION_LIMITS.items()),
+        description=CHECKS % {"limits": ", ".join("%s %d" % limit for limit in LIMITS.items()),
+                              "lanes": "; ".join("%s: %s" % (lane.name, ", ".join("%s %d" % limit for limit in lane.limits))
+                                                 for lane in LANES),
+                              "flights": ", ".join("%s %d" % (lane.name, lane.flight) for lane in LANES),
+                              "slices": "; ".join("%s is %s" % (lane.name, ", ".join(lane.slices))
+                                                  for lane in LANES if lane.slices),
                               "known": ", ".join(KNOWN)},
         epilog=EXIT_CODES % {"owner": OWNER, "floor": COST_FLOOR})
 

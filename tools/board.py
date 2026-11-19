@@ -49,9 +49,9 @@ def _short(item):
     return "%s (#%s)" % (item["content"]["title"].split(" — ")[0], item["content"]["number"])
 
 
-def _lane_marks(item):
+def _flight_marks(item):
     """
-    What a card in flight is besides a card, from its labels: the expedite lane's holder, a bench session. The label is
+    What a card in flight is besides a card, from its labels: the expedite's holder, a bench session. The label is
     echoed on whichever board's card carries it; the gate leaves out of its total only the bin's bench cards.
     """
     labels = item.get("labels", [])
@@ -65,7 +65,7 @@ def in_flight(items, today):
     bench card out of its total (a bench session is the PO's hands); the card labelled `expedite` is marked, so the
     lane's holder shows.
     """
-    return ["%s %s %d d%s" % (i["status"], _short(i), age(i["status_changed"], today), _lane_marks(i)) for i in items
+    return ["%s %s %d d%s" % (i["status"], _short(i), age(i["status_changed"], today), _flight_marks(i)) for i in items
             if i.get("status") in check_backlog.IN_FLIGHT and check_backlog.counts(i)]
 
 
@@ -142,7 +142,7 @@ def _boards_join(boards, each, today):
 def status_lines(boards, prs, closes, worked, today, bin_why="no bin board was given", disk=None):
     """
     The status, both boards: boards [(name, items)], prs [(repo, number, title, draft)], closes [(date, first line)],
-    worked {date}. The bin's cards count in the verdict as at the gate (the flight total, the lane, an undated wait);
+    worked {date}. The bin's cards count in the verdict as at the gate (the spark lane's flight, the expedite, an undated wait);
     with no bin among the boards that is said with `bin_why` — gather()'s cause for setting it aside — and spark's cards
     are counted alone. UnknownStage (check_backlog) for a card in a stage the gate does not know or a spark board with
     no Status on any card: the caller says could-not-run (P167). `disk` is the disk line (disk_status) or None; it comes last.
@@ -213,7 +213,7 @@ def gather(timeout=CLOSE_TIMEOUT):
     """
     (both boards, their open PRs, the spark board's closes, its id, why the bin's board was set aside or None). The spark
     board read only in part (unread()) is RuntimeError: the status and the close say could-not-run over it, and judge
-    nothing (W1). The bin's board is read for the flight total, the lane and its waits alone, so one read in part, or
+    nothing (W1). The bin's board is read for the spark lane's flight, the expedite and its waits alone, so one read in part, or
     with no Status on any card (check_backlog.no_status_on), is left out of the boards and its cause handed back —
     spark's cards are counted alone and the bin's unread line says why, as the gate does it (check_backlog.fetch):
     one convention for the bin's failing, so the two readers cannot disagree over it.
