@@ -1,0 +1,10 @@
+[
+ {"file": "tools/check_backlog.py", "name": "P918: the flight is one total again", "find": "            flying[lane_of(entry).name].append(entry)\n", "replace": "            flying[LANES[0].name].append(entry)\n"},
+ {"file": "tools/check_backlog.py", "name": "P918: sound's flight limit rises", "find": "((\"Ready\", 1), (\"Build\", 1)), 2)", "replace": "((\"Ready\", 1), (\"Build\", 1)), 3)"},
+ {"file": "tools/check_backlog.py", "name": "P918: sound's flight limit falls", "find": "((\"Ready\", 1), (\"Build\", 1)), 2)", "replace": "((\"Ready\", 1), (\"Build\", 1)), 1)"},
+ {"file": "tools/check_backlog.py", "name": "P918: a bin card on a sound slice flies in sound", "find": "    if entry.get(\"board\") != BIN_BOARD:\n", "replace": "    if True:\n"},
+ {"file": "tools/check_backlog.py", "name": "P918: the flight's sentence drops the lane", "find": "HOLDS % (IN_FLIGHT_HOLDS, \" (%s)\" % lane.name,", "replace": "HOLDS % (IN_FLIGHT_HOLDS, \"\","},
+ {"file": "tools/check_backlog.py", "name": "P918: an expedite lends every lane's flight a place", "find": "        if over(flying[lane.name], lane.flight):\n", "replace": "        if len(flying[lane.name]) > lane.flight + sum(1 for held in flying.values() for e in held if EXPEDITE in (e.get(\"labels\") or [])):\n"},
+ {"file": "tools/check_backlog.py", "name": "P918: --help drops the flight per lane", "find": "\"flights\": \", \".join(", "replace": "\"flights\": \"\" and \", \".join("},
+ {"file": "tools/check_backlog.py", "name": "P918: --help drops the sound lane's slices", "find": "\"slices\": \"; \".join(", "replace": "\"slices\": \"\" and \"; \".join("}
+]
