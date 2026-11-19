@@ -34,5 +34,11 @@
   "name": "a folder that another process removed is a refusal at the first error, with no new try",
   "find": "        except (NotADirectoryError, PermissionError) as raised:",
   "replace": "        except OSError as raised:"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "a refusal with no lock removes the store's folder, which another process may hold",
+  "find": "    _remove_empty(made - {folder})",
+  "replace": "    _remove_empty(made)"
  }
 ]

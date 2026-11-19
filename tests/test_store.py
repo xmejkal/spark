@@ -476,6 +476,14 @@ class OneWriterAtATimeTest(unittest.TestCase):
         self.assertEqual(ended, [(0, "")] * 6)
         self.assertEqual([each for each in root.rglob("*") if each.name != "deep"], [])
 
+    def test_a_take_that_never_holds_is_refused_and_leaves_the_store_s_folder_to_its_holder(self):
+        """P922, from its review: with no lock, the folder at the store's path may be one that another process holds."""
+        root = Path(tempfile.mkdtemp())
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(root / "store")}), self.assertRaises(store.StoreError) as refused:
+            store._hold_home(tries=2, take=lambda folder: None)
+        self.assertEqual(refused.exception.code, "store_not_writable")
+        self.assertTrue((root / "store").is_dir())
+
     def test_a_lock_keeps_the_folder_that_a_write_filled_and_one_that_was_there(self):
         root = Path(tempfile.mkdtemp())
         (root / "there").mkdir()

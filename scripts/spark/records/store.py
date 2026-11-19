@@ -261,16 +261,17 @@ def _take(folder):
     return None
 
 
-def _hold_home():
+def _hold_home(tries=HOLD_TRIES, take=_take):
     """The store's folder, open and held, and the set of folders this call made for it, so it never removes what
     another process made. Another holder may remove an empty folder while this call makes, opens or waits for it.
     The folder at the path is then not the one held, or an error says that it is gone, and the call starts again. A
-    file in the way and a folder spark may not open are refused at once."""
+    file in the way and a folder spark may not open are refused at once. A refusal removes only the folders above
+    the store: it holds no lock, and the store's folder at the path may be one that another process holds."""
     folder, made, cannot = Path(os.path.abspath(home())), set(), OSError("the folder changed each time spark took it")
-    for _ in range(HOLD_TRIES):
+    for _ in range(tries):
         try:
             _make_missing(folder, made)
-            held = _take(folder)
+            held = take(folder)
             if held is not None:
                 return held, made
         except (NotADirectoryError, PermissionError) as raised:
@@ -278,7 +279,7 @@ def _hold_home():
             break
         except OSError as raised:
             cannot = raised
-    _remove_empty(made)
+    _remove_empty(made - {folder})
     # as `_make_ready` (P496): a SPARK_HOME that names a file, or a folder spark may not open
     raise StoreError("cannot make %s for spark's store (%s): point SPARK_HOME at a folder you can write", folder, cannot,
                      code=records_codes.STORE_NOT_WRITABLE)

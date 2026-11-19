@@ -2,7 +2,8 @@
 
 Card: [P922 #1305](https://github.com/xmejkal/spark/issues/1305), from the plan council of P920. This file holds the
 acted, raised and rejected findings only. The review: one plan check and one lens on Sonnet, and the refuter on Opus
-(6 claims: 3 hold, 3 refuted). 2026-11-19.
+(6 claims: 3 hold, 3 refuted), then a second round of the refuter on the fix (4 claims hold, 1 new finding).
+2026-11-19.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -16,3 +17,5 @@ acted, raised and rejected findings only. The review: one plan check and one len
 | 8 | an empty folder above the store can stay when several processes take a store that does not exist at one moment | the fix of row 3, seen in its test | rejected | dropped because the folder is empty, git does not show it, and a lock that covers the folders above needs a second lock. The docstring of `locked()` and the test say the limit |
 | 9 | the start time 2 s ahead and the 0.5 s sleep can pass with no overlap on a loaded machine | the lens, question 3 | rejected | dropped because the tests then pass and do not fail falsely, and the mutation rows hold the two paths |
 | 10 | `flock` on a folder is not probed on Linux and on a network drive | the lens and the refuter | rejected | dropped because no store is on a network drive today. The PR's body names the limit |
+| 11 | when the 100 tries run out, the helper removes empty folders with no lock, so it can remove the folder that another process holds | the refuter, round 2, finding 5, forced with a patched `_take` | acted | fixed: a refusal removes only the folders above the store, with a test and a mutation row |
+| 12 | a `SPARK_HOME` that is a symlink loop raises `RuntimeError` from `home().resolve()` | the refuter, round 2, finding 6 | rejected | dropped because main calls `resolve()` the same way, so this PR changes nothing there |
