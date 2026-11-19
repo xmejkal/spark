@@ -85,10 +85,10 @@ nothing, exits 2, and its fix names the next command. The sentence of `not_regis
 "Nothing was written". The last line on stderr says it for these codes: `no_port`, `two_boards` (give `--port`),
 `port_not_listed`, `tool_missing`, `list_failed` and `store_problem`.
 
-`tools/box.py` of pixel-games records since P921 (#1303). Its `deploy` runs the launcher once, after the last copy and
+The deploy tool of pixel-games records since P921 (#1303). Its deploy runs the launcher once, after the last copy and
 before the reset. It prints one line: `spark's store: recorded pixel-games, <deployed>`, `not recorded (<code>)`, or
 `not known` after its time limit of 30 s. The deploy goes on whatever the line says. `bench.py show` then lists
-`pixel-games, by box.py` for that board.
+`pixel-games` with "by" and that tool's name for the board.
 
 ## The launcher, for a tool outside spark
 
