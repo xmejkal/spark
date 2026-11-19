@@ -180,6 +180,9 @@ class TheCoreTest(unittest.TestCase):
                                        node(2, "P2 — b", "Build", waiting="hardware", since="2026-10-06"),
                                        node(3, "P3 — c", "Ready", waiting="the PO", since="2026-10-06")))
         self.assertEqual(board.in_flight(spark, TODAY), ["Review P1 (#1) 2 d (waits on the PO)", "Build P2 (#2) 2 d"])
+        # The mark says a fact about the card: the bin's bench session that waits carries it, though no total counts it.
+        bench = board.to_items(project(node(7, "B7 — c", "Build", labels=("bench",), waiting="the PO", since="2026-10-06")))
+        self.assertEqual(board.in_flight(bench, TODAY), ["Build B7 (#7) 2 d (bench) (waits on the PO)"])
 
     def test_the_close_carries_the_mark_of_a_card_that_waits_on_the_po(self):
         spark = board.to_items(project(node(1, "P1 — a", "Review", waiting="the PO", since="2026-10-06")))

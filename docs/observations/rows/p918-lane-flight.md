@@ -20,7 +20,7 @@ who built the change on a copy of the tree. This file holds the acted, raised an
 | 8 | "ask him for the oldest" does not work in auto mode, and a card moved to Idea looks like plain backlog | the interface lens and the flow lens | acted | the newest card goes back to Idea with its wait kept and a comment that names its stage |
 | 9 | the plan dropped the age rule, and the PO's words are "not to leave it get stale" | the flow lens | acted | W6 names the three days and the repeat in every reply; no failure by the calendar |
 | 10 | the design raises how many cards can stand in the working stages, and the accepted answer said "no higher total" | the flow lens; the refuter read it as inside the PO's yes | acted | W6 and the PR say the rise plainly: six and four standing, four and two in work |
-| 11 | a returned wait can put a stage over its limit, and a wait can be set to pass a limit | the flow lens | acted | three W6 rules that the gate does not see |
+| 11 | a returned wait can put a stage over its limit, and a wait can be set to pass a limit | the flow lens | acted | three of the four W6 rules that the gate does not see (the fourth is row 9's) |
 | 12 | two of the plan's three measures cannot be counted from what exists | the flow lens | acted | W6 names two measures read from the day closes |
 | 13 | the plan's value proof for the waiting slice also passed with the flight per lane alone | the refuter, round 2 | acted | a board that only the waiting total passes: `test_the_board_that_only_the_waiting_total_passes` |
 | 14 | "the cap on the open questions to the PO is 4" was false: a wait in Idea or Ready has no cap | the refuter, round 2 | acted | the sentence is gone from the plan and is in no document |
@@ -39,3 +39,24 @@ who built the change on a copy of the tree. This file holds the acted, raised an
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
 | 24 | the session's own check of the new mutation rows said "escaped: 0" on a copy of the tree whose tests failed with no row planted | the session, by a control run | acted | the copy was built from the tracked files, the control passed, and the rows were planted again; a line in the learned rules |
+
+## The final review
+
+A code lens on Opus, a documents lens on Sonnet, then the refuter. Its verdict: stands with fixes.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 25 | the card's line "Discovery, Design and Review stay shared" had no test: a gate that counted only spark's cards there passed all 199 tests | the refuter | acted | `test_discovery_design_and_review_are_held_across_both_lanes` and a mutation row |
+| 26 | the PR said "Closes #1299", and the card's Done-when asks that the PO's rules say the same totals; that file is his | the refuter | raised | fixed: the PR says "Refs #1299"; the card closes when his rules file holds the totals and the proof is posted |
+| 27 | no test pinned that a card that waits on the PO in Review is still asked for its Needed by and its slice | the code lens, confirmed by the refuter | acted | a test and a mutation row |
+| 28 | the status's mark on a bench session of the bin that waits was untested, and two docstrings and the status help said that the gate counts such a card | the code lens, confirmed by the refuter | acted | the test holds the bench card; the docstrings and the help say what the gate does |
+| 29 | W6 did not say which card "the newest" is; on the same day the gate names the later card in the board's order, not the higher number | the documents lens; the refuter ran the tie | acted | W6 says the latest Waiting since, an undated wait as the latest, and the board's order on the same day |
+| 30 | W6's first sentence read as if Build were no working stage | the documents lens, confirmed by the refuter | acted | "Discovery, Design and Review each hold two cards" |
+| 31 | a session can set a wait on its own card and pull the next one, and the PR's text for the PO did not say so | the refuter | acted | W6 and the PR say it; the gate reads fields, not comments, so no cheap check exists |
+| 32 | "the first group of commits can merge alone" held for the tests and the anchors, but the documents of both steps are one commit | the refuter | acted | the PR says so |
+| 33 | the PR said "eight literal sentences"; it is the constant and seven | the refuter | acted | the PR's count is corrected |
+| 34 | the counting rule stood three lines long under the glossary's "Waiting on" beside W6 and the flow | the documents lens; the refuter kept the numbers in the flow, as the card asks | acted | the glossary holds one clause and a link |
+| 35 | two inserted help lines were 270 and 191 characters long | the code lens | acted | wrapped like the lines around them |
+| 36 | "the expedite's lane" names a third lane | the documents lens | rejected | the refuter: it is the expedite card's own lane, as in the code; the sentence now says "the lane of the card that carries `expedite`" |
+| 37 | a bare "waiting total" can be read as a wait on hardware | the documents lens | rejected | the refuter: every use follows a sentence that names the PO |
+| 38 | old row names and test comments say "the lane" for the expedite, and a repeat of `" (%s)" % lane.name` | the code lens | rejected | the refuter: "the expedite lane" is the glossary's own name; row names are the ledger's keys; the repeat is three short uses |

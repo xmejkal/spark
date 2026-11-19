@@ -82,8 +82,7 @@ cannot see that" is dropping the test.
 
 ## W6 — Finish before starting
 
-The board's limits are the rule. Each working stage, Discovery, Design and Review, holds two cards, counted across
-both lanes. Ready, Build and the cards in flight are held per lane, by the card's slice (P730, the PO, 2026-11-09, and
+The board's limits are the rule. Discovery, Design and Review each hold two cards, counted across both lanes. Ready, Build and the cards in flight are held per lane, by the card's slice (P730, the PO, 2026-11-09, and
 P918, the PO, 2026-11-18: "A flight total per lane"). The spark lane takes four in Ready, two in Build and four in
 flight. The sound lane, the slices "pixel-games" and "graphics library", takes one in Ready, one in Build and two in
 flight. A card with no slice is spark's. In flight means in Discovery, Design, Build or Review. An epic counts in no
@@ -102,16 +101,19 @@ by P146 on 2026-10-09). One part no command sees: a card stands in its working s
 council's, and the PO's to change). A card in a working stage with *Waiting on* set to `the PO` is in no stage's limit
 and in no flight. It counts in its lane's waiting total: at most two for spark and two for sound. The expedite lends
 this total no place. A wait on hardware or outside counts as before, and so does a wait in Idea or Ready. If a lane
-breaks its waiting total, the newest of its waiting cards goes back to Idea. Its wait stays, and a comment names the
-stage it stood in. The price, said plainly: more cards can stand in the working stages. The most is six for spark and
-four for sound, of which four and two are in work, and one more in the expedite's lane.
+breaks its waiting total, the card that the gate names goes back to Idea. That is the card with the latest *Waiting
+since*. A wait with no date counts as the latest. On the same day it is the later card in the board's order. Its wait
+stays, and a comment names the stage it stood in. The status still lists a waiting card in its flight line, with the
+mark `(waits on the PO)`. The price, said plainly: more cards can stand in the working stages. The most is six for spark and
+four for sound, of which four and two are in work, and one more in the lane of the card that carries `expedite`.
 
-The gate sees none of these four rules:
+The gate sees none of these four rules. So a session can set a wait on its own card and pull the next one, and only
+the status's list of waits shows it:
 
 - A wait is set only with the question posted on the card.
 - A card that waits has no work on it. Work that starts on it clears the wait first.
 - A wait is cleared only after its stage and its lane's flight have a place. If they have none, finish a card first.
-  Or move the lane's newest card in that stage back to Idea, with a comment that names the stage.
+  Or move the card that entered that stage last back to Idea, with a comment that names the stage.
 - A wait older than three days carries `!` in the status. It is asked again in every reply to the PO until he answers.
 
 One gap is known: the gate runs only where spark pushes. A broken limit of the sound lane fails spark's pushes, and the

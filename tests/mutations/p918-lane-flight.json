@@ -24,5 +24,8 @@
  {"file": "tools/check_backlog.py", "name": "P928: a bench session that waits enters the waiting total", "find": "        if status in IN_FLIGHT and counts(entry) and (from_spark or BENCH not in (entry.get(\"labels\") or [])):\n", "replace": "        if status in IN_FLIGHT and counts(entry) and (from_spark or apart or BENCH not in (entry.get(\"labels\") or [])):\n"},
  {"file": "tools/check_backlog.py", "name": "P928: --help drops the waiting limits", "find": "\"waits\": \", \".join(", "replace": "\"waits\": \"\" and \", \".join("},
  {"file": "tools/board.py", "name": "P928: the status drops the mark of a card that waits on the PO", "find": "    if check_backlog.waits_apart(item):\n", "replace": "    if False:\n"},
- {"file": "tools/board.py", "name": "P928: the status marks every wait", "find": "    if check_backlog.waits_apart(item):\n", "replace": "    if item.get(\"waiting on\"):\n"}
+ {"file": "tools/board.py", "name": "P928: the status marks every wait", "find": "    if check_backlog.waits_apart(item):\n", "replace": "    if item.get(\"waiting on\"):\n"},
+ {"file": "tools/check_backlog.py", "name": "P918: Discovery, Design and Review hold only spark's cards", "find": "            held = [e for e in by_stage.get(stage, []) if lane in (None, lane_of(e))]\n", "replace": "            held = [e for e in by_stage.get(stage, []) if (lane or LANES[0]) == lane_of(e)]\n"},
+ {"file": "tools/check_backlog.py", "name": "P928: a card that waits on the PO is not asked for its Needed by or its slice", "find": "        if from_spark and status in JUDGED:\n", "replace": "        if from_spark and status in JUDGED and not apart:\n"},
+ {"file": "tools/board.py", "name": "P928: a bench session that waits on the PO is not marked", "find": "    if check_backlog.waits_apart(item):\n", "replace": "    if check_backlog.waits_apart(item) and check_backlog.BENCH not in labels:\n"}
 ]

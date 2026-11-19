@@ -582,9 +582,7 @@ Kanban (the process design, §2).
 Two fields of a card on the board: who it waits on (`the PO`, `hardware` or `outside`) and the date it began. The gate
 fails a push on a *Waiting on* with no *Waiting since*, on both boards and in any open stage; the status lists every
 wait oldest first and marks one older than three days with `!` ([asks to the PO](scrum/README.md#asks-to-the-po)).
-Only a wait on the PO, in a working stage, is counted apart: such a card is in no stage's limit and in no flight, and in
-its lane's waiting total. The status marks it `(waits on the PO)` in its flight line
-([W6](scrum/WORKING_AGREEMENTS.md#w6--finish-before-starting)).
+A card in a working stage that waits on the PO counts apart ([W6](scrum/WORKING_AGREEMENTS.md#w6--finish-before-starting)).
 **The failure behind it:** R2.6's wait had no date, so it never aged (the process design, §2).
 
 ### Service level

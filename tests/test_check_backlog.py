@@ -27,8 +27,8 @@ a card with no labels key is no lane and no crash; an expedite epic in Build, wh
 lends nothing; and a Ready that holds one over its limit is named, expedite or not.
 
 P146 (docs/2026-10-06-process-design.md, §1: "The bin's desk cards count in the same three. A bench session is your
-hands, so it sits outside them"): the bin's board is read for three things. Its cards in a working stage fly in the same
-total as spark's — a task under its story rides on it, an epic counts nowhere, a Done card is out,
+hands, so it sits outside them"): the bin's board is read for three things. Its cards in a working stage fly in the spark
+lane's flight — a task under its story rides on it, an epic counts nowhere, a Done card is out,
 and a card labelled `bench` sits outside — the expedite lane is one lane across both boards, and a card that waits on
 someone is asked since when there too, as on spark's. They fill none of spark's stages and are asked for no Needed by or
 slice, and a sentence names them `bin #12`, apart from spark's #12. A bin board that could not be read is said, with its
@@ -389,6 +389,21 @@ class TheBacklogCheckTest(unittest.TestCase):
             self.assertFalse(check_backlog.waits_apart(item(1, stage, waiting="the PO")), stage)
         self.assertFalse(check_backlog.waits_apart(item(1, "Review", waiting="hardware")))
         self.assertFalse(check_backlog.waits_apart(item(1, "Review")))
+
+    def test_discovery_design_and_review_are_held_across_both_lanes(self):
+        # P918's Done-when: "The limits of 2 in Discovery, Design and Review stay shared across the board."
+        for stage in ("Discovery", "Design", "Review"):
+            with self.subTest(stage=stage):
+                cards = [item(1, stage), item(2, stage, slice_="graphics library"), item(3, stage, slice_="pixel-games")]
+                self.assertEqual(check_backlog.problems(cards[:2]), [])
+                self.assertEqual([line for line in check_backlog.problems(cards) if line.startswith(stage)],
+                                 ["%s holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another" % stage])
+
+    def test_a_card_that_waits_on_the_po_in_review_is_still_asked_for_its_needed_by_and_its_slice(self):
+        # Counted apart is not set aside: the commitment's questions (JUDGED) are asked of a card that waits, too.
+        said = check_backlog.problems([item(8, "Review", needed="", slice_=None, waiting="the PO", since="2026-11-17")])
+        self.assertEqual(said, ["#8 P8 — x: no `Needed by` — W14: an item names the design that needs it",
+                                "#8 P8 — x: on no slice of the story map"])
 
     def test_a_card_in_each_working_stage_is_four_in_flight_the_cap_and_passes(self):
         self.assertEqual(check_backlog.problems([item(1, "Discovery"), item(2, "Design"), item(3, "Build"),

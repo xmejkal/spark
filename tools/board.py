@@ -52,7 +52,8 @@ def _short(item):
 def _flight_marks(item):
     """
     What a card in flight is besides a card: from its labels, the expedite's holder and a bench session; from its
-    wait, a card that waits on the PO, which the gate counts apart (check_backlog.waits_apart, the one rule). A label
+    wait, a card that waits on the PO, which the gate counts apart (check_backlog.waits_apart, the one rule; a bench
+    session that waits carries the mark too, and the gate counts it in no total). A label
     is echoed on whichever board's card carries it; the gate leaves out of its total only the bin's bench cards.
     """
     labels = item.get("labels", [])
@@ -68,7 +69,7 @@ def in_flight(items, today):
     one difference the line itself says: a card labelled `bench` is listed and marked, though the gate leaves a bin's
     bench card out of its total (a bench session is the PO's hands); the card labelled `expedite` is marked, so the
     expedite's holder shows; and a card that waits on the PO is listed and marked, though the gate counts it in its
-    lane's waiting total and not in the flight.
+    lane's waiting total and not in the flight (a bench session in no total).
     """
     return ["%s %s %d d%s" % (i["status"], _short(i), age(i["status_changed"], today), _flight_marks(i)) for i in items
             if i.get("status") in check_backlog.IN_FLIGHT and check_backlog.counts(i)]
@@ -279,13 +280,16 @@ def disk_status(folder=None):
 #: the status prints, close_update() for when a close is at risk and the day it refuses, main() for the exit codes.
 STATUS_HELP = ("print the state of both boards: the gate's verdict, the cards in flight (expedite and bench marked), "
                "every wait oldest first ('!' past three days), Ready in the PO's order (a warning when down to one or "
-               "two), open PRs, the last close and a working day left without one. A card in flight that waits on the PO is marked '(waits on the PO)': the gate counts it in its lane's waiting total, not in its stage or the flight. A board it could not read, or a card "
+               "two), open PRs, the last close and a working day left without one. A card in flight that waits on the PO "
+               "is marked '(waits on the PO)': the gate counts it apart from the cards in work. A board it could not read, "
+               "or a card "
                "in a stage the gate does not know, makes the whole status one line, could-not-run with its cause; cards "
                "with no Status are said; the bin's board read in part, or with no Status on any card, is set aside and "
                "said, and spark's cards are counted alone. With under 10 GB free in the temp folder's disk, a last line "
                "'disk: low — …' says so. It always exits 0, since a session start must never fail")
 CLOSE_HELP = ("post the day's one status update to spark's board: the line, then what is in flight and what waits on the "
-              "PO; a card in flight that waits on him carries the mark '(waits on the PO)'. It is at risk when the gate finds a problem or a wait is older than three days, else on track. It "
+              "PO; a card in flight that waits on him carries the mark '(waits on the PO)'. It is at risk when the gate "
+              "finds a problem or a wait is older than three days, else on track. It "
               "refuses a day already closed (exit 1), and exits 1 with could-not-run when the boards could not be read "
               "or a card is in a stage the gate does not know")
 
