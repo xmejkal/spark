@@ -154,9 +154,10 @@ It reports:
 - the size of `scripts/`;
 - the work board — spark's and the bin's, through your `gh` login ([the board](../../GLOSSARY.md#the-board)). It fails
   the push on:
-  - a stage over its limit, or more than four cards in flight across both boards — the numbers and the counting rules
+  - a stage over its limit, a lane with too many cards in flight, or a lane with too many cards that wait on the PO
+    in a working stage — the numbers and the counting rules
     are [the flow's table](../../scrum/README.md#the-flow--an-items-stages);
-  - two open cards labelled `expedite`: the lane takes one card at a time;
+  - two open cards labelled `expedite`: the expedite lane takes one card at a time;
   - a card that waits on someone (*Waiting on*) with no *Waiting since*, on either board, in any open stage;
   - a card of spark's in Ready, Build or Review with no *Needed by* or no slice.
 
@@ -170,7 +171,7 @@ It reports:
   renamed stage is a decision, not a silent skip — and the spark board with no *Status* on any card is a changed field,
   `backlog: could-not-run — no card of the 3 on the spark board has a Status — the field's keys may have changed, or
   every card is new; the limits were not checked`. A card with no *Status* (GitHub's "No status" column) is in Idea and
-  said, `backlog: 3 card(s) have no stage: #3, #5, bin #20`. The bin's board is read for the flight total, the lane and
+  said, `backlog: 3 card(s) have no stage: #3, #5, bin #20`. The bin's board is read for the spark lane's flight, the expedite and
   its waits alone, so its failing costs nothing else: read in part, or with no *Status* on any card, it is set aside and
   spark's cards are judged alone, with the bin's unread line saying why —
   `backlog: the bin's board could not be read (it holds 25 items, 2 were read) — its cards were not counted or checked`,
@@ -217,8 +218,9 @@ A refusal: the gate's rules run on the board as `gh` printed it at the migration
 ```
 
 The other refusals read the same way, one line each, as the suite expects them: `Build (spark) holds 3 (#1, #2, #3) — its
-limit is 2: finish one before starting another`, `5 in flight (#1, #2, #3, #4, bin #19) — at most 4: finish one before
-starting another`, `2 cards labelled expedite (#1, #2) — one at a time, on the PO's word`, and for a card with no slice
+limit is 2: finish one before starting another`, `In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — its limit is 4: the spark lane finishes one
+before starting another`, `Waiting on the PO (sound) holds 3 (#5, #6, #7) — its limit is 2: the newest (#7) goes back to
+Idea with its wait kept and a comment that names its stage, until the PO answers one`, `2 cards labelled expedite (#1, #2) — one at a time, on the PO's word`, and for a card with no slice
 `#8 P8 — x: on no slice of the story map`. With no `gh` login:
 
 <!-- output: run 2026-10-09, spark 0.7.0 -->
