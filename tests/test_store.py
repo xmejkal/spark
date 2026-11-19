@@ -451,11 +451,11 @@ class OneWriterAtATimeTest(unittest.TestCase):
     def test_a_lock_on_a_store_that_does_not_exist_leaves_no_folder_and_no_file(self):
         """P922: the lock makes the folder it holds, and a dry run or a refused write leaves the place as it was."""
         root = Path(tempfile.mkdtemp())
-        temp = Path(tempfile.mkdtemp())
-        with mock.patch.dict(os.environ, {"SPARK_HOME": str(root / "deep" / "store")}), mock.patch.object(tempfile, "tempdir", str(temp)):
+        lock_files = set(Path(tempfile.gettempdir()).glob("spark-*.lock"))
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(root / "deep" / "store")}):
             with store.locked():
                 self.assertTrue((root / "deep" / "store").is_dir())
-        self.assertEqual((list(root.iterdir()), list(temp.iterdir())), ([], []))
+        self.assertEqual((list(root.iterdir()), set(Path(tempfile.gettempdir()).glob("spark-*.lock"))), ([], lock_files))
 
     def test_a_lock_keeps_the_folder_that_a_write_filled_and_one_that_was_there(self):
         root = Path(tempfile.mkdtemp())

@@ -234,7 +234,7 @@ def _hold_home():
             folder.mkdir(parents=True, exist_ok=True)
             held = os.open(folder, os.O_RDONLY)
         except OSError as cannot:  # as `_make_ready` (P496): a SPARK_HOME that names a file, or a folder spark may not open
-            raise StoreError("cannot hold %s for spark's store (%s): point SPARK_HOME at a folder you can write", folder, cannot,
+            raise StoreError("cannot make %s for spark's store (%s): point SPARK_HOME at a folder you can write", folder, cannot,
                              code=records_codes.STORE_NOT_WRITABLE)
         fcntl.flock(held, fcntl.LOCK_EX)
         try:
