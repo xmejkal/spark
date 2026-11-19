@@ -12,7 +12,7 @@
   ([W19](WORKING_AGREEMENTS.md#w19--the-item-exists-before-the-work-starts)), and its model:
   `Agent(description="#126 P180: the documentation expert for humans", model="sonnet", …)`.
 - Before every pull request, [a review sized to what the change holds](#the-council-before-every-pull-request): no new
-  new code path, one refuter on the strongest model; new logic, one lens and the refuter; a design, an epic or the rules, a council. Fable only
+  new code path, one refuter on Opus; new logic, one lens and the refuter; a design, an epic or the rules, a council. Fable only
   where the PO names it ([the token budget](#the-token-budget)).
 
 Every rule the team runs on is a file in this folder, and all its work is a card on a board.
@@ -109,7 +109,7 @@ PO's order into Ready commits.
 | **Discovery** | 2, epics do not count | the PO says "discover it", or a read runs on the card (D) | its document merges by PR (D) and the PO decides: design, park or drop. A read that only answered a question posts the answer, and the card goes back to Idea (D) | with the PO, through his `product-discovery` skill (P102e): journeys, a story map, his answers in batches. Drawing them in Miro and Canva is P102b. An epic goes deeper (P257): FULL depth with an architecture lens and its diagrams, a frame on the Miro journey board, a cheap test of the riskiest belief, and a plan of its slices before its first story |
 | **Design** | 2, epics do not count | a story the PO chose has no approved spec, before Ready or when it is pulled from Ready | the spec is in `docs/`, its council has run (full by default, light on request (D)), and the PO says yes | superpowers' brainstorming, then the spec in `docs/`. A story from a discovered epic points to its step on the epic's journey and story map. A story with no epic gets a short journey, a few lines in its spec. Chores and bugs skip the journey step (P257) |
 | **Ready** | 4 for spark, 1 for the sound session (P730) | the PO orders it. **This is the commitment.** The card has a slice, a *Needed by* that names the design that is blocked (W14), and a *Value proven by*, which is a hypothesis until it is reproduced at Done — nothing closes on an unreproduced criterion (W20, merged into W9 and this row, 2026-10-09). Chores and bugs enter here directly | Claude pulls the top card when Build is free, or into Design if the story has no spec | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
-| **Build** | 2 for spark, 1 for the sound session (P730) | pulled from the top of Ready, or an expedite; a story's plan runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes (decision 6, 2026-10-06) | the plan's tasks are done, test-first, and the final review starts | the plan first, in plan mode, with its diagrams. Then a small plan council: one lens on the everyday model and the refuter on the strongest. Its fixes go into the plan, with no second yes from the PO (decision 6). Chores and bugs get a plan and its council too, but no journey. Then executing-plans or subagent-driven-development; the plan's tasks become sub-issues (P257) |
+| **Build** | 2 for spark, 1 for the sound session (P730) | pulled from the top of Ready, or an expedite; a story's plan runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes (decision 6, 2026-10-06) | the plan's tasks are done, test-first, and the final review starts | the plan first, in plan mode, with its diagrams. Then a small plan council: one lens on Sonnet and the refuter on Opus. Its fixes go into the plan, with no second yes from the PO (decision 6). Chores and bugs get a plan and its council too, but no journey. Then executing-plans or subagent-driven-development; the plan's tasks become sub-issues (P257) |
 | **Review** | 2 | a fresh final review on Opus ([the token budget](#the-token-budget)) | [the council before the PR](#the-council-before-every-pull-request), sized to the change, has run and its fixes are in; the DoD green; the proof posted; **then Claude merges** when GitHub says mergeable (the PO merges the rules, the working agreements, a release, a tag and a bench change) | the PR says `Closes #N` |
 | **Done** | — | the work is where it is used (merged, or installed when there is no PR), and *Value proven by* has run with its output on the issue | (end) | the proof is posted on the issue |
 
@@ -215,8 +215,8 @@ A pull request fixes the gaps it makes. Older gaps in the README's shape go to P
 
 | the change | the review |
 | --- | --- |
-| no new code path (a docs fix, data, a move the tests pin) | one refuter on the strongest model |
-| new logic | one lens on the everyday model and the refuter |
+| no new code path (a docs fix, data, a move the tests pin) | one refuter on Opus |
+| new logic | one lens on Sonnet and the refuter on Opus |
 | a design, an epic or the rules | a council: the lenses, the refuter last |
 
 For a change that holds logic, the pull request carries its mutation rows, proven with `tools/mutate.py --anchors`,
@@ -234,15 +234,39 @@ that merges a design or closes an epic takes the full council even when it is on
 - **Sized to the question.** A look-up gets one agent; a comparison, a few. A full council (about 90 M input tokens)
   runs only where a council belongs, and councils are full by default (D), except the council before a pull request,
   which is [sized to the change](#the-council-before-every-pull-request).
-- **The model, and Fable spared.** Lenses run on Sonnet (decision of 2026-10-06). The PO's words of 2026-10-10:
-  *"ok, we really need to make sure Fable is only being used for the most important parts, we're almost out of it.
-  Can you make sure we don't run out of it?"* Claude's reading of them, his to change
-  ([#126](https://github.com/xmejkal/spark/issues/126)): refuters, the synthesis and the final review run on Opus,
-  and Fable, the most capable model, runs only on a part he names, whatever a skill says about the model
-  (superpowers' plans and reviews ask for the most capable one).
+- **The model by the job, and Fable spared.** The PO's words of 2026-10-10: *"ok, we really need to make sure Fable
+  is only being used for the most important parts, we're almost out of it. Can you make sure we don't run out of
+  it?"* His later words set the table below: 2026-11-12 (*"for designs and planning and architecture, lets try to use
+  the best model"*), 2026-11-18 (*"Please don't use Fable for the refutersr unless its a bigger refactoringg or so"*)
+  and 2026-11-19 (Opus as the session's model in spark, and Opus for the lenses of a design or epic council). The
+  table is Claude's reading of those words, his to change. Four parts of it stand on no words of his: Fable for a
+  research finding and for the final review of a release, Opus for a builder, and Fable for the refuter of a design
+  or an epic (he named "a bigger refactoring"). His yes of 2026-11-19 put the synthesis "on Fable in the main
+  session". The main session runs on Opus since that day, so the `architect` agent carries it. Fable, the most
+  capable model, runs only on the rows that name it, whatever a skill says about the model (superpowers' plans and
+  reviews ask for the most capable one).
+
+  | the job | who runs it | model |
+  | --- | --- | --- |
+  | a story's plan, the judgment of results, the PO's questions | the main session | Opus |
+  | the final review of a story | a fresh agent | Opus |
+  | a design, an epic's plan, a refactoring's stage split, the synthesis of a discovery or a council, a research finding that a decision rests on, the final review of a design, an epic or a release | the [`architect`](../.claude/agents/architect.md) agent | Fable |
+  | the architecture lens of any council, and every lens of a design or epic council | an agent | Opus |
+  | the lens of a pull request or of a small plan, and the docs, wording and names lenses | an agent | Sonnet |
+  | the refuter | the [`refuter`](../.claude/agents/refuter.md) agent | Opus, and Fable for a bigger refactoring, a design or an epic |
+  | a builder of new logic | an agent | Opus |
+  | a builder of a code move that the tests pin or of docs, searching and reading sources, the Miro batch, a wrap-up, the day close, a mutation sweep | an agent | Sonnet |
+  | spark's own agents (`agents/*.md`) | each | the model its file names |
+
+  No lens runs on Fable, because a council's lenses run at once. The main session cannot change its own model: a
+  session that is a discovery or a design from its first message starts on Fable by the PO's `/model`, and in every
+  other session the `architect` carries the Fable part. Claude says so when a job deserves a better model than its
+  row gives it (the PO, 2026-11-19: *"please always add your input, if you think something would deserve a better
+  model"*).
 - **Every launch names its model:** `Agent(description="#126 P180: the documentation expert for humans",
-  model="sonnet", …)`, or `agent(…, {model: 'opus'})` in a workflow. An agent with no model runs on the session's,
-  and a workflow keeps the model it was launched with: on 2026-10-10 one launched under Fable went on starting Fable
+  model="sonnet", …)`, or `agent(…, {model: 'opus'})` in a workflow. An agent with no model in its file and none in its
+  launch runs on the model that `CLAUDE_CODE_SUBAGENT_MODEL` names (Sonnet on the PO's Mac), and on the session's
+  model where that variable is not set. A workflow keeps the model it was launched with: on 2026-10-10 one launched under Fable went on starting Fable
   agents after the session had moved to Opus. A launch of one of spark's own agents (`agents/*.md`) passes no model,
   so the model its file names holds.
 - **Inside the PO's allowance** a run starts. Above it, Claude asks first, with the estimate. The allowance is decision

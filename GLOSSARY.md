@@ -585,7 +585,7 @@ design); the trial on 2026-11-02 corrects the guess ([the cadences](scrum/README
 A **council** is one run of several agents on one question — a spec, a plan, a pull request. Each agent reads it as one
 **lens**, a point of view: the PO assistant, the user's journey, the tech lead, and three documentation experts, for
 human readers, for AI, and for examples and help. Then a **refuter** tries to knock each finding down, and what stands
-is fixed or goes on the run's checklist. Lenses run on Sonnet and the refuter on Opus ([the token
+is fixed or goes on the run's checklist. The lens of a pull request runs on Sonnet, the lenses of a design or epic council and the refuter on Opus ([the token
 budget](scrum/README.md#the-token-budget)). Before every pull request a council sized to the change runs, then the
 refuter, and its findings are fixed before the merge (the PO, 2026-10-08 and 2026-10-10; [the
 council](scrum/README.md#the-council-before-every-pull-request)). **Why a refuter:** a lens's finding is a hypothesis
