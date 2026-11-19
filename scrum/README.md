@@ -77,7 +77,7 @@ choice after a three-lens council).
 | 2026-11-02 | the trial check (kept) | its first question now counts work on cards the board showed in Idea. It notes "limits raised 2026-10-06, the trial's second day" |
 
 - **The session start** is P102c's hook, in the PO's own settings; it prints nothing outside his project folders. It
-  also gives the gate's verdict and the open PRs, marks the `expedite` and `bench` cards in flight, lists every wait on
+  also gives the gate's verdict and the open PRs, marks the `expedite` and `bench` cards in flight and a card that waits on the PO there, lists every wait on
   both boards (one on someone other than the PO says who), marks a wait older than three days with `!`, and says
   *"Ready is down to N"* at one or two. It reads each board whole, page by page, and *"N open"* counts all of it;
   spark's board read in part, or a card in a stage the gate does not know, makes the whole status one could-not-run
@@ -108,14 +108,20 @@ PO's order into Ready commits.
 | **Idea** | — | the PO's words are recorded, or Claude files found work (decision 3); no slice is needed | the PO starts it, or it closes as not planned or as a duplicate | the PO's words are enough. *Needed by*, *Value proven by* and a slice come at Ready: refinement decreases with distance ([versions](VISION.md#versions)) |
 | **Discovery** | 2, epics do not count | the PO says "discover it", or a read runs on the card (D) | its document merges by PR (D) and the PO decides: design, park or drop. A read that only answered a question posts the answer, and the card goes back to Idea (D) | with the PO, through his `product-discovery` skill (P102e): journeys, a story map, his answers in batches. Drawing them in Miro and Canva is P102b. An epic goes deeper (P257): FULL depth with an architecture lens and its diagrams, a frame on the Miro journey board, a cheap test of the riskiest belief, and a plan of its slices before its first story |
 | **Design** | 2, epics do not count | a story the PO chose has no approved spec, before Ready or when it is pulled from Ready | the spec is in `docs/`, its council has run (full by default, light on request (D)), and the PO says yes | superpowers' brainstorming, then the spec in `docs/`. A story from a discovered epic points to its step on the epic's journey and story map. A story with no epic gets a short journey, a few lines in its spec. Chores and bugs skip the journey step (P257) |
-| **Ready** | 4 for spark, 1 for the sound session (P730) | the PO orders it. **This is the commitment.** The card has a slice, a *Needed by* that names the design that is blocked (W14), and a *Value proven by*, which is a hypothesis until it is reproduced at Done — nothing closes on an unreproduced criterion (W20, merged into W9 and this row, 2026-10-09). Chores and bugs enter here directly | Claude pulls the top card when Build is free, or into Design if the story has no spec | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
-| **Build** | 2 for spark, 1 for the sound session (P730) | pulled from the top of Ready, or an expedite; a story's plan runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes (decision 6, 2026-10-06) | the plan's tasks are done, test-first, and the final review starts | the plan first, in plan mode, with its diagrams. Then a small plan council: one lens on Sonnet and the refuter on Opus. Its fixes go into the plan, with no second yes from the PO (decision 6). Chores and bugs get a plan and its council too, but no journey. Then executing-plans or subagent-driven-development; the plan's tasks become sub-issues (P257) |
+| **Ready** | 4 for spark, 1 for the sound lane (P730) | the PO orders it. **This is the commitment.** The card has a slice, a *Needed by* that names the design that is blocked (W14), and a *Value proven by*, which is a hypothesis until it is reproduced at Done — nothing closes on an unreproduced criterion (W20, merged into W9 and this row, 2026-10-09). Chores and bugs enter here directly | Claude pulls the top card when Build is free, or into Design if the story has no spec | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
+| **Build** | 2 for spark, 1 for the sound lane (P730) | pulled from the top of Ready, or an expedite; a story's plan runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes (decision 6, 2026-10-06) | the plan's tasks are done, test-first, and the final review starts | the plan first, in plan mode, with its diagrams. Then a small plan council: one lens on Sonnet and the refuter on Opus. Its fixes go into the plan, with no second yes from the PO (decision 6). Chores and bugs get a plan and its council too, but no journey. Then executing-plans or subagent-driven-development; the plan's tasks become sub-issues (P257) |
 | **Review** | 2 | a fresh final review on Opus ([the token budget](#the-token-budget)) | [the council before the PR](#the-council-before-every-pull-request), sized to the change, has run and its fixes are in; the DoD green; the proof posted; **then Claude merges** when GitHub says mergeable (the PO merges the rules, the working agreements, a release, a tag and a bench change) | the PR says `Closes #N` |
 | **Done** | — | the work is where it is used (merged, or installed when there is no PR), and *Value proven by* has run with its output on the issue | (end) | the proof is posted on the issue |
 
-The sound session is the slices "pixel-games" and "graphics library"; a card with no slice is spark's. At most four cards are in flight — Discovery to Review — at once: the
-PO's call of 2026-10-06 evening, after the first day at the cap of three (*"2 everywhere, cap 4"*). What counts (P146,
-the PO, 2026-10-06):
+The board has two lanes. The sound lane is the slices "pixel-games" and "graphics library". The spark lane is every
+other card, a card with no slice, and every card of the bin. Each lane has its own flight, Discovery to Review together:
+at most four cards for spark and two for sound (P918, the PO, 2026-11-18: "A flight total per lane"). Before that, one
+total of four held for the whole board: the PO's call of 2026-10-06 evening, after the first day at the cap of three
+(*"2 everywhere, cap 4"*). What counts (P146, the PO, 2026-10-06):
+
+- a card in a working stage that waits on the PO counts apart. It is in no stage's limit and in no flight. It is in its
+  lane's waiting total, at most two per lane (the first slice of P928, 2026-11-19).
+  [W6](WORKING_AGREEMENTS.md#w6--finish-before-starting) has the rules around it and the experiment's measures;
 
 - an epic counts in no stage, and its stories carry the limit (R9, the PO, 2026-10-18: WIP experiment A, broad form, to 2026-11-02);
 - a card is in its working stage while any work runs on it, a background read included; a read that only answers a
@@ -133,10 +139,10 @@ story is a card like any other.
 
 **The expedite lane** (decision 4 (a), the PO's choice of 2026-10-06): *"only on [the PO's] word ("now"), one at a
 time, labelled `expedite`. It may take a stage one over its limit, and the gate fails on two."* Claude proposes it for
-a check that lies or a gate that breaks. The gate lets the expedite's working stage, and the four in flight, hold one
-over; Ready never, because the expedite enters Build. It is one lane across both boards.
+a check that lies or a gate that breaks. The gate lets the expedite's working stage, and its own lane's flight, hold one
+over; Ready never, because the expedite enters Build. One card carries it across both boards.
 
-**The bin.** The bin's cards in flight count in the same four; a bench session is the PO's hands and sits outside them:
+**The bin.** The bin's cards in flight count in the spark lane's four; a bench session is the PO's hands and sits outside them:
 a bin card labelled `bench` is left out of the total. The bin's cards fill none of spark's stages and are asked for no
 *Needed by* or slice. With no `gh` or network the gate prints could-not-run and lets the push through, the exception
 the design writes into W1; a bin board or parent stories it could not read are said with their cause, and do not stop
@@ -273,8 +279,8 @@ that merges a design or closes an epic takes the full council even when it is on
   2 (a), his choice of 2026-10-06: *"with no question asked, one run per card in flight, sized to its question, and at
   most one full council a day. Anything bigger is asked first, with its estimate."*
 - **Reported daily.** The day-close states the day's agent tokens (no tool counts them yet; card C1).
-- **Capped by the limits.** One run per in-flight card means at most four at once, five while the expedite lane is in
-  use.
+- **Capped by the limits.** One run per in-flight card means at most four at once in the spark lane and two in the sound lane, and
+  one more while the expedite lane is in use.
 
 ## Asks to the PO
 
@@ -282,7 +288,8 @@ that merges a design or closes an epic takes the full council even when it is on
 - **Nothing is decided until the PO answers.** An option's text names every move it makes, and his answer covers only
   what it showed.
 - **A card that waits on the PO** carries *Waiting on* and *Waiting since*. The gate names a *Waiting on* with no
-  *Waiting since*, on both boards, in any open stage, a riding task included.
+  *Waiting since*, on both boards, in any open stage, a riding task included. In a working stage such a card counts
+  apart from the cards in work ([W6](WORKING_AGREEMENTS.md#w6--finish-before-starting)).
 - **The decision window.** The session start lists those cards oldest first. It is not a meeting.
 
 ## Validating value, which is not the same as finishing

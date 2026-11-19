@@ -174,6 +174,21 @@ class TheCoreTest(unittest.TestCase):
             "spark — 4 open, the limits hold · trial check 2026-11-02",
             "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, bin Build B7 (#7) 2 d (bench)"])
 
+    def test_a_card_in_flight_that_waits_on_the_po_is_marked_and_one_that_waits_on_hardware_is_not(self):
+        # P928's first slice: the gate counts such a card apart (check_backlog.waits_apart), so the line says which they are.
+        spark = board.to_items(project(node(1, "P1 — a", "Review", waiting="the PO", since="2026-10-06"),
+                                       node(2, "P2 — b", "Build", waiting="hardware", since="2026-10-06"),
+                                       node(3, "P3 — c", "Ready", waiting="the PO", since="2026-10-06")))
+        self.assertEqual(board.in_flight(spark, TODAY), ["Review P1 (#1) 2 d (waits on the PO)", "Build P2 (#2) 2 d"])
+        # The mark says a fact about the card: the bin's bench session that waits carries it, though no total counts it.
+        bench = board.to_items(project(node(7, "B7 — c", "Build", labels=("bench",), waiting="the PO", since="2026-10-06")))
+        self.assertEqual(board.in_flight(bench, TODAY), ["Build B7 (#7) 2 d (bench) (waits on the PO)"])
+
+    def test_the_close_carries_the_mark_of_a_card_that_waits_on_the_po(self):
+        spark = board.to_items(project(node(1, "P1 — a", "Review", waiting="the PO", since="2026-10-06")))
+        _, body = board.close_update("x", [("spark", spark), ("bin", [])], set(), TODAY, TODAY)
+        self.assertIn("in flight: Review P1 (#1) 2 d (waits on the PO)", body)
+
     def test_a_card_that_is_the_expedite_and_a_bench_session_shows_both_marks(self):
         both = board.to_items(project(node(1, "P1 — a", "Build", labels=("story", "expedite", "bench"))))
         self.assertEqual(board.in_flight(both, TODAY), ["Build P1 (#1) 2 d (expedite) (bench)"])
@@ -258,7 +273,7 @@ class TheCoreTest(unittest.TestCase):
         lines = board.status_lines([("spark", SPARK_AT_THE_CAP), ("bin", BIN_FIFTH)], [], [], set(), TODAY)
         self.assertEqual(lines[:3], [
             "spark — 4 open, 1 problem(s) · trial check 2026-11-02",
-            "  ! 5 in flight (#1, #2, #3, #4, bin #19) — at most 4: finish one before starting another",
+            "  ! In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — its limit is 4: the spark lane finishes one before starting another",
             "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, bin Build B19 (#19) 2 d"])
 
     def test_the_status_says_when_the_bin_board_was_not_given(self):

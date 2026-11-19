@@ -82,15 +82,47 @@ cannot see that" is dropping the test.
 
 ## W6 — Finish before starting
 
-The board's limits are the rule: two cards in each working stage — Discovery, Design, Review — and Ready and Build per session, by the card's slice (P730, the PO, 2026-11-09): the spark session takes four in Ready and two in Build, and the sound session (the slices "pixel-games" and "graphics library") one in each. A card with no slice is spark's. At most four in flight across the working stages. An epic counts in no stage, and its stories carry the limit (R9, the PO, 2026-10-18: WIP experiment A, broad form. The PO made it standing on 2026-11-05: "Epics do not count"); a plan's task rides on its
-open story, and a task with no open parent story counts as a card; every other card counts. The expedite lane opens
-on the PO's word only, for one card at a time across both boards, labelled `expedite`: it may take its working stage,
-and the flight, one over its limit — Ready never. The bin's cards in a working stage fly in the same four, except one labelled
-`bench`, the PO's own hands; they fill none of spark's stages. `tools/check_backlog.py` reads both boards at every push
-and fails it when a limit breaks or two open cards carry `expedite`, so this holds by command, not by memory (P102a,
-2026-10-05; the limits raised at the PO's word on 2026-10-06, and again that evening; the counting rules, the lane and
-the bin's cards built by P146 on 2026-10-09). One part no command sees: a card stands in its working stage while any
-work runs on it (W19). [The flow](README.md#the-flow--an-items-stages) has each stage's entry and exit.
+The board's limits are the rule. Discovery, Design and Review each hold two cards, counted across both lanes. Ready, Build and the cards in flight are held per lane, by the card's slice (P730, the PO, 2026-11-09, and
+P918, the PO, 2026-11-18: "A flight total per lane"). The spark lane takes four in Ready, two in Build and four in
+flight. The sound lane, the slices "pixel-games" and "graphics library", takes one in Ready, one in Build and two in
+flight. A card with no slice is spark's. In flight means in Discovery, Design, Build or Review. An epic counts in no
+stage, and its stories carry the limit (R9, the PO, 2026-10-18: WIP experiment A, broad form. The PO made it standing
+on 2026-11-05: "Epics do not count"); a plan's task rides on its open story, and a task with no open parent story
+counts as a card; every other card counts. The expedite lane opens on the PO's word only, for one card at a time
+across both boards, labelled `expedite`: it may take its working stage, and its own lane's flight, one over its limit —
+Ready never. The bin's cards in a working stage fly in the spark lane, except one labelled `bench`, the PO's own hands;
+they fill none of spark's stages. `tools/check_backlog.py` reads both boards at every push and fails it when a limit
+breaks or two open cards carry `expedite`, so this holds by command, not by memory (P102a, 2026-10-05; the limits raised
+at the PO's word on 2026-10-06, and again that evening; the counting rules, the expedite lane and the bin's cards built
+by P146 on 2026-10-09). One part no command sees: a card stands in its working stage while any work runs on it (W19).
+[The flow](README.md#the-flow--an-items-stages) has each stage's entry and exit.
+
+**A card that waits on the PO counts apart** (the first slice of P928, 2026-11-19. The two limits are the plan
+council's, and the PO's to change). A card in a working stage with *Waiting on* set to `the PO` is in no stage's limit
+and in no flight. It counts in its lane's waiting total: at most two for spark and two for sound. The expedite lends
+this total no place. A wait on hardware or outside counts as before, and so does a wait in Idea or Ready. If a lane
+breaks its waiting total, the card that the gate names goes back to Idea. That is the card with the latest *Waiting
+since*. A wait with no date counts as the latest. On the same day it is the later card in the board's order. Its wait
+stays, and a comment names the stage it stood in. The status still lists a waiting card in its flight line, with the
+mark `(waits on the PO)`. The price, said plainly: more cards can stand in the working stages. The most is six for spark and
+four for sound, of which four and two are in work, and one more in the lane of the card that carries `expedite`.
+
+The gate sees none of these four rules. So a session can set a wait on its own card and pull the next one, and only
+the status's list of waits shows it:
+
+- A wait is set only with the question posted on the card.
+- A card that waits has no work on it. Work that starts on it clears the wait first.
+- A wait is cleared only after its stage and its lane's flight have a place. If they have none, finish a card first.
+  Or move the card that entered that stage last back to Idea, with a comment that names the stage.
+- A wait older than three days carries `!` in the status. It is asked again in every reply to the PO until he answers.
+
+One gap is known: the gate runs only where spark pushes. A broken limit of the sound lane fails spark's pushes, and the
+sound session does not see it (P930, #1316).
+
+**The experiment.** The flight per lane and the waiting total are WIP experiments. The first retro on or after
+2026-12-03 judges them by two measures, both read from the day closes. Per lane and day: how many cards wait on the PO,
+and the age of the oldest wait. Per card: the closes that list it in flight, split into work and waiting by the mark
+`(waits on the PO)`.
 
 **Origin:** Petr, twice: *"make sure you often prioritize your work, finish before moving on to
 too many things at the same time"* and *"go by priority and concentrate on the goal in mind"*.
@@ -151,7 +183,7 @@ harness, a research agent — is not built until a project reaches for it.
 **This is Ready's entry policy** ([the flow](README.md#the-flow--an-items-stages)). Ready is the commitment: a card
 enters it with a *Needed by* that names the blocked design, a slice and a *Value proven by*. In Idea, Discovery and
 Design a card decides whether to build, and is asked for none of them. The push gate reads both boards — spark's
-stages and limits, and the bin's cards in the same flight total — and fails the push on a spark card in Ready, Build or
+stages and limits, and the bin's cards in the spark lane's flight — and fails the push on a spark card in Ready, Build or
 Review with no *Needed by* or no slice (`tools/check_backlog.py`). The bin's cards are asked for neither, and no
 command checks a *Value proven by*.
 

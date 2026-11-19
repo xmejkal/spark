@@ -523,7 +523,7 @@ after work came in that it never planned — so "what are we doing now" had no a
 §9).
 The entry and exit of each stage are [the flow's table](scrum/README.md#the-flow--an-items-stages) too, and the merge
 is the PO's. `tools/check_backlog.py` fails a push that breaks a limit on both boards: spark's stages and limits, and
-the bin's cards in the same flight total (when online). It reads a board whole or judges nothing, and knows the seven
+the bin's cards in the spark lane's flight (when online). It reads a board whole or judges nothing, and knows the seven
 stages above: spark's board handed over by `gh` in part, or a card in a stage it does not know, is could-not-run naming
 it; a card with no Status stands in Idea and is said; the bin's board read in part, or with no Status on any card, is set
 aside and said, spark's cards counted alone (P168, P167). The Markdown backlog is the frozen archive.
@@ -544,17 +544,27 @@ of the map's slices, or `team tools` or `desk lane`. The gate asks a card for on
 Discovery or Design ([the flow](scrum/README.md#the-flow--an-items-stages)). **The failure behind it:** while the gate
 asked for a slice in Idea too, an agent chose P136's "so the push gate passes" (the process design, §2).
 
+### Lane
+
+A part of the board with its own limits, told by a card's slice. There are two. The sound lane is the slices
+`pixel-games` and `graphics library`. The spark lane is every other card, a card with no slice, and every card of the
+bin. Each lane has its own limits in Ready and Build (P730), in flight (P918) and for cards that wait on the PO (P928).
+The numbers are in [the flow](scrum/README.md#the-flow--an-items-stages). Two other things carry the word and are not
+lanes: the expedite lane, below, and the slice `desk lane`, whose cards are in the spark lane. **The failure behind
+it:** on 2026-11-18 one total of four in flight refused a spark push while the count held four spark cards and one
+pixel-games card (P918).
+
 ### The expedite lane
 
-One card at a time, on the PO's word ("now"), labelled `expedite`: its working stage and the four in flight may hold
-one over their limit, Ready never, and the gate fails a push on two such cards. It is one lane across both boards
+One card at a time, on the PO's word ("now"), labelled `expedite`: its working stage and its own lane's flight may hold
+one over their limit, Ready never, and the gate fails a push on two such cards. One card carries it across both boards
 (decision 4 (a); [the flow](scrum/README.md#the-flow--an-items-stages)). **The failure behind it:** P105 went from
 filed to merged in 39 minutes, outside any rule (the process design, §2).
 
 ### Bench
 
-A session of the PO's own hands at the bench: a card on the bin's board labelled `bench`. It sits outside the four in
-flight — the gate leaves it out of the total — and the status marks it in flight
+A session of the PO's own hands at the bench: a card on the bin's board labelled `bench`. It sits outside the spark lane's
+flight — the gate leaves it out of every total — and the status marks it in flight
 ([the flow](scrum/README.md#the-flow--an-items-stages), *The bin*). The design's words: "A bench session is your
 hands, so it sits outside them."
 
@@ -572,6 +582,7 @@ Kanban (the process design, §2).
 Two fields of a card on the board: who it waits on (`the PO`, `hardware` or `outside`) and the date it began. The gate
 fails a push on a *Waiting on* with no *Waiting since*, on both boards and in any open stage; the status lists every
 wait oldest first and marks one older than three days with `!` ([asks to the PO](scrum/README.md#asks-to-the-po)).
+A card in a working stage that waits on the PO counts apart ([W6](scrum/WORKING_AGREEMENTS.md#w6--finish-before-starting)).
 **The failure behind it:** R2.6's wait had no date, so it never aged (the process design, §2).
 
 ### Service level
