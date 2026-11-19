@@ -418,6 +418,109 @@ class OneWriterAtATimeTest(unittest.TestCase):
         self.assertEqual(writer.wait(timeout=60), 0)
         self.assertTrue((self.home / "drawer" / "a-probe.json").exists())
 
+    def test_a_writer_with_another_temp_folder_waits_for_the_same_store(self):
+        """P922: the lock is the store's, so a process with another TMPDIR (cron, `env -i`, a tool's child) shares it."""
+        given = Path(tempfile.mkdtemp()) / "entries.json"
+        given.write_text(json.dumps([{"label": "a probe", "count": 1}]))
+        with store.locked():
+            writer = subprocess.Popen([sys.executable, str(SCRIPTS / "parts.py"), "--drawer-set", str(given)],
+                                      env=dict(os.environ, TMPDIR=tempfile.mkdtemp()), stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL)
+            time.sleep(1.5)
+            self.assertFalse((self.home / "drawer" / "a-probe.json").exists(), "it wrote while another held the store")
+        self.assertEqual(writer.wait(timeout=60), 0)
+        self.assertTrue((self.home / "drawer" / "a-probe.json").exists())
+
+    def test_two_processes_with_two_temp_folders_lose_no_deploy_entry(self):
+        """P922's value: both start their appends at one moment, each from its own TMPDIR, and the record keeps every one."""
+        appends = ("import sys, time\nfrom spark.records.deploy_record_store import DeployRecordStore, outside_deploy\n"
+                   "time.sleep(max(0, float(sys.argv[2]) - time.time()))\n"
+                   "for n in range(40):\n"
+                   "    DeployRecordStore().append_deploy('aa:bb:cc:dd:ee:10', outside_deploy(sys.argv[1], 'box.py', "
+                   "'2026-11-19T20:00:%02d+01:00' % n, 'not read'))")
+        start = str(time.time() + 2)
+        writers = [subprocess.Popen([sys.executable, "-c", appends, name, start], cwd=SCRIPTS,
+                                    env=dict(os.environ, TMPDIR=tempfile.mkdtemp()), stderr=subprocess.PIPE, text=True)
+                   for name in ("one", "two")]
+        for writer in writers:
+            self.assertEqual(writer.wait(timeout=60), 0, writer.stderr.read())
+            writer.stderr.close()
+        kept = json.loads((self.home / "boards" / "aa-bb-cc-dd-ee-10.json").read_text())["deploys"]
+        self.assertEqual(sorted(each["project"] for each in kept), ["one"] * 40 + ["two"] * 40)
+
+    def test_a_lock_on_a_store_that_does_not_exist_leaves_no_folder_and_no_file(self):
+        """P922: the lock makes the folder it holds, and a dry run or a refused write leaves the place as it was."""
+        root = Path(tempfile.mkdtemp())
+        lock_files = set(Path(tempfile.gettempdir()).glob("spark-*.lock"))
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(root / "deep" / "store")}):
+            with store.locked():
+                self.assertTrue((root / "deep" / "store").is_dir())
+        self.assertEqual((list(root.iterdir()), set(Path(tempfile.gettempdir()).glob("spark-*.lock"))), ([], lock_files))
+
+    def test_six_processes_on_a_store_that_does_not_exist_take_turns_and_leave_nothing(self):
+        """P922, from its review: each process removes the empty folder it made while the others make and open it. None
+        is refused, no two are inside at once (the marker is made new each time), and the store's folder does not stay.
+        An empty folder above it can stay: the one that made it finds another process's folder in it and leaves it."""
+        root, marker = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "inside"
+        rounds = ("import os, sys, time\nfrom spark.records import store\n"
+                  "time.sleep(max(0, float(sys.argv[2]) - time.time()))\n"
+                  "for n in range(150):\n"
+                  "    with store.locked():\n"
+                  "        os.close(os.open(sys.argv[1], os.O_CREAT | os.O_EXCL | os.O_WRONLY))\n"
+                  "        os.unlink(sys.argv[1])")
+        start = str(time.time() + 2)
+        runners = [subprocess.Popen([sys.executable, "-c", rounds, str(marker), start], cwd=SCRIPTS, stderr=subprocess.PIPE, text=True,
+                                    env=dict(os.environ, SPARK_HOME=str(root / "deep" / "store"), TMPDIR=tempfile.mkdtemp()))
+                   for _ in range(6)]
+        ended = [(runner.wait(timeout=120), runner.communicate()[1][-600:]) for runner in runners]
+        self.assertEqual(ended, [(0, "")] * 6)
+        self.assertEqual([each for each in root.rglob("*") if each.name != "deep"], [])
+
+    def test_a_take_that_never_holds_is_refused_and_leaves_the_store_s_folder_to_its_holder(self):
+        """P922, from its review: with no lock, the folder at the store's path may be one that another process holds."""
+        root = Path(tempfile.mkdtemp())
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(root / "store")}), self.assertRaises(store.StoreError) as refused:
+            store._hold_home(tries=2, take=lambda folder: None)
+        self.assertEqual(refused.exception.code, "store_not_writable")
+        self.assertTrue((root / "store").is_dir())
+
+    def test_a_lock_keeps_the_folder_that_a_write_filled_and_one_that_was_there(self):
+        root = Path(tempfile.mkdtemp())
+        (root / "there").mkdir()
+        for name in ("new", "there"):
+            with self.subTest(name), mock.patch.dict(os.environ, {"SPARK_HOME": str(root / name)}):
+                with store.locked():
+                    if name == "new":
+                        store.write_json("tools", None, {})
+                self.assertTrue((root / name).is_dir())
+
+    def test_a_home_that_is_a_file_is_the_store_s_own_refusal(self):
+        given = Path(tempfile.mkdtemp()) / "a-file"
+        given.write_text("")
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(given)}), self.assertRaises(store.StoreError) as refused:
+            with store.locked():
+                self.fail("it held a file as the store")
+        self.assertEqual(refused.exception.code, "store_not_writable")
+        self.assertIn(str(given), str(refused.exception))
+
+    def test_a_waiter_holds_the_store_s_folder_and_not_one_that_the_holder_removed(self):
+        """The holder made the folder and removes it, empty, when it lets go: the waiter then holds a new one at the path."""
+        home = Path(tempfile.mkdtemp()) / "store"
+        seen = []
+
+        def wait_for_the_store():
+            with store.locked():
+                seen.append(home.is_dir())
+
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            waiter = threading.Thread(target=wait_for_the_store, daemon=True)
+            with store.locked():
+                waiter.start()
+                time.sleep(0.5)
+            waiter.join(timeout=20)
+        self.assertEqual(seen, [True])
+        self.assertFalse(home.exists())
+
     def test_a_writer_on_another_store_does_not_wait(self):
         elsewhere = Path(tempfile.mkdtemp())
         given = Path(tempfile.mkdtemp()) / "entries.json"

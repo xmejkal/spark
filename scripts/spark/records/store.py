@@ -219,33 +219,97 @@ def write_place(name, text):
     return write_file(target, text, name in PRIVATE)
 
 
-#: The stores this process holds, as (thread, lock file) pairs: what makes `locked()` re-entrant for the thread that holds one.
+#: The stores this process holds, as (thread, home) pairs: what makes `locked()` re-entrant for the thread that holds one.
 _HELD = set()
+
+
+#: How often `_hold_home` starts again when another process moved the folder under it, before it refuses.
+HOLD_TRIES = 100
+
+
+def _remove_empty(made):
+    """Take away each folder of `made` that is empty, the deepest first. One that holds something stays."""
+    for folder in sorted(made, key=lambda each: len(each.parts), reverse=True):
+        try:
+            folder.rmdir()
+        except OSError:
+            pass
+
+
+def _make_missing(folder, made):
+    """Make `folder` and each missing folder above it, and add to `made` only those that this call's own `mkdir` made."""
+    for each in reversed((folder, *folder.parents)):
+        try:
+            if not each.is_dir():
+                os.mkdir(each)
+                made.add(each)
+        except FileExistsError:  # another process made it this moment, or a file is in the way
+            pass
+
+
+def _take(folder):
+    """`folder` open and held with `flock`, or None when the folder at the path is not the one held any more."""
+    held = os.open(folder, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        if os.path.samestat(os.fstat(held), os.stat(folder)):
+            return held
+    except OSError:
+        os.close(held)
+        raise
+    os.close(held)
+    return None
+
+
+def _hold_home(tries=HOLD_TRIES, take=_take):
+    """The store's folder, open and held, and the set of folders this call made for it, so it never removes what
+    another process made. Another holder may remove an empty folder while this call makes, opens or waits for it.
+    The folder at the path is then not the one held, or an error says that it is gone, and the call starts again. A
+    file in the way and a folder spark may not open are refused at once. A refusal removes only the folders above
+    the store: it holds no lock, and the store's folder at the path may be one that another process holds."""
+    folder, made, cannot = Path(os.path.abspath(home())), set(), OSError("the folder changed each time spark took it")
+    for _ in range(tries):
+        try:
+            _make_missing(folder, made)
+            held = take(folder)
+            if held is not None:
+                return held, made
+        except (NotADirectoryError, PermissionError) as raised:
+            cannot = raised
+            break
+        except OSError as raised:
+            cannot = raised
+    _remove_empty(made - {folder})
+    # as `_make_ready` (P496): a SPARK_HOME that names a file, or a folder spark may not open
+    raise StoreError("cannot make %s for spark's store (%s): point SPARK_HOME at a folder you can write", folder, cannot,
+                     code=records_codes.STORE_NOT_WRITABLE)
 
 
 @contextlib.contextmanager
 def locked():
     """
     One writer at a time (§6.1): the store held from a write's plan to its last byte, so two agents writing at once cannot
-    each write what the other never read — a part reserved twice, a count lost. The lock is a file in the system's temp
-    folder named after this home, never in the store, so it is never a stray file in a repository; the operating system
-    lets go of it when its holder exits. A `locked()` inside a `locked()` of the same store, in the same thread, passes
-    through and only the outermost lets go: a second `flock` on a second open file would wait behind the first for ever.
+    each write what the other never read — a part reserved twice, a count lost. The lock is on the store's own folder
+    and is no file (P922): one store has one lock whatever the process's environment, and no stray file is in a
+    repository. A folder the lock made for a store that did not exist goes again when nothing was written into it, so
+    a dry run and a refused write leave nothing. Only when several processes take a store that does not exist at one
+    moment, an empty folder above it can stay. The operating system lets go of the lock when its holder exits. A
+    `locked()` inside a `locked()` of the same store, in the same thread, passes through and only the outermost lets
+    go: a second `flock` on a second open folder would wait behind the first for ever. Where the system has no
+    `flock`, nothing is held.
     """
-    named = hashlib.sha256(str(home().resolve()).encode()).hexdigest()[:16]
-    lock_file = Path(tempfile.gettempdir()) / ("spark-%s.lock" % named)
-    holder = (threading.get_ident(), lock_file)
-    if holder in _HELD:
+    holder = (threading.get_ident(), str(home().resolve()))
+    if holder in _HELD or not fcntl:
         yield
         return
-    with open(lock_file, "a") as held:
-        if fcntl:
-            fcntl.flock(held, fcntl.LOCK_EX)
-        _HELD.add(holder)
-        try:
-            yield
-        finally:
-            _HELD.discard(holder)
+    held, made = _hold_home()
+    _HELD.add(holder)
+    try:
+        yield
+    finally:
+        _HELD.discard(holder)
+        _remove_empty(made)  # under the lock, so a waiter sees that its folder is gone and starts again
+        os.close(held)
 
 
 def _target(name, key):
