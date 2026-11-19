@@ -1,4 +1,5 @@
 [
  {"file": "tests/test_agents_block.py", "name": "P927: an area named twice counts twice, in the text's order", "find": "    return sorted(set(AREA.findall(text)))\n", "replace": "    return AREA.findall(text)\n"},
- {"file": "tests/test_agents_block.py", "name": "P927: a row's model word is read in the table's case", "find": ".split(\"|\")[-1].lower())\n", "replace": ".split(\"|\")[-1])\n"}
+ {"file": "tests/test_agents_block.py", "name": "P927: a row's model word is read in the table's case", "find": ".split(\"|\")[-1].lower())\n", "replace": ".split(\"|\")[-1])\n"},
+ {"file": "tests/test_agents_block.py", "name": "P927: a link in a sentence outside the table counts as a row", "find": "for line in section.splitlines() if line.lstrip().startswith(\"|\")\n", "replace": "for line in section.splitlines()\n"}
 ]

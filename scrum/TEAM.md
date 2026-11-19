@@ -23,10 +23,11 @@ Two rules on the PO's card, moved here from the working agreements:
   `ask` rule for `wokwi-cli` and `make simulate`. It has been in his settings since 2026-10-09, on his answer *"Yes,
   always ask (Recommended)"* ([Q4 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)), for `wokwi-cli`,
   `make simulate` and `make simulate-all`: Claude Code asks him before running any of them. `scripts/run_scenario.py`
-  (P130) starts wokwi-cli inside itself, so no rule fires for it: Claude asks him before each run, and
-  Claude asked him on 2026-10-12 whether to add an ask rule for it. Since 2026-10-31 a run on Wokwi's free plan (50 CI
-  minutes in 30 days) is allowed with no ask (*"yes, the free plan option is totally fine"*), and Claude says the
-  minutes that the run used. The browser upload on wokwi.com is free too. A run that needs a paid plan waits for his
+  (P130) starts wokwi-cli inside itself, so no rule fires for it: until 2026-10-31 Claude asked him before each
+  run, and Claude asked him on 2026-10-12 whether to add an ask rule for it. Since 2026-10-31 a run through
+  `scripts/run_scenario.py` on Wokwi's free plan (50 CI minutes in 30 days) is allowed with no ask from Claude (*"yes,
+  the free plan option is totally fine"*), and Claude says the minutes that the run used. The ask rule in his settings
+  still fires for the three commands above. The pages for a user still say to ask the person before a run. The browser upload on wokwi.com is free too. A run that needs a paid plan waits for his
   word (*"let's not use wokwi payd stuff until I say otherwise"*). (W10, moved here
   2026-10-09 by P146.) Its origin, the PO's words, written down on 2026-09-25: *"lets not waste the simulation
   minutes we already only have 21 of 50 free"*.
@@ -67,8 +68,8 @@ Both role quotes are parts of one sentence of the PO's, 2026-10-06, as
 [#80 records it](https://github.com/xmejkal/spark/issues/80#issuecomment-6021564636) (typos corrected).
 
 The team's reference tools are KiCad 10.0.6's `kicad-cli` and ngspice 47, both read on the PO's Mac on 2026-11-19.
-The team compares spark's output with them, and neither is a user's requirement. A spark hash from before 2026-10-03,
-the day spark became public, can be an old one. The maintainer maps it to today's hash.
+The team compares spark's output with them, and neither is a user's requirement. A spark hash in a text from before
+2026-10-03, the day spark became public, can be an old one. The PO maps it to today's hash.
 
 The four agents are the plugin's agent files: `/spark:research` launches `part-finder`, `datasheet-reader` and
 `parts-researcher`, `/spark:identify` launches `parts-researcher`, and the review skill launches one `design-reviewer`

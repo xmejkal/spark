@@ -66,8 +66,8 @@ and the ledger `tests/mutations/ledger.jsonl`, which every run that plants rows 
 defines them. A critical mark is written by hand on a row that guards a store write, a deploy, an erase or a refusal that
 protects the person, at most 40 in all (`tests/test_ledger.py` caps it). The sweep's command is `SPARK_HOME=... python3
 tools/mutate.py tests/mutations/*.json --for <the wave's files> --tier critical,new,proving --budget 20 --copy`; a night
-slice takes `--budget 180` and needs the Mac awake, because the budget's clock does not count sleep; the proven rows run once per release, each 0.x release until 1.0 (`--tier proven`): the PO's
-rule, not a tool fact. A row the budget left is not a pass: the report quotes the left count. A row refused by
+slice takes `--budget 180` and needs the Mac awake, because the budget's clock does not count sleep; the proven rows
+run once per release, each 0.x release until 1.0 (`--tier proven`): the PO's rule, not a tool fact. A row the budget left is not a pass: the report quotes the left count. A row refused by
 `--anchors` in two sweeps is deleted in a pull request with its reason (`--retire` will list them, P787 PR 5); an escape
 never retires, it is a missing test.
 
@@ -99,10 +99,10 @@ by P146 on 2026-10-09). One part no command sees: a card stands in its working s
 
 **One holder for a board on USB** (proposed by P927 from the agreement that the two sessions made on 2026-11-18 on the
 PO's order, his to change). When two sessions share one board, one of them holds it at a time. Before a take, the
-session tells the other one and writes a take line as a comment on its card: the board, the port, the card and the end
-time. A touch also needs the PO's yes in the session that touches. The hold ends at its time by itself, or earlier with
-the line "The board is free". The PO's own bench work comes first: the holder stops at the next safe point and frees
-the board. A list of the ports is not a touch.
+session tells the other one and waits for its "free", because silence is not a yes. It then writes a take line as a
+comment on its card: the board, the port, the card and the end time. A touch is a look, a grant, a reach, a live try or a deploy. A list of the ports is none. A touch
+needs the PO's yes to the board question, or his grant, in the session that touches. The hold ends at its time by itself, or earlier with the line "The
+board is free". The PO's own bench work comes first: the holder stops at the next safe point and frees the board.
 
 **A card that waits on the PO counts apart** (the first slice of P928, 2026-11-19. The two limits are the plan
 council's, and the PO's to change). A card in a working stage with *Waiting on* set to `the PO` is in no stage's limit

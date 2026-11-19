@@ -19,10 +19,12 @@ AGENT_FOLDER = ROOT / ".claude" / "agents"
 #: The pages that the structure block sends a reader to.
 LINKED_PAGES = ("scrum/VISION.md", "docs/guide/map.md", "docs/guide/how-it-works.md")
 BUDGET_HEADING = "## The token budget"
+#: The agents whose files the token budget's table links. A new row with a link joins this list on purpose.
+LINKED_AGENTS = ("architect", "refuter")
 
 AREA = re.compile(r"scripts/spark/([a-z_]+)")
 MODEL_WORD = re.compile(r"\b(fable|opus|sonnet|haiku)\b")
-AGENT_LINK = re.compile(r"\]\(\.\./\.claude/agents/([a-z-]+)\.md\)")
+AGENT_LINK = re.compile(r"\.claude/agents/([a-z-]+)\.md")
 MODEL_LINE = re.compile(r"^model:\s*(\S+)", re.MULTILINE)
 
 
@@ -70,6 +72,22 @@ class RowModelTest(unittest.TestCase):
         self.assertIsNone(row_model("| spark's own agents | each | the model its file names |"))
 
 
+TABLE_TEXT = ("## Before\n\n| a job | the [`early`](../.claude/agents/early.md) agent | Opus |\n\n"
+              "## The token budget\n\nThe [`prose`](../.claude/agents/prose.md) agent is named in a sentence.\n\n"
+              "  | the job | who runs it | model |\n"
+              "  | a design | the [`first`](../.claude/agents/first.md#top) agent | Fable |\n"
+              "  | a check | [`second`](/.claude/agents/second.md) and [`third`](../.claude/agents/third.md) | Opus |\n\n"
+              "## After\n\n| a job | the [`late`](../.claude/agents/late.md) agent | Sonnet |\n")
+
+
+class AgentRowsTest(unittest.TestCase):
+    def test_each_link_of_each_table_row_under_the_heading_and_no_other(self):
+        self.assertEqual([agent for agent, _ in agent_rows(TABLE_TEXT)], ["first", "second", "third"])
+
+    def test_a_link_comes_with_its_whole_row(self):
+        self.assertEqual(row_model(dict(agent_rows(TABLE_TEXT))["first"]), "fable")
+
+
 class TheStructureBlockTest(unittest.TestCase):
     def test_agents_md_names_the_areas_that_the_code_has(self):
         said = named_areas(AGENTS_PAGE.read_text(encoding="utf-8"))
@@ -85,10 +103,11 @@ class TheStructureBlockTest(unittest.TestCase):
 class TheModelTableTest(unittest.TestCase):
     def test_a_row_that_links_an_agents_file_names_the_files_model(self):
         rows = agent_rows(BUDGET_PAGE.read_text(encoding="utf-8"))
-        self.assertTrue(rows, "the token budget's table links no agent's file")
+        self.assertEqual(sorted(agent for agent, _ in rows), list(LINKED_AGENTS))
         for agent, row in rows:
             in_file = MODEL_LINE.search((AGENT_FOLDER / ("%s.md" % agent)).read_text(encoding="utf-8"))
-            self.assertEqual(row_model(row), in_file and in_file.group(1).lower(),
+            self.assertIsNotNone(in_file, "the %s agent's file names no model" % agent)
+            self.assertEqual(row_model(row), in_file.group(1).lower(),
                              "the table's row for the %s agent and the model in its file differ" % agent)
 
 

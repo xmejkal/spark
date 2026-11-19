@@ -28,16 +28,18 @@ model and a printed enclosure come later. Also later ([P203](https://github.com/
 with its parts as a 3D model for a CAD program. One conversation then takes a small RC cart from needs to parts,
 firmware, PCB and 3D.
 
-The scripts in `scripts/` are thin CLIs: `main()` only parses arguments and prints. The code is in areas, here in
+The scripts in `scripts/` are the CLIs. A thin one only parses arguments and prints, and the others get there as
+each area moves onto the core ([#94](https://github.com/xmejkal/spark/issues/94)). The code is in areas, here in
 the journey's order. `scripts/spark/core` holds the contract that every area and frontend shares. An Operation is
-one job, and a CLI, an agent or an MCP tool runs it through the core. `scripts/spark/records` holds the JSON
-records and the person's store. `scripts/spark/idea` holds a project's needs. `scripts/spark/sourcing` holds what
-the person owns and what spark knows of each part. `scripts/spark/design` holds the design and the pin of each
-signal. `scripts/spark/build` holds the run from a requirements file to a board that builds. `scripts/spark/checks`
-holds the checks of a built design against facts in records. `scripts/spark/breadboard` holds the sheet that a
-person wires from. `scripts/spark/firmware` holds the flash image, the import check and a scenario's run.
-`scripts/spark/bench` holds the Operations on a board on USB. `scripts/spark/flow` says where a project stands. See
-[the map](docs/guide/map.md) and [how it works](docs/guide/how-it-works.md).
+one job that a frontend runs through the core, and the CLI is the only frontend today. `scripts/spark/records`
+holds the JSON records and the person's store. `scripts/spark/idea` holds a project's needs.
+`scripts/spark/sourcing` holds what the person owns and what spark knows of each part. `scripts/spark/design` holds
+the design and the pin of each signal. `scripts/spark/build` holds the run from a requirements file to a board that
+builds. `scripts/spark/checks` holds the checks of a built design against facts in records.
+`scripts/spark/breadboard` holds the sheet that a person wires from. `scripts/spark/firmware` holds the flash
+image, the import check and a scenario's run. `scripts/spark/bench` holds the Operations on a board on USB.
+`scripts/spark/flow` says where a project stands. See [the map](docs/guide/map.md) and [how it
+works](docs/guide/how-it-works.md).
 
 ## Principles for changing spark
 
