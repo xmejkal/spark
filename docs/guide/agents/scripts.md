@@ -91,7 +91,7 @@ envelope, with `data.written` false and the FireBeetle's hold in `data.reserved`
 
 These only read:
 
-- `check_all.py`, `check_physics.py`, `check_footprints.py`, `compare_design.py`, `check_bom.py`;
+- `check_all.py` (its `--boards` names the board definitions to verify against their vendor headers), `check_physics.py`, `check_footprints.py`, `compare_design.py`, `check_bom.py`;
 - `assign_pins.py` without `--emit-pins`, and `run_scenario.py --dry-run`, which needs no token and starts no run;
 - `import_firmware.py`. It writes nothing. It does import the project's firmware modules. Their module-level code runs
   on this machine, each module in its own process under a time limit ([P59](https://github.com/xmejkal/spark/issues/7)).
@@ -135,7 +135,7 @@ These only read:
   after a refusal, or after a `not_reached` where mpremote could not open the port or enter the raw REPL, so the code
   never ran. `pins_checked: false` means the record names no restricted pin, so nothing was refused. A pin that the
   code set and the firmware never sets can keep its value through the reset; `gpio_numbers_in_code` lists the
-  candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool. It asks the board question too. Of its stops, `--json` prints a line only for an open question;
+  candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool. Its `--cure-first` opens the port with DTR and RTS off before the only try (the bench's cold arm). It asks the board question too. Of its stops, `--json` prints a line only for an open question;
 - the board doctor ([P282](https://github.com/xmejkal/spark/issues/326)). When esptool's read fails
   (`look.py`, `grant.py --minutes`, `deploy.py`) or mpremote cannot open the port or enter the REPL (`reach.py`, `live.py`), the script adds the doctor's lines:
   `said` (the tool's own error line, a fact you show and never decide on), one `check` line per check
@@ -159,7 +159,7 @@ These only read:
   `indicate onboard display screen` and `sense onboard battery level` come from the `pin_roles` of the board record. The functions `power onboard charger`,
   `power onboard voltage regulator` and `connect onboard battery input` come from the `power` block. A need of "indicate light" finds the XIAO ESP32-C6 through its LED,
   and a need of "power charger" finds it through its charger. Tell the person that the board is the part, and pick the board for that need too. Read every page of
-  `--match` first: follow `truncated.next` until it is null.
+  `--match` first: follow `truncated.next` until it is null. With a listing, `--from N` starts at item N (`truncated.next` says where).
   A board that stops the chain at the footprint stage (P121) is one line in the text rows of `--list`, `--audit`, `--match`,
   `--pick`, `--requirements` and init: `stops at the footprint stage (P121): its board file lacks physical.header`, or
   `lacks 3 fields (first: physical.width_mm)` when more are missing (P411). The JSON gives the list: `stops_why` on a
