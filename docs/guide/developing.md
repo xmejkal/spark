@@ -281,9 +281,8 @@ exits 1 today, and the baseline holds that. A card that changes an output says w
 ## What spark can do
 
 `python3 tools/inventory.py` prints every script in `scripts/` and `tools/` as Markdown. Each row says what the
-script is for, which pages name it, and which of its flags no page names. Scripts that no page names and no script
-imports come first. It runs only `--help`, of each script that parses with argparse or the core's `run_cli` (P839),
-and writes nothing. `--spark DIR` reads another tree (P200, #153).
+script is for, which pages name it, and which flags of its `--help` (argparse or `run_cli`, P839) no page names.
+Scripts that nothing names or imports come first. It writes nothing. `--spark DIR` reads another tree (P200, #153).
 
 `python3 tools/measure.py` prints the shape of the code under `scripts/` (every folder in it but the MicroPython
 `stand_in/`), ending in a SCORE line (P322). `--rules` prints each breach of an architecture rule as
