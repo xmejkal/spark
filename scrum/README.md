@@ -234,14 +234,33 @@ that merges a design or closes an epic takes the full council even when it is on
 - **Sized to the question.** A look-up gets one agent; a comparison, a few. A full council (about 90 M input tokens)
   runs only where a council belongs, and councils are full by default (D), except the council before a pull request,
   which is [sized to the change](#the-council-before-every-pull-request).
-- **The model, and Fable spared.** Lenses run on Sonnet (decision of 2026-10-06). The PO's words of 2026-10-10:
-  *"ok, we really need to make sure Fable is only being used for the most important parts, we're almost out of it.
-  Can you make sure we don't run out of it?"* Claude's reading of them, his to change
-  ([#126](https://github.com/xmejkal/spark/issues/126)): refuters, the synthesis and the final review run on Opus,
-  and Fable, the most capable model, runs only on a part he names, whatever a skill says about the model
-  (superpowers' plans and reviews ask for the most capable one).
+- **The model by the job, and Fable spared.** The PO's words of 2026-10-10: *"ok, we really need to make sure Fable
+  is only being used for the most important parts, we're almost out of it. Can you make sure we don't run out of
+  it?"* His later words set the table below: 2026-11-12 (*"for designs and planning and architecture, lets try to use
+  the best model"*), 2026-11-18 (*"Please don't use Fable for the refutersr unless its a bigger refactoringg or so"*)
+  and 2026-11-19 (Opus as the session's model in spark, and Opus for the lenses of a design or epic council). The
+  table is his to change. Fable, the most capable model, runs only on the rows that name it, whatever a skill says
+  about the model (superpowers' plans and reviews ask for the most capable one).
+
+  | the job | who runs it | model |
+  | --- | --- | --- |
+  | the everyday session: a story's plan, the judgment of results, the PO's questions | the main session | Opus |
+  | a design, an epic's plan, a refactoring's stage split, the synthesis of a discovery or a council, a research finding that a decision rests on, the final review of a design, an epic or a release | the [`architect`](../.claude/agents/architect.md) agent | Fable |
+  | the architecture lens of any council, and every lens of a design or epic council | an agent | Opus |
+  | the lens of a pull request or of a small plan, and the docs, wording and names lenses | an agent | Sonnet |
+  | the refuter | the [`refuter`](../.claude/agents/refuter.md) agent | Opus, and Fable for a bigger refactoring, a design or an epic |
+  | a builder of new logic | an agent | Opus |
+  | a builder of a code move that the tests pin or of docs, searching and reading sources, the Miro batch, a wrap-up, the day close, a mutation sweep | an agent | Sonnet |
+  | spark's own agents (`agents/*.md`) | each | the model its file names |
+
+  No lens runs on Fable, because a council's lenses run at once. The main session cannot change its own model: a
+  session that is a discovery or a design from its first message starts on Fable by the PO's `/model`, and in every
+  other session the `architect` carries the Fable part. Claude says so when a job deserves a better model than its
+  row gives it (the PO, 2026-11-19: *"please always add your input, if you think something would deserve a better
+  model"*).
 - **Every launch names its model:** `Agent(description="#126 P180: the documentation expert for humans",
-  model="sonnet", …)`, or `agent(…, {model: 'opus'})` in a workflow. An agent with no model runs on the session's,
+  model="sonnet", …)`, or `agent(…, {model: 'opus'})` in a workflow. An agent with no model runs on the session's
+  or on the machine's default for agents,
   and a workflow keeps the model it was launched with: on 2026-10-10 one launched under Fable went on starting Fable
   agents after the session had moved to Opus. A launch of one of spark's own agents (`agents/*.md`) passes no model,
   so the model its file names holds.
