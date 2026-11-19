@@ -296,6 +296,100 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(check_backlog.problems(spark + [rushed]),
                          ["In flight (spark) holds 5 (#1, #2, #3, #4, #5) — " + IN_FLIGHT_SAYS])
 
+    # P928's first slice (the PO, 2026-11-19: "optimize the board and lets go"): a card in a working stage that waits on
+    # the PO leaves its stage limit and its lane's flight, and counts in its lane's waiting total, 2 for each lane.
+
+    def test_two_cards_that_wait_on_the_po_leave_review_free_for_two_in_work(self):
+        waiting = [item(1, "Review", waiting="the PO", since="2026-11-17"), item(2, "Review", waiting="the PO", since="2026-11-19")]
+        self.assertEqual(check_backlog.problems(waiting + [item(3, "Review"), item(4, "Review")]), [])
+        # The other side: a third card in work there is named, and the sentence holds the cards in work alone.
+        self.assertEqual(check_backlog.problems(waiting + [item(3, "Review"), item(4, "Review"), item(5, "Review")]),
+                         ["Review holds 3 (#3, #4, #5) — its limit is 2: finish one before starting another"])
+
+    def test_a_card_that_waits_on_the_po_is_not_in_its_lane_s_flight(self):
+        in_work = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
+        self.assertEqual(check_backlog.problems(in_work + [item(5, "Review", waiting="the PO", since="2026-11-17")]), [])
+
+    def test_the_board_that_only_the_waiting_total_passes(self):
+        # Four cards wait on the PO, two in each lane, and each lane builds one card. On one total this was 6 in flight,
+        # and with a flight per lane alone the sound lane held 3 of its 2 (the plan council's second round ran all three).
+        board = [item(1, "Discovery", waiting="the PO", since="2026-11-15"), item(2, "Review", waiting="the PO", since="2026-11-17"),
+                 item(3, "Discovery", slice_="pixel-games", waiting="the PO", since="2026-11-19"),
+                 item(4, "Review", slice_="pixel-games", waiting="the PO", since="2026-11-19"),
+                 item(5, "Build"), item(6, "Build", slice_="graphics library")]
+        self.assertEqual(check_backlog.problems(board), [])
+
+    def test_a_third_card_that_waits_on_the_po_in_a_lane_is_named_oldest_wait_first_with_the_newest(self):
+        sound = [item(7, "Review", slice_="pixel-games", waiting="the PO", since="2026-11-19"),
+                 item(5, "Discovery", slice_="pixel-games", waiting="the PO", since="2026-11-15"),
+                 item(6, "Design", slice_="graphics library", waiting="the PO", since="2026-11-17")]
+        spark = [item(1, "Review", waiting="the PO", since="2026-11-10"), item(2, "Build", waiting="the PO", since="2026-11-11")]
+        self.assertEqual(check_backlog.problems(spark + sound),
+                         ["Waiting on the PO (sound) holds 3 (#5, #6, #7) — its limit is 2: the newest (#7) goes back to Idea "
+                          "with its wait kept and a comment that names its stage, until the PO answers one"])
+        self.assertEqual(check_backlog.problems(spark + sound[:2]), [])
+
+    def test_a_wait_on_hardware_or_outside_counts_as_work(self):
+        for who in ("hardware", "outside"):
+            with self.subTest(who=who):
+                cards = [item(1, "Review"), item(2, "Review"), item(3, "Review", waiting=who, since="2026-11-17")]
+                self.assertEqual(check_backlog.problems(cards),
+                                 ["Review holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
+
+    def test_a_card_in_ready_that_waits_on_the_po_keeps_its_place_in_ready(self):
+        cards = [item(n) for n in (1, 2, 3, 4)] + [item(5, waiting="the PO", since="2026-11-17")]
+        self.assertEqual(check_backlog.problems(cards),
+                         ["Ready (spark) holds 5 (#1, #2, #3, #4, #5) — its limit is 4: the PO moves one back to Idea"])
+
+    def test_cards_that_count_nowhere_are_in_no_waiting_total(self):
+        # A lane at its waiting limit, and beside it a card that waits and counts nowhere: a task riding on its story, an
+        # epic, the bin's bench session, a card with no Status (it stands in Idea).
+        full = [item(1, "Review", waiting="the PO", since="2026-11-10"), item(2, "Build", waiting="the PO", since="2026-11-11")]
+        wait = dict(waiting="the PO", since="2026-11-19")
+        for name, spark, bin_cards in (
+                ("a riding task", [item(3, "Build", labels=("task",), parent=1, **wait)], []),
+                ("an epic", [item(3, "Review", labels=("epic",), **wait)], []),
+                ("a bench session", [], [item(19, "Build", labels=("story", "bench"), **wait)]),
+                ("no Status", [item(3, None, **wait)], [])):
+            with self.subTest(card=name):
+                self.assertEqual(check_backlog.problems(full + spark, bin_items=bin_cards), [])
+
+    def test_a_task_with_no_parent_story_and_a_bin_card_are_in_the_spark_lane_s_waiting_total(self):
+        full = [item(1, "Review", waiting="the PO", since="2026-11-10"), item(2, "Build", waiting="the PO", since="2026-11-11")]
+        ends = "with its wait kept and a comment that names its stage, until the PO answers one"
+        alone = item(3, "Build", labels=("task",), waiting="the PO", since="2026-11-19")
+        self.assertEqual(check_backlog.problems(full + [alone]),
+                         ["Waiting on the PO (spark) holds 3 (#1, #2, #3) — its limit is 2: the newest (#3) goes back to Idea " + ends])
+        on_a_sound_slice = item(19, "Build", slice_="pixel-games", waiting="the PO", since="2026-11-19")
+        self.assertEqual(check_backlog.problems(full, bin_items=[on_a_sound_slice]),
+                         ["Waiting on the PO (spark) holds 3 (#1, #2, bin #19) — its limit is 2: the newest (bin #19) goes back "
+                          "to Idea " + ends])
+
+    def test_the_expedite_lends_the_waiting_total_no_place_and_a_waiting_expedite_lends_its_stage_none(self):
+        full = [item(1, "Review", waiting="the PO", since="2026-11-10"), item(2, "Build", waiting="the PO", since="2026-11-11")]
+        rushed = item(9, "Build", labels=("story", "expedite"), waiting="the PO", since="2026-11-19")
+        said = check_backlog.problems(full + [rushed])
+        self.assertEqual(len(said), 1, said)
+        self.assertIn("Waiting on the PO (spark) holds 3 (#1, #2, #9) — its limit is 2", said[0])
+        # The expedite that waits is not among Build's cards, so Build gets no extra place from it.
+        self.assertEqual(check_backlog.problems([item(3, "Build"), item(4, "Build"), item(5, "Build"), rushed]),
+                         ["Build (spark) holds 3 (#3, #4, #5) — its limit is 2: finish one before starting another"])
+
+    def test_an_undated_wait_on_the_po_is_still_named_and_counts_as_the_newest(self):
+        cards = [item(1, "Review", waiting="the PO", since="2026-11-10"), item(2, "Build", waiting="the PO"),
+                 item(3, "Design", waiting="the PO", since="2026-11-19")]
+        said = check_backlog.problems(cards)
+        self.assertEqual(said[0], "#2 P2 — x: waits on the PO since nobody knows — set Waiting since")
+        self.assertIn("holds 3 (#1, #3, #2) — its limit is 2: the newest (#2) goes back to Idea", said[1])
+
+    def test_waits_apart_is_a_wait_on_the_po_in_a_working_stage_and_nothing_else(self):
+        for stage in ("Discovery", "Design", "Build", "Review"):
+            self.assertTrue(check_backlog.waits_apart(item(1, stage, waiting="the PO")), stage)
+        for stage in ("Idea", "Ready", "Done", None):
+            self.assertFalse(check_backlog.waits_apart(item(1, stage, waiting="the PO")), stage)
+        self.assertFalse(check_backlog.waits_apart(item(1, "Review", waiting="hardware")))
+        self.assertFalse(check_backlog.waits_apart(item(1, "Review")))
+
     def test_a_card_in_each_working_stage_is_four_in_flight_the_cap_and_passes(self):
         self.assertEqual(check_backlog.problems([item(1, "Discovery"), item(2, "Design"), item(3, "Build"),
                                                  item(4, "Review")]), [])
@@ -974,7 +1068,9 @@ class TheGateSaysWhatItIsTest(unittest.TestCase):
         self.assertEqual((done.returncode, asked), (0, ""), "--help ran the gate: " + done.stdout)
         for words in ("Discovery 2, Design 2, Review 2", "spark: Ready 4, Build 2; sound: Ready 1, Build 1",
                       "a lane with too many cards in flight, Discovery, Design, Build and Review together: spark 4, sound 2",
-                      "sound is pixel-games, graphics library", "every card of the bin's are the spark lane's", "expedite",
+                      "sound is pixel-games, graphics library", "every card of the bin's are the spark lane's",
+                      "a lane with too many cards that wait on the PO in a working stage: spark 2, sound 2",
+                      "in neither its stage nor its lane's flight", "expedite",
                       "Waiting since", "Needed by", "a task with no parent story", "bench",
                       "The stages it knows: Idea, Discovery, Design, Ready, Build, Review, Done",
                       "exit codes:", "0 the limits hold — or could-not-run", "1 a problem",

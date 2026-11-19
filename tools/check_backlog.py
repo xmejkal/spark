@@ -54,20 +54,23 @@ BIN_UNREAD = "the bin's board could not be read (%s) — its cards were not coun
 class Lane:
     """
     A part of the board with its own limits, told by the card's slice: its name as a sentence prints it, the slices that
-    are its (none: every other card), its (stage, limit) pairs, and the most of its cards in flight (IN_FLIGHT).
+    are its (none: every other card), its (stage, limit) pairs, the most of its cards in flight (IN_FLIGHT), and the most
+    of its cards that wait on the PO in a working stage (waits_apart).
     """
     name: str
     slices: tuple
     limits: tuple
     flight: int
+    waiting: int
 
 
 #: The two lanes. Spark's is first and takes every card that is not another lane's: one on any other slice, one with no
 #: slice, and every card of the bin (lane_of). Ready and Build since P730 (the PO, 2026-11-09): spark 4 and 2, sound, the
 #: slices "pixel-games" and "graphics library", 1 and 1. The flight since P918 (the PO, 2026-11-18): spark 4, the number
-#: that was the whole board's since 2026-10-06 evening (P146), and sound 2.
-LANES = (Lane("spark", (), (("Ready", 4), ("Build", 2)), 4),
-         Lane("sound", ("pixel-games", "graphics library"), (("Ready", 1), ("Build", 1)), 2))
+#: that was the whole board's since 2026-10-06 evening (P146), and sound 2. The cards that wait on the PO since P928's
+#: first slice (2026-11-19, the plan council's number, the PO's to change): 2 in each lane.
+LANES = (Lane("spark", (), (("Ready", 4), ("Build", 2)), 4, 2),
+         Lane("sound", ("pixel-games", "graphics library"), (("Ready", 1), ("Build", 1)), 2, 2))
 #: The stages held across the whole board (§3); Idea and Done carry no limit. Every working stage takes 2, the PO's call of
 #: 2026-10-06 evening (P146). Ready and Build are not here: LANES holds them (P730).
 LIMITS = {"Discovery": 2, "Design": 2, "Review": 2}
@@ -97,12 +100,21 @@ BIN_NO_STATUS = "no card of its %d has a Status"
 HOLDS = "%s%s holds %d (%s) — its limit is %d: %s"
 #: What HOLDS names a lane's flight: the cards of its four working stages together (IN_FLIGHT).
 IN_FLIGHT_HOLDS = "In flight"
+#: The board's Waiting on option for the PO, the one wait that is counted apart (waits_apart); board.py reads it too.
+THE_PO = "the PO"
+#: What HOLDS names a lane's cards that wait on the PO in a working stage, and what such a lane is told to do: no card
+#: in work can be finished to free a place, so the newest goes back, and its wait and a comment keep what it was.
+WAITING_HOLDS = "Waiting on %s" % THE_PO
+WAITING_DOES = ("the newest (%%s) goes back to Idea with its wait kept and a comment that names its stage, until %s answers "
+                "one" % THE_PO)
 #: The one way past a limit, on the PO's word only (decision 4): a card labelled so may take its working stage, and its
 #: lane's flight, one over its limit. One card at a time — the gate fails on two (P146).
 EXPEDITE = "expedite"
 #: The bin's label for a bench session — the PO's own hands at the bench, which sits outside the limits (the spec, §1: "A
 #: bench session is your hands, so it sits outside them"). A bin card labelled so flies in no lane (P146).
 BENCH = "bench"
+#: Where a wait with no Waiting since sorts among dated ones: after every date, so it reads as the newest.
+UNDATED = "9999-12-31"
 #: Under this many GraphQL points a whole look stays quiet about its cost (P811): a normal push reads about 9 (a page per
 #: 100 items, the project list); more than this says the cost, as does a look that was not whole.
 COST_FLOOR = 50
@@ -193,6 +205,15 @@ def counts(entry):
     return "epic" not in labels
 
 
+def waits_apart(entry):
+    """
+    Whether a card is counted apart from the cards in work (P928's first slice): it stands in a working stage and waits
+    on the PO. Such a card fills neither its stage nor its lane's flight; it counts in its lane's waiting total. A wait
+    on anyone else, and a wait in Idea or Ready, changes nothing. board.py marks the same cards (one rule).
+    """
+    return entry.get("status") in IN_FLIGHT and entry.get("waiting on") == THE_PO
+
+
 # --- MVP ---
 def lane_of(entry):
     """
@@ -221,10 +242,13 @@ def problems(items, bin_items=()):
     in a working stage that count (counts()) fly in the spark lane (lane_of) — all but a `bench` session, which sits
     outside the limits — and its expedite is the same one card; a card of its that waits on someone is asked since when,
     like any. They fill none of spark's stages and are asked for no Needed by or slice. A sentence names them `bin #12`.
-    A flight's sentence lists its cards as the boards hold them, spark's first.
+    A flight's sentence lists its cards as the boards hold them, spark's first. A card in a working stage that waits on
+    the PO (waits_apart) is in neither its stage's count nor its lane's flight: it is in its lane's waiting total, which
+    takes no extra place from the expedite, and whose sentence lists the cards oldest wait first.
     """
     no_stage(items, bin_items)  # a board with no stage on any card is not judged (UnknownStage); its line is main()'s to say
-    said, by_stage, flying = [], {}, {lane.name: [] for lane in LANES}
+    said, by_stage = [], {}
+    flying, waiting = ({lane.name: [] for lane in LANES} for _ in range(2))
     bin_cards = _marked(bin_items)
     for entry in [*items, *bin_cards]:
         status = stage_of(entry)  # UnknownStage for a stage the gate does not know: nothing is judged (P167)
@@ -237,11 +261,12 @@ def problems(items, bin_items=()):
             said.append("%s: waits on %s since nobody knows — set Waiting since" % (_name(entry), entry["waiting on"]))
         if rides(entry):
             continue  # a riding task is its story's; a parentless one is judged like any card
-        if from_spark and counts(entry):
+        apart = waits_apart(entry)  # a card that waits on the PO is in no stage's count and in no flight (P928)
+        if from_spark and counts(entry) and not apart:
             by_stage.setdefault(status, []).append(entry)
         # A bench session is the PO's hands and sits outside the limits (the spec, §1): a bin card labelled so does not fly.
         if status in IN_FLIGHT and counts(entry) and (from_spark or BENCH not in (entry.get("labels") or [])):
-            flying[lane_of(entry).name].append(entry)
+            (waiting if apart else flying)[lane_of(entry).name].append(entry)
         if from_spark and status in JUDGED:
             if not _section(entry["content"].get("body"), "Needed by"):
                 said.append("%s: no `Needed by` — W14: an item names the design that needs it" % _name(entry))
@@ -275,6 +300,11 @@ def problems(items, bin_items=()):
             said.append(HOLDS % (IN_FLIGHT_HOLDS, " (%s)" % lane.name, len(flying[lane.name]),
                                  ", ".join(_ref(e) for e in flying[lane.name]), lane.flight,
                                  "the %s lane finishes one before starting another" % lane.name))
+        # The waiting total is a plain count: the expedite lends it no place. Oldest wait first, an undated one last.
+        held = sorted(waiting[lane.name], key=lambda e: e.get("waiting since") or UNDATED)
+        if len(held) > lane.waiting:
+            said.append(HOLDS % (WAITING_HOLDS, " (%s)" % lane.name, len(held), ", ".join(_ref(e) for e in held),
+                                 lane.waiting, WAITING_DOES % _ref(held[-1])))
     return said
 
 
@@ -349,6 +379,9 @@ It fails on:
   - a lane with too many cards in flight, Discovery, Design, Build and Review together:
     %(flights)s. A lane is told by the card's slice: %(slices)s; every other
     card, one with no slice and every card of the bin's are the spark lane's;
+  - a lane with too many cards that wait on the PO in a working stage: %(waits)s. Such a
+    card counts here, and in neither its stage nor its lane's flight. A wait on anyone else, and
+    a wait in Idea or Ready, changes nothing; the expedite lends this total no place;
   - two open cards labelled `expedite`. One card at a time may carry it, on the PO's word: its
     working stage, and its lane's flight, may then hold one over their limit. Ready never;
   - a card that waits on someone (Waiting on) with no Waiting since, in any open stage, on either
@@ -388,6 +421,7 @@ def _parser():
                               "lanes": "; ".join("%s: %s" % (lane.name, ", ".join("%s %d" % limit for limit in lane.limits))
                                                  for lane in LANES),
                               "flights": ", ".join("%s %d" % (lane.name, lane.flight) for lane in LANES),
+                              "waits": ", ".join("%s %d" % (lane.name, lane.waiting) for lane in LANES),
                               "slices": "; ".join("%s is %s" % (lane.name, ", ".join(lane.slices))
                                                   for lane in LANES if lane.slices),
                               "known": ", ".join(KNOWN)},
