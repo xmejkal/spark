@@ -349,6 +349,24 @@ class TheShowTest(ShowCase):
             'The names after "deploys from" are folder names, as spark\'s deploys recorded them, or registered names with "by" '
             'and the tool that recorded them.'])
 
+    def test_the_view_s_date_is_the_look_s_date_in_the_machine_s_zone(self):
+        """P923: a deploy stored with another zone's offset. The view's date is the date of the look's line, a day later or
+        a day earlier than the stored text's, and --json keeps the stored text."""
+        for stored, local in (("2026-11-17T23:30:00-05:00", "2026-11-18"), ("2026-11-17T23:30:00Z", "2026-11-18"),
+                              ("2026-11-18T00:30:00+09:00", "2026-11-17")):
+            with self.subTest(stored=stored):
+                self.deploys(MAC_A, [entry("walk4", stored)])
+                lines = self.bench("show")[1].splitlines()
+                self.assertEqual(lines[3], "  deploys from  walk4 (1, last %s)" % local)
+                self.assertIn("walk4, ready seen, %sT" % local, lines[4])
+                self.assertEqual(self.envelope()[1]["data"]["boards"][0]["deploys_from"][0]["last"], stored)
+
+    def test_a_time_with_no_zone_and_a_text_that_is_no_time_keep_their_stored_first_ten_characters(self):
+        for stored, shown in (("2026-11-10T23:59:00", "2026-11-10"), ("last tuesday at nine", "last tuesd")):
+            with self.subTest(stored=stored):
+                self.deploys(MAC_A, [entry("walk4", stored)])
+                self.assertEqual(self.bench("show")[1].splitlines()[3], "  deploys from  walk4 (1, last %s)" % shown)
+
     def test_no_verb_word_shows_too(self):
         self.assertEqual(self.bench()[:2], self.bench("show")[:2])
 
