@@ -89,6 +89,11 @@ Wave 1, in order:
 5. P889 [#1259](https://github.com/xmejkal/spark/issues/1259): the pin table, plus the praised page's wire table with
    holes and "how to read the holes".
 
+The first story's result on the walk's e-paper sheet (P947, rendered with headless Chromium on 2026-11-20): each
+jumper in a lane of its own, 3V3 red, GND black, the step number in the middle of each run.
+
+![The e-paper and the FireBeetle 2 on the breadboard, after P947](p947-epaper-breadboard.png)
+
 Wave 2 goes further: P890 [#1261](https://github.com/xmejkal/spark/issues/1261), a Fritzing import into the store with
 credit, a photo crop, a page per part (front, back, dimension arrows and a facts table with sources), hover and click,
 and a theme switch.
