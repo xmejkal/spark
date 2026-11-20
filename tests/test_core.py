@@ -427,6 +427,15 @@ class RunOperationTest(unittest.TestCase):
         self.assertEqual((code, json.loads(out)["unchecked"][0]["code"], err), (2, "undeclared_effect", ""))
         self.assertIn("cannot run ['ls']", json.loads(out)["unchecked"][0]["sentence"])
 
+    def test_each_undeclared_effect_refusal_carries_the_same_fix(self):
+        # P935: pinned literally before the fix moved into the code
+        from spark.core.outside import refuse_consent, refuse_fetch, refuse_run
+        question = Question("revision", "Which revision?", VALUE, AGENT)
+        for refuse, value in ((refuse_run, ["ls"]), (refuse_consent, "look.py"), (refuse_replies, question), (refuse_fetch, "https://x.example")):
+            with self.assertRaises(SparkError) as refused:
+                refuse(value)
+            self.assertEqual(refused.exception.fix, "a defect in spark: report it, with the command", refuse.__name__)
+
     def test_replies_are_refused_without_asks_and_are_the_given_strategy_s_reply_with_it(self):
         # P737: the fifth field keeps its place, so the two positional builders stand; `replies` is a keyword with a refusing default
         question = Question("revision", "Which revision?", VALUE, AGENT)
