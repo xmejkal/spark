@@ -24,8 +24,7 @@ class Finding(namedtuple("Finding", "severity subject code sentence fix")):
 
     @classmethod
     def of(cls, severity, subject, code, sentence, fix=None):
-        """The Finding with the fix `codes.fix_of` gives: `fix` when given, else the one the Code holds (P853). A TypeError
-        when a plain-str code comes with no fix."""
+        """The Finding with the fix that `codes.fix_of` gives (P853)."""
         return cls(severity, subject, code, sentence, fix_of(code, fix))
 
 
