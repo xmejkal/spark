@@ -47,6 +47,7 @@ from spark.checks import check_codes  # noqa: E402
 from spark.design import design_codes  # noqa: E402
 from spark.breadboard import breadboard_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
+from spark.core.codes import Code  # noqa: E402
 from spark.idea import idea_codes  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
 from spark.bench import board_look  # noqa: E402
@@ -362,6 +363,89 @@ class TheBenchCodesTableTest(unittest.TestCase):
                                   ("relayed yes", "relayed_yes_refused", 1)):
             refusal = board_grant.GrantRefusedError(why)
             self.assertEqual((refusal.reason, refusal.code, reason in board_codes.CODES), (reason, code, True), why)
+
+
+#: P853: each area whose codes are Codes, with its table. An area joins when its codes take their fix.
+AREAS_WITH_FIXES = {"idea": idea_codes}
+#: P853: the errors that take a code, by class name; a subclass an area module defines takes one too.
+CODED_ERRORS = {"SparkError", "CodedMessageError", "StoreError"}
+
+
+def dotted(node):
+    """`a.b.c` of a Name or an Attribute chain, else ''."""
+    if isinstance(node, ast.Attribute):
+        base = dotted(node.value)
+        return base and base + "." + node.attr
+    return node.id if isinstance(node, ast.Name) else ""
+
+
+def calls_off_the_table(source, table):
+    """
+    P853: (the calls that take a code, each rule a call of `source` breaks as 'line N: the rule'). A Finding is made by
+    `Finding.of` alone; an error of CODED_ERRORS, or a subclass `source` defines, and `Finding.of` name a Code of
+    `table` (aliases resolved through the module's imports) and give no fix; no `_replace` gives a fix.
+    """
+    tree = ast.parse(source)
+    imported = {alias.asname or alias.name: ("%s.%s" % (node.module, alias.name) if isinstance(node, ast.ImportFrom) else alias.name)
+                for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom)) for alias in node.names}
+
+    def resolved(node):
+        first, dot, rest = dotted(node).partition(".")
+        return imported.get(first, first) + dot + rest
+
+    errors = CODED_ERRORS | {cls.name for cls in ast.walk(tree) if isinstance(cls, ast.ClassDef)
+                             and any(resolved(base).rpartition(".")[2] in CODED_ERRORS for base in cls.bases)}
+    calls, broken = 0, []
+    for call in (node for node in ast.walk(tree) if isinstance(node, ast.Call)):
+        name, keywords = resolved(call.func), {keyword.arg: keyword.value for keyword in call.keywords}
+        said = "line %d: %s" % (call.lineno, name.rpartition(".")[2] if name.rpartition(".")[2] in errors else name)
+        if name.endswith("Finding") or name.endswith("Finding._make"):
+            broken.append(said + " makes a Finding: Finding.of takes the fix from its Code")
+        elif name.endswith("_replace") and "fix" in keywords:
+            broken.append(said + " gives a fix")
+        elif name.endswith("Finding.of") or name.rpartition(".")[2] in errors:
+            calls += 1
+            of = name.endswith("Finding.of")
+            code = keywords.get("code", call.args[2] if of and len(call.args) > 2 else None)
+            word = resolved(code).rpartition(".")
+            if word[0] != table.__name__ or not isinstance(getattr(table, word[2], None), Code) or getattr(table, word[2]) not in table.CODES:
+                broken.append(said + " names its code as %r, not a Code of %s" % (ast.unparse(code) if code else None, table.__name__))
+            if "fix" in keywords or (of and len(call.args) > 4):
+                broken.append(said + " gives a fix")
+    return calls, broken
+
+
+class EveryCodeHoldsItsFixTest(unittest.TestCase):
+    """P853: in an area whose codes are Codes, each holds its meaning and its fix, and every Finding and error the area
+    makes names one of them and gives no fix of its own, so none goes out without the code's fix."""
+
+    def test_each_code_of_the_table_holds_its_meaning_and_a_fix(self):
+        for table in AREAS_WITH_FIXES.values():
+            for code, meaning in table.CODES.items():
+                self.assertEqual((type(code), code.meaning), (Code, meaning))
+                self.assertTrue(code.fix.strip(), code)
+
+    def test_every_finding_and_error_of_the_area_names_a_code_of_the_table_and_gives_no_fix(self):
+        for area, table in AREAS_WITH_FIXES.items():
+            found = [calls_off_the_table(path.read_text(), table) for path in sorted((ROOT / "scripts" / "spark" / area).glob("*.py"))]
+            self.assertTrue(sum(calls for calls, _ in found), "the scan found no call in %s" % area)
+            self.assertEqual([said for _, broken in found for said in broken], [])
+
+    def test_the_scan_names_each_rule_a_call_breaks(self):
+        source = ("from spark.core.result import Finding as F\nfrom spark.core.errors import SparkError\nfrom spark.records import store\n"
+                  "from spark.idea import idea_codes as ic\n\n\nclass DropError(SparkError):\n    pass\n\n\n"
+                  "F.of(1, 2, ic.NEED_UNKNOWN, 's')\nF(1, 2, ic.NEED_UNKNOWN, 's', 'f')\nF._make([])\n"
+                  "F.of(1, 2, ic.NEED_UNKNOWN, 's', 'f')\nF.of(1, 2, 'need_unknown', 's')\nSparkError('x', code=ic.CODES)\n"
+                  "store.StoreError('x', code=ic.DROP_UNWRITTEN, fix='f')\nDropError('x', code=reason)\nfound._replace(fix='f')\n")
+        self.assertEqual(calls_off_the_table(source, idea_codes), (6, [
+            "line 12: spark.core.result.Finding makes a Finding: Finding.of takes the fix from its Code",
+            "line 13: spark.core.result.Finding._make makes a Finding: Finding.of takes the fix from its Code",
+            "line 14: spark.core.result.Finding.of gives a fix",
+            "line 15: spark.core.result.Finding.of names its code as \"'need_unknown'\", not a Code of spark.idea.idea_codes",
+            "line 16: SparkError names its code as 'ic.CODES', not a Code of spark.idea.idea_codes",
+            "line 17: StoreError gives a fix",
+            "line 18: DropError names its code as 'reason', not a Code of spark.idea.idea_codes",
+            "line 19: found._replace gives a fix"]))
 
 
 if __name__ == "__main__":

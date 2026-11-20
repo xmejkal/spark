@@ -1,5 +1,6 @@
 """P442 (#587, W3-3): the core contract, with a toy Operation and no spark area imported: the result, the error, the codes."""
 
+import ast
 import copy
 import json
 import pickle
@@ -30,6 +31,8 @@ from spark.core.result import Finding, NextStep, OperationResult, envelope_item,
 PROBLEM = Finding(outcomes.PROBLEMS, "flash", "flash_differs", "the flash differs", "accept it")
 UNCHECKED = Finding(outcomes.COULD_NOT_RUN, None, "field_unknown", "flash unknown", "unknown is not a pass")
 NEED = Code("need_unknown", "the project has no need of that id", "drop a need that --needs lists")
+#: P853: the modules that rebuild a value with `type(value)(...)`, each with why the value is no str that may hold a Code.
+TYPE_REBUILDS = {"scripts/spark/records/tool_finder.py": "rebuilds a ToolError with its own class, an exception, never a str"}
 STEP = NextStep("deploy", ["--project", "p", "--token", "t"], "erases the flash", ["deletes", "writes"], True)
 
 
@@ -141,6 +144,13 @@ class CodeTest(unittest.TestCase):
     def test_the_privacy_step_masks_it_as_any_str(self):
         privacy = Privacy.of("/p", None, "/h", ())
         self.assertEqual(privacy.masked({"code": NEED, "where": "/p/x"}), {"code": "need_unknown", "where": "x"})
+
+    def test_no_module_rebuilds_a_value_with_its_own_type_but_the_listed_ones(self):
+        # P853: privacy.Replacer did, and a Refusal raised TypeError; a str that may hold a Code is never rebuilt so
+        rebuilt = {path.relative_to(ROOT).as_posix() for path in (ROOT / "scripts" / "spark").rglob("*.py")
+                   for node in ast.walk(ast.parse(path.read_text())) if isinstance(node, ast.Call) and isinstance(node.func, ast.Call)
+                   and getattr(node.func.func, "id", None) == "type"}
+        self.assertEqual(sorted(rebuilt), sorted(TYPE_REBUILDS))
 
 
 class Toy(Operation):
