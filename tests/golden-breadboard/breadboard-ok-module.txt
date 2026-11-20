@@ -19,10 +19,10 @@ One connection per step. The board's pins take the rows beside them, so a board 
 1. Put the board in the breadboard, each pin in its own row. Holes: b6 to b23, i10 to i23.
 2. Put e-paper in the breadboard, each pin in its own row. Holes: e38 to e45.
 3. Run a jumper from board 3V3 to the row of e-paper VCC. Holes: from a7 to a45.
-4. Run a jumper from board A5 to the row of e-paper DC. Holes: from j14 to a40.
+4. Run a jumper from board A5 to the row of e-paper D/C. Holes: from j14 to a40.
 5. Run a jumper from board D3 to the row of e-paper CS. Holes: from a20 to a41.
-6. Run a jumper from board D11 to the row of e-paper BUSY. Holes: from j22 to a38.
-7. Run a jumper from board D12 to the row of e-paper RESET. Holes: from j21 to a39.
+6. Run a jumper from board D11 to the row of e-paper Busy. Holes: from j22 to a38.
+7. Run a jumper from board D12 to the row of e-paper Reset. Holes: from j21 to a39.
 8. Run a jumper from board GND to the row of e-paper GND. Holes: from a9 to a44.
 9. Run a jumper from board MO to the row of e-paper SDI. Holes: from a12 to a43.
 10. Run a jumper from board SCK to the row of e-paper SCLK. Holes: from a11 to a42.
@@ -45,10 +45,10 @@ flowchart LR
   end
   subgraph g2["e-paper"]
     n9["e-paper VCC"]
-    n10["e-paper DC"]
+    n10["e-paper D/C"]
     n11["e-paper CS"]
-    n12["e-paper BUSY"]
-    n13["e-paper RESET"]
+    n12["e-paper Busy"]
+    n13["e-paper Reset"]
     n14["e-paper GND"]
     n15["e-paper SDI"]
     n16["e-paper SCLK"]
@@ -76,10 +76,10 @@ Hold your board to the picture. If the pins sit on the other side, tell spark.
 After the steps, each line is one point: its ends must be joined, and nothing else.
 
 1. board 3V3 · e-paper VCC (back up, header at the top: the left end pin, above the label VCC)
-2. board A5 · e-paper DC
+2. board A5 · e-paper D/C
 3. board D3 · e-paper CS
-4. board D11 · e-paper BUSY (back up, header at the top: the right end pin, above the label Busy)
-5. board D12 · e-paper RESET
+4. board D11 · e-paper Busy (back up, header at the top: the right end pin, above the label Busy)
+5. board D12 · e-paper Reset
 6. board GND · e-paper GND
 7. board MO · e-paper SDI
 8. board SCK · e-paper SCLK
@@ -166,11 +166,11 @@ breadboard.json not written: Wokwi has no part with this board's pins
    "anchor": [
     "row",
     "part",
-    "e-paper DC"
+    "e-paper D/C"
    ],
    "kind": "jumper",
    "source": "board A5",
-   "to": "the row of e-paper DC",
+   "to": "the row of e-paper D/C",
    "tag": "",
    "value": "",
    "job": "",
@@ -204,11 +204,11 @@ breadboard.json not written: Wokwi has no part with this board's pins
    "anchor": [
     "row",
     "part",
-    "e-paper BUSY (back up, header at the top: the right end pin, above the label Busy)"
+    "e-paper Busy (back up, header at the top: the right end pin, above the label Busy)"
    ],
    "kind": "jumper",
    "source": "board D11",
-   "to": "the row of e-paper BUSY",
+   "to": "the row of e-paper Busy",
    "tag": "",
    "value": "",
    "job": "",
@@ -223,11 +223,11 @@ breadboard.json not written: Wokwi has no part with this board's pins
    "anchor": [
     "row",
     "part",
-    "e-paper RESET"
+    "e-paper Reset"
    ],
    "kind": "jumper",
    "source": "board D12",
-   "to": "the row of e-paper RESET",
+   "to": "the row of e-paper Reset",
    "tag": "",
    "value": "",
    "job": "",

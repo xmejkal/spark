@@ -138,8 +138,8 @@ class TheAmplifierTest(unittest.TestCase):
         self.assertEqual(power_rails.rails_made_on_board([grounded_only]), set())  # a ground, "in" by default, draws none
 
     def test_the_speaker_terminal_is_still_wired_to_the_amplifier(self):
-        self.assertIn("Run a jumper from the row of SpeakerTerminal SPK_P to the row of Max98357aDfr0954 SPK_P.", self.text)
-        self.assertIn("Run a jumper from the row of SpeakerTerminal SPK_N to the row of Max98357aDfr0954 SPK_N.", self.text)
+        self.assertIn("Run a jumper from the row of SpeakerTerminal SPK+ to the row of Max98357aDfr0954 SPK_P.", self.text)
+        self.assertIn("Run a jumper from the row of SpeakerTerminal SPK- to the row of Max98357aDfr0954 SPK_N.", self.text)
 
 
 class TheMotorExampleTest(unittest.TestCase):

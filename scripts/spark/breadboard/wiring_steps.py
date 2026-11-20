@@ -21,6 +21,7 @@ import re
 from spark.records import board_pads
 from spark.design import board_components
 from spark.design import power_rails
+from spark.sourcing import part_facts
 
 #: What an end is: a pad of the board, a pin of a part, or one end of a resistor a part asks for.
 BOARD, PART, RESISTOR = "board", "part", "resistor"
@@ -320,8 +321,11 @@ def wiring(board, circuit, design_parts, resistors, board_component):
             number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
             return End(RESISTOR, tag, "%s end %s" % (tag, number), "%s (%s %s), end %s" % (tag, value, purpose, number),
                        number, purpose, value)
-        leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
-        short = "%s %s" % (shorts.get(component["name"], component["name"]), port.get("name"))
+        record = records.get(component["name"]) or {}
+        leg = record.get("legs", {}).get(port.get("name"))
+        # a pin is said by the label printed beside it; its port name stays the key the drawing looks it up by
+        printed = part_facts.printed_names(record).get(port.get("name"), port.get("name"))
+        short = "%s %s" % (shorts.get(component["name"], component["name"]), printed)
         return End(PART, component["name"], short, short + (" (%s)" % leg if leg else ""), port.get("name"))
 
     said = [one for one in (_said(point, end, design_parts) for point in points(circuit)) if one]

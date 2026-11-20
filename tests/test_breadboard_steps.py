@@ -1,7 +1,10 @@
+import os
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
@@ -10,7 +13,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from spark.breadboard.wiring_steps import (BOARD, PART, RESISTOR, BreadboardSteps, End, MermaidDiagram, NumberedList,  # noqa: E402
                               StepPoint)
+from spark.breadboard import drawing, sheet  # noqa: E402
 from spark.design import board_components  # noqa: E402
+
+EPAPER = Path(__file__).resolve().parent / "data" / "breadboard" / "epaper"
+
+
+def epaper_ends():
+    """{end name: End} of the e-paper fixture's points, as the build reads them."""
+    with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+        read = sheet._read_build(EPAPER / "requirements.json")
+    return read, {end.name: end for point in read.steps.points for end in point.ends}
 
 
 def board(label):
@@ -147,6 +160,33 @@ class TheShortNamesTest(unittest.TestCase):
         self.assertIn('  subgraph g2["e-paper"]', MermaidDiagram().render(BreadboardSteps(
             ["board"], [StepPoint([board("D3"), End(PART, "Epaper2in9", "e-paper CS", "e-paper CS", "CS")], None, False)],
             {"Epaper2in9": "e-paper"})))
+
+
+class ThePrintedLabelTest(unittest.TestCase):
+    """P947: a step names a module's pin by the label its record says is printed beside it, so the step and the part
+    read the same."""
+
+    def test_a_pin_with_a_printed_label_is_named_by_it(self):
+        _, ends = epaper_ends()
+        self.assertTrue({"e-paper D/C", "e-paper Reset", "e-paper Busy"} <= set(ends), sorted(ends))
+        self.assertFalse({"e-paper DC", "e-paper RESET", "e-paper BUSY"} & set(ends), sorted(ends))
+        self.assertEqual(ends["e-paper Busy"].words,
+                         "e-paper Busy (back up, header at the top: the right end pin, above the label Busy)")
+
+    def test_a_pin_with_no_printed_label_keeps_its_name(self):
+        _, ends = epaper_ends()
+        self.assertEqual((ends["e-paper CS"].words, ends["e-paper SDI"].words, ends["e-paper GND"].words),
+                         ("e-paper CS", "e-paper SDI", "e-paper GND"))
+
+    def test_the_pin_stays_the_catalog_key(self):
+        read, ends = epaper_ends()
+        self.assertEqual(ends["e-paper D/C"].pin, "DC")
+        _, catalog = sheet._drawing_inputs(read)
+        self.assertEqual(drawing.end_pin(ends["e-paper D/C"], catalog), "D/C")
+
+    def test_the_step_says_the_printed_label(self):
+        read, _ = epaper_ends()
+        self.assertIn("4. Run a jumper from board A5 to the row of e-paper D/C.", NumberedList().render(read.steps))
 
 
 if __name__ == "__main__":

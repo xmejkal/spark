@@ -427,7 +427,7 @@ class EachStepNamesItsHolesTest(unittest.TestCase):
             "1. Put the board in the breadboard, each pin in its own row. Holes: b6 to b23, i10 to i23.",
             "2. Put e-paper in the breadboard, each pin in its own row. Holes: e38 to e45.",
             "3. Run a jumper from board 3V3 to the row of e-paper VCC. Holes: from a7 to a45.",
-            "4. Run a jumper from board A5 to the row of e-paper DC. Holes: from j14 to a40."])
+            "4. Run a jumper from board A5 to the row of e-paper D/C. Holes: from j14 to a40."])
         self.assertEqual(len(lines), 10)
         self.assertTrue(all(" Holes: " in line for line in lines))
 
