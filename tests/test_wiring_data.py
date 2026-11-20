@@ -126,8 +126,10 @@ class TheMotorDataTest(unittest.TestCase):
         self.assertEqual(self.data.before_power.records, ["jst-ph-2-power-inlet", "l9110s-module", "tactile-button"])
 
     def test_the_supply_s_step_has_its_edge_and_a_placing_step_has_none(self):
-        self.assertEqual(self.data.steps[19].number, 20)
-        self.assertEqual(self.data.steps[19].edge, ("MOTOR6V supply", "JstPh2PowerInlet VCC"))
+        # P953: the inlet's VCC point is power, so it goes on the + rail marked MOTOR6V and the supply joins that rail
+        # (it was step 20, to the row of JstPh2PowerInlet VCC)
+        self.assertEqual(self.data.steps[20].number, 21)
+        self.assertEqual(self.data.steps[20].edge, ("MOTOR6V supply", "MOTOR6V rail"))
         self.assertIsNone(self.data.steps[0].edge)
 
 

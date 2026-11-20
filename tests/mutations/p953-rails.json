@@ -1,0 +1,14 @@
+[
+ {"file": "scripts/spark/breadboard/wiring_steps.py", "name": "the role half of the rail rule removed: power and ground stay in a row", "find": "rail = len(ends) + bool(supply) > ROW_HOLES or role in SIGNS", "replace": "rail = len(ends) + bool(supply) > ROW_HOLES"},
+ {"file": "scripts/spark/breadboard/wiring_steps.py", "name": "the signs swapped: power on a - rail, ground on a + rail", "find": "SIGNS = {POWER: \"+\", GROUND: \"-\"}", "replace": "SIGNS = {POWER: \"-\", GROUND: \"+\"}"},
+ {"file": "scripts/spark/breadboard/rails.py", "name": "a tie takes the other side than its first end's", "find": "(counts[one], one == sides[0]))", "replace": "(counts[one], one != sides[0]))"},
+ {"file": "scripts/spark/breadboard/rails.py", "name": "a mark may take a rail another mark took", "find": "if rail in self.rails and rail not in self.used:", "replace": "if rail in self.rails:"},
+ {"file": "scripts/spark/breadboard/rails.py", "name": "a rail hole reads as its Wokwi name again", "find": "return \"%s %s rail, hole %s\" % (RAIL_SIDES[group[0]], RAIL_SIGNS[group[1]], number)", "replace": "return hole.name"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "the bench change's sign dropped", "find": "rail = \"a free %s rail\" % change.sign if change.sign else \"a free rail\"", "replace": "rail = \"a free rail\""},
+ {"file": "scripts/spark/breadboard/rails.py", "name": "a rail hole under a part's body is left free for a rail jumper", "find": "return [hole for hole in surface.holes if not hole.column and any(", "replace": "return [hole for hole in surface.holes if False and any("},
+ {"file": "scripts/spark/breadboard/drawing.py", "name": "a rail jumper takes the rail's first free hole, not the one nearest its end", "find": "other = (ledger.claim_free_hole(seated_rails[step.anchor], end.name, one.x) if anchor is None", "replace": "other = (ledger.claim_free_hole(seated_rails[step.anchor], end.name) if anchor is None"},
+ {"file": "scripts/spark/breadboard/drawing.py", "name": "a resistor leg on a rail is not refused by name", "find": "and step.subject.kind == wiring_steps.RESISTOR:", "replace": "and False:"},
+ {"file": "scripts/spark/breadboard/wire_routing.py", "name": "the corner beside a hole off the grid keeps the grid's x, so its leg slants", "find": "points[1] = (points[0][0], points[1][1])", "replace": "points[1] = points[1]"},
+ {"file": "scripts/spark/breadboard/spacing.py", "name": "the rail holes of a rail's jumpers are handed out again by height", "find": "            if here.column:", "replace": "            if True:"},
+ {"file": "scripts/spark/breadboard/kept_moves.py", "name": "a jumper not kept takes the first free rail hole, not the one nearest its planned one", "find": "other=ledger.claim_free_hole(planned.other.group, by, planned.other.x)", "replace": "other=ledger.claim_free_hole(planned.other.group, by)"}
+]

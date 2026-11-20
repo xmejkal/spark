@@ -121,7 +121,7 @@ class ThreeCasesTest(unittest.TestCase):
         self.assertEqual(written.not_kept, [])
         self.assertEqual({one["id"] for one in diagram(project)["parts"]},
                          {"bb1", "board", "TactileButton", "LedRed5mm", "R1"})
-        self.assertEqual(len(diagram(project)["connections"]), 4)
+        self.assertEqual(len(diagram(project)["connections"]), 5)  # P953: ground through the - rail (it was 4)
 
     def test_b_a_moved_part_the_circuit_lost_is_named(self):
         project = new_project(FULL)

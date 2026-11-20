@@ -102,11 +102,13 @@ def tall_module_row(part_px, turned, degrees, surface):
 def ends_toward_their_runs(jumpers):
     """The jumpers with the holes of each row that two or more of them end in handed out again: the end whose other end
     lies higher takes the higher hole, so two legs in one column never run along each other (the walk's two jumpers to
-    the e-paper's VCC, one from row a and one from row j)."""
+    the e-paper's VCC, one from row a and one from row j). A rail's holes all lie at one height, so each rail jumper keeps
+    the rail hole nearest its other end (P953)."""
     ends = collections.defaultdict(list)
     for index, jumper in enumerate(jumpers):
-        ends[jumper.one.group].append((index, "one", jumper.other))
-        ends[jumper.other.group].append((index, "other", jumper.one))
+        for side, here, there in (("one", jumper.one, jumper.other), ("other", jumper.other, jumper.one)):
+            if here.column:
+                ends[here.group].append((index, side, there))
     changed = list(jumpers)
     for here in ends.values():
         holes = sorted((getattr(jumpers[index], side) for index, side, _ in here), key=lambda hole: hole.y)

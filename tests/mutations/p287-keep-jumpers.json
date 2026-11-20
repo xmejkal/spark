@@ -38,7 +38,7 @@
  {
   "file": "scripts/spark/breadboard/kept_moves.py",
   "name": "a jumper that is not kept takes the planned holes without a claim",
-  "find": "other=ledger.claim_free_hole(planned.other.group, by)))",
+  "find": "other=ledger.claim_free_hole(planned.other.group, by, planned.other.x)))",
   "replace": "other=planned.other))"
  },
  {

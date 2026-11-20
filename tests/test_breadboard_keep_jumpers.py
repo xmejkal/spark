@@ -63,12 +63,14 @@ class MovedJumperTest(unittest.TestCase):
         self.assertEqual(wire_between(project, "6b", "14t")[1], ["bb1:6b.j", "bb1:14t.b", "green", ROUTE])
 
     def test_b2_a_jumper_moved_to_another_row_the_new_circuit_joins_is_kept(self):
+        # P953: ground goes through the - rail, so the LED's K jumper to the rail is moved to the button's B row, which
+        # the new circuit joins to the rail (it was board GND's jumper, moved from the LED's K row to the button's B row)
         project = built_full()
-        index, wire = wire_between(project, "8b", "17b")
-        change_wire(project, index, other="bb1:12t.c")
+        index, wire = wire_between(project, "17b", "bn")
+        change_wire(project, index, one="bb1:12t.c")
         change_requirements(project, BUTTON_ONLY)
         written = build(project)
-        self.assertEqual(wire_between(project, "8b", "12t")[1][:2], ["bb1:8b.j", "bb1:12t.c"])
+        self.assertEqual(wire_between(project, "12t", "bn")[1][:2], ["bb1:12t.c", "bb1:bn.14"])
         self.assertEqual(codes(written), {"LedRed5mm": "not-in-circuit", "R1": "not-in-circuit"})
 
     def test_b3_a_jumper_moved_to_a_row_nothing_holds_is_named_and_the_planned_one_drawn(self):
@@ -84,14 +86,15 @@ class MovedJumperTest(unittest.TestCase):
         for part_id in ("LedRed5mm", "R1"):
             edit(project, move(part_id, dx=2 * PITCH_PX))
         change_wire(project, wire_between(project, "4b", "24b")[0], other="bb1:26b.f")
-        change_wire(project, wire_between(project, "8b", "17b")[0], other="bb1:19b.g")
+        # P953: the LED's K runs to the - rail, so its jumper follows the LED to row 19b (it was board GND's jumper)
+        change_wire(project, wire_between(project, "17b", "bn")[0], one="bb1:19b.g")
         moved = {one: place_of(project, one) for one in ("LedRed5mm", "R1")}
         change_requirements(project, LED_ONLY)
         written = build(project)
         self.assertEqual({one: place_of(project, one) for one in moved}, moved)
         self.assertEqual(codes(written), {"jumper 4b.j-26b.f": "rows-not-joined",
                                           "TactileButton": "not-in-circuit"})
-        self.assertEqual(wire_between(project, "8b", "19b")[1][:2], ["bb1:8b.j", "bb1:19b.g"])
+        self.assertEqual(wire_between(project, "19b", "bn")[1][:2], ["bb1:19b.g", "bb1:bn.14"])
 
     def test_a_jumper_moved_onto_a_hole_a_part_holds_is_named(self):
         project = built_full()
@@ -123,13 +126,13 @@ class MovedJumperTest(unittest.TestCase):
         written = build(project)
         self.assertEqual(wire_between(project, "6b", "14t")[1][:2], ["bb1:6b.j", "bb1:14t.b"])
         self.assertEqual(codes(written), {"jumper 6b.h-14t.c": "rows-not-joined"})
-        self.assertEqual(len(wires(project)), 4)
+        self.assertEqual(len(wires(project)), 5)  # P953: ground through the - rail, one jumper per end (it was 4)
 
     def test_a_connection_to_a_part_pin_is_named(self):
         project = built_full()
         edit(project, lambda drawn: drawn["connections"].append(["board:D8", "LedRed5mm:A", "green", []]))
         self.assertEqual(codes(build(project)), {"jumper board:D8-LedRed5mm:A": "jumper-not-on-board"})
-        self.assertEqual(len(wires(project)), 4)
+        self.assertEqual(len(wires(project)), 5)  # P953: ground through the - rail, one jumper per end (it was 4)
 
     def test_a_connection_with_no_route_is_read(self):
         project = built_full()
@@ -159,13 +162,16 @@ class EscapedMutantsTest(unittest.TestCase):
     """Tests the mutation table's first run found missing (P287)."""
 
     def test_a_jumper_not_kept_takes_a_free_hole_beside_a_kept_one(self):
+        # P953: on the - rail now: board GND's jumper to bn.6 is taken out, the button's B jumper moved onto bn.6, so
+        # board GND's takes the free rail hole nearest its planned one: bn.7, one pitch away, as bn.5 lies past the gap
+        # between two blocks of five (it was rows 17b.g and 17b.h)
         project = built_full()
         edit(project, lambda drawn: drawn["connections"].pop(2))
-        index, _ = wire_between(project, "12t", "17b")
-        change_wire(project, index, other="bb1:17b.g")
+        index, _ = wire_between(project, "12t", "bn")
+        change_wire(project, index, other="bb1:bn.6")
         self.assertEqual(build(project).not_kept, [])
-        self.assertEqual(wire_between(project, "12t", "17b")[1][:2], ["bb1:12t.a", "bb1:17b.g"])
-        self.assertEqual(wire_between(project, "8b", "17b")[1][:2], ["bb1:8b.j", "bb1:17b.h"])
+        self.assertEqual(wire_between(project, "12t", "bn")[1][:2], ["bb1:12t.a", "bb1:bn.6"])
+        self.assertEqual(wire_between(project, "8b", "bn")[1][:2], ["bb1:8b.j", "bb1:bn.7"])
 
     def test_a_jumper_moved_to_an_empty_row_beyond_the_last_part_is_the_persons_and_is_named(self):
         project = built_full()
@@ -178,7 +184,7 @@ class EscapedMutantsTest(unittest.TestCase):
         # R1 turned the other way with its pin 2 still in the LED's row: its pin 1 lies in the button's row
         edit(project, lambda drawn: next(one for one in drawn["parts"] if one["id"] == "R1")
              .update(rotate=0, left=round(part(project, "R1")["left"] - 58.8, 3)))
-        index, _ = wire_between(project, "12t", "17b")
+        index, _ = wire_between(project, "12t", "bn")  # P953: the button's B runs to the - rail (it ran to row 17b)
         change_wire(project, index, other="bb1:18b.h")
         self.assertEqual(codes(build(project)), {"R1": "row-shared", "jumper 12t.a-18b.h": "rows-not-joined"})
 
@@ -303,9 +309,9 @@ class QuietTest(unittest.TestCase):
 
     def test_a_kept_jumper_stays_at_its_place_in_the_list(self):
         project = built_full()
-        change_wire(project, 2, other="bb1:17b.h")
+        change_wire(project, 2, other="bb1:bn.8")  # P953: board GND runs to the - rail (it ran to row 17b, 17b.h)
         build(project)
-        self.assertEqual(wires(project)[2][:3], ["bb1:8b.j", "bb1:17b.h", "black"])
+        self.assertEqual(wires(project)[2][:3], ["bb1:8b.j", "bb1:bn.8", "black"])
 
 
 class MovedResistorTest(unittest.TestCase):

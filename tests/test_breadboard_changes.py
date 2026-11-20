@@ -210,6 +210,43 @@ class RailTest(unittest.TestCase):
         self.assertIn("Take out the magenta jumper from the row of C K to the GND rail.", lines)
 
 
+class SignedRailTest(unittest.TestCase):
+    """P953: power and ground go through the rails, so a rebuild of a project wired before tells the person once to move
+    each such jumper, and says the rail's sign."""
+
+    def test_an_old_ground_jumper_is_moved_to_a_minus_rail_once(self):
+        # today's XIAO sheet, rebuilt: its ground point was a row, now it is a - rail
+        from spark.breadboard import sheet, wiring_steps
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            read = sheet._read_build(Path(__file__).resolve().parent / "data" / "breadboard" / "button-light-xiao"
+                                     / "requirements.json")
+        now = read.steps.anchored()
+        before = wiring_steps.BreadboardSteps(read.steps.placed, [point._replace(rail=False) for point in read.steps.points],
+                                              read.steps.shorts).anchored()
+        earlier = record_of(before)
+        lines = changes.ChangeList().render(changes.changes_between(earlier, now, colors_of(now)))
+        self.assertEqual([line for line in lines if "rail" in line], [
+            "Move the purple jumper from board GND: it now goes to a free - rail, which you mark GND (it went to the row of "
+            "LedRed5mm K).",
+            "Run a jumper from the row of LedRed5mm K to the GND rail.",
+            "Move the magenta jumper from the row of TactileButton B: it now goes to the GND rail (it went to the row of "
+            "LedRed5mm K)."])
+        again = changes.WiringLog.from_build(now, colors_of(now), earlier, ())
+        self.assertEqual(changes.changes_between(again, now, colors_of(now)), [])
+
+    def test_an_old_record_with_no_sign_keeps_the_free_rail_words(self):
+        path = Path(tempfile.mkdtemp()) / "wiring-record.json"
+        step = {"key": ["board", "board GND"], "anchor": ["rail", "GND"], "kind": "jumper", "source": "board GND",
+                "to": "the GND rail", "tag": "", "value": "", "job": "", "color": "black", "marks": "GND"}
+        path.write_text(json.dumps({"steps": [step], "drawn_jumpers": []}))
+        old = changes.WiringLog.read(path)
+        self.assertEqual((old.why_unread, old.steps[0].sign), (None, ""))
+        change = changes.WiringChange("rerouted", "jumper", "board GND", "black", "the row of A K", "the GND rail", "GND")
+        self.assertEqual(changes.ChangeList().line(change), "Move the black jumper from board GND: it now goes to a free "
+                                                            "rail, which you mark GND (it went to the row of A K).")
+        self.assertIn("a free - rail, which you mark GND", changes.ChangeList().line(change._replace(sign="-")))
+
+
 class RemoveAndSwapTest(unittest.TestCase):
     def test_a_take_out_comes_before_a_swap_in_one_rebuild(self):
         before = seated(["board", "Led", "Old"], [

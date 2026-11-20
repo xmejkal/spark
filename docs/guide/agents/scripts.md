@@ -199,7 +199,7 @@ These write:
   picture. A board in `data/wokwi-geometry.json` is drawn on that half breadboard (the XIAO ESP32-C6). A board with a
   complete record is drawn on a 63-column breadboard (P412, the FireBeetle 2 ESP32-S3), as `breadboard.svg` alone. When
   a drawing is not written, the sheet and stderr say `breadboard.json not written:` and why, and an old file is
-  removed. [The breadboard codes](breadboard-codes.md) give each `kept` entry's code and its next step.
+  removed. [The breadboard codes](breadboard-codes.md) give each `kept` entry's code and how power and ground use the rails.
 
   The sheet names the pad that every GND means. Its picture is not verified: the row side, the USB end and the pads rest
   on the record and on the footprint's convention, and the sheet says to hold the board to the picture.
@@ -224,7 +224,7 @@ These write:
   names (the pushbutton's other side) counts as that point's. Only the drawn layout is checked, not a breadboard on the bench.
   A rebuild lists what to change on the bench (P300, `spark/breadboard/bench_changes.py`). `sheet.write()` reads
   `wiring-record.json`, before it writes anything: each step of the last sheet, its time `at` and its `base` (P875), the steps and `at` of the last sheet for another design. The base is the earlier sheet when its design differs from this one, else the base the record had, so a second build of one design lists the same changes. A record with no `at` or `base` has an unknown time. It writes the new record beside the sheet as `.new`, writes the sheet, and puts the record in place; a `.new` in the way stops the sheet. The sheet gets `### Changes since the sheet spark wrote on <time>` before `### Steps` (`WriteResult.since` and the `wrote` entry's `since` hold the time, absent when unknown), a line that says to use the list only if the person wired that sheet, and one bullet for each change. A first design built again says `- Nothing to change on the bench.` under `### Changes since the last build`; so does a record that cannot be read, with its reason as the bullet. `WriteResult.changes` lists `WiringChange(code, kind,
-  name, color, before, after, marks)`. The codes are `added`, `removed`, `rerouted` (a connection joins another row, rail or free
+  name, color, before, after, marks, sign)`. The codes are `added`, `removed`, `rerouted` (a connection joins another row, rail or free
   row) and `swapped` (a resistor with a new value). A resistor that goes is one `removed` line, not one for each end. `breadboard.py` prints each as `change: …` on stderr.
   `check_spine --keep` adds one kept entry for each: `{file, did: "changed", code, subject, color, why}`, and `why` is the
   line. A `move not kept` entry has `subject` and `code` too. With `--json` every kept entry keeps all its fields except

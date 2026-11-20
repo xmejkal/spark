@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from spark.breadboard.wiring_steps import (BOARD, PART, RESISTOR, BreadboardSteps, End, MermaidDiagram, NumberedList,  # noqa: E402
                               JumperColors, StepPoint, role_of, wiring)
-from spark.breadboard import drawing, sheet  # noqa: E402
+from spark.breadboard import drawing, sheet, wiring_steps  # noqa: E402
 from spark.design import board_components  # noqa: E402
 
 EPAPER = Path(__file__).resolve().parent / "data" / "breadboard" / "epaper"
@@ -186,7 +186,7 @@ class ThePrintedLabelTest(unittest.TestCase):
 
     def test_the_step_says_the_printed_label(self):
         read, _ = epaper_ends()
-        self.assertIn("4. Run a jumper from board A5 to the row of e-paper D/C.", NumberedList().render(read.steps))
+        self.assertIn("5. Run a jumper from board A5 to the row of e-paper D/C.", NumberedList().render(read.steps))
 
 
 class ThePointRoleTest(unittest.TestCase):
@@ -255,12 +255,57 @@ class ThePointRoleTest(unittest.TestCase):
     def test_the_role_reaches_each_step_and_each_drawn_jumper(self):
         read, _ = epaper_ends()
         seated = read.steps.anchored()
-        self.assertEqual([one.role for one in seated], [None, None] + ["power", "signal", "signal", "signal", "signal",
-                                                                       "ground", "signal", "signal"])
+        # P953: power and ground go through a rail, so each takes one jumper per end
+        self.assertEqual([one.role for one in seated], [None, None] + ["power", "power", "signal", "signal", "signal",
+                                                                       "signal", "ground", "ground", "signal", "signal"])
         with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
             layout = sheet._plan_layout(read)
         self.assertEqual({jumper.step: jumper.role for jumper in layout.jumpers if jumper.role != "signal"},
-                         {3: "power", 8: "ground"})
+                         {3: "power", 4: "power", 9: "ground", 10: "ground"})
+
+
+class TheRailByRoleTest(unittest.TestCase):
+    """P953: a point that carries power or ground goes on a rail by its role alone, a + rail for power and a - rail for
+    ground; the first end marks the rail and the others find it by its mark."""
+
+    def setUp(self):
+        self.read, _ = epaper_ends()
+        self.steps = NumberedList().render(self.read.steps)
+
+    def test_a_power_point_goes_on_a_plus_rail_marked_with_its_pad(self):
+        self.assertEqual(self.steps[2:4], [
+            "3. Run a jumper from board 3V3 to a free + rail. Mark it 3V3.",
+            "4. Run a jumper from the row of e-paper VCC (back up, header at the top: the left end pin, above the label "
+            "VCC) to the 3V3 rail."])
+
+    def test_a_ground_point_goes_on_a_minus_rail(self):
+        self.assertEqual(self.steps[8:10], ["9. Run a jumper from board GND to a free - rail. Mark it GND.",
+                                            "10. Run a jumper from the row of e-paper GND to the GND rail."])
+
+    def test_a_signal_point_of_two_ends_stays_in_a_row(self):
+        self.assertEqual(self.steps[4], "5. Run a jumper from board A5 to the row of e-paper D/C.")
+        self.assertFalse([point for point in self.read.steps.points if point.rail and role_of(point.ends) == "signal"])
+
+    def test_a_point_of_six_signal_ends_keeps_the_free_rail_words(self):
+        members = [("board", "D3")] + [("Btn%d" % number, "A") for number in range(1, 6)]
+
+        def end(component, port):
+            if component == "board":
+                return End(BOARD, "board", "board " + port, "board " + port, port, power_rail="")
+            return End(PART, component, "%s %s" % (component, port), "%s %s" % (component, port), port, power_rail="")
+
+        _, line, point = wiring_steps._said(wiring_steps.Point(members, []), end, [])
+        self.assertTrue(point.rail)
+        self.assertTrue(line.endswith(" — more ends than one breadboard row holds: join board D3 to a rail and put the "
+                                      "others on that rail"), line)
+        self.assertEqual(numbered([], [point])[:2], ["1. Run a jumper from board D3 to a free rail. Mark it D3.",
+                                                     "2. Run a jumper from the row of Btn1 A to the D3 rail."])
+
+    def test_the_point_line_says_power_and_the_sign(self):
+        self.assertEqual(self.read.point_lines[0], "1. board 3V3 · e-paper VCC (back up, header at the top: the left end "
+                         "pin, above the label VCC) — power: join board 3V3 to a + rail and the other ends to that rail")
+        self.assertEqual(self.read.point_lines[5], "6. board GND · e-paper GND — ground: join board GND to a - rail and "
+                                                   "the other ends to that rail")
 
 
 if __name__ == "__main__":

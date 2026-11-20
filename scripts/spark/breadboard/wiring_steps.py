@@ -6,8 +6,9 @@ records or the drawer.
 
 The board and each part go into the breadboard first, each pin in its own row, because their pins then sit in fixed
 rows. Then each point gets an anchor (its first part pin, else its first resistor end, else a free row for its board
-pin's jumper, or a rail when its ends do not fit one row), and every other end joins the anchor in one step: a jumper,
-or a resistor leg. Spark claims no row numbers, no rail colour and no side of the gap, because it does not know them.
+pin's jumper, or a rail when it carries power or ground or its ends do not fit one row), and every other end joins the
+anchor in one step: a jumper, or a resistor leg. A rail for power is a + rail and one for ground a - rail (P953), and
+the step says so. Spark claims no row numbers and no side of the gap, because it does not know them.
 
 `BreadboardSteps.numbered()` numbers the steps for the step list and the diagram, and gives the data a page reads
 (P826); the drawing (`drawing.py`) and the bench changes (`bench_changes.py`) number `anchored()` themselves. A
@@ -56,9 +57,12 @@ PLACE, SETUP, JOIN, SUPPLY = "place", "setup", "join", "supply"
 #: supply's name), its point's anchor (None for a placing step), whether it runs a jumper, and what its point carries
 #: (`role_of`, None for a placing step). A drawing reads these, never the step's words.
 Seated = collections.namedtuple("Seated", "step act subject anchor jumper role")
-#: Where a point's ends meet: in the row of one end, or on a rail with a mark.
+#: Where a point's ends meet: in the row of one end, or on a rail with a mark and its sign (P953): "+" for power, "-"
+#: for ground, "" for a rail that only holds more ends than a row.
 ROW, RAIL = "row", "rail"
-Seat = collections.namedtuple("Seat", "kind end mark")
+Seat = collections.namedtuple("Seat", "kind end mark sign", defaults=("",))
+#: The sign of the rail a point's role takes; a role not here takes no signed rail.
+SIGNS = {POWER: "+", GROUND: "-"}
 
 
 class Anchor:
@@ -111,25 +115,31 @@ class RowAnchor(Anchor):
 
 
 class RailAnchor(Anchor):
-    """A point with more ends than one row holds, whose ends meet on a rail marked with its name."""
+    """A point whose ends meet on a rail marked with its name: power on a + rail, ground on a - rail (`sign`, P953), or
+    a point with more ends than one row holds on any free rail (no sign)."""
 
-    def __init__(self, mark):
+    def __init__(self, mark, sign=""):
         self.mark = mark
+        self.sign = sign
         self.name = "%s rail" % mark
 
     def destination(self, first):
-        """The first end to arrive marks a free rail; the rest find it by its mark."""
-        return ("a free rail. Mark it %s" % self.mark) if first else "the %s rail" % self.mark
+        """The first end to arrive marks a free rail of its sign; the rest find it by its mark."""
+        if not first:
+            return "the %s rail" % self.mark
+        return "a free %s rail. Mark it %s" % (self.sign, self.mark) if self.sign else "a free rail. Mark it %s" % self.mark
 
     def seat(self):
-        return Seat(RAIL, None, self.mark)
+        return Seat(RAIL, None, self.mark, self.sign)
 
 
 def anchor_for(point):
-    """The anchor of one point: a rail when the caller said so (it owns the row size), else its best end."""
+    """The anchor of one point: a rail when the caller said so (it owns the row size), signed by what the point
+    carries, else its best end."""
     if point.rail:
         board_pads = [end.name[len("board "):] for end in point.ends if end.kind == BOARD]
-        return RailAnchor(point.supply or (board_pads[0] if board_pads else point.ends[0].name))
+        return RailAnchor(point.supply or (board_pads[0] if board_pads else point.ends[0].name),
+                          SIGNS.get(role_of(point.ends), ""))
     return RowAnchor(next(end for kind in ANCHOR_ORDER for end in point.ends if end.kind == kind))
 
 
@@ -406,9 +416,13 @@ def _said(point, end, parts):
     supply = " / ".join(off_board_supplies(point.nets, parts)) or None if point.nets and not on_board else None
     if supply:
         line += " · the %s supply, from off the board, not part of the parts list" % supply
-    # a board pin's end is its jumper's end, in a hole of the free row; a supply's wire takes a hole too
-    rail = len(ends) + bool(supply) > ROW_HOLES
-    if rail:
+    # power and ground go through the rails, by role alone, as the board is not picked yet (P953); a board pin's end is
+    # its jumper's end, in a hole of the free row, and a supply's wire takes a hole too
+    role = role_of(ends)
+    rail = len(ends) + bool(supply) > ROW_HOLES or role in SIGNS
+    if role in SIGNS:
+        line += " — %s: join %s to a %s rail and the other ends to that rail" % (role, ends[0].words, SIGNS[role])
+    elif rail:
         line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
                  % ends[0].words if on_board else " — put these ends on one rail")
     return on_board, line, StepPoint(ends, supply, rail)

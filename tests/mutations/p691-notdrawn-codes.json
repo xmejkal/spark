@@ -4,7 +4,7 @@
  {"file": "scripts/spark/breadboard/drawing.py", "name": "a full row is told as a full board", "find": "% (group, by), ROW_FULL, group)", "replace": "% (group, by), NO_HOLE_LEFT, group)"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "a full board drops its code", "find": "% by, NO_HOLE_LEFT, by)", "replace": "% by, None, by)"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "a pin with no position is told as no drawing fact", "find": "(wanted[0], drawn.type), NO_PIN_POSITION,", "replace": "(wanted[0], drawn.type), NO_DRAWING_FACT,"},
- {"file": "scripts/spark/breadboard/drawing.py", "name": "a rail is told as a planner fault", "find": "% mark, NOT_DRAWN_YET, mark)", "replace": "% mark, PLANNER_FAULT, mark)"},
+ {"file": "scripts/spark/breadboard/drawing.py", "name": "a rail is told as a planner fault", "find": "% (seat.mark, why), NOT_DRAWN_YET, seat.mark)", "replace": "% (seat.mark, why), PLANNER_FAULT, seat.mark)"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "a supply from off the board drops its code", "find": "                               NOT_DRAWN_YET, step.subject)", "replace": "                               None, step.subject)"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "a resistor joined to a row never placed is told as not drawn yet", "find": "% waiting[0][0], PLANNER_FAULT, waiting[0][0])", "replace": "% waiting[0][0], NOT_DRAWN_YET, waiting[0][0])"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "a resistor whose both legs join rows is told as a planner fault", "find": "% component, NOT_DRAWN_YET, component)", "replace": "% component, PLANNER_FAULT, component)"},

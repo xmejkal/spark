@@ -34,6 +34,19 @@ beside it, and across another only at a right angle. A wire that needs more bend
 the note under the picture names it ("wire 7 bends more than 4 times to go around the parts and is drawn dashed"); a
 wire with no way at all is not drawn, and the note says so. The steps and their holes are the same either way.
 
+## Power and ground on the rails
+
+Power and ground go through the rails, on every board (P953). A point that carries power (a record gives one of its ends
+a rail other than ground) goes on a + rail, and a point that carries ground on a - rail. The first end's step says `a
+free + rail. Mark it 3V3`, and each other end gets its own jumper to `the 3V3 rail`. The point's line ends with `— power:
+join board 3V3 to a + rail and the other ends to that rail`. The drawing puts a mark on the rail of its sign, on the side
+of the board that holds most of its ends (on a tie, its first end's side), and a second mark of that sign on the other
+side (`spark/breadboard/rails.py`). Three marks of one sign, a resistor leg on a rail, and a rail with no sign (a signal
+point with more ends than a row holds) are `not_drawn_yet`. Each rail jumper takes the free rail hole nearest its end
+that no part's body covers, and the step names it `bottom + rail, hole 5`. No jumper joins the top and bottom rails. A
+rebuild's line that marks a rail says its sign, `a free - rail, which you mark GND`; a record from before P953 has no
+sign, and its line keeps `a free rail`.
+
 ## A part's picture
 
 `parts.py --picture-frame <id> [--project .]` prints the frame a part's picture is drawn on
