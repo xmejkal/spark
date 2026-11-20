@@ -1817,6 +1817,71 @@ class ABrokenTraceIsNamedTest(unittest.TestCase):
         self.assertLess(len(detail), 400)
 
 
+class APourShortTsciReportsIsMeasuredTest(unittest.TestCase):
+    """
+    P957 (#1365): the e-paper project's S3 circuit, its pour 39 and its MOSI trace swapped for the walk's C6 ones
+    (tests/data/pour-contact), with the error tsci wrote for them, by a fake tsci the project's node_modules holds. The
+    copper keeps 0.5124 mm, so the build goes on and names the dropped short; the pour moved 0.6 mm onto the trace stops it.
+    """
+    FIXTURE = ROOT / "tests" / "data" / "breadboard" / "epaper"
+    WALK = ROOT / "tests" / "data" / "pour-contact" / "c6-epaper-mosi.json"
+
+    def said(self, lower_the_pour_by=0.0):
+        """The build stage in --json and the text run's output, for the swapped circuit."""
+        walk = [element for element in json.loads(self.WALK.read_text()) if element["type"] != "pcb_board"]
+        for vertex in next(element for element in walk if element["type"] == "pcb_copper_pour")["brep_shape"]["outer_ring"]["vertices"]:
+            vertex["y"] -= lower_the_pour_by
+        swapped = {(element["type"], element.get("pcb_copper_pour_id") or element.get("pcb_trace_id")) for element in walk}
+        circuit = [element for element in json.loads((self.FIXTURE / "dist" / "board" / "circuit.json").read_text())
+                   if (element["type"], element.get("pcb_copper_pour_id") or element.get("pcb_trace_id")) not in swapped]
+        root = Path(tempfile.mkdtemp()) / "epaper"
+        shutil.copytree(self.FIXTURE, root)
+        fake_tsci(root, "true", circuit + walk, binary=root / "node_modules" / ".bin" / "tsci")
+        said = {}
+        for flags in ([], ["--json"]):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                check_spine.main([str(root / "requirements.json")] + flags)
+            said[bool(flags)] = out.getvalue()
+        return next(stage for stage in json.loads(said[True])["stages"] if stage["name"] == "build"), said[False]
+
+    def test_a_short_the_copper_disproves_is_dropped_and_named_with_its_gap(self):
+        build, text = self.said()
+        self.assertEqual(build["status"], check_spine.OK, build["detail"])
+        note = ("a pour short tsci reported is dropped: pcb_copper_pour_39 and source_trace_1_0 on top are 0.5124 mm apart, "
+                "at least the board's clearance of 0.1 mm")
+        self.assertIn(", 0 errors, tsci 0.0.0-fake", build["detail"])
+        self.assertTrue(build["detail"].endswith("; " + note), build["detail"])
+        self.assertIn(note, text)
+
+    def test_a_real_contact_still_stops_the_build(self):
+        build, text = self.said(lower_the_pour_by=0.6)
+        self.assertEqual(build["status"], check_spine.PROBLEMS)
+        self.assertIn("1 error(s): pcb_placement_error; first: Copper pour pcb_copper_pour_39 (GND) shorts to trace", build["detail"])
+        self.assertNotIn("dropped", build["detail"] + text)
+
+
+@slow("one tscircuit build of the walk's C6 board, about 7 s on 2026-11-20")
+@unittest.skipUnless(test_converter.node() and board_engine.find_toolchain(ROOT), "needs the board engine and Node")
+class TheWalksC6BoardBuildsForRealTest(unittest.TestCase):
+    """P957 (#1365): the walk P934's requirements and its C6 board file (14-pin row first), with the e-paper's record,
+    built by the real board engine. tsci reports a pour short on the MOSI trace that its copper does not make."""
+
+    def test_the_build_stage_is_ok_and_names_the_dropped_short(self):
+        project = Path(tempfile.mkdtemp()) / "epaper-c6"
+        shutil.copytree(ROOT / "tests" / "data" / "breadboard" / "epaper-c6", project)
+        (project / ".spark").mkdir()
+        (project / "parts").mkdir()
+        shutil.copy(ROOT / "tests" / "data" / "breadboard" / "epaper" / "parts" / "epaper-2in9-bwr-mh-et-live.json", project / "parts")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(project / "requirements.json"), "--json"])
+        build = next(stage for stage in json.loads(out.getvalue())["stages"] if stage["name"] == "build")
+        self.assertEqual(build["status"], check_spine.OK, build["detail"])
+        self.assertIn("; a pour short tsci reported is dropped: pcb_copper_pour_39 and source_trace_1_0 on top are 0.5124 mm "
+                      "apart, at least the board's clearance of 0.1 mm", build["detail"])
+
+
 # --- MVP --- (P512, #708) Done when: an SPI and an I2C part build with 0 errors on both shipped boards
 @slow("four tscircuit builds, about 5 s each, 19.0 s on 2026-11-02")
 @unittest.skipUnless(test_converter.node() and board_engine.find_toolchain(ROOT), "needs the board engine and Node")

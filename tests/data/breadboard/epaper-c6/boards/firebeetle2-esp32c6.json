@@ -1,0 +1,423 @@
+{
+  "schema": 1,
+  "id": "firebeetle2-esp32c6",
+  "name": "DFRobot FireBeetle 2 ESP32-C6",
+  "//draft": "A DRAFT for walk P934, written 2026-11-20 from DFRobot's and Espressif's pages, in the shape of spark's boards/firebeetle2-esp32s3.json. Nothing here has touched the PO's two boards: every fact is verified false until a bench check or the session's spark commands say otherwise. A null is a fact no source gave, never a value to fill in.",
+  "//verified": false,
+  "chip": "esp32c6",
+  "//chip": "DFRobot wiki https://wiki.dfrobot.com/dfr1075/ specification: 'RISC-V single-core processor, ESP32-C6FH4 (160 MHz)'. The chip sits on the board, with its 4 MB flash in the package; there is no module. Not verified.",
+  "micropython_port": "ESP32_GENERIC_C6",
+  "//micropython_port": "https://micropython.org/download/ESP32_GENERIC_C6/ (read 2026-11-20): v1.29.0 of 2026-08-24, ESP32_GENERIC_C6-20260824-v1.29.0.bin, written at offset 0. micropython.org lists no DFRobot build for this board, and DFRobot's wiki links only a general ESP32 MicroPython tutorial. Not verified on the board.",
+  "sku": [
+    "DFR1075"
+  ],
+  "//sku": "DFRobot product page https://www.dfrobot.com/product-2771.html and wiki https://wiki.dfrobot.com/dfr1075/. Not verified.",
+  "flash_mb": 4,
+  "//flash_mb": "DFRobot wiki specification 'Flash 4MB'; the chip name ESP32-C6FH4 says 4 MB in the package. Not verified; the look (board_look.py) can read it from the board.",
+  "sources": {
+    "pins": "espressif/arduino-esp32 variants/dfrobot_firebeetle2_esp32c6/pins_arduino.h, last commit 6bfcd6d9a9a7ecd07d656a7a88673c93e7d4d537, fetched 2026-11-20 with gh",
+    "capabilities": "ESP32-C6 Series Datasheet, https://documentation.espressif.com/esp32-c6_datasheet_en.pdf (chapter 3 Boot Configurations, page 33; Table 5-7, page 66), read through the espressif-docs search on 2026-11-20; version and sha256 not taken",
+    "vendor": "https://wiki.dfrobot.com/dfr1075/",
+    "product": "https://www.dfrobot.com/product-2771.html",
+    "dimension": "https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_dimension_v1.pdf",
+    "schematic": "https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_schematics_v1.zip",
+    "step": "https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_stpfile_v1.zip (listed on the wiki; not downloaded)",
+    "pinout_picture": "https://dfimg.dfrobot.com/5d57611a3416442fa39bffca/wiki/1fa8b29bf6d340347ccdc39f4648b949_0x0.png",
+    "top_view_picture": "https://dfimg.dfrobot.com/5d57611a3416442fa39bffca/wiki/f24d6c2eaa74dacadb153d6f43c12432_0x0.png (the wiki's Board Overview, a render of V1.0)"
+  },
+  "physical": {
+    "//footprint_module": "A name chosen for the module emit_footprint.py would write. Not a vendor fact.",
+    "footprint_module": "FireBeetle2Esp32C6",
+    "footprint_export": "FireBeetle2Esp32C6",
+    "width_mm": 25.4,
+    "//width_mm": "Stated: dimension drawing [DFR1075][V1.1.0] '25.40mm'; wiki 'Dimension 25.4x60mm'. Not verified.",
+    "height_mm": 60.0,
+    "//height_mm": "Stated: dimension drawing '60.00mm'; wiki '25.4x60mm'. Not verified.",
+    "thickness_mm": 1.6,
+    "//thickness_mm": "Stated: dimension drawing, PCB Information table, 'Thickness: 1.6mm'. Not verified.",
+    "corner_radius_mm": null,
+    "//corner_radius_mm": "Not stated by DFRobot. Spark's own test fixture tests/data/snapshot/round0-c6-record measured 1.5 mm from the same PDF (sha256 8639e341...), which this draft did not repeat.",
+    "header": {
+      "rows": 2,
+      "pins": [
+        14,
+        18
+      ],
+      "//pins": "Counted on the dimension drawing and on the V1.1 schematic (P2 is 18 pins, P1 is 14). Not verified.",
+      "pitch_mm": 2.54,
+      "//pitch_mm": "Not printed as a number. Measured: each row's pad centres step 2.5399 to 2.5401 mm on average (single steps 2.539 to 2.544 mm). Measured 2026-11-20 from the vector paths of https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_dimension_v1.pdf (V1.1.0, sha256 8639e341...) with pypdf: every path's points taken through its cm transforms, the pads' circles rebuilt from their Bezier halves, and the scale taken from the printed dimension lines' extension lines (60.00 mm = 762.72 pt, so 12.712 pt/mm along; 25.40 mm = 322.68 pt, so 12.704 pt/mm across). Cross-check: the four 2.00 mm mounting holes' centres measure 56.60 x 21.99 mm with that scale (printed 56.60 x 22.00). The drawing's own resolution is about 0.01 mm. verified: false.",
+      "row_spacing_mm": 22.86,
+      "//row_spacing_mm": "Not printed. Measured between the centre lines of the two rows of through-hole pads (the inner circles; the outer circles are half-holes on the board edges, 25.49 mm apart): 290.34 pt, so 22.854 mm by the 25.40 mm scale and 22.865 mm by the mounting holes' printed 22.00 mm; recorded as 22.86, which is also 9 x 2.54 mm. The drawing's 22.00 mm is the mounting holes, not the pads. Measured 2026-11-20 from the vector paths of https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_dimension_v1.pdf (V1.1.0, sha256 8639e341...) with pypdf: every path's points taken through its cm transforms, the pads' circles rebuilt from their Bezier halves, and the scale taken from the printed dimension lines' extension lines (60.00 mm = 762.72 pt, so 12.712 pt/mm along; 25.40 mm = 322.68 pt, so 12.704 pt/mm across). Cross-check: the four 2.00 mm mounting holes' centres measure 56.60 x 21.99 mm with that scale (printed 56.60 x 22.00). The drawing's own resolution is about 0.01 mm. verified: false.",
+      "drill_mm": null,
+      "//drill_mm": "Not stated: the drawing draws no hole inside the pads, only the pad circles, so null. Source: https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_dimension_v1.pdf, its vector paths read 2026-11-20.",
+      "pad_mm": 1.5,
+      "//pad_mm": "Not printed. Measured: every pad is drawn as a circle 1.49 to 1.50 mm across (19.08 pt). Measured 2026-11-20 from the vector paths of https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_dimension_v1.pdf (V1.1.0, sha256 8639e341...) with pypdf: every path's points taken through its cm transforms, the pads' circles rebuilt from their Bezier halves, and the scale taken from the printed dimension lines' extension lines (60.00 mm = 762.72 pt, so 12.712 pt/mm along; 25.40 mm = 322.68 pt, so 12.704 pt/mm across). Cross-check: the four 2.00 mm mounting holes' centres measure 56.60 x 21.99 mm with that scale (printed 56.60 x 22.00). The drawing's own resolution is about 0.01 mm. verified: false.",
+      "first_pad_from_edge_mm": 5.2,
+      "//first_pad_from_edge_mm": "Not printed. Measured: the centre of the first pad of BOTH rows (the pads labelled 17 and NC) is 66.06 pt, so 5.197 mm, from the short board edge at the end away from USB-C; by the 56.60 mm mounting-hole scale also 5.197 mm. The last pads sit 11.63 mm (18-pin row) and 21.78 mm (14-pin row) from the USB-C edge. Measured 2026-11-20 from the vector paths of https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_dimension_v1.pdf (V1.1.0, sha256 8639e341...) with pypdf: every path's points taken through its cm transforms, the pads' circles rebuilt from their Bezier halves, and the scale taken from the printed dimension lines' extension lines (60.00 mm = 762.72 pt, so 12.712 pt/mm along; 25.40 mm = 322.68 pt, so 12.704 pt/mm across). Cross-check: the four 2.00 mm mounting holes' centres measure 56.60 x 21.99 mm with that scale (printed 56.60 x 22.00). The drawing's own resolution is about 0.01 mm. verified: false.",
+      "flush_edge": "+y",
+      "//flush_edge": "As boards/firebeetle2-esp32s3.json uses it: the edge the first pad of both rows is measured from, the end away from USB-C (the 17 and NC end); both rows start there at 5.197 mm, and the 18-pin row runs four pitches further toward the USB end. Measured from the vector paths of https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_dimension_v1.pdf. verified: false.",
+      "doubtful_pads": [],
+      "//doubtful_pads": "none: DFRobot's dimension drawing V1.1.0 (https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_dimension_v1.pdf) prints a label on every pad; the NC pads are named NC there, not doubtful. Read 2026-11-20, not checked on the board"
+    },
+    "mounting_holes": {
+      "count": 4,
+      "diameter_mm": null,
+      "//diameter_mm": "Not printed. The round-0 fixture measured 2.0 mm from the same PDF.",
+      "inset_mm": null,
+      "spacing_x_mm": 22.0,
+      "spacing_y_mm": 56.6,
+      "//spacing": "Stated: dimension drawing '22.00mm' across and '56.60mm' along. Not verified."
+    },
+    "max_component_height_mm": null,
+    "//max_component_height_mm": "Not stated by DFRobot. The STEP zip on the wiki could give it; not opened.",
+    "wokwi_size_px": null,
+    "//wokwi_size_px": "A picture size, not a vendor fact; no source.",
+    "buttons": {
+      "seen_from": "the component side facing you, USB-C at the top",
+      "boot": {
+        "silkscreen": "9/BOOT",
+        "place": "top right, beside the USB-C"
+      },
+      "reset": {
+        "silkscreen": "RST",
+        "place": "top left, beside the USB-C"
+      }
+    },
+    "//buttons": "From the maker's page: the wiki's Board Overview render (labels 'RST' and 'IO9/D9/BOOT') and the dimension drawing. Not verified on the PO's boards.",
+    "//header_silkscreen": "The silkscreen prints bare GPIO numbers. Dimension drawing V1.1.0, from the end away from USB-C. 18-pin row: 17, 16, 8, 14, NC, 1, 18, 9, 19, 20, 21, 22, 23, NC, GND, NC, 3V3, RST. 14-pin row: NC, 7, 6, 15, NC, 2, 3, 4, 5, SDA, SCL, GND, 3V3, VIN. The pinout picture and the V1.1 schematic (P1, P2) agree. Not verified on the board.",
+    "header_order": {
+      "//": "The pads named by pins_arduino.h's names, because spark's round-0 fixture found that pads named by bare numbers are taken by tscircuit as pin numbers. 14-pin row first, then the 18-pin row (the PO's bench look, 2026-11-20: board flat, chips up, USB-C on the near edge, VIN on the left edge, so the 14-pin row is spark's first row, the left one); each from the end away from USB-C. GPIO19 and GPIO20 are on both rows (schematic P2-10/P2-9 and P1-5/P1-4).",
+      "row_14": [
+        "NC4",
+        "D11",
+        "D12",
+        "D13",
+        "NC5",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "SDA",
+        "SCL",
+        "GND2",
+        "3V3_2",
+        "VIN"
+      ],
+      "row_18": [
+        "RX",
+        "TX",
+        "D2",
+        "D3",
+        "NC1",
+        "D6",
+        "D7",
+        "D9",
+        "IO19",
+        "IO20",
+        "MISO",
+        "MOSI",
+        "SCK",
+        "NC2",
+        "GND1",
+        "NC3",
+        "3V3",
+        "RST"
+      ]
+    },
+    "pad_aliases": {
+      "SS": "A4"
+    },
+    "//pad_aliases": "SS and A4 are both GPIO5 (pins_arduino.h); its pad is named A4.",
+    "//row_side": "verified: the PO's bench look on his own DFR1075, 2026-11-20 before 16:41 Prague: chips up, USB-C toward him, the word VIN on the left edge; matches DFRobot's top view and dimension drawing V1.1.0 turned with USB-C down"
+  },
+  "wokwi_part_type": null,
+  "//wokwi_part_type": "Wokwi was outside this research. Spark's round-0 fixture used board-esp32-c6-devkitc-1 as a stand-in and found it has no GPIO14 (D3 here) and names GPIO16/17 TX/RX.",
+  "wokwi_is_stand_in": null,
+  "pins": {
+    "D2": 8,
+    "D3": 14,
+    "D6": 1,
+    "D7": 18,
+    "D9": 9,
+    "D11": 7,
+    "D12": 6,
+    "D13": 15,
+    "A1": 2,
+    "A2": 3,
+    "A3": 4,
+    "A4": 5,
+    "SDA": 19,
+    "SCL": 20,
+    "SCK": 23,
+    "MISO": 21,
+    "MOSI": 22,
+    "SS": 5,
+    "TX": 16,
+    "RX": 17
+  },
+  "//pins": "pins_arduino.h at commit 6bfcd6d9, cross-checked against the wiki's pinout picture (sha256 51b2b39e...), which prints the same pairs (for example 8/D2, 14/D3, 15/D13, 5/A4). D0, D1, D4, D5, D8, D10, D14 and A0 do not exist on this board. Not verified with check_vendor_pins.py.",
+  "wake_capable_gpio": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "//wake_capable_gpio": "GPIO0-7, the low-power GPIOs of the ESP32-C6, as spark's own xiao-esp32-c6.json records for the same chip. The pinout picture marks 4, 5, 6, 7 with LP_ functions. Not re-read in soc_caps.h for this draft.",
+  "adc_gpio": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "//adc_gpio": "ADC1 channels on GPIO0-6: the pinout picture prints ADC1_1 to ADC1_6 on GPIO1-6, and the schematic V1.1 puts ADC_BAT (the battery divider) on GPIO0, which is not on the header. The C6 has one ADC, so no Wi-Fi caveat (spark's data/chips.json, as the xiao record cites). Not verified.",
+  "pin_roles": {
+    "strapping": {
+      "gpio": [
+        4,
+        5,
+        8,
+        9,
+        15
+      ],
+      "note": "ESP32-C6 Series Datasheet, chapter 3 Boot Configurations (https://documentation.espressif.com/esp32-c6_datasheet_en.pdf#page=33): MTMS (GPIO4), MTDI (GPIO5), GPIO8, GPIO9, GPIO15. GPIO8 and GPIO9 choose the boot mode (GPIO9 low at reset enters download boot; GPIO8 = 0 with GPIO9 = 0 is invalid); GPIO15 chooses the JTAG source. MTMS = GPIO4 and MTDI = GPIO5 per the wiki's pinout picture. On this header: A3, A4, D2, D9 (the BOOT button) and D13 (the LED). Not verified."
+    },
+    "onboard_led": {
+      "gpio": [
+        15
+      ],
+      "active_level": 1,
+      "note": "LED_BUILTIN = 15 in pins_arduino.h; wiki Board Overview 'IO15/D13'; schematic V1.1: GPIO15 drives LED D1 through R5 (2k) to GND, so a 1 lights it. Read from DFRobot's schematic, not measured. A strapping pin."
+    },
+    "onboard_button": {
+      "gpio": [
+        9
+      ],
+      "active_level": 0,
+      "note": "The BOOT button, wiki Board Overview 'IO9/D9/BOOT'; schematic V1.1: S1 joins IO9/Boot to GND, R1 10k pull-up to 3V3, C28 100 nF; so it reads 0 when pressed. Held at reset it enters the bootloader. Read from DFRobot's schematic, not measured."
+    },
+    "onboard_battery_sense": {
+      "gpio": [
+        0
+      ],
+      "facts": {
+        "divider": {
+          "value": 2,
+          "verified": false,
+          "source": "DFRobot schematic V1.1 (schematics zip above, member 'V1.1 Schematics.pdf', sha256 0f914806cea7f85db61485973899d9a236bd8f5d22f87124ec2e70f47ceca981): VBAT through R15 1M and R16 1M to GND, the midpoint ADC_BAT on chip pin 6 (GPIO0); wiki Board Overview 'IO0' at the battery connector.",
+          "why_it_matters": "The battery voltage is the pin voltage times this ratio."
+        }
+      },
+      "note": "GPIO0, not on the header. Sources as in the divider fact."
+    },
+    "not_wake_capable": {
+      "gpio": [
+        8,
+        9,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "note": "The header pins outside GPIO0-7 (see wake_capable_gpio)."
+    },
+    "console_uart": {
+      "gpio": [
+        16,
+        17
+      ],
+      "note": "TX = 16 and RX = 17 in pins_arduino.h; schematic V1.1: U0TXD through R13 499R to IO16/TX, U0RXD to IO17/RX. Not verified."
+    },
+    "usb": {
+      "gpio": [
+        12,
+        13
+      ],
+      "note": "Schematic V1.1: the USB-C's D- and D+ reach GPIO12 (USB_N, R6 22R) and GPIO13 (USB_P, R7 22R), the chip's own USB Serial/JTAG; wiki 'USB 2.0 CDC (Type-C port)'. Neither is on the header. Not verified."
+    },
+    "flash": {
+      "gpio": [
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "note": "The in-package flash of the ESP32-C6FH4, as spark's xiao-esp32-c6.json records for the same chip from the ESP32-C6 datasheet v1.5, Table 2-4. None is on the header. Not re-read for this draft."
+    },
+    "spi": {
+      "gpio": [
+        22,
+        21,
+        23,
+        5
+      ],
+      "note": "MOSI, MISO, SCK and SS from pins_arduino.h; also the GDI display connector's bus (pins_arduino.h GDI_* defines)."
+    },
+    "i2c": {
+      "gpio": [
+        19,
+        20
+      ],
+      "note": "SDA and SCL from pins_arduino.h, on two pads each. The V1.1 schematic shows no pull-ups on them."
+    }
+  },
+  "deep_sleep": null,
+  "//deep_sleep": "Not researched for this draft. Spark's xiao-esp32-c6.json holds the C6's facts (esp32.wake_on_ext1, one level for every pin in MicroPython); a session can carry them with that citation.",
+  "vendor": {
+    "arduino_variant": "dfrobot_firebeetle2_esp32c6"
+  },
+  "hardware_revisions": {
+    "source": "DFRobot wiki https://wiki.dfrobot.com/dfr1075/ and the schematics zip, which holds 'V1.0 Schematics.pdf' (sha256 440f838731d86ccd45794fa622c6b209d236608185a72c8dc9d9810d612d7d20) and 'V1.1 Schematics.pdf' (sha256 0f914806...).",
+    "how_to_tell": "The 3.3 V regulator: the wiki names an HM6245 LDO and a TPS62A02 DC-DC; the V1.1 schematic has the TPS62A02DRLR (U2). The Board Overview render and the pinout picture show the HM6245 and print 'V1.0' on the back. Which revision the PO's two boards are is not known.",
+    "v1_0": {
+      "3v3_regulator": "HM6245 LDO (wiki Board Overview)"
+    },
+    "v1_1": {
+      "3v3_regulator": "TPS62A02DRLR buck (schematic V1.1, U2)"
+    }
+  },
+  "documents": {
+    "firebeetle2-c6-dimension-v1-1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_dimension_v1.pdf",
+      "sha256": "8639e3415cd33c78df1dd3a4b1bfc3b2ccef3930929833cb09ba89be4f1e13fd",
+      "file": "dimension.pdf",
+      "retrieved": "2026-11-20",
+      "title": "[DFR1075][V1.1.0]",
+      "version": "V1.1.0"
+    },
+    "firebeetle2-c6-schematic-v1-1": {
+      "url": "https://dfimg.dfrobot.com/wiki/20576/DFR1075_firebeetle-esp32-c6-microcontroller_schematics_v1.zip",
+      "sha256": "0f914806cea7f85db61485973899d9a236bd8f5d22f87124ec2e70f47ceca981",
+      "file": "V1.1 Schematics.pdf",
+      "member": "V1.1 Schematics.pdf",
+      "retrieved": "2026-11-20",
+      "title": "FireBeetle 2 ESP32-C6",
+      "version": "V1.1",
+      "//zip_sha256": "a6e57af32293d628384c551b163989489fa9eac6455e58cb241861668db07a2a"
+    },
+    "firebeetle2-c6-pinout": {
+      "url": "https://dfimg.dfrobot.com/5d57611a3416442fa39bffca/wiki/1fa8b29bf6d340347ccdc39f4648b949_0x0.png",
+      "sha256": "51b2b39e630f0d8087b21e426c6a30bef10fec81131b51ef4d12329f315cb8a9",
+      "file": "pinout.png",
+      "retrieved": "2026-11-20",
+      "title": "Pinout (wiki)",
+      "version": null
+    },
+    "firebeetle2-c6-board-overview": {
+      "url": "https://dfimg.dfrobot.com/5d57611a3416442fa39bffca/wiki/f24d6c2eaa74dacadb153d6f43c12432_0x0.png",
+      "sha256": "20572bec6fe1f434685ddabfb3dd2609b4bd43c1d8107f743e163adabcc0cdb9",
+      "file": "board-overview.png",
+      "retrieved": "2026-11-20",
+      "title": "Board Overview (wiki)",
+      "version": null
+    }
+  },
+  "//power_pads": "Schematic V1.1: the pad silkscreened VIN is net VCC, which reaches VCC1 through Q1 (AO3407 P-FET, gate pulled down by R11 2k and lifted by VUSB); VCC1 feeds the CN3165 charger and, through D4 (SS34), the TPS62A02 that makes 3V3. Not verified.",
+  "power_pads": {
+    "GND1": {
+      "rail": "ground",
+      "direction": "out"
+    },
+    "GND2": {
+      "rail": "ground",
+      "direction": "out"
+    },
+    "3V3": {
+      "rail": "logic",
+      "direction": "out",
+      "can_supply": "regulator_3v3_a",
+      "own_draw": "module_peak_a",
+      "volts": "io_volts"
+    },
+    "3V3_2": {
+      "rail": "logic",
+      "direction": "out"
+    },
+    "VIN": {
+      "rail": "5v",
+      "direction": "in",
+      "feeds": "3V3"
+    }
+  },
+  "power": {
+    "charger": {
+      "value": "CN3165",
+      "verified": false,
+      "source": "Wiki specification 'CN3165 solar power management chip'; schematic V1.1 U4 CN3165.",
+      "why_it_matters": "The chip that charges the battery from USB or the solar panel."
+    },
+    "regulator": {
+      "value": null,
+      "verified": false,
+      "source": "Two revisions with two chips: HM6245 LDO (wiki, V1.0) and TPS62A02DRLR (schematic V1.1). The PO's boards' revision is not known.",
+      "why_it_matters": "Sets the 3.3 V rail's current; read the chip beside the battery connector to choose."
+    },
+    "battery_input": {
+      "value": "a 2-pin connector marked BAT (+ and -) on the top, beside the USB-C, for one Li-ion cell",
+      "verified": false,
+      "source": "Wiki Board Overview render ('BAT') and the pinout picture's back ('Li-ion', + and -); schematic V1.1 P4 to VBAT. The connector's family and pitch are not stated.",
+      "why_it_matters": "Where the cell plugs in."
+    },
+    "solar_input": {
+      "value": "the VIN pad, 5 V DC or a 5 V solar panel",
+      "verified": false,
+      "source": "Wiki specification 'VCC input 5V DC or 5V solar panel'; product page 'Integrated support for 5V solar panels (max 0.5A charging current)'.",
+      "why_it_matters": "A panel goes on VIN and GND, not on the BAT connector."
+    },
+    "feeding_vin_charges_the_battery": {
+      "value": true,
+      "verified": false,
+      "source": "Wiki specification (VIN takes a 5 V solar panel); schematic V1.1: VCC1 is the CN3165's VIN."
+    },
+    "charge_current_a": {
+      "value": 0.5,
+      "verified": false,
+      "source": "Wiki 'Max charging current 0.5A'; schematic V1.1 note 'ICH = 1188V / R9 = 540mA', R9 2.2k.",
+      "why_it_matters": "The charge current a cell must accept."
+    },
+    "regulator_3v3_a": {
+      "value": null,
+      "verified": false,
+      "source": "DFRobot rate neither regulator; their datasheets (linked on the wiki) were not read.",
+      "why_it_matters": "What everything on 3V3 is summed against, the chip's own radio included."
+    },
+    "module_peak_a": {
+      "value": 0.354,
+      "verified": false,
+      "source": "ESP32-C6 Series Datasheet, Table 5-7 (https://documentation.espressif.com/esp32-c6_datasheet_en.pdf#page=66): 802.11b, 1 Mbps, DSSS @ 21.0 dBm TX, 354 mA peak. Read through the espressif-docs search; version not recorded.",
+      "why_it_matters": "The chip's own peak on the 3V3 rail."
+    },
+    "deep_sleep_ua": {
+      "value": 36,
+      "verified": false,
+      "source": "Wiki 'Sleep current (deep sleep, battery-powered) Version 1.0: 16 uA, Version 1.2: 36 uA'; the higher, because the revision is not known.",
+      "why_it_matters": "Battery life of a sleeping gadget."
+    },
+    "io_volts": {
+      "value": 3.3,
+      "verified": false,
+      "source": "Wiki 'Operating voltage 3.3V'.",
+      "why_it_matters": "The voltage a GPIO drives, from which a series resistor is computed."
+    },
+    "usb": {
+      "value": "USB-C, USB 2.0 CDC through the chip's own USB Serial/JTAG",
+      "verified": false,
+      "source": "Wiki specification 'USB 2.0 CDC (Type-C port)'; schematic V1.1 U3 TYPE-C to GPIO12/13."
+    }
+  }
+}
