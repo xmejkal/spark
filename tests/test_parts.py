@@ -2054,6 +2054,12 @@ class AModulesPhysicalSaysHowItWasReadTest(unittest.TestCase):
                          ["physical.width_mm is not one of thickness_mm, mounting_holes, header: a size the sheet reads goes under "
                           "the board record's key name, and a note under a key that starts with //"])
 
+    def test_a_module_s_header_order_is_refused_by_the_one_rule(self):
+        # P947: a board takes physical.header_order; a module has pin_order and printed instead, so one fact has one source.
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header_order={"top": ["VCC", "GND"]})),
+                         ["physical.header_order is a board's: a module's pad order is its pin_order, and a pad's printed "
+                          "label is its need's or supply's printed"])
+
     def test_fact_set_writes_the_block_with_its_proof_and_refuses_a_wrong_one(self):
         home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
         (home / "catalog" / "x-mic.json").write_text(json.dumps(self.record(physical=None, physical_proof=None)))
