@@ -47,6 +47,15 @@ that no part's body covers, and the step names it `bottom + rail, hole 5`. No ju
 rebuild's line that marks a rail says its sign, `a free - rail, which you mark GND`; a record from before P953 has no
 sign, and its line keeps `a free rail`.
 
+## The pills and the wire colours
+
+In `breadboard.svg` each jumper carries one pill (P953): its step's number in a white disc, then the two pads it joins,
+the board's last (`6  CS to D3`), or the pad and its rail's sign (`3  3V3 to + rail`). The words are each end's `label`:
+the board's printed label, the part's printed name, or a resistor's `R1 end 1`. A pill lies on its wire's longest run,
+or beside a stub into a rail, and touches no part's body, end dot, other wire or other pill; it sits in its jumper's
+`data-step` group. Each wire is drawn in the hex of its colour word from `palette.wires` in `data/breadboards.json`,
+each at least 4.5:1 with white; the sheet and Wokwi keep the word (cyan is drawn `#0b7fa8`).
+
 ## A part's picture
 
 `parts.py --picture-frame <id> [--project .]` prints the frame a part's picture is drawn on

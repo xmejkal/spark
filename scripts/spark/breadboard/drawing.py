@@ -32,8 +32,9 @@ DrawnPart = collections.namedtuple("DrawnPart", "type attrs pins record", defaul
 #: record, as its DrawnPart has it.
 PlacedPart = collections.namedtuple("PlacedPart", "id type attrs left top rotate holes record", defaults=(None,))
 #: One jumper between two holes, for the step it belongs to, with the bends of its route as Wokwi writes them (strings
-#: such as "v-20"), empty when it runs straight, and what it carries (`wiring_steps.role_of`), which picks its color.
-Jumper = collections.namedtuple("Jumper", "one other step route role", defaults=((), wiring_steps.SIGNAL))
+#: such as "v-20"), empty when it runs straight, what it carries (`wiring_steps.role_of`), which picks its color, and the
+#: words of its pill in a picture (`wiring_steps.pill_words`, P953).
+Jumper = collections.namedtuple("Jumper", "one other step route role pill_words", defaults=((), wiring_steps.SIGNAL, ""))
 #: Value: the whole drawing as holes, the `geometry` it was planned on, which any renderer reads, and `crowded`, the id of
 #: each part placed closer to the part before it than its surface's `body_gap_columns`, since the board had no room.
 BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts jumpers geometry crowded", defaults=((),))
@@ -354,7 +355,8 @@ class BreadboardPlanner:
                 continue
             if step.act == wiring_steps.SETUP:
                 jumper = Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
-                                ledger.claim_free_group(spacing.free_after(ledger), end.name), number, role=step.role)
+                                ledger.claim_free_group(spacing.free_after(ledger), end.name), number, role=step.role,
+                                pill_words=wiring_steps.pill_words(step))
                 groups[end.name] = jumper.other.group
                 jumpers.append(jumper)
             else:
@@ -362,7 +364,7 @@ class BreadboardPlanner:
                 anchor = step.anchor.seat().end
                 other = (ledger.claim_free_hole(seated_rails[step.anchor], end.name, one.x) if anchor is None
                          else ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name))
-                jumpers.append(Jumper(one, other, number, role=step.role))
+                jumpers.append(Jumper(one, other, number, role=step.role, pill_words=wiring_steps.pill_words(step)))
         if spacing.gap:  # spark's own board; Wokwi's half board keeps the holes Wokwi was shown
             jumpers = ends_toward_their_runs(jumpers)
         return self.jumper_placement.place_jumpers(BreadboardLayout(

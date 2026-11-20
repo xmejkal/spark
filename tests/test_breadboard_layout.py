@@ -115,8 +115,9 @@ class TheSheetNamesTheWireColorsTest(unittest.TestCase):
         self.assertEqual([step["color"] for step in record["steps"]][2:], ["red", "red", "green", "blue", "purple",
                                                                          "orange", "black", "black", "magenta", "cyan"])
         svg = (project / "breadboard.svg").read_text()
-        self.assertIn('stroke="red"', svg)
-        self.assertIn('stroke="black"', svg)
+        # P953 PR 4a: the picture draws a red and a black wire in the palette's hex
+        self.assertIn('stroke="#d0202a" stroke-width="2.2"', svg)
+        self.assertIn('stroke="#20262b" stroke-width="2.2"', svg)
 
     def test_a_role_not_known_is_said_so(self):
         with in_store():

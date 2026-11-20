@@ -151,7 +151,7 @@ class TheSvgTest(unittest.TestCase):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         # P949: the keys data-step and data-part, and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "7d080087403696f129b6a967f04748f6306683bcd45359741f8d1b7966a058fb")  # P953: the wires around the parts; ground through the - rail, seen in a render on 2026-11-20
+                         "a79ee2aa68d2484a865d2865f8b7a4040e050806b372cc359e7ae05bf5bd4edd")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, seen in a render on 2026-11-20
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -189,8 +189,8 @@ class TheSvgTest(unittest.TestCase):
             self.assertAlmostEqual(numbers[1], center(jumper.one.name)[1], places=3)
             self.assertAlmostEqual(numbers[-2], center(jumper.other.name)[0], places=3)
             self.assertAlmostEqual(numbers[-1], center(jumper.other.name)[1], places=3)
-            self.assertEqual(path.get("stroke"), wiring_steps.JumperColors().of(
-                {one.step: one.role for one in self.layout.jumpers})[jumper.step])
+            self.assertEqual(path.get("stroke"), WIRE_HEX[wiring_steps.JumperColors().of(
+                {one.step: one.role for one in self.layout.jumpers})[jumper.step]])  # P953: the word's hex
 
     def test_a_turned_part_turns_about_its_measured_center(self):
         board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
@@ -263,7 +263,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
         # page's group (no glow, each word upright or sideways on the sheet), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "6638454ced57020a273708e7012c67f5b8f4810319ffae05d4aa2b5f0a4ee132")  # P953: the wires around the parts; ground through the - rail, seen in a render on 2026-11-20
+                         "fb324bc330f93a5e66c56a5efbb8f46fd88c71db154af28df04b86648ee54b19")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, seen in a render on 2026-11-20
 
     def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
         board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)
@@ -468,18 +468,6 @@ def shared_lines(drawn):
     return shared
 
 
-def number_boxes(root):
-    """Each step number's box: 0.6 of the 9 px font wide per digit, 9 px high, above its baseline, from its x as its
-    text-anchor places it."""
-    boxes = []
-    for text in root.iter("{http://www.w3.org/2000/svg}text"):
-        if text.get("font-weight") == "bold" and (text.text or "").isdigit():
-            x, y, width = float(text.get("x")), float(text.get("y")), 0.6 * 9 * len(text.text)
-            left = x - width / 2 if text.get("text-anchor") == "middle" else x
-            boxes.append((text.text, left, left + width, y - 9, y))
-    return boxes
-
-
 def golden_svgs():
     """{golden file: its breadboard.svg}, for every golden sheet that holds a picture."""
     found = {}
@@ -522,8 +510,9 @@ class TheWireStyleTest(unittest.TestCase):
     def test_3v3_is_red_gnd_is_black_and_no_signal_is_either(self):
         colors = {jumper.step: color.get("stroke") for (_, color, _), jumper in zip(wires(self.root), self.layout.jumpers)}
         # P953: power and ground go through the rails, so 3V3 has two jumpers (3, 4) and GND two (9, 10)
-        self.assertEqual((colors[3], colors[4], colors[9], colors[10]), ("red", "red", "black", "black"))
-        self.assertFalse({"red", "black"} & {colors[step] for step in colors if step not in (3, 4, 9, 10)})
+        # P953 PR 4a: red and black drawn in the palette's hex
+        self.assertEqual((colors[3], colors[4], colors[9], colors[10]), ("#d0202a", "#d0202a", "#20262b", "#20262b"))
+        self.assertFalse({"#d0202a", "#20262b"} & {colors[step] for step in colors if step not in (3, 4, 9, 10)})
 
 
 #: The fixtures whose pictures the pill tests read with their layouts: the walk's and those of the golden sheets.
@@ -653,19 +642,27 @@ class ThePillsTest(unittest.TestCase):
                             self.assertEqual(near, [], other.get("data-step"))
 
     def test_every_pill_finds_a_free_place_on_every_fixture(self):
-        # no pill falls back to its longest run's middle: each sits on a straight piece of its own wire, centred across it
-        for fixture, (text, layout) in self.drawn.items():
+        # no pill falls back to its longest run's middle: each sits on a straight piece of its own wire, centred across
+        # it, or, on a stub too short to hold it (a jumper into a rail), beside it or past its end, within 6 px of it
+        for fixture, (_, layout) in self.drawn.items():
             with self.subTest(fixture):
-                for group in ElementTree.fromstring(text).findall(".//svg:g[@class='wire']", NS):
-                    left, top, right, bottom = pill_box(pill_of(group))
-                    middle = ((left + right) / 2, (top + bottom) / 2)
-                    pieces = segments(group.findall("svg:path", NS)[1])
+                bodies = [svg_diagram.BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
+                obstacles = svg_diagram.BoardBackground(svg_diagram.BoardPalette.load()).obstacles(layout.geometry.surface, bodies)
+                paths = wire_routing.TrackJumperRouter().route(layout, obstacles)
+                pills = svg_diagram.PillLayout(4.0, 3.4).place(layout.jumpers, paths, obstacles)
+                self.assertEqual(sorted(pills), sorted(jumper.step for jumper in layout.jumpers))
+                for step, pill in pills.items():
+                    box = pill.box()
+                    pieces = list(zip(paths[step].points, paths[step].points[1:]))
                     on = [piece for piece in pieces if
-                          (piece[0][1] == piece[1][1] == round(middle[1], 3) and right - left > bottom - top
-                           and min(piece[0][0], piece[1][0]) < left and right < max(piece[0][0], piece[1][0])) or
-                          (piece[0][0] == piece[1][0] == round(middle[0], 3) and bottom - top > right - left
-                           and min(piece[0][1], piece[1][1]) < top and bottom < max(piece[0][1], piece[1][1]))]
-                    self.assertTrue(on, (group.get("data-step"), middle))
+                          (piece[0][1] == piece[1][1] == pill.y and not pill.turned
+                           and min(piece[0][0], piece[1][0]) < box.left and box.right < max(piece[0][0], piece[1][0])) or
+                          (piece[0][0] == piece[1][0] == pill.x and pill.turned
+                           and min(piece[0][1], piece[1][1]) < box.top and box.bottom < max(piece[0][1], piece[1][1]))]
+                    beside = [piece for piece in pieces if boxes_meet(
+                        (box.left, box.top, box.right, box.bottom), (min(piece[0][0], piece[1][0]), min(piece[0][1], piece[1][1]),
+                                                                     max(piece[0][0], piece[1][0]), max(piece[0][1], piece[1][1])), 6)]
+                    self.assertEqual((pill.free, bool(on or beside)), (True, True), (step, pill))
 
 
 def contrast(one, other):
@@ -696,12 +693,14 @@ class TheWirePaletteTest(unittest.TestCase):
         self.assertEqual(len(set(drawn.values())), 8)  # red, black and the six signals
 
     def test_the_sixth_signal_keeps_its_word_cyan_on_the_sheet_and_draws_0b7fa8(self):
-        # revision 8: no rename to teal; the sheet's word names the wire in hand, the picture draws it darker
-        roles = {jumper.step: jumper.role for jumper in self.layout.jumpers}
-        self.assertEqual(sheet.JUMPER_COLORS.of(roles)[13], "cyan")
-        group = next(one for one in self.root.findall(".//svg:g[@class='wire']", NS) if one.get("data-step") == "13")
+        # revision 8: no rename to teal; the sheet's word names the wire in hand, the picture draws it darker. The walk's
+        # golden sheet holds both: its colour line, then its picture
+        golden = (ROOT / "tests" / "golden-breadboard" / "breadboard-ok-c6.txt").read_text()
+        self.assertIn("12 magenta, 13 cyan.", golden)
+        root = ElementTree.fromstring(golden_svgs()["breadboard-ok-c6.txt"])
+        group = next(one for one in root.findall(".//svg:g[@class='wire']", NS) if one.get("data-step") == "13")
         self.assertEqual(group.findall("svg:path", NS)[1].get("stroke"), "#0b7fa8")
-        self.assertNotIn('"cyan"', self.text)
+        self.assertNotIn('"cyan"', golden_svgs()["breadboard-ok-c6.txt"])
 
     def test_every_wire_colour_has_4_5_to_1_on_white_and_3_to_1_on_the_board(self):
         # 4.5:1 (WCAG 1.4.3): a pill's white words on the wire's colour, its number in that colour on the white disc;
@@ -721,7 +720,7 @@ class TheWirePaletteTest(unittest.TestCase):
 
 
 class TheJumperLanesTest(unittest.TestCase):
-    """P947: one lane per jumper, so no two jumpers share a drawn line and no step numbers overlap, on the walk's
+    """P947: one lane per jumper, so no two jumpers share a drawn line (P953: no two pills touch, ThePillsTest), on the walk's
     e-paper sheet and on every golden sheet with a picture."""
 
     @classmethod
@@ -739,15 +738,6 @@ class TheJumperLanesTest(unittest.TestCase):
                 drawn = [color for _, color, _ in wires(ElementTree.fromstring(text))]
                 self.assertGreaterEqual(len(drawn), 2)
                 self.assertEqual(shared_lines(drawn), [])
-
-    def test_no_step_numbers_overlap(self):
-        for name, text in self.pictures.items():
-            with self.subTest(name):
-                boxes = number_boxes(ElementTree.fromstring(text))
-                self.assertGreaterEqual(len(boxes), 2)
-                meeting = [(a[0], b[0]) for index, a in enumerate(boxes) for b in boxes[index + 1:]
-                           if a[1] < b[2] and b[1] < a[2] and a[3] < b[4] and b[3] < a[4]]
-                self.assertEqual(meeting, [])
 
     def test_each_run_lies_at_least_half_a_pitch_off_every_row_of_holes(self):
         rows = sorted({hole.y for hole in self.layout.geometry.surface.terminal})

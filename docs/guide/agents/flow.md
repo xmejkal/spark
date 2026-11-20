@@ -74,7 +74,8 @@ removes `page.html` in a project, and `flow.py page` writes it again. If the flo
 its own result and lists one `not written` entry.
 
 The breadboard stands in the page as inline SVG ([P949](https://github.com/xmejkal/spark/issues/1353)), so a player can
-find its parts. Each jumper's group carries `data-step`, the number of its step, and each part's group carries
+find its parts. Each jumper's group carries `data-step`, the number of its step, and holds its wire, its end dots and
+its pill (`class="pill"`: the number and the two pads it joins, P953), and each part's group carries
 `data-part`, the part's id in the steps. A step that places a part has no jumper, so it has no `data-step`: the step's
 part comes from the guide's own data. No key is an `id`. The page inlines the breadboard only when it is plain shapes:
 it parses, has no DOCTYPE, uses only `svg`, `g`, `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`,
