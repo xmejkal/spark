@@ -325,7 +325,7 @@ class RunOperationTest(unittest.TestCase):
         self.assertEqual((result.status(), result.data, result.diagnostics), (outcomes.COULD_NOT_RUN, None, ()))
 
     def test_the_lines_given_to_add_diagnostics_lead_the_diagnostics_on_every_end_a_crash_too(self):
-        class Gathering(Toy):
+        class Adding(Toy):
             """Operation: the toy that gives a line to `outside.add_diagnostics` before it answers, refuses or crashes (P840)."""
 
             def run(self, project, what, left, right, *, outside):
@@ -335,7 +335,7 @@ class RunOperationTest(unittest.TestCase):
         for what, expected in (("problems", ["kept for a crash", "an aside"]), ("error", ["kept for a crash"]),
                                ("crash", ["kept for a crash", "toy: crashed, RuntimeError", CRASH_FIX, "Traceback (most recent call last):"])):
             with self.subTest(what=what):
-                result = run_operation(Gathering(), toy_values(what), FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
+                result = run_operation(Adding(), toy_values(what), FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
                 self.assertEqual(list(result.diagnostics[:len(expected)]), expected)
 
     def test_a_world_the_builder_gives_as_none_reaches_the_operation_as_none(self):

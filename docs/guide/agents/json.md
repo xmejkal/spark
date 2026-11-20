@@ -148,16 +148,14 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   `removed`, `not written`, `not kept`, `traces differ` or `traces not compared`, for a file that cannot be read or holds a trace spark does not read) and `why`. A `replaced` entry has `previous`, the path of the previous version, and a `.tsx` entry that spark wrote, replaced or found unchanged has `sha256`. In a project folder, it lists `.spark/build.json`, the record of the build that [`flow.py`](flow.md) reads (P825). The build also keeps tscircuit's schematic and PCB as `dist/board/schematic.svg` and `dist/board/pcb.svg` (P828, #1186): they have no entry of their own, because the `dist` entry covers them, and an export that gave nothing, or a build that did not finish, removes the earlier file (the `page.html` entry says why a picture is not drawn). A file that cannot be written or removed is one `not kept` entry that names it, and the build goes on. A `dist/` copy that fails is its own `not kept` entry for `dist`, and the `.tsx` entries stand (P891). A keep folder that is no project keeps and removes none of them. A `traces differ` entry follows the `left alone` entry of a `.tsx` whose traces join other pins than this build's board (P660). Its `only_in_kept` and `only_in_build` list each trace as `A to B`. It never changes `status`: tell the person not to wire or build from that file. When the sheet is written, a drawing's `not written` entry has `code`
   (P691: never `null`; [the codes](breadboard-codes.md)), `subject` and `expected` (`true`: by design or not drawn yet; do not retry; for
   `not_drawn_yet`, tell the person to wire it by hand from the sheet's steps). When the build finished and the sheet was not written, its entry has `code` (P701). A `wrote` entry for `breadboard.svg` may have `drawn_from` (`record`), and the one for `breadboard.md` `since` (P875): an ISO time with its offset, the time of the sheet its `changed` entries count from.
-- A crash prints nothing on stdout and exits 2. stderr gets the build's own lines first, such as the history line
-  ([P840](https://github.com/xmejkal/spark/issues/1204)), then `build-board: crashed, <class>`, the fix, the traceback.
 - `next`: one look step, only for `ok` in a project; its `why` is `first write firmware/main.py from pins.py` (P517), the pin map that `--keep` writes.
 - `unserved` is there when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board.
 - `missing_facts` is a top-level list, with `--keep` only, when spark writes `firmware/pins.py` and the board record
   lacks the level of its onboard LED or button ([P464](https://github.com/xmejkal/spark/issues/632)). The `wrote` entry
   for `firmware/pins.py` in `kept` has the same list. A build without `--keep`, or a `pins.py` spark left alone, gives
   no missing-fact signal yet ([rows](../../observations/rows/p464-missing-facts.md) 1 and 2).
-  - Each item has a problem's four keys, code `missing_fact`, a subject such as `pin_roles.onboard_led.active_level`.
-  - An item never changes `status` and is never in `unchecked`, so `ok` does not mean the firmware has every fact.
+  - Each item is `{subject, code, sentence, fix}` with the code `missing_fact` and a subject such as
+    `pin_roles.onboard_led.active_level`. It never changes `status`, so `ok` does not mean the firmware has every fact.
   - Never guess the level. Ask the person (see `/spark:build`), or use `/spark:research` or a bench measure. Write the
     answer with `parts.py --fact-set <board> FILE --project <the project's folder>` (a board of another project is refused), and build again.
 - The simulation line warns "no serial monitor is wired in the diagram" when the diagram has no `$serialMonitor` wires
@@ -166,6 +164,8 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   `wait-serial`, not a failure.
 - Refusals and crashes. Each stage that could not run shows as `[????] <stage>` with its sentence, then
   `the chain was NOT exercised — this is not a pass`, exit 2.
+  - A crash of spark itself (not a stage) prints nothing on stdout and exits 2. stderr gets the build's own lines, such
+    as the history line ([P840](https://github.com/xmejkal/spark/issues/1204)), before `build-board: crashed, <class>`.
   - The board emitter's refusal of a board that states no `power.io_volts` shows as `[????] schematic` with that sentence
     ([P121](https://github.com/xmejkal/spark/issues/55)).
   - A crash inside the board emitter (`spark/design/board_emitter.py`, called in process) is could-not-run

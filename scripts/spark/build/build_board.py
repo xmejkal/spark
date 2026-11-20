@@ -101,7 +101,7 @@ class BuildBoard(Operation):
         """The build of `requirements` (a path as given, or None), `keep` and `sim_dir` each a str, a Path or None."""
         keep, sim_dir = (Path(keep) if keep else None), (Path(sim_dir) if sim_dir else None)
         built = self.service.build(requirements, firmware, simulation_dir(sim_dir, keep))
-        outside.add_diagnostics(built.diagnostics)  # P840: the history line outlives a crash in the keep step
+        outside.add_diagnostics(built.diagnostics)
         try:
             code = verdict(built.stages)
             following = board_envelope.firmware_next_steps(code == EXIT_OK, requirements)  # P517: write the firmware next
