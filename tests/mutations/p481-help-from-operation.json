@@ -38,8 +38,8 @@
  {
   "file": "scripts/spark/core/operation_help_table.py",
   "name": "P481: a | in a help breaks the page's table",
-  "find": "argument.help.replace(\"|\", \"\\\\|\"))",
-  "replace": "argument.help)"
+  "find": "    return text.replace(\"|\", \"\\\\|\")",
+  "replace": "    return text"
  },
  {
   "file": "scripts/spark/core/operation_help_table.py",
@@ -74,7 +74,7 @@
  {
   "file": "tools/doc_blocks.py",
   "name": "P481: an Operation with no summary crashes, unnamed",
-  "find": "            if operations[name].summary is None:",
+  "find": "            if not getattr(operations[name], KINDS[kind].attribute):",
   "replace": "            if False:"
  },
  {
@@ -86,13 +86,13 @@
  {
   "file": "tools/doc_blocks.py",
   "name": "P481: an end that names another Operation closes the block",
-  "find": "        elif marker[1] != name:",
+  "find": "        elif marked != name:",
   "replace": "        elif False:"
  },
  {
   "file": "tools/doc_blocks.py",
   "name": "P481: a comment line with a typo in its marker is passed over in silence",
-  "find": "    raise BlockError(NOT_A_MARKER_MESSAGE % (page, number))",
+  "find": "    raise BlockError(NOT_A_MARKER_MESSAGE % (page, number, words[0]))",
   "replace": "    return None"
  },
  {
@@ -104,7 +104,7 @@
  {
   "file": "tools/doc_blocks.py",
   "name": "P481: a sentence that quotes a marker is refused",
-  "find": "    if not (line.lstrip().startswith(COMMENT_START) and MARKER_WORD in line):",
-  "replace": "    if MARKER_WORD not in line:"
+  "find": "    if not (line.lstrip().startswith(COMMENT_START) and words):",
+  "replace": "    if not words:"
  }
 ]
