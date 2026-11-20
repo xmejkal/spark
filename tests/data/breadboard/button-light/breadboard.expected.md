@@ -19,14 +19,14 @@
 One connection per step. The board's pins take the rows beside them, so a board pin always gets a jumper.
 
 1. Put the board in the breadboard, each pin in its own row. Holes: b6 to b23, i10 to i23.
-2. Put TactileButton in the breadboard, each pin in its own row. Holes: e26, e28, j26, j28.
-3. Put LedRed5mm in the breadboard, each pin in its own row. Holes: f31 to f32.
-4. Put R1 (330Ω in series with LedRed5mm A), end 1, in a free row. Holes: g38.
-5. Run a jumper from board A5 to the row of R1 end 1. Holes: from j14 to f38.
-6. Run a jumper from board D3 to the row of TactileButton A. Holes: from a20 to a28.
-7. Run a jumper from board GND to the row of LedRed5mm K. Holes: from a9 to g31.
-8. Run a jumper from the row of TactileButton B (either leg of the other pair) to the row of LedRed5mm K. Holes: from a26 to h31.
-9. Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A. Holes: g32.
+2. Put TactileButton in the breadboard, each pin in its own row. Holes: e31, e33, j31, j33.
+3. Put LedRed5mm in the breadboard, each pin in its own row. Holes: f40 to f41.
+4. Put R1 (330Ω in series with LedRed5mm A), end 1, in a free row. Holes: g47.
+5. Run a jumper from board A5 to the row of R1 end 1. Holes: from j14 to f47.
+6. Run a jumper from board D3 to the row of TactileButton A. Holes: from a20 to a33.
+7. Run a jumper from board GND to the row of LedRed5mm K. Holes: from a9 to g40.
+8. Run a jumper from the row of TactileButton B (either leg of the other pair) to the row of LedRed5mm K. Holes: from a31 to h40.
+9. Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A. Holes: g41.
 
 ### Diagram
 

@@ -1,15 +1,19 @@
 """
 The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Renderer of a planned layout as
-`breadboard.svg`, the Strategies that place a drawn part's pad labels (P945), and the Strategy that gives each jumper
-its own lane (P947). Moved out of `drawing`, whose planner and Wokwi diagram it reads. `sheet` writes the file;
-`part_shape` names a part's label layout.
+`breadboard.svg`, the breadboard under the parts in the old wiring page's look (`BoardPalette`, `BoardBackground`,
+P953), the Strategies that place a drawn part's pad labels (P945), and the Strategy that gives each jumper its own
+lane (P947). Moved out of `drawing`, whose planner and Wokwi diagram it reads. `sheet` writes the file; `part_shape`
+names a part's label layout.
 """
 
 import collections
+import json
 import xml.etree.ElementTree as ElementTree
+from pathlib import Path
 
 from spark.breadboard import part_pictures, wiring_steps
-from spark.breadboard.drawing import _round_px, rotate
+from spark.breadboard.drawing import BREADBOARDS_FILE, _round_px
+from spark.breadboard.spacing import BodyBox
 
 #: Where a drawn part's pad labels go, the `labels` of its part_px: beside each pad, inside a board's body; or from a
 #: row of pads along an edge into the module's body, turned along the column (P945).
@@ -103,15 +107,92 @@ class JumperLanes:
                    for hole in (jumper.one, jumper.other) for x, end_y, step in ends if step != jumper.step)
 
 
+class BoardPalette(collections.namedtuple("BoardPalette", "colors sizes")):
+    """Value: the breadboard picture's look (P953): `colors`, {what: hex}, and `sizes`, {what: px}, the `palette` and
+    `sizes_px` of data/breadboards.json. Another look is another file, with no code."""
+
+    @classmethod
+    def load(cls, path=BREADBOARDS_FILE):
+        data = json.loads(Path(path).read_text())
+        return cls(data["palette"], data["sizes_px"])
+
+
+class BoardBackground:
+    """
+    Renderer helper: the breadboard under the parts, as the old wiring page draws it (P953): the board's body with its
+    edge, the gap's band between the two halves, the terminal holes and the rail holes as small squares, each rail's
+    line and its + or - sign at its left end, the row letters at the left edge, and the column numbers (1 and every
+    `numbers_every`) above the top rails and below the bottom rails. A rail's line lies on the side of its holes away
+    from the other rail of its pair, so the two lines frame the pair as on a real board: red outside the + rail, blue
+    outside the - rail.
+    """
+
+    #: The signs at the left end of a + and a - rail.
+    PLUS, MINUS = "+", "−"
+
+    def __init__(self, palette):
+        self.palette = palette
+
+    def box(self, surface):
+        """The board's body: every hole and `board_pad` round them."""
+        pad = self.palette.sizes["board_pad"]
+        return BodyBox(min(hole.x for hole in surface.holes) - pad, min(hole.y for hole in surface.holes) - pad,
+                       max(hole.x for hole in surface.holes) + pad, max(hole.y for hole in surface.holes) + pad)
+
+    def draw(self, root, surface):
+        colors, sizes = self.palette
+        box = self.box(surface)
+        width, height = str(_round_px(box.right - box.left)), str(_round_px(box.bottom - box.top))
+        _element(root, "rect", x=box.left, y=box.top, width=width, height=height, rx=sizes["board_rx"],
+                 fill=colors["board"], stroke=colors["edge"], **{"stroke-width": sizes["edge_width"]})
+        top, bottom = surface.top_letters, [letter for letter in surface.letters_y if letter not in surface.top_letters]
+        middle = (surface.letters_y[top[-1]] + surface.letters_y[bottom[0]]) / 2
+        _element(root, "rect", x=box.left, y=middle - sizes["gap_band"] / 2, width=width, height=sizes["gap_band"],
+                 fill=colors["gap"])
+        rail_holes = [hole for hole in surface.holes if not hole.column]
+        for holes, color, size in ((surface.terminal, colors["hole"], sizes["hole"]),
+                                   (rail_holes, colors["rail_hole"], sizes["rail_hole"])):
+            if holes:
+                _element(root, "path", d="".join("M%s %sh0" % (_round_px(hole.x), _round_px(hole.y)) for hole in holes),
+                         stroke=color, **{"stroke-width": size, "stroke-linecap": "square"})
+        self._rails(root, surface, rail_holes)
+        letters = {"fill": colors["grid_text"], "font-size": sizes["letters"], "text-anchor": "middle"}
+        left = min(hole.x for hole in surface.terminal) - surface.pitch
+        for letter, y in surface.letters_y.items():
+            _element(root, "text", letter, x=left, y=y + sizes["letters"] * 0.35, **letters)
+        numbers = dict(letters, **{"font-size": sizes["numbers"]})
+        columns = sorted({hole.column: hole.x for hole in surface.terminal}.items())
+        said = [(column, x) for column, x in columns if column == 1 or column % sizes["numbers_every"] == 0]
+        for y in (min(hole.y for hole in surface.holes) - surface.pitch, max(hole.y for hole in surface.holes) + surface.pitch):
+            for column, x in said:
+                _element(root, "text", str(column), x=x, y=y + sizes["numbers"] * 0.35, **numbers)
+
+    def _rails(self, root, surface, rail_holes):
+        colors, sizes = self.palette
+        for rail in surface.rails:
+            row = [hole for hole in rail_holes if hole.group == rail]
+            plus = rail.endswith("p")
+            partner = next((hole.y for hole in rail_holes if hole.group != rail and hole.group[0] == rail[0]), None)
+            away = (1 if row[0].y > partner else -1) if partner is not None else (-1 if plus else 1)
+            y = row[0].y + away * sizes["rail_line_off"]
+            color = colors["plus" if plus else "minus"]
+            _element(root, "line", x1=min(hole.x for hole in row), y1=y, x2=max(hole.x for hole in row), y2=y,
+                     stroke=color, **{"stroke-width": sizes["rail_line"], "stroke-opacity": sizes["rail_line_opacity"]})
+            _element(root, "text", self.PLUS if plus else self.MINUS, x=min(hole.x for hole in row) - surface.pitch,
+                     y=row[0].y + sizes["rail_sign"] * 0.35, fill=color,
+                     **{"font-size": sizes["rail_sign"], "font-weight": "700", "text-anchor": "middle"})
+
+
 class SvgBreadboardDiagram:
     """
-    Renderer: a BreadboardLayout as an SVG picture in Wokwi's px, for the sheet to show (P268, #302): the breadboard's
-    holes and rails, each part as its picture at its holes, turned about its measured center as Wokwi turns it, with
+    Renderer: a BreadboardLayout as an SVG picture in Wokwi's px, for the sheet to show (P268, #302): a white page, the
+    breadboard in its `palette`'s look (BoardBackground, P953), each part as its picture at its holes, turned about its measured center as Wokwi turns it, with
     a dot on each pin, used or free (`PAD_MARKS`), and its name, then each jumper in its own lane (`lanes`, P947) as
     the praised page draws a wire: a white under-stroke, the color of what it carries on top and a dot at each end,
     with its number in the middle of its run. A part drawn from its record also gets its pad labels, placed by the
     PadLabelLayout its part_px names (`label_layouts`, keyed by the part_px's `labels`). Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
-    same bytes. The canvas holds every hole and every part's body. Each jumper's group carries `data-step`, its step's
+    same bytes. The canvas holds the board's body and every part's body, with MARGIN_PX round them, in Wokwi's px, so
+    its view box may start left of or above 0. The root sets the font once. Each jumper's group carries `data-step`, its step's
     number, and each part's group `data-part`, its id, so a player finds them (P949); a key is never an `id`.
     """
 
@@ -119,60 +200,44 @@ class SvgBreadboardDiagram:
     NOUN = "breadboard picture"
     PURPOSE_MESSAGE = "a picture of the same layout, which breadboard.md shows"
     SHEET_MESSAGE = "![The layout on a breadboard](breadboard.svg)"
-    #: The space around the outermost holes, in px.
-    MARGIN_PX = 14
+    #: The space round the board and every part's body, in px: two pitches, as on the old page.
+    MARGIN_PX = 19.2
     #: The room under the holes for the note of a board whose facts are not all verified, in px.
     NOTE_PX = 14
+    #: The one font of every text spark writes, set on the root.
+    FONT = "Helvetica,Arial,sans-serif"
     #: A wire's sizes, in px: the white under-stroke, the colored stroke, and the end dot with its white ring. The
     #: praised page's 7.5 and 4 are for its 18 px pitch; these fit spark's 9.6 px one.
     UNDER_STROKE_PX, WIRE_STROKE_PX, END_DOT_PX, END_RING_PX = 5, 2.5, 3, 1
 
-    def __init__(self, colors=None, pictures=None, label_layouts=None, lanes=None):
+    def __init__(self, colors=None, pictures=None, label_layouts=None, lanes=None, palette=None):
         self.colors = colors or wiring_steps.JumperColors()
         self.lanes = lanes or JumperLanes()
         self.pictures = pictures or part_pictures.PictogramPartPictures()
         self.label_layouts = label_layouts or {LABELS_BESIDE: BesideLabels(), LABELS_INTO_BODY: IntoBodyLabels()}
+        self.palette = palette or BoardPalette.load()
 
     def why_not_written(self, layout):
         """None: the picture is written for any layout."""
         return None
-
-    @staticmethod
-    def _far_corner(part, part_px):
-        """(x, y) of the right and lower edges of a part's body as it is turned and placed."""
-        width, height = part_px["size"]
-        corners = rotate({"0": (0, 0), "1": (width, 0), "2": (0, height), "3": (width, height)}, part_px["center"],
-                         part.rotate).values()
-        return part.left + max(x for x, _ in corners), part.top + max(y for _, y in corners)
 
     def text(self, layout):
         ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)
         surface = layout.geometry.surface
         pictures = {part.id: self.pictures.picture(part.type, part.record) for part in layout.parts}
         notes = self._notes(layout, pictures)
-        # a body that covers holes may hang past them (a module seated by one edge); a small part stays in the margin
-        corners = [self._far_corner(part, layout.geometry.part(part.type)) for part in layout.parts
-                   if layout.geometry.part(part.type).get("covers_holes")]
-        width = _round_px(max([max(hole.x for hole in surface.holes) + 2 * self.MARGIN_PX]
-                              + [x + self.MARGIN_PX for x, _ in corners]))
-        height = _round_px(max([max(hole.y for hole in surface.holes) + self.MARGIN_PX]
-                               + [y + self.MARGIN_PX for _, y in corners]) + (self.NOTE_PX if notes else 0))
+        background = BoardBackground(self.palette)
+        # a body may hang past the holes (a module seated by one edge, a board's USB end): the canvas holds it
+        boxes = [background.box(surface)] + [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
+        left, top = min(box.left for box in boxes) - self.MARGIN_PX, min(box.top for box in boxes) - self.MARGIN_PX
+        width = _round_px(max(box.right for box in boxes) + self.MARGIN_PX - left)
+        height = _round_px(max(box.bottom for box in boxes) + self.MARGIN_PX - top + (self.NOTE_PX if notes else 0))
+        left, top = _round_px(left), _round_px(top)
         root = ElementTree.Element(_svg("svg"), {"width": str(width), "height": str(height),
-                                                   "viewBox": "0 0 %s %s" % (width, height)})
-        ElementTree.SubElement(root, _svg("rect"), {"width": str(width), "height": str(height), "rx": "6",
-                                                    "fill": "#f4f4f4"})
-        holes = "".join("M%s %sh0" % (_round_px(hole.x), _round_px(hole.y)) for hole in surface.holes)
-        ElementTree.SubElement(root, _svg("path"), {"d": holes, "stroke": "#a8a8a8", "stroke-width": "3.5",
-                                                    "stroke-linecap": "round"})
-        for rail in surface.rails:
-            row = [hole for hole in surface.holes if hole.group == rail]
-            # a red line above each + rail and a blue one below each - rail, as Wokwi draws them
-            first, last = min(hole.x for hole in row), max(hole.x for hole in row)
-            outer = -1 if rail.endswith("p") else 1
-            y = _round_px(row[0].y + outer * 5)
-            ElementTree.SubElement(root, _svg("line"), {"x1": str(_round_px(first)), "y1": str(y),
-                                                        "x2": str(_round_px(last)), "y2": str(y), "stroke-width": "1",
-                                                        "stroke": "#e53935" if rail.endswith("p") else "#1e88e5"})
+                                                   "viewBox": "%s %s %s %s" % (left, top, width, height),
+                                                   "font-family": self.FONT})
+        _element(root, "rect", x=left, y=top, width=width, height=height, fill=self.palette.colors["page"])
+        background.draw(root, surface)
         for part in layout.parts:
             self._part(root, part, layout.geometry, pictures[part.id])
         self._wires(root, layout)
@@ -181,7 +246,7 @@ class SvgBreadboardDiagram:
             self._label(root, part, layout.geometry, joined)  # last, so no wire or other part covers a pin or a name
         if notes:
             note = ElementTree.SubElement(root, _svg("text"), {
-                "x": str(self.MARGIN_PX), "y": str(_round_px(height - 4)), "font-size": "8", "font-family": "sans-serif",
+                "x": str(_round_px(left + self.MARGIN_PX)), "y": str(_round_px(top + height - 4)), "font-size": "8",
                 "fill": "#5d4037"})
             note.text = ", ".join(notes)
         return ElementTree.tostring(root, encoding="unicode") + "\n"
@@ -226,7 +291,7 @@ class SvgBreadboardDiagram:
                     "stroke-width": "1", "stroke-dasharray": "2 1.5"})
             place = layout.place(x, y, part_px)
             attributes = {"x": str(_round_px(place.x)), "y": str(_round_px(place.y)), "font-size": "6",
-                          "font-family": "sans-serif", "text-anchor": place.anchor, "fill": "#ffffff",
+                          "text-anchor": place.anchor, "fill": "#ffffff",
                           "stroke": "#0d47a1", "stroke-width": "1.5", "paint-order": "stroke"}
             if place.rotate:
                 attributes["transform"] = "rotate(%s %s %s)" % (place.rotate, _round_px(place.x), _round_px(place.y))
@@ -258,7 +323,7 @@ class SvgBreadboardDiagram:
         cx, cy = part_px["center"]
         label = ElementTree.SubElement(root, _svg("text"), {
             "x": str(_round_px(part.left + cx)), "y": str(_round_px(part.top + cy)), "font-size": "8",
-            "font-family": "sans-serif", "text-anchor": "middle", "fill": "#1a1a1a", "stroke": "#ffffff",
+            "text-anchor": "middle", "fill": "#1a1a1a", "stroke": "#ffffff",
             "stroke-width": "2.5", "paint-order": "stroke"})
         label.text = part_px.get("name") or part.id
 
@@ -293,10 +358,19 @@ class SvgBreadboardDiagram:
         """A jumper's step number, in the middle of its run and just above it, with a white halo."""
         number = ElementTree.SubElement(root, _svg("text"), {
             "x": str(_round_px((jumper.one.x + jumper.other.x) / 2)), "y": str(_round_px(across - 3)), "font-size": "9",
-            "font-family": "sans-serif", "font-weight": "bold", "text-anchor": "middle", "fill": color,
+            "font-weight": "bold", "text-anchor": "middle", "fill": color,
             "stroke": "#ffffff", "stroke-width": "2.5", "paint-order": "stroke"})
         number.text = str(jumper.step)
 
 
 def _svg(tag):
     return "{%s}%s" % (part_pictures.SVG_NAMESPACE, tag)
+
+
+def _element(parent, tag, text=None, **attributes):
+    """One SVG element under `parent`, each number rounded once (`_round_px`), with its text when it has one."""
+    element = ElementTree.SubElement(parent, _svg(tag), {
+        key: str(_round_px(value)) if isinstance(value, (int, float)) else value for key, value in attributes.items()})
+    if text is not None:
+        element.text = text
+    return element

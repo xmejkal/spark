@@ -1,0 +1,25 @@
+{
+ "requirements": {
+  "board": "firebeetle2-esp32c6",
+  "parts": [
+   "epaper-2in9-bwr-mh-et-live"
+  ],
+  "unserved": [
+   {
+    "need": "stick",
+    "why": "no pick",
+    "picks": []
+   },
+   {
+    "need": "buttons",
+    "why": "no pick",
+    "picks": []
+   },
+   {
+    "need": "export",
+    "why": "no pick",
+    "picks": []
+   }
+  ]
+ }
+}

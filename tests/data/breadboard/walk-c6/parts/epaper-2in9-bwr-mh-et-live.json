@@ -1,0 +1,451 @@
+{
+  "schema": 1,
+  "id": "epaper-2in9-bwr-mh-et-live",
+  "name": "MH-ET LIVE 2.9 Inch E-paper Module, black/white/red, panel HINK-E029A10-A3, 8-pin header and 8-pin white connector",
+  "short_name": "e-paper",
+  "kind": "display",
+  "//": "Written by /spark:identify from three photos (front, back, back close), walk P934, 2026-11-19. True of the one module in the photos: MH-ET LIVE 2.9 Inch E-paper Module with the panel HINK-E029A10-A3 (black/white/red), a TXS0108E level shifter (marking YF08E), a BS1 slide switch and two 8-pin connectors. MH-ET LIVE sells several 2.9 inch boards (black/white, three-colour, four-colour) under one name with other panels; this record is not true of those. No SKU or maker document was found (MH-ET LIVE publishes none we could reach), so sku is null and the size is null (no ruler, no drawing). The lead read an inductor 330, NMOS A09T and three diodes B3 as a voltage converter: they match the panel booster of the SSD1675B application circuit (L1, Q1, D1-D3 and the RESE sense resistor R1, Table 13-1, page 43), the high voltage the panel's gates need, not a supply regulator. The 5- or 6-pin SOT-23 (marking unread, maybe 'AS2Z') is probably the 3.3 V regulator: not verified. A verified: true fact here is a chip datasheet's own number; everything about the module itself is read from the photos or a community source and is verified: false. Second round 2026-11-20: driver, LUT and RAM-mapping facts from GxEPD2_290_C90c, the Waveshare 2.9 B V4 MicroPython file, the mcer12 plugin, the SSD1675B datasheet and Good Display's 1675A/1675B note; none was run on this module.",
+  "vendor": "mh-et-live",
+  "sku": null,
+  "sources": [
+    "https://github.com/mcer12/GxEPD_HINKE029A10_plugin",
+    "https://raw.githubusercontent.com/ZinggJM/GxEPD2/master/src/epd3c/GxEPD2_290_C90c.h",
+    "https://raw.githubusercontent.com/ZinggJM/GxEPD2/master/src/epd3c/GxEPD2_290_C90c.cpp",
+    "https://cursedhardware.github.io/epd-driver-ic/SSD1675B.pdf",
+    "https://www.ti.com/lit/ds/symlink/txs0108e.pdf",
+    "https://github.com/waveshareteam/Pico_ePaper_Code/blob/main/python/Pico_ePaper-2.9-B_V4.py",
+    "https://github.com/waveshareteam/Pico_ePaper_Code",
+    "https://github.com/ZinggJM/GxEPD2/blob/master/README.md",
+    "https://github.com/mcer12/GxEPD_HINKE029A10_plugin/blob/master/src/GxEPD_HINKE029A10.cpp",
+    "https://github.com/mattytrentini/ssd1675a",
+    "https://github.com/mcauser/micropython-waveshare-epaper/blob/master/epaper2in9b.py"
+  ],
+  "needs": [
+    {
+      "signal": "SCLK",
+      "pin": "SCLK",
+      "direction": "out",
+      "bus": "spi"
+    },
+    {
+      "signal": "MOSI",
+      "pin": "SDI",
+      "printed": "SDI",
+      "direction": "out",
+      "bus": "spi"
+    },
+    {
+      "signal": "EPD_CS",
+      "pin": "CS",
+      "direction": "out"
+    },
+    {
+      "signal": "EPD_DC",
+      "pin": "DC",
+      "printed": "D/C",
+      "direction": "out",
+      "note": "used with BS1 at L (4-line SPI); at H (3-line, 9-bit SPI) the controller ignores it"
+    },
+    {
+      "signal": "EPD_RST",
+      "pin": "RESET",
+      "printed": "Reset",
+      "direction": "out",
+      "note": "active low (SSD1675B pin RES#)"
+    },
+    {
+      "signal": "EPD_BUSY",
+      "pin": "BUSY",
+      "printed": "Busy",
+      "direction": "in",
+      "note": "high while the panel refreshes; wait for low before the next command"
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "direction": "in",
+      "draws": "refresh_current_ma",
+      "note": "3.3 V or 5.0 V by the silkscreen, and the same as the IO voltage: for an ESP32 use 3.3 V"
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in"
+    }
+  ],
+  "unused_pins": [],
+  "pin_order": [
+    "VCC",
+    "GND",
+    "SDI",
+    "SCLK",
+    "CS",
+    "DC",
+    "RESET",
+    "BUSY"
+  ],
+  "footprint": "pinrow8",
+  "body_mm": {
+    "width": 85,
+    "height": 44,
+    "verified": false,
+    "source": "read from the photo back.jpg, scaled by the 8-pin header taken as 2.54 mm pitch (about 19.7 px per mm): about 85 x 44 mm, error about 5% (4 mm long, 2 mm short); mounting holes about 81 x 38 mm centre to centre, about 2 to 2.5 mm across. No drawing or maker statement found (2026-11-19, twelve searches); the one figure seen, 90.5 x 45.7 mm in a search summary of a withdrawn distributor listing of the black/white board, is not used. Earlier note: no drawing or maker statement found (2026-11-19: four searches for an MH-ET LIVE store, download page or drawing found none; the Bits&Parts listings of the MH-ET Live 2.9 inch black and black/red boards are withdrawn and print no size). A search engine's summary quoted the withdrawn black/white listing as 'Board dimensions: 90.5mm x 45.7mm'; the live page does not say it, it is a distributor's figure for another variant, and it is not used. No ruler in the photos; the board is longer than wide with four mounting holes",
+    "why_it_matters": "every placement and the drawn picture are arranged around it; read from the photo; confirm on the bench with calipers: the board, the hole spacing and the hole diameter"
+  },
+  "physical": {
+    "header": {
+      "rows": 1,
+      "pins": [
+        8
+      ],
+      "pitch_mm": 2.54,
+      "flush_edge": "-x",
+      "first_pad_from_edge_mm": 34.5,
+      "face": "back"
+    }
+  },
+  "physical_proof": {
+    "verified": false,
+    "source": "read from back.jpg, scaled by the 2.54 mm header: one straight row of 8 pins along the long top edge, pins out of the back, VCC the left end seen from the back, about 34.5 mm from the left edge; the row is drawn half a pitch from the edge, an assumption that the picture of P946 corrects",
+    "why_it_matters": "the drawn breadboard seats the module by these holes, and a pad read wrong wires the wrong pin; confirm on the bench"
+  },
+  "facts": {
+    "supply_range_v": {
+      "value": "3.3 or 5.0",
+      "verified": false,
+      "source": "read from the photo back-close.jpg: the box 'Supply Voltage and IO Voltage: 3.3V/5.0V'",
+      "why_it_matters": "the rail VCC joins; confirm that the module runs at 3.3 V on the bench"
+    },
+    "io_voltage_follows_vcc": {
+      "value": true,
+      "verified": false,
+      "source": "read from the photo back-close.jpg: the silkscreen names one value for 'Supply Voltage and IO Voltage'; the TXS0108E's input high is VCCI - 0.4 V (see txs0108e_input_high_min_v), so the host side of the shifter is likely powered from VCC; the copper was not traced",
+      "why_it_matters": "at VCC = 5 V a 3.3 V ESP32 output may not read as high; power VCC from 3.3 V"
+    },
+    "level_shifter": {
+      "value": "TXS0108E (TI), 20-pin TSSOP marked YF08E 26K64 ALKN",
+      "verified": false,
+      "source": "read from the photo back-close.jpg; TI's Package Option Addendum lists the part marking YF08E for TXS0108EPWR",
+      "cites": {
+        "document": "txs0108e",
+        "at": "Package Option Addendum, Part marking column"
+      },
+      "why_it_matters": "the module accepts 3.3 V and 5 V logic through it; which port faces the host is not traced"
+    },
+    "txs0108e_input_high_min_v": {
+      "value": "VCCI - 0.4 (VCCA 1.95-3.6 V)",
+      "verified": true,
+      "source": "TI TXS0108E datasheet SCES642L, Recommended Operating Conditions, VIH",
+      "cites": {
+        "document": "txs0108e",
+        "at": "5.3 Recommended Operating Conditions, page 6"
+      }
+    },
+    "level_shifter_supply_current_ua": {
+      "value": 8,
+      "verified": true,
+      "source": "TI TXS0108E datasheet SCES642L, ICCA + ICCB combined supply current, max, VCCA 1.5-3.6 V, VCCB 2.3-5.5 V",
+      "cites": {
+        "document": "txs0108e",
+        "at": "Electrical Characteristics, page 6"
+      }
+    },
+    "panel": {
+      "value": "HINK-E029A10-A3",
+      "verified": false,
+      "source": "read from the photo back-close.jpg: the flat cable prints HINK-E029A10-A3, Date: 20160809, CLSL H2008; no datasheet of the -A3 was found (2026-11-20: a search for 'HINK-E029A10-A3' finds only the -A1 plugin; glyn.de, which hosts other Holitech specifications, has no E029A10-A1 or -A3 file at that path)",
+      "why_it_matters": "the driver class is chosen by the panel; a wrong class shows nothing or garbage"
+    },
+    "display_controller": {
+      "value": "SSD1675A",
+      "verified": false,
+      "source": "community README (mcer12, for HINK-E029A10-A1, not -A3): 'It is a 3-color display with SSD1675A driver', https://github.com/mcer12/GxEPD_HINKE029A10_plugin. Supported by the same plugin's code, which writes a 70-byte LUT by command 0x32 (https://github.com/mcer12/GxEPD_HINKE029A10_plugin/blob/master/src/GxEPD_HINKE029A10.cpp lines 162-164), the SSD1675A length in Good Display's note (the SSD1675B takes 100 bytes). The SSD1675A datasheet was not found (2026-11-20, two searches: only the SSD1675B, SSD1680 and SSD1681 datasheets are online); nothing names the controller of the -A3",
+      "cites": {
+        "document": "goodisplay-1675a-vs-1675b",
+        "at": "page 3, '2. Part of the instruction code is different': 1675A count<70, 1675B count<100"
+      },
+      "why_it_matters": "the driver and every controller figure below rest on it; a driver for another controller (IL0373/UC8151) shows nothing"
+    },
+    "colours": {
+      "value": "black, white, red",
+      "verified": false,
+      "source": "read from the photo front.jpg: the stored picture shows red; the community README says 3-color",
+      "why_it_matters": "a three-colour panel refreshes slowly and has no fast partial refresh"
+    },
+    "resolution_px": {
+      "value": "128x296",
+      "verified": false,
+      "source": "GxEPD2_290_C90c.h WIDTH = 128, HEIGHT = 296, the class the community README says supports this panel: https://raw.githubusercontent.com/ZinggJM/GxEPD2/master/src/epd3c/GxEPD2_290_C90c.h",
+      "why_it_matters": "the frame buffer and every drawing coordinate"
+    },
+    "arduino_driver": {
+      "value": "GxEPD2: GxEPD2_3C<GxEPD2_290_C90c, GxEPD2_290_C90c::HEIGHT>",
+      "verified": false,
+      "source": "the community README: 'This display is now natively supported by GxEPD2 (GxEPD2_290_C90c)' (for the -A1); the class was written for the Good Display GDEM029C90, which the GxEPD2 README lists as '2.9\" b/w/y 128x296, SSD1680' (black/white/YELLOW, line 109 of https://github.com/ZinggJM/GxEPD2/blob/master/README.md); the class writes no LUT (no command 0x32) and refreshes with 0x22 = 0xF7, so on this panel it uses the waveform in the panel's own OTP (https://raw.githubusercontent.com/ZinggJM/GxEPD2/master/src/epd3c/GxEPD2_290_C90c.cpp)",
+      "why_it_matters": "the firmware's driver if it is written in Arduino; confirm with a test picture in black and red"
+    },
+    "micropython_driver": {
+      "value": {
+        "name": "Waveshare Pico_ePaper-2.9-B_V4.py, class EPD_2in9_B_V4_Portrait",
+        "url": "https://github.com/waveshareteam/Pico_ePaper_Code/blob/main/python/Pico_ePaper-2.9-B_V4.py",
+        "licence": "MIT (the permission text in the file's header)",
+        "last_change": "2024-08-08 (commit f07bfa1102 of waveshareteam/Pico_ePaper_Code, the last one touching the file)",
+        "written_for": "Waveshare Pico e-Paper 2.9 (B) V4, 128x296 black/white/red, on a Raspberry Pi Pico; tested on this panel by nobody we found",
+        "three_colours": true,
+        "init": "the same commands as GxEPD2_290_C90c: 0x12, 0x01 27 01 00, 0x11 03, 0x44/0x45 window, 0x3C 05, 0x21 00 80, 0x18 80, refresh 0x22 F7 (waveform from the panel's OTP, no 0x32)",
+        "needs": "machine.SPI and Pin, framebuf (in the ESP32 MicroPython port), two MONO_HLSB frame buffers of 4736 bytes each",
+        "changes_for_esp32": "the pin numbers are module constants for the Pico (SCK 10, DIN 11, RST 12, DC 8, CS 9, BUSY 13) and SPI(1) at 4 MHz; set them for the board"
+      },
+      "verified": false,
+      "source": "read from the file at https://github.com/waveshareteam/Pico_ePaper_Code/blob/main/python/Pico_ePaper-2.9-B_V4.py (fetched 2026-11-20) and its commit list; chosen over three others, see micropython_drivers_not_chosen",
+      "why_it_matters": "the MicroPython firmware starts from it; it was written for an SSD1680 panel, so confirm with a test picture in black and red on this module"
+    },
+    "full_refresh_time_ms": {
+      "value": 27000,
+      "verified": false,
+      "source": "GxEPD2_290_C90c.h full_refresh_time = 27000 ms ('e.g. 26130024us'); the GxEPD2 README: 'GDEM029C90 has a very long refresh time of about 27 seconds' (https://github.com/ZinggJM/GxEPD2/blob/master/README.md, lines 403-406). Measured on the GDEM029C90, a black/white/yellow panel; nothing found for the HINK-E029A10-A3, and the refresh time comes from the panel's own waveform",
+      "why_it_matters": "how long BUSY stays high and the screen flashes; measure on this module"
+    },
+    "partial_refresh": {
+      "value": false,
+      "verified": false,
+      "source": "GxEPD2_290_C90c.h: hasPartialUpdate = true '// but refresh is full screen', hasFastPartialUpdate = false; the community README: 'doesn't support partial update'",
+      "why_it_matters": "every update redraws the whole screen with its flashing; a clock or counter cannot update quickly"
+    },
+    "busy_active_level": {
+      "value": "high",
+      "verified": false,
+      "source": "SSD1675B pin description: 'When Busy is High, the operation of the chip should not be interrupted, and command should not be sent'; GxEPD2_290_C90c.cpp passes HIGH as the busy level (https://raw.githubusercontent.com/ZinggJM/GxEPD2/master/src/epd3c/GxEPD2_290_C90c.cpp); the panel's controller sits on its glass, out of sight; a community README names it SSD1675A, whose own datasheet was not found, and this figure is from the SSD1675B datasheet (its successor)",
+      "cites": {
+        "document": "ssd1675b",
+        "at": "5 Pin Description, BUSY, page 7"
+      },
+      "why_it_matters": "the firmware waits on it; confirm with a scope or a GPIO read during a refresh"
+    },
+    "bs1_interface": {
+      "value": "L: 4-line SPI (CS, D/C, SCLK, SDI); H: 3-line 9-bit SPI, D/C unused",
+      "verified": false,
+      "source": "read from the photo back-close.jpg: the table 'BS1 Interface H 3-Line L 4-Line'; the same in SSD1675B Table 6-1; the panel's controller sits on its glass, out of sight; a community README names it SSD1675A, whose own datasheet was not found, and this figure is from the SSD1675B datasheet (its successor)",
+      "cites": {
+        "document": "ssd1675b",
+        "at": "Table 6-1, page 9"
+      },
+      "why_it_matters": "GxEPD2 drives D/C, so it needs BS1 at L"
+    },
+    "bs1_switch_position": {
+      "value": "L",
+      "verified": false,
+      "source": "read from the photo back-close.jpg: the slider's tab stands toward the L mark",
+      "why_it_matters": "at H the module ignores D/C and a 4-wire driver shows nothing; look at the switch before wiring"
+    },
+    "spi_max_write_hz": {
+      "value": 20000000,
+      "verified": false,
+      "source": "SSD1675B features: 'maximum SPI write speed 20MHz'; the panel's controller sits on its glass, out of sight; a community README names it SSD1675A, whose own datasheet was not found, and this figure is from the SSD1675B datasheet (its successor)",
+      "cites": {
+        "document": "ssd1675b",
+        "at": "2 Features, page 4"
+      },
+      "why_it_matters": "the SPI clock the firmware sets"
+    },
+    "spi_mode": {
+      "value": 0,
+      "verified": false,
+      "source": "computed: SSD1675B Table 6-2 samples SDA on the rising edge of SCL, which fits SPI mode 0 or 3; the idle level of SCL was not read",
+      "cites": {
+        "document": "ssd1675b",
+        "at": "Table 6-2, page 9"
+      },
+      "why_it_matters": "the SPI mode the firmware sets"
+    },
+    "refresh_current_ma": {
+      "value": null,
+      "verified": false,
+      "source": "not published for the module or the panel; the SSD1675B's own operating current is 1000 uA typ (Iopr_VCI, Table 11-1, page 41) without the panel booster and the panel",
+      "why_it_matters": "the VCC rail is summed with it; measure the current during a full refresh"
+    },
+    "controller_deep_sleep_current_ua": {
+      "value": {
+        "typ": 1,
+        "max": 3
+      },
+      "verified": false,
+      "source": "SSD1675B Idslp_VCI1, deep sleep mode 1, DC/DC off, RAM retained; the panel's controller sits on its glass, out of sight; a community README names it SSD1675A, whose own datasheet was not found, and this figure is from the SSD1675B datasheet (its successor)",
+      "cites": {
+        "document": "ssd1675b",
+        "at": "Table 11-1 DC Characteristics, page 41"
+      },
+      "why_it_matters": "the controller's share of a battery design's sleep current"
+    },
+    "module_sleep_current_ua": {
+      "value": null,
+      "verified": false,
+      "source": "not published: the controller's deep sleep plus the level shifter (8 uA max) plus the regulator's quiescent current, which is not known",
+      "why_it_matters": "a battery gadget's sleep budget; measure VCC current with the panel in deep sleep"
+    },
+    "header_pitch_mm": {
+      "value": 2.54,
+      "verified": false,
+      "source": "by the look of the yellow 8-pin male header in back.jpg; not measured",
+      "why_it_matters": "the footprint pinrow8 and the breadboard; check that the pins drop into adjacent breadboard holes"
+    },
+    "second_connector": {
+      "value": "a white shrouded 8-pin connector at the short edge, labels Busy Reset D/C CS SCLK SDI GND VCC from the top",
+      "verified": false,
+      "source": "read from the photo back.jpg; its type and pitch are not read (it looks like a JST PH 2.0 style), and whether its pins join the header's same-named pins is not traced",
+      "why_it_matters": "a second way to wire the module; check continuity pin to pin with a multimeter before using it"
+    },
+    "micropython_drivers_not_chosen": {
+      "value": [
+        {
+          "name": "mattytrentini/ssd1675a",
+          "url": "https://github.com/mattytrentini/ssd1675a",
+          "licence": "MIT",
+          "last_change": "2025-05-22",
+          "why_not": "black/white only (red is a TODO in the code); writes a fixed 70-byte LUT taken from drewler's demo for Mike Rankin's board; one MONO_VLSB 296x128 buffer; prints every command; its README example passes arguments the constructor does not take"
+        },
+        {
+          "name": "mcauser/micropython-waveshare-epaper epaper2in9b.py",
+          "url": "https://github.com/mcauser/micropython-waveshare-epaper/blob/master/epaper2in9b.py",
+          "licence": "MIT",
+          "why_not": "written for the IL0373/UC8151 command set (PANEL_SETTING 0x00, BOOSTER 0x06, TCON 0x61, refresh 0x12) with BUSY low = busy; on an SSD1675 0x12 is a software reset and BUSY is high while busy, so nothing is shown"
+        },
+        {
+          "name": "rdagger/MicroPython-2.9-inch-ePaper-Library",
+          "url": "https://github.com/rdagger/MicroPython-2.9-inch-ePaper-Library",
+          "why_not": "seen in a search only, not read: written for the Waveshare 2.9 inch (B); its controller was not checked"
+        }
+      ],
+      "verified": false,
+      "source": "read from each repository on 2026-11-20 (the first two); the third from a search result",
+      "why_it_matters": "so nobody tries a driver already found unfit"
+    },
+    "waveform_lut": {
+      "value": "unknown which works on this panel; two ways are published for the HINK-E029A10-A1: (a) the panel's OTP waveform: 0x18 = 0x80 (internal temperature sensor), no 0x32, refresh 0x22 = 0xF7 (GxEPD2_290_C90c, the Waveshare 2.9 B V4 driver); (b) a custom 70-byte LUT by 0x32 with VSH/VSL 0x04 41 A8 32, VCOM 0x2C 68, and refresh 0x22 = 0xC7 (the mcer12 plugin, its LUT from drewler's demo)",
+      "verified": false,
+      "source": "https://raw.githubusercontent.com/ZinggJM/GxEPD2/master/src/epd3c/GxEPD2_290_C90c.cpp (_InitDisplay, _Update_Full); https://github.com/waveshareteam/Pico_ePaper_Code/blob/main/python/Pico_ePaper-2.9-B_V4.py (init, TurnOnDisplay); https://github.com/mcer12/GxEPD_HINKE029A10_plugin/blob/master/src/GxEPD_HINKE029A10.cpp (lines 24-31 and 109-164); the meaning of 0x18 = 0x80 and 0x22 = 0xF7 from the SSD1675B datasheet; the panel's controller sits on its glass, out of sight; a community README names it SSD1675A, whose own datasheet was not found, and this figure is from the SSD1675B datasheet (its successor)",
+      "cites": {
+        "document": "ssd1675b",
+        "at": "Command Table: 0x18 page 23 (80h internal sensor, 48h POR external), 0x22 page 25 (F7 = load temperature, display Mode 1)"
+      },
+      "why_it_matters": "a driver whose waveform does not fit the panel shows nothing, a faint picture or no red; the OTP way is tried first because two maintained drivers use it and the plugin's author points to GxEPD2_290_C90c"
+    },
+    "lut_length_bytes": {
+      "value": 70,
+      "verified": false,
+      "source": "Good Display, 'Difference between the applied waveform program of 1675A and 1675B': the SSD1675A takes 70 bytes by 0x32 with gate voltage, source voltages and the two frequency settings at LUT[70..75]; the SSD1675B takes 100 bytes with them at LUT[100..106] (SSD1675B datasheet, 0x32, page 28: '[100 bytes]'). Written for the 1.54 inch GDEM0154E97LT; it holds for this module only if its controller is the SSD1675A",
+      "cites": {
+        "document": "goodisplay-1675a-vs-1675b",
+        "at": "pages 2 and 3"
+      },
+      "why_it_matters": "a driver that writes a 100-byte (SSD1675B) LUT to an SSD1675A, or the other way round, drives the panel with a wrong waveform; only matters for a driver that writes its own LUT"
+    },
+    "ram_colour_mapping": {
+      "value": "red RAM (0x26) bit 1: red; red 0 and B/W RAM (0x24) bit 1: white; both 0: black",
+      "verified": false,
+      "source": "SSD1675B Table 6-4 'RAM bit and LUT mapping for 3-color display'; the three drivers agree: GxEPD2_290_C90c writes ~color_value to 0x26, Waveshare's Clear writes 0xFF to 0x24 and 0x00 to 0x26, the plugin writes ~buffer with red = 0x00; the panel's controller sits on its glass, out of sight; a community README names it SSD1675A, whose own datasheet was not found, and this figure is from the SSD1675B datasheet (its successor)",
+      "cites": {
+        "document": "ssd1675b",
+        "at": "6.5 RAM, Table 6-4, page 12"
+      },
+      "why_it_matters": "a plane written with the wrong polarity turns the screen red or black; check with a test picture"
+    },
+    "update_control_1_bytes": {
+      "value": 1,
+      "verified": false,
+      "source": "SSD1675B command 0x21 Display Update Control 1 has one parameter byte A (red RAM option A[7:4], BW RAM option A[3:0]); the SSD1680 init in GxEPD2_290_C90c and the Waveshare driver sends two (0x00 0x80, the second byte is the SSD1680's source output mode); the panel's controller sits on its glass, out of sight; a community README names it SSD1675A, whose own datasheet was not found, and this figure is from the SSD1675B datasheet (its successor)",
+      "cites": {
+        "document": "ssd1675b",
+        "at": "Command Table, 0x21, page 24"
+      },
+      "why_it_matters": "if the controller does not ignore the extra byte, or maps sources differently from the SSD1680, the picture may shift or stay blank; the bench test of the driver settles it"
+    },
+    "frame_buffer_bytes": {
+      "value": 9472,
+      "verified": false,
+      "source": "computed: 128 x 296 / 8 = 4736 bytes per plane, two planes (black/white and red) = 9472 bytes, from resolution_px (unverified)",
+      "why_it_matters": "the RAM the MicroPython firmware holds for the picture; it fits the ESP32-S3 and ESP32-C6 heaps, but allocate it early before the heap fragments"
+    },
+    "example_code": {
+      "value": [
+        {
+          "what": "Waveshare's demo at the end of Pico_ePaper-2.9-B_V4.py (text, lines and rectangles in black and red, then Clear)",
+          "url": "https://github.com/waveshareteam/Pico_ePaper_Code/blob/main/python/Pico_ePaper-2.9-B_V4.py",
+          "licence": "MIT",
+          "language": "MicroPython"
+        },
+        {
+          "what": "GxEPD2 examples (GxEPD2_Example and others) with the GxEPD2_290_C90c line selected",
+          "url": "https://github.com/ZinggJM/GxEPD2/tree/master/examples",
+          "licence": null,
+          "language": "Arduino C++",
+          "licence_note": "not read in this round; confirm in the repository LICENSE before copying"
+        },
+        {
+          "what": "HINKE029A10_Example.ino of the mcer12 plugin, for the older GxEPD library",
+          "url": "https://github.com/mcer12/GxEPD_HINKE029A10_plugin/tree/master/examples/HINKE029A10_Example",
+          "licence": "GPL-3.0",
+          "language": "Arduino C++"
+        }
+      ],
+      "verified": false,
+      "source": "the files read on 2026-11-20 (the GxEPD2 example folder by name only); no example from MH-ET LIVE or the panel maker (HINK/SEEKINK) was found",
+      "why_it_matters": "the conversation writes the firmware from these; none was run on this module"
+    }
+  },
+  "host_requirements": [
+    "Power VCC from 3.3 V on an ESP32: the silkscreen gives one voltage for supply and IO, and the TXS0108E reads a high only above VCC - 0.4 V on its powered side, so at VCC = 5 V a 3.3 V output may not be read and the panel stays blank.",
+    "Set the BS1 switch to L (4-line SPI) for GxEPD2 and other drivers that use D/C: at H the module ignores D/C and the panel shows nothing.",
+    "Wait for BUSY to go low before each command: a three-colour full refresh keeps it high for tens of seconds (GxEPD2 allows 27 s), and a command sent meanwhile corrupts the picture.",
+    "No fast partial refresh on this three-colour panel: every update redraws and flashes the whole screen, so it suits a picture that changes every few minutes, not a counter or a clock with seconds.",
+    "The header's order is printed on the back (VCC GND SDI SCLK CS D/C Reset Busy); from the display side it reads mirrored, so wire by the labels, not by position.",
+    "The refresh current and the module's sleep current are not published: measure both before a battery design rests on them.",
+    "MicroPython: use a driver for the SSD1675/SSD1680 command set with two planes (the Waveshare 2.9 B V4 file, its pins set for the board); a driver for the IL0373/UC8151 (mcauser epaper2in9b) or a black/white-only one (mattytrentini ssd1675a) shows nothing or no red.",
+    "Keep about 9.5 kB of RAM free for the two frame buffers (2 x 4736 bytes) and allocate them before the heap fragments."
+  ],
+  "documents": {
+    "txs0108e": {
+      "url": "https://www.ti.com/lit/ds/symlink/txs0108e.pdf",
+      "sha256": "a6ddbe03088d291d1a1f8012189086b4b9962d1c878a462a8393c59fe225c883",
+      "file": "txs0108e.pdf",
+      "retrieved": "2026-11-19",
+      "title": "TXS0108E 8-Bit Bi-Directional, Level-Shifting, Voltage Translator",
+      "version": "SCES642L, December 2007, revised November 2024"
+    },
+    "ssd1675b": {
+      "url": "https://cursedhardware.github.io/epd-driver-ic/SSD1675B.pdf",
+      "sha256": "3c98fdf73c8a29d2b883d60098727946ed5dcfe21b880a2f79479b0b5e3e45ad",
+      "file": "SSD1675B.pdf",
+      "retrieved": "2026-11-19",
+      "title": "SSD1675B 160 Source x 296 Gate Red/Black/White Active Matrix EPD Display Driver with Controller",
+      "version": "Rev 1.4, May 2019 (Advance Information; a third-party mirror of the Solomon Systech datasheet)"
+    },
+    "goodisplay-1675a-vs-1675b": {
+      "url": null,
+      "sha256": "81e615490f92354dc710f57ae5c98696484c7083b1259726dbba00ec0f7dd15d",
+      "file": "goodisplay-1675a-vs-1675b-gdem0154e97lt.pdf",
+      "retrieved": "2026-11-19",
+      "title": "Product Program Upgrade Instructions: Difference between the applied waveform program of 1675A and 1675B (GDEM0154E97LT)",
+      "version": "Dalian Good Display, 3 pages, PDF created 2019-05-16; for the 1.54 inch b/w panel GDEM0154E97LT, not this panel; where it was downloaded from is not recorded"
+    }
+  },
+  "also_known_as": [
+    "MH-ET LIVE 2.9 inch e-paper module",
+    "HINK-E029A10",
+    "2.9 inch e-paper module three color"
+  ],
+  "pin_order_proof": {
+    "verified": false,
+    "source": "read from the photos back.jpg and back-close.jpg: the silkscreen under the yellow 8-pin header reads VCC GND SDI SCLK CS D/C Reset Busy, left to right with the back up and the header at the top; which end is pad 1 is not printed (VCC is taken as pad 1)",
+    "why_it_matters": "a pin order read wrong reverses the supply; looked at from the display side the order is mirrored, so match each wire to the label on the back, not to its place"
+  },
+  "legs": {
+    "VCC": "back up, header at the top: the left end pin, above the label VCC",
+    "BUSY": "back up, header at the top: the right end pin, above the label Busy"
+  },
+  "simulation": {
+    "skip": "Wokwi's supported-hardware page lists a 2.9 inch e-Paper Display with no part page or id (read 2026-11-20, https://docs.wokwi.com/getting-started/supported-hardware), so its colours, controller and refresh are not known; the refresh time and partial update of this module are measured on the bench"
+  }
+}

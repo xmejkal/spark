@@ -17,6 +17,17 @@ Part of [the scripts](scripts.md). When `breadboard.py` does not write a drawing
 | `no_pin_position`, `planner_fault` | the Wokwi type; the hole, the part or the end | `no_pin_position`: first make sure that the record's `simulation.wokwi.pins` names pins that Wokwi has, then report it. `planner_fault`: a fault in spark's planner. Report it. Do not retry |
 | `no_wokwi_part` | none | none. It is by design, and `expected` is `true`. Do not retry. The `why` names each drawn part that Wokwi has no part for, the board or a module: `Wokwi has no part for the board and e-paper` |
 
+## The board's look and the space between parts
+
+`breadboard.svg` shows the breadboard as the README's old wiring page did (P953): a white page, the board in its
+`palette` (the colours and sizes in `data/breadboards.json`), the gap between rows e and f as a band, four rails with
+their + and - signs, the letters a to j and the column numbers. On spark's 63-column board each part's body (its *body
+box*) keeps 4 free columns (`body_gap_columns`) from the body before it. When the board is too full, the part goes
+closer, the layout names it in `crowded`, and the sheet says once "The parts are closer than 4 columns because the
+breadboard is full." That line is no failure: the drawing is right. A module with one row of pins whose body would reach
+across the gap sits in the outermost row, so its body hangs off the board's edge. Wokwi's half board keeps the layout
+Wokwi was shown.
+
 ## A part's picture
 
 `parts.py --picture-frame <id> [--project .]` prints the frame a part's picture is drawn on
