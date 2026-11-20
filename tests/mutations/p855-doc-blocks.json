@@ -1,0 +1,20 @@
+[
+ {
+  "file": "tools/check_docs.py",
+  "name": "P855: a page block's end marker reads as a command that does not exist",
+  "find": "    commands = sorted(set(re.findall(r\"/spark:([a-z][a-z-]*)\", END.sub(\"\", text))))",
+  "replace": "    commands = sorted(set(re.findall(r\"/spark:([a-z][a-z-]*)\", text)))"
+ },
+ {
+  "file": "scripts/spark/bench/run_live_code.py",
+  "name": "P855: live's --code help changes and the scripts page's block goes stale",
+  "find": "\"the code to run on the board, e.g. 'print(1)'\"",
+  "replace": "\"the code to run on the board\""
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P855: doc_blocks imports the bench's Operations at module level, so check_docs loads the bench area",
+  "find": "sys.path.insert(0, str(ROOT / \"scripts\"))\n",
+  "replace": "sys.path.insert(0, str(ROOT / \"scripts\"))\nfrom spark.bench import OPERATIONS  # noqa: E402,F401\n"
+ }
+]

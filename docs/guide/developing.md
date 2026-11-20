@@ -308,7 +308,7 @@ decision and its costs are in the P318 finding, in [PR #404](https://github.com/
 [`tools/check_docs.py`](../../tools/check_docs.py) reads `README.md`, `AGENTS.md` and these guides. The suite runs it
 as `tests/test_docs.py`. It fails when the docs:
 
-- name a `/spark:` command or a `.py` script that does not exist;
+- name a `/spark:` command (a page block's end marker names none) or a `.py` script that does not exist;
 - have a row in the commands guide's Skills or Agents table that names none;
 - leave a command, skill or agent out of README.md or the commands guide;
 - show a flag that its script's `--help` lacks;
