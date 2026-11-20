@@ -67,7 +67,7 @@ class FeatureCheckTest(unittest.TestCase):
         self.assertEqual(self.problems([feature("Clear", x=1.91, y=4.0)]), [])
 
     def test_a_hole_over_a_pad_is_refused_too(self):
-        self.assertEqual(self.problems([feature("H", "hole", x=0.5, y=4.5, w=1.0, h=1.0)]),
+        self.assertEqual(self.problems([feature("H", "hole", x=0.3, y=4.2, w=1.6, h=1.6)]),
                          [("feature_over_pad", "H"), ("feature_off_drawing", "H")])
 
     def test_anchor_beyond_tolerance_is_refused_by_name(self):
@@ -104,6 +104,21 @@ class FeatureCheckTest(unittest.TestCase):
         self.assertEqual(self.problems([feature("H1", "hole", x=1.2, y=1.2, w=1.6, h=1.6)]), [])
         self.assertEqual(self.problems([feature("H2", "hole", x=2.2, y=1.2, w=1.6, h=1.6)]), [("feature_off_drawing", "H2")])
 
+    def test_a_hole_that_is_no_circle_is_refused_even_with_no_mounting_holes(self):
+        # the review of PR #1368: a 3.0 x 0.2 mm hole box beside A1 drew a disc of 1.5 mm across the pad
+        record = features_fixture.board()
+        del record["physical"]["mounting_holes"]
+        check = FeatureCheck(picture_makers.shape_of(record), record)
+        flat = feature("Flat", "hole", x=0.9, y=3.0, w=3.0, h=0.2)
+        self.assertEqual([(problem.code, problem.feature) for problem in check.drawn_problems([flat])],
+                         [("feature_off_drawing", "Flat")])
+        self.assertEqual(check.drawn_problems([feature("Round", "hole", x=8.0, y=20.0, w=1.6, h=2.1)]), [])  # 0.5 mm apart
+
+    def test_a_hole_off_the_record_s_diameter_is_refused(self):
+        # the record's holes are 1.6 mm across: 2.1 passes (0.5 mm off), 2.2 is refused
+        self.assertEqual(self.problems([feature("H1", "hole", x=0.95, y=0.95, w=2.1, h=2.1)]), [])
+        self.assertEqual(self.problems([feature("H1", "hole", x=0.9, y=0.9, w=2.2, h=2.2)]), [("feature_off_drawing", "H1")])
+
     def test_fewer_than_two_anchors_is_refused(self):
         self.assertEqual(self.problems(anchors=GOOD_ANCHORS[:1]), [("feature_no_anchor", None)])
         self.assertEqual(self.problems(anchors=(("A1", 1.11, 5.0), ("A2", 1.11, 7.54))), [("feature_no_anchor", None)])
@@ -115,6 +130,7 @@ class FeatureCheckTest(unittest.TestCase):
 
     def test_label_with_http_is_refused(self):
         self.assertEqual(self.problems([feature("Link", "label", text="HTTP://x")]), [("feature_pad_label", "Link")])
+        self.assertEqual(self.problems([feature("Site", "label", text="WWW.dfrobot.com")]), [("feature_pad_label", "Site")])
 
 
 if __name__ == "__main__":
