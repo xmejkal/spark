@@ -20,8 +20,8 @@
  {
 "file": "scripts/spark/breadboard/drawing.py",
 "name": "Wokwi is not asked, so a board drawn from its record gets a Wokwi diagram",
-"find": "if any(not layout.geometry.part(part.type).get(\"wokwi_part\", True) for part in layout.parts):",
-"replace": "if False:"
+"find": "missing = [part for part in layout.parts if not layout.geometry.part(part.type).get(\"wokwi_part\", True)]",
+"replace": "missing = []"
 },
  {
 "file": "scripts/spark/breadboard/drawing.py",

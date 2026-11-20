@@ -62,8 +62,8 @@
  {
   "file": "scripts/spark/breadboard/wiring_steps.py",
   "name": "color palette off by one",
-  "find": "self.PALETTE[(number - 1) % len(self.PALETTE)]",
-  "replace": "self.PALETTE[number % len(self.PALETTE)]"
+  "find": "self.SIGNALS[signals % len(self.SIGNALS)]",
+  "replace": "self.SIGNALS[(signals + 1) % len(self.SIGNALS)]"
  },
  {
   "file": "scripts/spark/breadboard/sheet.py",

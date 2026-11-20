@@ -81,7 +81,7 @@ His answers to four questions, just before 12:29 Prague:
 Wave 1, in order:
 
 1. P947 [#1351](https://github.com/xmejkal/spark/issues/1351): lanes, printed labels, the wire style by role.
-2. P949: the page's look: inline SVG, CSS tokens, a legend.
+2. P949 [#1353](https://github.com/xmejkal/spark/issues/1353): the page's look: inline SVG, CSS tokens, a legend.
 3. P946 [#1349](https://github.com/xmejkal/spark/issues/1349): kept pictures. The e-paper is drawn from photos. The
    FireBeetle, the DFR0664 and the encoder are recovered.
 4. P888 [#1258](https://github.com/xmejkal/spark/issues/1258), then P887

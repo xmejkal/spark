@@ -389,6 +389,13 @@ class TheJumperLanesTest(unittest.TestCase):
                                                  drawing.Jumper(hole(5, 150), hole(7, 50), 2)], 10)
         self.assertEqual(lines, {1: 55, 2: 55})
 
+    def test_spans_less_than_a_pitch_apart_take_two_lines(self):
+        def hole(column, y):
+            return drawing.Hole("%d" % column, 10 * column, y, "%d" % column, column)
+        lines = svg_diagram.JumperLanes().lines([drawing.Jumper(hole(1, 150), hole(3, 50), 1),
+                                                 drawing.Jumper(hole(4, 150), hole(6, 50), 2)], 10)
+        self.assertEqual(lines, {1: 55, 2: 65})
+
 
 class TheSheetShowsItTest(unittest.TestCase):
     def test_the_sheet_s_picture_is_the_file_written_beside_it(self):

@@ -51,8 +51,9 @@ class JumperLanes:
     Strategy: the height of each jumper's run across (P947), so that no two jumpers share a drawn line. A run lies half
     a pitch off its far end's row, on the side of its first end (below the row when both ends share it), and further
     lines on that side are one pitch apart, so a run never lies on a row of holes. Jumpers take their lines shortest
-    span first, then by step, so runs nest; each takes the first line where no run comes within one pitch of its span.
-    When a leg on that side would pass over another jumper's end in its column, the other side is tried first.
+    span first, then by step, so runs nest; each takes the first line where no run comes within one pitch of its
+    span, a gap of one pitch included. When a leg on that side would pass over another jumper's end in its column,
+    the other side is tried first.
     """
 
     def lines(self, jumpers, pitch):
@@ -62,7 +63,7 @@ class JumperLanes:
         for jumper in sorted(jumpers, key=lambda one: (abs(one.one.x - one.other.x), one.step)):
             low, high = sorted((jumper.one.x, jumper.other.x))
             free = [y for y in self._candidates(jumper, pitch, len(jumpers))
-                    if not any(abs(y - y2) < pitch / 4 and low < high2 + pitch and low2 < high + pitch
+                    if not any(abs(y - y2) < pitch / 4 and low <= high2 + pitch and low2 <= high + pitch
                                for y2, low2, high2 in taken)]
             clear = [y for y in free if not self._crosses_an_end(jumper, y, ends)]
             lines[jumper.step] = (clear or free)[0]
