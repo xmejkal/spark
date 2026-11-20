@@ -81,9 +81,9 @@ class TheSvgTest(unittest.TestCase):
 
     def test_the_bytes_are_the_ones_reviewed(self):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
-        # P949 added the keys data-step and data-part, which change no pixel.
+        # P949: the keys data-step and data-part, and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "379d273257c045cbaa6a78d20112cc25a9c1e5fe5815ca903b9887b2ce310d4d")
+                         "b8486835247cd1610c0669bd7a8b174de67075d90a9da2531a5990ea9e43060f")
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -185,10 +185,10 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         self.assertEqual(self.text, svg_diagram.SvgBreadboardDiagram().text(self.layout))
 
     def test_the_picture_is_the_one_looked_at_on_2026_10_29(self):
-        # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose. P949 added
-        # the keys data-step and data-part, which change no pixel.
+        # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose. P949: the keys,
+        # and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "d6cf0665cd8e796b3474a6266f027c449413faa9c7af5d5d2be06a66734a811f")
+                         "7a7d2eedab965c042f9cc8484eb043d7c8f598864ec97368b4a74b0c7543d4e7")
 
     def test_the_xiao_has_none_of_it(self):
         text, _ = xiao_svg()
@@ -447,6 +447,41 @@ class TheKeysTest(unittest.TestCase):
         for name, (text, _layout) in self.drawn.items():
             with self.subTest(name):
                 self.assertNotIn(" id=", text)
+
+
+def pad_states(text, layout):
+    """{(part id, pin): the data-pad of the dot drawn on its hole}."""
+    dots = {(float(dot.get("cx")), float(dot.get("cy"))): dot.get("data-pad")
+            for dot in ElementTree.fromstring(text).iter("{http://www.w3.org/2000/svg}circle") if dot.get("data-pad")}
+    return {(part.id, pin): dots.get((round(hole.x, 3), round(hole.y, 3)))
+            for part in layout.parts for pin, hole in part.holes.items()}
+
+
+class ThePadStatesTest(unittest.TestCase):
+    """P949: the dot on each part's pin says whether its row is used by a wire or free, in the praised page's colours."""
+
+    def test_a_pin_is_used_when_its_row_joins_a_jumper_or_another_part_and_free_otherwise(self):
+        text, layout = xiao_svg()
+        # read from the fixture's steps: jumpers 5 to 8 end on D8, D10, GND, the button's 1.l and 2.l, the LED's C and R1's
+        # 1; the LED's A shares its row with R1's 2
+        used = {("board", "D8"), ("board", "D10"), ("board", "GND"), ("TactileButton", "1.l"), ("TactileButton", "2.l"),
+                ("LedRed5mm", "A"), ("LedRed5mm", "C"), ("R1", "1"), ("R1", "2")}
+        states = pad_states(text, layout)
+        self.assertEqual(len(states), 22)
+        self.assertEqual({pin for pin, state in states.items() if state == "used"}, used)
+        self.assertEqual({pin for pin, state in states.items() if state == "free"}, set(states) - used)
+        fills = {dot.get("data-pad"): dot.get("fill") for dot in ElementTree.fromstring(text).iter(
+            "{http://www.w3.org/2000/svg}circle") if dot.get("data-pad")}
+        self.assertEqual(fills, {"used": "#ffd34d", "free": "#c9a24b"})
+
+    def test_no_pin_is_drawn_held(self):
+        # held needs the board record's onboard roles, which the breadboard does not read yet (P950)
+        for name, (text, layout) in {"xiao": xiao_svg(), "epaper": epaper_svg(), "record": record_svg()}.items():
+            with self.subTest(name):
+                states = pad_states(text, layout)
+                self.assertGreaterEqual(len(states), 10)
+                self.assertEqual(set(states.values()), {"used", "free"})
+                self.assertNotIn("#5bc0eb", text)
 
 
 class TheSheetShowsItTest(unittest.TestCase):

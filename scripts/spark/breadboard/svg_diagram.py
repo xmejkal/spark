@@ -19,6 +19,15 @@ LABELS_BESIDE, LABELS_INTO_BODY = "beside", "into-body"
 #: Value: where one pad's label goes in the part's own frame: its anchor point, its `text-anchor` and its turn in degrees.
 LabelPlace = collections.namedtuple("LabelPlace", "x y anchor rotate")
 
+#: Value: what the dot on a part's pin says, its fill and the legend's words (P949, the praised page's colours).
+PadMark = collections.namedtuple("PadMark", "fill words")
+#: The states of a pin's dot, in the legend's order: its row joins a wire or another part, its row joins nothing, or
+#: something on the board is already wired to it. spark draws no pad held yet: that needs the board record's onboard
+#: roles (P950).
+PAD_USED, PAD_FREE, PAD_HELD = "used", "free", "held"
+PAD_MARKS = {PAD_USED: PadMark("#ffd34d", "pad used by a wire"), PAD_FREE: PadMark("#c9a24b", "pad free"),
+             PAD_HELD: PadMark("#5bc0eb", "pad held: do not use")}
+
 
 class PadLabelLayout:
     """Strategy: where a drawn part's pad label goes, beside its pad, in the part's own frame. `place(x, y, part_px)` gives
@@ -98,11 +107,10 @@ class SvgBreadboardDiagram:
     """
     Renderer: a BreadboardLayout as an SVG picture in Wokwi's px, for the sheet to show (P268, #302): the breadboard's
     holes and rails, each part as its picture at its holes, turned about its measured center as Wokwi turns it, with
-    a dot on each pin and its name, then each jumper in its own lane (`lanes`, P947) as the praised page draws a wire: a
-    white under-stroke, the color of what it carries on top and a dot at each end, with its number in the middle of its
-    run. A part drawn from
-    its record also gets its pad labels, placed by the PadLabelLayout its part_px names (`label_layouts`, keyed by the
-    part_px's `labels`). Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
+    a dot on each pin, used or free (`PAD_MARKS`), and its name, then each jumper in its own lane (`lanes`, P947) as
+    the praised page draws a wire: a white under-stroke, the color of what it carries on top and a dot at each end,
+    with its number in the middle of its run. A part drawn from its record also gets its pad labels, placed by the
+    PadLabelLayout its part_px names (`label_layouts`, keyed by the part_px's `labels`). Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
     same bytes. The canvas holds every hole and every part's body. Each jumper's group carries `data-step`, its step's
     number, and each part's group `data-part`, its id, so a player finds them (P949); a key is never an `id`.
     """
@@ -167,8 +175,9 @@ class SvgBreadboardDiagram:
         for part in layout.parts:
             self._part(root, part, layout.geometry)
         self._wires(root, layout)
+        joined = self._joined_groups(layout)
         for part in layout.parts:
-            self._label(root, part, layout.geometry)  # last, so no wire or other part covers a pin or a name
+            self._label(root, part, layout.geometry, joined)  # last, so no wire or other part covers a pin or a name
         if notes:
             note = ElementTree.SubElement(root, _svg("text"), {
                 "x": str(self.MARGIN_PX), "y": str(_round_px(height - 4)), "font-size": "8", "font-family": "sans-serif",
@@ -221,13 +230,25 @@ class SvgBreadboardDiagram:
                 "x": str(_round_px(cx - 17)), "y": str(_round_px(height - 12)), "width": "34", "height": "12", "rx": "3",
                 "fill": "#cfd8dc", "stroke": "#455a64", "stroke-width": "1"})
 
-    def _label(self, root, part, geometry):
+    @staticmethod
+    def _joined_groups(layout):
+        """The hole groups that join something: the group of each jumper's end, and each group with pins of two parts."""
+        parts_in = collections.defaultdict(set)
+        for part in layout.parts:
+            for hole in part.holes.values():
+                parts_in[hole.group].add(part.id)
+        ends = {hole.group for jumper in layout.jumpers for hole in (jumper.one, jumper.other)}
+        return ends | {group for group, parts in parts_in.items() if len(parts) > 1}
+
+    def _label(self, root, part, geometry, joined):
         part_px = geometry.part(part.type)
         if part_px.get("pad_labels"):
             self._pad_labels(root, part, part_px)
         for hole in part.holes.values():
+            state = PAD_USED if hole.group in joined else PAD_FREE
             ElementTree.SubElement(root, _svg("circle"), {"cx": str(_round_px(hole.x)), "cy": str(_round_px(hole.y)),
-                                                          "r": "2.5", "fill": "#2e7d32"})
+                                                          "r": "2.5", "fill": PAD_MARKS[state].fill, "stroke": "#20262b",
+                                                          "stroke-width": "0.6", "data-pad": state})
         cx, cy = part_px["center"]
         label = ElementTree.SubElement(root, _svg("text"), {
             "x": str(_round_px(part.left + cx)), "y": str(_round_px(part.top + cy)), "font-size": "8",
