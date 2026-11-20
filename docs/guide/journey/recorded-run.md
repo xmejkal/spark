@@ -310,7 +310,7 @@ The same project on the XIAO, as Wokwi shows its `breadboard.json`
 Since 2026-10-16 the sheet also shows the layout itself ([P268](https://github.com/xmejkal/spark/issues/302)). The
 build writes `breadboard.svg` beside the sheet, and `breadboard.md` shows it under the steps. Each part is a plain
 pictogram of its kind. Each jumper runs in a lane of its own, red for power and black for ground, with a white edge,
-end dots and its number mid-run. The dot on a pin is yellow when its row is used by a wire, gold when free:
+end dots and its number mid-run. The dot on a pin is yellow when its row is in use, gold when free:
 
 ![The button-and-LED project as the sheet shows it](../img/button-light-xiao-breadboard.svg)
 

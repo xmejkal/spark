@@ -21,6 +21,15 @@ SVG_NAMESPACE = "http://www.w3.org/2000/svg"
 #: The plain shapes: the only elements a picture that stands in a page may hold (P949). None runs a script, loads a
 #: file or holds a style; the pictograms use svg, g, path, rect and circle.
 PLAIN_SHAPES = ("svg", "g", "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "text", "tspan", "title")
+#: The only attributes such a picture may hold, by lowercase name: the geometry and the presentation that spark's
+#: breadboard and its pictograms draw with, and the breadboard's keys. No `style`, no `href`, no handler.
+PLAIN_ATTRIBUTES = ("x", "y", "width", "height", "viewbox", "cx", "cy", "r", "rx", "ry", "d", "points", "x1", "y1", "x2",
+                    "y2", "transform", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin",
+                    "stroke-dasharray", "opacity", "fill-opacity", "stroke-opacity", "paint-order", "font-size",
+                    "font-family", "font-weight", "text-anchor", "dominant-baseline", "class", "data-step", "data-part",
+                    "data-pad")
+#: Words that make a kept attribute's value load or run something in CSS, lowercase, and the backslash of a CSS escape.
+UNPLAIN_VALUES = ("url(", "image-set", "javascript:", "expression", "\\")
 
 #: Value: one part's picture: its inner SVG markup, its viewBox as (x, y, width, height), and the credit a drawing
 #: prints for it ("" for spark's own pictograms).

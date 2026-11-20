@@ -122,14 +122,15 @@ InlineSvg = namedtuple("InlineSvg", "markup pads")
 class SvgInliner:
     """
     Renderer: an SVG as markup that stands in the page (P949), or None. Inline, an SVG runs its scripts and its handlers,
-    and an <img> does not, so it inlines only an SVG that parses, holds no DOCTYPE, uses only `part_pictures.PLAIN_SHAPES`,
-    and has no `on` attribute, no `href` and no `url(` anywhere. It works on its own parse: every tag and attribute loses
-    its namespace, so the root has no xmlns and the file keeps its own, the comments are gone and every text stays
-    escaped. The same SVG gives the same bytes.
+    and an <img> does not, so it inlines only an SVG that parses and holds no DOCTYPE, whose elements are all
+    `part_pictures.PLAIN_SHAPES` and whose attributes are all `PLAIN_ATTRIBUTES` (its name lowercased, as HTML reads
+    it, with no namespace), and no value of which, read after the parse and lowercased, holds an `UNPLAIN_VALUES` word.
+    It works on its own parse: every tag loses its namespace, so the root has no xmlns and the file keeps its own, the
+    comments are gone and every text stays escaped. The same SVG gives the same bytes.
     """
 
     def inline(self, svg):
-        if "url(" in svg or "<!doctype" in svg.lower():
+        if "<!doctype" in svg.lower():
             return None
         try:
             root = ElementTree.fromstring(svg)
@@ -143,13 +144,12 @@ class SvgInliner:
 
     @staticmethod
     def _plain(element):
-        """True when `element` is a plain shape with no `on` attribute and no `href`; it drops every namespace on the way."""
+        """True when `element` is a plain shape whose every attribute is allowed and holds no unplain word; it drops the
+        tag's namespace on the way."""
         element.tag = _local(element.tag)
-        for name in list(element.attrib):
-            if _local(name).startswith("on") or _local(name) == "href":
-                return False
-            element.attrib[_local(name)] = element.attrib.pop(name)
-        return element.tag in part_pictures.PLAIN_SHAPES
+        names = all(name.lower() in part_pictures.PLAIN_ATTRIBUTES for name in element.attrib)
+        values = not any(word in value.lower() for value in element.attrib.values() for word in part_pictures.UNPLAIN_VALUES)
+        return element.tag in part_pictures.PLAIN_SHAPES and names and values
 
 
 def _local(name):

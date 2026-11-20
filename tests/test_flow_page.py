@@ -805,6 +805,19 @@ class TheInlinePictureTest(unittest.TestCase):
             "DOCTYPE": '<!DOCTYPE svg [<!ENTITY a "b">]><svg><text>&a;</text></svg>',
             "a masked path that is no XML": "<svg><text>read <project>/notes</text></svg>",
             "nested beyond the recursion limit": "<svg>" + "<g>" * 100000 + "</g>" * 100000 + "</svg>",
+            # the review's refuter ran each of these in headless Chrome: HTML lowercases an attribute's name, and CSS
+            # reads an escaped or uppercase url( and image-set
+            "ONLOAD": "<svg ONLOAD=\"document.title='SCRIPT-RAN'\"><rect/></svg>",
+            "OnClick": '<svg><rect OnClick="alert(1)"/></svg>',
+            "HREF": '<svg><rect HREF="#x"/></svg>',
+            "URL(": '<svg><rect fill="URL(#a)"/></svg>',
+            "&#117;rl(": '<svg><rect fill="&#117;rl(http://x/a)"/></svg>',
+            "&#x55;RL(": '<svg><rect fill="&#x55;RL(http://x/a)"/></svg>',
+            "a CSS escape": '<svg><rect fill="\\75 rl(http://x/a)"/></svg>',
+            "image-set": "<svg><rect fill=\"image-set('http://x/a.png' 1x)\"/></svg>",
+            "a style attribute": '<svg><rect style="fill:red"/></svg>',
+            "javascript:": '<svg><rect class="javascript:alert(1)"/></svg>',
+            "a namespaced attribute": '<svg xmlns:a="http://a.example"><rect a:fill="red"/></svg>',
         }
         for name, svg in guards.items():
             with self.subTest(name):
@@ -816,6 +829,14 @@ class TheInlinePictureTest(unittest.TestCase):
         # the control: plain shapes, an attribute that starts with "o" and a text that says "on" stand in the page
         text = page_of(a_phase("one"), pictures=[Picture("Breadboard", '<svg><rect opacity="1"/><text>on</text></svg>', None)])
         self.assertEqual((text.count(FIGURE), text.count("data:image/svg+xml;base64,")), (1, 0))
+
+    def test_spark_s_own_breadboard_and_every_pictogram_stand_in_the_page(self):
+        pictograms = sorted((ROOT / "data" / "pictograms").glob("*.svg"))
+        self.assertGreaterEqual(len(pictograms), 5)
+        for name, svg in [("breadboard.svg", self.svg)] + [(each.name, each.read_text()) for each in pictograms]:
+            with self.subTest(name):
+                text = page_of(a_phase("one"), pictures=[Picture("Breadboard", svg, None)])
+                self.assertEqual((text.count(FIGURE), text.count("data:image/svg+xml;base64,")), (1, 0))
 
     def test_the_mask_covers_the_inline_picture(self):
         home = Path(tempfile.mkdtemp()).resolve()
@@ -830,6 +851,21 @@ class TheInlinePictureTest(unittest.TestCase):
         # the test can fail: the same page, rendered without the mask, holds the home path
         unmasked = FlowHtmlPage().text(FlowPage("t", [a_phase("one").to_dict()], None, [picture], []))
         self.assertIn(str(home), unmasked)
+
+    def test_the_mask_covers_a_home_path_written_as_character_references(self):
+        # the review: the mask reads the raw text, and the parse turns &#47; into the / of the home path
+        home = Path(tempfile.mkdtemp()).resolve()
+        encoded = str(home).replace("/", "&#47;")
+        picture = Picture("Breadboard", '<svg xmlns="http://www.w3.org/2000/svg"><text>%s&#47;notes</text></svg>' % encoded, None)
+        store = FakeStore()
+        with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
+            write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("one")), parts_of([picture]),
+                       store=store)
+        text = store.written[0][2]
+        self.assertNotIn(str(home), text)
+        self.assertIn("<text>~/notes</text>", text)
+        # the test can fail: the same page, rendered without the mask, holds the decoded home path inline
+        self.assertIn(str(home), FlowHtmlPage().text(FlowPage("t", [a_phase("one").to_dict()], None, [picture], [])))
 
 
 def pad_legend(text):
@@ -849,7 +885,7 @@ class TheLookTest(unittest.TestCase):
     def test_the_pad_legend_follows_an_inline_breadboard_only(self):
         svg = (a_drawn_project() / "breadboard.svg").read_text()
         text = page_of(a_phase("one"), pictures=[Picture("Breadboard", svg, None)])
-        self.assertEqual(pad_legend(text), [("#ffd34d", "pad used by a wire"), ("#c9a24b", "pad free")])
+        self.assertEqual(pad_legend(text), [("#ffd34d", "pad in use"), ("#c9a24b", "pad free")])
         self.assertLess(text.index("</figure>"), text.index('<ul class="pads">'))
         held = '<svg><circle r="2" fill="#5bc0eb" data-pad="held"/></svg>'
         text = page_of(a_phase("one"), pictures=[Picture("Breadboard", held, None)])

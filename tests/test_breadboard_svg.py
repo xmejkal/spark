@@ -458,7 +458,7 @@ def pad_states(text, layout):
 
 
 class ThePadStatesTest(unittest.TestCase):
-    """P949: the dot on each part's pin says whether its row is used by a wire or free, in the praised page's colours."""
+    """P949: the dot on each pin says whether its row joins a wire or another part (in use) or nothing (free)."""
 
     def test_a_pin_is_used_when_its_row_joins_a_jumper_or_another_part_and_free_otherwise(self):
         text, layout = xiao_svg()

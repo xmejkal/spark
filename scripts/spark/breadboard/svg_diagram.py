@@ -25,7 +25,7 @@ PadMark = collections.namedtuple("PadMark", "fill words")
 #: something on the board is already wired to it. spark draws no pad held yet: that needs the board record's onboard
 #: roles (P950).
 PAD_USED, PAD_FREE, PAD_HELD = "used", "free", "held"
-PAD_MARKS = {PAD_USED: PadMark("#ffd34d", "pad used by a wire"), PAD_FREE: PadMark("#c9a24b", "pad free"),
+PAD_MARKS = {PAD_USED: PadMark("#ffd34d", "pad in use"), PAD_FREE: PadMark("#c9a24b", "pad free"),
              PAD_HELD: PadMark("#5bc0eb", "pad held: do not use")}
 
 
