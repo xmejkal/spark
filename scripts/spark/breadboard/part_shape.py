@@ -172,13 +172,28 @@ class RecordShapeSource(ShapeSource):
         if len(grounds) != 1 or grounds[0] not in pins:
             raise NotDrawnError("the board's ground pads, less the doubtful ones, are not exactly one: %s" % (", ".join(grounds) or "none"),
                            drawing.GROUND_NOT_ONE, ", ".join(grounds) or None)
-        return PartShape((width, height), pins, grounds[0], self._groups(len(pins), doubtful))
+        return PartShape((width, height), pins, grounds[0], self._with_row_side(self._groups(len(pins), doubtful), physical))
+
+    def _with_row_side(self, groups, physical):
+        """`groups` with the row side the record states (`physical.header.row_side`, P946): verified when the record says
+        so with a source; a stated side that is not the drawing's refuses the board. A record that states none, or states
+        it in no object, keeps the convention, unverified."""
+        row_side = physical["header"].get("row_side")
+        if not isinstance(row_side, dict):
+            return groups
+        if row_side.get("value") != groups["row_side"]["value"]:
+            raise self._disagrees("physical.header.row_side", "physical.header.row_side is not where the drawing puts "
+                                                              "row 0 (%s)" % groups["row_side"]["value"])
+        if row_side.get("verified") is True and isinstance(row_side.get("source"), str) and row_side["source"]:
+            groups["row_side"] = dict(groups["row_side"], verified=True, source=row_side["source"])
+        return groups
 
     @staticmethod
     def _groups(pad_count, doubtful):
-        """The fact groups, each with its provenance. None is verified: no fact of the record says a pad is where the
+        """The fact groups, each with its provenance. None is verified here: no fact of the record says a pad is where the
         drawing puts it (the FireBeetle's own record calls two pads unresolved), the row side and the USB end are the
-        footprint code's convention, and a doubtful pad is the record's own doubt."""
+        footprint code's convention, and a doubtful pad is the record's own doubt. `find_shape` takes the row side as
+        verified when the record's `physical.header.row_side` says so, with its source (P946)."""
         groups = {
             "pads": {"value": pad_count, "verified": False, "source": "the board file's physical header and header_order",
                      "why_it_matters": "a pad label read wrong wires the wrong pin, and no fact of the record says the pads are checked",

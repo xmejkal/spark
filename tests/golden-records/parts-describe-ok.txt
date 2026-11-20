@@ -8,6 +8,8 @@
   --sources          ask every URL a record cites whether it answers  [network]
   --fetch            download the datasheets and images a record cites, into your store  [network, writes]
   --keep             put a file you already have into your store; answers its documents entry, and with --part lists it in that record  [writes]
+  --keep-picture     keep a picture of a part (an SVG in its frame, see --picture-frame) and name it in the part's record as its picture for a view  [writes]
+  --picture-frame    the frame a part's picture is drawn on: an SVG in mm of its outline and its pads, from its record or its board's
   --read             read a datasheet page by page and stop where every --want fact is on a table row
   --kept             find a kept document by every word, with no network, and every fact resting on it
   --promote          catalog → the project's parts/, or the project's parts/ → the plugin's library  [writes]

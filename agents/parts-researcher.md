@@ -131,6 +131,8 @@ under a name is worse than no record.
   `physical_proof` `{verified, source, why_it_matters}`. Never guess a value. A module takes no `physical.header_order`:
   that key is a board's, and a module's pad order is its `pin_order` and each pad's label its need's or supply's `printed`.
 - `short_name` — what a person calls the part on the bench, a plain noun (`e-paper`); the sheet's steps use it.
+- `pictures` — never write it by hand. `parts.py --keep-picture` writes it with the picture's `documents` entry (P946):
+  one block per view (`breadboard-top`), `{document, made_by, likeness, credit, verified}`.
 - `facts` — the numbers a design rests on: supply range, current, thresholds, limits — each with
   its source. A module on an I2C bus says where its pull-ups come from: `module_has_i2c_pullups`
   (and `i2c_pullup_ohms`, 1k–10k) when it carries them, or pull-up `host_parts` on SDA and SCL when

@@ -374,7 +374,7 @@ class SimulatedPart:
         return self.why_not_read() or "the Wokwi definition of %s has no pin on GPIO%d" % (self.board_id, gpio)
 
 
-def _names_a_kept_file(entry):
+def names_a_kept_file(entry):
     """
     True when a `documents` entry is a table whose `sha256` is 64 lowercase hex characters and whose `file` is a plain
     name (`store.file_name_problem`, and no backslash and no `..`): the only entries that name a place under the store's
@@ -403,7 +403,7 @@ def read_simulated_part(board):
         return SimulatedPart(outcomes.NONE_RECORDED, board_id)
     not_kept = SimulatedPart(outcomes.NOT_CHECKED, board_id, why=WHY_NOT_KEPT)
     entry = documents[WOKWI_DEFINITION]
-    if not _names_a_kept_file(entry):
+    if not names_a_kept_file(entry):
         return not_kept
     try:
         payload = (store.place("sources") / entry["sha256"] / entry["file"]).read_bytes()

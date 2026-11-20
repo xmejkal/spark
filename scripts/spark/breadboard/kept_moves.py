@@ -212,7 +212,7 @@ class KeepMovesFirstFitPartPlacement(drawing.FirstFitPartPlacement):
             ledger.claim(hole, "%s %s" % (part_id, pin))
         for hole in covered:
             ledger.claim(hole, "%s, which covers it" % part_id)
-        return drawing.PlacedPart(part_id, drawn.type, drawn.attrs, left, top, turn, holes), None
+        return drawing.PlacedPart(part_id, drawn.type, drawn.attrs, left, top, turn, holes, drawn.record), None
 
     def place(self, part_id, drawn, ledger, after=0, pinned=None):
         kept = self.reserved.pop(part_id, None)

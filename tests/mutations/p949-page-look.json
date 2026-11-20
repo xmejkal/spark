@@ -12,7 +12,7 @@
  {"file": "scripts/spark/flow/flow_page.py", "name": "P949 review: any attribute is taken", "find": "        names = all(name.lower() in part_pictures.PLAIN_ATTRIBUTES for name in element.attrib)", "replace": "        names = True"},
  {"file": "scripts/spark/flow/flow_page.py", "name": "P949 review: an attribute's name is read as written, not as HTML reads it", "find": "all(name.lower() in part_pictures.PLAIN_ATTRIBUTES", "replace": "all(name in part_pictures.PLAIN_ATTRIBUTES"},
  {"file": "scripts/spark/breadboard/part_pictures.py", "name": "P949 review: a style attribute is plain", "find": "PLAIN_ATTRIBUTES = (\"x\", \"y\",", "replace": "PLAIN_ATTRIBUTES = (\"style\", \"x\", \"y\","},
- {"file": "scripts/spark/flow/flow_page.py", "name": "P949 review: no value is read", "find": "        values = not any(word in value.lower()", "replace": "        values = True or any(word in value.lower()"},
+ {"file": "scripts/spark/flow/flow_page.py", "name": "P949 review: no value is read", "find": "    return not any(word in value.lower() for value in attributes.values()", "replace": "    return True or any(word in value.lower() for value in attributes.values()"},
  {"file": "scripts/spark/flow/flow_page.py", "name": "P949 review: a value is read as written, not lowercased", "find": "any(word in value.lower() for value", "replace": "any(word in value for value"},
  {"file": "scripts/spark/breadboard/part_pictures.py", "name": "P949 review: a CSS escape is plain", "find": "\"javascript:\", \"expression\", \"\\\\\")", "replace": "\"javascript:\", \"expression\")"},
  {"file": "scripts/spark/flow/flow_page.py", "name": "P949: a DOCTYPE is taken", "find": "        if \"<!doctype\" in svg.lower():", "replace": "        if False:"},

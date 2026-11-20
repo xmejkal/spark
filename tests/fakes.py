@@ -317,7 +317,7 @@ class FakePartPictures:
     """Fake: stands in for part_pictures.PartPictures, giving every type the same marked square, so a test sees which
     parts of a drawing come from the pictures source and which do not."""
 
-    def picture(self, wokwi_type):
+    def picture(self, wokwi_type, record=None):
         from spark.breadboard import part_pictures
         return part_pictures.Picture('<rect width="10" height="10" fill="#123456"/>', (0.0, 0.0, 10.0, 10.0),
                                      "fake picture of %s" % wokwi_type)

@@ -19,7 +19,7 @@ from spark.records import provenance
 from spark.records import record_kind
 from spark.records import store
 from spark.records.record_kind import (
-    _absent, available, DEFINITION_SUFFIX, document_problems, owes, _parse, PIN_LISTS, record_home, RecordKind,
+    _absent, available, DEFINITION_SUFFIX, document_problems, picture_problems, owes, _parse, PIN_LISTS, record_home, RecordKind,
     REQUIRED_KEYS, RETIRED, SELECTOR_SAFE, _shape_problems, type_problems, VERBS)
 from spark.sourcing import sourcing_codes
 from spark.sourcing.part_rules import (
@@ -486,6 +486,11 @@ def part_document_problems(part, validation):
     return document_problems(part)
 
 
+def part_picture_problems(part, validation):
+    """`record_kind.picture_problems` of the record (P946)."""
+    return picture_problems(part)
+
+
 def pin_order_proof_problems(part, validation):
     """`part_rules.pin_order_problems` of the record, unless it owes its `pin_order_proof`."""
     return [] if "pin_order_proof" in validation.owed else pin_order_problems(part)
@@ -522,7 +527,8 @@ RULES = (id_problems, field_type_problems, retired_key_problems, need_problems, 
          selector_pin_problems, rail_and_signal_problems, body_problems, physical_problems, placeholder_problems,
          footprint_name_problems,
          pin_order_pad_problems, pad_count_problems, power_direction_problems, part_fact_problems,
-         part_host_part_problems, part_i2c_pullup_problems, part_document_problems, pin_order_proof_problems, own_socket_problems,
+         part_host_part_problems, part_i2c_pullup_problems, part_document_problems, part_picture_problems,
+         pin_order_proof_problems, own_socket_problems,
          part_simulation_problems, part_function_problems)
 #: The part kind (P724). `field_type_problems` stops the rules after it: they read the fields it checks, so they run
 #: only on a record whose types are right.

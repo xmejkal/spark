@@ -248,6 +248,7 @@ RECORD_TYPES = {
     "pin_order": ListOf(str, nulls=True),  # a null is a pad with nothing on it
     "own_socket": {"pins": ListOf(str), "source": str, "cites": dict},  # P864: the output pins that end in the module's own socket
     "short_name": str,  # P945: what a step and a line before power call the part by
+    "pictures": MapOf(dict),  # P946: a picture per view, each a block that points at a kept document
 }
 
 
@@ -312,6 +313,47 @@ def document_problems(part: dict) -> list:
         elif isinstance(documents[document], dict) and documents[document].get("kept") is False:
             problems.append("%s cites %r, which is not kept, so nobody can read it there" % (where, document))
     return problems
+
+
+#: The views a part's `pictures` may hold (P946): the breadboard's view from above first; a new view is a new word here.
+PICTURE_VIEWS = ("breadboard-top",)
+#: How near a picture is to the real part: drawn to its measures, close to them, or a rough shape.
+LIKENESS = ("exact", "near", "rough")
+
+
+def picture_problems(part: dict) -> list:
+    """
+    A record's `pictures` (P946): one block per view, `{document, made_by, likeness, credit, verified}`, whose `document`
+    is a key of `documents` that names a kept file. `verified` is true only when the size it is drawn to (`body_mm`) is.
+    A `pictures` or a block of the wrong type is `type_problems`' to name.
+    """
+    pictures = part.get("pictures")
+    documents = part.get("documents") if isinstance(part.get("documents"), dict) else {}
+    problems = []
+    for view, block in (pictures.items() if isinstance(pictures, dict) else ()):
+        where = "pictures.%s" % view
+        if view not in PICTURE_VIEWS:
+            problems.append("%s is no view spark draws (%s)" % (where, ", ".join(PICTURE_VIEWS)))
+        elif isinstance(block, dict):
+            problems.extend(_picture_block_problems(where, block, documents, part.get("body_mm")))
+    return problems
+
+
+def _picture_block_problems(where, block, documents, body):
+    """The first problem of one view's block, as a list."""
+    document, size_verified = block.get("document"), isinstance(body, dict) and body.get("verified") is True
+    for wrong, sentence in (
+            (not isinstance(document, str) or document not in documents, "document is %r, which documents does not hold" % (document,)),
+            (not isinstance(documents.get(document), dict) or not re.fullmatch(r"[0-9a-f]{64}", str(documents[document].get("sha256"))),
+             "document is %r, which is not kept in the store" % (document,)),
+            (not isinstance(block.get("made_by"), str) or not block["made_by"], "made_by is %r, but it names the maker" % (block.get("made_by"),)),
+            (block.get("likeness") not in LIKENESS, "likeness is %r, but it is one of %s" % (block.get("likeness"), ", ".join(LIKENESS))),
+            (not isinstance(block.get("credit"), str) or not block["credit"].strip(), "credit is %r, but it says who made the picture" % (block.get("credit"),)),
+            (not isinstance(block.get("verified"), bool), "verified is %r, but it is true or false" % (block.get("verified"),)),
+            (block.get("verified") is True and not size_verified, "verified is true, but body_mm is not verified")):
+        if wrong:
+            return ["%s.%s" % (where, sentence)]
+    return []
 
 
 def _citations(value, where=""):

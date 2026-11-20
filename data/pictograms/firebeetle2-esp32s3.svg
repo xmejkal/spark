@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25.4 60" width="25.4mm" height="60mm">
+<title>FireBeetle 2 ESP32-S3: drawing from the PO's pixel-games wiring page (pixel-master/docs/wiring.html), MIT</title>
+<g transform="matrix(0 0.141111 -0.141111 0 85.937 -144.372)" font-family="sans-serif">
+  <rect x="1023.1" y="429.0" width="425.2" height="180.0" rx="7" fill="#16202a" stroke="#000" />
+  <circle cx="1035.2" cy="441.0" r="5.5" fill="#f4f1ea" stroke="#c9a24b" stroke-width="2" />
+  <circle cx="1035.2" cy="597.0" r="5.5" fill="#f4f1ea" stroke="#c9a24b" stroke-width="2" />
+  <circle cx="1436.3" cy="441.0" r="5.5" fill="#f4f1ea" stroke="#c9a24b" stroke-width="2" />
+  <circle cx="1436.3" cy="597.0" r="5.5" fill="#f4f1ea" stroke="#c9a24b" stroke-width="2" />
+  <rect x="1023.1" y="455.2" width="180.7" height="127.6" rx="1.5" fill="#222d38" stroke="#6b7680" />
+  <rect x="1071.3" y="462.3" width="125.4" height="113.4" rx="1.5" fill="#d5d9dc" stroke="#8b949b" />
+  <text transform="rotate(180 1134.1 512.0)" x="1134.1" y="512.0" font-size="17" fill="#16202a" text-anchor="middle" font-weight="700">FireBeetle 2</text>
+  <text transform="rotate(180 1134.1 499.0)" x="1134.1" y="499.0" font-size="11" fill="#16202a" text-anchor="middle" font-weight="600">ESP32-S3 (DFR0975)</text>
+  <rect x="1259.8" y="453.1" width="26.9" height="126.9" rx="1.5" fill="#cfd4d8" stroke="#555" />
+  <rect x="1266.9" y="460.2" width="12.8" height="112.7" rx="1.5" fill="#3a424a" stroke="#222" />
+  <rect x="1218.7" y="467.3" width="14.2" height="103.5" rx="1.5" fill="#0c0f12" stroke="#555" />
+  <rect x="1226.5" y="484.3" width="6.4" height="69.4" rx="0.5" fill="#f3efe3" stroke="#888" />
+  <text x="1256.8" y="477.7" font-size="10" fill="#fff" text-anchor="middle" font-weight="700" transform="rotate(90 1256.8 477.7)">CAM</text>
+  <text x="1213.5" y="519.0" font-size="11" fill="#fff" text-anchor="middle" font-weight="700" transform="rotate(90 1213.5 519.0)">GDI</text>
+  <rect x="1291.0" y="499.9" width="21.3" height="21.3" rx="1.5" fill="#8b949b" stroke="#333" />
+  <circle cx="1301.7" cy="510.5" r="6" fill="#4a5158" />
+  <rect x="1388.8" y="432.5" width="22.7" height="19.8" rx="1.5" fill="#3a424a" stroke="#111" />
+  <rect x="1388.8" y="585.6" width="22.7" height="19.8" rx="1.5" fill="#3a424a" stroke="#111" />
+  <rect x="1316.5" y="555.9" width="52.4" height="53.1" rx="1.5" fill="#f3efe3" stroke="#888" />
+  <text transform="rotate(180 1342.8 578.5)" x="1342.8" y="578.5" font-size="11" fill="#16202a" text-anchor="middle" font-weight="700">BAT</text>
+  <rect x="1405.1" y="487.1" width="51.7" height="68.0" rx="1.5" fill="#b9c0c5" stroke="#555" />
+  <rect x="1432.5" y="462.9" width="9" height="6" rx="1" fill="#fff4cf" stroke="#c9a24b" />
+  <rect x="1432.5" y="569.1" width="9" height="6" rx="1" fill="#fff4cf" stroke="#c9a24b" />
+  <text transform="rotate(180 1301.7 488.0)" x="1301.7" y="488.0" font-size="8.2" fill="#b8c2ca" text-anchor="middle" font-weight="400">BOOT</text>
+</g>
+</svg>

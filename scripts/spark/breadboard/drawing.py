@@ -24,10 +24,12 @@ BREADBOARDS_FILE = Path(__file__).resolve().parents[3] / "data" / "breadboards.j
 #: Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, its group (the holes joined with it inside the
 #: board: a breadboard row such as 12t, or a rail such as tp), and its column (from 1; a rail hole has none, 0).
 Hole = collections.namedtuple("Hole", "name x y group column")
-#: What the planner draws for one component: its Wokwi type and attrs, and {its pin as the steps name it: Wokwi pin}.
-DrawnPart = collections.namedtuple("DrawnPart", "type attrs pins")
-#: One component on the breadboard: its id, type, attrs, top-left corner in px, its turn, and {Wokwi pin: Hole}.
-PlacedPart = collections.namedtuple("PlacedPart", "id type attrs left top rotate holes")
+#: What the planner draws for one component: its Wokwi type and attrs, {its pin as the steps name it: Wokwi pin}, and
+#: its record (the board's or the part's, None for a part with none), which its picture is looked up by (P946).
+DrawnPart = collections.namedtuple("DrawnPart", "type attrs pins record", defaults=(None,))
+#: One component on the breadboard: its id, type, attrs, top-left corner in px, its turn, {Wokwi pin: Hole} and its
+#: record, as its DrawnPart has it.
+PlacedPart = collections.namedtuple("PlacedPart", "id type attrs left top rotate holes record", defaults=(None,))
 #: One jumper between two holes, for the step it belongs to, with the bends of its route as Wokwi writes them (strings
 #: such as "v-20"), empty when it runs straight, and what it carries (`wiring_steps.role_of`), which picks its color.
 Jumper = collections.namedtuple("Jumper", "one other step route role", defaults=((), wiring_steps.SIGNAL))
@@ -282,7 +284,7 @@ class FirstFitPartPlacement(PartPlacement):
                     ledger.claim(hole, "%s %s" % (part_id, pin))
                 for hole in covered:
                     ledger.claim(hole, "%s, which covers it" % part_id)
-                return PlacedPart(part_id, drawn.type, drawn.attrs, left, top, degrees, holes)
+                return PlacedPart(part_id, drawn.type, drawn.attrs, left, top, degrees, holes, drawn.record)
         raise NotDrawnError("%s does not fit on the breadboard" % part_id, NO_HOLE_LEFT, part_id)
 
     def _fit(self, turned, left, top, ledger, after, pinned):

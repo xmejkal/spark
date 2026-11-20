@@ -112,6 +112,7 @@ STEPPED = (STORE + "history.jsonl", json.dumps({"event": "step", "project": "but
 DRAWER = planted(STORE + "drawer/red-leds.json", {"label": "red leds", "count": 5, "is": {"part": "led-red-5mm"}})
 CATALOG = planted(STORE + "catalog/golden-led.json", GOLDEN_LED)
 SHEET = ("sheet.pdf", "%PDF-1.4 golden\n")
+PICTURE = ("picture.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 8"><rect width="5" height="8"/></svg>\n')
 SHEET_KEPT = STORE + "sources/52d4d0818e899676cc5d6b002096ebd21d4108b2df2bb7d7cc4717d38325a0b3/sheet.pdf"
 ORDERS = planted("in.json", {"source": "dfrobot", "lines": 1, "stated": 1,
                              "items": [{"sku": "DFR0954", "name": "MAX98357 I2S Amplifier", "count": 2}]})
@@ -154,6 +155,10 @@ CASES = [
     Case("parts-keep-ok.txt", "parts.py", ["--keep", "sheet.pdf", "--url", CLOSED_URL], 0, (SHEET,),
          written=(SHEET_KEPT,)),
     Case("parts-keep-could-not-run-no-file.txt", "parts.py", ["--keep", "missing.pdf"], 2),
+    # P946: a record with no frame keeps no picture; a board's frame is printed
+    Case("parts-keep-picture-problems-no-frame.txt", "parts.py", ["--keep-picture", "picture.svg", "--part", "golden-led",
+         "--made-by", "drawing", "--likeness", "rough", "--credit", "a golden picture"] + WITH, 1, (SMALL_LED, PICTURE)),
+    Case("parts-picture-frame-ok.txt", "parts.py", ["--picture-frame", "firebeetle2-esp32s3"], 0),
     Case("parts-read-ok.txt", "parts.py", ["--read", "sheet.pdf", "--want", "forward_voltage_v"], 0, (SHEET,)),
     Case("parts-read-problems-not-found.txt", "parts.py", ["--read", "sheet.pdf", "--want", "peak_wavelength_nm"], 1,
          (SHEET,)),

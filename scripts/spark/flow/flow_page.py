@@ -11,7 +11,7 @@ import html
 import xml.etree.ElementTree as ElementTree
 from collections import namedtuple
 
-from spark.breadboard import before_power, part_pictures
+from spark.breadboard import before_power, part_pictures, picture_check
 from spark.breadboard.svg_diagram import PAD_MARKS
 from spark.breadboard.tabbed_page import token_styles
 from spark.flow import flow_codes
@@ -125,7 +125,8 @@ class SvgInliner:
     and an <img> does not, so it inlines only an SVG that parses and holds no DOCTYPE, whose elements are all
     `part_pictures.PLAIN_SHAPES` and whose attributes are all `PLAIN_ATTRIBUTES` (its name lowercased, as HTML reads
     it, with no namespace), and no value of which, read after the parse and lowercased, holds an `UNPLAIN_VALUES` word.
-    It works on its own parse: every tag loses its namespace, so the root has no xmlns and the file keeps its own, the
+    One more element stands (P946): an `image` of `IMAGE_ATTRIBUTES` whose href is a JPEG embedded as base64, by
+    `picture_check.is_embedded_jpeg`, the rule a kept picture passed. No element may stand inside a `title`. It works on its own parse: every tag loses its namespace, so the root has no xmlns and the file keeps its own, the
     comments are gone and every text stays escaped. The same SVG gives the same bytes.
     """
 
@@ -134,7 +135,8 @@ class SvgInliner:
             return None
         try:
             root = ElementTree.fromstring(svg)
-            if not all(self._plain(element) for element in root.iter()):
+            if not all(self._plain(element) for element in root.iter()) or any(
+                    len(element) for element in root.iter() if element.tag == "title"):
                 return None
             markup = ElementTree.tostring(root, encoding="unicode")
         except Exception:  # noqa: BLE001  a hand-edited file can hold anything: whatever it raises, the page shows an <img>
@@ -147,9 +149,19 @@ class SvgInliner:
         """True when `element` is a plain shape whose every attribute is allowed and holds no unplain word; it drops the
         tag's namespace on the way."""
         element.tag = _local(element.tag)
+        if picture_check.repeated_names(element.attrib):  # HTML keeps the first of two names that are one lowercased
+            return False
+        if element.tag == "image":  # P946: a kept photo, whose one href is a JPEG embedded as base64
+            others = {name: value for name, value in element.attrib.items() if not picture_check.is_href(name)}
+            names = all(name.lower() in part_pictures.IMAGE_ATTRIBUTES for name in others)
+            return picture_check.is_embedded_jpeg(element.get("href")) and names and _plain_values(others)
         names = all(name.lower() in part_pictures.PLAIN_ATTRIBUTES for name in element.attrib)
-        values = not any(word in value.lower() for value in element.attrib.values() for word in part_pictures.UNPLAIN_VALUES)
-        return element.tag in part_pictures.PLAIN_SHAPES and names and values
+        return element.tag in part_pictures.PLAIN_SHAPES and names and _plain_values(element.attrib)
+
+
+def _plain_values(attributes):
+    """True when no value, lowercased, holds an `UNPLAIN_VALUES` word."""
+    return not any(word in value.lower() for value in attributes.values() for word in part_pictures.UNPLAIN_VALUES)
 
 
 def _local(name):

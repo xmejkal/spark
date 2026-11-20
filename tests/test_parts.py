@@ -3785,7 +3785,7 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         from spark.design import design_operations
         from spark.sourcing import sourcing_operations
         writers = [op for op, cls in {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS}.items() if WRITES in cls.effects]
-        self.assertEqual(sorted(writers), ["drawer-import", "drawer-set", "fact-set", "fetch", "function-set", "keep", "needs-set", "pick", "promote",
+        self.assertEqual(sorted(writers), ["drawer-import", "drawer-set", "fact-set", "fetch", "function-set", "keep", "keep-picture", "needs-set", "pick", "promote",
                                            "requirements", "skeleton", "step"])
         for op in writers:
             with self.subTest(op=op):

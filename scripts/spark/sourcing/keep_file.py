@@ -97,6 +97,19 @@ def list_document(part_id, project, entry, dry_run):
     if path is not None and record is None:
         return ListingResult(Answer(problems=[_problem(part_id, "%s is not JSON (%s) — repair the file by hand first" % (part_id, path),
                                                        code=sourcing_codes.PART_CONTRACT_BROKEN)]), None, None, None)
+    key, held, replaced, documents = document_listing(record, entry)
+    try:
+        answer = record_home.set_fields(part_id, project, {"documents": documents}, dry_run, _documents_problems)
+    except PartError as missing:
+        return ListingResult(Answer(problems=[_problem(part_id, str(missing) + ("" if project else NEEDS_PROJECT), code=missing.code)]),
+                             key, held, replaced)
+    return ListingResult(answer, key, held, replaced)
+
+
+def document_listing(record, entry):
+    """(key, held, replaced, documents): the key `entry` is listed under in `record`'s documents, the entry that already
+    lists the same bytes (by sha256, else None), the not-kept entry of the same URL it replaces (else None), and the
+    documents with it listed. A record with no documents object lists it in an empty one."""
     documents = record.get("documents") if isinstance(record, dict) else None
     documents = documents if isinstance(documents, dict) else {}
     key, held = next(((name, one) for name, one in documents.items() if isinstance(one, dict) and one.get("sha256") == entry["sha256"]),
@@ -106,13 +119,7 @@ def list_document(part_id, project, entry, dry_run):
          and one.get("url") == entry["url"]),
         (datasheets.document_key(entry["file"], documents), None))
     listed = dict(entry, title=replaced.get("title")) if replaced else entry
-    try:
-        answer = record_home.set_fields(part_id, project, {"documents": documents if held else dict(documents, **{key: listed})},
-                                        dry_run, _documents_problems)
-    except PartError as missing:
-        return ListingResult(Answer(problems=[_problem(part_id, str(missing) + ("" if project else NEEDS_PROJECT), code=missing.code)]),
-                             key, held, replaced)
-    return ListingResult(answer, key, held, replaced)
+    return key, held, replaced, documents if held else dict(documents, **{key: listed})
 
 
 def _documents_problems(record, after, path):

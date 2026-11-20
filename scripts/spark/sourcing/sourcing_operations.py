@@ -8,12 +8,14 @@ from spark.sourcing.fetch_documents import FetchDocuments
 from spark.sourcing.import_drawer import ImportDrawer
 from spark.sourcing.find_kept import FindKept
 from spark.sourcing.keep_file import KeepFile
+from spark.sourcing.keep_picture import KeepPicture
 from spark.sourcing.list_catalog import ListCatalog
 from spark.sourcing.list_drawer import ListDrawer
 from spark.sourcing.list_parts import ListParts
 from spark.sourcing.list_signals import ListSignals
 from spark.sourcing.list_unverified import ListUnverified
 from spark.sourcing.mark_step import MarkStep
+from spark.sourcing.picture_frame import DrawPictureFrame
 from spark.sourcing.promote_record import PromoteRecord
 from spark.sourcing.read_datasheet import ReadDatasheet
 from spark.sourcing.resolve_sources import ResolveSources
@@ -27,5 +29,6 @@ from spark.sourcing.write_skeleton import WriteSkeleton
 # --- MVP ---
 OPERATIONS = {operation.name: operation for operation in (
     ListParts, ShowPart, ValidateParts, ListSignals, ListUnverified, WriteSkeleton, ResolveSources, FetchDocuments, KeepFile,
+    KeepPicture, DrawPictureFrame,
     ReadDatasheet, FindKept, PromoteRecord, ListCatalog, ListDrawer, MarkStep, SetDrawer, ImportDrawer, SetFunction, SetFacts)}
 # --- end MVP ---

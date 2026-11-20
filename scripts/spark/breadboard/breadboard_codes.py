@@ -1,5 +1,6 @@
 """
-The reasons `sheet.write` writes no sheet, each a code with one sentence (P692, W6-B2).
+The reasons `sheet.write` writes no sheet, each a code with one sentence (P692, W6-B2), and the rules a part's picture
+breaks (P946, `PICTURE_CODES`), all in `CODES`.
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
 sentence (no magic strings, P260). A NotBuiltError carries its code, and `sheet.refusal_code` gives the code of each error
@@ -28,4 +29,23 @@ CODES = {
     STORE_PROBLEM: "spark's store cannot be read or written",
     FILE_UNUSABLE: "a file the sheet reads or writes cannot be opened: its path, its folder or its permissions",
 }
+
+#: The rules a part's picture breaks (P946, `picture_check.PictureCheck`): a picture that breaks one is not kept, and a
+#: kept one that breaks one is not drawn.
+PICTURE_NOT_SVG, PICTURE_VIEW_BOX, PICTURE_ELEMENT = "picture_not_svg", "picture_view_box", "picture_element"
+PICTURE_ATTRIBUTE, PICTURE_LINK, PICTURE_JPEG = "picture_attribute", "picture_link", "picture_jpeg"
+PICTURE_GUIDE_LEFT, PICTURE_PAD_LABEL, PICTURE_TOO_BIG = "picture_guide_left", "picture_pad_label", "picture_too_big"
+#: Each picture rule's code and the one sentence that says what it means.
+PICTURE_CODES = {
+    PICTURE_NOT_SVG: "the picture is no SVG: its bytes are no UTF-8, do not parse, hold a DOCTYPE or an entity, or its root is no svg",
+    PICTURE_VIEW_BOX: "the picture's viewBox is not 0 0 W H with W and H the part's frame size in mm, within 0.1 mm",
+    PICTURE_ELEMENT: "an element is no plain shape and no image, or stands inside a title",
+    PICTURE_ATTRIBUTE: "an attribute is not one a picture holds, or its value can load or run something (url(, http and the like)",
+    PICTURE_LINK: "a link that is not a JPEG embedded as base64 on an image, or a text that holds a web address",
+    PICTURE_JPEG: "an embedded JPEG is no whole JPEG, or holds an APP1 segment (EXIF, which can say where a photo was taken)",
+    PICTURE_GUIDE_LEFT: "the frame's guide group (data-guide) is left in: the pads are spark's to draw",
+    PICTURE_PAD_LABEL: "a text is a pad's printed label: spark draws the labels over the picture",
+    PICTURE_TOO_BIG: "the picture is over 250000 bytes with no embedded JPEG, or over 400000 with one",
+}
+CODES.update(PICTURE_CODES)  # one table of the area's codes: the sheet's refusals and the picture rules
 # --- end MVP ---
