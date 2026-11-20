@@ -173,6 +173,7 @@ class WhatCannotBeMeasuredIsKeptTest(unittest.TestCase):
         for swap in ({"pour": bulge}, {"pour": lambda pour: pour.update(shape="rect")},
                      {"pour": lambda pour: pour["brep_shape"]["outer_ring"]["vertices"][0].update(x="-56.8")},
                      {"trace": no_width}, {"trace": lambda trace: trace["route"][1].update(route_type="arc")},
+                     {"trace": lambda trace: trace["route"][2].pop("layer")},
                      {"board": lambda board: board.pop("min_trace_to_pad_edge_clearance")},
                      {"board": lambda board: board.update(min_trace_to_pad_edge_clearance=True)}):
             with self.subTest(swap=swap):
