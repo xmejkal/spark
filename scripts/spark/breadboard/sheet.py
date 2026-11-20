@@ -419,7 +419,7 @@ def _drawn_or_not(paths, planned):
     if layout:
         return drawn, [why._replace(path=path) for path, _, why in said if why]
     return drawn, [drawing.NotWritten(path, renderer, planned.stopped.code, planned.stopped.subject,
-                                      str(planned.stopped)) for path, renderer, _ in said]
+                                      str(planned.stopped), planned.stopped.record) for path, renderer, _ in said]
 
 
 def _texts(drawn, paths, planned):

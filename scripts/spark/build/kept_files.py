@@ -19,6 +19,8 @@ from spark.design import pin_assigner
 from spark.firmware import sim_project
 from spark.records import board_records, store
 
+from spark.core import codes, outcomes
+from spark.core.operation import ASKS, FETCHES, READS, WRITES
 from spark.core.outcomes import OK, STATUS_FOR
 from spark.core.result import envelope_item
 
@@ -289,10 +291,28 @@ def keep_breadboard(requirements, destination, stages=()):
 def not_written_entry(one):
     """The kept entry of a drawing a build did not write (a `drawing.NotWritten`): `expected` is true for a code a retry
     gives again (`drawing.BY_DESIGN`): the agent does not retry, and for `not_drawn_yet` tells the person to wire it by
-    hand from the sheet's steps (P691, P783)."""
-    return {"file": str(one.path), "did": "not written", "code": one.code, "subject": one.subject,
+    hand from the sheet's steps (P691, P783). When a part record lacks the fact, `record` is its id and `fix` the code's
+    fix filled with it (P945); with no record known, neither key is there."""
+    said = {"file": str(one.path), "did": "not written", "code": one.code, "subject": one.subject,
             "expected": one.code in drawing.BY_DESIGN, "why": one.why,
             "line": "no %s: %s" % (one.renderer.NOUN, one.why)}
+    if one.record is not None and isinstance(one.code, codes.Code):
+        said.update(record=one.record, fix=one.code.fix % one.record)
+    return said
+
+
+#: Why a build names the research step next (P945): the breadboard picture cannot draw a part before its facts are found.
+WHY_DRAWING_NEXT = "find the physical facts that draw this part on the breadboard picture, before you wire it"
+
+
+def drawing_next_steps(kept, project=None):
+    """The `next` of a build whose breadboard picture lacks a part's facts: one research step per record a kept entry
+    names (the entry's `record`, P945), with `--project` when the build ran in a project. [] when every part is drawn."""
+    records = list(dict.fromkeys(entry["record"] for entry in kept or [] if entry.get("record")))
+    where = ["--project", str(project)] if project else []
+    return [outcomes.add_env(outcomes.step("research", ["--part", record] + where, WHY_DRAWING_NEXT,
+                                           effects=(READS, WRITES, ASKS, FETCHES)), store.read_given_env())
+            for record in records]
 
 
 def why_not_built(stages, board_only_why):

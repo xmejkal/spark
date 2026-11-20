@@ -689,5 +689,18 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             "other.py:line 10: spark.core.result.Finding makes a Finding: Finding.of takes the fix from its Code"]))
 
 
+class TheDrawingCodeTest(unittest.TestCase):
+    """P945: no_drawing_fact is a Code, so a build's kept entry gives its fix filled with the record that lacks the fact."""
+
+    def test_no_drawing_fact_is_a_code_whose_fix_names_the_research_of_the_record(self):
+        from spark.breadboard import drawing
+        self.assertIsInstance(drawing.NO_DRAWING_FACT, Code)
+        self.assertEqual(drawing.NO_DRAWING_FACT, "no_drawing_fact")
+        self.assertEqual(drawing.NO_DRAWING_FACT.fix % "x-module", "research.py --part x-module asks for the physical facts that draw it")
+        self.assertEqual(drawing.CODES["no_drawing_fact"], drawing.NO_DRAWING_FACT.meaning)
+        with self.assertRaises(TypeError):
+            codes.fix_of(drawing.NO_DRAWING_FACT)  # a template: its site fills it, never a raw %s
+
+
 if __name__ == "__main__":
     unittest.main()

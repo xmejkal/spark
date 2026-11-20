@@ -10,7 +10,7 @@ from pathlib import Path
 from spark.bench import board_envelope
 from spark.breadboard import tabbed_page
 from spark.build.build_service import findings_of, verdict
-from spark.build.kept_files import KeepAsked, keep_all, left_off, simulation_dir
+from spark.build.kept_files import KeepAsked, drawing_next_steps, keep_all, left_off, simulation_dir
 from spark.build.requirements_build import RequirementsBuildService
 from spark.build.stage_help_table import StageHelpTable
 from spark.build.stages import BUILD_STAGES, skipped_the_build
@@ -19,6 +19,7 @@ from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, 
 from spark.core.renderers import FlatJsonLine
 from spark.core.result import OperationResult
 from spark.core.text_guards import guard_lines
+from spark.design import loader
 from spark.flow.write_flow_page import write_kept_page
 
 #: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
@@ -38,6 +39,12 @@ def render(stages, code, unserved=()):
         EXIT_COULD_NOT_RUN: "  the chain was NOT exercised — this is not a pass",
     }[code] + (" — but not every need is on the board: %s" % ", ".join(unserved) if unserved and code == EXIT_OK else ""))
     return "\n".join(lines) + "\n"
+
+
+def project_of(requirements):
+    """The project folder a requirements file belongs to, or None for none given or the plugin's own library."""
+    project = loader.project_for(requirements) if requirements else None
+    return None if project is None or loader.is_library(project) else project
 
 
 # --- MVP ---
@@ -105,8 +112,10 @@ class BuildBoard(Operation):
         built = self.service.build(requirements, firmware, simulation_dir(sim_dir, keep), add_diagnostics=outside.add_diagnostics)
         try:
             code = verdict(built.stages)
-            following = board_envelope.firmware_next_steps(code == EXIT_OK, requirements)  # P517: write the firmware next
             kept = keep_all(built.stages, built.workdir, KeepAsked(requirements, keep, sim_dir), tabbed_page.TscircuitExport(built.toolchain), write_kept_page)
+            # P945: find the facts that draw a part before the wiring, then P517: write the firmware next
+            following = (drawing_next_steps(kept, project_of(requirements))
+                         + board_envelope.firmware_next_steps(code == EXIT_OK, requirements))
             text = guard_lines(render(built.stages, code, left_off(built.requirements)) + board_envelope.next_text(following))
             return OperationResult(said_of(built.stages, code, built.requirements, following, kept), findings_of(built.stages),
                                    lines=text[:-1].split("\n"),  # the one final newline is `print`'s

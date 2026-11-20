@@ -357,7 +357,7 @@ class TheGuideNamesEveryCodeTest(unittest.TestCase):
         guide = ROOT / "docs" / "guide"
         text = "".join(page.read_text() for page in [guide / "agents.md"] + sorted((guide / "agents").glob("*.md")))
         self.assertEqual([code for code in drawing.CODES if "`%s`" % code not in text], [])
-        for field in ("code", "subject", "expected", "drawn_from"):
+        for field in ("code", "subject", "expected", "drawn_from", "fix", "record"):
             self.assertIn("`%s`" % field, text)
 
 
