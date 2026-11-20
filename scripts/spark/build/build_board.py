@@ -61,8 +61,8 @@ class BuildBoard(Operation):
     Operation: the build. It runs the chain on a requirements file (None: the reference design) with the
     RequirementsBuildService it was given, keeps what --keep and --sim-dir ask for (`kept_files.keep_all`) and removes
     the work folder, after a crash too. Its data is the dict check_spine printed with --json (`said_of`), its lines the
-    verdict's text, its diagnostics the build's own lines (through `outside.add_diagnostics`, so a crash in the keep step
-    keeps them, P840) and then each kept entry's line, and its Findings `build_service.findings_of` the stages.
+    verdict's text, its diagnostics each kept entry's line, after the service's own lines (handed `outside.add_diagnostics`,
+    so a crash later keeps them, P840, P938), and its Findings `build_service.findings_of` the stages.
     """
 
     name = "build-board"
@@ -100,8 +100,7 @@ class BuildBoard(Operation):
     def run(self, requirements=None, keep=None, sim_dir=None, firmware=None, *, outside):
         """The build of `requirements` (a path as given, or None), `keep` and `sim_dir` each a str, a Path or None."""
         keep, sim_dir = (Path(keep) if keep else None), (Path(sim_dir) if sim_dir else None)
-        built = self.service.build(requirements, firmware, simulation_dir(sim_dir, keep))
-        outside.add_diagnostics(built.diagnostics)
+        built = self.service.build(requirements, firmware, simulation_dir(sim_dir, keep), add_diagnostics=outside.add_diagnostics)
         try:
             code = verdict(built.stages)
             following = board_envelope.firmware_next_steps(code == EXIT_OK, requirements)  # P517: write the firmware next

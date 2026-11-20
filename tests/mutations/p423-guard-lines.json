@@ -75,7 +75,7 @@
  {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "deploy's gate refusal is an event, not a diagnostic",
-  "find": "            self.diagnostics.append(\"%s: %s\" % (SCRIPT, shut))",
+  "find": "            self.outside.add_diagnostics([\"%s: %s\" % (SCRIPT, shut)])",
   "replace": "            self.say(DeployPhase.GATE, \"%s: %s\" % (SCRIPT, shut))"
  },
  {

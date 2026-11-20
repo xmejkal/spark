@@ -132,7 +132,8 @@ class DeployFlowService:
     """
     Service: one deploy from the plan to the record, phase by phase, over a DeployService built by `service_for`. Each phase
     returns the exit code when the run ends there, or None to go on. `reached()` is what the result reports, filled as the
-    run goes; its `stage` is the StageTrackingReporter's. `diagnostics` are the stderr lines.
+    run goes; its `stage` is the StageTrackingReporter's. Its stderr lines go to `outside.add_diagnostics` as they are
+    said (P938).
     """
 
     def __init__(self, service_for, outside, grants, asked, board_question):
@@ -143,7 +144,7 @@ class DeployFlowService:
         self.service = service_for(outside._replace(report=self.stages.report))
         self._reached = {"project": self.service.project.resolve(), "evidence": self.service.evidence,
                          "token": asked.token, "port": asked.port, "dry_run": asked.dry_run}
-        self.diagnostics, self.look, self.consent, self.planned, self.judged = [], None, None, None, None
+        self.look, self.consent, self.planned, self.judged = None, None, None, None
 
     def reached(self):
         """What the run reached so far, with the stage, for `board_envelope.deploy_result`."""
@@ -163,7 +164,7 @@ class DeployFlowService:
     def refuse(self, cannot):
         """The exit code of a refusal before the board was touched, said on stderr as `deploy.py: <why>`."""
         self._reached.update(refusal=str(cannot), reason=reason_of(cannot))
-        self.diagnostics.append("%s: %s" % (SCRIPT, cannot))
+        self.outside.add_diagnostics(["%s: %s" % (SCRIPT, cannot)])
         return EXIT_COULD_NOT_RUN
 
     def plan(self):
@@ -233,7 +234,7 @@ class DeployFlowService:
         lines = ["%s: %s" % (SCRIPT, cannot)]
         if isinstance(cannot, board_look.LookStopError):
             lines, reached["doctor"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)
-        self.diagnostics += lines
+        self.outside.add_diagnostics(lines)
         return EXIT_COULD_NOT_RUN
 
     def look_and_flash(self):
@@ -259,7 +260,7 @@ class DeployFlowService:
                 reached["run_in_terminal"] = rerun_line(reached["project"], token, look.port, reached["evidence"])
                 if board_grant.grant_may_cover(look, reached["evidence"]):
                     reached["grant_argv"] = grant_argv(reached["project"], look.port, "60")
-            self.diagnostics.append("%s: %s" % (SCRIPT, shut))
+            self.outside.add_diagnostics(["%s: %s" % (SCRIPT, shut)])
             return shut.code
         return None
 
@@ -426,7 +427,7 @@ class DeployImage(Operation):
             if flow.stages.stage not in CRASH_STATES:
                 raise
             return self._crashed(flow, crashed)
-        return board_envelope.deploy_result(flow.reached(), code, flow.diagnostics)
+        return board_envelope.deploy_result(flow.reached(), code)
 
     def _crashed(self, flow, crashed):
         """The result of a crash after the gate passed: one unchecked Finding with code `crash` that names the board's state,
@@ -438,5 +439,5 @@ class DeployImage(Operation):
         finding = Finding(outcomes.COULD_NOT_RUN, reached["stage"], codes.CRASH, "%s; the board %s" % (CRASH_MESSAGE % name, state.words), state.fix)
         look = NextStep(**board_envelope.look_step(reached["project"], reached.get("port"), reached["evidence"], CRASH_WHY_LOOK % state.words))
         return OperationResult(data, [finding], [look],
-                               diagnostics=flow.diagnostics + [CRASHED_MESSAGE % (self.name, name), state.fix] + traceback_lines(crashed))
+                               diagnostics=[CRASHED_MESSAGE % (self.name, name), state.fix] + traceback_lines(crashed))
 # --- end MVP ---
