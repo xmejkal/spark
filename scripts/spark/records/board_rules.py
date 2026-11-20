@@ -426,7 +426,13 @@ def board_document_problems(board, validation):
     return record_kind.document_problems(board)
 
 
+def board_feature_problems(board, validation):
+    """`record_kind.feature_problems` of the record: its measured features and its colour (P956)."""
+    return record_kind.feature_problems(board)
+
+
 #: The board's rules, in the order `board_records.BOARD` runs them after the shared schema and required-key checks.
 RULES = (id_problems, wokwi_power_pin_problems, pin_problems, gpio_list_problems, pad_problems, pin_role_problems,
          adc2_role_problems, power_problems, forbidden_key_problems, fab_key_problems, power_pad_rail_problems,
-         selector_name_problems, drill_problems, footprint_export_problems, plain_id_problems, board_document_problems)
+         selector_name_problems, drill_problems, footprint_export_problems, plain_id_problems, board_document_problems,
+         board_feature_problems)
