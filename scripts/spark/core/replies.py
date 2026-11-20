@@ -314,22 +314,27 @@ def needs_reply_findings(questions, replies_path, line):
                        NEEDS_REPLY.fix % (replies_path, line, replies_path)) for question in questions]
 
 
+def _misfit(key, question, lacks):
+    """The `bad_reply` of a value that does not fit `question`: its fix quotes the question's `example` when it has one,
+    else its `answer_form`, else what its kind takes."""
+    if question.example is not None:
+        return Finding.of(outcomes.PROBLEMS, key, BAD_REPLY, lacks, BAD_REPLY.fix % (json.dumps(question.example),))
+    return Finding.of(outcomes.PROBLEMS, key, BAD_REPLY_AS_ASKED, lacks, BAD_REPLY_AS_ASKED.fix % (question.answer_form or KIND_FORMS[question.kind]))
+
+
 def reply_problems(replies, questions, filled=()):
     """The problems in `replies` (key to Reply) against the open `questions`: a key no question has is `unknown_reply`
     with the nearest open key, a key in `filled` (a fact the record holds) is `unknown_reply` too, because a stray reply
-    would overwrite a fact, and a value that does not fit its question's kind is `bad_reply`, whose fix quotes the
-    question's `example` when it has one, else its `answer_form`, else what its kind takes. Nothing here is silent."""
+    would overwrite a fact, and a value that does not fit its question's kind is `bad_reply` (`_misfit`). Nothing here is
+    silent."""
     open_by_key = {question.key: question for question in questions}
     found = []
     for key, reply in replies.items():
         if key in open_by_key:
             question = open_by_key[key]
             lacks = question.misfit(reply.value)
-            if lacks and question.example is not None:
-                found.append(Finding.of(outcomes.PROBLEMS, key, BAD_REPLY, lacks, BAD_REPLY.fix % (json.dumps(question.example),)))
-            elif lacks:
-                found.append(Finding.of(outcomes.PROBLEMS, key, BAD_REPLY_AS_ASKED, lacks,
-                                        BAD_REPLY_AS_ASKED.fix % (question.answer_form or KIND_FORMS[question.kind])))
+            if lacks:
+                found.append(_misfit(key, question, lacks))
         elif key in filled:
             found.append(Finding.of(outcomes.PROBLEMS, key, UNKNOWN_REPLY, NOT_OPEN % key))
         else:

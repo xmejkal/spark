@@ -26,8 +26,8 @@
  {
   "file": "scripts/spark/core/replies.py",
   "name": "a bad reply quotes the example when the question has none, and the form when it has one",
-  "find": "            if lacks and question.example is not None:\n",
-  "replace": "            if lacks and question.example is None:\n"
+  "find": "    if question.example is not None:\n",
+  "replace": "    if question.example is None:\n"
  },
  {
   "file": "scripts/spark/core/cli.py",
@@ -56,25 +56,43 @@
  {
   "file": "tests/test_json_contracts.py",
   "name": "the scan takes a literal as a given fix",
-  "find": "    return [node]\n",
-  "replace": "    return [] if isinstance(node, ast.Constant) else [node]\n"
+  "find": "    return [(node, filled)]\n",
+  "replace": "    return [] if isinstance(node, ast.Constant) else [(node, filled)]\n"
  },
  {
   "file": "tests/test_json_contracts.py",
   "name": "the scan takes the fix of a Code of another word",
-  "find": "        return isinstance(code, Code) and code == word\n",
-  "replace": "        return isinstance(code, Code)\n"
+  "find": "        if not isinstance(code, Code) or code != word:\n",
+  "replace": "        if not isinstance(code, Code):\n"
  },
  {
   "file": "tests/test_json_contracts.py",
   "name": "the scan takes a _replace whose fix is made from another Finding's",
-  "find": " and ast.unparse(node.value) == receiver\n",
-  "replace": "\n"
+  "find": " and ast.unparse(node.value) == receiver for node in ast.walk(fix))",
+  "replace": " for node in ast.walk(fix))"
  },
  {
   "file": "tests/test_core.py",
   "name": "the rebuild scan misses x.__class__(...)",
   "find": "    return by_type or isinstance(call.func, ast.Attribute) and call.func.attr == \"__class__\"\n",
   "replace": "    return by_type\n"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes an unfilled template as a given fix",
+  "find": "        return filled or \"%\" not in code.fix\n",
+  "replace": "        return True\n"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "a Code named past its word passes as a variant without its parent's name",
+  "find": "        if not name.startswith(code.upper() + \"_\") or parent is None:\n",
+  "replace": "        if parent is None:\n"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "a variant may hold its parent's fix, so an alias passes as one",
+  "find": "        elif code.fix == parent.fix:\n",
+  "replace": "        elif False:\n"
  }
 ]

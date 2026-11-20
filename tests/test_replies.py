@@ -2,6 +2,7 @@
 chained), the one tty adapter, the project's replies file, and the Findings an open list makes. No network; the terminal is a fake."""
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -203,6 +204,7 @@ class RepliesStoreTest(unittest.TestCase):
                 self.assertEqual(refused.exception.code, "bad_argument", text)
 
 
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root writes anywhere")
     def test_a_file_that_cannot_be_read_or_written_has_its_own_fix(self):
         # P935: pinned literally before the fixes moved into the codes
         with self.assertRaises(SparkError) as refused:

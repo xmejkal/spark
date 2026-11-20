@@ -53,8 +53,6 @@ MAY_READ = {
     "bench.OPERATIONS": STRUCTURE + " (P919: scripts/bench.py made `bench` a scripts/ name, and the look's test walks the bench area's ops)",
     "sourcing_operations.OPERATIONS": STRUCTURE + " (P726 PR 2: the fifteen part ops on the core, each checked against its parts.OPERATIONS row)",
     "codes.INPUT_UNREADABLE": "a code's NAME, the word an agent decides on — vocabulary, not a value",
-    "codes.BAD_ARGUMENT": "a code's NAME raised by the test, its template filled there; the expectations are literals (P935)",
-    "codes.NEEDS_REPLY": "a code's NAME raised by the test; the expectation is a literal (P935)",
     "parts.HELP": "parts.py's own HelpText, given to run_cli so a test prints as parts.py prints — a fixture, not a value",
     "board_console.READ_CONSOLE": "the script the test runs against a fake serial module: the code under test, not the expectation",
     "image_evidence.COMPILE_CHILD": "the compile child's script, which the fake run answers for and the world's `ran` must hold, its flags "

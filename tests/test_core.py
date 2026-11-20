@@ -116,11 +116,12 @@ class SparkErrorTest(unittest.TestCase):
 
     def test_a_code_whose_fix_is_a_template_takes_no_default_fix(self):
         # P935: a raise without the template's values fails here, never as a raw %s in the JSON
-        with self.assertRaisesRegex(TypeError, "^the fix of 'bad_argument' is a template: give fix=, filled with its values$"):
-            SparkError("x", code=codes.BAD_ARGUMENT)
-        with self.assertRaisesRegex(TypeError, "^the fix of 'needs_reply' is a template"):
-            Finding.of(outcomes.COULD_NOT_RUN, None, codes.NEEDS_REPLY, "s")
-        self.assertEqual(SparkError("x", code=codes.BAD_ARGUMENT, fix=codes.BAD_ARGUMENT.fix % "x.py").fix, "x.py --help lists the arguments")
+        bad = Code("x_bad", "m", "%s --help")
+        with self.assertRaisesRegex(TypeError, "^the fix of 'x_bad' is a template: give fix=, filled with its values$"):
+            SparkError("x", code=bad)
+        with self.assertRaisesRegex(TypeError, "^the fix of 'x_bad' is a template"):
+            Finding.of(outcomes.COULD_NOT_RUN, None, bad, "s")
+        self.assertEqual(SparkError("x", code=bad, fix=bad.fix % "x.py").fix, "x.py --help")
 
 
 class FindingTest(unittest.TestCase):
@@ -757,8 +758,8 @@ class SchemaTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
             code = run_cli(HelpText("x.py", "", ""), Writes(), ["--set", str(given), "--json"], outside_builder=build_bare_outside_world)
         item = json.loads(out.getvalue())["unchecked"][0]
-        self.assertEqual((code, item["code"], item["fix"]), (2, "input_unreadable", "repair the file at that path so that it holds JSON, "
-                                                             "or pipe JSON to stdin, then run again"))
+        self.assertEqual((code, item["code"], item["fix"]), (2, "input_unreadable", "make the file or the stdin that the sentence names hold JSON, "
+                                                             "then run again"))
 
     def test_a_required_flag_refuses_an_empty_argv_with_the_cli_s_own_fix(self):
         # P726 PR 3: parts.py's --describe is required, so `parts.py` alone exits 2 and the fix names --describe

@@ -70,7 +70,7 @@ BAD_REPLY = Code("bad_reply", "a reply whose value does not fit its question's k
 BAD_REPLY_AS_ASKED = Code(BAD_REPLY, BAD_REPLY.meaning, "answer as the question asks: %s")
 #: The JSON a payload Argument names, a file or stdin, cannot be read or is not JSON (P726 PR 3; it was sourcing_codes' since P717).
 INPUT_UNREADABLE = Code("input_unreadable", "the JSON a write reads, from a file or from stdin, cannot be read or is not JSON",
-                        "repair the file at that path so that it holds JSON, or pipe JSON to stdin, then run again")
+                        "make the file or the stdin that the sentence names hold JSON, then run again")
 
 #: Each code and the one sentence that says what it means.
 CODES = {code: code.meaning for code in (BAD_ARGUMENT, CRASH, UNDECLARED_EFFECT, NEEDS_REPLY, UNKNOWN_REPLY, BAD_REPLY, INPUT_UNREADABLE)}
