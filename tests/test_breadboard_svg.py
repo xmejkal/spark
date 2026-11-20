@@ -550,6 +550,19 @@ def pill_box(pill):
             max(py for _, py in corners))
 
 
+def board_marks(root):
+    """(text, box) of each mark printed on the board itself, the root's own texts but the note lines: each row letter,
+    column number and rail sign, its box 0.6 of its size wide a character, from 0.75 of its size above its baseline to
+    0.25 below, about its x (they are centred)."""
+    marks = []
+    for text in root.findall("svg:text", NS):
+        if text.get("text-anchor") == "middle":
+            x, y, size = float(text.get("x")), float(text.get("y")), float(text.get("font-size"))
+            half = 0.3 * size * len(text.text)
+            marks.append((text.text, (x - half, y - 0.75 * size, x + half, y + 0.25 * size)))
+    return marks
+
+
 def boxes_meet(one, other, by=0):
     """True when two boxes (left, top, right, bottom) overlap or come closer than `by`."""
     return (one[0] - by <= other[2] and other[0] - by <= one[2] and one[1] - by <= other[3] and other[1] - by <= one[3])
@@ -640,6 +653,16 @@ class ThePillsTest(unittest.TestCase):
                                 min(piece[0][0], piece[1][0]), min(piece[0][1], piece[1][1]),
                                 max(piece[0][0], piece[1][0]), max(piece[0][1], piece[1][1])), half)]
                             self.assertEqual(near, [], other.get("data-step"))
+        # the review of PR #1377: no pill meets a printed mark of the board, a row letter, a column number or a rail's
+        # sign, on every fixture and every golden picture (the rebuild's too)
+        for name, text in self.pictures.items():
+            with self.subTest(name):
+                root = ElementTree.fromstring(text)
+                marks = board_marks(root)
+                self.assertGreaterEqual(len([mark for mark, _ in marks if mark in ("+", "−")]), 2)
+                for group in root.findall(".//svg:g[@class='wire']", NS):
+                    box = pill_box(pill_of(group))
+                    self.assertEqual([mark for mark, other in marks if boxes_meet(box, other)], [], group.get("data-step"))
 
     def test_every_pill_finds_a_free_place_on_every_fixture(self):
         # no pill falls back to its longest run's middle: each sits on a straight piece of its own wire, centred across
