@@ -62,6 +62,8 @@ DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(JUMPER_COLORS),
                      svg_diagram.SvgBreadboardDiagram(JUMPER_COLORS, pictures=picture_makers.MadePartPictures(
                          picture_makers.PictureMakerChain(picture_makers.MAKERS[name]() for name in picture_makers.BUILD_MAKERS),
                          part_pictures.PictogramPartPictures())))
+#: What the sheet says once when a part sits closer to the part before it than the free columns the planner keeps (P953).
+CROWDED_MESSAGE = "The parts are closer than %d columns because the breadboard is full."
 #: What the sheet says before power is applied, from `wiring_data`'s before_power.
 BEFORE_POWER_LIST = before_power.BeforePowerList()
 #: What the sheet says of the bench: one line per change since the last sheet for another design, in these words.
@@ -345,6 +347,8 @@ def _drawing_lines(planned):
     if declined:
         lines += ["", drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE % declined.why]
     lines += [line for one in drawing_catalog.board_lines(planned.layout) for line in ("", one)]
+    if planned.layout.crowded:
+        lines += ["", CROWDED_MESSAGE % planned.layout.geometry.surface.body_gap_columns]
     if planned.differs:
         more = len(planned.differs) - 1
         lines += ["", "The drawing does not join the points the same way: %s%s. Wire from the steps above."

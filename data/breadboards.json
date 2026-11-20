@@ -1,5 +1,34 @@
 {
- "//": "spark's own breadboard surface for a board drawn from its own record (P412): 63 columns, the half board's pitch, first column and rows, no rails. The columns are the PO's word, 2026-10-29; the model is not recorded, and rails are not recorded or drawn. Wokwi-measured facts stay in data/wokwi-geometry.json.",
+ "//": "spark's own breadboard surface for a board drawn from its own record (P412): 63 columns, the half board's pitch, first column and rows. The columns are the PO's word, 2026-10-29; the model is not recorded. Its rails (P953) are a drawing convention, as covers_holes is in data/wokwi-geometry.json, not a measured fact: four rails of 50 holes in blocks of 5, each hole on a column's x, + above - on both sides as on Wokwi's half board, each pair 3 pitches from its outer row of holes. Wokwi-measured facts stay in data/wokwi-geometry.json.",
+ "//palette": "The breadboard picture's colours (P953), from the old wiring page of the README (pixel-master/docs/wiring.html): the page, the board's body and edge, the gap between the halves, the holes, the rail holes, the + and - rails' lines and signs, the letters and numbers, and the titles. Another look is another palette here, with no code.",
+ "palette": {
+  "page": "#ffffff",
+  "board": "#f4f1ea",
+  "edge": "#c9c3b6",
+  "gap": "#e7e2d7",
+  "hole": "#8d969c",
+  "rail_hole": "#c2c0b8",
+  "plus": "#d0202a",
+  "minus": "#1668c7",
+  "grid_text": "#6b7176",
+  "title": "#20262b"
+ },
+ "//sizes_px": "The picture's sizes in px at spark's 9.6 px pitch: the old page's (18 px pitch) times 9.6 / 18. board_pad is the space from the outermost hole to the board's edge, gap_band the gap's height, rail_line_off how far a rail's line lies off its holes, numbers_every which columns get a number (and column 1).",
+ "sizes_px": {
+  "board_rx": 4.3,
+  "edge_width": 0.53,
+  "hole": 2.7,
+  "rail_hole": 2.35,
+  "rail_line": 0.8,
+  "rail_line_opacity": 0.6,
+  "rail_line_off": 3.84,
+  "rail_sign": 8.5,
+  "letters": 5.9,
+  "numbers": 5.3,
+  "numbers_every": 5,
+  "gap_band": 24,
+  "board_pad": 19.2
+ },
  "full": {
   "type": "spark-breadboard-full",
   "columns": 63,
@@ -18,6 +47,16 @@
    "j": 156.6
   },
   "top_letters": "abcde",
-  "rails_y": {}
+  "//body_gap_columns": "The free columns the planner keeps between two part bodies (P953, the PO's 'leave space in between elements', 2026-11-20), room for the wires between them. Wokwi's half board has none, so its layout stays the one Wokwi was shown.",
+  "body_gap_columns": 4,
+  "rails_y": {
+   "tp": 12.6,
+   "tn": 22.2,
+   "bp": 185.4,
+   "bn": 195
+  },
+  "rail_holes": 50,
+  "first_rail_x": 35.6,
+  "rail_block": 5
  }
 }

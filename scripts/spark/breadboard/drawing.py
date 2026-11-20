@@ -16,6 +16,7 @@ import json
 from pathlib import Path
 
 from spark.breadboard import wiring_steps
+from spark.breadboard.spacing import BodyBox, BodySpacing, ends_toward_their_runs, rotate, tall_module_row
 from spark.core import codes
 
 WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parents[3] / "data" / "wokwi-geometry.json"
@@ -33,8 +34,9 @@ PlacedPart = collections.namedtuple("PlacedPart", "id type attrs left top rotate
 #: One jumper between two holes, for the step it belongs to, with the bends of its route as Wokwi writes them (strings
 #: such as "v-20"), empty when it runs straight, and what it carries (`wiring_steps.role_of`), which picks its color.
 Jumper = collections.namedtuple("Jumper", "one other step route role", defaults=((), wiring_steps.SIGNAL))
-#: Value: the whole drawing as holes, and the `geometry` it was planned on, which any renderer reads.
-BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts jumpers geometry")
+#: Value: the whole drawing as holes, the `geometry` it was planned on, which any renderer reads, and `crowded`, the id of
+#: each part placed closer to the part before it than its surface's `body_gap_columns`, since the board had no room.
+BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts jumpers geometry crowded", defaults=((),))
 
 
 #: Why a board or a part cannot be drawn, as codes (P412): the code a build and an agent decide on, never the sentence.
@@ -120,6 +122,10 @@ class Surface:
                 self.holes.append(Hole("%s.%d" % (rail, number), x, y, rail, 0))
         self.terminal = [hole for hole in self.holes if hole.column]
         self.rails = list(board["rails_y"])
+        self.letters_y = dict(board["letters_y"])
+        self.top_letters = board["top_letters"]
+        #: The free columns the planner keeps between two part bodies on this board (P953); 0 keeps the old rule.
+        self.body_gap_columns = board.get("body_gap_columns", 0)
         #: The terminal holes column by column, nearest the gap first and the side below the gap before the side above
         #: it at the same distance: ranked by letter, never by float distance, whose ties would move a part.
         top = board["top_letters"]
@@ -130,7 +136,7 @@ class Surface:
 
     @classmethod
     def load_full(cls, path=BREADBOARDS_FILE):
-        """spark's own full-size surface, 63 columns and no rails (data/breadboards.json)."""
+        """spark's own full-size surface, 63 columns and four rails (data/breadboards.json)."""
         return cls(json.loads(Path(path).read_text())["full"])
 
     def hole_at(self, x, y, tolerance):
@@ -175,17 +181,6 @@ class WokwiGeometry:
     def hole_at(self, x, y):
         """The terminal hole under a pin at (x, y), within the measured tolerance, else None."""
         return self.surface.hole_at(x, y, self.tolerance)
-
-
-def rotate(pins, center, degrees):
-    """{pin: (x, y)} turned clockwise about the center, as Wokwi turns a part. Not rounded: round once, at the end."""
-    cx, cy = center
-    turned = {}
-    for pin, (x, y) in pins.items():
-        for _ in range(degrees // 90 % 4):
-            x, y = cx + cy - y, cy - cx + x
-        turned[pin] = (x, y)
-    return turned
 
 
 class HoleLedger:
@@ -252,7 +247,8 @@ class FirstFitPartPlacement(PartPlacement):
     that holds nothing else, and every hole the part covers is free. A part that covers holes also leaves each of its pins
     a free hole in its group, for a jumper (P412). A board that straddles the gap fits only when
     turned, because its pins in one line would share a group. `pinned` (pin, group) puts one pin in a group that already
-    holds something: a resistor's leg in the group of the pin it joins.
+    holds something: a resistor's leg in the group of the pin it joins. On a surface with `body_gap_columns` the whole
+    body lies right of `after` too, and a tall module takes only the outermost row (`spacing.tall_module_row`, P953).
     """
 
     #: Flat first, so a resistor lies along a row of holes before it stands across the gap.
@@ -267,17 +263,22 @@ class FirstFitPartPlacement(PartPlacement):
         if wanted:
             raise NotDrawnError("data/wokwi-geometry.json has no pin %s on %s" % (wanted[0], drawn.type), NO_PIN_POSITION,
                            drawn.type)
+        surface = self.geometry.surface
         for degrees in self.TURNS_DEGREES:
             turned = rotate(part_px["pins"], part_px["center"], degrees)
             first = pinned[0] if pinned else next(iter(turned))
-            candidates = [hole for hole in self.geometry.surface.by_gap if not pinned or hole.group == pinned[1]]
+            row = None if pinned else tall_module_row(part_px, turned, degrees, surface)
+            candidates = [hole for hole in surface.by_gap if (not pinned or hole.group == pinned[1])
+                          and (row is None or hole.name.endswith("." + row))]
             for start in candidates:
                 left, top = start.x - turned[first][0], start.y - turned[first][1]
+                if surface.body_gap_columns and min(BodyBox.at(part_px, degrees, left, top).columns(surface)) <= after:
+                    continue
                 holes = self._fit(turned, left, top, ledger, after, pinned)
                 if holes is None:
                     continue
                 covered = self._covered(part_px, degrees, left, top, holes) if part_px.get("covers_holes") else []
-                if any(not ledger.is_free(hole) or hole.column <= after for hole in covered):
+                if any(not ledger.is_free(hole) or (hole.column and hole.column <= after) for hole in covered):
                     continue
                 if part_px.get("covers_holes") and not self._pins_keep_a_free_hole(holes, covered, ledger):
                     continue
@@ -309,19 +310,17 @@ class FirstFitPartPlacement(PartPlacement):
                        for hole in self.geometry.surface.terminal) for pin in holes.values())
 
     def _covered(self, part_px, degrees, left, top, holes):
-        """The holes under the part's body, besides its own pins: its box, turned, about its center."""
+        """The holes under the part's body, besides its own pins, rail holes too: its box, turned, about its center."""
         cx, cy = part_px["center"]
         half_w, half_h = (cy, cx) if degrees % 180 else (cx, cy)
         mine = {hole.name for hole in holes.values()}
-        return [hole for hole in self.geometry.surface.terminal if hole.name not in mine
+        return [hole for hole in self.geometry.surface.holes if hole.name not in mine
                 and abs(hole.x - (left + cx)) < half_w and abs(hole.y - (top + cy)) < half_h]
 
 
 class BreadboardPlanner:
-    """Pure: the steps, the geometry and what to draw for each component in, a BreadboardLayout out."""
-
-    #: Columns from one part's last pin to the next part's first: one empty column between them, for the jumpers.
-    SPACING_COLUMNS = 2
+    """Pure: the steps, the geometry and what to draw for each component in, a BreadboardLayout out. The space between
+    part bodies is `spacing.BodySpacing`'s (P953): the layout names in `crowded` each part placed closer than it keeps."""
 
     def __init__(self, geometry, catalog, placement=None, jumper_placement=None):
         self.geometry = geometry
@@ -334,19 +333,12 @@ class BreadboardPlanner:
         ledger = HoleLedger(self.geometry.surface)
         self.placement.reserve_first(ledger)
         seated = list(steps.anchored())
-        placed, after = {}, 1
+        placed, spacing = {}, BodySpacing(self.geometry)
         for step in seated:
             if step.act == wiring_steps.PLACE:
-                placed[step.subject] = self.placement.place(step.subject, self._drawn(step.subject), ledger, after)
-                after = max(hole.column for hole in placed[step.subject].holes.values()) + self.SPACING_COLUMNS
-        for step in seated:
-            if step.act != wiring_steps.PLACE and step.anchor.seat().kind == wiring_steps.RAIL:
-                mark = step.anchor.seat().mark
-                raise NotDrawnError("%s goes on a rail, and rails are not drawn yet" % mark, NOT_DRAWN_YET, mark)
-            if step.act == wiring_steps.SUPPLY:
-                raise NotDrawnError("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject,
-                               NOT_DRAWN_YET, step.subject)
-        self._place_resistors(seated, placed, ledger, after)
+                placed[step.subject] = self._place_apart(spacing, step.subject, ledger)
+        self._refuse_what_is_not_drawn(seated)
+        self._place_resistors(seated, placed, ledger, spacing)
         parts_only = HoleLedger(self.geometry.surface, ledger.taken)
         groups, jumpers = {}, []
         for number, step in enumerate(seated, 1):
@@ -355,7 +347,7 @@ class BreadboardPlanner:
                 continue
             if step.act == wiring_steps.SETUP:
                 jumper = Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
-                                ledger.claim_free_group(after, end.name), number, role=step.role)
+                                ledger.claim_free_group(spacing.free_after(ledger), end.name), number, role=step.role)
                 groups[end.name] = jumper.other.group
                 jumpers.append(jumper)
             else:
@@ -363,11 +355,36 @@ class BreadboardPlanner:
                 jumpers.append(Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
                                       ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name), number,
                                       role=step.role))
-        return self.jumper_placement.place_jumpers(
-            BreadboardLayout(self.geometry.surface.type, list(placed.values()), jumpers, self.geometry), parts_only)
+        if spacing.gap:  # spark's own board; Wokwi's half board keeps the holes Wokwi was shown
+            jumpers = ends_toward_their_runs(jumpers)
+        return self.jumper_placement.place_jumpers(BreadboardLayout(
+            self.geometry.surface.type, list(placed.values()), jumpers, self.geometry, tuple(spacing.crowded)), parts_only)
 
-    def _place_resistors(self, seated, placed, ledger, after):
-        """A resistor has a fixed length, so it goes in with the leg that joins a row already in that row."""
+    @staticmethod
+    def _refuse_what_is_not_drawn(seated):
+        for step in seated:
+            if step.act != wiring_steps.PLACE and step.anchor.seat().kind == wiring_steps.RAIL:
+                mark = step.anchor.seat().mark
+                raise NotDrawnError("%s goes on a rail, and rails are not drawn yet" % mark, NOT_DRAWN_YET, mark)
+            if step.act == wiring_steps.SUPPLY:
+                raise NotDrawnError("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject,
+                               NOT_DRAWN_YET, step.subject)
+
+    def _place_apart(self, spacing, part_id, ledger, pinned=None, joins=None):
+        """The part placed with its body right of `spacing`'s bound; when the board has no room for that, by the old
+        rule, and named crowded. A resistor whose leg is `pinned` in the row of the part it `joins` keeps that part's."""
+        drawn = self._drawn(part_id)
+        after, close = spacing.bounds(joins)
+        try:
+            return spacing.placed(self.placement.place(part_id, drawn, ledger, after, pinned), False, joins)
+        except NotDrawnError as refused:
+            if refused.code != NO_HOLE_LEFT or after <= close:
+                raise
+        return spacing.placed(self.placement.place(part_id, drawn, ledger, close, pinned), True, joins)
+
+    def _place_resistors(self, seated, placed, ledger, spacing):
+        """A resistor has a fixed length, so it goes in with the leg that joins a row already in that row, its body in
+        the space of the part it joins (BodySpacing); one that joins no row keeps the space after the last part."""
         resistors = collections.OrderedDict()
         for step in seated:
             if (step.act in (wiring_steps.SETUP, wiring_steps.JOIN)
@@ -386,10 +403,9 @@ class BreadboardPlanner:
                 if len(pinned) > 1:
                     raise NotDrawnError("both ends of %s join other rows, and a drawn resistor has a fixed length"
                                    % component, NOT_DRAWN_YET, component)
-                drawn = self._drawn(component)
                 joined = [(self._pin(end), self._group_of(anchor, placed, {})) for end, anchor in pinned]
-                placed[component] = self.placement.place(component, drawn, ledger, after if not joined else 0,
-                                                         joined[0] if joined else None)
+                joins = pinned[0][1].component if joined else None
+                placed[component] = self._place_apart(spacing, component, ledger, joined[0] if joined else None, joins)
             waiting = [one for one in waiting if one[0] not in placed]
 
     def _drawn(self, component):

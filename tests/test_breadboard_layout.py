@@ -5,6 +5,7 @@ Wokwi diagram. The geometry is the one measured in Wokwi (docs/discovery/2026-10
     python3 -m unittest tests.test_breadboard_layout
 """
 
+import collections
 import hashlib
 import json
 import os
@@ -25,6 +26,7 @@ from spark.breadboard import drawing_catalog  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 from spark.breadboard import part_shape  # noqa: E402
+from spark.breadboard import spacing  # noqa: E402
 from spark.breadboard.drawing import HoleLedger, NotDrawnError, WokwiGeometry, rotate  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -274,7 +276,7 @@ class TheGeometryCopiesTest(unittest.TestCase):
         full = drawing.Surface.load_full()
         copied = GEOMETRY.with_surface(full)
         self.assertEqual((copied.surface.type, GEOMETRY.surface.type), ("spark-breadboard-full", "wokwi-breadboard-half"))
-        self.assertEqual((len(full.terminal), full.rails, full.pitch), (630, [], 9.6))
+        self.assertEqual((len(full.terminal), full.rails, full.pitch), (630, ["tp", "tn", "bp", "bn"], 9.6))
         self.assertEqual(len(GEOMETRY.surface.terminal), 300)
 
 
@@ -372,7 +374,8 @@ class TheRecordBoardLayoutTest(unittest.TestCase):
         self.assertEqual((refused.exception.code, refused.exception.subject), ("no_hole_left", "LedRed5mm"))
         placed = drawing.BreadboardPlanner(*record_inputs(self.read)).plan(self.read.steps).parts
         button = next(part for part in placed if part.id == "TactileButton")
-        self.assertEqual((min(h.column for h in button.holes.values()), max(h.column for h in button.holes.values())), (26, 28))
+        # P953: the board's body ends in 25 and four columns stay free, so the button's body starts in 30
+        self.assertEqual((min(h.column for h in button.holes.values()), max(h.column for h in button.holes.values())), (31, 33))
 
 
 EPAPER = ROOT / "tests" / "data" / "breadboard" / "epaper"
@@ -400,7 +403,8 @@ class AModuleDrawnFromItsRecordTest(unittest.TestCase):
     def test_its_8_holes_lie_on_one_letter_one_pitch_apart_seen_from_the_front(self):
         holes = self.module.holes
         self.assertEqual(len(holes), 8)
-        self.assertEqual({hole.name.split(".")[1] for hole in holes.values()}, {"e"})
+        # P953: a tall module takes the outermost row, so its body hangs off the board's bottom edge
+        self.assertEqual({hole.name.split(".")[1] for hole in holes.values()}, {"j"})
         # seen from the front, the back's left end (VCC) is on the right, and Busy is on the left
         order = sorted(holes, key=lambda pin: holes[pin].x)
         self.assertEqual(order, ["Busy", "Reset", "D/C", "CS", "SCLK", "SDI", "GND", "VCC"])
@@ -435,6 +439,123 @@ class AModuleDrawnFromItsRecordTest(unittest.TestCase):
             written = sheet.write(project / "requirements.json", project / "breadboard.md")
         self.assertEqual([path.name for path, _ in written.drawings], ["breadboard.svg"])
         self.assertEqual([(one.path.name, one.code) for one in written.not_written], [("breadboard.json", "no_wokwi_part")])
+
+
+WALK = ROOT / "tests" / "data" / "breadboard" / "walk-c6"
+
+
+def planned(fixture):
+    """The layout the build plans for one fixture of tests/data/breadboard, with an empty store."""
+    with in_store():
+        return sheet._plan_layout(sheet._read_build(fixture / "requirements.json"))
+
+
+def body_columns(layout):
+    """[(part id, first column, last column)] of each part's body, left to right."""
+    spans = []
+    for part in layout.parts:
+        columns = spacing.BodyBox.of(part, layout.geometry.part(part.type)).columns(layout.geometry.surface)
+        spans.append((part.id, columns[0], columns[-1]))
+    return sorted(spans, key=lambda span: span[1])
+
+
+class TheSpaceBetweenPartsTest(unittest.TestCase):
+    """P953 (#1359): the PO's "leave space in between elements": at least 4 free columns between two part bodies, a tall
+    module hanging off the outer edge of the breadboard, and a sheet that says so when the board is too full."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.walk = planned(WALK)
+        cls.epaper = next(part for part in cls.walk.parts if part.id == "Epaper2in9BwrMhEtLive")
+
+    def test_the_body_box_of_a_turned_part_is_its_four_corners_turned(self):
+        part_px = {"size": [40, 10], "center": [20, 5], "pins": {}}
+        flat = drawing.PlacedPart("x", "t", {}, 100, 50, 0, {})
+        self.assertEqual(tuple(spacing.BodyBox.of(flat, part_px)), (100, 50, 140, 60))
+        turned = flat._replace(rotate=90)
+        self.assertEqual(tuple(spacing.BodyBox.of(turned, part_px)), (115, 35, 125, 75))
+        self.assertEqual(spacing.BodyBox(100, 0, 130, 10).columns(GEOMETRY.surface), [9, 10, 11])
+
+    def test_no_two_bodies_are_closer_than_4_free_columns(self):
+        # a resistor whose leg sits in the row of the part it joins is one block with that part, so it is left out
+        for fixture in (WALK, RECORD_BOARD):
+            layout = planned(fixture)
+            groups = collections.Counter(hole.group for part in layout.parts for hole in part.holes.values())
+            joined = {part.id for part in layout.parts if any(groups[hole.group] > 1 for hole in part.holes.values())
+                      and part.type == "wokwi-resistor"}
+            spans = [span for span in body_columns(layout) if span[0] not in joined]
+            with self.subTest(fixture=fixture.name):
+                self.assertGreaterEqual(len(spans), 2)
+                for (one, _, last), (other, first, _) in zip(spans, spans[1:]):
+                    self.assertGreaterEqual(first - last - 1, 4, (one, other))
+
+    def test_a_resistor_joined_to_a_part_keeps_that_part_s_space(self):
+        # R1's leg is in the LED's row; turned the other way it would fill the free columns after the button
+        spans = {part: (first, last) for part, first, last in body_columns(planned(RECORD_BOARD))}
+        self.assertGreaterEqual(spans["R1"][0] - spans["TactileButton"][1] - 1, 4)
+
+    def test_a_body_that_reaches_left_of_its_pins_keeps_the_space(self):
+        # the refuter's numbers: the C6's body covers columns 2 to 25, so the e-paper's body starts at 30, and its first
+        # pin (Busy) is 13 columns right of that, in 42. Its body ends 4 px short of column 63.
+        self.assertEqual(body_columns(self.walk), [("board", 2, 25), ("Epaper2in9BwrMhEtLive", 30, 62)])
+        self.assertEqual((self.epaper.holes["Busy"].column, self.epaper.holes["VCC"].column), (42, 49))
+
+    def test_a_tall_module_hangs_off_the_outer_edge_and_covers_no_terminal_hole_above_its_row(self):
+        # its header is half a pitch from its body's edge, so the body covers row j beside its pins and no row above
+        surface = self.walk.geometry.surface
+        box = spacing.BodyBox.of(self.epaper, self.walk.geometry.part(self.epaper.type))
+        self.assertEqual({hole.name.split(".")[1] for hole in self.epaper.holes.values()}, {"j"})
+        self.assertGreater(box.bottom, max(hole.y for hole in surface.holes))
+        under = {hole.name.split(".")[1] for hole in surface.terminal
+                 if box.left < hole.x < box.right and box.top < hole.y < box.bottom}
+        self.assertEqual(under, {"j"})
+
+    def test_a_board_with_two_rows_of_pins_keeps_its_place_across_the_gap(self):
+        board = self.walk.parts[0]
+        self.assertEqual({hole.name.split(".")[1] for hole in board.holes.values()}, {"b", "i"})
+
+    def test_the_rail_holes_under_a_body_are_taken_and_do_not_refuse_its_place(self):
+        # a rail hole has no column (0), so "past the last part" never refuses it (the refuter's defect)
+        geometry, catalog = sheet._drawing_inputs(self._read())
+        ledger = HoleLedger(geometry.surface)
+        placed = drawing.FirstFitPartPlacement(geometry).place("Epaper2in9BwrMhEtLive", catalog["Epaper2in9BwrMhEtLive"],
+                                                               ledger, after=29)
+        rails = sorted(int(name.split(".")[1]) for name, by in ledger.taken.items()
+                       if name.startswith(("bp.", "bn.")) and by == "Epaper2in9BwrMhEtLive, which covers it")
+        self.assertEqual(placed.holes["Busy"].column, 42)
+        # rail hole n lies in column n + 1 + (n - 1) // 5, so holes 25 to 50 of both bottom rails lie in columns 30 to 60
+        self.assertEqual((len(rails) // 2, rails[0], rails[-1]), (26, 25, 50))
+
+    def test_all_end_holes_of_one_header_are_in_one_row_unless_taken(self):
+        groups = {hole.group for hole in self.epaper.holes.values()}
+        ends = [hole for jumper in self.walk.jumpers for hole in (jumper.one, jumper.other) if hole.group in groups]
+        rows = collections.Counter(hole.name.split(".")[1] for hole in ends)
+        # VCC takes two jumpers (3V3 and 3V3_2), so its second end is one row further out
+        self.assertEqual(dict(rows), {"f": 8, "g": 1})
+
+    def test_two_jumpers_into_one_row_take_the_hole_toward_their_other_end(self):
+        # the jumper from row a takes the upper hole and the one from row j the lower, so their legs never overlap
+        vcc = {jumper.step: (jumper.one.name, jumper.other.name) for jumper in self.walk.jumpers if jumper.step in (3, 4)}
+        self.assertEqual(vcc, {3: ("7b.j", "49b.g"), 4: ("11t.a", "49b.f")})
+
+    def test_a_full_breadboard_places_the_part_closer_and_says_so(self):
+        full = json.loads((ROOT / "data" / "breadboards.json").read_text())["full"]
+        with in_store():
+            read = sheet._read_build(RECORD_BOARD / "requirements.json")
+        # on 40 columns the button still keeps its 4 columns from the board, and the LED does not: it goes in by the old
+        # rule, 2 columns after the button's last pin
+        layout = drawing.BreadboardPlanner(*record_inputs(read, drawing.Surface(dict(full, columns=40)))).plan(read.steps)
+        self.assertEqual(layout.crowded, ("LedRed5mm",))
+        with in_store():
+            crowded = sheet.sheet(RECORD_BOARD / "requirements.json", read=read,
+                                  planned=sheet.PlannedLayout(layout, None, [], layout, ()))
+            spaced = sheet.sheet(RECORD_BOARD / "requirements.json", read=read, planned=sheet._plan_once(read))
+        self.assertEqual(crowded.count("The parts are closer than 4 columns because the breadboard is full."), 1)
+        self.assertNotIn("closer than", spaced)
+
+    def _read(self):
+        with in_store():
+            return sheet._read_build(WALK / "requirements.json")
 
 
 class AModuleWithNoDrawingFactTest(unittest.TestCase):
@@ -509,9 +630,9 @@ class EachStepNamesItsHolesTest(unittest.TestCase):
         lines = wiring_steps.NumberedList().render(read.steps, drawing.StepHoles.of(layout, read.steps))
         self.assertEqual(lines[:4], [
             "1. Put the board in the breadboard, each pin in its own row. Holes: b6 to b23, i10 to i23.",
-            "2. Put e-paper in the breadboard, each pin in its own row. Holes: e38 to e45.",
-            "3. Run a jumper from board 3V3 to the row of e-paper VCC. Holes: from a7 to a45.",
-            "4. Run a jumper from board A5 to the row of e-paper D/C. Holes: from j14 to a40."])
+            "2. Put e-paper in the breadboard, each pin in its own row. Holes: j42 to j49.",
+            "3. Run a jumper from board 3V3 to the row of e-paper VCC. Holes: from a7 to f49.",
+            "4. Run a jumper from board A5 to the row of e-paper D/C. Holes: from j14 to f44."])
         self.assertEqual(len(lines), 10)
         self.assertTrue(all(" Holes: " in line for line in lines))
 

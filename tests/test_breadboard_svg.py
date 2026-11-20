@@ -151,7 +151,7 @@ class TheSvgTest(unittest.TestCase):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         # P949: the keys data-step and data-part, and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "b8486835247cd1610c0669bd7a8b174de67075d90a9da2531a5990ea9e43060f")
+                         "da5bd3027bad3e93ad27abf94874de24684799fe8729d9bf04d8c0d75362de84")  # P953: the board's look
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -244,10 +244,12 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         self.assertEqual((board["ground"], board["doubtful"]), ("GND2", ["GND1", "GND3"]))
         self.assertEqual(self.texts.count(", ".join(note["sentence"] for note in board["notes"])), 1)
 
-    def test_the_surface_has_63_columns_and_no_rail_lines(self):
-        holes = re.findall(r"M[\d.]+ [\d.]+h0", [p.get("d") for p in self.root.findall("svg:path", NS)][0])
-        self.assertEqual(len(holes), 630)
-        self.assertEqual(len(self.root.findall("svg:line", NS)), 0)
+    def test_the_surface_has_63_columns_and_four_rails_of_50_holes(self):
+        # P953: the full board got rails, a drawing convention as on the old page
+        terminal, rails = [p.get("d") for p in self.root.findall("svg:path", NS)][:2]
+        self.assertEqual(len(re.findall(r"M[\d.]+ [\d.]+h0", terminal)), 630)
+        self.assertEqual(len(re.findall(r"M[\d.]+ [\d.]+h0", rails)), 200)
+        self.assertEqual(len(self.root.findall("svg:line", NS)), 4)
 
     def test_the_same_layout_gives_the_same_bytes(self):
         self.assertEqual(self.text, svg_diagram.SvgBreadboardDiagram().text(self.layout))
@@ -257,7 +259,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
         # page's group (no glow, each word upright or sideways on the sheet), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "66d577f4a8bb2d1e58bb331b128d957ae5a9119c00f004d9de8a3966c78ce3ed")
+                         "096c700a39e0d39724cbc7977efb2ef18babaa541433c3a21d8bada22e57ba16")  # P953: board look, 4 free columns
 
     def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
         board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)
@@ -328,6 +330,101 @@ class TheModuleSvgTest(unittest.TestCase):
         bottom = self.module.top + self.part_px["size"][1]
         self.assertGreater(bottom, max(hole.y for hole in self.layout.geometry.surface.holes))
         self.assertGreaterEqual(float(self.root.get("height")), bottom + svg_diagram.SvgBreadboardDiagram.MARGIN_PX)
+
+
+WALK = ROOT / "tests" / "data" / "breadboard" / "walk-c6"
+
+
+def walk_svg(palette=None):
+    with in_store():
+        layout = sheet._plan_layout(sheet._read_build(WALK / "requirements.json"))
+    return svg_diagram.SvgBreadboardDiagram(palette=palette).text(layout), layout
+
+
+def svg_all(root, tag):
+    return list(root.iter("{http://www.w3.org/2000/svg}%s" % tag))
+
+
+class TheBoardLookTest(unittest.TestCase):
+    """P953 (#1359): the breadboard in the old page's look (the README's wiring page): a white page, the board's warm body
+    with its edge, the gap's band, square holes, four rails with their lines and signs, the letters and the numbers."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text, cls.layout = walk_svg()
+        cls.root = ElementTree.fromstring(cls.text)
+        cls.rects = svg_all(cls.root, "rect")
+        cls.texts = svg_all(cls.root, "text")
+
+    def test_the_page_is_white_and_covers_the_whole_view_box(self):
+        x, y, width, height = [float(n) for n in self.root.get("viewBox").split()]
+        page = self.rects[0]
+        self.assertEqual(page.get("fill"), "#ffffff")
+        self.assertEqual([float(page.get(key)) for key in ("x", "y", "width", "height")], [x, y, width, height])
+        self.assertEqual((float(self.root.get("width")), float(self.root.get("height"))), (width, height))
+
+    def test_the_board_has_its_body_edge_and_gap_band(self):
+        board, gap = self.rects[1], self.rects[2]
+        self.assertEqual((board.get("fill"), board.get("stroke"), board.get("rx")), ("#f4f1ea", "#c9c3b6", "4.3"))
+        self.assertEqual(gap.get("fill"), "#e7e2d7")
+        # the gap lies between row e (89.4) and row f (118.2), 24 px high, across the board's width
+        self.assertEqual((float(gap.get("y")), float(gap.get("height"))), (91.8, 24))
+        self.assertEqual((gap.get("x"), gap.get("width")), (board.get("x"), board.get("width")))
+        surface = self.layout.geometry.surface
+        left, top = float(board.get("x")), float(board.get("y"))
+        self.assertEqual((left, top), (round(min(h.x for h in surface.holes) - 19.2, 3), round(min(h.y for h in surface.holes) - 19.2, 3)))
+
+    def test_the_terminal_holes_are_square_and_8d969c_and_the_rail_holes_c2c0b8(self):
+        terminal, rails = svg_all(self.root, "path")[:2]
+        self.assertEqual((terminal.get("stroke"), terminal.get("stroke-width"), terminal.get("stroke-linecap")),
+                         ("#8d969c", "2.7", "square"))
+        self.assertEqual((rails.get("stroke"), rails.get("stroke-width"), rails.get("stroke-linecap")),
+                         ("#c2c0b8", "2.35", "square"))
+        self.assertEqual(len(re.findall(r"M[\d.]+ [\d.]+h0", terminal.get("d"))), 630)
+        self.assertEqual(len(re.findall(r"M[\d.]+ [\d.]+h0", rails.get("d"))), 200)
+
+    def test_there_are_four_rail_lines_and_four_signs_in_their_colours(self):
+        lines = svg_all(self.root, "line")
+        self.assertEqual([(line.get("stroke"), line.get("stroke-width"), line.get("stroke-opacity")) for line in lines],
+                         [("#d0202a", "0.8", "0.6"), ("#1668c7", "0.8", "0.6")] * 2)
+        # the lines frame each pair: red above the + rail, blue below the - rail, 0.4 pitch off the holes
+        self.assertEqual([float(line.get("y1")) for line in lines], [8.76, 26.04, 181.56, 198.84])
+        signs = [(text.text, text.get("fill")) for text in self.texts if text.text in ("+", "−")]
+        self.assertEqual(signs, [("+", "#d0202a"), ("−", "#1668c7")] * 2)
+
+    def test_the_letters_a_to_j_are_at_the_left_edge_once(self):
+        letters = [text for text in self.texts if text.text and len(text.text) == 1 and text.text in "abcdefghij"]
+        self.assertEqual([text.text for text in letters], list("abcdefghij"))
+        self.assertEqual({(text.get("x"), text.get("fill"), text.get("font-size")) for text in letters},
+                         {("16.4", "#6b7176", "5.9")})
+
+    def test_the_numbers_are_1_and_every_5_above_and_below(self):
+        numbers = [text for text in self.texts if text.text and text.text.isdigit() and text.get("fill") == "#6b7176"]
+        said = ["1"] + [str(n) for n in range(5, 64, 5)]
+        self.assertEqual([text.text for text in numbers], said + said)
+        self.assertEqual({float(text.get("x")) for text in numbers[:2]}, {26, 64.4})
+        top, bottom = {text.get("y") for text in numbers[:13]}, {text.get("y") for text in numbers[13:]}
+        self.assertEqual((len(top), len(bottom)), (1, 1))
+        self.assertLess(float(top.pop()), 12.6)
+        self.assertGreater(float(bottom.pop()), 195)
+
+    def test_the_same_layout_gives_the_same_bytes(self):
+        self.assertTrue(self.text == svg_diagram.SvgBreadboardDiagram().text(self.layout))
+
+    def test_the_font_family_is_set_once_on_the_root(self):
+        # a part's own picture may set its own font; every text spark writes takes the root's
+        self.assertEqual(self.root.get("font-family"), "Helvetica,Arial,sans-serif")
+        own = ElementTree.fromstring(self.text)
+        for group in own.findall("svg:g[@data-part]", NS):
+            own.remove(group)
+        self.assertEqual(ElementTree.tostring(own, encoding="unicode").count("font-family="), 1)
+
+    def test_another_palette_changes_only_the_colours(self):
+        palette = svg_diagram.BoardPalette.load()
+        other = palette._replace(colors=dict(palette.colors, board="#000001"))
+        text, _ = walk_svg(other)
+        self.assertEqual(text.count("#000001"), 1)
+        self.assertTrue(text.replace("#000001", "#f4f1ea") == self.text)
 
 
 def wires(root):
@@ -432,7 +529,7 @@ class TheJumperLanesTest(unittest.TestCase):
         cls.pictures = dict(golden_svgs(), epaper=text)
 
     def test_every_golden_sheet_with_a_picture_is_read(self):
-        self.assertEqual(sorted(self.pictures), ["breadboard-ok-firebeetle.txt", "breadboard-ok-module.txt",
+        self.assertEqual(sorted(self.pictures), ["breadboard-ok-c6.txt", "breadboard-ok-firebeetle.txt", "breadboard-ok-module.txt",
                                                  "breadboard-ok-rebuild.txt", "breadboard-ok-xiao.txt", "epaper"])
 
     def test_no_two_jumpers_share_a_drawn_line(self):

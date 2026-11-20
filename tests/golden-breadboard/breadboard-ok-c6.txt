@@ -1,0 +1,654 @@
+# Breadboard: walk-c6, on a DFRobot FireBeetle 2 ESP32-C6
+
+## Parts
+
+| qty | part | for | have |
+| --- | --- | --- | --- |
+| 1 | DFRobot FireBeetle 2 ESP32-C6 | the board |  |
+| 1 | MH-ET LIVE 2.9 Inch E-paper Module, black/white/red, panel HINK-E029A10-A3, 8-pin header and 8-pin white connector | e-paper |  |
+| | a breadboard and jumper wires | |  |
+
+*have*: yours = your drawer holds it for this project · in your drawer = you own it, not held here · to get = not in your drawer · blank = this project is not on your list (`/spark:init` puts it there)
+
+## Wiring
+
+### Steps
+
+One connection per step. The board's pins take the rows beside them, so a board pin always gets a jumper.
+
+1. Put the board in the breadboard, each pin in its own row. Holes: b10 to b23, i6 to i23.
+2. Put e-paper in the breadboard, each pin in its own row. Holes: j42 to j49.
+3. Run a jumper from board 3V3 to the row of e-paper VCC. Holes: from j7 to g49.
+4. Run a jumper from board 3V3_2 to the row of e-paper VCC. Holes: from a11 to f49.
+5. Run a jumper from board D3 to the row of e-paper CS. Holes: from j20 to f45.
+6. Run a jumper from board D7 to the row of e-paper D/C. Holes: from j17 to f44.
+7. Run a jumper from board GND to the row of e-paper GND. Holes: from j9 to f48.
+8. Run a jumper from board MOSI to the row of e-paper SDI. Holes: from j12 to f47.
+9. Run a jumper from board SCK to the row of e-paper SCLK. Holes: from j11 to f46.
+10. Run a jumper from board SCL to the row of e-paper Busy. Holes: from a13 to f42.
+11. Run a jumper from board SDA to the row of e-paper Reset. Holes: from a14 to f43.
+
+### Diagram
+
+Each line is one step, with its number.
+
+```mermaid
+flowchart LR
+  subgraph g1["board"]
+    n1["board 3V3"]
+    n2["board 3V3_2"]
+    n3["board D3"]
+    n4["board D7"]
+    n5["board GND"]
+    n6["board MOSI"]
+    n7["board SCK"]
+    n8["board SCL"]
+    n9["board SDA"]
+  end
+  subgraph g2["e-paper"]
+    n10["e-paper VCC"]
+    n11["e-paper CS"]
+    n12["e-paper D/C"]
+    n13["e-paper GND"]
+    n14["e-paper SDI"]
+    n15["e-paper SCLK"]
+    n16["e-paper Busy"]
+    n17["e-paper Reset"]
+  end
+  n1 ---|"3"| n10
+  n2 ---|"4"| n10
+  n3 ---|"5"| n11
+  n4 ---|"6"| n12
+  n5 ---|"7"| n13
+  n6 ---|"8"| n14
+  n7 ---|"9"| n15
+  n8 ---|"10"| n16
+  n9 ---|"11"| n17
+```
+
+![The layout on a breadboard](breadboard.svg) Each jumper has the color of what it carries, red for power, black for ground and another color for each signal: 3 red, 4 red, 5 green, 6 blue, 7 black, 8 purple, 9 orange, 10 magenta, 11 cyan.
+
+There is no Wokwi diagram: Wokwi has no part for the board and e-paper. Use the picture.
+
+On the board, GND is the pad GND1.
+
+Hold your board to the picture. If the pins sit on the other side, tell spark.
+
+### Points
+
+After the steps, each line is one point: its ends must be joined, and nothing else.
+
+1. board 3V3 · board 3V3_2 · e-paper VCC (back up, header at the top: the left end pin, above the label VCC)
+2. board D3 · e-paper CS
+3. board D7 · e-paper D/C
+4. board GND · e-paper GND
+5. board MOSI · e-paper SDI
+6. board SCK · e-paper SCLK
+7. board SCL · e-paper Busy (back up, header at the top: the right end pin, above the label Busy)
+8. board SDA · e-paper Reset
+
+## Before you power it
+
+- e-paper: Power VCC from 3.3 V on an ESP32: the silkscreen gives one voltage for supply and IO, and the TXS0108E reads a high only above VCC - 0.4 V on its powered side, so at VCC = 5 V a 3.3 V output may not be read and the panel stays blank.
+- e-paper: Set the BS1 switch to L (4-line SPI) for GxEPD2 and other drivers that use D/C: at H the module ignores D/C and the panel shows nothing.
+- e-paper: Wait for BUSY to go low before each command: a three-colour full refresh keeps it high for tens of seconds (GxEPD2 allows 27 s), and a command sent meanwhile corrupts the picture.
+- e-paper: No fast partial refresh on this three-colour panel: every update redraws and flashes the whole screen, so it suits a picture that changes every few minutes, not a counter or a clock with seconds.
+- e-paper: The header's order is printed on the back (VCC GND SDI SCLK CS D/C Reset Busy); from the display side it reads mirrored, so wire by the labels, not by position.
+- e-paper: The refresh current and the module's sleep current are not published: measure both before a battery design rests on them.
+- e-paper: MicroPython: use a driver for the SSD1675/SSD1680 command set with two planes (the Waveshare 2.9 B V4 file, its pins set for the board); a driver for the IL0373/UC8151 (mcauser epaper2in9b) or a black/white-only one (mattytrentini ssd1675a) shows nothing or no red.
+- e-paper: Keep about 9.5 kB of RAM free for the two frame buffers (2 x 4736 bytes) and allocate them before the heap fragments.
+
+Each record whole, with what it asks of the board: `parts.py --show epaper-2in9-bwr-mh-et-live`.
+--- stderr ---
+wrote <project-dir>/breadboard.md
+wrote <project-dir>/breadboard.svg — a picture of the same layout, which breadboard.md shows
+breadboard.json not written: Wokwi has no part for the board and e-paper
+--- breadboard.svg ---
+<svg xmlns="http://www.w3.org/2000/svg" width="672" height="377.099" viewBox="-12.4 -25.8 672 377.099" font-family="Helvetica,Arial,sans-serif"><rect x="-12.4" y="-25.8" width="672" height="377.099" fill="#ffffff" /><rect x="6.8" y="-6.6" width="633.6" height="220.8" rx="4.3" fill="#f4f1ea" stroke="#c9c3b6" stroke-width="0.53" /><rect x="6.8" y="91.8" width="633.6" height="24" fill="#e7e2d7" /><path d="M26 51h0M26 60.6h0M26 70.2h0M26 79.8h0M26 89.4h0M26 118.2h0M26 127.8h0M26 137.4h0M26 147h0M26 156.6h0M35.6 51h0M35.6 60.6h0M35.6 70.2h0M35.6 79.8h0M35.6 89.4h0M35.6 118.2h0M35.6 127.8h0M35.6 137.4h0M35.6 147h0M35.6 156.6h0M45.2 51h0M45.2 60.6h0M45.2 70.2h0M45.2 79.8h0M45.2 89.4h0M45.2 118.2h0M45.2 127.8h0M45.2 137.4h0M45.2 147h0M45.2 156.6h0M54.8 51h0M54.8 60.6h0M54.8 70.2h0M54.8 79.8h0M54.8 89.4h0M54.8 118.2h0M54.8 127.8h0M54.8 137.4h0M54.8 147h0M54.8 156.6h0M64.4 51h0M64.4 60.6h0M64.4 70.2h0M64.4 79.8h0M64.4 89.4h0M64.4 118.2h0M64.4 127.8h0M64.4 137.4h0M64.4 147h0M64.4 156.6h0M74 51h0M74 60.6h0M74 70.2h0M74 79.8h0M74 89.4h0M74 118.2h0M74 127.8h0M74 137.4h0M74 147h0M74 156.6h0M83.6 51h0M83.6 60.6h0M83.6 70.2h0M83.6 79.8h0M83.6 89.4h0M83.6 118.2h0M83.6 127.8h0M83.6 137.4h0M83.6 147h0M83.6 156.6h0M93.2 51h0M93.2 60.6h0M93.2 70.2h0M93.2 79.8h0M93.2 89.4h0M93.2 118.2h0M93.2 127.8h0M93.2 137.4h0M93.2 147h0M93.2 156.6h0M102.8 51h0M102.8 60.6h0M102.8 70.2h0M102.8 79.8h0M102.8 89.4h0M102.8 118.2h0M102.8 127.8h0M102.8 137.4h0M102.8 147h0M102.8 156.6h0M112.4 51h0M112.4 60.6h0M112.4 70.2h0M112.4 79.8h0M112.4 89.4h0M112.4 118.2h0M112.4 127.8h0M112.4 137.4h0M112.4 147h0M112.4 156.6h0M122 51h0M122 60.6h0M122 70.2h0M122 79.8h0M122 89.4h0M122 118.2h0M122 127.8h0M122 137.4h0M122 147h0M122 156.6h0M131.6 51h0M131.6 60.6h0M131.6 70.2h0M131.6 79.8h0M131.6 89.4h0M131.6 118.2h0M131.6 127.8h0M131.6 137.4h0M131.6 147h0M131.6 156.6h0M141.2 51h0M141.2 60.6h0M141.2 70.2h0M141.2 79.8h0M141.2 89.4h0M141.2 118.2h0M141.2 127.8h0M141.2 137.4h0M141.2 147h0M141.2 156.6h0M150.8 51h0M150.8 60.6h0M150.8 70.2h0M150.8 79.8h0M150.8 89.4h0M150.8 118.2h0M150.8 127.8h0M150.8 137.4h0M150.8 147h0M150.8 156.6h0M160.4 51h0M160.4 60.6h0M160.4 70.2h0M160.4 79.8h0M160.4 89.4h0M160.4 118.2h0M160.4 127.8h0M160.4 137.4h0M160.4 147h0M160.4 156.6h0M170 51h0M170 60.6h0M170 70.2h0M170 79.8h0M170 89.4h0M170 118.2h0M170 127.8h0M170 137.4h0M170 147h0M170 156.6h0M179.6 51h0M179.6 60.6h0M179.6 70.2h0M179.6 79.8h0M179.6 89.4h0M179.6 118.2h0M179.6 127.8h0M179.6 137.4h0M179.6 147h0M179.6 156.6h0M189.2 51h0M189.2 60.6h0M189.2 70.2h0M189.2 79.8h0M189.2 89.4h0M189.2 118.2h0M189.2 127.8h0M189.2 137.4h0M189.2 147h0M189.2 156.6h0M198.8 51h0M198.8 60.6h0M198.8 70.2h0M198.8 79.8h0M198.8 89.4h0M198.8 118.2h0M198.8 127.8h0M198.8 137.4h0M198.8 147h0M198.8 156.6h0M208.4 51h0M208.4 60.6h0M208.4 70.2h0M208.4 79.8h0M208.4 89.4h0M208.4 118.2h0M208.4 127.8h0M208.4 137.4h0M208.4 147h0M208.4 156.6h0M218 51h0M218 60.6h0M218 70.2h0M218 79.8h0M218 89.4h0M218 118.2h0M218 127.8h0M218 137.4h0M218 147h0M218 156.6h0M227.6 51h0M227.6 60.6h0M227.6 70.2h0M227.6 79.8h0M227.6 89.4h0M227.6 118.2h0M227.6 127.8h0M227.6 137.4h0M227.6 147h0M227.6 156.6h0M237.2 51h0M237.2 60.6h0M237.2 70.2h0M237.2 79.8h0M237.2 89.4h0M237.2 118.2h0M237.2 127.8h0M237.2 137.4h0M237.2 147h0M237.2 156.6h0M246.8 51h0M246.8 60.6h0M246.8 70.2h0M246.8 79.8h0M246.8 89.4h0M246.8 118.2h0M246.8 127.8h0M246.8 137.4h0M246.8 147h0M246.8 156.6h0M256.4 51h0M256.4 60.6h0M256.4 70.2h0M256.4 79.8h0M256.4 89.4h0M256.4 118.2h0M256.4 127.8h0M256.4 137.4h0M256.4 147h0M256.4 156.6h0M266 51h0M266 60.6h0M266 70.2h0M266 79.8h0M266 89.4h0M266 118.2h0M266 127.8h0M266 137.4h0M266 147h0M266 156.6h0M275.6 51h0M275.6 60.6h0M275.6 70.2h0M275.6 79.8h0M275.6 89.4h0M275.6 118.2h0M275.6 127.8h0M275.6 137.4h0M275.6 147h0M275.6 156.6h0M285.2 51h0M285.2 60.6h0M285.2 70.2h0M285.2 79.8h0M285.2 89.4h0M285.2 118.2h0M285.2 127.8h0M285.2 137.4h0M285.2 147h0M285.2 156.6h0M294.8 51h0M294.8 60.6h0M294.8 70.2h0M294.8 79.8h0M294.8 89.4h0M294.8 118.2h0M294.8 127.8h0M294.8 137.4h0M294.8 147h0M294.8 156.6h0M304.4 51h0M304.4 60.6h0M304.4 70.2h0M304.4 79.8h0M304.4 89.4h0M304.4 118.2h0M304.4 127.8h0M304.4 137.4h0M304.4 147h0M304.4 156.6h0M314 51h0M314 60.6h0M314 70.2h0M314 79.8h0M314 89.4h0M314 118.2h0M314 127.8h0M314 137.4h0M314 147h0M314 156.6h0M323.6 51h0M323.6 60.6h0M323.6 70.2h0M323.6 79.8h0M323.6 89.4h0M323.6 118.2h0M323.6 127.8h0M323.6 137.4h0M323.6 147h0M323.6 156.6h0M333.2 51h0M333.2 60.6h0M333.2 70.2h0M333.2 79.8h0M333.2 89.4h0M333.2 118.2h0M333.2 127.8h0M333.2 137.4h0M333.2 147h0M333.2 156.6h0M342.8 51h0M342.8 60.6h0M342.8 70.2h0M342.8 79.8h0M342.8 89.4h0M342.8 118.2h0M342.8 127.8h0M342.8 137.4h0M342.8 147h0M342.8 156.6h0M352.4 51h0M352.4 60.6h0M352.4 70.2h0M352.4 79.8h0M352.4 89.4h0M352.4 118.2h0M352.4 127.8h0M352.4 137.4h0M352.4 147h0M352.4 156.6h0M362 51h0M362 60.6h0M362 70.2h0M362 79.8h0M362 89.4h0M362 118.2h0M362 127.8h0M362 137.4h0M362 147h0M362 156.6h0M371.6 51h0M371.6 60.6h0M371.6 70.2h0M371.6 79.8h0M371.6 89.4h0M371.6 118.2h0M371.6 127.8h0M371.6 137.4h0M371.6 147h0M371.6 156.6h0M381.2 51h0M381.2 60.6h0M381.2 70.2h0M381.2 79.8h0M381.2 89.4h0M381.2 118.2h0M381.2 127.8h0M381.2 137.4h0M381.2 147h0M381.2 156.6h0M390.8 51h0M390.8 60.6h0M390.8 70.2h0M390.8 79.8h0M390.8 89.4h0M390.8 118.2h0M390.8 127.8h0M390.8 137.4h0M390.8 147h0M390.8 156.6h0M400.4 51h0M400.4 60.6h0M400.4 70.2h0M400.4 79.8h0M400.4 89.4h0M400.4 118.2h0M400.4 127.8h0M400.4 137.4h0M400.4 147h0M400.4 156.6h0M410 51h0M410 60.6h0M410 70.2h0M410 79.8h0M410 89.4h0M410 118.2h0M410 127.8h0M410 137.4h0M410 147h0M410 156.6h0M419.6 51h0M419.6 60.6h0M419.6 70.2h0M419.6 79.8h0M419.6 89.4h0M419.6 118.2h0M419.6 127.8h0M419.6 137.4h0M419.6 147h0M419.6 156.6h0M429.2 51h0M429.2 60.6h0M429.2 70.2h0M429.2 79.8h0M429.2 89.4h0M429.2 118.2h0M429.2 127.8h0M429.2 137.4h0M429.2 147h0M429.2 156.6h0M438.8 51h0M438.8 60.6h0M438.8 70.2h0M438.8 79.8h0M438.8 89.4h0M438.8 118.2h0M438.8 127.8h0M438.8 137.4h0M438.8 147h0M438.8 156.6h0M448.4 51h0M448.4 60.6h0M448.4 70.2h0M448.4 79.8h0M448.4 89.4h0M448.4 118.2h0M448.4 127.8h0M448.4 137.4h0M448.4 147h0M448.4 156.6h0M458 51h0M458 60.6h0M458 70.2h0M458 79.8h0M458 89.4h0M458 118.2h0M458 127.8h0M458 137.4h0M458 147h0M458 156.6h0M467.6 51h0M467.6 60.6h0M467.6 70.2h0M467.6 79.8h0M467.6 89.4h0M467.6 118.2h0M467.6 127.8h0M467.6 137.4h0M467.6 147h0M467.6 156.6h0M477.2 51h0M477.2 60.6h0M477.2 70.2h0M477.2 79.8h0M477.2 89.4h0M477.2 118.2h0M477.2 127.8h0M477.2 137.4h0M477.2 147h0M477.2 156.6h0M486.8 51h0M486.8 60.6h0M486.8 70.2h0M486.8 79.8h0M486.8 89.4h0M486.8 118.2h0M486.8 127.8h0M486.8 137.4h0M486.8 147h0M486.8 156.6h0M496.4 51h0M496.4 60.6h0M496.4 70.2h0M496.4 79.8h0M496.4 89.4h0M496.4 118.2h0M496.4 127.8h0M496.4 137.4h0M496.4 147h0M496.4 156.6h0M506 51h0M506 60.6h0M506 70.2h0M506 79.8h0M506 89.4h0M506 118.2h0M506 127.8h0M506 137.4h0M506 147h0M506 156.6h0M515.6 51h0M515.6 60.6h0M515.6 70.2h0M515.6 79.8h0M515.6 89.4h0M515.6 118.2h0M515.6 127.8h0M515.6 137.4h0M515.6 147h0M515.6 156.6h0M525.2 51h0M525.2 60.6h0M525.2 70.2h0M525.2 79.8h0M525.2 89.4h0M525.2 118.2h0M525.2 127.8h0M525.2 137.4h0M525.2 147h0M525.2 156.6h0M534.8 51h0M534.8 60.6h0M534.8 70.2h0M534.8 79.8h0M534.8 89.4h0M534.8 118.2h0M534.8 127.8h0M534.8 137.4h0M534.8 147h0M534.8 156.6h0M544.4 51h0M544.4 60.6h0M544.4 70.2h0M544.4 79.8h0M544.4 89.4h0M544.4 118.2h0M544.4 127.8h0M544.4 137.4h0M544.4 147h0M544.4 156.6h0M554 51h0M554 60.6h0M554 70.2h0M554 79.8h0M554 89.4h0M554 118.2h0M554 127.8h0M554 137.4h0M554 147h0M554 156.6h0M563.6 51h0M563.6 60.6h0M563.6 70.2h0M563.6 79.8h0M563.6 89.4h0M563.6 118.2h0M563.6 127.8h0M563.6 137.4h0M563.6 147h0M563.6 156.6h0M573.2 51h0M573.2 60.6h0M573.2 70.2h0M573.2 79.8h0M573.2 89.4h0M573.2 118.2h0M573.2 127.8h0M573.2 137.4h0M573.2 147h0M573.2 156.6h0M582.8 51h0M582.8 60.6h0M582.8 70.2h0M582.8 79.8h0M582.8 89.4h0M582.8 118.2h0M582.8 127.8h0M582.8 137.4h0M582.8 147h0M582.8 156.6h0M592.4 51h0M592.4 60.6h0M592.4 70.2h0M592.4 79.8h0M592.4 89.4h0M592.4 118.2h0M592.4 127.8h0M592.4 137.4h0M592.4 147h0M592.4 156.6h0M602 51h0M602 60.6h0M602 70.2h0M602 79.8h0M602 89.4h0M602 118.2h0M602 127.8h0M602 137.4h0M602 147h0M602 156.6h0M611.6 51h0M611.6 60.6h0M611.6 70.2h0M611.6 79.8h0M611.6 89.4h0M611.6 118.2h0M611.6 127.8h0M611.6 137.4h0M611.6 147h0M611.6 156.6h0M621.2 51h0M621.2 60.6h0M621.2 70.2h0M621.2 79.8h0M621.2 89.4h0M621.2 118.2h0M621.2 127.8h0M621.2 137.4h0M621.2 147h0M621.2 156.6h0" stroke="#8d969c" stroke-width="2.7" stroke-linecap="square" /><path d="M35.6 12.6h0M45.2 12.6h0M54.8 12.6h0M64.4 12.6h0M74 12.6h0M93.2 12.6h0M102.8 12.6h0M112.4 12.6h0M122 12.6h0M131.6 12.6h0M150.8 12.6h0M160.4 12.6h0M170 12.6h0M179.6 12.6h0M189.2 12.6h0M208.4 12.6h0M218 12.6h0M227.6 12.6h0M237.2 12.6h0M246.8 12.6h0M266 12.6h0M275.6 12.6h0M285.2 12.6h0M294.8 12.6h0M304.4 12.6h0M323.6 12.6h0M333.2 12.6h0M342.8 12.6h0M352.4 12.6h0M362 12.6h0M381.2 12.6h0M390.8 12.6h0M400.4 12.6h0M410 12.6h0M419.6 12.6h0M438.8 12.6h0M448.4 12.6h0M458 12.6h0M467.6 12.6h0M477.2 12.6h0M496.4 12.6h0M506 12.6h0M515.6 12.6h0M525.2 12.6h0M534.8 12.6h0M554 12.6h0M563.6 12.6h0M573.2 12.6h0M582.8 12.6h0M592.4 12.6h0M35.6 22.2h0M45.2 22.2h0M54.8 22.2h0M64.4 22.2h0M74 22.2h0M93.2 22.2h0M102.8 22.2h0M112.4 22.2h0M122 22.2h0M131.6 22.2h0M150.8 22.2h0M160.4 22.2h0M170 22.2h0M179.6 22.2h0M189.2 22.2h0M208.4 22.2h0M218 22.2h0M227.6 22.2h0M237.2 22.2h0M246.8 22.2h0M266 22.2h0M275.6 22.2h0M285.2 22.2h0M294.8 22.2h0M304.4 22.2h0M323.6 22.2h0M333.2 22.2h0M342.8 22.2h0M352.4 22.2h0M362 22.2h0M381.2 22.2h0M390.8 22.2h0M400.4 22.2h0M410 22.2h0M419.6 22.2h0M438.8 22.2h0M448.4 22.2h0M458 22.2h0M467.6 22.2h0M477.2 22.2h0M496.4 22.2h0M506 22.2h0M515.6 22.2h0M525.2 22.2h0M534.8 22.2h0M554 22.2h0M563.6 22.2h0M573.2 22.2h0M582.8 22.2h0M592.4 22.2h0M35.6 185.4h0M45.2 185.4h0M54.8 185.4h0M64.4 185.4h0M74 185.4h0M93.2 185.4h0M102.8 185.4h0M112.4 185.4h0M122 185.4h0M131.6 185.4h0M150.8 185.4h0M160.4 185.4h0M170 185.4h0M179.6 185.4h0M189.2 185.4h0M208.4 185.4h0M218 185.4h0M227.6 185.4h0M237.2 185.4h0M246.8 185.4h0M266 185.4h0M275.6 185.4h0M285.2 185.4h0M294.8 185.4h0M304.4 185.4h0M323.6 185.4h0M333.2 185.4h0M342.8 185.4h0M352.4 185.4h0M362 185.4h0M381.2 185.4h0M390.8 185.4h0M400.4 185.4h0M410 185.4h0M419.6 185.4h0M438.8 185.4h0M448.4 185.4h0M458 185.4h0M467.6 185.4h0M477.2 185.4h0M496.4 185.4h0M506 185.4h0M515.6 185.4h0M525.2 185.4h0M534.8 185.4h0M554 185.4h0M563.6 185.4h0M573.2 185.4h0M582.8 185.4h0M592.4 185.4h0M35.6 195h0M45.2 195h0M54.8 195h0M64.4 195h0M74 195h0M93.2 195h0M102.8 195h0M112.4 195h0M122 195h0M131.6 195h0M150.8 195h0M160.4 195h0M170 195h0M179.6 195h0M189.2 195h0M208.4 195h0M218 195h0M227.6 195h0M237.2 195h0M246.8 195h0M266 195h0M275.6 195h0M285.2 195h0M294.8 195h0M304.4 195h0M323.6 195h0M333.2 195h0M342.8 195h0M352.4 195h0M362 195h0M381.2 195h0M390.8 195h0M400.4 195h0M410 195h0M419.6 195h0M438.8 195h0M448.4 195h0M458 195h0M467.6 195h0M477.2 195h0M496.4 195h0M506 195h0M515.6 195h0M525.2 195h0M534.8 195h0M554 195h0M563.6 195h0M573.2 195h0M582.8 195h0M592.4 195h0" stroke="#c2c0b8" stroke-width="2.35" stroke-linecap="square" /><line x1="35.6" y1="8.76" x2="592.4" y2="8.76" stroke="#d0202a" stroke-width="0.8" stroke-opacity="0.6" /><text x="26" y="15.575" fill="#d0202a" font-size="8.5" font-weight="700" text-anchor="middle">+</text><line x1="35.6" y1="26.04" x2="592.4" y2="26.04" stroke="#1668c7" stroke-width="0.8" stroke-opacity="0.6" /><text x="26" y="25.175" fill="#1668c7" font-size="8.5" font-weight="700" text-anchor="middle">−</text><line x1="35.6" y1="181.56" x2="592.4" y2="181.56" stroke="#d0202a" stroke-width="0.8" stroke-opacity="0.6" /><text x="26" y="188.375" fill="#d0202a" font-size="8.5" font-weight="700" text-anchor="middle">+</text><line x1="35.6" y1="198.84" x2="592.4" y2="198.84" stroke="#1668c7" stroke-width="0.8" stroke-opacity="0.6" /><text x="26" y="197.975" fill="#1668c7" font-size="8.5" font-weight="700" text-anchor="middle">−</text><text x="16.4" y="53.065" fill="#6b7176" font-size="5.9" text-anchor="middle">a</text><text x="16.4" y="62.665" fill="#6b7176" font-size="5.9" text-anchor="middle">b</text><text x="16.4" y="72.265" fill="#6b7176" font-size="5.9" text-anchor="middle">c</text><text x="16.4" y="81.865" fill="#6b7176" font-size="5.9" text-anchor="middle">d</text><text x="16.4" y="91.465" fill="#6b7176" font-size="5.9" text-anchor="middle">e</text><text x="16.4" y="120.265" fill="#6b7176" font-size="5.9" text-anchor="middle">f</text><text x="16.4" y="129.865" fill="#6b7176" font-size="5.9" text-anchor="middle">g</text><text x="16.4" y="139.465" fill="#6b7176" font-size="5.9" text-anchor="middle">h</text><text x="16.4" y="149.065" fill="#6b7176" font-size="5.9" text-anchor="middle">i</text><text x="16.4" y="158.665" fill="#6b7176" font-size="5.9" text-anchor="middle">j</text><text x="26" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">1</text><text x="64.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">5</text><text x="112.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">10</text><text x="160.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">15</text><text x="208.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">20</text><text x="256.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">25</text><text x="304.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">30</text><text x="352.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">35</text><text x="400.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">40</text><text x="448.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">45</text><text x="496.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">50</text><text x="544.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">55</text><text x="592.4" y="4.855" fill="#6b7176" font-size="5.3" text-anchor="middle">60</text><text x="26" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">1</text><text x="64.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">5</text><text x="112.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">10</text><text x="160.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">15</text><text x="208.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">20</text><text x="256.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">25</text><text x="304.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">30</text><text x="352.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">35</text><text x="400.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">40</text><text x="448.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">45</text><text x="496.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">50</text><text x="544.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">55</text><text x="592.4" y="206.455" fill="#6b7176" font-size="5.3" text-anchor="middle">60</text><g transform="translate(95.468 -9.586) rotate(90 48 113.386)" data-part="board"><g transform="scale(3.78 3.78) translate(0 0)"><rect x="0" y="0" width="25.4" height="60" fill="#040404" />
+<circle cx="23.79" cy="58.35" r="0.93" fill="#ffffff" />
+<circle cx="1.68" cy="58.35" r="0.93" fill="#ffffff" />
+<circle cx="23.79" cy="1.64" r="0.94" fill="#ffffff" />
+<circle cx="1.68" cy="1.65" r="0.93" fill="#ffffff" />
+<rect x="8.17" y="53.91" width="9" height="7.37" rx="0.88" fill="#f2f2f2" />
+<rect x="9.5" y="55.24" width="6.35" height="4.72" rx="0.59" fill="#b6b6b6" />
+<rect x="21.93" y="50.71" width="2.96" height="4.87" rx="0.3" fill="#383838" />
+<circle cx="23.41" cy="53.15" r="0.95" fill="#7e7e7e" />
+<rect x="0.51" y="50.71" width="2.96" height="4.87" rx="0.3" fill="#383838" />
+<circle cx="1.99" cy="53.15" r="0.95" fill="#7e7e7e" />
+<rect x="18.78" y="57.18" width="0.64" height="1.28" fill="#f4f4f4" />
+<rect x="18.78" y="57.18" width="0.64" height="0.32" fill="#e1b737" />
+<rect x="18.78" y="58.14" width="0.64" height="0.32" fill="#e1b737" />
+<rect x="5.98" y="57.18" width="0.58" height="1.28" fill="#f4f4f4" />
+<rect x="5.98" y="57.18" width="0.58" height="0.32" fill="#e1b737" />
+<rect x="5.98" y="58.14" width="0.58" height="0.32" fill="#e1b737" />
+<rect x="19.96" y="56.99" width="0.7" height="1.6" fill="#3a3a3a" />
+<rect x="19.96" y="56.99" width="0.7" height="0.45" fill="#c8c8c8" />
+<rect x="19.96" y="58.14" width="0.7" height="0.45" fill="#c8c8c8" />
+<rect x="20.95" y="56.99" width="0.7" height="1.6" fill="#3a3a3a" />
+<rect x="20.95" y="56.99" width="0.7" height="0.45" fill="#c8c8c8" />
+<rect x="20.95" y="58.14" width="0.7" height="0.45" fill="#c8c8c8" />
+<rect x="3.75" y="56.99" width="0.7" height="1.6" fill="#3a3a3a" />
+<rect x="3.75" y="56.99" width="0.7" height="0.45" fill="#c8c8c8" />
+<rect x="3.75" y="58.14" width="0.7" height="0.45" fill="#c8c8c8" />
+<rect x="4.74" y="56.99" width="0.7" height="1.6" fill="#3a3a3a" />
+<rect x="4.74" y="56.99" width="0.7" height="0.45" fill="#c8c8c8" />
+<rect x="4.74" y="58.14" width="0.7" height="0.45" fill="#c8c8c8" />
+<rect x="18.58" y="49.82" width="1.61" height="0.65" fill="#3a3a3a" />
+<rect x="18.58" y="49.82" width="0.45" height="0.65" fill="#c8c8c8" />
+<rect x="19.74" y="49.82" width="0.45" height="0.65" fill="#c8c8c8" />
+<rect x="18.58" y="50.75" width="1.61" height="0.65" fill="#3a3a3a" />
+<rect x="18.58" y="50.75" width="0.45" height="0.65" fill="#c8c8c8" />
+<rect x="19.74" y="50.75" width="0.45" height="0.65" fill="#c8c8c8" />
+<rect x="16.46" y="44.42" width="4.5" height="2.44" rx="0.12" fill="#454545" />
+<rect x="16.84" y="44.22" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="17.34" y="44.22" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="17.84" y="44.22" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="18.34" y="44.22" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="18.84" y="44.22" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="19.34" y="44.22" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="19.84" y="44.22" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="20.34" y="44.22" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="16.84" y="46.61" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="17.34" y="46.61" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="17.84" y="46.61" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="18.34" y="46.61" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="18.84" y="46.61" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="19.34" y="46.61" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="19.84" y="46.61" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="20.34" y="46.61" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="14.59" y="48.14" width="1.17" height="0.96" fill="#2a2a2a" />
+<rect x="14.59" y="48.14" width="0.33" height="0.96" fill="#c8c8c8" />
+<rect x="15.43" y="48.14" width="0.33" height="0.96" fill="#c8c8c8" />
+<rect x="14.44" y="46.73" width="1.08" height="0.77" fill="#3a3a3a" />
+<rect x="14.44" y="46.73" width="0.3" height="0.77" fill="#c8c8c8" />
+<rect x="15.22" y="46.73" width="0.3" height="0.77" fill="#c8c8c8" />
+<rect x="14.17" y="44.62" width="0.7" height="1.47" fill="#6d410e" />
+<rect x="14.17" y="44.62" width="0.7" height="0.41" fill="#c8c8c8" />
+<rect x="14.17" y="45.68" width="0.7" height="0.41" fill="#c8c8c8" />
+<rect x="15.16" y="44.62" width="0.7" height="1.47" fill="#6d410e" />
+<rect x="15.16" y="44.62" width="0.7" height="0.41" fill="#c8c8c8" />
+<rect x="15.16" y="45.68" width="0.7" height="0.41" fill="#c8c8c8" />
+<rect x="10.35" y="48.33" width="2.9" height="1.41" rx="0.07" fill="#373737" />
+<rect x="10.92" y="48.13" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="11.42" y="48.13" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="11.92" y="48.13" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="12.42" y="48.13" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="10.92" y="49.49" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="11.42" y="49.49" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="11.92" y="49.49" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="12.42" y="49.49" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="11.32" y="43.65" width="1.22" height="2.89" rx="0.06" fill="#373737" />
+<rect x="11.12" y="44.22" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="11.12" y="44.72" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="11.12" y="45.22" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="11.12" y="45.72" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="12.29" y="44.22" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="12.29" y="44.72" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="12.29" y="45.22" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="12.29" y="45.72" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="0" y="41.41" width="7.78" height="8.21" rx="0.39" fill="#e1e1e1" />
+<rect x="2.33" y="42.74" width="3.11" height="1.44" fill="#3a3a3a" />
+<rect x="2.33" y="46.85" width="3.11" height="1.44" fill="#3a3a3a" />
+<rect x="15.5" y="41.41" width="1.48" height="0.96" fill="#6d410e" />
+<rect x="15.5" y="41.41" width="0.42" height="0.96" fill="#c8c8c8" />
+<rect x="16.57" y="41.41" width="0.42" height="0.96" fill="#c8c8c8" />
+<rect x="15.55" y="40.26" width="1.18" height="0.77" fill="#3a3a3a" />
+<rect x="15.55" y="40.26" width="0.33" height="0.77" fill="#c8c8c8" />
+<rect x="16.4" y="40.26" width="0.33" height="0.77" fill="#c8c8c8" />
+<rect x="18.97" y="36.76" width="1.61" height="0.76" fill="#3a3a3a" />
+<rect x="18.97" y="36.76" width="0.45" height="0.76" fill="#c8c8c8" />
+<rect x="20.13" y="36.76" width="0.45" height="0.76" fill="#c8c8c8" />
+<rect x="18.97" y="37.85" width="1.61" height="0.76" fill="#3a3a3a" />
+<rect x="18.97" y="37.85" width="0.45" height="0.76" fill="#c8c8c8" />
+<rect x="20.13" y="37.85" width="0.45" height="0.76" fill="#c8c8c8" />
+<rect x="18.97" y="38.94" width="1.61" height="0.76" fill="#3a3a3a" />
+<rect x="18.97" y="38.94" width="0.45" height="0.76" fill="#c8c8c8" />
+<rect x="20.13" y="38.94" width="0.45" height="0.76" fill="#c8c8c8" />
+<rect x="15.05" y="35.19" width="3.21" height="3.59" rx="0.16" fill="#3a3a3a" />
+<rect x="15.53" y="34.99" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="16.03" y="34.99" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="16.53" y="34.99" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="17.03" y="34.99" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="17.53" y="34.99" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="15.53" y="38.53" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="16.03" y="38.53" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="16.53" y="38.53" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="17.03" y="38.53" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="17.53" y="38.53" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="10.8" y="34.17" width="2.96" height="6.15" rx="0.24" fill="#808080" />
+<rect x="10.8" y="34.17" width="2.96" height="0.74" fill="#e1b737" />
+<rect x="10.8" y="39.58" width="2.96" height="0.74" fill="#e1b737" />
+<rect x="7.72" y="34.17" width="2.95" height="6.15" rx="0.24" fill="#808080" />
+<rect x="7.72" y="34.17" width="2.95" height="0.74" fill="#e1b737" />
+<rect x="7.72" y="39.58" width="2.95" height="0.74" fill="#e1b737" />
+<rect x="5.53" y="39.42" width="1.22" height="0.77" fill="#3a3a3a" />
+<rect x="5.53" y="39.42" width="0.34" height="0.77" fill="#c8c8c8" />
+<rect x="6.41" y="39.42" width="0.34" height="0.77" fill="#c8c8c8" />
+<rect x="4.57" y="36.35" width="2.89" height="1.41" rx="0.07" fill="#373737" />
+<rect x="5.14" y="36.15" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="5.64" y="36.15" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="6.14" y="36.15" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="6.64" y="36.15" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="5.14" y="37.51" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="5.64" y="37.51" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="6.14" y="37.51" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="6.64" y="37.51" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="14.31" y="33.14" width="0.75" height="1.67" fill="#6d410e" />
+<rect x="14.31" y="33.14" width="0.75" height="0.47" fill="#c8c8c8" />
+<rect x="14.31" y="34.34" width="0.75" height="0.47" fill="#c8c8c8" />
+<rect x="15.38" y="33.14" width="0.75" height="1.67" fill="#6d410e" />
+<rect x="15.38" y="33.14" width="0.75" height="0.47" fill="#c8c8c8" />
+<rect x="15.38" y="34.34" width="0.75" height="0.47" fill="#c8c8c8" />
+<rect x="16.45" y="33.14" width="0.75" height="1.67" fill="#6d410e" />
+<rect x="16.45" y="33.14" width="0.75" height="0.47" fill="#c8c8c8" />
+<rect x="16.45" y="34.34" width="0.75" height="0.47" fill="#c8c8c8" />
+<rect x="5.4" y="27.76" width="14.6" height="2.18" rx="0.11" fill="#2d2d2d" />
+<rect x="8.32" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="8.82" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="9.32" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="9.82" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="10.32" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="10.82" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="11.32" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="11.82" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="12.32" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="12.82" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="13.33" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="13.83" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="14.33" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="14.83" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="15.33" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="15.83" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="16.33" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="16.83" y="28.41" width="0.25" height="0.87" fill="#e1b737" />
+<rect x="18.52" y="21.69" width="1.74" height="0.7" fill="#3a3a3a" />
+<rect x="18.52" y="21.69" width="0.49" height="0.7" fill="#c8c8c8" />
+<rect x="19.77" y="21.69" width="0.49" height="0.7" fill="#c8c8c8" />
+<rect x="18.52" y="22.68" width="1.74" height="0.7" fill="#3a3a3a" />
+<rect x="18.52" y="22.68" width="0.49" height="0.7" fill="#c8c8c8" />
+<rect x="19.77" y="22.68" width="0.49" height="0.7" fill="#c8c8c8" />
+<rect x="12.16" y="21.6" width="0.68" height="1.67" fill="#3a3a3a" />
+<rect x="12.16" y="21.6" width="0.68" height="0.47" fill="#c8c8c8" />
+<rect x="12.16" y="22.8" width="0.68" height="0.47" fill="#c8c8c8" />
+<rect x="13.13" y="21.6" width="0.68" height="1.67" fill="#3a3a3a" />
+<rect x="13.13" y="21.6" width="0.68" height="0.47" fill="#c8c8c8" />
+<rect x="13.13" y="22.8" width="0.68" height="0.47" fill="#c8c8c8" />
+<rect x="6.23" y="20.77" width="0.9" height="2.37" fill="#3a3a3a" />
+<rect x="6.23" y="20.77" width="0.9" height="0.66" fill="#c8c8c8" />
+<rect x="6.23" y="22.48" width="0.9" height="0.66" fill="#c8c8c8" />
+<rect x="7.52" y="20.77" width="0.9" height="2.37" fill="#3a3a3a" />
+<rect x="7.52" y="20.77" width="0.9" height="0.66" fill="#c8c8c8" />
+<rect x="7.52" y="22.48" width="0.9" height="0.66" fill="#c8c8c8" />
+<rect x="18.82" y="19.04" width="1.13" height="0.83" fill="#3a3a3a" />
+<rect x="18.82" y="19.04" width="0.32" height="0.83" fill="#c8c8c8" />
+<rect x="19.63" y="19.04" width="0.32" height="0.83" fill="#c8c8c8" />
+<rect x="18.01" y="15.19" width="2.82" height="3.34" rx="0.42" fill="#b2b2b2" />
+<rect x="10.1" y="14.17" width="5.14" height="5" rx="0.25" fill="#838383" />
+<rect x="10.54" y="13.97" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="11.04" y="13.97" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="11.54" y="13.97" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="12.04" y="13.97" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="12.54" y="13.97" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="13.04" y="13.97" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="13.54" y="13.97" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="14.04" y="13.97" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="14.54" y="13.97" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="10.54" y="18.92" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="11.04" y="18.92" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="11.54" y="18.92" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="12.04" y="18.92" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="12.54" y="18.92" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="13.04" y="18.92" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="13.54" y="18.92" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="14.04" y="18.92" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="14.54" y="18.92" width="0.25" height="0.45" fill="#c8c8c8" />
+<rect x="9.9" y="14.54" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="9.9" y="15.04" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="9.9" y="15.54" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="9.9" y="16.05" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="9.9" y="16.55" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="9.9" y="17.05" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="9.9" y="17.55" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="9.9" y="18.05" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="9.9" y="18.55" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="14.99" y="14.54" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="14.99" y="15.04" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="14.99" y="15.54" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="14.99" y="16.05" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="14.99" y="16.55" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="14.99" y="17.05" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="14.99" y="17.55" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="14.99" y="18.05" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="14.99" y="18.55" width="0.45" height="0.25" fill="#c8c8c8" />
+<rect x="16.85" y="14.79" width="0.83" height="1.12" fill="#3a3a3a" />
+<rect x="16.85" y="14.79" width="0.83" height="0.31" fill="#c8c8c8" />
+<rect x="16.85" y="15.6" width="0.83" height="0.31" fill="#c8c8c8" />
+<rect x="5.59" y="15.61" width="1.61" height="0.73" fill="#3a3a3a" />
+<rect x="5.59" y="15.61" width="0.45" height="0.73" fill="#c8c8c8" />
+<rect x="6.75" y="15.61" width="0.45" height="0.73" fill="#c8c8c8" />
+<rect x="5.59" y="16.65" width="1.61" height="0.73" fill="#3a3a3a" />
+<rect x="5.59" y="16.65" width="0.45" height="0.73" fill="#c8c8c8" />
+<rect x="6.75" y="16.65" width="0.45" height="0.73" fill="#c8c8c8" />
+<rect x="5.59" y="17.7" width="1.61" height="0.73" fill="#3a3a3a" />
+<rect x="5.59" y="17.7" width="0.45" height="0.73" fill="#c8c8c8" />
+<rect x="6.75" y="17.7" width="0.45" height="0.73" fill="#c8c8c8" />
+<rect x="18.82" y="13.85" width="1.13" height="0.83" fill="#6d410e" />
+<rect x="18.82" y="13.85" width="0.32" height="0.83" fill="#c8c8c8" />
+<rect x="19.63" y="13.85" width="0.32" height="0.83" fill="#c8c8c8" />
+<rect x="18.35" y="11.86" width="0.72" height="1.67" fill="#6d410e" />
+<rect x="18.35" y="11.86" width="0.72" height="0.47" fill="#c8c8c8" />
+<rect x="18.35" y="13.06" width="0.72" height="0.47" fill="#c8c8c8" />
+<rect x="19.38" y="11.86" width="0.72" height="1.67" fill="#6d410e" />
+<rect x="19.38" y="11.86" width="0.72" height="0.47" fill="#c8c8c8" />
+<rect x="19.38" y="13.06" width="0.72" height="0.47" fill="#c8c8c8" />
+<rect x="16.33" y="8.14" width="2.38" height="0.9" fill="#6d410e" />
+<rect x="16.33" y="8.14" width="0.67" height="0.9" fill="#c8c8c8" />
+<rect x="18.04" y="8.14" width="0.67" height="0.9" fill="#c8c8c8" />
+<rect x="16.33" y="9.42" width="2.38" height="0.9" fill="#6d410e" />
+<rect x="16.33" y="9.42" width="0.67" height="0.9" fill="#c8c8c8" />
+<rect x="18.04" y="9.42" width="0.67" height="0.9" fill="#c8c8c8" />
+<rect x="16.33" y="10.7" width="2.38" height="0.9" fill="#6d410e" />
+<rect x="16.33" y="10.7" width="0.67" height="0.9" fill="#c8c8c8" />
+<rect x="18.04" y="10.7" width="0.67" height="0.9" fill="#c8c8c8" />
+<rect x="10.8" y="11.6" width="1.17" height="0.84" fill="#6d410e" />
+<rect x="10.8" y="11.6" width="0.33" height="0.84" fill="#c8c8c8" />
+<rect x="11.64" y="11.6" width="0.33" height="0.84" fill="#c8c8c8" />
+<rect x="13.18" y="9.87" width="0.9" height="1.16" fill="#6d410e" />
+<rect x="13.18" y="9.87" width="0.9" height="0.33" fill="#c8c8c8" />
+<rect x="13.18" y="10.71" width="0.9" height="0.33" fill="#c8c8c8" />
+<rect x="11.7" y="10.58" width="0.9" height="0.57" fill="#068383" />
+<rect x="11.7" y="10.58" width="0.25" height="0.57" fill="#c8c8c8" />
+<rect x="12.35" y="10.58" width="0.25" height="0.57" fill="#c8c8c8" />
+<rect x="8.13" y="9.62" width="0.75" height="1.66" fill="#6d410e" />
+<rect x="8.13" y="9.62" width="0.75" height="0.46" fill="#c8c8c8" />
+<rect x="8.13" y="10.82" width="0.75" height="0.46" fill="#c8c8c8" />
+<rect x="9.2" y="9.62" width="0.75" height="1.66" fill="#6d410e" />
+<rect x="9.2" y="9.62" width="0.75" height="0.46" fill="#c8c8c8" />
+<rect x="9.2" y="10.82" width="0.75" height="0.46" fill="#c8c8c8" />
+<rect x="10.28" y="9.62" width="0.75" height="1.66" fill="#6d410e" />
+<rect x="10.28" y="9.62" width="0.75" height="0.46" fill="#c8c8c8" />
+<rect x="10.28" y="10.82" width="0.75" height="0.46" fill="#c8c8c8" />
+<circle cx="1.27" cy="5.2" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="7.74" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="10.28" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="12.82" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="15.36" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="17.9" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="20.44" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="22.98" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="25.52" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="28.06" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="30.6" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="33.14" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="35.68" r="0.75" fill="#e1b737" />
+<circle cx="1.27" cy="38.22" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="5.2" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="7.74" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="10.28" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="12.82" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="15.36" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="17.9" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="20.44" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="22.98" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="25.52" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="28.06" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="30.6" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="33.14" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="35.68" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="38.22" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="40.76" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="43.3" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="45.84" r="0.75" fill="#e1b737" />
+<circle cx="24.13" cy="48.38" r="0.75" fill="#e1b737" />
+<text x="19.13" y="54.59" font-size="0.88" font-family="sans-serif" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#ffffff" transform="rotate(-90 19.13 54.59)">15/D13</text>
+<text x="4.56" y="53.4" font-size="0.82" font-family="sans-serif" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#ffffff" transform="rotate(-90 4.56 53.4)">9/BOOT</text>
+<text x="18.81" y="26.28" font-size="0.88" font-family="sans-serif" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#ffffff" transform="rotate(-90 18.81 26.28)">GDI</text>
+</g><title>spark's drawing of 47 measured features of firebeetle2-esp32c6</title></g><g transform="translate(295.934 151.8) rotate(0 160.63 83.15)" data-part="Epaper2in9BwrMhEtLive"><g transform="scale(3.213 2.772) translate(0 0)"><rect x="1" y="1" width="98" height="58" rx="4" fill="#1565c0" stroke="#0d47a1" stroke-width="2" />
+  <rect x="10" y="20" width="80" height="20" rx="2" fill="#90caf9" />
+</g></g><g class="wire" data-step="3"><path d="M83.6 156.6L83.6 171L486.8 171L486.8 127.8" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M83.6 156.6L83.6 171L486.8 171L486.8 127.8" fill="none" stroke="red" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="83.6" cy="156.6" r="3" fill="red" stroke="#ffffff" stroke-width="1" /><circle cx="486.8" cy="127.8" r="3" fill="red" stroke="#ffffff" stroke-width="1" /></g><g class="wire" data-step="4"><path d="M122 51L122 94.2L486.8 94.2L486.8 118.2" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M122 51L122 94.2L486.8 94.2L486.8 118.2" fill="none" stroke="red" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="122" cy="51" r="3" fill="red" stroke="#ffffff" stroke-width="1" /><circle cx="486.8" cy="118.2" r="3" fill="red" stroke="#ffffff" stroke-width="1" /></g><g class="wire" data-step="5"><path d="M208.4 156.6L208.4 123L448.4 123L448.4 118.2" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M208.4 156.6L208.4 123L448.4 123L448.4 118.2" fill="none" stroke="green" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="208.4" cy="156.6" r="3" fill="green" stroke="#ffffff" stroke-width="1" /><circle cx="448.4" cy="118.2" r="3" fill="green" stroke="#ffffff" stroke-width="1" /></g><g class="wire" data-step="6"><path d="M179.6 156.6L179.6 132.6L438.8 132.6L438.8 118.2" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M179.6 156.6L179.6 132.6L438.8 132.6L438.8 118.2" fill="none" stroke="blue" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="179.6" cy="156.6" r="3" fill="blue" stroke="#ffffff" stroke-width="1" /><circle cx="438.8" cy="118.2" r="3" fill="blue" stroke="#ffffff" stroke-width="1" /></g><g class="wire" data-step="7"><path d="M102.8 156.6L102.8 161.4L477.2 161.4L477.2 118.2" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M102.8 156.6L102.8 161.4L477.2 161.4L477.2 118.2" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="102.8" cy="156.6" r="3" fill="black" stroke="#ffffff" stroke-width="1" /><circle cx="477.2" cy="118.2" r="3" fill="black" stroke="#ffffff" stroke-width="1" /></g><g class="wire" data-step="8"><path d="M131.6 156.6L131.6 142.2L467.6 142.2L467.6 118.2" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M131.6 156.6L131.6 142.2L467.6 142.2L467.6 118.2" fill="none" stroke="purple" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="131.6" cy="156.6" r="3" fill="purple" stroke="#ffffff" stroke-width="1" /><circle cx="467.6" cy="118.2" r="3" fill="purple" stroke="#ffffff" stroke-width="1" /></g><g class="wire" data-step="9"><path d="M122 156.6L122 151.8L458 151.8L458 118.2" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M122 156.6L122 151.8L458 151.8L458 118.2" fill="none" stroke="orange" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="122" cy="156.6" r="3" fill="orange" stroke="#ffffff" stroke-width="1" /><circle cx="458" cy="118.2" r="3" fill="orange" stroke="#ffffff" stroke-width="1" /></g><g class="wire" data-step="10"><path d="M141.2 51L141.2 113.4L419.6 113.4L419.6 118.2" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M141.2 51L141.2 113.4L419.6 113.4L419.6 118.2" fill="none" stroke="magenta" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="141.2" cy="51" r="3" fill="magenta" stroke="#ffffff" stroke-width="1" /><circle cx="419.6" cy="118.2" r="3" fill="magenta" stroke="#ffffff" stroke-width="1" /></g><g class="wire" data-step="11"><path d="M150.8 51L150.8 103.8L429.2 103.8L429.2 118.2" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M150.8 51L150.8 103.8L429.2 103.8L429.2 118.2" fill="none" stroke="cyan" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="150.8" cy="51" r="3" fill="cyan" stroke="#ffffff" stroke-width="1" /><circle cx="429.2" cy="118.2" r="3" fill="cyan" stroke="#ffffff" stroke-width="1" /></g><text x="285.2" y="168" font-size="9" font-weight="bold" text-anchor="middle" fill="red" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">3</text><text x="304.4" y="91.2" font-size="9" font-weight="bold" text-anchor="middle" fill="red" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">4</text><text x="328.4" y="120" font-size="9" font-weight="bold" text-anchor="middle" fill="green" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">5</text><text x="309.2" y="129.6" font-size="9" font-weight="bold" text-anchor="middle" fill="blue" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">6</text><text x="290" y="158.4" font-size="9" font-weight="bold" text-anchor="middle" fill="black" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">7</text><text x="299.6" y="139.2" font-size="9" font-weight="bold" text-anchor="middle" fill="purple" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">8</text><text x="290" y="148.8" font-size="9" font-weight="bold" text-anchor="middle" fill="orange" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">9</text><text x="280.4" y="110.4" font-size="9" font-weight="bold" text-anchor="middle" fill="magenta" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">10</text><text x="290" y="100.8" font-size="9" font-weight="bold" text-anchor="middle" fill="cyan" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">11</text><g transform="translate(95.468 -9.586) rotate(90 48 113.386)"><text x="9.8" y="21.654" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">NC4</text><text x="9.8" y="31.254" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D11</text><text x="9.8" y="40.854" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D12</text><text x="9.8" y="50.454" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D13</text><text x="9.8" y="60.054" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">NC5</text><text x="9.8" y="69.654" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">A1</text><text x="9.8" y="79.254" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">A2</text><text x="9.8" y="88.854" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">A3</text><text x="9.8" y="98.454" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">A4</text><text x="9.8" y="108.054" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">SDA</text><text x="9.8" y="117.654" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">SCL</text><text x="9.8" y="127.254" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">GND2</text><text x="9.8" y="136.854" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">3V3_2</text><text x="9.8" y="146.454" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">VIN</text><text x="86.2" y="21.654" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">RX</text><text x="86.2" y="31.254" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">TX</text><text x="86.2" y="40.854" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D2</text><text x="86.2" y="50.454" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D3</text><text x="86.2" y="60.054" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">NC1</text><text x="86.2" y="69.654" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D6</text><text x="86.2" y="79.254" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D7</text><text x="86.2" y="88.854" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D9</text><text x="86.2" y="98.454" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">IO19</text><text x="86.2" y="108.054" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">IO20</text><text x="86.2" y="117.654" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">MISO</text><text x="86.2" y="127.254" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">MOSI</text><text x="86.2" y="136.854" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">SCK</text><text x="86.2" y="146.454" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">NC2</text><text x="86.2" y="156.054" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">GND1</text><text x="86.2" y="165.654" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">NC3</text><text x="86.2" y="175.254" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">3V3</text><text x="86.2" y="184.854" font-size="6" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">RST</text><rect x="31" y="214.772" width="34" height="12" rx="3" fill="#cfd8dc" stroke="#455a64" stroke-width="1" /></g><circle cx="237.2" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="227.6" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="218" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="208.4" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="198.8" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="189.2" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="179.6" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="170" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="160.4" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="150.8" cy="60.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="141.2" cy="60.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="131.6" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="122" cy="60.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="112.4" cy="60.6" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="237.2" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="227.6" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="218" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="208.4" cy="147" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="198.8" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="189.2" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="179.6" cy="147" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="170" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="160.4" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="150.8" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="141.2" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="131.6" cy="147" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="122" cy="147" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="112.4" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="102.8" cy="147" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="93.2" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><circle cx="83.6" cy="147" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="74" cy="147" r="2.5" fill="#c9a24b" stroke="#20262b" stroke-width="0.6" data-pad="free" /><text x="143.468" y="103.8" font-size="8" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">board</text><g transform="translate(295.934 151.8) rotate(0 160.63 83.15)"><text x="188.866" y="9.8" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke" transform="rotate(90 188.866 9.8)">VCC</text><text x="179.266" y="9.8" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke" transform="rotate(90 179.266 9.8)">GND</text><text x="169.666" y="9.8" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke" transform="rotate(90 169.666 9.8)">SDI</text><text x="160.066" y="9.8" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke" transform="rotate(90 160.066 9.8)">SCLK</text><text x="150.466" y="9.8" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke" transform="rotate(90 150.466 9.8)">CS</text><text x="140.866" y="9.8" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke" transform="rotate(90 140.866 9.8)">D/C</text><text x="131.266" y="9.8" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke" transform="rotate(90 131.266 9.8)">Reset</text><text x="121.666" y="9.8" font-size="6" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke" transform="rotate(90 121.666 9.8)">Busy</text></g><circle cx="486.8" cy="156.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="477.2" cy="156.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="467.6" cy="156.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="458" cy="156.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="448.4" cy="156.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="438.8" cy="156.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="429.2" cy="156.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><circle cx="419.6" cy="156.6" r="2.5" fill="#ffd34d" stroke="#20262b" stroke-width="0.6" data-pad="used" /><text x="456.564" y="234.95" font-size="8" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">e-paper</text><text x="6.8" y="347.299" font-size="8" fill="#5d4037">pads not verified, row side not verified, USB end not verified, e-paper pads not verified, e-paper header side not verified</text></svg>
+--- wiring-record.json ---
+{
+ "steps": [
+  {
+   "key": [
+    "place",
+    "board"
+   ],
+   "anchor": null,
+   "kind": "place",
+   "source": "the board",
+   "to": "",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": null,
+   "marks": ""
+  },
+  {
+   "key": [
+    "place",
+    "Epaper2in9BwrMhEtLive"
+   ],
+   "anchor": null,
+   "kind": "place",
+   "source": "Epaper2in9BwrMhEtLive",
+   "to": "",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": null,
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board 3V3"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "e-paper VCC (back up, header at the top: the left end pin, above the label VCC)"
+   ],
+   "kind": "jumper",
+   "source": "board 3V3",
+   "to": "the row of e-paper VCC",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "red",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board 3V3_2"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "e-paper VCC (back up, header at the top: the left end pin, above the label VCC)"
+   ],
+   "kind": "jumper",
+   "source": "board 3V3_2",
+   "to": "the row of e-paper VCC",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "red",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board D3"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "e-paper CS"
+   ],
+   "kind": "jumper",
+   "source": "board D3",
+   "to": "the row of e-paper CS",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "green",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board D7"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "e-paper D/C"
+   ],
+   "kind": "jumper",
+   "source": "board D7",
+   "to": "the row of e-paper D/C",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "blue",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board GND"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "e-paper GND"
+   ],
+   "kind": "jumper",
+   "source": "board GND",
+   "to": "the row of e-paper GND",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "black",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board MOSI"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "e-paper SDI"
+   ],
+   "kind": "jumper",
+   "source": "board MOSI",
+   "to": "the row of e-paper SDI",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "purple",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board SCK"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "e-paper SCLK"
+   ],
+   "kind": "jumper",
+   "source": "board SCK",
+   "to": "the row of e-paper SCLK",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "orange",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board SCL"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "e-paper Busy (back up, header at the top: the right end pin, above the label Busy)"
+   ],
+   "kind": "jumper",
+   "source": "board SCL",
+   "to": "the row of e-paper Busy",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "magenta",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board SDA"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "e-paper Reset"
+   ],
+   "kind": "jumper",
+   "source": "board SDA",
+   "to": "the row of e-paper Reset",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "cyan",
+   "marks": ""
+  }
+ ],
+ "drawn_jumpers": [
+  [
+   "11b.j",
+   "46b.f"
+  ],
+  [
+   "11t.a",
+   "49b.f"
+  ],
+  [
+   "12b.j",
+   "47b.f"
+  ],
+  [
+   "13t.a",
+   "42b.f"
+  ],
+  [
+   "14t.a",
+   "43b.f"
+  ],
+  [
+   "17b.j",
+   "44b.f"
+  ],
+  [
+   "20b.j",
+   "45b.f"
+  ],
+  [
+   "48b.f",
+   "9b.j"
+  ],
+  [
+   "49b.g",
+   "7b.j"
+  ]
+ ],
+ "at": "<time>",
+ "base": null
+}
