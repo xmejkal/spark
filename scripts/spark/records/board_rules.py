@@ -306,13 +306,14 @@ def adc2_role_problems(board, validation):
             "ADC pins), or [] when it breaks out none, and a 'note'" % board["chip"]]
 
 
-def adc2_unread_gpio(board):
+def adc2_unread_gpio(board, table=None):
     """
     The GPIOs of the board's chip's ADC2 when `data/chips.json` records that ESP-IDF does not read it in oneshot mode
     (P813, the ESP32-C3), else (): the pin assigner gives them no adc ability, whatever `adc_gpio` and `pin_roles` say.
+    `table` is a chip_table.ChipTable a test gives; None reads the shipped one.
     """
     chip = board.get("chip")
-    table = chip_table.load()
+    table = chip_table.load() if table is None else table
     if table.adc2_oneshot_supported(chip) != chip_table.ChipFact(outcomes.RECORDED, False):
         return ()
     return table.adc2_gpio(chip) or ()
