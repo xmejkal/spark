@@ -1,11 +1,19 @@
 {
- "//": "Facts about each ESP-IDF v5.5.1 chip that a board rule reads (P809), cited to the kept ESP-IDF files. adc2_used_by_wifi: true means a board of that chip names the adc2_unusable_with_wifi role in pin_roles (board_rules.adc2_role_problems); false means it has no ADC2 that Wi-Fi uses; null means the source says something else, and boards.py --validate says the role is not checked. The chip keys are the board records' `chip` values.",
+ "//": "Facts about each ESP-IDF v5.5.1 chip that a board rule reads (P809), cited to the kept ESP-IDF files. adc2_used_by_wifi: true means a board of that chip names the adc2_unusable_with_wifi role in pin_roles (board_rules.adc2_role_problems); false means it has no ADC2 that Wi-Fi uses; null means the source says something else, and boards.py --validate says the role is not checked. adc2_oneshot_supported: false means ESP-IDF does not read the chip's ADC2 in oneshot mode, so the pin assigner gives the pins in adc2_gpio no adc ability, with no role (P813, the ESP32-C3 only). The chip keys are the board records' `chip` values. The ESP32-C3's adc_channel.h is cited and not yet kept in the store; the PO keeps it.",
  "documents": {
   "esp-idf-adc-oneshot-v5-5-1": {
    "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/docs/en/api-reference/peripherals/adc_oneshot.rst",
    "sha256": "66db4d85166e760c8300839b709eaa818d2541740c14d03bcb3dc3e5fc1d1dcf",
    "file": "esp-idf-v5.5.1-adc_oneshot.rst",
    "retrieved": "2026-11-14",
+   "title": null,
+   "version": "tag v5.5.1"
+  },
+  "esp-idf-adc-channel-v5-5-1-esp32c3": {
+   "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32c3/include/soc/adc_channel.h",
+   "sha256": "c79100bb8e2203294080930c104488ae0e680acbc793383f9e9cc3286ae66258",
+   "file": "esp-idf-v5.5.1-esp32c3-adc_channel.h",
+   "retrieved": "2026-11-20",
    "title": null,
    "version": "tag v5.5.1"
   },
@@ -82,7 +90,21 @@
     "value": null,
     "cites": {
      "document": "esp-idf-adc-oneshot-v5-5-1",
-     "at": "Hardware Limitations, line 169: \"ADC2 oneshot mode is no longer supported, due to hardware limitations.\" A different fact (P813)"
+     "at": "Hardware Limitations, line 169: \"ADC2 oneshot mode is no longer supported, due to hardware limitations.\" A different fact, held as adc2_oneshot_supported and adc2_gpio (P813)"
+    }
+   },
+   "adc2_oneshot_supported": {
+    "value": false,
+    "cites": {
+     "document": "esp-idf-adc-oneshot-v5-5-1",
+     "at": "Hardware Limitations, line 169: \"ADC2 oneshot mode is no longer supported, due to hardware limitations. The results are not stable.\" By default: the same line lets a build force it with CONFIG_ADC_ONESHOT_FORCE_USE_ADC2_ON_C3"
+    }
+   },
+   "adc2_gpio": {
+    "value": [5],
+    "cites": {
+     "document": "esp-idf-adc-channel-v5-5-1-esp32c3",
+     "at": "line 25: \"#define ADC2_CHANNEL_0_GPIO_NUM 5\", ADC2's one channel. File not yet kept; the PO keeps it (P813)"
     }
    }
   },

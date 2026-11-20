@@ -2,9 +2,9 @@
 The rules a board record is held to (P724), as `part_records` holds a part's: one named rule per function, each
 `(board, validation) -> list` of problems, in the order of `RULES`, which `board_records.BOARD` runs, and the names only
 they read (the forbidden keys, the fab keys, the shape of a label and a fact). The names `board_records` code and other
-modules read too (`PIN_ROLES`, `ADC2_UNUSABLE_WITH_WIFI`, `POWER_FUNCTIONS`, `GPIO_MIN`, `GPIO_MAX`, `is_gpio`,
-`is_pin_map_constant`) live here, and `board_records` imports them, so `board_records.PIN_ROLES` still works. It
-imports the records area below it, never `board_records`.
+modules read too (`PIN_ROLES`, `ADC2_UNUSABLE_WITH_WIFI`, `adc2_unread_gpio`, `POWER_FUNCTIONS`, `GPIO_MIN`,
+`GPIO_MAX`, `is_gpio`, `is_pin_map_constant`) live here, and `board_records` imports them, so
+`board_records.PIN_ROLES` still works. It imports the records area below it, never `board_records`.
 """
 
 import math
@@ -306,11 +306,25 @@ def adc2_role_problems(board, validation):
             "ADC pins), or [] when it breaks out none, and a 'note'" % board["chip"]]
 
 
+def adc2_unread_gpio(board, table=None):
+    """
+    The GPIOs of the board's chip's ADC2 when `data/chips.json` records that ESP-IDF does not read it in oneshot mode
+    (P813, the ESP32-C3), else (): the pin assigner gives them no adc ability, whatever `adc_gpio` and `pin_roles` say.
+    `table` is a chip_table.ChipTable a test gives; None reads the shipped one.
+    """
+    chip = board.get("chip")
+    table = chip_table.load() if table is None else table
+    if table.adc2_oneshot_supported(chip) != chip_table.ChipFact(outcomes.RECORDED, False):
+        return ()
+    return table.adc2_gpio(chip) or ()
+
+
 def adc2_role_unchecked(board):
     """Why the ADC2 role rule could not judge this board, as `outcomes.NOT_CHECKED_MESSAGE`'s `why`, or None: the
-    table holds no fact for its chip and the record names no ADC2 role. `boards.py --validate` prints it (P809)."""
+    table holds no fact for its chip and the record names no ADC2 role. `boards.py --validate` prints it (P809). A
+    chip whose ADC2 the table records as not read (`adc2_unread_gpio`, P813) leaves the rule nothing to judge."""
     fact = _adc2_fact(board)
-    if fact is None or fact.state != outcomes.NONE_RECORDED:
+    if fact is None or fact.state != outcomes.NONE_RECORDED or adc2_unread_gpio(board):
         return None
     return "data/chips.json holds no ADC2 fact for chip %r" % (board.get("chip"),)
 

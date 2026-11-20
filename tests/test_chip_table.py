@@ -1,6 +1,7 @@
 """
 The chip table (P809): `data/chips.json` holds each chip's `adc2_used_by_wifi`, cited to a kept ESP-IDF file, and
-`chip_table` reads it as RECORDED or NOT_CHECKED.
+`chip_table` reads it as RECORDED or NONE_RECORDED. P813: the ESP32-C3 also holds `adc2_oneshot_supported` (false), cited
+to the kept adc_oneshot.rst, and `adc2_gpio` (its ADC2 pin), cited to its adc_channel.h, which is not yet kept.
 """
 
 import json
@@ -27,11 +28,34 @@ class TheShippedTableTest(unittest.TestCase):
 
     def test_each_fact_is_a_bool_or_null_with_a_citation(self):
         for chip, facts in self.held["chips"].items():
-            with self.subTest(chip=chip):
-                fact = facts["adc2_used_by_wifi"]
-                self.assertIn(fact["value"], (True, False, None))
-                self.assertIn(fact["cites"]["document"], self.held["documents"])
-                self.assertTrue(fact["cites"]["at"])
+            for name in ("adc2_used_by_wifi", "adc2_oneshot_supported", "adc2_gpio"):
+                if name not in facts and name != "adc2_used_by_wifi":
+                    continue
+                with self.subTest(chip=chip, fact=name):
+                    fact = facts[name]
+                    if name == "adc2_gpio":
+                        self.assertTrue(isinstance(fact["value"], list) and fact["value"]
+                                        and all(type(gpio) is int for gpio in fact["value"]), fact["value"])
+                    else:
+                        self.assertIn(fact["value"], (True, False, None))
+                    self.assertIn(fact["cites"]["document"], self.held["documents"])
+                    self.assertTrue(fact["cites"]["at"])
+            self.assertLessEqual(set(facts), {"adc2_used_by_wifi", "adc2_oneshot_supported", "adc2_gpio"}, chip)
+
+    def test_a_chip_whose_adc2_oneshot_is_unsupported_names_its_adc2_pins(self):
+        for chip, facts in self.held["chips"].items():
+            if facts.get("adc2_oneshot_supported", {}).get("value") is False:
+                with self.subTest(chip=chip):
+                    self.assertIsNotNone(chip_table.load().adc2_gpio(chip))
+
+    def test_the_c3_facts_are_the_sources(self):
+        held = {chip: {name: fact["value"] for name, fact in facts.items() if name != "adc2_used_by_wifi"}
+                for chip, facts in self.held["chips"].items()}
+        self.assertEqual({chip: facts for chip, facts in held.items() if facts},
+                         {"esp32c3": {"adc2_oneshot_supported": False, "adc2_gpio": [5]}})
+        self.assertEqual(chip_table.load().adc2_oneshot_supported("esp32c3"),
+                         chip_table.ChipFact(outcomes.RECORDED, False))
+        self.assertEqual(chip_table.load().adc2_gpio("esp32c3"), (5,))
 
     def test_the_shipped_values_are_the_sources(self):
         values = {chip: facts["adc2_used_by_wifi"]["value"] for chip, facts in self.held["chips"].items()}
@@ -63,6 +87,31 @@ class TheLookupTest(unittest.TestCase):
         for chip in ("open", "absent", 5, None):
             with self.subTest(chip=chip):
                 self.assertEqual(self.TABLE.adc2_used_by_wifi(chip), chip_table.ChipFact(outcomes.NONE_RECORDED))
+
+    def test_adc2_oneshot_supported_is_read_as_adc2_used_by_wifi_is(self):
+        table = chip_table.ChipTable.from_dict({
+            "no": {"adc2_oneshot_supported": {"value": False}},
+            "open": {"adc2_oneshot_supported": {"value": None}},
+            "other": {"adc2_used_by_wifi": {"value": False}},
+        })
+        self.assertEqual(table.adc2_oneshot_supported("no"), chip_table.ChipFact(outcomes.RECORDED, False))
+        for chip in ("open", "other", "absent", 5, None):
+            with self.subTest(chip=chip):
+                self.assertEqual(table.adc2_oneshot_supported(chip), chip_table.ChipFact(outcomes.NONE_RECORDED))
+
+    def test_adc2_gpio_is_a_tuple_of_numbers_or_none_for_no_fact(self):
+        table = chip_table.ChipTable.from_dict({
+            "two": {"adc2_gpio": {"value": [5, 6]}},
+            "open": {"adc2_gpio": {"value": None}},
+            "odd": {"adc2_gpio": {"value": [5, "6"]}},
+            "flag": {"adc2_gpio": {"value": [True]}},
+            "word": {"adc2_gpio": {"value": "5"}},
+            "other": {"adc2_used_by_wifi": {"value": True}},
+        })
+        self.assertEqual(table.adc2_gpio("two"), (5, 6))
+        for chip in ("open", "odd", "flag", "word", "other", "absent", 5, None):
+            with self.subTest(chip=chip):
+                self.assertIsNone(table.adc2_gpio(chip))
 
     def test_the_table_cannot_be_changed(self):
         with self.assertRaises(TypeError):

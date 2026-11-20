@@ -1407,12 +1407,17 @@ class AChipThatSharesAdc2WithWifiNeedsTheRoleTest(unittest.TestCase):
         self.assertIn("'esp32' shares ADC2 with Wi-Fi", lines[0])
 
     def test_validate_says_a_chip_with_no_fact_is_not_checked_and_still_passes(self):
-        self.assertEqual(self._validate(definition("b", chip="esp32c3")),
-                         (0, ["- ADC2 role not checked: data/chips.json holds no ADC2 fact for chip 'esp32c3'"]))
+        self.assertEqual(self._validate(definition("b", chip="esp32-nochip")),
+                         (0, ["- ADC2 role not checked: data/chips.json holds no ADC2 fact for chip 'esp32-nochip'"]))
 
     def test_validate_says_nothing_more_when_the_role_is_named_or_the_chip_has_a_fact(self):
-        self.assertEqual(self._validate(definition("b", chip="esp32c3", pin_roles=self.ROLE)), (0, []))
+        self.assertEqual(self._validate(definition("b", chip="esp32-nochip", pin_roles=self.ROLE)), (0, []))
         self.assertEqual(self._validate(definition("b", chip="esp32c6")), (0, []))
+
+    def test_validate_says_nothing_of_a_c3_without_the_role_and_passes_it(self):
+        """P813: the table names the C3's ADC2 pin, whose oneshot read ESP-IDF does not support, so the pin assigner
+        keeps adc off it with no role, and the role rule has nothing left it could not judge."""
+        self.assertEqual(self._validate(definition("b", chip="esp32c3")), (0, []))
 
 
 class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):

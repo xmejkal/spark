@@ -1,10 +1,12 @@
 """
 Facts about each chip that a board rule reads (P809): the rows of `data/chips.json`, read here and nowhere else.
 
-One fact today, `adc2_used_by_wifi`, cited to ESP-IDF v5.5.1. `board_rules.adc2_role_problems` reads it: a board
-whose chip shares ADC2 with Wi-Fi names the `adc2_unusable_with_wifi` role. The lookup follows the reader rule in
-`outcomes`: a chip the table lacks or holds as null is NONE_RECORDED. It has no row in test_outcomes' READERS, because
-it reads no file that may be absent: `load` reads the shipped table, a required thing, and raises.
+Each fact is cited to ESP-IDF v5.5.1. `adc2_used_by_wifi`: `board_rules.adc2_role_problems` reads it, and a board
+whose chip shares ADC2 with Wi-Fi names the `adc2_unusable_with_wifi` role. `adc2_oneshot_supported` and `adc2_gpio`
+(P813, the ESP32-C3): `board_rules.adc2_unread_gpio` reads them, and the pin assigner gives the chip's ADC2 pins no
+adc. A lookup follows the reader rule in `outcomes`: a chip the table lacks or holds as null is NONE_RECORDED. It has no
+row in test_outcomes' READERS, because it reads no file that may be absent: `load` reads the shipped table, a required
+thing, and raises.
 """
 
 import functools
@@ -41,9 +43,28 @@ class ChipTable:
     def adc2_used_by_wifi(self, chip):
         """Whether `chip` shares ADC2 with Wi-Fi, as a ChipFact; NONE_RECORDED for a chip the table lacks or holds as
         null, and for a chip that is no string."""
-        fact = self.chips.get(chip, {}).get("adc2_used_by_wifi") if isinstance(chip, str) else None
-        value = fact.get("value") if isinstance(fact, dict) else None
+        return self._flag(chip, "adc2_used_by_wifi")
+
+    def adc2_oneshot_supported(self, chip):
+        """Whether ESP-IDF reads `chip`'s ADC2 in oneshot mode, as a ChipFact; NONE_RECORDED as `adc2_used_by_wifi`."""
+        return self._flag(chip, "adc2_oneshot_supported")
+
+    def adc2_gpio(self, chip):
+        """The GPIO numbers of `chip`'s ADC2, a tuple, or None when the table holds no fact: it lacks the chip or the
+        fact, or holds no list of GPIO numbers. None never means "no ADC2 pin"."""
+        value = self._value(chip, "adc2_gpio")
+        if isinstance(value, list) and value and all(type(gpio) is int for gpio in value):
+            return tuple(value)
+        return None
+
+    def _flag(self, chip, name):
+        value = self._value(chip, name)
         return ChipFact(outcomes.RECORDED, value) if isinstance(value, bool) else ChipFact(outcomes.NONE_RECORDED)
+
+    def _value(self, chip, name):
+        """The value of fact `name` of `chip`, or None for a chip the table lacks, a chip that is no string, no fact."""
+        fact = self.chips.get(chip, {}).get(name) if isinstance(chip, str) else None
+        return fact.get("value") if isinstance(fact, dict) else None
 
 
 @functools.lru_cache(maxsize=None)
