@@ -59,6 +59,65 @@ class ThePictogramsTest(unittest.TestCase):
         pictures = part_pictures.PictogramPartPictures()
         self.assertEqual(pictures.picture("wokwi-servo"), pictures.picture(part_pictures.FALLBACK))
 
+    def test_a_record_s_own_picture_comes_before_its_type_s_and_another_id_of_the_type_gets_the_box(self):
+        # P946: the FireBeetle's Wokwi type is the DevKitC stand-in, so a picture by type would show on every DevKitC too
+        pictures = part_pictures.PictogramPartPictures()
+        beetle = pictures.picture("board-esp32-s3-devkitc-1", {"id": "firebeetle2-esp32s3"})
+        self.assertIn('fill="#16202a"', beetle.markup)
+        self.assertEqual(beetle.view_box, (0.0, 0.0, 25.4, 60.0))
+        self.assertEqual(pictures.picture("board-esp32-s3-devkitc-1", {"id": "another-board"}),
+                         pictures.picture(part_pictures.FALLBACK))
+        self.assertEqual(pictures.picture("board-esp32-s3-devkitc-1"), pictures.picture(part_pictures.FALLBACK))
+
+    def test_a_part_with_no_record_picture_keeps_its_type_pictogram(self):
+        pictures = part_pictures.PictogramPartPictures()
+        led = part_pictures.read_picture((part_pictures.PICTOGRAMS / "wokwi-led.svg").read_text())
+        self.assertEqual(pictures.picture("wokwi-led"), led)
+        self.assertEqual(pictures.picture("wokwi-led", {"id": "led-with-no-picture"}), led)
+        self.assertEqual(pictures.picture("wokwi-led", {"no": "id"}), led)
+        self.assertEqual(pictures.picture("wokwi-led", {"id": "../pictograms/module"}), led)  # an id is a plain name only
+
+    def test_a_picture_s_first_title_is_its_credit_and_stays_out_of_its_markup(self):
+        picture = part_pictures.read_picture('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1"><title>by someone'
+                                             '</title><rect width="2" height="1"/></svg>')
+        self.assertEqual((picture.credit, "title" in picture.markup, picture.note), ("by someone", False, ""))
+        self.assertEqual(part_pictures.read_picture((part_pictures.PICTOGRAMS / "module.svg").read_text()).credit, "")
+
+
+class TheFireBeetlePictureTest(unittest.TestCase):
+    """P946: the FireBeetle drawn from the PO's old wiring page's group (MIT), turned a quarter into spark's frame."""
+
+    PATH = part_pictures.PICTOGRAMS / "firebeetle2-esp32s3.svg"
+
+    def test_it_is_turned_a_quarter_clockwise_never_mirrored_so_each_word_reads(self):
+        root = ElementTree.fromstring(self.PATH.read_text())
+        group = root.find("svg:g", NS)
+        a, b, c, d, e, f = [float(n) for n in re.findall(r"-?[\d.]+", group.get("transform"))]
+        self.assertGreater(a * d - b * c, 0)
+        self.assertEqual((a, d), (0.0, 0.0))
+        self.assertGreater(b, 0)  # the old page's length (x) runs down spark's frame, toward the USB end
+
+        def place(x, y):
+            return (a * x + c * y + e, b * x + d * y + f)
+
+        usb = next(rect for rect in group.findall("svg:rect", NS) if rect.get("fill") == "#b9c0c5")
+        corners = [place(float(usb.get("x")) + dx, float(usb.get("y")) + dy)
+                   for dx in (0, float(usb.get("width"))) for dy in (0, float(usb.get("height")))]
+        self.assertGreater(min(y for _, y in corners), 50)
+        outline = next(rect for rect in group.findall("svg:rect", NS) if rect.get("fill") == "#16202a")
+        top_left = place(float(outline.get("x")), float(outline.get("y")) + float(outline.get("height")))
+        self.assertAlmostEqual(top_left[0], 0, places=1)
+        self.assertAlmostEqual(top_left[1], 0, places=1)
+
+    def test_the_battery_socket_is_on_the_rx_edge_as_the_po_s_board_has_it(self):
+        # The PO's bench look (2026-11-20): USB-C at the near edge, RX on the left edge, BAT on the same edge as RX
+        root = ElementTree.fromstring(self.PATH.read_text())
+        group = root.find("svg:g", NS)
+        a, b, c, d, e, f = [float(n) for n in re.findall(r"-?[\d.]+", group.get("transform"))]
+        bat = next(text for text in group.findall("svg:text", NS) if text.text == "BAT")
+        x = a * float(bat.get("x")) + c * float(bat.get("y")) + e
+        self.assertLess(x, 25.4 / 2)
+
 
 class TheSvgTest(unittest.TestCase):
     @classmethod
@@ -184,11 +243,17 @@ class TheRecordBoardSvgTest(unittest.TestCase):
     def test_the_same_layout_gives_the_same_bytes(self):
         self.assertEqual(self.text, svg_diagram.SvgBreadboardDiagram().text(self.layout))
 
-    def test_the_picture_is_the_one_looked_at_on_2026_10_29(self):
+    def test_the_picture_is_the_one_looked_at_on_2026_11_20(self):
         # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose. P949: the keys,
-        # and the dot of each pin used or free, seen in a render on 2026-11-20.
+        # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
+        # page's group, BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "7a7d2eedab965c042f9cc8484eb043d7c8f598864ec97368b4a74b0c7543d4e7")
+                         "592ae10a3825352c480cc6accab3ba8e9788c02e811860adacb3fb8a9a667ef1")
+
+    def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
+        board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)
+        self.assertTrue(any(rect.get("fill") == "#16202a" for rect in board.iter("{http://www.w3.org/2000/svg}rect")))
+        self.assertIn("pixel-master/docs/wiring.html", board.find("svg:title", NS).text)
 
     def test_the_xiao_has_none_of_it(self):
         text, _ = xiao_svg()

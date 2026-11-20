@@ -44,7 +44,11 @@
       "first_pad_from_edge_mm": 5.2,
       "flush_edge": "+y",
       "//doubtful_pads": "P412: header_order calls pads 14 and 16 of the 18-pin row GND1 and GND3, and says a later reading of the same schematic and the board photo silkscreens them NC with no net. A jumper to an NC pad does nothing, so the drawn breadboard never names them as ground. Settle it with a continuity meter, module to pad.",
-      "doubtful_pads": ["GND1", "GND3"]
+      "doubtful_pads": ["GND1", "GND3"],
+      "//row_side": "P946: which long edge the 18-pin row (RX first) is on, seen from above with USB-C at the near edge. The drawing puts row 0 on the left; a value here that says otherwise refuses the drawing.",
+      "row_side": {"value": "row 0 on the left", "verified": true,
+                   "source": "the PO's look at his own FireBeetle 2 ESP32-S3 on 2026-11-20: flat, chips up, USB-C on the near edge, the silkscreen RX on the left edge and the BAT socket on the same edge (P946 #1349)",
+                   "why_it_matters": "a mirrored board shows on the bench: the pins sit on the other side"}
     },
     "mounting_holes": {
       "count": 4,

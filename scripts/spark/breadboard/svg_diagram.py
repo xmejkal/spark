@@ -148,7 +148,8 @@ class SvgBreadboardDiagram:
     def text(self, layout):
         ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)
         surface = layout.geometry.surface
-        notes = [note["sentence"] for part in layout.parts for note in layout.geometry.part(part.type).get("notes", [])]
+        pictures = {part.id: self.pictures.picture(part.type, part.record) for part in layout.parts}
+        notes = self._notes(layout, pictures)
         # a body that covers holes may hang past them (a module seated by one edge); a small part stays in the margin
         corners = [self._far_corner(part, layout.geometry.part(part.type)) for part in layout.parts
                    if layout.geometry.part(part.type).get("covers_holes")]
@@ -173,7 +174,7 @@ class SvgBreadboardDiagram:
                                                         "x2": str(_round_px(last)), "y2": str(y), "stroke-width": "1",
                                                         "stroke": "#e53935" if rail.endswith("p") else "#1e88e5"})
         for part in layout.parts:
-            self._part(root, part, layout.geometry)
+            self._part(root, part, layout.geometry, pictures[part.id])
         self._wires(root, layout)
         joined = self._joined_groups(layout)
         for part in layout.parts:
@@ -186,15 +187,20 @@ class SvgBreadboardDiagram:
         return ElementTree.tostring(root, encoding="unicode") + "\n"
 
     @staticmethod
+    def _notes(layout, pictures):
+        """The note line's sentences: each drawn part's unverified groups, then each picture's own note (P946)."""
+        return [note["sentence"] for part in layout.parts for note in layout.geometry.part(part.type).get("notes", [])] + [
+            picture.note for picture in pictures.values() if picture.note]
+
+    @staticmethod
     def _turn(part, part_px):
         """The transform that puts a part's own frame where Wokwi shows it: moved to its corner, turned about its center."""
         cx, cy = part_px["center"]
         return "translate(%s %s) rotate(%s %s %s)" % (_round_px(part.left), _round_px(part.top), part.rotate,
                                                       _round_px(cx), _round_px(cy))
 
-    def _part(self, root, part, geometry):
+    def _part(self, root, part, geometry, picture):
         part_px = geometry.part(part.type)
-        picture = self.pictures.picture(part.type)
         group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part, part_px), "data-part": part.id})
         width, height = part_px["size"]
         x, y, view_width, view_height = picture.view_box

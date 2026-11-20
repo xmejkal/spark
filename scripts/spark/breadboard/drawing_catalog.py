@@ -38,14 +38,14 @@ def describe_parts(read, geometry, modules=MODULE_SOURCE):
     board = read.built.board
     source = part_shape.find_source(board, part_shape.sources_for(geometry.data["parts"]))
     catalog = drawing.Catalog({wiring_steps.THE_BOARD: drawing.DrawnPart(
-        board.get("wokwi_part_type") or board.get("id"), {}, source.find_pin_names(board))})
+        board.get("wokwi_part_type") or board.get("id"), {}, source.find_pin_names(board), board)})
     for part in read.built.parts:
         wokwi = (part.get("simulation") or {}).get("wokwi") or {}
         component = board_components.component_name(part)
         if wokwi.get("part"):
-            catalog[component] = drawing.DrawnPart(wokwi["part"], wokwi.get("attrs") or {}, wokwi.get("pins") or {})
+            catalog[component] = drawing.DrawnPart(wokwi["part"], wokwi.get("attrs") or {}, wokwi.get("pins") or {}, part)
         elif modules.describe_part(part) is not None:
-            catalog[component] = drawing.DrawnPart(MODULE_TYPE % part["id"], {}, modules.find_pin_names(part))
+            catalog[component] = drawing.DrawnPart(MODULE_TYPE % part["id"], {}, modules.find_pin_names(part), part)
         else:
             catalog.undrawn[component] = part["id"]
     for tag, value, _ in read.resistors.values():

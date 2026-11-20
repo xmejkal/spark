@@ -80,12 +80,32 @@ class TheShapeIsReadFromTheRecordTest(unittest.TestCase):
         for name, group in groups.items():
             with self.subTest(group=name):
                 self.assertEqual(provenance.fact_problems(name, group), [])
-        self.assertEqual([group["verified"] for group in groups.values()], [False] * 4)
+        # P946: the row side is the PO's bench look (2026-11-20), the one group verified
+        self.assertEqual({name: group["verified"] for name, group in groups.items()},
+                         {"pads": False, "row_side": True, "usb_end": False, "doubtful_pads": False})
+        self.assertIn("2026-11-20", groups["row_side"]["source"])
 
     def test_the_unverified_groups_become_notes_in_order(self):
         notes = part_shape.project_to_px(RECORD.find_shape(firebeetle()))["notes"]
-        self.assertEqual([note["group"] for note in notes], ["pads", "row_side", "usb_end", "doubtful_pads"])
+        self.assertEqual([note["group"] for note in notes], ["pads", "usb_end", "doubtful_pads"])
         self.assertTrue(all(note["sentence"] and note["why"] for note in notes))
+
+    def test_a_board_whose_record_says_nothing_of_its_row_side_keeps_the_convention_unverified(self):
+        for held in (None, "row 0 on the left", {"value": "row 0 on the left", "verified": "yes", "source": "a look"},
+                     {"value": "row 0 on the left", "verified": True, "source": ""}):
+            with self.subTest(held=held):
+                board = firebeetle()
+                board["physical"]["header"]["row_side"] = held
+                group = RECORD.find_shape(board).groups["row_side"]
+                self.assertEqual((group["verified"], group["source"]),
+                                 (False, "footprint_emitter.pads, which puts row 0 at -x"))
+
+    def test_a_row_side_fact_that_is_not_the_drawing_s_refuses_the_board(self):
+        for value in ("row 0 on the right", None):
+            with self.subTest(value=value):
+                board = firebeetle()
+                board["physical"]["header"]["row_side"]["value"] = value
+                self.assertEqual(refusal(board), ("header_disagrees", "physical.header.row_side"))
 
 
 class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
