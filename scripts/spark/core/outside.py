@@ -13,7 +13,18 @@ from spark.core.codes import UNDECLARED_EFFECT
 from spark.core.errors import SparkError
 from spark.core.operation import ASKS, FETCHES, RUNS
 
+
 # --- MVP ---
+def refuse_replies(question):
+    """The `replies` of an Operation whose effects hold no ASKS: a SparkError with code `undeclared_effect`, and nobody is asked."""
+    raise SparkError("the operation declares no `%s` effect, so it cannot ask %r", ASKS, question.key, code=UNDECLARED_EFFECT)
+
+
+def refuse_fetch(url):
+    """The `fetch` of an Operation whose effects hold no FETCHES: a SparkError with code `undeclared_effect`, and nothing is fetched."""
+    raise SparkError("the operation declares no `%s` effect, so it cannot fetch %r", FETCHES, url, code=UNDECLARED_EFFECT)
+
+
 #: Value: `run` runs a program as `subprocess.run` does, and `find_tool` gives the `Tool` for a role or a tool's
 #: name in the project the world was built for (`records.tool_finder.ToolFinder(project).find`), or raises `ToolError`, a
 #: `ToolMissingError` when the tool is not installed (P725);
@@ -28,19 +39,6 @@ from spark.core.operation import ASKS, FETCHES, RUNS
 #: Operation hands it to its Service, P938); a line built into the final result goes in the result's `diagnostics`.
 #: Its default is None, so a direct `run()` has none.
 #: Each is the real thing, a Fake or a refusing stub, as `build_outside_world` chose.
-UNDECLARED_FIX = "a defect in spark: report it, with the command"
-
-
-def refuse_replies(question):
-    """The `replies` of an Operation whose effects hold no ASKS: a SparkError with code `undeclared_effect`, and nobody is asked."""
-    raise SparkError("the operation declares no `%s` effect, so it cannot ask %r", ASKS, question.key, code=UNDECLARED_EFFECT, fix=UNDECLARED_FIX)
-
-
-def refuse_fetch(url):
-    """The `fetch` of an Operation whose effects hold no FETCHES: a SparkError with code `undeclared_effect`, and nothing is fetched."""
-    raise SparkError("the operation declares no `%s` effect, so it cannot fetch %r", FETCHES, url, code=UNDECLARED_EFFECT, fix=UNDECLARED_FIX)
-
-
 OutsideWorld = namedtuple("OutsideWorld", "run find_tool report clock make_consent replies fetch add_diagnostics",
                           defaults=(refuse_replies, refuse_fetch, None))
 
@@ -61,12 +59,12 @@ class ProgramRunner:
 
 def refuse_run(command, **options):
     """The `run` of an Operation whose effects hold no RUNS: a SparkError with code `undeclared_effect`, and no program runs."""
-    raise SparkError("the operation declares no `%s` effect, so it cannot run %r", RUNS, command, code=UNDECLARED_EFFECT, fix=UNDECLARED_FIX)
+    raise SparkError("the operation declares no `%s` effect, so it cannot run %r", RUNS, command, code=UNDECLARED_EFFECT)
 
 
 def refuse_consent(line):
     """The `make_consent` of an Operation whose effects hold no ASKS: a SparkError with code `undeclared_effect`, and nobody is asked."""
-    raise SparkError("the operation declares no `%s` effect, so it cannot ask the person for a yes", ASKS, code=UNDECLARED_EFFECT, fix=UNDECLARED_FIX)
+    raise SparkError("the operation declares no `%s` effect, so it cannot ask the person for a yes", ASKS, code=UNDECLARED_EFFECT)
 
 
 #: The slots a frontend may fill in `build_outside_world`, each by keyword: the rest of the tuple the core builds itself.

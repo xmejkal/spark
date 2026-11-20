@@ -18,7 +18,8 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.core import outcomes
-from spark.core.codes import BAD_ARGUMENT, BAD_REPLY, NEEDS_REPLY, UNKNOWN_REPLY
+from spark.core.codes import (BAD_ARGUMENT_REPLIES_UNREADABLE, BAD_ARGUMENT_REPLIES_UNWRITABLE, BAD_REPLY, BAD_REPLY_AS_ASKED, NEEDS_REPLY,
+                              UNKNOWN_REPLY, UNKNOWN_REPLY_NEAR)
 from spark.core.errors import SparkError
 from spark.core.result import Finding
 from spark.core.text_guards import guard_lines
@@ -47,9 +48,8 @@ SEE_PAGE = "see %s, %s"
 LEFT_LINE = "input closed (Ctrl-C or Ctrl-D): the rest stays open"
 NOT_IN_FORM = "the reply is %r, and the question takes a number or JSON in %s: %s"
 YES_WORDS, NO_WORDS = ("yes", "y"), ("no", "n")
-#: The sentence and the fix of an open question's Finding.
+#: The sentence of an open question's Finding.
 WAITING = "waiting on a reply: %s"
-FILL_AND_RUN = "fill %s and run %s --replies %s"
 #: What a reply lacks, by kind.
 NOT_YES_NO = "the reply is %r, and a %s question takes yes or no (true or false)"
 NOT_A_CHOICE = "the reply is %r, and the choices are %s"
@@ -58,14 +58,8 @@ NOT_FINITE = "the reply is %r, not a finite number"
 #: The sentences of `reply_problems`.
 UNKNOWN_KEY = "no open question has the key %s"
 NOT_OPEN = "the key %s is a fact already filled, not open; a reply to it would overwrite the fact"
-NEAREST_FIX = "did you mean %s? Keys are in the run's data.open"
-NO_NEAREST_FIX = "remove it, or take a key from the run's data.open"
-MISFIT_FIX = "answer as the question's answer_form says, for example %s"
-MISFIT_FORM_FIX = "answer as the question asks: %s"
 #: What a kind takes, for a question with no `answer_form` and no `example`.
 KIND_FORMS = {YES_NO: "true or false", VALUE: "a value that is not empty", CHOICE: "one of the choices"}
-UNREADABLE_FIX = "run once without --replies to write the template, then fill its values"
-UNWRITABLE_FIX = "make the file writable, so that spark can mark the reply as used, then run again"
 WRONG_SHAPE = 'a replies file is {"replies": {"<key>": {"value": ..., "note": "...", "cites": {...}}}}, or a bare "<key>": value'
 
 
@@ -256,14 +250,15 @@ class RepliesStore:
         return cls(Path(project) / REPLIES_FILE)
 
     def _read(self):
-        """The file's `replies` object. A file that is missing, is not JSON or has another shape is a SparkError `bad_argument`."""
+        """The file's `replies` object. A file that is missing, is not JSON or has another shape is a SparkError `bad_argument`,
+        with the fix of `codes.BAD_ARGUMENT_REPLIES_UNREADABLE`."""
         try:
             given = json.loads(self.path.read_text(encoding="utf-8"))[REPLIES_KEY]
             if not isinstance(given, dict):
                 raise TypeError(WRONG_SHAPE)
             return given
         except (OSError, ValueError, KeyError, TypeError) as why:
-            raise SparkError("the replies file %s cannot be read: %s", self.path, why, code=BAD_ARGUMENT, fix=UNREADABLE_FIX)
+            raise SparkError("the replies file %s cannot be read: %s", self.path, why, code=BAD_ARGUMENT_REPLIES_UNREADABLE)
 
     def load(self):
         """The replies in the file, by key, each with `answered_by` set. A bare `"<key>": value` is read as `{"value": value}`, an
@@ -285,7 +280,7 @@ class RepliesStore:
             try:
                 TextFileWriter().write(self.path, json.dumps({REPLIES_KEY: held}, indent=1, ensure_ascii=False) + "\n")
             except OSError as why:
-                raise SparkError("the replies file %s cannot be written: %s", self.path, why, code=BAD_ARGUMENT, fix=UNWRITABLE_FIX)
+                raise SparkError("the replies file %s cannot be written: %s", self.path, why, code=BAD_ARGUMENT_REPLIES_UNWRITABLE)
         return cleared
 
     def dump(self, questions, answers=None):
@@ -315,32 +310,38 @@ def order_open(questions):
 def needs_reply_findings(questions, replies_path, line):
     """One unchecked Finding per open question, code `needs_reply`, the key as subject: the run is `could-not-run` until
     the replies come. `line` is the command that runs the Operation again; the fix adds `--replies`."""
-    return [Finding(outcomes.COULD_NOT_RUN, question.key, NEEDS_REPLY, WAITING % question.text, FILL_AND_RUN % (replies_path, line, replies_path))
-            for question in questions]
+    return [Finding.of(outcomes.COULD_NOT_RUN, question.key, NEEDS_REPLY, WAITING % question.text,
+                       NEEDS_REPLY.fix % (replies_path, line, replies_path)) for question in questions]
 
 
-def misfit_fix(question):
-    """The fix of a `bad_reply`: the question's `example` when it has one, else its `answer_form`, else what its kind takes."""
+def _misfit(key, question, lacks):
+    """The `bad_reply` of a value that does not fit `question`: its fix quotes the question's `example` when it has one,
+    else its `answer_form`, else what its kind takes."""
     if question.example is not None:
-        return MISFIT_FIX % (json.dumps(question.example),)
-    return MISFIT_FORM_FIX % (question.answer_form or KIND_FORMS[question.kind])
+        return Finding.of(outcomes.PROBLEMS, key, BAD_REPLY, lacks, BAD_REPLY.fix % (json.dumps(question.example),))
+    return Finding.of(outcomes.PROBLEMS, key, BAD_REPLY_AS_ASKED, lacks, BAD_REPLY_AS_ASKED.fix % (question.answer_form or KIND_FORMS[question.kind]))
 
 
 def reply_problems(replies, questions, filled=()):
     """The problems in `replies` (key to Reply) against the open `questions`: a key no question has is `unknown_reply`
     with the nearest open key, a key in `filled` (a fact the record holds) is `unknown_reply` too, because a stray reply
-    would overwrite a fact, and a value that does not fit its question's kind is `bad_reply`. Nothing here is silent."""
+    would overwrite a fact, and a value that does not fit its question's kind is `bad_reply` (`_misfit`). Nothing here is
+    silent."""
     open_by_key = {question.key: question for question in questions}
     found = []
     for key, reply in replies.items():
         if key in open_by_key:
-            lacks = open_by_key[key].misfit(reply.value)
+            question = open_by_key[key]
+            lacks = question.misfit(reply.value)
             if lacks:
-                found.append(Finding(outcomes.PROBLEMS, key, BAD_REPLY, lacks, misfit_fix(open_by_key[key])))
+                found.append(_misfit(key, question, lacks))
         elif key in filled:
-            found.append(Finding(outcomes.PROBLEMS, key, UNKNOWN_REPLY, NOT_OPEN % key, NO_NEAREST_FIX))
+            found.append(Finding.of(outcomes.PROBLEMS, key, UNKNOWN_REPLY, NOT_OPEN % key))
         else:
             nearest = difflib.get_close_matches(key, list(open_by_key), n=1)
-            found.append(Finding(outcomes.PROBLEMS, key, UNKNOWN_REPLY, UNKNOWN_KEY % key, NEAREST_FIX % nearest[0] if nearest else NO_NEAREST_FIX))
+            if nearest:
+                found.append(Finding.of(outcomes.PROBLEMS, key, UNKNOWN_REPLY_NEAR, UNKNOWN_KEY % key, UNKNOWN_REPLY_NEAR.fix % nearest[0]))
+            else:
+                found.append(Finding.of(outcomes.PROBLEMS, key, UNKNOWN_REPLY, UNKNOWN_KEY % key))
     return found
 # --- end MVP ---

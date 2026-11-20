@@ -2,6 +2,7 @@
 chained), the one tty adapter, the project's replies file, and the Findings an open list makes. No network; the terminal is a fake."""
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -18,7 +19,7 @@ from spark.core.errors import SparkError  # noqa: E402
 from fakes import Stream  # noqa: E402
 from spark.core.replies import (AGENT, CHOICE, EITHER, LEFT_LINE, PERSON, TYPED_BY, VALUE, YES_NO, ChainedReplyStrategy,  # noqa: E402
                                 DeferringReplyStrategy, GivenReplyStrategy, Question, RepliesStore, Reply, ReplyStrategy, Terminal,
-                                TerminalReplyStrategy, misfit_fix, needs_reply_findings, order_open, reply_problems)
+                                TerminalReplyStrategy, needs_reply_findings, order_open, reply_problems)
 
 DRAWING = {"document": "SEN0526 dimension drawing", "at": "page 1"}
 HOLES = Question("physical.mounting_holes", "Where are the mounting holes?", VALUE, AGENT, why="the sheet places the module",
@@ -203,6 +204,21 @@ class RepliesStoreTest(unittest.TestCase):
                 self.assertEqual(refused.exception.code, "bad_argument", text)
 
 
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root writes anywhere")
+    def test_a_file_that_cannot_be_read_or_written_has_its_own_fix(self):
+        # P935: pinned literally before the fixes moved into the codes
+        with self.assertRaises(SparkError) as refused:
+            self.store.load()
+        self.assertEqual((refused.exception.code, refused.exception.fix),
+                         ("bad_argument", "run once without --replies to write the template, then fill its values"))
+        self.store.dump([THICK], {THICK.key: Reply(THICK.key, 1.6, "a test")})
+        self.store.path.chmod(0o444)  # read, never written
+        with self.assertRaises(SparkError) as refused:
+            self.store.clear(THICK.key)
+        self.assertEqual((refused.exception.code, refused.exception.fix),
+                         ("bad_argument", "make the file writable, so that spark can mark the reply as used, then run again"))
+
+
 class OpenListTest(unittest.TestCase):
     def test_a_person_s_question_goes_first_and_the_rest_keep_their_order(self):
         self.assertEqual(order_open([HOLES, SOLDERED, THICK, REVISION]), [SOLDERED, HOLES, THICK, REVISION])
@@ -230,9 +246,18 @@ class OpenListTest(unittest.TestCase):
         self.assertEqual(by_subject["header.soldered"].fix, "answer as the question asks: true or false")  # no example: never "null"
 
     def test_a_bad_reply_s_fix_quotes_the_example_or_the_answer_form(self):
-        self.assertEqual(misfit_fix(HOLES), 'answer as the question\'s answer_form says, for example [{"x_mm": "<number>", "y_mm": "<number>", "drill_mm": "<number>"}]')
-        self.assertEqual(misfit_fix(THICK._replace(answer_form="a number in mm")), "answer as the question asks: a number in mm")
-        self.assertEqual(misfit_fix(REVISION), "answer as the question asks: one of the choices")
+        # P935: misfit_fix is inlined into reply_problems; its three assertions moved onto the Findings, the same bytes
+        def fix(question, value):
+            return reply_problems({question.key: Reply(question.key, value, "a test")}, [question])[0].fix
+        self.assertEqual(fix(HOLES, ""), 'answer as the question\'s answer_form says, for example [{"x_mm": "<number>", "y_mm": "<number>", "drill_mm": "<number>"}]')
+        self.assertEqual(fix(THICK._replace(answer_form="a number in mm"), ""), "answer as the question asks: a number in mm")
+        self.assertEqual(fix(REVISION, "V9"), "answer as the question asks: one of the choices")
+
+    def test_an_unknown_key_near_an_open_key_names_it_in_the_fix(self):
+        # P935: pinned literally before the fix moved into the code
+        found = reply_problems({"physical.mounting_hole": Reply("physical.mounting_hole", 1, "a test")}, [HOLES, THICK])
+        self.assertEqual([(f.code, f.fix) for f in found],
+                         [("unknown_reply", "did you mean physical.mounting_holes? Keys are in the run's data.open")])
 
     def test_an_unknown_key_far_from_every_open_key_and_a_reply_with_no_question_open(self):
         far = {"zzz": Reply("zzz", 1, "a test")}

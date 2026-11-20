@@ -25,17 +25,15 @@ from spark.core.text_guards import guard_lines, printable
 #: A None `description` takes the Operation's `summary`, and the Operation's `details` stand before the `epilog` (P481).
 #: `tool` is the envelope's `tool`, the script that answered (P707): a CLI with several Operations gives its own name
 #: (`parts`), and None means the Operation's name, as the one-Operation CLIs print it. `bad_argument_fix` is the fix
-#: sentence of a bad argument when the CLI has a better one than `BAD_ARGUMENT_FIX` (parts.py's describe route, P726 PR 3);
-#: None takes the default.
+#: sentence of a bad argument when the CLI has a better one than `codes.BAD_ARGUMENT`'s (parts.py's describe route, P726
+#: PR 3); None takes the default, filled with `prog`.
 HelpText = namedtuple("HelpText", "prog description epilog tool bad_argument_fix", defaults=(None, None, None, None))
 #: The sentence of a crash's Finding holds the class only, because the message can carry a home path.
 CRASH_MESSAGE = "%s: the traceback is on stderr"
-CRASH_FIX = "report this to the spark maintainers with the stderr traceback"
 #: The first diagnostics line of a crash: the op and the class, then the fix, then the traceback under Python's heading.
 CRASHED_MESSAGE = "%s: crashed, %s"
 #: How Python starts a frame's chunk of a traceback; the other chunks are one sentence each.
 FRAME_START = '  File "'
-BAD_ARGUMENT_FIX = "%s --help lists the arguments"
 #: The diagnostics line of a trace that raised: the class only, as a crash's sentence.
 TRACE_FAILED_MESSAGE = "trace: %s raised, the result stands"
 #: Value: how one run is done (P605, a parameter object). `privacy` masks the result and the values, `trace` is called
@@ -83,11 +81,11 @@ def _guarded_result(operation, values, outside, build_outside):
         world = outside or build_outside(operation.effects_of(values))
         result = operation.run(**values, outside=world if world is None else world._replace(add_diagnostics=added.extend))
     except SparkError as refused:
-        result = OperationResult(findings=[Finding(refused.status, None, refused.code, str(refused), refused.fix)])
+        result = OperationResult(findings=[Finding.of(refused.status, None, refused.code, str(refused), refused.fix)])
     except Exception as crashed:  # noqa: BLE001  the core's one catch-all: a crash is answered as could-not-run, never hidden
         name = printable(type(crashed).__name__)
-        result = OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.CRASH, CRASH_MESSAGE % name, CRASH_FIX)],
-                                 diagnostics=[CRASHED_MESSAGE % (operation.name, name), CRASH_FIX] + traceback_lines(crashed))
+        result = OperationResult(findings=[Finding.of(outcomes.COULD_NOT_RUN, None, codes.CRASH, CRASH_MESSAGE % name)],
+                                 diagnostics=[CRASHED_MESSAGE % (operation.name, name), codes.CRASH.fix] + traceback_lines(crashed))
     return result._replace(diagnostics=added + list(result.diagnostics)) if added else result
 
 
@@ -162,9 +160,10 @@ def _privacy_and_reporter(operation, values, as_json):
 
 
 def _unreadable_payload(prog, unreadable):
-    """The result of a payload the frontend could not read (P726 PR 3): one could-not-run Finding with the error's code and
-    the sentence as a diagnostics line (`<prog>: <sentence>`), never the usage: a broken file is not a wrong flag."""
-    return OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, unreadable.code, str(unreadable), None)],
+    """The result of a payload the frontend could not read (P726 PR 3): one could-not-run Finding of
+    `codes.INPUT_UNREADABLE`, the one code `load_payloads` raises, with its fix (P935), and the sentence as a diagnostics
+    line (`<prog>: <sentence>`), never the usage: a broken file is not a wrong flag."""
+    return OperationResult(findings=[Finding.of(outcomes.COULD_NOT_RUN, None, codes.INPUT_UNREADABLE, str(unreadable))],
                            diagnostics=["%s: %s" % (prog, unreadable)])
 
 
@@ -188,7 +187,7 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     try:
         values = vars(parser.parse_args(argv))
     except outcomes.BadArgumentError as bad:
-        refused = OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.BAD_ARGUMENT, str(bad), text.bad_argument_fix or BAD_ARGUMENT_FIX % text.prog)])
+        refused = OperationResult(findings=[Finding.of(outcomes.COULD_NOT_RUN, None, codes.BAD_ARGUMENT, str(bad), text.bad_argument_fix or codes.BAD_ARGUMENT.fix % text.prog)])
         line = renderer.render_bad_argument(refused, tool, operation.name) if JSON_FLAG in argv else None
         if line is None:
             parser.exit_with_usage(guard_lines(str(bad) + (" — " + text.bad_argument_fix if text.bad_argument_fix else "")))

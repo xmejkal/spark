@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/core/cli.py",
   "name": "a crash gives ok",
-  "find": "Finding(outcomes.COULD_NOT_RUN, None, codes.CRASH,",
-  "replace": "Finding(outcomes.OK, None, codes.CRASH,"
+  "find": "Finding.of(outcomes.COULD_NOT_RUN, None, codes.CRASH,",
+  "replace": "Finding.of(outcomes.OK, None, codes.CRASH,"
  },
  {
   "file": "scripts/spark/core/result.py",
@@ -26,20 +26,20 @@
  {
   "file": "scripts/spark/core/cli.py",
   "name": "a SparkError loses its status",
-  "find": "Finding(refused.status, None, refused.code, str(refused), refused.fix)",
-  "replace": "Finding(outcomes.PROBLEMS, None, refused.code, str(refused), refused.fix)"
+  "find": "Finding.of(refused.status, None, refused.code, str(refused), refused.fix)",
+  "replace": "Finding.of(outcomes.PROBLEMS, None, refused.code, str(refused), refused.fix)"
  },
  {
   "file": "scripts/spark/core/cli.py",
   "name": "the crash gives exit 1",
-  "find": "Finding(outcomes.COULD_NOT_RUN, None, codes.CRASH, CRASH_MESSAGE % name, CRASH_FIX)",
-  "replace": "Finding(outcomes.PROBLEMS, None, codes.CRASH, CRASH_MESSAGE % name, CRASH_FIX)"
+  "find": "Finding.of(outcomes.COULD_NOT_RUN, None, codes.CRASH, CRASH_MESSAGE % name)",
+  "replace": "Finding.of(outcomes.PROBLEMS, None, codes.CRASH, CRASH_MESSAGE % name)"
  },
  {
   "file": "scripts/spark/core/cli.py",
   "name": "the crash sentence holds the message",
-  "find": "CRASH_MESSAGE % name, CRASH_FIX",
-  "replace": "CRASH_MESSAGE % crashed, CRASH_FIX"
+  "find": "codes.CRASH, CRASH_MESSAGE % name)",
+  "replace": "codes.CRASH, CRASH_MESSAGE % crashed)"
  },
  {
   "file": "scripts/spark/core/cli.py",

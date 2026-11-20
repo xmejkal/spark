@@ -23,6 +23,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -277,7 +278,10 @@ class TheBenchCodesTableTest(unittest.TestCase):
     def test_the_tables_hold_each_constant_of_their_module_once_with_a_sentence_and_share_no_code(self):
         for module in (board_codes, codes, firmware_codes, breadboard_codes, check_codes, design_codes, build_codes,
                        records_codes, sourcing_codes, idea_codes):
-            constants = {name: value for name, value in vars(module).items() if name.isupper() and isinstance(value, str)}
+            # P935: a variant, a Code named after its parent (BAD_ARGUMENT_REPLIES_UNREADABLE), is the second constant
+            # of its word; EveryCodeHoldsItsFixTest holds it to its word's meaning and to a fix of its own
+            constants = {name: value for name, value in vars(module).items() if name.isupper() and isinstance(value, str)
+                         and not (isinstance(value, Code) and name.startswith(value.upper() + "_"))}
             self.assertEqual(sorted(constants.values()), sorted(module.CODES))
             sentences = list(module.CODES.values())
             self.assertTrue(all(sentence.strip() for sentence in sentences))
@@ -365,8 +369,10 @@ class TheBenchCodesTableTest(unittest.TestCase):
             self.assertEqual((refusal.reason, refusal.code, reason in board_codes.CODES), (reason, code, True), why)
 
 
-#: P853: each area whose codes are Codes, with its table. An area joins when its codes take their fix.
-AREAS_WITH_FIXES = {"idea": idea_codes}
+#: P853: each area whose codes are Codes, with its table. An area joins when its codes take their fix (the core, P935).
+AREAS_WITH_FIXES = {"idea": idea_codes, "core": codes}
+#: P935: the one given fix that is no Code's: the override a CLI injects through `HelpText` (parts.py's describe route).
+INJECTED_FIXES = {"text.bad_argument_fix"}
 #: P853: the errors that take a code, by class name; a subclass the area defines, at any depth, takes one too.
 CODED_ERRORS = {"SparkError", "CodedMessageError", "StoreError"}
 
@@ -402,31 +408,96 @@ def coded_errors(trees):
         errors |= more
 
 
+def fix_parts(node, filled=False):
+    """P935: the parts of a given fix that must each be a Code's fix, each with whether a % fills it: the fix itself, the
+    left of a % (its values may be anything) and each side of an `or`."""
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mod):
+        return fix_parts(node.left, True)
+    if isinstance(node, ast.BoolOp):
+        return [part for value in node.values for part in fix_parts(value)]
+    return [(node, filled)]
+
+
+def foreign_fix(fix, word, table, resolved):
+    """P935: the parts of a given `fix` that are neither the `.fix` of a Code of `table` with the call's `word` (a
+    variant's too), filled with % when it is a template, nor an injected fix."""
+    def codes_own(part, filled):
+        if not (isinstance(part, ast.Attribute) and part.attr == "fix"):
+            return False
+        module, _, name = resolved(part.value).rpartition(".")
+        code = getattr(table, name, None) if module == table.__name__ else None
+        if not isinstance(code, Code) or code != word:
+            return False
+        return filled or "%" not in code.fix
+    return [part for part, filled in fix_parts(fix) if not codes_own(part, filled) and ast.unparse(part) not in INJECTED_FIXES]
+
+
+def made_from_its_own_fix(call, fix):
+    """P935: a `_replace` whose `fix` holds its receiver's own `.fix`, as the Privacy mask's does."""
+    receiver = ast.unparse(call.func.value) if isinstance(call.func, ast.Attribute) else None
+    return any(isinstance(node, ast.Attribute) and node.attr == "fix" and ast.unparse(node.value) == receiver for node in ast.walk(fix))
+
+
+def variants_off_their_parent(table):
+    """P935: the Code constants of `table` named past their word that are no variant. A variant is named after its parent,
+    the constant named by its word (`<PARENT>_...`), and holds a fix of its own, so an alias of a code is none."""
+    broken = []
+    for name, code in vars(table).items():
+        if not isinstance(code, Code) or name == code.upper():
+            continue
+        parent = getattr(table, code.upper(), None)
+        if not name.startswith(code.upper() + "_") or parent is None:
+            broken.append("%s is not named after its parent %s" % (name, code.upper()))
+        elif code.fix == parent.fix:
+            broken.append("%s holds its parent's fix" % name)
+    return broken
+
+
+def forwards(code, fix):
+    """P935: a forward passes on the code and the fix of one thing it did not make (`x.code` with `x.fix`): a SparkError's."""
+    return (isinstance(code, ast.Attribute) and code.attr == "code" and isinstance(fix, ast.Attribute) and fix.attr == "fix"
+            and ast.unparse(code.value) == ast.unparse(fix.value))
+
+
 def calls_off_the_table(sources, table):
     """
     P853: (the calls that take a code, each rule a call breaks as 'file:line N: the rule'), over the area's `sources`
-    ({file name: text}). A Finding is made by `Finding.of` alone; an error of `coded_errors` and `Finding.of` name a Code
-    of `table` (aliases resolved through the module's imports) and give no fix; no `_replace` gives a fix.
+    ({file name: text}). A Finding is made by `Finding.of` alone, and no name aliases Finding; an error of `coded_errors`
+    and `Finding.of` name a Code of `table` (aliases resolved through the module's imports) and pass no keywords by **.
+    P935: a given fix is the `.fix` of a Code of the call's word, filled with % or after an injected fix's `or`
+    (`fix_parts`); a forward passes `x.code` with `x.fix`; a `_replace` gives no code, and a fix only made from the
+    receiver's own (the Privacy mask).
     """
     trees = {name: ast.parse(text) for name, text in sources.items()}
     errors, calls, broken = coded_errors(trees.values()), 0, []
     for file, tree in trees.items():
         resolved = resolver(tree)
+        for alias in (node for node in ast.walk(tree) if isinstance(node, ast.Assign) and resolved(node.value).endswith("Finding")):
+            broken.append("%s:line %d: %s aliases Finding: Finding.of takes the fix from its Code" % (file, alias.lineno, ast.unparse(alias.targets[0])))
         for call in (node for node in ast.walk(tree) if isinstance(node, ast.Call)):
             name, keywords = resolved(call.func), {keyword.arg: keyword.value for keyword in call.keywords}
             said = "%s:line %d: %s" % (file, call.lineno, name.rpartition(".")[2] if name.rpartition(".")[2] in errors else name)
-            if name.endswith("Finding") or name.endswith("Finding._make"):
+            of, replaces = name.endswith("Finding.of"), name.endswith("_replace")
+            coded = of or name.rpartition(".")[2] in errors
+            if None in keywords and (coded or replaces):
+                broken.append(said + " passes keywords by **")
+            if name.endswith(("Finding", "Finding._make", "Finding.__new__")):
                 broken.append(said + " makes a Finding: Finding.of takes the fix from its Code")
-            elif name.endswith("_replace") and "fix" in keywords:
-                broken.append(said + " gives a fix")
-            elif name.endswith("Finding.of") or name.rpartition(".")[2] in errors:
+            elif replaces:
+                if "code" in keywords:
+                    broken.append(said + " gives a code")
+                if "fix" in keywords and not made_from_its_own_fix(call, keywords["fix"]):
+                    broken.append(said + " gives a fix")
+            elif coded:
                 calls += 1
-                of = name.endswith("Finding.of")
                 code = keywords.get("code", call.args[2] if of and len(call.args) > 2 else None)
+                fix = keywords.get("fix", call.args[4] if of and len(call.args) > 4 else None)
+                if forwards(code, fix):
+                    continue
                 module, _, word = resolved(code).rpartition(".")
                 if module != table.__name__ or not isinstance(getattr(table, word, None), Code):
                     broken.append(said + " names its code as %r, not a Code of %s" % (ast.unparse(code) if code else None, table.__name__))
-                if "fix" in keywords or (of and len(call.args) > 4):
+                elif fix is not None and foreign_fix(fix, getattr(table, word), table, resolved):
                     broken.append(said + " gives a fix")
     return calls, broken
 
@@ -440,6 +511,21 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             for code, meaning in table.CODES.items():
                 self.assertEqual((type(code), code.meaning), (Code, meaning))
                 self.assertTrue(code.fix.strip(), code)
+
+    def test_each_code_constant_of_the_table_is_a_word_of_codes_with_that_word_s_meaning(self):
+        # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word
+        for table in AREAS_WITH_FIXES.values():
+            coded = {name: value for name, value in vars(table).items() if isinstance(value, Code)}
+            self.assertEqual([name for name, code in coded.items() if table.CODES.get(code) != code.meaning], [], table.__name__)
+            self.assertEqual(variants_off_their_parent(table), [], table.__name__)
+
+    def test_a_variant_named_off_its_parent_or_holding_its_parent_s_fix_is_named(self):
+        # P935: the review's `CRASH_TOO = CRASH`, an alias that passed as a variant
+        planted, gone = types.ModuleType("planted"), Code("x_gone", "m", "f")
+        planted.X_GONE, planted.X_GONE_TOO, planted.X_GONE_SEEN = gone, gone, Code(gone, "m", "look")
+        planted.OTHER, planted.LOST_X = Code(gone, "m", "look"), Code("lost", "m", "f")
+        self.assertEqual(variants_off_their_parent(planted), ["X_GONE_TOO holds its parent's fix", "OTHER is not named after its parent X_GONE",
+                                                              "LOST_X is not named after its parent LOST"])
 
     def test_every_finding_and_error_of_the_area_names_a_code_of_the_table_and_gives_no_fix(self):
         for area, table in AREAS_WITH_FIXES.items():
@@ -468,6 +554,37 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             "drop.py:line 18: DropError names its code as 'reason', not a Code of spark.idea.idea_codes",
             "drop.py:line 19: found._replace gives a fix",
             "drop.py:line 21: LostError names its code as 'reason', not a Code of spark.idea.idea_codes"]))
+
+    def test_the_scan_takes_a_filled_or_injected_fix_of_the_call_s_code_and_a_forward_and_names_the_rest(self):
+        # P935: the core's forms, and the gaps P853's review raised (rows 8 and 9)
+        cli = ("from spark.core import codes\nfrom spark.core.result import Finding\nfrom spark.core.errors import SparkError\n\n"
+               "Finding.of(1, None, codes.BAD_ARGUMENT, 's', text.bad_argument_fix or codes.BAD_ARGUMENT.fix % text.prog)\n"
+               "Finding.of(1, None, codes.UNKNOWN_REPLY_NEAR, 's', codes.UNKNOWN_REPLY_NEAR.fix % near)\n"
+               "SparkError('x', code=codes.BAD_ARGUMENT_REPLIES_UNREADABLE)\n"
+               "Finding.of(refused.status, None, refused.code, str(refused), refused.fix)\n"
+               "found._replace(fix=mask(found.fix))\n"
+               "Finding.of(1, None, codes.BAD_ARGUMENT, 's', codes.CRASH.fix)\n"
+               "Finding.of(1, None, codes.BAD_ARGUMENT, 's', other or codes.BAD_ARGUMENT.fix % prog)\n"
+               "Finding.of(1, None, codes.BAD_ARGUMENT, 's', 'see ' + codes.BAD_ARGUMENT.fix)\n"
+               "Finding.of(1, None, refused.code, 's', other.fix)\n"
+               "SparkError('x', **{'code': codes.CRASH, 'fix': 'f'})\n"
+               "Finding.__new__(Finding, 1, None, codes.CRASH, 's', 'f')\n"
+               "make = Finding\n"
+               "found._replace(code='crash')\n"
+               "found._replace(fix=other.fix)\n"
+               "Finding.of(1, None, codes.BAD_ARGUMENT, 's', codes.BAD_ARGUMENT.fix)\n")
+        self.assertEqual(calls_off_the_table({"cli.py": cli}, codes), (10, [
+            "cli.py:line 16: make aliases Finding: Finding.of takes the fix from its Code",
+            "cli.py:line 10: spark.core.result.Finding.of gives a fix",
+            "cli.py:line 11: spark.core.result.Finding.of gives a fix",
+            "cli.py:line 12: spark.core.result.Finding.of gives a fix",
+            "cli.py:line 13: spark.core.result.Finding.of names its code as 'refused.code', not a Code of spark.core.codes",
+            "cli.py:line 14: SparkError passes keywords by **",
+            "cli.py:line 14: SparkError names its code as None, not a Code of spark.core.codes",
+            "cli.py:line 15: spark.core.result.Finding.__new__ makes a Finding: Finding.of takes the fix from its Code",
+            "cli.py:line 17: found._replace gives a code",
+            "cli.py:line 18: found._replace gives a fix",
+            "cli.py:line 19: spark.core.result.Finding.of gives a fix"]))
 
 
 if __name__ == "__main__":
