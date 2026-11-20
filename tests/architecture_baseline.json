@@ -69,7 +69,6 @@
 "R6:scripts/spark/breadboard/part_pictures.py:PictogramPartPictures": 1,
 "R6:scripts/spark/breadboard/wiring_steps.py:RailAnchor": 1,
 "R6:scripts/spark/breadboard/wiring_steps.py:RowAnchor": 1,
-"R6:scripts/spark/breadboard/wiring_steps.py:StepColors": 1,
 "R6:scripts/spark/checks/build_check.py:Finding": 1,
 "R6:scripts/spark/checks/check.py:BuildCheck": 1,
 "R6:scripts/spark/checks/check.py:Check": 1,

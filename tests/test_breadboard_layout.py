@@ -75,10 +75,53 @@ def _rounded(value):
     return round(value, 3)
 
 
-class TheStepColorsTest(unittest.TestCase):
-    def test_step_one_is_the_palette_s_first_and_step_nine_wraps_to_it(self):
-        colors = wiring_steps.StepColors()
-        self.assertEqual([colors.color(n) for n in (1, 2, 8, 9)], ["red", "orange", "magenta", "red"])
+class TheJumperColorsTest(unittest.TestCase):
+    """P947: a jumper's color says what it carries: red for power, black for ground, grey when no record says, and each
+    signal the next color of its own list, in step order."""
+
+    def test_power_is_red_ground_black_and_a_role_not_known_grey(self):
+        self.assertEqual(wiring_steps.JumperColors().of({3: "power", 4: "signal", 8: "ground", 9: "unknown"}),
+                         {3: "red", 4: "green", 8: "black", 9: "grey"})
+
+    def test_signals_take_the_colors_in_their_own_order_and_wrap_after_the_last(self):
+        colors = wiring_steps.JumperColors().of({number: "signal" for number in range(3, 10)} | {5: "ground"})
+        self.assertEqual([colors[n] for n in (3, 4, 6, 7, 8, 9)], ["green", "blue", "purple", "orange", "magenta", "cyan"])
+        wrapped = wiring_steps.JumperColors().of({number: "signal" for number in range(1, 9)})
+        self.assertEqual((wrapped[7], wrapped[8]), ("green", "blue"))
+
+    def test_no_signal_is_red_black_or_grey_and_neighbouring_signals_differ(self):
+        colors = wiring_steps.JumperColors().of({number: "signal" for number in range(1, 20)})
+        self.assertFalse({"red", "black", "grey"} & set(colors.values()))
+        self.assertTrue(all(colors[n] != colors[n + 1] for n in range(1, 19)))
+
+
+class TheSheetNamesTheWireColorsTest(unittest.TestCase):
+    """P947: the e-paper sheet's color line, the picture's wires and the wiring record name one color per jumper."""
+
+    def test_the_line_the_svg_and_the_record_agree(self):
+        import shutil
+        project = Path(tempfile.mkdtemp()) / "epaper"
+        shutil.copytree(EPAPER, project)
+        with in_store():
+            sheet.write(project / "requirements.json", project / "breadboard.md")
+        text = (project / "breadboard.md").read_text()
+        self.assertIn("Each jumper has the color of what it carries, red for power, black for ground and another color "
+                      "for each signal: 3 red, 4 green, 5 blue, 6 purple, 7 orange, 8 black, 9 magenta, 10 cyan.", text)
+        record = json.loads((project / "wiring-record.json").read_text())
+        self.assertEqual([step["color"] for step in record["steps"]][2:], ["red", "green", "blue", "purple", "orange",
+                                                                         "black", "magenta", "cyan"])
+        svg = (project / "breadboard.svg").read_text()
+        self.assertIn('stroke="red"', svg)
+        self.assertIn('stroke="black"', svg)
+
+    def test_a_role_not_known_is_said_so(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        planned = sheet._plan_once(read)
+        jumpers = [jumper._replace(role="unknown") if jumper.step == 4 else jumper for jumper in planned.layout.jumpers]
+        planned = planned._replace(layout=planned.layout._replace(jumpers=jumpers))
+        self.assertIn("3 red, 4 grey (role not known), 5 green,",
+                      sheet.sheet(EPAPER / "requirements.json", read=read, planned=planned))
 
 
 class TheBreadboardTest(unittest.TestCase):
@@ -177,8 +220,10 @@ class TheXiaoLayoutTest(unittest.TestCase):
                         if one.act == wiring_steps.JOIN and one.subject.kind != wiring_steps.RESISTOR]
         self.assertEqual([jumper.step for jumper in self.layout.jumpers], jumper_steps)
         drawn = json.loads(drawing.WokwiBreadboardDiagram().text(self.layout))
+        roles = {jumper.step: jumper.role for jumper in self.layout.jumpers}
         self.assertEqual([wire[2] for wire in drawn["connections"]],
-                         [wiring_steps.StepColors().color(number) for number in jumper_steps])
+                         [wiring_steps.JumperColors().of(roles)[number] for number in jumper_steps])
+        self.assertEqual(roles[jumper_steps[0]], "signal")
 
     def test_one_empty_column_parts_the_board_s_body_from_the_next_part(self):
         # The board's pins are in columns 3 to 9 and its body covers 10; column 11 stays empty, so the button is in 12.
@@ -196,7 +241,7 @@ class TheXiaoLayoutTest(unittest.TestCase):
         with in_store():
             text = sheet.drawing_text(XIAO / "requirements.json")
         self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
-                         "cf3f8e5384d50a1d496be66784679810f8932b1576566ca6f8a9d8f59646c32d")
+                         "4a35a5ed29ec535099a02a44e53593c1b264add1220cc8d567f512831952a1ea")
 
     def test_every_hole_named_exists_on_a_half_board(self):
         drawn = json.loads(drawing.WokwiBreadboardDiagram().text(self.layout))

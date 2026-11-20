@@ -82,7 +82,7 @@ class TheSvgTest(unittest.TestCase):
     def test_the_bytes_are_the_ones_reviewed(self):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "354a314c3f8de47efd7720833e9459f64191d0526c4d53c9ab8a80ff43851031")
+                         "57c65b8ba2b025ff217e168683034c974502118bf3ee448b9531f9df553c6be2")
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -113,7 +113,8 @@ class TheSvgTest(unittest.TestCase):
             self.assertAlmostEqual(numbers[1], center(jumper.one.name)[1], places=3)
             self.assertAlmostEqual(numbers[-2], center(jumper.other.name)[0], places=3)
             self.assertAlmostEqual(numbers[-1], center(jumper.other.name)[1], places=3)
-            self.assertEqual(path.get("stroke"), wiring_steps.StepColors().color(jumper.step))
+            self.assertEqual(path.get("stroke"), wiring_steps.JumperColors().of(
+                {one.step: one.role for one in self.layout.jumpers})[jumper.step])
 
     def test_a_turned_part_turns_about_its_measured_center(self):
         board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
@@ -182,7 +183,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
     def test_the_picture_is_the_one_looked_at_on_2026_10_29(self):
         # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "4f2a60144634428236b7295c7535132abebb92046d68b308e16ec5ee2ad1f972")
+                         "f1846e408ef3d8586d869fde881cdf100cbbf665e4f755f46cdd100a48173f80")
 
     def test_the_xiao_has_none_of_it(self):
         text, _ = xiao_svg()

@@ -12,7 +12,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from spark.breadboard.wiring_steps import (BOARD, PART, RESISTOR, BreadboardSteps, End, MermaidDiagram, NumberedList,  # noqa: E402
-                              StepPoint)
+                              StepPoint, role_of, wiring)
 from spark.breadboard import drawing, sheet  # noqa: E402
 from spark.design import board_components  # noqa: E402
 
@@ -187,6 +187,69 @@ class ThePrintedLabelTest(unittest.TestCase):
     def test_the_step_says_the_printed_label(self):
         read, _ = epaper_ends()
         self.assertIn("4. Run a jumper from board A5 to the row of e-paper D/C.", NumberedList().render(read.steps))
+
+
+class ThePointRoleTest(unittest.TestCase):
+    """P947: what a point carries is read from the records' rail facts, never from a pin's name: a board pad's rail in
+    the board's power_pads, a part pin's rail in its record's power list."""
+
+    def test_each_end_holds_its_record_s_rail(self):
+        _, ends = epaper_ends()
+        self.assertEqual({name: ends[name].power_rail for name in ("board 3V3", "board GND", "board A5", "e-paper VCC",
+                                                                    "e-paper GND", "e-paper D/C")},
+                         {"board 3V3": "logic", "board GND": "ground", "board A5": "", "e-paper VCC": "logic",
+                          "e-paper GND": "ground", "e-paper D/C": ""})
+
+    def test_power_ground_and_signal_points(self):
+        _, ends = epaper_ends()
+        self.assertEqual(role_of([ends["board 3V3"], ends["e-paper VCC"]]), "power")
+        self.assertEqual(role_of([ends["board GND"], ends["e-paper GND"]]), "ground")
+        self.assertEqual(role_of([ends["board A5"], ends["e-paper D/C"]]), "signal")
+
+    def test_one_end_on_a_rail_decides_whatever_the_other_says(self):
+        _, ends = epaper_ends()
+        self.assertEqual(role_of([ends["board GND"], pin("Btn", "A")]), "ground")
+        self.assertEqual(role_of([pin("Btn", "A"), ends["e-paper VCC"]]), "power")
+        self.assertEqual(role_of([ends["board GND"], pin("Btn", "A")._replace(power_rail=None)]), "ground")
+
+    def test_an_end_whose_record_says_nothing_makes_the_role_not_known(self):
+        _, ends = epaper_ends()
+        self.assertEqual(role_of([ends["board A5"], pin("Btn", "A")._replace(power_rail=None)]), "unknown")
+
+    def test_a_pin_named_gnd_or_vcc_with_no_rail_fact_is_a_signal(self):
+        read, _ = epaper_ends()
+        record = dict(read.built.parts[0], power=[{"pin": "SCLK", "rail": "logic", "direction": "in"}])
+        _, steps = wiring(read.built.board, read.circuit, [record], read.resistors, sheet.BOARD_COMPONENT)
+        ends = {end.name: end for point in steps.points for end in point.ends}
+        self.assertEqual((ends["e-paper GND"].power_rail, ends["e-paper VCC"].power_rail), ("", ""))
+        self.assertEqual(ends["e-paper SCLK"].power_rail, "logic")
+
+    def test_a_record_with_no_power_list_says_nothing(self):
+        read, _ = epaper_ends()
+        record = {key: value for key, value in read.built.parts[0].items() if key != "power"}
+        _, steps = wiring(read.built.board, read.circuit, [record], read.resistors, sheet.BOARD_COMPONENT)
+        ends = {end.name: end for point in steps.points for end in point.ends}
+        self.assertEqual((ends["e-paper GND"].power_rail, ends["e-paper D/C"].power_rail), (None, None))
+
+    def test_a_board_port_that_matches_no_power_pad_is_a_signal_and_a_board_with_none_says_nothing(self):
+        read, _ = epaper_ends()
+        _, steps = wiring(read.built.board, read.circuit, read.built.parts, read.resistors, sheet.BOARD_COMPONENT)
+        ends = {end.name: end for point in steps.points for end in point.ends}
+        self.assertEqual((ends["board MO"].power_rail, ends["board SCK"].power_rail), ("", ""))
+        board = {key: value for key, value in read.built.board.items() if key != "power_pads"}
+        _, steps = wiring(board, read.circuit, read.built.parts, read.resistors, sheet.BOARD_COMPONENT)
+        ends = {end.name: end for point in steps.points for end in point.ends}
+        self.assertEqual((ends["board 3V3"].power_rail, ends["board MO"].power_rail), (None, None))
+
+    def test_the_role_reaches_each_step_and_each_drawn_jumper(self):
+        read, _ = epaper_ends()
+        seated = read.steps.anchored()
+        self.assertEqual([one.role for one in seated], [None, None] + ["power", "signal", "signal", "signal", "signal",
+                                                                       "ground", "signal", "signal"])
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            layout = sheet._plan_layout(read)
+        self.assertEqual({jumper.step: jumper.role for jumper in layout.jumpers if jumper.role != "signal"},
+                         {3: "power", 8: "ground"})
 
 
 if __name__ == "__main__":

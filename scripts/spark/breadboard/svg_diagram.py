@@ -49,7 +49,7 @@ class SvgBreadboardDiagram:
     """
     Renderer: a BreadboardLayout as an SVG picture in Wokwi's px, for the sheet to show (P268, #302): the breadboard's
     holes and rails, each part as its picture at its holes, turned about its measured center as Wokwi turns it, with
-    a dot on each pin and its name, then each jumper as a line in its step's color with its number. A part drawn from
+    a dot on each pin and its name, then each jumper as a line in the color of what it carries, with its number. A part drawn from
     its record also gets its pad labels, placed by the PadLabelLayout its part_px names (`label_layouts`, keyed by the
     part_px's `labels`). Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
     same bytes. The canvas holds every hole and every part's body.
@@ -65,7 +65,7 @@ class SvgBreadboardDiagram:
     NOTE_PX = 14
 
     def __init__(self, colors=None, pictures=None, label_layouts=None):
-        self.colors = colors or wiring_steps.StepColors()
+        self.colors = colors or wiring_steps.JumperColors()
         self.pictures = pictures or part_pictures.PictogramPartPictures()
         self.label_layouts = label_layouts or {LABELS_BESIDE: BesideLabels(), LABELS_INTO_BODY: IntoBodyLabels()}
 
@@ -110,8 +110,9 @@ class SvgBreadboardDiagram:
                                                         "stroke": "#e53935" if rail.endswith("p") else "#1e88e5"})
         for part in layout.parts:
             self._part(root, part, layout.geometry)
+        colors = self.colors.of({jumper.step: jumper.role for jumper in layout.jumpers})
         for jumper in layout.jumpers:
-            self._jumper(root, jumper, layout.geometry.surface.pitch)
+            self._jumper(root, jumper, layout.geometry.surface.pitch, colors[jumper.step])
         for part in layout.parts:
             self._label(root, part, layout.geometry)  # last, so no wire or other part covers a pin or a name
         if notes:
@@ -180,11 +181,10 @@ class SvgBreadboardDiagram:
             "stroke-width": "2.5", "paint-order": "stroke"})
         label.text = part_px.get("name") or part.id
 
-    def _jumper(self, root, jumper, pitch):
+    def _jumper(self, root, jumper, pitch, color):
         """One jumper along the holes: out of its first hole along the column, across between two rows of holes, and
         into its last hole. Its bends sit half a pitch off the holes, so no bend looks like a joint with a hole of
         another group."""
-        color = self.colors.color(jumper.step)
         one, other = jumper.one, jumper.other
         half = pitch / 2
         across = other.y - half if other.y > one.y else other.y + half

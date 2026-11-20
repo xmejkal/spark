@@ -195,7 +195,7 @@ These write:
 - `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for what
   you have, and refuses a failed or stale build. Its Wiring section has numbered steps (one connection each), a mermaid
   diagram whose edges are those steps, and the points as a check list. Beside it, each build writes `breadboard.json`
-  (P267): the same steps on a Wokwi half breadboard, each jumper in its step's color, as a Wokwi diagram, and
+  (P267): the same steps on a Wokwi half breadboard, each jumper colored by role, as a Wokwi diagram, and
   `breadboard.svg` (P268), the picture. A board in `data/wokwi-geometry.json` is drawn on that half breadboard (the XIAO
   ESP32-C6). A board with a complete record is drawn from the record on a 63-column breadboard (P412, the FireBeetle 2
   ESP32-S3). It gets `breadboard.svg` alone, because Wokwi has no part with its pins. An old drawing that is not written

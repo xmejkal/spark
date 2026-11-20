@@ -22,7 +22,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from spark.breadboard import bench_changes as changes  # noqa: E402
 from spark.build import build_record  # noqa: E402
-from spark.breadboard.wiring_steps import BOARD, PART, RESISTOR, BreadboardSteps, End, StepColors, StepPoint  # noqa: E402
+from spark.breadboard.wiring_steps import BOARD, PART, RESISTOR, BreadboardSteps, End, StepPoint  # noqa: E402
+
+#: Input colors, one per step number, that wrap after the last: the bench changes name whatever color a sheet gave.
+COLORS = ("red", "orange", "gold", "green", "cyan", "blue", "purple", "magenta")
 
 
 def board(label):
@@ -44,7 +47,7 @@ def seated(placed, points):
 
 def colors_of(steps):
     """The color of each jumper step, as the sheet would show it."""
-    return {number: StepColors().color(number) for number, one in enumerate(steps, 1) if one.jumper}
+    return {number: COLORS[(number - 1) % len(COLORS)] for number, one in enumerate(steps, 1) if one.jumper}
 
 
 LED_K = "the cathode"

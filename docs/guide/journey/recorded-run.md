@@ -258,7 +258,7 @@ rail when a point has more ends than a row holds. Today's steps for this project
 
 **The drawn breadboard.** Since 2026-10-16 the build also writes `breadboard.json` beside the sheet
 ([P267](https://github.com/xmejkal/spark/issues/300)). It is a Wokwi diagram of the same steps on a half breadboard:
-each part's legs in holes, and each jumper in its step's color. The sheet names the colors under its steps. To see
+each part's legs in holes, and each jumper in the color of what it carries, which the sheet names under its steps. To see
 it, open a new project on wokwi.com, paste the file into its `diagram.json`, and compare the picture with your own
 breadboard. Since 2026-10-17 a part you move in the file stays where you put it at the next build
 ([P273](https://github.com/xmejkal/spark/issues/309)), even after you change the requirements, if it still fits. A

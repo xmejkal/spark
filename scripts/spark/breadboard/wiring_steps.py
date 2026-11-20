@@ -36,7 +36,13 @@ ANCHOR_ORDER = (PART, RESISTOR, BOARD)
 #: diagram, and where another end joins it), the full words a step says when it moves this end, and its pin on the
 #: component (the board's printed label, the part's pin, the resistor's end number), which a drawing looks up. A
 #: resistor end also says its job (what the part asks it to do) and its value, which stay the same when its tag renumbers.
-End = collections.namedtuple("End", "kind component name words pin job value", defaults=("", ""))
+#: `power_rail` is the rail its record gives the pin ("ground", "logic", ...), "" when the record says it is no power
+#: pin, and None when no record says (P947).
+End = collections.namedtuple("End", "kind component name words pin job value power_rail", defaults=("", "", ""))
+#: What a point's jumpers carry, read from the ends' rails (P947): power, ground, a signal, or not known.
+POWER, GROUND, SIGNAL, UNKNOWN = "power", "ground", "signal", "unknown"
+#: The rail a record gives every ground pin.
+GROUND_RAIL = "ground"
 #: One connection point: its ends (the board's first), the supply from off the board on it, and whether it goes on a rail.
 StepPoint = collections.namedtuple("StepPoint", "ends supply rail")
 #: One step: its words, and the two diagram names it joins (None for a step that only places something).
@@ -47,9 +53,9 @@ NumberedStep = collections.namedtuple("NumberedStep", "number words edge")
 #: What a step does: put a component in, set a point's anchor up, join an end to the anchor, or connect a supply.
 PLACE, SETUP, JOIN, SUPPLY = "place", "setup", "join", "supply"
 #: One step with what it is about: what it does, its subject (the component placed, the End set up or joined, the
-#: supply's name), its point's anchor (None for a placing step), and whether it runs a jumper. A drawing reads these,
-#: never the step's words.
-Seated = collections.namedtuple("Seated", "step act subject anchor jumper")
+#: supply's name), its point's anchor (None for a placing step), whether it runs a jumper, and what its point carries
+#: (`role_of`, None for a placing step). A drawing reads these, never the step's words.
+Seated = collections.namedtuple("Seated", "step act subject anchor jumper role")
 #: Where a point's ends meet: in the row of one end, or on a rail with a mark.
 ROW, RAIL = "row", "rail"
 Seat = collections.namedtuple("Seat", "kind end mark")
@@ -127,6 +133,17 @@ def anchor_for(point):
     return RowAnchor(next(end for kind in ANCHOR_ORDER for end in point.ends if end.kind == kind))
 
 
+def role_of(ends):
+    """What a point carries, from its ends' rails: ground when one end is on the ground rail, power when one is on
+    another rail, not known when no rail is and a record says nothing of an end, else a signal."""
+    rails = [end.power_rail for end in ends]
+    if GROUND_RAIL in rails:
+        return GROUND
+    if any(rails):
+        return POWER
+    return UNKNOWN if None in rails else SIGNAL
+
+
 def needs_jumper(end):
     """Whether an end reaches its destination by a jumper: a resistor leg goes in itself, everything else does not."""
     return end.kind != RESISTOR
@@ -166,19 +183,20 @@ class BreadboardSteps:
         step list, the diagram and a page; a drawing numbers them itself."""
         walked = [Seated(WiringStep("Put %s in the breadboard, each pin in its own row."
                               % ("the board" if placed == THE_BOARD else self.short_name(placed)), None), PLACE, placed, None,
-                                  False)
+                                  False, None)
                   for placed in self.placed]
         for point in self.points:
             anchor = anchor_for(point)
             set_up = anchor.seat().end
-            walked += [Seated(step, SETUP, set_up, anchor, set_up.kind == BOARD) for step in anchor.setup()]
+            role = role_of(point.ends)
+            walked += [Seated(step, SETUP, set_up, anchor, set_up.kind == BOARD, role) for step in anchor.setup()]
             walked += [Seated(WiringStep(move(end, anchor.destination(number == 0)), (end.name, anchor.name)), JOIN, end,
-                              anchor, needs_jumper(end)) for number, end in enumerate(anchor.others(point.ends))]
+                              anchor, needs_jumper(end), role) for number, end in enumerate(anchor.others(point.ends))]
             if point.supply:
                 walked.append(Seated(WiringStep("Connect the %s supply, from off the board, to %s. Check its voltage first "
                                           "(Before you power it)." % (point.supply, anchor.destination(False)),
                                           ("%s supply" % point.supply, anchor.name)), SUPPLY, point.supply, anchor,
-                                     False))
+                                     False, role))
         return walked
 
     def boxes(self):
@@ -229,14 +247,24 @@ def _quote(text):
     return text.replace('"', "#quot;")
 
 
-class StepColors:
-    """One color per step number, so a step's wire in a drawing and its line on the sheet match. Neighbouring steps
-    differ. The palette wraps after its last color, so step 9 has step 1's color again: the number tells them apart."""
+class JumperColors:
+    """Strategy: one color per jumper by what it carries (P947), so its wire in a drawing and its line on the sheet
+    match: red for power, black for ground, grey when no record says, and each signal jumper the next of SIGNALS in
+    step order, so no two signals share a color while colors are left. SIGNALS wraps after its last; the number tells
+    two apart."""
 
-    PALETTE = ("red", "orange", "gold", "green", "cyan", "blue", "purple", "magenta")
+    BY_ROLE = {POWER: "red", GROUND: "black", UNKNOWN: "grey"}
+    SIGNALS = ("green", "blue", "purple", "orange", "magenta", "cyan")
 
-    def color(self, number):
-        return self.PALETTE[(number - 1) % len(self.PALETTE)]
+    def of(self, roles):
+        """{step number: color} of the jumpers whose roles are `roles`, {step number: role}."""
+        colors, signals = {}, 0
+        for number in sorted(roles):
+            colors[number] = self.BY_ROLE.get(roles[number])
+            if colors[number] is None:
+                colors[number] = self.SIGNALS[signals % len(self.SIGNALS)]
+                signals += 1
+        return colors
 
 
 #: One connection point: the (component, port) pairs it joins, and the names of the nets on it.
@@ -297,6 +325,32 @@ def printed_label(board, port):
     return "GND" if re.fullmatch(r"GND\d*", label) else label
 
 
+def board_rail(board, port, pad):
+    """The rail of a board's pad, from its record's power_pads (P947): the rail of the first of the port's hints or its
+    printed label that is a power pad, "" when none is, and None when the record has no power_pads or no rail there."""
+    power_pads = board.get("power_pads")
+    if not isinstance(power_pads, dict):
+        return None
+    found = next((name for name in list(port.get("port_hints") or []) + [pad] if name in power_pads), None)
+    if found is None:
+        return ""
+    rail = power_pads[found].get("rail") if isinstance(power_pads[found], dict) else None
+    return rail if isinstance(rail, str) and rail else None
+
+
+def part_rail(record, pin):
+    """The rail of a part's pin, from its record's power list (P947): the rail of the entry for the pin, "" when the
+    list has none for it, and None when the record holds no power list (missing, empty or not a list) or no rail there."""
+    power = record.get("power")
+    if not isinstance(power, list) or not power:
+        return None
+    entry = next((one for one in power if isinstance(one, dict) and one.get("pin") == pin), None)
+    if entry is None:
+        return ""
+    rail = entry.get("rail")
+    return rail if isinstance(rail, str) and rail else None
+
+
 def _natural(text):
     """D3 before D10: digits compared as numbers."""
     return [int(piece) if piece.isdigit() else piece for piece in re.split(r"(\d+)", text)]
@@ -315,7 +369,7 @@ def wiring(board, circuit, design_parts, resistors, board_component):
         if component["name"] == board_component:
             pad = printed_label(board, port)
             label = "board %s" % pad
-            return End(BOARD, THE_BOARD, label, label, pad)
+            return End(BOARD, THE_BOARD, label, label, pad, power_rail=board_rail(board, port, pad))
         if component["name"] in resistors:
             tag, value, purpose = resistors[component["name"]]
             number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
@@ -326,7 +380,8 @@ def wiring(board, circuit, design_parts, resistors, board_component):
         # a pin is said by the label printed beside it; its port name stays the key the drawing looks it up by
         printed = part_facts.printed_names(record).get(port.get("name"), port.get("name"))
         short = "%s %s" % (shorts.get(component["name"], component["name"]), printed)
-        return End(PART, component["name"], short, short + (" (%s)" % leg if leg else ""), port.get("name"))
+        return End(PART, component["name"], short, short + (" (%s)" % leg if leg else ""), port.get("name"),
+                   power_rail=part_rail(record, port.get("name")))
 
     said = [one for one in (_said(point, end, design_parts) for point in points(circuit)) if one]
     said.sort(key=lambda one: (not one[0], _natural(one[1])))

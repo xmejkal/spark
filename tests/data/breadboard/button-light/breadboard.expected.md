@@ -58,7 +58,7 @@ flowchart LR
   n5 ---|"9"| n9
 ```
 
-![The layout on a breadboard](breadboard.svg) Each jumper has its step's color: 5 cyan, 6 blue, 7 purple, 8 magenta.
+![The layout on a breadboard](breadboard.svg) Each jumper has the color of what it carries, red for power, black for ground and another color for each signal: 5 green, 6 blue, 7 black, 8 black.
 
 There is no Wokwi diagram: Wokwi has no part for the board. Use the picture.
 

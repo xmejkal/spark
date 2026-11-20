@@ -19,7 +19,8 @@ wiring-record.json, which it keeps beside the sheet):
     else a resistor end's row, else a free row for a board pin's jumper, or a rail for a point with more ends than a row
     holds); a mermaid diagram whose numbered lines are those steps; and the points, one per
     line, as the check list after wiring (spark/breadboard/wiring_steps.py holds the step rule);
-  - beside the sheet, breadboard.json (P267): the steps on a Wokwi half breadboard, each jumper in its step's color,
+  - beside the sheet, breadboard.json (P267): the steps on a Wokwi half breadboard, each jumper in the color of what
+    it carries (red for power, black for ground, another color for each signal),
     to paste into a new project on wokwi.com; and breadboard.svg (P268), the same layout as a picture the sheet
     shows, each part as spark's own pictogram (data/pictograms/). A part, a resistor or a jumper you moved in
     breadboard.json stays where you put it at the next build (P273, P287), if it still fits: a resistor with its

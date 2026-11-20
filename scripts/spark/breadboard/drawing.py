@@ -1,6 +1,6 @@
 """
 The drawn breadboard (P267, #300): the sheet's steps on a breadboard, each part's legs in holes and each
-step's jumper in the step's color, written as `breadboard.json`, a second Wokwi diagram, and as `breadboard.svg`.
+step's jumper in the color of what it carries, written as `breadboard.json`, a second Wokwi diagram, and as `breadboard.svg`.
 
 A pure planner turns the steps into holes, and a renderer turns the holes into a diagram. The planner reads the steps
 from `BreadboardSteps.anchored()`, so it never decides the wiring again. Where Wokwi draws each pin and hole comes from
@@ -28,9 +28,9 @@ Hole = collections.namedtuple("Hole", "name x y group column")
 DrawnPart = collections.namedtuple("DrawnPart", "type attrs pins")
 #: One component on the breadboard: its id, type, attrs, top-left corner in px, its turn, and {Wokwi pin: Hole}.
 PlacedPart = collections.namedtuple("PlacedPart", "id type attrs left top rotate holes")
-#: One jumper between two holes, drawn in the color of the step it belongs to, with the bends of its route as Wokwi
-#: writes them (strings such as "v-20"), empty when it runs straight.
-Jumper = collections.namedtuple("Jumper", "one other step route", defaults=((),))
+#: One jumper between two holes, for the step it belongs to, with the bends of its route as Wokwi writes them (strings
+#: such as "v-20"), empty when it runs straight, and what it carries (`wiring_steps.role_of`), which picks its color.
+Jumper = collections.namedtuple("Jumper", "one other step route role", defaults=((), wiring_steps.SIGNAL))
 #: Value: the whole drawing as holes, and the `geometry` it was planned on, which any renderer reads.
 BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts jumpers geometry")
 
@@ -352,13 +352,14 @@ class BreadboardPlanner:
                 continue
             if step.act == wiring_steps.SETUP:
                 jumper = Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
-                                ledger.claim_free_group(after, end.name), number)
+                                ledger.claim_free_group(after, end.name), number, role=step.role)
                 groups[end.name] = jumper.other.group
                 jumpers.append(jumper)
             else:
                 anchor = step.anchor.seat().end
                 jumpers.append(Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
-                                      ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name), number))
+                                      ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name), number,
+                                      role=step.role))
         return self.jumper_placement.place_jumpers(
             BreadboardLayout(self.geometry.surface.type, list(placed.values()), jumpers, self.geometry), parts_only)
 
@@ -483,8 +484,8 @@ class StepHoles:
 
 
 class WokwiBreadboardDiagram:
-    """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in its step's color. Its constructor takes the
-    colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
+    """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in the color of what it carries. Its constructor takes
+    the colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
     below, `text(layout)` and `why_not_written(layout)`, which `sheet.DRAWING_RENDERERS` and the build read."""
 
     #: The file it writes, beside the sheet.
@@ -502,7 +503,7 @@ class WokwiBreadboardDiagram:
     DECLINED_MESSAGE = "Wokwi has no part for %s"
 
     def __init__(self, colors=None, breadboard_id="bb1"):
-        self.colors = colors or wiring_steps.StepColors()
+        self.colors = colors or wiring_steps.JumperColors()
         self.breadboard_id = breadboard_id
 
     def why_not_written(self, layout):
@@ -524,8 +525,9 @@ class WokwiBreadboardDiagram:
             drawn.update({"rotate": part.rotate} if part.rotate else {})
             drawn["attrs"] = dict(part.attrs or {})
             parts.append(drawn)
+        colors = self.colors.of({jumper.step: jumper.role for jumper in layout.jumpers})
         connections = [["%s:%s" % (self.breadboard_id, jumper.one.name), "%s:%s" % (self.breadboard_id,
-                        jumper.other.name), self.colors.color(jumper.step), list(jumper.route)] for jumper in layout.jumpers]
+                        jumper.other.name), colors[jumper.step], list(jumper.route)] for jumper in layout.jumpers]
         return {"version": 1, "author": "spark", "editor": "wokwi", "parts": parts, "connections": connections,
                 "dependencies": {}}
 
