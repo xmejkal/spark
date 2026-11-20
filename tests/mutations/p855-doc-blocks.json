@@ -2,7 +2,7 @@
  {
   "file": "tools/check_docs.py",
   "name": "P855: a page block's end marker reads as a command that does not exist",
-  "find": "    commands = sorted(set(re.findall(r\"(?<!<!-- )/spark:([a-z][a-z-]*)\", text)))",
+  "find": "    commands = sorted(set(re.findall(r\"/spark:([a-z][a-z-]*)\", END.sub(\"\", text))))",
   "replace": "    commands = sorted(set(re.findall(r\"/spark:([a-z][a-z-]*)\", text)))"
  },
  {

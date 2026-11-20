@@ -162,19 +162,19 @@ These only read:
   own, a board, and a part that matches no word of the need are never named or counted there. spark checks only that the
   record has a Wokwi model, not that a scenario can drive it. The sentence of the note is the build's own.
 
-**`live.py` runs code on the board:** it is in neither list, and its flags follow. Run it only while `grant.py --check` says granted, and say first that the firmware stops while the code runs. Before it sends
-anything, it checks the grant and refuses code that writes a number of the board's USB or flash pins
-([P254](https://github.com/xmejkal/spark/issues/266)): any such number anywhere in the code, `time.sleep(12)` too.
-A number computed at run time passes. Only the XIAO C6 record names these pins so far. Then it asks [the board question](replies.md#the-question-of-the-grant-reach-and-live): a stop of it is exit 2, and its `--json` line adds `open`, `product` and `known_board`. `--json` gives `answer`
-(`ran`, `raised`, `not_reached`, `refused_no_grant`, `refused_pin`, `refused_no_parse`, or `could-not-run`),
-`grant_why`, `why`, `output`, `cure`, `reset` (`done`, `failed` or null), `pins_checked`, `gpio_numbers_in_code`
-and `port`. Exit 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset
-failed, or it could not run. `ran` means the board ran the code: an empty output still counts, so read `output`.
-A `reset` of `failed` means the firmware may be stopped: tell the person to press R or replug. `reset` is null only
-after a refusal, or after a `not_reached` where mpremote could not open the port or enter the raw REPL, so the code
-never ran. `pins_checked: false` means the record names no restricted pin, so nothing was refused. A pin that the
-code set and the firmware never sets can keep its value through the reset; `gpio_numbers_in_code` lists the
-candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool. Its `--cure-first` opens the port with DTR and RTS off before the only try (the bench's cold arm). It asks the board question too. Of its stops, `--json` prints a line only for an open question.
+**`live.py` runs code on the board.** Say first that the firmware stops while the code runs. Before it sends anything,
+it refuses code that writes a number of the board's USB or flash pins (P254): any such number anywhere in the code,
+`time.sleep(12)` too. A number computed at run time passes. Then it asks [the board
+question](replies.md#the-question-of-the-grant-reach-and-live): a stop of it is exit 2, and its `--json` line adds
+`open`, `product` and `known_board`. `--json` gives `answer` (`ran`, `raised`, `not_reached`, `refused_no_grant`,
+`refused_pin`, `refused_no_parse`, or `could-not-run`), `grant_why`, `why`, `output`, `cure`, `reset` (`done`, `failed`
+or null), `pins_checked`, `gpio_numbers_in_code` and `port`. Exit 0 the board ran the code, 1 refused or the code
+raised, 2 the board did not answer, the reset failed, or it could not run. An empty `output` still counts as `ran`. A
+`reset` of `failed` means the firmware may be stopped: tell the person to press R or replug. `reset` is null only after
+a refusal, or after a `not_reached` where mpremote could not open the port or enter the raw REPL, so the code never ran.
+`pins_checked: false` means the record names no restricted pin, so nothing was refused. A pin that the code set and the
+firmware never sets can keep its value through the reset; `gpio_numbers_in_code` lists the candidates, and it
+over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool.
 
 <!-- spark:operation live -->
 
@@ -199,7 +199,8 @@ These write:
   `breadboard.svg` (P268), the picture. A board in `data/wokwi-geometry.json` is drawn on that half breadboard (the XIAO
   ESP32-C6). A board with a complete record is drawn from the record on a 63-column breadboard (P412, the FireBeetle 2
   ESP32-S3). It gets `breadboard.svg` alone, because Wokwi has no part with its pins. When a drawing is not written, the
-  sheet and stderr say `breadboard.json not written:` and why, and an old file is removed. Its `code` in `kept` and the next step are in [the breadboard codes](breadboard-codes.md).
+  sheet and stderr say `breadboard.json not written:` and why, and an old file is removed. The `code` of each `kept`
+  entry (why no drawing was written) and its next step are in [the breadboard codes](breadboard-codes.md).
 
   The sheet names the pad that every GND means. Its picture is not verified: the row side, the USB end and the pads rest
   on the record and on the footprint's convention, and the sheet says to hold the board to the picture.

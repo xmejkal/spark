@@ -1,7 +1,8 @@
 # P855 PR 3: the scripts page's first generated block, from live's Operation: rows
 
 Card: [P855 #1220](https://github.com/xmejkal/spark/issues/1220). This file holds the acted, raised and rejected
-findings only. The plan check: one lens on Sonnet (2 musts, 3 shoulds). 2026-11-20.
+findings only. The plan check: one lens on Sonnet (2 musts, 3 shoulds). The review: a lens on Sonnet and the refuter
+on Opus (2 musts, 5 worth fixing). 2026-11-20.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -12,3 +13,10 @@ findings only. The plan check: one lens on Sonnet (2 musts, 3 shoulds). 2026-11-
 | 5 | the PR body and the card say why one block fits the budget now, and how the next one comes | the plan check | acted | fixed: the PR body and a comment on #1220 |
 | 6 | the done line says scripts.md holds generated "blocks", and it holds one: the next needs a cut of about 12 lines | build | raised | a comment on #1220, for the PO's eye: restate the done line or keep the card for the next block |
 | 7 | OperationHelpTable shows an `nargs` "*" value as one word too (check_all's `--boards`, which `--help` shows as `[BOARDS ...]`); its docstring names only "+" | build | raised | a comment on #1220: the PR that gives check_all a block handles both |
+| 8 | the lookbehind skips any `/spark:NAME` after `<!-- `, so `<!-- /spark:frobnicate -->` passed | the refuter | acted | fixed: `missing_names` removes only `doc_blocks.END`'s shape before the search, so the marker form has one source; a test flags `<!-- /spark:frobnicate -->`; the row's anchor moved to the new line and was planted again |
+| 9 | two lines of scripts.md grew long to fit the budget (the breadboard sentence to 181 characters, live's opening to 208), and live's paragraph repeats its block | the lens | acted | fixed: both wrapped at the page's width of 120. Cut from live's paragraph: the grant and the reset that the block's summary says, the run-only-while-granted sentence, reach's `--cure-first` sentence and its `--json` stops (reach's `--help` and json.md:295 say them), the P254 link's URL, and a longer `ran` sentence. The refusals, the board question and the JSON keys stay. 308 lines |
+| 10 | the breadboard link sentence should say what a code is | the lens | acted | fixed: "The `code` of each `kept` entry (why no drawing was written) and its next step are in the breadboard codes" |
+| 11 | "it is in neither list" reads oddly | the lens | acted | fixed: the clause is gone; the bold opening, outside the list, is enough |
+| 12 | agents.md lists firmware-codes and not breadboard-codes, and json.md's `kept` code could link the page | the lens | acted | fixed: agents.md:11 names both in one cell (297 characters, 185 lines); json.md:149 links the page in place (425 lines) |
+| 13 | the PR body's "Why only one block" is long, and it should say what was wrapped and cut | the lens | acted | fixed in the PR body |
+| 14 | live's paragraph loses the fact that it ends with `mpremote reset`, so the firmware starts again from boot | the lens | rejected | the block's summary says it resets the board, and docs/guide/journey/bench.md:165 holds the rest |

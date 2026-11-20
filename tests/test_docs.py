@@ -37,6 +37,10 @@ class TheChecksTest(unittest.TestCase):
         self.assertEqual(said, ["/spark:operation names no command"])
         self.assertEqual(check_docs.missing_names("<!-- /spark:operation live -->"), [])
 
+    def test_a_comment_that_is_no_end_marker_still_names_its_command(self):
+        # P855 review: only the end marker's own shape is skipped
+        self.assertEqual(check_docs.missing_names("<!-- /spark:frobnicate -->"), ["/spark:frobnicate names no command"])
+
     def test_a_script_in_a_package_under_scripts_may_be_named_by_its_file_name(self):
         self.assertEqual(check_docs.missing_names("the exit codes live in `outcomes.py`"), [])
 
