@@ -103,7 +103,8 @@ class SvgBreadboardDiagram:
     run. A part drawn from
     its record also gets its pad labels, placed by the PadLabelLayout its part_px names (`label_layouts`, keyed by the
     part_px's `labels`). Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
-    same bytes. The canvas holds every hole and every part's body.
+    same bytes. The canvas holds every hole and every part's body. Each jumper's group carries `data-step`, its step's
+    number, and each part's group `data-part`, its id, so a player finds them (P949); a key is never an `id`.
     """
 
     FILE_NAME = "breadboard.svg"
@@ -185,7 +186,7 @@ class SvgBreadboardDiagram:
     def _part(self, root, part, geometry):
         part_px = geometry.part(part.type)
         picture = self.pictures.picture(part.type)
-        group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part, part_px)})
+        group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part, part_px), "data-part": part.id})
         width, height = part_px["size"]
         x, y, view_width, view_height = picture.view_box
         inner = ElementTree.SubElement(group, _svg("g"), {"transform": "scale(%s %s) translate(%s %s)" % (
@@ -250,7 +251,7 @@ class SvgBreadboardDiagram:
         one, other = jumper.one, jumper.other
         route = "M%s %sL%s %sL%s %sL%s %s" % (_round_px(one.x), _round_px(one.y), _round_px(one.x), _round_px(across),
                                              _round_px(other.x), _round_px(across), _round_px(other.x), _round_px(other.y))
-        group = ElementTree.SubElement(root, _svg("g"), {"class": "wire"})
+        group = ElementTree.SubElement(root, _svg("g"), {"class": "wire", "data-step": str(jumper.step)})
         for stroke, width in (("#ffffff", self.UNDER_STROKE_PX), (color, self.WIRE_STROKE_PX)):
             ElementTree.SubElement(group, _svg("path"), {
                 "d": route, "fill": "none", "stroke": stroke, "stroke-width": str(width), "stroke-linecap": "round",

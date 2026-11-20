@@ -81,8 +81,9 @@ class TheSvgTest(unittest.TestCase):
 
     def test_the_bytes_are_the_ones_reviewed(self):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
+        # P949 added the keys data-step and data-part, which change no pixel.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "d5a4aeed58c17928849272262160d4ae78c609e3707bc15f29fd62b1c6ca4006")
+                         "379d273257c045cbaa6a78d20112cc25a9c1e5fe5815ca903b9887b2ce310d4d")
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -184,9 +185,10 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         self.assertEqual(self.text, svg_diagram.SvgBreadboardDiagram().text(self.layout))
 
     def test_the_picture_is_the_one_looked_at_on_2026_10_29(self):
-        # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose
+        # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose. P949 added
+        # the keys data-step and data-part, which change no pixel.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "d8f13588027120eeadf46939282c422f04a8f532211ad5a98d069646574db3b4")
+                         "d6cf0665cd8e796b3474a6266f027c449413faa9c7af5d5d2be06a66734a811f")
 
     def test_the_xiao_has_none_of_it(self):
         text, _ = xiao_svg()
@@ -405,6 +407,46 @@ class TheJumperLanesTest(unittest.TestCase):
         lines = svg_diagram.JumperLanes().lines([drawing.Jumper(hole(1, 150), hole(3, 50), 1),
                                                  drawing.Jumper(hole(4, 150), hole(6, 50), 2)], 10)
         self.assertEqual(lines, {1: 55, 2: 65})
+
+
+class TheKeysTest(unittest.TestCase):
+    """P949: a player finds each jumper by its step and each part by its id, as data attributes, never as an id."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.drawn = {"xiao": xiao_svg(), "epaper": epaper_svg()}
+
+    def test_each_jumper_is_one_group_keyed_by_its_step_once(self):
+        for name, (text, layout) in self.drawn.items():
+            with self.subTest(name):
+                groups = ElementTree.fromstring(text).findall(".//*[@data-step]")
+                self.assertEqual(sorted(int(group.get("data-step")) for group in groups),
+                                 sorted(jumper.step for jumper in layout.jumpers))
+                self.assertGreaterEqual(len(groups), 2)
+                jumpers = {jumper.step: jumper for jumper in layout.jumpers}
+                for group in groups:
+                    jumper = jumpers[int(group.get("data-step"))]
+                    color = group.findall("svg:path", NS)[1]
+                    self.assertEqual((segments(color)[0][0], segments(color)[-1][1]),
+                                     ((round(jumper.one.x, 3), round(jumper.one.y, 3)),
+                                      (round(jumper.other.x, 3), round(jumper.other.y, 3))))
+
+    def test_each_part_is_one_group_keyed_by_its_id_once(self):
+        for name, (text, layout) in self.drawn.items():
+            with self.subTest(name):
+                groups = ElementTree.fromstring(text).findall(".//*[@data-part]")
+                self.assertEqual(sorted(group.get("data-part") for group in groups),
+                                 sorted(part.id for part in layout.parts))
+                self.assertGreaterEqual(len(groups), 2)
+        board = [group for group in ElementTree.fromstring(self.drawn["xiao"][0]).findall(".//*[@data-part]")
+                 if group.get("data-part") == wiring_steps.THE_BOARD]
+        self.assertEqual(len(board), 1)
+        self.assertIn("rotate(90 34 44)", board[0].get("transform"))
+
+    def test_no_key_is_an_id(self):
+        for name, (text, _layout) in self.drawn.items():
+            with self.subTest(name):
+                self.assertNotIn(" id=", text)
 
 
 class TheSheetShowsItTest(unittest.TestCase):
