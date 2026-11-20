@@ -65,7 +65,7 @@ class PourContact:
 
     def measured(self, error):
         """The gap in mm between the pour and the trace `error` names, at most 0 when they touch; None for an error
-        that is no pour short to a trace, or for copper spark does not read."""
+        that is no pour short to a trace, or for copper spark does not read (a trace whose width is not constant too)."""
         if error.get("type") != "pcb_placement_error":
             return None
         said = POUR_SHORT_PHRASE.fullmatch(str(error.get("message") or ""))
@@ -76,7 +76,10 @@ class PourContact:
             pour = self.one("pcb_copper_pour", "pcb_copper_pour_id", pour_id)
             if pour.get("layer") != layer or pour.get("shape") != "brep":
                 return None
-            return gap_between(rings_of(pour), pieces(self.one("pcb_trace", "pcb_trace_id", trace_id).get("route"), layer))
+            trace = self.one("pcb_trace", "pcb_trace_id", trace_id)
+            if trace.get("route_thickness_mode", "constant") != "constant":
+                return None  # an interpolated trace tapers from one point's width to the next's, which `pieces` does not draw
+            return gap_between(rings_of(pour), pieces(trace.get("route"), layer))
         except (UnmeasurableError, AttributeError, KeyError, TypeError):
             return None
 

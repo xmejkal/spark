@@ -196,6 +196,12 @@ class WhatCannotBeMeasuredIsKeptTest(unittest.TestCase):
             with self.subTest(types=[element["type"] for element in elements]):
                 self.assertEqual(PourContact(elements).disproved([error_of(circuit)]), ([error_of(circuit)], []))
 
+    def test_a_trace_whose_width_tapers_is_kept_and_a_constant_one_is_measured(self):
+        tapered = walk(trace=lambda trace: trace.update(route_thickness_mode="interpolated"))
+        self.assertEqual(PourContact(tapered).disproved([error_of(tapered)]), ([error_of(tapered)], []))
+        constant = walk(trace=lambda trace: trace.update(route_thickness_mode="constant"))
+        self.assertEqual(PourContact(constant).disproved([error_of(constant)])[0], [])
+
     def test_the_pour_on_another_layer_than_the_words_is_kept(self):
         circuit = walk(pour=lambda pour: pour.update(layer="bottom"))
         self.assertEqual(PourContact(circuit).disproved([error_of(circuit)]), ([error_of(circuit)], []))
