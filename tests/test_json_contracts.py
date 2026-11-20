@@ -369,10 +369,18 @@ class TheBenchCodesTableTest(unittest.TestCase):
             self.assertEqual((refusal.reason, refusal.code, reason in board_codes.CODES), (reason, code, True), why)
 
 
-#: P853: each area whose codes are Codes, with its table. An area joins when its codes take their fix (the core, P935).
-AREAS_WITH_FIXES = {"idea": idea_codes, "core": codes}
+#: P853: each area whose codes are Codes, with its table. An area joins when its codes take their fix (P935).
+AREAS_WITH_FIXES = {"idea": idea_codes, "core": codes, "records": records_codes, "sourcing": sourcing_codes}
+#: P935: the tables whose Codes an area names besides its own: the core's, which every Operation writes, and the records'.
+NAMED_TOO = {"records": (codes,), "sourcing": (records_codes, codes)}
 #: P935: the one given fix that is no Code's: the override a CLI injects through `HelpText` (parts.py's describe route).
 INJECTED_FIXES = {"text.bad_argument_fix"}
+#: P935: each fix given with the code of a refusal its site caught, by the file: the code is the refusal's, so no variant
+#: can hold the fix (research's sources, after the store's refusal).
+CAUGHT_FIXES = {("research/research_source.py", "cls.RETRY_FIX")}
+#: P935: the file whose plain Findings pass on one Answer item's own code and fix: `Answer.to_result`, whose items carry
+#: no Code's fix until P941 (#1343).
+ITEM_FINDINGS = {"record_kind.py"}
 #: P853: the errors that take a code, by class name; a subclass the area defines, at any depth, takes one too.
 CODED_ERRORS = {"SparkError", "CodedMessageError", "StoreError"}
 
@@ -396,11 +404,11 @@ def resolver(tree):
     return resolved
 
 
-def coded_errors(trees):
-    """P853: CODED_ERRORS and every class the trees define on one of them, a subclass of a subclass too, until none is added."""
+def coded_errors(trees, roots=CODED_ERRORS):
+    """P853: the `roots` and every class the trees define on one of them, a subclass of a subclass too, until none is added."""
     classes = [(cls.name, {resolver(tree)(base).rpartition(".")[2] for base in cls.bases})
                for tree in trees for cls in ast.walk(tree) if isinstance(cls, ast.ClassDef)]
-    errors = set(CODED_ERRORS)
+    errors = set(roots)
     while True:
         more = {name for name, bases in classes if bases & errors} - errors
         if not more:
@@ -440,12 +448,13 @@ def made_from_its_own_fix(call, fix):
 
 def variants_off_their_parent(table):
     """P935: the Code constants of `table` named past their word that are no variant. A variant is named after its parent,
-    the constant named by its word (`<PARENT>_...`), and holds a fix of its own, so an alias of a code is none."""
+    the constant named by its word (`<PARENT>_...`) in `table` or the core's, and holds a fix of its own, so an alias of a
+    code is none."""
     broken = []
     for name, code in vars(table).items():
         if not isinstance(code, Code) or name == code.upper():
             continue
-        parent = getattr(table, code.upper(), None)
+        parent = getattr(table, code.upper(), None) or getattr(codes, code.upper(), None)
         if not name.startswith(code.upper() + "_") or parent is None:
             broken.append("%s is not named after its parent %s" % (name, code.upper()))
         elif code.fix == parent.fix:
@@ -459,19 +468,46 @@ def forwards(code, fix):
             and ast.unparse(code.value) == ast.unparse(fix.value))
 
 
-def calls_off_the_table(sources, table):
+def caught_names(tree, resolved, spark_errors):
+    """P935: the names an `except E as x` of the tree binds where no E is one of `spark_errors`: a refusal with no fix."""
+    types = {}
+    for handler in (node for node in ast.walk(tree) if isinstance(node, ast.ExceptHandler) and node.name):
+        caught = handler.type.elts if isinstance(handler.type, ast.Tuple) else [handler.type]
+        types.setdefault(handler.name, set()).update(resolved(one).rpartition(".")[2] for one in caught)
+    return {name for name, classes in types.items() if not classes & spark_errors}
+
+
+def passes_on_a_refusal(file, code, fix, caught):
+    """P935: a call that passes on the code of a refusal its site caught (`x.code`): with no fix when `x` is one of
+    `caught`, or with the fix CAUGHT_FIXES names for the file."""
+    if not (isinstance(code, ast.Attribute) and code.attr == "code" and isinstance(code.value, ast.Name)):
+        return False
+    return code.value.id in caught if fix is None else (file, ast.unparse(fix)) in CAUGHT_FIXES
+
+
+def passes_on_an_item(file, call):
+    """P935: a plain Finding of an ITEM_FINDINGS file whose code and fix are one item's own: `x.get("code")`, `x.get("fix")`."""
+    got = [arg for arg in call.args[2:5:2] if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute) and arg.func.attr == "get"]
+    return (file in ITEM_FINDINGS and len(got) == 2 and [ast.unparse(one.args[0]) for one in got] == ["'code'", "'fix'"]
+            and ast.unparse(got[0].func.value) == ast.unparse(got[1].func.value))
+
+
+def calls_off_the_table(sources, table, also=()):
     """
     P853: (the calls that take a code, each rule a call breaks as 'file:line N: the rule'), over the area's `sources`
     ({file name: text}). A Finding is made by `Finding.of` alone, and no name aliases Finding; an error of `coded_errors`
     and `Finding.of` name a Code of `table` (aliases resolved through the module's imports) and pass no keywords by **.
     P935: a given fix is the `.fix` of a Code of the call's word, filled with % or after an injected fix's `or`
     (`fix_parts`); a forward passes `x.code` with `x.fix`; a `_replace` gives no code, and a fix only made from the
-    receiver's own (the Privacy mask).
+    receiver's own (the Privacy mask). A Code of a table `also` holds counts as `table`'s; a caught refusal's code is
+    passed on as `passes_on_a_refusal` says, and an item's as `passes_on_an_item` says.
     """
     trees = {name: ast.parse(text) for name, text in sources.items()}
     errors, calls, broken = coded_errors(trees.values()), 0, []
+    spark_errors = coded_errors(trees.values(), {"SparkError"})
     for file, tree in trees.items():
         resolved = resolver(tree)
+        caught = caught_names(tree, resolved, spark_errors)
         for alias in (node for node in ast.walk(tree) if isinstance(node, ast.Assign) and resolved(node.value).endswith("Finding")):
             broken.append("%s:line %d: %s aliases Finding: Finding.of takes the fix from its Code" % (file, alias.lineno, ast.unparse(alias.targets[0])))
         for call in (node for node in ast.walk(tree) if isinstance(node, ast.Call)):
@@ -481,7 +517,7 @@ def calls_off_the_table(sources, table):
             coded = of or name.rpartition(".")[2] in errors
             if None in keywords and (coded or replaces):
                 broken.append(said + " passes keywords by **")
-            if name.endswith(("Finding", "Finding._make", "Finding.__new__")):
+            if name.endswith(("Finding", "Finding._make", "Finding.__new__")) and not passes_on_an_item(file, call):
                 broken.append(said + " makes a Finding: Finding.of takes the fix from its Code")
             elif replaces:
                 if "code" in keywords:
@@ -492,12 +528,13 @@ def calls_off_the_table(sources, table):
                 calls += 1
                 code = keywords.get("code", call.args[2] if of and len(call.args) > 2 else None)
                 fix = keywords.get("fix", call.args[4] if of and len(call.args) > 4 else None)
-                if forwards(code, fix):
+                if forwards(code, fix) or passes_on_a_refusal(file, code, fix, caught):
                     continue
                 module, _, word = resolved(code).rpartition(".")
-                if module != table.__name__ or not isinstance(getattr(table, word, None), Code):
+                named = next((one for one in (table,) + tuple(also) if one.__name__ == module), None)
+                if not isinstance(getattr(named, word, None), Code):
                     broken.append(said + " names its code as %r, not a Code of %s" % (ast.unparse(code) if code else None, table.__name__))
-                elif fix is not None and foreign_fix(fix, getattr(table, word), table, resolved):
+                elif fix is not None and foreign_fix(fix, getattr(named, word), named, resolved):
                     broken.append(said + " gives a fix")
     return calls, broken
 
@@ -513,10 +550,12 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
                 self.assertTrue(code.fix.strip(), code)
 
     def test_each_code_constant_of_the_table_is_a_word_of_codes_with_that_word_s_meaning(self):
-        # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word
+        # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word;
+        # an area's variant of the core's word (BAD_ARGUMENT_IN_LIBRARY) has the core's meaning
         for table in AREAS_WITH_FIXES.values():
             coded = {name: value for name, value in vars(table).items() if isinstance(value, Code)}
-            self.assertEqual([name for name, code in coded.items() if table.CODES.get(code) != code.meaning], [], table.__name__)
+            self.assertEqual([name for name, code in coded.items() if table.CODES.get(code, codes.CODES.get(code)) != code.meaning], [],
+                             table.__name__)
             self.assertEqual(variants_off_their_parent(table), [], table.__name__)
 
     def test_a_variant_named_off_its_parent_or_holding_its_parent_s_fix_is_named(self):
@@ -527,10 +566,20 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         self.assertEqual(variants_off_their_parent(planted), ["X_GONE_TOO holds its parent's fix", "OTHER is not named after its parent X_GONE",
                                                               "LOST_X is not named after its parent LOST"])
 
+    def test_an_area_s_variant_of_the_core_s_word_has_the_core_s_code_as_its_parent(self):
+        # P935 PR 2: sourcing's BAD_ARGUMENT_IN_LIBRARY
+        planted = types.ModuleType("planted")
+        planted.BAD_ARGUMENT_HERE = Code("bad_argument", "m", "look here")
+        planted.BAD_ARGUMENT_SAME = Code("bad_argument", "m", "%s --help lists the arguments")
+        planted.HERE_CRASH = Code("crash", "m", "look")
+        self.assertEqual(variants_off_their_parent(planted), ["BAD_ARGUMENT_SAME holds its parent's fix",
+                                                              "HERE_CRASH is not named after its parent CRASH"])
+
     def test_every_finding_and_error_of_the_area_names_a_code_of_the_table_and_gives_no_fix(self):
         for area, table in AREAS_WITH_FIXES.items():
-            sources = {path.name: path.read_text() for path in sorted((ROOT / "scripts" / "spark" / area).glob("*.py"))}
-            calls, broken = calls_off_the_table(sources, table)
+            root = ROOT / "scripts" / "spark" / area  # P935: its subfolders too, each file by its path in the area
+            sources = {str(path.relative_to(root)): path.read_text() for path in sorted(root.rglob("*.py"))}
+            calls, broken = calls_off_the_table(sources, table, NAMED_TOO.get(area, ()))
             self.assertTrue(calls, "the scan found no call in %s" % area)
             self.assertEqual(broken, [])
 
@@ -585,6 +634,31 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             "cli.py:line 17: found._replace gives a code",
             "cli.py:line 18: found._replace gives a fix",
             "cli.py:line 19: spark.core.result.Finding.of gives a fix"]))
+
+    def test_the_scan_takes_the_tables_an_area_reads_a_caught_refusal_s_code_and_an_item_s_and_names_the_rest(self):
+        # P935 PR 2: the sourcing and records forms; the plan check's limits (a SparkError's code with no fix, a site not named)
+        head = ("from spark.core import codes\nfrom spark.core.errors import SparkError\nfrom spark.core.result import Finding\n"
+                "from spark.records import records_codes\nfrom spark.records.store import StoreError\nfrom spark.sourcing import sourcing_codes\n\n")
+        caught = ("try:\n    pass\nexcept StoreError as refused:\n    SparkError('x', code=refused.code)\n"
+                  "except (ValueError, SparkError) as said:\n    SparkError('x', code=said.code)\n"
+                  "SparkError('x', code=error.code)\nSparkError('x', code=error.code, fix=cls.RETRY_FIX)\n"
+                  "StoreError('x', code=records_codes.URL_UNREACHABLE)\nSparkError('x', code=sourcing_codes.BAD_ARGUMENT_IN_LIBRARY)\n"
+                  "SparkError('x', code=codes.CRASH)\nSparkError('x', code=records_codes.CODES)\n")
+        item = "Finding(1, None, item.get('code'), 's', item.get('fix'))\nFinding(1, None, item.get('code'), 's', other.get('fix'))\n"
+        sources = {"research/research_source.py": head + caught, "research/other.py": head + caught, "record_kind.py": head + item,
+                   "other.py": head + item}
+        # ast.walk reads a module's own lines before those in a try, so line 13 comes after line 14
+        self.assertEqual(calls_off_the_table(sources, sourcing_codes, NAMED_TOO["sourcing"]), (16, [
+            "research/research_source.py:line 14: SparkError names its code as 'error.code', not a Code of spark.sourcing.sourcing_codes",
+            "research/research_source.py:line 19: SparkError names its code as 'records_codes.CODES', not a Code of spark.sourcing.sourcing_codes",
+            "research/research_source.py:line 13: SparkError names its code as 'said.code', not a Code of spark.sourcing.sourcing_codes",
+            "research/other.py:line 14: SparkError names its code as 'error.code', not a Code of spark.sourcing.sourcing_codes",
+            "research/other.py:line 15: SparkError names its code as 'error.code', not a Code of spark.sourcing.sourcing_codes",
+            "research/other.py:line 19: SparkError names its code as 'records_codes.CODES', not a Code of spark.sourcing.sourcing_codes",
+            "research/other.py:line 13: SparkError names its code as 'said.code', not a Code of spark.sourcing.sourcing_codes",
+            "record_kind.py:line 9: spark.core.result.Finding makes a Finding: Finding.of takes the fix from its Code",
+            "other.py:line 8: spark.core.result.Finding makes a Finding: Finding.of takes the fix from its Code",
+            "other.py:line 9: spark.core.result.Finding makes a Finding: Finding.of takes the fix from its Code"]))
 
 
 if __name__ == "__main__":

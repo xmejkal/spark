@@ -269,6 +269,18 @@ class DfrobotWikiSourceTest(unittest.TestCase):
                 offer, outside = self.offer(pages={PAGE: html})
                 self.assertEqual(([problem.code for problem in offer.problems], offer.urls_read, offer.documents, outside.fetched), (["no_document_list"], (), {}, [PAGE]))
 
+    def test_each_problem_of_the_wiki_carries_its_fix(self):
+        # P935 PR 2: the fixes moved onto the sourcing Codes, pinned as the person reads them
+        listed = "keep the page's documents by hand: parts.py --fetch after their URLs are in the record's sources"
+        many = [("File %d" % index, FILES + "X1_f%d.pdf" % index, "application/pdf") for index in range(13)]
+        for record, pages, fix in ((dict(BARE, sku=None), None, "write the maker's part number as the record's sku (parts.py --skeleton --sku, "
+                                                                 "or by hand), then run again"),
+                                   (BARE, {PAGE: b"<html>Just a moment...</html>"}, listed),
+                                   (BARE, dict({PAGE: listing(many)}, **{url: b"%PDF" for _, url, _ in many}), listed)):
+            with self.subTest(fix=fix[:20]):
+                offer, _ = self.offer(record, pages or PAGES)
+                self.assertEqual([problem.fix for problem in offer.problems], [fix])
+
     def test_a_subject_of_given_as_one_object_and_a_top_level_article_list_their_document(self):
         one = {"@type": "TechArticle", "subjectOf": {"@type": "DigitalDocument", "name": "Dimension", "url": PDF_DRAWING, "fileFormat": "application/pdf"}}
         for data in (one, {"@context": "x", "@graph": [one]}):
@@ -554,6 +566,14 @@ class ResearchPartTest(unittest.TestCase):
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = research.main(["--part", "x-mod", "--project", str(self.project), "--replies", str(self.project / "none.json")])
         self.assertEqual((code, out.getvalue()[:33], "cannot be read" in out.getvalue()), (2, "  bad_argument: the replies file ", True))
+
+    def test_an_unknown_id_and_a_library_record_carry_their_fixes(self):
+        # P935 PR 2: the fixes moved onto the sourcing Codes, pinned as the person reads them
+        for part, fix in (("nope", "parts.py --need <words> finds what exists; a new record starts with parts.py --skeleton"),
+                          ("led-red-5mm", "spark's library is changed in spark's repository; research a copy of the record in the project's parts/")):
+            result = run_operation(ResearchPart(), {"part": part, "project": self.project, "replies": None},
+                                   FakeOutsideWorld(replies=DeferringReplyStrategy()))
+            self.assertEqual([found.fix for found in result.findings], [fix], part)
 
     def test_a_library_record_is_refused_and_a_record_with_no_gaps_writes_no_file(self):
         result = run_operation(ResearchPart(), {"part": "led-red-5mm", "project": self.project, "replies": None},

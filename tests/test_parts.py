@@ -3736,6 +3736,18 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
                     said, code = run_json(argv)
                     self.assertEqual((code, said["unchecked"][0]["code"]), (2, word))
 
+    def test_a_bad_argument_of_a_part_operation_carries_parts_py_s_fix(self):
+        # P935 PR 2: the four sites gave bad_argument with fix null; now parts.py's one fix of a bad argument
+        project, facts = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "facts.json"
+        facts.write_text('{"nope": 1}')
+        with in_store(Path(tempfile.mkdtemp())):
+            for argv, items in ((["--promote", "x"], "unchecked"), (["--step", str(project), "nap"], "unchecked"),
+                                (["--skeleton", "x", "--project", str(project)], "unchecked"), (["--fact-set", "x", str(facts)], "problems")):
+                with self.subTest(argv=argv):
+                    said, _ = run_json(argv)
+                    self.assertEqual((said[items][0]["code"], said[items][0]["fix"]),
+                                     ("bad_argument", "parts.py --describe --json lists every operation and its arguments"))
+
     def test_every_write_operation_narrows_its_effects_on_a_dry_run(self):
         from spark.core.operation import READS, WRITES
         from spark.design import design_operations

@@ -86,6 +86,17 @@ class RegisteredProjectStoreTest(StoreCase):
                 RegisteredProjectStore().register(name, ORIGIN, "box.py", REGISTERED_AT)
             self.assertEqual(refused.exception.code, "key_not_plain", name)
 
+    def test_each_refused_name_carries_its_fix(self):
+        # P935 PR 2: the fixes moved onto the records Codes, pinned as the person reads them
+        RegisteredProjectStore().register("pixel-games", ORIGIN, "box.py", REGISTERED_AT)
+        for name, origin, fix in (("Pixel", ORIGIN, "register a name such as pixel-games"),
+                                  ("blink", " ", "give the origin and the tool as text, such as --origin <the origin remote> "
+                                                 "--tool box.py, then run bench.py register again"),
+                                  ("pixel-games", OTHER_ORIGIN, "pick another name, then run bench.py register again")):
+            with self.assertRaises(SparkError) as refused:
+                RegisteredProjectStore().register(name, origin, "box.py", REGISTERED_AT)
+            self.assertEqual(refused.exception.fix, fix, name)
+
     def test_a_file_that_is_no_object_of_registrations_is_a_store_error(self):
         store.place("registered-projects").parent.mkdir(parents=True, exist_ok=True)
         for text in ("{not json", '["pixel-games"]', '{"pixel-games": {"origin": 7}}'):
