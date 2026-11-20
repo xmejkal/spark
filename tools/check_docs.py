@@ -17,6 +17,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from doc_blocks import END  # a page block's end marker, which names no command (P855)
+
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_NOTE = re.compile(r"<!-- output: run \d{4}-\d{2}-\d{2}, spark \d+\.\d+\.\d+ -->$")
 RUNS_NOTE = re.compile(r"<!-- runs: exit (\d+) -->$")
@@ -105,8 +107,9 @@ def long_cells(path, text, root=ROOT, limits=CELL_LIMITS):
 
 
 def missing_names(text, root=ROOT):
-    """The commands and scripts the text names that do not exist."""
-    commands = sorted(set(re.findall(r"/spark:([a-z][a-z-]*)", text)))
+    """The commands and scripts the text names that do not exist. A page block's end marker (doc_blocks.END, P855)
+    names no command."""
+    commands = sorted(set(re.findall(r"/spark:([a-z][a-z-]*)", END.sub("", text))))
     scripts = sorted(set(re.findall(r"\b([a-z][a-z_]*\.py)\b", text)))
     return (["/spark:%s names no command" % name for name in commands
              if not (root / "commands" / ("%s.md" % name)).is_file()]
