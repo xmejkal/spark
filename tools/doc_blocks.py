@@ -59,7 +59,7 @@ def _stage_table(operation):
 
 #: Strategy: what one kind of block shows: the attribute of the Operation it renders (a block of an Operation whose
 #: attribute is empty is refused) and the function that renders the Operation's block.
-BlockKind = namedtuple("BlockKind", "shown render")
+BlockKind = namedtuple("BlockKind", "attribute render")
 #: Each kind of block by the word after `spark:` in its markers.
 KINDS = {"operation": BlockKind("summary", _operation_help), "stages": BlockKind("stages", _stage_table)}
 START = re.compile(r"<!-- spark:(%s) ([\w-]+) -->" % "|".join(KINDS))
@@ -105,8 +105,8 @@ def fresh_text(page, text, operations=None):
             kind, name, opened_at = marked_kind, marked, number
             if name not in operations:
                 raise BlockError(UNKNOWN_MESSAGE % (page, number, name))
-            if not getattr(operations[name], KINDS[kind].shown):
-                raise BlockError(NOTHING_TO_SHOW_MESSAGE % (page, number, name, KINDS[kind].shown))
+            if not getattr(operations[name], KINDS[kind].attribute):
+                raise BlockError(NOTHING_TO_SHOW_MESSAGE % (page, number, name, KINDS[kind].attribute))
             kept.append(line)
         elif name is None:
             raise BlockError(NO_START_MESSAGE % (page, number, marked))

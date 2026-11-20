@@ -27,7 +27,7 @@ class OperationHelpTable:
 
 
 def table_cell(text):
-    """`text` as one cell of a Markdown table: a `|` in it is escaped, so it does not end the cell (P936 shares it)."""
+    """`text` as one cell of a Markdown table: a `|` in it is escaped, so it does not end the cell."""
     return text.replace("|", "\\|")
 
 

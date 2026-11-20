@@ -74,7 +74,7 @@
  {
   "file": "tools/doc_blocks.py",
   "name": "P481: an Operation with no summary crashes, unnamed",
-  "find": "            if not getattr(operations[name], KINDS[kind].shown):",
+  "find": "            if not getattr(operations[name], KINDS[kind].attribute):",
   "replace": "            if False:"
  },
  {

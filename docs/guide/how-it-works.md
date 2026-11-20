@@ -23,8 +23,8 @@ flowchart LR
     sim -. you run it next .-> checks["check_all.py: five checks"]
 ```
 
-The build's output prints the stages below, from one table, `stages.BUILD_STAGES` (P852); `check_spine.py --help` says
-what each code means. A schematic note is a problem, so the run exits 1 though the board builds:
+A schematic note is a problem, so the run exits 1 though the board builds. `check_spine.py --help` says what each code
+means. The build's output prints the stages below, from one table, `stages.BUILD_STAGES` (P852):
 
 <!-- spark:stages build-board -->
 

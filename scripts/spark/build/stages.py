@@ -8,7 +8,8 @@ is `BUILD_STAGES`, never the rendered text. Every importer imports the names, ne
 Stages in `run`, `main` and the tests.
 
 The page's cell of a stage's endings may hold 300 characters (tools/check_docs.py's CELL_LIMIT), and the simulation's
-holds 268 (2026-11-20): an ending added there may need a shorter message, or the cell goes over and check_docs fails.
+is near it: an ending added there may need a shorter message, or check_docs fails. Its advice to move the text below
+the table does not apply, because the block is generated.
 """
 
 from collections import namedtuple

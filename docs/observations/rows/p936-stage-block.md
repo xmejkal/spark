@@ -15,3 +15,13 @@ refuter on Opus), then a build to the checked plan. This file holds the acted, r
 | 7 | `StageMarkdownTable` must escape a `\|` as the core's table does, with the same step | plan check | acted | `operation_help_table.table_cell`, which both Renderers call |
 | 8 | the simulation's cell is near the 300-character limit | plan check | acted | the `stages.py` docstring says it holds 268 of 300 |
 | 9 | "HelpTable" means a Markdown table in the core and `--help` text in the build | plan check, architecture lens | raised | a line on card [P937 #1333](https://github.com/xmejkal/spark/issues/1333) |
+| 10 | `"`%s`".__mod__` is hard to read | PR review, architecture lens | acted | `_code_alone(code)` beside `_code_and_meaning` |
+| 11 | the `BlockKind` field `shown` reads like a bool | PR review, architecture lens | acted | renamed `attribute`, and the two rows that name it anchored again |
+| 12 | the sentence before the block ends on the schematic note, so its colon does not lead into the table | PR review, architecture lens | acted | the note ends with a full stop, and the sentence that introduces the table comes last |
+| 13 | the two new lines of developing.md are 121 and 124 characters | PR review, architecture lens | acted | wrapped at 120 in two lines |
+| 14 | a date and a count in the `stages.py` docstring go stale | PR review, architecture lens | acted | it says the simulation's cell is near the limit, and that check_docs' advice to move text below the table does not apply to a generated block |
+| 15 | "(P936 shares it)" in `table_cell`'s docstring is history | PR review, architecture lens | acted | cut |
+| 16 | the PR body said no existing test was edited, but a module docstring and an import changed | PR review, architecture lens | acted | it says no existing test's body was edited |
+| 17 | the simulation row shows a `%s` as "…" | PR review, architecture lens | rejected | the codes and --help say it |
+| 18 | "(design_codes)" is not explained on the page | PR review, architecture lens | rejected | the codes and --help say it |
+| 19 | "a build with no copper is not a pass" is on no guide page now | PR review, architecture lens | rejected | the codes and --help say it: `not_routed` |

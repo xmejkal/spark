@@ -50,7 +50,7 @@ class StageMarkdownTable:
         rows = []
         for definition in definitions:
             by_status = {}
-            for status, words in _endings(definition, "`%s`".__mod__):
+            for status, words in _endings(definition, _code_alone):
                 by_status.setdefault(status, []).append(words)
             ends = "; ".join("%s: %s" % (status, ", ".join(said)) for status, said in by_status.items())
             rows.append("| %s | %s | %s |" % (definition.name, table_cell(definition.summary), table_cell(ends)))
@@ -64,6 +64,10 @@ def _endings(definition, code_said):
 
 def _code_and_meaning(code):
     return "%s: %s" % (code, build_codes.CODES[code])
+
+
+def _code_alone(code):
+    return "`%s`" % code
 
 
 def _said_of(ending, code_said):
