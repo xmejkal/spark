@@ -12,6 +12,7 @@ from spark.records import board_records
 from spark.build import board_engine
 from spark.build import project_setup
 from spark.build.board_engine import convert, converter_stage_problem, find_converter
+from spark.build.pour_contact import PourContact
 from spark.build.stages import (BOARD, BOARD_EMITTER_CRASHED_ENDING, BOARD_ONLY_ENDING, BOARD_ONLY_WITH_PARTS_ENDING,
                                 BOARD_UNUSABLE_ENDING, BUILD, CHIP_NOT_COMPILED_ENDING, CIRCUIT_ERRORS_ENDING,
                                 DIAGRAM_UNWIRED_ENDING, ENGINE_MISSING_ENDING, EVERY_PART_SKIPPED_ENDING, FACT_MISSING_ENDING,
@@ -325,10 +326,11 @@ class BuildService:
                 return None
             stages.append(BUILD.ended(NO_CIRCUIT_ENDING, engine.toolchain, version, built.stderr.strip()[-800:]))
             return None
-        traces = self._circuit_verdict(built.circuit_path, board, part_list, stages)
-        if traces is None:
+        verdict = self._circuit_verdict(built.circuit_path, board, part_list, stages)
+        if verdict is None:
             return None
-        stages.append(BUILD.ok("%d trace(s), 0 errors, tsci %s%s" % (traces, version, core_note(version))))
+        traces, notes = verdict
+        stages.append(BUILD.ok("; ".join(["%d trace(s), 0 errors, tsci %s%s" % (traces, version, core_note(version))] + notes)))
         return built
 
     @staticmethod
@@ -347,9 +349,11 @@ class BuildService:
         return built, can, last_words
 
     def _circuit_verdict(self, circuit_path, board, part_list, stages):
-        """What the built circuit says of the design: its trace count when it passed, else None after the stage that stops it."""
+        """What the built circuit says of the design: (its trace count, a note for each pour short its copper disproves) when
+        it passed, else None after the stage that stops it."""
         circuit = json.loads(circuit_path.read_text())
         traces, errors = count_in(circuit)
+        errors, notes = PourContact(circuit).disproved(errors)
         # NOT a trace count. Comparing connections asked for against `pcb_trace`s is wrong twice
         # over, and was tried here first: a net with N members needs N-1 traces, and a pin on a
         # poured net (V33 and GND are poured, 53 pours on this board) is connected by copper with no
@@ -374,7 +378,7 @@ class BuildService:
         if traces == 0:
             stages.append(BUILD.ended(NOT_ROUTED_ENDING))
             return None
-        return traces
+        return traces, notes
 
     def _simulation(self, inputs, project, board, built, stages):
         """The simulation project, the last step of the product goal: the converter found from the project (not from `cwd`:
