@@ -167,13 +167,14 @@ def deploy_data(reached):
     return data
 
 
-def deploy_result(reached, code, diagnostics=()):
+def deploy_result(reached, code):
     """
     The OperationResult of one deploy run. `reached` is the dict the run filled as it went (the keys read above: `project`,
     `evidence` and `stage` always, the rest optional), `code` the exit code it decided: 0 no Finding, 1 a problem, 2
-    unchecked, so the status is the code's. The person's lines were Events, so `lines` is empty; `diagnostics` are the stderr lines.
+    unchecked, so the status is the code's. The person's lines were Events, so `lines` is empty, and the stderr lines went to
+    `add_diagnostics` (P938).
     """
     plan = reached.get("plan")
     found = [] if code == outcomes.EXIT_OK else reached.get("findings") or [_finding(reached, code)]  # P892: a stop at the board gives its own
     return OperationResult(deploy_data(reached), found, _steps(reached),
-                           diagnostics=list(diagnostics), notes=((list(plan.notes) if plan else []) + reached.get("notes", [])) or None)
+                           notes=((list(plan.notes) if plan else []) + reached.get("notes", [])) or None)

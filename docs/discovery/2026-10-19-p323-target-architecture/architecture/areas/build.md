@@ -27,7 +27,7 @@ a new project with the files every check and reviewer needs.
 | Module | Holds |
 |---|---|
 | `build/build_service.py` | `BuildService(engine, emitter, find_tool=None, runner=None)` (P706, P725, P664: `runner` runs the converter's command): `build(inputs)` runs the six stage methods over the engine and the emitter it is given, with `BuildInputs`, `board_alone`, `islands_in`, `verdict` and the stage sentences |
-| `build/requirements_build.py` | `RequirementsBuildService(build_service=None)` (P783 PR 3; `build_service` is an object with `for_toolchain`, BuildService or a fake): `build(requirements_path, firmware, simulation)` is `check_spine.py`'s whole run of the chain: the requirements read (a refusal is one `requirements` stage), the work folder, a `BuildService`'s stages (a timeout that reaches it is one `stage_timed_out` stage, its guard since P664, and any other exception one `stage_crashed` stage), and the history note; a `RequirementsBuildResult` of `stages`, `workdir`, `requirements`, `toolchain` and `diagnostics`. `REFERENCE` is here. `BuildBoard` hands the diagnostics on and renders the stages |
+| `build/requirements_build.py` | `RequirementsBuildService(build_service=None, note_built=None)` (P783 PR 3; `build_service` is an object with `for_toolchain`, BuildService or a fake; `note_built` writes the history line, P938): `build(requirements_path, firmware, simulation, add_diagnostics)` is `check_spine.py`'s whole run of the chain: the requirements read (a refusal is one `requirements` stage), the work folder, a `BuildService`'s stages (a timeout that reaches it is one `stage_timed_out` stage, its guard since P664, and any other exception one `stage_crashed` stage), and the history note; a `RequirementsBuildResult` of `stages`, `workdir`, `requirements` and `toolchain`. Its lines go to `add_diagnostics`, the core's slot that `BuildBoard` hands it (P938). `REFERENCE` is here |
 | `build/build_board.py` | the Operation `BuildBoard(service=None)` (op `build-board`, P804): it runs a `RequirementsBuildService`, keeps what `--keep` and `--sim-dir` ask for (`kept_files.keep_all`), removes the work folder in a `finally`, and answers with the dict `--json` prints (`said_of`, rendered by `FlatJsonLine`), the verdict's text (`render`), the diagnostics and the Findings (`build_service.findings_of`) |
 | `build/build_operations.py` | `OPERATIONS`, which maps each printed `op` to its class, for the frontends (P804) |
 | `build/stages.py` | `Stage` (one link's result) and `NO_FOOTPRINT_HINT`, imported by name (P705) |
@@ -123,7 +123,7 @@ sequenceDiagram
   participant S as BuildService
   participant E as BoardEmitter
   participant T as TscircuitEngine
-  M->>R: build(requirements, firmware, simulation)
+  M->>R: build(requirements, firmware, simulation, add_diagnostics)
   R->>R: read the requirements (a refusal: one stage, no work folder); the work folder; the kept diagram and firmware
   R->>S: for_toolchain(toolchain).build(BuildInputs)
   S->>S: _board, _parts (board_alone ends a board-only build)
@@ -136,8 +136,8 @@ sequenceDiagram
   T-->>S: BuildResult, or TimedOutError: the build stage names the late command, the stages before stand (P664)
   S->>S: _simulation (converter functions, loader.load as today; a late converter is a timed-out simulation stage)
   S-->>R: stages (R turns a crash, or a timeout outside the two tools, into one stage)
-  R->>R: the P429 line; the history note, or its line
-  R-->>M: RequirementsBuildResult; main prints the diagnostics and reports
+  R->>R: the P429 line; the history note, or its line (each to add_diagnostics as it is said, P938)
+  R-->>M: RequirementsBuildResult; the core prints the diagnostics and reports
 ```
 
 ### How build is tested alone

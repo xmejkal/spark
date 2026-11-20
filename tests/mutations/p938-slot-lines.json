@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/build/requirements_build.py",
+  "name": "P938: the firmware line never reaches the slot, so a rebuild drops the line without a word",
+  "find": "            add_diagnostics(lines)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/build/requirements_build.py",
+  "name": "P938: the history line never reaches the slot, so a history it cannot keep is not said",
+  "find": "                add_diagnostics([\"  the build was not recorded in your history: %s\" % unrecorded])",
+  "replace": "                pass"
+ },
+ {
+  "file": "scripts/spark/build/requirements_build.py",
+  "name": "P938: the note_built the service was given is ignored",
+  "find": "                (self.note_built or part_facts.note_built)(handed)",
+  "replace": "                part_facts.note_built(handed)"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P938: the deploy's refusal before the board never reaches the slot",
+  "find": "        self.outside.add_diagnostics([\"%s: %s\" % (SCRIPT, cannot)])",
+  "replace": "        pass"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P938: the closed gate's line never reaches the slot",
+  "find": "            self.outside.add_diagnostics([\"%s: %s\" % (SCRIPT, shut)])",
+  "replace": "            pass"
+ }
+]
