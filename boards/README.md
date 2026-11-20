@@ -56,6 +56,9 @@ re-implementing a lookup.
    lower-case letters, digits and `-`. The `pins` keys, the `power_pads` keys and their rails, and
    `physical.footprint_export` are names — letters, digits and `_` — because the board is written with them as code;
    `physical.header.drill_mm` is a number. `boards.py --validate` refuses anything else.
+   `physical.header.doubtful_pads` lists the pads whose net is in doubt, such as a ground pad silkscreened NC. The
+   drawn breadboard needs it: write `[]` when none is doubtful, after checking. With several ground pads, the drawing
+   wires `GND` to the first one in `power_pads` that is not doubtful (P955).
 2. **Get the pin map from the vendor's Arduino variant header**, not from a pinout picture:
    `espressif/arduino-esp32` → `variants/<board>/pins_arduino.h`. Pinout diagrams are drawn by
    marketing; the header is what the toolchain compiles against. Cross-check it against the
@@ -210,6 +213,12 @@ exact board, a same-silicon devkit stands in and `wokwi_is_stand_in` says so —
 addresses pins by GPIO number, so a stand-in costs the silkscreen labels in the picture, and the board's own LED and button
 where the devkit has only bare header pins (P483).
 A stand-in's `documents["wokwi-board"]` entry cites the stand-in's own file, so a GPIO it reaches is a header pin and the limits say so.
+
+A board whose `wokwi_part_type` is `null` still builds (P955). The full build and the board-only build end its
+simulation stage `could-not-run` with "the board record names no wokwi_part_type" (code `simulation_fact_missing`),
+before the converter runs. The sheet, the picture and `pins.py` are still written, and the run exits 2: the chain was
+not exercised, so it is not a pass. The next step: name Wokwi's part for the board, or a devkit with the same chip and
+`wokwi_is_stand_in: true`.
 
 Wokwi custom boards exist but are a browser-only feature (F1 → "Load custom board file"):
 `wokwi.toml` has no board key, and the simulator loads boards from a bundle Wokwi hosts. Getting
