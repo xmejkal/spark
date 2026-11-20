@@ -380,6 +380,10 @@ class BuildService:
         """The simulation project, the last step of the product goal: the converter found from the project (not from `cwd`:
         run from /tmp the converter beside the project was "not found"), the stand-ins from the records (P31) and the board's own (P792), the diagram."""
         workdir = inputs.workdir
+        stopped = no_wokwi_part(board)
+        if stopped:
+            stages.append(stopped)
+            return
         own = find_converter(project)
         missing = converter_stage_problem(project, own, self.find_tool)
         if missing:
@@ -427,6 +431,15 @@ class BuildService:
         return sim_dir, staged
 
 
+def no_wokwi_part(board):
+    """The could-not-run simulation stage of a board whose record names no Wokwi part, or None: one guard for the full
+    build and the board-only build (P955). It speaks before the converter, whose lint crashed on the null type, and before
+    a missing converter or an unmapped part, so a person who adds the board's Wokwi part sees the next cause next."""
+    if not board.get("wokwi_part_type"):
+        return SIMULATION.ended(NO_WOKWI_PART_TYPE_ENDING)
+    return None
+
+
 def board_alone(board, workdir, firmware=None, project=None, runner=None):
     """
     The stages after `board` for a project that runs on the board alone (P236): parts, schematic, footprint and build are
@@ -434,8 +447,9 @@ def board_alone(board, workdir, firmware=None, project=None, runner=None):
     with none, the diagram holds the board's part alone. The full build adds the same parts to its circuit (P792). A limit "not checked" stays a limit in an ok stage (P396, P37).
     """
     skipped = [definition.ended(BOARD_ONLY_ENDING) for definition in (PARTS, SCHEMATIC, FOOTPRINT, BUILD)]
-    if not board.get("wokwi_part_type"):
-        return skipped + [SIMULATION.ended(NO_WOKWI_PART_TYPE_ENDING)]
+    stopped = no_wokwi_part(board)
+    if stopped:
+        return skipped + [stopped]
     sim_dir, project = workdir / "sim", project or board_records.PLUGIN_ROOT
     given, own = board_alone_input.read_board_alone(board, project), find_converter(project)
     stopped = given.wired and (converter_stage_problem(project, own) or (SIMULATION.ended(FACT_MISSING_ENDING, given.why) if given.why else None))
