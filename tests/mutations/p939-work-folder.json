@@ -1,0 +1,14 @@
+[
+ {
+  "file": "scripts/spark/build/requirements_build.py",
+  "name": "P939: a build that raises after its work folder is made leaves the folder in the temp folder",
+  "find": "            shutil.rmtree(workdir, ignore_errors=True)\n            raise",
+  "replace": "            raise"
+ },
+ {
+  "file": "scripts/spark/build/requirements_build.py",
+  "name": "P939: an OSError while the work folder is filled leaves the folder in the temp folder",
+  "find": "        try:\n            toolchain = self._work_folder(workdir, requirements, source)",
+  "replace": "        toolchain = self._work_folder(workdir, requirements, source)\n        try:"
+ }
+]

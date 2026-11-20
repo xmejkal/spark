@@ -2865,15 +2865,35 @@ class ARequirementsBuildServiceTest(unittest.TestCase):
 
         def broken(design):
             raise RuntimeError("the history broke")
-        folders = set(Path(tempfile.gettempdir()).glob("spark-spine-*"))
-        service = requirements_build.RequirementsBuildService(FakeBuildService(a_build_that_simulated), note_built=broken)
+        service =requirements_build.RequirementsBuildService(FakeBuildService(a_build_that_simulated), note_built=broken)
         values = {"requirements": str(self.requirements), "keep": None, "sim_dir": str(sim), "firmware": None}
         result = run_operation(build_board.BuildBoard(service), values, FakeOutsideWorld())
-        for left in set(Path(tempfile.gettempdir()).glob("spark-spine-*")) - folders:  # P939: the crash leaves the work folder
-            shutil.rmtree(left, ignore_errors=True)
         self.assertEqual(list(result.diagnostics[:2]), [
             "  sim/wokwi.toml line 3 names the firmware in a form spark cannot read. The rebuild wrote it again with no image "
             "named, and a scenario run then names the default one.", "build-board: crashed, RuntimeError"])
+
+    def test_a_crash_after_the_work_folder_is_made_leaves_no_work_folder(self):
+        # P939: BuildBoard removes a folder the service returned, never one it raised past
+        def broken(design):
+            raise RuntimeError("the history broke")
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+        folders = set(Path(tempfile.gettempdir()).glob("spark-spine-*"))
+        service = requirements_build.RequirementsBuildService(FakeBuildService(lambda *_, **__: stages), note_built=broken)
+        with self.assertRaises(RuntimeError):
+            service.build(self.requirements, add_diagnostics=[].extend)
+        self.assertEqual(set(Path(tempfile.gettempdir()).glob("spark-spine-*")), folders)
+
+    def test_a_tools_file_it_cannot_read_leaves_no_work_folder(self):
+        # P939: the toolchain is looked up after the folder is made, and an OSError from it propagates
+        tools = self.project / ".spark" / "tools.json"
+        tools.write_text("{}")
+        tools.chmod(0)
+        self.addCleanup(tools.chmod, 0o644)
+        folders = set(Path(tempfile.gettempdir()).glob("spark-spine-*"))
+        service = requirements_build.RequirementsBuildService(FakeBuildService(lambda *_, **__: self.fail("the build ran")))
+        with self.assertRaises(PermissionError):
+            service.build(self.requirements, add_diagnostics=[].extend)
+        self.assertEqual(set(Path(tempfile.gettempdir()).glob("spark-spine-*")), folders)
 
 
 class ALoadAcrossAPairNeedsNoGroundTest(unittest.TestCase):
