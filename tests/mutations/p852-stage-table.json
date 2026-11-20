@@ -1,6 +1,6 @@
 [
  {"file": "scripts/spark/build/stages.py", "name": "P852: a definition ends with an ending of another stage", "find": "        if ending not in self.endings:\n", "replace": "        if False:\n"},
- {"file": "scripts/spark/build/stages.py", "name": "P852: an ending that is neither skipped nor coded ends a stage with no code", "find": "        if ending.code is None and ending.status != SKIPPED:\n", "replace": "        if False:\n"},
+ {"file": "scripts/spark/build/stages.py", "name": "P852: an ending with no code ends a stage with no code (a skip has its code since P936)", "find": "        if ending.code is None:\n", "replace": "        if False:\n"},
  {"file": "scripts/spark/build/stages.py", "name": "P852: an ending's message is not filled with its values", "find": "return Stage(self.name, ending.status, ending.message % values, ending.code)", "replace": "return Stage(self.name, ending.status, ending.message, ending.code)"},
  {"file": "scripts/spark/build/stages.py", "name": "P852: an ending's Stage drops its code", "find": "return Stage(self.name, ending.status, ending.message % values, ending.code)", "replace": "return Stage(self.name, ending.status, ending.message % values, None)"},
  {"file": "scripts/spark/build/stages.py", "name": "P852: a design error's Stage drops the error's own code", "find": "str(found) + hint, found.code)", "replace": "str(found) + hint, None)"},
@@ -12,7 +12,7 @@
  {"file": "scripts/spark/build/build_board.py", "name": "P852: check_spine.py --help lists no stage", "find": "    details = StageHelpTable.render(stages)\n", "replace": "    details = None\n"},
  {"file": "scripts/spark/build/stage_help_table.py", "name": "P852: the help names a stage without its summary", "find": "lines.append(\"  %-16s %s\" % (definition.name, definition.summary))", "replace": "lines.append(\"  %s\" % definition.name)"},
  {"file": "scripts/spark/build/stage_help_table.py", "name": "P852: the help names a code without its meaning", "find": "return \"%s: %s\" % (code, build_codes.CODES[code])", "replace": "return code"},
- {"file": "scripts/spark/build/stage_help_table.py", "name": "P852: the help says a skip as a design error", "find": "return ending.message.replace(\"%s\", \"…\") if ending.status == SKIPPED else DESIGN_ERROR_LINE", "replace": "return DESIGN_ERROR_LINE"},
+ {"file": "scripts/spark/build/stage_help_table.py", "name": "P852: the help says a skip as a design error", "find": "return code_said(ending.code) if ending.code else DESIGN_ERROR_LINE", "replace": "return DESIGN_ERROR_LINE"},
  {"file": "scripts/spark/build/stage_help_table.py", "name": "P852: the help says one status and code twice for a stage", "find": "    return list(dict.fromkeys((ending.status, _said_of(ending, code_said)) for ending in definition.endings))", "replace": "    return [(ending.status, _said_of(ending, code_said)) for ending in definition.endings]"},
  {"file": "scripts/spark/build/stages.py", "name": "P852: the table swaps the code of the build's circuit errors for another", "find": "CIRCUIT_ERRORS_ENDING = StageEnding(build_codes.DESIGN_NOT_BUILT, PROBLEMS,", "replace": "CIRCUIT_ERRORS_ENDING = StageEnding(build_codes.PART_STRANDED, PROBLEMS,"}
 ]
