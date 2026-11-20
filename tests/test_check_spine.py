@@ -2266,6 +2266,14 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
                          "the board definition disagrees with itself: header_order.row_left has 7 labels but physical.header.pins says 6 "
                          "— one of the two is wrong, and guessing which would shift every pad after the disagreement")
 
+    def test_a_board_that_disagrees_with_itself_leaves_no_footprint_file(self):  # P852: row 9 of p432-one-refusal escaped
+        project, wanted = self.project_without("physical.header.drill_mm")
+        self.edit_record(project, lambda record: record["physical"]["header"].update(pins=[6, 6]))
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "requirements.json").write_text(json.dumps(wanted))
+        stages = build_stages(wanted, workdir, project=project)
+        self.assertEqual((stages[-1].name, sorted(path.name for path in workdir.glob("*.tsx"))), ("footprint", ["board.tsx"]))
+
     def test_a_value_of_the_wrong_kind_in_the_header_stops_the_footprint_stage_too(self):
         # the board file's validation checks no header geometry: a pitch written as text was a TypeError out of the build
         project, wanted = self.project_without("physical.header.drill_mm")
