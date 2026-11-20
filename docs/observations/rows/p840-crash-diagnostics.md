@@ -3,7 +3,8 @@
 Card: [P840 #1204](https://github.com/xmejkal/spark/issues/1204), raised by row 20 of
 `docs/observations/rows/p804-build-and-checks-on-core.md`. One plan round (the architecture lens and the refuter on
 Opus), then a build to the plan with the council's changes. This file holds the acted, raised and rejected findings
-only. 2026-11-20.
+only. 2026-11-20. A note of the PR review: the trace's arguments now live only in `cli.py`, as the patterns page
+says only that `trace` is called once.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -22,4 +23,3 @@ only. 2026-11-20.
 | 13 | the patterns page should say the lines come first before the mask, and that `run_operation` fills the slot | PR review | acted | both said on lines 61 and 72; line 61 stays shorter than on main by cutting "the run's open list", which `data.open` names |
 | 14 | "gather" is a second word for the slot | PR review | acted | the PR's title says "added", and `test_core`'s class is `Adding` |
 | 15 | the None-world row leaves one drawer test green | PR review | rejected | `test_core` catches the row, and the weakness predates this PR |
-| 16 | the trace's arguments now live only in `cli.py` | PR review | note | the patterns page says only that `trace` is called once |
