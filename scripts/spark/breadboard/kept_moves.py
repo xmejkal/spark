@@ -305,8 +305,8 @@ class KeepMovesJumperPlacement(drawing.JumperPlacement):
             else:
                 by = "jumper %d" % planned.step
                 # the free hole nearest the planned one: in a row the first free, on a rail one near its other end (P953)
-                jumpers.append(planned._replace(one=ledger.claim_nearest_free_hole(planned.one.group, planned.one.x, by),
-                                                other=ledger.claim_nearest_free_hole(planned.other.group, planned.other.x, by)))
+                jumpers.append(planned._replace(one=ledger.claim_free_hole(planned.one.group, by, planned.one.x),
+                                                other=ledger.claim_free_hole(planned.other.group, by, planned.other.x)))
         return layout._replace(jumpers=jumpers)
 
 

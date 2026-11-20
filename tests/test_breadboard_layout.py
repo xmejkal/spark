@@ -26,6 +26,7 @@ from spark.breadboard import drawing_catalog  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 from spark.breadboard import part_shape  # noqa: E402
+from spark.breadboard import rails  # noqa: E402
 from spark.breadboard import spacing  # noqa: E402
 from spark.breadboard.drawing import HoleLedger, NotDrawnError, WokwiGeometry, rotate  # noqa: E402
 
@@ -614,7 +615,7 @@ class TheRailSeatingTest(unittest.TestCase):
 
     def test_power_takes_the_plus_rail_of_the_side_of_most_ends(self):
         surface = drawing.Surface.load_full()
-        self.assertEqual(drawing.RailSeating(surface).group("3V3", "+", ["b", "t", "b"]), "bp")
+        self.assertEqual(rails.RailSeating(surface).group("3V3", "+", ["b", "t", "b"]), "bp")
         # the walk: board 3V3 in row j, 3V3_2 in row a, the e-paper's VCC in row j: all three to the bottom + rail
         walk = self.rail_jumpers("walk-c6")
         self.assertEqual({step: one.split(".")[0] for step, (_, one) in walk.items()},
@@ -622,24 +623,29 @@ class TheRailSeatingTest(unittest.TestCase):
 
     def test_a_tie_takes_the_first_end_s_side(self):
         surface = drawing.Surface.load_full()
-        self.assertEqual(drawing.RailSeating(surface).group("3V3", "+", ["t", "b"]), "tp")
-        self.assertEqual(drawing.RailSeating(surface).group("GND", "-", ["b", "t"]), "bn")
+        self.assertEqual(rails.RailSeating(surface).group("3V3", "+", ["t", "b"]), "tp")
+        self.assertEqual(rails.RailSeating(surface).group("GND", "-", ["b", "t"]), "bn")
         # the e-paper fixture: board 3V3 in row a, the e-paper's VCC in row f, so the top + rail
         self.assertEqual({one.split(".")[0] for _, one in self.rail_jumpers("epaper").values()}, {"tp", "tn"})
 
     def test_a_second_power_mark_takes_the_other_side(self):
-        seating = drawing.RailSeating(drawing.Surface.load_full())
+        seating = rails.RailSeating(drawing.Surface.load_full())
         self.assertEqual([seating.group("3V3", "+", ["b"]), seating.group("5V", "+", ["b"]),
                           seating.group("GND", "-", ["t"])], ["bp", "tp", "tn"])
 
     def test_a_third_power_mark_is_not_drawn_yet(self):
-        seating = drawing.RailSeating(drawing.Surface.load_full())
+        seating = rails.RailSeating(drawing.Surface.load_full())
         seating.group("3V3", "+", ["b"])
         seating.group("5V", "+", ["t"])
+        self.assertIsNone(seating.group("VBAT", "+", ["b"]))
+        # the planner says so by name: the XIAO on a half board whose only rails are + rails, so GND has none
+        read = xiao_read()
+        surface = drawing.Surface(dict(GEOMETRY.data["breadboard"], rails_y={"tp": 12.3, "bp": 186.3}))
+        planner = drawing.BreadboardPlanner(GEOMETRY.with_surface(surface), drawing_catalog.describe_parts(read, GEOMETRY))
         with self.assertRaises(NotDrawnError) as refused:
-            seating.group("VBAT", "+", ["b"])
-        self.assertEqual(str(refused.exception), "VBAT goes on a free + rail, and none is left")
-        self.assertEqual((refused.exception.code, refused.exception.subject), ("not_drawn_yet", "VBAT"))
+            planner.plan(read.steps)
+        self.assertEqual(str(refused.exception), "GND goes on a free - rail, and none is left")
+        self.assertEqual((refused.exception.code, refused.exception.subject), ("not_drawn_yet", "GND"))
 
     def test_each_rail_end_has_a_jumper_to_a_free_rail_hole(self):
         # each rail hole a jumper takes is taken once, and no part's body lies over it or within half a pitch of it
