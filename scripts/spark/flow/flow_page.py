@@ -7,9 +7,11 @@ from the web and is the same bytes for the same flow.
 
 import base64
 import html
+import xml.etree.ElementTree as ElementTree
 from collections import namedtuple
 
-from spark.breadboard import before_power
+from spark.breadboard import before_power, part_pictures
+from spark.breadboard.svg_diagram import PAD_MARKS
 from spark.breadboard.tabbed_page import TabbedHtmlPage
 from spark.flow import flow_codes
 from spark.flow.phase_readers import MARKS
@@ -112,6 +114,48 @@ class WiringHtmlSection:
         return '<div class="nav">%s %s</div>' % (_text(flow_codes.STEP_OF % (at + 1, len(numbers))), " ".join(links))
 
 
+#: Value: a picture made fit to stand in the page: its markup, and the pad states its dots draw, in PAD_MARKS's order.
+InlineSvg = namedtuple("InlineSvg", "markup pads")
+
+
+class SvgInliner:
+    """
+    Renderer: an SVG as markup that stands in the page (P949), or None. Inline, an SVG runs its scripts and its handlers,
+    and an <img> does not, so it inlines only an SVG that parses, holds no DOCTYPE, uses only `part_pictures.PLAIN_SHAPES`,
+    and has no `on` attribute, no `href` and no `url(` anywhere. It works on its own parse: every tag and attribute loses
+    its namespace, so the root has no xmlns and the file keeps its own, the comments are gone and every text stays
+    escaped. The same SVG gives the same bytes.
+    """
+
+    def inline(self, svg):
+        if "url(" in svg or "<!doctype" in svg.lower():
+            return None
+        try:
+            root = ElementTree.fromstring(svg)
+            if not all(self._plain(element) for element in root.iter()):
+                return None
+            markup = ElementTree.tostring(root, encoding="unicode")
+        except Exception:  # noqa: BLE001  a hand-edited file can hold anything: whatever it raises, the page shows an <img>
+            return None
+        drawn = {element.get("data-pad") for element in root.iter()}
+        return InlineSvg(markup, [state for state in PAD_MARKS if state in drawn])
+
+    @staticmethod
+    def _plain(element):
+        """True when `element` is a plain shape with no `on` attribute and no `href`; it drops every namespace on the way."""
+        element.tag = _local(element.tag)
+        for name in list(element.attrib):
+            if _local(name).startswith("on") or _local(name) == "href":
+                return False
+            element.attrib[_local(name)] = element.attrib.pop(name)
+        return element.tag in part_pictures.PLAIN_SHAPES
+
+
+def _local(name):
+    """A tag or attribute name without its namespace."""
+    return name.rsplit("}", 1)[-1]
+
+
 class FlowHtmlPage:
     """
     Renderer: a FlowPage as one HTML document, the same bytes for the same page. It loops over the page's phases and holds
@@ -129,6 +173,7 @@ class FlowHtmlPage:
              "p,li{overflow-wrap:anywhere}"
              "img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}")
     WIRING = WiringHtmlSection()
+    INLINER = SvgInliner()
 
     def text(self, page):
         head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._rail(page), self._stands_at(page)]
@@ -180,11 +225,16 @@ class FlowHtmlPage:
             return ""
         return '<section id="pictures"><h2>Pictures</h2>\n%s\n</section>' % "\n".join(self._picture(each) for each in pictures)
 
-    @staticmethod
-    def _picture(picture):
+    def _picture(self, picture):
+        """The breadboard stands in the page when the inliner takes it, so a player finds its keys. Any other picture, and
+        a breadboard it refuses, is an <img>: one SVG's <style> cannot reach another, and no script in it runs."""
         title = _text(picture.title)
         if picture.svg is None:
             return '<div class="picture"><h3>%s</h3><p>%s</p></div>' % (title, _text(picture.why_missing))
+        inline = self.INLINER.inline(picture.svg) if picture.title == flow_codes.BREADBOARD_TITLE else None
+        if inline:
+            return '<div class="picture"><h3>%s</h3><figure class="fig" aria-label="%s">%s</figure></div>' % (
+                title, title, inline.markup)
         data = base64.b64encode(picture.svg.encode("utf-8")).decode("ascii")
         return '<div class="picture"><h3>%s</h3><img src="data:image/svg+xml;base64,%s" alt="%s"></div>' % (title, data, title)
 

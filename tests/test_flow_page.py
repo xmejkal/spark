@@ -740,7 +740,96 @@ class ThePictureFilesTest(unittest.TestCase):
         self.assertEqual(pictures[1].svg, "<svg><title>kept schematic</title></svg>")
         self.assertEqual(pictures[2].why_missing, NOT_DRAWN_HERE)
         run_flow("page", "--project", str(project), "--json")
-        self.assertEqual((project / "page.html").read_text().count("data:image/svg+xml;base64,"), 2)
+        # the schematic is an <img>, and the breadboard stands in the page (P949)
+        text = (project / "page.html").read_text()
+        self.assertEqual(text.count("data:image/svg+xml;base64,"), 1)
+        self.assertEqual(text.count(FIGURE), 1)
+        self.assertIn("<svg><title>bb</title></svg></figure>", text)
+
+
+def a_drawn_project():
+    """A built XIAO project with the breadboard.svg the sheet draws, as a build with --keep leaves it."""
+    project = a_built_project()
+    with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+        sheet.write(project / "requirements.json", project / "breadboard.md")
+    return project
+
+
+#: A picture as tsci writes one, with its namespace.
+NAMESPACED = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><title>%s</title></svg>'
+FIGURE = '<figure class="fig"'
+
+
+class TheInlinePictureTest(unittest.TestCase):
+    """P949: the breadboard stands in the page as plain shapes, with its keys for a player; any other SVG stays an <img>,
+    and so do the schematic and the PCB."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.project = a_drawn_project()
+        cls.svg = (cls.project / "breadboard.svg").read_text()
+
+    def test_the_breadboard_is_inline_with_no_namespace_and_the_schematic_and_pcb_stay_img(self):
+        pictures = [Picture("Breadboard", self.svg, None), Picture("Schematic", NAMESPACED % "schematic", None),
+                    Picture("PCB", NAMESPACED % "pcb", None)]
+        text = page_of(a_phase("one"), pictures=pictures)
+        self.assertIn('xmlns="http://www.w3.org/2000/svg"', self.svg)  # the file keeps it, so the test can fail
+        self.assertEqual(text.count(FIGURE), 1)
+        self.assertEqual(text.count("data:image/svg+xml;base64,"), 2)
+        figure = text.split(FIGURE, 1)[1].split("</figure>", 1)[0]
+        self.assertIn("<svg ", figure)
+        self.assertIn('data-step="5"', figure)
+        for word in ("xmlns", "ns0:", "http"):
+            self.assertNotIn(word, text.lower())
+        order = [text.index(mark) for mark in ("<h3>Breadboard</h3>", FIGURE, "</figure>", "<h3>Schematic</h3>")]
+        self.assertEqual(order, sorted(order))
+
+    def test_each_jumper_step_and_each_part_of_the_built_fixture_is_in_the_page(self):
+        text = page_of_project(self.project)
+        # the fixture's steps 5 to 8 run a jumper; steps 1 to 4 place a part and carry no step key
+        for step in (5, 6, 7, 8):
+            self.assertEqual(text.count('data-step="%d"' % step), 1, step)
+        self.assertEqual(text.count("data-step="), 4)
+        self.assertEqual(sorted(re.findall(r'data-part="([^"]*)"', text)), ["LedRed5mm", "R1", "TactileButton", "board"])
+
+    def test_an_svg_with_anything_but_plain_shapes_stays_an_img(self):
+        guards = {
+            "script": '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+            "foreignObject": '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><p>x</p></foreignObject></svg>',
+            "style": "<svg><style>rect{fill:red}</style><rect/></svg>",
+            "image href": '<svg><image href="x.png"/></svg>',
+            "a href": '<svg><a href="#x"><rect/></a></svg>',
+            "onload": '<svg onload="alert(1)"><rect/></svg>',
+            "xlink:href": '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><rect xlink:href="#x"/></svg>',
+            "url(": '<svg><rect style="fill:url(#a)"/></svg>',
+            "DOCTYPE": '<!DOCTYPE svg [<!ENTITY a "b">]><svg><text>&a;</text></svg>',
+            "a masked path that is no XML": "<svg><text>read <project>/notes</text></svg>",
+            "nested beyond the recursion limit": "<svg>" + "<g>" * 100000 + "</g>" * 100000 + "</svg>",
+        }
+        for name, svg in guards.items():
+            with self.subTest(name):
+                text = page_of(a_phase("one"), pictures=[Picture("Breadboard", svg, None)])
+                self.assertNotIn(FIGURE, text)
+                self.assertEqual(text.count("data:image/svg+xml;base64,"), 1)
+                self.assertNotIn("<script", text.lower())
+                self.assertNotIn("onload", text.lower())
+        # the control: plain shapes, an attribute that starts with "o" and a text that says "on" stand in the page
+        text = page_of(a_phase("one"), pictures=[Picture("Breadboard", '<svg><rect opacity="1"/><text>on</text></svg>', None)])
+        self.assertEqual((text.count(FIGURE), text.count("data:image/svg+xml;base64,")), (1, 0))
+
+    def test_the_mask_covers_the_inline_picture(self):
+        home = Path(tempfile.mkdtemp()).resolve()
+        picture = Picture("Breadboard", '<svg xmlns="http://www.w3.org/2000/svg"><text>%s/notes</text></svg>' % home, None)
+        store = FakeStore()
+        with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
+            write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("one")), parts_of([picture]),
+                       store=store)
+        text = store.written[0][2]
+        self.assertNotIn(str(home), text)
+        self.assertIn("<text>~/notes</text>", text)
+        # the test can fail: the same page, rendered without the mask, holds the home path
+        unmasked = FlowHtmlPage().text(FlowPage("t", [a_phase("one").to_dict()], None, [picture], []))
+        self.assertIn(str(home), unmasked)
 
 
 class TheKeepStepTest(unittest.TestCase):
@@ -762,7 +851,10 @@ class TheKeepStepTest(unittest.TestCase):
         entry = self.keep()
         self.assertEqual((entry["did"], entry["why"]), ("wrote", FlowHtmlPage.PURPOSE_MESSAGE))
         text = self.page.read_text()
-        self.assertEqual(3, text.count("data:image/svg+xml;base64,"))
+        # the schematic and the PCB are <img>s, and the breadboard stands in the page with no namespace (P949)
+        self.assertEqual(2, text.count("data:image/svg+xml;base64,"))
+        self.assertEqual(text.count(FIGURE), 1)
+        self.assertNotIn("http", text.lower())
         self.assertEqual(len(Parsed(text).sections), 9)
 
     def test_a_flow_page_that_raises_is_one_no_page_entry(self):
@@ -822,7 +914,9 @@ class TheKeepStepTest(unittest.TestCase):
         entry = self.keep()
         self.assertEqual(entry["did"], "wrote")
         text = self.page.read_text()
-        self.assertEqual(text.count("data:image/svg+xml;base64,"), 2)
+        # the PCB is an <img>, and the breadboard stands in the page (P949)
+        self.assertEqual(text.count("data:image/svg+xml;base64,"), 1)
+        self.assertEqual(text.count(FIGURE), 1)
         self.assertIn("its file cannot be kept", text)
         self.assertEqual([each["did"] for each in self.kept if each["file"] == str(board / "schematic.svg")], ["not kept"])
         self.assertIn("fake pcb-svg", (board / "pcb.svg").read_text())
