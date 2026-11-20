@@ -789,10 +789,11 @@ class TheInlinePictureTest(unittest.TestCase):
 
     def test_each_jumper_step_and_each_part_of_the_built_fixture_is_in_the_page(self):
         text = page_of_project(self.project)
-        # the fixture's steps 5 to 8 run a jumper; steps 1 to 4 place a part and carry no step key
-        for step in (5, 6, 7, 8):
+        # the fixture's steps 5 to 9 run a jumper (7 to 9 join GND through a - rail, P953); steps 1 to 4 place a part
+        # and carry no step key
+        for step in (5, 6, 7, 8, 9):
             self.assertEqual(text.count('data-step="%d"' % step), 1, step)
-        self.assertEqual(text.count("data-step="), 4)
+        self.assertEqual(text.count("data-step="), 5)
         self.assertEqual(sorted(re.findall(r'data-part="([^"]*)"', text)), ["LedRed5mm", "R1", "TactileButton", "board"])
 
     def test_an_svg_with_anything_but_plain_shapes_stays_an_img(self):
@@ -977,7 +978,8 @@ class TheBudgetTest(unittest.TestCase):
 
     def test_the_page_stays_within_its_budget(self):
         text = self.page(331 * 1000)
-        self.assertEqual((text.count(FIGURE), text.count("data-step="), len(self.wiring.steps)), (1, 8, 10))
+        # power and ground go through the rails (P953): 12 steps, 10 of them jumpers
+        self.assertEqual((text.count(FIGURE), text.count("data-step="), len(self.wiring.steps)), (1, 10, 12))
         self.assertLess(len(text.encode("utf-8")), self.BUDGET)
 
     def test_a_pcb_picture_of_3_mib_goes_over(self):
