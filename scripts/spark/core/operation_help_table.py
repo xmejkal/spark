@@ -21,9 +21,14 @@ class OperationHelpTable:
         """The block's text, one line per row, without the markers. A bool Argument has no value, and the value of any
         other is its metavar, its choices as argparse prints them, or its dest in capitals, as `--help` shows it."""
         rows = ["| %s | %s | %s |" % (", ".join("`%s`" % flag for flag in argument.flags), _value_of(argument),
-                                      argument.help.replace("|", "\\|"))
+                                      table_cell(argument.help))
                 for argument in operation.arguments if argument.dest != JSON_DEST]
         return "\n".join([operation.summary, ""] + list(TABLE_HEAD) + rows)
+
+
+def table_cell(text):
+    """`text` as one cell of a Markdown table: a `|` in it is escaped, so it does not end the cell."""
+    return text.replace("|", "\\|")
 
 
 def _value_of(argument):

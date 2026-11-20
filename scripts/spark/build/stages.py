@@ -2,9 +2,14 @@
 The build's stages as one table (P852), and the outcome of one stage (P705): `BUILD_STAGES`, a `StageDefinition` per
 stage in run order, each with its name, its summary and its endings, and `Stage`, which a definition makes, so no call
 site writes a stage's name, status or code. `board_engine`, `build_service` and `requirements_build` read it, the flow
-and `kept_files` read the names, and `stage_help_table.StageHelpTable` renders it for `check_spine.py --help`. A later
-frontend (`--describe`, MCP) reads `BUILD_STAGES`, never the rendered text. Every importer imports the names, never the
-module: `stages` is a list of Stages in `run`, `main` and the tests.
+and `kept_files` read the names, `stage_help_table.StageHelpTable` renders it for `check_spine.py --help`, and
+`StageMarkdownTable` for how-it-works.md (P936). A later frontend (`--describe`, MCP) reads `BuildBoard.stages`, which
+is `BUILD_STAGES`, never the rendered text. Every importer imports the names, never the module: `stages` is a list of
+Stages in `run`, `main` and the tests.
+
+The page's cell of a stage's endings may hold 300 characters (tools/check_docs.py's CELL_LIMIT), and the simulation's
+is near it: an ending added there may need a shorter message, or check_docs fails. Its advice to move the text below
+the table does not apply, because the block is generated.
 """
 
 from collections import namedtuple

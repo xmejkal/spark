@@ -23,24 +23,24 @@ flowchart LR
     sim -. you run it next .-> checks["check_all.py: five checks"]
 ```
 
-The build's output also prints the chain as the glossary draws it, idea -> parts -> pin map -> schematic -> footprint
--> build -> simulation. The stages it reports are the ones in the table below; the pin map is made inside "schematic",
-so a pin that cannot be assigned stops that stage.
+A schematic note is a problem, so the run exits 1 though the board builds. `check_spine.py --help` says what each code
+means. The build's output prints the stages below, from one table, `stages.BUILD_STAGES` (P852):
 
-In words:
+<!-- spark:stages build-board -->
 
-| stage | done by |
-| --- | --- |
-| board | the dev board's definition, resolved and checked against its contract ([`boards.py`](../../scripts/boards.py)) |
-| parts | each part's record from the library ([`parts.py`](../../scripts/parts.py)); reported only when it stops there |
-| schematic | `board.tsx` is written in process by [`board_emitter.py`](../../scripts/spark/design/board_emitter.py) (the CLI is [`emit_board.py`](../../scripts/emit_board.py)), with the pin map made inside it: every signal gets a pin with a reason ([`assign_pins.py`](../../scripts/assign_pins.py)) |
-| schematic-notes | reported only on a note: a pin no part claims, an output nothing receives (not one in its part's own socket), a rail nothing sources, one side of a driven pair (a speaker terminal's) that nothing drives, or a rail two supplies drive. It counts as a problem: the run exits 1 though the board builds |
-| footprint | the dev board's footprint is made from its board definition ([`emit_footprint.py`](../../scripts/emit_footprint.py)) |
-| build | tscircuit builds it, and copper is counted: a build with no copper is not a pass |
-| simulation | the Wokwi diagram and chips are generated ([`sim_project.py`](../../scripts/spark/firmware/sim_project.py) and the converter in [`tools/circuit-to-wokwi/`](../../tools/circuit-to-wokwi/)), and kept with `--keep` or `--sim-dir`. No simulation runs |
+| stage | what it is | how it ends when not ok |
+|---|---|---|
+| requirements | the requirements file, read as a design before any folder is made | could-not-run: a design error, with its own code (design_codes) |
+| board | the board record the requirements name, from the project or spark's library | could-not-run: `board_unusable` |
+| parts | the part records the requirements name; listed only when it does not end ok | could-not-run: `board_only_with_parts`, `no_parts`, a design error, with its own code (design_codes); skipped: board only: nothing to wire |
+| schematic | board.tsx, written by the board emitter with the pin map made inside it | could-not-run: a design error, with its own code (design_codes), `stage_crashed`, `schematic_refused`; skipped: board only: nothing to wire |
+| schematic-notes | what the board emitter notes about a board it wrote; listed only when there is a note, and the build goes on | problems: `schematic_noted` |
+| footprint | the board's footprint that board.tsx imports, drawn with the design's rules | could-not-run: a design error, with its own code (design_codes), `stage_crashed`; skipped: board only: nothing to wire |
+| build | the board engine (tsci) builds board.tsx, and the copper is counted | could-not-run: `tool_missing`, `stage_timed_out`, `tool_cannot_build`; problems: `design_not_built`, `part_stranded`, `not_routed`; skipped: board only: nothing to wire |
+| simulation | the Wokwi diagram, its chips and wokwi.toml; no simulation runs | could-not-run: `tool_missing`, `simulation_fact_missing`, `chip_not_compiled`, `stage_timed_out`, `converter_lacks_part`; problems: `no_diagram`, `diagram_unwired`; skipped: every part is skipped from the simulation, so the diagram holds none of the project's parts, … |
+| check_spine | not a stage the build runs: an error of the run itself that no stage caught | could-not-run: `stage_crashed` |
 
-Two more names can appear, each as could-not-run: `requirements`, for a file that is not a design, and `check_spine`,
-for an error the script did not expect. Every stage comes from one table, `stages.BUILD_STAGES` (P852), and `check_spine.py --help` lists it: each stage with the status and code of each way it can end.
+<!-- /spark:stages build-board -->
 
 `/spark:build` stops after the simulation stage. You run [`check_all.py`](../../scripts/check_all.py) next; it runs
 the five checks on what was built. The [journey guide](journey/build.md) shows a real run.

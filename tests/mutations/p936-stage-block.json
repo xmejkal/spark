@@ -1,0 +1,11 @@
+[
+ {"file": "scripts/spark/build/build_board.py", "name": "P936: the build Operation holds no stages as data", "find": "    stages = BUILD_STAGES\n", "replace": "    stages = ()\n"},
+ {"file": "tools/doc_blocks.py", "name": "P936: a stages block is written as the Operation's help", "find": "\"stages\": BlockKind(\"stages\", _stage_table)", "replace": "\"stages\": BlockKind(\"stages\", _operation_help)"},
+ {"file": "tools/doc_blocks.py", "name": "P936: an end of the other kind closes the block", "find": "        elif marked_kind != kind:", "replace": "        elif False:"},
+ {"file": "tools/doc_blocks.py", "name": "P936: a page whose only block is a stages block is never read, so it goes stale unseen", "find": "if any(word in text for word in MARKER_WORDS)]", "replace": "if MARKER_WORDS[0] in text]"},
+ {"file": "tools/doc_blocks.py", "name": "P936: a block cannot name the build Operation", "find": "    return {**OPERATIONS, **BUILD_OPERATIONS}", "replace": "    return OPERATIONS"},
+ {"file": "tools/doc_blocks.py", "name": "P936: an Operation with no stages is said to have no summary", "find": "NOTHING_TO_SHOW_MESSAGE % (page, number, name, KINDS[kind].attribute)", "replace": "NOTHING_TO_SHOW_MESSAGE % (page, number, name, \"summary\")"},
+ {"file": "scripts/spark/build/stage_help_table.py", "name": "P936: the page's cell puts every ending under the first status", "find": "by_status.setdefault(status, []).append(words)", "replace": "by_status.setdefault(next(iter(by_status), status), []).append(words)"},
+ {"file": "scripts/spark/build/stage_help_table.py", "name": "P936: the page's row drops the stage's summary", "find": "table_cell(definition.summary)", "replace": "\"\""},
+ {"file": "scripts/spark/build/stage_help_table.py", "name": "P936: a | in a stage's summary breaks the page's table", "find": "table_cell(definition.summary)", "replace": "definition.summary"}
+]
