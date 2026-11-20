@@ -69,8 +69,8 @@ class RequirementsBuildService:
             shutil.copy(simulation / "diagram.json", workdir / sim_project.KEPT_DIAGRAM)
         firmware, kept = self._firmware(firmware, simulation)
         stages = self._stages(toolchain, BuildInputs(requirements, workdir, project, from_library, firmware))
-        if gone := self._firmware_line(kept, workdir):
-            add_diagnostics(gone)
+        if lines := self._firmware_line(kept, workdir):
+            add_diagnostics(lines)
         # The history says a build ran end to end (§5.7), written by the chain itself; one it cannot keep is said, and the verdict stands.
         if handed is not None and vouches_for_a_build(stages):
             try:
