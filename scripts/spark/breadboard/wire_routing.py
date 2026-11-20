@@ -183,11 +183,13 @@ Search = collections.namedtuple("Search", "step start goal legs most close")
 
 class TrackRouting:
     """
-    Value: one drawing's routing, worked out once when it is made: the grid, the cells each wire holds (`axes`, by axis), the cells a run along an axis may not
-    enter (`near`: next to a run along that axis, end to end or side by side, so two runs keep a pitch apart), the
-    cells a crossing may not take (`no_cross`, within a pitch of a bend or an end), and the cells beside each end hole
-    (`rings`, which only its own jumper may take, as a wire there would touch the end's dot). `paths` is
-    {step: JumperPath}; `expanded` counts the states the searches took, the budget a test pins in place of seconds.
+    Value: one drawing's routing, worked out once when it is made: the grid, the cells each wire holds (`axes`, by
+    axis), the cells a run along an axis may not enter (`near`: next to a run along that axis, end to end or side by
+    side, so two runs keep a pitch apart), the cells a crossing may not take (`no_cross`, within a pitch of a bend or an
+    end), and the cells beside each end hole (`rings`, which only its own jumper may take, as a wire there would touch
+    the end's dot). `paths` is {step: JumperPath}; `expanded` counts the states the searches took, the budget a test
+    pins in place of seconds; `cut_short` counts the searches BUDGET stopped before they found a way or ran out of
+    states, since such a stop is no proof that there is no way.
     """
 
     #: The costs of the search: a cell on the board, a cell off it, a cell of a run beside a rail's line, a bend, a
@@ -210,7 +212,7 @@ class TrackRouting:
                 u, v = self.grid.cell(hole.x, hole.y)
                 for du, dv in MOVES:
                     self.rings.setdefault((u + du, v + dv), set()).add(jumper.step)
-        self.expanded, self.paths = 0, {}
+        self.expanded, self.cut_short, self.paths = 0, 0, {}
         order = sorted(layout.jumpers, key=lambda one: (abs(one.one.x - one.other.x), one.step))
         for most, fallback, close in self.TRIES:
             for jumper in [one for one in order if one.step not in self.paths]:
@@ -251,6 +253,7 @@ class TrackRouting:
                     parents[nxt], costs[nxt] = state, cost + extra
                     heapq.heappush(heap, (cost + extra + self._estimate(nxt, search.goal), cost + extra) + nxt)
         self.expanded += taken
+        self.cut_short += bool(heap) and taken >= self.BUDGET
         return None
 
     def _estimate(self, state, goal):

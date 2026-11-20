@@ -169,6 +169,11 @@ class TheRoutesTest(unittest.TestCase):
         self.assertEqual({step: path.fallback for step, path in self.routed["epaper"][2].paths.items()},
                          {3: "", 5: "", 6: "", 7: "", 9: "", 10: "", 4: "bends", 8: "bends"})
 
+    def test_no_search_is_cut_short_by_its_budget(self):
+        # a search the budget stops returns no way as a search with no way does; the largest that found one took 47497
+        self.assertEqual({fixture: routing.cut_short for fixture, (_, _, routing) in self.routed.items()},
+                         {fixture: 0 for fixture in FIXTURES})
+
     def test_the_walk_routes_within_its_budget_of_states(self):
         # the states the searches took, in place of seconds: 233824 on 2026-11-20
         self.assertLessEqual(self.routed["walk-c6"][2].expanded, 300000)
