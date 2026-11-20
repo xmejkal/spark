@@ -128,7 +128,7 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "keep_simulation removes the project's note whatever the simulation stage did",
-  "find": "simulated = any(stage.name == \"simulation\" and stage.status == OK for stage in stages)",
+  "find": "simulated = any(stage.name == SIMULATION.name and stage.status == OK for stage in stages)",
   "replace": "simulated = True"
  }
 ]

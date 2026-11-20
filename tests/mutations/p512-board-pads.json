@@ -62,8 +62,8 @@
  {
   "file": "scripts/spark/build/build_service.py",
   "name": "the verdict leaves the selectors out",
-  "find": "for element in errors})), first), build_codes.DESIGN_NOT_BUILT))",
-  "replace": "for element in errors})), \"\"), build_codes.DESIGN_NOT_BUILT))"
+  "find": "len(errors), \", \".join(sorted({element[\"type\"] for element in errors})), first))",
+  "replace": "len(errors), \", \".join(sorted({element[\"type\"] for element in errors})), \"\"))"
  },
  {
   "file": "scripts/spark/build/build_service.py",

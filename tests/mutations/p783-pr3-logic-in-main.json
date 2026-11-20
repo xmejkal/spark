@@ -14,13 +14,13 @@
  {
   "file": "scripts/spark/build/requirements_build.py",
   "name": "P783 PR 3: a build past its limit is called a crash",
-  "find": "said, build_codes.STAGE_TIMED_OUT)]",
-  "replace": "said, build_codes.STAGE_CRASHED)]"
+  "find": "return [BUILD.ended(TIMED_OUT_ENDING, said)]",
+  "replace": "return [CHECK_SPINE.ended(CHECK_SPINE_CRASHED_ENDING, type(late).__name__, late)]"
  },
  {
   "file": "scripts/spark/build/requirements_build.py",
   "name": "P783 PR 3: a refused requirements file loses its code",
-  "find": "str(broken), broken.code)]",
-  "replace": "str(broken))]"
+  "find": "[REQUIREMENTS.stopped_by(broken)]",
+  "replace": "[REQUIREMENTS.stopped_by(loader.DesignError(\"%s\", broken, code=None))]"
  }
 ]

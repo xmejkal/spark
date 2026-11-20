@@ -32,8 +32,8 @@
  {
   "file": "scripts/spark/build/build_service.py",
   "name": "every part skipped is an ok stage again, so the store notes a build nothing simulated",
-  "find": "lead, status = (EVERY_PART_SKIPPED_MESSAGE, SKIPPED) if skipped else (\"\", OK)",
-  "replace": "lead, status = (EVERY_PART_SKIPPED_MESSAGE, OK) if skipped else (\"\", OK)"
+  "find": "stages.append(SIMULATION.ended(EVERY_PART_SKIPPED_ENDING, detail) if skipped else SIMULATION.ok(detail))",
+  "replace": "stages.append(SIMULATION.ok(EVERY_PART_SKIPPED_ENDING.message % detail) if skipped else SIMULATION.ok(detail))"
  },
  {
   "file": "scripts/spark/build/build_service.py",

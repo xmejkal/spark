@@ -4,6 +4,7 @@ message is filled with % (council D5), a definition makes only the Stages of its
 lists the table.
 """
 
+import ast
 import contextlib
 import io
 import re
@@ -18,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_spine  # noqa: E402
-from spark.build import build_codes  # noqa: E402
+from spark.build import build_codes, stages as stage_table  # noqa: E402
 from spark.build.stages import (BOARD, BUILD_STAGES, DESIGN_ERROR, FOOTPRINT, NO_PARTS_ENDING, PARTS, SCHEMATIC,  # noqa: E402
                                 STAGE_NAMED, StageEnding)
 from spark.core.outcomes import COULD_NOT_RUN, OK, SKIPPED  # noqa: E402
@@ -36,6 +37,17 @@ class TheTableTest(unittest.TestCase):
             else:
                 self.assertIn(ending.code, build_codes.CODES, ending)
             self.assertNotEqual(ending.status, OK, ending)
+
+    def test_each_ending_is_named_and_a_call_site_ends_a_stage_with_it(self):
+        """An ending no call site uses would still show in --help: each is a constant of stages.py that a call in scripts/
+        hands to `ended`, the design error's to `stopped_by`."""
+        named = {value: name for name, value in vars(stage_table).items() if isinstance(value, StageEnding)}
+        self.assertLessEqual(set(ENDINGS), set(named))
+        calls = [node for path in (ROOT / "scripts").rglob("*.py") if path.name != "stages.py"
+                 for node in ast.walk(ast.parse(path.read_text())) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)]
+        used = {node.args[0].id for node in calls if node.func.attr == "ended" and isinstance(node.args[0], ast.Name)}
+        used |= {"DESIGN_ERROR" for node in calls if node.func.attr == "stopped_by"}
+        self.assertEqual(sorted(named[ending] for ending in ENDINGS if named[ending] not in used), [])
 
     def test_each_name_is_one_stage_s(self):
         self.assertEqual(len(STAGE_NAMED), len(BUILD_STAGES))
@@ -95,6 +107,7 @@ class TheHelpListsTheTableTest(unittest.TestCase):
         for code in {ending.code for ending in ENDINGS if ending.code}:
             self.assertIn("%s: %s" % (code, " ".join(build_codes.CODES[code].split())), said)
         self.assertIn("skipped every part is skipped from the simulation, so the diagram holds none of the project's parts, …", said)
+        self.assertEqual(said.count("design_not_built:"), 1)  # two endings of the build stage, one status and one code
 
 
 if __name__ == "__main__":
