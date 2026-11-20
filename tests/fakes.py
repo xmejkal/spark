@@ -303,6 +303,20 @@ class FakeDeployRecordStore:
         return Path("boards") / (mac + ".json")
 
 
+class FakeStoreFetch:
+    """A fake `store.fetch` (P952): the bytes of each URL in `answers`, the store's StoreError with `url_unreachable` for
+    any other URL, and each URL it was asked for in `asked`, in order."""
+
+    def __init__(self, answers):
+        self.answers, self.asked = dict(answers), []
+
+    def __call__(self, url):
+        self.asked.append(url)
+        if url not in self.answers:
+            raise store.StoreError("%s does not answer (a made-up page)", url, code=records_codes.URL_UNREACHABLE)
+        return self.answers[url]
+
+
 class FakeTextFileWriter:
     """A fake replies.TextFileWriter: `write(path, text)` keeps the text in `written` by path and writes nothing (P825)."""
 
