@@ -88,13 +88,14 @@ def refusal_code(stopped):
 
 
 def _passives(design_parts):
-    """{component name of a passive a part asks for: what it is for}, from the parts' records."""
-    found = {}
+    """{component name of a passive a part asks for: what it is for, the part said by its short name}, from the parts'
+    records."""
+    found, shorts = {}, board_components.short_names(design_parts)
     for part in design_parts:
         for host_part in part.get("host_parts") or []:
             phrase = PURPOSE.get(host_part["kind"], host_part["kind"] + " on")
             for name in board_components.host_part_names(part, host_part):
-                found[name] = "%s %s %s" % (phrase, board_components.component_name(part), host_part["pin"])
+                found[name] = "%s %s %s" % (phrase, shorts[board_components.component_name(part)], host_part["pin"])
     return found
 
 
@@ -163,9 +164,9 @@ def _parts_table(board, design_parts, resistors, supplies, have):
     status = (lambda record_id: have.get(record_id, HAVE_TO_GET)) if have is not None else (lambda record_id: "")
     rows = ["| qty | part | for | have |", "| --- | --- | --- | --- |",
             "| 1 | %s | the board | %s |" % (board.get("name"), status(board.get("id")))]
-    by_record = collections.OrderedDict()
+    by_record, shorts = collections.OrderedDict(), board_components.short_names(design_parts)
     for part in design_parts:
-        by_record.setdefault(part["id"], (part, []))[1].append(board_components.component_name(part))
+        by_record.setdefault(part["id"], (part, []))[1].append(shorts[board_components.component_name(part)])
     rows += ["| %d | %s | %s | %s |" % (len(names), part.get("name"), ", ".join(sorted(names)), status(record_id))
              for record_id, (part, names) in by_record.items()]
     by_value = collections.OrderedDict()

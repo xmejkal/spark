@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from spark.breadboard.wiring_steps import (BOARD, PART, RESISTOR, BreadboardSteps, End, MermaidDiagram, NumberedList,  # noqa: E402
                               StepPoint)
+from spark.design import board_components  # noqa: E402
 
 
 def board(label):
@@ -111,6 +112,41 @@ class TheDiagramTest(unittest.TestCase):
         self.assertIn('["VBUS rail"]', drawn)
         self.assertIn('["VBUS supply"]', drawn)
         self.assertTrue(drawn.startswith("```mermaid\nflowchart LR\n") and drawn.endswith("\n```"))
+
+
+class TheShortNamesTest(unittest.TestCase):
+    """P945: a step and a line before power call a part by a short name: the instance name the requirements give, else
+    the record's short_name when no other part is called the same, else the component name."""
+
+    def test_a_record_s_short_name_names_the_part(self):
+        self.assertEqual(board_components.short_names([{"id": "epaper-2in9", "short_name": "e-paper"}]),
+                         {"Epaper2in9": "e-paper"})
+
+    def test_the_instance_name_wins_over_the_short_name(self):
+        part = {"id": "epaper-2in9", "short_name": "e-paper", "_instance": "Screen"}
+        self.assertEqual(board_components.short_names([part]), {"Screen": "Screen"})
+
+    def test_two_parts_called_the_same_keep_their_component_names(self):
+        parts = [{"id": "epaper-2in9", "short_name": "screen"}, {"id": "oled-1in3", "short_name": "screen"},
+                 {"id": "led-red", "short_name": "led"}]
+        self.assertEqual(board_components.short_names(parts),
+                         {"Epaper2in9": "Epaper2in9", "Oled1in3": "Oled1in3", "LedRed": "led"})
+
+    def test_a_short_name_an_instance_already_has_goes_to_the_instance(self):
+        parts = [{"id": "epaper-2in9", "short_name": "Screen"}, {"id": "oled-1in3", "_instance": "Screen"}]
+        self.assertEqual(board_components.short_names(parts), {"Epaper2in9": "Epaper2in9", "Screen": "Screen"})
+
+    def test_no_short_name_keeps_the_component_name(self):
+        self.assertEqual(board_components.short_names([{"id": "led-red-5mm", "name": "Red LED, 5 mm"}]),
+                         {"LedRed5mm": "LedRed5mm"})
+
+    def test_the_place_step_and_the_diagram_box_say_the_short_name(self):
+        steps = BreadboardSteps(["board", "Epaper2in9"], [StepPoint([board("D3"), pin("e-paper", "CS")], None, False)],
+                                {"Epaper2in9": "e-paper"})
+        self.assertEqual(NumberedList().render(steps)[1], "2. Put e-paper in the breadboard, each pin in its own row.")
+        self.assertIn('  subgraph g2["e-paper"]', MermaidDiagram().render(BreadboardSteps(
+            ["board"], [StepPoint([board("D3"), End(PART, "Epaper2in9", "e-paper CS", "e-paper CS", "CS")], None, False)],
+            {"Epaper2in9": "e-paper"})))
 
 
 if __name__ == "__main__":

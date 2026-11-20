@@ -82,6 +82,23 @@ def component_name(part):
     return "".join(word.capitalize() for word in part["id"].replace("_", "-").split("-"))
 
 
+def record_short_name(part):
+    """What a person calls a part's record on the bench: its `short_name`, else its `name` (P945)."""
+    return part.get("short_name") or part.get("name")
+
+
+def short_names(part_list):
+    """
+    {component name: the name a step and a line before power call it by} (P945). The instance name the requirements
+    give wins. Else the record's `short_name`, when no other part of the list would be called the same. Else the
+    component name, as before. The component name stays the key of the circuit, the catalog and `pins.py`.
+    """
+    wanted = [(part, part.get("_instance") or part.get("short_name") or component_name(part)) for part in part_list]
+    taken = [name for _, name in wanted]
+    return {component_name(part): name if part.get("_instance") or taken.count(name) == 1 else component_name(part)
+            for part, name in wanted}
+
+
 def placeholder_components(part_list):
     """
     Components whose footprint is a stand-in, by the name the emitted file gives them.
