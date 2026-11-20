@@ -28,15 +28,18 @@ class PartCaption:
     Renderer helper: each part's caption (P953), its human name outside its body: the record's `name` up to its first
     comma, else the record's id, else the part's own id. It lies GAP px above the body, left-aligned with it; below the
     body when anything it must keep clear of is in that box: a body, a printed letter, number or rail sign, a wire, an
-    end dot, a pill or a caption placed before it, by CLEAR px. When both are taken, the two lines slide right a pitch
-    at a time along the body, then move a pitch further out, up to FARTHEST pitches; with no free place at all, the
-    caption sits above its body, left-aligned.
+    end dot, a pill or a caption placed before it, by CLEAR px. When both are taken, it moves out a pitch at a time
+    above and below, still at the body's left edge, up to FARTHEST pitches, so it stays by its own body and is never
+    read as a pill's words (the review of PR #1379); only then do the same tries slide right a pitch at a time along
+    the body. With no free place at all, the caption sits above its body, left-aligned. The canvas holds it wherever
+    it lies.
     """
 
     #: The space between a caption and its body, and the space it keeps from everything else, in px; its font weight.
     GAP, CLEAR, WEIGHT = 4.8, 1.0, "600"
-    #: The most pitches a caption moves out from its body's edge.
-    FARTHEST = 6
+    #: The most pitches a caption moves out from its body's edge: 9 lifts the walk's board caption over the top rails
+    #: and the wires that leave its pads.
+    FARTHEST = 9
 
     def __init__(self, size, pitch):
         self.size, self.pitch = size, pitch
@@ -57,7 +60,7 @@ class PartCaption:
             caption = Caption(words, named, body.left, body.top - self.GAP - Caption.DESCENT * self.size, self.size)
             below = body.bottom + self.GAP + Caption.ASCENT * self.size
             tries = [caption._replace(x=body.left + step * self.pitch, y=y + side * away * self.pitch)
-                     for away in range(self.FARTHEST + 1) for step in range(int((body.right - body.left) // self.pitch) + 1)
+                     for step in range(int((body.right - body.left) // self.pitch) + 1) for away in range(self.FARTHEST + 1)
                      for side, y in ((-1, caption.y), (1, below))]
             captions[part.id] = next((one for one in tries if not any(one.box().meets(box, self.CLEAR) for box in taken)),
                                      caption)
@@ -68,7 +71,8 @@ class PartCaption:
 class PartNotes:
     """Renderer helper: the note under the picture (P953), one line for each part that has a fact not verified: its
     caption's words, then the `words` of each such group of its part_px, "DFRobot FireBeetle 2 ESP32-C6: pads, row side
-    and USB end not verified.", then its picture's own note (P946). It names no record id where the record has a name."""
+    and USB end not verified.", then its picture's own note (P946). It follows the caption's rule: a record id only
+    where the record has no name."""
 
     @staticmethod
     def lines(layout, pictures):

@@ -62,10 +62,11 @@ A pad's label says the word the steps say for it (`wiring_steps.pad_word`, P953)
 reads `NC` in a muted grey, and `3V3_2` stays `3V3_2`, as the steps say it. A used pad's label is bold yellow, a free
 one dim, each with a thin dark outline. Every turned text reads bottom to top: a label's turn plus its part's is 0 or
 -90. Each part has one caption outside its body (`class="caption"`): its record's `name` up to the first comma
-(`DFRobot FireBeetle 2 ESP32-C6`), or, with no name, its id in grey. It sits above the body, else below it, else
-slides along the body and then out a pitch at a time, until no body, wire, end dot, pill, mark or other caption is in
-its box. The note under the picture has one line per part with a fact not verified (`class="note"`): `MH-ET LIVE 2.9
-Inch E-paper Module: pads and header side not verified.`, then the part picture's own note, then the wires' line.
+(`DFRobot FireBeetle 2 ESP32-C6`), or, with no name, its id in grey. It sits above the body, else below it, at the
+body's left edge, moving out a pitch at a time (up to 9) before it slides along the body, until no body, wire, end dot,
+pill, mark or other caption is in its box. The note under the picture has one line per part with a fact not verified
+(`class="note"`), named as its caption is, so a record id only where the record has no name: `MH-ET LIVE 2.9 Inch
+E-paper Module: pads and header side not verified.`, then the part picture's own note, then the wires' line.
 
 ## A part's picture
 

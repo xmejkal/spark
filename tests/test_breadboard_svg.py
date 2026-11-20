@@ -151,7 +151,7 @@ class TheSvgTest(unittest.TestCase):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         # P949: the keys data-step and data-part, and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "faca967063a8f6cc8773538913e8abd0c1ad4866885a9d76f31d273ecf254ce0")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, pill 7 clear of the rail signs; PR 4b: a caption per part outside its body, seen in a render on 2026-11-20
+                         "64800cebc45098b861a511c5b436b764c33310e76e1ad7cd5f22c110a0c61e0e")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, pill 7 clear of the rail signs; PR 4b: a caption per part outside its body, at its left edge (the review of PR #1379), seen in a render on 2026-11-20
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
