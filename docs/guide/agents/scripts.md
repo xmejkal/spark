@@ -283,7 +283,7 @@ These write:
 - `assign_pins.py --emit-pins`; `boards.py --resolve`.
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
-  - `--drawer-set`, `--needs-set`, `--needs-drop`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, `--keep-picture` ([a part's picture](breadboard-codes.md#a-parts-picture)), and `--fetch`, which
+  - `--drawer-set`, `--needs-set`, `--needs-drop`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, `--keep-picture` ([a part's picture](breadboard-codes.md#a-parts-picture)), `--features-set` ([a board's measured features](breadboard-codes.md#a-boards-measured-features)), and `--fetch`, which
     also uses the network. `--fact-set` writes `legs` (leg by leg, each pin one of `pin_order`) and `host_requirements` (the list as a whole) too ([P741](https://github.com/xmejkal/spark/issues/1017)),
     and `short_name`, what the steps call the part ([P947](https://github.com/xmejkal/spark/issues/1351)).
   - **A bench result goes back with `--fact-set`** ([P374](https://github.com/xmejkal/spark/issues/479)), under the `write`
