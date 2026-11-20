@@ -2865,7 +2865,7 @@ class ARequirementsBuildServiceTest(unittest.TestCase):
 
         def broken(design):
             raise RuntimeError("the history broke")
-        service =requirements_build.RequirementsBuildService(FakeBuildService(a_build_that_simulated), note_built=broken)
+        service = requirements_build.RequirementsBuildService(FakeBuildService(a_build_that_simulated), note_built=broken)
         values = {"requirements": str(self.requirements), "keep": None, "sim_dir": str(sim), "firmware": None}
         result = run_operation(build_board.BuildBoard(service), values, FakeOutsideWorld())
         self.assertEqual(list(result.diagnostics[:2]), [
@@ -2883,16 +2883,17 @@ class ARequirementsBuildServiceTest(unittest.TestCase):
             service.build(self.requirements, add_diagnostics=[].extend)
         self.assertEqual(set(Path(tempfile.gettempdir()).glob("spark-spine-*")), folders)
 
-    def test_a_tools_file_it_cannot_read_leaves_no_work_folder(self):
-        # P939: the toolchain is looked up after the folder is made, and an OSError from it propagates
-        tools = self.project / ".spark" / "tools.json"
-        tools.write_text("{}")
-        tools.chmod(0)
-        self.addCleanup(tools.chmod, 0o644)
+    def test_a_working_directory_that_is_gone_leaves_no_work_folder(self):
+        # P939: the reference design's toolchain is looked up from the working directory after the folder is made, and
+        # a deleted one raises an OSError for every user, root too
+        self.addCleanup(os.chdir, os.getcwd())
+        gone = Path(tempfile.mkdtemp())
+        os.chdir(gone)
+        gone.rmdir()
         folders = set(Path(tempfile.gettempdir()).glob("spark-spine-*"))
         service = requirements_build.RequirementsBuildService(FakeBuildService(lambda *_, **__: self.fail("the build ran")))
-        with self.assertRaises(PermissionError):
-            service.build(self.requirements, add_diagnostics=[].extend)
+        with self.assertRaises(FileNotFoundError):
+            service.build(add_diagnostics=[].extend)
         self.assertEqual(set(Path(tempfile.gettempdir()).glob("spark-spine-*")), folders)
 
 
