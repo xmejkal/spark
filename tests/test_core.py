@@ -18,7 +18,7 @@ from spark.records import deploy_record_store, tool_finder  # noqa: E402
 from fakes import FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
 from spark.core.codes import Code  # noqa: E402
-from spark.core.cli import DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
+from spark.core.cli import CRASH_FIX, DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
 from spark.core.renderers import FlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
@@ -323,6 +323,27 @@ class RunOperationTest(unittest.TestCase):
         result = run_operation(Toy(), {"project": Path("p"), "what": "error", "left": False, "right": False}, FakeOutsideWorld())
         self.assertEqual(result.findings, [Finding(outcomes.COULD_NOT_RUN, None, "tool_missing", "no tool in p", "install it")])
         self.assertEqual((result.status(), result.data, result.diagnostics), (outcomes.COULD_NOT_RUN, None, ()))
+
+    def test_the_lines_given_to_add_diagnostics_lead_the_diagnostics_on_every_end_a_crash_too(self):
+        class Gathering(Toy):
+            """Operation: the toy that gives a line to `outside.add_diagnostics` before it answers, refuses or crashes (P840)."""
+
+            def run(self, project, what, left, right, *, outside):
+                outside.add_diagnostics(["kept for a crash"])
+                return super().run(project, what, left, right, outside=outside)
+
+        for what, expected in (("problems", ["kept for a crash", "an aside"]), ("error", ["kept for a crash"]),
+                               ("crash", ["kept for a crash", "toy: crashed, RuntimeError", CRASH_FIX, "Traceback (most recent call last):"])):
+            with self.subTest(what=what):
+                result = run_operation(Gathering(), toy_values(what), FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
+                self.assertEqual(list(result.diagnostics[:len(expected)]), expected)
+
+    def test_a_world_the_builder_gives_as_none_reaches_the_operation_as_none(self):
+        class Unreached(Toy):
+            def run(self, project, what, left, right, *, outside):
+                return OperationResult({"outside": outside})
+
+        self.assertEqual(run_operation(Unreached(), toy_values("ok"), None, lambda effects: None).data, {"outside": None})
 
     def test_a_crash_is_the_whole_envelope_in_key_order_exit_2_and_the_traceback_in_diagnostics(self):
         code, out, err = cli("--what", "crash", "--json")

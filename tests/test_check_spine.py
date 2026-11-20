@@ -3365,3 +3365,12 @@ class TheBuildIsAnOperationTest(unittest.TestCase):
         self.assertFalse(work.exists(), "the work folder is left behind")
         self.assertEqual([(f.severity, f.code) for f in result.findings], [(check_spine.COULD_NOT_RUN, "crash")])
         self.assertEqual(result.diagnostics[0], "build-board: crashed, RuntimeError")
+
+    def test_a_crash_in_the_keep_step_keeps_the_builds_own_lines_ahead_of_the_traceback(self):
+        # P840: the history line was lost when the keep step crashed (P804's rows, row 20)
+        unrecorded = "  the build was not recorded in your history: history.jsonl line 1 is not a history event"
+        values = {"requirements": None, "keep": str(Path(tempfile.mkdtemp()) / "project"), "sim_dir": None, "firmware": None}
+        built = FakeRequirementsBuild([AStageThatCannotBeRead()], self.work(), diagnostics=[unrecorded])
+        result = run_operation(build_board.BuildBoard(built), values, FakeOutsideWorld())
+        self.assertEqual([(f.severity, f.code) for f in result.findings], [(check_spine.COULD_NOT_RUN, "crash")])
+        self.assertEqual(list(result.diagnostics[:2]), [unrecorded, "build-board: crashed, RuntimeError"])
