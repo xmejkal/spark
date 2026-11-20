@@ -17,7 +17,7 @@ from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import flow_codes
 from spark.records import records_codes, store
-from spark.core.errors import CodedMessageError, SparkError
+from spark.core.errors import CodedMessageError
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS, SKIPPED
 from spark.core.zone_time import stamp
 
@@ -274,7 +274,7 @@ class SimulateReader(PhaseReader):
         try:
             says = [image.why_untested() or flow_codes.TESTED_MESSAGE]
         except DeployError as unread:
-            raise SparkError("%s", unread, code=unread.reason)
+            raise CodedMessageError("%s", unread, code=unread.reason)
         newer = image.find_newer_files()
         says += [flow_codes.NEWER_MESSAGE % ", ".join(newer)] if newer else []
         return self.phase(None, says + [flow_codes.SCENARIO_COMMAND])

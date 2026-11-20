@@ -30,6 +30,7 @@ import flow  # noqa: E402
 from fakes import FakeClock, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
+from spark.flow.phase_readers import SimulateReader  # noqa: E402
 from spark.flow.show_flow import ShowFlow  # noqa: E402
 from spark.records import store  # noqa: E402
 
@@ -405,6 +406,19 @@ class ThePhasesTest(FlowTest):
         (project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 42\n")
         said, _ = show(project)
         self.assertEqual(statuses(said)["simulate"], "problems")
+
+    def test_a_run_log_spark_cannot_read_gives_the_simulate_phase_could_not_run_with_its_sentence(self):
+        # P853: the reader raised a SparkError with no fix, a TypeError that crashed the whole flow
+        project = a_built_project()
+        (project / "sim" / "runs").mkdir(parents=True)
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+        (project / "sim" / "image.bin").write_bytes(b"an image")
+        log = project / "sim" / "runs" / "a.log"
+        log.write_text("")
+        log.chmod(0)
+        self.addCleanup(log.chmod, 0o600)
+        phase = SimulateReader().answer(project)
+        self.assertEqual((phase.status, phase.says), ("could-not-run", ["cannot read %s: [Errno 13] Permission denied: '%s'" % (log, log)]))
 
 
 class TheCommandTest(FlowTest):

@@ -1,0 +1,68 @@
+[
+ {
+  "file": "scripts/spark/core/codes.py",
+  "name": "a Code has no __getnewargs__, so a copy, a deepcopy or a pickle of it raises",
+  "find": "    def __getnewargs__(self):\n",
+  "replace": "    def _getnewargs(self):\n"
+ },
+ {
+  "file": "scripts/spark/core/codes.py",
+  "name": "a fix given to a Finding or a SparkError loses to the Code's",
+  "find": "    if fix is not None:\n        return fix\n",
+  "replace": "    if fix is not None and not isinstance(code, Code):\n        return fix\n"
+ },
+ {
+  "file": "scripts/spark/core/result.py",
+  "name": "Finding.of gives no fix when none is given",
+  "find": "        return cls(severity, subject, code, sentence, fix_of(code, fix))\n",
+  "replace": "        return cls(severity, subject, code, sentence, fix)\n"
+ },
+ {
+  "file": "scripts/spark/core/errors.py",
+  "name": "a SparkError keeps no fix when none is given",
+  "find": "        self.fix, self.status = fix_of(code, fix), status\n",
+  "replace": "        self.fix, self.status = fix, status\n"
+ },
+ {
+  "file": "scripts/spark/idea/idea_codes.py",
+  "name": "the fix of a need that is not there is empty",
+  "find": "                    \"drop a need that --needs lists\")\n",
+  "replace": "                    \"\")\n"
+ },
+ {
+  "file": "scripts/spark/idea/drop_need.py",
+  "name": "the code of a need that is not there goes as a plain str, with no fix",
+  "find": "Finding.of(outcomes.PROBLEMS, need, idea_codes.NEED_UNKNOWN, sentence)",
+  "replace": "Finding.of(outcomes.PROBLEMS, need, str(idea_codes.NEED_UNKNOWN), sentence)"
+ },
+ {
+  "file": "tools/measure.py",
+  "name": "U1 lets a leaf import any module of spark.core",
+  "find": "module.rpartition(\".\")[0] == LEAF_PACKAGE and module.rpartition(\".\")[2] in LEAVES for module in modules)",
+  "replace": "module.rpartition(\".\")[0] == LEAF_PACKAGE for module in modules)"
+ },
+ {
+  "file": "tools/measure.py",
+  "name": "U1 lets a leaf import a leaf of any package",
+  "find": "module.rpartition(\".\")[0] == LEAF_PACKAGE and module.rpartition(\".\")[2] in LEAVES for module in modules)",
+  "replace": "module.rpartition(\".\")[2] in LEAVES for module in modules)"
+ },
+ {
+  "file": "scripts/spark/core/privacy.py",
+  "name": "the mask rebuilds every str with its own type, so a Refusal or a Code raises",
+  "find": "        return PastedLine(masked) if isinstance(text, PastedLine) else masked\n",
+  "replace": "        return type(text)(masked)\n"
+ },
+ {
+  "file": "scripts/spark/core/privacy.py",
+  "name": "the mask gives a PastedLine back as a plain str",
+  "find": "        return PastedLine(masked) if isinstance(text, PastedLine) else masked\n",
+  "replace": "        return masked\n"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "a run log the simulate reader cannot read escapes and crashes the flow",
+  "find": "            raise CodedMessageError(\"%s\", unread, code=unread.reason)\n",
+  "replace": "            raise unread\n"
+ }
+]

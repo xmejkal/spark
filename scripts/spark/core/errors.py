@@ -2,6 +2,7 @@
 raises to answer instead of crashing (P442, W3-3), which `run_operation` turns into one Finding."""
 
 from spark.core import outcomes
+from spark.core.codes import fix_of
 from spark.core.text_guards import ValueMessageError
 
 
@@ -17,12 +18,14 @@ class CodedMessageError(ValueMessageError):
 
 class SparkError(CodedMessageError):
     """
-    Error: an Operation's answer that is no result, with its `code`, its `fix` and its `status` (`outcomes.COULD_NOT_RUN`
-    unless `outcomes.PROBLEMS` is given). A ValueMessageError: the template is a constant and the values follow it, each
-    put on one line. `run_operation` turns it into one Finding of that severity, so an envelope carries it as any item.
+    Error: an Operation's answer that is no result, with its `code`, its `fix` (the one a Code holds unless `fix` is given,
+    `codes.fix_of`, P853) and its `status` (`outcomes.COULD_NOT_RUN` unless `outcomes.PROBLEMS` is given). A
+    ValueMessageError: the template is a constant and the values follow it, each put on one line. `run_operation` turns
+    it into one Finding of that severity, so an envelope carries it as any item. A TypeError when a plain-str code comes
+    with no fix.
     """
 
-    def __init__(self, template, *values, code, fix, status=outcomes.COULD_NOT_RUN):
+    def __init__(self, template, *values, code, fix=None, status=outcomes.COULD_NOT_RUN):
         super().__init__(template, *values, code=code)
-        self.fix, self.status = fix, status
+        self.fix, self.status = fix_of(code, fix), status
 # --- end MVP ---
