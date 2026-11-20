@@ -330,6 +330,58 @@ class TheRecordBoardLayoutTest(unittest.TestCase):
         self.assertEqual((min(h.column for h in button.holes.values()), max(h.column for h in button.holes.values())), (26, 28))
 
 
+EPAPER = ROOT / "tests" / "data" / "breadboard" / "epaper"
+
+
+def epaper_inputs(read):
+    """(geometry, catalog) of the e-paper fixture, with the module's part_px built by hand from its physical block: the
+    header on the back, 8 pads 2.54 mm apart, the first 34.5 mm from the left edge seen from the back, half a pitch
+    from the top edge. Its labels are the printed ones, so the pin DC is the pad D/C (P945, the spike)."""
+    geometry, catalog = record_inputs(read)
+    labels = ["VCC", "GND", "SDI", "SCLK", "CS", "D/C", "Reset", "Busy"]
+    pins = {label: (85 - (34.5 + 2.54 * number), 1.27) for number, label in enumerate(labels)}
+    part_px = dict(part_shape.project_to_px(part_shape.PartShape((85, 44), pins, None, {})), full_surface=False)
+    catalog = dict(catalog, Epaper2in9BwrMhEtLive=drawing.DrawnPart("spark-module-epaper-2in9-bwr-mh-et-live", {}, {
+        "VCC": "VCC", "GND": "GND", "SDI": "SDI", "SCLK": "SCLK", "CS": "CS", "DC": "D/C", "RESET": "Reset", "BUSY": "Busy"}))
+    return geometry.with_part("spark-module-epaper-2in9-bwr-mh-et-live", part_px), catalog
+
+
+class AModuleDrawnFromItsRecordTest(unittest.TestCase):
+    """P945: the walk's e-paper, whose record has a physical block and no Wokwi part, through the real planner beside the
+    FireBeetle on the full breadboard."""
+
+    @classmethod
+    def setUpClass(cls):
+        with in_store():
+            cls.read = sheet._read_build(EPAPER / "requirements.json")
+        cls.geometry, cls.catalog = epaper_inputs(cls.read)
+        cls.layout = drawing.BreadboardPlanner(cls.geometry, cls.catalog).plan(cls.read.steps)
+        cls.module = next(part for part in cls.layout.parts if part.id == "Epaper2in9BwrMhEtLive")
+
+    def test_its_8_holes_lie_on_one_letter_one_pitch_apart_seen_from_the_front(self):
+        holes = self.module.holes
+        self.assertEqual(len(holes), 8)
+        self.assertEqual({hole.name.split(".")[1] for hole in holes.values()}, {"e"})
+        # seen from the front, the back's left end (VCC) is on the right, and Busy is on the left
+        order = sorted(holes, key=lambda pin: holes[pin].x)
+        self.assertEqual(order, ["Busy", "Reset", "D/C", "CS", "SCLK", "SDI", "GND", "VCC"])
+        xs = [holes[pin].x for pin in order]
+        self.assertEqual({round(right - left, 3) for left, right in zip(xs, xs[1:])}, {9.6})
+
+    def test_the_pin_dc_finds_its_printed_pad_d_c(self):
+        end = next(end for point in self.read.steps.points for end in point.ends if end.component == "Epaper2in9BwrMhEtLive"
+                   and end.pin == "DC")
+        self.assertEqual(drawing.end_pin(end, self.catalog), "D/C")
+        self.assertEqual(drawing.end_group(end, {part.id: part for part in self.layout.parts}, self.catalog),
+                         self.module.holes["D/C"].group)
+
+    def test_each_pin_s_group_keeps_a_free_hole_for_its_jumper(self):
+        groups = {hole.group for hole in self.module.holes.values()}
+        ends = {hole.group for jumper in self.layout.jumpers for hole in (jumper.one, jumper.other)}
+        self.assertEqual(groups, ends & groups)
+        self.assertEqual(len(groups), 8)
+
+
 class AnOldDrawingTest(unittest.TestCase):
     def test_write_removes_a_drawing_an_earlier_build_left_when_this_one_cannot_be_drawn(self):
         import shutil
