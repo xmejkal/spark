@@ -38,7 +38,7 @@ from spark.breadboard import sheet  # noqa: E402
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
-from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, write_page  # noqa: E402
+from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
 
 #: The built fixture test_flow.py builds its projects from.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -882,6 +882,37 @@ class TheLookTest(unittest.TestCase):
         self.assertNotRegex(outside, r"(?:color|background|border-color):\s*(?!var\(|transparent|inherit)[a-z]+")
         for word in ("url(", "@import", "@font-face"):
             self.assertNotIn(word, page)
+
+
+class TheBudgetTest(unittest.TestCase):
+    """P949: with the walk's e-paper breadboard inline, its wiring and two tsci pictures of the walk's sizes (schematic.svg
+    96 KB, pcb.svg 331 KB), the page stays under 3 MiB."""
+
+    BUDGET = 3 * 1024 * 1024
+
+    @classmethod
+    def setUpClass(cls):
+        cls.project = Path(tempfile.mkdtemp()) / "epaper"
+        shutil.copytree(ROOT / "tests" / "data" / "breadboard" / "epaper", cls.project)
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            sheet.write(cls.project / "requirements.json", cls.project / "breadboard.md")
+            cls.wiring = kept_wiring(cls.project)
+
+    def page(self, pcb_bytes):
+        def tsci(size):
+            return NAMESPACED % ("x" * size)
+        pictures = [Picture("Breadboard", (self.project / "breadboard.svg").read_text(), None),
+                    Picture("Schematic", tsci(96 * 1000), None), Picture("PCB", tsci(pcb_bytes), None)]
+        return page_of_wiring(self.wiring, pictures)
+
+    def test_the_page_stays_within_its_budget(self):
+        text = self.page(331 * 1000)
+        self.assertEqual((text.count(FIGURE), text.count("data-step="), len(self.wiring.steps)), (1, 8, 10))
+        self.assertLess(len(text.encode("utf-8")), self.BUDGET)
+
+    def test_a_pcb_picture_of_3_mib_goes_over(self):
+        # the twin, so the budget test can fail
+        self.assertGreater(len(self.page(self.BUDGET).encode("utf-8")), self.BUDGET)
 
 
 class TheKeepStepTest(unittest.TestCase):
