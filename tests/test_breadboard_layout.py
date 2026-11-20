@@ -590,6 +590,94 @@ class TheSpaceBetweenPartsTest(unittest.TestCase):
             return sheet._read_build(WALK / "requirements.json")
 
 
+class TheRailSeatingTest(unittest.TestCase):
+    """P953: power and ground go through the rails. A point's mark takes the rail of its sign on the side that holds most
+    of its ends, and each of its ends runs a jumper to a free hole of that rail that no part's body lies over."""
+
+    #: Every fixture the planner draws.
+    DRAWN = (WALK, XIAO, RECORD_BOARD, EPAPER)
+
+    @classmethod
+    def setUpClass(cls):
+        cls.layouts = {fixture.name: planned(fixture) for fixture in cls.DRAWN}
+
+    def rail_jumpers(self, name):
+        return {jumper.step: (jumper.one.name, jumper.other.name) for jumper in self.layouts[name].jumpers
+                if not jumper.other.column}
+
+    def test_power_takes_the_plus_rail_of_the_side_of_most_ends(self):
+        surface = drawing.Surface.load_full()
+        self.assertEqual(drawing.RailSeating(surface).group("3V3", "+", ["b", "t", "b"]), "bp")
+        # the walk: board 3V3 in row j, 3V3_2 in row a, the e-paper's VCC in row j: all three to the bottom + rail
+        walk = self.rail_jumpers("walk-c6")
+        self.assertEqual({step: one.split(".")[0] for step, (_, one) in walk.items()},
+                         {3: "bp", 4: "bp", 5: "bp", 8: "bn", 9: "bn"})
+
+    def test_a_tie_takes_the_first_end_s_side(self):
+        surface = drawing.Surface.load_full()
+        self.assertEqual(drawing.RailSeating(surface).group("3V3", "+", ["t", "b"]), "tp")
+        self.assertEqual(drawing.RailSeating(surface).group("GND", "-", ["b", "t"]), "bn")
+        # the e-paper fixture: board 3V3 in row a, the e-paper's VCC in row f, so the top + rail
+        self.assertEqual({one.split(".")[0] for _, one in self.rail_jumpers("epaper").values()}, {"tp", "tn"})
+
+    def test_a_second_power_mark_takes_the_other_side(self):
+        seating = drawing.RailSeating(drawing.Surface.load_full())
+        self.assertEqual([seating.group("3V3", "+", ["b"]), seating.group("5V", "+", ["b"]),
+                          seating.group("GND", "-", ["t"])], ["bp", "tp", "tn"])
+
+    def test_a_third_power_mark_is_not_drawn_yet(self):
+        seating = drawing.RailSeating(drawing.Surface.load_full())
+        seating.group("3V3", "+", ["b"])
+        seating.group("5V", "+", ["t"])
+        with self.assertRaises(NotDrawnError) as refused:
+            seating.group("VBAT", "+", ["b"])
+        self.assertEqual(str(refused.exception), "VBAT goes on a free + rail, and none is left")
+        self.assertEqual((refused.exception.code, refused.exception.subject), ("not_drawn_yet", "VBAT"))
+
+    def test_each_rail_end_has_a_jumper_to_a_free_rail_hole(self):
+        # each rail hole a jumper takes is taken once, and no part's body lies over it or within half a pitch of it
+        # (the walk after PR 1: rail holes under a body)
+        for name, layout in self.layouts.items():
+            with self.subTest(name):
+                rails = [jumper.other for jumper in layout.jumpers if not jumper.other.column]
+                self.assertTrue(rails)
+                self.assertEqual(len({hole.name for hole in rails}), len(rails))
+                half = layout.geometry.surface.pitch / 2
+                for part in layout.parts:
+                    box = spacing.BodyBox.of(part, layout.geometry.part(part.type))
+                    under = [hole.name for hole in rails if box.left - half < hole.x < box.right + half
+                             and box.top - half < hole.y < box.bottom + half]
+                    self.assertEqual(under, [], part.id)
+        self.assertEqual(self.rail_jumpers("walk-c6"), {3: ("7b.j", "bp.5"), 4: ("11t.a", "bp.9"), 5: ("49b.f", "bp.23"),
+                                                        8: ("9b.j", "bn.7"), 9: ("48b.f", "bn.23")})
+
+    def test_a_rail_hole_reads_top_plus_rail_hole_n(self):
+        self.assertEqual(drawing.hole_label(drawing.Hole("tp.3", 0, 0, "tp", 0)), "top + rail, hole 3")
+        self.assertEqual(drawing.hole_label(drawing.Hole("bn.12", 0, 0, "bn", 0)), "bottom - rail, hole 12")
+        with in_store():
+            read = sheet._read_build(WALK / "requirements.json")
+        holes = drawing.StepHoles.of(self.layouts["walk-c6"], read.steps)
+        self.assertEqual(holes.get(3), "from j7 to bottom + rail, hole 5")
+
+    def test_a_resistor_leg_on_a_rail_is_not_drawn_yet(self):
+        # FirstFitPartPlacement pins a resistor's leg in a row of holes only, so a leg on a rail is refused by name
+        read = xiao_read()
+        ground = next(point for point in read.steps.points if point.rail)
+        leg = next(end for point in read.steps.points for end in point.ends if end.name == "R1 end 2")
+        points = [point for point in read.steps.points if point is not ground and leg not in point.ends]
+        steps = wiring_steps.BreadboardSteps(read.steps.placed, points + [ground._replace(ends=ground.ends + [leg])])
+        planner = drawing.BreadboardPlanner(GEOMETRY, drawing_catalog.describe_parts(read, GEOMETRY))
+        with self.assertRaisesRegex(NotDrawnError, "R1 has a leg on the GND rail") as refused:
+            planner.plan(steps)
+        self.assertEqual((refused.exception.code, refused.exception.subject), ("not_drawn_yet", "R1"))
+
+    def test_drawn_nets_are_empty_on_every_fixture(self):
+        for fixture in self.DRAWN:
+            with self.subTest(fixture.name), in_store():
+                planned_once = sheet._plan_once(sheet._read_build(fixture / "requirements.json"))
+                self.assertEqual((planned_once.stopped, planned_once.differs), (None, []))
+
+
 class AModuleWithNoDrawingFactTest(unittest.TestCase):
     """P945: a module with neither a Wokwi part nor a physical block stops the drawing, and names its record."""
 

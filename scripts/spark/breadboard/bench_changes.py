@@ -39,13 +39,15 @@ FREE_ROW = "a free row"
 #: One step of a sheet as the record keeps it: its key and its anchor's key (tuples of strings), what a person does
 #: (a kind above), the words for its subject and where it goes (a rail is "the GND rail", never the mark), a
 #: resistor's tag, value and job, the color of its jumper on the bench (None when no drawing showed one), and the mark
-#: ("GND") when it is the first end to reach a rail, else "".
-RecordedStep = collections.namedtuple("RecordedStep", "key anchor kind source to tag value job color marks")
+#: ("GND") when it is the first end to reach a rail, else "", with that rail's sign ("+", "-", P953), "" for an
+#: unsigned rail and in a record from before signs.
+RecordedStep = collections.namedtuple("RecordedStep", "key anchor kind source to tag value job color marks sign",
+                                      defaults=("",))
 #: One difference: a code, what a person does (a kind), the subject's words, the jumper's color (None when the earlier
 #: or new sheet showed none), the destination before and after, and the rail mark the first end to reach a rail puts on
-#: it (else ""). A swapped resistor has its tag as `name` and its values as `before` and `after`; a removed one has its
-#: tag, value (`before`) and job (`after`).
-WiringChange = collections.namedtuple("WiringChange", "code kind name color before after marks")
+#: it (else "") with its sign ("+", "-" or ""). A swapped resistor has its tag as `name` and its values as `before` and
+#: `after`; a removed one has its tag, value (`before`) and job (`after`).
+WiringChange = collections.namedtuple("WiringChange", "code kind name color before after marks sign", defaults=("",))
 
 
 def _end_key(end):
@@ -100,7 +102,8 @@ def describe(seated, colors=None):
         source = _name(end) if end.kind == wiring_steps.BOARD or not one.jumper else "the row of " + _name(end)
         found.append(RecordedStep(_end_key(end), anchor, JUMPER if one.jumper else LEG, source, to,
                                   end.component if resistor else "", end.value if resistor else "",
-                                  end.job if resistor else "", colors.get(number) if one.jumper else None, marks))
+                                  end.job if resistor else "", colors.get(number) if one.jumper else None, marks,
+                                  seat.sign if marks else ""))
     return found
 
 
@@ -112,7 +115,7 @@ SheetBase = collections.namedtuple("SheetBase", "steps at")
 def _step(one):
     """One RecordedStep from its dict in the file. KeyError, TypeError or ValueError when it is none."""
     step = RecordedStep(tuple(one["key"]), tuple(one["anchor"]) if one["anchor"] else None, one["kind"], one["source"],
-                        one["to"], one["tag"], one["value"], one["job"], one["color"], one["marks"])
+                        one["to"], one["tag"], one["value"], one["job"], one["color"], one["marks"], one.get("sign", ""))
     if not all(isinstance(part, str) for part in step.key + (step.anchor or ())):
         raise ValueError("a key that is not a list of strings")
     return step
@@ -241,13 +244,13 @@ def changes_between(record, seated, colors=None):
     for one in now:
         old = before.get(one.key)
         if old is None:
-            added.append(WiringChange(ADDED, one.kind, one.source, one.color, "", one.to, one.marks))
+            added.append(WiringChange(ADDED, one.kind, one.source, one.color, "", one.to, one.marks, one.sign))
             continue
         if old.value != one.value and one.key[:2] not in jobs:
             jobs.add(one.key[:2])
             swapped.append(WiringChange(SWAPPED, RESISTOR, one.tag, None, old.value, one.value, ""))
         if old.anchor != one.anchor:
-            rerouted.append(WiringChange(REROUTED, one.kind, one.source, old.color, old.to, one.to, one.marks))
+            rerouted.append(WiringChange(REROUTED, one.kind, one.source, old.color, old.to, one.to, one.marks, one.sign))
     bench = {change.color for change in removed + rerouted if change.color}
     added = [change._replace(color=None) if change.color in bench else change for change in added]
     further = sorted(added + rerouted, key=lambda change: not change.marks)
@@ -278,7 +281,8 @@ class ChangeList:
 
     def line(self, change):
         jumper = "%s jumper" % change.color if change.color else "jumper"
-        after = "a free rail, which you mark %s" % change.marks if change.marks else change.after
+        rail = "a free %s rail" % change.sign if change.sign else "a free rail"
+        after = "%s, which you mark %s" % (rail, change.marks) if change.marks else change.after
         if change.code == SWAPPED:
             return "Swap %s, %s, for %s %s resistor in the same rows." % (
                 change.name, change.before, _article(change.after), change.after)

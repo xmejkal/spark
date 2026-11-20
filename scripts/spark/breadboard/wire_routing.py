@@ -348,8 +348,21 @@ class TrackRouting:
                    if (cell[0] - before[0], cell[1] - before[1]) != (after[0] - cell[0], after[1] - cell[1])]
         for u, v in corners + [cells[0], cells[-1]]:
             self.no_cross |= {(u + du, v + dv) for du in (-1, 0, 1) for dv in (-1, 0, 1)}
-        points = [(jumper.one.x, jumper.one.y)] + [self.grid.point(cell) for cell in corners] + [(jumper.other.x, jumper.other.y)]
-        return JumperPath(tuple((_round_px(x), _round_px(y)) for x, y in points), len(corners), fallback)
+        points = self._along_the_holes([(jumper.one.x, jumper.one.y)] + [self.grid.point(cell) for cell in corners]
+                                       + [(jumper.other.x, jumper.other.y)], self.grid.point(cells[1])[1])
+        return JumperPath(tuple((_round_px(x), _round_px(y)) for x, y in points), len(points) - 2, fallback)
+
+    @staticmethod
+    def _along_the_holes(points, first_track):
+        """The points with each leg along its own hole's x. A rail hole of Wokwi's half board lies off the grid's
+        columns (P953), so the corner beside it takes the hole's x; a way with no corner between two holes of different
+        x gets two corners on the track next to its first hole (`first_track`, its y)."""
+        if len(points) == 2:
+            (x1, y1), (x2, y2) = points
+            return points if x1 == x2 else [points[0], (x1, first_track), (x2, first_track), points[1]]
+        points[1] = (points[0][0], points[1][1])
+        points[-2] = (points[-1][0], points[-2][1])
+        return points
 
 
 def _step(cell, move):

@@ -5,7 +5,8 @@ step's jumper in the color of what it carries, written as `breadboard.json`, a s
 A pure planner turns the steps into holes, and a renderer turns the holes into a diagram. The planner reads the steps
 from `BreadboardSteps.anchored()`, so it never decides the wiring again. Where Wokwi draws each pin and hole comes from
 `data/wokwi-geometry.json`, measured once in Wokwi. A leg over a hole connects in Wokwi with no connection entry, so
-only the jumpers are connections.
+only the jumpers are connections. Power and ground go through the rails (P953): `RailSeating` gives each point's mark
+one rail, and every end of that point runs a jumper to a free hole of it that no part's body lies over.
 
     BreadboardPlanner(geometry, catalog).plan(steps)  ->  BreadboardLayout  ->  WokwiBreadboardDiagram().render(layout)
 """
@@ -65,7 +66,8 @@ CODES = {
     NO_DRAWING_FACT: NO_DRAWING_FACT.meaning,
     NO_WOKWI_PIN: "the end in the subject has no Wokwi pin: its part's record does not map it, or it is a doubtful pad",
     ROW_FULL: "a pin's row has no free hole for one more jumper, as too many steps join it; the subject is the row",
-    NOT_DRAWN_YET: "the subject is not drawn yet: a rail, an off-board supply, or a resistor with both legs joined",
+    NOT_DRAWN_YET: ("the subject is not drawn yet: a rail with no sign or on a breadboard with no rails, a third rail of "
+                    "one sign, a resistor leg on a rail, an off-board supply, or a resistor with both legs joined"),
     PLANNER_FAULT: "a fault in spark's planner: a hole claimed twice or an unplaced part joined; the subject names it",
 }
 
@@ -211,6 +213,16 @@ class HoleLedger:
         self.claim(hole, by)
         return hole
 
+    def claim_nearest_free_hole(self, group, x, by):
+        """Claim the free hole of one group nearest to `x` (on a tie the left one), or NotDrawnError: the group is
+        full. A rail jumper takes it, so its run stays short."""
+        free = [hole for hole in self.surface.holes if hole.group == group and self.is_free(hole)]
+        if not free:
+            raise NotDrawnError("row %s has no free hole for %s" % (group, by), ROW_FULL, group)
+        hole = min(free, key=lambda one: (abs(one.x - x), one.x))
+        self.claim(hole, by)
+        return hole
+
     def claim_free_group(self, after, by):
         """Claim a hole in the first group right of column `after` with nothing in it, or NotDrawnError: the board is
         full."""
@@ -320,6 +332,34 @@ class FirstFitPartPlacement(PartPlacement):
                 and abs(hole.x - (left + cx)) < half_w and abs(hole.y - (top + cy)) < half_h]
 
 
+class RailSeating:
+    """
+    Strategy (P953): the rail each signed mark takes, built for one plan. A point's side is the side of the board (t or
+    b, the last letter of a row's group) that holds most of its ends, on a tie its first end's side. The first mark of a
+    sign takes that side's rail of the sign (+ is a "p" rail, - an "n" rail), a second the other side's, and a third is
+    not drawn yet. No bridge joins the two sides' rails: the steps would have to say it.
+    """
+
+    #: The last letter of a rail of each sign.
+    LETTERS = {"+": "p", "-": "n"}
+
+    def __init__(self, surface):
+        self.rails = list(surface.rails)
+        self.used = []
+
+    def group(self, mark, sign, sides):
+        """The rail group `mark` takes, `sides` the side of each of its ends in step order; NotDrawnError when its sign
+        has no free rail left."""
+        counts = collections.Counter(sides)
+        side = max(counts, key=lambda one: (counts[one], one == sides[0]))
+        others = [rail[0] for rail in self.rails if rail[0] != side]
+        for rail in [side + self.LETTERS.get(sign, "")] + [one + self.LETTERS.get(sign, "") for one in others]:
+            if rail in self.rails and rail not in self.used:
+                self.used.append(rail)
+                return rail
+        raise NotDrawnError("%s goes on a free %s rail, and none is left" % (mark, sign), NOT_DRAWN_YET, mark)
+
+
 class BreadboardPlanner:
     """Pure: the steps, the geometry and what to draw for each component in, a BreadboardLayout out. The space between
     part bodies is `spacing.BodySpacing`'s (P953): the layout names in `crowded` each part placed closer than it keeps."""
@@ -341,6 +381,8 @@ class BreadboardPlanner:
                 placed[step.subject] = self._place_apart(spacing, step.subject, ledger)
         self._refuse_what_is_not_drawn(seated)
         self._place_resistors(seated, placed, ledger, spacing)
+        self._claim_rail_holes_under_bodies(placed, ledger)
+        rails = self._seat_rails(seated, placed)
         parts_only = HoleLedger(self.geometry.surface, ledger.taken)
         groups, jumpers = {}, []
         for number, step in enumerate(seated, 1):
@@ -353,24 +395,54 @@ class BreadboardPlanner:
                 groups[end.name] = jumper.other.group
                 jumpers.append(jumper)
             else:
+                one = ledger.claim_free_hole(self._group_of(end, placed, groups), end.name)
                 anchor = step.anchor.seat().end
-                jumpers.append(Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
-                                      ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name), number,
-                                      role=step.role))
+                other = (ledger.claim_nearest_free_hole(rails[step.anchor], one.x, end.name) if anchor is None
+                         else ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name))
+                jumpers.append(Jumper(one, other, number, role=step.role))
         if spacing.gap:  # spark's own board; Wokwi's half board keeps the holes Wokwi was shown
             jumpers = ends_toward_their_runs(jumpers)
         return self.jumper_placement.place_jumpers(BreadboardLayout(
             self.geometry.surface.type, list(placed.values()), jumpers, self.geometry, tuple(spacing.crowded)), parts_only)
 
-    @staticmethod
-    def _refuse_what_is_not_drawn(seated):
+    def _refuse_what_is_not_drawn(self, seated):
+        """NotDrawnError for the first step the planner does not draw: a rail with no sign or on a breadboard with no
+        rails, a resistor leg on a rail (its pinned leg seats only in a row of holes), or a supply from off the board."""
         for step in seated:
-            if step.act != wiring_steps.PLACE and step.anchor.seat().kind == wiring_steps.RAIL:
-                mark = step.anchor.seat().mark
-                raise NotDrawnError("%s goes on a rail, and rails are not drawn yet" % mark, NOT_DRAWN_YET, mark)
+            seat = step.anchor.seat() if step.act != wiring_steps.PLACE else None
+            if seat and seat.kind == wiring_steps.RAIL and not (seat.sign and self.geometry.surface.rails):
+                why = "this breadboard has no rails" if seat.sign else "a rail with no sign is not drawn yet"
+                raise NotDrawnError("%s goes on a rail, and %s" % (seat.mark, why), NOT_DRAWN_YET, seat.mark)
+            if seat and seat.kind == wiring_steps.RAIL and step.act != wiring_steps.SUPPLY \
+                    and step.subject.kind == wiring_steps.RESISTOR:
+                raise NotDrawnError("%s has a leg on the %s rail, and a drawn resistor's leg goes only in a row"
+                                    % (step.subject.component, seat.mark), NOT_DRAWN_YET, step.subject.component)
             if step.act == wiring_steps.SUPPLY:
                 raise NotDrawnError("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject,
                                NOT_DRAWN_YET, step.subject)
+
+    def _claim_rail_holes_under_bodies(self, placed, ledger):
+        """Claim each free rail hole that a placed part's body lies over, or comes within half a pitch of, so a rail
+        jumper takes a hole a person can reach and its wire's leg clears the body."""
+        surface = self.geometry.surface
+        for part in placed.values():
+            box = BodyBox.of(part, self.geometry.part(part.type))
+            for hole in surface.holes:
+                if not hole.column and ledger.is_free(hole) and box.left - surface.pitch / 2 < hole.x < box.right + \
+                        surface.pitch / 2 and box.top - surface.pitch / 2 < hole.y < box.bottom + surface.pitch / 2:
+                    ledger.claim(hole, "%s, whose body lies over it" % part.id)
+
+    def _seat_rails(self, seated, placed):
+        """{rail anchor: its rail group}: each point on a rail seated by RailSeating, in step order, from the sides of
+        the rows its ends sit in."""
+        ends = collections.OrderedDict()
+        for step in seated:
+            if step.act == wiring_steps.JOIN and step.anchor.seat().kind == wiring_steps.RAIL:
+                ends.setdefault(step.anchor, []).append(step.subject)
+        seating = RailSeating(self.geometry.surface)
+        return {anchor: seating.group(anchor.seat().mark, anchor.seat().sign,
+                                      [self._group_of(end, placed, {})[-1] for end in found])
+                for anchor, found in ends.items()}
 
     def _place_apart(self, spacing, part_id, ledger, pinned=None, joins=None):
         """The part placed with its body right of `spacing`'s bound; when the board has no room for that, by the old
@@ -451,11 +523,19 @@ def end_group(end, placed, catalog, groups=None):
     return placed[end.component].holes[end_pin(end, catalog)].group
 
 
+#: The words of a rail group's letters (P953): its side, then its sign.
+RAIL_SIDES, RAIL_SIGNS = {"t": "top", "b": "bottom"}, {"p": "+", "n": "-"}
+
+
 def hole_label(hole):
-    """What a person reads on a breadboard for one terminal hole: its row letter, then its column (e41 for 41t.e). A rail
-    hole keeps its Wokwi name."""
+    """What a person reads on a breadboard for one hole: a terminal hole's row letter, then its column (e41 for 41t.e);
+    a rail hole's side, sign and number (top + rail, hole 3 for tp.3), else its Wokwi name."""
     group, _, letter = hole.name.partition(".")
-    return "%s%d" % (letter, hole.column) if hole.column else hole.name
+    if hole.column:
+        return "%s%d" % (letter, hole.column)
+    if len(group) == 2 and group[0] in RAIL_SIDES and group[1] in RAIL_SIGNS:
+        return "%s %s rail, hole %s" % (RAIL_SIDES[group[0]], RAIL_SIGNS[group[1]], letter)
+    return hole.name
 
 
 class StepHoles:
