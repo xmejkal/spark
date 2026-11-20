@@ -99,7 +99,7 @@ flowchart LR
   n21 ---|"20"| n19
 ```
 
-breadboard.json and breadboard.svg not written: nothing says how to draw L9110sModule in Wokwi.
+breadboard.json and breadboard.svg not written: nothing says how to draw L9110sModule: its record has no Wokwi part and no physical block.
 
 ### Points
 
@@ -133,8 +133,8 @@ After the steps, each line is one point: its ends must be joined, and nothing el
 Each record whole, with what it asks of the board: `parts.py --show jst-ph-2-power-inlet`, `parts.py --show l9110s-module`, `parts.py --show tactile-button`.
 --- stderr ---
 wrote <project-dir>/breadboard.md
-breadboard.json not written: nothing says how to draw L9110sModule in Wokwi
-breadboard.svg not written: nothing says how to draw L9110sModule in Wokwi
+breadboard.json not written: nothing says how to draw L9110sModule: its record has no Wokwi part and no physical block
+breadboard.svg not written: nothing says how to draw L9110sModule: its record has no Wokwi part and no physical block
 --- wiring-record.json ---
 {
  "steps": [

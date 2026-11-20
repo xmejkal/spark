@@ -144,7 +144,7 @@ for, numbered wiring steps (one connection each) and a mermaid diagram of them, 
 `breadboard.json` is an example layout of the same steps on a half breadboard (a board with a complete record, such as the FireBeetle 2 ESP32-S3, is drawn from the record on a 63-column breadboard as `breadboard.svg` alone, P412), each jumper in its step's color
 ([P267](https://github.com/xmejkal/spark/issues/300)). The person pastes it into the `diagram.json` of a new project
 on wokwi.com and compares it with their own breadboard. `breadboard.svg` is the same layout as a picture, which the
-sheet shows inline, each part as a plain pictogram ([P268](https://github.com/xmejkal/spark/issues/302)). A part you move in it stays where you put it at the next build ([P273](https://github.com/xmejkal/spark/issues/309)),
+sheet shows inline, each part as a plain pictogram ([P268](https://github.com/xmejkal/spark/issues/302)). A module with no Wokwi part is drawn from its record's `physical` block, with each pad and its printed label; each numbered step ends with the holes it uses, and a step calls a part by its record's `short_name` ([P945](https://github.com/xmejkal/spark/issues/1348)). A part you move in it stays where you put it at the next build ([P273](https://github.com/xmejkal/spark/issues/309)),
 if it still fits. A part it cannot keep is named, one line each, and with `--json` a `kept` entry with `did`
 `move not kept`. A resistor you move stays if its joined leg is still in the row it joins. A jumper you move stays, with its bends,
 if it still joins the two rows the new layout joins (its color is the step's). Otherwise it is named, for example
@@ -202,7 +202,7 @@ writes no `built`, and the tally says `not built yet`.
   the chain runs end to end
 ```
 
-In a project, the verdict then ends with `next:` and the look step: first write `firmware/main.py` from `pins.py`.
+In a project, the verdict then ends with `next:` and the look step: first write `firmware/main.py` from `pins.py`. When the picture cannot draw a part (`no_drawing_fact`), the build still exits 0 and a `research.py --part <id>` step comes first: offer it to the person before the wiring, because it finds the facts that draw the part (P945).
 
 15 routed traces carry the 18 written connections: a group of N connected pins needs N−1 traces.
 

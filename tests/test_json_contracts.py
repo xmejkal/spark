@@ -689,5 +689,30 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             "other.py:line 10: spark.core.result.Finding makes a Finding: Finding.of takes the fix from its Code"]))
 
 
+class TheDrawingCodeTest(unittest.TestCase):
+    """P945: no_drawing_fact is a Code, so a build's kept entry gives its fix filled with the record that lacks the fact."""
+
+    def test_no_drawing_fact_is_a_code_whose_fix_names_the_research_of_the_record(self):
+        from spark.breadboard import drawing
+        self.assertIsInstance(drawing.NO_DRAWING_FACT, Code)
+        self.assertEqual(drawing.NO_DRAWING_FACT, "no_drawing_fact")
+        self.assertEqual(drawing.NO_DRAWING_FACT.fix % "x-module", "research.py --part x-module --project . asks for the physical facts that draw it")
+        self.assertEqual(drawing.CODES["no_drawing_fact"], drawing.NO_DRAWING_FACT.meaning)
+        with self.assertRaises(TypeError):
+            codes.fix_of(drawing.NO_DRAWING_FACT)  # a template: its site fills it, never a raw %s
+
+    def test_a_kept_entry_with_no_record_has_no_fix_and_never_says_part_none(self):
+        from spark.breadboard import drawing
+        from spark.build import kept_files
+        from spark.breadboard import svg_diagram
+        renderer = svg_diagram.SvgBreadboardDiagram()
+        board = kept_files.not_written_entry(drawing.NotWritten(Path("breadboard.svg"), renderer, drawing.NO_DRAWING_FACT,
+                                                                "board-x", "nothing says how to draw the board board-x"))
+        self.assertEqual([key for key in ("record", "fix") if key in board], [])
+        part = kept_files.not_written_entry(drawing.NotWritten(Path("breadboard.svg"), renderer, drawing.NO_DRAWING_FACT,
+                                                               "XModule", "why", "x-module"))
+        self.assertEqual((part["record"], part["fix"]), ("x-module", "research.py --part x-module --project . asks for the physical facts that draw it"))
+
+
 if __name__ == "__main__":
     unittest.main()

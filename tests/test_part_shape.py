@@ -222,12 +222,151 @@ class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
         self.assertEqual((refused.exception.code, refused.exception.subject), ("no_drawing_fact", "board-x"))
 
 
+MODULE = part_shape.ModuleShapeSource()
+
+
+def epaper():
+    """The walk's e-paper record, with its physical block: the header on the back, 8 pins, the first 34.5 mm from the
+    left edge seen from the back (P945)."""
+    return json.loads((ROOT / "tests" / "data" / "breadboard" / "epaper" / "parts" / "epaper-2in9-bwr-mh-et-live.json").read_text())
+
+
+def module_refusal(record):
+    """(code, subject) of the refusal that ModuleShapeSource gives the record."""
+    with unittest.TestCase().assertRaises(drawing.NotDrawnError) as caught:
+        MODULE.find_shape(record)
+    return caught.exception.code, caught.exception.subject
+
+
+class AModuleIsDrawnFromItsPhysicalBlockTest(unittest.TestCase):
+    """P945: one row of header pins along the module's top edge, seen from above as it sits in the breadboard."""
+
+    def test_eight_pads_sit_one_pitch_apart_on_one_row_half_a_pitch_from_the_edge(self):
+        shape = MODULE.find_shape(epaper())
+        self.assertEqual(shape.size, (85, 44))
+        self.assertEqual(len(shape.pins), 8)
+        self.assertEqual({y for _, y in shape.pins.values()}, {1.27})
+        xs = sorted(x for x, _ in shape.pins.values())
+        self.assertEqual({round(right - left, 4) for left, right in zip(xs, xs[1:])}, {2.54})
+
+    def test_a_header_on_the_back_reads_mirrored_from_above(self):
+        pins = MODULE.find_shape(epaper()).pins
+        self.assertEqual(pins["VCC"], (50.5, 1.27))
+        self.assertEqual(pins["Busy"], (32.72, 1.27))
+        self.assertEqual(sorted(pins, key=lambda label: pins[label][0]),
+                         ["Busy", "Reset", "D/C", "CS", "SCLK", "SDI", "GND", "VCC"])
+
+    def test_a_header_on_the_front_keeps_the_order(self):
+        record = epaper()
+        record["physical"]["header"]["face"] = "front"
+        pins = MODULE.find_shape(record).pins
+        self.assertEqual(pins["VCC"], (34.5, 1.27))
+        self.assertEqual(sorted(pins, key=lambda label: pins[label][0]),
+                         ["VCC", "GND", "SDI", "SCLK", "CS", "D/C", "Reset", "Busy"])
+        self.assertNotIn("face", MODULE.find_shape(record).groups)
+
+    def test_a_row_counted_from_the_right_edge_starts_there(self):
+        record = epaper()
+        record["physical"]["header"].update(flush_edge="+x", face="front")
+        pins = MODULE.find_shape(record).pins
+        self.assertEqual(pins["VCC"], (50.5, 1.27))
+        self.assertEqual(pins["GND"], (47.96, 1.27))
+
+    def test_each_missing_field_is_refused_by_its_name(self):
+        for field in ("body_mm.width", "body_mm.height", "pin_order", "physical.header.rows", "physical.header.pins",
+                      "physical.header.pitch_mm", "physical.header.flush_edge", "physical.header.first_pad_from_edge_mm",
+                      "physical.header.face"):
+            record = epaper()
+            *path, last = field.split(".")
+            block = record
+            for key in path:
+                block = block[key]
+            del block[last]
+            with self.subTest(field=field):
+                self.assertEqual(module_refusal(record), ("no_header_fact", field))
+
+    def test_two_rows_are_refused_by_rows(self):
+        record = epaper()
+        record["physical"]["header"].update(rows=2, pins=[4, 4])
+        self.assertEqual(module_refusal(record), ("header_disagrees", "physical.header.rows"))
+
+    def test_a_pin_count_that_is_not_the_pin_order_s_is_refused_by_pins(self):
+        record = epaper()
+        record["physical"]["header"]["pins"] = [7]
+        self.assertEqual(module_refusal(record), ("header_disagrees", "physical.header.pins"))
+
+    def test_an_unknown_face_or_edge_is_refused_by_its_field(self):
+        for field, value in (("face", "top"), ("face", ["back"]), ("flush_edge", "+y"), ("flush_edge", ["-x"])):
+            record = epaper()
+            record["physical"]["header"][field] = value
+            with self.subTest(field=field, value=value):
+                self.assertEqual(module_refusal(record), ("header_disagrees", "physical.header." + field))
+
+    def test_a_size_that_is_not_a_finite_number_above_nothing_names_its_field(self):
+        for field, value in (("pitch_mm", 0), ("first_pad_from_edge_mm", -1), ("pitch_mm", float("nan")), ("pitch_mm", True)):
+            record = epaper()
+            record["physical"]["header"][field] = value
+            with self.subTest(field=field, value=value):
+                self.assertEqual(module_refusal(record), ("header_disagrees", "physical.header." + field))
+
+    def test_a_pad_outside_the_body_is_refused_by_first_pad_from_edge_mm(self):
+        record = epaper()
+        record["physical"]["header"]["first_pad_from_edge_mm"] = 70
+        self.assertEqual(module_refusal(record), ("header_disagrees", "physical.header.first_pad_from_edge_mm"))
+
+    def test_a_record_with_no_physical_block_is_declined(self):
+        record = epaper()
+        del record["physical"]
+        self.assertIsNone(MODULE.find_shape(record))
+        self.assertIsNone(MODULE.describe_part(record))
+
+    def test_a_module_s_part_px_has_no_usb_mark_and_its_labels_go_into_the_body(self):
+        part_px = MODULE.describe_part(epaper())
+        self.assertEqual((part_px["usb_mark"], part_px["labels"], part_px["full_surface"]), (False, "into-body", False))
+        self.assertEqual((part_px["ground"], part_px["doubtful"], part_px["covers_holes"]), (None, [], True))
+        self.assertEqual([note["sentence"] for note in part_px["notes"]],
+                         ["e-paper pads not verified", "e-paper header side not verified"])
+
+    def test_the_board_keeps_its_usb_mark_and_its_labels_beside_the_pads(self):
+        part_px = RECORD.describe_part(firebeetle())
+        self.assertEqual((part_px["usb_mark"], part_px["labels"], part_px["full_surface"]), (True, "beside", True))
+
+    def test_the_printed_spellings_name_the_pads_and_the_steps_pins_find_them(self):
+        self.assertIn("D/C", MODULE.find_shape(epaper()).pins)
+        self.assertEqual(MODULE.find_pin_names(epaper()), {
+            "VCC": "VCC", "GND": "GND", "SDI": "SDI", "SCLK": "SCLK", "CS": "CS", "DC": "D/C", "RESET": "Reset",
+            "BUSY": "Busy"})
+
+    def test_two_pins_printed_alike_are_refused_with_the_label(self):
+        record = epaper()
+        sclk = next(need for need in record["needs"] if need["pin"] == "SCLK")
+        sclk["printed"] = "CS"
+        self.assertEqual(module_refusal(record), ("duplicate_pad_label", "CS"))
+
+    def test_a_pad_with_no_pin_in_pin_order_is_refused_by_pin_order(self):
+        # the contract allows a null pad (nothing on it); one null and two nulls are both named by the field
+        for nulls in ([3], [3, 5]):
+            record = epaper()
+            for index in nulls:
+                record["pin_order"][index] = None
+            with self.subTest(nulls=nulls):
+                self.assertEqual(module_refusal(record), ("no_header_fact", "pin_order"))
+
+    def test_the_placer_is_given_by_injection(self):
+        class EveryPadAtOnePlace(part_shape.OneRowHeaderPlacer):
+            def place(self, header, size, labels):
+                return [(label, 1, 1) for label in labels]
+
+        pins = part_shape.ModuleShapeSource(EveryPadAtOnePlace()).find_shape(epaper()).pins
+        self.assertEqual(set(pins.values()), {(1, 1)})
+
+
 class TheGuideNamesEveryCodeTest(unittest.TestCase):
     def test_agents_md_names_every_code_and_the_kept_fields(self):
         guide = ROOT / "docs" / "guide"
         text = "".join(page.read_text() for page in [guide / "agents.md"] + sorted((guide / "agents").glob("*.md")))
         self.assertEqual([code for code in drawing.CODES if "`%s`" % code not in text], [])
-        for field in ("code", "subject", "expected", "drawn_from"):
+        for field in ("code", "subject", "expected", "drawn_from", "fix", "record"):
             self.assertIn("`%s`" % field, text)
 
 

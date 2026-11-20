@@ -116,8 +116,8 @@
  {
 "file": "scripts/spark/breadboard/part_shape.py",
 "name": "a size of zero is drawn",
-"find": "or value <= 0:",
-"replace": "or value < 0:"
+"find": "if not math.isfinite(value) or value <= 0:",
+"replace": "if not math.isfinite(value) or value < 0:"
 },
  {
 "file": "scripts/spark/breadboard/part_shape.py",
@@ -146,8 +146,8 @@
  {
 "file": "scripts/spark/breadboard/part_shape.py",
 "name": "the record part keeps the half breadboard",
-"find": "\"full_surface\": True}",
-"replace": "\"full_surface\": False}"
+"find": "labels=svg_diagram.LABELS_BESIDE, full_surface=True)",
+"replace": "labels=svg_diagram.LABELS_BESIDE, full_surface=False)"
 },
  {
 "file": "scripts/spark/breadboard/part_shape.py",

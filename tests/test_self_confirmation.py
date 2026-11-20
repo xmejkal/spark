@@ -46,6 +46,8 @@ MAY_READ = {
     "drawing.CODES": PINNED,
     "board_emitter.SCHEMATIC_STAGE": "the stage a refused input names, looked up in the build's table: the code under test (P852)",
     "board_emitter.FOOTPRINT_STAGE": "the stage a refused input names, looked up in the build's table: the code under test (P852)",
+    "drawing.NO_DRAWING_FACT": "the Code object under test (P945): its type, its word and its fix filled with a record, each "
+                               "compared with a literal; never a value the test takes as its own expectation",
     "drawing.NO_HOLE_LEFT": "the code a faked \"no room\" refusal must carry (P783: the code is required); it is carried, but no "
                             "assertion compares it: a fixture, not the expectation",
     "board_live.EXIT_FOR_ANSWER": STRUCTURE, "board_live.RAN": STRUCTURE,

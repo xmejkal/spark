@@ -24,6 +24,7 @@ from spark.breadboard import breadboard_codes
 from spark.breadboard import drawing
 from spark.breadboard import drawing_catalog
 from spark.breadboard import drawing_match
+from spark.breadboard import svg_diagram
 from spark.breadboard import kept_moves
 from spark.breadboard import wiring_steps
 
@@ -51,7 +52,7 @@ STEP_COLORS = wiring_steps.StepColors()
 #: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
 #: new entry here, and nothing else changes.
 DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(STEP_COLORS),
-                     drawing.SvgBreadboardDiagram(STEP_COLORS))
+                     svg_diagram.SvgBreadboardDiagram(STEP_COLORS))
 #: What the sheet says before power is applied, from `wiring_data`'s before_power.
 BEFORE_POWER_LIST = before_power.BeforePowerList()
 #: What the sheet says of the bench: one line per change since the last sheet for another design, in these words.
@@ -88,13 +89,14 @@ def refusal_code(stopped):
 
 
 def _passives(design_parts):
-    """{component name of a passive a part asks for: what it is for}, from the parts' records."""
-    found = {}
+    """{component name of a passive a part asks for: what it is for, the part said by its short name}, from the parts'
+    records."""
+    found, shorts = {}, board_components.short_names(design_parts)
     for part in design_parts:
         for host_part in part.get("host_parts") or []:
             phrase = PURPOSE.get(host_part["kind"], host_part["kind"] + " on")
             for name in board_components.host_part_names(part, host_part):
-                found[name] = "%s %s %s" % (phrase, board_components.component_name(part), host_part["pin"])
+                found[name] = "%s %s %s" % (phrase, shorts[board_components.component_name(part)], host_part["pin"])
     return found
 
 
@@ -163,9 +165,9 @@ def _parts_table(board, design_parts, resistors, supplies, have):
     status = (lambda record_id: have.get(record_id, HAVE_TO_GET)) if have is not None else (lambda record_id: "")
     rows = ["| qty | part | for | have |", "| --- | --- | --- | --- |",
             "| 1 | %s | the board | %s |" % (board.get("name"), status(board.get("id")))]
-    by_record = collections.OrderedDict()
+    by_record, shorts = collections.OrderedDict(), board_components.short_names(design_parts)
     for part in design_parts:
-        by_record.setdefault(part["id"], (part, []))[1].append(board_components.component_name(part))
+        by_record.setdefault(part["id"], (part, []))[1].append(shorts[board_components.component_name(part)])
     rows += ["| %d | %s | %s | %s |" % (len(names), part.get("name"), ", ".join(sorted(names)), status(record_id))
              for record_id, (part, names) in by_record.items()]
     by_value = collections.OrderedDict()
@@ -241,14 +243,18 @@ def wiring_data(requirements_path, circuit_path=None, read=None):
 
 def _drawing_inputs(read):
     """(geometry, catalog) the layout is planned on. Wokwi's own geometry for a board it measured; for a board drawn
-    from its own record, a copy that holds its part_px and spark's 63-column breadboard (P412)."""
+    from its own record, a copy that holds its part_px and spark's 63-column breadboard (P412). A module drawn from its
+    record adds its part_px to either (P945)."""
     wokwi = drawing.WokwiGeometry.load()
     catalog = drawing_catalog.describe_parts(read, wokwi)
+    geometry = wokwi
+    for drawn_type, module_px in drawing_catalog.record_parts(read).items():
+        geometry = geometry.with_part(drawn_type, module_px)
     board = read.built.board
     part_px, _ = part_shape.find_part_px(board, part_shape.sources_for(wokwi.data["parts"]))
     if not part_px.get("full_surface"):
-        return wokwi, catalog
-    geometry = wokwi.with_part(catalog[wiring_steps.THE_BOARD].type, part_px)
+        return geometry, catalog
+    geometry = geometry.with_part(catalog[wiring_steps.THE_BOARD].type, part_px)
     return geometry.with_surface(drawing.Surface.load_full()), catalog
 
 
@@ -351,8 +357,9 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
     lines += ["", "## Wiring"]
     if change_lines is not None:
         lines += [""] + change_lines
+    holes = drawing.StepHoles.of(planned.layout, steps) if planned.layout else None  # P945: each step names its holes
     for heading, intro, renderer in WIRING_VIEWS:
-        lines += ["", "### " + heading, "", intro, ""] + renderer.render(steps)
+        lines += ["", "### " + heading, "", intro, ""] + renderer.render(steps, holes)
     lines += _drawing_lines(planned)
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]
@@ -415,7 +422,7 @@ def _drawn_or_not(paths, planned):
     if layout:
         return drawn, [why._replace(path=path) for path, _, why in said if why]
     return drawn, [drawing.NotWritten(path, renderer, planned.stopped.code, planned.stopped.subject,
-                                      str(planned.stopped)) for path, renderer, _ in said]
+                                      str(planned.stopped), planned.stopped.record) for path, renderer, _ in said]
 
 
 def _texts(drawn, paths, planned):

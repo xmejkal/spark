@@ -205,8 +205,9 @@ class TheXiaoExampleTest(unittest.TestCase):
         steps = [line for line in text.split("### Steps", 1)[1].split("### Diagram", 1)[0].splitlines()
                  if re.match(r"^\d+\. ", line)]
         self.assertEqual(len(steps), 9, text)
-        self.assertEqual(steps[4], "5. Run a jumper from board D8 to the row of R1 end 1.")
-        self.assertEqual(steps[5], "6. Run a jumper from board D10 to the row of TactileButton A.")
+        # P945: each step ends with the holes the drawing uses
+        self.assertEqual(steps[4], "5. Run a jumper from board D8 to the row of R1 end 1. Holes: from j4 to f24.")
+        self.assertEqual(steps[5], "6. Run a jumper from board D10 to the row of TactileButton A. Holes: from j6 to a14.")
 
 
 class AStaleOrFailedBuildIsRefusedTest(unittest.TestCase):
@@ -453,6 +454,39 @@ class TheCommandLineTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("check_spine.py requirements.json --keep .", said)
         self.assertFalse((project / "breadboard.md").exists())
+
+
+class TheEpaperSheetTest(unittest.TestCase):
+    """P945: the walk's e-paper, whose record's short_name is "e-paper": every step, point and line before power calls it
+    so, and its 120-character record name is said once, in the parts table."""
+
+    @classmethod
+    def setUpClass(cls):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            cls.text = sheet.sheet(ROOT / "tests" / "data" / "breadboard" / "epaper" / "requirements.json")
+
+    def test_the_steps_and_the_points_name_the_e_paper(self):
+        self.assertIn("2. Put e-paper in the breadboard, each pin in its own row.", self.text)
+        self.assertIn("1. board 3V3 · e-paper VCC (back up, header at the top: the left end pin, above the label VCC)", self.text)
+        self.assertNotIn("Epaper2in9BwrMhEtLive", self.text)
+        self.assertEqual(self.text.count("MH-ET LIVE 2.9 Inch E-paper Module"), 1)
+
+    def test_a_line_before_power_opens_with_the_short_name(self):
+        lines = self.text.split("## Before you power it")[1].splitlines()
+        said = [line for line in lines if line.startswith("- ")]
+        self.assertTrue(said)
+        self.assertEqual([line for line in said if not line.startswith("- e-paper: ")], [])
+
+    def test_the_parts_table_says_what_the_part_is_for_by_its_short_name(self):
+        self.assertIn("8-pin header and 8-pin white connector | e-paper |", self.text)
+
+    def test_a_host_requirement_of_a_record_with_no_short_name_opens_with_its_name(self):
+        from spark.breadboard import before_power
+        part = {"id": "x-amp", "name": "Amplifier X", "host_requirements": ["feed it 5 V"]}
+        items = before_power.BeforePower.of([part], {}).items
+        self.assertEqual([(item.kind, item.subject) for item in items], [("host-requirement", "Amplifier X")])
+        items = before_power.BeforePower.of([dict(part, short_name="amp")], {}).items
+        self.assertEqual([(item.kind, item.subject) for item in items], [("host-requirement", "amp")])
 
 
 if __name__ == "__main__":

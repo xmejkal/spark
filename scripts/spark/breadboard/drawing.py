@@ -13,10 +13,10 @@ only the jumpers are connections.
 import collections
 import copy
 import json
-import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
-from spark.breadboard import part_pictures, wiring_steps
+from spark.breadboard import wiring_steps
+from spark.core import codes
 
 WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parents[3] / "data" / "wokwi-geometry.json"
 BREADBOARDS_FILE = Path(__file__).resolve().parents[3] / "data" / "breadboards.json"
@@ -39,12 +39,16 @@ BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts 
 NO_HEADER_FACT, HEADER_DISAGREES = "no_header_fact", "header_disagrees"
 NO_DOUBTFUL_PAD_FACT, GROUND_NOT_ONE = "no_doubtful_pad_fact", "ground_not_one"
 DUPLICATE_PAD_LABEL, NO_HOLE_LEFT, NO_WOKWI_PART = "duplicate_pad_label", "no_hole_left", "no_wokwi_part"
-NO_PIN_POSITION, NO_DRAWING_FACT, NO_WOKWI_PIN = "no_pin_position", "no_drawing_fact", "no_wokwi_pin"
+NO_PIN_POSITION, NO_WOKWI_PIN = "no_pin_position", "no_wokwi_pin"
+#: The one code here that is a Code (P945): its fix, filled with the part record's id, says how to get the facts.
+NO_DRAWING_FACT = codes.Code("no_drawing_fact", "nothing says how to draw a part (no Wokwi part and no physical block in its "
+                             "record) or the board; the subject is it", "research.py --part %s --project . asks for the physical facts that draw it")
 ROW_FULL, NOT_DRAWN_YET, PLANNER_FAULT = "row_full", "not_drawn_yet", "planner_fault"
 #: Each code with the one sentence that says what it means. Every refusal has one (P691).
 CODES = {
-    NO_HEADER_FACT: "the board's record lacks a field its pads or its outline need; the subject is the first field",
-    HEADER_DISAGREES: "the board's record disagrees with itself, a value of the wrong kind or a pad order that does not fit the pin counts",
+    NO_HEADER_FACT: "the board's or the module's record lacks a field its pads or its outline need; the subject is the first field",
+    HEADER_DISAGREES: ("the board's or the module's record disagrees with itself, a value of the wrong kind or a pad order "
+                       "that does not fit the pin counts"),
     NO_DOUBTFUL_PAD_FACT: "the board's record does not say which pads are doubtful (physical.header.doubtful_pads), so no ground is picked",
     GROUND_NOT_ONE: "the board's ground pads, less the doubtful ones, are not exactly one; the subject names those left",
     DUPLICATE_PAD_LABEL: "two pads of the board's record have one label; the subject is the label",
@@ -52,7 +56,7 @@ CODES = {
                    "free row for a jumper; the subject is the part or the end"),
     NO_WOKWI_PART: "Wokwi has no part with this board's pins, so no Wokwi diagram is written, by design",
     NO_PIN_POSITION: "data/wokwi-geometry.json lacks a Wokwi type's pins or one of them; the subject is the type",
-    NO_DRAWING_FACT: "nothing says how to draw a part (no Wokwi part in its record) or the board; the subject is it",
+    NO_DRAWING_FACT: NO_DRAWING_FACT.meaning,
     NO_WOKWI_PIN: "the end in the subject has no Wokwi pin: its part's record does not map it, or it is a doubtful pad",
     ROW_FULL: "a pin's row has no free hole for one more jumper, as too many steps join it; the subject is the row",
     NOT_DRAWN_YET: "the subject is not drawn yet: a rail, an off-board supply, or a resistor with both legs joined",
@@ -61,8 +65,9 @@ CODES = {
 
 
 #: Value: a drawing a build did not write: where it would be, its renderer, why as a code from CODES with its subject
-#: (None when it has none), and the sentence a person reads.
-NotWritten = collections.namedtuple("NotWritten", "path renderer code subject why")
+#: (None when it has none), the sentence a person reads, and the id of the part record that lacks the fact (None when
+#: no record is known).
+NotWritten = collections.namedtuple("NotWritten", "path renderer code subject why record", defaults=(None,))
 #: The codes of a refusal a retry gives again: by design, or a drawing spark does not make yet. No failure the person can
 #: fix; for NOT_DRAWN_YET, the sheet's steps say how to wire it by hand.
 BY_DESIGN = (NO_WOKWI_PART, NOT_DRAWN_YET)
@@ -70,12 +75,23 @@ BY_DESIGN = (NO_WOKWI_PART, NOT_DRAWN_YET)
 
 class NotDrawnError(Exception):
     """The steps cannot be drawn: a fact the drawing needs is missing, or the breadboard has no room. `code` (one of
-    CODES, required) and `subject` say which, so a caller never reads the message."""
+    CODES, required) and `subject` say which, so a caller never reads the message. `record` is the id of the part record
+    that lacks the fact, None when no record is known."""
 
-    def __init__(self, message, code, subject=None):
+    def __init__(self, message, code, subject=None, record=None):
         super().__init__(message)
         self.code = code
         self.subject = subject
+        self.record = record
+
+
+class Catalog(dict):
+    """Value: what the planner draws each component as, {component: DrawnPart}, and `undrawn`, {component: the id of its
+    part record} for each part that nothing says how to draw, so the refusal names the record to research."""
+
+    def __init__(self, drawn=(), undrawn=None):
+        super().__init__(drawn)
+        self.undrawn = dict(undrawn or {})
 
 
 class Surface:
@@ -381,11 +397,16 @@ class BreadboardPlanner:
         return end_pin(end, self.catalog)
 
 
+#: Why a part is not drawn, filled with its component: neither of the two ways to draw it is in its record.
+NO_DRAWING_MESSAGE = "nothing says how to draw %s: its record has no Wokwi part and no physical block"
+
+
 def drawn_part(component, catalog):
-    """What the catalog draws for one component, or NotDrawnError naming it."""
+    """What the catalog draws for one component, or NotDrawnError naming it and the record the catalog knows it by."""
     drawn = catalog.get(component)
     if drawn is None:
-        raise NotDrawnError("nothing says how to draw %s in Wokwi" % component, NO_DRAWING_FACT, component)
+        raise NotDrawnError(NO_DRAWING_MESSAGE % component, NO_DRAWING_FACT, component,
+                            record=getattr(catalog, "undrawn", {}).get(component))
     return drawn
 
 
@@ -405,6 +426,59 @@ def end_group(end, placed, catalog, groups=None):
     if end.component not in placed:
         raise NotDrawnError("%s is joined before it is placed" % end.name, PLANNER_FAULT, end.name)
     return placed[end.component].holes[end_pin(end, catalog)].group
+
+
+def hole_label(hole):
+    """What a person reads on a breadboard for one terminal hole: its row letter, then its column (e41 for 41t.e). A rail
+    hole keeps its Wokwi name."""
+    group, _, letter = hole.name.partition(".")
+    return "%s%d" % (letter, hole.column) if hole.column else hole.name
+
+
+class StepHoles:
+    """
+    Value: the holes each numbered step uses in one planned layout (P945), {step number: words}, which the step list
+    appends: a placing step names its part's holes, a jumper its two holes in the order the step runs it, and a
+    resistor leg its own hole, at the step that puts it in. A step the layout does not draw has none. Built by `of`; it decides nothing again.
+    """
+
+    def __init__(self, words):
+        self.words = dict(words)
+
+    def get(self, number):
+        """The words of one step's holes, or None."""
+        return self.words.get(number)
+
+    @staticmethod
+    def _span(holes):
+        """A part's holes by row letter, then column: each run of neighbouring columns as one range, "e38 to e45", and a
+        hole with no neighbour alone, so "e12, e14" never reads as e13 too."""
+        runs = []
+        for hole in sorted(holes, key=lambda hole: (hole.name.partition(".")[2], hole.column)):
+            last = runs[-1][-1] if runs else None
+            if last and last.name.partition(".")[2] == hole.name.partition(".")[2] and hole.column == last.column + 1:
+                runs[-1].append(hole)
+            else:
+                runs.append([hole])
+        return ", ".join(hole_label(run[0]) if len(run) == 1 else "%s to %s" % (hole_label(run[0]), hole_label(run[-1]))
+                         for run in runs)
+
+    @classmethod
+    def of(cls, layout, steps):
+        """The holes of `steps` (a BreadboardSteps) as `layout` draws them, numbered as `steps.numbered()` numbers them."""
+        placed = {part.id: part for part in layout.parts}
+        jumpers = {jumper.step: jumper for jumper in layout.jumpers}
+        words = {}
+        for number, seated in enumerate(steps.anchored(), 1):
+            if number in jumpers:
+                words[number] = "from %s to %s" % (hole_label(jumpers[number].one), hole_label(jumpers[number].other))
+            elif seated.act == wiring_steps.PLACE and seated.subject in placed:
+                words[number] = cls._span(placed[seated.subject].holes.values())
+            elif seated.act in (wiring_steps.SETUP, wiring_steps.JOIN) and seated.subject.kind == wiring_steps.RESISTOR \
+                    and seated.subject.component in placed:
+                hole = placed[seated.subject.component].holes.get(seated.subject.pin)
+                words[number] = hole_label(hole) if hole else None
+        return cls({number: said for number, said in words.items() if said})
 
 
 class WokwiBreadboardDiagram:
@@ -458,142 +532,3 @@ def _round_px(value):
     """A position as the file holds it: rounded once, here, and whole when it is whole."""
     value = round(value, 3)
     return int(value) if value == int(value) else value
-
-
-class SvgBreadboardDiagram:
-    """
-    Renderer: a BreadboardLayout as an SVG picture in Wokwi's px, for the sheet to show (P268, #302): the breadboard's
-    holes and rails, each part as its picture at its holes, turned about its measured center as Wokwi turns it, with
-    a dot on each pin and its id, then each jumper as a line in its step's color with its number. Built with
-    ElementTree, so every text is escaped, and rounded once, so the same layout gives the same bytes.
-    """
-
-    FILE_NAME = "breadboard.svg"
-    NOUN = "breadboard picture"
-    PURPOSE_MESSAGE = "a picture of the same layout, which breadboard.md shows"
-    SHEET_MESSAGE = "![The layout on a breadboard](breadboard.svg)"
-    #: The space around the outermost holes, in px.
-    MARGIN_PX = 14
-    #: The room under the holes for the note of a board whose facts are not all verified, in px.
-    NOTE_PX = 14
-
-    def __init__(self, colors=None, pictures=None):
-        self.colors = colors or wiring_steps.StepColors()
-        self.pictures = pictures or part_pictures.PictogramPartPictures()
-
-    def why_not_written(self, layout):
-        """None: the picture is written for any layout."""
-        return None
-
-    def text(self, layout):
-        ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)
-        surface = layout.geometry.surface
-        notes = [note["sentence"] for part in layout.parts for note in layout.geometry.part(part.type).get("notes", [])]
-        width = _round_px(max(hole.x for hole in surface.holes) + 2 * self.MARGIN_PX)
-        height = _round_px(max(hole.y for hole in surface.holes) + self.MARGIN_PX + (self.NOTE_PX if notes else 0))
-        root = ElementTree.Element(_svg("svg"), {"width": str(width), "height": str(height),
-                                                   "viewBox": "0 0 %s %s" % (width, height)})
-        ElementTree.SubElement(root, _svg("rect"), {"width": str(width), "height": str(height), "rx": "6",
-                                                    "fill": "#f4f4f4"})
-        holes = "".join("M%s %sh0" % (_round_px(hole.x), _round_px(hole.y)) for hole in surface.holes)
-        ElementTree.SubElement(root, _svg("path"), {"d": holes, "stroke": "#a8a8a8", "stroke-width": "3.5",
-                                                    "stroke-linecap": "round"})
-        for rail in surface.rails:
-            row = [hole for hole in surface.holes if hole.group == rail]
-            # a red line above each + rail and a blue one below each - rail, as Wokwi draws them
-            first, last = min(hole.x for hole in row), max(hole.x for hole in row)
-            outer = -1 if rail.endswith("p") else 1
-            y = _round_px(row[0].y + outer * 5)
-            ElementTree.SubElement(root, _svg("line"), {"x1": str(_round_px(first)), "y1": str(y),
-                                                        "x2": str(_round_px(last)), "y2": str(y), "stroke-width": "1",
-                                                        "stroke": "#e53935" if rail.endswith("p") else "#1e88e5"})
-        for part in layout.parts:
-            self._part(root, part, layout.geometry)
-        for jumper in layout.jumpers:
-            self._jumper(root, jumper, layout.geometry.surface.pitch)
-        for part in layout.parts:
-            self._label(root, part, layout.geometry)  # last, so no wire or other part covers a pin or a name
-        if notes:
-            note = ElementTree.SubElement(root, _svg("text"), {
-                "x": str(self.MARGIN_PX), "y": str(_round_px(height - 4)), "font-size": "8", "font-family": "sans-serif",
-                "fill": "#5d4037"})
-            note.text = ", ".join(notes)
-        return ElementTree.tostring(root, encoding="unicode") + "\n"
-
-    @staticmethod
-    def _turn(part, part_px):
-        """The transform that puts a part's own frame where Wokwi shows it: moved to its corner, turned about its center."""
-        cx, cy = part_px["center"]
-        return "translate(%s %s) rotate(%s %s %s)" % (_round_px(part.left), _round_px(part.top), part.rotate,
-                                                      _round_px(cx), _round_px(cy))
-
-    def _part(self, root, part, geometry):
-        part_px = geometry.part(part.type)
-        picture = self.pictures.picture(part.type)
-        group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part, part_px)})
-        width, height = part_px["size"]
-        x, y, view_width, view_height = picture.view_box
-        inner = ElementTree.SubElement(group, _svg("g"), {"transform": "scale(%s %s) translate(%s %s)" % (
-            _round_px(width / view_width), _round_px(height / view_height), _round_px(-x), _round_px(-y))})
-        for child in ElementTree.fromstring('<g xmlns="%s">%s</g>' % (part_pictures.SVG_NAMESPACE, picture.markup)):
-            inner.append(child)
-        if picture.credit:
-            ElementTree.SubElement(group, _svg("title")).text = picture.credit
-
-    def _pad_labels(self, root, part, part_px):
-        """A board drawn from its record (P412): each pad's label beside its pin inside the body, a dashed ring on a
-        doubtful pad, and a mark at the USB end (named in no word, since its place is not verified). Drawn in the part's own frame, so it turns with the part."""
-        cx, _ = part_px["center"]
-        height = part_px["size"][1]
-        group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part, part_px)})
-        for pad, (x, y) in part_px["pins"].items():
-            if pad in part_px["doubtful"]:
-                ElementTree.SubElement(group, _svg("circle"), {
-                    "cx": str(_round_px(x)), "cy": str(_round_px(y)), "r": "4", "fill": "none", "stroke": "#e65100",
-                    "stroke-width": "1", "stroke-dasharray": "2 1.5"})
-            inward = x < cx
-            label = ElementTree.SubElement(group, _svg("text"), {
-                "x": str(_round_px(x + (5 if inward else -5))), "y": str(_round_px(y + 2)), "font-size": "6",
-                "font-family": "sans-serif", "text-anchor": "start" if inward else "end", "fill": "#ffffff",
-                "stroke": "#0d47a1", "stroke-width": "1.5", "paint-order": "stroke"})
-            label.text = pad
-        ElementTree.SubElement(group, _svg("rect"), {
-            "x": str(_round_px(cx - 17)), "y": str(_round_px(height - 12)), "width": "34", "height": "12", "rx": "3",
-            "fill": "#cfd8dc", "stroke": "#455a64", "stroke-width": "1"})
-
-    def _label(self, root, part, geometry):
-        part_px = geometry.part(part.type)
-        if part_px.get("pad_labels"):
-            self._pad_labels(root, part, part_px)
-        for hole in part.holes.values():
-            ElementTree.SubElement(root, _svg("circle"), {"cx": str(_round_px(hole.x)), "cy": str(_round_px(hole.y)),
-                                                          "r": "2.5", "fill": "#2e7d32"})
-        cx, cy = part_px["center"]
-        label = ElementTree.SubElement(root, _svg("text"), {
-            "x": str(_round_px(part.left + cx)), "y": str(_round_px(part.top + cy)), "font-size": "8",
-            "font-family": "sans-serif", "text-anchor": "middle", "fill": "#1a1a1a", "stroke": "#ffffff",
-            "stroke-width": "2.5", "paint-order": "stroke"})
-        label.text = part.id
-
-    def _jumper(self, root, jumper, pitch):
-        """One jumper along the holes: out of its first hole along the column, across between two rows of holes, and
-        into its last hole. Its bends sit half a pitch off the holes, so no bend looks like a joint with a hole of
-        another group."""
-        color = self.colors.color(jumper.step)
-        one, other = jumper.one, jumper.other
-        half = pitch / 2
-        across = other.y - half if other.y > one.y else other.y + half
-        ElementTree.SubElement(root, _svg("path"), {
-            "d": "M%s %sL%s %sL%s %sL%s %s" % (
-                _round_px(one.x), _round_px(one.y), _round_px(one.x), _round_px(across), _round_px(other.x),
-                _round_px(across), _round_px(other.x), _round_px(other.y)),
-            "fill": "none", "stroke": color, "stroke-width": "2.5", "stroke-linecap": "round",
-            "stroke-linejoin": "round"})
-        number = ElementTree.SubElement(root, _svg("text"), {
-            "x": str(_round_px(one.x + 3)), "y": str(_round_px(across - 2)), "font-size": "9",
-            "font-family": "sans-serif", "font-weight": "bold", "fill": color})
-        number.text = str(jumper.step)
-
-
-def _svg(tag):
-    return "{%s}%s" % (part_pictures.SVG_NAMESPACE, tag)

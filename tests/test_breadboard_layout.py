@@ -330,6 +330,135 @@ class TheRecordBoardLayoutTest(unittest.TestCase):
         self.assertEqual((min(h.column for h in button.holes.values()), max(h.column for h in button.holes.values())), (26, 28))
 
 
+EPAPER = ROOT / "tests" / "data" / "breadboard" / "epaper"
+
+
+def epaper_inputs(read):
+    """(geometry, catalog) of the e-paper fixture as the build gives the planner: the module's part_px from its physical
+    block, the header on the back, 8 pads 2.54 mm apart, the first 34.5 mm from the left edge seen from the back, half
+    a pitch from the top edge. Its labels are the printed ones, so the pin DC is the pad D/C (P945)."""
+    return sheet._drawing_inputs(read)
+
+
+class AModuleDrawnFromItsRecordTest(unittest.TestCase):
+    """P945: the walk's e-paper, whose record has a physical block and no Wokwi part, through the real planner beside the
+    FireBeetle on the full breadboard."""
+
+    @classmethod
+    def setUpClass(cls):
+        with in_store():
+            cls.read = sheet._read_build(EPAPER / "requirements.json")
+        cls.geometry, cls.catalog = epaper_inputs(cls.read)
+        cls.layout = drawing.BreadboardPlanner(cls.geometry, cls.catalog).plan(cls.read.steps)
+        cls.module = next(part for part in cls.layout.parts if part.id == "Epaper2in9BwrMhEtLive")
+
+    def test_its_8_holes_lie_on_one_letter_one_pitch_apart_seen_from_the_front(self):
+        holes = self.module.holes
+        self.assertEqual(len(holes), 8)
+        self.assertEqual({hole.name.split(".")[1] for hole in holes.values()}, {"e"})
+        # seen from the front, the back's left end (VCC) is on the right, and Busy is on the left
+        order = sorted(holes, key=lambda pin: holes[pin].x)
+        self.assertEqual(order, ["Busy", "Reset", "D/C", "CS", "SCLK", "SDI", "GND", "VCC"])
+        xs = [holes[pin].x for pin in order]
+        self.assertEqual({round(right - left, 3) for left, right in zip(xs, xs[1:])}, {9.6})
+
+    def test_the_pin_dc_finds_its_printed_pad_d_c(self):
+        end = next(end for point in self.read.steps.points for end in point.ends if end.component == "Epaper2in9BwrMhEtLive"
+                   and end.pin == "DC")
+        self.assertEqual(drawing.end_pin(end, self.catalog), "D/C")
+        self.assertEqual(drawing.end_group(end, {part.id: part for part in self.layout.parts}, self.catalog),
+                         self.module.holes["D/C"].group)
+
+    def test_each_pin_s_group_keeps_a_free_hole_for_its_jumper(self):
+        groups = {hole.group for hole in self.module.holes.values()}
+        ends = {hole.group for jumper in self.layout.jumpers for hole in (jumper.one, jumper.other)}
+        self.assertEqual(groups, ends & groups)
+        self.assertEqual(len(groups), 8)
+
+    def test_the_catalog_maps_each_pin_to_its_printed_pad_and_the_geometry_knows_the_module(self):
+        drawn = self.catalog["Epaper2in9BwrMhEtLive"]
+        self.assertEqual((drawn.type, drawn.pins["DC"], drawn.pins["RESET"], drawn.pins["VCC"]),
+                         ("spark-module-epaper-2in9-bwr-mh-et-live", "D/C", "Reset", "VCC"))
+        self.assertEqual(self.geometry.part(drawn.type)["labels"], "into-body")
+        self.assertEqual(self.catalog.undrawn, {})
+
+    def test_the_sheet_writes_the_picture_and_no_wokwi_diagram(self):
+        import shutil
+        project = Path(tempfile.mkdtemp()) / "epaper"
+        shutil.copytree(EPAPER, project)
+        with in_store():
+            written = sheet.write(project / "requirements.json", project / "breadboard.md")
+        self.assertEqual([path.name for path, _ in written.drawings], ["breadboard.svg"])
+        self.assertEqual([(one.path.name, one.code) for one in written.not_written], [("breadboard.json", "no_wokwi_part")])
+
+
+class AModuleWithNoDrawingFactTest(unittest.TestCase):
+    """P945: a module with neither a Wokwi part nor a physical block stops the drawing, and names its record."""
+
+    def test_the_refusal_names_the_component_and_the_record(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        del read.built.parts[0]["physical"]
+        geometry, catalog = sheet._drawing_inputs(read)
+        self.assertEqual(catalog.undrawn, {"Epaper2in9BwrMhEtLive": "epaper-2in9-bwr-mh-et-live"})
+        with self.assertRaisesRegex(NotDrawnError, "nothing says how to draw Epaper2in9BwrMhEtLive: its record has no "
+                                                   "Wokwi part and no physical block") as refused:
+            drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
+        self.assertEqual((refused.exception.code, refused.exception.subject, refused.exception.record),
+                         ("no_drawing_fact", "Epaper2in9BwrMhEtLive", "epaper-2in9-bwr-mh-et-live"))
+
+    def test_a_physical_block_that_lacks_a_field_stops_the_plan_by_that_field(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        del read.built.parts[0]["physical"]["header"]["face"]
+        planned = sheet._plan_once(read)
+        self.assertEqual((planned.stopped.code, planned.stopped.subject), ("no_header_fact", "physical.header.face"))
+
+
+class EachStepNamesItsHolesTest(unittest.TestCase):
+    """P945: the step list names the holes each step uses in the planned layout, read as a person reads a breadboard."""
+
+    def test_the_e_paper_s_steps_name_their_holes_in_the_order_the_step_runs(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        layout = drawing.BreadboardPlanner(*epaper_inputs(read)).plan(read.steps)
+        lines = wiring_steps.NumberedList().render(read.steps, drawing.StepHoles.of(layout, read.steps))
+        self.assertEqual(lines[:4], [
+            "1. Put the board in the breadboard, each pin in its own row. Holes: b6 to b23, i10 to i23.",
+            "2. Put e-paper in the breadboard, each pin in its own row. Holes: e38 to e45.",
+            "3. Run a jumper from board 3V3 to the row of e-paper VCC. Holes: from a7 to a45.",
+            "4. Run a jumper from board A5 to the row of e-paper DC. Holes: from j14 to a40."])
+        self.assertEqual(len(lines), 10)
+        self.assertTrue(all(" Holes: " in line for line in lines))
+
+    def test_a_resistor_s_setup_and_its_joined_leg_name_their_holes(self):
+        read = xiao_read()
+        layout = drawing.BreadboardPlanner(GEOMETRY, drawing_catalog.describe_parts(read, GEOMETRY)).plan(read.steps)
+        holes = drawing.StepHoles.of(layout, read.steps)
+        resistor = next(part for part in layout.parts if part.id == "R1")
+        seated = list(read.steps.anchored())
+        for number, step in enumerate(seated, 1):
+            if step.act == "setup" and step.subject.kind == "resistor":  # the leg the step puts in, not both
+                self.assertEqual(holes.get(number), drawing.hole_label(resistor.holes[step.subject.pin]))
+            if step.act == "join" and step.subject.kind == "resistor":
+                self.assertEqual(holes.get(number), drawing.hole_label(resistor.holes[step.subject.pin]))
+        self.assertTrue(any(step.subject.kind == "resistor" for step in seated if step.act in ("setup", "join")))
+
+    def test_a_range_covers_only_neighbouring_columns(self):
+        holes = [drawing.Hole(name, 0, 0, name.split(".")[0], int(name.split("t")[0]))
+                 for name in ("14t.e", "12t.e", "12t.j", "14t.j", "15t.j", "16t.j")]
+        self.assertEqual(drawing.StepHoles._span(holes), "e12, e14, j12, j14 to j16")
+
+    def test_a_hole_reads_letter_then_column_and_a_rail_keeps_its_name(self):
+        self.assertEqual(drawing.hole_label(drawing.Hole("41t.e", 0, 0, "41t", 41)), "e41")
+        self.assertEqual(drawing.hole_label(drawing.Hole("tp.3", 0, 0, "tp", 0)), "tp.3")
+
+    def test_with_no_layout_the_steps_read_as_before(self):
+        read = xiao_read()
+        self.assertEqual(wiring_steps.NumberedList().render(read.steps, None), wiring_steps.NumberedList().render(read.steps))
+        self.assertFalse(any(" Holes: " in line for line in wiring_steps.NumberedList().render(read.steps)))
+
+
 class AnOldDrawingTest(unittest.TestCase):
     def test_write_removes_a_drawing_an_earlier_build_left_when_this_one_cannot_be_drawn(self):
         import shutil
@@ -474,7 +603,8 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         read = xiao_read()
         catalog = drawing_catalog.describe_parts(read, GEOMETRY)
         del catalog["LedRed5mm"]
-        with self.assertRaisesRegex(NotDrawnError, "nothing says how to draw LedRed5mm in Wokwi") as refused:
+        with self.assertRaisesRegex(NotDrawnError, "nothing says how to draw LedRed5mm: its record has no Wokwi part "
+                                                   "and no physical block") as refused:
             drawing.BreadboardPlanner(GEOMETRY, catalog).plan(read.steps)
         self.assertEqual((refused.exception.code, refused.exception.subject), ("no_drawing_fact", "LedRed5mm"))
 

@@ -14,7 +14,7 @@
  {
   "file": "scripts/spark/breadboard/drawing.py",
   "name": "P783: a NotDrawnError may be made without a code again",
-  "find": "    def __init__(self, message, code, subject=None):",
-  "replace": "    def __init__(self, message, code=None, subject=None):"
+  "find": "    def __init__(self, message, code, subject=None, record=None):",
+  "replace": "    def __init__(self, message, code=None, subject=None, record=None):"
  }
 ]

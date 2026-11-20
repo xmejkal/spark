@@ -31,7 +31,7 @@ THE_BOARD = "board"
 #: needs a jumper to a free row.
 ANCHOR_ORDER = (PART, RESISTOR, BOARD)
 
-#: One end of a connection: its kind, the component it belongs to (one diagram box each), its short name (in the
+#: One end of a connection: its kind, the component it belongs to (one diagram box each), its end label (in the
 #: diagram, and where another end joins it), the full words a step says when it moves this end, and its pin on the
 #: component (the board's printed label, the part's pin, the resistor's end number), which a drawing looks up. A
 #: resistor end also says its job (what the part asks it to do) and its value, which stay the same when its tag renumbers.
@@ -141,11 +141,18 @@ def move(end, destination):
 
 
 class BreadboardSteps:
-    """Value: the steps of one build, from what to place (the board, then each part) and the points to join."""
+    """Value: the steps of one build, from what to place (the board, then each part) and the points to join. `shorts`
+    is {component: the name a person calls it by} (`board_components.short_names`, P945); a component not in it is
+    called by its component name."""
 
-    def __init__(self, placed, points):
+    def __init__(self, placed, points, shorts=None):
         self.placed = list(placed)
         self.points = list(points)
+        self.shorts = dict(shorts or {})
+
+    def short_name(self, component):
+        """The name a step calls a component by."""
+        return self.shorts.get(component, component)
 
     def numbered(self):
         """[NumberedStep], in the order of anchored(), numbered from 1: each thing placed, then each point's anchor set up
@@ -157,7 +164,8 @@ class BreadboardSteps:
         """[Seated], in order, each step with what it does, its subject and its anchor. numbered() numbers them for the
         step list, the diagram and a page; a drawing numbers them itself."""
         walked = [Seated(WiringStep("Put %s in the breadboard, each pin in its own row."
-                              % ("the board" if placed == THE_BOARD else placed), None), PLACE, placed, None, False)
+                              % ("the board" if placed == THE_BOARD else self.short_name(placed)), None), PLACE, placed, None,
+                                  False)
                   for placed in self.placed]
         for point in self.points:
             anchor = anchor_for(point)
@@ -182,17 +190,23 @@ class BreadboardSteps:
 
 
 class NumberedList:
-    """Renderer: the steps as numbered Markdown lines."""
+    """Renderer: the steps as numbered Markdown lines. Given `holes` (a `drawing.StepHoles` of the planned layout, P945),
+    each step that the drawing places ends with the holes it uses."""
 
-    def render(self, steps):
-        return ["%d. %s" % (step.number, step.words) for step in steps.numbered()]
+    #: What a step's holes add to its line, filled with the holes' words.
+    HOLES_MESSAGE = " Holes: %s."
+
+    def render(self, steps, holes=None):
+        return ["%d. %s%s" % (step.number, step.words, self.HOLES_MESSAGE % holes.get(step.number)
+                              if holes and holes.get(step.number) else "") for step in steps.numbered()]
 
 
 class MermaidDiagram:
     """Renderer: a mermaid flowchart. A box per component, a node per end, a rail or a supply as a node, and one edge
     per step that joins two things, labelled with its number."""
 
-    def render(self, steps):
+    def render(self, steps, holes=None):
+        """The diagram's lines. `holes` is taken as the step list takes it and not drawn: an edge is a step, not a hole."""
         ids = {}
 
         def node(name, indent):
@@ -200,7 +214,7 @@ class MermaidDiagram:
 
         lines = ["```mermaid", "flowchart LR"]
         for number, (component, names) in enumerate(steps.boxes().items(), 1):
-            lines += ['  subgraph g%d["%s"]' % (number, _quote(component))]
+            lines += ['  subgraph g%d["%s"]' % (number, _quote(steps.short_name(component)))]
             lines += [node(name, "    ") for name in names] + ["  end"]
         edges = [(step.number, step.edge) for step in steps.numbered() if step.edge]
         lines += [node(name, "  ") for name in dict.fromkeys(name for _, edge in edges for name in edge)
@@ -291,6 +305,7 @@ def wiring(board, circuit, design_parts, resistors, board_component):
     """The wiring: one numbered line per connection point, board labels first, and the same points as steps.
     `board_component` is the circuit's name for the board (`sheet.BOARD_COMPONENT`)."""
     records = {board_components.component_name(part): part for part in design_parts}
+    shorts = board_components.short_names(design_parts)
 
     def end(component, port):
         """One end of a connection, as a person finds it on the bench. Every end of a part or a resistor reads
@@ -306,14 +321,14 @@ def wiring(board, circuit, design_parts, resistors, board_component):
             return End(RESISTOR, tag, "%s end %s" % (tag, number), "%s (%s %s), end %s" % (tag, value, purpose, number),
                        number, purpose, value)
         leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
-        short = "%s %s" % (component["name"], port.get("name"))
+        short = "%s %s" % (shorts.get(component["name"], component["name"]), port.get("name"))
         return End(PART, component["name"], short, short + (" (%s)" % leg if leg else ""), port.get("name"))
 
     said = [one for one in (_said(point, end, design_parts) for point in points(circuit)) if one]
     said.sort(key=lambda one: (not one[0], _natural(one[1])))
     placed = {one.component for _, _, step_point in said for one in step_point.ends}
     steps = BreadboardSteps(
-        [THE_BOARD] + [name for name in records if name in placed], [step_point for _, _, step_point in said])
+        [THE_BOARD] + [name for name in records if name in placed], [step_point for _, _, step_point in said], shorts)
     return ["%d. %s" % (number, line) for number, (_, line, _) in enumerate(said, 1)], steps
 
 

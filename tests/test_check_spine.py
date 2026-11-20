@@ -465,6 +465,50 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
         return [entry for entry in json.loads(out.getvalue())["kept"] if Path(entry["file"]).name.startswith("breadboard.")]
 
+    def keep_the_epaper(self, physical=True):
+        """`report` with --json on a copy of the e-paper project, kept into itself, its record with or without its
+        physical block (P945): the exit code, the JSON said and the project folder."""
+        import argparse
+        import contextlib
+        import io
+        import shutil
+        project = Path(tempfile.mkdtemp()) / "epaper"
+        shutil.copytree(Path(__file__).resolve().parent / "data" / "breadboard" / "epaper", project)
+        record_path = project / "parts" / "epaper-2in9-bwr-mh-et-live.json"
+        if not physical:
+            record = json.loads(record_path.read_text())
+            del record["physical"], record["physical_proof"]
+            record_path.write_text(json.dumps(record))
+        work = self.workdir()
+        shutil.copy(project / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
+        args = argparse.Namespace(json=True, keep=project, requirements=str(project / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            code = run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
+        return code, json.loads(out.getvalue()), project
+
+    def test_a_module_nothing_draws_exits_0_with_the_sheet_the_pin_map_and_a_research_step_next(self):
+        code, said, project = self.keep_the_epaper(physical=False)
+        self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertTrue((project / "breadboard.md").is_file())
+        self.assertTrue((project / "firmware" / "pins.py").is_file())
+        refused = [entry for entry in said["kept"] if entry.get("code") == "no_drawing_fact"]
+        self.assertEqual(sorted(Path(entry["file"]).name for entry in refused), ["breadboard.json", "breadboard.svg"])
+        for entry in refused:
+            self.assertEqual((entry["subject"], entry["record"], entry["fix"], entry["expected"]),
+                             ("Epaper2in9BwrMhEtLive", "epaper-2in9-bwr-mh-et-live",
+                              "research.py --part epaper-2in9-bwr-mh-et-live --project . asks for the physical facts that draw it", False))
+        research = [step for step in said["next"] if step["op"] == "research"]
+        self.assertEqual(len(research), 1)
+        self.assertEqual(research[0]["argv"], ["--part", "epaper-2in9-bwr-mh-et-live", "--project", str(project.resolve())])
+        self.assertEqual(said["next"][0]["op"], "research")
+
+    def test_a_module_drawn_from_its_record_gives_no_research_step(self):
+        code, said, project = self.keep_the_epaper()
+        self.assertEqual(code, 0)
+        self.assertTrue((project / "breadboard.svg").is_file())
+        self.assertEqual([step for step in said.get("next", []) if step["op"] == "research"], [])
+        self.assertEqual([entry for entry in said["kept"] if "record" in entry or "fix" in entry], [])
+
     def test_a_part_with_no_drawing_fact_names_its_code_and_a_wrote_entry_of_wokwi_geometry_has_no_drawn_from(self):
         for entry in self.kept_json_of("motor"):
             if entry["did"] == "not written" and entry["file"].endswith((".json", ".svg")):

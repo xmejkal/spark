@@ -27,13 +27,14 @@ BeforePowerItem = collections.namedtuple("BeforePowerItem", "kind subject pin re
 HEADING = "Before you power it"
 
 
-def own_socket_items(part, ends):
-    """The one item for the pins of `part` that end in its own socket (`ends`, from `power_rails.own_socket_ends`), or none."""
+def own_socket_items(part, ends, name):
+    """The one item for the pins of `part` that end in its own socket (`ends`, from `power_rails.own_socket_ends`), or none.
+    `name` is what the line calls the part (`board_components.short_names`)."""
     pins = [(supply["pin"], supply.get("rail")) for owner, supply, _ in ends if owner is part]
     if not pins:
         return []
     kind = OWN_SOCKET if part["own_socket"].get("verified") is True else OWN_SOCKET_UNVERIFIED
-    return [BeforePowerItem(kind, board_components.component_name(part), ", ".join(pin for pin, _ in pins), part["id"], pins[0][1], ())]
+    return [BeforePowerItem(kind, name, ", ".join(pin for pin, _ in pins), part["id"], pins[0][1], ())]
 
 
 class BeforePower:
@@ -51,18 +52,19 @@ class BeforePower:
         items = [BeforePowerItem(OFF_BOARD_SUPPLY, net, None, None, None, tuple(sorted(users)))
                  for net, users in supplies.items()]
         seen, ends = set(), power_rails.own_socket_ends(design_parts)
+        shorts = board_components.short_names(design_parts)
         for part in design_parts:
-            name = board_components.component_name(part)
+            name = shorts[board_components.component_name(part)]
             items += [BeforePowerItem(CONFLICT, name, conflict["pin"], part["id"], conflict["line"], ())
                       for conflict in part_rules.conflicts_of(part)]
             items += [BeforePowerItem(FIRMWARE_PULL, name, pin, part["id"], None, ())
                       for pin in part.get("_firmware_pulls", [])]
             items += [BeforePowerItem(UNUSED_PIN, name, pin["pin"], part["id"], pin.get("note", ""), ())
                       for pin in part.get("unused_pins") or []]
-            items += own_socket_items(part, ends)
+            items += own_socket_items(part, ends, name)
             if part["id"] not in seen:
                 seen.add(part["id"])
-                items += [BeforePowerItem(HOST_REQUIREMENT, part.get("name"), None, part["id"], requirement, ())
+                items += [BeforePowerItem(HOST_REQUIREMENT, board_components.record_short_name(part), None, part["id"], requirement, ())
                           for requirement in part.get("host_requirements") or []]
         return cls(items, sorted({part["id"] for part in design_parts}))
 
