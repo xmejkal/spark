@@ -1,5 +1,5 @@
 {
- "//": "Facts about each ESP-IDF v5.5.1 chip that a board rule reads (P809), cited to the kept ESP-IDF files. adc2_used_by_wifi: true means a board of that chip names the adc2_unusable_with_wifi role in pin_roles (board_rules.adc2_role_problems); false means it has no ADC2 that Wi-Fi uses; null means the source says something else, and boards.py --validate says the role is not checked. adc2_oneshot_supported: false means ESP-IDF does not read the chip's ADC2 in oneshot mode, so the pin assigner gives the pins in adc2_gpio no adc ability, with no role (P813, the ESP32-C3 only). The chip keys are the board records' `chip` values. The ESP32-C3's adc_channel.h is cited and not yet kept in the store; the PO keeps it.",
+ "//": "Facts about each ESP-IDF v5.5.1 chip that a board rule reads (P809), cited to the kept ESP-IDF files. adc2_used_by_wifi: true means a board of that chip names the adc2_unusable_with_wifi role in pin_roles (board_rules.adc2_role_problems); false means it has no ADC2 that Wi-Fi uses; null means the source says something else, and boards.py --validate says the role is not checked. adc2_oneshot_supported: false means ESP-IDF does not read the chip's ADC2 in oneshot mode, so the pin assigner gives the pins in adc2_gpio no adc ability, with no role (P813, the ESP32-C3 only). The chip keys are the board records' `chip` values.",
  "documents": {
   "esp-idf-adc-oneshot-v5-5-1": {
    "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/docs/en/api-reference/peripherals/adc_oneshot.rst",
@@ -104,7 +104,7 @@
     "value": [5],
     "cites": {
      "document": "esp-idf-adc-channel-v5-5-1-esp32c3",
-     "at": "line 25: \"#define ADC2_CHANNEL_0_GPIO_NUM 5\", ADC2's one channel. File not yet kept; the PO keeps it (P813)"
+     "at": "line 25: \"#define ADC2_CHANNEL_0_GPIO_NUM 5\", ADC2's one channel (P813)"
     }
    }
   },

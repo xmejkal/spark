@@ -51,7 +51,7 @@ lacks, or a strapping pin (close audit C4), is refused by name. An instance's `n
 written with it as code`.
 
 A project that runs on the board alone, such as a blink of the board's own LED, says `"board_only": true` with an empty
-`parts` list. `parts.py --requirements` writes it when the board serves every need, and removes it when a part comes. The parts, schematic, footprint and build stages are then `skipped`, never `ok`, and the simulation holds
+`parts` list. `parts.py --requirements` writes it when the board serves every need, and removes it when a part comes. The parts, schematic, footprint and build stages are then `skipped`, never `ok`, with the code `board_only` in `--json` (P936), and the simulation holds
 the board's Wokwi part. When that part is a stand-in (`wokwi_is_stand_in`, as the S3 devkit is for the FireBeetle 2 ESP32-S3),
 the build wires Wokwi's LED as `onboard_led` and Wokwi's pushbutton as `onboard_button` in place of the board's own, each to its
 pin and to ground, through the converter, and merges into your kept `sim/diagram.json` as a full build does
@@ -59,7 +59,7 @@ pin and to ground, through the converter, and merges into your kept `sim/diagram
 an LED that a 1 lights and a button that reads 0 when pressed. When only one of them qualifies, only that one is wired. A full build of such a board wires the same two beside the project's parts ([P792](https://github.com/xmejkal/spark/issues/1100)). That
 build needs Node, as a full build does. Any other board-only build, such as the XIAO ESP32-C6's (its Wokwi part is the board
 itself), holds the board alone and needs no converter. A full build whose every part's record skips the simulation
-(`simulation.skip`) builds and keeps its board, and its simulation stage is `skipped`, with the records' reasons under what it
+(`simulation.skip`) builds and keeps its board, and its simulation stage is `skipped`, with the code `every_part_skipped`, and with the records' reasons under what it
 cannot show; the closing line is `the chain runs end to end; every part is skipped from the simulation, so the diagram holds none
 of the project's parts`, exit 0, and the store notes no build (P778).
 

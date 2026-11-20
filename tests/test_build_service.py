@@ -228,7 +228,7 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         # the PO, 2026-11-12: skipped, not ok, so the store notes no build
         stages = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}])
         stage = stages[-1]
-        self.assertEqual((stage.status, stage.code), (SKIPPED, None))
+        self.assertEqual((stage.status, stage.code), (SKIPPED, "every_part_skipped"))  # P936, the PO 2026-11-20
         self.assertTrue(stage.detail.startswith("every part is skipped from the simulation, so the diagram holds none of the project's parts, 0 wire(s) in the diagram"), stage.detail)
         self.assertIn("what it cannot show (", stage.detail)
         self.assertIn(self.SKIPPED, stage.detail)
@@ -281,7 +281,7 @@ class AStandInBoardsOwnPartsInTheFullBuildTest(TheSimulationStageOfASkippedDesig
 
     def test_the_stand_ins_reach_the_converter_and_the_limits_and_every_part_skipped_stays_skipped(self):
         stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}], self.STAND_INS)
-        self.assertEqual((stage.status, stage.code), (SKIPPED, None))
+        self.assertEqual((stage.status, stage.code), (SKIPPED, "every_part_skipped"))
         self.assertIn("so the diagram holds none of the project's parts, 4 wire(s) in the diagram", stage.detail)
         self.assertIn(self.BUTTON, stage.detail)
         self.assertIn("ONBOARD_LED (GPIO21): the Wokwi stand-in has no LED on GPIO21", stage.detail)
@@ -399,9 +399,9 @@ class EachEndingSaysItsDetailTest(unittest.TestCase):
 
     def test_a_board_alone_with_no_wokwi_part(self):
         stages = board_alone({"name": "x"}, Path(tempfile.mkdtemp()))
-        self.assertEqual([(stage.name, stage.status, stage.detail) for stage in stages],
-                         [(name, SKIPPED, "board only: nothing to wire") for name in ("parts", "schematic", "footprint", "build")]
-                         + [("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type")])
+        self.assertEqual([(stage.name, stage.status, stage.detail, stage.code) for stage in stages],
+                         [(name, SKIPPED, "board only: nothing to wire", "board_only") for name in ("parts", "schematic", "footprint", "build")]
+                         + [("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type", "simulation_fact_missing")])
 
     def test_a_crash_no_stage_caught(self):
         built = RequirementsBuildService(FakeBuildService(crashes)).build()

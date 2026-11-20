@@ -69,9 +69,11 @@ def said_of(stages, code, requirements, following, kept):
     The dict `check_spine.py --json` prints: check, status and stages, with the needs the requirements file leaves off the
     board (`unserved`, `left_off`), the next steps (`next`, P517) and the facts the board record lacks (`missing_facts`,
     P464) when there are any, and with --keep or --sim-dir what was kept (`kept`, P124), each entry without its `line`,
-    which the person reads on stderr.
+    which the person reads on stderr. A stage that has a code has its `code` too, after its detail; an ok stage has none
+    (P936, the PO 2026-11-20: "Every stage with a code").
     """
-    said = {"check": "spine", "status": STATUS_FOR[code], "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages],
+    said = {"check": "spine", "status": STATUS_FOR[code],
+            "stages": [{"name": s.name, "status": s.status, "detail": s.detail, **({"code": s.code} if s.code else {})} for s in stages],
             **({"unserved": requirements["unserved"]} if left_off(requirements) else {}), **({"next": following} if following else {}),
             **({"missing_facts": held} if (held := [item for entry in kept or [] for item in entry.get("missing_facts", [])]) else {})}
     if kept is not None:

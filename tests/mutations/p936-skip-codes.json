@@ -1,0 +1,7 @@
+[
+ {"file": "scripts/spark/build/stages.py", "name": "P936: the board-only skip has no code again", "find": "BOARD_ONLY_ENDING = StageEnding(build_codes.BOARD_ONLY, SKIPPED,", "replace": "BOARD_ONLY_ENDING = StageEnding(None, SKIPPED,"},
+ {"file": "scripts/spark/build/stages.py", "name": "P936: the every-part-skipped skip says board_only", "find": "EVERY_PART_SKIPPED_ENDING = StageEnding(build_codes.EVERY_PART_SKIPPED, SKIPPED,", "replace": "EVERY_PART_SKIPPED_ENDING = StageEnding(build_codes.BOARD_ONLY, SKIPPED,"},
+ {"file": "scripts/spark/build/stages.py", "name": "P936: a skip with no code ends a stage again (the old rule back)", "find": "        if ending.code is None:\n", "replace": "        if ending.code is None and ending.status != SKIPPED:\n"},
+ {"file": "scripts/spark/build/build_board.py", "name": "P936: --json drops each stage's code", "find": "**({\"code\": s.code} if s.code else {})", "replace": "**{}"},
+ {"file": "scripts/spark/build/build_board.py", "name": "P936: an ok stage's entry gets a code of null", "find": "if s.code else {})", "replace": "if True else {})"}
+]

@@ -40,15 +40,15 @@ ENDS_AS = {
     ("parts", "BOARD_ONLY_WITH_PARTS_ENDING"): ("board_only_with_parts", "could-not-run"),
     ("parts", "NO_PARTS_ENDING"): ("no_parts", "could-not-run"),
     ("parts", "DESIGN_ERROR"): (None, "could-not-run"),
-    ("parts", "BOARD_ONLY_ENDING"): (None, "skipped"),
+    ("parts", "BOARD_ONLY_ENDING"): ("board_only", "skipped"),
     ("schematic", "DESIGN_ERROR"): (None, "could-not-run"),
     ("schematic", "BOARD_EMITTER_CRASHED_ENDING"): ("stage_crashed", "could-not-run"),
     ("schematic", "SCHEMATIC_REFUSED_ENDING"): ("schematic_refused", "could-not-run"),
-    ("schematic", "BOARD_ONLY_ENDING"): (None, "skipped"),
+    ("schematic", "BOARD_ONLY_ENDING"): ("board_only", "skipped"),
     ("schematic-notes", "SCHEMATIC_NOTED_ENDING"): ("schematic_noted", "problems"),
     ("footprint", "DESIGN_ERROR"): (None, "could-not-run"),
     ("footprint", "FOOTPRINT_EMITTER_CRASHED_ENDING"): ("stage_crashed", "could-not-run"),
-    ("footprint", "BOARD_ONLY_ENDING"): (None, "skipped"),
+    ("footprint", "BOARD_ONLY_ENDING"): ("board_only", "skipped"),
     ("build", "ENGINE_MISSING_ENDING"): ("tool_missing", "could-not-run"),
     ("build", "TIMED_OUT_ENDING"): ("stage_timed_out", "could-not-run"),
     ("build", "TOOL_CANNOT_BUILD_ENDING"): ("tool_cannot_build", "could-not-run"),
@@ -56,7 +56,7 @@ ENDS_AS = {
     ("build", "PART_STRANDED_ENDING"): ("part_stranded", "problems"),
     ("build", "CIRCUIT_ERRORS_ENDING"): ("design_not_built", "problems"),
     ("build", "NOT_ROUTED_ENDING"): ("not_routed", "problems"),
-    ("build", "BOARD_ONLY_ENDING"): (None, "skipped"),
+    ("build", "BOARD_ONLY_ENDING"): ("board_only", "skipped"),
     ("simulation", "CONVERTER_MISSING_ENDING"): ("tool_missing", "could-not-run"),
     ("simulation", "FACT_MISSING_ENDING"): ("simulation_fact_missing", "could-not-run"),
     ("simulation", "NO_WOKWI_PART_TYPE_ENDING"): ("simulation_fact_missing", "could-not-run"),
@@ -65,7 +65,7 @@ ENDS_AS = {
     ("simulation", "CONVERTER_LACKS_PART_ENDING"): ("converter_lacks_part", "could-not-run"),
     ("simulation", "NO_DIAGRAM_ENDING"): ("no_diagram", "problems"),
     ("simulation", "DIAGRAM_UNWIRED_ENDING"): ("diagram_unwired", "problems"),
-    ("simulation", "EVERY_PART_SKIPPED_ENDING"): (None, "skipped"),
+    ("simulation", "EVERY_PART_SKIPPED_ENDING"): ("every_part_skipped", "skipped"),
     ("check_spine", "CHECK_SPINE_CRASHED_ENDING"): ("stage_crashed", "could-not-run"),
 }
 
@@ -76,10 +76,11 @@ class TheTableTest(unittest.TestCase):
         self.assertEqual({(definition.name, named[ending]): (ending.code, ending.status)
                           for definition in BUILD_STAGES for ending in definition.endings}, ENDS_AS)
 
-    def test_each_ending_names_a_code_build_codes_knows_or_is_a_skip_or_the_design_error(self):
+    def test_each_ending_names_a_code_build_codes_knows_or_is_the_design_error(self):
+        # P936, the PO 2026-11-20: a skip has its code too, so only the design error, whose code is its own, has none
         for ending in ENDINGS:
             if ending.code is None:
-                self.assertTrue(ending.status == SKIPPED or ending is DESIGN_ERROR, ending)
+                self.assertIs(ending, DESIGN_ERROR)
             else:
                 self.assertIn(ending.code, build_codes.CODES, ending)
             self.assertNotEqual(ending.status, OK, ending)
@@ -132,6 +133,12 @@ class ADefinitionMakesOnlyItsOwnStagesTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             BOARD.ended(NO_PARTS_ENDING, "board_only")
 
+    def test_a_skip_with_no_code_raises(self):
+        # P936: every ending but the design error names its code, a skip too
+        uncoded = StageEnding(None, SKIPPED, "nothing to do")
+        with self.assertRaises(ValueError):
+            PARTS._replace(endings=(uncoded,)).ended(uncoded)
+
     def test_the_design_error_is_made_by_stopped_by_alone_and_only_where_one_can_stop(self):
         with self.assertRaises(ValueError):
             PARTS.ended(DESIGN_ERROR, "a sentence")
@@ -155,7 +162,10 @@ class TheHelpListsTheTableTest(unittest.TestCase):
             self.assertIn("%s %s" % (definition.name, definition.summary), said)
         for code in {ending.code for ending in ENDINGS if ending.code}:
             self.assertIn("%s: %s" % (code, " ".join(build_codes.CODES[code].split())), said)
-        self.assertIn("skipped every part is skipped from the simulation, so the diagram holds none of the project's parts, …", said)
+        # P936: a skip says its code and meaning, board_only once for each of its four stages
+        for code, times in (("board_only", 4), ("every_part_skipped", 1)):
+            self.assertEqual(said.count("skipped %s: %s" % (code, " ".join(build_codes.CODES[code].split()))), times, code)
+        self.assertNotIn("…", said)
         self.assertEqual(said.count("design_not_built:"), 1)  # two endings of the build stage, one status and one code
 
 
@@ -169,7 +179,7 @@ class TheMarkdownTableTest(unittest.TestCase):
         self.assertEqual(StageMarkdownTable.render(definitions).splitlines(), [
             "| stage | what it is | how it ends when not ok |", "|---|---|---|",
             "| one | the first \\| stage | could-not-run: a design error, with its own code (design_codes), `no_parts`; "
-            "skipped: board only: nothing to wire |",
+            "skipped: `board_only` |",
             "| two | the second | problems: `design_not_built`, `not_routed`; could-not-run: `stage_timed_out` |"])
 
     def test_the_build_operation_holds_the_table_as_data(self):
