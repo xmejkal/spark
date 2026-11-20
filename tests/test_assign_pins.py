@@ -575,6 +575,45 @@ class AnAdc2PinReadsNoVoltageTest(unittest.TestCase):
         self.assertIn("GPIO11 cannot do: it is on ADC2", str(refused.exception))
 
 
+class AC3Adc2PinIsNotReadTest(unittest.TestCase):
+    """
+    P813: ESP-IDF v5.5.1 does not support a oneshot read of the ESP32-C3's ADC2, and data/chips.json names its pin
+    (GPIO5), so a C3 board's GPIO5 offers no adc, from the chip's facts, with no role in the record.
+    """
+
+    CHIP_WORDS = ("SENSE asks for A1 by name and needs adc, which GPIO5 cannot do: it is on ADC2 of chip 'esp32c3', "
+                  "whose oneshot read ESP-IDF v5.5.1 does not support (data/chips.json, adc2_oneshot_supported)")
+
+    def c3_board(self, chip="esp32c3", pin_roles=None):
+        return board(chip=chip, pins={"P0": 0, "P1": 1, "A0": 4, "A1": 5}, wake_capable_gpio=[], adc_gpio=[4, 5],
+                     pin_roles=pin_roles or {})
+
+    def test_the_adc2_pin_offers_no_adc_and_the_adc1_pin_does(self):
+        self.assertEqual((pin_assigner.capability_of(self.c3_board(), 5), pin_assigner.capability_of(self.c3_board(), 4)),
+                         ({"pwm"}, {"adc", "pwm"}))
+
+    def test_the_same_pin_on_another_chip_is_read_as_its_adc_gpio_says(self):
+        self.assertIn("adc", pin_assigner.capability_of(self.c3_board(chip="esp32c6"), 5))
+
+    def test_an_adc_signal_takes_the_adc1_pin_and_a_second_one_is_refused(self):
+        placed_pins, _ = pin_assigner.assign(self.c3_board(), [{"name": "SENSE", "needs": ["adc"]}])
+        self.assertEqual(placed(placed_pins), {"SENSE": "A0"})
+        with self.assertRaises(pin_assigner.ImpossibleError):
+            pin_assigner.assign(self.c3_board(), [{"name": "SENSE", "needs": ["adc"]}, {"name": "SENSE2", "needs": ["adc"]}])
+
+    def test_a_named_adc2_pin_with_needs_adc_is_refused_in_the_chip_fact_s_words(self):
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(self.c3_board(), [{"name": "SENSE", "pin": "A1", "needs": ["adc"]}])
+        self.assertEqual(refused.exception.code, "named_pin_unsuitable")
+        self.assertEqual(str(refused.exception), self.CHIP_WORDS)
+
+    def test_the_chip_fact_s_words_win_over_the_role_s_on_a_c3_that_names_the_role_too(self):
+        roles = {"adc2_unusable_with_wifi": {"gpio": [5], "note": "on ADC2"}}
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(self.c3_board(pin_roles=roles), [{"name": "SENSE", "pin": "A1", "needs": ["adc"]}])
+        self.assertEqual(str(refused.exception), self.CHIP_WORDS)
+
+
 class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
     """
     P36. The irrigation firmware typed twelve GPIO numbers by hand and its scenario a thirteenth,
