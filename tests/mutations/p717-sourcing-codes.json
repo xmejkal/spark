@@ -38,8 +38,8 @@
  {
   "file": "scripts/spark/sourcing/sourcing_codes.py",
   "name": "CODES misses a constant",
-  "find": "    UNKNOWN_MATCHER: \"the name is no matcher, or none that serves this flag; the message lists the names that fit\",\n",
-  "replace": ""
+  "find": "TRANSCRIPT_ENDS_EARLY, UNKNOWN_MATCHER, NO_SKU,",
+  "replace": "TRANSCRIPT_ENDS_EARLY, NO_SKU,"
  },
  {
   "file": "scripts/spark/sourcing/run_cost.py",

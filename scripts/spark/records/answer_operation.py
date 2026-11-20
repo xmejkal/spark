@@ -20,6 +20,9 @@ from spark.records import records_codes, store
 from spark.records.record_kind import Answer, _cannot
 
 # --- MVP ---
+#: The frontend's word: parts.py's fix of `codes.BAD_ARGUMENT`. Its HelpText injects it for an argv the parser refuses,
+#: and an Operation gives it with a bad argument it finds, so one CLI gives one fix for one code (P935).
+BAD_ARGUMENT_FIX = "parts.py --describe --json lists every operation and its arguments"
 #: The fix of a negative --from, for every listing on the core.
 START_FIX = "--from takes a whole number from 0 up"
 #: The sentence of a negative --from.

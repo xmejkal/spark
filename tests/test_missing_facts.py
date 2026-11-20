@@ -41,6 +41,12 @@ class ListMissingFactsTest(unittest.TestCase):
         self.assertIn("xiao-esp32-c6", found[0].fix)
         self.assertIn("--fact-set", found[0].fix)
 
+    def test_the_fix_is_the_records_code_s_filled_with_the_board_s_id(self):
+        # P935 PR 2: the fix moved onto records_codes.MISSING_FACT, pinned as the person reads it
+        self.assertEqual(missing_facts.list_missing_facts(levelless())[0].fix,
+                         "Tell it: write it with `parts.py --fact-set xiao-esp32-c6 FILE --project .` from the project's folder, as "
+                         "{value, verified, source}. Find it: run /spark:research. Or measure it on the bench.")
+
     def test_one_is_missing(self):
         board = levelless()
         board["pin_roles"]["onboard_led"]["active_level"] = BENCH

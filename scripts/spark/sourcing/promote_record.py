@@ -6,7 +6,7 @@ target and copies nothing.
 
 from spark.core import codes
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument
-from spark.records.answer_operation import ANSWER_ARGUMENTS
+from spark.records.answer_operation import ANSWER_ARGUMENTS, BAD_ARGUMENT_FIX
 from spark.records.record_kind import Answer, _cannot
 from spark.sourcing.part_facts import promote
 from spark.sourcing.part_operation import PartOperation
@@ -32,7 +32,7 @@ class PromoteRecord(PartOperation):
 
     def build_answer(self, part_id, project, dry_run):
         if not project:
-            return Answer(unchecked=[_cannot(NEEDS_PROJECT, code=codes.BAD_ARGUMENT)])
+            return Answer(unchecked=[_cannot(NEEDS_PROJECT, BAD_ARGUMENT_FIX, code=codes.BAD_ARGUMENT)])
         target = promote(part_id, project, dry_run=dry_run)
         return Answer({"path": str(target), "written": not dry_run},
                       ["  %s %s" % ("would promote to" if dry_run else "promoted to", target)])

@@ -19,8 +19,6 @@ ACTIVE_LEVEL_MEANING = {
 }
 LEVEL_FACT = "active_level"
 SENTENCE = "%s has no %s in the board record (%s), so the firmware would guess it"
-FIX = ("Tell it: write it with `parts.py --fact-set %s FILE --project .` from the project's folder, as {value, verified, source}. Find it: run /spark:research. "
-       "Or measure it on the bench.")
 
 
 def list_missing_facts(board):
@@ -28,9 +26,9 @@ def list_missing_facts(board):
     One Finding per onboard part of the board whose level a stage needs and whose record names no level, in table order.
     A part with no names for its pins gets none (pins.py writes no line for it), and a null level is missing.
     """
-    return [Finding(outcomes.COULD_NOT_RUN, "pin_roles.%s.%s" % (role, LEVEL_FACT), records_codes.MISSING_FACT,
-                    SENTENCE % (spec.what, LEVEL_FACT.replace("_", " "), ACTIVE_LEVEL_MEANING[role]),
-                    FIX % board.get("id", "<board>"))
+    return [Finding.of(outcomes.COULD_NOT_RUN, "pin_roles.%s.%s" % (role, LEVEL_FACT), records_codes.MISSING_FACT,
+                       SENTENCE % (spec.what, LEVEL_FACT.replace("_", " "), ACTIVE_LEVEL_MEANING[role]),
+                       records_codes.MISSING_FACT.fix % board.get("id", "<board>"))
             for role, spec, entry in board_records.onboard_entries(board) if role in ACTIVE_LEVEL_MEANING
             and board_records.names_pins(entry) and provenance.read_value(entry, LEVEL_FACT) is None]
 

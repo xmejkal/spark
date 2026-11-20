@@ -10,7 +10,7 @@ from spark.core import codes
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument
 from spark.core.outcomes import add_env, step
 from spark.records import record_kind, store
-from spark.records.answer_operation import ANSWER_ARGUMENTS
+from spark.records.answer_operation import ANSWER_ARGUMENTS, BAD_ARGUMENT_FIX
 from spark.records.record_kind import Answer, DEFINITION_SUFFIX, _cannot, _problem, _with_project
 from spark.sourcing.part_facts import skeleton
 from spark.sourcing.part_operation import PartOperation
@@ -52,7 +52,7 @@ class WriteSkeleton(PartOperation):
     def build_answer(self, part_id, project, dry_run, **given):
         """`given` holds the three facts the skeleton starts from, each a flag: `kind`, `vendor` and `sku`."""
         if not project or not given["kind"]:
-            return Answer(unchecked=[_cannot(NEEDS_PROJECT_AND_KIND, code=codes.BAD_ARGUMENT)])
+            return Answer(unchecked=[_cannot(NEEDS_PROJECT_AND_KIND, BAD_ARGUMENT_FIX, code=codes.BAD_ARGUMENT)])
         if not store.PLAIN.fullmatch(part_id):  # P87: a file every reader would refuse is never written
             return Answer(problems=[_problem(part_id, NOT_A_PLAIN_ID % part_id)])
         held = store.records("parts", record_kind.LIBRARY, project, drafts=True).get(part_id)

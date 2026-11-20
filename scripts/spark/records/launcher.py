@@ -13,17 +13,13 @@ import sys
 from pathlib import Path
 
 from spark.core import outcomes
-from spark.records import store
+from spark.records import records_codes, store
 
 # --- MVP ---
 PLACE = "launcher"
 #: The script the launcher runs: spark's bench.py, by its whole path.
 BENCH_SCRIPT = Path(__file__).resolve().parents[2] / "bench.py"
-#: The code of the launcher's own line: the code it runs is gone.
-LAUNCHER_STALE = "launcher_stale"
 STALE_SENTENCE = "the Python or the bench.py that spark's launcher runs is gone, so nothing ran"
-STALE_FIX = ("run bench.py register <name> --origin <origin> --tool <tool> again from a spark checkout that stays: it writes "
-             "the launcher again")
 #: The launcher's text: Python 3.9 and later, the standard library only. %(...)r are the Python, the script and the line.
 TEXT = '''#!/usr/bin/env python3
 """spark's launcher for bench.py, written by bench.py register (P920). Run it with any python3: it starts spark's bench.py
@@ -45,7 +41,8 @@ sys.exit(subprocess.call([PYTHON, SCRIPT] + sys.argv[1:], env=dict(os.environ, S
 
 def stale_line():
     """The envelope the launcher prints when the code it runs is gone: bench's, with no op and one unchecked item."""
-    return outcomes.envelope("bench", None, None, [], [{"code": LAUNCHER_STALE, "sentence": STALE_SENTENCE, "fix": STALE_FIX}])
+    return outcomes.envelope("bench", None, None, [], [{"code": records_codes.LAUNCHER_STALE, "sentence": STALE_SENTENCE,
+                                                           "fix": records_codes.LAUNCHER_STALE.fix}])
 
 
 def write_launcher(python=sys.executable, script=BENCH_SCRIPT):

@@ -1,0 +1,140 @@
+[
+ {
+  "file": "scripts/spark/sourcing/mark_step.py",
+  "name": "a word that is no step is refused with fix null again",
+  "find": "run_cost.STEPS), BAD_ARGUMENT_FIX, code=codes.BAD_ARGUMENT)",
+  "replace": "run_cost.STEPS), code=codes.BAD_ARGUMENT)"
+ },
+ {
+  "file": "scripts/spark/sourcing/promote_record.py",
+  "name": "a promotion with no project is refused with fix null again",
+  "find": "_cannot(NEEDS_PROJECT, BAD_ARGUMENT_FIX, code=",
+  "replace": "_cannot(NEEDS_PROJECT, code="
+ },
+ {
+  "file": "scripts/spark/sourcing/write_skeleton.py",
+  "name": "a skeleton with no project or kind is refused with fix null again",
+  "find": "_cannot(NEEDS_PROJECT_AND_KIND, BAD_ARGUMENT_FIX, code=",
+  "replace": "_cannot(NEEDS_PROJECT_AND_KIND, code="
+ },
+ {
+  "file": "scripts/spark/sourcing/set_facts.py",
+  "name": "a payload that is no fact write is refused with fix null again",
+  "find": "BAD_ARGUMENT_FIX, code=codes.BAD_ARGUMENT)])",
+  "replace": "code=codes.BAD_ARGUMENT)])"
+ },
+ {
+  "file": "scripts/spark/records/answer_operation.py",
+  "name": "an Operation's bad argument takes the core's default, not parts.py's own fix",
+  "find": "BAD_ARGUMENT_FIX = \"parts.py --describe --json lists every operation and its arguments\"",
+  "replace": "BAD_ARGUMENT_FIX = \"parts.py --help lists the arguments\""
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "parts.py's parser refusal loses its own fix",
+  "find": "bad_argument_fix=BAD_ARGUMENT_FIX)",
+  "replace": "bad_argument_fix=None)"
+ },
+ {
+  "file": "scripts/spark/records/registered_project_store.py",
+  "name": "a name that is not plain takes the store key's fix, not the register one",
+  "find": "code=records_codes.KEY_NOT_PLAIN_REGISTERED)",
+  "replace": "code=records_codes.KEY_NOT_PLAIN)"
+ },
+ {
+  "file": "scripts/spark/records/launcher.py",
+  "name": "the launcher's stale line has no fix",
+  "find": "\"fix\": records_codes.LAUNCHER_STALE.fix}])",
+  "replace": "\"fix\": None}])"
+ },
+ {
+  "file": "scripts/spark/records/missing_facts.py",
+  "name": "a missing fact's fix goes out with %s unfilled",
+  "find": "records_codes.MISSING_FACT.fix % board.get(\"id\", \"<board>\"))",
+  "replace": "records_codes.MISSING_FACT.fix)"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "a value the contract refuses goes out without its replies fix",
+  "find": "PART_CONTRACT_BROKEN_REPLIES.fix % (replies_path, line, replies_path)) for sentence in broken]",
+  "replace": "None) for sentence in broken]"
+ },
+ {
+  "file": "scripts/spark/sourcing/sourcing_codes.py",
+  "name": "a library record's fix no longer says where the library is changed",
+  "find": "\"spark's library is changed in spark's repository; research",
+  "replace": "\"spark's library is changed elsewhere; research"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a page that does not answer takes the store's fix, not the source's",
+  "find": "return SparkError(\"%s\", error, code=error.code, fix=cls.RETRY_FIX)",
+  "replace": "return SparkError(\"%s\", error, code=error.code)"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes any x.code with no fix as a forward, a SparkError's too",
+  "find": "return code.value.id in caught if fix is None else",
+  "replace": "return True if fix is None else"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes a name an except of a SparkError binds as a refusal with no fix",
+  "find": "return {name for name, classes in types.items() if classes <= fixless}",
+  "replace": "return set(types)"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes a caught fix in any file, not the site that CAUGHT_FIXES names",
+  "find": "else site + (ast.unparse(fix),) in CAUGHT_FIXES",
+  "replace": "else ast.unparse(fix) in {entry[2] for entry in CAUGHT_FIXES}"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes a caught fix in any function of the file CAUGHT_FIXES names",
+  "find": "else site + (ast.unparse(fix),) in CAUGHT_FIXES",
+  "replace": "else (site[0], ast.unparse(fix)) in {(entry[0], entry[2]) for entry in CAUGHT_FIXES}"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes an Exception's code with no fix as a refusal's",
+  "find": "if classes <= fixless}",
+  "replace": "if classes <= fixless | {\"Exception\"}}"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the area scan reads only the top folder, so research's calls go unread",
+  "find": "sorted(root.rglob(\"*.py\"))",
+  "replace": "sorted(root.glob(\"*.py\"))"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "a second BAD_ARGUMENT in an area's table takes the core's meaning unnoticed",
+  "find": "codes.CODES.get(code) if name != code.upper() else None)",
+  "replace": "codes.CODES.get(code))"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes an item's other keys as its code and fix",
+  "find": " and [ast.unparse(one.args[0]) for one in got] == [\"'code'\", \"'fix'\"]",
+  "replace": ""
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes an item's code with another item's fix",
+  "find": "\n            and ast.unparse(got[0].func.value) == ast.unparse(got[1].func.value))",
+  "replace": ")"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "an area's variant of the core's word has no parent",
+  "find": " or getattr(codes, code.upper(), None)",
+  "replace": ""
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes a name of another table's module that is no Code",
+  "find": "if not isinstance(getattr(named, word, None), Code):",
+  "replace": "if named is None:"
+ }
+]

@@ -12,7 +12,6 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.core import outcomes
-from spark.core.codes import BAD_ARGUMENT
 from spark.core.errors import SparkError
 from spark.core.events import Event
 from spark.core.operation import ASKS, COMMON_ARGUMENTS, FETCHES, JSON_FLAG, READS, WRITES, Argument, Operation
@@ -26,7 +25,7 @@ from spark.sourcing.part_records import PHYSICAL_KEYS, PartError, definition_pat
 from spark.sourcing.research import PHASE, REFUSED_LINE
 from spark.sourcing.research.merge import BODY, DOCUMENTS, body_sizes, fold_documents, fold_not_published, fold_replies, not_published_of
 from spark.sourcing.research.research_source import RESEARCH_SOURCES, DfrobotWikiSource, names_a_drawing, question_for
-from spark.sourcing.sourcing_codes import PART_CONTRACT_BROKEN
+from spark.sourcing.sourcing_codes import BAD_ARGUMENT_IN_LIBRARY, PART_CONTRACT_BROKEN_REPLIES
 
 # --- MVP ---
 SCRIPT, OP = "research.py", "research-part"
@@ -38,15 +37,12 @@ SOURCE_ORDER = ("dfrobot-wiki", "kept-documents")
 #: Value: what one round of the sources left: the record with their documents folded in, the questions, the source list
 #: the run prints, the problems the sources met as (source name, SparkError) and the record keys the fold changed.
 Round = namedtuple("Round", "record questions sources problems written")
-IN_LIBRARY_FIX = "spark's library is changed in spark's repository; research a copy of the record in the project's parts/"
-CONTRACT_FIX = "fix the value in %s so the record meets its contract (the typed values are kept there), then run %s --replies %s"
 WROTE = "record written: %s (unverified)"
 NO_GAPS = "no gaps: every fact the needs file lists is held or named in physical_proof.not_published"
 KEPT_LINE = "documents: %d kept in the store, %d listed but not keepable"
 NONE_ASKED = "none asked"
 PART_HELP = "the id of the part record to research: in the project's parts/ or the person's shelf"
 PROJECT_HELP = "the project whose parts/ holds the record (default: here)"
-NO_SUCH_PART_FIX = "parts.py --need <words> finds what exists; a new record starts with parts.py --skeleton"
 
 
 def refusal(outside, refused):
@@ -164,8 +160,9 @@ class ResearchPart(Operation):
             broken, written = self._fold(path, record, held, answers)
             if broken:  # the contract refused a value: the typed values survive in the file, where the fix is made
                 RepliesStore(replies_path).dump(held.questions, answers)
-                findings = [Finding(outcomes.PROBLEMS, part, PART_CONTRACT_BROKEN, sentence, CONTRACT_FIX % (replies_path, line, replies_path)) for sentence in broken]
-        findings += [Finding(outcomes.COULD_NOT_RUN, name, problem.code, printable(str(problem)), problem.fix) for name, problem in held.problems]
+                findings = [Finding.of(outcomes.PROBLEMS, part, PART_CONTRACT_BROKEN_REPLIES, sentence,
+                                       PART_CONTRACT_BROKEN_REPLIES.fix % (replies_path, line, replies_path)) for sentence in broken]
+        findings += [Finding.of(outcomes.COULD_NOT_RUN, name, problem.code, printable(str(problem)), problem.fix) for name, problem in held.problems]
         following = []
         if open_questions:
             RepliesStore(replies_path).dump(open_questions)
@@ -184,9 +181,9 @@ class ResearchPart(Operation):
         try:
             path = definition_path(part, project)
         except PartError as missing:
-            raise refusal(outside, SparkError("%s", missing, code=missing.code, fix=NO_SUCH_PART_FIX))
+            raise refusal(outside, SparkError("%s", missing, code=missing.code))
         if path.parent.resolve() == record_kind.LIBRARY.resolve():
-            raise refusal(outside, SparkError("%s is a record of spark's own library", part, code=BAD_ARGUMENT, fix=IN_LIBRARY_FIX))
+            raise refusal(outside, SparkError("%s is a record of spark's own library", part, code=BAD_ARGUMENT_IN_LIBRARY))
         return path, json.loads(path.read_text(encoding="utf-8"))
 
     @staticmethod

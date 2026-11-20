@@ -28,7 +28,6 @@ NOTHING_WRITTEN = "Nothing was written."
 NAME_HELP = "the name the project registered with bench.py register"
 #: The fix of each stop that names no fix of its own: the next command, for the name.
 AGAIN_FIX = "fix what the line above says, then run bench.py record %s again (with --port PORT when two boards are on USB)"
-NOT_REGISTERED_FIX = "run bench.py register %s --origin <origin> --tool <tool> from spark's code once, then bench.py record %s again"
 NO_MAC_FIX = "deploy this board with spark's deploy.py, which reads its MAC from the chip: bench.py record needs a serial that holds it"
 RECORDED_LINE = "recorded: %s, made by %s, %s, on %s, MAC ends %s. No port was opened."
 
@@ -60,7 +59,7 @@ class RecordDeploy(Operation):
             registered = self.registered.read(name)
             if registered is None:
                 raise SparkError("%s is not registered in spark's store. %s", name, NOTHING_WRITTEN, code=records_codes.NOT_REGISTERED,
-                                 fix=NOT_REGISTERED_FIX % (name, name))
+                                 fix=records_codes.NOT_REGISTERED.fix % (name, name))
             finder = self.platform_for(project, outside.find_tool).make_port_finder(outside.run)
             row = finder.require_one_board("%s record %s" % (SCRIPT, name), port)
             mac = known_board.mac_part_of(row)
