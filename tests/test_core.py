@@ -357,7 +357,8 @@ class RunOperationTest(unittest.TestCase):
                 return super().run(project, what, left, right, outside=outside)
 
         for what, expected in (("problems", ["kept for a crash", "an aside"]), ("error", ["kept for a crash"]),
-                               ("crash", ["kept for a crash", "toy: crashed, RuntimeError", codes.CRASH.fix, "Traceback (most recent call last):"])):
+                               ("crash", ["kept for a crash", "toy: crashed, RuntimeError",
+                                         "report this to the spark maintainers with the stderr traceback", "Traceback (most recent call last):"])):
             with self.subTest(what=what):
                 result = run_operation(Adding(), toy_values(what), FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
                 self.assertEqual(list(result.diagnostics[:len(expected)]), expected)
