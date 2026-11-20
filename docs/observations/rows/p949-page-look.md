@@ -36,5 +36,6 @@ the plan. Then come the plan's risks and the build's own findings. 2026-11-20.
 | 28 | some lines of the new code and docs are over the usual length | the review, the lens | rejected | the refuter: ruff's limit is not passed, and the files hold many longer lines. The new lines follow the files around them |
 | 29 | a PNG cannot hold text, so the screenshots need no check | the review, the lens | rejected | the refuter: false in general (a PNG can hold tEXt chunks). These two PNGs hold only IHDR, IDAT and IEND |
 | 30 | the review's rows proved only by their anchors | the builder | acted | every row of the table, 18 after the review, was planted by hand in a copy of the tree. The control run on the copy was OK. All 18 were caught by `test_flow_page` and `test_breadboard_svg` |
+| 31 | the P827 row "the page is written without the mask" lost its anchor when `write_page` named `privacy` | the builder, `--anchors` | acted | it finds `page = masked_page(page, privacy)`. Planted by hand in a copy, with the mask after the render in place: caught by `test_flow_page` and `test_flow` (2 failures), the control OK |
 
 The rows: tests/mutations/p949-page-look.json.
