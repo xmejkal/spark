@@ -321,8 +321,8 @@ as `tests/test_docs.py`. It fails when the docs:
   only go down, kept by review: cut or split the page, never raise a number, remove a split page's entry ([P500](https://github.com/xmejkal/spark/issues/689)).
 
 A ` ```sh ` block marked `<!-- runs: exit N -->` is run in an empty project, with a store of its own, and must exit `N`.
-A page block, between the line `<!-- spark:operation NAME -->` and an end marker with a slash before `spark`, is
-written by `python3 tools/doc_blocks.py` from the Operation NAME (P481): change the Operation, never the block.
+A page block, between the line `<!-- spark:KIND NAME -->` and its end marker, is written by `python3 tools/doc_blocks.py`
+from the Operation NAME, its help (`operation`, P481) or its stages (`stages`, P936): change the Operation, never the block.
 
 Nothing mechanical checks a skill or agent named in prose, an absolute link, or a second, wrong version; the council
 reads those. Nor can it tell whether a step's status is still current. So when a step of the [journey](journey.md)

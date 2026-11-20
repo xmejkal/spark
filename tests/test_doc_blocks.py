@@ -1,4 +1,5 @@
-"""P481: a page block between an Operation's markers is what OperationHelpTable renders for it, and a broken marker is named."""
+"""P481: a page block between an Operation's markers is what OperationHelpTable renders for it, and a broken marker is named.
+P936: a stages block is what StageMarkdownTable renders for the Operation's stages."""
 
 import subprocess
 import sys
@@ -15,6 +16,9 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import doc_blocks  # noqa: E402
 from spark.bench.look_at_board import LookAtBoard  # noqa: E402
+from spark.build.build_board import BuildBoard  # noqa: E402
+from spark.build.stage_help_table import StageMarkdownTable  # noqa: E402
+from spark.build.stages import NO_PARTS_ENDING, StageDefinition  # noqa: E402
 from spark.core.operation import COMMON_ARGUMENTS, Argument, Operation  # noqa: E402
 from spark.core.operation_help_table import OperationHelpTable  # noqa: E402
 
@@ -45,6 +49,14 @@ class TheTreeTest(unittest.TestCase):
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "tools", capture_output=True, text=True, timeout=60,
                              stdin=subprocess.DEVNULL)
         self.assertEqual(run.stdout, "[]\n", run.stderr)
+
+    def test_the_how_it_works_page_holds_the_build_stages_block(self):
+        # P936: the stage table is generated, kept current by the first test
+        self.assertIn("docs/guide/how-it-works.md", [page for page, _ in doc_blocks.pages_with_blocks()])
+        self.assertIn("<!-- spark:stages build-board -->\n", (ROOT / "docs/guide/how-it-works.md").read_text())
+
+    def test_a_block_may_name_the_build_operation(self):
+        self.assertIs(doc_blocks.block_operations()["build-board"], BuildBoard)
 
     def test_the_scripts_page_holds_lives_block(self):
         # P855: the first block on a guide page, kept current by the test above
@@ -98,6 +110,45 @@ class TheBlockTest(unittest.TestCase):
         self.assertEqual(doc_blocks.fresh_text("a.md", text, LOOK), text)
         self.assertEqual(doc_blocks.fresh_text("a.md", text + block("old"), LOOK),
                          text + block("\n%s\n" % OperationHelpTable.render(LookAtBoard)))
+
+
+class Staged(Operation):
+    name = "staged"
+    stages = (StageDefinition("one", "the first", (NO_PARTS_ENDING,)),)
+
+
+STAGED = {"staged": Staged}
+STAGES_START, STAGES_END = "<!-- spark:stages staged -->", "<!-- /spark:stages staged -->"
+
+
+class TheStagesBlockTest(unittest.TestCase):
+    """P936: a stages block is StageMarkdownTable's text for the stages of the Operation it names."""
+
+    def refused(self, text, operations=STAGED):
+        with self.assertRaises(doc_blocks.BlockError) as said:
+            doc_blocks.fresh_text("a.md", text, operations)
+        return str(said.exception)
+
+    def test_a_stages_block_is_written_from_the_operation_s_stages(self):
+        text = "# A page\n\n%s\nold words\n%s\n" % (STAGES_START, STAGES_END)
+        self.assertEqual(doc_blocks.fresh_text("a.md", text, STAGED),
+                         "# A page\n\n%s\n\n%s\n\n%s\n" % (STAGES_START, StageMarkdownTable.render(Staged.stages), STAGES_END))
+
+    def test_an_operation_with_no_stages_is_named(self):
+        self.assertEqual(self.refused("%s\n%s\n" % (STAGES_START, STAGES_END), {"staged": Operation}),
+                         "a.md line 1: the Operation staged has no stages to show")
+
+    def test_an_end_of_the_other_kind_is_named(self):
+        self.assertEqual(self.refused("%s\n<!-- /spark:operation staged -->\n" % STAGES_START),
+                         "a.md line 2: the stages block of staged ends with a marker of the kind operation")
+
+    def test_a_comment_line_that_names_spark_stages_but_is_no_marker_is_named(self):
+        self.assertEqual(self.refused("# A page\n%s \n" % STAGES_START), "a.md line 2: this line names spark:stages but is no marker")
+
+    def test_a_page_with_only_a_stages_block_is_found(self):
+        with tempfile.TemporaryDirectory() as root:
+            (Path(root) / "a.md").write_text("%s\nold\n%s\n" % (STAGES_START, STAGES_END))
+            self.assertEqual([page for page, _ in doc_blocks.pages_with_blocks(Path(root))], ["a.md"])
 
 
 class ThePagesTest(unittest.TestCase):

@@ -67,7 +67,8 @@ class BuildBoard(Operation):
 
     name = "build-board"
     summary = "The one thing that has to work: a module list in, a board that builds out."
-    details = StageHelpTable.render(BUILD_STAGES)
+    stages = BUILD_STAGES
+    details = StageHelpTable.render(stages)
     arguments = (Argument(("requirements",), "requirements", str, "a requirements.json; omit for the reference design. "
                           "\"board_only\": true with no parts builds the board alone", nargs="?"),
                  COMMON_ARGUMENTS["json"]._replace(help="the verdict as one JSON object: check, status, stages, next (the firmware step, "

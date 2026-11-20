@@ -20,9 +20,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_spine  # noqa: E402
 from spark.build import build_codes, stages as stage_table  # noqa: E402
-from spark.build.stage_help_table import StageHelpTable  # noqa: E402
+from spark.build.build_board import BuildBoard  # noqa: E402
+from spark.build.stage_help_table import StageHelpTable, StageMarkdownTable  # noqa: E402
 from spark.build.stages import (BOARD, BUILD_STAGES, DESIGN_ERROR, FOOTPRINT, NO_PARTS_ENDING, PARTS, SCHEMATIC,  # noqa: E402
-                                STAGE_NAMED, StageEnding)
+                                STAGE_NAMED, StageDefinition, StageEnding)
 from spark.core.outcomes import COULD_NOT_RUN, OK, SKIPPED  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.design.loader import DesignError  # noqa: E402
@@ -156,6 +157,25 @@ class TheHelpListsTheTableTest(unittest.TestCase):
             self.assertIn("%s: %s" % (code, " ".join(build_codes.CODES[code].split())), said)
         self.assertIn("skipped every part is skipped from the simulation, so the diagram holds none of the project's parts, …", said)
         self.assertEqual(said.count("design_not_built:"), 1)  # two endings of the build stage, one status and one code
+
+
+class TheMarkdownTableTest(unittest.TestCase):
+    """P936: how-it-works.md's stage table is StageMarkdownTable's text, from the same endings as the help."""
+
+    def test_a_row_per_stage_its_summary_escaped_and_its_codes_grouped_by_status_once(self):
+        definitions = (StageDefinition("one", "the first | stage", (DESIGN_ERROR, NO_PARTS_ENDING, stage_table.BOARD_ONLY_ENDING)),
+                       StageDefinition("two", "the second", (stage_table.CIRCUIT_ERRORS_ENDING, stage_table.NO_CIRCUIT_ENDING,
+                                                             stage_table.NOT_ROUTED_ENDING, stage_table.TIMED_OUT_ENDING)))
+        self.assertEqual(StageMarkdownTable.render(definitions).splitlines(), [
+            "| stage | what it is | how it ends when not ok |", "|---|---|---|",
+            "| one | the first \\| stage | could-not-run: a design error, with its own code (design_codes), `no_parts`; "
+            "skipped: board only: nothing to wire |",
+            "| two | the second | problems: `design_not_built`, `not_routed`; could-not-run: `stage_timed_out` |"])
+
+    def test_the_build_operation_holds_the_table_as_data(self):
+        # P936: --describe and MCP read BuildBoard.stages, never the rendered help
+        self.assertIs(BuildBoard.stages, BUILD_STAGES)
+        self.assertEqual(BuildBoard.details, StageHelpTable.render(BUILD_STAGES))
 
 
 if __name__ == "__main__":
