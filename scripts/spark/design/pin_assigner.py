@@ -56,6 +56,9 @@ CAPABILITIES = part_rules.CAPABILITIES
 UNAVAILABLE_ROLES = ("strapping",)
 
 #: A signal that names a pin with one of those roles (close audit C4), and the way out. --- MVP --- (P513)
+#: Why a named pin of a chip whose ADC2 the table records as not read lacks adc (P813): the fact and its source.
+CHIP_ADC2_REASON = (": it is on ADC2 of chip %r, whose oneshot read ESP-IDF v5.5.1 does not support "
+                    "(data/chips.json, adc2_oneshot_supported)")
 NAMED_STRAP_REFUSAL = ("%s asks for %s by name, and GPIO%d is %s — a pin this never offers, because the chip reads it "
                        "at reset; drop `pin` and spark picks another, or see P527 (#726) for a pin a connector fixes")
 
@@ -133,12 +136,15 @@ def capability_of(board, gpio):
 
     `adc` is a pin in `adc_gpio` that the record does not put on ADC2 (its `adc2_unusable_with_wifi` role): a pin on
     ADC2 reads no voltage while the radio is on, so a signal that needs adc never lands there, and a plain signal
-    spends it before an ADC1 pin (P798). A record with no such role is read as its `adc_gpio` says.
+    spends it before an ADC1 pin (P798). A record with no such role is read as its `adc_gpio` says. Nor is it a pin
+    of a chip whose ADC2 `data/chips.json` records as not read in oneshot mode (`adc2_unread_gpio`, P813, the
+    ESP32-C3's GPIO5), with or without the role.
     """
     can = set()
     if gpio in board.get("wake_capable_gpio", []):
         can.add("wake")
-    if gpio in board.get("adc_gpio", []) and gpio not in _adc2_gpio(board):
+    not_read = set(_adc2_gpio(board)) | set(board_records.adc2_unread_gpio(board))
+    if gpio in board.get("adc_gpio", []) and gpio not in not_read:
         can.add("adc")
     if "pwm_gpio" not in board or gpio in board.get("pwm_gpio", []):
         can.add("pwm")
@@ -276,7 +282,7 @@ def assign(board, signals):
         cannot = needs - capability_of(board, gpio)
         if cannot:
             raise ImpossibleError("%s asks for %s by name and needs %s, which GPIO%d cannot do%s" % (signal["name"], label, ", ".join(
-                sorted(cannot)), gpio, _why_not_adc(cannot, roles)), design_codes.NAMED_PIN_UNSUITABLE)
+                sorted(cannot)), gpio, _why_not_adc(cannot, roles, board, gpio)), design_codes.NAMED_PIN_UNSUITABLE)
         line = signal.get("line") if signal.get("bus") else None
         if gpio in taken_gpio:
             if line in SHARED_LINES and bus_holders.get(gpio) == (signal["bus"], line):
@@ -337,8 +343,14 @@ def assign(board, signals):
     return PinMap(assignments, leftover)
 
 
-def _why_not_adc(cannot, roles):
-    """The refusal's reason when the pin lacks adc for being on ADC2, in the role's own words, or "" (P798)."""
+def _why_not_adc(cannot, roles, board, gpio):
+    """
+    The refusal's reason when the pin lacks adc for being on ADC2, or "": in the chip fact's words when the table
+    records the chip's ADC2 as not read (P813), which win over the role's, since the fact is the stronger one; else in
+    the role's own words (P798).
+    """
+    if "adc" in cannot and gpio in board_records.adc2_unread_gpio(board):
+        return CHIP_ADC2_REASON % (board.get("chip"),)
     if "adc" in cannot and board_records.ADC2_UNUSABLE_WITH_WIFI in roles:
         return ": it is %s, so spark keeps an adc signal off it; pick an ADC1 pin" % (
             board_records.PIN_ROLES[board_records.ADC2_UNUSABLE_WITH_WIFI])
