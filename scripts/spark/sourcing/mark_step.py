@@ -7,7 +7,7 @@ yet on the person's list is listed. The dry run says what it would write and wri
 from spark.core import codes
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument
 from spark.records import store
-from spark.records.answer_operation import ANSWER_ARGUMENTS
+from spark.records.answer_operation import ANSWER_ARGUMENTS, BAD_ARGUMENT_FIX
 from spark.records.record_kind import Answer, _cannot
 from spark.sourcing import run_cost
 from spark.sourcing.part_operation import PartOperation
@@ -35,7 +35,7 @@ class MarkStep(PartOperation):
     def build_answer(self, project_and_step, dry_run):
         target, step = project_and_step
         if step not in run_cost.STEPS:
-            return Answer(unchecked=[_cannot(NOT_A_STEP % ", ".join(run_cost.STEPS), code=codes.BAD_ARGUMENT)])
+            return Answer(unchecked=[_cannot(NOT_A_STEP % ", ".join(run_cost.STEPS), BAD_ARGUMENT_FIX, code=codes.BAD_ARGUMENT)])
         listed = store.find_listed_name(target) is not None
         event = run_cost.step_event(store.plan_listed_name(target) if dry_run else store.add_project(target), step)
         if not dry_run:

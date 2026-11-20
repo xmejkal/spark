@@ -20,14 +20,14 @@
  {
   "file": "scripts/spark/sourcing/research/research_source.py",
   "name": "a file that does not answer is silent, not a problem",
-  "find": "                    problems.append(self._problem(refused, self.RETRY_FIX))\n                    continue",
+  "find": "                    problems.append(self._problem(refused))\n                    continue",
   "replace": "                    continue"
  },
  {
   "file": "scripts/spark/sourcing/research/research_source.py",
   "name": "a page that does not answer crashes the run instead of one unchecked item",
-  "find": "        except StoreError as unreached:\n            return SourceOffer(problems=(self._problem(unreached, self.RETRY_FIX),))",
-  "replace": "        except ValueError as unreached:\n            return SourceOffer(problems=(self._problem(unreached, self.RETRY_FIX),))"
+  "find": "        except StoreError as unreached:\n            return SourceOffer(problems=(self._problem(unreached),))",
+  "replace": "        except ValueError as unreached:\n            return SourceOffer(problems=(self._problem(unreached),))"
  },
  {
   "file": "scripts/spark/sourcing/research/research_source.py",
@@ -38,7 +38,7 @@
  {
   "file": "scripts/spark/sourcing/research/research_source.py",
   "name": "a page without a document list offers nothing and says nothing",
-  "find": "        if listed is None:  # not marked as read: a challenge page or a changed page shape is read again next run\n            return SourceOffer(problems=(SparkError(\"%s lists no documents spark can read\", url, code=NO_DOCUMENT_LIST, fix=self.NO_LIST_FIX),))\n",
+  "find": "        if listed is None:  # not marked as read: a challenge page or a changed page shape is read again next run\n            return SourceOffer(problems=(SparkError(\"%s lists no documents spark can read\", url, code=NO_DOCUMENT_LIST),))\n",
   "replace": "        if listed is None:\n            return SourceOffer()\n"
  },
  {
@@ -80,7 +80,7 @@
  {
   "file": "scripts/spark/sourcing/research/research_part.py",
   "name": "a source's problem is not an unchecked item",
-  "find": "        findings += [Finding(outcomes.COULD_NOT_RUN, name, problem.code, printable(str(problem)), problem.fix) for name, problem in held.problems]\n",
+  "find": "        findings += [Finding.of(outcomes.COULD_NOT_RUN, name, problem.code, printable(str(problem)), problem.fix) for name, problem in held.problems]\n",
   "replace": ""
  },
  {
@@ -140,8 +140,8 @@
  {
   "file": "scripts/spark/sourcing/research/research_source.py",
   "name": "a page with no document list is marked as read, so the real page is never fetched again",
-  "find": "            return SourceOffer(problems=(SparkError(\"%s lists no documents spark can read\", url, code=NO_DOCUMENT_LIST, fix=self.NO_LIST_FIX),))\n",
-  "replace": "            return SourceOffer(problems=(SparkError(\"%s lists no documents spark can read\", url, code=NO_DOCUMENT_LIST, fix=self.NO_LIST_FIX),), urls_read=(url,))\n"
+  "find": "            return SourceOffer(problems=(SparkError(\"%s lists no documents spark can read\", url, code=NO_DOCUMENT_LIST),))\n",
+  "replace": "            return SourceOffer(problems=(SparkError(\"%s lists no documents spark can read\", url, code=NO_DOCUMENT_LIST),), urls_read=(url,))\n"
  },
  {
   "file": "scripts/spark/sourcing/research/research_source.py",

@@ -20,8 +20,6 @@ PLACE = "registered-projects"
 #: The keys of one name's entry in the file, each a text.
 FIELDS = ("origin", "tool", "registered")
 NOT_REGISTERED_YET = "Not registered."
-TAKEN_FIX = "pick another name, then run bench.py register again"
-BLANK_FIX = "give the origin and the tool as text, such as --origin <the origin remote> --tool box.py, then run bench.py register again"
 
 
 class RegisteredProject(namedtuple("RegisteredProject", "name origin tool registered")):
@@ -46,16 +44,16 @@ class RegisteredProjectStore:
         and with another tool it replaces the tool: a name has one tool."""
         if not store.PLAIN.fullmatch(name):
             raise SparkError("%r is not a plain name (lower-case letters, digits and '-'). %s", name, NOT_REGISTERED_YET,
-                             code=records_codes.KEY_NOT_PLAIN, fix="register a name such as pixel-games")
+                             code=records_codes.KEY_NOT_PLAIN_REGISTERED)
         if any(not value.strip() or CONTROL.search(value) for value in (origin, tool)):  # a blank tool reads as spark's own deploy
             raise SparkError("the origin and the tool must be printable text, not blank. %s", NOT_REGISTERED_YET,
-                             code=records_codes.BLANK_VALUE, fix=BLANK_FIX)
+                             code=records_codes.BLANK_VALUE)
         with store.locked():
             listed = self._read_all()
             kept = listed.get(name)
             if (kept and kept["origin"] != origin) or name in store.projects():
                 raise SparkError("%s is taken in spark's store: another project holds it. %s", name, NOT_REGISTERED_YET,
-                                 code=records_codes.NAME_TAKEN, fix=TAKEN_FIX)
+                                 code=records_codes.NAME_TAKEN)
             if kept and kept["tool"] == tool:
                 return RegisteredProject(name, *(kept[field] for field in FIELDS)), False
             listed[name] = dict(zip(FIELDS, (origin, tool, at)))

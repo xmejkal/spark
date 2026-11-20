@@ -44,14 +44,14 @@
  {
   "file": "scripts/spark/sourcing/write_skeleton.py",
   "name": "P726 PR 2: a skeleton with no kind is refused with no code",
-  "find": "            return Answer(unchecked=[_cannot(NEEDS_PROJECT_AND_KIND, code=codes.BAD_ARGUMENT)])",
-  "replace": "            return Answer(unchecked=[_cannot(NEEDS_PROJECT_AND_KIND)])"
+  "find": "            return Answer(unchecked=[_cannot(NEEDS_PROJECT_AND_KIND, BAD_ARGUMENT_FIX, code=codes.BAD_ARGUMENT)])",
+  "replace": "            return Answer(unchecked=[_cannot(NEEDS_PROJECT_AND_KIND, BAD_ARGUMENT_FIX)])"
  },
  {
   "file": "scripts/spark/sourcing/mark_step.py",
   "name": "P726 PR 2: a word that is no step is refused with no code",
-  "find": "            return Answer(unchecked=[_cannot(NOT_A_STEP % \", \".join(run_cost.STEPS), code=codes.BAD_ARGUMENT)])",
-  "replace": "            return Answer(unchecked=[_cannot(NOT_A_STEP % \", \".join(run_cost.STEPS))])"
+  "find": "            return Answer(unchecked=[_cannot(NOT_A_STEP % \", \".join(run_cost.STEPS), BAD_ARGUMENT_FIX, code=codes.BAD_ARGUMENT)])",
+  "replace": "            return Answer(unchecked=[_cannot(NOT_A_STEP % \", \".join(run_cost.STEPS), BAD_ARGUMENT_FIX)])"
  },
  {
   "file": "scripts/parts.py",

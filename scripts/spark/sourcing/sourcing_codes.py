@@ -1,43 +1,59 @@
 """
-The reasons sourcing refuses, each a code with one sentence (P717, W6-S2): part_records' PartError, run_cost's
-NoTranscriptError and matching's UnknownMatcherError, wherever they are raised.
+The reasons sourcing refuses, each a Code with its meaning and its fix (P717, W6-S2, P935): part_records' PartError,
+run_cost's NoTranscriptError and matching's UnknownMatcherError, wherever they are raised, and research's own.
 
-A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the
-English sentence (no magic strings, P260). The errors are `errors.CodedMessageError`s, so a raise cannot leave its code
-out. Exit codes and the text of printable values stay as they were; a control character in a value, such as a project
-or a matcher name, now shows as `?` (P444). No sourcing CLI writes a code yet: an envelope's item has no `code` key, and
-the codes wait in the library for the Operation that comes later. No code is an equal literal of another leaf.
+A leaf: it imports nothing of spark but `spark.core.codes`. Each refusal names its code, so an agent decides on the code
+and never on the English sentence (no magic strings, P260). The errors are `errors.CodedMessageError`s, so a raise cannot
+leave its code out; a SparkError and `Finding.of` take the fix from the code. A variant is another Code of its parent's
+word and meaning, named after it, with a fix of its own; its parent may be the core's. A control character in a value,
+such as a project or a matcher name, shows as `?` (P444). No code is an equal literal of another leaf.
 """
 
+from spark.core import codes
+from spark.core.codes import Code
 
 # --- MVP ---
 #: part_records: a part record asked for by name, its contract and a promotion (the JSON a write reads is the core's
 #: `codes.INPUT_UNREADABLE` since P726 PR 3).
-NO_SUCH_PART, PART_CONTRACT_BROKEN = "no_such_part", "part_contract_broken"
-PROMOTION_WOULD_OVERWRITE = "promotion_would_overwrite"
+NO_SUCH_PART = Code("no_such_part", "neither the project nor spark's library has a part record of the id asked for",
+                    "parts.py --need <words> finds what exists; a new record starts with parts.py --skeleton")
+PART_CONTRACT_BROKEN = Code("part_contract_broken", "a part record does not meet the part contract",
+                            "fix each problem the sentence names in the record, then run again")
+#: A variant of PART_CONTRACT_BROKEN: research's fold refused a typed value; the fix is a template of the replies file, the
+#: command and the replies file again.
+PART_CONTRACT_BROKEN_REPLIES = Code(PART_CONTRACT_BROKEN, PART_CONTRACT_BROKEN.meaning,
+                                    "fix the value in %s so the record meets its contract (the typed values are kept there), then run %s --replies %s")
+PROMOTION_WOULD_OVERWRITE = Code("promotion_would_overwrite", "the library already holds a record of this id, and a promotion never overwrites one",
+                                 "keep the record that is there, or move it away by hand first")
+#: A variant of the core's BAD_ARGUMENT: research asked for a record of spark's own library (research_part).
+BAD_ARGUMENT_IN_LIBRARY = Code(codes.BAD_ARGUMENT, codes.BAD_ARGUMENT.meaning,
+                               "spark's library is changed in spark's repository; research a copy of the record in the project's parts/")
 #: run_cost: what a project's history and its session transcripts lack, so the cost of its steps is not known.
-STEP_LINE_BROKEN, NO_STEP_MARKED, STEP_WITHOUT_SESSION = "step_line_broken", "no_step_marked", "step_without_session"
-NO_TRANSCRIPT, TRANSCRIPT_UNREADABLE = "no_transcript", "transcript_unreadable"
-TRANSCRIPT_ENDS_EARLY = "transcript_ends_early"
+STEP_LINE_BROKEN = Code("step_line_broken", "a step line in the history has no start spark can read as a time: fix it by hand",
+                        "fix the step line the sentence names in the history by hand")
+NO_STEP_MARKED = Code("no_step_marked", "the history marks no step of the project, so there is no cost to count",
+                      "mark each step with parts.py --step <project> <step> in a Claude Code session")
+STEP_WITHOUT_SESSION = Code("step_without_session", "a step was marked in no Claude Code session, so its cost cannot be counted",
+                            "mark the step again with parts.py --step <project> <step> in a Claude Code session")
+NO_TRANSCRIPT = Code("no_transcript", "no transcript of the step's session is here, so the cost of its steps is not known",
+                     "count the cost on the machine that ran the session")
+TRANSCRIPT_UNREADABLE = Code("transcript_unreadable", "the session's transcripts cannot be opened, or name no time spark can read",
+                             "make the session's transcripts readable, then count again")
+TRANSCRIPT_ENDS_EARLY = Code("transcript_ends_early", "the session's transcripts end before one of its steps began, so its cost is not known",
+                             "count again once the session has run past the step's start")
 #: matching: a matcher name.
-UNKNOWN_MATCHER = "unknown_matcher"
+UNKNOWN_MATCHER = Code("unknown_matcher", "the name is no matcher, or none that serves this flag; the message lists the names that fit",
+                       "give one of the names the sentence lists")
 #: research: what the DFRobot wiki source needs and did not find (P737).
-NO_SKU, NO_DOCUMENT_LIST, MORE_DOCUMENTS = "no_sku", "no_document_list", "more_documents"
+NO_SKU = Code("no_sku", "a DFRobot record names no sku, so its wiki page has no address",
+              "write the maker's part number as the record's sku (parts.py --skeleton --sku, or by hand), then run again")
+NO_DOCUMENT_LIST = Code("no_document_list", "the wiki page holds no document list spark can read (its JSON-LD block), so no document was kept from it",
+                        "keep the page's documents by hand: parts.py --fetch after their URLs are in the record's sources")
+MORE_DOCUMENTS = Code("more_documents", "the wiki page lists more files than one run takes (twelve); the message names the rest",
+                      NO_DOCUMENT_LIST.fix)
 
 #: Each code and the one sentence that says what it means.
-CODES = {
-    NO_SUCH_PART: "neither the project nor spark's library has a part record of the id asked for",
-    PART_CONTRACT_BROKEN: "a part record does not meet the part contract",
-    PROMOTION_WOULD_OVERWRITE: "the library already holds a record of this id, and a promotion never overwrites one",
-    STEP_LINE_BROKEN: "a step line in the history has no start spark can read as a time: fix it by hand",
-    NO_STEP_MARKED: "the history marks no step of the project, so there is no cost to count",
-    STEP_WITHOUT_SESSION: "a step was marked in no Claude Code session, so its cost cannot be counted",
-    NO_TRANSCRIPT: "no transcript of the step's session is here, so the cost of its steps is not known",
-    TRANSCRIPT_UNREADABLE: "the session's transcripts cannot be opened, or name no time spark can read",
-    TRANSCRIPT_ENDS_EARLY: "the session's transcripts end before one of its steps began, so its cost is not known",
-    UNKNOWN_MATCHER: "the name is no matcher, or none that serves this flag; the message lists the names that fit",
-    NO_SKU: "a DFRobot record names no sku, so its wiki page has no address",
-    NO_DOCUMENT_LIST: "the wiki page holds no document list spark can read (its JSON-LD block), so no document was kept from it",
-    MORE_DOCUMENTS: "the wiki page lists more files than one run takes (twelve); the message names the rest",
-}
+CODES = {code: code.meaning for code in (
+    NO_SUCH_PART, PART_CONTRACT_BROKEN, PROMOTION_WOULD_OVERWRITE, STEP_LINE_BROKEN, NO_STEP_MARKED, STEP_WITHOUT_SESSION,
+    NO_TRANSCRIPT, TRANSCRIPT_UNREADABLE, TRANSCRIPT_ENDS_EARLY, UNKNOWN_MATCHER, NO_SKU, NO_DOCUMENT_LIST, MORE_DOCUMENTS)}
 # --- end MVP ---

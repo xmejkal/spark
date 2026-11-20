@@ -44,7 +44,7 @@ from spark.core.describe_operations import OPERATION_LINE, DescribeOperations, e
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
-from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation  # noqa: E402
+from spark.records.answer_operation import ANSWER_ARGUMENTS, BAD_ARGUMENT_FIX, AnswerOperation  # noqa: E402
 from spark.records.record_kind import Answer  # noqa: E402
 from spark.sourcing import sourcing_operations  # noqa: E402
 from spark.design import design_operations  # noqa: E402
@@ -90,7 +90,7 @@ OPERATIONS = {name: {**design_operations.OPERATIONS, **sourcing_operations.OPERA
 FLAGS = ["--" + name for name in OPERATIONS]
 #: What parts.py says of itself, and the fix of an argv that names no operation.
 HELP = HelpText("parts.py", "What a part needs, and what is known about it.", "", tool="parts",
-                bad_argument_fix="parts.py --describe --json lists every operation and its arguments")
+                bad_argument_fix=BAD_ARGUMENT_FIX)
 
 
 def asked_on_the_core(argv):

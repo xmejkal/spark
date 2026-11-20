@@ -127,9 +127,8 @@ class DfrobotWikiSource(ResearchSource):
     MOST_DOCUMENTS = 12
     #: The `source` of a proof that says what the page did not publish: the page, and the date it was read.
     NOT_LISTED = "the DFRobot wiki page %s lists no dimension drawing (read %s)"
+    #: The fix of a page or a file that did not answer, or that the store refused, given with the store's code.
     RETRY_FIX = "run again when the page answers; the other sources still ran"
-    NO_SKU_FIX = "write the maker's part number as the record's sku (parts.py --skeleton --sku, or by hand), then run again"
-    NO_LIST_FIX = "keep the page's documents by hand: parts.py --fetch after their URLs are in the record's sources"
     LD_JSON = re.compile(r'<script\s+type="application/ld\+json"\s*>(.*?)</script>', re.S)
 
     def page_of(self, record):
@@ -177,25 +176,26 @@ class DfrobotWikiSource(ResearchSource):
         except ValueError:
             return False
 
-    @staticmethod
-    def _problem(error, fix):
-        return SparkError("%s", error, code=error.code, fix=fix)
+    @classmethod
+    def _problem(cls, error):
+        """The SparkError of a StoreError the source caught: its code, and the source's own fix."""
+        return SparkError("%s", error, code=error.code, fix=cls.RETRY_FIX)
 
     def offer(self, gaps, record, outside):
         if str(record.get("vendor") or "").strip().lower() != self.VENDOR:
             return SourceOffer()
         url = self.page_of(record)
         if url is None:
-            return SourceOffer(problems=(SparkError("%s has no sku, so its DFRobot wiki page has no address", record.get("id"), code=NO_SKU, fix=self.NO_SKU_FIX),))
+            return SourceOffer(problems=(SparkError("%s has no sku, so its DFRobot wiki page has no address", record.get("id"), code=NO_SKU),))
         if self._sources_hold(record, url):
             return SourceOffer()
         try:
             html = outside.fetch(url).decode("utf-8", "replace")
         except StoreError as unreached:
-            return SourceOffer(problems=(self._problem(unreached, self.RETRY_FIX),))
+            return SourceOffer(problems=(self._problem(unreached),))
         listed = self.listed_documents(html)
         if listed is None:  # not marked as read: a challenge page or a changed page shape is read again next run
-            return SourceOffer(problems=(SparkError("%s lists no documents spark can read", url, code=NO_DOCUMENT_LIST, fix=self.NO_LIST_FIX),))
+            return SourceOffer(problems=(SparkError("%s lists no documents spark can read", url, code=NO_DOCUMENT_LIST),))
         documents, problems = self._keep(listed, record, outside)
         return SourceOffer(documents=documents, problems=tuple(problems), urls_read=(url,))
 
@@ -222,13 +222,13 @@ class DfrobotWikiSource(ResearchSource):
                 try:
                     digest = keep_in_store(outside.fetch(url), name)
                 except StoreError as refused:
-                    problems.append(self._problem(refused, self.RETRY_FIX))
+                    problems.append(self._problem(refused))
                     continue
                 documents[key] = document_entry(url, digest, name, outside.clock.now().date().isoformat(), title)
             taken[key] = documents[key]
         if left:
             problems.append(SparkError("the page lists more than %d files to keep; these were not fetched: %s", self.MOST_DOCUMENTS,
-                                       ", ".join(left), code=MORE_DOCUMENTS, fix=self.NO_LIST_FIX))
+                                       ", ".join(left), code=MORE_DOCUMENTS))
         return documents, problems
 
 

@@ -8,7 +8,7 @@ The CLI reads the file and hands the object in (`Argument.payload`).
 from spark.core import codes
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument
 from spark.records import missing_facts, provenance
-from spark.records.answer_operation import ANSWER_ARGUMENTS
+from spark.records.answer_operation import ANSWER_ARGUMENTS, BAD_ARGUMENT_FIX
 from spark.records.record_kind import Answer, CHAIN_FACTS, _absent, _problem
 from spark.sourcing import drawer
 from spark.sourcing.part_operation import PartOperation
@@ -40,7 +40,7 @@ class SetFacts(PartOperation):
         part_id, facts = part_and_facts
         if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + drawer.PROVENANCE_KEYS + drawer.SHEET_KEYS)):
             return Answer(problems=[_problem(part_id, NOT_A_FACT_WRITE % (", ".join(CHAIN_FACTS), ", ".join(drawer.SHEET_KEYS), ", ".join(drawer.DESCRIBING)),
-                                             code=codes.BAD_ARGUMENT)])
+                                             BAD_ARGUMENT_FIX, code=codes.BAD_ARGUMENT)])
         facts = {key: drawer.scrub(key, value) if key in drawer.DESCRIBING + drawer.PROVENANCE_KEYS + drawer.SHEET_KEYS else value for key, value in facts.items()}
         wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])] + drawer.list_provenance_key_problems(facts)
         if wrong:
