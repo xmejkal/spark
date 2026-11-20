@@ -496,7 +496,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         for entry in refused:
             self.assertEqual((entry["subject"], entry["record"], entry["fix"], entry["expected"]),
                              ("Epaper2in9BwrMhEtLive", "epaper-2in9-bwr-mh-et-live",
-                              "research.py --part epaper-2in9-bwr-mh-et-live asks for the physical facts that draw it", False))
+                              "research.py --part epaper-2in9-bwr-mh-et-live --project . asks for the physical facts that draw it", False))
         research = [step for step in said["next"] if step["op"] == "research"]
         self.assertEqual(len(research), 1)
         self.assertEqual(research[0]["argv"], ["--part", "epaper-2in9-bwr-mh-et-live", "--project", str(project.resolve())])

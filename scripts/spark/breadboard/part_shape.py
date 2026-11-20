@@ -297,6 +297,8 @@ class ModuleShapeSource(ShapeSource):
         missing = next((field for field in self.NEEDED if self._field(record, field) is None), None)
         if missing:
             raise NotDrawnError("the part record lacks %s" % missing, drawing.NO_HEADER_FACT, missing)
+        if None in record["pin_order"]:  # a pad with nothing on it has no label to draw: P947 may name one
+            raise NotDrawnError("the part record's pin_order holds a pad with no pin", drawing.NO_HEADER_FACT, "pin_order")
         header, size = record["physical"]["header"], (record["body_mm"]["width"], record["body_mm"]["height"])
         labels = list(self.printed_labels(record).values())
         if len(set(labels)) != len(labels):

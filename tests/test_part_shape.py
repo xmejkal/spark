@@ -343,6 +343,15 @@ class AModuleIsDrawnFromItsPhysicalBlockTest(unittest.TestCase):
         sclk["printed"] = "CS"
         self.assertEqual(module_refusal(record), ("duplicate_pad_label", "CS"))
 
+    def test_a_pad_with_no_pin_in_pin_order_is_refused_by_pin_order(self):
+        # the contract allows a null pad (nothing on it); one null and two nulls are both named by the field
+        for nulls in ([3], [3, 5]):
+            record = epaper()
+            for index in nulls:
+                record["pin_order"][index] = None
+            with self.subTest(nulls=nulls):
+                self.assertEqual(module_refusal(record), ("no_header_fact", "pin_order"))
+
     def test_the_placer_is_given_by_injection(self):
         class EveryPadAtOnePlace(part_shape.OneRowHeaderPlacer):
             def place(self, header, size, labels):

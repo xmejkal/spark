@@ -696,7 +696,7 @@ class TheDrawingCodeTest(unittest.TestCase):
         from spark.breadboard import drawing
         self.assertIsInstance(drawing.NO_DRAWING_FACT, Code)
         self.assertEqual(drawing.NO_DRAWING_FACT, "no_drawing_fact")
-        self.assertEqual(drawing.NO_DRAWING_FACT.fix % "x-module", "research.py --part x-module asks for the physical facts that draw it")
+        self.assertEqual(drawing.NO_DRAWING_FACT.fix % "x-module", "research.py --part x-module --project . asks for the physical facts that draw it")
         self.assertEqual(drawing.CODES["no_drawing_fact"], drawing.NO_DRAWING_FACT.meaning)
         with self.assertRaises(TypeError):
             codes.fix_of(drawing.NO_DRAWING_FACT)  # a template: its site fills it, never a raw %s
@@ -711,7 +711,7 @@ class TheDrawingCodeTest(unittest.TestCase):
         self.assertEqual([key for key in ("record", "fix") if key in board], [])
         part = kept_files.not_written_entry(drawing.NotWritten(Path("breadboard.svg"), renderer, drawing.NO_DRAWING_FACT,
                                                                "XModule", "why", "x-module"))
-        self.assertEqual((part["record"], part["fix"]), ("x-module", "research.py --part x-module asks for the physical facts that draw it"))
+        self.assertEqual((part["record"], part["fix"]), ("x-module", "research.py --part x-module --project . asks for the physical facts that draw it"))
 
 
 if __name__ == "__main__":

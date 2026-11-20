@@ -42,7 +42,7 @@ DUPLICATE_PAD_LABEL, NO_HOLE_LEFT, NO_WOKWI_PART = "duplicate_pad_label", "no_ho
 NO_PIN_POSITION, NO_WOKWI_PIN = "no_pin_position", "no_wokwi_pin"
 #: The one code here that is a Code (P945): its fix, filled with the part record's id, says how to get the facts.
 NO_DRAWING_FACT = codes.Code("no_drawing_fact", "nothing says how to draw a part (no Wokwi part and no physical block in its "
-                             "record) or the board; the subject is it", "research.py --part %s asks for the physical facts that draw it")
+                             "record) or the board; the subject is it", "research.py --part %s --project . asks for the physical facts that draw it")
 ROW_FULL, NOT_DRAWN_YET, PLANNER_FAULT = "row_full", "not_drawn_yet", "planner_fault"
 #: Each code with the one sentence that says what it means. Every refusal has one (P691).
 CODES = {
@@ -439,7 +439,7 @@ class StepHoles:
     """
     Value: the holes each numbered step uses in one planned layout (P945), {step number: words}, which the step list
     appends: a placing step names its part's holes, a jumper its two holes in the order the step runs it, and a
-    resistor leg its hole. A step the layout does not draw has none. Built by `of`; it decides nothing again.
+    resistor leg its own hole, at the step that puts it in. A step the layout does not draw has none. Built by `of`; it decides nothing again.
     """
 
     def __init__(self, words):
@@ -474,10 +474,7 @@ class StepHoles:
                 words[number] = "from %s to %s" % (hole_label(jumpers[number].one), hole_label(jumpers[number].other))
             elif seated.act == wiring_steps.PLACE and seated.subject in placed:
                 words[number] = cls._span(placed[seated.subject].holes.values())
-            elif seated.act == wiring_steps.SETUP and seated.subject.kind == wiring_steps.RESISTOR \
-                    and seated.subject.component in placed:
-                words[number] = cls._span(placed[seated.subject.component].holes.values())
-            elif seated.act == wiring_steps.JOIN and seated.subject.kind == wiring_steps.RESISTOR \
+            elif seated.act in (wiring_steps.SETUP, wiring_steps.JOIN) and seated.subject.kind == wiring_steps.RESISTOR \
                     and seated.subject.component in placed:
                 hole = placed[seated.subject.component].holes.get(seated.subject.pin)
                 words[number] = hole_label(hole) if hole else None

@@ -438,8 +438,8 @@ class EachStepNamesItsHolesTest(unittest.TestCase):
         resistor = next(part for part in layout.parts if part.id == "R1")
         seated = list(read.steps.anchored())
         for number, step in enumerate(seated, 1):
-            if step.act == "setup" and step.subject.kind == "resistor":
-                self.assertEqual(holes.get(number), drawing.StepHoles._span(resistor.holes.values()))
+            if step.act == "setup" and step.subject.kind == "resistor":  # the leg the step puts in, not both
+                self.assertEqual(holes.get(number), drawing.hole_label(resistor.holes[step.subject.pin]))
             if step.act == "join" and step.subject.kind == "resistor":
                 self.assertEqual(holes.get(number), drawing.hole_label(resistor.holes[step.subject.pin]))
         self.assertTrue(any(step.subject.kind == "resistor" for step in seated if step.act in ("setup", "join")))
