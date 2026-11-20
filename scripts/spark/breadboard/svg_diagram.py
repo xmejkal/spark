@@ -145,15 +145,26 @@ class BoardBackground:
         return wire_routing.Obstacles(self.box(surface), tuple(bodies), tuple(marks),
                                       tuple((y, left, right) for _, _, y, left, right in self.rail_lines(surface)))
 
+    def sign_boxes(self, surface):
+        """The box of each rail's + or - sign, which a pill keeps clear of (a wire may pass it, so `obstacles` leaves
+        it out): 0.6 of its size wide, from 0.75 of its size above its baseline to 0.25 below."""
+        size = self.palette.sizes["rail_sign"]
+        return tuple(BodyBox(x - 0.3 * size, baseline - 0.75 * size, x + 0.3 * size, baseline + 0.25 * size)
+                     for _, x, baseline in self._signs(surface))
+
+    def _signs(self, surface):
+        """(its rail, x, baseline) of each rail's sign, at the rail's left end."""
+        size = self.palette.sizes["rail_sign"]
+        return [(rail, left - surface.pitch, row_y + size * 0.35) for rail, row_y, _, left, _ in self.rail_lines(surface)]
+
     def _rails(self, root, surface):
         colors, sizes = self.palette
-        for rail, row_y, y, left, right in self.rail_lines(surface):
+        for (rail, _, y, left, right), (_, x, baseline) in zip(self.rail_lines(surface), self._signs(surface)):
             plus = rail.endswith("p")
             color = colors["plus" if plus else "minus"]
             _element(root, "line", x1=left, y1=y, x2=right, y2=y,
                      stroke=color, **{"stroke-width": sizes["rail_line"], "stroke-opacity": sizes["rail_line_opacity"]})
-            _element(root, "text", self.PLUS if plus else self.MINUS, x=left - surface.pitch,
-                     y=row_y + sizes["rail_sign"] * 0.35, fill=color,
+            _element(root, "text", self.PLUS if plus else self.MINUS, x=x, y=baseline, fill=color,
                      **{"font-size": sizes["rail_sign"], "font-weight": "700", "text-anchor": "middle"})
 
 
@@ -185,7 +196,7 @@ class PillLayout:
     is given; the renderer builds one, and no caller swaps it. A pill lies on a straight piece of its own wire,
     centred on its line: first the runs across, longest first, then the runs along a column, turned. On a piece it
     starts at the middle and slides along it, SLIDE px at a time either way, until it is clear of every body and
-    printed letter or number, every end dot, every other wire and every pill placed before it, by CLEAR px. A pill
+    printed letter, number or rail sign, every end dot, every other wire and every pill placed before it, by CLEAR px. A pill
     keeps CLEAR px plus half the white under-stroke from each end of its piece, so it never hides a bend. A wire too
     short to hold it (a stub into a rail) gets it across beside a piece, 2 CLEAR off its wire or its end dot, or past
     an end of the wire, along its last piece. A wire with no such place gets its pill on the middle of its longest
@@ -202,7 +213,7 @@ class PillLayout:
 
     def place(self, jumpers, paths, obstacles):
         """{step: WirePill} of every jumper, `paths` its JumperPaths and `obstacles` the drawing's
-        `wire_routing.Obstacles`, whose bodies and marks a pill keeps clear of."""
+        `wire_routing.Obstacles`, whose bodies and marks (the rail signs among them) a pill keeps clear of."""
         blocked = list(obstacles.bodies) + list(obstacles.marks)
         dots = [(hole.x, hole.y) for jumper in jumpers for hole in (jumper.one, jumper.other)]
         pills = {}
@@ -334,7 +345,8 @@ class SvgBreadboardDiagram:
         boxes = [background.box(surface)] + [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
         obstacles = background.obstacles(surface, boxes[1:])
         paths = self.router.route(layout, obstacles)
-        pills = self.pill_layout.place(layout.jumpers, paths, obstacles)
+        pills = self.pill_layout.place(layout.jumpers, paths,
+                                       obstacles._replace(marks=obstacles.marks + background.sign_boxes(surface)))
         boxes += [BodyBox(min(x for x, _ in path.points), min(y for _, y in path.points), max(x for x, _ in path.points),
                           max(y for _, y in path.points)) for path in paths.values() if path.points]
         boxes += [pill.box() for pill in pills.values()]

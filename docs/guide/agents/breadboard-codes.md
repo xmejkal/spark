@@ -51,9 +51,9 @@ sign, and its line keeps `a free rail`.
 
 In `breadboard.svg` each jumper carries one pill (P953): its step's number in a white disc, then the two pads it joins,
 the board's last (`6  CS to D3`), or the pad and its rail's sign (`3  3V3 to + rail`). The words are each end's `label`:
-the board's printed label, the part's printed name, or a resistor's `R1 end 1`. A pill lies on its wire's longest run,
-or beside a stub into a rail, and touches no part's body, end dot, other wire or other pill; it sits in its jumper's
-`data-step` group. Each wire is drawn in the hex of its colour word from `palette.wires` in `data/breadboards.json`,
+the board's printed label, the part's printed name, or a resistor's `R1 end 1`. A pill lies on its wire's longest run
+across, else on its longest run along a column (turned), else beside a stub into a rail or past its end. It touches no part's body, end
+dot, other wire, other pill, letter, number or rail sign, and sits in its jumper's `data-step` group. Each wire is drawn in the hex of its colour word from `palette.wires` in `data/breadboards.json`,
 each at least 4.5:1 with white; the sheet and Wokwi keep the word (cyan is drawn `#0b7fa8`).
 
 ## A part's picture

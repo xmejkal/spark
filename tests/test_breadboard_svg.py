@@ -151,7 +151,7 @@ class TheSvgTest(unittest.TestCase):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         # P949: the keys data-step and data-part, and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "a79ee2aa68d2484a865d2865f8b7a4040e050806b372cc359e7ae05bf5bd4edd")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, seen in a render on 2026-11-20
+                         "549d5b330ef7d6d439111523c50de89bc9c59d03ef0d17ce57b80e9932d9ac13")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, pill 7 clear of the rail signs, seen in a render on 2026-11-20
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -551,12 +551,12 @@ def pill_box(pill):
 
 
 def board_marks(root):
-    """(text, box) of each mark printed on the board itself, the root's own texts but the note lines: each row letter,
-    column number and rail sign, its box 0.6 of its size wide a character, from 0.75 of its size above its baseline to
-    0.25 below, about its x (they are centred)."""
+    """(text, box) of each mark printed on the board itself, the root's own centred texts with no halo (not a part's
+    name, not a note line): each row letter, column number and rail sign, its box 0.6 of its size wide a character,
+    from 0.75 of its size above its baseline to 0.25 below, about its x."""
     marks = []
     for text in root.findall("svg:text", NS):
-        if text.get("text-anchor") == "middle":
+        if text.get("text-anchor") == "middle" and text.get("stroke") is None:
             x, y, size = float(text.get("x")), float(text.get("y")), float(text.get("font-size"))
             half = 0.3 * size * len(text.text)
             marks.append((text.text, (x - half, y - 0.75 * size, x + half, y + 0.25 * size)))
@@ -670,9 +670,13 @@ class ThePillsTest(unittest.TestCase):
         for fixture, (_, layout) in self.drawn.items():
             with self.subTest(fixture):
                 bodies = [svg_diagram.BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
-                obstacles = svg_diagram.BoardBackground(svg_diagram.BoardPalette.load()).obstacles(layout.geometry.surface, bodies)
+                background = svg_diagram.BoardBackground(svg_diagram.BoardPalette.load())
+                obstacles = background.obstacles(layout.geometry.surface, bodies)
                 paths = wire_routing.TrackJumperRouter().route(layout, obstacles)
-                pills = svg_diagram.PillLayout(4.0, 3.4).place(layout.jumpers, paths, obstacles)
+                signs = background.sign_boxes(layout.geometry.surface)
+                self.assertEqual(len(signs), 4)
+                pills = svg_diagram.PillLayout(4.0, 3.4).place(layout.jumpers, paths,
+                                                               obstacles._replace(marks=obstacles.marks + signs))
                 self.assertEqual(sorted(pills), sorted(jumper.step for jumper in layout.jumpers))
                 for step, pill in pills.items():
                     box = pill.box()
