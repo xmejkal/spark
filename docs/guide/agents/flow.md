@@ -80,7 +80,11 @@ part comes from the guide's own data. No key is an `id`. The page inlines the br
 it parses, has no DOCTYPE, uses only `svg`, `g`, `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`,
 `text`, `tspan` and `title`, and only attributes of geometry and colour that spark draws with, and its three keys
 (`part_pictures.PLAIN_ATTRIBUTES`; no `style`, no `href`, no handler). No value may hold `url(`, `image-set`,
-`javascript:`, `expression` or a backslash, read after the parse in any case. Else the page shows it as an `<img>`, as
+`javascript:`, `expression` or a backslash, read after the parse in any case. One more element may stand
+([P946](https://github.com/xmejkal/spark/issues/1349)): an `image` whose one `href` is a JPEG embedded as base64
+(`data:image/jpeg;base64,...`), the rule `picture_check.is_embedded_jpeg` that a kept picture of a part passed, with
+only `x`, `y`, `width`, `height`, `preserveAspectRatio`, `transform` and `opacity` beside it. No element may stand
+inside a `title`. Else the page shows it as an `<img>`, as
 it shows the schematic and the PCB, so a script in a hand-edited `breadboard.svg` never runs, and nothing loads. The
 dot on each pin is yellow when its row joins a wire or another part and gold when it is free. Under the picture a
 legend names the states that the dots draw: "pad in use" and "pad free". "Pad held: do not use" shows only when a pad

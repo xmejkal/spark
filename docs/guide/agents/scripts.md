@@ -283,9 +283,19 @@ These write:
 - `assign_pins.py --emit-pins`; `boards.py --resolve`.
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
-  - `--drawer-set`, `--needs-set`, `--needs-drop`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
+  - `--drawer-set`, `--needs-set`, `--needs-drop`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, `--keep-picture`, and `--fetch`, which
     also uses the network. `--fact-set` writes `legs` (leg by leg, each pin one of `pin_order`) and `host_requirements` (the list as a whole) too ([P741](https://github.com/xmejkal/spark/issues/1017)),
     and `short_name`, what the steps call the part ([P947](https://github.com/xmejkal/spark/issues/1351)).
+  - **A part's picture** ([P946](https://github.com/xmejkal/spark/issues/1349)): `parts.py --picture-frame <id>
+    [--project .]` prints the frame to draw it on, an SVG in mm of the outline and the pads, with each pad's ring and
+    label in a `data-guide` group (it writes nothing). Draw the part on it, in the real part's colours and with its
+    main parts at their places, take the guide group out, and keep it: `parts.py --keep-picture FILE --part <id>
+    --made-by WORD --likeness exact|near|rough --credit LINE --project . --dry-run` first. It checks the picture
+    ([the codes](breadboard-codes.md)), keeps the file in the store and names it in the record's `documents` and
+    `pictures.breadboard-top` in one write, or keeps nothing. `verified` follows the frame's size fact (`body_mm.verified`).
+    The next build draws it, with spark's pads and labels over it. The build tries the makers in the order
+    `picture_makers.BUILD_MAKERS` (the kept picture), then spark's pictograms in `data/pictograms/`, the one named by the
+    record's id before the one named by its Wokwi type.
   - **A bench result goes back with `--fact-set`** ([P374](https://github.com/xmejkal/spark/issues/479)), under the `write`
     key of the `--unverified` row. Write `verified: true` only for a result the person stated in this conversation, and
     put in `source` who measured it, when and how, in the person's own zone: `bench, 2026-10-29, meter on the owned

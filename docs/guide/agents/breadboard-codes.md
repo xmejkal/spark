@@ -16,3 +16,21 @@ Part of [the scripts](scripts.md). When `breadboard.py` does not write a drawing
 | `row_full`, `not_drawn_yet` | the row; the rail, the supply or the resistor | `row_full`: too many steps join one pin. Report it with the project's steps. `not_drawn_yet`: spark does not draw a rail, a supply from off the board or a resistor whose both legs join rows; `expected` is `true`. Do not retry: tell the person to wire it by hand from the sheet's steps |
 | `no_pin_position`, `planner_fault` | the Wokwi type; the hole, the part or the end | `no_pin_position`: first make sure that the record's `simulation.wokwi.pins` names pins that Wokwi has, then report it. `planner_fault`: a fault in spark's planner. Report it. Do not retry |
 | `no_wokwi_part` | none | none. It is by design, and `expected` is `true`. Do not retry. The `why` names each drawn part that Wokwi has no part for, the board or a module: `Wokwi has no part for the board and e-paper` |
+
+A part's picture ([P946](https://github.com/xmejkal/spark/issues/1349)) is checked by `picture_check.PictureCheck`
+against the part's frame before `parts.py --keep-picture` keeps it, and again before the build draws it. Each problem
+names its code and the element, as a path from the root: `svg/g[0]/image[0]`. A refused picture is not kept. A kept
+picture that is refused at the build is drawn as the part's pictogram, with a note under the drawing:
+`<part>: kept picture not shown (<why>)`. Draw the picture again in the frame (`parts.py --picture-frame <id>`) and keep it again.
+
+| code | the picture breaks this rule |
+| --- | --- |
+| `picture_not_svg` | its bytes are UTF-8, parse, hold no DOCTYPE and no entity, and its root is an `svg` |
+| `picture_view_box` | its `viewBox` is `0 0 W H`, with W and H the frame's size in mm, within 0.1 mm |
+| `picture_element` | each element is a plain shape (as the page's) or an `image`, and none stands inside a `title` |
+| `picture_attribute` | each attribute is one a picture holds (no `id`, no `style`, no handler), and no value holds `url(`, `http` or the like |
+| `picture_link` | the one link is a JPEG embedded as base64 on an `image` (`href`, never `xlink:href`); no text holds a web address |
+| `picture_jpeg` | an embedded JPEG is a whole JPEG with no APP1 segment (EXIF, which can say where a photo was taken) |
+| `picture_guide_left` | the frame's guide group (`data-guide`) is left out: the pads are spark's to draw |
+| `picture_pad_label` | no text is a pad's printed label: spark draws the labels over the picture |
+| `picture_too_big` | at most 250000 bytes with no embedded JPEG, 400000 with one |
