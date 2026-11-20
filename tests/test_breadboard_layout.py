@@ -555,7 +555,7 @@ class TheSpaceBetweenPartsTest(unittest.TestCase):
         self.assertNotIn("closer than", spaced)
 
     def test_a_body_that_would_reach_past_the_board_s_last_column_is_named_crowded_or_refused(self):
-        # the review (refuter): only the body's left side was checked, so on a shorter board the e-paper's body lay past
+        # the review of PR #1369: only the body's left side was checked, so on a shorter board the e-paper's body lay past
         # the board's right end, and nothing said so. Its spaced place needs 63 columns: on 60 it goes in by the old
         # rule, named crowded and on the board; on 58 no place is left and the plan refuses it.
         full = json.loads((ROOT / "data" / "breadboards.json").read_text())["full"]
