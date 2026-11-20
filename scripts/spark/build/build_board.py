@@ -10,16 +10,18 @@ from pathlib import Path
 from spark.bench import board_envelope
 from spark.breadboard import tabbed_page
 from spark.build.build_service import findings_of, verdict
-from spark.build.kept_files import KeepAsked, drawing_next_steps, keep_all, left_off, simulation_dir
+from spark.build.kept_files import KeepAsked, keep_all, left_off, simulation_dir
 from spark.build.requirements_build import RequirementsBuildService
 from spark.build.stage_help_table import StageHelpTable
 from spark.build.stages import BUILD_STAGES, skipped_the_build
-from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, WRITES, Argument, Operation
+from spark.core import outcomes
+from spark.core.operation import ASKS, COMMON_ARGUMENTS, FETCHES, READS, RUNS, WRITES, Argument, Operation
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, STATUS_FOR
 from spark.core.renderers import FlatJsonLine
 from spark.core.result import OperationResult
 from spark.core.text_guards import guard_lines
 from spark.design import loader
+from spark.records import store
 from spark.flow.write_flow_page import write_kept_page
 
 #: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
@@ -39,6 +41,20 @@ def render(stages, code, unserved=()):
         EXIT_COULD_NOT_RUN: "  the chain was NOT exercised — this is not a pass",
     }[code] + (" — but not every need is on the board: %s" % ", ".join(unserved) if unserved and code == EXIT_OK else ""))
     return "\n".join(lines) + "\n"
+
+
+#: Why a build names the research step next (P945): the breadboard picture cannot draw a part before its facts are found.
+WHY_DRAWING_NEXT = "find the physical facts that draw this part on the breadboard picture, before you wire it"
+
+
+def drawing_next_steps(kept, project):
+    """The `next` of a build whose breadboard picture lacks a part's facts: one research step per record a kept entry
+    names (the entry's `record`, P945), with `--project` when the build ran in a project. [] when every part is drawn."""
+    records = list(dict.fromkeys(entry["record"] for entry in kept or [] if entry.get("record")))
+    where = ["--project", str(project)] if project else []
+    return [outcomes.add_env(outcomes.step("research", ["--part", record] + where, WHY_DRAWING_NEXT,
+                                           effects=(READS, WRITES, ASKS, FETCHES)), store.read_given_env())
+            for record in records]
 
 
 def project_of(requirements):

@@ -24,6 +24,7 @@ from spark.breadboard import breadboard_codes
 from spark.breadboard import drawing
 from spark.breadboard import drawing_catalog
 from spark.breadboard import drawing_match
+from spark.breadboard import svg_diagram
 from spark.breadboard import kept_moves
 from spark.breadboard import wiring_steps
 
@@ -51,7 +52,7 @@ STEP_COLORS = wiring_steps.StepColors()
 #: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
 #: new entry here, and nothing else changes.
 DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(STEP_COLORS),
-                     drawing.SvgBreadboardDiagram(STEP_COLORS))
+                     svg_diagram.SvgBreadboardDiagram(STEP_COLORS))
 #: What the sheet says before power is applied, from `wiring_data`'s before_power.
 BEFORE_POWER_LIST = before_power.BeforePowerList()
 #: What the sheet says of the bench: one line per change since the last sheet for another design, in these words.

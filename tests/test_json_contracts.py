@@ -704,7 +704,8 @@ class TheDrawingCodeTest(unittest.TestCase):
     def test_a_kept_entry_with_no_record_has_no_fix_and_never_says_part_none(self):
         from spark.breadboard import drawing
         from spark.build import kept_files
-        renderer = drawing.SvgBreadboardDiagram()
+        from spark.breadboard import svg_diagram
+        renderer = svg_diagram.SvgBreadboardDiagram()
         board = kept_files.not_written_entry(drawing.NotWritten(Path("breadboard.svg"), renderer, drawing.NO_DRAWING_FACT,
                                                                 "board-x", "nothing says how to draw the board board-x"))
         self.assertEqual([key for key in ("record", "fix") if key in board], [])

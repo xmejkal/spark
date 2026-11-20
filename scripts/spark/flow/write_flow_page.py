@@ -9,7 +9,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.breadboard import sheet, tabbed_page
-from spark.breadboard.drawing import SvgBreadboardDiagram
+from spark.breadboard.svg_diagram import SvgBreadboardDiagram
 from spark.breadboard.tabbed_page import page_title
 from spark.flow import flow_codes
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture

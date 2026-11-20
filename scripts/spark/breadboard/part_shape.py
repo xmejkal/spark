@@ -18,7 +18,7 @@ import json
 import math
 from pathlib import Path
 
-from spark.breadboard import drawing
+from spark.breadboard import drawing, svg_diagram
 from spark.breadboard.drawing import NotDrawnError
 from spark.design import footprint_emitter
 
@@ -38,7 +38,7 @@ def _px(mm):
     return round(mm * PX_PER_MM, 3)
 
 
-def project_to_px(shape, usb_mark=True, labels=drawing.LABELS_BESIDE, full_surface=True):
+def project_to_px(shape, usb_mark=True, labels=svg_diagram.LABELS_BESIDE, full_surface=True):
     """The `part_px` of a shape: the dict the planner and the renderers read. It scales to px and derives the `center` the
     turn goes about. `covers_holes` is a drawing convention, not a measured fact: the body of a board hides the holes under
     it. `notes` holds the sentence and the why of each group that is not verified, in the order the shape lists them. The
@@ -329,7 +329,7 @@ class ModuleShapeSource(ShapeSource):
         shape = self.find_shape(record)
         if shape is None:
             return None
-        part_px = project_to_px(shape, usb_mark=False, labels=drawing.LABELS_INTO_BODY, full_surface=False)
+        part_px = project_to_px(shape, usb_mark=False, labels=svg_diagram.LABELS_INTO_BODY, full_surface=False)
         return dict(part_px, name=record.get("short_name") or record.get("id"))
 
     def find_pin_names(self, record):

@@ -24,7 +24,7 @@ from fakes import FakePartPictures  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import drawing, part_pictures, sheet, wiring_steps  # noqa: E402
+from spark.breadboard import drawing, part_pictures, sheet, svg_diagram, wiring_steps  # noqa: E402
 from test_breadboard_layout import EPAPER, RECORD_BOARD, epaper_inputs, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -40,7 +40,7 @@ def xiao_svg(pictures=None):
     with in_store():
         read = sheet._read_build(XIAO / "requirements.json")
         layout = sheet._plan_layout(read)
-    return drawing.SvgBreadboardDiagram(pictures=pictures).text(layout), layout
+    return svg_diagram.SvgBreadboardDiagram(pictures=pictures).text(layout), layout
 
 
 class ThePictogramsTest(unittest.TestCase):
@@ -141,7 +141,7 @@ def record_svg():
     with in_store():
         read = sheet._read_build(RECORD_BOARD / "requirements.json")
     layout = drawing.BreadboardPlanner(*record_inputs(read)).plan(read.steps)
-    return drawing.SvgBreadboardDiagram().text(layout), layout
+    return svg_diagram.SvgBreadboardDiagram().text(layout), layout
 
 
 class TheRecordBoardSvgTest(unittest.TestCase):
@@ -177,7 +177,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         self.assertEqual(len(self.root.findall("svg:line", NS)), 0)
 
     def test_the_same_layout_gives_the_same_bytes(self):
-        self.assertEqual(self.text, drawing.SvgBreadboardDiagram().text(self.layout))
+        self.assertEqual(self.text, svg_diagram.SvgBreadboardDiagram().text(self.layout))
 
     def test_the_picture_is_the_one_looked_at_on_2026_10_29(self):
         # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose
@@ -199,7 +199,7 @@ class TheModuleSvgTest(unittest.TestCase):
             read = sheet._read_build(EPAPER / "requirements.json")
         geometry, catalog = epaper_inputs(read)
         cls.layout = drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
-        cls.text = drawing.SvgBreadboardDiagram().text(cls.layout)
+        cls.text = svg_diagram.SvgBreadboardDiagram().text(cls.layout)
         cls.root = ElementTree.fromstring(cls.text)
         cls.module = next(part for part in cls.layout.parts if part.id == "Epaper2in9BwrMhEtLive")
         cls.part_px = geometry.part(cls.module.type)
@@ -216,9 +216,9 @@ class TheModuleSvgTest(unittest.TestCase):
                 self.assertTrue(label.get("transform").startswith("rotate(90 "), label.get("transform"))
 
     def test_a_label_of_a_bottom_edge_row_sits_above_its_pad(self):
-        place = drawing.IntoBodyLabels().place(50, 160, {"center": [100, 83]})
+        place = svg_diagram.IntoBodyLabels().place(50, 160, {"center": [100, 83]})
         self.assertEqual((place.y < 160, abs(place.x - 50) <= 4.8, place.anchor, place.rotate), (True, True, "end", 90))
-        place = drawing.IntoBodyLabels().place(50, 4.8, {"center": [100, 83]})
+        place = svg_diagram.IntoBodyLabels().place(50, 4.8, {"center": [100, 83]})
         self.assertEqual((place.y > 4.8, place.anchor), (True, "start"))
 
     def test_the_module_draws_no_usb_mark_and_the_board_keeps_its_one(self):
@@ -233,7 +233,7 @@ class TheModuleSvgTest(unittest.TestCase):
     def test_the_canvas_holds_the_module_that_hangs_below_the_holes(self):
         bottom = self.module.top + self.part_px["size"][1]
         self.assertGreater(bottom, max(hole.y for hole in self.layout.geometry.surface.holes))
-        self.assertGreaterEqual(float(self.root.get("height")), bottom + drawing.SvgBreadboardDiagram.MARGIN_PX)
+        self.assertGreaterEqual(float(self.root.get("height")), bottom + svg_diagram.SvgBreadboardDiagram.MARGIN_PX)
 
 
 class TheSheetShowsItTest(unittest.TestCase):

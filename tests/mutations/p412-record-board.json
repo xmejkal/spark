@@ -146,8 +146,8 @@
  {
 "file": "scripts/spark/breadboard/part_shape.py",
 "name": "the record part keeps the half breadboard",
-"find": "labels=drawing.LABELS_BESIDE, full_surface=True)",
-"replace": "labels=drawing.LABELS_BESIDE, full_surface=False)"
+"find": "labels=svg_diagram.LABELS_BESIDE, full_surface=True)",
+"replace": "labels=svg_diagram.LABELS_BESIDE, full_surface=False)"
 },
  {
 "file": "scripts/spark/breadboard/part_shape.py",
