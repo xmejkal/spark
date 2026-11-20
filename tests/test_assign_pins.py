@@ -607,6 +607,21 @@ class AC3Adc2PinIsNotReadTest(unittest.TestCase):
         self.assertEqual(refused.exception.code, "named_pin_unsuitable")
         self.assertEqual(str(refused.exception), self.CHIP_WORDS)
 
+    def test_both_facts_are_needed_before_a_pin_loses_adc(self):
+        """A pin list alone, a read the table records as supported, or an unread ADC2 with no pin list takes no adc
+        away (data/chips.json pairs the two facts; test_chip_table holds it to that)."""
+        from unittest import mock
+        from spark.records import chip_table
+        table = chip_table.ChipTable.from_dict({
+            "pins-only": {"adc2_gpio": {"value": [5]}},
+            "supported": {"adc2_oneshot_supported": {"value": True}, "adc2_gpio": {"value": [5]}},
+            "no-pins": {"adc2_oneshot_supported": {"value": False}},
+        })
+        with mock.patch.object(chip_table, "load", return_value=table):
+            for chip in table.chips:
+                with self.subTest(chip=chip):
+                    self.assertIn("adc", pin_assigner.capability_of(self.c3_board(chip=chip), 5))
+
     def test_the_chip_fact_s_words_win_over_the_role_s_on_a_c3_that_names_the_role_too(self):
         roles = {"adc2_unusable_with_wifi": {"gpio": [5], "note": "on ADC2"}}
         with self.assertRaises(pin_assigner.ImpossibleError) as refused:
