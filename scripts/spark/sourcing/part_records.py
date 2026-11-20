@@ -260,6 +260,9 @@ PHYSICAL_KEYS = ("thickness_mm", "mounting_holes", "header")
 #: A hole is a point and a drill, from the board's top-left corner; a header's sizes are the pitch and the row geometry.
 HOLE_KEYS, HEADER_SIZES = ("x_mm", "y_mm", "drill_mm"), ("pitch_mm", "row_spacing_mm", "first_pad_from_edge_mm")
 PHYSICAL_WHY = "a hole or a header placed wrong puts the module where its pins miss the breadboard"
+#: Why a module takes no `physical.header_order`, which a board takes (P947): one fact, one source.
+HEADER_ORDER_RULE = ("physical.header_order is a board's: a module's pad order is its pin_order, and a pad's printed label is "
+                     "its need's or supply's printed")
 
 
 def _above_zero(value):
@@ -286,9 +289,10 @@ def _empty_key_problems(where, block):
 def _physical_value_problems(physical):
     """Each key of `physical` that is null or empty, each size that is not finite and above 0, and each hole missing a coordinate."""
     problems = _empty_key_problems("physical", physical)
+    problems += [HEADER_ORDER_RULE] if "header_order" in physical else []
     problems += ["physical.%s is not one of %s: a size the sheet reads goes under the board record's key name, and a note "
                  "under a key that starts with //" % (key, ", ".join(PHYSICAL_KEYS))
-                 for key in physical if key not in PHYSICAL_KEYS and not str(key).startswith("//")]
+                 for key in physical if key not in PHYSICAL_KEYS + ("header_order",) and not str(key).startswith("//")]
     if not _unpublished(physical.get("thickness_mm")) and not _above_zero(physical["thickness_mm"]):
         problems.append("physical.thickness_mm is %r, but it is a number above 0" % (physical["thickness_mm"],))
     holes = physical.get("mounting_holes")

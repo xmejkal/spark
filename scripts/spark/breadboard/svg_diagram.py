@@ -1,7 +1,8 @@
 """
 The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Renderer of a planned layout as
-`breadboard.svg`, and the Strategies that place a drawn part's pad labels (P945). Moved out of `drawing`, whose planner
-and Wokwi diagram it reads. `sheet` writes the file; `part_shape` names a part's label layout.
+`breadboard.svg`, the Strategies that place a drawn part's pad labels (P945), and the Strategy that gives each jumper
+its own lane (P947). Moved out of `drawing`, whose planner and Wokwi diagram it reads. `sheet` writes the file;
+`part_shape` names a part's label layout.
 """
 
 import collections
@@ -45,11 +46,61 @@ class IntoBodyLabels(PadLabelLayout):
         return LabelPlace(x - 2, y - 5, "end", 90)
 
 
+class JumperLanes:
+    """
+    Strategy: the height of each jumper's run across (P947), so that no two jumpers share a drawn line. A run lies half
+    a pitch off its far end's row, on the side of its first end (below the row when both ends share it), and further
+    lines on that side are one pitch apart, so a run never lies on a row of holes. Jumpers take their lines shortest
+    span first, then by step, so runs nest; each takes the first line where no run comes within one pitch of its
+    span, a gap of one pitch included. When a leg would pass over another jumper's end in its column, or run along a
+    leg already drawn there, the other side is tried first, then lines further out.
+    """
+
+    def lines(self, jumpers, pitch):
+        """{step: the y of its run across}."""
+        ends = [(hole.x, hole.y, jumper.step) for jumper in jumpers for hole in (jumper.one, jumper.other)]
+        rows = [y for _, y, _ in ends]
+        depths = len(jumpers) + int((max(rows) - min(rows)) / pitch) + 2 if rows else 0
+        taken, legs, lines = [], [], {}
+        for jumper in sorted(jumpers, key=lambda one: (abs(one.one.x - one.other.x), one.step)):
+            low, high = sorted((jumper.one.x, jumper.other.x))
+            free = [y for y in self._candidates(jumper, pitch, depths)
+                    if not any(abs(y - y2) < pitch / 4 and low <= high2 + pitch and low2 <= high + pitch
+                               for y2, low2, high2 in taken)]
+            clear = [y for y in free if not self._crosses_an_end(jumper, y, ends) and not self._runs_along(jumper, y, legs)]
+            lines[jumper.step] = (clear or free)[0]
+            taken.append((lines[jumper.step], low, high))
+            legs += [(hole.x, *sorted((hole.y, lines[jumper.step]))) for hole in (jumper.one, jumper.other)]
+        return lines
+
+    @staticmethod
+    def _candidates(jumper, pitch, count):
+        """The lines a jumper may take, in the order it tries them: its own side first, unless a leg there would pass over
+        another jumper's end, then the other side."""
+        one, other = jumper.one, jumper.other
+        side = -1 if other.y > one.y else 1
+        return [other.y + toward * (pitch / 2 + depth * pitch) for toward in (side, -side) for depth in range(count + 1)]
+
+    @staticmethod
+    def _runs_along(jumper, y, legs):
+        """True when a leg of the jumper, from one of its holes to the run at `y`, overlaps a leg drawn in its column."""
+        return any(abs(x - hole.x) < 0.5 and min(high, max(hole.y, y)) - max(low, min(hole.y, y)) > 0
+                   for hole in (jumper.one, jumper.other) for x, low, high in legs)
+
+    @staticmethod
+    def _crosses_an_end(jumper, y, ends):
+        """True when a leg of the jumper, from one of its holes to the run at `y`, passes over another jumper's end."""
+        return any(abs(x - hole.x) < 0.5 and min(hole.y, y) < end_y < max(hole.y, y)
+                   for hole in (jumper.one, jumper.other) for x, end_y, step in ends if step != jumper.step)
+
+
 class SvgBreadboardDiagram:
     """
     Renderer: a BreadboardLayout as an SVG picture in Wokwi's px, for the sheet to show (P268, #302): the breadboard's
     holes and rails, each part as its picture at its holes, turned about its measured center as Wokwi turns it, with
-    a dot on each pin and its name, then each jumper as a line in its step's color with its number. A part drawn from
+    a dot on each pin and its name, then each jumper in its own lane (`lanes`, P947) as the praised page draws a wire: a
+    white under-stroke, the color of what it carries on top and a dot at each end, with its number in the middle of its
+    run. A part drawn from
     its record also gets its pad labels, placed by the PadLabelLayout its part_px names (`label_layouts`, keyed by the
     part_px's `labels`). Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
     same bytes. The canvas holds every hole and every part's body.
@@ -63,9 +114,13 @@ class SvgBreadboardDiagram:
     MARGIN_PX = 14
     #: The room under the holes for the note of a board whose facts are not all verified, in px.
     NOTE_PX = 14
+    #: A wire's sizes, in px: the white under-stroke, the colored stroke, and the end dot with its white ring. The
+    #: praised page's 7.5 and 4 are for its 18 px pitch; these fit spark's 9.6 px one.
+    UNDER_STROKE_PX, WIRE_STROKE_PX, END_DOT_PX, END_RING_PX = 5, 2.5, 3, 1
 
-    def __init__(self, colors=None, pictures=None, label_layouts=None):
-        self.colors = colors or wiring_steps.StepColors()
+    def __init__(self, colors=None, pictures=None, label_layouts=None, lanes=None):
+        self.colors = colors or wiring_steps.JumperColors()
+        self.lanes = lanes or JumperLanes()
         self.pictures = pictures or part_pictures.PictogramPartPictures()
         self.label_layouts = label_layouts or {LABELS_BESIDE: BesideLabels(), LABELS_INTO_BODY: IntoBodyLabels()}
 
@@ -110,8 +165,7 @@ class SvgBreadboardDiagram:
                                                         "stroke": "#e53935" if rail.endswith("p") else "#1e88e5"})
         for part in layout.parts:
             self._part(root, part, layout.geometry)
-        for jumper in layout.jumpers:
-            self._jumper(root, jumper, layout.geometry.surface.pitch)
+        self._wires(root, layout)
         for part in layout.parts:
             self._label(root, part, layout.geometry)  # last, so no wire or other part covers a pin or a name
         if notes:
@@ -180,23 +234,39 @@ class SvgBreadboardDiagram:
             "stroke-width": "2.5", "paint-order": "stroke"})
         label.text = part_px.get("name") or part.id
 
-    def _jumper(self, root, jumper, pitch):
-        """One jumper along the holes: out of its first hole along the column, across between two rows of holes, and
-        into its last hole. Its bends sit half a pitch off the holes, so no bend looks like a joint with a hole of
-        another group."""
-        color = self.colors.color(jumper.step)
+    def _wires(self, root, layout):
+        """Each jumper in its lane and its color, then every step number, over every wire so that none hides one."""
+        colors = self.colors.of({jumper.step: jumper.role for jumper in layout.jumpers})
+        lines = self.lanes.lines(layout.jumpers, layout.geometry.surface.pitch)
+        for jumper in layout.jumpers:
+            self._jumper(root, jumper, lines[jumper.step], colors[jumper.step])
+        for jumper in layout.jumpers:
+            self._number(root, jumper, lines[jumper.step], colors[jumper.step])
+
+    def _jumper(self, root, jumper, across, color):
+        """One jumper along the holes, as one group: out of its first hole along the column, across at its lane's
+        height `across`, and into its last hole, drawn twice (white under, its color on top), with a dot at each end.
+        Its bends sit at least half a pitch off the holes, so no bend looks like a joint with a hole of another group."""
         one, other = jumper.one, jumper.other
-        half = pitch / 2
-        across = other.y - half if other.y > one.y else other.y + half
-        ElementTree.SubElement(root, _svg("path"), {
-            "d": "M%s %sL%s %sL%s %sL%s %s" % (
-                _round_px(one.x), _round_px(one.y), _round_px(one.x), _round_px(across), _round_px(other.x),
-                _round_px(across), _round_px(other.x), _round_px(other.y)),
-            "fill": "none", "stroke": color, "stroke-width": "2.5", "stroke-linecap": "round",
-            "stroke-linejoin": "round"})
+        route = "M%s %sL%s %sL%s %sL%s %s" % (_round_px(one.x), _round_px(one.y), _round_px(one.x), _round_px(across),
+                                             _round_px(other.x), _round_px(across), _round_px(other.x), _round_px(other.y))
+        group = ElementTree.SubElement(root, _svg("g"), {"class": "wire"})
+        for stroke, width in (("#ffffff", self.UNDER_STROKE_PX), (color, self.WIRE_STROKE_PX)):
+            ElementTree.SubElement(group, _svg("path"), {
+                "d": route, "fill": "none", "stroke": stroke, "stroke-width": str(width), "stroke-linecap": "round",
+                "stroke-linejoin": "round"})
+        for hole in (one, other):
+            ElementTree.SubElement(group, _svg("circle"), {
+                "cx": str(_round_px(hole.x)), "cy": str(_round_px(hole.y)), "r": str(self.END_DOT_PX), "fill": color,
+                "stroke": "#ffffff", "stroke-width": str(self.END_RING_PX)})
+
+    @staticmethod
+    def _number(root, jumper, across, color):
+        """A jumper's step number, in the middle of its run and just above it, with a white halo."""
         number = ElementTree.SubElement(root, _svg("text"), {
-            "x": str(_round_px(one.x + 3)), "y": str(_round_px(across - 2)), "font-size": "9",
-            "font-family": "sans-serif", "font-weight": "bold", "fill": color})
+            "x": str(_round_px((jumper.one.x + jumper.other.x) / 2)), "y": str(_round_px(across - 3)), "font-size": "9",
+            "font-family": "sans-serif", "font-weight": "bold", "text-anchor": "middle", "fill": color,
+            "stroke": "#ffffff", "stroke-width": "2.5", "paint-order": "stroke"})
         number.text = str(jumper.step)
 
 

@@ -60,7 +60,7 @@ class MovedJumperTest(unittest.TestCase):
         change_requirements(project, BUTTON_ONLY)
         written = build(project)
         self.assertEqual(codes(written), {"LedRed5mm": "not-in-circuit", "R1": "not-in-circuit"})
-        self.assertEqual(wire_between(project, "6b", "14t")[1], ["bb1:6b.j", "bb1:14t.b", "gold", ROUTE])
+        self.assertEqual(wire_between(project, "6b", "14t")[1], ["bb1:6b.j", "bb1:14t.b", "green", ROUTE])
 
     def test_b2_a_jumper_moved_to_another_row_the_new_circuit_joins_is_kept(self):
         project = built_full()
@@ -305,7 +305,7 @@ class QuietTest(unittest.TestCase):
         project = built_full()
         change_wire(project, 2, other="bb1:17b.h")
         build(project)
-        self.assertEqual(wires(project)[2][:3], ["bb1:8b.j", "bb1:17b.h", "purple"])
+        self.assertEqual(wires(project)[2][:3], ["bb1:8b.j", "bb1:17b.h", "black"])
 
 
 class MovedResistorTest(unittest.TestCase):

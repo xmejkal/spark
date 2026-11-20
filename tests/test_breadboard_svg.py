@@ -82,12 +82,14 @@ class TheSvgTest(unittest.TestCase):
     def test_the_bytes_are_the_ones_reviewed(self):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "354a314c3f8de47efd7720833e9459f64191d0526c4d53c9ab8a80ff43851031")
+                         "d5a4aeed58c17928849272262160d4ae78c609e3707bc15f29fd62b1c6ca4006")
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
         holes = [(hole.x, hole.y) for hole in drawing.WokwiGeometry.load().surface.holes]
-        for path in (p for p in self.root.findall("svg:path", NS) if p.get("fill") == "none"):
+        paths = [path for under, color, _ in wires(self.root) for path in (under, color)]
+        self.assertEqual(len(paths), 2 * len(self.layout.jumpers))
+        for path in paths:
             numbers = [float(n) for n in re.findall(r"-?[\d.]+", path.get("d"))]
             for x, y in zip(numbers[2:-2:2], numbers[3:-2:2]):
                 self.assertFalse(any(abs(x - hx) < 1 and abs(y - hy) < 1 for hx, hy in holes), (x, y))
@@ -105,7 +107,8 @@ class TheSvgTest(unittest.TestCase):
             group, letter = name.split(".")
             return (board["first_column_x"] + board["pitch"] * (int(group[:-1]) - 1), board["letters_y"][letter])
 
-        paths = [path for path in self.root.findall("svg:path", NS) if path.get("fill") == "none"]
+        # each jumper has two paths on one route, the white under-stroke and its color (P947); the color one is read
+        paths = [color for _, color, _ in wires(self.root)]
         self.assertEqual(len(paths), len(self.layout.jumpers))
         for path, jumper in zip(paths, self.layout.jumpers):
             numbers = [float(n) for n in re.findall(r"-?[\d.]+", path.get("d"))]
@@ -113,7 +116,8 @@ class TheSvgTest(unittest.TestCase):
             self.assertAlmostEqual(numbers[1], center(jumper.one.name)[1], places=3)
             self.assertAlmostEqual(numbers[-2], center(jumper.other.name)[0], places=3)
             self.assertAlmostEqual(numbers[-1], center(jumper.other.name)[1], places=3)
-            self.assertEqual(path.get("stroke"), wiring_steps.StepColors().color(jumper.step))
+            self.assertEqual(path.get("stroke"), wiring_steps.JumperColors().of(
+                {one.step: one.role for one in self.layout.jumpers})[jumper.step])
 
     def test_a_turned_part_turns_about_its_measured_center(self):
         board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
@@ -182,7 +186,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
     def test_the_picture_is_the_one_looked_at_on_2026_10_29(self):
         # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "4f2a60144634428236b7295c7535132abebb92046d68b308e16ec5ee2ad1f972")
+                         "d8f13588027120eeadf46939282c422f04a8f532211ad5a98d069646574db3b4")
 
     def test_the_xiao_has_none_of_it(self):
         text, _ = xiao_svg()
@@ -234,6 +238,173 @@ class TheModuleSvgTest(unittest.TestCase):
         bottom = self.module.top + self.part_px["size"][1]
         self.assertGreater(bottom, max(hole.y for hole in self.layout.geometry.surface.holes))
         self.assertGreaterEqual(float(self.root.get("height")), bottom + svg_diagram.SvgBreadboardDiagram.MARGIN_PX)
+
+
+def wires(root):
+    """Each drawn jumper's group: (under-stroke path, color path, end dots), in the order they are drawn."""
+    found = []
+    for group in root.findall("svg:g[@class='wire']", NS):
+        paths, dots = group.findall("svg:path", NS), group.findall("svg:circle", NS)
+        found.append((paths[0], paths[1], dots))
+    return found
+
+
+def segments(path):
+    """The straight pieces of a jumper's path, ((x1, y1), (x2, y2)) each."""
+    numbers = [float(n) for n in re.findall(r"-?[\d.]+", path.get("d"))]
+    points = list(zip(numbers[::2], numbers[1::2]))
+    return list(zip(points, points[1:]))
+
+
+def shared_lines(drawn):
+    """Each pair of pieces of two jumpers that lie on one line and overlap by more than 0 px."""
+    pieces = [(number, piece) for number, path in enumerate(drawn) for piece in segments(path)]
+    shared = []
+    for index, (one, ((ax1, ay1), (ax2, ay2))) in enumerate(pieces):
+        for other, ((bx1, by1), (bx2, by2)) in pieces[index + 1:]:
+            if one == other:
+                continue
+            if ay1 == ay2 and by1 == by2 and abs(ay1 - by1) < 0.01:
+                overlap = min(max(ax1, ax2), max(bx1, bx2)) - max(min(ax1, ax2), min(bx1, bx2))
+            elif ax1 == ax2 and bx1 == bx2 and abs(ax1 - bx1) < 0.01:
+                overlap = min(max(ay1, ay2), max(by1, by2)) - max(min(ay1, ay2), min(by1, by2))
+            else:
+                continue
+            if overlap > 0.01:
+                shared.append((one, other, ax1, ay1, overlap))
+    return shared
+
+
+def number_boxes(root):
+    """Each step number's box: 0.6 of the 9 px font wide per digit, 9 px high, above its baseline, from its x as its
+    text-anchor places it."""
+    boxes = []
+    for text in root.iter("{http://www.w3.org/2000/svg}text"):
+        if text.get("font-weight") == "bold" and (text.text or "").isdigit():
+            x, y, width = float(text.get("x")), float(text.get("y")), 0.6 * 9 * len(text.text)
+            left = x - width / 2 if text.get("text-anchor") == "middle" else x
+            boxes.append((text.text, left, left + width, y - 9, y))
+    return boxes
+
+
+def golden_svgs():
+    """{golden file: its breadboard.svg}, for every golden sheet that holds a picture."""
+    found = {}
+    for path in sorted((ROOT / "tests" / "golden-breadboard").glob("breadboard-ok-*.txt")):
+        text = path.read_text()
+        if "--- breadboard.svg ---\n" in text:
+            found[path.name] = text.split("--- breadboard.svg ---\n", 1)[1].split("\n--- ", 1)[0]
+    return found
+
+
+def epaper_svg():
+    with in_store():
+        read = sheet._read_build(EPAPER / "requirements.json")
+    layout = drawing.BreadboardPlanner(*epaper_inputs(read)).plan(read.steps)
+    return svg_diagram.SvgBreadboardDiagram().text(layout), layout
+
+
+class TheWireStyleTest(unittest.TestCase):
+    """P947, the praised page's wire: a white under-stroke, the color on the same path, and a dot at each end, the
+    color by what the jumper carries."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text, cls.layout = epaper_svg()
+        cls.root = ElementTree.fromstring(cls.text)
+
+    def test_each_jumper_is_one_group_with_an_under_stroke_its_color_and_two_end_dots_at_its_holes(self):
+        drawn = wires(self.root)
+        self.assertEqual(len(drawn), len(self.layout.jumpers))
+        for (under, color, dots), jumper in zip(drawn, self.layout.jumpers):
+            with self.subTest(step=jumper.step):
+                self.assertEqual((under.get("stroke"), under.get("d")), ("#ffffff", color.get("d")))
+                self.assertGreater(float(under.get("stroke-width")), float(color.get("stroke-width")))
+                self.assertEqual([(float(dot.get("cx")), float(dot.get("cy")), dot.get("fill")) for dot in dots],
+                                 [(round(hole.x, 3), round(hole.y, 3), color.get("stroke"))
+                                  for hole in (jumper.one, jumper.other)])
+                self.assertEqual(segments(color)[0][0], (round(jumper.one.x, 3), round(jumper.one.y, 3)))
+                self.assertEqual(segments(color)[-1][1], (round(jumper.other.x, 3), round(jumper.other.y, 3)))
+
+    def test_3v3_is_red_gnd_is_black_and_no_signal_is_either(self):
+        colors = {jumper.step: color.get("stroke") for (_, color, _), jumper in zip(wires(self.root), self.layout.jumpers)}
+        self.assertEqual((colors[3], colors[8]), ("red", "black"))
+        self.assertFalse({"red", "black"} & {colors[step] for step in colors if step not in (3, 8)})
+
+
+class TheJumperLanesTest(unittest.TestCase):
+    """P947: one lane per jumper, so no two jumpers share a drawn line and no step numbers overlap, on the walk's
+    e-paper sheet and on every golden sheet with a picture."""
+
+    @classmethod
+    def setUpClass(cls):
+        text, cls.layout = epaper_svg()
+        cls.pictures = dict(golden_svgs(), epaper=text)
+
+    def test_every_golden_sheet_with_a_picture_is_read(self):
+        self.assertEqual(sorted(self.pictures), ["breadboard-ok-firebeetle.txt", "breadboard-ok-module.txt",
+                                                 "breadboard-ok-rebuild.txt", "breadboard-ok-xiao.txt", "epaper"])
+
+    def test_no_two_jumpers_share_a_drawn_line(self):
+        for name, text in self.pictures.items():
+            with self.subTest(name):
+                drawn = [color for _, color, _ in wires(ElementTree.fromstring(text))]
+                self.assertGreaterEqual(len(drawn), 2)
+                self.assertEqual(shared_lines(drawn), [])
+
+    def test_no_step_numbers_overlap(self):
+        for name, text in self.pictures.items():
+            with self.subTest(name):
+                boxes = number_boxes(ElementTree.fromstring(text))
+                self.assertGreaterEqual(len(boxes), 2)
+                meeting = [(a[0], b[0]) for index, a in enumerate(boxes) for b in boxes[index + 1:]
+                           if a[1] < b[2] and b[1] < a[2] and a[3] < b[4] and b[3] < a[4]]
+                self.assertEqual(meeting, [])
+
+    def test_each_run_lies_at_least_half_a_pitch_off_every_row_of_holes(self):
+        rows = sorted({hole.y for hole in self.layout.geometry.surface.terminal})
+        half = self.layout.geometry.surface.pitch / 2
+        for (_, color, _) in wires(ElementTree.fromstring(self.pictures["epaper"])):
+            runs = [y1 for (x1, y1), (x2, y2) in segments(color) if y1 == y2 and x1 != x2]
+            for y in runs:
+                self.assertGreaterEqual(min(abs(y - row) for row in rows), half - 0.01, y)
+
+    def test_the_e_paper_s_eight_runs_take_eight_lines(self):
+        runs = {segments(color)[1][0][1] for _, color, _ in wires(ElementTree.fromstring(self.pictures["epaper"]))}
+        self.assertEqual(len(runs), 8)
+
+    def test_overlapping_spans_take_lines_one_pitch_apart_toward_their_first_end_the_shorter_first(self):
+        def hole(column, y):
+            return drawing.Hole("%d" % column, 10 * column, y, "%d" % column, column)
+        long_up = drawing.Jumper(hole(1, 150), hole(9, 50), 4)
+        short_up = drawing.Jumper(hole(3, 150), hole(6, 50), 5)
+        down = drawing.Jumper(hole(4, 50), hole(7, 150), 6)
+        lines = svg_diagram.JumperLanes().lines([long_up, short_up, down], 10)
+        self.assertEqual(lines, {5: 55, 4: 65, 6: 145})
+
+    def test_spans_more_than_a_pitch_apart_share_a_line(self):
+        def hole(column, y):
+            return drawing.Hole("%d" % column, 10 * column, y, "%d" % column, column)
+        lines = svg_diagram.JumperLanes().lines([drawing.Jumper(hole(1, 150), hole(3, 50), 1),
+                                                 drawing.Jumper(hole(5, 150), hole(7, 50), 2)], 10)
+        self.assertEqual(lines, {1: 55, 2: 55})
+
+    def test_two_legs_never_share_a_column(self):
+        # The review: jumpers 1a to 5j and 1j to 8a both have a leg in column 1; the second runs past the first one's end.
+        def hole(column, y):
+            return drawing.Hole("%d" % column, 10 * column, y, "%d" % column, column)
+        jumpers = [drawing.Jumper(hole(1, 50), hole(5, 150), 1), drawing.Jumper(hole(1, 150), hole(8, 50), 2)]
+        lines = svg_diagram.JumperLanes().lines(jumpers, 10)
+        legs = [sorted((50, lines[1])), sorted((150, lines[2]))]
+        self.assertLessEqual(min(legs[0][1], legs[1][1]) - max(legs[0][0], legs[1][0]), 0, lines)
+        self.assertEqual(lines, {1: 145, 2: 155})
+
+    def test_spans_less_than_a_pitch_apart_take_two_lines(self):
+        def hole(column, y):
+            return drawing.Hole("%d" % column, 10 * column, y, "%d" % column, column)
+        lines = svg_diagram.JumperLanes().lines([drawing.Jumper(hole(1, 150), hole(3, 50), 1),
+                                                 drawing.Jumper(hole(4, 150), hole(6, 50), 2)], 10)
+        self.assertEqual(lines, {1: 55, 2: 65})
 
 
 class TheSheetShowsItTest(unittest.TestCase):

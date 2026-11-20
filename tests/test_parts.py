@@ -1955,6 +1955,32 @@ class FactSetWritesTheSheetKeysTest(unittest.TestCase):
         said, code, after = self.write(home, {"legs": {"A": "the\x1banode"}, "host_requirements": ["x" * 1200]})
         self.assertEqual((code, after["legs"]["A"], len(after["host_requirements"][0])), (0, "the anode", 1000))
 
+    def test_short_name_is_written_and_read_back_and_a_dry_run_writes_nothing(self):
+        # P947: the steps call a part by its short_name, and a person's own module needs a command that writes it.
+        home = self.a_store()
+        given = home / "write.json"
+        given.write_text(json.dumps({"short_name": "red led"}))
+        with in_store(home):
+            dry, code = run_json(["--fact-set", "x-led", str(given), "--dry-run"])
+        self.assertEqual((code, dry["data"]["was"], dry["data"]["now"]), (0, {"short_name": None}, {"short_name": "red led"}))
+        self.assertNotIn("short_name", json.loads((home / "catalog" / "x-led.json").read_text()))
+        said, code, after = self.write(home, {"short_name": "red led"})
+        self.assertEqual((code, after["short_name"]), (0, "red led"))
+
+    def test_an_empty_or_blank_short_name_and_a_number_are_refused(self):
+        home = self.a_store()
+        for value in ("", "  ", 7):
+            with self.subTest(value=value):
+                said, code, after = self.write(home, {"short_name": value})
+                self.assertEqual((code, "short_name" in after), (1, False))
+                self.assertIn("short_name is a short text that names the part on the bench",
+                              [p["sentence"] for p in said["problems"]])
+
+    def test_a_control_character_in_a_short_name_is_cleaned(self):
+        home = self.a_store()
+        said, code, after = self.write(home, {"short_name": "red\x1bled"})
+        self.assertEqual((code, after["short_name"]), (0, "red led"))
+
 
 class AModulesPhysicalSaysHowItWasReadTest(unittest.TestCase):
     """
@@ -2053,6 +2079,12 @@ class AModulesPhysicalSaysHowItWasReadTest(unittest.TestCase):
         self.assertEqual(self.problems(physical=dict(self.PHYSICAL, **{"width_mm": 16, "//header": "two rows"})),
                          ["physical.width_mm is not one of thickness_mm, mounting_holes, header: a size the sheet reads goes under "
                           "the board record's key name, and a note under a key that starts with //"])
+
+    def test_a_module_s_header_order_is_refused_by_the_one_rule(self):
+        # P947: a board takes physical.header_order; a module has pin_order and printed instead, so one fact has one source.
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header_order={"top": ["VCC", "GND"]})),
+                         ["physical.header_order is a board's: a module's pad order is its pin_order, and a pad's printed "
+                          "label is its need's or supply's printed"])
 
     def test_fact_set_writes_the_block_with_its_proof_and_refuses_a_wrong_one(self):
         home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()

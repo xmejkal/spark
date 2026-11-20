@@ -14,6 +14,6 @@
  {"file": "scripts/spark/sourcing/part_records.py", "name": "a huge integer size crashes validate", "find": "(isinstance(value, int) or math.isfinite(value)) and value > 0", "replace": "math.isfinite(value) and value > 0"},
  {"file": "scripts/spark/sourcing/part_records.py", "name": "a fractional count passes", "find": "    return isinstance(value, int) and _above_zero(value)", "replace": "    return _above_zero(value)"},
  {"file": "scripts/spark/sourcing/part_records.py", "name": "a header key may be null or empty", "find": "        problems += _empty_key_problems(\"physical.header\", header)\n", "replace": ""},
- {"file": "scripts/spark/sourcing/part_records.py", "name": "a key outside the three passes", "find": "for key in physical if key not in PHYSICAL_KEYS and not str(key).startswith(\"//\")]", "replace": "for key in physical if False]"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a key outside the three passes", "find": "for key in physical if key not in PHYSICAL_KEYS + (\"header_order\",) and not str(key).startswith(\"//\")]", "replace": "for key in physical if False]"},
  {"file": "scripts/spark/sourcing/drawer.py", "name": "--fact-set refuses a physical write", "find": "\"pin_roles\", \"physical\", \"physical_proof\")", "replace": "\"pin_roles\")"}
 ]

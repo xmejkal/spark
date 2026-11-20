@@ -75,10 +75,53 @@ def _rounded(value):
     return round(value, 3)
 
 
-class TheStepColorsTest(unittest.TestCase):
-    def test_step_one_is_the_palette_s_first_and_step_nine_wraps_to_it(self):
-        colors = wiring_steps.StepColors()
-        self.assertEqual([colors.color(n) for n in (1, 2, 8, 9)], ["red", "orange", "magenta", "red"])
+class TheJumperColorsTest(unittest.TestCase):
+    """P947: a jumper's color says what it carries: red for power, black for ground, gray when no record says, and each
+    signal the next color of its own list, in step order."""
+
+    def test_power_is_red_ground_black_and_a_role_not_known_gray(self):
+        self.assertEqual(wiring_steps.JumperColors().of({3: "power", 4: "signal", 8: "ground", 9: "unknown"}),
+                         {3: "red", 4: "green", 8: "black", 9: "gray"})
+
+    def test_signals_take_the_colors_in_their_own_order_and_wrap_after_the_last(self):
+        colors = wiring_steps.JumperColors().of({number: "signal" for number in range(3, 10)} | {5: "ground"})
+        self.assertEqual([colors[n] for n in (3, 4, 6, 7, 8, 9)], ["green", "blue", "purple", "orange", "magenta", "cyan"])
+        wrapped = wiring_steps.JumperColors().of({number: "signal" for number in range(1, 9)})
+        self.assertEqual((wrapped[7], wrapped[8]), ("green", "blue"))
+
+    def test_no_signal_is_red_black_or_gray_and_neighbouring_signals_differ(self):
+        colors = wiring_steps.JumperColors().of({number: "signal" for number in range(1, 20)})
+        self.assertFalse({"red", "black", "gray"} & set(colors.values()))
+        self.assertTrue(all(colors[n] != colors[n + 1] for n in range(1, 19)))
+
+
+class TheSheetNamesTheWireColorsTest(unittest.TestCase):
+    """P947: the e-paper sheet's color line, the picture's wires and the wiring record name one color per jumper."""
+
+    def test_the_line_the_svg_and_the_record_agree(self):
+        import shutil
+        project = Path(tempfile.mkdtemp()) / "epaper"
+        shutil.copytree(EPAPER, project)
+        with in_store():
+            sheet.write(project / "requirements.json", project / "breadboard.md")
+        text = (project / "breadboard.md").read_text()
+        self.assertIn("Each jumper has the color of what it carries, red for power, black for ground and another color "
+                      "for each signal: 3 red, 4 green, 5 blue, 6 purple, 7 orange, 8 black, 9 magenta, 10 cyan.", text)
+        record = json.loads((project / "wiring-record.json").read_text())
+        self.assertEqual([step["color"] for step in record["steps"]][2:], ["red", "green", "blue", "purple", "orange",
+                                                                         "black", "magenta", "cyan"])
+        svg = (project / "breadboard.svg").read_text()
+        self.assertIn('stroke="red"', svg)
+        self.assertIn('stroke="black"', svg)
+
+    def test_a_role_not_known_is_said_so(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        planned = sheet._plan_once(read)
+        jumpers = [jumper._replace(role="unknown") if jumper.step == 4 else jumper for jumper in planned.layout.jumpers]
+        planned = planned._replace(layout=planned.layout._replace(jumpers=jumpers))
+        self.assertIn("3 red, 4 gray (role not known), 5 green,",
+                      sheet.sheet(EPAPER / "requirements.json", read=read, planned=planned))
 
 
 class TheBreadboardTest(unittest.TestCase):
@@ -171,14 +214,16 @@ class TheXiaoLayoutTest(unittest.TestCase):
         for row, held in rows.items():
             self.assertEqual(len(held), 1, (row, held))
 
-    def test_each_jumper_step_has_one_wire_in_its_step_s_color(self):
+    def test_each_jumper_step_has_one_wire_in_the_color_of_its_role(self):
         seated = list(self.read.steps.anchored())
         jumper_steps = [number for number, one in enumerate(seated, 1)
                         if one.act == wiring_steps.JOIN and one.subject.kind != wiring_steps.RESISTOR]
         self.assertEqual([jumper.step for jumper in self.layout.jumpers], jumper_steps)
         drawn = json.loads(drawing.WokwiBreadboardDiagram().text(self.layout))
+        roles = {jumper.step: jumper.role for jumper in self.layout.jumpers}
         self.assertEqual([wire[2] for wire in drawn["connections"]],
-                         [wiring_steps.StepColors().color(number) for number in jumper_steps])
+                         [wiring_steps.JumperColors().of(roles)[number] for number in jumper_steps])
+        self.assertEqual(roles[jumper_steps[0]], "signal")
 
     def test_one_empty_column_parts_the_board_s_body_from_the_next_part(self):
         # The board's pins are in columns 3 to 9 and its body covers 10; column 11 stays empty, so the button is in 12.
@@ -196,7 +241,7 @@ class TheXiaoLayoutTest(unittest.TestCase):
         with in_store():
             text = sheet.drawing_text(XIAO / "requirements.json")
         self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
-                         "cf3f8e5384d50a1d496be66784679810f8932b1576566ca6f8a9d8f59646c32d")
+                         "4a35a5ed29ec535099a02a44e53593c1b264add1220cc8d567f512831952a1ea")
 
     def test_every_hole_named_exists_on_a_half_board(self):
         drawn = json.loads(drawing.WokwiBreadboardDiagram().text(self.layout))
@@ -415,6 +460,45 @@ class AModuleWithNoDrawingFactTest(unittest.TestCase):
         self.assertEqual((planned.stopped.code, planned.stopped.subject), ("no_header_fact", "physical.header.face"))
 
 
+class TheWokwiLineNamesTheCauseTest(unittest.TestCase):
+    """P947: the line that says why no Wokwi diagram is written names each drawn part that Wokwi has no part for, the
+    board or a module, by the name the picture gives it."""
+
+    def test_the_e_paper_names_the_board_and_the_module(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        layout = drawing.BreadboardPlanner(*epaper_inputs(read)).plan(read.steps)
+        refused = drawing.WokwiBreadboardDiagram().why_not_written(layout)
+        self.assertEqual((refused.code, refused.subject, refused.why),
+                         ("no_wokwi_part", None, "Wokwi has no part for the board and e-paper"))
+
+    def test_the_firebeetle_alone_names_the_board(self):
+        with in_store():
+            read = sheet._read_build(RECORD_BOARD / "requirements.json")
+        layout = drawing.BreadboardPlanner(*record_inputs(read)).plan(read.steps)
+        self.assertEqual(drawing.WokwiBreadboardDiagram().why_not_written(layout).why,
+                         "Wokwi has no part for the board")
+
+    def test_a_wokwi_board_with_a_module_drawn_from_its_record_names_the_module_alone(self):
+        geometry = GEOMETRY.with_part("spark-module-x", {"wokwi_part": False, "name": "e-paper", "pins": {}})
+        geometry = geometry.with_part("spark-module-y", {"wokwi_part": False, "pins": {}})
+        parts = [drawing.PlacedPart("board", "board-xiao-esp32-c6", {}, 0, 0, 0, {}),
+                 drawing.PlacedPart("Epaper", "spark-module-x", {}, 0, 0, 0, {}),
+                 drawing.PlacedPart("Led", "wokwi-led", {}, 0, 0, 0, {}),
+                 drawing.PlacedPart("Sensor", "spark-module-y", {}, 0, 0, 0, {})]
+        layout = drawing.BreadboardLayout("wokwi-breadboard-half", parts, [], geometry)
+        self.assertEqual(drawing.WokwiBreadboardDiagram().why_not_written(layout).why,
+                         "Wokwi has no part for e-paper and Sensor")
+        self.assertIsNone(drawing.WokwiBreadboardDiagram().why_not_written(
+            drawing.BreadboardLayout("wokwi-breadboard-half", [parts[0], parts[2]], [], geometry)))
+
+    def test_the_sheet_says_the_same_cause(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        self.assertIn("There is no Wokwi diagram: Wokwi has no part for the board and e-paper. Use the picture.",
+                      sheet.sheet(EPAPER / "requirements.json", read=read, planned=sheet._plan_once(read)))
+
+
 class EachStepNamesItsHolesTest(unittest.TestCase):
     """P945: the step list names the holes each step uses in the planned layout, read as a person reads a breadboard."""
 
@@ -427,7 +511,7 @@ class EachStepNamesItsHolesTest(unittest.TestCase):
             "1. Put the board in the breadboard, each pin in its own row. Holes: b6 to b23, i10 to i23.",
             "2. Put e-paper in the breadboard, each pin in its own row. Holes: e38 to e45.",
             "3. Run a jumper from board 3V3 to the row of e-paper VCC. Holes: from a7 to a45.",
-            "4. Run a jumper from board A5 to the row of e-paper DC. Holes: from j14 to a40."])
+            "4. Run a jumper from board A5 to the row of e-paper D/C. Holes: from j14 to a40."])
         self.assertEqual(len(lines), 10)
         self.assertTrue(all(" Holes: " in line for line in lines))
 

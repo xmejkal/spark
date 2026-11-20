@@ -141,13 +141,13 @@ file holds a trace that spark does not read, or it cannot be read. With `--json`
 why. After a build that finished, it also writes `breadboard.md`, new each time: the parts, the resistors they ask
 for, numbered wiring steps (one connection each) and a mermaid diagram of them, by the board's printed labels and the parts' legs, and what each record says to check before power
 ([P191](https://github.com/xmejkal/spark/issues/143)). Hand it to the person who wires the breadboard. Beside it,
-`breadboard.json` is an example layout of the same steps on a half breadboard (a board with a complete record, such as the FireBeetle 2 ESP32-S3, is drawn from the record on a 63-column breadboard as `breadboard.svg` alone, P412), each jumper in its step's color
+`breadboard.json` is an example layout of the same steps on a half breadboard (a board with a complete record, such as the FireBeetle 2 ESP32-S3, is drawn from the record on a 63-column breadboard as `breadboard.svg` alone, P412), each jumper in the color of what it carries
 ([P267](https://github.com/xmejkal/spark/issues/300)). The person pastes it into the `diagram.json` of a new project
 on wokwi.com and compares it with their own breadboard. `breadboard.svg` is the same layout as a picture, which the
 sheet shows inline, each part as a plain pictogram ([P268](https://github.com/xmejkal/spark/issues/302)). A module with no Wokwi part is drawn from its record's `physical` block, with each pad and its printed label; each numbered step ends with the holes it uses, and a step calls a part by its record's `short_name` ([P945](https://github.com/xmejkal/spark/issues/1348)). A part you move in it stays where you put it at the next build ([P273](https://github.com/xmejkal/spark/issues/309)),
 if it still fits. A part it cannot keep is named, one line each, and with `--json` a `kept` entry with `did`
 `move not kept`. A resistor you move stays if its joined leg is still in the row it joins. A jumper you move stays, with its bends,
-if it still joins the two rows the new layout joins (its color is the step's). Otherwise it is named, for example
+if it still joins the two rows the new layout joins (its color is that of what it carries). Otherwise it is named, for example
 `jumper 6b.j-15t.a: no jumper of the new layout is left to join rows 6b and 15t, so spark drew its own`.
 Spark never names a jumper it drew itself. The build also makes sure that the drawing joins the points of
 `circuit.json` ([P279](https://github.com/xmejkal/spark/issues/317)). An end it joins differently is named, as

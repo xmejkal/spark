@@ -95,7 +95,7 @@ class RebuildTest(unittest.TestCase):
         self.assertEqual(lines[0], "Put LedRed5mm in the breadboard.")
         self.assertIn("Put R1 end 1 (in series with LedRed5mm A) in a free row.", lines)
         self.assertEqual([one.code for one in written.changes], ["added"] * 5 + ["rerouted"])
-        self.assertEqual(lines[-1], "Move the green jumper from board GND: it now goes to the row of LedRed5mm K "
+        self.assertEqual(lines[-1], "Move the black jumper from board GND: it now goes to the row of LedRed5mm K "
                                     "(it went to the row of TactileButton B).")
         self.assertEqual(section(project), ["- " + line for line in lines])
         self.assertEqual(len(record(project)["steps"]), 9)
@@ -355,7 +355,7 @@ class CheckSpineTest(unittest.TestCase):
         self.assertEqual(changed[0], {"file": str(project / "breadboard.md"), "did": "changed", "code": "added",
                                       "subject": "LedRed5mm", "color": None,
                                       "why": "Put LedRed5mm in the breadboard."})
-        self.assertEqual(changed[2]["color"], "cyan")
+        self.assertEqual(changed[2]["color"], "green")
         self.assertIn("  changed: Put LedRed5mm in the breadboard.", said)
 
     def test_json_keeps_every_field_of_a_kept_entry_but_the_line(self):

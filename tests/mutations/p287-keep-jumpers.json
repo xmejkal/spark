@@ -134,8 +134,8 @@
  {
   "file": "scripts/spark/breadboard/drawing.py",
   "name": "the renderer writes no route",
-  "find": "self.colors.color(jumper.step), list(jumper.route)]",
-  "replace": "self.colors.color(jumper.step), []]"
+  "find": "colors[jumper.step], list(jumper.route)]",
+  "replace": "colors[jumper.step], []]"
  },
  {
   "file": "scripts/spark/breadboard/drawing.py",

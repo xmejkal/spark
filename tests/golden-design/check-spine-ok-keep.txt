@@ -21,7 +21,7 @@
   wrote dist — this is what every check reads
   wrote breadboard.md — the parts and how to wire them on a breadboard
   wrote breadboard.svg — a picture of the same layout, which breadboard.md shows
-  no drawn breadboard: Wokwi has no part with this board's pins
+  no drawn breadboard: Wokwi has no part for the board
   wrote firmware/pins.py — the pins the firmware imports
   wrote .spark/build.json — what this build was built from and how it ended, which flow.py reads
   wrote sim — the simulation project: diagram.json, wokwi.toml and the chips

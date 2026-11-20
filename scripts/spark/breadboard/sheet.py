@@ -47,12 +47,17 @@ WIRING_VIEWS = (
     ("Diagram", "Each line is one step, with its number.", wiring_steps.MermaidDiagram()),
 )
 
-#: The one palette of step colors, for the sheet's color line and the drawing's jumpers alike.
-STEP_COLORS = wiring_steps.StepColors()
+#: The one palette of jumper colors, by what each carries, for the sheet's color line and the drawing's jumpers alike.
+JUMPER_COLORS = wiring_steps.JumperColors()
+#: What the sheet says of the colors, filled with each jumper's number and color.
+COLORS_MESSAGE = ("Each jumper has the color of what it carries, red for power, black for ground and another color for "
+                  "each signal: %s.")
+#: What a jumper's color adds on the sheet when no record says what it carries.
+ROLE_NOT_KNOWN = " (role not known)"
 #: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
 #: new entry here, and nothing else changes.
-DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(STEP_COLORS),
-                     svg_diagram.SvgBreadboardDiagram(STEP_COLORS))
+DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(JUMPER_COLORS),
+                     svg_diagram.SvgBreadboardDiagram(JUMPER_COLORS))
 #: What the sheet says before power is applied, from `wiring_data`'s before_power.
 BEFORE_POWER_LIST = before_power.BeforePowerList()
 #: What the sheet says of the bench: one line per change since the last sheet for another design, in these words.
@@ -325,14 +330,16 @@ def _drawing_lines(planned):
     if not planned.layout:
         return ["", "%s not written: %s." % (" and ".join(renderer.FILE_NAME for renderer in DRAWING_RENDERERS),
                                               planned.stopped)]
-    colors = "Each jumper has its step's color: %s." % ", ".join(
-        "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step)) for jumper in planned.layout.jumpers)
+    roles = {jumper.step: jumper.role for jumper in planned.layout.jumpers}
+    colors = COLORS_MESSAGE % ", ".join("%d %s%s" % (number, color, ROLE_NOT_KNOWN if roles[number] == wiring_steps.UNKNOWN
+                                                      else "") for number, color in JUMPER_COLORS.of(roles).items())
     drawn = [renderer for renderer in DRAWING_RENDERERS if not renderer.why_not_written(planned.layout)]
     first, *others = drawn
     lines = ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
     lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
-    if len(drawn) < len(DRAWING_RENDERERS):
-        lines += ["", drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
+    declined = EDITABLE_DRAWING.why_not_written(planned.layout)
+    if declined:
+        lines += ["", drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE % declined.why]
     lines += [line for one in drawing_catalog.board_lines(planned.layout) for line in ("", one)]
     if planned.differs:
         more = len(planned.differs) - 1
@@ -448,7 +455,7 @@ def write(requirements_path, out, circuit_path=None):
     record = bench_changes.WiringLog.read(store.path)
     planned = _plan_once(read, earlier_path, record)
     seated = read.steps.anchored()
-    colors = {jumper.step: STEP_COLORS.color(jumper.step) for jumper in planned.layout.jumpers} if planned.layout else {}
+    colors = JUMPER_COLORS.of({jumper.step: jumper.role for jumper in planned.layout.jumpers}) if planned.layout else {}
     new_record = bench_changes.WiringLog.from_build(seated, colors, record, _spark_jumpers(
         planned, earlier_path, record), store.now())
     changes = bench_changes.changes_between(new_record.base, seated, colors) if new_record.base else []

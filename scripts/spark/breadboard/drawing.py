@@ -1,6 +1,6 @@
 """
 The drawn breadboard (P267, #300): the sheet's steps on a breadboard, each part's legs in holes and each
-step's jumper in the step's color, written as `breadboard.json`, a second Wokwi diagram, and as `breadboard.svg`.
+step's jumper in the color of what it carries, written as `breadboard.json`, a second Wokwi diagram, and as `breadboard.svg`.
 
 A pure planner turns the steps into holes, and a renderer turns the holes into a diagram. The planner reads the steps
 from `BreadboardSteps.anchored()`, so it never decides the wiring again. Where Wokwi draws each pin and hole comes from
@@ -28,9 +28,9 @@ Hole = collections.namedtuple("Hole", "name x y group column")
 DrawnPart = collections.namedtuple("DrawnPart", "type attrs pins")
 #: One component on the breadboard: its id, type, attrs, top-left corner in px, its turn, and {Wokwi pin: Hole}.
 PlacedPart = collections.namedtuple("PlacedPart", "id type attrs left top rotate holes")
-#: One jumper between two holes, drawn in the color of the step it belongs to, with the bends of its route as Wokwi
-#: writes them (strings such as "v-20"), empty when it runs straight.
-Jumper = collections.namedtuple("Jumper", "one other step route", defaults=((),))
+#: One jumper between two holes, for the step it belongs to, with the bends of its route as Wokwi writes them (strings
+#: such as "v-20"), empty when it runs straight, and what it carries (`wiring_steps.role_of`), which picks its color.
+Jumper = collections.namedtuple("Jumper", "one other step route role", defaults=((), wiring_steps.SIGNAL))
 #: Value: the whole drawing as holes, and the `geometry` it was planned on, which any renderer reads.
 BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts jumpers geometry")
 
@@ -54,7 +54,8 @@ CODES = {
     DUPLICATE_PAD_LABEL: "two pads of the board's record have one label; the subject is the label",
     NO_HOLE_LEFT: ("the breadboard has no place where a part fits with a free hole beside each of its pins, or no "
                    "free row for a jumper; the subject is the part or the end"),
-    NO_WOKWI_PART: "Wokwi has no part with this board's pins, so no Wokwi diagram is written, by design",
+    NO_WOKWI_PART: ("Wokwi has no part for a drawn part (the board or a module), so no Wokwi diagram is written, by design; "
+                    "the why names each such part"),
     NO_PIN_POSITION: "data/wokwi-geometry.json lacks a Wokwi type's pins or one of them; the subject is the type",
     NO_DRAWING_FACT: NO_DRAWING_FACT.meaning,
     NO_WOKWI_PIN: "the end in the subject has no Wokwi pin: its part's record does not map it, or it is a doubtful pad",
@@ -351,13 +352,14 @@ class BreadboardPlanner:
                 continue
             if step.act == wiring_steps.SETUP:
                 jumper = Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
-                                ledger.claim_free_group(after, end.name), number)
+                                ledger.claim_free_group(after, end.name), number, role=step.role)
                 groups[end.name] = jumper.other.group
                 jumpers.append(jumper)
             else:
                 anchor = step.anchor.seat().end
                 jumpers.append(Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
-                                      ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name), number))
+                                      ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name), number,
+                                      role=step.role))
         return self.jumper_placement.place_jumpers(
             BreadboardLayout(self.geometry.surface.type, list(placed.values()), jumpers, self.geometry), parts_only)
 
@@ -482,8 +484,8 @@ class StepHoles:
 
 
 class WokwiBreadboardDiagram:
-    """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in its step's color. Its constructor takes the
-    colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
+    """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in the color of what it carries. Its constructor takes
+    the colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
     below, `text(layout)` and `why_not_written(layout)`, which `sheet.DRAWING_RENDERERS` and the build read."""
 
     #: The file it writes, beside the sheet.
@@ -495,21 +497,26 @@ class WokwiBreadboardDiagram:
     #: What the sheet says about the file, under its steps.
     SHEET_MESSAGE = ("An example layout is in breadboard.json: paste it into the diagram.json of a new project on "
                      "wokwi.com.")
-    #: What the sheet says once when no Wokwi diagram is written for a board drawn from its own record.
-    SHEET_DECLINED_MESSAGE = "There is no Wokwi diagram for this board. Use the picture."
-    #: Why no file is written for such a board.
-    DECLINED_MESSAGE = "Wokwi has no part with this board's pins"
+    #: What the sheet says once when no Wokwi diagram is written, filled with the why.
+    SHEET_DECLINED_MESSAGE = "There is no Wokwi diagram: %s. Use the picture."
+    #: Why no file is written, filled with each drawn part that Wokwi has no part for.
+    DECLINED_MESSAGE = "Wokwi has no part for %s"
 
     def __init__(self, colors=None, breadboard_id="bb1"):
-        self.colors = colors or wiring_steps.StepColors()
+        self.colors = colors or wiring_steps.JumperColors()
         self.breadboard_id = breadboard_id
 
     def why_not_written(self, layout):
         """None when the layout can be a Wokwi diagram, else the NotWritten (its path is only the file's name): a part that
-        says it is no Wokwi part would show the wrong board there."""
-        if any(not layout.geometry.part(part.type).get("wokwi_part", True) for part in layout.parts):
-            return NotWritten(Path(self.FILE_NAME), self, NO_WOKWI_PART, None, self.DECLINED_MESSAGE)
-        return None
+        says it is no Wokwi part would show the wrong part there. The why names each such part, in layout order, by the
+        name the picture gives it (the board is "the board")."""
+        missing = [part for part in layout.parts if not layout.geometry.part(part.type).get("wokwi_part", True)]
+        if not missing:
+            return None
+        names = ["the board" if part.id == wiring_steps.THE_BOARD else layout.geometry.part(part.type).get("name") or part.id
+                 for part in missing]
+        said = names[0] if len(names) == 1 else "%s and %s" % (", ".join(names[:-1]), names[-1])
+        return NotWritten(Path(self.FILE_NAME), self, NO_WOKWI_PART, None, self.DECLINED_MESSAGE % said)
 
     def render(self, layout):
         parts = [{"type": layout.breadboard, "id": self.breadboard_id, "top": 0, "left": 0, "attrs": {}}]
@@ -518,8 +525,9 @@ class WokwiBreadboardDiagram:
             drawn.update({"rotate": part.rotate} if part.rotate else {})
             drawn["attrs"] = dict(part.attrs or {})
             parts.append(drawn)
+        colors = self.colors.of({jumper.step: jumper.role for jumper in layout.jumpers})
         connections = [["%s:%s" % (self.breadboard_id, jumper.one.name), "%s:%s" % (self.breadboard_id,
-                        jumper.other.name), self.colors.color(jumper.step), list(jumper.route)] for jumper in layout.jumpers]
+                        jumper.other.name), colors[jumper.step], list(jumper.route)] for jumper in layout.jumpers]
         return {"version": 1, "author": "spark", "editor": "wokwi", "parts": parts, "connections": connections,
                 "dependencies": {}}
 

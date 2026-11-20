@@ -576,7 +576,8 @@ class TheWiringTest(unittest.TestCase):
     def test_the_section_holds_its_heading_the_fixed_sentence_the_lines_the_link_and_the_steps_in_that_order(self):
         text = page_of_wiring(PageWiring(THREE, [an_item()], ["rec"], None), THREE_PICTURES)
         marks = ["<h2>Wiring</h2>", "<p>Read the lines before power first. In the Breadboard picture below, each jumper has its "
-                 "step&#x27;s number and color: find the holes there.</p>", "<h3>Before you power it</h3>", "<ul>", "</ul>",
+                 "step&#x27;s number and the color of what it carries: find the holes there.</p>",
+                 "<h3>Before you power it</h3>", "<ul>", "</ul>",
                  "Each record whole", "One at a time: start at step 1", '<ol id="steps">']
         order = [text.index(mark) for mark in marks]
         self.assertEqual(order, sorted(order))

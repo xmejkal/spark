@@ -58,7 +58,7 @@ flowchart LR
   n5 ---|"9"| n9
 ```
 
-An example layout is in breadboard.json: paste it into the diagram.json of a new project on wokwi.com. Each jumper has its step's color: 5 cyan, 6 blue, 7 purple, 8 magenta.
+An example layout is in breadboard.json: paste it into the diagram.json of a new project on wokwi.com. Each jumper has the color of what it carries, red for power, black for ground and another color for each signal: 5 green, 6 blue, 7 black, 8 black.
 
 ![The layout on a breadboard](breadboard.svg)
 
@@ -140,7 +140,7 @@ wrote <project-dir>/breadboard.svg — a picture of the same layout, which bread
     [
       "bb1:4b.j",
       "bb1:24b.f",
-      "cyan",
+      "green",
       []
     ],
     [
@@ -152,13 +152,13 @@ wrote <project-dir>/breadboard.svg — a picture of the same layout, which bread
     [
       "bb1:8b.j",
       "bb1:17b.g",
-      "purple",
+      "black",
       []
     ],
     [
       "bb1:12t.a",
       "bb1:17b.h",
-      "magenta",
+      "black",
       []
     ]
   ],
@@ -191,7 +191,7 @@ wrote <project-dir>/breadboard.svg — a picture of the same layout, which bread
   <rect x="20" y="1" width="3" height="9" fill="#8d6e63" />
   <rect x="27" y="1" width="3" height="9" fill="#212121" />
   <rect x="34" y="1" width="3" height="9" fill="#c9a227" />
-</g></g><path d="M54.8 156.6L54.8 123L246.8 123L246.8 118.2" fill="none" stroke="cyan" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="57.8" y="121" font-size="9" font-family="sans-serif" font-weight="bold" fill="cyan">5</text><path d="M74 156.6L74 55.8L150.8 55.8L150.8 51" fill="none" stroke="blue" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="77" y="53.8" font-size="9" font-family="sans-serif" font-weight="bold" fill="blue">6</text><path d="M93.2 156.6L93.2 132.6L179.6 132.6L179.6 127.8" fill="none" stroke="purple" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="96.2" y="130.6" font-size="9" font-family="sans-serif" font-weight="bold" fill="purple">7</text><path d="M131.6 51L131.6 132.6L179.6 132.6L179.6 137.4" fill="none" stroke="magenta" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="134.6" y="130.6" font-size="9" font-family="sans-serif" font-weight="bold" fill="magenta">8</text><circle cx="102.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="74" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="64.4" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="54.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="45.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="45.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="54.8" cy="147" r="2.5" fill="#2e7d32" /><circle cx="64.4" cy="147" r="2.5" fill="#2e7d32" /><circle cx="74" cy="147" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="147" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="102.8" cy="147" r="2.5" fill="#2e7d32" /><text x="77.435" y="117.982" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">board</text><circle cx="150.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="150.8" cy="156.6" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="156.6" r="2.5" fill="#2e7d32" /><text x="139.3" y="122.9" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">TactileButton</text><circle cx="189.2" cy="118.2" r="2.5" fill="#2e7d32" /><circle cx="179.6" cy="118.2" r="2.5" fill="#2e7d32" /><text x="184.2" y="101.2" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">LedRed5mm</text><circle cx="246.8" cy="127.8" r="2.5" fill="#2e7d32" /><circle cx="189.2" cy="127.8" r="2.5" fill="#2e7d32" /><text x="218.5" y="127.95" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">R1</text></svg>
+</g></g><g class="wire"><path d="M54.8 156.6L54.8 142.2L246.8 142.2L246.8 118.2" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M54.8 156.6L54.8 142.2L246.8 142.2L246.8 118.2" fill="none" stroke="green" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="54.8" cy="156.6" r="3" fill="green" stroke="#ffffff" stroke-width="1" /><circle cx="246.8" cy="118.2" r="3" fill="green" stroke="#ffffff" stroke-width="1" /></g><g class="wire"><path d="M74 156.6L74 55.8L150.8 55.8L150.8 51" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M74 156.6L74 55.8L150.8 55.8L150.8 51" fill="none" stroke="blue" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="74" cy="156.6" r="3" fill="blue" stroke="#ffffff" stroke-width="1" /><circle cx="150.8" cy="51" r="3" fill="blue" stroke="#ffffff" stroke-width="1" /></g><g class="wire"><path d="M93.2 156.6L93.2 123L179.6 123L179.6 127.8" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M93.2 156.6L93.2 123L179.6 123L179.6 127.8" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="93.2" cy="156.6" r="3" fill="black" stroke="#ffffff" stroke-width="1" /><circle cx="179.6" cy="127.8" r="3" fill="black" stroke="#ffffff" stroke-width="1" /></g><g class="wire"><path d="M131.6 51L131.6 132.6L179.6 132.6L179.6 137.4" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M131.6 51L131.6 132.6L179.6 132.6L179.6 137.4" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="131.6" cy="51" r="3" fill="black" stroke="#ffffff" stroke-width="1" /><circle cx="179.6" cy="137.4" r="3" fill="black" stroke="#ffffff" stroke-width="1" /></g><text x="150.8" y="139.2" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="green" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">5</text><text x="112.4" y="52.8" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="blue" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">6</text><text x="136.4" y="120" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="black" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">7</text><text x="155.6" y="129.6" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="black" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">8</text><circle cx="102.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="74" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="64.4" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="54.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="45.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="45.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="54.8" cy="147" r="2.5" fill="#2e7d32" /><circle cx="64.4" cy="147" r="2.5" fill="#2e7d32" /><circle cx="74" cy="147" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="147" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="102.8" cy="147" r="2.5" fill="#2e7d32" /><text x="77.435" y="117.982" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">board</text><circle cx="150.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="150.8" cy="156.6" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="156.6" r="2.5" fill="#2e7d32" /><text x="139.3" y="122.9" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">TactileButton</text><circle cx="189.2" cy="118.2" r="2.5" fill="#2e7d32" /><circle cx="179.6" cy="118.2" r="2.5" fill="#2e7d32" /><text x="184.2" y="101.2" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">LedRed5mm</text><circle cx="246.8" cy="127.8" r="2.5" fill="#2e7d32" /><circle cx="189.2" cy="127.8" r="2.5" fill="#2e7d32" /><text x="218.5" y="127.95" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">R1</text></svg>
 --- wiring-record.json ---
 {
  "steps": [
@@ -278,7 +278,7 @@ wrote <project-dir>/breadboard.svg — a picture of the same layout, which bread
    "tag": "",
    "value": "",
    "job": "",
-   "color": "cyan",
+   "color": "green",
    "marks": ""
   },
   {
@@ -316,7 +316,7 @@ wrote <project-dir>/breadboard.svg — a picture of the same layout, which bread
    "tag": "",
    "value": "",
    "job": "",
-   "color": "purple",
+   "color": "black",
    "marks": ""
   },
   {
@@ -335,7 +335,7 @@ wrote <project-dir>/breadboard.svg — a picture of the same layout, which bread
    "tag": "",
    "value": "",
    "job": "",
-   "color": "magenta",
+   "color": "black",
    "marks": ""
   },
   {

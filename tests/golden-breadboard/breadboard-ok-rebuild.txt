@@ -18,9 +18,9 @@ Use this list only if you wired the sheet from <time>. If you did not, follow th
 
 - Take out LedRed5mm.
 - Take out R1, 330Ω in series with LedRed5mm A.
-- Take out the cyan jumper from board D8 to the row of R1 end 1 (in series with LedRed5mm A).
-- Take out the magenta jumper from the row of TactileButton B to the row of LedRed5mm K.
-- Move the purple jumper from board GND: it now goes to the row of TactileButton B (it went to the row of LedRed5mm K).
+- Take out the green jumper from board D8 to the row of R1 end 1 (in series with LedRed5mm A).
+- Take out the black jumper from the row of TactileButton B to the row of LedRed5mm K.
+- Move the black jumper from board GND: it now goes to the row of TactileButton B (it went to the row of LedRed5mm K).
 
 ### Steps
 
@@ -49,7 +49,7 @@ flowchart LR
   n2 ---|"4"| n4
 ```
 
-An example layout is in breadboard.json: paste it into the diagram.json of a new project on wokwi.com. Each jumper has its step's color: 3 gold, 4 green.
+An example layout is in breadboard.json: paste it into the diagram.json of a new project on wokwi.com. Each jumper has the color of what it carries, red for power, black for ground and another color for each signal: 3 green, 4 black.
 
 ![The layout on a breadboard](breadboard.svg)
 
@@ -73,9 +73,9 @@ wrote <project-dir>/breadboard.json — an example layout of the steps on a brea
 wrote <project-dir>/breadboard.svg — a picture of the same layout, which breadboard.md shows
 change: Take out LedRed5mm.
 change: Take out R1, 330Ω in series with LedRed5mm A.
-change: Take out the cyan jumper from board D8 to the row of R1 end 1 (in series with LedRed5mm A).
-change: Take out the magenta jumper from the row of TactileButton B to the row of LedRed5mm K.
-change: Move the purple jumper from board GND: it now goes to the row of TactileButton B (it went to the row of LedRed5mm K).
+change: Take out the green jumper from board D8 to the row of R1 end 1 (in series with LedRed5mm A).
+change: Take out the black jumper from the row of TactileButton B to the row of LedRed5mm K.
+change: Move the black jumper from board GND: it now goes to the row of TactileButton B (it went to the row of LedRed5mm K).
 not kept: LedRed5mm: it is not in the new circuit
 not kept: R1: it is not in the new circuit
 --- breadboard.json ---
@@ -114,13 +114,13 @@ not kept: R1: it is not in the new circuit
     [
       "bb1:6b.j",
       "bb1:14t.a",
-      "gold",
+      "green",
       []
     ],
     [
       "bb1:8b.j",
       "bb1:12t.a",
-      "green",
+      "black",
       []
     ]
   ],
@@ -143,7 +143,7 @@ not kept: R1: it is not in the new circuit
   <rect x="57.28" y="11.5" width="10" height="3" fill="#8c8c8c" />
   <rect x="57.28" y="30.5" width="10" height="3" fill="#8c8c8c" />
   <circle cx="33.64" cy="22.68" r="13" fill="#43a047" />
-</g></g><path d="M74 156.6L74 55.8L150.8 55.8L150.8 51" fill="none" stroke="gold" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="77" y="53.8" font-size="9" font-family="sans-serif" font-weight="bold" fill="gold">3</text><path d="M93.2 156.6L93.2 55.8L131.6 55.8L131.6 51" fill="none" stroke="green" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="96.2" y="53.8" font-size="9" font-family="sans-serif" font-weight="bold" fill="green">4</text><circle cx="102.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="74" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="64.4" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="54.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="45.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="45.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="54.8" cy="147" r="2.5" fill="#2e7d32" /><circle cx="64.4" cy="147" r="2.5" fill="#2e7d32" /><circle cx="74" cy="147" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="147" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="102.8" cy="147" r="2.5" fill="#2e7d32" /><text x="77.435" y="117.982" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">board</text><circle cx="150.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="150.8" cy="156.6" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="156.6" r="2.5" fill="#2e7d32" /><text x="139.3" y="122.9" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">TactileButton</text></svg>
+</g></g><g class="wire"><path d="M74 156.6L74 65.4L150.8 65.4L150.8 51" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M74 156.6L74 65.4L150.8 65.4L150.8 51" fill="none" stroke="green" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="74" cy="156.6" r="3" fill="green" stroke="#ffffff" stroke-width="1" /><circle cx="150.8" cy="51" r="3" fill="green" stroke="#ffffff" stroke-width="1" /></g><g class="wire"><path d="M93.2 156.6L93.2 55.8L131.6 55.8L131.6 51" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /><path d="M93.2 156.6L93.2 55.8L131.6 55.8L131.6 51" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="93.2" cy="156.6" r="3" fill="black" stroke="#ffffff" stroke-width="1" /><circle cx="131.6" cy="51" r="3" fill="black" stroke="#ffffff" stroke-width="1" /></g><text x="112.4" y="62.4" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="green" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">3</text><text x="112.4" y="52.8" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="black" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">4</text><circle cx="102.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="74" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="64.4" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="54.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="45.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="45.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="54.8" cy="147" r="2.5" fill="#2e7d32" /><circle cx="64.4" cy="147" r="2.5" fill="#2e7d32" /><circle cx="74" cy="147" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="147" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="102.8" cy="147" r="2.5" fill="#2e7d32" /><text x="77.435" y="117.982" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">board</text><circle cx="150.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="150.8" cy="156.6" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="156.6" r="2.5" fill="#2e7d32" /><text x="139.3" y="122.9" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">TactileButton</text></svg>
 --- wiring-record.json ---
 {
  "steps": [
@@ -212,7 +212,7 @@ not kept: R1: it is not in the new circuit
    "tag": "",
    "value": "",
    "job": "",
-   "color": "purple",
+   "color": "black",
    "marks": ""
   }
  ],
@@ -312,7 +312,7 @@ not kept: R1: it is not in the new circuit
     "tag": "",
     "value": "",
     "job": "",
-    "color": "cyan",
+    "color": "green",
     "marks": ""
    },
    {
@@ -350,7 +350,7 @@ not kept: R1: it is not in the new circuit
     "tag": "",
     "value": "",
     "job": "",
-    "color": "purple",
+    "color": "black",
     "marks": ""
    },
    {
@@ -369,7 +369,7 @@ not kept: R1: it is not in the new circuit
     "tag": "",
     "value": "",
     "job": "",
-    "color": "magenta",
+    "color": "black",
     "marks": ""
    },
    {
