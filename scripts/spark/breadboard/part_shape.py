@@ -329,7 +329,8 @@ class ModuleShapeSource(ShapeSource):
         shape = self.find_shape(record)
         if shape is None:
             return None
-        return project_to_px(shape, usb_mark=False, labels=drawing.LABELS_INTO_BODY, full_surface=False)
+        part_px = project_to_px(shape, usb_mark=False, labels=drawing.LABELS_INTO_BODY, full_surface=False)
+        return dict(part_px, name=record.get("short_name") or record.get("id"))
 
     def find_pin_names(self, record):
         """{pin as the steps print it: its pad's printed label}, for every pin of pin_order."""

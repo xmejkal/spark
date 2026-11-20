@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.breadboard import drawing, part_pictures, sheet, wiring_steps  # noqa: E402
-from test_breadboard_layout import RECORD_BOARD, record_inputs  # noqa: E402
+from test_breadboard_layout import EPAPER, RECORD_BOARD, epaper_inputs, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 MOTOR = ROOT / "tests" / "data" / "breadboard" / "motor"
@@ -188,6 +188,52 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         text, _ = xiao_svg()
         self.assertNotIn("#cfd8dc", text)
         self.assertNotIn("stroke-dasharray", text)
+
+
+class TheModuleSvgTest(unittest.TestCase):
+    """P945: the e-paper drawn from its record beside the FireBeetle: its pads named into its body, no USB mark."""
+
+    @classmethod
+    def setUpClass(cls):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        geometry, catalog = epaper_inputs(read)
+        cls.layout = drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
+        cls.text = drawing.SvgBreadboardDiagram().text(cls.layout)
+        cls.root = ElementTree.fromstring(cls.text)
+        cls.module = next(part for part in cls.layout.parts if part.id == "Epaper2in9BwrMhEtLive")
+        cls.part_px = geometry.part(cls.module.type)
+
+    def test_each_label_of_a_top_edge_row_sits_below_its_pad_within_half_a_pitch_turned_along_the_column(self):
+        labels = {element.text: element for element in self.root.iter("{http://www.w3.org/2000/svg}text")
+                  if element.text in self.part_px["pins"]}
+        self.assertEqual(sorted(labels), sorted(["VCC", "GND", "SDI", "SCLK", "CS", "D/C", "Reset", "Busy"]))
+        for pad, (x, y) in self.part_px["pins"].items():
+            with self.subTest(pad=pad):
+                label = labels[pad]
+                self.assertLessEqual(abs(float(label.get("x")) - x), 4.8)
+                self.assertGreater(float(label.get("y")), y)
+                self.assertTrue(label.get("transform").startswith("rotate(90 "), label.get("transform"))
+
+    def test_a_label_of_a_bottom_edge_row_sits_above_its_pad(self):
+        place = drawing.IntoBodyLabels().place(50, 160, {"center": [100, 83]})
+        self.assertEqual((place.y < 160, abs(place.x - 50) <= 4.8, place.anchor, place.rotate), (True, True, "end", 90))
+        place = drawing.IntoBodyLabels().place(50, 4.8, {"center": [100, 83]})
+        self.assertEqual((place.y > 4.8, place.anchor), (True, "start"))
+
+    def test_the_module_draws_no_usb_mark_and_the_board_keeps_its_one(self):
+        marks = [rect for rect in self.root.iter("{http://www.w3.org/2000/svg}rect") if rect.get("fill") == "#cfd8dc"]
+        self.assertEqual(len(marks), 1)
+
+    def test_the_module_is_named_by_its_short_name(self):
+        texts = [element.text for element in self.root.iter("{http://www.w3.org/2000/svg}text")]
+        self.assertIn("e-paper", texts)
+        self.assertNotIn("Epaper2in9BwrMhEtLive", texts)
+
+    def test_the_canvas_holds_the_module_that_hangs_below_the_holes(self):
+        bottom = self.module.top + self.part_px["size"][1]
+        self.assertGreater(bottom, max(hole.y for hole in self.layout.geometry.surface.holes))
+        self.assertGreaterEqual(float(self.root.get("height")), bottom + drawing.SvgBreadboardDiagram.MARGIN_PX)
 
 
 class TheSheetShowsItTest(unittest.TestCase):

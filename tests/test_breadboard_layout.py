@@ -334,13 +334,11 @@ EPAPER = ROOT / "tests" / "data" / "breadboard" / "epaper"
 
 
 def epaper_inputs(read):
-    """(geometry, catalog) of the e-paper fixture, with the module's part_px built by hand from its physical block: the
-    header on the back, 8 pads 2.54 mm apart, the first 34.5 mm from the left edge seen from the back, half a pitch
-    from the top edge. Its labels are the printed ones, so the pin DC is the pad D/C (P945, the spike)."""
+    """(geometry, catalog) of the e-paper fixture, with the module's part_px from its physical block: the header on the
+    back, 8 pads 2.54 mm apart, the first 34.5 mm from the left edge seen from the back, half a pitch from the top edge.
+    Its labels are the printed ones, so the pin DC is the pad D/C (P945)."""
     geometry, catalog = record_inputs(read)
-    labels = ["VCC", "GND", "SDI", "SCLK", "CS", "D/C", "Reset", "Busy"]
-    pins = {label: (85 - (34.5 + 2.54 * number), 1.27) for number, label in enumerate(labels)}
-    part_px = dict(part_shape.project_to_px(part_shape.PartShape((85, 44), pins, None, {})), full_surface=False)
+    part_px = part_shape.ModuleShapeSource().describe_part(read.built.parts[0])
     catalog = dict(catalog, Epaper2in9BwrMhEtLive=drawing.DrawnPart("spark-module-epaper-2in9-bwr-mh-et-live", {}, {
         "VCC": "VCC", "GND": "GND", "SDI": "SDI", "SCLK": "SCLK", "CS": "CS", "DC": "D/C", "RESET": "Reset", "BUSY": "Busy"}))
     return geometry.with_part("spark-module-epaper-2in9-bwr-mh-et-live", part_px), catalog
