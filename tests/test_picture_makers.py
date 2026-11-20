@@ -257,8 +257,11 @@ class TheBuildDrawsAKeptPictureTest(unittest.TestCase):
                          for text in element.iter(SVG + "text") if text.text == label]
                 self.assertEqual(len(drawn), 1)
                 self.assertGreater(drawn[0], picture)
-
-    def test_a_kept_picture_that_fails_is_the_box_with_a_note(self):
+        # the review of PR #1379: GND is pinned by its count, the S3's three pads and the e-paper's one, each after its
+        # part's picture (the walk-c6 fixture's three, the C6's two and the e-paper's, are in test_breadboard_svg)
+        grounds = [index for index, element in enumerate(groups) for text in element.iter(SVG + "text") if text.text == "GND"]
+        self.assertEqual(len(grounds), 4)
+        self.assertTrue(all(index > picture for index in grounds))
         def broken(home, record):
             entry = record["documents"]["picture"]
             (Path(home) / "sources" / entry["sha256"] / entry["file"]).write_bytes(b"<svg/>")

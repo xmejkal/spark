@@ -854,6 +854,18 @@ class TheLabelsTest(unittest.TestCase):
                 for words in ("board", "Epaper2in9BwrMhEtLive", "firebeetle2-esp32c6", "epaper-2in9-bwr-mh-et-live"):
                     self.assertNotIn(">%s<" % words, text)
 
+    def test_the_walk_s_board_caption_sits_at_its_body_s_left_edge_inside_the_canvas(self):
+        # the review of PR #1379: slid right along the board it sat under pill 12 and read as that pill's words
+        _, layout = self.drawn["walk-c6"]
+        board = next(part for part in layout.parts if part.id == wiring_steps.THE_BOARD)
+        body = svg_diagram.BodyBox.of(board, layout.geometry.part(board.type))
+        caption = captions(self.walk)["DFRobot FireBeetle 2 ESP32-C6"]
+        self.assertAlmostEqual(float(caption.get("x")), body.left, places=2)
+        self.assertLessEqual(caption_box(caption)[3], body.top)
+        left, top = (float(n) for n in self.walk.get("viewBox").split()[:2])
+        self.assertGreater(caption_box(caption)[1], top)
+        self.assertGreaterEqual(caption_box(caption)[0], left)
+
     def test_a_part_with_no_name_is_captioned_by_its_id_muted(self):
         self.assertEqual(captions(ElementTree.fromstring(self.drawn["button-light-xiao"][0]))["R1"].get("fill"), "#6b7176")
 
@@ -880,6 +892,21 @@ class TheNoteTest(unittest.TestCase):
                         "MH-ET LIVE 2.9 Inch E-paper Module: pads and header side not verified.",
                         "wires 6, 7, 10 and 11 bend more than 4 times to go around the parts and are drawn dashed"],
             "button-light": ["DFRobot FireBeetle 2 ESP32-S3: pads, USB end and the pads in a dashed ring not verified."]})
+
+    def test_a_part_names_its_id_only_when_its_record_has_no_name(self):
+        # the review of PR #1379: the note follows the caption's rule, so a record id shows only where no name is
+        class Geometry:
+            def part(self, part_type):
+                return {"notes": [{"words": "pads"}, {"words": "header side"}]}
+
+        parts = [drawing.PlacedPart(part_id, "spark-module-x", {}, 0, 0, 0, {}, record) for part_id, record in (
+            ("Named", {"id": "named-module", "name": "Maker Module, rev 2"}), ("Nameless", {"id": "nameless-module"}),
+            ("NoRecord", None))]
+        layout = drawing.BreadboardLayout(None, parts, [], Geometry())
+        pictures = {part.id: part_pictures.Picture("", (0, 0, 1, 1), "") for part in parts}
+        self.assertEqual(part_captions.PartNotes.lines(layout, pictures), [
+            "Maker Module: pads and header side not verified.", "nameless-module: pads and header side not verified.",
+            "NoRecord: pads and header side not verified."])
 
 
 def contrast(one, other):
