@@ -832,6 +832,58 @@ class TheInlinePictureTest(unittest.TestCase):
         self.assertIn(str(home), unmasked)
 
 
+def pad_legend(text):
+    """(swatch colour, words) of each line of the page's pad legend."""
+    legend = text.split('<ul class="pads">', 1)[1].split("</ul>", 1)[0]
+    return re.findall(r'<li><span class="sw" style="background:(#[0-9a-f]{6})"></span>([^<]*)</li>', legend)
+
+
+def token_block(pattern, style):
+    return dict(re.findall(r"(--[a-z]+):([^;]+)", re.search(pattern, style).group(1)))
+
+
+class TheLookTest(unittest.TestCase):
+    """P949: the praised page's colours, light and dark, with system fonts and nothing loaded, and a legend of the pads
+    under the breadboard that says only what the picture draws."""
+
+    def test_the_pad_legend_follows_an_inline_breadboard_only(self):
+        svg = (a_drawn_project() / "breadboard.svg").read_text()
+        text = page_of(a_phase("one"), pictures=[Picture("Breadboard", svg, None)])
+        self.assertEqual(pad_legend(text), [("#ffd34d", "pad used by a wire"), ("#c9a24b", "pad free")])
+        self.assertLess(text.index("</figure>"), text.index('<ul class="pads">'))
+        held = '<svg><circle r="2" fill="#5bc0eb" data-pad="held"/></svg>'
+        text = page_of(a_phase("one"), pictures=[Picture("Breadboard", held, None)])
+        self.assertEqual(pad_legend(text), [("#5bc0eb", "pad held: do not use")])
+        for name, pictures in {"no picture": [], "not drawn": [Picture("Breadboard", None, "not drawn")],
+                               "refused": [Picture("Breadboard", "<svg><script/></svg>", None)],
+                               "no pad": [Picture("Breadboard", "<svg><rect/></svg>", None)],
+                               "the schematic": [Picture("Schematic", svg, None)]}.items():
+            with self.subTest(name):
+                self.assertNotIn('class="pads"', page_of(a_phase("one"), pictures=pictures))
+
+    def test_every_token_is_defined_light_and_dark_and_the_style_uses_only_them(self):
+        page = page_of_wiring(PageWiring(THREE, [], ["rec"], None), THREE_PICTURES)
+        style = re.search(r"<style>(.*?)</style>", page, re.S).group(1)
+        light = token_block(r"^:root\{([^}]*)\}", style)
+        dark = token_block(r'@media \(prefers-color-scheme: dark\)\{:root:not\(\[data-theme="light"\]\)\{([^}]*)\}\}', style)
+        self.assertEqual(dark, token_block(r':root\[data-theme="dark"\]\{([^}]*)\}', style))
+        colours = {"--bg", "--ink", "--muted", "--line", "--signal", "--backdrop"}
+        self.assertEqual((set(light), set(dark)), (colours | {"--display", "--body"}, colours))
+        for name in colours - {"--backdrop"}:
+            self.assertNotEqual(light[name], dark[name], name)
+        # the praised page's ground, and a white ground under the pictures in both, which are drawn for a light one
+        self.assertEqual((light["--bg"], dark["--bg"], light["--backdrop"], dark["--backdrop"]),
+                         ("#eef1f3", "#141b21", "#fff", "#fff"))
+        self.assertEqual(set(re.findall(r"var\((--[a-z]+)\)", style)), set(light))
+        self.assertTrue(light["--body"].startswith("system-ui"), light["--body"])
+        outside = re.sub(r"\{[^{}]*--bg:[^{}]*\}", "{}", style)
+        self.assertEqual(style.count("--bg:"), 3)
+        self.assertNotRegex(outside, r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
+        self.assertNotRegex(outside, r"(?:color|background|border-color):\s*(?!var\(|transparent|inherit)[a-z]+")
+        for word in ("url(", "@import", "@font-face"):
+            self.assertNotIn(word, page)
+
+
 class TheKeepStepTest(unittest.TestCase):
     """The keep step: in a project the page is the flow page with the three pictures the build drew, and it is written after
     the simulation folder is kept. In a folder that is no project, today's tabbed page stays."""

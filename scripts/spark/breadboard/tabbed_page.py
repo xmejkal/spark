@@ -96,17 +96,6 @@ class TabbedHtmlPage:
              ".panel img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;"
              "background:var(--backdrop)}")
 
-    @classmethod
-    def token_styles(cls):
-        """The token blocks the Artifact rules ask for: light on :root, dark under the media query (unless the viewer
-        chose light) and under :root[data-theme="dark"], so a chosen theme wins both ways."""
-        def block(values, scheme):
-            return "".join("%s:%s;" % pair for pair in values.items()) + "color-scheme:%s" % scheme
-        dark = block(cls.TOKENS_DARK, "dark")
-        return (":root{%s}" % block(cls.TOKENS_LIGHT, "light")
-                + '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){%s}}' % dark
-                + ':root[data-theme="dark"]{%s}' % dark)
-
     def text(self, tabs, title="spark"):
         radios, labels, panels, shown = [], [], [], []
         for number, tab in enumerate(tabs, 1):
@@ -118,7 +107,8 @@ class TabbedHtmlPage:
         return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
                           '<meta name="viewport" content="width=device-width, initial-scale=1">',
                           '<title>%s</title>' % html.escape(title),
-                          '<style>%s</style>' % (self.token_styles() + self.STYLE + "".join(shown)), '</head>', '<body>']
+                          '<style>%s</style>' % (token_styles(self.TOKENS_LIGHT, self.TOKENS_DARK) + self.STYLE
+                                                 + "".join(shown)), '</head>', '<body>']
                          + radios + ['<nav>' + "".join(labels) + '</nav>'] + panels + ['</body>', '</html>']) + "\n"
 
     @staticmethod
@@ -127,6 +117,18 @@ class TabbedHtmlPage:
             return "<p>%s: not drawn, because %s.</p>" % (html.escape(tab.title), html.escape(tab.why_missing))
         data = base64.b64encode(tab.svg.encode("utf-8")).decode("ascii")
         return '<img src="data:image/svg+xml;base64,%s" alt="%s">' % (data, html.escape(tab.title, quote=True))
+
+
+def token_styles(light, dark):
+    """The token blocks the Artifact rules ask for: `light` on :root, `dark` under the media query (unless the viewer
+    chose light) and under :root[data-theme="dark"], so a chosen theme wins both ways. Both pages call it, each with its
+    own tokens."""
+    def block(values, scheme):
+        return "".join("%s:%s;" % pair for pair in values.items()) + "color-scheme:%s" % scheme
+    dark_block = block(dark, "dark")
+    return (":root{%s}" % block(light, "light")
+            + '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){%s}}' % dark_block
+            + ':root[data-theme="dark"]{%s}' % dark_block)
 
 
 #: Most words of a project's name that its page title keeps, and most letters of each (the title has 2 to 4 words).
