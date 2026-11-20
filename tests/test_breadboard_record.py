@@ -75,7 +75,7 @@ class FirstBuildTest(unittest.TestCase):
         written = build(project)
         self.assertEqual(written.changes, [])
         self.assertIsNone(section(project))
-        self.assertEqual(len(record(project)["steps"]), 9)
+        self.assertEqual(len(record(project)["steps"]), 10)  # P953: ground through the - rail, one jumper per end
 
 
 class RebuildTest(unittest.TestCase):
@@ -94,11 +94,12 @@ class RebuildTest(unittest.TestCase):
         lines = bench_changes.ChangeList().render(written.changes)
         self.assertEqual(lines[0], "Put LedRed5mm in the breadboard.")
         self.assertIn("Put R1 end 1 (in series with LedRed5mm A) in a free row.", lines)
-        self.assertEqual([one.code for one in written.changes], ["added"] * 5 + ["rerouted"])
-        self.assertEqual(lines[-1], "Move the black jumper from board GND: it now goes to the row of LedRed5mm K "
-                                    "(it went to the row of TactileButton B).")
+        # P953: ground goes through the - rail, so board GND stays where it was and the LED's K joins the rail (it was
+        # a rerouted board GND, from the button's B row to the LED's K row)
+        self.assertEqual([one.code for one in written.changes], ["added"] * 5)
+        self.assertEqual(lines[3], "Run a black jumper from the row of LedRed5mm K to the GND rail.")
         self.assertEqual(section(project), ["- " + line for line in lines])
-        self.assertEqual(len(record(project)["steps"]), 9)
+        self.assertEqual(len(record(project)["steps"]), 10)  # P953: ground through the - rail, one jumper per end
 
     def test_the_section_comes_before_the_steps(self):
         project = new_project(BUTTON_ONLY)
@@ -134,15 +135,16 @@ class RebuildTest(unittest.TestCase):
         written = build(project)
         self.assertEqual(written.changes, [])
         self.assertRegex(" ".join(section(project)), r"cannot be compared.*cannot be read")
-        self.assertEqual(len(record(project)["steps"]), 9)
+        self.assertEqual(len(record(project)["steps"]), 10)  # P953: ground through the - rail, one jumper per end
 
 
 class DrawnJumpersTest(unittest.TestCase):
     def test_a_first_build_records_every_jumper_spark_drew(self):
         project = new_project(FULL)
         build(project)
+        # P953: the ground jumpers go to the bottom - rail, one per end (they were 12t.a-17b.h and 17b.g-8b.j)
         self.assertEqual(record(project)["drawn_jumpers"],
-                         [["12t.a", "17b.h"], ["14t.a", "6b.j"], ["17b.g", "8b.j"], ["24b.f", "4b.j"]])
+                         [["12t.a", "bn.10"], ["14t.a", "6b.j"], ["17b.g", "bn.14"], ["24b.f", "4b.j"], ["8b.j", "bn.6"]])
 
     def test_a_jumper_the_person_moved_and_the_build_kept_is_not_recorded_as_spark_s(self):
         from test_breadboard_keep import edit
@@ -151,7 +153,7 @@ class DrawnJumpersTest(unittest.TestCase):
         edit(project, lambda drawn: drawn["connections"][1].__setitem__(1, "bb1:14t.b"))
         build(project)
         self.assertNotIn(["14t.b", "6b.j"], record(project)["drawn_jumpers"])
-        self.assertEqual(len(record(project)["drawn_jumpers"]), 3)
+        self.assertEqual(len(record(project)["drawn_jumpers"]), 4)  # P953: 5 jumpers drawn, one of them the person's
 
 
 class WriteOrderTest(unittest.TestCase):
@@ -163,7 +165,7 @@ class WriteOrderTest(unittest.TestCase):
         (project / "breadboard.svg").mkdir()  # the picture cannot be written over a folder
         with self.assertRaises(OSError):
             build(project)
-        self.assertEqual(len(record(project)["steps"]), 9)
+        self.assertEqual(len(record(project)["steps"]), 10)  # P953: ground through the - rail, one jumper per end
         self.assertIn("LedRed5mm", (project / "breadboard.md").read_text())
 
     def test_a_renderer_that_fails_leaves_the_earlier_sheet_and_record_alone(self):
@@ -351,7 +353,7 @@ class CheckSpineTest(unittest.TestCase):
         project = self.rebuilt()
         kept, said = self.keep(project, FULL)
         changed = [entry for entry in kept if entry["did"] == "changed"]
-        self.assertEqual([entry["code"] for entry in changed], ["added"] * 5 + ["rerouted"])
+        self.assertEqual([entry["code"] for entry in changed], ["added"] * 5)  # P953: board GND stays on the - rail
         self.assertEqual(changed[0], {"file": str(project / "breadboard.md"), "did": "changed", "code": "added",
                                       "subject": "LedRed5mm", "color": None,
                                       "why": "Put LedRed5mm in the breadboard."})
@@ -381,7 +383,7 @@ class CheckSpineTest(unittest.TestCase):
         self.keep(project, FULL, [Stage("build", check_spine.PROBLEMS, "1 error")])
         again, _ = self.keep(project, FULL)
         changed = [entry for entry in again if entry["did"] == "changed"]
-        self.assertEqual([entry["code"] for entry in changed], ["added"] * 5 + ["rerouted"])
+        self.assertEqual([entry["code"] for entry in changed], ["added"] * 5)  # P953: board GND stays on the - rail
         self.assertEqual(changed, [entry for entry in first if entry["did"] == "changed"])
 
     def test_the_sheet_s_entry_names_the_time_of_the_sheet_it_counts_from(self):

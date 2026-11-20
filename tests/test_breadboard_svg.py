@@ -151,7 +151,7 @@ class TheSvgTest(unittest.TestCase):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         # P949: the keys data-step and data-part, and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "5001ff445cb11e0c7b857b0d92af43a934e7290de231430f64352b73a96071ba")  # P953: the wires around the parts
+                         "7d080087403696f129b6a967f04748f6306683bcd45359741f8d1b7966a058fb")  # P953: the wires around the parts; ground through the - rail, seen in a render on 2026-11-20
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -174,6 +174,10 @@ class TheSvgTest(unittest.TestCase):
 
         def center(name):
             group, letter = name.split(".")
+            if group in board["rails_y"]:  # P953: a rail hole, tp.3, counted along its rail in blocks
+                number = int(letter) - 1
+                return (board["first_rail_x"] + board["pitch"] * (number + number // board["rail_block"]),
+                        board["rails_y"][group])
             return (board["first_column_x"] + board["pitch"] * (int(group[:-1]) - 1), board["letters_y"][letter])
 
         # each jumper has two paths on one route, the white under-stroke and its color (P947); the color one is read
@@ -259,7 +263,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
         # page's group (no glow, each word upright or sideways on the sheet), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "ac835219a011ce29fc08b7ba9b7d0a9e9c88b6fc7e5917a13495d44972ad0fb3")  # P953: the wires around the parts
+                         "6638454ced57020a273708e7012c67f5b8f4810319ffae05d4aa2b5f0a4ee132")  # P953: the wires around the parts; ground through the - rail, seen in a render on 2026-11-20
 
     def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
         board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)
@@ -517,8 +521,9 @@ class TheWireStyleTest(unittest.TestCase):
 
     def test_3v3_is_red_gnd_is_black_and_no_signal_is_either(self):
         colors = {jumper.step: color.get("stroke") for (_, color, _), jumper in zip(wires(self.root), self.layout.jumpers)}
-        self.assertEqual((colors[3], colors[8]), ("red", "black"))
-        self.assertFalse({"red", "black"} & {colors[step] for step in colors if step not in (3, 8)})
+        # P953: power and ground go through the rails, so 3V3 has two jumpers (3, 4) and GND two (9, 10)
+        self.assertEqual((colors[3], colors[4], colors[9], colors[10]), ("red", "red", "black", "black"))
+        self.assertFalse({"red", "black"} & {colors[step] for step in colors if step not in (3, 4, 9, 10)})
 
 
 class TheJumperLanesTest(unittest.TestCase):

@@ -263,7 +263,8 @@ class KeepMovesJumperPlacement(drawing.JumperPlacement):
     """
     Strategy: an earlier jumper keeps its holes, route and direction when its two rows are the two rows of a planned
     jumper that no earlier jumper has taken yet and both its holes are free. The first in the file wins a pair of rows
-    and a hole. Every other jumper takes its first free hole in its own rows, so no jumper changes a row, and nothing
+    and a hole. Every other jumper takes the free hole of its own rows nearest its planned one (in a row of holes the
+    first free, on a rail one near its other end), so no jumper changes a row, and nothing
     kept leaves the layout as it was. `reasons` is {EarlierJumper.subject: (code, message)} for each earlier jumper
     that is not in the layout; two earlier jumpers with the same ends share one entry. Built for one plan.
     """
@@ -303,8 +304,9 @@ class KeepMovesJumperPlacement(drawing.JumperPlacement):
                 jumpers.append(planned._replace(one=ends[0], other=ends[1], route=wire.route))
             else:
                 by = "jumper %d" % planned.step
-                jumpers.append(planned._replace(one=ledger.claim_free_hole(planned.one.group, by),
-                                                other=ledger.claim_free_hole(planned.other.group, by)))
+                # the free hole nearest the planned one: in a row the first free, on a rail one near its other end (P953)
+                jumpers.append(planned._replace(one=ledger.claim_nearest_free_hole(planned.one.group, planned.one.x, by),
+                                                other=ledger.claim_nearest_free_hole(planned.other.group, planned.other.x, by)))
         return layout._replace(jumpers=jumpers)
 
 

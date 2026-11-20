@@ -186,7 +186,7 @@ class ThePrintedLabelTest(unittest.TestCase):
 
     def test_the_step_says_the_printed_label(self):
         read, _ = epaper_ends()
-        self.assertIn("4. Run a jumper from board A5 to the row of e-paper D/C.", NumberedList().render(read.steps))
+        self.assertIn("5. Run a jumper from board A5 to the row of e-paper D/C.", NumberedList().render(read.steps))
 
 
 class ThePointRoleTest(unittest.TestCase):
@@ -255,12 +255,13 @@ class ThePointRoleTest(unittest.TestCase):
     def test_the_role_reaches_each_step_and_each_drawn_jumper(self):
         read, _ = epaper_ends()
         seated = read.steps.anchored()
-        self.assertEqual([one.role for one in seated], [None, None] + ["power", "signal", "signal", "signal", "signal",
-                                                                       "ground", "signal", "signal"])
+        # P953: power and ground go through a rail, so each takes one jumper per end
+        self.assertEqual([one.role for one in seated], [None, None] + ["power", "power", "signal", "signal", "signal",
+                                                                       "signal", "ground", "ground", "signal", "signal"])
         with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
             layout = sheet._plan_layout(read)
         self.assertEqual({jumper.step: jumper.role for jumper in layout.jumpers if jumper.role != "signal"},
-                         {3: "power", 8: "ground"})
+                         {3: "power", 4: "power", 9: "ground", 10: "ground"})
 
 
 class TheRailByRoleTest(unittest.TestCase):

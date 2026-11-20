@@ -24,9 +24,10 @@ One connection per step. The board's pins take the rows beside them, so a board 
 4. Put R1 (330Ω in series with LedRed5mm A), end 1, in a free row. Holes: g47.
 5. Run a jumper from board A5 to the row of R1 end 1. Holes: from j14 to f47.
 6. Run a jumper from board D3 to the row of TactileButton A. Holes: from a20 to a33.
-7. Run a jumper from board GND to the row of LedRed5mm K. Holes: from a9 to g40.
-8. Run a jumper from the row of TactileButton B (either leg of the other pair) to the row of LedRed5mm K. Holes: from a31 to h40.
-9. Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A. Holes: g41.
+7. Run a jumper from board GND to a free - rail. Mark it GND. Holes: from a9 to top - rail, hole 7.
+8. Run a jumper from the row of LedRed5mm K (the cathode, the shorter leg, by the flat of the rim) to the GND rail. Holes: from g40 to top - rail, hole 33.
+9. Run a jumper from the row of TactileButton B (either leg of the other pair) to the GND rail. Holes: from a31 to top - rail, hole 25.
+10. Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A. Holes: g41.
 
 ### Diagram
 
@@ -51,14 +52,16 @@ flowchart LR
     n8["LedRed5mm K"]
     n9["LedRed5mm A"]
   end
+  n10["GND rail"]
   n1 ---|"5"| n4
   n2 ---|"6"| n6
-  n3 ---|"7"| n8
-  n7 ---|"8"| n8
-  n5 ---|"9"| n9
+  n3 ---|"7"| n10
+  n8 ---|"8"| n10
+  n7 ---|"9"| n10
+  n5 ---|"10"| n9
 ```
 
-![The layout on a breadboard](breadboard.svg) Each jumper has the color of what it carries, red for power, black for ground and another color for each signal: 5 green, 6 blue, 7 black, 8 black.
+![The layout on a breadboard](breadboard.svg) Each jumper has the color of what it carries, red for power, black for ground and another color for each signal: 5 green, 6 blue, 7 black, 8 black, 9 black.
 
 There is no Wokwi diagram: Wokwi has no part for the board. Use the picture.
 
@@ -72,7 +75,7 @@ After the steps, each line is one point: its ends must be joined, and nothing el
 
 1. board A5 · R1 (330Ω in series with LedRed5mm A), end 1
 2. board D3 · TactileButton A (either leg of one joined pair; a meter on continuity shows which legs are joined)
-3. board GND · LedRed5mm K (the cathode, the shorter leg, by the flat of the rim) · TactileButton B (either leg of the other pair)
+3. board GND · LedRed5mm K (the cathode, the shorter leg, by the flat of the rim) · TactileButton B (either leg of the other pair) — ground: join board GND to a - rail and the other ends to that rail
 4. LedRed5mm A (the anode, the longer leg) · R1 (330Ω in series with LedRed5mm A), end 2
 
 ## Before you power it

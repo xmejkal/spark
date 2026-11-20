@@ -153,21 +153,29 @@ class TheRoutesTest(unittest.TestCase):
                 self.assertEqual(near, [])
 
     def test_the_walk_s_result_is_pinned(self):
-        # 5 wires around the parts with at most 4 bends, 4 dashed; none over a body (it was 7 before P953)
+        # 7 wires around the parts with at most 4 bends, 4 dashed; none over a body (it was 7 before P953). P953 PR 3:
+        # power and ground go through the rails, so the five rail wires (3, 4, 5, 8, 9) keep the rules and the four
+        # dashed are signals (they were 7, 8, 9 and 11 of 9, now 6, 7, 10 and 11 of 11)
         _, _, routing = self.routed["walk-c6"]
         self.assertEqual({step: path.fallback for step, path in routing.paths.items()},
-                         {3: "", 4: "", 5: "", 6: "", 10: "", 7: "bends", 8: "bends", 9: "bends", 11: "bends"})
+                         {3: "", 4: "", 5: "", 8: "", 9: "", 12: "", 13: "", 6: "bends", 7: "bends", 10: "bends",
+                          11: "bends"})
 
-    def test_the_xiao_s_wire_7_is_dashed_as_its_end_lies_between_a_body_and_another_end(self):
+    def test_the_xiao_s_wire_7_is_no_longer_dashed_as_ground_goes_to_the_rail(self):
+        # before P953 PR 3 its wire 7 (board GND to the LED's K row) was dashed: its end lay between a body and another
+        # end. Now board GND, the LED's K and the button's B each run to the bottom - rail, and every wire keeps the rules.
         _, _, routing = self.routed["button-light-xiao"]
-        self.assertEqual({step: path.fallback for step, path in routing.paths.items()}, {5: "", 6: "", 7: "bends", 8: ""})
+        self.assertEqual({step: path.fallback for step, path in routing.paths.items()},
+                         {5: "", 6: "", 7: "", 8: "", 9: ""})
 
     def test_the_other_fixtures_results_are_pinned(self):
         # each dashed wire's end lies between bodies or other ends, where 4 bends do not reach it
+        # P953 PR 3: ground on the button-light goes to the - rail and no wire is dashed (its 7 was); the e-paper's
+        # dashed are signals (they were 4 and 8 of 3 to 10, now 5, 11 and 12 of 3 to 12)
         self.assertEqual({step: path.fallback for step, path in self.routed["button-light"][2].paths.items()},
-                         {5: "", 6: "", 7: "bends", 8: ""})
+                         {5: "", 6: "", 7: "", 8: "", 9: ""})
         self.assertEqual({step: path.fallback for step, path in self.routed["epaper"][2].paths.items()},
-                         {3: "", 5: "", 6: "", 7: "", 9: "", 10: "", 4: "bends", 8: "bends"})
+                         {3: "", 4: "", 6: "", 7: "", 8: "", 9: "", 10: "", 5: "bends", 11: "bends", 12: "bends"})
 
     def test_no_search_is_cut_short_by_its_budget(self):
         # a search the budget stops returns no way as a search with no way does; the largest that found one took 47497
@@ -220,15 +228,16 @@ class TheFallbackTest(unittest.TestCase):
         group = root.find("svg:g[@data-step='5']", NS)
         self.assertEqual((len(group.findall("svg:path", NS)), len(group.findall("svg:circle", NS))), (0, 2))
         notes = [text.text for text in root.iter("{http://www.w3.org/2000/svg}text") if text.get("fill") == "#5d4037"]
-        self.assertEqual(notes, ["wire 7 bends more than 4 times to go around the parts and is drawn dashed, "
-                                 "wire 5 finds no way around the parts and is not drawn"])
+        # P953 PR 3: the XIAO has no dashed wire now (its 7 was), so the note names only the walled wire
+        self.assertEqual(notes, ["wire 5 finds no way around the parts and is not drawn"])
 
     def test_a_dashed_wire_is_dashed_in_its_colour_only(self):
-        layout, _, _ = routed("button-light-xiao")
+        # P953 PR 3: the XIAO has no dashed wire now (its 7 was), so the walk's dashed wire 6 and its solid wire 3
+        layout, _, _ = routed("walk-c6")
         root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(layout))
-        under, color = root.find("svg:g[@data-step='7']", NS).findall("svg:path", NS)
+        under, color = root.find("svg:g[@data-step='6']", NS).findall("svg:path", NS)
         self.assertEqual((under.get("stroke-dasharray"), color.get("stroke-dasharray")), (None, "4 2"))
-        self.assertIsNone(root.find("svg:g[@data-step='5']", NS).findall("svg:path", NS)[1].get("stroke-dasharray"))
+        self.assertIsNone(root.find("svg:g[@data-step='3']", NS).findall("svg:path", NS)[1].get("stroke-dasharray"))
 
     def test_the_lane_router_is_still_a_strategy(self):
         layout, _, _ = routed("epaper")

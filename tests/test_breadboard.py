@@ -166,7 +166,9 @@ class TheMotorExampleTest(unittest.TestCase):
                          ["1. board A5", "2. board D3", "3. board D11", "4. board D12", "5. board GND",
                           "6. JstPh2PowerInlet VCC"])
         self.assertEqual(self.wiring[0], "1. board A5 · L9110sModule AIB · R2 (10kΩ pull-down on L9110sModule AIB), end 1")
-        self.assertTrue(self.wiring[5].endswith("· the MOTOR6V supply, from off the board, not part of the parts list"))
+        # P953: a power point says its rail after the supply
+        self.assertTrue(self.wiring[5].endswith("· the MOTOR6V supply, from off the board, not part of the parts list — "
+                                                "power: join JstPh2PowerInlet VCC to a + rail and the other ends to that rail"))
 
     def test_the_sheet_reads_as_recorded(self):
         # The refuter: five probe mutations escaped every assertion of a line's parts. The whole sheet, word for word,
@@ -204,7 +206,7 @@ class TheXiaoExampleTest(unittest.TestCase):
             text = sheet.sheet(XIAO / "requirements.json")
         steps = [line for line in text.split("### Steps", 1)[1].split("### Diagram", 1)[0].splitlines()
                  if re.match(r"^\d+\. ", line)]
-        self.assertEqual(len(steps), 9, text)
+        self.assertEqual(len(steps), 10, text)  # P953: ground goes through a rail, one jumper per end
         # P945: each step ends with the holes the drawing uses
         self.assertEqual(steps[4], "5. Run a jumper from board D8 to the row of R1 end 1. Holes: from j4 to f24.")
         self.assertEqual(steps[5], "6. Run a jumper from board D10 to the row of TactileButton A. Holes: from j6 to a14.")
