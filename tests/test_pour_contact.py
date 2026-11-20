@@ -113,6 +113,10 @@ class ContainmentAndRingsTest(unittest.TestCase):
         circuit = walk(pour=holed_pour(square(-1, -1, 3, 1)), trace=STRAIGHT)
         self.assertLessEqual(PourContact(circuit).measured(error_of(circuit)), 0)
 
+    def test_a_trace_across_a_strip_of_pour_with_both_ends_in_holes_is_a_contact(self):
+        circuit = walk(pour=holed_pour(square(-1, -1, 2, 1), square(3, -1, 6, 1)), trace=STRAIGHT)
+        self.assertLessEqual(PourContact(circuit).measured(error_of(circuit)), 0)
+
 
 class ViasAndOtherLayersTest(unittest.TestCase):
     def via(self, x, y, **diameter):
@@ -174,8 +178,11 @@ class WhatCannotBeMeasuredIsKeptTest(unittest.TestCase):
                      {"pour": lambda pour: pour["brep_shape"]["outer_ring"]["vertices"][0].update(x="-56.8")},
                      {"trace": no_width}, {"trace": lambda trace: trace["route"][1].update(route_type="arc")},
                      {"trace": lambda trace: trace["route"][2].pop("layer")},
+                     {"trace": lambda trace: [point.update(width=False) for point in trace["route"]]},
                      {"board": lambda board: board.pop("min_trace_to_pad_edge_clearance")},
-                     {"board": lambda board: board.update(min_trace_to_pad_edge_clearance=True)}):
+                     {"board": lambda board: board.update(min_trace_to_pad_edge_clearance=True)},
+                     {"board": lambda board: board.update(min_trace_to_pad_edge_clearance=0)},
+                     {"pour": lambda pour: pour["brep_shape"]["inner_rings"][0].update(vertices=[{"x": 0, "y": 0}] * 2)}):
             with self.subTest(swap=swap):
                 circuit = walk(**swap)
                 self.assertEqual(PourContact(circuit).disproved([error_of(circuit)]), ([error_of(circuit)], []))

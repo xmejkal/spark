@@ -56,10 +56,12 @@ class PourContact:
         return kept, notes
 
     def clearance(self):
+        """The board's `min_trace_to_pad_edge_clearance` in mm; None when it is no number above 0."""
         try:
-            return number(self.one("pcb_board", "type", "pcb_board").get("min_trace_to_pad_edge_clearance"))
+            bar = number(self.one("pcb_board", "type", "pcb_board").get("min_trace_to_pad_edge_clearance"))
         except UnmeasurableError:
             return None
+        return bar if bar > 0 else None
 
     def measured(self, error):
         """The gap in mm between the pour and the trace `error` names, at most 0 when they touch; None for an error
@@ -88,11 +90,11 @@ class PourContact:
 
 def rings_of(pour):
     """The pour's outer ring and its holes, each a list of (x, y). A vertex with any key but x and y (a bulge, an arc) is
-    no straight edge, so UnmeasurableError."""
+    no straight edge, and a ring of fewer than 3 vertices is no ring, so UnmeasurableError."""
     shape = pour["brep_shape"]
     rings = []
     for ring in [shape["outer_ring"]] + list(shape.get("inner_rings") or []):
-        if any(set(vertex) != {"x", "y"} for vertex in ring["vertices"]):
+        if len(ring["vertices"]) < 3 or any(set(vertex) != {"x", "y"} for vertex in ring["vertices"]):
             raise UnmeasurableError(ring)
         rings.append([xy(vertex) for vertex in ring["vertices"]])
     return rings
