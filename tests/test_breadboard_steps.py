@@ -17,6 +17,7 @@ from spark.breadboard import drawing, sheet, wiring_steps  # noqa: E402
 from spark.design import board_components  # noqa: E402
 
 EPAPER = Path(__file__).resolve().parent / "data" / "breadboard" / "epaper"
+XIAO = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light-xiao"
 
 
 def epaper_ends():
@@ -187,6 +188,18 @@ class ThePrintedLabelTest(unittest.TestCase):
     def test_the_step_says_the_printed_label(self):
         read, _ = epaper_ends()
         self.assertIn("5. Run a jumper from board A5 to the row of e-paper D/C.", NumberedList().render(read.steps))
+
+    def test_each_end_has_its_label(self):
+        # P953: the word a jumper's pill says for an end: the board's printed label, the part's printed name (not its
+        # pin, "DC", nor its short name), and a resistor's end with its tag
+        _, ends = epaper_ends()
+        self.assertEqual((ends["board D3"].label, ends["e-paper D/C"].label, ends["e-paper Busy"].label,
+                          ends["e-paper SDI"].label), ("D3", "D/C", "Busy", "SDI"))
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            read = sheet._read_build(XIAO / "requirements.json")
+        xiao = {end.name: end for point in read.steps.points for end in point.ends}
+        self.assertEqual((xiao["board GND"].label, xiao["LedRed5mm K"].label, xiao["R1 end 1"].label,
+                          xiao["R1 end 2"].label), ("GND", "K", "R1 end 1", "R1 end 2"))
 
 
 class ThePointRoleTest(unittest.TestCase):

@@ -526,6 +526,200 @@ class TheWireStyleTest(unittest.TestCase):
         self.assertFalse({"red", "black"} & {colors[step] for step in colors if step not in (3, 4, 9, 10)})
 
 
+#: The fixtures whose pictures the pill tests read with their layouts: the walk's and those of the golden sheets.
+PILL_FIXTURES = ("walk-c6", "button-light-xiao", "button-light", "epaper")
+#: The colour of each word a jumper's colour is named by (P953, the visual spec's palette; revision 8 keeps "cyan").
+WIRE_HEX = {"red": "#d0202a", "black": "#20262b", "green": "#0b7a43", "blue": "#1668c7", "purple": "#7a3fc0",
+            "orange": "#b85c00", "magenta": "#b0127a", "cyan": "#0b7fa8", "gray": "#5f6b73"}
+
+
+def fixture_svg(fixture):
+    """(the sheet's picture of one fixture, its layout), planned and drawn as a build draws it, with an empty store."""
+    with in_store():
+        layout = sheet._plan_layout(sheet._read_build(ROOT / "tests" / "data" / "breadboard" / fixture / "requirements.json"))
+        renderer = next(one for one in sheet.DRAWING_RENDERERS if isinstance(one, svg_diagram.SvgBreadboardDiagram))
+        return renderer.text(layout), layout
+
+
+def pill_of(group):
+    """The pill group inside one jumper's group."""
+    return group.find("svg:g[@class='pill']", NS)
+
+
+def pill_box(pill):
+    """(left, top, right, bottom) of a pill as drawn: its rect, turned about its centre when its group turns it."""
+    rect = pill.find("svg:rect", NS)
+    x, y, width, height = (float(rect.get(key)) for key in ("x", "y", "width", "height"))
+    turn = re.search(r"rotate\((-?[\d.]+) (-?[\d.]+) (-?[\d.]+)\)", pill.get("transform") or "")
+    if not turn:
+        return x, y, x + width, y + height
+    angle, cx, cy = (float(n) for n in turn.groups())
+    cos, sin = round(math.cos(math.radians(angle))), round(math.sin(math.radians(angle)))
+    corners = [(cx + (px - cx) * cos - (py - cy) * sin, cy + (px - cx) * sin + (py - cy) * cos)
+               for px in (x, x + width) for py in (y, y + height)]
+    return (min(px for px, _ in corners), min(py for _, py in corners), max(px for px, _ in corners),
+            max(py for _, py in corners))
+
+
+def boxes_meet(one, other, by=0):
+    """True when two boxes (left, top, right, bottom) overlap or come closer than `by`."""
+    return (one[0] - by <= other[2] and other[0] - by <= one[2] and one[1] - by <= other[3] and other[1] - by <= one[3])
+
+
+class ThePillsTest(unittest.TestCase):
+    """P953 PR 4a: every jumper carries one pill, the PO's "7  SDI to D11": its step's number in a white disc, then the
+    two pads it joins, the board's last; on its wire, clear of every body, end dot, other wire and other pill."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.drawn = {fixture: fixture_svg(fixture) for fixture in PILL_FIXTURES}
+        cls.pictures = dict(golden_svgs(), **{fixture: text for fixture, (text, _) in cls.drawn.items()})
+
+    def test_each_jumper_has_exactly_one_pill_inside_its_group(self):
+        dashed = 0
+        for name, text in self.pictures.items():
+            with self.subTest(name):
+                root = ElementTree.fromstring(text)
+                groups = root.findall(".//svg:g[@class='wire']", NS)
+                self.assertGreaterEqual(len(groups), 2)
+                for group in groups:
+                    self.assertEqual(len(group.findall("svg:g[@class='pill']", NS)), 1, group.get("data-step"))
+                    self.assertEqual(pill_of(group).findall("svg:text", NS)[0].text, group.get("data-step"))
+                    dashed += bool(group.findall("svg:path", NS)[1].get("stroke-dasharray"))
+                self.assertEqual(len(root.findall(".//svg:g[@class='pill']", NS)), len(groups))
+        self.assertGreaterEqual(dashed, 4)  # a dashed wire (the walk's 6, 7, 10 and 11) carries its pill too
+
+    def test_the_walk_s_pills_read_as_the_po_said(self):
+        # read from the walk's sheet: 3 board 3V3 to a free + rail, 6 board D3 to the row of e-paper CS, 8 board GND to a
+        # free - rail, 10 board MOSI to the row of e-paper SDI, ...
+        root = ElementTree.fromstring(self.drawn["walk-c6"][0])
+        words = {int(group.get("data-step")): pill_of(group).findall("svg:text", NS)[1].text
+                 for group in root.findall(".//svg:g[@class='wire']", NS)}
+        self.assertEqual(words, {3: "3V3 to + rail", 4: "3V3_2 to + rail", 5: "VCC to + rail", 6: "CS to D3",
+                                 7: "D/C to D7", 8: "GND to - rail", 9: "GND to - rail", 10: "SDI to MOSI",
+                                 11: "SCLK to SCK", 12: "Busy to SCL", 13: "Reset to SDA"})
+
+    def test_the_number_is_in_the_disc_before_the_words(self):
+        for name, text in self.pictures.items():
+            with self.subTest(name):
+                for group in ElementTree.fromstring(text).findall(".//svg:g[@class='wire']", NS):
+                    color = group.findall("svg:path", NS)[1].get("stroke")
+                    pill = pill_of(group)
+                    rect, disc = pill.find("svg:rect", NS), pill.find("svg:circle", NS)
+                    number, words = pill.findall("svg:text", NS)
+                    self.assertEqual((rect.get("height"), rect.get("rx"), rect.get("fill"), rect.get("stroke"),
+                                      rect.get("stroke-width")), ("9.6", "4.8", color, "#ffffff", "0.53"))
+                    self.assertEqual((disc.get("r"), disc.get("fill")), ("3.4", "#ffffff"))
+                    self.assertAlmostEqual(float(disc.get("cx")) - float(rect.get("x")), 4.8, places=2)
+                    self.assertEqual((number.get("x"), number.get("text-anchor"), number.get("font-size"),
+                                      number.get("font-weight"), number.get("fill")),
+                                     (disc.get("cx"), "middle", "5.3", "800", color))
+                    self.assertGreaterEqual(float(words.get("x")), float(disc.get("cx")) + 3.4 + 1.6 - 0.01)
+                    self.assertEqual((words.get("font-size"), words.get("font-weight"), words.get("fill")),
+                                     ("6.1", "700", "#ffffff"))
+                    self.assertAlmostEqual(float(rect.get("width")), 9.6 + 3.6 + 3.57 * len(words.text), places=2)
+
+    def test_no_two_pill_boxes_touch(self):
+        for name, text in self.pictures.items():
+            with self.subTest(name):
+                boxes = [(group.get("data-step"), pill_box(pill_of(group)))
+                         for group in ElementTree.fromstring(text).findall(".//svg:g[@class='wire']", NS)]
+                self.assertGreaterEqual(len(boxes), 2)
+                self.assertEqual([(one, other) for index, (one, a) in enumerate(boxes) for other, b in boxes[index + 1:]
+                                  if boxes_meet(a, b)], [])
+
+    def test_no_pill_touches_a_body_an_end_dot_or_another_wire(self):
+        for fixture, (text, layout) in self.drawn.items():
+            with self.subTest(fixture):
+                groups = ElementTree.fromstring(text).findall(".//svg:g[@class='wire']", NS)
+                bodies = [(box.left, box.top, box.right, box.bottom) for box in (
+                    svg_diagram.BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts)]
+                dots = [(float(dot.get("cx")), float(dot.get("cy")), float(dot.get("r")) + float(dot.get("stroke-width")) / 2)
+                        for group in groups for dot in group.findall("svg:circle", NS)]
+                self.assertEqual(len(dots), 2 * len(layout.jumpers))
+                for group in groups:
+                    box = pill_box(pill_of(group))
+                    with self.subTest(step=group.get("data-step")):
+                        self.assertFalse([body for body in bodies if boxes_meet(box, body)])
+                        self.assertFalse([dot for dot in dots if boxes_meet(box, (dot[0], dot[1], dot[0], dot[1]), dot[2])])
+                        for other in groups:
+                            if other is group:
+                                continue
+                            under, color = other.findall("svg:path", NS)[:2]
+                            half = float(under.get("stroke-width")) / 2
+                            near = [piece for piece in segments(color) if boxes_meet(box, (
+                                min(piece[0][0], piece[1][0]), min(piece[0][1], piece[1][1]),
+                                max(piece[0][0], piece[1][0]), max(piece[0][1], piece[1][1])), half)]
+                            self.assertEqual(near, [], other.get("data-step"))
+
+    def test_every_pill_finds_a_free_place_on_every_fixture(self):
+        # no pill falls back to its longest run's middle: each sits on a straight piece of its own wire, centred across it
+        for fixture, (text, layout) in self.drawn.items():
+            with self.subTest(fixture):
+                for group in ElementTree.fromstring(text).findall(".//svg:g[@class='wire']", NS):
+                    left, top, right, bottom = pill_box(pill_of(group))
+                    middle = ((left + right) / 2, (top + bottom) / 2)
+                    pieces = segments(group.findall("svg:path", NS)[1])
+                    on = [piece for piece in pieces if
+                          (piece[0][1] == piece[1][1] == round(middle[1], 3) and right - left > bottom - top
+                           and min(piece[0][0], piece[1][0]) < left and right < max(piece[0][0], piece[1][0])) or
+                          (piece[0][0] == piece[1][0] == round(middle[0], 3) and bottom - top > right - left
+                           and min(piece[0][1], piece[1][1]) < top and bottom < max(piece[0][1], piece[1][1]))]
+                    self.assertTrue(on, (group.get("data-step"), middle))
+
+
+def contrast(one, other):
+    """The WCAG contrast ratio of two #rrggbb colours."""
+    def luminance(color):
+        channels = [int(color[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+        linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+    high, low = sorted((luminance(one), luminance(other)), reverse=True)
+    return (high + 0.05) / (low + 0.05)
+
+
+class TheWirePaletteTest(unittest.TestCase):
+    """P953 PR 4a: the wires in the visual spec's palette (data/breadboards.json's palette.wires), the sheet's words
+    unchanged, and the wire's sizes of the old page at spark's pitch."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text, cls.layout = fixture_svg("walk-c6")
+        cls.root = ElementTree.fromstring(cls.text)
+
+    def test_each_word_draws_its_hex(self):
+        self.assertEqual(svg_diagram.BoardPalette.load().colors["wires"], WIRE_HEX)
+        words = wiring_steps.JumperColors().of({jumper.step: jumper.role for jumper in self.layout.jumpers})
+        drawn = {int(group.get("data-step")): group.findall("svg:path", NS)[1].get("stroke")
+                 for group in self.root.findall(".//svg:g[@class='wire']", NS)}
+        self.assertEqual(drawn, {step: WIRE_HEX[word] for step, word in words.items()})
+        self.assertEqual(len(set(drawn.values())), 8)  # red, black and the six signals
+
+    def test_the_sixth_signal_keeps_its_word_cyan_on_the_sheet_and_draws_0b7fa8(self):
+        # revision 8: no rename to teal; the sheet's word names the wire in hand, the picture draws it darker
+        roles = {jumper.step: jumper.role for jumper in self.layout.jumpers}
+        self.assertEqual(sheet.JUMPER_COLORS.of(roles)[13], "cyan")
+        group = next(one for one in self.root.findall(".//svg:g[@class='wire']", NS) if one.get("data-step") == "13")
+        self.assertEqual(group.findall("svg:path", NS)[1].get("stroke"), "#0b7fa8")
+        self.assertNotIn('"cyan"', self.text)
+
+    def test_every_wire_colour_has_4_5_to_1_on_white_and_3_to_1_on_the_board(self):
+        # 4.5:1 (WCAG 1.4.3): a pill's white words on the wire's colour, its number in that colour on the white disc;
+        # 3:1 (WCAG 1.4.11): the wire on the board's body
+        palette = svg_diagram.BoardPalette.load().colors
+        for word, color in palette["wires"].items():
+            with self.subTest(word):
+                self.assertGreaterEqual(contrast(color, "#ffffff"), 4.5)
+                self.assertGreaterEqual(contrast(color, palette["board"]), 3.0)
+
+    def test_the_wire_is_2_2_on_a_4_white_under_stroke_and_its_end_dot_3_with_a_0_8_ring(self):
+        for group in self.root.findall(".//svg:g[@class='wire']", NS):
+            under, color = group.findall("svg:path", NS)[:2]
+            self.assertEqual((float(under.get("stroke-width")), float(color.get("stroke-width"))), (4.0, 2.2))
+            for dot in group.findall("svg:circle", NS):
+                self.assertEqual((float(dot.get("r")), dot.get("stroke"), float(dot.get("stroke-width"))), (3.0, "#ffffff", 0.8))
+
+
 class TheJumperLanesTest(unittest.TestCase):
     """P947: one lane per jumper, so no two jumpers share a drawn line and no step numbers overlap, on the walk's
     e-paper sheet and on every golden sheet with a picture."""
