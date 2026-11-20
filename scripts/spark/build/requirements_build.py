@@ -43,7 +43,7 @@ class RequirementsBuildService:
     `note_built(design)`, which writes the history line (part_facts.note_built), each None for the real one. A refused
     file, a build past its limit and any crash of the stages are each one stage that could not run; an OSError from
     making the work folder or reading the toolchain and the kept files propagates, as it did from check_spine's main.
-    It never removes the work folder: the caller (`BuildBoard`) does.
+    It removes the work folder when it raises after making it (P939); one it returns, the caller (`BuildBoard`) removes.
     """
 
     def __init__(self, build_service=None, note_built=None):
@@ -62,35 +62,39 @@ class RequirementsBuildService:
         # The project is the file's, up from its own folder; a file in no project is built from the plugin's library.
         project = loader.project_for(source) if source else None
         from_library = bool(source) and loader.is_library(project)
-        workdir, toolchain = self._work_folder(requirements, source)
-        # What `built` will name is loaded now, once, before anything can change under it.
-        handed = design_handed_to(workdir, project) if source and not from_library else None
-        if simulation and (simulation / "diagram.json").is_file():  # P482: the build merges into a copy, never the person's file
-            shutil.copy(simulation / "diagram.json", workdir / sim_project.KEPT_DIAGRAM)
-        firmware, kept = self._firmware(firmware, simulation)
-        stages = self._stages(toolchain, BuildInputs(requirements, workdir, project, from_library, firmware))
-        if lines := self._firmware_line(kept, workdir):
-            add_diagnostics(lines)
-        # The history says a build ran end to end (§5.7), written by the chain itself; one it cannot keep is said, and the verdict stands.
-        if handed is not None and vouches_for_a_build(stages):
-            try:
-                # looked up at call time, so a test's patch of `part_facts.note_built` still reaches it
-                (self.note_built or part_facts.note_built)(handed)
-            except (store.StoreError, OSError) as unrecorded:
-                add_diagnostics(["  the build was not recorded in your history: %s" % unrecorded])
-        return RequirementsBuildResult(stages, workdir, requirements, toolchain)
+        workdir = Path(tempfile.mkdtemp(prefix="spark-spine-"))
+        try:
+            toolchain = self._work_folder(workdir, requirements, source)
+            # What `built` will name is loaded now, once, before anything can change under it.
+            handed = design_handed_to(workdir, project) if source and not from_library else None
+            if simulation and (simulation / "diagram.json").is_file():  # P482: the build merges into a copy, never the person's file
+                shutil.copy(simulation / "diagram.json", workdir / sim_project.KEPT_DIAGRAM)
+            firmware, kept = self._firmware(firmware, simulation)
+            stages = self._stages(toolchain, BuildInputs(requirements, workdir, project, from_library, firmware))
+            if lines := self._firmware_line(kept, workdir):
+                add_diagnostics(lines)
+            # The history says a build ran end to end (§5.7), written by the chain itself; one it cannot keep is said, and the verdict stands.
+            if handed is not None and vouches_for_a_build(stages):
+                try:
+                    # looked up at call time, so a test's patch of `part_facts.note_built` still reaches it
+                    (self.note_built or part_facts.note_built)(handed)
+                except (store.StoreError, OSError) as unrecorded:
+                    add_diagnostics(["  the build was not recorded in your history: %s" % unrecorded])
+            return RequirementsBuildResult(stages, workdir, requirements, toolchain)
+        except BaseException:  # P939: a folder it returns, the caller removes after the keep step
+            shutil.rmtree(workdir, ignore_errors=True)
+            raise
 
     @staticmethod
-    def _work_folder(requirements, source):
-        """(the new work folder with requirements.json in it, the toolchain found from the file's folder or the working
-        directory, or None): tsci needs its toolchain reachable from the build folder, so its node_modules is linked in."""
-        workdir = Path(tempfile.mkdtemp(prefix="spark-spine-"))
+    def _work_folder(workdir, requirements, source):
+        """The toolchain found from the file's folder or the working directory, or None, with requirements.json written
+        into `workdir`: tsci needs its toolchain reachable from the build folder, so its node_modules is linked in."""
         (workdir / "requirements.json").write_text(json.dumps(requirements))
         toolchain = board_engine.find_toolchain(source.parent if source else Path.cwd())
         modules = modules_for(toolchain) if toolchain is not None else None
         if modules is not None and not (workdir / "node_modules").exists():
             os.symlink(modules, workdir / "node_modules")
-        return workdir, toolchain
+        return toolchain
 
     @staticmethod
     def _firmware(firmware, simulation):

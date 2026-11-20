@@ -49,7 +49,8 @@ on which one PATH found first, and nothing said so.
 The run is `spark/build/requirements_build.RequirementsBuildService`: it reads the file, makes the work folder and runs
 `build_service.BuildService` over `board_engine.TscircuitEngine` and `spark/design/board_emitter.BoardEmitter`, all in
 process (P706). The Operation `spark/build/build_board.BuildBoard` runs it, keeps what --keep asks for and removes the
-work folder (P804); this CLI hands the arguments to the core, which parses them and prints.
+work folder (P804), which the service removes itself when it raises (P939); this CLI hands the arguments to the core,
+which parses them and prints.
 """
 
 import sys

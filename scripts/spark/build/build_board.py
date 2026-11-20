@@ -60,10 +60,10 @@ class BuildBoard(Operation):
     """
     Operation: the build. It runs the chain on a requirements file (None: the reference design) with the
     RequirementsBuildService it was given, keeps what --keep and --sim-dir ask for (`kept_files.keep_all`) and removes
-    the work folder, after a crash too. Its data is the dict check_spine printed with --json (`said_of`), its lines the
-    verdict's text, its diagnostics each kept entry's line, after the service's own lines (the service gives them
-    to `outside.add_diagnostics`, so a crash later keeps them, P840, P938), and its Findings `build_service.findings_of`
-    the stages.
+    the work folder, after a crash in its own steps too; the service removes one it raised past (P939). Its data is the
+    dict check_spine printed with --json (`said_of`), its lines the verdict's text, its diagnostics each kept entry's
+    line, after the service's own lines (the service gives them to `outside.add_diagnostics`, so a crash later keeps
+    them, P840, P938), and its Findings `build_service.findings_of` the stages.
     """
 
     name = "build-board"
