@@ -97,7 +97,7 @@ class TheRoutesTest(unittest.TestCase):
             with self.subTest(fixture=fixture, step=jumper.step):
                 self.assertEqual(path.bends, len(path.points) - 2)
                 if path.fallback:
-                    self.assertEqual((path.fallback, path.bends > 4, path.bends <= 8), (wire_routing.BENDS, True, True))
+                    self.assertEqual((path.fallback, path.bends > 4, path.bends <= 8), ("bends", True, True))
                 else:
                     self.assertLessEqual(path.bends, 4)
 
@@ -205,7 +205,7 @@ class TheFallbackTest(unittest.TestCase):
         wall = BodyBox(jumper.other.x - 12, jumper.other.y - 12, jumper.other.x + 12, jumper.other.y + 12)
         background = svg_diagram.BoardBackground(svg_diagram.BoardPalette.load())
         routing = wire_routing.TrackJumperRouter.routing(layout, background.obstacles(layout.geometry.surface, bodies + [wall]))
-        self.assertEqual(routing.paths[5], wire_routing.JumperPath((), 0, wire_routing.NO_WAY))
+        self.assertEqual(routing.paths[5], wire_routing.JumperPath((), 0, "no_way"))
 
         class Walled(wire_routing.JumperRouter):
             def route(self, layout, obstacles):
