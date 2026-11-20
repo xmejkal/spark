@@ -105,8 +105,9 @@ def long_cells(path, text, root=ROOT, limits=CELL_LIMITS):
 
 
 def missing_names(text, root=ROOT):
-    """The commands and scripts the text names that do not exist."""
-    commands = sorted(set(re.findall(r"/spark:([a-z][a-z-]*)", text)))
+    """The commands and scripts the text names that do not exist. A page block's end marker (tools/doc_blocks.py's END,
+    P855) names no command."""
+    commands = sorted(set(re.findall(r"(?<!<!-- )/spark:([a-z][a-z-]*)", text)))
     scripts = sorted(set(re.findall(r"\b([a-z][a-z_]*\.py)\b", text)))
     return (["/spark:%s names no command" % name for name in commands
              if not (root / "commands" / ("%s.md" % name)).is_file()]
