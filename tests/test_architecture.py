@@ -408,10 +408,11 @@ class TheBreadboardAreaTest(unittest.TestCase):
     """W6-B3 (P694): the breadboard's modules live in `scripts/spark/breadboard/`, its `__init__.py` imports nothing, and
     each module imports alone. `scripts/` keeps the CLI `breadboard.py`, which defines `main` only."""
     BREADBOARD = ROOT / "scripts" / "spark" / "breadboard"
-    #: The fifteen modules of the area, by the names of its page (`areas/breadboard.md`); `part_shape` came in W6-D3b,
-    #: `before_power` in P826, `svg_diagram` in P945, `picture_check` and `picture_makers` in P946.
-    MODULES = ["before_power", "bench_changes", "breadboard_codes", "drawing", "drawing_catalog", "drawing_match", "kept_moves",
-               "part_pictures", "part_shape", "picture_check", "picture_makers", "sheet", "svg_diagram", "tabbed_page",
+    #: The eighteen modules of the area, by the names of its page (`areas/breadboard.md`); `part_shape` came in W6-D3b,
+    #: `before_power` in P826, `svg_diagram` in P945, `picture_check` and `picture_makers` in P946, `feature_check`,
+    #: `feature_measure` and `features_picture` in P956.
+    MODULES = ["before_power", "bench_changes", "breadboard_codes", "drawing", "drawing_catalog", "drawing_match", "feature_check",
+               "feature_measure", "features_picture", "kept_moves", "part_pictures", "part_shape", "picture_check", "picture_makers", "sheet", "svg_diagram", "tabbed_page",
                "wiring_steps"]
 
     def test_scripts_holds_the_cli_and_no_breadboard_library_module(self):
@@ -638,7 +639,7 @@ class TheSourcingAreaTest(unittest.TestCase):
     MODULES = ["brief_choices", "datasheets", "drawer", "fetch_documents", "find_kept", "import_drawer", "keep_file", "keep_picture",
                "list_catalog", "list_drawer", "list_parts", "list_signals", "list_unverified", "mark_step", "matching", "offers", "part_facts",
                "part_operation", "part_records", "part_rules", "picture_frame", "promote_record", "read_datasheet", "record_home", "resolve_sources",
-               "run_cost", "set_drawer", "set_facts", "set_function", "show_part", "sourcing_codes", "sourcing_operations",
+               "run_cost", "set_drawer", "set_facts", "set_features", "set_function", "show_part", "sourcing_codes", "sourcing_operations",
                "validate_parts", "write_answers", "write_skeleton"]
     #: `parts.py`'s own top-level names since P726 PR 3: the CLI's flag shape of `DropNeed`, the route to the Operations on
     #: the core, the help epilog and `main`. The text printer's rule is `record_kind.Answer.text_lines` and `run_cli`'s.
@@ -681,7 +682,7 @@ class TheSourcingAreaTest(unittest.TestCase):
         code = ("from spark.core.operation import Operation; from spark.sourcing import sourcing_operations as s; "
                 "print(sorted(s.OPERATIONS)); print([op for op, cls in s.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-        self.assertEqual(run.stdout.split("\n")[:2], ["['catalog', 'drawer', 'drawer-import', 'drawer-set', 'fact-set', 'fetch', 'function-set', 'keep', 'keep-picture', 'kept', "
+        self.assertEqual(run.stdout.split("\n")[:2], ["['catalog', 'drawer', 'drawer-import', 'drawer-set', 'fact-set', 'features-set', 'fetch', 'function-set', 'keep', 'keep-picture', 'kept', "
                                                      "'list', 'picture-frame', 'promote', 'read', 'show', 'signals', 'skeleton', 'sources', 'step', 'unverified', 'validate']", "[]"], run.stderr)
 
     def test_the_first_argument_of_every_parts_operation_is_its_flag(self):

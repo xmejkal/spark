@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.core import outcomes  # noqa: E402
-from spark.records.record_kind import Answer, RecordKind, Validation, _cannot, _problem, picture_problems, type_problems  # noqa: E402
+from spark.records.record_kind import (Answer, RecordKind, Validation, _cannot, _problem, feature_problems,  # noqa: E402
+                                      picture_problems, type_problems)
 
 PATH = Path("/nowhere/x.json")
 
@@ -145,6 +146,73 @@ class APartsPicturesTest(unittest.TestCase):
         part["pictures"]["side"] = part["pictures"]["breadboard-top"]
         part["pictures"]["back"] = part["pictures"]["breadboard-top"]
         self.assertEqual(len(picture_problems(part)), 2)
+
+
+def _feature(**changed):
+    """A good measured feature (P956) with `changed` set."""
+    return dict({"name": "MCU", "kind": "chip", "x": 1.0, "y": 2.0, "w": 3.0, "h": 4.0, "colour": "#838383",
+                 "verified": False, "source": "measured by the suite"}, **changed)
+
+
+def _problems(*features, colour=None):
+    physical = dict({"features": list(features)}, **({"colour": colour} if colour is not None else {}))
+    return feature_problems({"physical": physical})
+
+
+class FeatureProblemsTest(unittest.TestCase):
+    """P956: a record's measured features and its colour hold their shape, each problem naming the feature."""
+
+    def test_each_broken_field_is_named_with_the_feature(self):
+        label = _feature(name="WORD", kind="label", text="SPARK")
+        no_text = {key: value for key, value in label.items() if key != "text"}
+        kinds = "chip, usb, button, led, jst, fpc, connector, crystal, inductor, passives, hole, label"
+        for case, found, wanted in (
+                ("a good chip and a label", _problems(_feature(), label), []),
+                ("a kind outside the list", _problems(_feature(kind="robot")),
+                 ["physical.features[0] (MCU) is of kind 'robot', which is none of %s" % kinds]),
+                ("a colour that is no hex", _problems(_feature(colour="grey")),
+                 ["physical.features[0] (MCU) has colour 'grey', but it is #rrggbb in lower case"]),
+                ("an upper-case hex", _problems(_feature(colour="#83838A")),
+                 ["physical.features[0] (MCU) has colour '#83838A', but it is #rrggbb in lower case"]),
+                ("two features of one name", _problems(_feature(), _feature()),
+                 ["physical.features[1] (MCU) has the name of a feature before it: each name is one feature's"]),
+                ("a label with no text", _problems(no_text),
+                 ["physical.features[0] (WORD) has text None, but a label holds a text of 1 to 24 characters"]),
+                ("a label over 24 characters", _problems(dict(label, text="X" * 25)),
+                 ["physical.features[0] (WORD) has text '%s', but a label holds a text of 1 to 24 characters" % ("X" * 25)]),
+                ("a size of nothing", _problems(_feature(w=0)), ["physical.features[0] (MCU) has w 0, but it is above 0"]),
+                ("a size that is text", _problems(_feature(x="1")), ["physical.features[0] (MCU) has x '1', but it is a number of mm"]),
+                ("a size that is a bool", _problems(_feature(h=True)), ["physical.features[0] (MCU) has h True, but it is a number of mm"]),
+                ("no source", _problems(_feature(source=" ")), ["physical.features[0] (MCU) has no source: it says who measured it, on what"]),
+                ("verified as text", _problems(_feature(verified="no")),
+                 ["physical.features[0] (MCU) has verified 'no', but it is true or false"]),
+                ("leads of a sort no chip has", _problems(_feature(leads="six")),
+                 ["physical.features[0] (MCU) has leads 'six', but they are one of four, top-bottom, left-right, none"]),
+                ("a count on a chip", _problems(_feature(count=2)),
+                 ["physical.features[0] (MCU) holds count, which only a passives or fpc or jst holds"]),
+                ("a count of nothing", _problems(_feature(kind="jst", count=0)),
+                 ["physical.features[0] (MCU) has count 0, but it is a whole number above 0"]),
+                ("a field no feature has", _problems(_feature(url="x")), ["physical.features[0] (MCU) holds url, which is no field of a feature"]),
+                ("features that are no list", feature_problems({"physical": {"features": {}}}), ["physical.features is {}, but it is a list of features"]),
+                ("a feature that is no object", _problems("chip"), ["physical.features[0] is 'chip', but a feature is an object"]),
+                ("a board colour with no source", _problems(colour={"value": "#040404", "verified": False}),
+                 ["physical.colour is {'value': '#040404', 'verified': False}, but it is {value: #rrggbb in lower case, verified, source}"]),
+                ("no physical block", feature_problems({}), [])):
+            with self.subTest(case):
+                self.assertEqual(found, wanted)
+
+    def test_board_and_part_rules_both_run_feature_problems(self):
+        """The board's rules run it (P956); a module's record holds no features in this version, so its rules refuse the key."""
+        import json
+        from spark.records import board_records
+        from spark.sourcing import part_records
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        board["physical"]["features"] = [_feature(kind="robot")]
+        self.assertIn("physical.features[0] (MCU) is of kind 'robot', which is none of chip, usb, button, led, jst, fpc, "
+                      "connector, crystal, inductor, passives, hole, label", board_records.validate(board, ROOT / "boards" / "x.json"))
+        part = json.loads((ROOT / "tests" / "data" / "breadboard" / "epaper" / "parts" / "epaper-2in9-bwr-mh-et-live.json").read_text())
+        part["physical"]["features"] = [_feature()]
+        self.assertTrue([problem for problem in part_records.validate(part, ROOT / "parts" / "x.json") if "features" in problem])
 
 
 if __name__ == "__main__":
