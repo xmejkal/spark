@@ -1,0 +1,2 @@
+--- stderr ---
+parts.py: golden-led has no frame to draw on: it has no physical block (physical)

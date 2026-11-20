@@ -8,7 +8,6 @@ the picture, each one says what it uses, and the build draws a kept picture with
 import hashlib
 import json
 import os
-import re
 import shutil
 import sys
 import tempfile

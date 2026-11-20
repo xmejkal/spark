@@ -17,7 +17,19 @@ Part of [the scripts](scripts.md). When `breadboard.py` does not write a drawing
 | `no_pin_position`, `planner_fault` | the Wokwi type; the hole, the part or the end | `no_pin_position`: first make sure that the record's `simulation.wokwi.pins` names pins that Wokwi has, then report it. `planner_fault`: a fault in spark's planner. Report it. Do not retry |
 | `no_wokwi_part` | none | none. It is by design, and `expected` is `true`. Do not retry. The `why` names each drawn part that Wokwi has no part for, the board or a module: `Wokwi has no part for the board and e-paper` |
 
-A part's picture ([P946](https://github.com/xmejkal/spark/issues/1349)) is checked by `picture_check.PictureCheck`
+## A part's picture
+
+`parts.py --picture-frame <id> [--project .]` prints the frame a part's picture is drawn on
+([P946](https://github.com/xmejkal/spark/issues/1349)): an SVG in mm of the outline and the pads, with each pad's ring
+and label in a `data-guide` group. It writes nothing. Draw the part on it in the real part's colours, with its main
+parts at their places and no glow or shadow, take the guide group out, and keep it: `parts.py --keep-picture FILE
+--part <id> --made-by WORD --likeness exact|near|rough --credit LINE --project . --dry-run` first. It keeps the file
+in the store and names it in the record's `documents` and `pictures.breadboard-top` in one write, or keeps
+nothing. `verified` follows the frame's size fact (`body_mm.verified`). The next build draws it, with spark's pads
+and labels over it: the build asks the makers in the order `picture_makers.BUILD_MAKERS` (the kept picture), then
+spark's pictograms in `data/pictograms/`, the one named by the record's id before the one named by its Wokwi type.
+
+A part's picture is checked by `picture_check.PictureCheck`
 against the part's frame before `parts.py --keep-picture` keeps it, and again before the build draws it. Each problem
 names its code and the element, as a path from the root: `svg/g[0]/image[0]`. A refused picture is not kept. A kept
 picture that is refused at the build is drawn as the part's pictogram, with a note under the drawing:

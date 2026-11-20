@@ -1,5 +1,6 @@
 """
-The reasons `sheet.write` writes no sheet, each a code with one sentence (P692, W6-B2).
+The reasons `sheet.write` writes no sheet, each a code with one sentence (P692, W6-B2), and the rules a part's picture
+breaks (P946, `PICTURE_CODES`), all in `CODES`.
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
 sentence (no magic strings, P260). A NotBuiltError carries its code, and `sheet.refusal_code` gives the code of each error
@@ -46,4 +47,5 @@ PICTURE_CODES = {
     PICTURE_PAD_LABEL: "a text is a pad's printed label: spark draws the labels over the picture",
     PICTURE_TOO_BIG: "the picture is over 250000 bytes with no embedded JPEG, or over 400000 with one",
 }
+CODES.update(PICTURE_CODES)  # one table of the area's codes: the sheet's refusals and the picture rules
 # --- end MVP ---
