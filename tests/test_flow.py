@@ -428,6 +428,16 @@ class TheCommandTest(FlowTest):
         self.assertEqual(stopped.exception.code, 0)
         self.assertIn("Exit codes:", out.getvalue())
 
+    def test_each_verb_s_help_says_its_own_operation_s_sentence(self):
+        # P937 (the PO, 2026-11-20): one sentence per Operation, the summary of the verb's
+        from spark.flow.write_flow_page import WriteFlowPage
+        for argv, own, other in ((["--help"], ShowFlow, WriteFlowPage), (["show", "--help"], ShowFlow, WriteFlowPage),
+                                 (["page", "--help"], WriteFlowPage, ShowFlow)):
+            with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
+                flow.main(argv)
+            self.assertIn("\n" + own.summary + "\n", out.getvalue(), argv)
+            self.assertNotIn(other.summary, out.getvalue(), argv)
+
     def test_a_word_that_is_no_verb_is_refused_with_2(self):
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as stopped:
             flow.main(["nonsense"])

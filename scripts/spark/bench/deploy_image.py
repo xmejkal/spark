@@ -364,7 +364,9 @@ press the board's RESET once (with its place when the board record has it) and w
 mpremote answers after it: a restart that left the board in download mode is said and not counted. At the end of the wait
 ready is unknown with the code `download_mode_stayed`, or `port_gone` when the port was not listed or did not come back
 (then there is no REPL line). If it reads the firmware's `ready`, the board finished its restart late, and deploy.py reads
-it again at once. What the port printed, `nothing`, or why it could not be read goes in the board log.""" % (
+it again at once. What the port printed, `nothing`, or why it could not be read goes in the board log.
+
+Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 

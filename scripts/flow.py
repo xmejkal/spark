@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-"""Say where a project stands, phase by phase from the idea to the deploy, and what each phase offers next (P825), or write
-that as the project's page.html (P827)."""
+"""
+Say where a project stands, or write it as the project's page.html (P825, P827).
+
+Its `--help` sentence is the summary of the verb's Operation, ShowFlow's or WriteFlowPage's (P937), and EPILOG is the
+CLI's own text.
+"""
 
 import sys
 from pathlib import Path
@@ -53,7 +57,7 @@ def main(argv=None, outside=None):
     """Run the verb `argv` names and print its lines, or with --json its envelope. `outside` is the OutsideWorld a test
     gives. Returns the exit code."""
     operation, argv = operation_for(sys.argv[1:] if argv is None else list(argv))
-    return run_cli(HelpText("flow.py", __doc__.strip(), EPILOG, tool="flow"), operation(), argv,
+    return run_cli(HelpText("flow.py", epilog=EPILOG, tool="flow"), operation(), argv,
                    outside_builder=build_bare_outside_world, outside=outside)
 
 

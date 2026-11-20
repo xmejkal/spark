@@ -262,5 +262,20 @@ class LiveScriptTest(unittest.TestCase):
         self.assertIn("Traceback (most recent call last):", problems)
 
 
+class TheHelpTest(unittest.TestCase):
+    """P937 (the PO, 2026-11-20): each paragraph of live.py --help in its place: the board doctor's is RunLiveCode's, so
+    it comes before the CLI's own --json and exit codes."""
+
+    def test_the_board_doctor_paragraph_is_the_operations_and_comes_before_the_json(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            live.main(["--help"], outside=FakeOutsideWorld())
+        said, doctor = out.getvalue(), "the board doctor (P282) runs two checks"
+        self.assertIn(doctor, RunLiveCode.details)
+        self.assertEqual(said.count(doctor), 1)
+        self.assertLess(said.index(doctor), said.index("--json prints one line"))
+        self.assertLess(said.index("--json prints one line"), said.index("Exit codes:"))
+
+
 if __name__ == "__main__":
     unittest.main()

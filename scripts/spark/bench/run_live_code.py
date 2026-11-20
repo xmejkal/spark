@@ -85,7 +85,11 @@ board's record trusts no USB serial (it showed none, or one that its firmware se
 Espressif's own USB with a serial that does not start with the kept MAC, for example a board granted in another
 project: grant.py gives no live grant to a board with no serial. One yes or one no is for one run. A no is
 answered_no, and nothing ran on the board. A --port that the list does not hold stops with port_not_listed, and a
-/dev/tty. port is its /dev/cu. port.""" % board_grant.GRANT_COMMAND
+/dev/tty. port is its /dev/cu. port.
+
+When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
+port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
+and one next step for your hands, as the last line. Its look at the console can restart the board. --json carries it as doctor.""" % board_grant.GRANT_COMMAND
 
 
 class RunLiveCode(Operation):

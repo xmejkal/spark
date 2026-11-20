@@ -46,6 +46,7 @@ class CheckGrant(Operation):
     """
 
     name = "check-grant"
+    summary = "Say whether the board on USB has a live grant now: the check a later call makes (P253)."
     arguments = (Argument(("--check",), "check", bool, "say whether the board on USB has a live grant now"),
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote (default: here)"),
                  COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON: granted, why and the grant"))

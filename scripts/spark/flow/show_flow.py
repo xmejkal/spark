@@ -58,7 +58,7 @@ class ShowFlow(Operation):
     """
 
     name = "show-flow"
-    summary = "where a project stands, phase by phase from the idea to the deploy, with the offers of each phase"
+    summary = "Say where a project stands, phase by phase from the idea to the deploy, and what each phase offers next (P825)."
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS,)
     data_keys = ("phases", "stands_at")
