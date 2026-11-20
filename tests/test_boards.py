@@ -1469,8 +1469,7 @@ class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):
         with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
             boards.main(["--list", "--help"])
         self.assertNotIn("--json", ListBoards.details)
-        self.assertIn(ListBoards.details + "\n\n" + boards.LIST_EPILOG, out.getvalue())
-        self.assertTrue(boards.LIST_EPILOG.startswith("--json prints one envelope"))
+        self.assertIn(ListBoards.details + "\n\n--json prints one envelope (docs/guide/agents/json.md): data.boards rows", out.getvalue())
 
 
 if __name__ == "__main__":

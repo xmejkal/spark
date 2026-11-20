@@ -441,7 +441,7 @@ class TheHelpTest(unittest.TestCase):
             deploy.main(["--help"])
         said, why = out.getvalue(), "Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify)."
         self.assertTrue(DeployImage.details.endswith(why))
-        self.assertNotIn(why, deploy.EPILOG)
+        self.assertEqual(said.count(why), 1)
         self.assertLess(said.index(why), said.index("--json prints one envelope"))
         self.assertLess(said.index("--json prints one envelope"), said.index("Exit codes:"))
         self.assertTrue(said.rstrip().endswith("and the sentence says why."), "the exit codes are the last paragraph")

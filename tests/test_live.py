@@ -272,7 +272,7 @@ class TheHelpTest(unittest.TestCase):
             live.main(["--help"], outside=FakeOutsideWorld())
         said, doctor = out.getvalue(), "the board doctor (P282) runs two checks"
         self.assertIn(doctor, RunLiveCode.details)
-        self.assertNotIn(doctor, live.EPILOG)
+        self.assertEqual(said.count(doctor), 1)
         self.assertLess(said.index(doctor), said.index("--json prints one line"))
         self.assertLess(said.index("--json prints one line"), said.index("Exit codes:"))
 
