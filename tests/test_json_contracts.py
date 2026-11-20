@@ -47,6 +47,8 @@ from spark.checks import check_codes  # noqa: E402
 from spark.design import design_codes  # noqa: E402
 from spark.breadboard import breadboard_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
+from spark.core.codes import Code  # noqa: E402
+from spark.idea import idea_codes  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 import check_vendor_pins  # noqa: E402
@@ -274,7 +276,7 @@ class TheBenchCodesTableTest(unittest.TestCase):
 
     def test_the_tables_hold_each_constant_of_their_module_once_with_a_sentence_and_share_no_code(self):
         for module in (board_codes, codes, firmware_codes, breadboard_codes, check_codes, design_codes, build_codes,
-                       records_codes, sourcing_codes):
+                       records_codes, sourcing_codes, idea_codes):
             constants = {name: value for name, value in vars(module).items() if name.isupper() and isinstance(value, str)}
             self.assertEqual(sorted(constants.values()), sorted(module.CODES))
             sentences = list(module.CODES.values())
@@ -307,6 +309,8 @@ class TheBenchCodesTableTest(unittest.TestCase):
         # P717: no sourcing code is an equal literal of another leaf
         tables = others + (records_codes,)
         self.assertEqual(set(sourcing_codes.CODES) & set().union(*(other.CODES for other in tables)), set())
+        # P853: no idea code is an equal literal of another leaf
+        self.assertEqual(set(idea_codes.CODES) & set().union(*(other.CODES for other in tables + (sourcing_codes,))), set())
         # P692: a store problem is one code in both leaves, an equal literal with the same meaning
         self.assertEqual(sorted(set(breadboard_codes.CODES) & set(board_codes.CODES)), ["store_problem"])
         self.assertEqual(breadboard_codes.CODES["store_problem"], board_codes.CODES["store_problem"])
@@ -359,6 +363,111 @@ class TheBenchCodesTableTest(unittest.TestCase):
                                   ("relayed yes", "relayed_yes_refused", 1)):
             refusal = board_grant.GrantRefusedError(why)
             self.assertEqual((refusal.reason, refusal.code, reason in board_codes.CODES), (reason, code, True), why)
+
+
+#: P853: each area whose codes are Codes, with its table. An area joins when its codes take their fix.
+AREAS_WITH_FIXES = {"idea": idea_codes}
+#: P853: the errors that take a code, by class name; a subclass the area defines, at any depth, takes one too.
+CODED_ERRORS = {"SparkError", "CodedMessageError", "StoreError"}
+
+
+def dotted(node):
+    """`a.b.c` of a Name or an Attribute chain, else ''."""
+    if isinstance(node, ast.Attribute):
+        base = dotted(node.value)
+        return base and base + "." + node.attr
+    return node.id if isinstance(node, ast.Name) else ""
+
+
+def resolver(tree):
+    """The dotted name of a node, its first name resolved through the module's imports."""
+    imported = {alias.asname or alias.name: ("%s.%s" % (node.module, alias.name) if isinstance(node, ast.ImportFrom) else alias.name)
+                for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom)) for alias in node.names}
+
+    def resolved(node):
+        first, dot, rest = dotted(node).partition(".")
+        return imported.get(first, first) + dot + rest
+    return resolved
+
+
+def coded_errors(trees):
+    """P853: CODED_ERRORS and every class the trees define on one of them, a subclass of a subclass too, until none is added."""
+    classes = [(cls.name, {resolver(tree)(base).rpartition(".")[2] for base in cls.bases})
+               for tree in trees for cls in ast.walk(tree) if isinstance(cls, ast.ClassDef)]
+    errors = set(CODED_ERRORS)
+    while True:
+        more = {name for name, bases in classes if bases & errors} - errors
+        if not more:
+            return errors
+        errors |= more
+
+
+def calls_off_the_table(sources, table):
+    """
+    P853: (the calls that take a code, each rule a call breaks as 'file:line N: the rule'), over the area's `sources`
+    ({file name: text}). A Finding is made by `Finding.of` alone; an error of `coded_errors` and `Finding.of` name a Code
+    of `table` (aliases resolved through the module's imports) and give no fix; no `_replace` gives a fix.
+    """
+    trees = {name: ast.parse(text) for name, text in sources.items()}
+    errors, calls, broken = coded_errors(trees.values()), 0, []
+    for file, tree in trees.items():
+        resolved = resolver(tree)
+        for call in (node for node in ast.walk(tree) if isinstance(node, ast.Call)):
+            name, keywords = resolved(call.func), {keyword.arg: keyword.value for keyword in call.keywords}
+            said = "%s:line %d: %s" % (file, call.lineno, name.rpartition(".")[2] if name.rpartition(".")[2] in errors else name)
+            if name.endswith("Finding") or name.endswith("Finding._make"):
+                broken.append(said + " makes a Finding: Finding.of takes the fix from its Code")
+            elif name.endswith("_replace") and "fix" in keywords:
+                broken.append(said + " gives a fix")
+            elif name.endswith("Finding.of") or name.rpartition(".")[2] in errors:
+                calls += 1
+                of = name.endswith("Finding.of")
+                code = keywords.get("code", call.args[2] if of and len(call.args) > 2 else None)
+                module, _, word = resolved(code).rpartition(".")
+                if module != table.__name__ or not isinstance(getattr(table, word, None), Code):
+                    broken.append(said + " names its code as %r, not a Code of %s" % (ast.unparse(code) if code else None, table.__name__))
+                if "fix" in keywords or (of and len(call.args) > 4):
+                    broken.append(said + " gives a fix")
+    return calls, broken
+
+
+class EveryCodeHoldsItsFixTest(unittest.TestCase):
+    """P853: in an area whose codes are Codes, each holds its meaning and its fix, and every Finding and error the area
+    makes names one of them and gives no fix of its own, so none goes out without the code's fix."""
+
+    def test_each_code_of_the_table_holds_its_meaning_and_a_fix(self):
+        for table in AREAS_WITH_FIXES.values():
+            for code, meaning in table.CODES.items():
+                self.assertEqual((type(code), code.meaning), (Code, meaning))
+                self.assertTrue(code.fix.strip(), code)
+
+    def test_every_finding_and_error_of_the_area_names_a_code_of_the_table_and_gives_no_fix(self):
+        for area, table in AREAS_WITH_FIXES.items():
+            sources = {path.name: path.read_text() for path in sorted((ROOT / "scripts" / "spark" / area).glob("*.py"))}
+            calls, broken = calls_off_the_table(sources, table)
+            self.assertTrue(calls, "the scan found no call in %s" % area)
+            self.assertEqual(broken, [])
+
+    def test_the_scan_names_each_rule_a_call_breaks(self):
+        drop = ("from spark.core.result import Finding as F\nfrom spark.core.errors import SparkError\nfrom spark.records import store\n"
+                "from spark.idea import idea_codes as ic\n\n\nclass DropError(SparkError):\n    pass\n\n\n"
+                "F.of(1, 2, ic.NEED_UNKNOWN, 's')\nF(1, 2, ic.NEED_UNKNOWN, 's', 'f')\nF._make([])\n"
+                "F.of(1, 2, ic.NEED_UNKNOWN, 's', 'f')\nF.of(1, 2, 'need_unknown', 's')\nSparkError('x', code=ic.CODES)\n"
+                "store.StoreError('x', code=ic.DROP_UNWRITTEN, fix='f')\nDropError('x', code=reason)\nfound._replace(fix='f')\n"
+                "from spark.idea.errors import LostError\nLostError('x', code=reason)\n")
+        # a subclass of a subclass, defined in another file of the area
+        errors = ("from spark.idea.drop import DropError\n\n\nclass GoneError(DropError):\n    pass\n\n\n"
+                  "class LostError(GoneError):\n    pass\n")
+        self.assertEqual(calls_off_the_table({"drop.py": drop, "errors.py": errors}, idea_codes), (7, [
+            "drop.py:line 12: spark.core.result.Finding makes a Finding: Finding.of takes the fix from its Code",
+            "drop.py:line 13: spark.core.result.Finding._make makes a Finding: Finding.of takes the fix from its Code",
+            "drop.py:line 14: spark.core.result.Finding.of gives a fix",
+            "drop.py:line 15: spark.core.result.Finding.of names its code as \"'need_unknown'\", not a Code of spark.idea.idea_codes",
+            "drop.py:line 16: SparkError names its code as 'ic.CODES', not a Code of spark.idea.idea_codes",
+            "drop.py:line 17: StoreError gives a fix",
+            "drop.py:line 18: DropError names its code as 'reason', not a Code of spark.idea.idea_codes",
+            "drop.py:line 19: found._replace gives a fix",
+            "drop.py:line 21: LostError names its code as 'reason', not a Code of spark.idea.idea_codes"]))
 
 
 if __name__ == "__main__":

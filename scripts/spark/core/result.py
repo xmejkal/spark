@@ -8,12 +8,26 @@ A Refusal is the sentence with its code that a refusal returns before there is a
 from collections import namedtuple
 
 from spark.core import outcomes
+from spark.core.codes import fix_of
+
 
 # --- MVP ---
-#: Value: one thing an Operation found. `severity` is `outcomes.PROBLEMS` (it looked and found this) or
-#: `outcomes.COULD_NOT_RUN` (it could not look at this). `subject` says what a problem is about; it is None for most
-#: unchecked items, which the envelope prints without one, and a name for one that says what it lacks (P464). `code` is the word an agent decides on, `fix` what to do.
-Finding = namedtuple("Finding", "severity subject code sentence fix")
+class Finding(namedtuple("Finding", "severity subject code sentence fix")):
+    """
+    Value: one thing an Operation found. `severity` is `outcomes.PROBLEMS` (it looked and found this) or
+    `outcomes.COULD_NOT_RUN` (it could not look at this). `subject` says what a problem is about; it is None for most
+    unchecked items, which the envelope prints without one, and a name for one that says what it lacks (P464). `code` is
+    the word an agent decides on, `sentence` the text of this case and `fix` what to do.
+    """
+
+    __slots__ = ()
+
+    @classmethod
+    def of(cls, severity, subject, code, sentence, fix=None):
+        """The Finding with the fix that `codes.fix_of` gives (P853)."""
+        return cls(severity, subject, code, sentence, fix_of(code, fix))
+
+
 #: Value: a step an agent may take next, with the fields of `outcomes.step`, which prints it. `needs_person` is None
 #: unless the person's hands come first. `env` is None unless the step needs variables set, such as the store (P473).
 NextStep = namedtuple("NextStep", "op argv why effects needs_yes needs_person env", defaults=((), False, None, None))

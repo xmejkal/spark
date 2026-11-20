@@ -1,20 +1,20 @@
 """
-The reasons a need cannot be dropped, each a code with one sentence (P514). A leaf: it imports nothing of spark. The Operation
-names its code in a Finding, and `CODES` says in one sentence what each means. The codes every Operation can write are the core's.
+The reasons a need cannot be dropped, each a Code with its meaning and its fix (P514, P853). A leaf: it imports nothing of
+spark but `spark.core.codes`. The Operation names its code in a Finding or a SparkError, which takes the fix from it, and
+`CODES` says in one sentence what each means. The codes every Operation can write are the core's.
 """
 
+from spark.core.codes import Code
+
 # --- MVP ---
-#: The project has no need of that id: it never had one, or it is already dropped.
-NEED_UNKNOWN = "need_unknown"
-#: The needs file or the drawer cannot be read, so nothing is dropped.
-NEEDS_UNREADABLE = "needs_unreadable"
-#: The drop could not be written, or the holds could not be planned: the drawer is written first and the needs file last.
-DROP_UNWRITTEN = "drop_unwritten"
+NEED_UNKNOWN = Code("need_unknown", "the project has no need of that id: it never had one, or it is already dropped",
+                    "drop a need that --needs lists")
+NEEDS_UNREADABLE = Code("needs_unreadable", "the needs file or the drawer cannot be read, so nothing is dropped",
+                        "drop the need again once the file is fixed")
+DROP_UNWRITTEN = Code("drop_unwritten", "the drop could not be planned or written, so the same drop again finishes it",
+                      "check the disk and the store folder, then run the same drop again: the drawer is written first "
+                      "and the needs file last")
 
 #: Each code and the one sentence that says what it means.
-CODES = {
-    NEED_UNKNOWN: "the project has no need of that id: it never had one, or it is already dropped",
-    NEEDS_UNREADABLE: "the needs file or the drawer cannot be read, so nothing is dropped",
-    DROP_UNWRITTEN: "the drop could not be planned or written: the drawer is written first and the needs file last, so a retry finishes it",
-}
+CODES = {code: code.meaning for code in (NEED_UNKNOWN, NEEDS_UNREADABLE, DROP_UNWRITTEN)}
 # --- end MVP ---
