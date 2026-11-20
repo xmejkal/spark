@@ -37,7 +37,7 @@ class Stage:
 class StageEnding(namedtuple("StageEnding", "code status message")):
     """
     Value: one way a stage ends that is not ok: its `code` (build_codes), its status, and `message`, the template of the
-    stage's detail. The code is None for a skip, and for DESIGN_ERROR, whose code is the design error's own. Every message
+    stage's detail. The code is None only for DESIGN_ERROR, whose code is the design error's own. Every message
     is filled with %, so a literal % is written %%.
     """
 
@@ -52,9 +52,9 @@ class StageDefinition(namedtuple("StageDefinition", "name summary endings")):
 
     def ended(self, ending, *values):
         """The Stage of `ending`, its message filled with `values` (TypeError for a value missing or one too many).
-        ValueError for an ending this stage does not have, or one that is neither skipped nor coded (DESIGN_ERROR)."""
+        ValueError for an ending this stage does not have, or one with no code (DESIGN_ERROR)."""
         self._require(ending)
-        if ending.code is None and ending.status != SKIPPED:
+        if ending.code is None:
             raise ValueError("%s: a stage that does not end ok names its code; a design error's is its own (stopped_by)"
                              % self.name)
         return Stage(self.name, ending.status, ending.message % values, ending.code)
@@ -73,7 +73,7 @@ class StageDefinition(namedtuple("StageDefinition", "name summary endings")):
 #: The design error's own sentence and code: a requirements file that is not a design, a part record, a refused input.
 DESIGN_ERROR = StageEnding(None, COULD_NOT_RUN, "%s")
 #: A project that runs on the board alone (P236): every stage between the board and the simulation.
-BOARD_ONLY_ENDING = StageEnding(None, SKIPPED, "board only: nothing to wire")
+BOARD_ONLY_ENDING = StageEnding(build_codes.BOARD_ONLY, SKIPPED, "board only: nothing to wire")
 #: A tool the build ran, past its limit (P664): the sentence names the command.
 TIMED_OUT_ENDING = StageEnding(build_codes.STAGE_TIMED_OUT, COULD_NOT_RUN, "%s")
 
@@ -119,8 +119,8 @@ DIAGRAM_UNWIRED_ENDING = StageEnding(build_codes.DIAGRAM_UNWIRED, PROBLEMS,
                                      "a diagram with 0 connections. Every part is placed and none is wired, which is what "
                                      "an unmapped component looks like once the converter has given up on it")
 #: Every part's record skips the simulation (P778): the diagram holds none of the project's parts, which is no defect.
-EVERY_PART_SKIPPED_ENDING = StageEnding(None, SKIPPED, "every part is skipped from the simulation, so the diagram holds "
-                                                       "none of the project's parts, %s")
+EVERY_PART_SKIPPED_ENDING = StageEnding(build_codes.EVERY_PART_SKIPPED, SKIPPED, "every part is skipped from the simulation, "
+                                                                           "so the diagram holds none of the project's parts, %s")
 #: Anything no stage caught: could-not-run, never problems, because the tool failed, not the chain.
 CHECK_SPINE_CRASHED_ENDING = StageEnding(build_codes.STAGE_CRASHED, COULD_NOT_RUN, "%s: %s")
 

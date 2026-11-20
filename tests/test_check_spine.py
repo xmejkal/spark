@@ -2283,6 +2283,10 @@ class TheBoardAloneTest(unittest.TestCase):
         said = json.loads(out.getvalue())
         self.assertEqual((code, said["status"]), (0, "ok"))
         self.assertEqual([s["status"] for s in said["stages"]].count("skipped"), 4)
+        # P936, the PO 2026-11-20: each skipped entry carries its code, and an ok entry has no code key
+        self.assertEqual([(s["name"], s.get("code", "no key")) for s in said["stages"]],
+                         [("board", "no key")] + [(name, "board_only") for name in ("parts", "schematic", "footprint", "build")]
+                         + [("simulation", "no key")])
 
     def test_board_only_with_parts_is_refused(self):
         _, stages = self.run_alone(parts=["tactile-button"])
@@ -3287,7 +3291,7 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
 
 # --- MVP ---
 class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
-    """P701: every Stage that does not end ok names its code (build_codes, or the design error's own), and the sheet's
+    """P701: every Stage that does not end ok names its code (build_codes, or the design error's own; a skip too, P936), and the sheet's
     `not written` entry carries its code into --json's `kept`. The codes are literals here."""
 
     #: The code of each way a stage of the build can end that is not ok, by call site: board_engine's
@@ -3299,14 +3303,14 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
         "board_unusable", "board_only_with_parts", "no_parts", "broken.code", "refused.code", "stage_crashed",
         "schematic_refused", "schematic_noted", "disagreement.code", "stage_crashed", "tool_missing",
         "tool_cannot_build", "design_not_built", "stage_timed_out", "part_stranded", "design_not_built", "not_routed",
-        "simulation_fact_missing", "diagram_unwired", "chip_not_compiled",
-        "simulation_fact_missing", "simulation_fact_missing",
+        "simulation_fact_missing", "diagram_unwired", "every_part_skipped", "chip_not_compiled",
+        "simulation_fact_missing", "board_only", "simulation_fact_missing",
         "broken.code", "stage_timed_out", "stage_crashed",
     ]
 
     def test_each_stage_that_is_not_ok_names_its_code(self):
         """P852: every Stage in scripts/ is made by a definition of `stages.BUILD_STAGES`, whose `ended` raises for an ending
-        that is neither skipped nor coded, so no Stage( call is left outside stages.py; and the table keeps each code the
+        with no code (P936), so no Stage( call is left outside stages.py; and the table keeps each code the
         call sites passed, the design errors' as the stages a design error can stop."""
         calls = ["%s:%d" % (path.relative_to(ROOT), node.lineno) for path in sorted((ROOT / "scripts").rglob("*.py"))
                  if path.name != "stages.py" for node in ast.walk(ast.parse(path.read_text()))
@@ -3504,6 +3508,15 @@ class TheBuildIsAnOperationTest(unittest.TestCase):
                 self.assertEqual(outcomes.EXIT_FOR[result.status()], build_service.verdict(stages))
         found = build_service.findings_of(cases["could not run"])
         self.assertEqual([(f.severity, f.subject, f.code, f.sentence) for f in found], [(check_spine.COULD_NOT_RUN, "build", "tool_missing", "no tsci")])
+
+    def test_a_coded_skip_is_no_finding_and_each_entry_with_a_code_carries_it_after_its_detail(self):
+        # P936, the PO 2026-11-20: "Every stage with a code"; an ok entry stays {name, status, detail}
+        stages = [Stage("build", check_spine.OK, "x"), Stage("simulation", check_spine.SKIPPED, "y", "every_part_skipped")]
+        self.assertEqual(build_service.findings_of(stages), [])
+        entries = build_board.said_of(stages, outcomes.EXIT_OK, None, [], None)["stages"]
+        self.assertEqual([list(entry.items()) for entry in entries],
+                         [[("name", "build"), ("status", "ok"), ("detail", "x")],
+                          [("name", "simulation"), ("status", "skipped"), ("detail", "y"), ("code", "every_part_skipped")]])
 
     def test_run_operation_with_plain_strings_gives_the_json_line_and_the_exit(self):
         stages, sim = [Stage("build", check_spine.OK, "fine")], Path(tempfile.mkdtemp()) / "sim"

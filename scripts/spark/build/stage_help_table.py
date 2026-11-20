@@ -8,7 +8,6 @@ import textwrap
 
 from spark.build import build_codes
 from spark.core.operation_help_table import table_cell
-from spark.core.outcomes import SKIPPED
 
 # --- MVP ---
 #: The help's first line.
@@ -24,8 +23,7 @@ TABLE_HEAD = ("| stage | what it is | how it ends when not ok |", "|---|---|---|
 
 class StageHelpTable:
     """Renderer: each stage's name and summary, then one line for each status and code it can end with, the code's
-    meaning from `build_codes.CODES`. A skip has no code yet, so its line is its message, each value as `…`. It takes
-    StageDefinitions and decides nothing again."""
+    meaning from `build_codes.CODES`. It takes StageDefinitions and decides nothing again."""
 
     @staticmethod
     def render(definitions):
@@ -71,8 +69,6 @@ def _code_alone(code):
 
 
 def _said_of(ending, code_said):
-    """What is said of one ending: its code as `code_said` says it, a skip's message or DESIGN_ERROR_LINE."""
-    if ending.code:
-        return code_said(ending.code)
-    return ending.message.replace("%s", "…") if ending.status == SKIPPED else DESIGN_ERROR_LINE
+    """What is said of one ending: its code as `code_said` says it, or DESIGN_ERROR_LINE, the one ending with no code."""
+    return code_said(ending.code) if ending.code else DESIGN_ERROR_LINE
 # --- end MVP ---
