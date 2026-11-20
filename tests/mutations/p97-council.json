@@ -452,8 +452,8 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "F10: the refusal of spark's library names no part",
-  "find": "\"not by parts.py\" % part_id)])",
-  "replace": "\"not by parts.py\" % \"\")])"
+  "find": "LIBRARY_REFUSAL % part_id)])",
+  "replace": "LIBRARY_REFUSAL % \"\")])"
  },
  {
   "file": "scripts/spark/sourcing/record_home.py",

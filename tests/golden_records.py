@@ -27,6 +27,7 @@ import golden_bench  # noqa: E402
 import golden_checks  # noqa: E402
 import golden_design  # noqa: E402
 import golden_firmware  # noqa: E402
+import features_fixture  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from fakes import fake_pdftotext  # noqa: E402
 from golden_firmware import LOG_MARK  # noqa: E402
@@ -113,6 +114,8 @@ DRAWER = planted(STORE + "drawer/red-leds.json", {"label": "red leds", "count": 
 CATALOG = planted(STORE + "catalog/golden-led.json", GOLDEN_LED)
 SHEET = ("sheet.pdf", "%PDF-1.4 golden\n")
 PICTURE = ("picture.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 8"><rect width="5" height="8"/></svg>\n')
+SYNTHETIC_BOARD = planted("boards/%s.json" % features_fixture.BOARD_ID, features_fixture.board())
+FEATURES = planted("features.json", features_fixture.features_file())
 SHEET_KEPT = STORE + "sources/52d4d0818e899676cc5d6b002096ebd21d4108b2df2bb7d7cc4717d38325a0b3/sheet.pdf"
 ORDERS = planted("in.json", {"source": "dfrobot", "lines": 1, "stated": 1,
                              "items": [{"sku": "DFR0954", "name": "MAX98357 I2S Amplifier", "count": 2}]})
@@ -185,6 +188,12 @@ CASES = [
          (SMALL_LED, planted("in.json", {"about": "A red light."})), written=("parts/golden-led.json",)),
     Case("parts-fact-set-problems-not-a-fact.txt", "parts.py", ["--fact-set", "golden-led", "in.json"] + WITH, 1,
          (SMALL_LED, planted("in.json", {"colour": "red"}))),
+    # P956: a board's features measured on a synthetic top view; on the board with its rows swapped the anchors refuse
+    Case("parts-features-set-ok.txt", "parts.py", ["--features-set", "features.json", "--part", features_fixture.BOARD_ID]
+         + WITH, 0, (SYNTHETIC_BOARD, FEATURES), written=("boards/%s.json" % features_fixture.BOARD_ID,)),
+    Case("parts-features-set-problems-off-drawing.txt", "parts.py", ["--features-set", "features.json", "--part",
+         features_fixture.BOARD_ID] + WITH, 1, (planted("boards/%s.json" % features_fixture.BOARD_ID,
+                                                        features_fixture.mirrored_board()), FEATURES)),
     Case("parts-audit-ok.txt", "parts.py", ["--audit"] + WITH, 0),
     Case("parts-needs-ok.txt", "parts.py", ["--needs", PROJECT], 0, (NEEDS,)),
     Case("parts-needs-set-ok.txt", "parts.py", ["--needs-set", PROJECT, "in.json"], 0,
