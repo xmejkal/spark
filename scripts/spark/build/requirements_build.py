@@ -30,33 +30,35 @@ REFERENCE = {"board": "firebeetle2-esp32s3",
              "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
 
 
-#: Result: the stages, the work folder (None when the requirements were refused), the requirements read, the toolchain
-#: found (or None) and `diagnostics`, the lines for the person beside the verdict, unguarded.
-RequirementsBuildResult = namedtuple("RequirementsBuildResult", "stages workdir requirements toolchain diagnostics")
+#: Result: the stages, the work folder (None when the requirements were refused), the requirements read and the
+#: toolchain found (or None). The lines for the person went to `add_diagnostics` (P938).
+RequirementsBuildResult = namedtuple("RequirementsBuildResult", "stages workdir requirements toolchain")
 
 
 class RequirementsBuildService:
     """
     Service: the CLI's whole run of the chain for one requirements file, or the reference design: it reads the file,
     makes the work folder `spark-spine-*`, runs the stages of a `BuildService` and notes a build that ran end to end in
-    the person's history. It is given `build_service`, an object with `for_toolchain` (BuildService, or a fake), or None
-    for the real one. A refused file, a build past its limit and any crash of the stages are each one stage that could
-    not run; an OSError from making the work folder or reading the toolchain and the kept files propagates, as it did
-    from check_spine's main. It never removes the work folder: the caller (`BuildBoard`) does.
+    the person's history. It is given `build_service`, an object with `for_toolchain` (BuildService, or a fake), and
+    `note_built(design)`, which writes the history line (part_facts.note_built), each None for the real one. A refused
+    file, a build past its limit and any crash of the stages are each one stage that could not run; an OSError from
+    making the work folder or reading the toolchain and the kept files propagates, as it did from check_spine's main.
+    It never removes the work folder: the caller (`BuildBoard`) does.
     """
 
-    def __init__(self, build_service=None):
-        self.build_service = build_service
+    def __init__(self, build_service=None, note_built=None):
+        self.build_service, self.note_built = build_service, note_built
 
-    def build(self, requirements_path=None, firmware=None, simulation=None):
+    def build(self, requirements_path=None, firmware=None, simulation=None, add_diagnostics=None):
         """A RequirementsBuildResult for the file at `requirements_path` (None: the reference design), the flash image
-        `firmware` (None: the one the kept wokwi.toml in the folder `simulation` names) and that folder, or None."""
+        `firmware` (None: the one the kept wokwi.toml in the folder `simulation` names) and that folder, or None. Each line
+        for the person goes to `add_diagnostics(lines)` as it is said, so a crash later keeps it (P938)."""
         # Read AS input: a malformed file is a stage that could not run, not a traceback, and no folder is made.
         source = Path(requirements_path).resolve() if requirements_path else None
         try:
             requirements = loader.read(source) if source else dict(REFERENCE)
         except loader.DesignError as broken:
-            return RequirementsBuildResult([REQUIREMENTS.stopped_by(broken)], None, None, None, [])
+            return RequirementsBuildResult([REQUIREMENTS.stopped_by(broken)], None, None, None)
         # The project is the file's, up from its own folder; a file in no project is built from the plugin's library.
         project = loader.project_for(source) if source else None
         from_library = bool(source) and loader.is_library(project)
@@ -67,14 +69,16 @@ class RequirementsBuildService:
             shutil.copy(simulation / "diagram.json", workdir / sim_project.KEPT_DIAGRAM)
         firmware, kept = self._firmware(firmware, simulation)
         stages = self._stages(toolchain, BuildInputs(requirements, workdir, project, from_library, firmware))
-        diagnostics = self._firmware_line(kept, workdir)
+        if lines := self._firmware_line(kept, workdir):
+            add_diagnostics(lines)
         # The history says a build ran end to end (§5.7), written by the chain itself; one it cannot keep is said, and the verdict stands.
         if handed is not None and vouches_for_a_build(stages):
             try:
-                part_facts.note_built(handed)
+                # looked up at call time, so a test's patch of `part_facts.note_built` still reaches it
+                (self.note_built or part_facts.note_built)(handed)
             except (store.StoreError, OSError) as unrecorded:
-                diagnostics.append("  the build was not recorded in your history: %s" % unrecorded)
-        return RequirementsBuildResult(stages, workdir, requirements, toolchain, diagnostics)
+                add_diagnostics(["  the build was not recorded in your history: %s" % unrecorded])
+        return RequirementsBuildResult(stages, workdir, requirements, toolchain)
 
     @staticmethod
     def _work_folder(requirements, source):

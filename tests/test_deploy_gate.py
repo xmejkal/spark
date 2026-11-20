@@ -196,6 +196,19 @@ class TheGateTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("run look.py first, then deploy.py --token <token>.", problems)
 
+    def test_a_refusal_and_a_closed_gate_give_their_line_to_the_slot_as_it_is_said(self):
+        # P938: the line reaches the core's slot before the result is built, so a crash while it is built keeps the line
+        values = {"project": self.project, "port": None, "token": None, "ignore_older_runs": False, "no_simulation": False, "dry_run": False}
+        for scenario_ran, said in ((False, "yet: run a scenario first"), (True, "run look.py first, then deploy.py --token <token>.")):
+            if scenario_ran:
+                self.run_the_scenario()
+            with self.subTest(scenario_ran=scenario_ran):
+                added = []
+                outside = self.outside_world(self.fake_tools_run(), FakeConsent(True), FakeReporter())._replace(add_diagnostics=added.extend)
+                result = DeployImage(platform_for=MicroPythonPlatform).run(**values, outside=outside)
+                self.assertEqual((len(added), list(result.diagnostics)), (1, []))
+                self.assertIn(said, added[0])
+
     def test_the_yes_erases_then_writes_on_the_port_the_look_picked(self):
         self.run_the_scenario()
         consent = FakeConsent(True)

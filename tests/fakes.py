@@ -407,15 +407,18 @@ class FakeBuildService:
 
 
 class FakeRequirementsBuild:
-    """Fake: stands in for `requirements_build.RequirementsBuildService` in `build_board.BuildBoard` (P804): `build` answers
-    with the stages, the work folder, the requirements and the diagnostics lines the test gave, and no toolchain."""
+    """Fake: stands in for `requirements_build.RequirementsBuildService` in `build_board.BuildBoard` (P804): `build` gives
+    the diagnostics lines the test gave to `add_diagnostics` (P938), then answers with the stages, the work folder and the
+    requirements the test gave, and no toolchain."""
 
     def __init__(self, stages, workdir=None, requirements=None, diagnostics=()):
         self.stages, self.workdir, self.requirements, self.diagnostics = list(stages), workdir, requirements, list(diagnostics)
 
-    def build(self, requirements_path=None, firmware=None, simulation=None):
+    def build(self, requirements_path=None, firmware=None, simulation=None, add_diagnostics=None):
         from spark.build.requirements_build import RequirementsBuildResult
-        return RequirementsBuildResult(self.stages, self.workdir, self.requirements, None, list(self.diagnostics))
+        if self.diagnostics:
+            add_diagnostics(list(self.diagnostics))
+        return RequirementsBuildResult(self.stages, self.workdir, self.requirements, None)
 
 
 def run_build_board(stages, args, workdir=None):

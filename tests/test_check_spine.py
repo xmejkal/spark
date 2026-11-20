@@ -2796,7 +2796,8 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
 class ARequirementsBuildServiceTest(unittest.TestCase):
     """P783 PR 3: `requirements_build.RequirementsBuildService` is check_spine's whole run, given a fake BuildService
     (no patch): a refused file is one requirements stage and makes no work folder, a build past its limit and a crash
-    are each one stage that could not run with its code, and a history it cannot keep is one diagnostics line."""
+    are each one stage that could not run with its code, and a history it cannot keep is one line given to
+    `add_diagnostics` (P938)."""
 
     def setUp(self):
         self.home, self.project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "plant-alarm"
@@ -2809,25 +2810,27 @@ class ARequirementsBuildServiceTest(unittest.TestCase):
         self.addCleanup(patcher.stop)
 
     def run_with(self, build):
-        """The RequirementsBuildResult of the person's file over a fake BuildService whose build is `build`; its work folder removed after."""
-        run = requirements_build.RequirementsBuildService(FakeBuildService(build)).build(self.requirements)
+        """(the RequirementsBuildResult of the person's file over a fake BuildService whose build is `build`, the lines it
+        gave `add_diagnostics`); its work folder removed after."""
+        added = []
+        run = requirements_build.RequirementsBuildService(FakeBuildService(build)).build(self.requirements, add_diagnostics=added.extend)
         if run.workdir is not None:
             self.addCleanup(shutil.rmtree, run.workdir, True)
-        return run
+        return run, added
 
     def test_a_refused_file_is_one_requirements_stage_with_its_code_and_no_work_folder(self):
         self.requirements.write_text("{not json")
         folders = set(Path(tempfile.gettempdir()).glob("spark-spine-*"))
-        run = self.run_with(lambda *_, **__: self.fail("the build ran on a refused file"))
+        run, added = self.run_with(lambda *_, **__: self.fail("the build ran on a refused file"))
         self.assertEqual([(stage.name, stage.status) for stage in run.stages], [("requirements", "could-not-run")])
         self.assertTrue(run.stages[0].code)
-        self.assertEqual((run.workdir, run.requirements, run.toolchain, run.diagnostics), (None, None, None, []))
+        self.assertEqual((run.workdir, run.requirements, run.toolchain, added), (None, None, None, []))
         self.assertEqual(set(Path(tempfile.gettempdir()).glob("spark-spine-*")), folders)
 
     def test_a_build_past_its_limit_is_stage_timed_out(self):
         def late(*_, **__):
             raise subprocess.TimeoutExpired(["/x/node_modules/.bin/tsci", "build"], 900)
-        run = self.run_with(late)
+        run, _ = self.run_with(late)
         self.assertEqual([(stage.name, stage.status, stage.code) for stage in run.stages], [("build", "could-not-run", "stage_timed_out")])
         self.assertIn("`tsci build` did not finish in 900s", run.stages[0].detail)
         self.assertTrue(run.workdir.is_dir())
@@ -2835,18 +2838,42 @@ class ARequirementsBuildServiceTest(unittest.TestCase):
     def test_any_other_exception_is_stage_crashed(self):
         def broken(*_, **__):
             raise ValueError("a fault of its own")
-        run = self.run_with(broken)
+        run, _ = self.run_with(broken)
         self.assertEqual([(stage.name, stage.status, stage.code, stage.detail) for stage in run.stages],
                          [("check_spine", "could-not-run", "stage_crashed", "ValueError: a fault of its own")])
 
     def test_a_history_it_cannot_keep_is_one_diagnostics_line(self):
         (self.home / "history.jsonl").write_text("this is not an event\n")
         stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
-        run = self.run_with(lambda *_, **__: stages)
+        run, added = self.run_with(lambda *_, **__: stages)
         self.assertEqual(run.stages, stages)
-        self.assertEqual(len(run.diagnostics), 1)
-        self.assertTrue(run.diagnostics[0].startswith("  the build was not recorded in your history: "), run.diagnostics)
-        self.assertIn("history.jsonl line 1 is not a history event", run.diagnostics[0])
+        self.assertEqual(len(added), 1)
+        self.assertTrue(added[0].startswith("  the build was not recorded in your history: "), added)
+        self.assertIn("history.jsonl line 1 is not a history event", added[0])
+
+    def test_a_crash_in_the_history_note_keeps_the_firmware_line_ahead_of_the_traceback(self):
+        # P938: the service's own lines reached the core only when it returned, so a crash partway lost them
+        sim = Path(tempfile.mkdtemp()) / "sim"
+        sim.mkdir()
+        (sim / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 3\n")
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+
+        def a_build_that_simulated(requirements, workdir, **_):
+            (workdir / "sim").mkdir()
+            (workdir / "sim" / "wokwi.toml").write_text("[wokwi]\n")
+            return stages
+
+        def broken(design):
+            raise RuntimeError("the history broke")
+        folders = set(Path(tempfile.gettempdir()).glob("spark-spine-*"))
+        service = requirements_build.RequirementsBuildService(FakeBuildService(a_build_that_simulated), note_built=broken)
+        values = {"requirements": str(self.requirements), "keep": None, "sim_dir": str(sim), "firmware": None}
+        result = run_operation(build_board.BuildBoard(service), values, FakeOutsideWorld())
+        for left in set(Path(tempfile.gettempdir()).glob("spark-spine-*")) - folders:  # P939: the crash leaves the work folder
+            shutil.rmtree(left, ignore_errors=True)
+        self.assertEqual(list(result.diagnostics[:2]), [
+            "  sim/wokwi.toml line 3 names the firmware in a form spark cannot read. The rebuild wrote it again with no image "
+            "named, and a scenario run then names the default one.", "build-board: crashed, RuntimeError"])
 
 
 class ALoadAcrossAPairNeedsNoGroundTest(unittest.TestCase):

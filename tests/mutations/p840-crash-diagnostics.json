@@ -20,7 +20,7 @@
  {
   "file": "scripts/spark/build/build_board.py",
   "name": "P840: the build never gives its own lines to add_diagnostics, so they are lost",
-  "find": "        outside.add_diagnostics(built.diagnostics)",
-  "replace": "        pass"
+  "find": "add_diagnostics=outside.add_diagnostics)",
+  "replace": "add_diagnostics=lambda lines: None)"
  }
 ]
