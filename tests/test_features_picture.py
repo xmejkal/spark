@@ -8,7 +8,6 @@ the same bytes for the same record, and that the features maker declines a recor
 so that a person reads `git diff tests/data/pictures/features-synthetic.svg`.
 """
 
-import json
 import os
 import shutil
 import sys
