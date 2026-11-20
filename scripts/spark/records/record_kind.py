@@ -248,7 +248,6 @@ RECORD_TYPES = {
     "pin_order": ListOf(str, nulls=True),  # a null is a pad with nothing on it
     "own_socket": {"pins": ListOf(str), "source": str, "cites": dict},  # P864: the output pins that end in the module's own socket
     "short_name": str,  # P945: what a step and a line before power call the part by
-    "physical": {"header": {"flush_edge": str, "face": str}},  # P945: the edge a module's row counts from, the face it sits on
 }
 
 

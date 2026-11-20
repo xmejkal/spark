@@ -28,6 +28,10 @@ person and keep it for the agent. The list has two parts:
   sensor can. A module with no chip is known by its look and its labels.
 - **Not read**: each thing the photo does not show, and which face it saw. A photo of the underside gives the pad
   layout and not the pin names.
+- **The header**, when a straight header plugs the module into a breadboard: with the header at the top, which edge
+  the first pin counts from and how far (scaled by the 2.54 mm pitch), and which face holds the header and its labels.
+  It goes into `physical.header` (`flush_edge`, `first_pad_from_edge_mm`, `face`) with `physical_proof`
+  `verified: false`, and the breadboard picture draws the module from it (P945).
 
 ## 2. What exists
 

@@ -701,6 +701,17 @@ class TheDrawingCodeTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             codes.fix_of(drawing.NO_DRAWING_FACT)  # a template: its site fills it, never a raw %s
 
+    def test_a_kept_entry_with_no_record_has_no_fix_and_never_says_part_none(self):
+        from spark.breadboard import drawing
+        from spark.build import kept_files
+        renderer = drawing.SvgBreadboardDiagram()
+        board = kept_files.not_written_entry(drawing.NotWritten(Path("breadboard.svg"), renderer, drawing.NO_DRAWING_FACT,
+                                                                "board-x", "nothing says how to draw the board board-x"))
+        self.assertEqual([key for key in ("record", "fix") if key in board], [])
+        part = kept_files.not_written_entry(drawing.NotWritten(Path("breadboard.svg"), renderer, drawing.NO_DRAWING_FACT,
+                                                               "XModule", "why", "x-module"))
+        self.assertEqual((part["record"], part["fix"]), ("x-module", "research.py --part x-module asks for the physical facts that draw it"))
+
 
 if __name__ == "__main__":
     unittest.main()

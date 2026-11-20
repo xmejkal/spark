@@ -134,7 +134,9 @@ page 1. A skeleton's `body_mm` is a gap: the outline question is asked first. It
 Read the cited drawing and fill each value. A value that the drawing does not give stays null, and its question stays
 open. If the vendor did not publish it, say so in `physical_proof.not_published` with `parts.py --fact-set`. Then run
 the `next[0]` step, the same line with `--replies`. Run 2 writes `physical` and `physical_proof` (`verified: false`,
-read off a drawing). When the outline was the gap, it writes `body_mm`. `parts.py --show <id>` prints them. If the page
+read off a drawing). The header's answer uses the board record's words, `rows`, `pins`, `pitch_mm`, `flush_edge` (`-x` or
+`+x`) and `first_pad_from_edge_mm`, read with the header at the top, and `face`: `back` when the header and its labels
+sit on the face toward the breadboard. The breadboard picture draws a module from them (P945). When the outline was the gap, it writes `body_mm`. `parts.py --show <id>` prints them. If the page
 did not answer in that run, the run still ends with exit 2, because the unchecked item stays. The file's shape and the
 codes are in [docs/guide/agents/replies.md](../docs/guide/agents/replies.md).
 

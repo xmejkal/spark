@@ -82,5 +82,18 @@ class FactNeedsAnswerTest(unittest.TestCase):
         self.assertEqual(need.to_dict(), {"consumer": "spark.x.Y", "status": "will read", "card": "P734"})
 
 
+class AModulesHeaderIsReadTest(unittest.TestCase):
+    """P945: ModuleShapeSource reads a module's physical.header, and research asks for it in the board's words and the
+    two words a module adds, flush_edge and face."""
+
+    def test_the_header_row_reads_and_its_question_asks_every_word_the_drawing_needs(self):
+        data = json.loads((ROOT / "data" / "fact-needs.json").read_text())
+        row = next(row for row in data["needs"] if row["fact_path"] == "physical.header")
+        self.assertEqual((row["consumer"], row["status"], row["card"]),
+                         ("spark.breadboard.part_shape.ModuleShapeSource", "reads", None))
+        self.assertEqual(sorted(data["questions"]["physical.header"]["example"]),
+                         ["face", "first_pad_from_edge_mm", "flush_edge", "pins", "pitch_mm", "rows"])
+
+
 if __name__ == "__main__":
     unittest.main()

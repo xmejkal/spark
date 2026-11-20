@@ -125,6 +125,11 @@ under a name is worse than no record.
   matches `pin_order`; a JLCPCB id (`jlcpcb:C…`) when the module has one.
 - `body_mm` — width and height from the vendor's drawing, with the URL; an invented size makes
   every overlap check meaningless.
+- `physical.header` — for a module with one straight row of header pins, so the breadboard picture draws it (P945):
+  `rows`, `pins` (counts), `pitch_mm`, `flush_edge` (`-x` or `+x`, read with the header at the top) and
+  `first_pad_from_edge_mm`, and `face` (`back` when the header and its labels face the breadboard). Beside it,
+  `physical_proof` `{verified, source, why_it_matters}`. Never guess a value.
+- `short_name` — what a person calls the part on the bench, a plain noun (`e-paper`); the sheet's steps use it.
 - `facts` — the numbers a design rests on: supply range, current, thresholds, limits — each with
   its source. A module on an I2C bus says where its pull-ups come from: `module_has_i2c_pullups`
   (and `i2c_pullup_ohms`, 1k–10k) when it carries them, or pull-up `host_parts` on SDA and SCL when

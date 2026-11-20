@@ -35,6 +35,7 @@ CASES = [
     Case("breadboard-ok-xiao.txt", "breadboard.py", "button-light-xiao", [REQUIREMENTS], 0),
     Case("breadboard-ok-firebeetle.txt", "breadboard.py", "button-light", [REQUIREMENTS], 0),
     Case("breadboard-ok-not-drawn.txt", "breadboard.py", "motor", [REQUIREMENTS], 0),
+    Case("breadboard-ok-module.txt", "breadboard.py", "epaper", [REQUIREMENTS], 0),  # P945: a module drawn from its record
     Case("breadboard-ok-rebuild.txt", "breadboard.py", "button-light-xiao", [REQUIREMENTS], 0, then="button-only-xiao"),
     Case("breadboard-could-not-run-not-built.txt", "breadboard.py", "button-light", [REQUIREMENTS], 2,
          (("dist/board/circuit.json", None),)),
