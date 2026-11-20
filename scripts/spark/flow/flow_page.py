@@ -2,15 +2,18 @@
 The page of a project (P827, #1185): the flow's phases as one plain HTML file, `page.html`, each with a status word and a
 mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it. The page
 adds no tick of its own: a phase whose status is not ok never shows one (`shown_phase`). It has no script, loads nothing
-from the web and is the same bytes for the same flow.
+from the web and is the same bytes for the same flow. The breadboard stands in it as plain shapes (`SvgInliner`, P949),
+with its keys for a player and a legend of its pads; every other picture is an <img>.
 """
 
 import base64
 import html
+import xml.etree.ElementTree as ElementTree
 from collections import namedtuple
 
-from spark.breadboard import before_power
-from spark.breadboard.tabbed_page import TabbedHtmlPage
+from spark.breadboard import before_power, part_pictures
+from spark.breadboard.svg_diagram import PAD_MARKS
+from spark.breadboard.tabbed_page import token_styles
 from spark.flow import flow_codes
 from spark.flow.phase_readers import MARKS
 from spark.core.outcomes import COULD_NOT_RUN, OK
@@ -112,23 +115,82 @@ class WiringHtmlSection:
         return '<div class="nav">%s %s</div>' % (_text(flow_codes.STEP_OF % (at + 1, len(numbers))), " ".join(links))
 
 
+#: Value: a picture made fit to stand in the page: its markup, and the pad states its dots draw, in PAD_MARKS's order.
+InlineSvg = namedtuple("InlineSvg", "markup pads")
+
+
+class SvgInliner:
+    """
+    Renderer: an SVG as markup that stands in the page (P949), or None. Inline, an SVG runs its scripts and its handlers,
+    and an <img> does not, so it inlines only an SVG that parses and holds no DOCTYPE, whose elements are all
+    `part_pictures.PLAIN_SHAPES` and whose attributes are all `PLAIN_ATTRIBUTES` (its name lowercased, as HTML reads
+    it, with no namespace), and no value of which, read after the parse and lowercased, holds an `UNPLAIN_VALUES` word.
+    It works on its own parse: every tag loses its namespace, so the root has no xmlns and the file keeps its own, the
+    comments are gone and every text stays escaped. The same SVG gives the same bytes.
+    """
+
+    def inline(self, svg):
+        if "<!doctype" in svg.lower():
+            return None
+        try:
+            root = ElementTree.fromstring(svg)
+            if not all(self._plain(element) for element in root.iter()):
+                return None
+            markup = ElementTree.tostring(root, encoding="unicode")
+        except Exception:  # noqa: BLE001  a hand-edited file can hold anything: whatever it raises, the page shows an <img>
+            return None
+        drawn = {element.get("data-pad") for element in root.iter()}
+        return InlineSvg(markup, [state for state in PAD_MARKS if state in drawn])
+
+    @staticmethod
+    def _plain(element):
+        """True when `element` is a plain shape whose every attribute is allowed and holds no unplain word; it drops the
+        tag's namespace on the way."""
+        element.tag = _local(element.tag)
+        names = all(name.lower() in part_pictures.PLAIN_ATTRIBUTES for name in element.attrib)
+        values = not any(word in value.lower() for value in element.attrib.values() for word in part_pictures.UNPLAIN_VALUES)
+        return element.tag in part_pictures.PLAIN_SHAPES and names and values
+
+
+def _local(name):
+    """A tag or attribute name without its namespace."""
+    return name.rsplit("}", 1)[-1]
+
+
 class FlowHtmlPage:
     """
     Renderer: a FlowPage as one HTML document, the same bytes for the same page. It loops over the page's phases and holds
-    no phase name and no count. The colors are the tabbed page's tokens, and no color says a status: the mark and the word do.
+    no phase name and no count. The colors are the praised page's tokens (P949), light and dark, with the system's fonts,
+    and no color says a status: the mark and the word do. Under an inline breadboard a legend names each pad state its
+    dots draw, and only those.
     """
 
     FILE_NAME = "page.html"
     NOUN = "page"
     PURPOSE_MESSAGE = "where the project stands, phase by phase, with its pictures: open it in a browser"
 
-    STYLE = ("body{margin:0;padding:12px 16px;font:15px system-ui,sans-serif;background:var(--paper);color:var(--ink)}"
+    #: The praised page's colors by token, light and dark. The picture ground stays white in both, as the tabbed page's:
+    #: the pictures are drawn for a light ground. The fonts are the system's, so the page loads nothing.
+    TOKENS_LIGHT = {"--bg": "#eef1f3", "--ink": "#1c262e", "--muted": "#566570", "--line": "#c3ccd3", "--signal": "#c8500f",
+                    "--backdrop": "#fff", "--display": "ui-serif,Georgia,serif",
+                    "--body": 'system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif'}
+    TOKENS_DARK = {"--bg": "#141b21", "--ink": "#e4eaee", "--muted": "#9aa9b4", "--line": "#3a4955", "--signal": "#f08a48",
+                   "--backdrop": "#fff"}
+    STYLE = ("body{max-width:1180px;margin:0 auto;padding:12px 16px;font:16px/1.55 var(--body);background:var(--bg);"
+             "color:var(--ink)}"
+             "h1,h2{font-family:var(--display);line-height:1.2}"
              "nav ol{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:0;padding:0}"
-             "a{color:var(--ink)}a:focus-visible{outline:2px solid var(--accent)}"
-             ".phase{border-top:1px solid var(--ink);padding:4px 0}"
+             "a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}"
+             ".phase{border-top:1px solid var(--line);padding:4px 0}"
              "p,li{overflow-wrap:anywhere}"
-             "img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}")
+             "img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}"
+             ".fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:6px}"
+             ".fig svg{display:block;width:100%;height:auto}"
+             ".pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;color:var(--muted)}"
+             ".sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;vertical-align:-2px;"
+             "border:1px solid var(--line)}")
     WIRING = WiringHtmlSection()
+    INLINER = SvgInliner()
 
     def text(self, page):
         head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._rail(page), self._stands_at(page)]
@@ -137,7 +199,7 @@ class FlowHtmlPage:
         return "\n".join(head + [part for part in body if part] + ["</body>", "</html>"]) + "\n"
 
     def _open(self, page):
-        style = TabbedHtmlPage.token_styles() + self.STYLE + (self.WIRING.STYLE if page.wiring else "")
+        style = token_styles(self.TOKENS_LIGHT, self.TOKENS_DARK) + self.STYLE + (self.WIRING.STYLE if page.wiring else "")
         return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
                           '<meta name="viewport" content="width=device-width, initial-scale=1">',
                           '<title>%s</title>' % _text(page.title), '<style>%s</style>' % style, '</head>',
@@ -180,13 +242,27 @@ class FlowHtmlPage:
             return ""
         return '<section id="pictures"><h2>Pictures</h2>\n%s\n</section>' % "\n".join(self._picture(each) for each in pictures)
 
-    @staticmethod
-    def _picture(picture):
+    def _picture(self, picture):
+        """The breadboard stands in the page when the inliner takes it, so a player finds its keys. Any other picture, and
+        a breadboard it refuses, is an <img>: one SVG's <style> cannot reach another, and no script in it runs."""
         title = _text(picture.title)
         if picture.svg is None:
             return '<div class="picture"><h3>%s</h3><p>%s</p></div>' % (title, _text(picture.why_missing))
+        inline = self.INLINER.inline(picture.svg) if picture.title == flow_codes.BREADBOARD_TITLE else None
+        if inline:
+            return '<div class="picture"><h3>%s</h3><figure class="fig" aria-label="%s">%s</figure>%s</div>' % (
+                title, title, inline.markup, self._pads(inline.pads))
         data = base64.b64encode(picture.svg.encode("utf-8")).decode("ascii")
         return '<div class="picture"><h3>%s</h3><img src="data:image/svg+xml;base64,%s" alt="%s"></div>' % (title, data, title)
+
+    @staticmethod
+    def _pads(pads):
+        """The legend under an inline breadboard: one line per pad state its dots draw, after the figure, so its words
+        stand on the page's own ground in both themes. Nothing when it draws none."""
+        if not pads:
+            return ""
+        return '<ul class="pads">%s</ul>' % "".join('<li><span class="sw" style="background:%s"></span>%s</li>' % (
+            PAD_MARKS[state].fill, _text(PAD_MARKS[state].words)) for state in pads)
 
     @staticmethod
     def _legend():

@@ -73,6 +73,20 @@ the build writes the same page with all three pictures, after it kept the simula
 removes `page.html` in a project, and `flow.py page` writes it again. If the flow page cannot be written, the build keeps
 its own result and lists one `not written` entry.
 
+The breadboard stands in the page as inline SVG ([P949](https://github.com/xmejkal/spark/issues/1353)), so a player can
+find its parts. Each jumper's group carries `data-step`, the number of its step, and each part's group carries
+`data-part`, the part's id in the steps. A step that places a part has no jumper, so it has no `data-step`: the step's
+part comes from the guide's own data. No key is an `id`. The page inlines the breadboard only when it is plain shapes:
+it parses, has no DOCTYPE, uses only `svg`, `g`, `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`,
+`text`, `tspan` and `title`, and only attributes of geometry and colour that spark draws with, and its three keys
+(`part_pictures.PLAIN_ATTRIBUTES`; no `style`, no `href`, no handler). No value may hold `url(`, `image-set`,
+`javascript:`, `expression` or a backslash, read after the parse in any case. Else the page shows it as an `<img>`, as
+it shows the schematic and the PCB, so a script in a hand-edited `breadboard.svg` never runs, and nothing loads. The
+dot on each pin is yellow when its row joins a wire or another part and gold when it is free. Under the picture a
+legend names the states that the dots draw: "pad in use" and "pad free". "Pad held: do not use" shows only when a pad
+is held, and spark draws none yet ([P950](https://github.com/xmejkal/spark/issues/1354)). The page takes the colours of
+the wiring page that the PO chose as the model, light and dark, with the system's fonts. It still has no script and loads nothing.
+
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json
 ```

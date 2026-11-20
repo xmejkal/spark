@@ -99,9 +99,11 @@ def write_page(project, readers=None, parts=None, renderer=None, store=None):
     shown = (parts or kept_parts)(project)
     page = FlowPage(page_title(Path(project).resolve().name), [phase.to_dict() for phase in phases], stands_at,
                     shown.pictures, (flow_codes.BENCH_NOTE,), shown.wiring)
-    page = masked_page(page, privacy_for(project))
+    privacy = privacy_for(project)
+    page = masked_page(page, privacy)
     renderer = renderer or FlowHtmlPage()
-    path = (store or FlowPageStore()).write(project, renderer.FILE_NAME, renderer.text(page))
+    # masked again once rendered: the inline breadboard's parse turns a character reference (&#47;) into a path
+    path = (store or FlowPageStore()).write(project, renderer.FILE_NAME, privacy.masked(renderer.text(page)))
     return Written(path, page.phases, page.stands_at)
 
 

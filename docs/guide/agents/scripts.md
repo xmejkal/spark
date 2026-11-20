@@ -240,7 +240,7 @@ These write:
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
   reads, writes `breadboard.md`, `breadboard.json`, `breadboard.svg` and `page.html` after a build that finished, and creates `.tscircuit/cache/`.
   `page.html` (P271) shows the breadboard picture and tscircuit's schematic and PCB in three tabs, each from
-  `tsci export` on the kept `dist/board/circuit.json`. Since 2026-11-17, in a project folder, it is the flow page (P827), each phase of `flow.py` with its status word and a mark, then the same three pictures, written after the simulation project is kept. A folder that is no project keeps the three tabs. A tab that could not be drawn says why. With no build in this
+  `tsci export` on the kept `dist/board/circuit.json`. Since 2026-11-17, in a project folder, it is the flow page (P827): the phases of `flow.py`, then the three pictures, the breadboard inline (P949, [flow.md](flow.md#the-page)), written after the simulation project is kept. A folder that is no project keeps the three tabs. A tab that could not be drawn says why. With no build in this
   run, a board-only build, or a `dist/` that was not kept, an old `page.html` is removed and the kept entry says why.
   The page follows the Artifact page rules (P272): color tokens with a dark mode, a 16 px side gutter, and a title of
   two to four words, `<project folder> circuit`, so the same file opens in a browser and as an Artifact. Publish it as an Artifact (P272, #308) only if the person says yes; spark never does. Ask first: "Publish this page as an

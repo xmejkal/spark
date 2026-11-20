@@ -1,8 +1,8 @@
 [
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark media query loses its light-choice guard", "find": "{:root:not([data-theme=\"light\"]){%s}}'", "replace": "{:root{%s}}'"},
- {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark media query is left out", "find": "+ '@media (prefers-color-scheme: dark){:root:not([data-theme=\"light\"]){%s}}' % dark", "replace": ""},
- {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the data-theme dark block is left out", "find": "+ ':root[data-theme=\"dark\"]{%s}' % dark", "replace": ""},
- {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark blocks do not set the dark color scheme", "find": "dark = block(cls.TOKENS_DARK, \"dark\")", "replace": "dark = block(cls.TOKENS_DARK, \"light\")"},
+ {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark media query is left out", "find": "+ '@media (prefers-color-scheme: dark){:root:not([data-theme=\"light\"]){%s}}' % dark_block", "replace": ""},
+ {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the data-theme dark block is left out", "find": "+ ':root[data-theme=\"dark\"]{%s}' % dark_block", "replace": ""},
+ {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark blocks do not set the dark color scheme", "find": "dark_block = block(dark, \"dark\")", "replace": "dark_block = block(dark, \"light\")"},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the body background is a literal color", "find": "background:var(--paper);color:var(--ink)}", "replace": "background:#f6f3ee;color:var(--ink)}"},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the selected tab is a literal color", "find": "{border-color:var(--accent)}", "replace": "{border-color:#c33}"},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the panel gutter is 12px", "find": ".panel{display:none;padding:12px 16px}", "replace": ".panel{display:none;padding:12px 12px}"},
@@ -16,6 +16,6 @@
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark paper equals the light paper", "find": "\"--paper\": \"#1d1c1a\"", "replace": "\"--paper\": \"#f6f3ee\""},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark ink equals the light ink", "find": "\"--ink\": \"#e8e4dc\"", "replace": "\"--ink\": \"#222\""},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark accent equals the light accent", "find": "\"--accent\": \"#ff7a70\"", "replace": "\"--accent\": \"#c33\""},
- {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the light block sets the dark color scheme", "find": "block(cls.TOKENS_LIGHT, \"light\")", "replace": "block(cls.TOKENS_LIGHT, \"dark\")"},
+ {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the light block sets the dark color scheme", "find": "block(light, \"light\")", "replace": "block(light, \"dark\")"},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the page does not say its language", "find": "'<html lang=\"en\">'", "replace": "'<html>'"}
 ]

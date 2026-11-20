@@ -38,7 +38,7 @@ from spark.breadboard import sheet  # noqa: E402
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
-from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, write_page  # noqa: E402
+from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
 
 #: The built fixture test_flow.py builds its projects from.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -740,7 +740,215 @@ class ThePictureFilesTest(unittest.TestCase):
         self.assertEqual(pictures[1].svg, "<svg><title>kept schematic</title></svg>")
         self.assertEqual(pictures[2].why_missing, NOT_DRAWN_HERE)
         run_flow("page", "--project", str(project), "--json")
-        self.assertEqual((project / "page.html").read_text().count("data:image/svg+xml;base64,"), 2)
+        # the schematic is an <img>, and the breadboard stands in the page (P949)
+        text = (project / "page.html").read_text()
+        self.assertEqual(text.count("data:image/svg+xml;base64,"), 1)
+        self.assertEqual(text.count(FIGURE), 1)
+        self.assertIn("<svg><title>bb</title></svg></figure>", text)
+
+
+def a_drawn_project():
+    """A built XIAO project with the breadboard.svg the sheet draws, as a build with --keep leaves it."""
+    project = a_built_project()
+    with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+        sheet.write(project / "requirements.json", project / "breadboard.md")
+    return project
+
+
+#: A picture as tsci writes one, with its namespace.
+NAMESPACED = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><title>%s</title></svg>'
+FIGURE = '<figure class="fig"'
+
+
+class TheInlinePictureTest(unittest.TestCase):
+    """P949: the breadboard stands in the page as plain shapes, with its keys for a player; any other SVG stays an <img>,
+    and so do the schematic and the PCB."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.project = a_drawn_project()
+        cls.svg = (cls.project / "breadboard.svg").read_text()
+
+    def test_the_breadboard_is_inline_with_no_namespace_and_the_schematic_and_pcb_stay_img(self):
+        pictures = [Picture("Breadboard", self.svg, None), Picture("Schematic", NAMESPACED % "schematic", None),
+                    Picture("PCB", NAMESPACED % "pcb", None)]
+        text = page_of(a_phase("one"), pictures=pictures)
+        self.assertIn('xmlns="http://www.w3.org/2000/svg"', self.svg)  # the file keeps it, so the test can fail
+        self.assertEqual(text.count(FIGURE), 1)
+        self.assertEqual(text.count("data:image/svg+xml;base64,"), 2)
+        figure = text.split(FIGURE, 1)[1].split("</figure>", 1)[0]
+        self.assertIn("<svg ", figure)
+        self.assertIn('data-step="5"', figure)
+        for word in ("xmlns", "ns0:", "http"):
+            self.assertNotIn(word, text.lower())
+        order = [text.index(mark) for mark in ("<h3>Breadboard</h3>", FIGURE, "</figure>", "<h3>Schematic</h3>")]
+        self.assertEqual(order, sorted(order))
+
+    def test_each_jumper_step_and_each_part_of_the_built_fixture_is_in_the_page(self):
+        text = page_of_project(self.project)
+        # the fixture's steps 5 to 8 run a jumper; steps 1 to 4 place a part and carry no step key
+        for step in (5, 6, 7, 8):
+            self.assertEqual(text.count('data-step="%d"' % step), 1, step)
+        self.assertEqual(text.count("data-step="), 4)
+        self.assertEqual(sorted(re.findall(r'data-part="([^"]*)"', text)), ["LedRed5mm", "R1", "TactileButton", "board"])
+
+    def test_an_svg_with_anything_but_plain_shapes_stays_an_img(self):
+        guards = {
+            "script": '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+            "foreignObject": '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><p>x</p></foreignObject></svg>',
+            "style": "<svg><style>rect{fill:red}</style><rect/></svg>",
+            "image href": '<svg><image href="x.png"/></svg>',
+            "a href": '<svg><a href="#x"><rect/></a></svg>',
+            "onload": '<svg onload="alert(1)"><rect/></svg>',
+            "xlink:href": '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><rect xlink:href="#x"/></svg>',
+            "url(": '<svg><rect style="fill:url(#a)"/></svg>',
+            "DOCTYPE": '<!DOCTYPE svg [<!ENTITY a "b">]><svg><text>&a;</text></svg>',
+            "a masked path that is no XML": "<svg><text>read <project>/notes</text></svg>",
+            "nested beyond the recursion limit": "<svg>" + "<g>" * 100000 + "</g>" * 100000 + "</svg>",
+            # the review's refuter ran each of these in headless Chrome: HTML lowercases an attribute's name, and CSS
+            # reads an escaped or uppercase url( and image-set
+            "ONLOAD": "<svg ONLOAD=\"document.title='SCRIPT-RAN'\"><rect/></svg>",
+            "OnClick": '<svg><rect OnClick="alert(1)"/></svg>',
+            "HREF": '<svg><rect HREF="#x"/></svg>',
+            "URL(": '<svg><rect fill="URL(#a)"/></svg>',
+            "&#117;rl(": '<svg><rect fill="&#117;rl(http://x/a)"/></svg>',
+            "&#x55;RL(": '<svg><rect fill="&#x55;RL(http://x/a)"/></svg>',
+            "a CSS escape": '<svg><rect fill="\\75 rl(http://x/a)"/></svg>',
+            "image-set": "<svg><rect fill=\"image-set('http://x/a.png' 1x)\"/></svg>",
+            "a style attribute": '<svg><rect style="fill:red"/></svg>',
+            "javascript:": '<svg><rect class="javascript:alert(1)"/></svg>',
+            "a namespaced attribute": '<svg xmlns:a="http://a.example"><rect a:fill="red"/></svg>',
+        }
+        for name, svg in guards.items():
+            with self.subTest(name):
+                text = page_of(a_phase("one"), pictures=[Picture("Breadboard", svg, None)])
+                self.assertNotIn(FIGURE, text)
+                self.assertEqual(text.count("data:image/svg+xml;base64,"), 1)
+                self.assertNotIn("<script", text.lower())
+                self.assertNotIn("onload", text.lower())
+        # the control: plain shapes, an attribute that starts with "o" and a text that says "on" stand in the page
+        text = page_of(a_phase("one"), pictures=[Picture("Breadboard", '<svg><rect opacity="1"/><text>on</text></svg>', None)])
+        self.assertEqual((text.count(FIGURE), text.count("data:image/svg+xml;base64,")), (1, 0))
+
+    def test_spark_s_own_breadboard_and_every_pictogram_stand_in_the_page(self):
+        pictograms = sorted((ROOT / "data" / "pictograms").glob("*.svg"))
+        self.assertGreaterEqual(len(pictograms), 5)
+        for name, svg in [("breadboard.svg", self.svg)] + [(each.name, each.read_text()) for each in pictograms]:
+            with self.subTest(name):
+                text = page_of(a_phase("one"), pictures=[Picture("Breadboard", svg, None)])
+                self.assertEqual((text.count(FIGURE), text.count("data:image/svg+xml;base64,")), (1, 0))
+
+    def test_the_mask_covers_the_inline_picture(self):
+        home = Path(tempfile.mkdtemp()).resolve()
+        picture = Picture("Breadboard", '<svg xmlns="http://www.w3.org/2000/svg"><text>%s/notes</text></svg>' % home, None)
+        store = FakeStore()
+        with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
+            write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("one")), parts_of([picture]),
+                       store=store)
+        text = store.written[0][2]
+        self.assertNotIn(str(home), text)
+        self.assertIn("<text>~/notes</text>", text)
+        # the test can fail: the same page, rendered without the mask, holds the home path
+        unmasked = FlowHtmlPage().text(FlowPage("t", [a_phase("one").to_dict()], None, [picture], []))
+        self.assertIn(str(home), unmasked)
+
+    def test_the_mask_covers_a_home_path_written_as_character_references(self):
+        # the review: the mask reads the raw text, and the parse turns &#47; into the / of the home path
+        home = Path(tempfile.mkdtemp()).resolve()
+        encoded = str(home).replace("/", "&#47;")
+        picture = Picture("Breadboard", '<svg xmlns="http://www.w3.org/2000/svg"><text>%s&#47;notes</text></svg>' % encoded, None)
+        store = FakeStore()
+        with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
+            write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("one")), parts_of([picture]),
+                       store=store)
+        text = store.written[0][2]
+        self.assertNotIn(str(home), text)
+        self.assertIn("<text>~/notes</text>", text)
+        # the test can fail: the same page, rendered without the mask, holds the decoded home path inline
+        self.assertIn(str(home), FlowHtmlPage().text(FlowPage("t", [a_phase("one").to_dict()], None, [picture], [])))
+
+
+def pad_legend(text):
+    """(swatch colour, words) of each line of the page's pad legend."""
+    legend = text.split('<ul class="pads">', 1)[1].split("</ul>", 1)[0]
+    return re.findall(r'<li><span class="sw" style="background:(#[0-9a-f]{6})"></span>([^<]*)</li>', legend)
+
+
+def token_block(pattern, style):
+    return dict(re.findall(r"(--[a-z]+):([^;]+)", re.search(pattern, style).group(1)))
+
+
+class TheLookTest(unittest.TestCase):
+    """P949: the praised page's colours, light and dark, with system fonts and nothing loaded, and a legend of the pads
+    under the breadboard that says only what the picture draws."""
+
+    def test_the_pad_legend_follows_an_inline_breadboard_only(self):
+        svg = (a_drawn_project() / "breadboard.svg").read_text()
+        text = page_of(a_phase("one"), pictures=[Picture("Breadboard", svg, None)])
+        self.assertEqual(pad_legend(text), [("#ffd34d", "pad in use"), ("#c9a24b", "pad free")])
+        self.assertLess(text.index("</figure>"), text.index('<ul class="pads">'))
+        held = '<svg><circle r="2" fill="#5bc0eb" data-pad="held"/></svg>'
+        text = page_of(a_phase("one"), pictures=[Picture("Breadboard", held, None)])
+        self.assertEqual(pad_legend(text), [("#5bc0eb", "pad held: do not use")])
+        for name, pictures in {"no picture": [], "not drawn": [Picture("Breadboard", None, "not drawn")],
+                               "refused": [Picture("Breadboard", "<svg><script/></svg>", None)],
+                               "no pad": [Picture("Breadboard", "<svg><rect/></svg>", None)],
+                               "the schematic": [Picture("Schematic", svg, None)]}.items():
+            with self.subTest(name):
+                self.assertNotIn('class="pads"', page_of(a_phase("one"), pictures=pictures))
+
+    def test_every_token_is_defined_light_and_dark_and_the_style_uses_only_them(self):
+        page = page_of_wiring(PageWiring(THREE, [], ["rec"], None), THREE_PICTURES)
+        style = re.search(r"<style>(.*?)</style>", page, re.S).group(1)
+        light = token_block(r"^:root\{([^}]*)\}", style)
+        dark = token_block(r'@media \(prefers-color-scheme: dark\)\{:root:not\(\[data-theme="light"\]\)\{([^}]*)\}\}', style)
+        self.assertEqual(dark, token_block(r':root\[data-theme="dark"\]\{([^}]*)\}', style))
+        colours = {"--bg", "--ink", "--muted", "--line", "--signal", "--backdrop"}
+        self.assertEqual((set(light), set(dark)), (colours | {"--display", "--body"}, colours))
+        for name in colours - {"--backdrop"}:
+            self.assertNotEqual(light[name], dark[name], name)
+        # the praised page's ground, and a white ground under the pictures in both, which are drawn for a light one
+        self.assertEqual((light["--bg"], dark["--bg"], light["--backdrop"], dark["--backdrop"]),
+                         ("#eef1f3", "#141b21", "#fff", "#fff"))
+        self.assertEqual(set(re.findall(r"var\((--[a-z]+)\)", style)), set(light))
+        self.assertTrue(light["--body"].startswith("system-ui"), light["--body"])
+        outside = re.sub(r"\{[^{}]*--bg:[^{}]*\}", "{}", style)
+        self.assertEqual(style.count("--bg:"), 3)
+        self.assertNotRegex(outside, r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
+        self.assertNotRegex(outside, r"(?:color|background|border-color):\s*(?!var\(|transparent|inherit)[a-z]+")
+        for word in ("url(", "@import", "@font-face"):
+            self.assertNotIn(word, page)
+
+
+class TheBudgetTest(unittest.TestCase):
+    """P949: with the walk's e-paper breadboard inline, its wiring and two tsci pictures of the walk's sizes (schematic.svg
+    96 KB, pcb.svg 331 KB), the page stays under 3 MiB."""
+
+    BUDGET = 3 * 1024 * 1024
+
+    @classmethod
+    def setUpClass(cls):
+        cls.project = Path(tempfile.mkdtemp()) / "epaper"
+        shutil.copytree(ROOT / "tests" / "data" / "breadboard" / "epaper", cls.project)
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            sheet.write(cls.project / "requirements.json", cls.project / "breadboard.md")
+            cls.wiring = kept_wiring(cls.project)
+
+    def page(self, pcb_bytes):
+        def tsci(size):
+            return NAMESPACED % ("x" * size)
+        pictures = [Picture("Breadboard", (self.project / "breadboard.svg").read_text(), None),
+                    Picture("Schematic", tsci(96 * 1000), None), Picture("PCB", tsci(pcb_bytes), None)]
+        return page_of_wiring(self.wiring, pictures)
+
+    def test_the_page_stays_within_its_budget(self):
+        text = self.page(331 * 1000)
+        self.assertEqual((text.count(FIGURE), text.count("data-step="), len(self.wiring.steps)), (1, 8, 10))
+        self.assertLess(len(text.encode("utf-8")), self.BUDGET)
+
+    def test_a_pcb_picture_of_3_mib_goes_over(self):
+        # the twin, so the budget test can fail
+        self.assertGreater(len(self.page(self.BUDGET).encode("utf-8")), self.BUDGET)
 
 
 class TheKeepStepTest(unittest.TestCase):
@@ -762,7 +970,10 @@ class TheKeepStepTest(unittest.TestCase):
         entry = self.keep()
         self.assertEqual((entry["did"], entry["why"]), ("wrote", FlowHtmlPage.PURPOSE_MESSAGE))
         text = self.page.read_text()
-        self.assertEqual(3, text.count("data:image/svg+xml;base64,"))
+        # the schematic and the PCB are <img>s, and the breadboard stands in the page with no namespace (P949)
+        self.assertEqual(2, text.count("data:image/svg+xml;base64,"))
+        self.assertEqual(text.count(FIGURE), 1)
+        self.assertNotIn("http", text.lower())
         self.assertEqual(len(Parsed(text).sections), 9)
 
     def test_a_flow_page_that_raises_is_one_no_page_entry(self):
@@ -822,7 +1033,9 @@ class TheKeepStepTest(unittest.TestCase):
         entry = self.keep()
         self.assertEqual(entry["did"], "wrote")
         text = self.page.read_text()
-        self.assertEqual(text.count("data:image/svg+xml;base64,"), 2)
+        # the PCB is an <img>, and the breadboard stands in the page (P949)
+        self.assertEqual(text.count("data:image/svg+xml;base64,"), 1)
+        self.assertEqual(text.count(FIGURE), 1)
         self.assertIn("its file cannot be kept", text)
         self.assertEqual([each["did"] for each in self.kept if each["file"] == str(board / "schematic.svg")], ["not kept"])
         self.assertIn("fake pcb-svg", (board / "pcb.svg").read_text())
