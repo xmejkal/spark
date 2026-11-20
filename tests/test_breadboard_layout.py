@@ -415,6 +415,45 @@ class AModuleWithNoDrawingFactTest(unittest.TestCase):
         self.assertEqual((planned.stopped.code, planned.stopped.subject), ("no_header_fact", "physical.header.face"))
 
 
+class TheWokwiLineNamesTheCauseTest(unittest.TestCase):
+    """P947: the line that says why no Wokwi diagram is written names each drawn part that Wokwi has no part for, the
+    board or a module, by the name the picture gives it."""
+
+    def test_the_e_paper_names_the_board_and_the_module(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        layout = drawing.BreadboardPlanner(*epaper_inputs(read)).plan(read.steps)
+        refused = drawing.WokwiBreadboardDiagram().why_not_written(layout)
+        self.assertEqual((refused.code, refused.subject, refused.why),
+                         ("no_wokwi_part", None, "Wokwi has no part for the board and e-paper"))
+
+    def test_the_firebeetle_alone_names_the_board(self):
+        with in_store():
+            read = sheet._read_build(RECORD_BOARD / "requirements.json")
+        layout = drawing.BreadboardPlanner(*record_inputs(read)).plan(read.steps)
+        self.assertEqual(drawing.WokwiBreadboardDiagram().why_not_written(layout).why,
+                         "Wokwi has no part for the board")
+
+    def test_a_wokwi_board_with_a_module_drawn_from_its_record_names_the_module_alone(self):
+        geometry = GEOMETRY.with_part("spark-module-x", {"wokwi_part": False, "name": "e-paper", "pins": {}})
+        geometry = geometry.with_part("spark-module-y", {"wokwi_part": False, "pins": {}})
+        parts = [drawing.PlacedPart("board", "board-xiao-esp32-c6", {}, 0, 0, 0, {}),
+                 drawing.PlacedPart("Epaper", "spark-module-x", {}, 0, 0, 0, {}),
+                 drawing.PlacedPart("Led", "wokwi-led", {}, 0, 0, 0, {}),
+                 drawing.PlacedPart("Sensor", "spark-module-y", {}, 0, 0, 0, {})]
+        layout = drawing.BreadboardLayout("wokwi-breadboard-half", parts, [], geometry)
+        self.assertEqual(drawing.WokwiBreadboardDiagram().why_not_written(layout).why,
+                         "Wokwi has no part for e-paper and Sensor")
+        self.assertIsNone(drawing.WokwiBreadboardDiagram().why_not_written(
+            drawing.BreadboardLayout("wokwi-breadboard-half", [parts[0], parts[2]], [], geometry)))
+
+    def test_the_sheet_says_the_same_cause(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        self.assertIn("There is no Wokwi diagram: Wokwi has no part for the board and e-paper. Use the picture.",
+                      sheet.sheet(EPAPER / "requirements.json", read=read, planned=sheet._plan_once(read)))
+
+
 class EachStepNamesItsHolesTest(unittest.TestCase):
     """P945: the step list names the holes each step uses in the planned layout, read as a person reads a breadboard."""
 

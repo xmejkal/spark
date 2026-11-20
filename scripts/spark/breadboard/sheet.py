@@ -331,8 +331,9 @@ def _drawing_lines(planned):
     first, *others = drawn
     lines = ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
     lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
-    if len(drawn) < len(DRAWING_RENDERERS):
-        lines += ["", drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
+    declined = EDITABLE_DRAWING.why_not_written(planned.layout)
+    if declined:
+        lines += ["", drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE % declined.why]
     lines += [line for one in drawing_catalog.board_lines(planned.layout) for line in ("", one)]
     if planned.differs:
         more = len(planned.differs) - 1

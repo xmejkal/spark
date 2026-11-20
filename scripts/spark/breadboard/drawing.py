@@ -54,7 +54,8 @@ CODES = {
     DUPLICATE_PAD_LABEL: "two pads of the board's record have one label; the subject is the label",
     NO_HOLE_LEFT: ("the breadboard has no place where a part fits with a free hole beside each of its pins, or no "
                    "free row for a jumper; the subject is the part or the end"),
-    NO_WOKWI_PART: "Wokwi has no part with this board's pins, so no Wokwi diagram is written, by design",
+    NO_WOKWI_PART: ("Wokwi has no part for a drawn part (the board or a module), so no Wokwi diagram is written, by design; "
+                    "the why names each such part"),
     NO_PIN_POSITION: "data/wokwi-geometry.json lacks a Wokwi type's pins or one of them; the subject is the type",
     NO_DRAWING_FACT: NO_DRAWING_FACT.meaning,
     NO_WOKWI_PIN: "the end in the subject has no Wokwi pin: its part's record does not map it, or it is a doubtful pad",
@@ -495,10 +496,10 @@ class WokwiBreadboardDiagram:
     #: What the sheet says about the file, under its steps.
     SHEET_MESSAGE = ("An example layout is in breadboard.json: paste it into the diagram.json of a new project on "
                      "wokwi.com.")
-    #: What the sheet says once when no Wokwi diagram is written for a board drawn from its own record.
-    SHEET_DECLINED_MESSAGE = "There is no Wokwi diagram for this board. Use the picture."
-    #: Why no file is written for such a board.
-    DECLINED_MESSAGE = "Wokwi has no part with this board's pins"
+    #: What the sheet says once when no Wokwi diagram is written, filled with the why.
+    SHEET_DECLINED_MESSAGE = "There is no Wokwi diagram: %s. Use the picture."
+    #: Why no file is written, filled with each drawn part that Wokwi has no part for.
+    DECLINED_MESSAGE = "Wokwi has no part for %s"
 
     def __init__(self, colors=None, breadboard_id="bb1"):
         self.colors = colors or wiring_steps.StepColors()
@@ -506,10 +507,15 @@ class WokwiBreadboardDiagram:
 
     def why_not_written(self, layout):
         """None when the layout can be a Wokwi diagram, else the NotWritten (its path is only the file's name): a part that
-        says it is no Wokwi part would show the wrong board there."""
-        if any(not layout.geometry.part(part.type).get("wokwi_part", True) for part in layout.parts):
-            return NotWritten(Path(self.FILE_NAME), self, NO_WOKWI_PART, None, self.DECLINED_MESSAGE)
-        return None
+        says it is no Wokwi part would show the wrong part there. The why names each such part, in layout order, by the
+        name the picture gives it (the board is "the board")."""
+        missing = [part for part in layout.parts if not layout.geometry.part(part.type).get("wokwi_part", True)]
+        if not missing:
+            return None
+        names = ["the board" if part.id == wiring_steps.THE_BOARD else layout.geometry.part(part.type).get("name") or part.id
+                 for part in missing]
+        said = names[0] if len(names) == 1 else "%s and %s" % (", ".join(names[:-1]), names[-1])
+        return NotWritten(Path(self.FILE_NAME), self, NO_WOKWI_PART, None, self.DECLINED_MESSAGE % said)
 
     def render(self, layout):
         parts = [{"type": layout.breadboard, "id": self.breadboard_id, "top": 0, "left": 0, "attrs": {}}]

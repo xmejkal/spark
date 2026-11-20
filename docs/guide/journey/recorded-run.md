@@ -300,7 +300,7 @@ is drawn from what spark measured in Wokwi (`data/wokwi-geometry.json`). The Fir
 record ([P412](https://github.com/xmejkal/spark/issues/538)) on a 63-column breadboard: `breadboard.svg` shows each
 pad's label beside its pin, rings the two ground pads the record doubts and marks the USB end. Three things are not
 verified: the pads, the side of the row, and the USB end. The sheet says so and tells you to hold your board to the
-picture. Wokwi has no part with its pins, so for the FireBeetle the sheet says `There is no Wokwi diagram for this board.`
+picture. Wokwi has no part with its pins, so for the FireBeetle the sheet says `There is no Wokwi diagram: Wokwi has no part for the board.`
 It also names the ground pad (GND2). A board whose record lacks a fact says which one.
 The same project on the XIAO, as Wokwi shows its `breadboard.json`
 ([the measurement](../../discovery/2026-10-16-p267-wokwi-holes/README.md)):
