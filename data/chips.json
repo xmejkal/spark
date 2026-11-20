@@ -97,7 +97,7 @@
     "value": false,
     "cites": {
      "document": "esp-idf-adc-oneshot-v5-5-1",
-     "at": "Hardware Limitations, line 169: \"ADC2 oneshot mode is no longer supported, due to hardware limitations. The results are not stable.\""
+     "at": "Hardware Limitations, line 169: \"ADC2 oneshot mode is no longer supported, due to hardware limitations. The results are not stable.\" By default: the same line lets a build force it with CONFIG_ADC_ONESHOT_FORCE_USE_ADC2_ON_C3"
     }
    },
    "adc2_gpio": {

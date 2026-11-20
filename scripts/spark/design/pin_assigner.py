@@ -56,11 +56,12 @@ CAPABILITIES = part_rules.CAPABILITIES
 UNAVAILABLE_ROLES = ("strapping",)
 
 #: A signal that names a pin with one of those roles (close audit C4), and the way out. --- MVP --- (P513)
-#: Why a named pin of a chip whose ADC2 the table records as not read lacks adc (P813): the fact and its source.
-CHIP_ADC2_REASON = (": it is on ADC2 of chip %r, whose oneshot read ESP-IDF v5.5.1 does not support "
-                    "(data/chips.json, adc2_oneshot_supported)")
 NAMED_STRAP_REFUSAL = ("%s asks for %s by name, and GPIO%d is %s — a pin this never offers, because the chip reads it "
                        "at reset; drop `pin` and spark picks another, or see P527 (#726) for a pin a connector fixes")
+
+#: Why a named pin of a chip whose ADC2 the table records as not read lacks adc (P813): the fact and its source.
+CHIP_ADC2_REASON = (": it is on ADC2, which ESP-IDF v5.5.1 does not read in oneshot mode on chip %r by default "
+                    "(data/chips.json, adc2_oneshot_supported)")
 
 #: Roles that do not disqualify a pin but make it a worse choice, and by how much.
 #:

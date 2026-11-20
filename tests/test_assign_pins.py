@@ -581,8 +581,8 @@ class AC3Adc2PinIsNotReadTest(unittest.TestCase):
     (GPIO5), so a C3 board's GPIO5 offers no adc, from the chip's facts, with no role in the record.
     """
 
-    CHIP_WORDS = ("SENSE asks for A1 by name and needs adc, which GPIO5 cannot do: it is on ADC2 of chip 'esp32c3', "
-                  "whose oneshot read ESP-IDF v5.5.1 does not support (data/chips.json, adc2_oneshot_supported)")
+    CHIP_WORDS = ("SENSE asks for A1 by name and needs adc, which GPIO5 cannot do: it is on ADC2, which ESP-IDF v5.5.1 "
+                  "does not read in oneshot mode on chip 'esp32c3' by default (data/chips.json, adc2_oneshot_supported)")
 
     def c3_board(self, chip="esp32c3", pin_roles=None):
         return board(chip=chip, pins={"P0": 0, "P1": 1, "A0": 4, "A1": 5}, wake_capable_gpio=[], adc_gpio=[4, 5],

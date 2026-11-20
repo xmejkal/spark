@@ -1,7 +1,7 @@
 """
-The chip table (P809): `data/chips.json` holds each chip's `adc2_used_by_wifi`, cited to an ESP-IDF file, and
-`chip_table` reads it as RECORDED or NONE_RECORDED. P813: the ESP32-C3 also holds `adc2_oneshot_supported` (false) and
-`adc2_gpio` (its ADC2 pin), each cited.
+The chip table (P809): `data/chips.json` holds each chip's `adc2_used_by_wifi`, cited to a kept ESP-IDF file, and
+`chip_table` reads it as RECORDED or NONE_RECORDED. P813: the ESP32-C3 also holds `adc2_oneshot_supported` (false), cited
+to the kept adc_oneshot.rst, and `adc2_gpio` (its ADC2 pin), cited to its adc_channel.h, which is not yet kept.
 """
 
 import json
