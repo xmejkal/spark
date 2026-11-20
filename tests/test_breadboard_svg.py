@@ -25,7 +25,7 @@ from fakes import FakePartPictures  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import drawing, part_pictures, sheet, svg_diagram, wiring_steps  # noqa: E402
+from spark.breadboard import drawing, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
 from test_breadboard_layout import EPAPER, RECORD_BOARD, epaper_inputs, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -151,7 +151,7 @@ class TheSvgTest(unittest.TestCase):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         # P949: the keys data-step and data-part, and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "da5bd3027bad3e93ad27abf94874de24684799fe8729d9bf04d8c0d75362de84")  # P953: the board's look
+                         "5001ff445cb11e0c7b857b0d92af43a934e7290de231430f64352b73a96071ba")  # P953: the wires around the parts
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -259,7 +259,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
         # page's group (no glow, each word upright or sideways on the sheet), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "096c700a39e0d39724cbc7977efb2ef18babaa541433c3a21d8bada22e57ba16")  # P953: board look, 4 free columns
+                         "ac835219a011ce29fc08b7ba9b7d0a9e9c88b6fc7e5917a13495d44972ad0fb3")  # P953: the wires around the parts
 
     def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
         board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)
@@ -283,7 +283,9 @@ class TheRecordBoardSvgTest(unittest.TestCase):
     def test_the_xiao_has_none_of_it(self):
         text, _ = xiao_svg()
         self.assertNotIn("#cfd8dc", text)
-        self.assertNotIn("stroke-dasharray", text)
+        # no doubtful pad's dashed ring; P953: a wire that bends more than 4 times is dashed too, so the rings are counted
+        self.assertEqual(len([circle for circle in svg_all(ElementTree.fromstring(text), "circle")
+                              if circle.get("stroke-dasharray")]), 0)
 
 
 class TheModuleSvgTest(unittest.TestCase):
@@ -557,8 +559,9 @@ class TheJumperLanesTest(unittest.TestCase):
                 self.assertGreaterEqual(min(abs(y - row) for row in rows), half - 0.01, y)
 
     def test_the_e_paper_s_eight_runs_take_eight_lines(self):
-        runs = {segments(color)[1][0][1] for _, color, _ in wires(ElementTree.fromstring(self.pictures["epaper"]))}
-        self.assertEqual(len(runs), 8)
+        # P953: the picture's wires go around the parts on tracks (tests/test_wire_routing.py); the lanes stay a Strategy
+        lines = wire_routing.LaneJumperRouter().lines(self.layout.jumpers, self.layout.geometry.surface.pitch)
+        self.assertEqual(len(set(lines.values())), 8)
 
     def test_overlapping_spans_take_lines_one_pitch_apart_toward_their_first_end_the_shorter_first(self):
         def hole(column, y):
@@ -566,13 +569,13 @@ class TheJumperLanesTest(unittest.TestCase):
         long_up = drawing.Jumper(hole(1, 150), hole(9, 50), 4)
         short_up = drawing.Jumper(hole(3, 150), hole(6, 50), 5)
         down = drawing.Jumper(hole(4, 50), hole(7, 150), 6)
-        lines = svg_diagram.JumperLanes().lines([long_up, short_up, down], 10)
+        lines = wire_routing.LaneJumperRouter().lines([long_up, short_up, down], 10)
         self.assertEqual(lines, {5: 55, 4: 65, 6: 145})
 
     def test_spans_more_than_a_pitch_apart_share_a_line(self):
         def hole(column, y):
             return drawing.Hole("%d" % column, 10 * column, y, "%d" % column, column)
-        lines = svg_diagram.JumperLanes().lines([drawing.Jumper(hole(1, 150), hole(3, 50), 1),
+        lines = wire_routing.LaneJumperRouter().lines([drawing.Jumper(hole(1, 150), hole(3, 50), 1),
                                                  drawing.Jumper(hole(5, 150), hole(7, 50), 2)], 10)
         self.assertEqual(lines, {1: 55, 2: 55})
 
@@ -581,7 +584,7 @@ class TheJumperLanesTest(unittest.TestCase):
         def hole(column, y):
             return drawing.Hole("%d" % column, 10 * column, y, "%d" % column, column)
         jumpers = [drawing.Jumper(hole(1, 50), hole(5, 150), 1), drawing.Jumper(hole(1, 150), hole(8, 50), 2)]
-        lines = svg_diagram.JumperLanes().lines(jumpers, 10)
+        lines = wire_routing.LaneJumperRouter().lines(jumpers, 10)
         legs = [sorted((50, lines[1])), sorted((150, lines[2]))]
         self.assertLessEqual(min(legs[0][1], legs[1][1]) - max(legs[0][0], legs[1][0]), 0, lines)
         self.assertEqual(lines, {1: 145, 2: 155})
@@ -589,7 +592,7 @@ class TheJumperLanesTest(unittest.TestCase):
     def test_spans_less_than_a_pitch_apart_take_two_lines(self):
         def hole(column, y):
             return drawing.Hole("%d" % column, 10 * column, y, "%d" % column, column)
-        lines = svg_diagram.JumperLanes().lines([drawing.Jumper(hole(1, 150), hole(3, 50), 1),
+        lines = wire_routing.LaneJumperRouter().lines([drawing.Jumper(hole(1, 150), hole(3, 50), 1),
                                                  drawing.Jumper(hole(4, 150), hole(6, 50), 2)], 10)
         self.assertEqual(lines, {1: 55, 2: 65})
 
