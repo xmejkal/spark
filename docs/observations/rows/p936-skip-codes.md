@@ -17,3 +17,7 @@ findings only. 2026-11-20.
 | 8 | the plan says `skipped board_only: …` is said once in --help | build | acted | four stages end with it, so the test pins four, and `every_part_skipped` once |
 | 9 | the plan's mutation row 6 (the help says every code as a design error) is P852's row "the help says a skip as a design error", whose line this PR replaced | build | acted | P852's row anchored again on the new line, so no two rows plant one defect; P852's guard row anchored on `if ending.code is None:`. `--anchors` refuses the same 20 rows as main |
 | 10 | `tools/mutate.py --retarget` moves the rows of a moved file, not a changed line | build | acted | the two P852 rows edited by hand, then `--anchors` |
+| 11 | the PR's review: merge, no finding | review, lens | acted | merged after the refuter's one fix |
+| 12 | tests/test_chip_table.py:4 still says the C3's adc_channel.h "is not yet kept" | review, refuter | acted | the docstring says the kept adc_channel.h |
+| 13 | --help may cut the board_only fix sentence | review, lens | rejected | the refuter: --help prints only the meaning, never a fix; both meanings print in full |
+| 14 | a reader breaks on the new `code` key | review, refuter | rejected | a real board-only build and a full build both exit 0; `.spark/build.json` stays `{name, status}`; flow.py runs with and without --json; the snapshot records the unchanged text |
