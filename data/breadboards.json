@@ -1,6 +1,6 @@
 {
  "//": "spark's own breadboard surface for a board drawn from its own record (P412): 63 columns, the half board's pitch, first column and rows. The columns are the PO's word, 2026-10-29; the model is not recorded. Its rails (P953) are a drawing convention, as covers_holes is in data/wokwi-geometry.json, not a measured fact: four rails of 50 holes in blocks of 5, each hole on a column's x, + above - on both sides as on Wokwi's half board, each pair 3 pitches from its outer row of holes. Wokwi-measured facts stay in data/wokwi-geometry.json.",
- "//palette": "The breadboard picture's colours (P953), from the old wiring page of the README (pixel-master/docs/wiring.html): the page, the board's body and edge, the gap between the halves, the holes, the rail holes, the + and - rails' lines and signs, the letters and numbers, and the titles. `wires` draws each jumper colour's word (wiring_steps.JumperColors, the word the sheet says) in the visual spec's hex: each has at least 4.5:1 with white, so a pill's white words read on it, and 3:1 with the board; cyan keeps its word and is drawn #0b7fa8. Another look is another palette here, with no code.",
+ "//palette": "The breadboard picture's colours (P953), from the old wiring page of the README (pixel-master/docs/wiring.html): the page, the board's body and edge, the gap between the halves, the holes, the rail holes, the + and - rails' lines and signs, the letters and numbers, the titles (a part's caption), a pad's label (used, free, or with no net: NC) and its dark outline, which reads on a light module and vanishes on a dark one. `wires` draws each jumper colour's word (wiring_steps.JumperColors, the word the sheet says) in the visual spec's hex: each has at least 4.5:1 with white, so a pill's white words read on it, and 3:1 with the board; cyan keeps its word and is drawn #0b7fa8. Another look is another palette here, with no code.",
  "palette": {
   "page": "#ffffff",
   "board": "#f4f1ea",
@@ -12,6 +12,10 @@
   "minus": "#1668c7",
   "grid_text": "#6b7176",
   "title": "#20262b",
+  "pad_used": "#ffd34d",
+  "pad_free": "#b8c2ca",
+  "pad_none": "#8d969c",
+  "pad_halo": "#121820",
   "wires": {
    "red": "#d0202a",
    "black": "#20262b",
@@ -24,7 +28,7 @@
    "gray": "#5f6b73"
   }
  },
- "//sizes_px": "The picture's sizes in px at spark's 9.6 px pitch: the old page's (18 px pitch) times 9.6 / 18. board_pad is the space from the outermost hole to the board's edge, gap_band the gap's height, rail_line_off how far a rail's line lies off its holes, numbers_every which columns get a number (and column 1).",
+ "//sizes_px": "The picture's sizes in px at spark's 9.6 px pitch: the old page's (18 px pitch) times 9.6 / 18. board_pad is the space from the outermost hole to the board's edge, gap_band the gap's height, rail_line_off how far a rail's line lies off its holes, numbers_every which columns get a number (and column 1). pad_label and pad_label_used are a pad label's font size and pad_halo its outline's width, caption a part's caption's and note a line of the note's.",
  "sizes_px": {
   "board_rx": 4.3,
   "edge_width": 0.53,
@@ -38,7 +42,12 @@
   "numbers": 5.3,
   "numbers_every": 5,
   "gap_band": 24,
-  "board_pad": 19.2
+  "board_pad": 19.2,
+  "pad_label": 5,
+  "pad_label_used": 5.2,
+  "pad_halo": 1.3,
+  "caption": 7,
+  "note": 6
  },
  "full": {
   "type": "spark-breadboard-full",

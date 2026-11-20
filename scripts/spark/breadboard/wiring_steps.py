@@ -340,7 +340,8 @@ def off_board_supplies(nets, parts):
 
 def printed_label(board, port):
     """What the board's silkscreen prints beside one of its pads: a label its header rows list, a pad or power pad of its
-    file, or the printed spelling of an alias (MISO is printed MI); never a bare pin number. Every ground pad is GND."""
+    file, or the printed spelling of an alias (MISO is printed MI); never a bare pin number. Every ground pad is GND
+    (`pad_word`)."""
     physical = board.get("physical") or {}
     rows = [label for row in (physical.get("header_order") or {}).values() if isinstance(row, list) for label in row]
     pads = board_pads.BoardPads.from_record(board)  # --- MVP --- (P512)
@@ -348,7 +349,14 @@ def printed_label(board, port):
     hints = port.get("port_hints") or []
     label = next((pads.pad_of(hint) for hint in hints if hint in known), None) or next(
         (hint for hint in hints if not re.fullmatch(r"pin\d+|\d+", hint)), port.get("name"))
-    return "GND" if re.fullmatch(r"GND\d*", label) else label
+    return pad_word(label)
+
+
+def pad_word(pad):
+    """The word the steps say for a board's pad, which the picture prints beside it (P953): a ground pad is GND and a pad
+    with no net NC, whatever number its record's key adds; any other key as it is (3V3_2 stays 3V3_2 until a record says
+    that the two 3V3 pads are joined)."""
+    return re.sub(r"^(GND|NC)\d+$", r"\1", pad)
 
 
 def board_rail(board, port, pad):

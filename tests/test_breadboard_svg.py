@@ -25,7 +25,7 @@ from fakes import FakePartPictures  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import drawing, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
+from spark.breadboard import drawing, part_captions, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
 from test_breadboard_layout import EPAPER, RECORD_BOARD, epaper_inputs, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -151,7 +151,7 @@ class TheSvgTest(unittest.TestCase):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         # P949: the keys data-step and data-part, and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "549d5b330ef7d6d439111523c50de89bc9c59d03ef0d17ce57b80e9932d9ac13")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, pill 7 clear of the rail signs, seen in a render on 2026-11-20
+                         "64800cebc45098b861a511c5b436b764c33310e76e1ad7cd5f22c110a0c61e0e")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, pill 7 clear of the rail signs; PR 4b: a caption per part outside its body, at its left edge (the review of PR #1379), seen in a render on 2026-11-20
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -162,11 +162,6 @@ class TheSvgTest(unittest.TestCase):
             numbers = [float(n) for n in re.findall(r"-?[\d.]+", path.get("d"))]
             for x, y in zip(numbers[2:-2:2], numbers[3:-2:2]):
                 self.assertFalse(any(abs(x - hx) < 1 and abs(y - hy) < 1 for hx, hy in holes), (x, y))
-
-    def test_each_part_is_named_once(self):
-        names = [text.text for text in self.root.findall("svg:text", NS)]
-        for part in self.layout.parts:
-            self.assertEqual(names.count(part.id), 1, part.id)
 
     def test_each_jumper_runs_from_hole_center_to_hole_center_in_its_step_s_color(self):
         # The hole centers come from the data file here, not from the layout the renderer read.
@@ -229,10 +224,14 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         cls.texts = [element.text for element in cls.root.iter("{http://www.w3.org/2000/svg}text")]
 
     def test_every_pad_label_is_written_once_beside_its_pin(self):
+        # P953 PR 4b: in the steps' words, so the S3's GND1, GND2 and GND3 are three labels GND
         board = self.layout.geometry.part(self.layout.parts[0].type)
         self.assertEqual(len(board["pins"]), 32)
+        labels = [text.text for text, _ in pad_labels(self.root)]
+        self.assertEqual(len(labels), 32)
         for pad in board["pins"]:
-            self.assertEqual(self.texts.count(pad), 1, pad)
+            word = "GND" if pad in ("GND1", "GND2", "GND3") else pad
+            self.assertEqual(labels.count(word), 3 if word == "GND" else 1, pad)
 
     def test_a_doubtful_pad_has_a_dashed_ring_and_the_others_have_none(self):
         rings = [c for c in self.root.iter("{http://www.w3.org/2000/svg}circle") if c.get("stroke-dasharray")]
@@ -246,7 +245,9 @@ class TheRecordBoardSvgTest(unittest.TestCase):
     def test_the_note_is_the_unverified_groups_of_the_board_once_and_the_board_keeps_its_ground_and_doubts(self):
         board = self.layout.geometry.part(self.layout.parts[0].type)
         self.assertEqual((board["ground"], board["doubtful"]), ("GND2", ["GND1", "GND3"]))
-        self.assertEqual(self.texts.count(", ".join(note["sentence"] for note in board["notes"])), 1)
+        # P953 PR 4b: one line for the board, its groups by their words after its caption's name
+        self.assertEqual(self.texts.count("DFRobot FireBeetle 2 ESP32-S3: pads, USB end and the pads in a dashed ring not "
+                                          "verified."), 1)
 
     def test_the_surface_has_63_columns_and_four_rails_of_50_holes(self):
         # P953: the full board got rails, a drawing convention as on the old page
@@ -263,26 +264,12 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
         # page's group (no glow, each word upright or sideways on the sheet), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "fb324bc330f93a5e66c56a5efbb8f46fd88c71db154af28df04b86648ee54b19")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, seen in a render on 2026-11-20
+                         "9b6aceacfe058a6b1fc01ef3502466322512f847f5d4c8f78af999ce5651209a")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex; PR 4b: the pads in the steps' words read bottom to top, a caption per part and its note line, seen in a render on 2026-11-20
 
     def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
         board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)
         self.assertTrue(any(rect.get("fill") == "#16202a" for rect in board.iter("{http://www.w3.org/2000/svg}rect")))
         self.assertIn("pixel-master/docs/wiring.html", board.find("svg:title", NS).text)
-
-    def test_every_word_of_the_board_s_picture_reads_upright_or_sideways_never_upside_down_on_the_sheet(self):
-        # the review's refuter: the sheet turns the board a quarter more, and four words read upside down
-        board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)
-        sheet_turn = float(re.search(r"rotate\((-?[\d.]+)", board.get("transform")).group(1))
-        picture = next(group for group in board.iter("{http://www.w3.org/2000/svg}g") if "matrix(" in (group.get("transform") or ""))
-        a, b = [float(n) for n in re.findall(r"-?[\d.]+", picture.get("transform"))[:2]]
-        texts = list(picture.iter("{http://www.w3.org/2000/svg}text"))
-        self.assertEqual(len(texts), 6)
-        for text in texts:
-            with self.subTest(text=text.text):
-                own = re.search(r"rotate\((-?[\d.]+)", text.get("transform") or "")
-                total = (sheet_turn + math.degrees(math.atan2(b, a)) + (float(own.group(1)) if own else 0) + 180) % 360 - 180
-                self.assertTrue(-90 <= total <= 90, total)
 
     def test_the_xiao_has_none_of_it(self):
         text, _ = xiao_svg()
@@ -315,21 +302,27 @@ class TheModuleSvgTest(unittest.TestCase):
                 label = labels[pad]
                 self.assertLessEqual(abs(float(label.get("x")) - x), 4.8)
                 self.assertGreater(float(label.get("y")), y)
-                self.assertTrue(label.get("transform").startswith("rotate(90 "), label.get("transform"))
+                # P953 PR 4b: turned back a quarter, so it reads bottom to top
+                self.assertTrue(label.get("transform").startswith("rotate(-90 "), label.get("transform"))
 
     def test_a_label_of_a_bottom_edge_row_sits_above_its_pad(self):
-        place = svg_diagram.IntoBodyLabels().place(50, 160, {"center": [100, 83]})
-        self.assertEqual((place.y < 160, abs(place.x - 50) <= 4.8, place.anchor, place.rotate), (True, True, "end", 90))
-        place = svg_diagram.IntoBodyLabels().place(50, 4.8, {"center": [100, 83]})
-        self.assertEqual((place.y > 4.8, place.anchor), (True, "start"))
+        # P953 PR 4b: it reads bottom to top, on a module turned by 0 or half round
+        place = svg_diagram.IntoBodyLabels().place(50, 160, {"center": [100, 83]}, 0)
+        self.assertEqual((place.y < 160, abs(place.x - 50) <= 4.8, place.anchor, place.rotate), (True, True, "start", -90))
+        place = svg_diagram.IntoBodyLabels().place(50, 4.8, {"center": [100, 83]}, 0)
+        self.assertEqual((place.y > 4.8, place.anchor), (True, "end"))
+        place = svg_diagram.IntoBodyLabels().place(50, 4.8, {"center": [100, 83]}, 180)
+        self.assertEqual((place.y > 4.8, abs(place.x - 50) <= 4.8, place.anchor, (180 + place.rotate) % 360),
+                         (True, True, "start", 270))
 
     def test_the_module_draws_no_usb_mark_and_the_board_keeps_its_one(self):
         marks = [rect for rect in self.root.iter("{http://www.w3.org/2000/svg}rect") if rect.get("fill") == "#cfd8dc"]
         self.assertEqual(len(marks), 1)
 
-    def test_the_module_is_named_by_its_short_name(self):
+    def test_the_module_is_named_by_its_record_s_name(self):
+        # P953 PR 4b: its caption, the record's name up to its first comma, in place of its short name in its body
         texts = [element.text for element in self.root.iter("{http://www.w3.org/2000/svg}text")]
-        self.assertIn("e-paper", texts)
+        self.assertIn("MH-ET LIVE 2.9 Inch E-paper Module", texts)
         self.assertNotIn("Epaper2in9BwrMhEtLive", texts)
 
     def test_the_canvas_holds_the_module_that_hangs_below_the_holes(self):
@@ -551,12 +544,12 @@ def pill_box(pill):
 
 
 def board_marks(root):
-    """(text, box) of each mark printed on the board itself, the root's own centred texts with no halo (not a part's
-    name, not a note line): each row letter, column number and rail sign, its box 0.6 of its size wide a character,
-    from 0.75 of its size above its baseline to 0.25 below, about its x."""
+    """(text, box) of each mark printed on the board itself, the root's own centred texts (a caption and a note line
+    start at their x): each row letter, column number and rail sign, its box 0.6 of its size wide a character, from 0.75
+    of its size above its baseline to 0.25 below, about its x."""
     marks = []
     for text in root.findall("svg:text", NS):
-        if text.get("text-anchor") == "middle" and text.get("stroke") is None:
+        if text.get("text-anchor") == "middle":
             x, y, size = float(text.get("x")), float(text.get("y")), float(text.get("font-size"))
             half = 0.3 * size * len(text.text)
             marks.append((text.text, (x - half, y - 0.75 * size, x + half, y + 0.25 * size)))
@@ -654,12 +647,13 @@ class ThePillsTest(unittest.TestCase):
                                 max(piece[0][0], piece[1][0]), max(piece[0][1], piece[1][1])), half)]
                             self.assertEqual(near, [], other.get("data-step"))
         # the review of PR #1377: no pill meets a printed mark of the board, a row letter, a column number or a rail's
-        # sign, on every fixture and every golden picture (the rebuild's too)
+        # sign, on every fixture and every golden picture (the rebuild's too); PR 4b: nor a part's caption
         for name, text in self.pictures.items():
             with self.subTest(name):
                 root = ElementTree.fromstring(text)
-                marks = board_marks(root)
+                marks = board_marks(root) + [(words, caption_box(caption)) for words, caption in captions(root).items()]
                 self.assertGreaterEqual(len([mark for mark, _ in marks if mark in ("+", "−")]), 2)
+                self.assertGreaterEqual(len(captions(root)), 2)
                 for group in root.findall(".//svg:g[@class='wire']", NS):
                     box = pill_box(pill_of(group))
                     self.assertEqual([mark for mark, other in marks if boxes_meet(box, other)], [], group.get("data-step"))
@@ -690,6 +684,229 @@ class ThePillsTest(unittest.TestCase):
                         (box.left, box.top, box.right, box.bottom), (min(piece[0][0], piece[1][0]), min(piece[0][1], piece[1][1]),
                                                                      max(piece[0][0], piece[1][0]), max(piece[0][1], piece[1][1])), 6)]
                     self.assertEqual((pill.free, bool(on or beside)), (True, True), (step, pill))
+
+
+def affine(transform):
+    """The matrix (a, b, c, d, e, f) of an SVG transform list: translate, rotate about a point, scale and matrix."""
+    matrix = (1, 0, 0, 1, 0, 0)
+    for name, numbers in re.findall(r"(\w+)\(([^)]*)\)", transform or ""):
+        n = [float(one) for one in re.findall(r"-?[\d.]+(?:e-?\d+)?", numbers)]
+        if name == "translate":
+            step = (1, 0, 0, 1, n[0], n[1] if len(n) > 1 else 0)
+        elif name == "scale":
+            step = (n[0], 0, 0, n[1] if len(n) > 1 else n[0], 0, 0)
+        elif name == "matrix":
+            step = tuple(n)
+        else:
+            cos, sin = math.cos(math.radians(n[0])), math.sin(math.radians(n[0]))
+            cx, cy = (n[1], n[2]) if len(n) > 1 else (0, 0)
+            step = (cos, sin, -sin, cos, cx - cos * cx + sin * cy, cy - sin * cx - cos * cy)
+        matrix = compose(matrix, step)
+    return matrix
+
+
+def compose(one, other):
+    """The matrix that applies `other`, then `one`."""
+    a, b, c, d, e, f = one
+    p, q, r, s, t, u = other
+    return (a * p + c * q, b * p + d * q, a * r + c * s, b * r + d * s, a * t + c * u + e, b * t + d * u + f)
+
+
+def sheet_texts(root):
+    """(text element, the matrix that puts it on the sheet) of every text: its ancestors' transforms and its own."""
+    found = []
+
+    def walk(element, matrix):
+        matrix = compose(matrix, affine(element.get("transform")))
+        if element.tag == "{http://www.w3.org/2000/svg}text":
+            found.append((element, matrix))
+        for child in element:
+            walk(child, matrix)
+
+    walk(root, (1, 0, 0, 1, 0, 0))
+    return found
+
+
+def turn_of(matrix):
+    """The turn of a matrix on the sheet, in degrees from 0 to 360."""
+    return round(math.degrees(math.atan2(matrix[1], matrix[0]))) % 360
+
+
+def text_box(text, matrix):
+    """(left, top, right, bottom) of a text on the sheet: 0.6 of its size wide a character, from 0.75 of its size above
+    its baseline to 0.25 below, by its anchor, turned by its matrix."""
+    x, y, size = float(text.get("x")), float(text.get("y")), float(text.get("font-size"))
+    width = 0.6 * size * len(text.text)
+    left = x - {"middle": width / 2, "end": width}.get(text.get("text-anchor"), 0)
+    corners = [(matrix[0] * px + matrix[2] * py + matrix[4], matrix[1] * px + matrix[3] * py + matrix[5])
+               for px in (left, left + width) for py in (y - 0.75 * size, y + 0.25 * size)]
+    return (min(px for px, _ in corners), min(py for _, py in corners), max(px for px, _ in corners),
+            max(py for _, py in corners))
+
+
+def caption_box(text):
+    """(left, top, right, bottom) of a caption: 0.55 of its size wide a character plus half its size (Chrome draws the
+    fixtures' names 0.50 to 0.54), from 0.75 of its size above its baseline to 0.25 below."""
+    x, y, size = float(text.get("x")), float(text.get("y")), float(text.get("font-size"))
+    return x, y - 0.75 * size, x + (0.55 * len(text.text) + 0.5) * size, y + 0.25 * size
+
+
+def captions(root):
+    """{words: text element} of each part's caption."""
+    return {text.text: text for text in root.findall("svg:text[@class='caption']", NS)}
+
+
+def pad_labels(root):
+    """(text element, its matrix on the sheet) of each pad label of every part drawn from its record."""
+    labels = {id(text) for group in root.iter("{http://www.w3.org/2000/svg}g") if group.get("class") == "pad-labels"
+              for text in group.findall("svg:text", NS)}
+    return [(text, matrix) for text, matrix in sheet_texts(root) if id(text) in labels]
+
+
+class TheLabelsTest(unittest.TestCase):
+    """P953 PR 4b: a pad's label says the steps' word for it, every turned text reads bottom to top, and each part has one
+    caption outside its body with its human name, where no wire runs."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.drawn = {fixture: fixture_svg(fixture) for fixture in PILL_FIXTURES}
+        cls.pictures = dict(golden_svgs(), **{fixture: text for fixture, (text, _) in cls.drawn.items()})
+        cls.walk = ElementTree.fromstring(cls.drawn["walk-c6"][0])
+
+    def test_a_ground_pad_reads_gnd_and_an_nc_pad_reads_nc_muted(self):
+        # the steps' function: the C6's GND1 and GND2 are "board GND" in the walk's sheet, its NC1 to NC5 no end at all
+        self.assertEqual([wiring_steps.pad_word(pad) for pad in ("GND1", "GND2", "GND", "NC5", "NC12", "ENC1", "D3")],
+                         ["GND", "GND", "GND", "NC", "NC", "ENC1", "D3"])
+        board = [text for text, _ in pad_labels(self.walk) if text.text not in
+                 ("VCC", "SDI", "SCLK", "CS", "D/C", "Reset", "Busy")]  # the e-paper's own, but its GND
+        words = [text.text for text in board]
+        self.assertEqual((len(words), words.count("GND"), words.count("NC")), (33, 3, 5))  # the C6's 32 and the e-paper's GND
+        self.assertEqual({text.get("fill") for text in board if text.text == "NC"}, {"#8d969c"})
+        for name, text in self.pictures.items():
+            with self.subTest(name):
+                self.assertEqual([one.text for one, _ in pad_labels(ElementTree.fromstring(text))
+                                  if re.fullmatch(r"(GND|NC)\d+", one.text)], [])
+
+    def test_3v3_2_stays_as_the_steps_say_it(self):
+        golden = (ROOT / "tests" / "golden-breadboard" / "breadboard-ok-c6.txt").read_text()
+        self.assertIn("4. Run a jumper from board 3V3_2 to the 3V3 rail.", golden)
+        words = [text.text for text, _ in pad_labels(self.walk)]
+        self.assertEqual((words.count("3V3_2"), words.count("3V3")), (1, 1))
+
+    def test_a_used_pad_reads_bold_yellow_and_the_others_dim_each_with_a_dark_outline(self):
+        # read from the walk's sheet: the board's ends are 3V3, 3V3_2, D3, D7, GND, MOSI, SCK, SCL and SDA; every e-paper pad
+        labels = [text for text, _ in pad_labels(self.walk)]
+        used = sorted(text.text for text in labels if text.get("fill") == "#ffd34d")
+        self.assertEqual(used, sorted(["3V3", "3V3_2", "D3", "D7", "GND", "MOSI", "SCK", "SCL", "SDA", "VCC", "GND", "SDI",
+                                       "SCLK", "CS", "D/C", "Reset", "Busy"]))
+        for text in labels:
+            with self.subTest(text.text):
+                bold = text.get("fill") == "#ffd34d"
+                self.assertEqual((text.get("font-size"), text.get("font-weight")), ("5.2", "700") if bold else ("5", None))
+                self.assertIn(text.get("fill"), ("#ffd34d", "#b8c2ca", "#8d969c"))
+                self.assertEqual((text.get("stroke"), text.get("stroke-width"), text.get("paint-order")),
+                                 ("#121820", "1.3", "stroke"))
+
+    def test_every_turned_text_reads_bottom_to_top(self):
+        # replaces the record board's check that no word reads upside down: one way only, 0 or -90 on the sheet, for
+        # the pad labels, the pills, the parts' own pictures and the board's marks
+        turned = 0
+        for name, text in self.pictures.items():
+            with self.subTest(name):
+                for element, matrix in sheet_texts(ElementTree.fromstring(text)):
+                    self.assertIn(turn_of(matrix), (0, 270), element.text)
+                    turned += turn_of(matrix) == 270
+        self.assertGreaterEqual(turned, 100)
+
+    def test_no_wire_touches_a_label_or_a_caption(self):
+        for name, text in self.pictures.items():
+            with self.subTest(name):
+                root = ElementTree.fromstring(text)
+                boxes = [(one.text, text_box(one, matrix)) for one, matrix in pad_labels(root)] + [
+                    (words, caption_box(one)) for words, one in captions(root).items()]
+                self.assertGreaterEqual(len(boxes), 2)
+                for under, color, _ in wires(root):
+                    half = float(under.get("stroke-width")) / 2
+                    for (x1, y1), (x2, y2) in segments(color):
+                        piece = (min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
+                        self.assertEqual([words for words, box in boxes if boxes_meet(box, piece, half)], [],
+                                         (x1, y1, x2, y2))
+
+    def test_each_part_has_one_caption_outside_its_body_with_its_human_name(self):
+        expected = {"walk-c6": ["DFRobot FireBeetle 2 ESP32-C6", "MH-ET LIVE 2.9 Inch E-paper Module"],
+                    "button-light-xiao": ["Seeed Studio XIAO ESP32-C6", "6x6 mm tactile push button",
+                                          "Kingbright L-7113ID 5 mm red LED", "R1"],
+                    "button-light": ["DFRobot FireBeetle 2 ESP32-S3", "6x6 mm tactile push button",
+                                     "Kingbright L-7113ID 5 mm red LED", "R1"],
+                    "epaper": ["DFRobot FireBeetle 2 ESP32-S3", "MH-ET LIVE 2.9 Inch E-paper Module"]}
+        for fixture, (text, layout) in self.drawn.items():
+            with self.subTest(fixture):
+                root = ElementTree.fromstring(text)
+                found = captions(root)
+                self.assertEqual(len(root.findall("svg:text[@class='caption']", NS)), len(layout.parts))
+                self.assertEqual(sorted(found), sorted(expected[fixture]))
+                bodies = [svg_diagram.BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
+                for words, caption in found.items():
+                    self.assertFalse([body for body in bodies if boxes_meet(caption_box(caption), body)], words)
+                    self.assertEqual((caption.get("font-size"), caption.get("font-weight")), ("7", "600"))
+                    if words != "R1":
+                        self.assertEqual(caption.get("fill"), "#20262b")
+                for words in ("board", "Epaper2in9BwrMhEtLive", "firebeetle2-esp32c6", "epaper-2in9-bwr-mh-et-live"):
+                    self.assertNotIn(">%s<" % words, text)
+
+    def test_the_walk_s_board_caption_sits_at_its_body_s_left_edge_inside_the_canvas(self):
+        # the review of PR #1379: slid right along the board it sat under pill 12 and read as that pill's words
+        _, layout = self.drawn["walk-c6"]
+        board = next(part for part in layout.parts if part.id == wiring_steps.THE_BOARD)
+        body = svg_diagram.BodyBox.of(board, layout.geometry.part(board.type))
+        caption = captions(self.walk)["DFRobot FireBeetle 2 ESP32-C6"]
+        self.assertAlmostEqual(float(caption.get("x")), body.left, places=2)
+        self.assertLessEqual(caption_box(caption)[3], body.top)
+        left, top = (float(n) for n in self.walk.get("viewBox").split()[:2])
+        self.assertGreater(caption_box(caption)[1], top)
+        self.assertGreaterEqual(caption_box(caption)[0], left)
+
+    def test_a_part_with_no_name_is_captioned_by_its_id_muted(self):
+        self.assertEqual(captions(ElementTree.fromstring(self.drawn["button-light-xiao"][0]))["R1"].get("fill"), "#6b7176")
+
+        def part(record):
+            return drawing.PlacedPart("LedRed5mm", "wokwi-led", {}, 0, 0, 0, {}, record)
+
+        self.assertEqual([part_captions.PartCaption.words(part(record)) for record in (
+            {"id": "led-x", "name": "Maker LED, red, 5 mm"}, {"id": "led-x", "name": ""}, {"id": "led-x"}, None, {"name": 7})],
+            [("Maker LED", True), ("led-x", False), ("led-x", False), ("LedRed5mm", False), ("LedRed5mm", False)])
+
+
+class TheNoteTest(unittest.TestCase):
+    """P953 PR 4b: the note under the picture, one line per part with its human name and no record id."""
+
+    def test_one_line_per_part_with_its_human_name_and_no_record_id(self):
+        lines = {}
+        for fixture in ("walk-c6", "button-light"):
+            root = ElementTree.fromstring(fixture_svg(fixture)[0])
+            notes = root.findall("svg:text[@class='note']", NS)
+            self.assertEqual({(note.get("font-size"), note.get("fill")) for note in notes}, {("6", "#6b7176")})
+            lines[fixture] = [note.text for note in notes]
+        self.assertEqual(lines, {
+            "walk-c6": ["DFRobot FireBeetle 2 ESP32-C6: pads, row side and USB end not verified.",
+                        "MH-ET LIVE 2.9 Inch E-paper Module: pads and header side not verified.",
+                        "wires 6, 7, 10 and 11 bend more than 4 times to go around the parts and are drawn dashed"],
+            "button-light": ["DFRobot FireBeetle 2 ESP32-S3: pads, USB end and the pads in a dashed ring not verified."]})
+
+    def test_a_part_names_its_id_only_when_its_record_has_no_name(self):
+        # the review of PR #1379: the note follows the caption's rule, so a record id shows only where no name is
+        class Geometry:
+            def part(self, part_type):
+                return {"notes": [{"words": "pads"}, {"words": "header side"}]}
+
+        parts = [drawing.PlacedPart(part_id, "spark-module-x", {}, 0, 0, 0, {}, record) for part_id, record in (
+            ("Named", {"id": "named-module", "name": "Maker Module, rev 2"}), ("Nameless", {"id": "nameless-module"}),
+            ("NoRecord", None))]
+        layout = drawing.BreadboardLayout(None, parts, [], Geometry())
+        pictures = {part.id: part_pictures.Picture("", (0, 0, 1, 1), "") for part in parts}
+        self.assertEqual(part_captions.PartNotes.lines(layout, pictures), [
+            "Maker Module: pads and header side not verified.", "nameless-module: pads and header side not verified.",
+            "NoRecord: pads and header side not verified."])
 
 
 def contrast(one, other):

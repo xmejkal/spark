@@ -227,7 +227,8 @@ class TheFallbackTest(unittest.TestCase):
         root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram(router=Walled()).text(layout))
         group = root.find("svg:g[@data-step='5']", NS)
         self.assertEqual((len(group.findall("svg:path", NS)), len(group.findall("svg:circle", NS))), (0, 2))
-        notes = [text.text for text in root.iter("{http://www.w3.org/2000/svg}text") if text.get("fill") == "#5d4037"]
+        # P953 PR 4b: a note line is found by its class, in the grid text's grey
+        notes = [text.text for text in root.iter("{http://www.w3.org/2000/svg}text") if text.get("class") == "note"]
         # P953 PR 3: the XIAO has no dashed wire now (its 7 was), so the note names only the walled wire
         self.assertEqual(notes, ["wire 5 finds no way around the parts and is not drawn"])
 

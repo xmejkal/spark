@@ -14,7 +14,7 @@
  {
   "file": "scripts/spark/breadboard/wiring_steps.py",
   "name": "each ground pad is its own point",
-  "find": "    return \"GND\" if re.fullmatch(r\"GND\\d*\", label) else label",
+  "find": "    return pad_word(label)",
   "replace": "    return label"
  },
  {
