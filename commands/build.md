@@ -84,6 +84,10 @@ when the record holds it (`active_level`). A part on many pins has one name per 
 the comment and "not verified" when nobody verified it (P389). An empty `parts`
 list without `board_only` still stops at the parts stage.
 
+When tsci says that a copper pour shorts a trace, the build measures the gap on the circuit's copper. A gap of at least
+the board's clearance is dropped, and the build stage's line names it with its gap, after `0 errors`: tell the person
+([P957](https://github.com/xmejkal/spark/issues/1365)). A real contact, or a short to a pad or a via, stops the build.
+
 When the board record lacks the level of its onboard LED or button, the build stays `ok` and says so: each kept line for
 `firmware/pins.py` has `missing fact: <sentence>. <fix>`, and with `--json` the entry has `missing_facts` (code
 `missing_fact`; the top-level `missing_facts` too). Only a build with `--keep` that writes `pins.py` says it. `pins.py` then has no `ONBOARD_LED_ON` or `ONBOARD_BUTTON_ON`, and you never guess one. Say in one
