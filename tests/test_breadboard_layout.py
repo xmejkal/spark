@@ -76,12 +76,12 @@ def _rounded(value):
 
 
 class TheJumperColorsTest(unittest.TestCase):
-    """P947: a jumper's color says what it carries: red for power, black for ground, grey when no record says, and each
+    """P947: a jumper's color says what it carries: red for power, black for ground, gray when no record says, and each
     signal the next color of its own list, in step order."""
 
-    def test_power_is_red_ground_black_and_a_role_not_known_grey(self):
+    def test_power_is_red_ground_black_and_a_role_not_known_gray(self):
         self.assertEqual(wiring_steps.JumperColors().of({3: "power", 4: "signal", 8: "ground", 9: "unknown"}),
-                         {3: "red", 4: "green", 8: "black", 9: "grey"})
+                         {3: "red", 4: "green", 8: "black", 9: "gray"})
 
     def test_signals_take_the_colors_in_their_own_order_and_wrap_after_the_last(self):
         colors = wiring_steps.JumperColors().of({number: "signal" for number in range(3, 10)} | {5: "ground"})
@@ -89,9 +89,9 @@ class TheJumperColorsTest(unittest.TestCase):
         wrapped = wiring_steps.JumperColors().of({number: "signal" for number in range(1, 9)})
         self.assertEqual((wrapped[7], wrapped[8]), ("green", "blue"))
 
-    def test_no_signal_is_red_black_or_grey_and_neighbouring_signals_differ(self):
+    def test_no_signal_is_red_black_or_gray_and_neighbouring_signals_differ(self):
         colors = wiring_steps.JumperColors().of({number: "signal" for number in range(1, 20)})
-        self.assertFalse({"red", "black", "grey"} & set(colors.values()))
+        self.assertFalse({"red", "black", "gray"} & set(colors.values()))
         self.assertTrue(all(colors[n] != colors[n + 1] for n in range(1, 19)))
 
 
@@ -120,7 +120,7 @@ class TheSheetNamesTheWireColorsTest(unittest.TestCase):
         planned = sheet._plan_once(read)
         jumpers = [jumper._replace(role="unknown") if jumper.step == 4 else jumper for jumper in planned.layout.jumpers]
         planned = planned._replace(layout=planned.layout._replace(jumpers=jumpers))
-        self.assertIn("3 red, 4 grey (role not known), 5 green,",
+        self.assertIn("3 red, 4 gray (role not known), 5 green,",
                       sheet.sheet(EPAPER / "requirements.json", read=read, planned=planned))
 
 
@@ -214,7 +214,7 @@ class TheXiaoLayoutTest(unittest.TestCase):
         for row, held in rows.items():
             self.assertEqual(len(held), 1, (row, held))
 
-    def test_each_jumper_step_has_one_wire_in_its_step_s_color(self):
+    def test_each_jumper_step_has_one_wire_in_the_color_of_its_role(self):
         seated = list(self.read.steps.anchored())
         jumper_steps = [number for number, one in enumerate(seated, 1)
                         if one.act == wiring_steps.JOIN and one.subject.kind != wiring_steps.RESISTOR]

@@ -389,6 +389,16 @@ class TheJumperLanesTest(unittest.TestCase):
                                                  drawing.Jumper(hole(5, 150), hole(7, 50), 2)], 10)
         self.assertEqual(lines, {1: 55, 2: 55})
 
+    def test_two_legs_never_share_a_column(self):
+        # The review: jumpers 1a to 5j and 1j to 8a both have a leg in column 1; the second runs past the first one's end.
+        def hole(column, y):
+            return drawing.Hole("%d" % column, 10 * column, y, "%d" % column, column)
+        jumpers = [drawing.Jumper(hole(1, 50), hole(5, 150), 1), drawing.Jumper(hole(1, 150), hole(8, 50), 2)]
+        lines = svg_diagram.JumperLanes().lines(jumpers, 10)
+        legs = [sorted((50, lines[1])), sorted((150, lines[2]))]
+        self.assertLessEqual(min(legs[0][1], legs[1][1]) - max(legs[0][0], legs[1][0]), 0, lines)
+        self.assertEqual(lines, {1: 145, 2: 155})
+
     def test_spans_less_than_a_pitch_apart_take_two_lines(self):
         def hole(column, y):
             return drawing.Hole("%d" % column, 10 * column, y, "%d" % column, column)

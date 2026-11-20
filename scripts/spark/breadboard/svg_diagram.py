@@ -52,22 +52,25 @@ class JumperLanes:
     a pitch off its far end's row, on the side of its first end (below the row when both ends share it), and further
     lines on that side are one pitch apart, so a run never lies on a row of holes. Jumpers take their lines shortest
     span first, then by step, so runs nest; each takes the first line where no run comes within one pitch of its
-    span, a gap of one pitch included. When a leg on that side would pass over another jumper's end in its column,
-    the other side is tried first.
+    span, a gap of one pitch included. When a leg would pass over another jumper's end in its column, or run along a
+    leg already drawn there, the other side is tried first, then lines further out.
     """
 
     def lines(self, jumpers, pitch):
         """{step: the y of its run across}."""
         ends = [(hole.x, hole.y, jumper.step) for jumper in jumpers for hole in (jumper.one, jumper.other)]
-        taken, lines = [], {}
+        rows = [y for _, y, _ in ends]
+        depths = len(jumpers) + int((max(rows) - min(rows)) / pitch) + 2 if rows else 0
+        taken, legs, lines = [], [], {}
         for jumper in sorted(jumpers, key=lambda one: (abs(one.one.x - one.other.x), one.step)):
             low, high = sorted((jumper.one.x, jumper.other.x))
-            free = [y for y in self._candidates(jumper, pitch, len(jumpers))
+            free = [y for y in self._candidates(jumper, pitch, depths)
                     if not any(abs(y - y2) < pitch / 4 and low <= high2 + pitch and low2 <= high + pitch
                                for y2, low2, high2 in taken)]
-            clear = [y for y in free if not self._crosses_an_end(jumper, y, ends)]
+            clear = [y for y in free if not self._crosses_an_end(jumper, y, ends) and not self._runs_along(jumper, y, legs)]
             lines[jumper.step] = (clear or free)[0]
             taken.append((lines[jumper.step], low, high))
+            legs += [(hole.x, *sorted((hole.y, lines[jumper.step]))) for hole in (jumper.one, jumper.other)]
         return lines
 
     @staticmethod
@@ -77,6 +80,12 @@ class JumperLanes:
         one, other = jumper.one, jumper.other
         side = -1 if other.y > one.y else 1
         return [other.y + toward * (pitch / 2 + depth * pitch) for toward in (side, -side) for depth in range(count + 1)]
+
+    @staticmethod
+    def _runs_along(jumper, y, legs):
+        """True when a leg of the jumper, from one of its holes to the run at `y`, overlaps a leg drawn in its column."""
+        return any(abs(x - hole.x) < 0.5 and min(high, max(hole.y, y)) - max(low, min(hole.y, y)) > 0
+                   for hole in (jumper.one, jumper.other) for x, low, high in legs)
 
     @staticmethod
     def _crosses_an_end(jumper, y, ends):

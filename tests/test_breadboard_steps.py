@@ -12,7 +12,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from spark.breadboard.wiring_steps import (BOARD, PART, RESISTOR, BreadboardSteps, End, MermaidDiagram, NumberedList,  # noqa: E402
-                              StepPoint, role_of, wiring)
+                              JumperColors, StepPoint, role_of, wiring)
 from spark.breadboard import drawing, sheet  # noqa: E402
 from spark.design import board_components  # noqa: E402
 
@@ -240,6 +240,17 @@ class ThePointRoleTest(unittest.TestCase):
         _, steps = wiring(board, read.circuit, read.built.parts, read.resistors, sheet.BOARD_COMPONENT)
         ends = {end.name: end for point in steps.points for end in point.ends}
         self.assertEqual((ends["board 3V3"].power_rail, ends["board MO"].power_rail), (None, None))
+
+    def test_an_amplifier_s_speaker_outputs_are_signals_and_its_supply_is_power(self):
+        # The review: the speaker rail is made on the board by the amplifier's outputs, a driven pair, never a supply.
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            read = sheet._read_build(EPAPER.parent / "amplifier" / "requirements.json")
+        roles = {one.subject.name: one.role for one in read.steps.anchored() if one.act == "join"}
+        self.assertEqual((roles["SpeakerTerminal SPK+"], roles["SpeakerTerminal SPK-"]), ("signal", "signal"))
+        self.assertEqual((roles["board 3V3"], roles["board GND"]), ("power", "ground"))
+        numbers = {one.subject.name: number for number, one in enumerate(read.steps.anchored(), 1) if one.act == "join"}
+        colors = JumperColors().of({number: roles[name] for name, number in numbers.items()})
+        self.assertFalse({"red", "black"} & {colors[numbers["SpeakerTerminal SPK+"]], colors[numbers["SpeakerTerminal SPK-"]]})
 
     def test_the_role_reaches_each_step_and_each_drawn_jumper(self):
         read, _ = epaper_ends()

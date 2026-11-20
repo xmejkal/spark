@@ -195,11 +195,11 @@ These write:
 - `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for what
   you have, and refuses a failed or stale build. Its Wiring section has numbered steps (one connection each), a mermaid
   diagram whose edges are those steps, and the points as a check list. Beside it, each build writes `breadboard.json`
-  (P267): the same steps on a Wokwi half breadboard, each jumper colored by role, as a Wokwi diagram, and
-  `breadboard.svg` (P268), the picture. A board in `data/wokwi-geometry.json` is drawn on that half breadboard (the XIAO
-  ESP32-C6). A board with a complete record is drawn from the record on a 63-column breadboard (P412, the FireBeetle 2
-  ESP32-S3). It gets `breadboard.svg` alone, because Wokwi has no part with its pins. An old drawing that is not written
-  again is removed. [The breadboard codes](breadboard-codes.md) say why a drawing was not written, and the next step.
+  (P267): the same steps on a Wokwi half breadboard, each jumper colored by role, and `breadboard.svg` (P268), the
+  picture. A board in `data/wokwi-geometry.json` is drawn on that half breadboard (the XIAO ESP32-C6). A board with a
+  complete record is drawn on a 63-column breadboard (P412, the FireBeetle 2 ESP32-S3), as `breadboard.svg` alone. When
+  a drawing is not written, the sheet and stderr say `breadboard.json not written:` and why, and an old file is
+  removed. [The breadboard codes](breadboard-codes.md) give each `kept` entry's code and its next step.
 
   The sheet names the pad that every GND means. Its picture is not verified: the row side, the USB end and the pads rest
   on the record and on the footprint's convention, and the sheet says to hold the board to the picture.

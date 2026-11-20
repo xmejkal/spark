@@ -249,11 +249,11 @@ def _quote(text):
 
 class JumperColors:
     """Strategy: one color per jumper by what it carries (P947), so its wire in a drawing and its line on the sheet
-    match: red for power, black for ground, grey when no record says, and each signal jumper the next of SIGNALS in
+    match: red for power, black for ground, gray when no record says, and each signal jumper the next of SIGNALS in
     step order, so no two signals share a color while colors are left. SIGNALS wraps after its last; the number tells
     two apart."""
 
-    BY_ROLE = {POWER: "red", GROUND: "black", UNKNOWN: "grey"}
+    BY_ROLE = {POWER: "red", GROUND: "black", UNKNOWN: "gray"}
     SIGNALS = ("green", "blue", "purple", "orange", "magenta", "cyan")
 
     def of(self, roles):
@@ -338,14 +338,16 @@ def board_rail(board, port, pad):
     return rail if isinstance(rail, str) and rail else None
 
 
-def part_rail(record, pin):
+def part_rail(record, pin, made=frozenset()):
     """The rail of a part's pin, from its record's power list (P947): the rail of the entry for the pin, "" when the
-    list has none for it, and None when the record holds no power list (missing, empty or not a list) or no rail there."""
+    list has none for it, and None when the record holds no power list (missing, empty or not a list) or no rail there.
+    A side of a driven pair (a `polarity`) on a net made on this board (`made`, `power_rails.rails_made_on_board`) is
+    "": an amplifier's speaker outputs carry a signal, never a supply. A regulator's output has no polarity and stays."""
     power = record.get("power")
     if not isinstance(power, list) or not power:
         return None
     entry = next((one for one in power if isinstance(one, dict) and one.get("pin") == pin), None)
-    if entry is None:
+    if entry is None or (entry.get("polarity") and power_rails.net_for(entry) in made):
         return ""
     rail = entry.get("rail")
     return rail if isinstance(rail, str) and rail else None
@@ -361,6 +363,7 @@ def wiring(board, circuit, design_parts, resistors, board_component):
     `board_component` is the circuit's name for the board (`sheet.BOARD_COMPONENT`)."""
     records = {board_components.component_name(part): part for part in design_parts}
     shorts = board_components.short_names(design_parts)
+    made = power_rails.rails_made_on_board(design_parts)
 
     def end(component, port):
         """One end of a connection, as a person finds it on the bench. Every end of a part or a resistor reads
@@ -381,7 +384,7 @@ def wiring(board, circuit, design_parts, resistors, board_component):
         printed = part_facts.printed_names(record).get(port.get("name"), port.get("name"))
         short = "%s %s" % (shorts.get(component["name"], component["name"]), printed)
         return End(PART, component["name"], short, short + (" (%s)" % leg if leg else ""), port.get("name"),
-                   power_rail=part_rail(record, port.get("name")))
+                   power_rail=part_rail(record, port.get("name"), made))
 
     said = [one for one in (_said(point, end, design_parts) for point in points(circuit)) if one]
     said.sort(key=lambda one: (not one[0], _natural(one[1])))

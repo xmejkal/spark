@@ -48,7 +48,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep bu
             {"name": "simulation", "status": "ok", "detail": "7 wire(s) in the diagram\n ... onboard GPIOs: not checked: ..."}],
  "kept": [{"file": "build/breadboard.md", "did": "wrote", "why": "the parts and how to wire them on a breadboard"},
           {"file": "build/breadboard.json", "did": "not written", "code": "no_wokwi_part", "subject": null,
-           "expected": true, "why": "Wokwi has no part with this board's pins"},
+           "expected": true, "why": "Wokwi has no part for the board"},
           {"file": "build/firmware/pins.py", "did": "wrote", "why": "the pins the firmware imports"},
           ...]}
 ```
