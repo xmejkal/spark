@@ -9,7 +9,7 @@ import collections
 
 class RailSeating:
     """
-    Strategy: the rail each signed mark takes, built for one plan. A point's side is the side of the board (t or b, the
+    The rail each signed mark takes, built for one plan. A point's side is the side of the board (t or b, the
     last letter of a row's group) that holds most of its ends, on a tie its first end's side. The first mark of a sign
     takes that side's rail of the sign (+ is a "p" rail, - an "n" rail), a second the other side's, and a third gets
     none. No bridge joins the two sides' rails: the steps would have to say it.
