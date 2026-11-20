@@ -80,20 +80,44 @@
  {
   "file": "tests/test_json_contracts.py",
   "name": "the scan takes a name an except of a SparkError binds as a refusal with no fix",
-  "find": "return {name for name, classes in types.items() if not classes & spark_errors}",
+  "find": "return {name for name, classes in types.items() if classes <= fixless}",
   "replace": "return set(types)"
  },
  {
   "file": "tests/test_json_contracts.py",
   "name": "the scan takes a caught fix in any file, not the site that CAUGHT_FIXES names",
-  "find": "else (file, ast.unparse(fix)) in CAUGHT_FIXES",
-  "replace": "else ast.unparse(fix) in {given for _, given in CAUGHT_FIXES}"
+  "find": "else site + (ast.unparse(fix),) in CAUGHT_FIXES",
+  "replace": "else ast.unparse(fix) in {entry[2] for entry in CAUGHT_FIXES}"
  },
  {
   "file": "tests/test_json_contracts.py",
-  "name": "the scan takes an item's forward in any file",
-  "find": "return (file in ITEM_FINDINGS and len(got) == 2",
-  "replace": "return (len(got) == 2"
+  "name": "the scan takes a caught fix in any function of the file CAUGHT_FIXES names",
+  "find": "else site + (ast.unparse(fix),) in CAUGHT_FIXES",
+  "replace": "else (site[0], ast.unparse(fix)) in {(entry[0], entry[2]) for entry in CAUGHT_FIXES}"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes an Exception's code with no fix as a refusal's",
+  "find": "if classes <= fixless}",
+  "replace": "if classes <= fixless | {\"Exception\"}}"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the area scan reads only the top folder, so research's calls go unread",
+  "find": "sorted(root.rglob(\"*.py\"))",
+  "replace": "sorted(root.glob(\"*.py\"))"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "a second BAD_ARGUMENT in an area's table takes the core's meaning unnoticed",
+  "find": "codes.CODES.get(code) if name != code.upper() else None)",
+  "replace": "codes.CODES.get(code))"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes an item's other keys as its code and fix",
+  "find": " and [ast.unparse(one.args[0]) for one in got] == [\"'code'\", \"'fix'\"]",
+  "replace": ""
  },
  {
   "file": "tests/test_json_contracts.py",

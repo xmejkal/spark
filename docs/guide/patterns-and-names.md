@@ -64,10 +64,10 @@ through `outside.run` (P458), the store the look reads through `LookAtBoard(reco
 files are the `--project` folder, read direct (a sandbox is another folder); a `Project` Adapter over them is the open option, [P788](https://github.com/xmejkal/spark/issues/1094). `build_outside_world(effects, reporter, find_tool)` gives the real `run` only when the effects hold `runs`,
 and a stub that raises `SparkError` with code `undeclared_effect` otherwise; an area's builder,
 `spark.bench.build_project_outside_world(project, effects, reporter)`, adds `ToolFinder(project).find` (P725). A test
-gives a `FakeOutsideWorld`. `SparkError` is the one error an Operation raises to answer instead of crashing: a
-`ValueMessageError` with `code`, `fix` and `status`. A `Code` (P853) holds a `meaning` and a `fix`, which `Finding.of`
-and `SparkError` take through `codes.fix_of`. A `%` fix is a template filled at its site; a fix that differs in kind is
-a variant, a Code of the same word. `test_json_contracts.py` fails on a code off its table, or a fix not its code's.
+gives a `FakeOutsideWorld`. `SparkError` is the one error an Operation raises instead of crashing: a `ValueMessageError`
+with `code`, `fix` and `status`. A `Code` (P853) holds its `meaning` and `fix`, which `Finding.of` and `SparkError` take
+with `codes.fix_of`. A `%` fix is a template filled at its site; a fix that differs in kind is a variant, a Code of its
+parent's word (or a core code's). `test_json_contracts.py` fails on a code off its table or a fix not its code's.
 
 `spark.core.cli` holds the frontends. `run_operation(operation, values, outside, build_outside, options)` runs for any frontend (P605: `options` is a `RunOptions` of `privacy`, `trace` and `clock`. It masks the result with the `Privacy` step, then calls `trace` once, and a trace that raises adds one diagnostics line), puts the lines of `add_diagnostics` first, before it masks, and turns a
 `SparkError` into one Finding of its status, and any other exception into one unchecked Finding with code `crash`: the

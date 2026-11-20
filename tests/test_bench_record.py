@@ -306,6 +306,13 @@ class RecordTest(RecordCase):
         self.assertEqual(self.ran, [])
         self.no_record()
 
+    def test_a_name_that_is_not_registered_carries_the_fix_that_registers_it(self):
+        # P935 PR 2: the fix moved onto records_codes.NOT_REGISTERED, pinned as the person reads it
+        self.register()
+        _, said = self.envelope("record", "pixel-game")
+        self.assertEqual(said["unchecked"][0]["fix"], "run bench.py register pixel-game --origin <origin> --tool <tool> from spark's code "
+                                                      "once, then bench.py record pixel-game again")
+
     def test_no_board_two_boards_and_an_unlisted_port_write_nothing(self):
         self.register()
         for devs, argv, code in (("", [], "no_port"), (devs_of(S3, C6), [], "two_boards"),
@@ -388,6 +395,11 @@ class TheLauncherTest(StoreCase):
             self.assertEqual([item["code"] for item in said["unchecked"]], ["launcher_stale"])
             self.assertIn("bench.py register", said["unchecked"][0]["fix"])
             self.assertEqual((said["problems"], said["next"], said["truncated"]), ([], [], None))
+
+    def test_the_stale_line_carries_the_fix_that_writes_the_launcher_again(self):
+        # P935 PR 2: the fix moved onto records_codes.LAUNCHER_STALE, pinned as the person reads it
+        self.assertEqual(launcher.stale_line()["unchecked"][0]["fix"], "run bench.py register <name> --origin <origin> --tool <tool> "
+                                                                       "again from a spark checkout that stays: it writes the launcher again")
 
     def test_the_launcher_is_private_and_returns_the_exit_code(self):
         path = launcher.write_launcher()
