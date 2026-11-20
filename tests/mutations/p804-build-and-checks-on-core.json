@@ -50,8 +50,8 @@
  {
   "file": "scripts/spark/build/build_board.py",
   "name": "P804: the kept entries' lines never reach stderr",
-  "find": "diagnostics=list(built.diagnostics) + [\"  %s\" % entry[\"line\"] for entry in kept or []]",
-  "replace": "diagnostics=list(built.diagnostics)"
+  "find": "diagnostics=[\"  %s\" % entry[\"line\"] for entry in kept or []]",
+  "replace": "diagnostics=[]"
  },
  {
   "file": "scripts/spark/checks/check.py",
