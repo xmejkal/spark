@@ -165,13 +165,14 @@ class RecordShapeSource(ShapeSource):
             raise self._disagrees("physical.header.%s" % ("pitch_mm" if along else "row_spacing_mm"), "two pads sit at one place")
         doubtful = physical["header"].get("doubtful_pads")
         if not isinstance(doubtful, list):
-            raise NotDrawnError("the board file does not say which pads are doubtful: physical.header.doubtful_pads",
-                           drawing.NO_DOUBTFUL_PAD_FACT)
+            raise NotDrawnError("the board file does not say which pads are doubtful: physical.header.doubtful_pads "
+                                "(write [] when none is doubtful, after checking)", drawing.NO_DOUBTFUL_PAD_FACT)
+        # GND is the first ground pad of power_pads that is not doubtful: every ground pad the record names is one net (P955).
         grounds = [name for name, pad in (board.get("power_pads") or {}).items()
                    if isinstance(pad, dict) and pad.get("rail") == "ground" and name not in doubtful]
-        if len(grounds) != 1 or grounds[0] not in pins:
-            raise NotDrawnError("the board's ground pads, less the doubtful ones, are not exactly one: %s" % (", ".join(grounds) or "none"),
-                           drawing.GROUND_NOT_ONE, ", ".join(grounds) or None)
+        if not grounds or any(name not in pins for name in grounds):
+            raise NotDrawnError("no ground pad is left once the doubtful ones are out, or a ground pad is no pad of the header: %s"
+                                % (", ".join(grounds) or "none"), drawing.GROUND_NOT_ONE, ", ".join(grounds) or None)
         return PartShape((width, height), pins, grounds[0], self._with_row_side(self._groups(len(pins), doubtful), physical))
 
     def _with_row_side(self, groups, physical):
@@ -218,7 +219,7 @@ class RecordShapeSource(ShapeSource):
         return project_to_px(self.find_shape(board))
 
     def find_pin_names(self, board):
-        """Every pad but the doubtful ones, and GND for the one ground pad. A step to a doubtful pad finds no pin and is refused."""
+        """Every pad but the doubtful ones, and GND for the first ground pad of power_pads that is not doubtful. A step to a doubtful pad finds no pin and is refused."""
         shape = self.find_shape(board)
         doubtful = shape.groups.get("doubtful_pads", {}).get("value") or []
         return dict({label: label for label in shape.pins if label not in doubtful}, GND=shape.ground)

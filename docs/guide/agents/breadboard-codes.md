@@ -7,8 +7,8 @@ Part of [the scripts](scripts.md). When `breadboard.py` does not write a drawing
 | --- | --- | --- |
 | `no_header_fact` | the field the record lacks | research that field of the board's or the module's record (`physical.header`, `width_mm`, `body_mm`, `header_order`). Never guess it |
 | `header_disagrees` | the field that does not fit | read that field of the record against its source and fix the record |
-| `no_doubtful_pad_fact` | none | research `physical.header.doubtful_pads` of the board file. Never guess it. A project file made before P412 lacks it |
-| `ground_not_one` | the ground pads left | settle with a meter which ground pads have a net, then fix `doubtful_pads` |
+| `no_doubtful_pad_fact` | none | research `physical.header.doubtful_pads` of the board file: the pads whose net is in doubt. Write `[]` when none is doubtful, after checking. A `null` or an absent key is refused. Never guess it |
+| `ground_not_one` | the ground pads left | no ground pad is left once the doubtful ones are out, or a ground pad of `power_pads` is no pad of the header. Fix `power_pads` or `doubtful_pads` from the board's schematic. With several good ground pads the drawing wires `GND` to the first one in `power_pads` |
 | `duplicate_pad_label` | the label | fix `header_order` of the record |
 | `no_hole_left` | the part or the end | the part does not fit with a free hole beside each pin, or a jumper finds no free row. A module's body covers the holes under it too. Use a longer breadboard or another part |
 | `no_drawing_fact` | the part | the record has no Wokwi part and no `physical` block. The entry's `record` names it and `fix` says `research.py --part <id> --project .`, which asks for `physical.header`. Never guess it |

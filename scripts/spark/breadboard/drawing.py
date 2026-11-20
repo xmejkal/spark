@@ -52,7 +52,8 @@ CODES = {
     HEADER_DISAGREES: ("the board's or the module's record disagrees with itself, a value of the wrong kind or a pad order "
                        "that does not fit the pin counts"),
     NO_DOUBTFUL_PAD_FACT: "the board's record does not say which pads are doubtful (physical.header.doubtful_pads), so no ground is picked",
-    GROUND_NOT_ONE: "the board's ground pads, less the doubtful ones, are not exactly one; the subject names those left",
+    GROUND_NOT_ONE: ("no ground pad is left once the doubtful ones are out, or a ground pad is no pad of the header; "
+                     "the subject names the ground pads left"),
     DUPLICATE_PAD_LABEL: "two pads of the board's record have one label; the subject is the label",
     NO_HOLE_LEFT: ("the breadboard has no place where a part fits with a free hole beside each of its pins, or no "
                    "free row for a jumper; the subject is the part or the end"),
