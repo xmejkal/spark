@@ -320,20 +320,21 @@ class TheRecordBoardLayoutTest(unittest.TestCase):
         self.assertEqual(again._replace(geometry=None), self.layout._replace(geometry=None))
 
     def test_one_hole_fewer_refuses_the_board(self):
-        # a and j are taken everywhere but columns 46 to 63, which the board fills exactly; take one more a or j
-        # hole in the middle of them and the pin there has no free hole left
+        # a and j are taken everywhere but columns 44 to 61, which the board fills exactly; take one more a or j
+        # hole in the middle of them and the pin there has no free hole left. (P953's review: a body may not reach past
+        # the board's last column, so the board's USB end, two columns past its last pin, ends in column 63.)
         geometry, catalog = record_inputs(self.read)
         placement = drawing.FirstFitPartPlacement(geometry)
 
         def place(also_taken):
             ledger = HoleLedger(geometry.surface)
             for hole in geometry.surface.terminal:
-                if hole.name.split(".")[1] in "aj" and (not 46 <= hole.column <= 63 or hole.name in also_taken):
+                if hole.name.split(".")[1] in "aj" and (not 44 <= hole.column <= 61 or hole.name in also_taken):
                     ledger.claim(hole, "taken")
             return placement.place("board", catalog["board"], ledger)
 
-        self.assertEqual(min(h.column for h in place(()).holes.values()), 46)
-        for taken in ("55t.a", "55b.j"):
+        self.assertEqual(min(h.column for h in place(()).holes.values()), 44)
+        for taken in ("53t.a", "53b.j"):
             with self.subTest(taken=taken), self.assertRaises(NotDrawnError) as refused:
                 place((taken,))
             self.assertEqual((refused.exception.code, refused.exception.subject), ("no_hole_left", "board"))
@@ -552,6 +553,37 @@ class TheSpaceBetweenPartsTest(unittest.TestCase):
             spaced = sheet.sheet(RECORD_BOARD / "requirements.json", read=read, planned=sheet._plan_once(read))
         self.assertEqual(crowded.count("The parts are closer than 4 columns because the breadboard is full."), 1)
         self.assertNotIn("closer than", spaced)
+
+    def test_a_body_that_would_reach_past_the_board_s_last_column_is_named_crowded_or_refused(self):
+        # the review (refuter): only the body's left side was checked, so on a shorter board the e-paper's body lay past
+        # the board's right end, and nothing said so. Its spaced place needs 63 columns: on 60 it goes in by the old
+        # rule, named crowded and on the board; on 58 no place is left and the plan refuses it.
+        full = json.loads((ROOT / "data" / "breadboards.json").read_text())["full"]
+        read = self._read()
+        geometry, catalog = sheet._drawing_inputs(read)
+        for columns in (60, 58):
+            surface = drawing.Surface(dict(full, columns=columns))
+            planner = drawing.BreadboardPlanner(geometry.with_surface(surface), catalog)
+            with self.subTest(columns=columns):
+                if columns == 58:
+                    with self.assertRaises(NotDrawnError) as refused:
+                        planner.plan(read.steps)
+                    self.assertEqual((refused.exception.code, refused.exception.subject),
+                                     ("no_hole_left", "Epaper2in9BwrMhEtLive"))
+                    continue
+                layout = planner.plan(read.steps)
+                epaper = next(part for part in layout.parts if part.id == "Epaper2in9BwrMhEtLive")
+                box = spacing.BodyBox.of(epaper, layout.geometry.part(epaper.type))
+                self.assertEqual(layout.crowded, ("Epaper2in9BwrMhEtLive",))
+                self.assertLessEqual(box.right, max(hole.x for hole in surface.terminal) + surface.pitch / 2)
+
+    def test_a_free_row_for_a_jumper_lies_right_of_the_space_or_by_the_old_rule_when_none_is_left(self):
+        geometry = GEOMETRY.with_surface(drawing.Surface.load_full())
+        room = spacing.BodySpacing(geometry)
+        room.after, room.close = 50, 40
+        self.assertEqual(room.free_after(HoleLedger(geometry.surface)), 50)
+        room.after = 63  # no column lies right of the last one
+        self.assertEqual(room.free_after(HoleLedger(geometry.surface)), 40)
 
     def _read(self):
         with in_store():

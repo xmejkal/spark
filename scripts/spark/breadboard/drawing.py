@@ -264,6 +264,7 @@ class FirstFitPartPlacement(PartPlacement):
             raise NotDrawnError("data/wokwi-geometry.json has no pin %s on %s" % (wanted[0], drawn.type), NO_PIN_POSITION,
                            drawn.type)
         surface = self.geometry.surface
+        right_end = max(hole.x for hole in surface.terminal) + surface.pitch / 2  # a body may hang below, not past the end
         for degrees in self.TURNS_DEGREES:
             turned = rotate(part_px["pins"], part_px["center"], degrees)
             first = pinned[0] if pinned else next(iter(turned))
@@ -272,7 +273,8 @@ class FirstFitPartPlacement(PartPlacement):
                           and (row is None or hole.name.endswith("." + row))]
             for start in candidates:
                 left, top = start.x - turned[first][0], start.y - turned[first][1]
-                if surface.body_gap_columns and min(BodyBox.at(part_px, degrees, left, top).columns(surface)) <= after:
+                box = BodyBox.at(part_px, degrees, left, top)
+                if surface.body_gap_columns and (min(box.columns(surface)) <= after or box.right > right_end):
                     continue
                 holes = self._fit(turned, left, top, ledger, after, pinned)
                 if holes is None:
