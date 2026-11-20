@@ -63,7 +63,7 @@ holes and the silkscreen words that name no pad. Boards only in this version.
    `bottom`, `left` or `right`) where the USB socket is. Give two anchors or more at pads that are half the board apart.
    An anchor names its pad by the record's label (`RX`, not the silkscreen's `17`). A colour is `#rrggbb` in lower case,
    read off the picture. The kinds are `chip` (with `leads`: `four`, `top-bottom`, `left-right` or `none`), `usb`,
-   `button`, `led`, `jst`, `fpc` and `passives` (with `count`, 2 by default), `connector`, `crystal`, `inductor`,
+   `button`, `led`, `jst`, `fpc` and `passives` (with `count`, 2 by default, at most 64), `connector`, `crystal`, `inductor`,
    `hole` and `label` (with `text`, at most 24 characters). The file's order is the drawing's order, labels last.
    Leave out a silkscreen word that is a pad's label: spark draws those.
 3. `parts.py --features-set FILE --part <board> --project . --dry-run`, then without `--dry-run`. Spark scales each
@@ -83,7 +83,7 @@ pad. Look at the drawing next to the maker's picture, and let the person judge i
 | --- | --- |
 | `feature_outside` | a box lies more than 0.5 mm past the outline (a box up to 0.5 mm past is pulled back inside); a `usb` box may hang up to 2 mm past the USB edge, and is drawn there |
 | `feature_over_pad` | a box covers part of a pad's circle (`physical.header.pad_mm`, else 1.5 mm across) |
-| `feature_off_drawing` | an anchor lies more than 0.5 mm from its pad, or a `hole` more than 0.5 mm from the nearest place that `physical.mounting_holes` gives |
+| `feature_off_drawing` | an anchor lies more than 0.5 mm from its pad; or a `hole` lies more than 0.5 mm from the nearest place that `physical.mounting_holes` gives, its width and height differ by more than 0.5 mm, or its width differs from `mounting_holes.diameter_mm` by more than 0.5 mm |
 | `feature_no_anchor` | fewer than two anchors at pads half the board apart, or an anchor that names no pad |
-| `feature_pad_label` | a label's text is a pad's label, which spark draws, or holds a web address |
+| `feature_pad_label` | a label's text is a pad's label, which spark draws, or holds a web address (`http` or `www.`) |
 | `feature_unreadable` | the features file is no JSON, lacks a field, or names a picture that the record's `documents` do not hold |

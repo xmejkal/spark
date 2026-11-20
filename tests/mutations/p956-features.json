@@ -6,7 +6,7 @@
  {"file": "scripts/spark/breadboard/feature_check.py", "name": "P956: a box exactly 0.5 mm past the outline is refused", "find": "        if past > 0:", "replace": "        if past >= 0:"},
  {"file": "scripts/spark/breadboard/feature_check.py", "name": "P956: the anchor check is skipped", "find": "        return self.anchor_problems(measured.anchors) + self.drawn_problems(measured.features)", "replace": "        return self.drawn_problems(measured.features)"},
  {"file": "scripts/spark/breadboard/feature_check.py", "name": "P956: the over-pad check uses the diameter", "find": "< self.pad_radius:", "replace": "< self.pad_radius * 2:"},
- {"file": "scripts/spark/breadboard/feature_check.py", "name": "P956: the pad-label rule for a label's text is dropped", "find": "(text.strip() in self.pins or \"http\" in text.lower())", "replace": "\"http\" in text.lower()"},
+ {"file": "scripts/spark/breadboard/feature_check.py", "name": "P956: the pad-label rule for a label's text is dropped", "find": "(text.strip() in self.pins or \"http\" in text.lower()", "replace": "(\"http\" in text.lower()"},
  {"file": "scripts/spark/breadboard/feature_check.py", "name": "P956: any feature may hang 2 mm past the USB edge", "find": "(USB_OVERHANG_MM if feature[\"kind\"] == \"usb\" else EDGE_TOLERANCE_MM)", "replace": "USB_OVERHANG_MM"},
  {"file": "scripts/spark/breadboard/feature_check.py", "name": "P956: a hole is not checked against the mounting holes", "find": "        if feature[\"kind\"] == \"hole\" and self.holes:", "replace": "        if False:"},
  {"file": "scripts/spark/breadboard/picture_makers.py", "name": "P956: BUILD_MAKERS loses features", "find": "BUILD_MAKERS = (\"stored\", \"features\")", "replace": "BUILD_MAKERS = (\"stored\",)"},
@@ -17,5 +17,9 @@
  {"file": "scripts/spark/records/record_kind.py", "name": "P956: a kind outside the list passes", "find": "    if kind not in FEATURE_KINDS:", "replace": "    if False:"},
  {"file": "scripts/spark/records/board_rules.py", "name": "P956: feature_problems is not in the board's rules", "find": "board_document_problems,\n         board_feature_problems)", "replace": "board_document_problems)"},
  {"file": "scripts/spark/sourcing/set_features.py", "name": "P956: features-set looks for a part's record, not a board's", "find": "home, source = record_home.record_path(part_id, project, \"board\")", "replace": "home, source = record_home.record_path(part_id, project, \"part\")"},
- {"file": "scripts/spark/sourcing/set_features.py", "name": "P956: features-set writes the boxes it did not pull inside", "find": "features = [check.fitted(feature) for feature in measured.features]", "replace": "features = list(measured.features)"}
+ {"file": "scripts/spark/sourcing/set_features.py", "name": "P956: features-set writes the boxes it did not pull inside", "find": "features = [check.fitted(feature) for feature in measured.features]", "replace": "features = list(measured.features)"},
+ {"file": "scripts/spark/breadboard/feature_check.py", "name": "P956 review: a hole that is no circle passes", "find": "        if round(abs(w - h), 6) > DRAWING_TOLERANCE_MM:", "replace": "        if False:"},
+ {"file": "scripts/spark/breadboard/feature_check.py", "name": "P956 review: a hole off the record's diameter passes", "find": "        if self.hole_diameter is not None and round(abs(w - self.hole_diameter), 6) > DRAWING_TOLERANCE_MM:", "replace": "        if False:"},
+ {"file": "scripts/spark/breadboard/feature_check.py", "name": "P956 review: a label with www. passes", "find": "\n                                                                     or \"www.\" in text.lower()):", "replace": "):"},
+ {"file": "scripts/spark/records/record_kind.py", "name": "P956 review: a count has no upper limit", "find": "not 0 < count <= MAX_COUNT", "replace": "not 0 < count"}
 ]

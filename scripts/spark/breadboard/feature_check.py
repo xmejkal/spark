@@ -35,7 +35,10 @@ class FeatureCheck:
         header = physical.get("header") if isinstance(physical.get("header"), dict) else {}
         pad = header.get("pad_mm")
         self.pad_radius = (pad if isinstance(pad, (int, float)) and not isinstance(pad, bool) and pad > 0 else DEFAULT_PAD_MM) / 2
-        self.holes = self._hole_places(physical.get("mounting_holes"))
+        holes = physical.get("mounting_holes")
+        self.holes = self._hole_places(holes)
+        diameter = holes.get("diameter_mm") if isinstance(holes, dict) else None
+        self.hole_diameter = diameter if isinstance(diameter, (int, float)) and not isinstance(diameter, bool) and diameter > 0 else None
 
     def _hole_places(self, holes):
         """The centres of the mounting holes that the record's spacing gives, about the frame's centre; () with none."""
@@ -101,13 +104,27 @@ class FeatureCheck:
             if math.hypot(max(x - cx, 0, cx - x - w), max(y - cy, 0, cy - y - h)) < self.pad_radius:
                 found.append(FeatureProblem(codes.FEATURE_OVER_PAD, name, "%s covers part of the pad %s" % (name, pad)))
                 break
+        if feature["kind"] == "hole":
+            found += self._hole_size_problems(name, w, h)
         if feature["kind"] == "hole" and self.holes:
             off = min(math.hypot(x + w / 2 - hx, y + h / 2 - hy) for hx, hy in self.holes)
             if off > DRAWING_TOLERANCE_MM:
                 found.append(FeatureProblem(codes.FEATURE_OFF_DRAWING, name, "%s lies %.2f mm from the nearest mounting hole "
                                             "of physical.mounting_holes" % (name, off)))
         text = feature.get("text")
-        if feature["kind"] == "label" and isinstance(text, str) and (text.strip() in self.pins or "http" in text.lower()):
+        if feature["kind"] == "label" and isinstance(text, str) and (text.strip() in self.pins or "http" in text.lower()
+                                                                     or "www." in text.lower()):
             found.append(FeatureProblem(codes.FEATURE_PAD_LABEL, name, "%s says %r, which is a pad's label spark draws, or "
                                         "a web address" % (name, text)))
         return found
+
+    def _hole_size_problems(self, name, w, h):
+        """A hole is drawn as a disc of its width: its box is a square, and its size is the record's
+        `mounting_holes.diameter_mm` when the record states one, each within the drawing's tolerance (the review of
+        PR #1368). Differences are rounded to a micrometre, so a measurement in hundredths compares as written."""
+        if round(abs(w - h), 6) > DRAWING_TOLERANCE_MM:
+            return [FeatureProblem(codes.FEATURE_OFF_DRAWING, name, "%s is %g x %g mm, but a hole is round" % (name, w, h))]
+        if self.hole_diameter is not None and round(abs(w - self.hole_diameter), 6) > DRAWING_TOLERANCE_MM:
+            return [FeatureProblem(codes.FEATURE_OFF_DRAWING, name, "%s is %g mm across, but physical.mounting_holes.diameter_mm "
+                                   "says %g" % (name, w, self.hole_diameter))]
+        return []

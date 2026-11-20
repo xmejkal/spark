@@ -366,6 +366,8 @@ FEATURE_KIND_FIELDS = {"text": ("label",), "leads": ("chip",), "count": ("passiv
 CHIP_LEADS = ("four", "top-bottom", "left-right", "none")
 #: The longest text a label holds.
 LABEL_MAX_CHARACTERS = 24
+#: The most parts a `count` holds: a drawing of more is no picture (the review of PR #1368).
+MAX_COUNT = 64
 #: A colour as a feature and `physical.colour` hold it: #rrggbb in lower case.
 HEX_COLOUR = re.compile(r"#[0-9a-f]{6}")
 
@@ -441,8 +443,8 @@ def _one_feature_problems(feature, names):
     if "leads" in feature and feature["leads"] not in CHIP_LEADS:
         why.append("has leads %r, but they are one of %s" % (feature["leads"], ", ".join(CHIP_LEADS)))
     count = feature.get("count")
-    if "count" in feature and (type(count) is not int or count <= 0):
-        why.append("has count %r, but it is a whole number above 0" % (count,))
+    if "count" in feature and (type(count) is not int or not 0 < count <= MAX_COUNT):
+        why.append("has count %r, but it is a whole number from 1 to %d" % (count, MAX_COUNT))
     return why
 
 
