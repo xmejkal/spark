@@ -198,9 +198,8 @@ These write:
   (P267): the same steps on a Wokwi half breadboard, each jumper in its step's color, as a Wokwi diagram, and
   `breadboard.svg` (P268), the picture. A board in `data/wokwi-geometry.json` is drawn on that half breadboard (the XIAO
   ESP32-C6). A board with a complete record is drawn from the record on a 63-column breadboard (P412, the FireBeetle 2
-  ESP32-S3). It gets `breadboard.svg` alone, because Wokwi has no part with its pins. When a drawing is not written, the
-  sheet and stderr say `breadboard.json not written:` and why, and an old file is removed. The `code` of each `kept`
-  entry (why no drawing was written) and its next step are in [the breadboard codes](breadboard-codes.md).
+  ESP32-S3). It gets `breadboard.svg` alone, because Wokwi has no part with its pins. An old drawing that is not written
+  again is removed. [The breadboard codes](breadboard-codes.md) say why a drawing was not written, and the next step.
 
   The sheet names the pad that every GND means. Its picture is not verified: the row side, the USB end and the pads rest
   on the record and on the footprint's convention, and the sheet says to hold the board to the picture.
@@ -285,7 +284,8 @@ These write:
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
   - `--drawer-set`, `--needs-set`, `--needs-drop`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
-    also uses the network. `--fact-set` writes `legs` (leg by leg, each pin one of `pin_order`) and `host_requirements` (the list as a whole) too ([P741](https://github.com/xmejkal/spark/issues/1017)).
+    also uses the network. `--fact-set` writes `legs` (leg by leg, each pin one of `pin_order`) and `host_requirements` (the list as a whole) too ([P741](https://github.com/xmejkal/spark/issues/1017)),
+    and `short_name`, what the steps call the part ([P947](https://github.com/xmejkal/spark/issues/1351)).
   - **A bench result goes back with `--fact-set`** ([P374](https://github.com/xmejkal/spark/issues/479)), under the `write`
     key of the `--unverified` row. Write `verified: true` only for a result the person stated in this conversation, and
     put in `source` who measured it, when and how, in the person's own zone: `bench, 2026-10-29, meter on the owned

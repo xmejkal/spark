@@ -42,11 +42,13 @@ Link = namedtuple("Link", "target where path question")
 PROVENANCE_KEYS = ("facts", "body_mm", "pin_order_proof", "pin_roles", "physical", "physical_proof") + ("own_socket",)
 #: A source is a sentence ("bench, date, tool, who"), so these keys keep up to this many characters of a text, above the longest record text.
 PROVENANCE_MAX = 1000
-#: The keys the breadboard sheet reads as text (P741): `legs`, how to tell each leg apart, by a pin of `pin_order`, and
-#: `host_requirements`, the lines the host board must meet. `--fact-set` writes them: legs leg by leg, the lines as a whole (like tags).
-SHEET_KEYS = ("legs", "host_requirements")
+#: The keys the breadboard sheet reads as text (P741): `legs`, how to tell each leg apart, by a pin of `pin_order`,
+#: `host_requirements`, the lines the host board must meet, and `short_name`, what the steps call the part (P947).
+#: `--fact-set` writes them: legs leg by leg, the lines as a whole (like tags), the short name as a text.
+SHEET_KEYS = ("legs", "host_requirements", "short_name")
 LEGS_SHAPE = "legs is {pin of pin_order (%s): words that tell the leg apart}; %s is not"
 LINES_SHAPE = "host_requirements is a list of lines that are not empty; item %s is not"
+SHORT_NAME_SHAPE = "short_name is a short text that names the part on the bench"
 
 
 def scrub(key, value):
@@ -70,7 +72,7 @@ def list_provenance_key_problems(values):
 
 def list_sheet_key_problems(values, record):
     """Why the `SHEET_KEYS` in `values` cannot be written to `record` (P741): a leg's pin is not in the record's `pin_order` or its
-    text is empty, a leg key holds a control character, or a host requirement is not a text or is empty. An empty `legs` or an
+    text is empty, a leg key holds a control character, a host requirement or the short name is not a text or is empty. An empty `legs` or an
     empty list is the caller's "a write fills a fact" refusal, not this one."""
     problems, pins = [], record.get("pin_order") if isinstance(record.get("pin_order"), list) else []
     if "legs" in values:
@@ -82,6 +84,8 @@ def list_sheet_key_problems(values, record):
         lines = values["host_requirements"]
         bad = [index for index, line in enumerate(lines) if not _words(line)] if isinstance(lines, list) else ["the value"]
         problems += [LINES_SHAPE % item for item in bad]
+    if "short_name" in values and not _words(values["short_name"]):
+        problems.append(SHORT_NAME_SHAPE)
     return problems
 
 
