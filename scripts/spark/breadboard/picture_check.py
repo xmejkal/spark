@@ -34,6 +34,18 @@ def is_embedded_jpeg(value):
     return isinstance(value, str) and EMBEDDED_JPEG.fullmatch(value) is not None
 
 
+def repeated_names(attributes):
+    """True when two attribute names are one name to HTML: equal once lowercased, without a namespace. HTML keeps the
+    first of two, so a second one hides what the first does (the review of P946)."""
+    names = [name.rsplit("}", 1)[-1].lower() for name in attributes]
+    return len(set(names)) != len(names)
+
+
+def is_href(name):
+    """True for an attribute that HTML may read as a link: its lowercased name, without a namespace, ends in href."""
+    return name.rsplit("}", 1)[-1].lower().endswith("href")
+
+
 def jpeg_problem(href):
     """Why the JPEG of an embedded href is refused, or None: its bytes start a JPEG, and no APP1 segment (EXIF, which can
     say where a photo was taken) comes before its scan."""
@@ -126,10 +138,12 @@ class PictureCheck:
     def _attribute_problem(tag, attributes):
         """("link" | "jpeg" | "attribute", why) of the first attribute that breaks a rule, or None."""
         allowed = part_pictures.IMAGE_ATTRIBUTES if tag == "image" else part_pictures.PLAIN_ATTRIBUTES
+        if repeated_names(attributes):
+            return "attribute", "two attributes have one name once lowercased: HTML keeps the first"
         if tag == "image" and "href" not in attributes:
             return "link", "an image with no embedded JPEG"
         for name, value in attributes.items():
-            if name.endswith("href"):
+            if is_href(name):
                 if name != "href" or tag != "image" or not is_embedded_jpeg(value):
                     return "link", "%s=%s... is no JPEG embedded on an image" % (name, value[:30])
                 why = jpeg_problem(value)

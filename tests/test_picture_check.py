@@ -94,6 +94,18 @@ class EachRuleRefusesByElementTest(unittest.TestCase):
                 element = "svg/%s[0]" % re.match(r"<(\w+)", inner).group(1)
                 self.assertEqual(found(svg(inner)), [(code, element)])
 
+    def test_an_href_in_any_case_or_a_name_repeated_once_lowercased_is_refused(self):
+        # the review's refuter: HTML lowercases a name and keeps the first of two, so HREF="//..." loaded from the web
+        jpeg = "data:image/jpeg;base64," + JPEG
+        for inner, code in (('<image HREF="//example.com/x.jpg" href="%s"/>' % jpeg, "picture_attribute"),
+                            ('<image href="%s" HREF="//example.com/x.jpg"/>' % jpeg, "picture_attribute"),
+                            ('<image HREF="data:image/png;base64,%s"/>' % JPEG, "picture_link"),
+                            ('<image HREF="%s"/>' % jpeg, "picture_link"),
+                            ('<rect fill="red" FILL="blue"/>', "picture_attribute")):
+            with self.subTest(inner=inner[:50]):
+                element = "svg/%s[0]" % re.match(r"<(\w+)", inner).group(1)
+                self.assertEqual(found(svg(inner)), [(code, element)])
+
     def test_an_image_with_no_href_is_refused(self):
         self.assertEqual(found(svg('<image width="1" height="1"/>')), [("picture_link", "svg/image[0]")])
 
@@ -106,7 +118,7 @@ class EachRuleRefusesByElementTest(unittest.TestCase):
 
     def test_bytes_that_are_no_whole_jpeg_are_refused(self):
         raw = base64.b64decode(JPEG)
-        for payload in (b"GIF89a....", raw[:20], b"\xff\xd8"):
+        for payload in (b"GIF89a....", raw[:20], b"\xff\xd8", b"AB\xff\xda\x00\x02"):  # the last: a scan right after two bytes that are no SOI
             with self.subTest(payload=payload[:8]):
                 href = "data:image/jpeg;base64," + base64.b64encode(payload).decode()
                 self.assertEqual(found(svg(image(href))), [("picture_jpeg", "svg/image[0]")])

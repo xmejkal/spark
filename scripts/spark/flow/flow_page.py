@@ -149,8 +149,10 @@ class SvgInliner:
         """True when `element` is a plain shape whose every attribute is allowed and holds no unplain word; it drops the
         tag's namespace on the way."""
         element.tag = _local(element.tag)
+        if picture_check.repeated_names(element.attrib):  # HTML keeps the first of two names that are one lowercased
+            return False
         if element.tag == "image":  # P946: a kept photo, whose one href is a JPEG embedded as base64
-            others = {name: value for name, value in element.attrib.items() if name != "href"}
+            others = {name: value for name, value in element.attrib.items() if not picture_check.is_href(name)}
             names = all(name.lower() in part_pictures.IMAGE_ATTRIBUTES for name in others)
             return picture_check.is_embedded_jpeg(element.get("href")) and names and _plain_values(others)
         names = all(name.lower() in part_pictures.PLAIN_ATTRIBUTES for name in element.attrib)

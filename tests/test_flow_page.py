@@ -853,6 +853,10 @@ class TheInlinePictureTest(unittest.TestCase):
             "an image with a style": '<svg><image style="a" href="data:image/jpeg;base64,%s"/></svg>' % SYNTHETIC_JPEG,
             "a JPEG href on a rect": '<svg><rect href="data:image/jpeg;base64,%s"/></svg>' % SYNTHETIC_JPEG,
             "a title inside a title": "<svg><title>a<title>b</title></title><rect/></svg>",
+            # the review's refuter: HTML lowercases a name and keeps the first of two, so this loaded from the web
+            "HREF before href": '<svg><image HREF="//example.com/x.jpg" href="data:image/jpeg;base64,%s"/></svg>' % SYNTHETIC_JPEG,
+            "HREF of a PNG": '<svg><image HREF="data:image/png;base64,%s"/></svg>' % SYNTHETIC_JPEG,
+            "a name repeated once lowercased": '<svg><rect fill="red" FILL="blue"/></svg>',
         }
         for name, svg in guards.items():
             with self.subTest(name):

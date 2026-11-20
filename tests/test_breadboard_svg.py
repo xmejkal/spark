@@ -7,6 +7,7 @@ Wokwi diagram, with spark's own pictograms (data/pictograms/).
 
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -89,7 +90,7 @@ class TheFireBeetlePictureTest(unittest.TestCase):
 
     PATH = part_pictures.PICTOGRAMS / "firebeetle2-esp32s3.svg"
 
-    def test_it_is_turned_a_quarter_clockwise_never_mirrored_so_each_word_reads(self):
+    def test_it_is_turned_a_quarter_clockwise_never_mirrored(self):
         root = ElementTree.fromstring(self.PATH.read_text())
         group = root.find("svg:g", NS)
         a, b, c, d, e, f = [float(n) for n in re.findall(r"-?[\d.]+", group.get("transform"))]
@@ -254,14 +255,28 @@ class TheRecordBoardSvgTest(unittest.TestCase):
     def test_the_picture_is_the_one_looked_at_on_2026_11_20(self):
         # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose. P949: the keys,
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
-        # page's group (no glow), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
+        # page's group (no glow, each word upright or sideways on the sheet), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "1491e07b02d1ec947019c344f00517131c2edc5976eec7f72d0a4a64b6e63a5e")
+                         "66d577f4a8bb2d1e58bb331b128d957ae5a9119c00f004d9de8a3966c78ce3ed")
 
     def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
         board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)
         self.assertTrue(any(rect.get("fill") == "#16202a" for rect in board.iter("{http://www.w3.org/2000/svg}rect")))
         self.assertIn("pixel-master/docs/wiring.html", board.find("svg:title", NS).text)
+
+    def test_every_word_of_the_board_s_picture_reads_upright_or_sideways_never_upside_down_on_the_sheet(self):
+        # the review's refuter: the sheet turns the board a quarter more, and four words read upside down
+        board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)
+        sheet_turn = float(re.search(r"rotate\((-?[\d.]+)", board.get("transform")).group(1))
+        picture = next(group for group in board.iter("{http://www.w3.org/2000/svg}g") if "matrix(" in (group.get("transform") or ""))
+        a, b = [float(n) for n in re.findall(r"-?[\d.]+", picture.get("transform"))[:2]]
+        texts = list(picture.iter("{http://www.w3.org/2000/svg}text"))
+        self.assertEqual(len(texts), 6)
+        for text in texts:
+            with self.subTest(text=text.text):
+                own = re.search(r"rotate\((-?[\d.]+)", text.get("transform") or "")
+                total = (sheet_turn + math.degrees(math.atan2(b, a)) + (float(own.group(1)) if own else 0) + 180) % 360 - 180
+                self.assertTrue(-90 <= total <= 90, total)
 
     def test_the_xiao_has_none_of_it(self):
         text, _ = xiao_svg()
