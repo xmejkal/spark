@@ -23,22 +23,46 @@ def to_ohms(resistance):
     return str(int(ohms)) if ohms == int(ohms) else str(ohms)
 
 
-def describe_parts(read, geometry):
-    """{component as the steps name it: how Wokwi draws it}, from the records. The board's pins come from the first
-    shape source that places it (`part_shape`), or NotDrawnError with a code says why none does. A board whose Wokwi pins are
-    not its printed labels names no pins, so the drawing says which pin it cannot find. `geometry` must be Wokwi's own."""
+#: The source that draws a module with no Wokwi part from its record's physical block (P945).
+MODULE_SOURCE = part_shape.ModuleShapeSource()
+#: The drawn type of a module drawn from its record, filled with the record's id.
+MODULE_TYPE = "spark-module-%s"
+
+
+def describe_parts(read, geometry, modules=MODULE_SOURCE):
+    """A drawing.Catalog: {component as the steps name it: how Wokwi draws it}, from the records. The board's pins come
+    from the first shape source that places it (`part_shape`), or NotDrawnError with a code says why none does. A board
+    whose Wokwi pins are not its printed labels names no pins, so the drawing says which pin it cannot find. A part with
+    no Wokwi part is drawn from its record by `modules`, each pin mapped to its printed pad; one that `modules` declines
+    goes into the catalog's `undrawn` with its record id. `geometry` must be Wokwi's own."""
     board = read.built.board
     source = part_shape.find_source(board, part_shape.sources_for(geometry.data["parts"]))
-    catalog = {wiring_steps.THE_BOARD: drawing.DrawnPart(
-        board.get("wokwi_part_type") or board.get("id"), {}, source.find_pin_names(board))}
+    catalog = drawing.Catalog({wiring_steps.THE_BOARD: drawing.DrawnPart(
+        board.get("wokwi_part_type") or board.get("id"), {}, source.find_pin_names(board))})
     for part in read.built.parts:
         wokwi = (part.get("simulation") or {}).get("wokwi") or {}
+        component = board_components.component_name(part)
         if wokwi.get("part"):
-            catalog[board_components.component_name(part)] = drawing.DrawnPart(
-                wokwi["part"], wokwi.get("attrs") or {}, wokwi.get("pins") or {})
+            catalog[component] = drawing.DrawnPart(wokwi["part"], wokwi.get("attrs") or {}, wokwi.get("pins") or {})
+        elif modules.describe_part(part) is not None:
+            catalog[component] = drawing.DrawnPart(MODULE_TYPE % part["id"], {}, modules.find_pin_names(part))
+        else:
+            catalog.undrawn[component] = part["id"]
     for tag, value, _ in read.resistors.values():
         catalog[tag] = drawing.DrawnPart("wokwi-resistor", {"value": to_ohms(value)}, {"1": "1", "2": "2"})
     return catalog
+
+
+def record_parts(read, modules=MODULE_SOURCE):
+    """{drawn type: part_px} of each part with no Wokwi part that `modules` draws from its record: what the geometry
+    must also know before the planner places them. Raises NotDrawnError for a record that lacks a fact or disagrees."""
+    found = {}
+    for part in read.built.parts:
+        if not ((part.get("simulation") or {}).get("wokwi") or {}).get("part"):
+            part_px = modules.describe_part(part)
+            if part_px is not None:
+                found[MODULE_TYPE % part["id"]] = part_px
+    return found
 
 
 def find_board_px(layout):

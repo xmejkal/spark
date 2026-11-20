@@ -56,7 +56,8 @@ CODES = {
                    "free row for a jumper; the subject is the part or the end"),
     NO_WOKWI_PART: "Wokwi has no part with this board's pins, so no Wokwi diagram is written, by design",
     NO_PIN_POSITION: "data/wokwi-geometry.json lacks a Wokwi type's pins or one of them; the subject is the type",
-    NO_DRAWING_FACT: "nothing says how to draw a part (no Wokwi part in its record) or the board; the subject is it",
+    NO_DRAWING_FACT: ("nothing says how to draw a part (no Wokwi part and no physical block in its record) or the board; "
+                      "the subject is it"),
     NO_WOKWI_PIN: "the end in the subject has no Wokwi pin: its part's record does not map it, or it is a doubtful pad",
     ROW_FULL: "a pin's row has no free hole for one more jumper, as too many steps join it; the subject is the row",
     NOT_DRAWN_YET: "the subject is not drawn yet: a rail, an off-board supply, or a resistor with both legs joined",
@@ -74,12 +75,23 @@ BY_DESIGN = (NO_WOKWI_PART, NOT_DRAWN_YET)
 
 class NotDrawnError(Exception):
     """The steps cannot be drawn: a fact the drawing needs is missing, or the breadboard has no room. `code` (one of
-    CODES, required) and `subject` say which, so a caller never reads the message."""
+    CODES, required) and `subject` say which, so a caller never reads the message. `record` is the id of the part record
+    that lacks the fact, None when no record is known."""
 
-    def __init__(self, message, code, subject=None):
+    def __init__(self, message, code, subject=None, record=None):
         super().__init__(message)
         self.code = code
         self.subject = subject
+        self.record = record
+
+
+class Catalog(dict):
+    """Value: what the planner draws each component as, {component: DrawnPart}, and `undrawn`, {component: the id of its
+    part record} for each part that nothing says how to draw, so the refusal names the record to research."""
+
+    def __init__(self, drawn=(), undrawn=None):
+        super().__init__(drawn)
+        self.undrawn = dict(undrawn or {})
 
 
 class Surface:
@@ -385,11 +397,16 @@ class BreadboardPlanner:
         return end_pin(end, self.catalog)
 
 
+#: Why a part is not drawn, filled with its component: neither of the two ways to draw it is in its record.
+NO_DRAWING_MESSAGE = "nothing says how to draw %s: its record has no Wokwi part and no physical block"
+
+
 def drawn_part(component, catalog):
-    """What the catalog draws for one component, or NotDrawnError naming it."""
+    """What the catalog draws for one component, or NotDrawnError naming it and the record the catalog knows it by."""
     drawn = catalog.get(component)
     if drawn is None:
-        raise NotDrawnError("nothing says how to draw %s in Wokwi" % component, NO_DRAWING_FACT, component)
+        raise NotDrawnError(NO_DRAWING_MESSAGE % component, NO_DRAWING_FACT, component,
+                            record=getattr(catalog, "undrawn", {}).get(component))
     return drawn
 
 

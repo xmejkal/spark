@@ -99,7 +99,7 @@ flowchart LR
   n21 ---|"20"| n19
 ```
 
-breadboard.json and breadboard.svg not written: nothing says how to draw L9110sModule in Wokwi.
+breadboard.json and breadboard.svg not written: nothing says how to draw L9110sModule: its record has no Wokwi part and no physical block.
 
 ### Points
 

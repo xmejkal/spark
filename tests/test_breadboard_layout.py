@@ -334,14 +334,10 @@ EPAPER = ROOT / "tests" / "data" / "breadboard" / "epaper"
 
 
 def epaper_inputs(read):
-    """(geometry, catalog) of the e-paper fixture, with the module's part_px from its physical block: the header on the
-    back, 8 pads 2.54 mm apart, the first 34.5 mm from the left edge seen from the back, half a pitch from the top edge.
-    Its labels are the printed ones, so the pin DC is the pad D/C (P945)."""
-    geometry, catalog = record_inputs(read)
-    part_px = part_shape.ModuleShapeSource().describe_part(read.built.parts[0])
-    catalog = dict(catalog, Epaper2in9BwrMhEtLive=drawing.DrawnPart("spark-module-epaper-2in9-bwr-mh-et-live", {}, {
-        "VCC": "VCC", "GND": "GND", "SDI": "SDI", "SCLK": "SCLK", "CS": "CS", "DC": "D/C", "RESET": "Reset", "BUSY": "Busy"}))
-    return geometry.with_part("spark-module-epaper-2in9-bwr-mh-et-live", part_px), catalog
+    """(geometry, catalog) of the e-paper fixture as the build gives the planner: the module's part_px from its physical
+    block, the header on the back, 8 pads 2.54 mm apart, the first 34.5 mm from the left edge seen from the back, half
+    a pitch from the top edge. Its labels are the printed ones, so the pin DC is the pad D/C (P945)."""
+    return sheet._drawing_inputs(read)
 
 
 class AModuleDrawnFromItsRecordTest(unittest.TestCase):
@@ -378,6 +374,45 @@ class AModuleDrawnFromItsRecordTest(unittest.TestCase):
         ends = {hole.group for jumper in self.layout.jumpers for hole in (jumper.one, jumper.other)}
         self.assertEqual(groups, ends & groups)
         self.assertEqual(len(groups), 8)
+
+    def test_the_catalog_maps_each_pin_to_its_printed_pad_and_the_geometry_knows_the_module(self):
+        drawn = self.catalog["Epaper2in9BwrMhEtLive"]
+        self.assertEqual((drawn.type, drawn.pins["DC"], drawn.pins["RESET"], drawn.pins["VCC"]),
+                         ("spark-module-epaper-2in9-bwr-mh-et-live", "D/C", "Reset", "VCC"))
+        self.assertEqual(self.geometry.part(drawn.type)["labels"], "into-body")
+        self.assertEqual(self.catalog.undrawn, {})
+
+    def test_the_sheet_writes_the_picture_and_no_wokwi_diagram(self):
+        import shutil
+        project = Path(tempfile.mkdtemp()) / "epaper"
+        shutil.copytree(EPAPER, project)
+        with in_store():
+            written = sheet.write(project / "requirements.json", project / "breadboard.md")
+        self.assertEqual([path.name for path, _ in written.drawings], ["breadboard.svg"])
+        self.assertEqual([(one.path.name, one.code) for one in written.not_written], [("breadboard.json", "no_wokwi_part")])
+
+
+class AModuleWithNoDrawingFactTest(unittest.TestCase):
+    """P945: a module with neither a Wokwi part nor a physical block stops the drawing, and names its record."""
+
+    def test_the_refusal_names_the_component_and_the_record(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        del read.built.parts[0]["physical"]
+        geometry, catalog = sheet._drawing_inputs(read)
+        self.assertEqual(catalog.undrawn, {"Epaper2in9BwrMhEtLive": "epaper-2in9-bwr-mh-et-live"})
+        with self.assertRaisesRegex(NotDrawnError, "nothing says how to draw Epaper2in9BwrMhEtLive: its record has no "
+                                                   "Wokwi part and no physical block") as refused:
+            drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
+        self.assertEqual((refused.exception.code, refused.exception.subject, refused.exception.record),
+                         ("no_drawing_fact", "Epaper2in9BwrMhEtLive", "epaper-2in9-bwr-mh-et-live"))
+
+    def test_a_physical_block_that_lacks_a_field_stops_the_plan_by_that_field(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        del read.built.parts[0]["physical"]["header"]["face"]
+        planned = sheet._plan_once(read)
+        self.assertEqual((planned.stopped.code, planned.stopped.subject), ("no_header_fact", "physical.header.face"))
 
 
 class AnOldDrawingTest(unittest.TestCase):
@@ -524,7 +559,8 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         read = xiao_read()
         catalog = drawing_catalog.describe_parts(read, GEOMETRY)
         del catalog["LedRed5mm"]
-        with self.assertRaisesRegex(NotDrawnError, "nothing says how to draw LedRed5mm in Wokwi") as refused:
+        with self.assertRaisesRegex(NotDrawnError, "nothing says how to draw LedRed5mm: its record has no Wokwi part "
+                                                   "and no physical block") as refused:
             drawing.BreadboardPlanner(GEOMETRY, catalog).plan(read.steps)
         self.assertEqual((refused.exception.code, refused.exception.subject), ("no_drawing_fact", "LedRed5mm"))
 

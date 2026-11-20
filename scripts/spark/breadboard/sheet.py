@@ -241,14 +241,18 @@ def wiring_data(requirements_path, circuit_path=None, read=None):
 
 def _drawing_inputs(read):
     """(geometry, catalog) the layout is planned on. Wokwi's own geometry for a board it measured; for a board drawn
-    from its own record, a copy that holds its part_px and spark's 63-column breadboard (P412)."""
+    from its own record, a copy that holds its part_px and spark's 63-column breadboard (P412). A module drawn from its
+    record adds its part_px to either (P945)."""
     wokwi = drawing.WokwiGeometry.load()
     catalog = drawing_catalog.describe_parts(read, wokwi)
+    geometry = wokwi
+    for drawn_type, module_px in drawing_catalog.record_parts(read).items():
+        geometry = geometry.with_part(drawn_type, module_px)
     board = read.built.board
     part_px, _ = part_shape.find_part_px(board, part_shape.sources_for(wokwi.data["parts"]))
     if not part_px.get("full_surface"):
-        return wokwi, catalog
-    geometry = wokwi.with_part(catalog[wiring_steps.THE_BOARD].type, part_px)
+        return geometry, catalog
+    geometry = geometry.with_part(catalog[wiring_steps.THE_BOARD].type, part_px)
     return geometry.with_surface(drawing.Surface.load_full()), catalog
 
 
