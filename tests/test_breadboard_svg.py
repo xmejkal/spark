@@ -254,9 +254,9 @@ class TheRecordBoardSvgTest(unittest.TestCase):
     def test_the_picture_is_the_one_looked_at_on_2026_11_20(self):
         # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose. P949: the keys,
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
-        # page's group, BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
+        # page's group (no glow), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "592ae10a3825352c480cc6accab3ba8e9788c02e811860adacb3fb8a9a667ef1")
+                         "1491e07b02d1ec947019c344f00517131c2edc5976eec7f72d0a4a64b6e63a5e")
 
     def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
         board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)

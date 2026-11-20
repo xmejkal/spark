@@ -93,6 +93,8 @@ MAY_READ = {
     "board_records.ONBOARD_ROLES":
         "the table of onboard roles, checked against the vocabulary of roles a board may declare",
     "board_records.WOKWI_DEFINITION": "a documents key's NAME, used to build a fixture — vocabulary, not a value",
+    "picture_makers.BUILD_MAKERS": "the build's order under test (P946), compared with a literal; never an expectation taken from it",
+    "picture_makers.MAKERS": "the registry under test (P946): its names are compared with a literal list",
     "breadboard_codes.PICTURE_CODES": "the table under test (P946): its keys are compared with a literal set of the nine "
                                       "picture codes, and each sentence is only checked to be there",
     "sheet.BOARD_COMPONENT": AGREEMENT + ": the board's component name, checked against the converter's mapping.ts (P484)",

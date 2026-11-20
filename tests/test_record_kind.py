@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.core import outcomes  # noqa: E402
-from spark.records.record_kind import Answer, RecordKind, Validation, _cannot, _problem  # noqa: E402
+from spark.records.record_kind import Answer, RecordKind, Validation, _cannot, _problem, picture_problems, type_problems  # noqa: E402
 
 PATH = Path("/nowhere/x.json")
 
@@ -93,6 +93,58 @@ class AnAnswerBecomesAResultTest(unittest.TestCase):
     def test_a_code_is_in_an_item_only_when_given(self):
         self.assertEqual(_problem("s", "t"), {"subject": "s", "sentence": "t", "fix": None})
         self.assertEqual(_cannot("t", code="c"), {"sentence": "t", "fix": None, "code": "c"})
+
+
+SHA = "a" * 64
+
+
+def pictured(**block):
+    """A part with one kept document and a breadboard-top picture of it, `block` changing the picture's fields."""
+    picture = dict({"document": "photo", "made_by": "photo", "likeness": "near", "credit": "the PO's photo", "verified": False},
+                   **block)
+    return {"body_mm": {"width": 85, "height": 44, "verified": False}, "documents": {
+        "photo": {"url": None, "file": "photo.svg", "sha256": SHA}, "page": {"url": "https://example.org/a", "kept": False}},
+        "pictures": {"breadboard-top": picture}}
+
+
+class APartsPicturesTest(unittest.TestCase):
+    """P946: a part record's `pictures`, one block per view, each pointing at a kept document."""
+
+    def test_pictures_is_an_object_of_objects(self):
+        self.assertEqual(type_problems({"pictures": {"breadboard-top": "x.svg"}}),
+                         ["pictures.breadboard-top is 'x.svg', but it is an object"])
+        self.assertEqual(type_problems({"pictures": ["x.svg"]}), ["pictures is ['x.svg'], but it is an object"])
+        self.assertEqual(type_problems(pictured()), [])
+
+    def test_a_picture_that_holds_has_no_problem(self):
+        self.assertEqual(picture_problems(pictured()), [])
+        self.assertEqual(picture_problems({}), [])
+        verified = pictured(verified=True)
+        verified["body_mm"]["verified"] = True
+        self.assertEqual(picture_problems(verified), [])
+
+    def test_each_picture_problem(self):
+        cases = {
+            "an unknown view": ({"pictures": {"breadboard-back": pictured()["pictures"]["breadboard-top"]}},
+                                "pictures.breadboard-back is no view spark draws (breadboard-top)"),
+            "a document not listed": ({"document": "other"}, "pictures.breadboard-top.document is 'other', which documents does not hold"),
+            "a document not kept": ({"document": "page"}, "pictures.breadboard-top.document is 'page', which is not kept in the store"),
+            "a likeness not in the list": ({"likeness": "perfect"}, "pictures.breadboard-top.likeness is 'perfect', but it is one of exact, near, rough"),
+            "an empty credit": ({"credit": ""}, "pictures.breadboard-top.credit is '', but it says who made the picture"),
+            "a made_by that is no string": ({"made_by": 3}, "pictures.breadboard-top.made_by is 3, but it names the maker"),
+            "verified that is no bool": ({"verified": "no"}, "pictures.breadboard-top.verified is 'no', but it is true or false"),
+            "verified over a size not verified": ({"verified": True}, "pictures.breadboard-top.verified is true, but body_mm is not verified"),
+        }
+        for name, (change, problem) in cases.items():
+            with self.subTest(name):
+                part = dict(pictured(), **change) if "pictures" in change else pictured(**change)
+                self.assertEqual(picture_problems(part), [problem])
+
+    def test_two_broken_views_are_both_named(self):
+        part = pictured()
+        part["pictures"]["side"] = part["pictures"]["breadboard-top"]
+        part["pictures"]["back"] = part["pictures"]["breadboard-top"]
+        self.assertEqual(len(picture_problems(part)), 2)
 
 
 if __name__ == "__main__":

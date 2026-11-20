@@ -24,6 +24,8 @@ from spark.breadboard import breadboard_codes
 from spark.breadboard import drawing
 from spark.breadboard import drawing_catalog
 from spark.breadboard import drawing_match
+from spark.breadboard import part_pictures
+from spark.breadboard import picture_makers
 from spark.breadboard import svg_diagram
 from spark.breadboard import kept_moves
 from spark.breadboard import wiring_steps
@@ -57,7 +59,9 @@ ROLE_NOT_KNOWN = " (role not known)"
 #: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
 #: new entry here, and nothing else changes.
 DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(JUMPER_COLORS),
-                     svg_diagram.SvgBreadboardDiagram(JUMPER_COLORS))
+                     svg_diagram.SvgBreadboardDiagram(JUMPER_COLORS, pictures=picture_makers.MadePartPictures(
+                         picture_makers.PictureMakerChain(picture_makers.MAKERS[name]() for name in picture_makers.BUILD_MAKERS),
+                         part_pictures.PictogramPartPictures())))
 #: What the sheet says before power is applied, from `wiring_data`'s before_power.
 BEFORE_POWER_LIST = before_power.BeforePowerList()
 #: What the sheet says of the bench: one line per change since the last sheet for another design, in these words.

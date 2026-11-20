@@ -62,16 +62,17 @@ def refresh_shelf_copy(path, record, project_name, dry_run):
 
 def merge_values(record, values):
     """`record` with `values` set, and the values it had: `facts` takes the written names over the held ones, the other names stay
-    (P374); `legs` the same, leg by leg (P741)."""
+    (P374); `legs` the same, leg by leg (P741); `pictures` view by view (P946)."""
     after, was = dict(record, **values), {key: record.get(key) for key in values}
     if isinstance(values.get("legs"), dict):
         held = record.get("legs") if isinstance(record.get("legs"), dict) else {}
         after["legs"], was["legs"] = dict(held, **values["legs"]), {pin: held.get(pin) for pin in values["legs"]}
     if isinstance(values.get("pin_roles"), dict):  # P464: role by role, so a role keeps its gpio and note
         after["pin_roles"], was["pin_roles"] = missing_facts.merged_roles(record, values)
-    if isinstance(values.get("facts"), dict):
-        held = record.get("facts") if isinstance(record.get("facts"), dict) else {}
-        after["facts"], was["facts"] = dict(held, **values["facts"]), {name: held.get(name) for name in values["facts"]}
+    for field in ("facts", "pictures"):
+        if isinstance(values.get(field), dict):
+            held = record.get(field) if isinstance(record.get(field), dict) else {}
+            after[field], was[field] = dict(held, **values[field]), {name: held.get(name) for name in values[field]}
     return after, was
 
 
