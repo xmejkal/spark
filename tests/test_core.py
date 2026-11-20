@@ -18,7 +18,7 @@ from spark.records import deploy_record_store, tool_finder  # noqa: E402
 from fakes import FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
 from spark.core.codes import Code  # noqa: E402
-from spark.core.cli import CRASH_FIX, DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
+from spark.core.cli import DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
 from spark.core.renderers import FlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
@@ -33,6 +33,14 @@ UNCHECKED = Finding(outcomes.COULD_NOT_RUN, None, "field_unknown", "flash unknow
 NEED = Code("need_unknown", "the project has no need of that id", "drop a need that --needs lists")
 #: P853: the modules that rebuild a value with `type(value)(...)`, each with why the value is no str that may hold a Code.
 TYPE_REBUILDS = {"scripts/spark/records/tool_finder.py": "rebuilds a ToolError with its own class, an exception, never a str"}
+
+
+def rebuilds_with_its_type(call):
+    """P853, P935: `call` makes a value again with the type of another, `type(x)(...)` or `x.__class__(...)`."""
+    by_type = isinstance(call.func, ast.Call) and getattr(call.func.func, "id", None) == "type"
+    return by_type or isinstance(call.func, ast.Attribute) and call.func.attr == "__class__"
+
+
 STEP = NextStep("deploy", ["--project", "p", "--token", "t"], "erases the flash", ["deletes", "writes"], True)
 
 
@@ -106,6 +114,14 @@ class SparkErrorTest(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "^the code 'tool_missing' holds no fix: give fix=, or make it a Code$"):
             SparkError("x", code="tool_missing")
 
+    def test_a_code_whose_fix_is_a_template_takes_no_default_fix(self):
+        # P935: a raise without the template's values fails here, never as a raw %s in the JSON
+        with self.assertRaisesRegex(TypeError, "^the fix of 'bad_argument' is a template: give fix=, filled with its values$"):
+            SparkError("x", code=codes.BAD_ARGUMENT)
+        with self.assertRaisesRegex(TypeError, "^the fix of 'needs_reply' is a template"):
+            Finding.of(outcomes.COULD_NOT_RUN, None, codes.NEEDS_REPLY, "s")
+        self.assertEqual(SparkError("x", code=codes.BAD_ARGUMENT, fix=codes.BAD_ARGUMENT.fix % "x.py").fix, "x.py --help lists the arguments")
+
 
 class FindingTest(unittest.TestCase):
     def test_a_finding_of_a_code_takes_its_fix_unless_one_is_given_and_a_plain_str_code_with_none_is_a_type_error(self):
@@ -119,8 +135,12 @@ class FindingTest(unittest.TestCase):
 
 class CodesTest(unittest.TestCase):
     def test_the_table_holds_each_constant_of_the_module_once_with_a_sentence(self):
+        # P935: a variant is a second constant of the same word, so the constants are no longer the table's words one to
+        # one (it pinned `sorted(constants.values()) == sorted(codes.CODES)`); each constant is a Code whose word the
+        # table holds with that Code's meaning, and each word of the table is the constant named by the word
         constants = {name: value for name, value in vars(codes).items() if name.isupper() and isinstance(value, str)}
-        self.assertEqual(sorted(constants.values()), sorted(codes.CODES))
+        self.assertEqual([name for name, value in constants.items() if not isinstance(value, Code) or codes.CODES.get(value) != value.meaning], [])
+        self.assertEqual([code for code in codes.CODES if constants.get(code.upper()) is not code], [])
         sentences = list(codes.CODES.values())
         self.assertTrue(all(sentence.strip() for sentence in sentences))
         self.assertEqual(len(set(sentences)), len(sentences))
@@ -148,9 +168,13 @@ class CodeTest(unittest.TestCase):
     def test_no_module_rebuilds_a_value_with_its_own_type_but_the_listed_ones(self):
         # P853: privacy.Replacer did, and a Refusal raised TypeError; a str that may hold a Code is never rebuilt so
         rebuilt = {path.relative_to(ROOT).as_posix() for path in (ROOT / "scripts" / "spark").rglob("*.py")
-                   for node in ast.walk(ast.parse(path.read_text())) if isinstance(node, ast.Call) and isinstance(node.func, ast.Call)
-                   and getattr(node.func.func, "id", None) == "type"}
+                   for node in ast.walk(ast.parse(path.read_text())) if isinstance(node, ast.Call) and rebuilds_with_its_type(node)}
         self.assertEqual(sorted(rebuilt), sorted(TYPE_REBUILDS))
+
+    def test_the_rebuild_scan_sees_type_of_a_value_and_its_class_attribute(self):
+        # P935: P853's review, row 9
+        calls = [node for node in ast.walk(ast.parse("type(x)(y)\nx.__class__(y)\ntype(x)\nx.copy(y)")) if isinstance(node, ast.Call)]
+        self.assertEqual([ast.unparse(node) for node in calls if rebuilds_with_its_type(node)], ["type(x)(y)", "x.__class__(y)"])
 
 
 class Toy(Operation):
@@ -333,7 +357,7 @@ class RunOperationTest(unittest.TestCase):
                 return super().run(project, what, left, right, outside=outside)
 
         for what, expected in (("problems", ["kept for a crash", "an aside"]), ("error", ["kept for a crash"]),
-                               ("crash", ["kept for a crash", "toy: crashed, RuntimeError", CRASH_FIX, "Traceback (most recent call last):"])):
+                               ("crash", ["kept for a crash", "toy: crashed, RuntimeError", codes.CRASH.fix, "Traceback (most recent call last):"])):
             with self.subTest(what=what):
                 result = run_operation(Adding(), toy_values(what), FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
                 self.assertEqual(list(result.diagnostics[:len(expected)]), expected)
@@ -717,6 +741,23 @@ class SchemaTest(unittest.TestCase):
         schema = Writes().input_schema()["properties"]
         self.assertEqual(schema["items"]["type"], ["object", "array"])
         self.assertEqual(schema["part_and_facts"]["prefixItems"], [{"type": "string"}, {"type": ["object", "array"]}])
+
+    def test_a_payload_that_is_not_json_answers_input_unreadable_with_its_fix_under_json(self):
+        # P935: the fix was null
+        import contextlib
+        import io
+        import tempfile
+        from spark.core.cli import HelpText, run_cli
+        from spark.core.outside import build_bare_outside_world
+        class Writes(Toy):
+            arguments = (Argument(("--set",), "items", str, "a JSON list", metavar="FILE", payload=0), COMMON_ARGUMENTS["json"])
+        given = Path(tempfile.mkdtemp()) / "in.json"
+        given.write_text("{")
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            code = run_cli(HelpText("x.py", "", ""), Writes(), ["--set", str(given), "--json"], outside_builder=build_bare_outside_world)
+        item = json.loads(out.getvalue())["unchecked"][0]
+        self.assertEqual((code, item["code"], item["fix"]), (2, "input_unreadable", "repair the file at that path so that it holds JSON, "
+                                                             "or pipe JSON to stdin, then run again"))
 
     def test_a_required_flag_refuses_an_empty_argv_with_the_cli_s_own_fix(self):
         # P726 PR 3: parts.py's --describe is required, so `parts.py` alone exits 2 and the fix names --describe

@@ -66,8 +66,8 @@ and a stub that raises `SparkError` with code `undeclared_effect` otherwise; an 
 `spark.bench.build_project_outside_world(project, effects, reporter)`, adds `ToolFinder(project).find` (P725). A test gives a
 `FakeOutsideWorld`. `SparkError` (`spark.core.errors`) is the one error an Operation raises to answer instead of
 crashing: a `ValueMessageError` with `code`, `fix` and `status`. A `Code` (`spark.core.codes`, P853) holds its `meaning`
-(its `CODES` sentence, not a Finding's `sentence` of one case) and its `fix`, which `Finding.of` and `SparkError` take
-through `codes.fix_of`; `tests/test_json_contracts.py` fails on an off-table code or a given fix.
+and its `fix`, taken by `Finding.of` and `SparkError` through `codes.fix_of`; a fix with `%` is a template its site fills,
+a fix of another kind a variant Code of its word (P935). `test_json_contracts.py` fails on an off-table code or fix.
 
 `spark.core.cli` holds the frontends. `run_operation(operation, values, outside, build_outside, options)` runs for any frontend (P605: `options` is a `RunOptions` of `privacy`, `trace` and `clock`. It masks the result with the `Privacy` step, then calls `trace` once, and a trace that raises adds one diagnostics line), puts the lines of `add_diagnostics` first, before it masks, and turns a
 `SparkError` into one Finding of its status, and any other exception into one unchecked Finding with code `crash`: the

@@ -1,0 +1,80 @@
+[
+ {
+  "file": "scripts/spark/core/codes.py",
+  "name": "a template fix with no values given goes out raw, %s and all",
+  "find": "    if \"%\" in code.fix:\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/spark/core/codes.py",
+  "name": "the fix of an undeclared effect is empty",
+  "find": "                         \"a defect in spark: report it, with the command\")",
+  "replace": "                         \"\")"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "a replies file that cannot be read takes the fix of one that cannot be written",
+  "find": "self.path, why, code=BAD_ARGUMENT_REPLIES_UNREADABLE)",
+  "replace": "self.path, why, code=BAD_ARGUMENT_REPLIES_UNWRITABLE)"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "an unknown key near an open one and one far from all swap their fixes",
+  "find": "            if nearest:\n",
+  "replace": "            if not nearest:\n"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "a bad reply quotes the example when the question has none, and the form when it has one",
+  "find": "            if lacks and question.example is not None:\n",
+  "replace": "            if lacks and question.example is None:\n"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "a bad argument's fix names the tool, not the CLI's file",
+  "find": "text.bad_argument_fix or codes.BAD_ARGUMENT.fix % text.prog)",
+  "replace": "text.bad_argument_fix or codes.BAD_ARGUMENT.fix % tool)"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "the CLI's own bad-argument fix loses to the default",
+  "find": "text.bad_argument_fix or codes.BAD_ARGUMENT.fix % text.prog)",
+  "replace": "codes.BAD_ARGUMENT.fix % text.prog or text.bad_argument_fix)"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "a payload that is not JSON answers with an empty fix",
+  "find": "codes.INPUT_UNREADABLE, str(unreadable))",
+  "replace": "codes.INPUT_UNREADABLE, str(unreadable), \"\")"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes x.code with y.fix as a forward",
+  "find": "\n            and ast.unparse(code.value) == ast.unparse(fix.value))",
+  "replace": ")"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes a literal as a given fix",
+  "find": "    return [node]\n",
+  "replace": "    return [] if isinstance(node, ast.Constant) else [node]\n"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes the fix of a Code of another word",
+  "find": "        return isinstance(code, Code) and code == word\n",
+  "replace": "        return isinstance(code, Code)\n"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan takes a _replace whose fix is made from another Finding's",
+  "find": " and ast.unparse(node.value) == receiver\n",
+  "replace": "\n"
+ },
+ {
+  "file": "tests/test_core.py",
+  "name": "the rebuild scan misses x.__class__(...)",
+  "find": "    return by_type or isinstance(call.func, ast.Attribute) and call.func.attr == \"__class__\"\n",
+  "replace": "    return by_type\n"
+ }
+]

@@ -18,7 +18,7 @@ from spark.core.errors import SparkError  # noqa: E402
 from fakes import Stream  # noqa: E402
 from spark.core.replies import (AGENT, CHOICE, EITHER, LEFT_LINE, PERSON, TYPED_BY, VALUE, YES_NO, ChainedReplyStrategy,  # noqa: E402
                                 DeferringReplyStrategy, GivenReplyStrategy, Question, RepliesStore, Reply, ReplyStrategy, Terminal,
-                                TerminalReplyStrategy, misfit_fix, needs_reply_findings, order_open, reply_problems)
+                                TerminalReplyStrategy, needs_reply_findings, order_open, reply_problems)
 
 DRAWING = {"document": "SEN0526 dimension drawing", "at": "page 1"}
 HOLES = Question("physical.mounting_holes", "Where are the mounting holes?", VALUE, AGENT, why="the sheet places the module",
@@ -244,9 +244,12 @@ class OpenListTest(unittest.TestCase):
         self.assertEqual(by_subject["header.soldered"].fix, "answer as the question asks: true or false")  # no example: never "null"
 
     def test_a_bad_reply_s_fix_quotes_the_example_or_the_answer_form(self):
-        self.assertEqual(misfit_fix(HOLES), 'answer as the question\'s answer_form says, for example [{"x_mm": "<number>", "y_mm": "<number>", "drill_mm": "<number>"}]')
-        self.assertEqual(misfit_fix(THICK._replace(answer_form="a number in mm")), "answer as the question asks: a number in mm")
-        self.assertEqual(misfit_fix(REVISION), "answer as the question asks: one of the choices")
+        # P935: misfit_fix is inlined into reply_problems; its three assertions moved onto the Findings, the same bytes
+        def fix(question, value):
+            return reply_problems({question.key: Reply(question.key, value, "a test")}, [question])[0].fix
+        self.assertEqual(fix(HOLES, ""), 'answer as the question\'s answer_form says, for example [{"x_mm": "<number>", "y_mm": "<number>", "drill_mm": "<number>"}]')
+        self.assertEqual(fix(THICK._replace(answer_form="a number in mm"), ""), "answer as the question asks: a number in mm")
+        self.assertEqual(fix(REVISION, "V9"), "answer as the question asks: one of the choices")
 
     def test_an_unknown_key_near_an_open_key_names_it_in_the_fix(self):
         # P935: pinned literally before the fix moved into the code
