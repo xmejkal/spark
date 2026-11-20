@@ -3132,9 +3132,9 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
     """P701: every Stage that does not end ok names its code (build_codes, or the design error's own), and the sheet's
     `not written` entry carries its code into --json's `kept`. The codes are literals here."""
 
-    #: Each Stage that is not ok, in the order the build area built them at its call sites before P852 (P705):
-    #: board_engine's converter_stage_problem and convert, build_service's BuildService and board_alone,
-    #: requirements_build's RequirementsBuildService. A code a design error carries is named by the expression that passed it on.
+    #: The code of each way a stage of the build can end that is not ok, by call site: board_engine's
+    #: converter_stage_problem and convert, build_service's BuildService and board_alone, requirements_build's
+    #: RequirementsBuildService. A code a design error carries is named by the expression that passes it on.
     CODES_IN_ORDER = [
         "tool_missing",
         "stage_timed_out", "converter_lacks_part", "no_diagram",

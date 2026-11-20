@@ -58,7 +58,7 @@ class StageDefinition(namedtuple("StageDefinition", "name summary endings")):
         """The Stage of a design error `found`, which this stage could not run past: its sentence (`str`) and then `hint`,
         and its own `code`. ValueError when a design error cannot stop this stage."""
         self._require(DESIGN_ERROR)
-        return Stage(self.name, COULD_NOT_RUN, DESIGN_ERROR.message % found + hint, found.code)
+        return Stage(self.name, COULD_NOT_RUN, str(found) + hint, found.code)
 
     def _require(self, ending):
         if ending not in self.endings:
@@ -123,12 +123,12 @@ REQUIREMENTS = StageDefinition("requirements", "the requirements file, read as a
                                (DESIGN_ERROR,))
 BOARD = StageDefinition("board", "the board record the requirements name, from the project or spark's library",
                         (BOARD_UNUSABLE_ENDING,))
-PARTS = StageDefinition("parts", "the part records the requirements name; said only when it stops there",
+PARTS = StageDefinition("parts", "the part records the requirements name; listed only when it does not end ok",
                         (BOARD_ONLY_WITH_PARTS_ENDING, NO_PARTS_ENDING, DESIGN_ERROR, BOARD_ONLY_ENDING))
 SCHEMATIC = StageDefinition("schematic", "board.tsx, written by the board emitter with the pin map made inside it",
                             (DESIGN_ERROR, BOARD_EMITTER_CRASHED_ENDING, SCHEMATIC_REFUSED_ENDING, BOARD_ONLY_ENDING))
-SCHEMATIC_NOTES = StageDefinition("schematic-notes", "what the board emitter notes about a board it wrote; said only on a "
-                                                     "note, and the build goes on", (SCHEMATIC_NOTED_ENDING,))
+SCHEMATIC_NOTES = StageDefinition("schematic-notes", "what the board emitter notes about a board it wrote; listed only "
+                                                     "when there is a note, and the build goes on", (SCHEMATIC_NOTED_ENDING,))
 FOOTPRINT = StageDefinition("footprint", "the board's footprint that board.tsx imports, drawn with the design's rules",
                             (DESIGN_ERROR, FOOTPRINT_EMITTER_CRASHED_ENDING, BOARD_ONLY_ENDING))
 BUILD = StageDefinition("build", "the board engine (tsci) builds board.tsx, and the copper is counted",
@@ -138,9 +138,10 @@ SIMULATION = StageDefinition("simulation", "the Wokwi diagram, its chips and wok
                              (CONVERTER_MISSING_ENDING, FACT_MISSING_ENDING, NO_WOKWI_PART_TYPE_ENDING,
                               CHIP_NOT_COMPILED_ENDING, TIMED_OUT_ENDING, CONVERTER_LACKS_PART_ENDING, NO_DIAGRAM_ENDING,
                               DIAGRAM_UNWIRED_ENDING, EVERY_PART_SKIPPED_ENDING))
-CHECK_SPINE = StageDefinition("check_spine", "an error of the run itself that no stage caught", (CHECK_SPINE_CRASHED_ENDING,))
+CHECK_SPINE = StageDefinition("check_spine", "not a stage the build runs: an error of the run itself that no stage caught",
+                              (CHECK_SPINE_CRASHED_ENDING,))
 
-#: The build's stages, in the order it runs them; it stops at the first that cannot feed the next.
+#: The stages the build reports, in the order it runs them, and check_spine for a crash no stage caught.
 BUILD_STAGES = (REQUIREMENTS, BOARD, PARTS, SCHEMATIC, SCHEMATIC_NOTES, FOOTPRINT, BUILD, SIMULATION, CHECK_SPINE)
 #: Each definition by its name, for a design error that names the stage it stopped (`RefusedInputError.stage`).
 STAGE_NAMED = {definition.name: definition for definition in BUILD_STAGES}

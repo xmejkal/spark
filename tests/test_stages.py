@@ -20,16 +20,61 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_spine  # noqa: E402
 from spark.build import build_codes, stages as stage_table  # noqa: E402
+from spark.build.stage_help_table import StageHelpTable  # noqa: E402
 from spark.build.stages import (BOARD, BUILD_STAGES, DESIGN_ERROR, FOOTPRINT, NO_PARTS_ENDING, PARTS, SCHEMATIC,  # noqa: E402
                                 STAGE_NAMED, StageEnding)
 from spark.core.outcomes import COULD_NOT_RUN, OK, SKIPPED  # noqa: E402
+from spark.design import board_emitter  # noqa: E402
 from spark.design.loader import DesignError  # noqa: E402
 
 #: Every ending of the table, once, with a stage that has it.
 ENDINGS = {ending: definition for definition in BUILD_STAGES for ending in definition.endings}
 
 
+#: Each ending of each stage by the ending's name in stages.py, with its code and status. A literal, so a code or a status
+#: swapped in the table fails here.
+ENDS_AS = {
+    ("requirements", "DESIGN_ERROR"): (None, "could-not-run"),
+    ("board", "BOARD_UNUSABLE_ENDING"): ("board_unusable", "could-not-run"),
+    ("parts", "BOARD_ONLY_WITH_PARTS_ENDING"): ("board_only_with_parts", "could-not-run"),
+    ("parts", "NO_PARTS_ENDING"): ("no_parts", "could-not-run"),
+    ("parts", "DESIGN_ERROR"): (None, "could-not-run"),
+    ("parts", "BOARD_ONLY_ENDING"): (None, "skipped"),
+    ("schematic", "DESIGN_ERROR"): (None, "could-not-run"),
+    ("schematic", "BOARD_EMITTER_CRASHED_ENDING"): ("stage_crashed", "could-not-run"),
+    ("schematic", "SCHEMATIC_REFUSED_ENDING"): ("schematic_refused", "could-not-run"),
+    ("schematic", "BOARD_ONLY_ENDING"): (None, "skipped"),
+    ("schematic-notes", "SCHEMATIC_NOTED_ENDING"): ("schematic_noted", "problems"),
+    ("footprint", "DESIGN_ERROR"): (None, "could-not-run"),
+    ("footprint", "FOOTPRINT_EMITTER_CRASHED_ENDING"): ("stage_crashed", "could-not-run"),
+    ("footprint", "BOARD_ONLY_ENDING"): (None, "skipped"),
+    ("build", "ENGINE_MISSING_ENDING"): ("tool_missing", "could-not-run"),
+    ("build", "TIMED_OUT_ENDING"): ("stage_timed_out", "could-not-run"),
+    ("build", "TOOL_CANNOT_BUILD_ENDING"): ("tool_cannot_build", "could-not-run"),
+    ("build", "NO_CIRCUIT_ENDING"): ("design_not_built", "problems"),
+    ("build", "PART_STRANDED_ENDING"): ("part_stranded", "problems"),
+    ("build", "CIRCUIT_ERRORS_ENDING"): ("design_not_built", "problems"),
+    ("build", "NOT_ROUTED_ENDING"): ("not_routed", "problems"),
+    ("build", "BOARD_ONLY_ENDING"): (None, "skipped"),
+    ("simulation", "CONVERTER_MISSING_ENDING"): ("tool_missing", "could-not-run"),
+    ("simulation", "FACT_MISSING_ENDING"): ("simulation_fact_missing", "could-not-run"),
+    ("simulation", "NO_WOKWI_PART_TYPE_ENDING"): ("simulation_fact_missing", "could-not-run"),
+    ("simulation", "CHIP_NOT_COMPILED_ENDING"): ("chip_not_compiled", "could-not-run"),
+    ("simulation", "TIMED_OUT_ENDING"): ("stage_timed_out", "could-not-run"),
+    ("simulation", "CONVERTER_LACKS_PART_ENDING"): ("converter_lacks_part", "could-not-run"),
+    ("simulation", "NO_DIAGRAM_ENDING"): ("no_diagram", "problems"),
+    ("simulation", "DIAGRAM_UNWIRED_ENDING"): ("diagram_unwired", "problems"),
+    ("simulation", "EVERY_PART_SKIPPED_ENDING"): (None, "skipped"),
+    ("check_spine", "CHECK_SPINE_CRASHED_ENDING"): ("stage_crashed", "could-not-run"),
+}
+
+
 class TheTableTest(unittest.TestCase):
+    def test_each_stage_ends_each_way_with_the_code_and_status_it_always_had(self):
+        named = {value: name for name, value in vars(stage_table).items() if isinstance(value, StageEnding)}
+        self.assertEqual({(definition.name, named[ending]): (ending.code, ending.status)
+                          for definition in BUILD_STAGES for ending in definition.endings}, ENDS_AS)
+
     def test_each_ending_names_a_code_build_codes_knows_or_is_a_skip_or_the_design_error(self):
         for ending in ENDINGS:
             if ending.code is None:
@@ -49,9 +94,11 @@ class TheTableTest(unittest.TestCase):
         used |= {"DESIGN_ERROR" for node in calls if node.func.attr == "stopped_by"}
         self.assertEqual(sorted(named[ending] for ending in ENDINGS if named[ending] not in used), [])
 
-    def test_each_name_is_one_stage_s(self):
+    def test_each_name_is_one_stage_s_and_the_emitter_names_the_table_s(self):
         self.assertEqual(len(STAGE_NAMED), len(BUILD_STAGES))
         self.assertIs(STAGE_NAMED["schematic"], SCHEMATIC)
+        # a refused input names its stage with these, so STAGE_NAMED[refused.stage] finds it
+        self.assertEqual([STAGE_NAMED[board_emitter.SCHEMATIC_STAGE], STAGE_NAMED[board_emitter.FOOTPRINT_STAGE]], [SCHEMATIC, FOOTPRINT])
 
 
 class EachMessageIsFilledWithPercentTest(unittest.TestCase):
@@ -101,6 +148,7 @@ class TheHelpListsTheTableTest(unittest.TestCase):
         printed = io.StringIO()
         with contextlib.redirect_stdout(printed), self.assertRaises(SystemExit):
             check_spine.main(["--help"])
+        self.assertIn(StageHelpTable.render(BUILD_STAGES), printed.getvalue())
         said = " ".join(printed.getvalue().split())  # argparse wraps nothing here, the table wraps at 120
         for definition in BUILD_STAGES:
             self.assertIn("%s %s" % (definition.name, definition.summary), said)

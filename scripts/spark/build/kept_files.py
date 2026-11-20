@@ -300,7 +300,7 @@ def why_not_built(stages, board_only_why):
     `board_only_why` for a board-only design, else that the build did not finish."""
     if any(stage.name == BUILD.name and stage.status == OK for stage in stages):
         return None
-    refused = next((stage.detail for stage in stages if stage.name == REQUIREMENTS.name and stage.status != OK), None)  # its detail is why a refused file built nothing (P280)
+    refused = next((stage.detail for stage in stages if stage.name == REQUIREMENTS.name and stage.status != OK), None)
     if refused:
         return refused
     if skipped_the_build(stages):

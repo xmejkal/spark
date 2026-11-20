@@ -247,7 +247,7 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         self.assertEqual((stage.status, stage.code), (PROBLEMS, "diagram_unwired"))
         self.assertNotIn("every part is skipped", stage.detail)
 
-    def test_the_unwired_diagram_says_what_it_said_before_the_stage_table(self):  # P852
+    def test_the_unwired_diagram_says_its_detail(self):  # P852
         stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}, {"part": "led-red-5mm", "name": "Led"}])
         self.assertEqual(stage.detail, "a diagram with 0 connections. Every part is placed and none is wired, which is what an "
                                        "unmapped component looks like once the converter has given up on it")
@@ -308,9 +308,8 @@ def crashes(*given, **named):
     raise RuntimeError("boom")
 
 
-class EachEndingSaysWhatItSaidBeforeTheStageTableTest(unittest.TestCase):
-    """P852: the detail of each way a stage ends, as the build wrote it at its call sites before the stages came from one
-    table, filled with known values. The goldens reach about 8 of the 36 sites; these pin the templates of the rest."""
+class EachEndingSaysItsDetailTest(unittest.TestCase):
+    """P852: the detail of each way a stage ends that no golden reaches, filled with known values, word for word."""
 
     FED = fed_circuit((("Mcu", "3V3", "V33"),))
     LED = {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}
