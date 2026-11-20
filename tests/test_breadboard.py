@@ -205,8 +205,9 @@ class TheXiaoExampleTest(unittest.TestCase):
         steps = [line for line in text.split("### Steps", 1)[1].split("### Diagram", 1)[0].splitlines()
                  if re.match(r"^\d+\. ", line)]
         self.assertEqual(len(steps), 9, text)
-        self.assertEqual(steps[4], "5. Run a jumper from board D8 to the row of R1 end 1.")
-        self.assertEqual(steps[5], "6. Run a jumper from board D10 to the row of TactileButton A.")
+        # P945: each step ends with the holes the drawing uses
+        self.assertEqual(steps[4], "5. Run a jumper from board D8 to the row of R1 end 1. Holes: from j4 to f24.")
+        self.assertEqual(steps[5], "6. Run a jumper from board D10 to the row of TactileButton A. Holes: from j6 to a14.")
 
 
 class AStaleOrFailedBuildIsRefusedTest(unittest.TestCase):

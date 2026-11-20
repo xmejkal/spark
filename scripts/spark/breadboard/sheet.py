@@ -356,8 +356,9 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
     lines += ["", "## Wiring"]
     if change_lines is not None:
         lines += [""] + change_lines
+    holes = drawing.StepHoles.of(planned.layout, steps) if planned.layout else None  # P945: each step names its holes
     for heading, intro, renderer in WIRING_VIEWS:
-        lines += ["", "### " + heading, "", intro, ""] + renderer.render(steps)
+        lines += ["", "### " + heading, "", intro, ""] + renderer.render(steps, holes)
     lines += _drawing_lines(planned)
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]

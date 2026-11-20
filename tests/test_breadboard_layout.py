@@ -415,6 +415,51 @@ class AModuleWithNoDrawingFactTest(unittest.TestCase):
         self.assertEqual((planned.stopped.code, planned.stopped.subject), ("no_header_fact", "physical.header.face"))
 
 
+class EachStepNamesItsHolesTest(unittest.TestCase):
+    """P945: the step list names the holes each step uses in the planned layout, read as a person reads a breadboard."""
+
+    def test_the_e_paper_s_steps_name_their_holes_in_the_order_the_step_runs(self):
+        with in_store():
+            read = sheet._read_build(EPAPER / "requirements.json")
+        layout = drawing.BreadboardPlanner(*epaper_inputs(read)).plan(read.steps)
+        lines = wiring_steps.NumberedList().render(read.steps, drawing.StepHoles.of(layout, read.steps))
+        self.assertEqual(lines[:4], [
+            "1. Put the board in the breadboard, each pin in its own row. Holes: b6 to b23, i10 to i23.",
+            "2. Put e-paper in the breadboard, each pin in its own row. Holes: e38 to e45.",
+            "3. Run a jumper from board 3V3 to the row of e-paper VCC. Holes: from a7 to a45.",
+            "4. Run a jumper from board A5 to the row of e-paper DC. Holes: from j14 to a40."])
+        self.assertEqual(len(lines), 10)
+        self.assertTrue(all(" Holes: " in line for line in lines))
+
+    def test_a_resistor_s_setup_and_its_joined_leg_name_their_holes(self):
+        read = xiao_read()
+        layout = drawing.BreadboardPlanner(GEOMETRY, drawing_catalog.describe_parts(read, GEOMETRY)).plan(read.steps)
+        holes = drawing.StepHoles.of(layout, read.steps)
+        resistor = next(part for part in layout.parts if part.id == "R1")
+        seated = list(read.steps.anchored())
+        for number, step in enumerate(seated, 1):
+            if step.act == wiring_steps.SETUP and step.subject.kind == wiring_steps.RESISTOR:
+                self.assertEqual(holes.get(number), drawing.StepHoles._span(resistor.holes.values()))
+            if step.act == wiring_steps.JOIN and step.subject.kind == wiring_steps.RESISTOR:
+                self.assertEqual(holes.get(number), drawing.hole_label(resistor.holes[step.subject.pin]))
+        self.assertTrue(any(step.subject.kind == wiring_steps.RESISTOR for step in seated
+                            if step.act in (wiring_steps.SETUP, wiring_steps.JOIN)))
+
+    def test_a_range_covers_only_neighbouring_columns(self):
+        holes = [drawing.Hole(name, 0, 0, name.split(".")[0], int(name.split("t")[0]))
+                 for name in ("14t.e", "12t.e", "12t.j", "14t.j", "15t.j", "16t.j")]
+        self.assertEqual(drawing.StepHoles._span(holes), "e12, e14, j12, j14 to j16")
+
+    def test_a_hole_reads_letter_then_column_and_a_rail_keeps_its_name(self):
+        self.assertEqual(drawing.hole_label(drawing.Hole("41t.e", 0, 0, "41t", 41)), "e41")
+        self.assertEqual(drawing.hole_label(drawing.Hole("tp.3", 0, 0, "tp", 0)), "tp.3")
+
+    def test_with_no_layout_the_steps_read_as_before(self):
+        read = xiao_read()
+        self.assertEqual(wiring_steps.NumberedList().render(read.steps, None), wiring_steps.NumberedList().render(read.steps))
+        self.assertFalse(any(" Holes: " in line for line in wiring_steps.NumberedList().render(read.steps)))
+
+
 class AnOldDrawingTest(unittest.TestCase):
     def test_write_removes_a_drawing_an_earlier_build_left_when_this_one_cannot_be_drawn(self):
         import shutil

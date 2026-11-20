@@ -44,10 +44,16 @@ def a_copy(name):
     return project
 
 
+#: P945: what the sheet's step list adds after a step's words when the drawing places it; the page's data has no holes
+#: until P887, so the words are compared without it.
+HOLES = re.compile(r" Holes: [^.]+\.$")
+
+
 def expected_steps(text):
-    """[(number, words)] of the numbered lines under "### Steps" of a sheet."""
+    """[(number, words)] of the numbered lines under "### Steps" of a sheet, without the holes a drawn step ends with."""
     section = text.split("### Steps", 1)[1].split("### Diagram", 1)[0]
-    return [(int(found.group(1)), found.group(2)) for found in re.finditer(r"^(\d+)\. (.*)$", section, re.MULTILINE)]
+    return [(int(found.group(1)), HOLES.sub("", found.group(2)))
+            for found in re.finditer(r"^(\d+)\. (.*)$", section, re.MULTILINE)]
 
 
 def expected_before_power(text):
@@ -67,6 +73,9 @@ class TheDataReadsAsTheSheetTest(unittest.TestCase):
                 expected = (FIXTURES / name / "breadboard.expected.md").read_text()
                 self.assertEqual([(step.number, step.words) for step in data.steps], expected_steps(expected))
                 self.assertEqual(before_power.BeforePowerList().render(data.before_power), expected_before_power(expected))
+                steps = re.findall(r"^\d+\. .*$", expected.split("### Steps", 1)[1].split("### Diagram", 1)[0], re.MULTILINE)
+                # the motor is not drawn, so no step has holes; every step of button-light is drawn and has them
+                self.assertEqual(sum(bool(HOLES.search(line)) for line in steps), 0 if name == "motor" else len(steps))
 
 
 class TheMotorDataTest(unittest.TestCase):

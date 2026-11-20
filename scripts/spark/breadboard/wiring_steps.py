@@ -190,17 +190,23 @@ class BreadboardSteps:
 
 
 class NumberedList:
-    """Renderer: the steps as numbered Markdown lines."""
+    """Renderer: the steps as numbered Markdown lines. Given `holes` (a `drawing.StepHoles` of the planned layout, P945),
+    each step that the drawing places ends with the holes it uses."""
 
-    def render(self, steps):
-        return ["%d. %s" % (step.number, step.words) for step in steps.numbered()]
+    #: What a step's holes add to its line, filled with the holes' words.
+    HOLES_MESSAGE = " Holes: %s."
+
+    def render(self, steps, holes=None):
+        return ["%d. %s%s" % (step.number, step.words, self.HOLES_MESSAGE % holes.get(step.number)
+                              if holes and holes.get(step.number) else "") for step in steps.numbered()]
 
 
 class MermaidDiagram:
     """Renderer: a mermaid flowchart. A box per component, a node per end, a rail or a supply as a node, and one edge
     per step that joins two things, labelled with its number."""
 
-    def render(self, steps):
+    def render(self, steps, holes=None):
+        """The diagram's lines. `holes` is taken as the step list takes it and not drawn: an edge is a step, not a hole."""
         ids = {}
 
         def node(name, indent):

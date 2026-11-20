@@ -432,6 +432,62 @@ def end_group(end, placed, catalog, groups=None):
     return placed[end.component].holes[end_pin(end, catalog)].group
 
 
+def hole_label(hole):
+    """What a person reads on a breadboard for one terminal hole: its row letter, then its column (e41 for 41t.e). A rail
+    hole keeps its Wokwi name."""
+    group, _, letter = hole.name.partition(".")
+    return "%s%d" % (letter, hole.column) if hole.column else hole.name
+
+
+class StepHoles:
+    """
+    Value: the holes each numbered step uses in one planned layout (P945), {step number: words}, which the step list
+    appends: a placing step names its part's holes, a jumper its two holes in the order the step runs it, and a
+    resistor leg its hole. A step the layout does not draw has none. Built by `of`; it decides nothing again.
+    """
+
+    def __init__(self, words):
+        self.words = dict(words)
+
+    def get(self, number):
+        """The words of one step's holes, or None."""
+        return self.words.get(number)
+
+    @staticmethod
+    def _span(holes):
+        """A part's holes by row letter, then column: each run of neighbouring columns as one range, "e38 to e45", and a
+        hole with no neighbour alone, so "e12, e14" never reads as e13 too."""
+        runs = []
+        for hole in sorted(holes, key=lambda hole: (hole.name.partition(".")[2], hole.column)):
+            last = runs[-1][-1] if runs else None
+            if last and last.name.partition(".")[2] == hole.name.partition(".")[2] and hole.column == last.column + 1:
+                runs[-1].append(hole)
+            else:
+                runs.append([hole])
+        return ", ".join(hole_label(run[0]) if len(run) == 1 else "%s to %s" % (hole_label(run[0]), hole_label(run[-1]))
+                         for run in runs)
+
+    @classmethod
+    def of(cls, layout, steps):
+        """The holes of `steps` (a BreadboardSteps) as `layout` draws them, numbered as `steps.numbered()` numbers them."""
+        placed = {part.id: part for part in layout.parts}
+        jumpers = {jumper.step: jumper for jumper in layout.jumpers}
+        words = {}
+        for number, seated in enumerate(steps.anchored(), 1):
+            if number in jumpers:
+                words[number] = "from %s to %s" % (hole_label(jumpers[number].one), hole_label(jumpers[number].other))
+            elif seated.act == wiring_steps.PLACE and seated.subject in placed:
+                words[number] = cls._span(placed[seated.subject].holes.values())
+            elif seated.act == wiring_steps.SETUP and seated.subject.kind == wiring_steps.RESISTOR \
+                    and seated.subject.component in placed:
+                words[number] = cls._span(placed[seated.subject.component].holes.values())
+            elif seated.act == wiring_steps.JOIN and seated.subject.kind == wiring_steps.RESISTOR \
+                    and seated.subject.component in placed:
+                hole = placed[seated.subject.component].holes.get(seated.subject.pin)
+                words[number] = hole_label(hole) if hole else None
+        return cls({number: said for number, said in words.items() if said})
+
+
 class WokwiBreadboardDiagram:
     """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in its step's color. Its constructor takes the
     colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
