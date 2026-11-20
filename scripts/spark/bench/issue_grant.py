@@ -56,6 +56,7 @@ class IssueGrant(Operation):
     """
 
     name = "issue-grant"
+    summary = "Let Claude run code on one board for a time limit: one yes typed in your own terminal (P253)."
     arguments = (Argument(("--minutes",), "minutes", int, "give a grant for this many minutes from your yes (1 to 1440)", required=True),
                  Argument(("--scope",), "scope", str, SCOPE_HELP, board_grant.SCOPE_LIVE, choices=board_grant.SCOPES),
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote and esptool (default: here)"),

@@ -124,7 +124,7 @@ class WriteFlowPage(Operation):
     """
 
     name = "write-flow-page"
-    summary = "write page.html in the project: each phase of the flow with a status word and a mark, and the project's pictures"
+    summary = "Write page.html in the project: each phase of the flow with a status word and a mark, and the project's pictures (P827)."
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS, WRITES)
     data_keys = ("file", "did", "stands_at", "phases")

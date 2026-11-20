@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Let Claude run code on one board for a time limit: one yes typed in your own terminal (P253), and the check a later call makes."""
+"""
+Give Claude a grant on one board for a time limit, or check one (P253).
+
+Its `--help` sentence is the summary of the mode's Operation, IssueGrant's or CheckGrant's (P937), and EPILOG is the
+CLI's own text.
+"""
 
 import sys
 from pathlib import Path
@@ -73,7 +78,7 @@ def main(argv=None, outside=None, operation=None):
     """Issue or check a grant. `outside` is the OutsideWorld a test gives (a run builds the project's), `operation` the
     CheckGrant or IssueGrant a test gives with its Fakes. Returns the exit code."""
     argv = sys.argv[1:] if argv is None else list(argv)
-    return run_cli(HelpText("grant.py", __doc__.strip(), EPILOG), operation or operation_for(argv)(), argv,
+    return run_cli(HelpText("grant.py", epilog=EPILOG), operation or operation_for(argv)(), argv,
                    outside_builder=build_project_outside_world, outside=outside)
 
 

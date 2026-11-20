@@ -58,6 +58,9 @@ def _validate_all(project: Path, for_fab: bool) -> int:
 
 #: The flag that picks the Operation on the core. argparse takes a prefix of it too (`--li`), so the pick does (P707).
 LIST_FLAG = "--list"
+#: The CLI's own text in `boards.py --list --help`, after ListBoards' details (P855, P937): its --json.
+LIST_EPILOG = """--json prints one envelope (docs/guide/agents/json.md): data.boards rows with id, layer (library or project), active
+and stops_why (the sentence that names the missing fields, or null)."""
 
 
 def main(argv=None, outside=None) -> int:
@@ -69,7 +72,7 @@ def main(argv=None, outside=None) -> int:
         from spark.core.cli import HelpText, run_cli
         from spark.core.outside import build_bare_outside_world
         from spark.design.list_boards import ListBoards
-        return run_cli(HelpText("boards.py", tool="boards"), ListBoards(), argv,
+        return run_cli(HelpText("boards.py", epilog=LIST_EPILOG, tool="boards"), ListBoards(), argv,
                        outside_builder=build_bare_outside_world, outside=outside)
     parser = argparse.ArgumentParser(
         prog="boards.py", description="Resolve and check the project's board definitions.")

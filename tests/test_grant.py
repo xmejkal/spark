@@ -620,6 +620,15 @@ class GrantModesTest(GrantCase):
             grant.main(["--help"], outside=FakeOutsideWorld())
         self.assertIn("--scope {live,deploy}", out.getvalue())
 
+    def test_each_mode_s_help_says_its_own_operation_s_sentence(self):
+        # P937 (the PO, 2026-11-20): one sentence per Operation, the summary of the mode's
+        for argv, own, other in ((["--help"], IssueGrant, CheckGrant), (["--check", "--help"], CheckGrant, IssueGrant)):
+            out = io.StringIO()
+            with self.assertRaises(SystemExit), contextlib.redirect_stdout(out):
+                grant.main(argv, outside=FakeOutsideWorld())
+            self.assertIn("\n" + own.summary + "\n", out.getvalue(), argv)
+            self.assertNotIn(other.summary, out.getvalue(), argv)
+
     def test_a_flag_of_the_other_mode_and_no_mode_are_refused_with_the_usage(self):
         self.assertIn("unrecognized arguments: --json", self.refused(["--minutes", "5", "--json"]))
         self.assertIn("unrecognized arguments: --minutes 5", self.refused(["--check", "--minutes", "5"]))

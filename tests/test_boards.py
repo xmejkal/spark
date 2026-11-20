@@ -1460,6 +1460,18 @@ class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):
             self.listed("--list", "--for-fab", "--project", str(project()))
         self.assertEqual(refused.exception.code, 2, "the Operation's parser knows no --for-fab: the usage, exit 2")
 
+    def test_the_help_keeps_the_json_sentence_in_the_clis_own_text_after_the_operations(self):
+        # P937 (the PO, 2026-11-20): --json is the frontend's, so ListBoards' details hold none
+        import contextlib
+        import io
+        from spark.design.list_boards import ListBoards
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            boards.main(["--list", "--help"])
+        self.assertNotIn("--json", ListBoards.details)
+        self.assertIn(ListBoards.details + "\n\n" + boards.LIST_EPILOG, out.getvalue())
+        self.assertTrue(boards.LIST_EPILOG.startswith("--json prints one envelope"))
+
 
 if __name__ == "__main__":
     unittest.main()

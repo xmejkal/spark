@@ -431,6 +431,22 @@ class TheGuardedPrintTest(ProjectCase):
         self.assertTrue(json.loads(said)["next"][0]["argv"][1].endswith("/a\u202eb"))  # a pasted place: --json keeps it raw
 
 
+class TheHelpTest(unittest.TestCase):
+    """P937 (the PO, 2026-11-20): each paragraph of deploy.py --help in its place: the stages' `why:` lines are
+    DeployImage's, so they come before the CLI's own --json and exit codes."""
+
+    def test_the_why_paragraph_is_the_operations_and_comes_before_the_json_and_the_exit_codes(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            deploy.main(["--help"])
+        said, why = out.getvalue(), "Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify)."
+        self.assertTrue(DeployImage.details.endswith(why))
+        self.assertNotIn(why, deploy.EPILOG)
+        self.assertLess(said.index(why), said.index("--json prints one envelope"))
+        self.assertLess(said.index("--json prints one envelope"), said.index("Exit codes:"))
+        self.assertTrue(said.rstrip().endswith("and the sentence says why."), "the exit codes are the last paragraph")
+
+
 class TheDeployEnvelopeYesRuleTest(unittest.TestCase):
     """P337 B: the NEXT_DEPLOY step names a deploy grant only where a grant may answer."""
 

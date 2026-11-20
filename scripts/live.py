@@ -13,16 +13,11 @@ from spark.bench import build_project_outside_world
 from spark.bench.run_live_code import RunLiveCode
 from spark.core.cli import HelpText, run_cli
 
-#: The CLI's own text in `--help`, after RunLiveCode's details (P855): its --json, the board doctor's paragraph (it
-#: follows the --json one, so it stays here and `--help` stays as it was), then its exit codes.
+#: The CLI's own text in `--help`, after RunLiveCode's details (P855): its --json and its exit codes.
 EPILOG = """--json prints one line with every field, null where it has none: answer (ran, raised, not_reached, refused_no_grant,
 refused_pin, refused_no_parse, or could-not-run, the word outcomes.py shares), grant_why (grant.py's code when the grant refused), why, output, cure, reset (done, failed or null),
 pins_checked (false when the record names no usb or flash pin) and gpio_numbers_in_code, with port. A stop of the board
 question adds open, product and known_board.
-
-When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
-port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
-and one next step for your hands, as the last line. Its look at the console can restart the board. --json carries it as doctor.
 
 Exit codes: 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset failed,
 live.py could not run, or the board question stopped it (other_board, no_known_board, needs_reply, answered_no), and

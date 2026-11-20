@@ -15,12 +15,9 @@ LIBRARY, PROJECT = "library", "project"
 #: One row of the text: the active mark, the id, the layer, and the stop line when the board stops at the footprint.
 ROW_LINE = "  %s %s (%s)%s"
 
-#: What --list prints, the paragraph of `boards.py --list --help` after its arguments, line breaks and all (P855). Its
-#: --json sentence shares a line with the rest, so it stays here and `--help` stays as it was.
+#: What --list prints, the paragraph of `boards.py --list --help` after its arguments, before the CLI's --json (P855).
 DETAILS = """--list marks the active board with * and says which board stops the chain at the footprint stage (P121): its
-file lacks what the footprint is drawn from, and it is still a choice for pin-map work. --json prints one envelope
-(docs/guide/agents/json.md): data.boards rows with id, layer (library or project), active and stops_why (the sentence that
-names the missing fields, or null)."""
+file lacks what the footprint is drawn from, and it is still a choice for pin-map work."""
 
 
 class ListBoards(Operation):

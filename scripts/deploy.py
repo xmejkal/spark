@@ -37,8 +37,7 @@ from spark.bench.deploy_image import DeployImage
 from spark.core.cli import HelpText, run_cli
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK  # noqa: F401  (the tests read deploy's exit codes here)
 
-#: The CLI's own text in `--help`, after DeployImage's details (P855): its --json, its exit codes, and the stages'
-#: `why:` lines, which follow the exit codes, so they stay here and `--help` stays as it was.
+#: The CLI's own text in `--help`, after DeployImage's details (P855): its --json and its exit codes.
 EPILOG = """--json prints one envelope on stdout (docs/guide/agents/json.md): the token, the look, the stage the run reached, the
 yes, the board log and the store record in `data`, and in `next` the step that waits for the person (`needs_yes`). Every
 line above then goes to stderr, and so does the flash tool's own output. Exit codes do not change; the envelope's status
@@ -48,9 +47,7 @@ the error on stderr and exits 2.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, the board question waits for a reply (needs_reply), the board is not the
-kept one (other_board) or none is kept (no_known_board), there was no terminal, or ready is unknown, and the sentence says why.
-
-Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify)."""
+kept one (other_board) or none is kept (no_known_board), there was no terminal, or ready is unknown, and the sentence says why."""
 
 
 def main(argv=None, outside=None, operation=None):
