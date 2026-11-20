@@ -789,8 +789,8 @@ class TheInlinePictureTest(unittest.TestCase):
 
     def test_each_jumper_step_and_each_part_of_the_built_fixture_is_in_the_page(self):
         text = page_of_project(self.project)
-        # the fixture's steps 5 to 9 run a jumper (7 to 9 join GND through a - rail, P953); steps 1 to 4 place a part
-        # and carry no step key
+        # the fixture's steps 5 to 9 run a jumper (7 to 9 join GND through a - rail, P953); steps 1 to 4 and 10 place
+        # a part and carry no step key
         for step in (5, 6, 7, 8, 9):
             self.assertEqual(text.count('data-step="%d"' % step), 1, step)
         self.assertEqual(text.count("data-step="), 5)
