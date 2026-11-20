@@ -38,6 +38,10 @@ class TheTreeTest(unittest.TestCase):
     def test_the_deploy_command_holds_the_looks_block(self):
         self.assertIn("commands/deploy.md", [page for page, _ in doc_blocks.pages_with_blocks()])
 
+    def test_the_scripts_page_holds_lives_block(self):
+        # P855: the first block on a guide page, kept current by the test above
+        self.assertIn("<!-- spark:operation live -->\n", (ROOT / "docs/guide/agents/scripts.md").read_text())
+
 
 class TheBlockTest(unittest.TestCase):
     def test_a_block_is_written_between_its_markers_and_the_rest_stays(self):
