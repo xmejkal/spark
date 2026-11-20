@@ -219,7 +219,7 @@ class RecordShapeSource(ShapeSource):
         return project_to_px(self.find_shape(board))
 
     def find_pin_names(self, board):
-        """Every pad but the doubtful ones, and GND for the one ground pad. A step to a doubtful pad finds no pin and is refused."""
+        """Every pad but the doubtful ones, and GND for the first ground pad of power_pads that is not doubtful. A step to a doubtful pad finds no pin and is refused."""
         shape = self.find_shape(board)
         doubtful = shape.groups.get("doubtful_pads", {}).get("value") or []
         return dict({label: label for label in shape.pins if label not in doubtful}, GND=shape.ground)

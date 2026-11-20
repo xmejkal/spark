@@ -19,7 +19,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from fakes import FakeBuildService, FakeTscircuitEngine  # noqa: E402
+from fakes import FakeBuildService, FakeTscircuitEngine, FakeTscircuitExport  # noqa: E402
 from golden_design import fed_circuit  # noqa: E402
 from spark.build import board_engine, kept_files  # noqa: E402
 from spark.build.build_service import BuildInputs, BuildService, board_alone  # noqa: E402
@@ -321,6 +321,21 @@ class ABoardWithNoWokwiPartInTheFullBuildTest(unittest.TestCase):
         self.assertEqual((stages[-1].code, stages[-1].detail), ("simulation_fact_missing", "the board record names no wokwi_part_type"))
         self.assertFalse((self.project / SHIM_ARGS).exists())  # the converter never ran
         self.assertEqual((verdict(stages), vouches_for_a_build(stages)), (EXIT_COULD_NOT_RUN, False))
+
+    def test_the_full_path_still_keeps_the_sheet_the_pin_map_and_the_page_and_tries_the_picture(self):
+        # The review of PR #1364: the could-not-run simulation stops no kept file. The picture is refused here for the display's
+        # own missing drawing fact, a part with no Wokwi part and no physical block; the walk's C6 drew it (the PR's manual check).
+        board = dict(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()), id=self.BOARD, wokwi_part_type=None)
+        board["physical"] = dict(board["physical"], header=dict(board["physical"]["header"], doubtful_pads=[]))
+        stages = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}], boards=[(self.BOARD, board)])
+        requirements = self.project / "requirements.json"
+        requirements.write_text((self.workdir / "requirements.json").read_text())
+        entries = kept_files.keep_all(stages, self.workdir, kept_files.KeepAsked(str(requirements), self.project, None), FakeTscircuitExport())
+        did = {Path(entry["file"]).name: (entry["did"], entry.get("code")) for entry in entries}
+        for name in ("breadboard.md", "pins.py", "build.json", "page.html"):
+            self.assertEqual(did[name], ("wrote", None), name)
+        self.assertEqual(did["breadboard.svg"], ("not written", "no_drawing_fact"))
+        self.assertNotIn("sim", did)  # no simulation project: the converter never ran
 
 
 def crashes(*given, **named):
