@@ -23,7 +23,9 @@ from spark.core.operation import ASKS, FETCHES, RUNS
 #: `replies(question)` is a `replies.ReplyStrategy`'s `reply`: the Reply to a Question, or None for "not now" (P737); it needs
 #: ASKS too, and its default refuses, so the two callers that build the tuple positionally stand. `fetch(url)` gives the bytes
 #: of one URL or raises the store's `StoreError`, as `records.store.fetch` does (the frontend gives that one); it needs FETCHES,
-#: and its default refuses too.
+#: and its default refuses too. `add_diagnostics(lines)` is the core's (P840): `run_operation` fills it for each run and puts
+#: its lines ahead of the result's `diagnostics`, a crash's too. It is for lines that must outlive a crash; a line that only
+#: belongs to a normal answer goes in the result's `diagnostics`. Its default is None, so a direct `run()` has none.
 #: Each is the real thing, a Fake or a refusing stub, as `build_outside_world` chose.
 UNDECLARED_FIX = "a defect in spark: report it, with the command"
 
@@ -38,7 +40,8 @@ def refuse_fetch(url):
     raise SparkError("the operation declares no `%s` effect, so it cannot fetch %r", FETCHES, url, code=UNDECLARED_EFFECT, fix=UNDECLARED_FIX)
 
 
-OutsideWorld = namedtuple("OutsideWorld", "run find_tool report clock make_consent replies fetch", defaults=(refuse_replies, refuse_fetch))
+OutsideWorld = namedtuple("OutsideWorld", "run find_tool report clock make_consent replies fetch add_diagnostics",
+                          defaults=(refuse_replies, refuse_fetch, None))
 
 
 class ProgramRunner:

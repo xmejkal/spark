@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P840: the lines given to add_diagnostics are dropped, so a crash loses the build's history line",
+  "find": "    return result._replace(diagnostics=added + list(result.diagnostics)) if added else result",
+  "replace": "    return result"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P840: the lines given to add_diagnostics come after the result's own, after a crash's traceback",
+  "find": "    return result._replace(diagnostics=added + list(result.diagnostics)) if added else result",
+  "replace": "    return result._replace(diagnostics=list(result.diagnostics) + added) if added else result"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P840: a world the builder gives as None is replaced, so the run crashes",
+  "find": "outside=world if world is None else world._replace(add_diagnostics=added.extend))",
+  "replace": "outside=world._replace(add_diagnostics=added.extend))"
+ },
+ {
+  "file": "scripts/spark/build/build_board.py",
+  "name": "P840: the build never gives its own lines to add_diagnostics, so they are lost",
+  "find": "        outside.add_diagnostics(built.diagnostics)",
+  "replace": "        pass"
+ }
+]
