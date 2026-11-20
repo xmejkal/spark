@@ -1,5 +1,6 @@
 """P481: a page block between an Operation's markers is what OperationHelpTable renders for it, and a broken marker is named."""
 
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -37,6 +38,13 @@ class TheTreeTest(unittest.TestCase):
 
     def test_the_deploy_command_holds_the_looks_block(self):
         self.assertIn("commands/deploy.md", [page for page, _ in doc_blocks.pages_with_blocks()])
+
+    def test_importing_the_tool_for_its_markers_loads_no_spark_module(self):
+        # P855 review: tools/check_docs.py imports END from here, and the docs checker must not depend on the bench area
+        code = "import sys; import doc_blocks; print(sorted(name for name in sys.modules if name.split('.')[0] == 'spark'))"
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "tools", capture_output=True, text=True, timeout=60,
+                             stdin=subprocess.DEVNULL)
+        self.assertEqual(run.stdout, "[]\n", run.stderr)
 
     def test_the_scripts_page_holds_lives_block(self):
         # P855: the first block on a guide page, kept current by the test above

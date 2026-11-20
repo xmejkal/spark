@@ -19,8 +19,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from spark.bench import OPERATIONS  # noqa: E402
-from spark.core.operation_help_table import OperationHelpTable  # noqa: E402
 
 # --- MVP ---
 #: The pages that may hold a block, as globs from the root.
@@ -41,6 +39,13 @@ STALE_MESSAGE = "%s: a block differs from its Operation, so run python3 tools/do
 WROTE_MESSAGE = "wrote %s"
 
 
+def bench_operations():
+    """The Operations a block may name: the bench's table, imported only here, so that `import doc_blocks` for its markers
+    (tools/check_docs.py reads END, P855) loads no spark module."""
+    from spark.bench import OPERATIONS
+    return OPERATIONS
+
+
 class BlockError(ValueError):
     """A page's markers that cannot be written: the sentence names the page, the line and the Operation."""
 
@@ -57,9 +62,11 @@ def _marker(page, number, line):
     raise BlockError(NOT_A_MARKER_MESSAGE % (page, number))
 
 
-def fresh_text(page, text, operations=OPERATIONS):
-    """`text` with each block between its markers rendered anew from `operations` (an op name to its class). A line in a
-    code fence is never a marker. Raises BlockError, see the module's docstring."""
+def fresh_text(page, text, operations=None):
+    """`text` with each block between its markers rendered anew from `operations` (an op name to its class; None for
+    `bench_operations()`). A line in a code fence is never a marker. Raises BlockError, see the module's docstring."""
+    from spark.core.operation_help_table import OperationHelpTable
+    operations = bench_operations() if operations is None else operations
     kept, name, opened_at, fenced = [], None, None, False
     for number, line in enumerate(text.split("\n"), 1):
         if name is None and line.lstrip().startswith(FENCE):
@@ -95,7 +102,7 @@ def pages_with_blocks(root=ROOT):
     return [(page, text) for page, text in pages if MARKER_WORD in text]
 
 
-def stale_pages(root=ROOT, operations=OPERATIONS):
+def stale_pages(root=ROOT, operations=None):
     """A sentence for each page whose block differs from what its Operation renders or whose markers are refused. It
     writes nothing."""
     said = []
@@ -107,7 +114,7 @@ def stale_pages(root=ROOT, operations=OPERATIONS):
     return said
 
 
-def write_pages(root=ROOT, operations=OPERATIONS):
+def write_pages(root=ROOT, operations=None):
     """(written, refused): the pages whose blocks were written anew, and a sentence for each page refused, which is not
     written."""
     written, refused = [], []
