@@ -408,14 +408,14 @@ class FakeBuildService:
 
 class FakeRequirementsBuild:
     """Fake: stands in for `requirements_build.RequirementsBuildService` in `build_board.BuildBoard` (P804): `build` answers
-    with the stages, the work folder and the requirements the test gave, no toolchain and no diagnostics."""
+    with the stages, the work folder, the requirements and the diagnostics lines the test gave, and no toolchain."""
 
-    def __init__(self, stages, workdir=None, requirements=None):
-        self.stages, self.workdir, self.requirements = list(stages), workdir, requirements
+    def __init__(self, stages, workdir=None, requirements=None, diagnostics=()):
+        self.stages, self.workdir, self.requirements, self.diagnostics = list(stages), workdir, requirements, list(diagnostics)
 
     def build(self, requirements_path=None, firmware=None, simulation=None):
         from spark.build.requirements_build import RequirementsBuildResult
-        return RequirementsBuildResult(self.stages, self.workdir, self.requirements, None, [])
+        return RequirementsBuildResult(self.stages, self.workdir, self.requirements, None, list(self.diagnostics))
 
 
 def run_build_board(stages, args, workdir=None):
@@ -484,7 +484,8 @@ class FakeOutsideWorld:
     `report` is its `reporter`'s, a FakeReporter of its own unless the test gives one (P507). `clock` is a FakeClock unless
     given, and `make_consent` the callable given, or one that fails the test on its first call (P655). `replies` is the
     given ReplyStrategy's `reply`, or one that fails the test on its first call (P737). `fetch` answers a URL with the
-    bytes the callable given returns (or raises what it raises), keeps each URL in `fetched`, and fails the test when none was given."""
+    bytes the callable given returns (or raises what it raises), keeps each URL in `fetched`, and fails the test when none was given.
+    `add_diagnostics` is the core's slot (P840): `run_operation` fills it, so a direct `.run()` has none (an AttributeError)."""
 
     def __init__(self, run=None, find_tool=None, reporter=None, clock=None, make_consent=None, replies=None, fetch=None):
         self.ran, self._run, self._find_tool = [], run, find_tool

@@ -154,10 +154,8 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   lacks the level of its onboard LED or button ([P464](https://github.com/xmejkal/spark/issues/632)). The `wrote` entry
   for `firmware/pins.py` in `kept` has the same list. A build without `--keep`, or a `pins.py` spark left alone, gives
   no missing-fact signal yet ([rows](../../observations/rows/p464-missing-facts.md) 1 and 2).
-  - Each item is `{subject, code, sentence, fix}`, with the code `missing_fact` and a subject such as
-    `pin_roles.onboard_led.active_level`.
-  - An item never changes `status` and is never in `unchecked`. So after `status`, read `missing_facts` when you built
-    with `--keep`: `ok` does not mean the firmware has every fact.
+  - Each item is `{subject, code, sentence, fix}` with the code `missing_fact` and a subject such as
+    `pin_roles.onboard_led.active_level`. It never changes `status`, so `ok` does not mean the firmware has every fact.
   - Never guess the level. Ask the person (see `/spark:build`), or use `/spark:research` or a bench measure. Write the
     answer with `parts.py --fact-set <board> FILE --project <the project's folder>` (a board of another project is refused), and build again.
 - The simulation line warns "no serial monitor is wired in the diagram" when the diagram has no `$serialMonitor` wires
@@ -166,6 +164,8 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   `wait-serial`, not a failure.
 - Refusals and crashes. Each stage that could not run shows as `[????] <stage>` with its sentence, then
   `the chain was NOT exercised — this is not a pass`, exit 2.
+  - A crash of spark itself (not a stage) prints nothing on stdout and exits 2. stderr gets the build's own lines, such
+    as the history line ([P840](https://github.com/xmejkal/spark/issues/1204)), before `build-board: crashed, <class>`.
   - The board emitter's refusal of a board that states no `power.io_volts` shows as `[????] schematic` with that sentence
     ([P121](https://github.com/xmejkal/spark/issues/55)).
   - A crash inside the board emitter (`spark/design/board_emitter.py`, called in process) is could-not-run

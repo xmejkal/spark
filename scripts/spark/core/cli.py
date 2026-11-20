@@ -75,15 +75,20 @@ def _guarded_result(operation, values, outside, build_outside):
     `build_outside(operation.effects_of(values))` when None. A
     SparkError is one Finding of its status. Any other exception, the builder's too, is a crash: one unchecked Finding with
     code `crash` and the class in its sentence, and in `diagnostics` the op and the class, the fix, and the traceback,
-    never in the envelope (an exception's message can carry a home path, so it goes to stderr, on one line)."""
+    never in the envelope (an exception's message can carry a home path, so it goes to stderr, on one line). The world's
+    `add_diagnostics` is this run's list (P840): its lines lead the diagnostics, whatever the end, a crash too. A world
+    the builder gives as None stays None."""
+    added = []
     try:
-        return operation.run(**values, outside=outside or build_outside(operation.effects_of(values)))
+        world = outside or build_outside(operation.effects_of(values))
+        result = operation.run(**values, outside=world if world is None else world._replace(add_diagnostics=added.extend))
     except SparkError as refused:
-        return OperationResult(findings=[Finding(refused.status, None, refused.code, str(refused), refused.fix)])
+        result = OperationResult(findings=[Finding(refused.status, None, refused.code, str(refused), refused.fix)])
     except Exception as crashed:  # noqa: BLE001  the core's one catch-all: a crash is answered as could-not-run, never hidden
         name = printable(type(crashed).__name__)
-        return OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.CRASH, CRASH_MESSAGE % name, CRASH_FIX)],
-                               diagnostics=[CRASHED_MESSAGE % (operation.name, name), CRASH_FIX] + traceback_lines(crashed))
+        result = OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.CRASH, CRASH_MESSAGE % name, CRASH_FIX)],
+                                 diagnostics=[CRASHED_MESSAGE % (operation.name, name), CRASH_FIX] + traceback_lines(crashed))
+    return result._replace(diagnostics=added + list(result.diagnostics)) if added else result
 
 
 def traceback_lines(crashed):
