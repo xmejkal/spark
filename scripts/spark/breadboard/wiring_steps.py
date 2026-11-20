@@ -38,8 +38,9 @@ ANCHOR_ORDER = (PART, RESISTOR, BOARD)
 #: component (the board's printed label, the part's pin, the resistor's end number), which a drawing looks up. A
 #: resistor end also says its job (what the part asks it to do) and its value, which stay the same when its tag renumbers.
 #: `power_rail` is the rail its record gives the pin ("ground", "logic", ...), "" when the record says it is no power
-#: pin, and None when no record says (P947).
-End = collections.namedtuple("End", "kind component name words pin job value power_rail", defaults=("", "", ""))
+#: pin, and None when no record says (P947). `label` is the word a drawn jumper's pill says for it (P953): the board's
+#: printed label, the part's printed name, or the resistor's end with its tag ("R1 end 1").
+End = collections.namedtuple("End", "kind component name words pin job value power_rail label", defaults=("", "", "", ""))
 #: What a point's jumpers carry, read from the ends' rails (P947): power, ground, a signal, or not known.
 POWER, GROUND, SIGNAL, UNKNOWN = "power", "ground", "signal", "unknown"
 #: The rail a record gives every ground pin.
@@ -159,6 +160,20 @@ def needs_jumper(end):
     return end.kind != RESISTOR
 
 
+def pill_words(seated):
+    """What the pill of a step's jumper says (P953): the end it moves, "to", then where it goes: the anchor's end, the
+    board's last ("SDI to D11"), a rail by its sign ("3V3 to + rail"), or a free row."""
+    end, seat = seated.subject, seated.anchor.seat()
+    if seated.act == SETUP:
+        return "%s to a free row" % end.label
+    if seat.kind == RAIL:
+        return "%s to %s rail" % (end.label, seat.sign)
+    pair = [end, seat.end]
+    if end.kind == BOARD and seat.end.kind != BOARD:
+        pair.reverse()
+    return "%s to %s" % (pair[0].label, pair[1].label)
+
+
 def move(end, destination):
     """The words that bring one end to its destination: a resistor leg goes in, everything else gets a jumper."""
     if not needs_jumper(end):
@@ -261,7 +276,8 @@ class JumperColors:
     """Strategy: one color per jumper by what it carries (P947), so its wire in a drawing and its line on the sheet
     match: red for power, black for ground, gray when no record says, and each signal jumper the next of SIGNALS in
     step order, so no two signals share a color while colors are left. SIGNALS wraps after its last; the number tells
-    two apart."""
+    two apart. These are the words the sheet and Wokwi say; the picture draws each in its hex of data/breadboards.json's
+    `palette.wires` (P953)."""
 
     BY_ROLE = {POWER: "red", GROUND: "black", UNKNOWN: "gray"}
     SIGNALS = ("green", "blue", "purple", "orange", "magenta", "cyan")
@@ -382,19 +398,20 @@ def wiring(board, circuit, design_parts, resistors, board_component):
         if component["name"] == board_component:
             pad = printed_label(board, port)
             label = "board %s" % pad
-            return End(BOARD, THE_BOARD, label, label, pad, power_rail=board_rail(board, port, pad))
+            return End(BOARD, THE_BOARD, label, label, pad, power_rail=board_rail(board, port, pad), label=pad)
         if component["name"] in resistors:
             tag, value, purpose = resistors[component["name"]]
             number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
-            return End(RESISTOR, tag, "%s end %s" % (tag, number), "%s (%s %s), end %s" % (tag, value, purpose, number),
-                       number, purpose, value)
+            name = "%s end %s" % (tag, number)
+            return End(RESISTOR, tag, name, "%s (%s %s), end %s" % (tag, value, purpose, number), number, purpose, value,
+                       label=name)
         record = records.get(component["name"]) or {}
         leg = record.get("legs", {}).get(port.get("name"))
         # a pin is said by the label printed beside it; its port name stays the key the drawing looks it up by
         printed = part_facts.printed_names(record).get(port.get("name"), port.get("name"))
         short = "%s %s" % (shorts.get(component["name"], component["name"]), printed)
         return End(PART, component["name"], short, short + (" (%s)" % leg if leg else ""), port.get("name"),
-                   power_rail=part_rail(record, port.get("name"), made))
+                   power_rail=part_rail(record, port.get("name"), made), label=printed)
 
     said = [one for one in (_said(point, end, design_parts) for point in points(circuit)) if one]
     said.sort(key=lambda one: (not one[0], _natural(one[1])))

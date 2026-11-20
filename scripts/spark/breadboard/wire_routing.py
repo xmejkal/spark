@@ -199,7 +199,8 @@ class TrackRouting:
     MAX_BENDS, FALLBACK_BENDS, BAND = 4, 8, 4
     #: The tries for each jumper not yet routed, in order: (its most bends, its fallback, whether it may come close).
     TRIES = ((MAX_BENDS, "", False), (FALLBACK_BENDS, BENDS, False), (FALLBACK_BENDS, BENDS, True))
-    #: How close to a part's body a wire's leg out of its hole may come, in px: the white under-stroke's half width.
+    #: How close to a part's body a wire's leg out of its hole may come, in px: more than the white under-stroke's half
+    #: width (2, P953's visual spec).
     LEG_CLEARANCE = 2.5
     #: The most states one search may take before it gives up.
     BUDGET = 60000
