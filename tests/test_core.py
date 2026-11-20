@@ -97,6 +97,22 @@ class SparkErrorTest(unittest.TestCase):
     def test_a_value_in_its_sentence_stays_on_one_line(self):
         self.assertEqual(str(SparkError("%s is missing", "a\nb", code="c", fix="f")), "a?b is missing")
 
+    def test_its_fix_is_the_codes_unless_one_is_given_and_a_plain_str_code_with_none_is_a_type_error(self):
+        # P853
+        self.assertEqual((SparkError("x", code=NEED).fix, SparkError("x", code=NEED, fix="given").fix), (NEED.fix, "given"))
+        with self.assertRaisesRegex(TypeError, "^the code 'tool_missing' holds no fix: give fix=, or make it a Code$"):
+            SparkError("x", code="tool_missing")
+
+
+class FindingTest(unittest.TestCase):
+    def test_a_finding_of_a_code_takes_its_fix_unless_one_is_given_and_a_plain_str_code_with_none_is_a_type_error(self):
+        # P853
+        self.assertEqual(Finding.of(outcomes.PROBLEMS, "light", NEED, "no need called light"),
+                         Finding(outcomes.PROBLEMS, "light", "need_unknown", "no need called light", "drop a need that --needs lists"))
+        self.assertEqual(Finding.of(outcomes.PROBLEMS, None, NEED, "s", "given").fix, "given")
+        with self.assertRaisesRegex(TypeError, "^the code 'flash_differs' holds no fix"):
+            Finding.of(outcomes.PROBLEMS, None, "flash_differs", "s")
+
 
 class CodesTest(unittest.TestCase):
     def test_the_table_holds_each_constant_of_the_module_once_with_a_sentence(self):

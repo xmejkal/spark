@@ -47,6 +47,7 @@ from spark.checks import check_codes  # noqa: E402
 from spark.design import design_codes  # noqa: E402
 from spark.breadboard import breadboard_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
+from spark.idea import idea_codes  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 import check_vendor_pins  # noqa: E402
@@ -274,7 +275,7 @@ class TheBenchCodesTableTest(unittest.TestCase):
 
     def test_the_tables_hold_each_constant_of_their_module_once_with_a_sentence_and_share_no_code(self):
         for module in (board_codes, codes, firmware_codes, breadboard_codes, check_codes, design_codes, build_codes,
-                       records_codes, sourcing_codes):
+                       records_codes, sourcing_codes, idea_codes):
             constants = {name: value for name, value in vars(module).items() if name.isupper() and isinstance(value, str)}
             self.assertEqual(sorted(constants.values()), sorted(module.CODES))
             sentences = list(module.CODES.values())
@@ -307,6 +308,8 @@ class TheBenchCodesTableTest(unittest.TestCase):
         # P717: no sourcing code is an equal literal of another leaf
         tables = others + (records_codes,)
         self.assertEqual(set(sourcing_codes.CODES) & set().union(*(other.CODES for other in tables)), set())
+        # P853: no idea code is an equal literal of another leaf
+        self.assertEqual(set(idea_codes.CODES) & set().union(*(other.CODES for other in tables + (sourcing_codes,))), set())
         # P692: a store problem is one code in both leaves, an equal literal with the same meaning
         self.assertEqual(sorted(set(breadboard_codes.CODES) & set(board_codes.CODES)), ["store_problem"])
         self.assertEqual(breadboard_codes.CODES["store_problem"], board_codes.CODES["store_problem"])

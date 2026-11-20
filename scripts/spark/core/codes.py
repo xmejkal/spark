@@ -23,6 +23,16 @@ class Code(str):
         return str(self), self.meaning, self.fix
 
 
+def fix_of(code, fix=None):
+    """`fix` when it is given, else the fix `code` holds: the one rule of `Finding.of` and `SparkError`. A TypeError that
+    names the code when a plain str comes with no fix."""
+    if fix is not None:
+        return fix
+    if not isinstance(code, Code):
+        raise TypeError("the code %r holds no fix: give fix=, or make it a Code" % (code,))
+    return code.fix
+
+
 #: An argument the Operation cannot run with: `run_cli` answers it for every Operation (it was board_codes.BAD_ARGUMENT).
 BAD_ARGUMENT = "bad_argument"
 #: The Operation raised an exception it did not turn into a Finding: a defect in spark, never in the project.

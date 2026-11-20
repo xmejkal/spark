@@ -85,6 +85,7 @@ class ArchitectureRules(unittest.TestCase):
         # P853: a leaf may import a leaf of spark.core, so two that import each other could not be imported
         paths = {path.stem: path for path in (ROOT / "scripts").rglob("*.py") if path.stem in measure.LEAVES}
         imports = {stem: measure.imports_of(ast.parse(path.read_text())) & set(paths) - {stem} for stem, path in paths.items()}
+        self.assertIn("codes", imports["idea_codes"])
         for stem in imports:
             reached, todo = set(), list(imports[stem])
             while todo:

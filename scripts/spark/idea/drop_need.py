@@ -17,11 +17,6 @@ from spark.idea import idea_codes
 # --- MVP ---
 #: The sentence of a need that is not there, with the ids that are.
 NEED_UNKNOWN_SENTENCE = "no need called %s: it was never there or is already dropped. --needs lists them: %s"
-NEED_UNKNOWN_FIX = "drop a need that --needs lists"
-#: The fix of a needs file or a drawer that cannot be read.
-UNREADABLE_FIX = "drop the need again once the file is fixed"
-#: The fix of a plan or a write that failed: the drawer is written first and the needs file last, so a retry finishes it.
-UNWRITTEN_FIX = "check the disk and the store folder, then run the same drop again: the drawer is written first and the needs file last"
 #: A hold released: the line of a drop, and of its dry run.
 RELEASE_LINE = "  %s %d of %d: %s — its need is dropped"
 #: The note when requirements.json still lists a part whose need is dropped.
@@ -54,17 +49,17 @@ class DropNeed(Operation):
         try:
             current, entries = self.needs.read(project), self.drawer.entries()
         except store.StoreError as unreadable:
-            raise SparkError("%s", unreadable, code=idea_codes.NEEDS_UNREADABLE, fix=UNREADABLE_FIX)
+            raise SparkError("%s", unreadable, code=idea_codes.NEEDS_UNREADABLE)
         try:
             name = store.plan_listed_name(project)
         except (OSError, store.StoreError) as failed:
-            raise SparkError("the project's name could not be read: %s", failed, code=idea_codes.DROP_UNWRITTEN, fix=UNWRITTEN_FIX)
+            raise SparkError("the project's name could not be read: %s", failed, code=idea_codes.DROP_UNWRITTEN)
         ids = [each["id"] for each in current]
         dropped = next((each for each in current if each["id"] == need), None)
         if dropped is None:
             sentence = NEED_UNKNOWN_SENTENCE % (need, ", ".join(ids) or "none")
             return OperationResult({"project": name, "need": need, "needs": ids, "dropped": None, "released": [], "written": False},
-                                   [Finding(outcomes.PROBLEMS, need, idea_codes.NEED_UNKNOWN, sentence, NEED_UNKNOWN_FIX)])
+                                   [Finding.of(outcomes.PROBLEMS, need, idea_codes.NEED_UNKNOWN, sentence)])
         after = [each for each in current if each["id"] != need]
         try:
             changes, released = self.needs.dropped_holds(name, current, after, entries)
@@ -78,6 +73,6 @@ class DropNeed(Operation):
                 self.drawer.apply(changes)
                 self.needs.write(project, after)
         except (OSError, store.StoreError) as failed:
-            raise SparkError("the drop of %s was not finished: %s", need, failed, code=idea_codes.DROP_UNWRITTEN, fix=UNWRITTEN_FIX)
+            raise SparkError("the drop of %s was not finished: %s", need, failed, code=idea_codes.DROP_UNWRITTEN)
         return OperationResult(data, lines=lines, notes=[{"subject": None, "sentence": note} for note in notes] or None)
 # --- end MVP ---
