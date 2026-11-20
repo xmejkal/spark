@@ -410,10 +410,10 @@ class TheBreadboardAreaTest(unittest.TestCase):
     BREADBOARD = ROOT / "scripts" / "spark" / "breadboard"
     #: The eighteen modules of the area, by the names of its page (`areas/breadboard.md`); `part_shape` came in W6-D3b,
     #: `before_power` in P826, `svg_diagram` in P945, `picture_check` and `picture_makers` in P946, `feature_check`,
-    #: `feature_measure` and `features_picture` in P956, `spacing` in P953.
+    #: `feature_measure` and `features_picture` in P956, `spacing` and `wire_routing` in P953.
     MODULES = ["before_power", "bench_changes", "breadboard_codes", "drawing", "drawing_catalog", "drawing_match", "feature_check",
                "feature_measure", "features_picture", "kept_moves", "part_pictures", "part_shape", "picture_check", "picture_makers", "sheet", "spacing",
-               "svg_diagram", "tabbed_page", "wiring_steps"]
+               "svg_diagram", "tabbed_page", "wire_routing", "wiring_steps"]
 
     def test_scripts_holds_the_cli_and_no_breadboard_library_module(self):
         self.assertEqual(sorted(path.stem for path in self.BREADBOARD.glob("*.py") if path.name != "__init__.py"), self.MODULES)

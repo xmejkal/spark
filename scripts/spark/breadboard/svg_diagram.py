@@ -11,7 +11,7 @@ import json
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
-from spark.breadboard import part_pictures, wiring_steps
+from spark.breadboard import part_pictures, wire_routing, wiring_steps
 from spark.breadboard.drawing import BREADBOARDS_FILE, _round_px
 from spark.breadboard.spacing import BodyBox
 
@@ -57,54 +57,6 @@ class IntoBodyLabels(PadLabelLayout):
         if y < part_px["center"][1]:
             return LabelPlace(x - 2, y + 5, "start", 90)
         return LabelPlace(x - 2, y - 5, "end", 90)
-
-
-class JumperLanes:
-    """
-    Strategy: the height of each jumper's run across (P947), so that no two jumpers share a drawn line. A run lies half
-    a pitch off its far end's row, on the side of its first end (below the row when both ends share it), and further
-    lines on that side are one pitch apart, so a run never lies on a row of holes. Jumpers take their lines shortest
-    span first, then by step, so runs nest; each takes the first line where no run comes within one pitch of its
-    span, a gap of one pitch included. When a leg would pass over another jumper's end in its column, or run along a
-    leg already drawn there, the other side is tried first, then lines further out.
-    """
-
-    def lines(self, jumpers, pitch):
-        """{step: the y of its run across}."""
-        ends = [(hole.x, hole.y, jumper.step) for jumper in jumpers for hole in (jumper.one, jumper.other)]
-        rows = [y for _, y, _ in ends]
-        depths = len(jumpers) + int((max(rows) - min(rows)) / pitch) + 2 if rows else 0
-        taken, legs, lines = [], [], {}
-        for jumper in sorted(jumpers, key=lambda one: (abs(one.one.x - one.other.x), one.step)):
-            low, high = sorted((jumper.one.x, jumper.other.x))
-            free = [y for y in self._candidates(jumper, pitch, depths)
-                    if not any(abs(y - y2) < pitch / 4 and low <= high2 + pitch and low2 <= high + pitch
-                               for y2, low2, high2 in taken)]
-            clear = [y for y in free if not self._crosses_an_end(jumper, y, ends) and not self._runs_along(jumper, y, legs)]
-            lines[jumper.step] = (clear or free)[0]
-            taken.append((lines[jumper.step], low, high))
-            legs += [(hole.x, *sorted((hole.y, lines[jumper.step]))) for hole in (jumper.one, jumper.other)]
-        return lines
-
-    @staticmethod
-    def _candidates(jumper, pitch, count):
-        """The lines a jumper may take, in the order it tries them: its own side first, unless a leg there would pass over
-        another jumper's end, then the other side."""
-        one, other = jumper.one, jumper.other
-        side = -1 if other.y > one.y else 1
-        return [other.y + toward * (pitch / 2 + depth * pitch) for toward in (side, -side) for depth in range(count + 1)]
-
-    @staticmethod
-    def _runs_along(jumper, y, legs):
-        """True when a leg of the jumper, from one of its holes to the run at `y`, overlaps a leg drawn in its column."""
-        return any(abs(x - hole.x) < 0.5 and min(high, max(hole.y, y)) - max(low, min(hole.y, y)) > 0
-                   for hole in (jumper.one, jumper.other) for x, low, high in legs)
-
-    @staticmethod
-    def _crosses_an_end(jumper, y, ends):
-        """True when a leg of the jumper, from one of its holes to the run at `y`, passes over another jumper's end."""
-        return any(abs(x - hole.x) < 0.5 and min(hole.y, y) < end_y < max(hole.y, y)
-                   for hole in (jumper.one, jumper.other) for x, end_y, step in ends if step != jumper.step)
 
 
 class BoardPalette(collections.namedtuple("BoardPalette", "colors sizes")):
@@ -155,31 +107,53 @@ class BoardBackground:
             if holes:
                 _element(root, "path", d="".join("M%s %sh0" % (_round_px(hole.x), _round_px(hole.y)) for hole in holes),
                          stroke=color, **{"stroke-width": size, "stroke-linecap": "square"})
-        self._rails(root, surface, rail_holes)
-        letters = {"fill": colors["grid_text"], "font-size": sizes["letters"], "text-anchor": "middle"}
+        self._rails(root, surface)
+        for text, x, y, size in self.texts(surface):
+            _element(root, "text", text, x=x, y=y + size * 0.35, fill=colors["grid_text"], **{"font-size": size,
+                                                                                            "text-anchor": "middle"})
+
+    def texts(self, surface):
+        """(text, x, y of its middle, font size) of each row letter, at the left edge, then each column number (1 and
+        every `numbers_every`), above the top rails and below the bottom rails."""
+        sizes = self.palette.sizes
         left = min(hole.x for hole in surface.terminal) - surface.pitch
-        for letter, y in surface.letters_y.items():
-            _element(root, "text", letter, x=left, y=y + sizes["letters"] * 0.35, **letters)
-        numbers = dict(letters, **{"font-size": sizes["numbers"]})
+        letters = [(letter, left, y, sizes["letters"]) for letter, y in surface.letters_y.items()]
         columns = sorted({hole.column: hole.x for hole in surface.terminal}.items())
         said = [(column, x) for column, x in columns if column == 1 or column % sizes["numbers_every"] == 0]
-        for y in (min(hole.y for hole in surface.holes) - surface.pitch, max(hole.y for hole in surface.holes) + surface.pitch):
-            for column, x in said:
-                _element(root, "text", str(column), x=x, y=y + sizes["numbers"] * 0.35, **numbers)
+        return letters + [(str(column), x, y, sizes["numbers"]) for y in (
+            min(hole.y for hole in surface.holes) - surface.pitch, max(hole.y for hole in surface.holes) + surface.pitch)
+            for column, x in said]
 
-    def _rails(self, root, surface, rail_holes):
-        colors, sizes = self.palette
+    def rail_lines(self, surface):
+        """(its rail, its holes' y, its line's y, left, right) of each rail: the line lies on the side of its holes away
+        from the other rail of its pair."""
+        rail_holes = [hole for hole in surface.holes if not hole.column]
+        found = []
         for rail in surface.rails:
             row = [hole for hole in rail_holes if hole.group == rail]
-            plus = rail.endswith("p")
             partner = next((hole.y for hole in rail_holes if hole.group != rail and hole.group[0] == rail[0]), None)
-            away = (1 if row[0].y > partner else -1) if partner is not None else (-1 if plus else 1)
-            y = row[0].y + away * sizes["rail_line_off"]
+            away = (1 if row[0].y > partner else -1) if partner is not None else (-1 if rail.endswith("p") else 1)
+            found.append((rail, row[0].y, row[0].y + away * self.palette.sizes["rail_line_off"],
+                          min(hole.x for hole in row), max(hole.x for hole in row)))
+        return found
+
+    def obstacles(self, surface, bodies):
+        """The Obstacles a wire keeps clear of: the board, the `bodies`, each letter's and number's box (0.6 of its
+        size wide a character, 0.8 of it high), and each rail's line."""
+        marks = [BodyBox(x - 0.3 * size * len(text), y - 0.4 * size, x + 0.3 * size * len(text), y + 0.4 * size)
+                 for text, x, y, size in self.texts(surface)]
+        return wire_routing.Obstacles(self.box(surface), tuple(bodies), tuple(marks),
+                                      tuple((y, left, right) for _, _, y, left, right in self.rail_lines(surface)))
+
+    def _rails(self, root, surface):
+        colors, sizes = self.palette
+        for rail, row_y, y, left, right in self.rail_lines(surface):
+            plus = rail.endswith("p")
             color = colors["plus" if plus else "minus"]
-            _element(root, "line", x1=min(hole.x for hole in row), y1=y, x2=max(hole.x for hole in row), y2=y,
+            _element(root, "line", x1=left, y1=y, x2=right, y2=y,
                      stroke=color, **{"stroke-width": sizes["rail_line"], "stroke-opacity": sizes["rail_line_opacity"]})
-            _element(root, "text", self.PLUS if plus else self.MINUS, x=min(hole.x for hole in row) - surface.pitch,
-                     y=row[0].y + sizes["rail_sign"] * 0.35, fill=color,
+            _element(root, "text", self.PLUS if plus else self.MINUS, x=left - surface.pitch,
+                     y=row_y + sizes["rail_sign"] * 0.35, fill=color,
                      **{"font-size": sizes["rail_sign"], "font-weight": "700", "text-anchor": "middle"})
 
 
@@ -187,11 +161,12 @@ class SvgBreadboardDiagram:
     """
     Renderer: a BreadboardLayout as an SVG picture in Wokwi's px, for the sheet to show (P268, #302): a white page, the
     breadboard in its `palette`'s look (BoardBackground, P953), each part as its picture at its holes, turned about its measured center as Wokwi turns it, with
-    a dot on each pin, used or free (`PAD_MARKS`), and its name, then each jumper in its own lane (`lanes`, P947) as
-    the praised page draws a wire: a white under-stroke, the color of what it carries on top and a dot at each end,
-    with its number in the middle of its run. A part drawn from its record also gets its pad labels, placed by the
+    a dot on each pin, used or free (`PAD_MARKS`), and its name, then each jumper on the way its `router` gives it
+    (P953: around the parts, on tracks between the holes) as the praised page draws a wire: a white under-stroke, the
+    color of what it carries on top and a dot at each end, with its number over the middle of its longest run. A wire
+    that needs more bends is drawn dashed, and the note says so, as it says of a wire with no way at all. A part drawn from its record also gets its pad labels, placed by the
     PadLabelLayout its part_px names (`label_layouts`, keyed by the part_px's `labels`). Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
-    same bytes. The canvas holds the board's body and every part's body, with MARGIN_PX round them, in Wokwi's px, so
+    same bytes. The canvas holds the board's body, every part's body and every wire, with MARGIN_PX round them, in Wokwi's px, so
     its view box may start left of or above 0. The root sets the font once. Each jumper's group carries `data-step`, its step's
     number, and each part's group `data-part`, its id, so a player finds them (P949); a key is never an `id`.
     """
@@ -202,7 +177,7 @@ class SvgBreadboardDiagram:
     SHEET_MESSAGE = "![The layout on a breadboard](breadboard.svg)"
     #: The space round the board and every part's body, in px: two pitches, as on the old page.
     MARGIN_PX = 19.2
-    #: The room under the holes for the note of a board whose facts are not all verified, in px.
+    #: The room under the holes for each line of the note: the unverified facts of the parts, then the wires', in px.
     NOTE_PX = 14
     #: The one font of every text spark writes, set on the root.
     FONT = "Helvetica,Arial,sans-serif"
@@ -210,9 +185,17 @@ class SvgBreadboardDiagram:
     #: praised page's 7.5 and 4 are for its 18 px pitch; these fit spark's 9.6 px one.
     UNDER_STROKE_PX, WIRE_STROKE_PX, END_DOT_PX, END_RING_PX = 5, 2.5, 3, 1
 
-    def __init__(self, colors=None, pictures=None, label_layouts=None, lanes=None, palette=None):
+    #: The dashes of a wire that needs more bends than a wire may have.
+    DASHES = "4 2"
+    #: What the note says of the wires drawn dashed, and of the wires not drawn, filled with their numbers.
+    DASHED_NOTE = ("wire %s bends more than 4 times to go around the parts and is drawn dashed",
+                   "wires %s bend more than 4 times to go around the parts and are drawn dashed")
+    NOT_DRAWN_NOTE = ("wire %s finds no way around the parts and is not drawn", "wires %s find no way around the parts "
+                      "and are not drawn")
+
+    def __init__(self, colors=None, pictures=None, label_layouts=None, router=None, palette=None):
         self.colors = colors or wiring_steps.JumperColors()
-        self.lanes = lanes or JumperLanes()
+        self.router = router or wire_routing.TrackJumperRouter()
         self.pictures = pictures or part_pictures.PictogramPartPictures()
         self.label_layouts = label_layouts or {LABELS_BESIDE: BesideLabels(), LABELS_INTO_BODY: IntoBodyLabels()}
         self.palette = palette or BoardPalette.load()
@@ -225,13 +208,16 @@ class SvgBreadboardDiagram:
         ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)
         surface = layout.geometry.surface
         pictures = {part.id: self.pictures.picture(part.type, part.record) for part in layout.parts}
-        notes = self._notes(layout, pictures)
         background = BoardBackground(self.palette)
         # a body may hang past the holes (a module seated by one edge, a board's USB end): the canvas holds it
         boxes = [background.box(surface)] + [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
+        paths = self.router.route(layout, background.obstacles(surface, boxes[1:]))
+        boxes += [BodyBox(min(x for x, _ in path.points), min(y for _, y in path.points), max(x for x, _ in path.points),
+                          max(y for _, y in path.points)) for path in paths.values() if path.points]
+        notes = [", ".join(said) for said in (self._notes(layout, pictures), self._wire_notes(paths)) if said]
         left, top = min(box.left for box in boxes) - self.MARGIN_PX, min(box.top for box in boxes) - self.MARGIN_PX
         width = _round_px(max(box.right for box in boxes) + self.MARGIN_PX - left)
-        height = _round_px(max(box.bottom for box in boxes) + self.MARGIN_PX - top + (self.NOTE_PX if notes else 0))
+        height = _round_px(max(box.bottom for box in boxes) + self.MARGIN_PX - top + self.NOTE_PX * len(notes))
         left, top = _round_px(left), _round_px(top)
         root = ElementTree.Element(_svg("svg"), {"width": str(width), "height": str(height),
                                                    "viewBox": "%s %s %s %s" % (left, top, width, height),
@@ -240,15 +226,16 @@ class SvgBreadboardDiagram:
         background.draw(root, surface)
         for part in layout.parts:
             self._part(root, part, layout.geometry, pictures[part.id])
-        self._wires(root, layout)
+        self._wires(root, layout, paths)
         joined = self._joined_groups(layout)
         for part in layout.parts:
             self._label(root, part, layout.geometry, joined)  # last, so no wire or other part covers a pin or a name
-        if notes:
+        for index, line in enumerate(notes):  # the parts' notes, then the wires'
             note = ElementTree.SubElement(root, _svg("text"), {
-                "x": str(_round_px(left + self.MARGIN_PX)), "y": str(_round_px(top + height - 4)), "font-size": "8",
+                "x": str(_round_px(left + self.MARGIN_PX)),
+                "y": str(_round_px(top + height - 4 - self.NOTE_PX * (len(notes) - 1 - index))), "font-size": "8",
                 "fill": "#5d4037"})
-            note.text = ", ".join(notes)
+            note.text = line
         return ElementTree.tostring(root, encoding="unicode") + "\n"
 
     @staticmethod
@@ -327,38 +314,52 @@ class SvgBreadboardDiagram:
             "stroke-width": "2.5", "paint-order": "stroke"})
         label.text = part_px.get("name") or part.id
 
-    def _wires(self, root, layout):
-        """Each jumper in its lane and its color, then every step number, over every wire so that none hides one."""
-        colors = self.colors.of({jumper.step: jumper.role for jumper in layout.jumpers})
-        lines = self.lanes.lines(layout.jumpers, layout.geometry.surface.pitch)
-        for jumper in layout.jumpers:
-            self._jumper(root, jumper, lines[jumper.step], colors[jumper.step])
-        for jumper in layout.jumpers:
-            self._number(root, jumper, lines[jumper.step], colors[jumper.step])
+    def _wire_notes(self, paths):
+        """The note's sentences of the wires drawn dashed and of the wires not drawn, each by its step's number."""
+        said = []
+        for fallback, words in ((wire_routing.BENDS, self.DASHED_NOTE), (wire_routing.NO_WAY, self.NOT_DRAWN_NOTE)):
+            steps = sorted(step for step, path in paths.items() if path.fallback == fallback)
+            if steps:
+                numbers = ", ".join(map(str, steps[:-1])) + " and %d" % steps[-1] if len(steps) > 1 else str(steps[0])
+                said.append(words[len(steps) > 1] % numbers)
+        return said
 
-    def _jumper(self, root, jumper, across, color):
-        """One jumper along the holes, as one group: out of its first hole along the column, across at its lane's
-        height `across`, and into its last hole, drawn twice (white under, its color on top), with a dot at each end.
-        Its bends sit at least half a pitch off the holes, so no bend looks like a joint with a hole of another group."""
-        one, other = jumper.one, jumper.other
-        route = "M%s %sL%s %sL%s %sL%s %s" % (_round_px(one.x), _round_px(one.y), _round_px(one.x), _round_px(across),
-                                             _round_px(other.x), _round_px(across), _round_px(other.x), _round_px(other.y))
+    def _wires(self, root, layout, paths):
+        """Each jumper on its way and in its color, then every step number, over every wire so that none hides one."""
+        colors = self.colors.of({jumper.step: jumper.role for jumper in layout.jumpers})
+        for jumper in layout.jumpers:
+            self._jumper(root, jumper, paths[jumper.step], colors[jumper.step])
+        for jumper in layout.jumpers:
+            if paths[jumper.step].points:
+                self._number(root, jumper, paths[jumper.step], colors[jumper.step])
+
+    def _jumper(self, root, jumper, path, color):
+        """One jumper as one group: its way from its first hole to its other, drawn twice (white under, its color on top,
+        dashed when it bends more than a wire may), with a dot at each end. A jumper with no way gets its dots alone."""
         group = ElementTree.SubElement(root, _svg("g"), {"class": "wire", "data-step": str(jumper.step)})
-        for stroke, width in (("#ffffff", self.UNDER_STROKE_PX), (color, self.WIRE_STROKE_PX)):
-            ElementTree.SubElement(group, _svg("path"), {
+        route = "M" + "L".join("%s %s" % point for point in path.points)
+        for stroke, width in (("#ffffff", self.UNDER_STROKE_PX), (color, self.WIRE_STROKE_PX)) if path.points else ():
+            drawn = ElementTree.SubElement(group, _svg("path"), {
                 "d": route, "fill": "none", "stroke": stroke, "stroke-width": str(width), "stroke-linecap": "round",
                 "stroke-linejoin": "round"})
-        for hole in (one, other):
+            if path.fallback and stroke == color:
+                drawn.set("stroke-dasharray", self.DASHES)
+        for hole in (jumper.one, jumper.other):
             ElementTree.SubElement(group, _svg("circle"), {
                 "cx": str(_round_px(hole.x)), "cy": str(_round_px(hole.y)), "r": str(self.END_DOT_PX), "fill": color,
                 "stroke": "#ffffff", "stroke-width": str(self.END_RING_PX)})
 
     @staticmethod
-    def _number(root, jumper, across, color):
-        """A jumper's step number, in the middle of its run and just above it, with a white halo."""
+    def _number(root, jumper, path, color):
+        """A jumper's step number over the middle of its longest run, with a white halo: just above a run across, just
+        beside one along a column."""
+        (x1, y1), (x2, y2) = max(zip(path.points, path.points[1:]),
+                                 key=lambda piece: abs(piece[1][0] - piece[0][0]) + abs(piece[1][1] - piece[0][1]))
+        across = y1 == y2
         number = ElementTree.SubElement(root, _svg("text"), {
-            "x": str(_round_px((jumper.one.x + jumper.other.x) / 2)), "y": str(_round_px(across - 3)), "font-size": "9",
-            "font-weight": "bold", "text-anchor": "middle", "fill": color,
+            "x": str(_round_px((x1 + x2) / 2 + (0 if across else 3))),
+            "y": str(_round_px((y1 + y2) / 2 + (-3 if across else 3))), "font-size": "9", "font-weight": "bold",
+            "text-anchor": "middle" if across else "start", "fill": color,
             "stroke": "#ffffff", "stroke-width": "2.5", "paint-order": "stroke"})
         number.text = str(jumper.step)
 

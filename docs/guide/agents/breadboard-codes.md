@@ -28,6 +28,12 @@ breadboard is full." That line is no failure: the drawing is right. A module wit
 across the gap sits in the outermost row, so its body hangs off the board's edge. Wokwi's half board keeps the layout
 Wokwi was shown.
 
+Each wire in the picture goes around the parts, never over a part's body (P953): out of its hole along the column,
+then only on tracks half a pitch between the rows and columns of holes, with at most 4 bends, one pitch from the wire
+beside it, and across another only at a right angle. A wire that needs more bends to get around is drawn dashed, and
+the note under the picture names it ("wire 7 bends more than 4 times to go around the parts and is drawn dashed"); a
+wire with no way at all is not drawn, and the note says so. The steps and their holes are the same either way.
+
 ## A part's picture
 
 `parts.py --picture-frame <id> [--project .]` prints the frame a part's picture is drawn on
