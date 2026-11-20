@@ -41,7 +41,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.design import pin_assigner  # noqa: E402
 from spark.records import board_records  # noqa: E402
-from spark.build import build_codes  # noqa: E402
 from spark.build import build_record  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
@@ -49,7 +48,7 @@ from spark.build import build_service  # noqa: E402
 from spark.build import requirements_build  # noqa: E402
 from spark.build import kept_files  # noqa: E402
 from spark.build import build_board  # noqa: E402
-from spark.build.stages import Stage  # noqa: E402
+from spark.build.stages import BUILD_STAGES, DESIGN_ERROR, Stage  # noqa: E402
 from suite_runs import slow  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
@@ -2267,6 +2266,14 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
                          "the board definition disagrees with itself: header_order.row_left has 7 labels but physical.header.pins says 6 "
                          "— one of the two is wrong, and guessing which would shift every pad after the disagreement")
 
+    def test_a_board_that_disagrees_with_itself_leaves_no_footprint_file(self):  # P852: row 9 of p432-one-refusal escaped
+        project, wanted = self.project_without("physical.header.drill_mm")
+        self.edit_record(project, lambda record: record["physical"]["header"].update(pins=[6, 6]))
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "requirements.json").write_text(json.dumps(wanted))
+        stages = build_stages(wanted, workdir, project=project)
+        self.assertEqual((stages[-1].name, sorted(path.name for path in workdir.glob("*.tsx"))), ("footprint", ["board.tsx"]))
+
     def test_a_value_of_the_wrong_kind_in_the_header_stops_the_footprint_stage_too(self):
         # the board file's validation checks no header geometry: a pitch written as text was a TypeError out of the build
         project, wanted = self.project_without("physical.header.drill_mm")
@@ -3125,9 +3132,9 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
     """P701: every Stage that does not end ok names its code (build_codes, or the design error's own), and the sheet's
     `not written` entry carries its code into --json's `kept`. The codes are literals here."""
 
-    #: Each Stage that is not ok, in the order the build area builds them (P705): board_engine's converter_stage_problem
-    #: and convert, build_service's BuildService and board_alone, requirements_build's RequirementsBuildService. A code a design error carries is named by the
-    #: expression that passes it on.
+    #: The code of each way a stage of the build can end that is not ok, by call site: board_engine's
+    #: converter_stage_problem and convert, build_service's BuildService and board_alone, requirements_build's
+    #: RequirementsBuildService. A code a design error carries is named by the expression that passes it on.
     CODES_IN_ORDER = [
         "tool_missing",
         "stage_timed_out", "converter_lacks_part", "no_diagram",
@@ -3140,21 +3147,17 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
     ]
 
     def test_each_stage_that_is_not_ok_names_its_code(self):
-        stops = []
-        for source in ("spark/build/board_engine.py", "spark/build/build_service.py", "spark/build/requirements_build.py"):
-            tree = ast.parse((ROOT / "scripts" / source).read_text())
-            stops += sorted((node.lineno, node.col_offset, node) for node in ast.walk(tree)
-                            if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "Stage" and len(node.args) > 1
-                            and getattr(node.args[1], "id", None) in ("COULD_NOT_RUN", "PROBLEMS"))
-
-        def code(call):
-            if len(call.args) < 4:
-                return None
-            named = call.args[3]
-            if isinstance(named, ast.Attribute) and getattr(named.value, "id", None) == "build_codes":
-                return getattr(build_codes, named.attr)
-            return ast.unparse(named)
-        self.assertEqual([code(call) for _, _, call in stops], self.CODES_IN_ORDER)
+        """P852: every Stage in scripts/ is made by a definition of `stages.BUILD_STAGES`, whose `ended` raises for an ending
+        that is neither skipped nor coded, so no Stage( call is left outside stages.py; and the table keeps each code the
+        call sites passed, the design errors' as the stages a design error can stop."""
+        calls = ["%s:%d" % (path.relative_to(ROOT), node.lineno) for path in sorted((ROOT / "scripts").rglob("*.py"))
+                 if path.name != "stages.py" for node in ast.walk(ast.parse(path.read_text()))
+                 if isinstance(node, ast.Call) and "Stage" in (getattr(node.func, "id", None), getattr(node.func, "attr", None))]
+        self.assertEqual(calls, [])
+        self.assertEqual({ending.code for definition in BUILD_STAGES for ending in definition.endings if ending.code},
+                         {code for code in self.CODES_IN_ORDER if "." not in code})
+        self.assertEqual([definition.name for definition in BUILD_STAGES if DESIGN_ERROR in definition.endings],
+                         ["requirements", "parts", "schematic", "footprint"])
 
     def test_a_board_nobody_has_parts_said_twice_and_no_parts_are_caught_with_their_codes(self):
         workdir = Path(tempfile.mkdtemp())

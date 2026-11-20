@@ -396,16 +396,16 @@
   "replace": "        return emit(design.board, part_list, inputs.assignments, placements, width, height, design.rules), None\n    except KeyError as refused:"
  },
  {
-  "file": "scripts/spark/build/build_service.py",
+  "file": "scripts/spark/build/stages.py",
   "name": "F5: a board emitter crash reads as problems again",
-  "find": "stages.append(Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, said_of_a_crash(\"the board emitter\", crash), build_codes.STAGE_CRASHED))",
-  "replace": "stages.append(Stage(board_emitter.SCHEMATIC_STAGE, PROBLEMS, said_of_a_crash(\"the board emitter\", crash), build_codes.STAGE_CRASHED))"
+  "find": "BOARD_EMITTER_CRASHED_ENDING = StageEnding(build_codes.STAGE_CRASHED, COULD_NOT_RUN,",
+  "replace": "BOARD_EMITTER_CRASHED_ENDING = StageEnding(build_codes.STAGE_CRASHED, PROBLEMS,"
  },
  {
-  "file": "scripts/spark/build/build_service.py",
+  "file": "scripts/spark/build/stages.py",
   "name": "F5: the board emitter refusing the input reads as problems",
-  "find": "stages.append(Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, str(refusal), build_codes.SCHEMATIC_REFUSED))",
-  "replace": "stages.append(Stage(board_emitter.SCHEMATIC_STAGE, PROBLEMS, str(refusal), build_codes.SCHEMATIC_REFUSED))"
+  "find": "SCHEMATIC_REFUSED_ENDING = StageEnding(build_codes.SCHEMATIC_REFUSED, COULD_NOT_RUN, \"%s\")",
+  "replace": "SCHEMATIC_REFUSED_ENDING = StageEnding(build_codes.SCHEMATIC_REFUSED, PROBLEMS, \"%s\")"
  },
  {
   "file": "scripts/spark/design/power_rails.py",

@@ -13,12 +13,11 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.build import board_engine
-from spark.build import build_codes
 from spark.build.board_engine import modules_for, timed_out_sentence  # noqa: F401 — the CLI's handler, and tests read it here
 from spark.build.build_service import BuildInputs, BuildService, vouches_for_a_build
-from spark.build.kept_files import REQUIREMENTS_STAGE, design_handed_to
-from spark.build.stages import Stage
-from spark.core.outcomes import COULD_NOT_RUN, NOT_CHECKED
+from spark.build.kept_files import design_handed_to
+from spark.build.stages import BUILD, CHECK_SPINE, CHECK_SPINE_CRASHED_ENDING, REQUIREMENTS, TIMED_OUT_ENDING
+from spark.core.outcomes import NOT_CHECKED
 from spark.design import loader
 from spark.firmware import sim_project
 from spark.records import store
@@ -57,7 +56,7 @@ class RequirementsBuildService:
         try:
             requirements = loader.read(source) if source else dict(REFERENCE)
         except loader.DesignError as broken:
-            return RequirementsBuildResult([Stage(REQUIREMENTS_STAGE, COULD_NOT_RUN, str(broken), broken.code)], None, None, None, [])
+            return RequirementsBuildResult([REQUIREMENTS.stopped_by(broken)], None, None, None, [])
         # The project is the file's, up from its own folder; a file in no project is built from the plugin's library.
         project = loader.project_for(source) if source else None
         from_library = bool(source) and loader.is_library(project)
@@ -107,13 +106,12 @@ class RequirementsBuildService:
             return service.for_toolchain(toolchain).build(inputs)
         except (subprocess.TimeoutExpired, board_engine.TimedOutError) as late:  # the guard: BuildService keeps the stages for its own tools (P664)
             said = str(late) if isinstance(late, board_engine.TimedOutError) else timed_out_sentence(late)
-            return [Stage("build", COULD_NOT_RUN, said, build_codes.STAGE_TIMED_OUT)]
+            return [BUILD.ended(TIMED_OUT_ENDING, said)]
         except Exception as exc:  # noqa: BLE001
             # Anything unforeseen is could-not-run, never problems. An exception says this tool
             # failed, which is not the same as the chain failing, and reporting one as the other
             # sends somebody to debug a design that was never examined.
-            return [Stage("check_spine", COULD_NOT_RUN,
-                          "%s: %s" % (type(exc).__name__, exc), build_codes.STAGE_CRASHED)]
+            return [CHECK_SPINE.ended(CHECK_SPINE_CRASHED_ENDING, type(exc).__name__, exc)]
 
     @staticmethod
     def _firmware_line(kept, workdir):

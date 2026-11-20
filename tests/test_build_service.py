@@ -6,6 +6,7 @@ and the engine's runner. The codes and the limit are literals here, as in test_c
 """
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -18,10 +19,11 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from fakes import FakeTscircuitEngine  # noqa: E402
+from fakes import FakeBuildService, FakeTscircuitEngine  # noqa: E402
 from golden_design import fed_circuit  # noqa: E402
 from spark.build import board_engine, kept_files  # noqa: E402
-from spark.build.build_service import BuildInputs, BuildService  # noqa: E402
+from spark.build.build_service import BuildInputs, BuildService, board_alone  # noqa: E402
+from spark.build.requirements_build import RequirementsBuildService  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS, SKIPPED  # noqa: E402
 from spark.build.build_service import every_part_skipped, verdict, vouches_for_a_build  # noqa: E402
@@ -245,6 +247,11 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         self.assertEqual((stage.status, stage.code), (PROBLEMS, "diagram_unwired"))
         self.assertNotIn("every part is skipped", stage.detail)
 
+    def test_the_unwired_diagram_says_its_detail(self):  # P852
+        stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}, {"part": "led-red-5mm", "name": "Led"}])
+        self.assertEqual(stage.detail, "a diagram with 0 connections. Every part is placed and none is wired, which is what an "
+                                       "unmapped component looks like once the converter has given up on it")
+
     def test_the_converter_gets_an_added_netlist_only_on_a_stand_in_board(self):  # P792
         self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}])
         self.assertEqual("--add-netlist" in json.loads((self.project / SHIM_ARGS).read_text()), self.STAND_IN)
@@ -294,3 +301,74 @@ class AStandInBoardsOwnPartsInTheFullBuildTest(TheSimulationStageOfASkippedDesig
         stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}], BOARD_ALONE_DIAGRAM)
         self.assertIn("the diagram holds no stand-in for onboard_led and onboard_button: a project's own converter older than P792", stage.detail)
         self.assertNotIn(self.BUTTON, stage.detail)
+
+
+def crashes(*given, **named):
+    """A build that raises what no stage catches."""
+    raise RuntimeError("boom")
+
+
+class EachEndingSaysItsDetailTest(unittest.TestCase):
+    """P852: the detail of each way a stage ends that no golden reaches, filled with known values, word for word."""
+
+    FED = fed_circuit((("Mcu", "3V3", "V33"),))
+    LED = {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}
+
+    def detail(self, requirements=REFERENCE, **given):
+        return a_build(requirements, **given)[1][-1].detail
+
+    def converted(self, said):
+        """The Stage `board_engine.convert` stops at when the converter exits 1 and says `said`."""
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / ".spark" / "tools.json").write_text(json.dumps(a_converter_shim(project, {})))
+        sim_dir = project / "work" / "sim"
+        sim_dir.mkdir(parents=True)
+        return board_engine.convert(project, None, ["--circuit", "c.json"], sim_dir,
+                                    lambda command, **named: subprocess.CompletedProcess(command, 1, "", said))[1]
+
+    def test_the_parts_stage(self):
+        self.assertEqual(self.detail({"board": "firebeetle2-esp32s3", "board_only": True, "parts": ["x"]}),
+                         "the requirements say board_only and name parts: say one")
+        self.assertEqual(self.detail({"board": "firebeetle2-esp32s3"}),
+                         "the requirements name no parts, so there is nothing to build; a board holding only the microcontroller "
+                         'proves nothing. A project that runs on the board alone says "board_only": true')
+
+    def test_the_build_stage(self):
+        self.assertEqual(self.detail(self.LED, engine=FakeTscircuitEngine(self.FED[:6] + self.FED[7:])),
+                         "Mcu reaches no ground. A board builds, routes "
+                         "and reports no error with a component joined to nothing — the parts around it are wired to nets it is "
+                         "simply not on")
+        self.assertEqual(self.detail(self.LED, engine=FakeTscircuitEngine([e for e in self.FED if e["type"] != "pcb_trace"])),
+                         "built with 0 pcb_traces — every component is placed and no copper joins any of them. tscircuit skips "
+                         "routing entirely when one net is unroutable, and that does not raise")
+        self.assertEqual(self.detail(self.LED, engine=FakeTscircuitEngine(self.FED + [{"type": "pcb_trace_missing_error", "message": "x"}])),
+                         "1 error(s): pcb_trace_missing_error; first: x")
+        self.assertEqual(self.detail(engine=FakeTscircuitEngine(circuit=None, stderr="boom\n")),
+                         "no circuit.json was produced by fake-tsci (0.0.0-fake), which does build a trivial board\nboom")
+        self.assertEqual(self.detail(engine=FakeTscircuitEngine(circuit=None, version="1.2.3", probe=(False, "no react"))),
+                         "fake-tsci (1.2.3) cannot build even a trivial board from here, so this is the toolchain, not the design. "
+                         "Use the project's own tsci (npm i @tscircuit/cli in the project) or one that builds on its own.\nno react")
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "requirements.json").write_text(json.dumps(REFERENCE))
+        service = BuildService(FakeTscircuitEngine(found=False), board_emitter.BoardEmitter(assume_missing_sizes=True),
+                               find_tool=lambda name, project: None)
+        self.assertEqual(service.build(BuildInputs(REFERENCE, workdir))[-1].detail,
+                         "the board engine was not found — so the chain was not exercised; /spark:setup installs it")
+
+    def test_the_simulation_stage(self):
+        self.assertEqual(self.converted("no Wokwi part is mapped to Servo").detail,
+                         "the converter has no Wokwi part for a component on this board — a mapping to add to its lib/mapping.ts, "
+                         "not a defect in the design, which built\nno Wokwi part is mapped to Servo")
+        self.assertEqual(self.converted("it broke").detail, "no diagram was produced\nit broke")
+
+    def test_a_board_alone_with_no_wokwi_part(self):
+        stages = board_alone({"name": "x"}, Path(tempfile.mkdtemp()))
+        self.assertEqual([(stage.name, stage.status, stage.detail) for stage in stages],
+                         [(name, SKIPPED, "board only: nothing to wire") for name in ("parts", "schematic", "footprint", "build")]
+                         + [("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type")])
+
+    def test_a_crash_no_stage_caught(self):
+        built = RequirementsBuildService(FakeBuildService(crashes)).build()
+        self.addCleanup(shutil.rmtree, built.workdir)
+        self.assertEqual([(stage.name, stage.detail) for stage in built.stages], [("check_spine", "RuntimeError: boom")])

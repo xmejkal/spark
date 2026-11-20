@@ -12,7 +12,8 @@ from spark.breadboard import tabbed_page
 from spark.build.build_service import findings_of, verdict
 from spark.build.kept_files import KeepAsked, keep_all, left_off, simulation_dir
 from spark.build.requirements_build import RequirementsBuildService
-from spark.build.stages import skipped_the_build
+from spark.build.stage_help_table import StageHelpTable
+from spark.build.stages import BUILD_STAGES, skipped_the_build
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, WRITES, Argument, Operation
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, STATUS_FOR
 from spark.core.renderers import FlatJsonLine
@@ -66,6 +67,7 @@ class BuildBoard(Operation):
 
     name = "build-board"
     summary = "The one thing that has to work: a module list in, a board that builds out."
+    details = StageHelpTable.render(BUILD_STAGES)
     arguments = (Argument(("requirements",), "requirements", str, "a requirements.json; omit for the reference design. "
                           "\"board_only\": true with no parts builds the board alone", nargs="?"),
                  COMMON_ARGUMENTS["json"]._replace(help="the verdict as one JSON object: check, status, stages, next (the firmware step, "

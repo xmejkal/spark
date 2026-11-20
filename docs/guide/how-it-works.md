@@ -40,7 +40,7 @@ In words:
 | simulation | the Wokwi diagram and chips are generated ([`sim_project.py`](../../scripts/spark/firmware/sim_project.py) and the converter in [`tools/circuit-to-wokwi/`](../../tools/circuit-to-wokwi/)), and kept with `--keep` or `--sim-dir`. No simulation runs |
 
 Two more names can appear, each as could-not-run: `requirements`, for a file that is not a design, and `check_spine`,
-for an error the script did not expect.
+for an error the script did not expect. Every stage comes from one table, `stages.BUILD_STAGES` (P852), and `check_spine.py --help` lists it: each stage with the status and code of each way it can end.
 
 `/spark:build` stops after the simulation stage. You run [`check_all.py`](../../scripts/check_all.py) next; it runs
 the five checks on what was built. The [journey guide](journey/build.md) shows a real run.

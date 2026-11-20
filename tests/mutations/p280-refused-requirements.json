@@ -20,7 +20,7 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "a build that finished is still said not to",
-  "find": "    if any(stage.name == \"build\" and stage.status == OK for stage in stages):\n        return None\n",
+  "find": "    if any(stage.name == BUILD.name and stage.status == OK for stage in stages):\n        return None\n",
   "replace": "    if False:\n        return None\n"
  }
 ]

@@ -12,7 +12,7 @@ from pathlib import Path
 from spark.build import build_codes
 from spark.build.build_record import OWN_FILES, STAGE_IN_THE_WAY, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, StageTakenError, sha256_of
 from spark.build.build_service import verdict
-from spark.build.stages import skipped_the_build
+from spark.build.stages import BUILD, REQUIREMENTS, SIMULATION, skipped_the_build
 from spark.breadboard import drawing, sheet, tabbed_page
 from spark.design import board_sections, loader
 from spark.design import pin_assigner
@@ -27,8 +27,6 @@ PIN_MODULE = Path("firmware") / "pins.py"
 #: What stops the pin map from being written: no pin can be placed, or the design, the store or a file cannot be read.
 PIN_MAP_REFUSALS = (pin_assigner.ImpossibleError, loader.DesignError, store.StoreError, OSError, ValueError)
 
-#: The stage that reads the requirements file; its detail is why a refused file built nothing (P280).
-REQUIREMENTS_STAGE = "requirements"
 #: The `did` of a kept entry for a part the person moved in breadboard.json that the build could not keep (P273).
 MOVE_NOT_KEPT = "move not kept"
 #: The `did` of a kept entry for one thing a rebuild asks a person to change on the bench (P300).
@@ -222,7 +220,7 @@ def _show_traces(side, traces):
 
 def _built(stages):
     """Whether the chain's build stage ended ok: a board that was not built, or that has problems, replaces no board."""
-    return any(stage.name == "build" and stage.status == OK for stage in stages)
+    return any(stage.name == BUILD.name and stage.status == OK for stage in stages)
 
 
 def _kept(workdir, destination, recorded, finished):
@@ -300,9 +298,9 @@ def not_written_entry(one):
 def why_not_built(stages, board_only_why):
     """Why no build finished in this run, or None when one did: the refused requirements file's own reason (P280),
     `board_only_why` for a board-only design, else that the build did not finish."""
-    if any(stage.name == "build" and stage.status == OK for stage in stages):
+    if any(stage.name == BUILD.name and stage.status == OK for stage in stages):
         return None
-    refused = next((stage.detail for stage in stages if stage.name == REQUIREMENTS_STAGE and stage.status != OK), None)
+    refused = next((stage.detail for stage in stages if stage.name == REQUIREMENTS.name and stage.status != OK), None)
     if refused:
         return refused
     if skipped_the_build(stages):
@@ -588,7 +586,7 @@ def keep_simulation(workdir, destination, stages):
     if not (workdir / "sim").is_dir():
         return None
     try:
-        simulated = any(stage.name == "simulation" and stage.status == OK for stage in stages)
+        simulated = any(stage.name == SIMULATION.name and stage.status == OK for stage in stages)
         if simulated and not (workdir / "sim" / sim_project.LIMITS_NOTE).is_file():  # the copy merges, so an older note would stay for the next run
             (Path(destination) / sim_project.LIMITS_NOTE).unlink(missing_ok=True)
         shutil.copytree(workdir / "sim", destination, dirs_exist_ok=True)
