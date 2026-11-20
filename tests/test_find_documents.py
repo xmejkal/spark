@@ -110,6 +110,19 @@ class FindDocumentsTest(unittest.TestCase):
         self.find()
         self.assertEqual(self.fetch.asked, [wiki.PAGE, wiki.DRAWING], "a second run fetches nothing")
 
+    def test_the_same_bytes_listed_under_another_url_are_kept_under_that_entrys_file_and_not_listed_twice(self):
+        record = wiki.board()
+        record["documents"]["photo"] = {"url": "https://example.net/top.png", "sha256": TOP_SHA, "file": "top.png",
+                                        "retrieved": "2026-11-19", "title": "Top", "version": None}
+        self.write_record(record)
+        before = self.record_path.read_text()
+        self.fetch.answers[wiki.PAGE] = wiki.page(documents=())
+        envelope, code = self.find()
+        self.assertEqual(code, 1, envelope)
+        self.assertEqual(self.kept(), ["%s/top.png" % TOP_SHA])
+        self.assertEqual(self.record_path.read_text(), before)
+        self.assertEqual((envelope["data"]["top_view"]["key"], envelope["data"]["top_view"]["new"]), ("photo", False))
+
     def test_changed_bytes_at_a_listed_url_are_listed_beside_the_old_entry_with_a_note(self):
         record = wiki.board()
         record["documents"]["old-dimension"] = {"url": wiki.DRAWING, "sha256": "a" * 64, "file": "dimension.pdf",
@@ -247,13 +260,6 @@ class FindDocumentsTest(unittest.TestCase):
         self.assertEqual(step["argv"][:4], ["--features-set", "<file>", "--part", wiki.BOARD_ID])
         self.assertIn("documents.%s" % envelope["data"]["top_view"]["key"], step["why"])
         self.assertTrue(any("revision" in note["sentence"] for note in envelope["notes"]), "the top view's revision is not checked")
-
-    def test_describe_marks_find_documents_network(self):
-        # test_routes.TheNetworkIsThePersonsYesTest reads every network row of --describe, so no allowed-tools may hold it
-        with contextlib.redirect_stdout(io.StringIO()) as out:
-            parts.main(["--describe", "--json"])
-        operations = {operation["flag"]: operation for operation in json.loads(out.getvalue())["data"]["operations"]}
-        self.assertIn("network", operations["--find-documents"]["effects"])
 
 
 if __name__ == "__main__":

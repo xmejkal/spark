@@ -51,9 +51,17 @@ NO_DOCUMENT_LIST = codes.Code("no_document_list", "the wiki page holds no docume
                         "keep the page's documents by hand: parts.py --fetch after their URLs are in the record's sources")
 MORE_DOCUMENTS = codes.Code("more_documents", "the wiki page lists more files than one run takes (twelve); the message names the rest",
                       NO_DOCUMENT_LIST.fix)
+#: find_documents: what a board's maker's page did not give (P952). Each fix is the next way to a top view or a drawing.
+NO_VENDOR_FINDER = codes.Code("no_vendor_finder", "no finder knows the board's maker: its vendor and its sources name no page spark can read",
+                        "take a photo of the board's component side (/spark:identify), then measure it with parts.py --features-set")
+NO_TOP_VIEW = codes.Code("no_top_view", "the maker's page has no picture in its \"Board Overview\" section, so no top view was kept",
+                   NO_VENDOR_FINDER.fix)
+NO_DIMENSION_DRAWING = codes.Code("no_dimension_drawing", "the maker's page lists no document named \"Dimension\", so no dimension drawing was kept",
+                            "keep a dimension drawing from another page of the maker with parts.py --keep FILE --url URL")
 
 #: Each code and the one sentence that says what it means.
 CODES = {code: code.meaning for code in (
     NO_SUCH_PART, PART_CONTRACT_BROKEN, PROMOTION_WOULD_OVERWRITE, STEP_LINE_BROKEN, NO_STEP_MARKED, STEP_WITHOUT_SESSION,
-    NO_TRANSCRIPT, TRANSCRIPT_UNREADABLE, TRANSCRIPT_ENDS_EARLY, UNKNOWN_MATCHER, NO_SKU, NO_DOCUMENT_LIST, MORE_DOCUMENTS)}
+    NO_TRANSCRIPT, TRANSCRIPT_UNREADABLE, TRANSCRIPT_ENDS_EARLY, UNKNOWN_MATCHER, NO_SKU, NO_DOCUMENT_LIST, MORE_DOCUMENTS,
+    NO_VENDOR_FINDER, NO_TOP_VIEW, NO_DIMENSION_DRAWING)}
 # --- end MVP ---

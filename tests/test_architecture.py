@@ -636,11 +636,11 @@ class TheSourcingAreaTest(unittest.TestCase):
     the one flag shape (P726 PR 3)."""
     SOURCING = ROOT / "scripts" / "spark" / "sourcing"
     #: The modules of the area, by the names of its page (`areas/sourcing.md`).
-    MODULES = ["brief_choices", "datasheets", "drawer", "fetch_documents", "find_kept", "import_drawer", "keep_file", "keep_picture",
+    MODULES = ["brief_choices", "datasheets", "drawer", "fetch_documents", "find_documents", "find_kept", "import_drawer", "keep_file", "keep_picture",
                "list_catalog", "list_drawer", "list_parts", "list_signals", "list_unverified", "mark_step", "matching", "offers", "part_facts",
                "part_operation", "part_records", "part_rules", "picture_frame", "promote_record", "read_datasheet", "record_home", "resolve_sources",
                "run_cost", "set_drawer", "set_facts", "set_features", "set_function", "show_part", "sourcing_codes", "sourcing_operations",
-               "validate_parts", "write_answers", "write_skeleton"]
+               "validate_parts", "vendor_documents", "write_answers", "write_skeleton"]
     #: `parts.py`'s own top-level names since P726 PR 3: the CLI's flag shape of `DropNeed`, the route to the Operations on
     #: the core, the help epilog and `main`. The text printer's rule is `record_kind.Answer.text_lines` and `run_cli`'s.
     PARTS_CLI = ["DropNeedFlag", "asked_on_the_core", "catalog_epilog", "main", "on_the_core"]
@@ -682,7 +682,7 @@ class TheSourcingAreaTest(unittest.TestCase):
         code = ("from spark.core.operation import Operation; from spark.sourcing import sourcing_operations as s; "
                 "print(sorted(s.OPERATIONS)); print([op for op, cls in s.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-        self.assertEqual(run.stdout.split("\n")[:2], ["['catalog', 'drawer', 'drawer-import', 'drawer-set', 'fact-set', 'features-set', 'fetch', 'function-set', 'keep', 'keep-picture', 'kept', "
+        self.assertEqual(run.stdout.split("\n")[:2], ["['catalog', 'drawer', 'drawer-import', 'drawer-set', 'fact-set', 'features-set', 'fetch', 'find-documents', 'function-set', 'keep', 'keep-picture', 'kept', "
                                                      "'list', 'picture-frame', 'promote', 'read', 'show', 'signals', 'skeleton', 'sources', 'step', 'unverified', 'validate']", "[]"], run.stderr)
 
     def test_the_first_argument_of_every_parts_operation_is_its_flag(self):

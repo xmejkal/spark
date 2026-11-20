@@ -25,6 +25,8 @@ from spark.sourcing.sourcing_codes import MORE_DOCUMENTS, NO_DOCUMENT_LIST, NO_S
 WHERE_LOCAL, WHERE_WEB = "local", "web, free"
 #: The page a question about a kept drawing cites: a dimension drawing is one page.
 FIRST_PAGE = "page 1"
+#: The address of a DFRobot wiki page, filled with a sku in lower case.
+DFROBOT_WIKI_PAGE = "https://wiki.dfrobot.com/%s/"
 #: A document whose key or title holds one of these words is the drawing a geometry question cites.
 DRAWING_TITLE_WORDS = ("dimension", "drawing")
 #: The `why` of a Question, from its FactNeed: who reads the fact today, or will, and the card that makes it read.
@@ -109,6 +111,15 @@ class KeptDocumentsSource(ResearchSource):
         return SourceOffer(questions=[question_for(need, self.needs.question_of(need.fact_path), cites) for need in gaps])
 
 
+def dfrobot_wiki_page(record):
+    """The DFRobot wiki page of a record: its first string `sku` (a board keeps a list), trimmed and in lower case, in the
+    wiki's address, or None when it has none. Research reads a module's and `--find-documents` a board's (P952)."""
+    sku = record.get("sku")
+    skus = sku if isinstance(sku, list) else [sku]
+    first = next((one for one in skus if isinstance(one, str) and one.strip()), None)
+    return DFROBOT_WIKI_PAGE % quote(first.strip().lower(), safe="") if first else None
+
+
 class DfrobotWikiSource(ResearchSource):
     """
     Strategy: the DFRobot wiki page of the module, by its `sku`. It fetches the page once per record (never when the
@@ -120,7 +131,6 @@ class DfrobotWikiSource(ResearchSource):
 
     where = WHERE_WEB
     VENDOR = "dfrobot"
-    PAGE = "https://wiki.dfrobot.com/%s/"
     #: The `fileFormat` words of a file the store keeps, beside the `KEEPABLE` endings.
     KEEPABLE_FORMATS = ("application/pdf", "image/png", "image/jpeg", "image/webp", "image/svg+xml")
     #: The most files kept from one page: the researcher's own fetch budget (agents/parts-researcher.md).
@@ -130,13 +140,6 @@ class DfrobotWikiSource(ResearchSource):
     #: The fix of a page or a file that did not answer, or that the store refused, given with the store's code.
     RETRY_FIX = "run again when the page answers; the other sources still ran"
     LD_JSON = re.compile(r'<script\s+type="application/ld\+json"\s*>(.*?)</script>', re.S)
-
-    def page_of(self, record):
-        """The page's URL from the record's first string `sku`, lower case, or None."""
-        sku = record.get("sku")
-        skus = sku if isinstance(sku, list) else [sku]
-        first = next((one for one in skus if isinstance(one, str) and one.strip()), None)
-        return self.PAGE % quote(first.strip().lower(), safe="") if first else None
 
     @staticmethod
     def listed_documents(html):
@@ -184,7 +187,7 @@ class DfrobotWikiSource(ResearchSource):
     def offer(self, gaps, record, outside):
         if str(record.get("vendor") or "").strip().lower() != self.VENDOR:
             return SourceOffer()
-        url = self.page_of(record)
+        url = dfrobot_wiki_page(record)
         if url is None:
             return SourceOffer(problems=(SparkError("%s has no sku, so its DFRobot wiki page has no address", record.get("id"), code=NO_SKU),))
         if self._sources_hold(record, url):
