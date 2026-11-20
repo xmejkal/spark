@@ -35,6 +35,11 @@ class BodyBox(collections.namedtuple("BodyBox", "left top right bottom")):
         return cls(left + min(x for x, _ in corners), top + min(y for _, y in corners),
                    left + max(x for x, _ in corners), top + max(y for _, y in corners))
 
+    def meets(self, other, by):
+        """True when this box and `other` overlap or come closer than `by` px."""
+        return (self.left - by < other.right and other.left - by < self.right and self.top - by < other.bottom
+                and other.top - by < self.bottom)
+
     def columns(self, surface):
         """The columns of `surface` whose x lies inside the box, edges included, in order."""
         return sorted({hole.column for hole in surface.terminal if self.left - 0.01 <= hole.x <= self.right + 0.01})

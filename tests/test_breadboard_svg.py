@@ -25,7 +25,7 @@ from fakes import FakePartPictures  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import drawing, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
+from spark.breadboard import drawing, part_captions, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
 from test_breadboard_layout import EPAPER, RECORD_BOARD, epaper_inputs, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -151,7 +151,7 @@ class TheSvgTest(unittest.TestCase):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         # P949: the keys data-step and data-part, and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "549d5b330ef7d6d439111523c50de89bc9c59d03ef0d17ce57b80e9932d9ac13")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, pill 7 clear of the rail signs, seen in a render on 2026-11-20
+                         "faca967063a8f6cc8773538913e8abd0c1ad4866885a9d76f31d273ecf254ce0")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, pill 7 clear of the rail signs; PR 4b: a caption per part outside its body, seen in a render on 2026-11-20
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -264,7 +264,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
         # page's group (no glow, each word upright or sideways on the sheet), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "fb324bc330f93a5e66c56a5efbb8f46fd88c71db154af28df04b86648ee54b19")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, seen in a render on 2026-11-20
+                         "9b6aceacfe058a6b1fc01ef3502466322512f847f5d4c8f78af999ce5651209a")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex; PR 4b: the pads in the steps' words read bottom to top, a caption per part and its note line, seen in a render on 2026-11-20
 
     def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
         board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)
@@ -860,7 +860,7 @@ class TheLabelsTest(unittest.TestCase):
         def part(record):
             return drawing.PlacedPart("LedRed5mm", "wokwi-led", {}, 0, 0, 0, {}, record)
 
-        self.assertEqual([svg_diagram.PartCaption.words(part(record)) for record in (
+        self.assertEqual([part_captions.PartCaption.words(part(record)) for record in (
             {"id": "led-x", "name": "Maker LED, red, 5 mm"}, {"id": "led-x", "name": ""}, {"id": "led-x"}, None, {"name": 7})],
             [("Maker LED", True), ("led-x", False), ("led-x", False), ("LedRed5mm", False), ("LedRed5mm", False)])
 

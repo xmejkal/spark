@@ -235,8 +235,8 @@ These write:
   that equals the fresh plan's as spark's. A failed build never removes
   `wiring-record.json`. Never read an empty list as proof that nothing changed on the bench: read the sheet. The list stays until another design is built, but not after a record that cannot be read. Spark has no witness that the person wired a sheet.
   Each drawing is one entry of `sheet.DRAWING_RENDERERS`, all from one plan of the layout (P270). `breadboard.svg` (P268) is
-  the picture `breadboard.md` shows inline, its part pictures from `part_pictures.PictogramPartPictures`, and each jumper
-  carries a pill with its number and the two pads it joins ([the pills](breadboard-codes.md#the-pills-and-the-wire-colours)).
+  the picture `breadboard.md` shows inline: part pictures from `part_pictures.PictogramPartPictures`, a pill on each jumper
+  ([the pills](breadboard-codes.md#the-pills-and-the-wire-colours)), a caption by each part and a note line per part ([the captions](breadboard-codes.md#the-labels-the-captions-and-the-note)).
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
   reads, writes `breadboard.md`, `breadboard.json`, `breadboard.svg` and `page.html` after a build that finished, and creates `.tscircuit/cache/`.
   `page.html` (P271) shows the breadboard picture and tscircuit's schematic and PCB in three tabs, each from

@@ -30,7 +30,8 @@ RECORD = "record"
 FLUSH_EDGE = "+y"
 
 #: Value: a part in mm: its outline `size` (width, height), its `pins` {label: (x, y)}, the pad `ground` stands for, and
-#: its fact `groups` {name: {value, verified, source, why_it_matters, note}}.
+#: its fact `groups` {name: {value, verified, source, why_it_matters, note, words}}: `words` names the group in the
+#: picture's note line of its part (P953).
 PartShape = collections.namedtuple("PartShape", "size pins ground groups")
 
 
@@ -41,13 +42,14 @@ def _px(mm):
 def project_to_px(shape, usb_mark=True, labels=svg_diagram.LABELS_BESIDE, full_surface=True):
     """The `part_px` of a shape: the dict the planner and the renderers read. It scales to px and derives the `center` the
     turn goes about. `covers_holes` is a drawing convention, not a measured fact: the body of a board hides the holes under
-    it. `notes` holds the sentence and the why of each group that is not verified, in the order the shape lists them. The
+    it. `notes` holds the sentence, the words that the picture's note says it by (P953) and the why of each group that is
+    not verified, in the order the shape lists them. The
     flags say what this source can do, so no caller compares a source's name: `wokwi_part` (Wokwi has a part with these
     pins), `pad_labels` (the picture names each pad), `full_surface` (the board is drawn on the 63-column breadboard),
     `usb_mark` (the picture marks a USB end: a board's) and `labels` (where a pad's label goes, a key of
     `drawing.PAD_LABEL_LAYOUTS`)."""
     width, height = shape.size
-    notes = [{"group": name, "sentence": group["note"], "why": group["why_it_matters"]}
+    notes = [{"group": name, "sentence": group["note"], "words": group["words"], "why": group["why_it_matters"]}
              for name, group in shape.groups.items() if group["verified"] is False]
     return {"size": [_px(width), _px(height)], "center": [_px(width / 2), _px(height / 2)], "covers_holes": True,
             "pins": {label: [_px(x), _px(y)] for label, (x, y) in shape.pins.items()},
@@ -198,21 +200,22 @@ class RecordShapeSource(ShapeSource):
         groups = {
             "pads": {"value": pad_count, "verified": False, "source": "the board file's physical header and header_order",
                      "why_it_matters": "a pad label read wrong wires the wrong pin, and no fact of the record says the pads are checked",
-                     "note": "pads not verified"},
+                     "note": "pads not verified", "words": "pads"},
             "row_side": {"value": "row 0 on the left", "verified": False,
                          "source": "footprint_emitter.pads, which puts row 0 at -x",
                          "why_it_matters": "a mirrored board shows on the bench: the pins sit on the other side",
-                         "note": "row side not verified"},
+                         "note": "row side not verified", "words": "row side"},
             "usb_end": {"value": "at the end away from the first pads", "verified": False,
                         "source": "footprint_emitter.pads, which puts the first pads at the +y end",
                         "why_it_matters": "the pins may sit at the other end of the board",
-                        "note": "USB end not verified"}}
+                        "note": "USB end not verified", "words": "USB end"}}
         if doubtful:
             groups["doubtful_pads"] = {
                 "value": list(doubtful), "verified": False, "source": "the board file's physical.header.doubtful_pads",
                 "why_it_matters": "a jumper to a pad silkscreened NC does nothing",
                 "note": "%s doubtful" % (" and ".join(doubtful) if len(doubtful) < 3 else
-                                         "%s and %s" % (", ".join(doubtful[:-1]), doubtful[-1]))}
+                                         "%s and %s" % (", ".join(doubtful[:-1]), doubtful[-1])),
+                "words": "the pads in a dashed ring"}
         return groups
 
     def describe_part(self, board):
@@ -336,11 +339,11 @@ class ModuleShapeSource(ShapeSource):
         why = proof.get("why_it_matters") or "a pad read wrong wires the wrong pin"
         name = record.get("short_name") or record.get("id")
         groups = {"pads": {"value": pad_count, "verified": verified, "source": source, "why_it_matters": why,
-                           "note": "%s pads not verified" % name}}
+                           "note": "%s pads not verified" % name, "words": "pads"}}
         if face == OneRowHeaderPlacer.BACK:
             groups["face"] = {"value": "header on the back, labels mirrored from the front", "verified": verified,
                               "source": source, "why_it_matters": "a mirrored module wires each pin to its neighbour's row",
-                              "note": "%s header side not verified" % name}
+                              "note": "%s header side not verified" % name, "words": "header side"}
         return groups
 
     def describe_part(self, record):

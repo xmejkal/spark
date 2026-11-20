@@ -250,7 +250,8 @@ class TheBuildDrawsAKeptPictureTest(unittest.TestCase):
         picture = next(index for index, group in enumerate(groups) if group.get("data-part") == "Epaper2in9BwrMhEtLive")
         self.assertEqual(len(list(groups[picture].iter(SVG + "image"))), 1)
         self.assertEqual(groups[picture].find(SVG + "title").text, "a synthetic picture")
-        for label in ("GND", "SDI", "SCLK", "CS", "D/C", "Reset", "Busy"):  # VCC is the FireBeetle's pad too
+        # VCC is the FireBeetle's pad too, and so is GND since P953 PR 4b (its GND1 to GND3 read GND, as the steps say)
+        for label in ("SDI", "SCLK", "CS", "D/C", "Reset", "Busy"):
             with self.subTest(label=label):
                 drawn = [index for index, element in enumerate(groups)
                          for text in element.iter(SVG + "text") if text.text == label]
