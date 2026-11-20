@@ -20,8 +20,8 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "spark's library board is not refused",
-  "find": "in (record_kind.LIBRARY.resolve(), board_records.LIBRARY.resolve()):",
-  "replace": "in (record_kind.LIBRARY.resolve(),):"
+  "find": "    return Path(path).parent.resolve() in (record_kind.LIBRARY.resolve(), board_records.LIBRARY.resolve())",
+  "replace": "    return Path(path).parent.resolve() in (record_kind.LIBRARY.resolve(),)"
  },
  {
   "file": "scripts/spark/records/missing_facts.py",

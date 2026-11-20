@@ -1,0 +1,118 @@
+{
+ "//": "P956: the FireBeetle 2 ESP32-C6's geometry and pad order as its walk's record held them before the rows were swapped (row_18 first, 2026-11-20), the comments left out and doubtful_pads [] as the walk holds it now; and the four anchors measured on DFRobot's top view (the wiki's board overview) by the walk, in the frame's mm. Numbers only: no vendor's bytes.",
+ "board": {
+  "id": "firebeetle2-esp32c6",
+  "physical": {
+   "width_mm": 25.4,
+   "height_mm": 60.0,
+   "corner_radius_mm": null,
+   "header": {
+    "rows": 2,
+    "pins": [
+     18,
+     14
+    ],
+    "pitch_mm": 2.54,
+    "row_spacing_mm": 22.86,
+    "drill_mm": null,
+    "pad_mm": 1.5,
+    "first_pad_from_edge_mm": 5.2,
+    "flush_edge": "+y",
+    "doubtful_pads": []
+   },
+   "header_order": {
+    "row_18": [
+     "RX",
+     "TX",
+     "D2",
+     "D3",
+     "NC1",
+     "D6",
+     "D7",
+     "D9",
+     "IO19",
+     "IO20",
+     "MISO",
+     "MOSI",
+     "SCK",
+     "NC2",
+     "GND1",
+     "NC3",
+     "3V3",
+     "RST"
+    ],
+    "row_14": [
+     "NC4",
+     "D11",
+     "D12",
+     "D13",
+     "NC5",
+     "A1",
+     "A2",
+     "A3",
+     "A4",
+     "SDA",
+     "SCL",
+     "GND2",
+     "3V3_2",
+     "VIN"
+    ]
+   },
+   "mounting_holes": {
+    "count": 4,
+    "diameter_mm": null,
+    "inset_mm": null,
+    "spacing_x_mm": 22.0,
+    "spacing_y_mm": 56.6
+   }
+  },
+  "power_pads": {
+   "GND1": {
+    "rail": "ground",
+    "direction": "out"
+   },
+   "GND2": {
+    "rail": "ground",
+    "direction": "out"
+   },
+   "3V3": {
+    "rail": "logic",
+    "direction": "out",
+    "can_supply": "regulator_3v3_a",
+    "own_draw": "module_peak_a",
+    "volts": "io_volts"
+   },
+   "3V3_2": {
+    "rail": "logic",
+    "direction": "out"
+   },
+   "VIN": {
+    "rail": "5v",
+    "direction": "in",
+    "feeds": "3V3"
+   }
+  }
+ },
+ "anchors_mm": [
+  [
+   "RST",
+   24.22,
+   48.4
+  ],
+  [
+   "RX",
+   24.22,
+   5.15
+  ],
+  [
+   "VIN",
+   1.25,
+   38.22
+  ],
+  [
+   "NC4",
+   1.25,
+   5.15
+  ]
+ ]
+}

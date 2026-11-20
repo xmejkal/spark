@@ -26,7 +26,8 @@ parts at their places and no glow or shadow, take the guide group out, and keep 
 --part <id> --made-by WORD --likeness exact|near|rough --credit LINE --project . --dry-run` first. It keeps the file
 in the store and names it in the record's `documents` and `pictures.breadboard-top` in one write, or keeps
 nothing. `verified` follows the frame's size fact (`body_mm.verified`). The next build draws it, with spark's pads
-and labels over it: the build asks the makers in the order `picture_makers.BUILD_MAKERS` (the kept picture), then
+and labels over it: the build asks the makers in the order `picture_makers.BUILD_MAKERS` (the kept picture, then
+spark's drawing of the measured features, below), then
 spark's pictograms in `data/pictograms/`, the one named by the record's id before the one named by its Wokwi type.
 
 A part's picture is checked by `picture_check.PictureCheck`
@@ -46,3 +47,43 @@ picture that is refused at the build is drawn as the part's pictogram, with a no
 | `picture_guide_left` | the frame's guide group (`data-guide`) is left out: the pads are spark's to draw |
 | `picture_pad_label` | no text is a pad's printed label: spark draws the labels over the picture |
 | `picture_too_big` | at most 250000 bytes with no embedded JPEG, 400000 with one |
+
+## A board's measured features
+
+A board's main features can be measured on the maker's top view and drawn in their real colours
+([P956](https://github.com/xmejkal/spark/issues/1362)): the chips, the USB socket, the buttons, the LEDs, the battery
+socket, the display connector, the crystal, the inductors, the groups of small resistors and capacitors, the mounting
+holes and the silkscreen words that name no pad. Boards only in this version.
+
+1. Keep the maker's top view in the record's `documents` (`parts.py --keep`). It must be a component-side top view,
+   never a mirrored one.
+2. Look at the picture and write a features file in its pixels: `{picture: {document, outline_px: [left, top, right,
+   bottom], usb_edge}, measured_by, colour, anchors: [{pad, x_px, y_px}], features: [{name, kind, x_px, y_px, w_px,
+   h_px, colour}]}`. `outline_px` is the PCB's outline in the picture. `usb_edge` is the picture's edge (`top`,
+   `bottom`, `left` or `right`) where the USB socket is. Give two anchors or more at pads that are half the board apart.
+   An anchor names its pad by the record's label (`RX`, not the silkscreen's `17`). A colour is `#rrggbb` in lower case,
+   read off the picture. The kinds are `chip` (with `leads`: `four`, `top-bottom`, `left-right` or `none`), `usb`,
+   `button`, `led`, `jst`, `fpc` and `passives` (with `count`, 2 by default, at most 64), `connector`, `crystal`, `inductor`,
+   `hole` and `label` (with `text`, at most 24 characters). The file's order is the drawing's order, labels last.
+   Leave out a silkscreen word that is a pad's label: spark draws those.
+3. `parts.py --features-set FILE --part <board> --project . --dry-run`, then without `--dry-run`. Spark scales each
+   axis by the outline and turns the picture so that the USB end is at the bottom. It never mirrors. It writes
+   `physical.features` in mm in the board's frame and `physical.colour`, each with its source and `verified` false, and
+   replaces the old ones whole. Its answer gives each anchor's offset from its pad.
+4. Build. The build asks the kept picture first, then spark's drawing of the features (`features_picture`), then the
+   pictogram. A record whose features cannot be drawn gets the pictogram, with a note under the drawing:
+   `<board>: measured features not shown (<why>)`.
+
+Only the pads and the mounting holes can be checked against the maker's dimension drawing, through the record. A
+mirrored or wrongly scaled picture fails at the anchors. A chip or a socket is checked only against the outline and the
+pads, so a wrong place that is near no pad passes, and no check can tell a bad measurement from a real part beside a
+pad. Look at the drawing next to the maker's picture, and let the person judge it by eye.
+
+| code | the features break this rule |
+| --- | --- |
+| `feature_outside` | a box lies more than 0.5 mm past the outline (a box up to 0.5 mm past is pulled back inside); a `usb` box may hang up to 2 mm past the USB edge, and is drawn there |
+| `feature_over_pad` | a box covers part of a pad's circle (`physical.header.pad_mm`, else 1.5 mm across) |
+| `feature_off_drawing` | an anchor lies more than 0.5 mm from its pad; or a `hole` lies more than 0.5 mm from the nearest place that `physical.mounting_holes` gives, its width and height differ by more than 0.5 mm, or its width differs from `mounting_holes.diameter_mm` by more than 0.5 mm |
+| `feature_no_anchor` | fewer than two anchors at pads half the board apart, or an anchor that names no pad |
+| `feature_pad_label` | a label's text is a pad's label, which spark draws, or holds a web address (`http` or `www.`) |
+| `feature_unreadable` | the features file is no JSON, lacks a field, or names a picture that the record's `documents` do not hold |

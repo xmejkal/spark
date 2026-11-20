@@ -1,0 +1,26 @@
+{
+  "//": "P956: a features file of a made-up board of 20 x 40 mm with two rows of six pads, read off a made-up picture of 220 x 420 px whose outline is 10..210 x 10..410 px (10 px to the mm), USB end at the picture's top. No vendor's bytes: every number is made up for the tests.",
+  "picture": {"document": "synthetic-top-view", "outline_px": [10, 10, 210, 410], "usb_edge": "top"},
+  "measured_by": "the suite",
+  "colour": "#0a3d1f",
+  "anchors": [
+    {"pad": "A1", "x_px": 198.9, "y_px": 360},
+    {"pad": "B6", "x_px": 21.1, "y_px": 233}
+  ],
+  "features": [
+    {"name": "H1", "kind": "hole", "x_px": 182, "y_px": 382, "w_px": 16, "h_px": 16, "colour": "#ffffff"},
+    {"name": "USB", "kind": "usb", "x_px": 90, "y_px": -5, "w_px": 40, "h_px": 30, "colour": "#d9d9d9"},
+    {"name": "MCU", "kind": "chip", "x_px": 90, "y_px": 120, "w_px": 40, "h_px": 40, "colour": "#838383", "leads": "four"},
+    {"name": "REG", "kind": "chip", "x_px": 140, "y_px": 85, "w_px": 30, "h_px": 15, "colour": "#454545", "leads": "top-bottom"},
+    {"name": "BOOT", "kind": "button", "x_px": 40, "y_px": 40, "w_px": 30, "h_px": 40, "colour": "#383838"},
+    {"name": "LED", "kind": "led", "x_px": 40, "y_px": 330, "w_px": 10, "h_px": 20, "colour": "#f4f4f4"},
+    {"name": "BAT", "kind": "jst", "x_px": 130, "y_px": 170, "w_px": 50, "h_px": 40, "colour": "#e1e1e1", "count": 2},
+    {"name": "FPC", "kind": "fpc", "x_px": 60, "y_px": 270, "w_px": 100, "h_px": 20, "colour": "#2d2d2d", "count": 12},
+    {"name": "CONN", "kind": "connector", "x_px": 70, "y_px": 370, "w_px": 80, "h_px": 20, "colour": "#202020"},
+    {"name": "XTAL", "kind": "crystal", "x_px": 60, "y_px": 180, "w_px": 20, "h_px": 30, "colour": "#b2b2b2"},
+    {"name": "L1", "kind": "inductor", "x_px": 100, "y_px": 50, "w_px": 30, "h_px": 50, "colour": "#808080"},
+    {"name": "C1-C3", "kind": "passives", "x_px": 155, "y_px": 225, "w_px": 15, "h_px": 30, "colour": "#6d410e", "count": 3},
+    {"name": "WORD", "kind": "label", "x_px": 110, "y_px": 320, "w_px": 40, "h_px": 10, "colour": "#ffffff", "text": "SPARK"},
+    {"name": "SIDE", "kind": "label", "x_px": 80, "y_px": 220, "w_px": 10, "h_px": 40, "colour": "#ffffff", "text": "IO9"}
+  ]
+}

@@ -140,6 +140,11 @@ sit on the face toward the breadboard. The breadboard picture draws a module fro
 did not answer in that run, the run still ends with exit 2, because the unchecked item stays. The file's shape and the
 codes are in [docs/guide/agents/replies.md](../docs/guide/agents/replies.md).
 
+For a board, the picture can also show its main parts in their real colours (P956): keep the maker's component-side top
+view with `parts.py --keep`, measure each chip, socket, button, LED, hole and silkscreen word on it in pixels, and write
+them with `parts.py --features-set FILE --part <board> --project .`. The steps and the file's shape are in
+[a board's measured features](../docs/guide/agents/breadboard-codes.md#a-boards-measured-features).
+
 ## Candidates not chosen
 
 A candidate whose datasheet was kept gets a catalog record in the person's store,

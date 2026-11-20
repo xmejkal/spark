@@ -11,6 +11,7 @@ and the core alone of spark, so the records area reads nothing above it. `Record
 """
 
 import json
+import math
 import re
 from collections import namedtuple
 from pathlib import Path
@@ -354,6 +355,97 @@ def _picture_block_problems(where, block, documents, body):
         if wrong:
             return ["%s.%s" % (where, sentence)]
     return []
+
+
+#: The kinds of a part's measured feature (P956), one word each: the drawing draws each kind by its own shape.
+FEATURE_KINDS = ("chip", "usb", "button", "led", "jst", "fpc", "connector", "crystal", "inductor", "passives", "hole", "label")
+#: The fields every feature holds, and each field that one kind or a few hold, with those kinds.
+FEATURE_FIELDS = ("name", "kind", "x", "y", "w", "h", "colour", "verified", "source")
+FEATURE_KIND_FIELDS = {"text": ("label",), "leads": ("chip",), "count": ("passives", "fpc", "jst")}
+#: The sides of the frame a chip's leads come out of; with none given, four.
+CHIP_LEADS = ("four", "top-bottom", "left-right", "none")
+#: The longest text a label holds.
+LABEL_MAX_CHARACTERS = 24
+#: The most parts a `count` holds: a drawing of more is no picture (the review of PR #1368).
+MAX_COUNT = 64
+#: A colour as a feature and `physical.colour` hold it: #rrggbb in lower case.
+HEX_COLOUR = re.compile(r"#[0-9a-f]{6}")
+
+
+def feature_problems(record: dict) -> list:
+    """
+    A record's measured features (P956): `physical.features`, a list of `{name, kind, x, y, w, h, colour, verified,
+    source}` in mm in the part's frame (x and y the top-left corner), with `text` on a label, `leads` on a chip and
+    `count` on passives, an fpc or a jst; and `physical.colour`, `{value, verified, source}`. The structure only: where a
+    feature sits against the frame is `feature_check.FeatureCheck`'s, which reads the frame. Each problem names the
+    feature by its place and its name.
+    """
+    physical = record.get("physical")
+    if not isinstance(physical, dict):
+        return []
+    problems = _board_colour_problems(physical.get("colour"))
+    features = physical.get("features")
+    if features is None:
+        return problems
+    if not isinstance(features, list):
+        return problems + ["physical.features is %r, but it is a list of features" % (features,)]
+    names = []
+    for index, feature in enumerate(features):
+        if not isinstance(feature, dict):
+            problems.append("physical.features[%d] is %r, but a feature is an object" % (index, feature))
+            continue
+        where = "physical.features[%d] (%s)" % (index, feature.get("name"))
+        problems.extend("%s %s" % (where, why) for why in _one_feature_problems(feature, names))
+        names.append(feature.get("name"))
+    return problems
+
+
+def _board_colour_problems(colour):
+    if colour is None:
+        return []
+    if (not isinstance(colour, dict) or not isinstance(colour.get("value"), str) or not HEX_COLOUR.fullmatch(colour["value"])
+            or not isinstance(colour.get("verified"), bool) or not isinstance(colour.get("source"), str) or not colour["source"].strip()):
+        return ["physical.colour is %r, but it is {value: #rrggbb in lower case, verified, source}" % (colour,)]
+    return []
+
+
+def _is_size(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _one_feature_problems(feature, names):
+    """Why one feature breaks the shape, as phrases; `names` are the names of the features before it."""
+    kind, why = feature.get("kind"), []
+    if not isinstance(feature.get("name"), str) or not feature["name"].strip():
+        why.append("has no name")
+    elif feature["name"] in names:
+        why.append("has the name of a feature before it: each name is one feature's")
+    if kind not in FEATURE_KINDS:
+        why.append("is of kind %r, which is none of %s" % (kind, ", ".join(FEATURE_KINDS)))
+    why += ["has %s %r, but it is a number of mm" % (field, feature.get(field)) for field in ("x", "y", "w", "h")
+            if not _is_size(feature.get(field))]
+    why += ["has %s %r, but it is above 0" % (field, feature[field]) for field in ("w", "h")
+            if _is_size(feature.get(field)) and feature[field] <= 0]
+    if not isinstance(feature.get("colour"), str) or not HEX_COLOUR.fullmatch(feature["colour"]):
+        why.append("has colour %r, but it is #rrggbb in lower case" % (feature.get("colour"),))
+    if not isinstance(feature.get("verified"), bool):
+        why.append("has verified %r, but it is true or false" % (feature.get("verified"),))
+    if not isinstance(feature.get("source"), str) or not feature["source"].strip():
+        why.append("has no source: it says who measured it, on what")
+    for field in feature:
+        if field not in FEATURE_FIELDS and field not in FEATURE_KIND_FIELDS:
+            why.append("holds %s, which is no field of a feature" % field)
+        elif field in FEATURE_KIND_FIELDS and kind not in FEATURE_KIND_FIELDS[field]:
+            why.append("holds %s, which only a %s holds" % (field, " or ".join(FEATURE_KIND_FIELDS[field])))
+    text = feature.get("text")
+    if kind == "label" and (not isinstance(text, str) or not text.strip() or len(text) > LABEL_MAX_CHARACTERS):
+        why.append("has text %r, but a label holds a text of 1 to %d characters" % (text, LABEL_MAX_CHARACTERS))
+    if "leads" in feature and feature["leads"] not in CHIP_LEADS:
+        why.append("has leads %r, but they are one of %s" % (feature["leads"], ", ".join(CHIP_LEADS)))
+    count = feature.get("count")
+    if "count" in feature and (type(count) is not int or not 0 < count <= MAX_COUNT):
+        why.append("has count %r, but it is a whole number from 1 to %d" % (count, MAX_COUNT))
+    return why
 
 
 def _citations(value, where=""):

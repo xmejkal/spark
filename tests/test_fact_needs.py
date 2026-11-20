@@ -57,7 +57,7 @@ class EveryConsumerExistsTest(unittest.TestCase):
 class FactNeedsAnswerTest(unittest.TestCase):
     def test_by_kind(self):
         self.assertEqual(len(NEEDS.of_kind("module")), 5)
-        self.assertEqual(NEEDS.of_kind("board"), [])
+        self.assertEqual([need.fact_path for need in NEEDS.of_kind("board")], ["physical.features"])  # P956
 
     def test_by_the_write_key_of_an_open_fact_exactly(self):
         self.assertEqual([need.consumer for need in NEEDS.of_fact("body_mm")],

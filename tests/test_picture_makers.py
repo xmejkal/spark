@@ -99,9 +99,29 @@ class TheChainTest(unittest.TestCase):
         self.assertEqual((stored_first.candidate.made_by, stored_first.candidate.likeness), ("photo", "near"))
         self.assertEqual((frame_first.candidate.made_by, frame_first.candidate.likeness), ("frame", "rough"))
 
-    def test_the_build_s_order_is_the_stored_maker_alone(self):
-        self.assertEqual(picture_makers.BUILD_MAKERS, ("stored",))
-        self.assertEqual(sorted(picture_makers.MAKERS), ["frame", "stored"])
+    def test_build_order_is_stored_then_features(self):
+        # P956 adds spark's drawing of the measured features after the kept picture; the frame is never the build's
+        self.assertEqual(picture_makers.BUILD_MAKERS, ("stored", "features"))
+        self.assertEqual(sorted(picture_makers.MAKERS), ["features", "frame", "stored"])
+
+    def test_stored_picture_wins_over_features(self):
+        home = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, home, True)
+        with mock.patch.dict(os.environ, {"SPARK_HOME": home}):
+            board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+            frame = FramePictureMaker.svg(picture_makers.shape_of(board)).replace(' data-guide="pads"', "")
+            frame = frame.split("<g>")[0] + "</svg>\n"
+            board["documents"] = dict(board.get("documents") or {}, picture=keep(home, frame.encode("utf-8"), "board.svg"))
+            board["pictures"] = {"breadboard-top": {"document": "picture", "made_by": "drawing", "likeness": "rough",
+                                                    "credit": "a kept board picture", "verified": False}}
+            board["physical"]["features"] = [{"name": "MCU", "kind": "chip", "x": 8.0, "y": 25.0, "w": 4.0, "h": 4.0,
+                                              "colour": "#838383", "verified": False, "source": "the suite"}]
+            chain = PictureMakerChain(picture_makers.MAKERS[name]() for name in picture_makers.BUILD_MAKERS)
+            made = chain.first(request(board))
+            del board["pictures"]
+            drawn = chain.first(request(board))
+        self.assertEqual((made.candidate.made_by, made.declines), ("drawing", ()))
+        self.assertEqual((drawn.candidate.made_by, [decline.maker for decline in drawn.declines]), ("features", ["stored"]))
 
     def test_every_maker_says_what_it_uses(self):
         self.assertEqual(StoredPictureMaker().uses(), picture_makers.MakerUses((), ("kept-file",), None, False))
@@ -258,7 +278,7 @@ class TheBuildDrawsAKeptPictureTest(unittest.TestCase):
     def test_the_sheet_draws_with_the_build_s_makers(self):
         renderer = next(one for one in sheet.DRAWING_RENDERERS if isinstance(one, svg_diagram.SvgBreadboardDiagram))
         self.assertIsInstance(renderer.pictures, MadePartPictures)
-        self.assertEqual([maker.NAME for maker in renderer.pictures.chain.makers], ["stored"])
+        self.assertEqual([maker.NAME for maker in renderer.pictures.chain.makers], ["stored", "features"])  # P956
 
 
 if __name__ == "__main__":

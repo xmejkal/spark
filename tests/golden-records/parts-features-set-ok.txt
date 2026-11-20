@@ -1,0 +1,247 @@
+  wrote 14 features of synthetic-board (<project-dir>/boards/synthetic-board.json), in mm in its frame:
+    H1 (hole) at 1.2, 1.2, 1.6 x 1.6, #ffffff
+    USB (usb) at 8, 38.5, 4 x 3, #d9d9d9
+    MCU (chip) at 8, 25, 4 x 4, #838383
+    REG (chip) at 4, 31, 3 x 1.5, #454545
+    BOOT (button) at 14, 33, 3 x 4, #383838
+    LED (led) at 16, 6, 1 x 2, #f4f4f4
+    BAT (jst) at 3, 20, 5 x 4, #e1e1e1
+    FPC (fpc) at 5, 12, 10 x 2, #2d2d2d
+    CONN (connector) at 6, 2, 8 x 2, #202020
+    XTAL (crystal) at 13, 20, 2 x 3, #b2b2b2
+    L1 (inductor) at 8, 31, 3 x 5, #808080
+    C1-C3 (passives) at 4, 15.5, 1.5 x 3, #6d410e
+    WORD (label) at 6, 8, 4 x 1, #ffffff
+    SIDE (label) at 12, 15, 1 x 4, #ffffff
+    anchor A1 at 1.11, 5: 0.00 mm from its pad
+    anchor B6 at 18.89, 17.7: 0.00 mm from its pad
+--- boards/synthetic-board.json ---
+{
+  "schema": 1,
+  "id": "synthetic-board",
+  "name": "Synthetic board",
+  "chip": "esp32c6",
+  "documents": {
+    "synthetic-top-view": {
+      "url": null,
+      "file": "top.png",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "physical": {
+    "width_mm": 20.0,
+    "height_mm": 40.0,
+    "corner_radius_mm": null,
+    "header": {
+      "rows": 2,
+      "pins": [
+        6,
+        6
+      ],
+      "pitch_mm": 2.54,
+      "row_spacing_mm": 17.78,
+      "first_pad_from_edge_mm": 5.0,
+      "flush_edge": "+y",
+      "doubtful_pads": [],
+      "pad_mm": 1.5
+    },
+    "header_order": {
+      "row_a": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "row_b": [
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B6"
+      ]
+    },
+    "mounting_holes": {
+      "count": 4,
+      "diameter_mm": 1.6,
+      "spacing_x_mm": 16.0,
+      "spacing_y_mm": 36.0
+    },
+    "features": [
+      {
+        "name": "H1",
+        "kind": "hole",
+        "x": 1.2,
+        "y": 1.2,
+        "w": 1.6,
+        "h": 1.6,
+        "colour": "#ffffff",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 182,382,16,16 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "USB",
+        "kind": "usb",
+        "x": 8.0,
+        "y": 38.5,
+        "w": 4.0,
+        "h": 3.0,
+        "colour": "#d9d9d9",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 90,-5,40,30 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "MCU",
+        "kind": "chip",
+        "x": 8.0,
+        "y": 25.0,
+        "w": 4.0,
+        "h": 4.0,
+        "colour": "#838383",
+        "leads": "four",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 90,120,40,40 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "REG",
+        "kind": "chip",
+        "x": 4.0,
+        "y": 31.0,
+        "w": 3.0,
+        "h": 1.5,
+        "colour": "#454545",
+        "leads": "top-bottom",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 140,85,30,15 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "BOOT",
+        "kind": "button",
+        "x": 14.0,
+        "y": 33.0,
+        "w": 3.0,
+        "h": 4.0,
+        "colour": "#383838",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 40,40,30,40 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "LED",
+        "kind": "led",
+        "x": 16.0,
+        "y": 6.0,
+        "w": 1.0,
+        "h": 2.0,
+        "colour": "#f4f4f4",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 40,330,10,20 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "BAT",
+        "kind": "jst",
+        "x": 3.0,
+        "y": 20.0,
+        "w": 5.0,
+        "h": 4.0,
+        "colour": "#e1e1e1",
+        "count": 2,
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 130,170,50,40 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "FPC",
+        "kind": "fpc",
+        "x": 5.0,
+        "y": 12.0,
+        "w": 10.0,
+        "h": 2.0,
+        "colour": "#2d2d2d",
+        "count": 12,
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 60,270,100,20 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "CONN",
+        "kind": "connector",
+        "x": 6.0,
+        "y": 2.0,
+        "w": 8.0,
+        "h": 2.0,
+        "colour": "#202020",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 70,370,80,20 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "XTAL",
+        "kind": "crystal",
+        "x": 13.0,
+        "y": 20.0,
+        "w": 2.0,
+        "h": 3.0,
+        "colour": "#b2b2b2",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 60,180,20,30 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "L1",
+        "kind": "inductor",
+        "x": 8.0,
+        "y": 31.0,
+        "w": 3.0,
+        "h": 5.0,
+        "colour": "#808080",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 100,50,30,50 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "C1-C3",
+        "kind": "passives",
+        "x": 4.0,
+        "y": 15.5,
+        "w": 1.5,
+        "h": 3.0,
+        "colour": "#6d410e",
+        "count": 3,
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 155,225,15,30 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "WORD",
+        "kind": "label",
+        "x": 6.0,
+        "y": 8.0,
+        "w": 4.0,
+        "h": 1.0,
+        "colour": "#ffffff",
+        "text": "SPARK",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 110,320,40,10 px of the outline 10,10,210,410 px"
+      },
+      {
+        "name": "SIDE",
+        "kind": "label",
+        "x": 12.0,
+        "y": 15.0,
+        "w": 1.0,
+        "h": 4.0,
+        "colour": "#ffffff",
+        "text": "IO9",
+        "verified": false,
+        "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), box 80,220,10,40 px of the outline 10,10,210,410 px"
+      }
+    ],
+    "colour": {
+      "value": "#0a3d1f",
+      "verified": false,
+      "source": "measured by the suite on documents.synthetic-top-view (top.png, sha256 000000000000), the board's colour"
+    }
+  },
+  "power_pads": {
+    "B6": {
+      "rail": "ground",
+      "direction": "out"
+    }
+  }
+}

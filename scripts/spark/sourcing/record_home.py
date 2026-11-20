@@ -76,20 +76,35 @@ def merge_values(record, values):
     return after, was
 
 
+def in_library(path):
+    """True for a record in spark's own library, which is changed in spark's repository, never by parts.py."""
+    return Path(path).parent.resolve() in (record_kind.LIBRARY.resolve(), board_records.LIBRARY.resolve())
+
+
+#: Why a record in spark's own library is not written, filled with its id.
+LIBRARY_REFUSAL = "%s is in spark's own library, which is changed in spark's repository, not by parts.py"
+
+
 def set_fields(part_id, project, values, dry_run, refuse):
     """
     Set fields of a part record in its own home (§5.4) — the catalog's, a project's, or a listed project's behind a shelf
     copy — never spark's library, which is changed in spark's repository. A shelf copy that follows the record is made
     current whether or not this write changed anything (`refresh_shelf_copy`), and the answer says what became of it.
-    `refuse(record, after, path)` says what is wrong with the result, and anything it says refuses the write.
+    `refuse(record, after, path)` says what is wrong with the result, and anything it says refuses the write. Values that
+    hold `pin_roles` reach a board's record (P464), others a part's; `write_fields` writes a home already found.
     """
-    path, source = record_path(part_id, project, "board" if "pin_roles" in values else "part")  # P464: only a level in pin_roles reaches a board
+    return write_fields(part_id, record_path(part_id, project, "board" if "pin_roles" in values else "part"), values, dry_run, refuse)
+
+
+def write_fields(part_id, home, values, dry_run, refuse):
+    """`set_fields` into `home`, the (path, project whose shelf copy follows it) of `record_path`: a board's record when
+    the caller found a board's (P956). A home with no path raises PartError, as `set_fields`."""
+    path, source = home
     if path is None:
         raise PartError("no record called %r — `parts.py --need` finds what exists", part_id,
                         code=sourcing_codes.NO_SUCH_PART)
-    if path.parent.resolve() in (record_kind.LIBRARY.resolve(), board_records.LIBRARY.resolve()):
-        return Answer(problems=[_problem(part_id, "%s is in spark's own library, which is changed in spark's repository, "
-                                                  "not by parts.py" % part_id)])
+    if in_library(path):
+        return Answer(problems=[_problem(part_id, LIBRARY_REFUSAL % part_id)])
     record = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(record, dict):
         return Answer(problems=[_problem(part_id, "%s is not a JSON object (%s) — repair the file by hand first" % (part_id, path))])

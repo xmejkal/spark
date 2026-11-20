@@ -97,6 +97,8 @@ MAY_READ = {
     "picture_makers.MAKERS": "the registry under test (P946): its names are compared with a literal list",
     "breadboard_codes.PICTURE_CODES": "the table under test (P946): its keys are compared with a literal set of the nine "
                                       "picture codes, and each sentence is only checked to be there",
+    "features_picture.SHAPES": AGREEMENT + ": its kinds against record_kind.FEATURE_KINDS, the validator's list (P956)",
+    "record_kind.FEATURE_KINDS": AGREEMENT + ": the validator's kinds against features_picture.SHAPES, the drawing's table (P956)",
     "sheet.BOARD_COMPONENT": AGREEMENT + ": the board's component name, checked against the converter's mapping.ts (P484)",
     "onboard_parts.ONBOARD_PARTS": "the table of roles spark wires (P484), checked against the roles a scenario reaches",
     "check.CHECKS": STRUCTURE, "board_records.LIBRARY": STRUCTURE, "record_kind.LIBRARY": STRUCTURE, "fab.FILE": STRUCTURE, "chip_table.FILE": STRUCTURE,

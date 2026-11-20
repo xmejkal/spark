@@ -133,6 +133,8 @@ under a name is worse than no record.
 - `short_name` — what a person calls the part on the bench, a plain noun (`e-paper`); the sheet's steps use it.
 - `pictures` — never write it by hand. `parts.py --keep-picture` writes it with the picture's `documents` entry (P946):
   one block per view (`breadboard-top`), `{document, made_by, likeness, credit, verified}`.
+- `physical.features` and `physical.colour` of a board — never write them by hand. Measure the maker's top view in its
+  pixels and write them with `parts.py --features-set` (P956, [a board's measured features](../docs/guide/agents/breadboard-codes.md#a-boards-measured-features)).
 - `facts` — the numbers a design rests on: supply range, current, thresholds, limits — each with
   its source. A module on an I2C bus says where its pull-ups come from: `module_has_i2c_pullups`
   (and `i2c_pullup_ohms`, 1k–10k) when it carries them, or pull-up `host_parts` on SDA and SCL when

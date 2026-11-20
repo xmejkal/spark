@@ -1,0 +1,3 @@
+--- stderr ---
+parts.py: the anchor A1 lies 17.78 mm from its pad in the record: the picture is turned, mirrored or scaled wrong
+parts.py: the anchor B6 lies 17.78 mm from its pad in the record: the picture is turned, mirrored or scaled wrong

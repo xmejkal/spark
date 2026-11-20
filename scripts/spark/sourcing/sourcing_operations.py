@@ -21,6 +21,7 @@ from spark.sourcing.read_datasheet import ReadDatasheet
 from spark.sourcing.resolve_sources import ResolveSources
 from spark.sourcing.set_drawer import SetDrawer
 from spark.sourcing.set_facts import SetFacts
+from spark.sourcing.set_features import SetFeatures
 from spark.sourcing.set_function import SetFunction
 from spark.sourcing.show_part import ShowPart
 from spark.sourcing.validate_parts import ValidateParts
@@ -30,5 +31,5 @@ from spark.sourcing.write_skeleton import WriteSkeleton
 OPERATIONS = {operation.name: operation for operation in (
     ListParts, ShowPart, ValidateParts, ListSignals, ListUnverified, WriteSkeleton, ResolveSources, FetchDocuments, KeepFile,
     KeepPicture, DrawPictureFrame,
-    ReadDatasheet, FindKept, PromoteRecord, ListCatalog, ListDrawer, MarkStep, SetDrawer, ImportDrawer, SetFunction, SetFacts)}
+    ReadDatasheet, FindKept, PromoteRecord, ListCatalog, ListDrawer, MarkStep, SetDrawer, ImportDrawer, SetFunction, SetFacts, SetFeatures)}
 # --- end MVP ---

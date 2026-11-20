@@ -48,4 +48,19 @@ PICTURE_CODES = {
     PICTURE_TOO_BIG: "the picture is over 250000 bytes with no embedded JPEG, or over 400000 with one",
 }
 CODES.update(PICTURE_CODES)  # one table of the area's codes: the sheet's refusals and the picture rules
+
+#: The rules a part's measured features break (P956, `feature_check.FeatureCheck`): features that break one are not
+#: written, and written ones that break one are not drawn.
+FEATURE_OUTSIDE, FEATURE_OVER_PAD, FEATURE_OFF_DRAWING = "feature_outside", "feature_over_pad", "feature_off_drawing"
+FEATURE_NO_ANCHOR, FEATURE_PAD_LABEL, FEATURE_UNREADABLE = "feature_no_anchor", "feature_pad_label", "feature_unreadable"
+#: Each feature rule's code and the one sentence that says what it means.
+FEATURE_CODES = {
+    FEATURE_OUTSIDE: "a feature's box lies more than 0.5 mm outside the part's outline (a USB socket may hang 2 mm past the USB edge)",
+    FEATURE_OVER_PAD: "a feature's box covers part of a pad: spark draws the pads, and a part there would hide one",
+    FEATURE_OFF_DRAWING: "an anchor or a mounting hole lies more than 0.5 mm from where the record's dimension drawing puts it, or a hole is not round or not the record's diameter",
+    FEATURE_NO_ANCHOR: "fewer than two anchors at pads half the board apart, or an anchor that names no pad: nothing proves the turn and the scale",
+    FEATURE_PAD_LABEL: "a label's text is a pad's printed label, which spark draws, or holds a web address (http or www.)",
+    FEATURE_UNREADABLE: "the features file cannot be read: no JSON, a field missing, or a picture document the record does not hold",
+}
+CODES.update(FEATURE_CODES)  # the measured features' rules too (P956)
 # --- end MVP ---

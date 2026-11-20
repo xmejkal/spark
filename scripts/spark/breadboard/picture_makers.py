@@ -13,8 +13,10 @@ import collections
 import hashlib
 
 from spark.breadboard import part_pictures, part_shape
+from spark.breadboard.feature_check import FeatureCheck
+from spark.breadboard.features_picture import FeaturesDrawing
 from spark.breadboard.picture_check import PictureCheck
-from spark.records import board_records, store
+from spark.records import board_records, record_kind, store
 
 #: Value: what a maker uses to run: the tools.json entries it calls, the inputs it reads (words), the cost of one run
 #: (None, or a sentence with the price) and whether it runs only on the person's yes.
@@ -119,6 +121,43 @@ class FramePictureMaker(PartPictureMaker):
                 '<g data-guide="pads">%s</g>\n</svg>\n' % (width, height, width, height, width, height, pads))
 
 
+class FeaturesPictureMaker(PartPictureMaker):
+    """Strategy: spark's drawing of the part from the features measured on the maker's top view (P956,
+    `physical.features`, written by `parts.py --features-set`), in their colours (`features_picture.FeaturesDrawing`). It
+    declines a record with no features, a feature that breaks the record's shape or a `FeatureCheck` rule, and a drawing
+    that breaks `PictureCheck`, so the build can always paste what it gives."""
+
+    NAME = "features"
+
+    def __init__(self, drawing=None):
+        self.drawing = drawing or FeaturesDrawing()
+
+    def uses(self):
+        return MakerUses((), ("physical", "features"), None, False)
+
+    def make(self, request):
+        record = request.record
+        physical = record.get("physical") if isinstance(record.get("physical"), dict) else {}
+        if not physical.get("features"):
+            return Decline(self.NAME, "the record holds no measured features", (
+                "physical.features: parts.py --features-set FILE --part %s --project ." % record.get("id"),))
+        if request.shape is None:
+            return Decline(self.NAME, "the record has no frame", ())
+        wrong = record_kind.feature_problems(record)
+        if wrong:
+            return Decline(self.NAME, wrong[0], ())
+        refused = FeatureCheck(request.shape, record).drawn_problems(physical["features"])
+        if refused:
+            return Decline(self.NAME, "%s breaks %s: %s" % (refused[0].feature, refused[0].code, refused[0].sentence), ())
+        data = self.drawing.svg(record, request.shape).encode("utf-8")
+        problems = PictureCheck(request.shape).problems(data)
+        if problems:
+            return Decline(self.NAME, "the drawing breaks %s at %s" % problems[0][:2], ())
+        picture = part_pictures.read_picture(data.decode("utf-8"))
+        return PictureCandidate(picture.markup, picture.view_box, self.NAME, "near", "spark's drawing of %d measured features of %s"
+                                % (len(physical["features"]), record.get("id")))
+
+
 def _escaped(text):
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
@@ -141,15 +180,16 @@ class PictureMakerChain:
 
 
 #: Every maker by its name.
-MAKERS = {"stored": StoredPictureMaker, "frame": FramePictureMaker}
-#: The order the build asks the makers in: a kept picture, else the pictogram (P951 makes it a setting).
-BUILD_MAKERS = ("stored",)
+MAKERS = {"stored": StoredPictureMaker, "frame": FramePictureMaker, "features": FeaturesPictureMaker}
+#: The order the build asks the makers in: a kept picture, then spark's drawing of the measured features (P956), else
+#: the pictogram (P951 makes it a setting).
+BUILD_MAKERS = ("stored", "features")
 
 
 class MadePartPictures(part_pictures.PartPictures):
     """Decorator: a part's picture from the chain of makers when the record has a frame and a maker answers, else the
     `fallback`'s (spark's pictograms). A record that holds a picture for the view that no maker shows gets the fallback's
-    picture with a note that says why."""
+    picture with a note that says why, and so does a record whose measured features no maker draws (P956)."""
 
     def __init__(self, chain, fallback):
         self.chain, self.fallback = chain, fallback
@@ -169,4 +209,8 @@ class MadePartPictures(part_pictures.PartPictures):
         if isinstance(record.get("pictures"), dict) and BREADBOARD_TOP in record["pictures"]:
             why = "; ".join(decline.reason for decline in result.declines) or "the record holds no frame"
             return fallback._replace(note="%s: kept picture not shown (%s)" % (record.get("short_name") or record.get("id"), why))
+        if isinstance(record.get("physical"), dict) and record["physical"].get("features"):
+            why = next((decline.reason for decline in result.declines if decline.maker == FeaturesPictureMaker.NAME),
+                       "no maker of the build draws them")
+            return fallback._replace(note="%s: measured features not shown (%s)" % (record.get("short_name") or record.get("id"), why))
         return fallback
