@@ -145,11 +145,8 @@ BUILD_STAGES = (REQUIREMENTS, BOARD, PARTS, SCHEMATIC, SCHEMATIC_NOTES, FOOTPRIN
 #: Each definition by its name, for a design error that names the stage it stopped (`RefusedInputError.stage`).
 STAGE_NAMED = {definition.name: definition for definition in BUILD_STAGES}
 
-#: The names of the two stages a reader of the build record asks about: the board's own build and its simulation diagram.
-BUILD_STAGE, SIMULATION_STAGE = "build", "simulation"
-
 
 def skipped_the_build(stages):
     """Whether `stages` are a board-only build's (`build_service.board_alone`): its build stage is SKIPPED, so no board was built.
     A full build whose simulation stage is SKIPPED (every part skipped, P778) built its board, so it is not."""
-    return any(stage.name == BUILD_STAGE and stage.status == SKIPPED for stage in stages)
+    return any(stage.name == BUILD.name and stage.status == SKIPPED for stage in stages)

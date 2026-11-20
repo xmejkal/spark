@@ -13,12 +13,11 @@ import subprocess
 from pathlib import Path
 
 from spark.records import board_records
-from spark.build import build_codes
-from spark.build.stages import Stage
+from spark.build.stages import (CONVERTER_LACKS_PART_ENDING, CONVERTER_MISSING_ENDING, NO_DIAGRAM_ENDING, SIMULATION,
+                                TIMED_OUT_ENDING)
 from spark.firmware import sim_project
 from spark.records import tool_finder
 
-from spark.core.outcomes import COULD_NOT_RUN, PROBLEMS
 
 #: A real tsci build of a five-part board took 496 s on the P581 bench (the autorouter 231.6 s), so the limit is
 #: about 1.8 times that (P659). The probe and the converter are small jobs with their own limit.
@@ -200,7 +199,7 @@ def converter_stage_problem(project, own=None, find_tool=None):
     try:
         converter_command(project, own, find_tool)
     except tool_finder.ToolError as missing:
-        return Stage("simulation", COULD_NOT_RUN, str(missing), build_codes.TOOL_MISSING)
+        return SIMULATION.ended(CONVERTER_MISSING_ENDING, missing)
     return None
 
 
@@ -230,12 +229,11 @@ def convert(project, own, source, sim_dir, runner=None):
                                                                                      "--chips", str(sim_dir / "chips")], cwd=str(own.parent if own else sim_dir),
                                           capture_output=True, text=True, timeout=CONVERTER_TIMEOUT_S, env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
     except TimedOutError as late:
-        return None, Stage("simulation", COULD_NOT_RUN, str(late), build_codes.STAGE_TIMED_OUT), ""
+        return None, SIMULATION.ended(TIMED_OUT_ENDING, late), ""
     if made.returncode or not diagram_path.is_file():
         said = (made.stderr or made.stdout)[-800:]
         if simulation_could_not_look(said):
-            return None, Stage("simulation", COULD_NOT_RUN, "the converter has no Wokwi part for a component on this board — a mapping "
-                               "to add to its lib/mapping.ts, not a defect in the design, which built\n" + said, build_codes.CONVERTER_LACKS_PART), ""
-        return None, Stage("simulation", PROBLEMS, "no diagram was produced\n" + said, build_codes.NO_DIAGRAM), ""
+            return None, SIMULATION.ended(CONVERTER_LACKS_PART_ENDING, said), ""
+        return None, SIMULATION.ended(NO_DIAGRAM_ENDING, said), ""
     notes = "".join("\n           " + note for note in (bad_kept, sim_project.kept_note(made.stdout), *sim_project.converter_warnings(made.stdout)) if note)
     return json.loads(diagram_path.read_text()), None, notes

@@ -10,7 +10,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.build.build_record import BuildRecordStore, sha256_of
-from spark.build.stages import BUILD_STAGE, SIMULATION_STAGE
+from spark.build.stages import BUILD, SIMULATION
 from spark.breadboard import sheet
 from spark.design import need_requirements, needs
 from spark.firmware import firmware_codes
@@ -211,9 +211,9 @@ class BuildReader(PhaseReader):
         if stale:
             return self.phase(flow_codes.STALE, [stale] + says, offers)
         skipped = skipped_stages(record) if record.get("status") == OK else []
-        if BUILD_STAGE in skipped:
+        if BUILD.name in skipped:
             return self.phase(None, [flow_codes.BOARD_ONLY_BUILD_MESSAGE])  # no offer: a rebuild skips the same stages
-        if skipped == [SIMULATION_STAGE]:
+        if skipped == [SIMULATION.name]:
             return self.phase(None, says + [flow_codes.SIMULATION_SKIPPED_MESSAGE], offers)
         if skipped:
             return self.phase(flow_codes.PARTIAL, says, offers)
@@ -236,7 +236,7 @@ class BreadboardReader(PhaseReader):
                 raise
             record = None  # no sheet and no record to read: not started, and the build phase says the record's sentence
         stale = why_build_stale(project, record) if record else None
-        if record and not stale and BUILD_STAGE in skipped_stages(record):
+        if record and not stale and BUILD.name in skipped_stages(record):
             return self.phase(None, [flow_codes.BOARD_ONLY_MESSAGE])
         if not kept:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_SHEET_MESSAGE])
