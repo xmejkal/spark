@@ -41,10 +41,14 @@ NO_DOUBTFUL_PAD_FACT, GROUND_NOT_ONE = "no_doubtful_pad_fact", "ground_not_one"
 DUPLICATE_PAD_LABEL, NO_HOLE_LEFT, NO_WOKWI_PART = "duplicate_pad_label", "no_hole_left", "no_wokwi_part"
 NO_PIN_POSITION, NO_DRAWING_FACT, NO_WOKWI_PIN = "no_pin_position", "no_drawing_fact", "no_wokwi_pin"
 ROW_FULL, NOT_DRAWN_YET, PLANNER_FAULT = "row_full", "not_drawn_yet", "planner_fault"
+#: Where a drawn part's pad labels go, the `labels` of its part_px: beside each pad, inside a board's body; or from a
+#: row of pads along an edge into the module's body, turned along the column (P945).
+LABELS_BESIDE, LABELS_INTO_BODY = "beside", "into-body"
 #: Each code with the one sentence that says what it means. Every refusal has one (P691).
 CODES = {
-    NO_HEADER_FACT: "the board's record lacks a field its pads or its outline need; the subject is the first field",
-    HEADER_DISAGREES: "the board's record disagrees with itself, a value of the wrong kind or a pad order that does not fit the pin counts",
+    NO_HEADER_FACT: "the board's or the module's record lacks a field its pads or its outline need; the subject is the first field",
+    HEADER_DISAGREES: ("the board's or the module's record disagrees with itself, a value of the wrong kind or a pad order "
+                       "that does not fit the pin counts"),
     NO_DOUBTFUL_PAD_FACT: "the board's record does not say which pads are doubtful (physical.header.doubtful_pads), so no ground is picked",
     GROUND_NOT_ONE: "the board's ground pads, less the doubtful ones, are not exactly one; the subject names those left",
     DUPLICATE_PAD_LABEL: "two pads of the board's record have one label; the subject is the label",

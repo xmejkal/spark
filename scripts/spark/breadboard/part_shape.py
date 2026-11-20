@@ -38,19 +38,22 @@ def _px(mm):
     return round(mm * PX_PER_MM, 3)
 
 
-def project_to_px(shape):
+def project_to_px(shape, usb_mark=True, labels=drawing.LABELS_BESIDE, full_surface=True):
     """The `part_px` of a shape: the dict the planner and the renderers read. It scales to px and derives the `center` the
     turn goes about. `covers_holes` is a drawing convention, not a measured fact: the body of a board hides the holes under
     it. `notes` holds the sentence and the why of each group that is not verified, in the order the shape lists them. The
     flags say what this source can do, so no caller compares a source's name: `wokwi_part` (Wokwi has a part with these
-    pins), `pad_labels` (the picture names each pad), `full_surface` (the board is drawn on the 63-column breadboard)."""
+    pins), `pad_labels` (the picture names each pad), `full_surface` (the board is drawn on the 63-column breadboard),
+    `usb_mark` (the picture marks a USB end: a board's) and `labels` (where a pad's label goes, a key of
+    `drawing.PAD_LABEL_LAYOUTS`)."""
     width, height = shape.size
     notes = [{"group": name, "sentence": group["note"], "why": group["why_it_matters"]}
              for name, group in shape.groups.items() if group["verified"] is False]
     return {"size": [_px(width), _px(height)], "center": [_px(width / 2), _px(height / 2)], "covers_holes": True,
             "pins": {label: [_px(x), _px(y)] for label, (x, y) in shape.pins.items()},
             "doubtful": list(shape.groups.get("doubtful_pads", {}).get("value") or []), "ground": shape.ground,
-            "source": RECORD, "notes": notes, "wokwi_part": False, "pad_labels": True, "full_surface": True}
+            "source": RECORD, "notes": notes, "wokwi_part": False, "pad_labels": True, "full_surface": full_surface,
+            "usb_mark": usb_mark, "labels": labels}
 
 
 class ShapeSource:
@@ -204,6 +207,133 @@ class RecordShapeSource(ShapeSource):
         shape = self.find_shape(board)
         doubtful = shape.groups.get("doubtful_pads", {}).get("value") or []
         return dict({label: label for label in shape.pins if label not in doubtful}, GND=shape.ground)
+
+
+class OneRowHeaderPlacer:
+    """
+    Strategy: the pads of a module with one straight row of header pins along an edge, as a ModuleShapeSource places
+    them. `place(header, size, labels)` gives [(label, x_mm, y_mm)] in the module's frame, which is the board's frame
+    turned to a module: the module seen from above as it sits in the breadboard, the header's edge at the top, the
+    origin at the top-left corner of the outline, y down, in mm.
+
+    `flush_edge` and `first_pad_from_edge_mm` mean what they mean on a board: the first pad (the first label) sits that
+    far from that edge, "-x" the left one and "+x" the right one, and pad n sits n pitches further along. They are read
+    on the face whose silkscreen names the pads (`face`), with the header at the top. A header on the back faces the
+    breadboard, so from above its order is mirrored: x becomes width - x. The row's pad centres sit half a pitch inside
+    the header's edge: the record holds no number for it, so this is an assumption, which a picture of the module (P946)
+    corrects.
+    """
+
+    #: The edges a module's row may count from, and the sign of the step from one pad to the next, on the face read.
+    EDGES = {"-x": 1, "+x": -1}
+    #: The faces a header may sit on: the one seen from above, and the one toward the breadboard, whose order mirrors.
+    FRONT, BACK = "front", "back"
+
+    def place(self, header, size, labels):
+        width, _ = size
+        pitch, first = header["pitch_mm"], header["first_pad_from_edge_mm"]
+        start = first if header["flush_edge"] == "-x" else width - first
+        step = pitch * self.EDGES[header["flush_edge"]]
+        placed = []
+        for number, label in enumerate(labels):
+            x = start + step * number
+            placed.append((label, width - x if header["face"] == self.BACK else x, pitch / 2))
+        return placed
+
+
+class ModuleShapeSource(ShapeSource):
+    """
+    Strategy: a module with no Wokwi part whose record holds a `physical` block: its outline from `body_mm`, its one row
+    of pads from `physical.header` through the placer it is given (an `OneRowHeaderPlacer` by default), each pad named by
+    its printed label (`needs[].printed` and `power[].printed`, else the pin of `pin_order`). It declines (None) a record
+    with no `physical` block. A record that lacks a field the drawing needs, or disagrees with itself, raises
+    NotDrawnError with a code and the field, so a module is never drawn wrong. It has no ground and no doubtful pad.
+    """
+
+    NAME = RECORD
+    #: The fields the drawing needs, in the order a missing one is named.
+    NEEDED = ("body_mm.width", "body_mm.height", "pin_order", "physical.header.rows", "physical.header.pins",
+              "physical.header.pitch_mm", "physical.header.flush_edge", "physical.header.first_pad_from_edge_mm",
+              "physical.header.face")
+
+    def __init__(self, placer=None):
+        self.placer = placer or OneRowHeaderPlacer()
+
+    @staticmethod
+    def _field(record, field):
+        value = record
+        for key in field.split("."):
+            value = value.get(key) if isinstance(value, dict) else None
+        return value
+
+    @staticmethod
+    def _disagrees(field, said):
+        return NotDrawnError(footprint_emitter.DISAGREES_MESSAGE % said, drawing.HEADER_DISAGREES, field)
+
+    @staticmethod
+    def printed_labels(record):
+        """{pin of pin_order: the label printed beside its pad}: a need's or a supply's `printed`, else the pin itself."""
+        printed = {entry.get("pin"): entry["printed"] for key in ("needs", "power") for entry in record.get(key) or []
+                   if isinstance(entry, dict) and isinstance(entry.get("printed"), str) and entry["printed"]}
+        return {pin: printed.get(pin, pin) for pin in record.get("pin_order") or []}
+
+    def _refuse_odd(self, record, header, labels):
+        """A header this drawing does not handle, or one that disagrees with the record's own pins."""
+        for field in ("body_mm.width", "body_mm.height", "physical.header.pitch_mm", "physical.header.first_pad_from_edge_mm"):
+            value = self._field(record, field)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+                raise self._disagrees(field, "%s is not a finite number above 0" % field)
+        for field, ok in (("rows", header["rows"] == 1 and type(header["rows"]) is int),
+                          ("pins", header["pins"] == [len(labels)]),
+                          ("flush_edge", isinstance(header["flush_edge"], str) and header["flush_edge"] in OneRowHeaderPlacer.EDGES),
+                          ("face", isinstance(header["face"], str) and header["face"] in (OneRowHeaderPlacer.FRONT, OneRowHeaderPlacer.BACK))):
+            if not ok:
+                raise self._disagrees("physical.header.%s" % field, "physical.header.%s does not fit the rest of the header" % field)
+
+    def find_shape(self, record):
+        """The PartShape of this module's record, None with no physical block, or NotDrawnError with a code and a subject."""
+        if record.get("physical") is None:
+            return None
+        missing = next((field for field in self.NEEDED if self._field(record, field) is None), None)
+        if missing:
+            raise NotDrawnError("the part record lacks %s" % missing, drawing.NO_HEADER_FACT, missing)
+        header, size = record["physical"]["header"], (record["body_mm"]["width"], record["body_mm"]["height"])
+        labels = list(self.printed_labels(record).values())
+        if len(set(labels)) != len(labels):
+            label = next(label for label in labels if labels.count(label) > 1)
+            raise NotDrawnError("two pads of the part record are called %s" % label, drawing.DUPLICATE_PAD_LABEL, label)
+        self._refuse_odd(record, header, labels)
+        pins = {}
+        for label, x, y in self.placer.place(header, size, labels):
+            if not 0 <= x <= size[0]:
+                raise self._disagrees("physical.header.first_pad_from_edge_mm", "a pad lies outside the module along its edge")
+            pins[label] = (round(x, 4), round(y, 4))
+        return PartShape(size, pins, None, self._groups(record, len(pins), header["face"]))
+
+    @staticmethod
+    def _groups(record, pad_count, face):
+        """The fact groups, verified only when the record's physical_proof says so."""
+        proof = record.get("physical_proof") if isinstance(record.get("physical_proof"), dict) else {}
+        verified, source = proof.get("verified") is True, proof.get("source") or "the part record's physical block"
+        why = proof.get("why_it_matters") or "a pad read wrong wires the wrong pin"
+        name = record.get("short_name") or record.get("id")
+        groups = {"pads": {"value": pad_count, "verified": verified, "source": source, "why_it_matters": why,
+                           "note": "%s pads not verified" % name}}
+        if face == OneRowHeaderPlacer.BACK:
+            groups["face"] = {"value": "header on the back, labels mirrored from the front", "verified": verified,
+                              "source": source, "why_it_matters": "a mirrored module wires each pin to its neighbour's row",
+                              "note": "%s header side not verified" % name}
+        return groups
+
+    def describe_part(self, record):
+        shape = self.find_shape(record)
+        if shape is None:
+            return None
+        return project_to_px(shape, usb_mark=False, labels=drawing.LABELS_INTO_BODY, full_surface=False)
+
+    def find_pin_names(self, record):
+        """{pin as the steps print it: its pad's printed label}, for every pin of pin_order."""
+        return self.printed_labels(record)
 
 
 def sources_for(parts=None):
