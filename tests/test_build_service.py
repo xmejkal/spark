@@ -207,15 +207,18 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         """The simulation stage of `stages`."""
         return self.stages(parts, diagram)[-1]
 
-    def stages(self, parts, diagram=BOARD_ALONE_DIAGRAM, runner=None, records=()):
-        """The stages of a build on BOARD whose project holds the display's record, `records` ((id, record)), and a converter
-        that writes `diagram` (run by `runner` when given); the engine builds a circuit that feeds the board and the display, so the
-        build stage passes."""
+    def stages(self, parts, diagram=BOARD_ALONE_DIAGRAM, runner=None, records=(), boards=()):
+        """The stages of a build on BOARD whose project holds the display's record, `records` and `boards` ((id, record)),
+        and a converter that writes `diagram` (run by `runner` when given); the engine builds a circuit that feeds the board
+        and the display, so the build stage passes."""
         project = self.project = Path(tempfile.mkdtemp()) / "sim project"
         (project / ".spark").mkdir(parents=True)
         (project / "parts").mkdir()
+        (project / "boards").mkdir()
         for record_id, record in (("dfr0664-tft-2in", DISPLAY),) + tuple(records):
             (project / "parts" / (record_id + ".json")).write_text(json.dumps(record))
+        for board_id, board in boards:
+            (project / "boards" / (board_id + ".json")).write_text(json.dumps(board))
         (project / ".spark" / "tools.json").write_text(json.dumps(a_converter_shim(project, diagram)))
         self.workdir, stages = a_build({"board": self.BOARD, "parts": parts}, engine=FakeTscircuitEngine(fed_circuit(self.FEEDS)), runner=runner, project=project)
         self.assertEqual(stages[-1].name, "simulation", [(stage.name, stage.status, stage.detail) for stage in stages])
@@ -301,6 +304,23 @@ class AStandInBoardsOwnPartsInTheFullBuildTest(TheSimulationStageOfASkippedDesig
         stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}], BOARD_ALONE_DIAGRAM)
         self.assertIn("the diagram holds no stand-in for onboard_led and onboard_button: a project's own converter older than P792", stage.detail)
         self.assertNotIn(self.BUTTON, stage.detail)
+
+
+class ABoardWithNoWokwiPartInTheFullBuildTest(unittest.TestCase):
+    """P955: a board whose record names no Wokwi part (the walk's FireBeetle 2 ESP32-C6) builds, and its simulation stage
+    could not run with the reason the board-only build gives, before the converter, whose lint crashed on the null type."""
+
+    BOARD = "xiao-with-no-wokwi-part"
+    FEEDS = TheSimulationStageOfASkippedDesignTest.FEEDS
+    stages = TheSimulationStageOfASkippedDesignTest.stages  # the helper alone: a subclass would run the parent's tests twice
+
+    def test_the_simulation_could_not_run_names_the_missing_part_type_and_the_converter_is_not_run(self):
+        board = dict(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()), id=self.BOARD, wokwi_part_type=None)
+        stages = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}], boards=[(self.BOARD, board)])
+        self.assertEqual([(stage.name, stage.status) for stage in stages][-2:], [("build", OK), ("simulation", COULD_NOT_RUN)])
+        self.assertEqual((stages[-1].code, stages[-1].detail), ("simulation_fact_missing", "the board record names no wokwi_part_type"))
+        self.assertFalse((self.project / SHIM_ARGS).exists())  # the converter never ran
+        self.assertEqual((verdict(stages), vouches_for_a_build(stages)), (EXIT_COULD_NOT_RUN, False))
 
 
 def crashes(*given, **named):

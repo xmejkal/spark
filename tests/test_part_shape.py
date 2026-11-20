@@ -108,6 +108,28 @@ class TheShapeIsReadFromTheRecordTest(unittest.TestCase):
                 self.assertEqual(refusal(board), ("header_disagrees", "physical.header.row_side"))
 
 
+class ABoardWithSeveralGroundPadsIsDrawnTest(unittest.TestCase):
+    """P955: the walk's FireBeetle 2 ESP32-C6 has two ground pads, GND1 and GND2, on one net (DFRobot's V1.1 schematic).
+    The drawing wires the step word GND to the first ground pad of `power_pads` that is not doubtful."""
+
+    def test_the_round0_c6_with_two_grounds_and_no_doubtful_pad_draws_with_gnd1_as_gnd(self):
+        board = json.loads((ROOT / "tests" / "data" / "snapshot" / "round0-c6-record" / "boards" / "firebeetle2-esp32c6.json").read_text())
+        board["physical"]["header"]["doubtful_pads"] = []  # in memory: test_snapshot reads the fixture as it is
+        shape = RECORD.find_shape(board)
+        self.assertEqual(shape.ground, "GND1")
+        self.assertTrue({"GND1", "GND2"} <= set(shape.pins), sorted(shape.pins))
+        self.assertNotIn("doubtful_pads", shape.groups)
+        names = RECORD.find_pin_names(board)
+        self.assertEqual((names["GND"], names["GND2"]), ("GND1", "GND2"))
+
+    def test_two_grounds_left_draw_with_the_first_as_gnd(self):  # was test_two_grounds_left_is_not_one (P412's refusal)
+        board = firebeetle()
+        board["physical"]["header"]["doubtful_pads"] = ["GND1"]
+        self.assertEqual(RECORD.find_shape(board).ground, "GND2")
+        names = RECORD.find_pin_names(board)
+        self.assertEqual((names["GND"], names["GND3"]), ("GND2", "GND3"))
+
+
 class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
     def test_a_record_with_no_header_names_the_field(self):
         board = firebeetle()
@@ -195,10 +217,18 @@ class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
         del board["physical"]["header"]["doubtful_pads"]
         self.assertEqual(refusal(board), ("no_doubtful_pad_fact", None))
 
-    def test_two_grounds_left_is_not_one(self):
+    def test_a_null_doubtful_pads_is_refused_and_the_refusal_says_to_write_an_empty_list_after_checking(self):  # P955
         board = firebeetle()
-        board["physical"]["header"]["doubtful_pads"] = ["GND1"]
-        self.assertEqual(refusal(board), ("ground_not_one", "GND2, GND3"))
+        board["physical"]["header"]["doubtful_pads"] = None
+        with self.assertRaises(drawing.NotDrawnError) as caught:
+            RECORD.find_shape(board)
+        self.assertEqual((caught.exception.code, caught.exception.subject), ("no_doubtful_pad_fact", None))
+        self.assertIn("write [] when none is doubtful, after checking", str(caught.exception))
+
+    def test_a_ground_pad_that_is_no_header_pad_is_refused(self):  # P955
+        board = firebeetle()
+        board["power_pads"]["GND9"] = {"rail": "ground", "direction": "out"}
+        self.assertEqual(refusal(board), ("ground_not_one", "GND2, GND9"))
 
     def test_no_ground_left_is_not_one(self):
         board = firebeetle()
