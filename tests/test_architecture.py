@@ -408,10 +408,11 @@ class TheBreadboardAreaTest(unittest.TestCase):
     """W6-B3 (P694): the breadboard's modules live in `scripts/spark/breadboard/`, its `__init__.py` imports nothing, and
     each module imports alone. `scripts/` keeps the CLI `breadboard.py`, which defines `main` only."""
     BREADBOARD = ROOT / "scripts" / "spark" / "breadboard"
-    #: The thirteen modules of the area, by the names of its page (`areas/breadboard.md`); `part_shape` came in W6-D3b,
-    #: `before_power` in P826, `svg_diagram` in P945.
+    #: The fifteen modules of the area, by the names of its page (`areas/breadboard.md`); `part_shape` came in W6-D3b,
+    #: `before_power` in P826, `svg_diagram` in P945, `picture_check` and `picture_makers` in P946.
     MODULES = ["before_power", "bench_changes", "breadboard_codes", "drawing", "drawing_catalog", "drawing_match", "kept_moves",
-               "part_pictures", "part_shape", "sheet", "svg_diagram", "tabbed_page", "wiring_steps"]
+               "part_pictures", "part_shape", "picture_check", "picture_makers", "sheet", "svg_diagram", "tabbed_page",
+               "wiring_steps"]
 
     def test_scripts_holds_the_cli_and_no_breadboard_library_module(self):
         self.assertEqual(sorted(path.stem for path in self.BREADBOARD.glob("*.py") if path.name != "__init__.py"), self.MODULES)

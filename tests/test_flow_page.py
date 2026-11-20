@@ -42,6 +42,9 @@ from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page
 
 #: The built fixture test_flow.py builds its projects from.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
+#: The base64 of the synthetic JPEG in tests/data/pictures (P946): one colour, made by Pillow, no photo.
+SYNTHETIC_JPEG = re.search(r'href="data:image/jpeg;base64,([^"]+)"',
+                           (ROOT / "tests" / "data" / "pictures" / "epaper-synthetic.svg").read_text()).group(1)
 UNKNOWN_CODE = "a-new-code"
 #: The nine phases of a real flow, the words of the page and its codes, as the card says them: literals, not the code's own.
 NINE = ["idea", "needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"]
@@ -829,6 +832,33 @@ class TheInlinePictureTest(unittest.TestCase):
         # the control: plain shapes, an attribute that starts with "o" and a text that says "on" stand in the page
         text = page_of(a_phase("one"), pictures=[Picture("Breadboard", '<svg><rect opacity="1"/><text>on</text></svg>', None)])
         self.assertEqual((text.count(FIGURE), text.count("data:image/svg+xml;base64,")), (1, 0))
+
+    def test_a_breadboard_with_an_embedded_jpeg_stays_inline(self):
+        # P946: a kept photo of a part is an <image> whose one href is a JPEG embedded as base64, by picture_check's rule
+        svg = ('<svg xmlns="http://www.w3.org/2000/svg"><g data-part="Epaper"><image x="0" y="0" width="85" height="44" '
+               'preserveAspectRatio="none" href="data:image/jpeg;base64,%s"/></g><g class="wire" data-step="1"><path d="M0 0"/>'
+               '</g></svg>' % SYNTHETIC_JPEG)
+        text = page_of(a_phase("one"), pictures=[Picture("Breadboard", svg, None)])
+        self.assertEqual((text.count(FIGURE), text.count("data:image/svg+xml;base64,")), (1, 0))
+        self.assertEqual(text.count("data:image/jpeg;base64,%s" % SYNTHETIC_JPEG), 1)
+        self.assertEqual(text.count('data-step="1"'), 1)
+
+    def test_an_image_with_any_other_href_or_a_title_inside_a_title_stays_an_img(self):
+        guards = {
+            "http": '<svg><image href="http://example.org/a.jpg"/></svg>',
+            "data:image/png": '<svg><image href="data:image/png;base64,%s"/></svg>' % SYNTHETIC_JPEG,
+            "data:image/svg+xml": '<svg><image href="data:image/svg+xml;base64,%s"/></svg>' % SYNTHETIC_JPEG,
+            "xlink:href": ('<svg xmlns:xlink="http://www.w3.org/1999/xlink"><image xlink:href="data:image/jpeg;base64,%s"/>'
+                           '</svg>' % SYNTHETIC_JPEG),
+            "an image with a style": '<svg><image style="a" href="data:image/jpeg;base64,%s"/></svg>' % SYNTHETIC_JPEG,
+            "a JPEG href on a rect": '<svg><rect href="data:image/jpeg;base64,%s"/></svg>' % SYNTHETIC_JPEG,
+            "a title inside a title": "<svg><title>a<title>b</title></title><rect/></svg>",
+        }
+        for name, svg in guards.items():
+            with self.subTest(name):
+                text = page_of(a_phase("one"), pictures=[Picture("Breadboard", svg, None)])
+                self.assertNotIn(FIGURE, text)
+                self.assertEqual(text.count("data:image/svg+xml;base64,"), 1)
 
     def test_spark_s_own_breadboard_and_every_pictogram_stand_in_the_page(self):
         pictograms = sorted((ROOT / "data" / "pictograms").glob("*.svg"))

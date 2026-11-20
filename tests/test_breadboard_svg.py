@@ -109,6 +109,14 @@ class TheFireBeetlePictureTest(unittest.TestCase):
         self.assertAlmostEqual(top_left[0], 0, places=1)
         self.assertAlmostEqual(top_left[1], 0, places=1)
 
+    def test_it_fits_its_frame_holds_no_pad_label_and_credits_the_po_s_page(self):
+        from spark.breadboard import part_shape
+        from spark.breadboard.picture_check import PictureCheck
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        self.assertEqual(PictureCheck(part_shape.RecordShapeSource().find_shape(board)).problems(self.PATH.read_bytes()), [])
+        self.assertEqual(part_pictures.read_picture(self.PATH.read_text()).credit,
+                         "FireBeetle 2 ESP32-S3: drawing from the PO's pixel-games wiring page (pixel-master/docs/wiring.html), MIT")
+
     def test_the_battery_socket_is_on_the_rx_edge_as_the_po_s_board_has_it(self):
         # The PO's bench look (2026-11-20): USB-C at the near edge, RX on the left edge, BAT on the same edge as RX
         root = ElementTree.fromstring(self.PATH.read_text())

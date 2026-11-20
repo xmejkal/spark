@@ -29,6 +29,9 @@ PLAIN_ATTRIBUTES = ("x", "y", "width", "height", "viewbox", "cx", "cy", "r", "rx
                     "stroke-dasharray", "opacity", "fill-opacity", "stroke-opacity", "paint-order", "font-size",
                     "font-family", "font-weight", "text-anchor", "dominant-baseline", "class", "data-step", "data-part",
                     "data-pad")
+#: The only attributes an embedded photo's <image> may hold (P946), by lowercase name: its place and size, and its href,
+#: which must be a JPEG embedded as base64 (`picture_check.is_embedded_jpeg`).
+IMAGE_ATTRIBUTES = ("x", "y", "width", "height", "preserveaspectratio", "transform", "opacity", "href")
 #: Words that make a kept attribute's value load or run something in CSS, lowercase, and the backslash of a CSS escape.
 UNPLAIN_VALUES = ("url(", "image-set", "javascript:", "expression", "\\")
 
