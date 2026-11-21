@@ -52,6 +52,21 @@ RED_TESTS_SHOWN = 5
 
 #: The word for the run of every test; story_tests holds the other two.
 RUN_FULL = "full"
+#: The test module that runs the page script's own tests with node (P829): it skips without node, and a skip is no pass.
+NODE_TEST = "test_flow_script"
+NO_NODE_LINE = "could not run: the story run holds %s, which runs the page script with node, and node is not installed"
+
+
+def needs_node(story):
+    """True when `story` is a story run that holds NODE_TEST: then the gate needs node."""
+    return story is not None and NODE_TEST in story.modules
+
+
+def node_refusal(story, which=shutil.which):
+    """The line that stops the gate when `story` needs node and `which` (a test's swap) finds none, else None."""
+    if needs_node(story) and which("node") is None:
+        return NO_NODE_LINE % NODE_TEST
+    return None
 
 
 def archive(root, commit, into):
@@ -259,6 +274,10 @@ def gate(root, commit, scratch, full=False):
         print("could not archive %s: %s" % (commit, broken), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     story = None if full else story_tests_in(scratch, changed_files(root, commit))
+    refused = node_refusal(story)
+    if refused:
+        print(refused)
+        return EXIT_COULD_NOT_RUN
     suite, ok, left, red = measure(scratch, full=full, story=story)
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()

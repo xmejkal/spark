@@ -445,7 +445,22 @@ class PickPlan:
 
     def __init__(self, project):
         self.name, self.current, self.entries = store.plan_listed_name(project), read(project), drawer.entries()
-        self.known = {row[:2]: row[2] for row in drawer.linkable(project)}
+        rows = drawer.linkable(project)
+        self.known, self.paths = {row[:2]: row[2] for row in rows}, {row[:2]: row[3] for row in rows}
+
+    def name_of(self, key):
+        """The name a person reads for the part `key` (a record id or a drawer entry key, as `plan_holds`' problems name
+        it): its record's `name`, else its drawer entry's `label`, else the key itself (P829, the PO, 2026-11-21)."""
+        for kind in ("part", "board"):
+            if (kind, key) in self.paths:
+                try:
+                    record = json.loads(Path(self.paths[(kind, key)]).read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    record = None
+                if isinstance(record, dict) and isinstance(record.get("name"), str) and record["name"]:
+                    return record["name"]
+        label = (self.entries.get(key) or {}).get("label")
+        return label if isinstance(label, str) and label else key
 
     def holds(self, need_id, pick_id):
         """(the key the pick names, drawer changes, problems) of picking `pick_id` alone for the need `need_id`, the other

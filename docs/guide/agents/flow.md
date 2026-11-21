@@ -92,7 +92,7 @@ even when it is stored as the drawer entry of its record. Nor is a pick that the
 screen: 2 more picks, 1 refused (too few free). Claude can list them with parts.py --match.` A count of 0 is left out.
 A need with candidates and none plausible gets no offers and the line `No pick fits <need> by its words. Ask Claude to
 run parts.py --match.` When another need's pick cannot get its part, the need gets no offers, and its line holds that
-problem's own sentence once, such as `wet: The pick for soil cannot get “x-one” (…), so spark refuses this pick and
+problem's own sentence once, with the part by its name (its record's, else its drawer label), such as `wet: The pick for soil cannot get “Soil probe” (…), so spark refuses this pick and
 saves nothing.`
 
 The build phase reads `.spark/build.json`. If the folder of `check_spine.py --keep` is a project, the build writes this
@@ -110,7 +110,7 @@ the breadboard phase too when the sheet exists ([P886](https://github.com/xmejka
 ## The page
 
 `flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It reads the
-same phases as `show`, so a person reads them from the disk, in a browser, with no script. A line under the title says
+same phases as `show`, so a person reads them from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). A line under the title says
 what the page is and that every change goes through Claude in the chat. Under it stands the guide
 ([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: `data.guide` as one line each, NOW with its
 phase in parentheses and its sentence, DONE, LATER and SET ASIDE, and a list with no item draws no line.
@@ -153,7 +153,7 @@ it shows the schematic and the PCB, so a script in a hand-edited `breadboard.svg
 dot on each pin is yellow when its row joins a wire or another part and gold when it is free. Under the picture a
 legend names the states that the dots draw: "pad in use" and "pad free". "Pad held: do not use" shows only when a pad
 is held, and spark draws none yet ([P950](https://github.com/xmejkal/spark/issues/1354)). The page takes the colours of
-the wiring page that the PO chose as the model, light and dark, with the system's fonts. It still has no script and loads nothing.
+the wiring page that the PO chose as the model, light and dark, with the system's fonts. It loads nothing.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json
@@ -177,7 +177,7 @@ links Back, Next, All steps and Picture. Picture shows only when the breadboard 
 button walks the steps. The links "Wiring", "Pictures", "All steps" and "Picture" leave that view, and the browser's Back
 returns to the step. In a
 browser that does not know the CSS `:has()`, every step shows. When the page prints, every step shows. In a published
-Artifact, the fragment may not survive a reload of the outer page. The page has no script and no checkbox on a step, and
+Artifact, the fragment may not survive a reload of the outer page. The steps need no script, the page has no checkbox on a step, and
 it never says that the board is wired.
 
 The words on the page:
@@ -195,6 +195,36 @@ The words on the page:
 The page adds no tick. A phase that is not `ok` never shows the tick, whatever mark it carries. It shows the could-not-run
 mark. A code that the flow does not know shows as itself. No color says a status. The page does not know whether the board is
 wired or flashed, and says so in one line. Every text on it is masked, so no path of the home folder reaches the file.
+
+### The page script
+
+The page ends with one script and its words ([P829](https://github.com/xmejkal/spark/issues/1187)): an inert block
+`<script type="application/json" id="spark-words">`, then one `<script>` with no `src`, whose text is
+`scripts/spark/flow/page_script.js`. Python writes every word the script shows into the block: per offer it may send its
+label and the lines of its confirm, the published page's intro, and the words of the wait and of each answer. The script
+fills in only a time, a label or spark's own line, and never shows a key or the fingerprint. Without the block the page
+is the page with no script, byte for byte, but its hooks (below). The markup holds no `<button`, `<input`, `onclick` or
+`<iframe`.
+
+From disk, or wherever `claude.use("db")` gives no database, the script does nothing. Nor does it for a viewer who is not
+the artifact's owner (`(await claude.use("user")).isOwner()`), so the published page declares `db` and `user`. For the
+owner it puts the published intro in place of the line under the title, and adds a button to each offer whose kind the
+page sends: a pick, the parts list and the build. A need's drop has none; it is asked in the chat. Such an offer's
+`<li>` carries `data-makes-stale`, the phases it can make out of date, space apart. When the phase of the guide's NOW has
+exactly one such offer, the NOW line carries its `data-key` and `data-makes-stale` too, and gets the same button. A click
+shows the offer's label, its effect and "These steps may be marked out of date: …" when there are any, with Send and
+Cancel. Send writes the row `requests/<id>`: `{id, key, seen, at}`, a new UUID, the offer's key, the page's
+`data-fingerprint` and the time. One request waits at a time: until its answer, the other buttons are grey, and Copy (it
+copies the command that carries the request to spark, which P829's next PR adds) and Withdraw stand under the intro. A
+write the database refuses puts the page back and says "Could not send. Nothing ran.". Withdraw deletes the row, and
+only once the delete is done says "Withdrawn. If Claude had already started it, its answer shows here.": it keeps
+watching that request's answer. The script watches the latest request by `at`, and ignores a snapshot older than the
+page's own request, then the row `answers/<id>`.
+
+The answer row holds `flow.py run-request`'s `data` unchanged ([a page request](#a-page-request)). The script says it in
+the page's words: what ran ok by its kind, the step's first problem (`line`), or why it could not run. A refusal shows as
+its code's own words only when `line` is exactly that code's meaning, in grey; any other `line` with `ran: false` shows
+as could not run. Never "done" alone.
 
 Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect
 line says and ask the person first.
