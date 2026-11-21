@@ -32,7 +32,6 @@ from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import SimulateReader  # noqa: E402
 from spark.flow.show_flow import ShowFlow, read_flow  # noqa: E402
-from spark.flow import fingerprint  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.outcomes import OK  # noqa: E402
@@ -534,6 +533,8 @@ def offer_of(envelope, key):
 
 
 SOIL = [{"id": "soil", "does": "sense", "what": "soil-moisture"}]
+#: The three files a click changes, named here and not read from the module, so a file dropped there fails.
+THREE_FILES = (Path(".spark") / "needs.json", Path("requirements.json"), Path(".spark") / "build.json")
 
 
 class MakesStaleTest(FlowTest):
@@ -601,10 +602,10 @@ class FingerprintTest(FlowTest):
         self.assertRegex(said["data"]["fingerprint"], "^[0-9a-f]{64}$")
 
     def test_it_changes_when_any_one_of_the_three_files_changes(self):
-        for name in fingerprint.FILES:
+        for name in THREE_FILES:
             with self.subTest(name=str(name)):
                 project = Path(tempfile.mkdtemp())
-                for each in fingerprint.FILES:
+                for each in THREE_FILES:
                     (project / each).parent.mkdir(parents=True, exist_ok=True)
                     (project / each).write_text("{}")
                 before = fingerprint_of(project, [])
@@ -612,7 +613,7 @@ class FingerprintTest(FlowTest):
                 self.assertNotEqual(fingerprint_of(project, []), before)
 
     def test_a_missing_file_that_becomes_empty_changes_it(self):
-        for name in fingerprint.FILES:
+        for name in THREE_FILES:
             with self.subTest(name=str(name)):
                 project = Path(tempfile.mkdtemp())
                 before = fingerprint_of(project, [])

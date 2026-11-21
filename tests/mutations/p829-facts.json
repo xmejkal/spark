@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "a pick names no phase that may go out of date (P829)",
+  "find": "MAKES_STALE = {PICK: (REQUIREMENTS,), WRITE_REQUIREMENTS: (BUILD, BREADBOARD), BUILD_BOARD: ()}",
+  "replace": "MAKES_STALE = {PICK: (), WRITE_REQUIREMENTS: (BUILD, BREADBOARD), BUILD_BOARD: ()}"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "an offer names a phase that holds nothing yet (P829)",
+  "find": "return tuple(phase for phase in flow_codes.MAKES_STALE[kind] if phase in held)",
+  "replace": "return flow_codes.MAKES_STALE[kind]"
+ },
+ {
+  "file": "scripts/spark/flow/fingerprint.py",
+  "name": "the fingerprint misses a change of the build record (P829)",
+  "find": "FILES = (needs.FILE, Path(REQUIREMENTS_FILE), BUILD_RECORD_FILE)",
+  "replace": "FILES = (needs.FILE, Path(REQUIREMENTS_FILE))"
+ },
+ {
+  "file": "scripts/spark/flow/fingerprint.py",
+  "name": "the fingerprint misses a change of the drawer count in an offer (P829)",
+  "find": "digest.update(json.dumps(offers, sort_keys=True, ensure_ascii=False).encode(\"utf-8\"))",
+  "replace": "pass"
+ },
+ {
+  "file": "scripts/spark/flow/fingerprint.py",
+  "name": "a missing file reads as an empty one in the fingerprint (P829)",
+  "find": "else MISSING)",
+  "replace": "else b\"\")"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "a pick does not say it uses one of what you own (P829)",
+  "find": "RESERVE_MESSAGE = \"Uses 1 of your %s %s for the %s.\"",
+  "replace": "RESERVE_MESSAGE = \"\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "the build offer does not say what a refused parts list deletes (P829)",
+  "find": "BUILD_REFUSED_MESSAGE = \"If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted.\"",
+  "replace": "BUILD_REFUSED_MESSAGE = \"\""
+ }
+]
