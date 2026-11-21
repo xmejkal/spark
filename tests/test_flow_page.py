@@ -1328,17 +1328,16 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
             calls.append(project)
             return a_guide()
 
-        with mock.patch("spark.flow.write_flow_page.guide_of", counting):
-            write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one")), parts_of([]), store=FakeStore())
+        write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one")), parts_of([]), store=FakeStore(), guide=counting)
         self.assertEqual(len(calls), 1)
 
     def test_no_home_path_reaches_the_guide_on_the_page_or_in_what_is_answered(self):
         home = Path(tempfile.mkdtemp()).resolve()
         guide = a_guide(done=["read %s/secret" % home], now=dict(a_guide()["now"], says="see %s/notes" % home))
         store = FakeStore()
-        with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}), \
-                mock.patch("spark.flow.write_flow_page.guide_of", lambda *_args: guide):
-            written = write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("one")), parts_of([]), store=store)
+        with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
+            written = write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("one")), parts_of([]), store=store,
+                                 guide=lambda *_args: guide)
         self.assertNotIn(str(home), store.written[0][2])
         self.assertIn("~/notes", store.written[0][2])
         self.assertEqual((written.guide["done"], written.guide["now"]["says"]), (["read ~/secret"], "see ~/notes"))
