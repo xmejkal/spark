@@ -64,7 +64,7 @@ mutations, it always takes forever, lets be smart about it"* ([P714](https://git
 approved on 2026-11-12). The tiers (critical, new, proving, proven, retired) are facts `tools/mutate.py` reads from the row
 and the ledger `tests/mutations/ledger.jsonl`, which every run that plants rows writes; [the glossary](../GLOSSARY.md#mutation-and-the-mutation-table)
 defines them. A critical mark is written by hand on a row that guards a store write, a deploy, an erase or a refusal that
-protects the person, at most 40 in all (`tests/test_ledger.py` caps it). The sweep's command is `SPARK_HOME=... python3
+protects the person, at most 50 in all (P981, the PO, 2026-11-22) (`tests/test_ledger.py` caps it). The sweep's command is `SPARK_HOME=... python3
 tools/mutate.py tests/mutations/*.json --for <the wave's files> --tier critical,new,proving --budget 20 --copy`; a night
 slice takes `--budget 180` and needs the Mac awake, because the budget's clock does not count sleep; the proven rows
 run once per release, each 0.x release until 1.0 (`--tier proven`): the PO's rule, not a tool fact. A row the budget left is not a pass: the report quotes the left count. A row refused by
