@@ -37,3 +37,10 @@ findings of the plan check (plan v4, rounds 2 and 3) and of PR 1's review (a len
 | 29 | PR 2: `no_simulation` and `now.needs` | PR 2 plan check 5 | acted | `no_simulation` is its own line under LATER; `now.needs` is not drawn, the parts sentence names the needs |
 | 30 | PR 2: the older row "the page answers an empty guide" anchored on the line PR 2 changed | the build | acted | its `find` is now `page.fingerprint, page.guide)` in tests/mutations/p977-guide.json |
 | 31 | PR 2: `TheBenchLineTest` found "wired" in the guide's deploy sentence, which asks the person to wire first | the build | acted | the test leaves the guide section out, with a comment naming P977 PR 2; the rest of the page still holds no "wired" |
+| 32 | PR 2 review: LATER listed requirements and build as work to do while the rail says ok | review lens and refuter | acted | `flow_codes.LATER_BUT_DONE`: a phase after now whose status is ok gets " (done, may change)"; `test_a_phase_after_now_that_is_ok_says_it_may_change`, two rows |
+| 33 | PR 2 review: `TheBenchLineTest` left the whole guide out of its check | review | acted | only the deploy sentence is removed, as a literal |
+| 34 | PR 2 review: WIRING_FIRST read like an order that competes with NOW | review | acted | a layout sentence: "Below: the wiring and its pictures, then each phase, folded: click one to read it." |
+| 35 | PR 2 review: "3 need(s) have no part yet" | review | acted | "1 need has" and "3 needs have"; `test_several_needs_with_no_pick_are_a_counted_plural`, one row |
+| 36 | PR 2 review: NOW did not tie to the rail | review | acted | the label is "NOW (phase)"; one row |
+| 37 | PR 2 review: two wordings for the link to step 1 | review | acted | one constant, `ONE_AT_A_TIME` with the first step's number, in the guide and the wiring section; the step-5 test reads the guide section alone, because the wiring's own link hid a mutant |
+| 38 | PR 2 review: flow.md's guide paragraph was long and `now.steps` unclear | review | acted | split into paragraphs; `steps` is "the number of wiring steps when wiring is part of now, else null" |

@@ -10,9 +10,9 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 </head>
 <body data-stands-at="build" data-fingerprint="b43d63777aab" data-written="<time>">
 <h1>button light circuit</h1>
-<p class="intro">Where this project stands. This page only shows it. To change anything, tell Claude in the chat. The wiring and its pictures come first. The phases are below, each folded: click one to read it.</p>
+<p class="intro">Where this project stands. This page only shows it. To change anything, tell Claude in the chat. Below: the wiring and its pictures, then each phase, folded: click one to read it.</p>
 <section id="guide">
-<p><strong>NOW</strong> Ask Claude in the chat to build the board. It takes seconds and costs nothing.</p>
+<p><strong>NOW (build)</strong> Ask Claude in the chat to build the board. It takes seconds and costs nothing.</p>
 <p><strong>DONE</strong> idea, needs, parts, requirements</p>
 <p><strong>LATER</strong> breadboard, firmware, simulate, deploy</p>
 </section>

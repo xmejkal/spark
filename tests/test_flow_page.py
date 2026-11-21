@@ -300,8 +300,9 @@ class TheBenchLineTest(unittest.TestCase):
         bench = html.escape(BENCH)
         self.assertEqual(text.count(bench), 1)
         # P977 PR 2: the guide's deploy sentence asks "When the breadboard is wired, ...", a condition for the person and no claim
-        # that the board is wired, so it stands outside this check (the guide has its own tests); the rest of the page does not.
-        rest = re.sub(r'<section id="guide">.*?</section>', "", text.replace(bench, ""), flags=re.S)
+        # that the board is wired, so only that sentence stands outside this check; the rest of the guide and the page do not.
+        deploy = html.escape("When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then run the deploy in your terminal.")
+        rest = text.replace(bench, "").replace(deploy, "")
         for word in ("wired", "flashed", "none recorded"):
             self.assertNotIn(word, rest)
 
@@ -515,7 +516,8 @@ class ParsedWiring(html.parser.HTMLParser):
 
 #: P828 step 2: the line under the title, and its second sentence when the page holds wiring steps, as the PO reads them.
 PAGE_INTRO = "Where this project stands. This page only shows it. To change anything, tell Claude in the chat."
-WIRING_FIRST = "The wiring and its pictures come first. The phases are below, each folded: click one to read it."
+# P977 PR 2 review: a layout sentence, no longer an order that competes with the guide's NOW.
+WIRING_FIRST = "Below: the wiring and its pictures, then each phase, folded: click one to read it."
 
 
 def page_of_wiring(wiring, pictures=()):
@@ -1250,12 +1252,12 @@ class TheGuideSectionTest(unittest.TestCase):
 
     def test_each_line_shows_its_items_in_order_and_an_empty_list_shows_no_line(self):
         lines, _section = guide_lines(guide_page(a_guide()))
-        self.assertEqual(lines, [("NOW", "Ask Claude to build the board."), ("DONE", "idea, needs"), ("LATER", "firmware, deploy"),
+        self.assertEqual(lines, [("NOW (build)", "Ask Claude to build the board."), ("DONE", "idea, needs"), ("LATER", "firmware, deploy"),
                                  ("SET ASIDE", "stick")])
         lines, _section = guide_lines(guide_page(a_guide(done=[], set_aside=[])))
-        self.assertEqual([label for label, _rest in lines], ["NOW", "LATER"])
+        self.assertEqual([label for label, _rest in lines], ["NOW (build)", "LATER"])
         lines, _section = guide_lines(guide_page(a_guide(later=[])))
-        self.assertEqual([label for label, _rest in lines], ["NOW", "DONE", "SET ASIDE"])
+        self.assertEqual([label for label, _rest in lines], ["NOW (build)", "DONE", "SET ASIDE"])
 
     def test_no_simulation_is_its_own_line_under_later(self):
         text = guide_page(a_guide(no_simulation="No simulation: Wokwi has no model of this board."))
@@ -1274,18 +1276,18 @@ class TheGuideSectionTest(unittest.TestCase):
         now = dict(a_guide()["now"], steps=3)
         wiring = PageWiring([(1, "Put the board in."), (2, "Run a jumper."), (3, "Run another.")], [], [], None)
         lines, section = guide_lines(guide_page(a_guide(now=now), wiring))
-        self.assertEqual(lines[0], ("NOW", 'Ask Claude to build the board. <a href="#step-1">Start wiring at step 1</a>'))
+        self.assertEqual(lines[0], ("NOW (build)", 'Ask Claude to build the board. <a href="#step-1">One at a time: start at step 1</a>'))
 
     def test_the_step_link_goes_to_the_first_step_s_own_number(self):
         now = dict(a_guide()["now"], steps=2)
         wiring = PageWiring([(5, "Put the board in."), (6, "Run a jumper.")], [], [], None)
-        self.assertIn('<a href="#step-5">Start wiring at step 5</a>', guide_page(a_guide(now=now), wiring))
+        self.assertIn('<a href="#step-5">One at a time: start at step 5</a>', guide_lines(guide_page(a_guide(now=now), wiring))[1])
 
     def test_no_step_link_without_steps_in_now_or_without_wiring_steps_on_the_page(self):
         wiring = PageWiring([(1, "Put the board in.")], [], [], None)
         for guide, shown in ((a_guide(), wiring), (a_guide(now=dict(a_guide()["now"], steps=4)), None),
                              (a_guide(now=dict(a_guide()["now"], steps=4)), PageWiring([], [], [], "no sheet yet"))):
-            self.assertNotIn("Start wiring", guide_page(guide, shown))
+            self.assertNotIn("One at a time", guide_lines(guide_page(guide, shown))[1])  # the wiring section has its own link
 
     def test_with_a_guide_the_stands_at_line_goes_and_without_one_it_stays(self):
         self.assertNotIn("The project stands at", guide_page(a_guide()))
@@ -1310,6 +1312,14 @@ class TheGuideSectionTest(unittest.TestCase):
 
 class TheGuideThroughWritePageTest(unittest.TestCase):
     """The guide is computed once in write_page, masked, drawn, and answered as Written.guide."""
+
+    def test_a_phase_after_now_that_is_ok_says_it_may_change(self):
+        # P977 PR 2 review: the rail says ok, so LATER must not list it as work still to do; a phase not ok has no suffix.
+        store = FakeStore()
+        written = write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one", "not-started"), a_phase("two", OK),
+                                                                            a_phase("three", "not-started")), parts_of([]), store=store)
+        self.assertEqual(written.guide["later"], ["two (done, may change)", "three"])
+        self.assertIn("<strong>LATER</strong> two (done, may change), three</p>", store.written[0][2])
 
     def test_write_page_draws_the_guide_it_answers(self):
         store = FakeStore()

@@ -109,7 +109,7 @@ def who_and_sentence(now, open_needs, fact):
         return by, said % fact.log if fact.fact == flow_codes.RUN_FAILED else said
     said = flow_codes.NOW_SENTENCES.get((now.phase, now.status))
     if said == flow_codes.PARTS_NOW:
-        return [now.by], said % (len(open_needs), ", ".join(open_needs))
+        return [now.by], said % (flow_codes.ONE_NEED_HAS if len(open_needs) == 1 else flow_codes.MANY_NEEDS_HAVE % len(open_needs), ", ".join(open_needs))
     return [now.by], said or (flow_codes.PROBLEMS_NOW if now.status == PROBLEMS else flow_codes.COULD_NOT_RUN_NOW) % now.phase
 
 
@@ -165,8 +165,8 @@ def guide_of(project, phases, steps=count_steps):
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
     said = now_of(now, by_name, open_needs, fact, count) if now else None
     wired = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
-    later = [label(phase, no_model) for index, phase in enumerate(phases)
-             if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]
+    later = [label(phase, no_model) + (flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else "")
+             for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]
     return {"now": said, "done": done_of(phases, at, no_model, wired), "later": later,
             "set_aside": [need["id"] for need in set_aside(listed)],
             "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None}

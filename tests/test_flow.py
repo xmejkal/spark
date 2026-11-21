@@ -698,9 +698,16 @@ class TheGuideTest(FlowTest):
         self.assertTrue([key for key in offers(said, "parts") if key.startswith("pick:dry:")])
         guide = said["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["needs"], guide["now"]["says"], guide["set_aside"]),
-                         ("parts", ["you"], ["soil"], "1 need(s) have no part yet: soil. Tell Claude a pick for each, or to set it aside.",
+                         ("parts", ["you"], ["soil"], "1 need has no part yet: soil. Tell Claude a pick for each, or to set it aside.",
                           ["wet", "dry"]))
         self.assertEqual(guide["done"], ["idea", "needs"])
+
+    def test_several_needs_with_no_pick_are_a_counted_plural(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "pump", "does": "move", "what": "water"},
+            {"id": "led", "does": "indicate", "what": "light"}])
+        self.assertEqual(show(project)[0]["data"]["guide"]["now"]["says"],
+                         "3 needs have no part yet: soil, pump, led. Tell Claude a pick for each, or to set it aside.")
 
     def test_every_need_picked_or_set_aside_makes_the_parts_ok_and_the_parts_list_now(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [

@@ -91,8 +91,32 @@
  },
  {
   "file": "scripts/spark/flow/flow_codes.py",
-  "name": "the step link's words change (P977 PR 2)",
-  "find": "START_WIRING = \"Start wiring at step %d\"",
-  "replace": "START_WIRING = \"Start at step %d\""
+  "name": "the step link's words differ from the wiring section's (P977 PR 2)",
+  "find": "ONE_AT_A_TIME = \"One at a time: start at step %d\"",
+  "replace": "ONE_AT_A_TIME = \"Start at step %d\""
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "a phase after now that is ok loses its done suffix (P977 PR 2 review)",
+  "find": "(flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else \"\")",
+  "replace": "\"\""
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "every phase after now gets the done suffix (P977 PR 2 review)",
+  "find": "flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else \"\"",
+  "replace": "flow_codes.LATER_BUT_DONE if index > at else \"\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "NOW names no phase (P977 PR 2 review)",
+  "find": "flow_codes.GUIDE_NOW % now[\"phase\"]",
+  "replace": "flow_codes.GUIDE_NOW % \"\""
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "one need with no part is called needs (P977 PR 2 review)",
+  "find": "flow_codes.ONE_NEED_HAS if len(open_needs) == 1 else flow_codes.MANY_NEEDS_HAVE % len(open_needs)",
+  "replace": "flow_codes.MANY_NEEDS_HAVE % len(open_needs)"
  }
 ]

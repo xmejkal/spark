@@ -99,7 +99,7 @@ class WiringHtmlSection:
     def _steps(self, steps, with_picture):
         if not steps:
             return []
-        start = '<p><a href="#step-%d">%s</a></p>' % (steps[0][0], _text(flow_codes.ONE_AT_A_TIME))
+        start = '<p><a href="#step-%d">%s</a></p>' % (steps[0][0], _text(flow_codes.ONE_AT_A_TIME % steps[0][0]))
         return [start, '<ol id="steps">'] + [self._step(each, steps, with_picture) for each in steps] + ["</ol>"]
 
     def _step(self, step, steps, with_picture):
@@ -254,8 +254,8 @@ class FlowHtmlPage:
         link = ""
         if now and now.get("steps") and self._wiring_first(page) and page.wiring.steps:
             first = page.wiring.steps[0][0]
-            link = ' <a href="#step-%d">%s</a>' % (first, _text(flow_codes.START_WIRING % first))
-        lines = [self._guide_line(flow_codes.GUIDE_NOW, [now["says"]], link) if now else "",
+            link = ' <a href="#step-%d">%s</a>' % (first, _text(flow_codes.ONE_AT_A_TIME % first))
+        lines = [self._guide_line(flow_codes.GUIDE_NOW % now["phase"], [now["says"]], link) if now else "",
                  self._guide_line(flow_codes.GUIDE_DONE, guide["done"], ""),
                  self._guide_line(flow_codes.GUIDE_LATER, guide["later"], ""),
                  "<p>%s</p>" % _text(guide["no_simulation"]) if guide["no_simulation"] else "",

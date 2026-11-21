@@ -122,8 +122,8 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "a passed simulate before now leaves the later list (P977)",
-  "find": "             if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]",
-  "replace": "             if index > at]"
+  "find": "for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]",
+  "replace": "for index, phase in enumerate(phases) if index > at]"
  },
  {
   "file": "scripts/spark/flow/guide.py",
