@@ -3136,12 +3136,16 @@ class JoinedPadsAreWrittenToABoardTest(unittest.TestCase):
 
     def test_a_group_with_a_pad_not_on_the_board_is_refused_and_nothing_is_written(self):
         home, project, board = self.a_project()
-        for joined in (dict(self.JOINED, value=[["3V3", "3V4"]]), dict(self.JOINED, value=[["3V3", "GND1"]]), dict(self.JOINED, value=[["3V3"]]),
-                       dict(self.JOINED, cites={"document": "nope", "at": "page 1"}), dict(self.JOINED, value=None),
-                       {key: value for key, value in self.JOINED.items() if key != "source"}):
+        for joined, text in ((dict(self.JOINED, value=[["3V3", "3V4"]]), "'3V4', which is not a pad in header_order"),
+                             (dict(self.JOINED, value=[["3V3", "GND1"]]), "pads on more than one rail"),
+                             (dict(self.JOINED, value=[["3V3"]]), "a group is a list of two pads or more"),
+                             (dict(self.JOINED, cites={"document": "nope", "at": "page 1"}), "cites 'nope', which documents does not hold"),
+                             (dict(self.JOINED, value=None), "it never empties one"),
+                             ({key: value for key, value in self.JOINED.items() if key != "source"}, "has no 'source'")):
             with self.subTest(joined=joined):
                 said, code = self.write(home, project, {"joined_pads": joined})
                 self.assertEqual(code, 1, said)
+                self.assertIn(text, " ".join(problem["sentence"] for problem in said["problems"]))
                 self.assertEqual(self.stored(project), board)
 
     def test_joined_pads_and_pin_roles_are_written_together(self):

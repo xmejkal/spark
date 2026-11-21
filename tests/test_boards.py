@@ -303,7 +303,9 @@ class TheJoinedPadsTest(unittest.TestCase):
 
     def test_the_pads_of_one_group_share_their_rail(self):
         self.assertTrue([p for p in self.problems(self.fact([["3V3", "GND1"]])) if "rail" in p])
-        self.assertTrue([p for p in self.problems(self.fact([["3V3", "NC1"]])) if "rail" in p])  # a rail pad joined to a pad that names none
+        mixed = self.problems(self.fact([["3V3", "NC1"]]))  # a rail pad joined to a pad that names none
+        self.assertTrue([p for p in mixed if "more than one rail" in p], mixed)
+        self.assertTrue([p for p in mixed if "add the pad to power_pads with that rail" in p], mixed)  # --fact-set cannot write power_pads
         self.assertEqual(self.problems(self.fact([["SDA", "IO19"], ["SCL", "IO20"]])), [])  # no rail at all
 
     def test_a_doubtful_pad_is_joined_to_nothing(self):
@@ -345,6 +347,11 @@ class JoinedPadsReaderTest(unittest.TestCase):
                 self.assertEqual((joined.groups, joined.group_of("3V3")), ((), ("3V3",)))
         self.assertEqual(board_pads.JoinedPads.from_record({"physical": {"header": {"joined_pads": "x"}}}).groups, ())
         self.assertEqual(board_pads.JoinedPads.from_record("not a record").groups, ())
+
+    def test_only_a_shape_fault_reads_as_no_group_the_rules_are_validate_s(self):
+        # a field with no source, or a group on two rails, breaks a rule of `validate` and not the shape: the reader of a record that was not validated reads its groups
+        record = {"physical": {"header": {"joined_pads": {"value": [["3V3", "GND1"]], "verified": False}}}}
+        self.assertEqual(board_pads.JoinedPads.from_record(record).groups, (("3V3", "GND1"),))
 # --- end MVP ---
 
 

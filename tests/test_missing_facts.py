@@ -83,6 +83,10 @@ class LevelWriteProblemsTest(unittest.TestCase):
         for given in ({"joined_pads": joined}, {"joined_pads": joined, "pin_roles": {"onboard_led": {"active_level": BENCH}}}):
             with self.subTest(given=sorted(given)):
                 self.assertEqual(missing_facts.level_write_problems(given), [])
+        for given in ({"joined_pads": joined, "pin_roles": {}}, {"joined_pads": joined, "pin_roles": "x"}):
+            with self.subTest(given=given):
+                problems = missing_facts.level_write_problems(given)
+                self.assertTrue([p for p in problems if "pin_roles" in p and "joined_pads" in p], problems)  # the sentence names both keys
         for given in ({"joined_pads": joined, "name": "x"}, {"joined_pads": None}, {"joined_pads": "x"}, {"joined_pads": {}},
                       {"joined_pads": dict(joined, value=[])}, {"joined_pads": dict(joined, value=None)},
                       {"joined_pads": joined, "pin_roles": {}}):
