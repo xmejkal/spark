@@ -25,7 +25,7 @@ from fakes import FakePartPictures  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import board_marks as board_marks_module, drawing, part_captions, part_pictures, sheet, svg_diagram, wire_pills, wire_routing, wiring_steps  # noqa: E402
+from spark.breadboard import board_marks as board_marks_module, breadboard_scene, drawing, part_captions, part_pictures, sheet, svg_diagram, wire_pills, wire_routing, wiring_steps  # noqa: E402
 from test_breadboard_layout import EPAPER, RECORD_BOARD, epaper_inputs, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -669,8 +669,8 @@ class ThePillsTest(unittest.TestCase):
                 paths = wire_routing.TrackJumperRouter().route(layout, obstacles)
                 signs = marks.sign_boxes()
                 self.assertEqual(len(signs), 4)
-                pills = wire_pills.PillLayout(4.0, 3.4).place(layout.jumpers, paths,
-                                                               obstacles._replace(marks=obstacles.marks + signs))
+                pills = wire_pills.PillLayout(4.0, 3.4, breadboard_scene.PxLabelMeasure(7)).place(layout.jumpers, paths,
+                                                                                                  obstacles._replace(marks=obstacles.marks + signs))
                 self.assertEqual(sorted(pills), sorted(jumper.step for jumper in layout.jumpers))
                 for step, pill in pills.items():
                     box = pill.box()

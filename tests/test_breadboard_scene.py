@@ -132,7 +132,10 @@ class TheSceneTest(unittest.TestCase):
             pill = {(u + index, v) for index in range(len(str(jumper.jumper.step)))}
             drawn = {alone[v - grid.low[1]][u - grid.low[0]] for (u, v), _ in wire_cells(jumper) if (u, v) not in pill}
             with self.subTest(step=jumper.jumper.step):
-                self.assertEqual(drawn, {":"} if jumper.path.fallback else {"-", "|", "+"})
+                if jumper.path.fallback:
+                    self.assertEqual(drawn, {":"})
+                else:  # a wire with no run across (the walk's 8, a stub into a rail) has no '-'
+                    self.assertTrue(drawn and drawn <= {"-", "|", "+"}, drawn)
 
     def test_the_scene_holds_the_board_its_parts_and_its_wires_in_layout_order(self):
         layout = self.scene.layout
