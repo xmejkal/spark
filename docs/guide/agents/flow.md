@@ -26,7 +26,17 @@ The words of a phase:
 | `mark` | the glyph a page shows for the status |
 | `by` | who does the phase: `you`, `claude` or `your terminal` |
 | `says` | sentences for a person. A value nobody recorded reads `unknown` |
-| `offers` | `{key, label, effect, makes_stale}`: a next step. `label` is the words of its button, such as `Build the board`. `effect` is plain sentences that name every write the step makes, such as `Uses 1 of your 3 DFRobot FireBeetle 2 ESP32-S3 for the brain.` A pick of a part that other projects hold all of says that spark refuses it. `makes_stale` lists the phases the step can make out of date, and only those that hold something now: a pick names `requirements` when requirements.json is there, and Write the parts list names `build` and `breadboard` when a build is recorded ([P829](https://github.com/xmejkal/spark/issues/1187)). `flow.py` runs none |
+| `offers` | `{key, label, effect, makes_stale}`: a next step, with the four keys under this table. `flow.py` runs none |
+
+An offer has four keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
+
+- `key`: the step, such as `pick:light:led-red-5mm`, `requirements` or `build`.
+- `label`: the words of its button, such as `Build the board`.
+- `effect`: plain sentences that name every write the step makes, such as `Uses 1 of your 3 DFRobot FireBeetle 2
+  ESP32-S3 for the brain.` A pick of a part that other projects hold all of says that spark refuses it.
+- `makes_stale`: the phases the step can make out of date. It lists only the phases that hold something now. With
+  requirements.json there, a pick names `requirements`. With a build recorded, Write the parts list names `build` and
+  `breadboard`. A build names none.
 
 A `null` status means spark does not judge the phase, and `says` tells where it stands. The idea has `null`. A
 hand-written project (requirements.json and no needs) has `null` for its needs and parts. Written firmware and a
