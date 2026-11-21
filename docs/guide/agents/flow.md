@@ -3,6 +3,7 @@
 Part of the [guide for AI agents](../agents.md). `flow.py show` says where a project stands, phase by phase
 ([P825](https://github.com/xmejkal/spark/issues/1183)). The phases go from the idea to the deploy. It reads the project's
 files and the store, and writes nothing. `flow.py` with no verb shows too. `flow.py page` writes the same phases as a page ([below](#the-page)).
+`flow.py run-request` runs the step the page asked for ([a page request](#a-page-request)).
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" show --project . --json
@@ -188,3 +189,45 @@ wired or flashed, and says so in one line. Every text on it is masked, so no pat
 
 Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect
 line says and ask the person first.
+
+## A page request
+
+`flow.py run-request` runs the step that the person asked for on the page ([P829](https://github.com/xmejkal/spark/issues/1187)).
+The request is one file, `.spark/page-request.json` in the project: `{id, key, seen, at}`, the page's id for the click
+(a UUID), the offer's key, the first 12 hex digits of the fingerprint the page was read at, and when it was sent.
+Claude writes the file from the page's request, as the page sent it. Never write a key or a `seen` of your own into it.
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" run-request --project . --json
+```
+
+It reads the file and deletes it at once, so one request runs once at most. Then it reads the flow, as `show` does. It
+runs the step only when the key is one of the offers now, its kind is `pick`, `requirements` or `build`, and `seen` is
+the fingerprint now. The values of the step come from spark's offer, never from the request: a pick of that one part
+for that need, the parts list with no `--dry-run` and no `--replies`, so it removes nothing, and the build of the
+project's `requirements.json` with `--keep` the project. The step writes what the offer's effect says. A deploy, a
+simulation, a look or a grant is never an offer here, so a request for one runs nothing.
+
+The envelope has `op` `run-request`. Its `data` holds:
+
+- `for`: the request's id, or `null` when the id is no UUID.
+- `key`: the request's key, or `null` when it is no text.
+- `ran`: `true` when the step ran, `false` when nothing ran.
+- `status` and `mark`: how the step ended, as a phase's (`ok`, `problems` or `could-not-run`). A refusal is
+  `could-not-run`.
+- `line`: one sentence. For a step, its first problem or reason, or `ran <key>: ok` when it ended ok. For a refusal, why
+  nothing ran.
+- `fingerprint`: the fingerprint after the run, the whole sha256.
+
+A step's own `problems` and `unchecked` items are the envelope's. A refusal is one `unchecked` item:
+
+| code | meaning | what to do |
+| --- | --- | --- |
+| `request_malformed` | the file is missing or is no JSON object, or its id, key or seen cannot be read | reload the page and click again |
+| `request_in_chat` | the key is a need's drop, which is asked in the chat | tell Claude in the chat, for example: drop the light need |
+| `request_not_offered` | spark does not offer the key now, or the page never runs its kind | reload the page: it shows the steps spark offers now |
+| `request_stale` | the project changed after the page was read: `seen` is not the fingerprint now | reload the page and click again |
+
+A stale refusal is normal: a second Build from the same page is stale once the first one ran. The exit is 0 when the step
+ran ok, 1 when it ran with problems and 2 when nothing ran or the step could not run. Only a wrong argument answers
+with no `data`.

@@ -116,11 +116,12 @@ def refusal_of(request, offered, fingerprint):
     return None
 
 
-def first_line(result):
-    """What a step said first: its first Finding of the run's status, else its first line, else None."""
+def line_of(key, result):
+    """One sentence for the step `key` ran: the sentence of its first Finding of the run's status, or, when it ended ok,
+    spark's own line. A step's first line is no sentence: the build's is blank."""
     status = result.status()
     found = [finding.sentence for finding in result.findings if finding.severity == status]
-    return found[0] if found else (result.lines[0] if result.lines else None)
+    return found[0] if found else RAN_LINE % (key, MARKS[status][0] or OK)
 
 
 class RunRequest(Operation):
@@ -159,8 +160,7 @@ class RunRequest(Operation):
         after = fingerprint_of(project, read_flow(project, self.readers)[0])
         status = result.status()
         data = {"for": request.id, "key": request.key, "ran": True, "status": status, "mark": MARKS[status][1],
-                "line": first_line(result), "fingerprint": after}
-        word = MARKS[status][0] or OK
-        return OperationResult(data, result.findings, lines=[RAN_LINE % (request.key, word)] + list(result.lines),
+                "line": line_of(request.key, result), "fingerprint": after}
+        return OperationResult(data, result.findings, lines=[RAN_LINE % (request.key, MARKS[status][0] or OK)] + list(result.lines),
                                diagnostics=result.diagnostics)
 # --- end MVP ---

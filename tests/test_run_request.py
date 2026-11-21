@@ -122,7 +122,7 @@ class EachKindRunsItsStepTest(RunRequestTest):
                                                 "passed_over": (), "dry_run": False}]})
         self.assertIs(self.steps["pick"].ran[0]["passed_over"], NO_PASSED_OVER)  # the flag left out, never a payload
         self.assertEqual(envelope["data"], {"for": ID, "key": "pick:light:led-red-5mm", "ran": True, "status": "ok", "mark": "✓",
-                                            "line": "the step said this", "fingerprint": self.fingerprint()})
+                                            "line": "ran pick:light:led-red-5mm: ok", "fingerprint": self.fingerprint()})
 
     def test_the_parts_list_runs_the_requirements_write_with_no_dry_run_and_no_replies(self):
         self.ask("requirements")

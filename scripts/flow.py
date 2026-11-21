@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Say where a project stands, or write it as the project's page.html (P825, P827).
+Say where a project stands, write it as the project's page.html, or run the step the page asked for (P825, P827, P829).
 
-Its `--help` sentence is the summary of the verb's Operation, ShowFlow's or WriteFlowPage's (P937), and EPILOG is the
-CLI's own text.
+Its `--help` sentence is the summary of the verb's Operation, ShowFlow's, WriteFlowPage's or RunRequest's (P937), and
+EPILOG is the CLI's own text.
 """
 
 import sys
@@ -40,6 +40,14 @@ data-fingerprint (the first 12 hex digits of the fingerprint) and data-written (
 below). With --json it prints data.file, data.did, data.stands_at, data.phases (each phase and its status),
 data.fingerprint and data.guide.
 
+flow.py run-request reads .spark/page-request.json, the page's request {id, key, seen, at}, and deletes it at once. It
+runs the step only when the key is an offer now, its kind is pick, requirements or build, and seen is the first 12 hex
+digits of the fingerprint now. The values come from spark's offer, never from the request. Else it runs nothing:
+request_malformed (no file, no JSON object, or an id that is no UUID, a key that is no text, a seen that is not 12 hex
+digits), request_in_chat (a need's drop), request_not_offered (not an offer now, or a kind the page never runs) or
+request_stale (the project changed after the page was read). With --json it prints data.for, data.key, data.ran,
+data.status, data.mark, data.line and data.fingerprint, the one after the run, a refusal too.
+
 The fingerprint is the sha256 of the current offers and of .spark/needs.json, requirements.json and .spark/build.json. It
 changes when an offer or one of these files changes. No other file of the project changes it, except through an offer.
 
@@ -54,7 +62,8 @@ requirements the picks cannot give, a build that failed, a firmware line in sim/
 phase could not be read or its last build could not run, or an argument is wrong. Problems win: with both, the status is
 problems and the exit 1, and the phase that could not run is listed under unchecked. Every phase answers either way.
 For page, 0 means the page was written and 2 that it could not be written or an argument is wrong. A phase's own
-problems do not change them."""
+problems do not change them. For run-request, 0 means the step ran ok, 1 that it ran with problems, and 2 that nothing
+ran, the step could not run or an argument is wrong."""
 
 
 def operation_for(argv):
