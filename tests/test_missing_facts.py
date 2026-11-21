@@ -78,6 +78,16 @@ class LevelWriteProblemsTest(unittest.TestCase):
     def test_a_level_as_a_fact_for_a_known_role_holds(self):
         self.assertEqual(missing_facts.level_write_problems({"pin_roles": {"onboard_led": {"active_level": BENCH}}}), [])
 
+    def test_a_board_takes_pin_roles_or_joined_pads(self):
+        joined = {"value": [["3V3", "3V3_2"]], "verified": False, "source": "x", "why_it_matters": "y"}
+        for given in ({"joined_pads": joined}, {"joined_pads": joined, "pin_roles": {"onboard_led": {"active_level": BENCH}}}):
+            with self.subTest(given=sorted(given)):
+                self.assertEqual(missing_facts.level_write_problems(given), [])
+        for given in ({"joined_pads": joined, "name": "x"}, {"joined_pads": None}, {"joined_pads": "x"}, {"joined_pads": {}},
+                      {"joined_pads": joined, "pin_roles": {}}):
+            with self.subTest(given=copy.deepcopy(given)):
+                self.assertTrue(missing_facts.level_write_problems(given))
+
     def test_everything_else_is_refused(self):
         for given in ({"pin_roles": {"onboard_led": {"active_level": 0}}},
                       {"pin_roles": {"onboard_led": {"active_level": BENCH, "note": "x"}}},
