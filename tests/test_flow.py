@@ -10,6 +10,7 @@ It covers the area's modules `show_flow`, `phase_readers` and `flow_codes`, and 
 
 import contextlib
 import datetime
+import hashlib
 import io
 import json
 import os
@@ -545,7 +546,27 @@ def a_firmware(project):
     return project
 
 
-NO_MODEL = "No simulation: Wokwi has no model of this board, so the board is the test."
+# P977 review: the sentences the review asked for, and `now.by` a list (two jobs name the person and Claude)
+NO_MODEL = "No simulation: Wokwi has no model of this board. You test it on the real board."
+
+
+def a_run(project, verdict, image=b"an image"):
+    """A run log in sim/runs/ that names `verdict` and the sha256 of `image`, as run_scenario.py writes its header."""
+    (project / "sim" / "runs").mkdir(parents=True, exist_ok=True)
+    (project / "sim" / "runs" / "one.log").write_text("verdict: %s\nimage sha256: %s\n\nwhat the board printed\n"
+                                                       % (verdict, hashlib.sha256(image).hexdigest()))
+    return project
+
+
+def an_image(project, image=b"an image"):
+    """sim/wokwi.toml naming sim/image.bin, which holds `image`, an hour after firmware/ was written."""
+    (project / "sim").mkdir(exist_ok=True)
+    (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+    (project / "sim" / "image.bin").write_bytes(image)
+    for path in (project / "firmware").rglob("*"):
+        os.utime(path, (1_700_000_000, 1_700_000_000))
+    os.utime(project / "sim" / "image.bin", (1_700_003_600, 1_700_003_600))
+    return project
 
 
 class TheGuideTest(FlowTest):
@@ -555,7 +576,7 @@ class TheGuideTest(FlowTest):
         said, code = show(a_project_built_with_no_simulation())
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "build"))
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "firmware", "by": "claude", "offer": None, "needs": [],
+            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [],
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "needs", "parts", "requirements", "build (no simulation)"],
@@ -564,10 +585,10 @@ class TheGuideTest(FlowTest):
     def test_with_the_firmware_written_the_deploy_is_now_and_the_simulate_stays_later(self):
         said, _ = show(a_firmware(a_project_built_with_no_simulation()))
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "deploy", "by": "your terminal", "offer": None, "needs": [],
+            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [],
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
-            "done": ["idea", "needs", "parts", "requirements", "build (no simulation)", "firmware"],
+            "done": ["idea", "needs", "parts", "requirements", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
             "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL})
 
     def test_any_other_cause_of_a_simulation_that_could_not_run_stops_at_the_build(self):
@@ -575,7 +596,7 @@ class TheGuideTest(FlowTest):
             with self.subTest(code=code):
                 guide = show(a_project_built_with_no_simulation(code))[0]["data"]["guide"]
                 self.assertEqual((guide["now"]["phase"], guide["now"]["says"], guide["now"]["offer"], guide["no_simulation"]),
-                                 ("build", "The build phase could not run. Ask Claude what it says.", "build", None))
+                                 ("build", "The build phase could not run. Ask Claude to read you why.", "build", None))
                 self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements"])
 
     def test_a_board_only_build_of_a_board_wokwi_has_no_model_of_is_passed_and_the_firmware_is_one_job(self):
@@ -616,15 +637,35 @@ class TheGuideTest(FlowTest):
         (project / "sim" / "image.bin").write_bytes(b"an image")
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
-                         ("simulate", "your terminal", "Ask Claude for the scenario command, and run it in your terminal. "
-                                                       "It uses Wokwi CI minutes."))
-        self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements", "build", "firmware"])
+                         ("simulate", ["your terminal"], "Ask Claude for the scenario command, and run it in your terminal. "
+                                                         "It uses Wokwi CI minutes."))
+        self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements", "build", "breadboard (spark cannot see it)", "firmware"])
+
+    def test_an_old_image_on_a_board_wokwi_has_no_model_of_is_counted_as_done(self):
+        guide = show(an_image(a_firmware(a_project_built_with_no_simulation())))[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["later"], guide["no_simulation"]),
+                         ("deploy", ["simulate (no Wokwi model of this board)"], NO_MODEL))
+        self.assertNotIn("simulate", guide["done"])
+
+    def test_a_run_that_failed_on_the_image_has_its_own_sentence(self):
+        guide = show(a_run(an_image(a_firmware(a_built_project())), "failed"))[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
+                         ("simulate", "The last run failed on this image. Ask Claude to go through its log with you."))
+
+    def test_firmware_changed_after_a_passed_run_leaves_the_simulate_open(self):
+        project = a_run(an_image(a_firmware(a_built_project())), "passed")
+        self.assertEqual(show(project)[0]["data"]["guide"]["now"]["phase"], "deploy")  # the run tested this image
+        os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
+                         ("simulate", "Your firmware changed after the image. Ask Claude to make the image again, then run the scenario."))
+        self.assertNotIn("simulate", guide["done"])
 
     def test_a_fresh_project_starts_at_the_idea(self):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         self.assertEqual(show(project)[0]["data"]["guide"], {
-            "now": {"phase": "idea", "by": "you", "offer": None, "needs": [],
+            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [],
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None})
@@ -640,7 +681,7 @@ class TheGuideTest(FlowTest):
         self.assertTrue([key for key in offers(said, "parts") if key.startswith("pick:dry:")])
         guide = said["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["needs"], guide["now"]["says"], guide["set_aside"]),
-                         ("parts", "you", ["soil"], "1 need(s) have no part yet: soil. Tell Claude a pick for each, or to set it aside.",
+                         ("parts", ["you"], ["soil"], "1 need(s) have no part yet: soil. Tell Claude a pick for each, or to set it aside.",
                           ["wet", "dry"]))
         self.assertEqual(guide["done"], ["idea", "needs"])
 

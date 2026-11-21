@@ -219,7 +219,7 @@ where the devkit has only bare header pins (P483).
 A stand-in's `documents["wokwi-board"]` entry cites the stand-in's own file, so a GPIO it reaches is a header pin and the limits say so.
 
 A board whose `wokwi_part_type` is `null` still builds (P955). The full build and the board-only build end its
-simulation stage `could-not-run` with "the board record names no wokwi_part_type" (code `simulation_fact_missing`),
+simulation stage `could-not-run` with "the board record names no wokwi_part_type" (code `board_not_in_wokwi`, P977),
 before the converter runs. The sheet, the picture and `pins.py` are still written, and the run exits 2: the chain was
 not exercised, so it is not a pass. The next step: name Wokwi's part for the board, or a devkit with the same chip and
 `wokwi_is_stand_in: true`.

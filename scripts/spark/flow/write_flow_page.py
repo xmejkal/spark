@@ -16,7 +16,8 @@ from spark.flow import flow_codes
 from spark.flow.fingerprint import FILES, fingerprint_of
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture
 from spark.flow.phase_readers import REQUIREMENTS_FILE
-from spark.flow.show_flow import guide_of, privacy_for, read_flow
+from spark.flow.guide import guide_of
+from spark.flow.show_flow import privacy_for, read_flow
 from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Operation
 from spark.core.outcomes import COULD_NOT_RUN
 from spark.core.result import Finding, OperationResult

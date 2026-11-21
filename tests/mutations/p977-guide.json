@@ -18,10 +18,22 @@
   "replace": "\"aside\": (lambda v: True,"
  },
  {
+  "file": "scripts/spark/design/list_needs.py",
+  "name": "the --needs text hides a need set aside (P977)",
+  "find": "+ (\"  [aside]\" if n.get(\"aside\") else \"\")",
+  "replace": "+ \"\""
+ },
+ {
+  "file": "scripts/spark/design/match_needs.py",
+  "name": "the --match text hides a need set aside (P977)",
+  "find": "+ (\"  [aside]\" if need[\"aside\"] else \"\")",
+  "replace": "+ \"\""
+ },
+ {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "a need set aside with no pick still counts as open (P977)",
-  "find": "    return [need for need in matched if need.get(\"pick\") or not need.get(\"aside\")]",
-  "replace": "    return list(matched)"
+  "find": "    return [need for need in listed if need.get(\"pick\") or not need.get(\"aside\")]",
+  "replace": "    return list(listed)"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
@@ -30,81 +42,111 @@
   "replace": "[]"
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
-  "name": "the guide passes a build whatever stopped its simulation (P977)",
-  "find": "and stopped[0].get(\"code\") in NO_WOKWI_CODES",
+  "file": "scripts/spark/flow/guide.py",
+  "name": "the guide counts a build as done whatever stopped its simulation (P977)",
+  "find": "and stopped[0].get(\"code\") in NO_MODEL_CODES",
   "replace": ""
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
-  "name": "a skipped stage stops the guide passing a board-only build (P977)",
+  "file": "scripts/spark/flow/guide.py",
+  "name": "a skipped stage stops a board-only build with no model counting as done (P977)",
   "find": "if stage.get(\"status\") not in (OK, SKIPPED)]",
   "replace": "if stage.get(\"status\") != OK]"
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
-  "name": "the guide passes a stale build (P977)",
-  "find": "    if not build or build.status != COULD_NOT_RUN or not passes_build(",
-  "replace": "    if not build or not passes_build("
+  "file": "scripts/spark/flow/guide.py",
+  "name": "the guide counts a stale build as done (P977)",
+  "find": "    if not build or build.status != COULD_NOT_RUN or not stops_only_for_no_model(",
+  "replace": "    if not build or not stops_only_for_no_model("
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
-  "name": "the guide passes a simulate that has problems (P977)",
-  "find": "({flow_codes.SIMULATE} if simulate and simulate.status == flow_codes.NOT_STARTED else set())",
+  "file": "scripts/spark/flow/guide.py",
+  "name": "the guide counts a simulate that has problems as done (P977)",
+  "find": "({flow_codes.SIMULATE} if simulate and simulate.status in (flow_codes.NOT_STARTED, None) else set())",
   "replace": "({flow_codes.SIMULATE} if simulate else set())"
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
-  "name": "an image no run tested is taken as done (P977)",
-  "find": " or (phase.phase == flow_codes.SIMULATE and phase.says[0] != flow_codes.TESTED_MESSAGE)",
+  "file": "scripts/spark/flow/guide.py",
+  "name": "an old image on a board with no model leaves the simulate open (P977 review 1)",
+  "find": "simulate.status in (flow_codes.NOT_STARTED, None)",
+  "replace": "simulate.status == flow_codes.NOT_STARTED"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "a run that failed on the image reads as no run (P977 review 2)",
+  "find": "        if image.failed_runs():\n            return flow_codes.RUN_FAILED\n",
   "replace": ""
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
+  "file": "scripts/spark/flow/guide.py",
+  "name": "firmware changed after a passed run leaves the image tested (P977 review 3)",
+  "find": "        if image.find_newer_files():\n            return flow_codes.IMAGE_OLDER\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "an image no run tested is taken as done (P977)",
+  "find": " or (phase.phase == flow_codes.SIMULATE and fact in OPEN_IMAGE_FACTS)",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
   "name": "a fresh project starts at the needs, not the idea (P977)",
   "find": "        return phases[0]\n    return now",
   "replace": "        return now\n    return now"
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
+  "file": "scripts/spark/flow/guide.py",
   "name": "the firmware beside a current sheet loses the wiring job (P977)",
-  "find": "        return flow_codes.TWO_JOBS_NOW % count",
-  "replace": "        return flow_codes.FIRMWARE_NOW"
+  "find": "flow_codes.TWO_JOBS_NOW % count) if count is not None else",
+  "replace": "flow_codes.FIRMWARE_NOW) if count is not None else"
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
-  "name": "the guide's done lists the breadboard (P977)",
-  "find": "            if phase.phase != flow_codes.BREADBOARD and not (",
-  "replace": "            if not ("
+  "file": "scripts/spark/flow/guide.py",
+  "name": "the two jobs name Claude alone (P977 review 6)",
+  "find": "    by, says = ([flow_codes.BY_YOU, flow_codes.BY_CLAUDE],",
+  "replace": "    by, says = ([flow_codes.BY_CLAUDE],"
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
+  "file": "scripts/spark/flow/guide.py",
+  "name": "the breadboard never shows in done (P977 review 7)",
+  "find": "            done += [flow_codes.SHEET_UNSEEN] if wired else []",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "the breadboard shows in done while the wiring is part of now (P977 review 7)",
+  "find": "    wired = is_sheet_current(project, by_name) and not two_jobs",
+  "replace": "    wired = is_sheet_current(project, by_name)"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
   "name": "a passed simulate before now leaves the later list (P977)",
-  "find": "             if index > at or (phase.phase == flow_codes.SIMULATE and later_simulate)]",
+  "find": "             if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]",
   "replace": "             if index > at]"
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
+  "file": "scripts/spark/flow/guide.py",
   "name": "the guide names no offer for the job (P977)",
   "find": "    return key if holder in by_name and key in [offer.key for offer in by_name[holder].offers] else None",
   "replace": "    return None"
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
+  "file": "scripts/spark/flow/guide.py",
   "name": "the guide does not list the open needs (P977)",
   "find": "\"needs\": open_needs if now.phase == flow_codes.PARTS else []}",
   "replace": "\"needs\": []}"
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
+  "file": "scripts/spark/flow/guide.py",
   "name": "the guide does not list the needs set aside (P977)",
-  "find": "\"set_aside\": [need[\"id\"] for need in listed if need.get(\"aside\")]",
+  "find": "\"set_aside\": [need[\"id\"] for need in set_aside(listed)]",
   "replace": "\"set_aside\": []"
  },
  {
-  "file": "scripts/spark/flow/show_flow.py",
+  "file": "scripts/spark/flow/guide.py",
   "name": "the guide does not say why there is no simulation (P977)",
-  "find": "flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in passed else None",
+  "find": "flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None",
   "replace": "None"
  },
  {

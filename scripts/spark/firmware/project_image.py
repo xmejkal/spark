@@ -86,7 +86,7 @@ class ProjectImage:
         """
         logs = self.read_run_logs()
         named = [(log, verdict) for log, verdict, sha256 in logs if sha256 == self.sha256]
-        failed = [(log, verdict) for log, verdict in named if verdict != scenario_steps.PASSED]
+        failed = self.failed_runs(logs)
         if failed:
             return ("%s did not pass on this image (verdict: %s): deploy.py flashes only an image that passed"
                     % (failed[0][0].name, failed[0][1]))
@@ -95,6 +95,13 @@ class ProjectImage:
             return ("no run in sim/runs/ tested %s as it is now%s: %s with run_scenario.py, "
                     % (self.path.name, older, "run its scenario again" if logs else "run a scenario") + NO_SIMULATION_HINT % "")
         return None
+
+    def failed_runs(self, logs=None):
+        """[(log, verdict)] of each run on this image's sha256 that did not pass (P977: the flow's guide reads it), from
+        `logs` (None: the runs folder's). DeployError when a log cannot be read."""
+        named = [(log, verdict) for log, verdict, sha256 in (self.read_run_logs() if logs is None else logs) if sha256 == self.sha256]
+        failed = [(log, verdict) for log, verdict in named if verdict != scenario_steps.PASSED]
+        return failed
 
     # --- MVP ---
     def find_passed_logs(self):

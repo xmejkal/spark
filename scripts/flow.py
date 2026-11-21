@@ -28,7 +28,7 @@ is a key, such as pick:soil:x-led, with a label (the words of its button, such a
 sentences that name every write it makes) and makes_stale (the phases it can make out of date, only those that hold
 something now). flow.py runs no offer. The last line names the first phase that is not done. The guide (P977) says
 what to do now, in one sentence, and which phases are done and later. A build that stopped only because Wokwi has no
-model of its board (board_not_in_wokwi) counts as done there, and the guide says there is no simulation.
+model of its board (board_not_in_wokwi) is counted as done there, and the guide says there is no simulation.
 
 flow.py page writes page.html in the project: the same phases, each with its status word and a mark, the wiring of a built
 project (the lines before power, then the steps, one at a time or all at once) and the pictures the project holds: the

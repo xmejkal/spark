@@ -169,6 +169,21 @@ class TheNeedsFileTest(unittest.TestCase):
         run(["--needs-set", str(self.project), a_file([{"id": "soil", "mark": "gap"}])])
         self.assertEqual(self.saved()["needs"], [{"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True, "mark": "gap"}])
 
+    def test_the_needs_and_match_text_show_a_need_set_aside(self):
+        """P977: list_needs and match_needs print `[aside]` on the line of a need set aside."""
+        run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True},
+                                                       {"id": "wet", "does": "sense", "what": "soil-moisture"}])])
+        for flag in ("--needs", "--match"):
+            with self.subTest(flag=flag):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                    parts.main([flag, str(self.project)])
+                lines = out.getvalue().splitlines()
+                soil = [line for line in lines if line.lstrip().startswith("soil")]
+                self.assertEqual(len(soil), 1, lines)
+                self.assertTrue(soil[0].endswith("  [aside]"), soil)
+                self.assertFalse([line for line in lines if line.lstrip().startswith("wet") and "[aside]" in line])
+
     def test_aside_is_true_or_null_and_anything_else_refuses_the_write(self):
         for aside in ("yes", False, 1):
             with self.subTest(aside=aside):

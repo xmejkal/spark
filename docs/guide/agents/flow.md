@@ -19,13 +19,18 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
 - `stands_at`: the first phase that is open. It passes a phase whose `status` is `ok` or `null`. Only `ok` is a pass
   that spark judged. The deploy is never done here, so `stands_at` always names a phase.
 - `guide` ([P977](https://github.com/xmejkal/spark/issues/1407)): what the person does now. `now` is `{phase, by, says,
-  offer, needs}`: the phase to act on, who acts, one sentence for the person, the key of the offer that does the job (or
-  `null`) and, for the parts, the needs with no pick. While no need is written, `now` is the idea. `done` names the
-  phases before `now`, never the breadboard, which spark cannot judge. `later` names the phases after it. `set_aside`
-  lists the needs the person set aside (`aside: true`). A build whose only stop is a simulation stage with the code
-  `board_not_in_wokwi` is passed: `done` says `build (no simulation)`, `later` says `simulate (no Wokwi model of this
-  board)`, and `no_simulation` says why (else `null`). The build phase keeps `could-not-run`, so the exit stays 2. An
-  image no passed run tested makes the simulate `now`. Relay `now.says` as it is.
+  offer, needs}`: the phase to act on, who acts (a list: `["you", "claude"]` when the firmware and the wiring are two
+  jobs, else one item), one sentence for the person, the key of the offer that does the job (or `null`) and, for the
+  parts, the needs with no pick. While no need is written, `now` is the idea. `now` is `null` only with a phase list a
+  test swaps in. `done` names the phases before `now`; the breadboard is in it only once `now` is past the firmware's
+  two jobs and the sheet is current, as `breadboard (spark cannot see it)`. `later` names the phases after `now`. An
+  item of `done` or `later` can carry a suffix in parentheses: match on the name before it. `set_aside` lists the needs
+  the person set aside (`aside: true`). To bring one back, the person tells Claude, which writes `{"id", "aside": null}`
+  with `--needs-set`. A build whose only stop is a simulation stage with the code `board_not_in_wokwi` is counted as
+  done: `done` says `build (no simulation)`, a simulate with no status or not started is in `later` as `simulate (no
+  Wokwi model of this board)`, and `no_simulation` says why (else `null`). The build phase keeps `could-not-run`, so the
+  exit stays 2. Else the simulate is `now` while a run failed on its image, a file under `firmware/` changed after the
+  image, or no run tested it, each with its own sentence. Relay `now.says` as it is.
 
 The words of a phase:
 

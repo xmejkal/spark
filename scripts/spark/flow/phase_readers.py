@@ -190,14 +190,15 @@ def pick_offer(project, need, candidate, plan, listed):
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK))
 
 
-def counted(matched):
-    """The needs that count for the parts (P977): each with a pick, and each the person did not set aside."""
-    return [need for need in matched if need.get("pick") or not need.get("aside")]
+def counted(listed):
+    """The needs that count for the parts (P977): each with a pick, and each the person did not set aside. `listed` are
+    needs as `needs.read` or `needs.match` gives them; the guide reads the same rule."""
+    return [need for need in listed if need.get("pick") or not need.get("aside")]
 
 
-def set_aside(matched):
-    """The ids of the needs the person set aside (P977), picked or not: a picked one still counts as picked."""
-    return [need["need"] for need in matched if need.get("aside")]
+def set_aside(listed):
+    """The needs the person set aside (P977), picked or not: a picked one still counts as picked."""
+    return [need for need in listed if need.get("aside")]
 
 
 class PartsReader(PhaseReader):
@@ -214,7 +215,7 @@ class PartsReader(PhaseReader):
         if not matched:
             status, said = without_needs(project)
             return self.phase(status, [said])
-        open_needs, aside = counted(matched), set_aside(matched)
+        open_needs, aside = counted(matched), [need["need"] for need in set_aside(matched)]
         picked = sum(1 for need in open_needs if need.get("pick"))
         status = OK if picked == len(open_needs) else flow_codes.PARTIAL if picked else flow_codes.NOT_STARTED
         # the list is read as the pick reads it: one that cannot be read stops this phase, as needs.match does

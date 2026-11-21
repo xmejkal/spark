@@ -145,7 +145,7 @@ REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your pic
 REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
 BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
 BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
-BUILD_PARTIAL_NOW = "The build stopped. Ask Claude to go through its lines with you."
+BUILD_PARTIAL_NOW = "The build stopped. Ask Claude what stopped it and what to do."
 SHEET_NOW = "No wiring sheet yet. Ask Claude to build the board."
 SHEET_STALE_NOW = "The wiring sheet is out of date. Ask Claude to build the board again."
 #: The firmware with a current wiring sheet: two jobs in any order, and the count of the sheet's steps.
@@ -156,16 +156,24 @@ SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal
 DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then run the deploy "
               "in your terminal.")
 PROBLEMS_NOW = "The %s phase has problems. Ask Claude to go through them with you."
-COULD_NOT_RUN_NOW = "The %s phase could not run. Ask Claude what it says."
+COULD_NOT_RUN_NOW = "The %s phase could not run. Ask Claude to read you why."
 NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW,
                  (REQUIREMENTS, NOT_STARTED): REQUIREMENTS_NOW, (REQUIREMENTS, STALE): REQUIREMENTS_STALE_NOW,
                  (BUILD, NOT_STARTED): BUILD_NOW, (BUILD, STALE): BUILD_STALE_NOW, (BUILD, PARTIAL): BUILD_PARTIAL_NOW,
                  (BREADBOARD, NOT_STARTED): SHEET_NOW, (BREADBOARD, STALE): SHEET_STALE_NOW, (FIRMWARE, NOT_STARTED): FIRMWARE_NOW,
-                 (SIMULATE, NOT_STARTED): SIMULATE_NOW, (SIMULATE, None): SIMULATE_NOW, (DEPLOY, NOT_STARTED): DEPLOY_NOW}
-#: A build whose only stop is a board Wokwi has no model of counts as done (the PO, 2026-11-21), and these say why.
-NO_SIMULATION_NOW = "No simulation: Wokwi has no model of this board, so the board is the test."
+                 (SIMULATE, NOT_STARTED): SIMULATE_NOW, (DEPLOY, NOT_STARTED): DEPLOY_NOW}
+#: What the runs say of the image a simulate with no status names (`ProjectImage`): a run on it did not pass, a file
+#: under firmware/ changed after it, no run tested it, or a passed run tested it. The first three leave it open.
+RUN_FAILED, IMAGE_OLDER, IMAGE_UNTESTED, IMAGE_TESTED = "run-failed", "image-older", "image-untested", "image-tested"
+RUN_FAILED_NOW = "The last run failed on this image. Ask Claude to go through its log with you."
+IMAGE_OLDER_NOW = "Your firmware changed after the image. Ask Claude to make the image again, then run the scenario."
+IMAGE_NOW = {RUN_FAILED: RUN_FAILED_NOW, IMAGE_OLDER: IMAGE_OLDER_NOW, IMAGE_UNTESTED: SIMULATE_NOW}
+#: A build whose only stop is a board Wokwi has no model of is counted as done (the PO, 2026-11-21), and these say why.
+NO_SIMULATION_NOW = "No simulation: Wokwi has no model of this board. You test it on the real board."
 BUILT_NO_SIMULATION = "build (no simulation)"
 SIMULATE_NO_MODEL = "simulate (no Wokwi model of this board)"
+#: The breadboard in done, once the wiring is no longer part of now: the sheet is current, and spark cannot see the wires.
+SHEET_UNSEEN = "breadboard (spark cannot see it)"
 #: The offer that does the job of a phase to act on now: (the phase that holds it, its key).
 JOB_OFFERS = {REQUIREMENTS: (REQUIREMENTS, WRITE_REQUIREMENTS), BUILD: (BUILD, BUILD_BOARD), BREADBOARD: (BUILD, BUILD_BOARD)}
 # --- end MVP ---
