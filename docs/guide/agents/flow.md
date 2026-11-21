@@ -56,11 +56,9 @@ An offer has four keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
 - `key`: the step, such as `pick:light:led-red-5mm`, `requirements` or `build`.
 - `label`: the words of its button, such as `Build the board`.
 - `effect`: plain sentences that name every write the step makes, such as `Uses 1 of your 3 “DFRobot FireBeetle 2
-  ESP32-S3” for the brain.` The part's name stands in quotes. A pick that the pick itself refuses says so and names
-  no phase (`needs.PickPlan`). The reason is the problem `plan_holds` gives, in its own words: too few of the part are
-  free (other projects hold them, this project's other picks use them, or both), or another need's pick cannot get its
-  part. A pick that lets a hold go says whose it was: "Frees what the old pick held." for the need's old pick, and
-  "Frees a part this project held without a pick." for a hold given by hand.
+  ESP32-S3” for the brain.` The part's name stands in quotes. A pick that lets a hold go says whose it was: "Frees
+  what the old pick held." for the need's old pick, and "Frees a part this project held without a pick." for a hold
+  given by hand.
 - `makes_stale`: the phases the step can make out of date. It lists only the phases that hold something now. With
   requirements.json there, a pick names `requirements`. Write the parts list names `build` when `.spark/build.json` is
   there and `breadboard` when breadboard.md is there. A build names none.
@@ -83,7 +81,18 @@ A build that ended `ok` and skipped any other stage is `partial`. No build does 
 `sim/runs/`, the simulate phase says to run a scenario. It blames an older spark only for a log that names no image.
 
 The offer keys are `needs-drop:<need>`, `pick:<need>:<id or entry>`, `requirements` and `build`. A pick's effect says
-how many the person has. If none is free, it also names the projects that hold them.
+how many the person has.
+
+The parts phase offers at most three picks per need ([P976](https://github.com/xmejkal/spark/issues/1406)). They are
+the need's plausible candidates in the order of `parts.py --match`: each holds the need's words or scores above 0 with
+the matcher. A board is plausible for a `compute` need whatever its words. The need's current pick is never offered,
+even when it is stored as the drawer entry of its record. Nor is a pick that the pick itself refuses
+(`needs.PickPlan`): too few of the part are free. One line of `says` per need counts the rest, such as `Not shown for
+screen: 2 more picks, 1 refused (too few free). Claude can list them with parts.py --match.` A count of 0 is left out.
+A need with candidates and none plausible gets no offers and the line `No pick fits <need> by its words. Ask Claude to
+run parts.py --match.` When another need's pick cannot get its part, the need gets no offers, and its line holds that
+problem's own sentence once, such as `wet: The pick for soil cannot get “x-one” (…), so spark refuses this pick and
+saves nothing.`
 
 The build phase reads `.spark/build.json`. If the folder of `check_spine.py --keep` is a project, the build writes this
 file and lists it under `kept`. It holds the build's `status`, its `stages`, the `requirements` file, its sha256 and the

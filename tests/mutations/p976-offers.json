@@ -1,0 +1,98 @@
+[
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: a candidate with none of the need's words and a score of 0 takes an offer's place (test_flow.OffersPerNeedTest)",
+  "find": "    return bool(candidate[\"what_matches\"]) or candidate[\"score\"] > 0",
+  "replace": "    return True"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: a candidate that holds the need's word only in its tags is not offered (test_flow.OffersPerNeedTest)",
+  "find": "    return bool(candidate[\"what_matches\"]) or candidate[\"score\"] > 0",
+  "replace": "    return bool(candidate[\"what_matches\"])"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: the need's current pick is offered again (test_flow.OffersPerNeedTest, test_flow.ThePhasesTest)",
+  "find": "for candidate in (c for c in plausible if not plan.is_current(need[\"need\"], pick_id_of(c))):",
+  "replace": "for candidate in plausible:"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: more than three picks are offered for one need (test_flow.OffersPerNeedTest)",
+  "find": "OFFERS_PER_NEED = 3",
+  "replace": "OFFERS_PER_NEED = 4"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: a refusal by another need's pick is not said, and the pick is offered (test_flow.TheReviewRoundTest)",
+  "find": "        elif problems:\n            return [], [flow_codes.NEED_REFUSED_LINE",
+  "replace": "        elif False:\n            return [], [flow_codes.NEED_REFUSED_LINE"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: the says line counts every offered pick as more, not those past the three (test_flow.OffersPerNeedTest)",
+  "find": "left_out_lines(need[\"need\"], len(offered) - OFFERS_PER_NEED, refused)",
+  "replace": "left_out_lines(need[\"need\"], len(offered), refused)"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: a need with more picks and refused ones does not say the refused (test_flow.OffersPerNeedTest)",
+  "find": "    if more > 0 and refused:",
+  "replace": "    if more > 0 and False:"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: a need whose only left-out picks are refused says nothing of them (test_flow.OffersPerNeedTest, test_flow.ThePhasesTest)",
+  "find": "    elif refused:\n        said = flow_codes.REFUSED_PICKS_MESSAGE",
+  "replace": "    elif False:\n        said = flow_codes.REFUSED_PICKS_MESSAGE"
+ },
+ {
+  "file": "scripts/spark/design/needs.py",
+  "name": "P976: same-words is the default matcher again (test_flow.OffersPerNeedTest, test_needs.TheMatcherTest)",
+  "find": "MATCHER = \"word-overlap\"",
+  "replace": "MATCHER = \"same-words\""
+ },
+ {
+  "file": "scripts/spark/design/match_needs.py",
+  "name": "P976: the sentence below the cut is keyed on the default matcher again (test_needs.TheMatcherTest)",
+  "find": "if chosen.name == matching.SameWords.name else",
+  "replace": "if chosen.name == needs.MATCHER else"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976 review: a board is not plausible for a compute need whose words it lacks (test_flow.OffersPerNeedTest, test_flow.TheRunOnButtonLightTest)",
+  "find": "    if need[\"does\"] == COMPUTE and candidate[\"kind\"] == \"board\":\n        return True",
+  "replace": "    if False:\n        return True"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976 review: a part for a compute need is plausible for its verb alone (test_flow.OffersPerNeedTest)",
+  "find": "    if need[\"does\"] == COMPUTE and candidate[\"kind\"] == \"board\":\n        return True",
+  "replace": "    if need[\"does\"] == COMPUTE:\n        return True"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976 review: a need with candidates and none plausible is silent (test_flow.OffersPerNeedTest)",
+  "find": "    if need[\"candidates\"] and not plausible:\n        return [], [flow_codes.NO_PLAUSIBLE_MESSAGE",
+  "replace": "    if False:\n        return [], [flow_codes.NO_PLAUSIBLE_MESSAGE"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976 review: a need with no candidate at all says no pick fits it (test_flow.OffersPerNeedTest)",
+  "find": "    if need[\"candidates\"] and not plausible:\n        return [], [flow_codes.NO_PLAUSIBLE_MESSAGE",
+  "replace": "    if not plausible:\n        return [], [flow_codes.NO_PLAUSIBLE_MESSAGE"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976 review: one pick reads as picks (test_flow.OffersPerNeedTest)",
+  "find": "    return words[0] if count == 1 else words[1]",
+  "replace": "    return words[1]"
+ },
+ {
+  "file": "scripts/spark/design/needs.py",
+  "name": "P976 review: a current pick stored as its drawer entry is offered again (test_flow.OffersPerNeedTest)",
+  "find": "any(as_record(pick, self.known, self.entries) == wanted",
+  "replace": "any(pick == wanted"
+ }
+]

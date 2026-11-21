@@ -57,7 +57,7 @@ class MatchNeeds(AnswerOperation):
                 lines += ["          " + sentence for sentence in c["limits"]]  # P397: the JSON keeps them as data
                 del c["about"]  # the text shows it; the JSON gains only `score` and `why`
                 c.pop("stop_line", None)  # likewise: the JSON has `stops_why`, the list
-            hidden = "none with the need's words" if chosen.name == needs.MATCHER else "each scoring under %s" % matching.MIN_SHOWN
+            hidden = "none with the need's words" if chosen.name == matching.SameWords.name else "each scoring under %s" % matching.MIN_SHOWN
             lines += ["      … %d more, %s" % (need["more"], hidden)] if need["more"] else []
             lines += ["      nothing in the store does this — a gap"] if not need["candidates"] else []
         lines += ["  %s: %s" % (p["subject"], p["sentence"]) for p in problems]

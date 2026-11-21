@@ -19,8 +19,8 @@ NEED_MORE = "  and %d more with fewer of the words: add a word, or --matcher nam
 NEED_NOTHING = ("  nothing in the drawer, the boards or the part records matches %r.\n"
                 "  Research it: /spark:research \"%s\"  — vendors in order: %s; sellers: %s")
 #: The help of the options the goal Operations share, worded as parts.py's OPTIONS rows.
-MATCHER_HELP = ("with --match or --need: the matcher that ranks the offers (--match: same-words, word-overlap; "
-                "--need: word-overlap, name-contains); a name that does not fit is refused with the names that do")
+MATCHER_HELP = ("with --match or --need: the matcher that ranks the offers (--match: same-words, word-overlap, default word-overlap; "
+                "--need: word-overlap, name-contains, default word-overlap); a name that does not fit is refused with the names that do")
 
 
 def _need_line(row):

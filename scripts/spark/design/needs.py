@@ -119,8 +119,9 @@ def write(project, needs):
 #: Where a candidate lives, nearest first (§5.5); anything else is one of the person's other projects, after these.
 LAYERS = (offers.DRAWER, "project", "shelf", "library", "catalog")
 
-#: `--match`'s matcher (P211). A default changes only with the PO's yes, after he reads the matchers' numbers on his needs.
-MATCHER = "same-words"
+#: `--match`'s matcher (P211), and so the parts phase's: word-overlap since the PO's yes of 2026-11-21 (P976). A default
+#: changes only with the PO's yes, after he reads the matchers' numbers on his needs.
+MATCHER = "word-overlap"
 
 
 def offer(key, project=None):
@@ -453,6 +454,13 @@ class PickPlan:
         after = [dict(need, pick=[pick] if pick else []) if need["id"] == need_id else need for need in self.current]
         changes, _notes, problems = plan_holds(self.name, after, self.entries)
         return (next(iter(pick.values())) if pick else None), changes, problems
+
+    def is_current(self, need_id, pick_id):
+        """True when the need's pick is what `pick_id` names: a drawer entry of a record spark knows is that record
+        (`as_record`), so a pick stored as the entry is the record's pick too."""
+        wanted = _resolve(pick_id, self.known, self.entries)
+        return wanted is not None and any(as_record(pick, self.known, self.entries) == wanted
+                                          for need in self.current if need["id"] == need_id for pick in need.get("pick") or [])
 
     def needs_picking(self, key, but):
         """The ids of the needs other than `but` whose picks name `key`."""
