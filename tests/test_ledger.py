@@ -24,9 +24,9 @@ import ledger  # noqa: E402
 
 ROW = {"file": "m.py", "name": "add subtracts", "find": "return a + b", "replace": "return a - b"}
 FIELDS = ["key", "file", "blob", "date", "status", "by", "caught", "refused", "s"]
-#: At most this many rows carry `"tier": "critical"`: the PO's number (P787's plan, approved 2026-11-12), so the rows that
-#: run every sweep stay few, and a mark is a choice, never a default.
-CRITICAL_CAP = 40
+#: At most this many rows carry `"tier": "critical"`: the PO's number (P787's plan, approved 2026-11-12; raised from 40 to 50
+#: on his "raise the tier", P981, 2026-11-22), so the rows that run every sweep stay few, and a mark is a choice, never a default.
+CRITICAL_CAP = 50
 TABLES = sorted((ROOT / "tests" / "mutations").glob("*.json"))
 
 
