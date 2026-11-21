@@ -12,11 +12,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.cli import HelpText, run_cli
 from spark.core.outside import build_bare_outside_world
+from spark.flow.run_request import RunRequest
 from spark.flow.show_flow import ShowFlow
 from spark.flow.write_flow_page import WriteFlowPage
 
-#: The verbs, each the Operation it runs. With no verb word, flow.py shows. `run-request` comes with P829.
-VERBS = {"show": ShowFlow, "page": WriteFlowPage}
+#: The verbs, each the Operation it runs. With no verb word, flow.py shows.
+VERBS = {"show": ShowFlow, "page": WriteFlowPage, "run-request": RunRequest}
 DEFAULT_VERB = "show"
 
 EPILOG = """flow.py show reads the project's files and the store, and writes nothing. It says each phase in order: idea,
