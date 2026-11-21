@@ -40,6 +40,7 @@ The [journey guide](journey.md) shows these commands on real runs.
 | `/spark:identify` | a module you own, from a photo |
 | `/spark:build` | you have a [requirements file](../../GLOSSARY.md#the-requirements-file) |
 | `/spark:deploy` | a scenario passed and the board is on USB |
+| `/spark:page` | you want the project's page as a private Artifact, or you used a button on it: Claude hands each request to `flow.py run-request` and runs no step itself ([`page.md`](../../commands/page.md)) |
 
 ### `/spark:init`
 
@@ -191,8 +192,7 @@ out of the bag. Page: [`commands/identify.md`](../../commands/identify.md).
 A requirements file becomes a board that builds, with a Wokwi diagram generated from it, or it names the stage that
 stopped it. It runs no simulation. It runs in seconds, with no agents ([journey: Build](journey/build.md)).
 
-With `--keep .` it writes `board.tsx`, its footprint, `dist/`, `breadboard.md` (the parts and how to wire them), `breadboard.json` (the same wiring on a Wokwi breadboard, for the
-XIAO ESP32-C6 today),
+With `--keep .` it writes `board.tsx`, its footprint, `dist/`, `breadboard.md` (the parts and how to wire them), `breadboard.json` (the same wiring on a Wokwi breadboard, for the XIAO ESP32-C6 today),
 `firmware/pins.py` (the pins the firmware imports) and `sim/` (the Wokwi project) into the project. After a build whose build stage ended ok, a `board.tsx` that spark wrote and nobody changed is `replaced`
 (`unchanged` when this build made the same board; the previous version is `.spark/previous/board.tsx.txt`). Any other is left alone,
 and so is one when the build did not finish or the replace failed. `dist/` is built from the requirements file, not from your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)). To check an edited `board.tsx`, build it with `npx --no tsci build board.tsx`; to regenerate it, delete it. When its traces join other

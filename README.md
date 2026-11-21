@@ -134,6 +134,7 @@ before its goal, or part of it was not run here. **not yet**: nothing does it ye
 - `/spark:idea` turns a goal into needs, a part for each need and a requirements file.
 - `/spark:research` finds a missing part, and `/spark:identify` a module from a photo.
 - `/spark:build` makes a board from a requirements file, and `/spark:deploy` puts the firmware onto the board.
+- `/spark:page` publishes the project's page as a private Artifact and runs the step that a button on it asked for.
 
 **Skills**, which Claude picks up from your words: `spark-design` designs a board, `spark-review` reviews it and gates it
 before you order it, and `spark-reverse-engineer` reads a board from its photo.

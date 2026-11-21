@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/flow/write_flow_page.py",
+  "name": "the record of the published page holds the project's path (P829)",
+  "find": "store.write_file(self.path, json.dumps({\"artifact\": artifact}) + \"\\n\")",
+  "replace": "store.write_file(self.path, json.dumps({\"artifact\": artifact, \"project\": str(self.path.parent.parent)}) + \"\\n\")"
+ },
+ {
+  "file": "scripts/spark/flow/write_flow_page.py",
+  "name": "an --artifact that is no Artifact id is kept (P829)",
+  "find": "ARTIFACT_PATTERN = re.compile(r\"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$\")",
+  "replace": "ARTIFACT_PATTERN = re.compile(r\"^.*$\")"
+ },
+ {
+  "file": "scripts/spark/flow/write_flow_page.py",
+  "name": "--artifact is not kept (P829)",
+  "find": "            if artifact is not None:\n                published.write(artifact)\n",
+  "replace": "            pass\n"
+ },
+ {
+  "file": "scripts/spark/flow/write_flow_page.py",
+  "name": "a record spark cannot use answers what it holds (P829)",
+  "find": "        return artifact if isinstance(artifact, str) and ARTIFACT_PATTERN.match(artifact) else None\n",
+  "replace": "        return artifact\n"
+ },
+ {
+  "file": "scripts/spark/flow/write_flow_page.py",
+  "name": "a later page answers no kept artifact (P829)",
+  "find": "\"artifact\": published.read()}",
+  "replace": "\"artifact\": artifact}"
+ }
+]

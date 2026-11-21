@@ -38,7 +38,9 @@ phase that is not ok never shows one. Only the build with --keep draws the schem
 whether the board is wired or flashed. Each offer shows its label and its effect. The page's <body> carries
 data-fingerprint (the first 12 hex digits of the fingerprint) and data-written (the newest change time of the three files
 below). With --json it prints data.file, data.did, data.stands_at, data.phases (each phase and its status),
-data.fingerprint and data.guide.
+data.fingerprint, data.guide and data.artifact. --artifact ID keeps the id of the Artifact the page is published as
+in .spark/page.json, the id only, and every later page answers it as data.artifact (null when none is kept). An id that
+is no UUID in lower case is a bad argument, and nothing is written. Only /spark:page publishes the page.
 
 flow.py run-request reads .spark/page-request.json, the page's request {id, key, seen, at}, and deletes it at once. It
 runs the step only when seen is the first 12 hex digits of the fingerprint now, the key is an offer now, and its kind

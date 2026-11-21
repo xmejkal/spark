@@ -388,7 +388,8 @@ class TheCommandTest(unittest.TestCase):
         envelope, code = run_flow("page", "--project", str(project), "--json")
         self.assertEqual((code, envelope["op"], envelope["status"]), (0, "write-flow-page", OK))
         # P977: the page answers the guide too
-        self.assertEqual(sorted(envelope["data"]), ["did", "file", "fingerprint", "guide", "phases", "stands_at"])
+        # P829 PR 4: and the artifact the page is published as, null until /spark:page publishes it
+        self.assertEqual(sorted(envelope["data"]), ["artifact", "did", "file", "fingerprint", "guide", "phases", "stands_at"])
         self.assertEqual(envelope["data"]["guide"], run_flow("show", "--project", str(project), "--json")[0]["data"]["guide"])
         self.assertEqual(envelope["data"]["guide"]["now"]["phase"], "firmware")
         self.assertEqual(envelope["data"]["fingerprint"], fingerprint_of(project, read_flow(project)[0]))
@@ -1454,6 +1455,60 @@ class ThePageScriptTest(unittest.TestCase):
         self.assertEqual(len(scripts_of(text)), 2)
         self.assertEqual(words_of(text)["offers"]["build"]["label"], "</script><script>alert(1)</script>")
         self.assertIn("\\u003c/script>\\u003cscript>alert(1)", text)
+
+
+class ThePublishedPageTest(unittest.TestCase):
+    """P829 PR 4: `flow.py page --artifact ID` keeps the id of the Artifact the page is published as in .spark/page.json,
+    the id only and never a path, and every `flow.py page` reads it back as data.artifact."""
+
+    ARTIFACT = "cd9a5ac3-f053-4a6a-bc9c-ab6f687f4096"
+
+    def page(self, project, *argv):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            return run_flow("page", "--project", str(project), "--json", *argv)
+
+    def test_the_artifact_is_kept_as_its_id_only_and_read_back(self):
+        project = a_built_project()
+        envelope, code = self.page(project, "--artifact", self.ARTIFACT)
+        self.assertEqual((code, envelope["data"]["artifact"]), (0, self.ARTIFACT))
+        text = (project / ".spark" / "page.json").read_text(encoding="utf-8")
+        self.assertEqual(json.loads(text), {"artifact": "cd9a5ac3-f053-4a6a-bc9c-ab6f687f4096"})
+        self.assertNotIn(str(project.name), text)
+        self.assertNotIn("/", text)
+        again, code = self.page(project)
+        self.assertEqual((code, again["data"]["artifact"]), (0, "cd9a5ac3-f053-4a6a-bc9c-ab6f687f4096"))
+
+    def test_a_page_never_published_answers_no_artifact_and_writes_no_record(self):
+        project = a_built_project()
+        envelope, code = self.page(project)
+        self.assertEqual((code, envelope["data"]["artifact"]), (0, None))
+        self.assertEqual(sorted(envelope["data"]), ["artifact", "did", "file", "fingerprint", "guide", "phases", "stands_at"])
+        self.assertFalse((project / ".spark" / "page.json").exists())
+
+    def test_an_id_that_is_no_uuid_is_a_bad_argument_and_writes_nothing(self):
+        for given in ("../page.html", "/tmp/x/index.html", "CD9A5AC3-F053-4A6A-BC9C-AB6F687F4096", ""):
+            with self.subTest(given=given):
+                project = a_built_project()
+                envelope, code = self.page(project, "--artifact", given)
+                self.assertEqual((code, envelope["status"]), (2, COULD_NOT_RUN))
+                self.assertEqual([item["code"] for item in envelope["unchecked"]], ["bad_argument"])
+                self.assertFalse((project / ".spark" / "page.json").exists())
+                self.assertFalse((project / "page.html").exists())
+
+    def test_a_record_spark_cannot_use_answers_no_artifact(self):
+        for held in ("not json", '{"artifact": "/tmp/x"}', '["cd9a5ac3-f053-4a6a-bc9c-ab6f687f4096"]', '{"artifact": 5}'):
+            with self.subTest(held=held):
+                project = a_built_project()
+                (project / ".spark" / "page.json").write_text(held, encoding="utf-8")
+                envelope, code = self.page(project)
+                self.assertEqual((code, envelope["data"]["artifact"]), (0, None))
+
+    def test_a_new_id_replaces_the_old_one(self):
+        project = a_built_project()
+        self.page(project, "--artifact", self.ARTIFACT)
+        self.page(project, "--artifact", "9667a2de-3d30-4c7f-a7fc-9ded96a0e967")
+        self.assertEqual(json.loads((project / ".spark" / "page.json").read_text(encoding="utf-8")),
+                         {"artifact": "9667a2de-3d30-4c7f-a7fc-9ded96a0e967"})
 
 
 if __name__ == "__main__":
