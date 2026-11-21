@@ -35,7 +35,10 @@ An offer has four keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
 - `label`: the words of its button, such as `Build the board`.
 - `effect`: plain sentences that name every write the step makes, such as `Uses 1 of your 3 “DFRobot FireBeetle 2
   ESP32-S3” for the brain.` The part's name stands in quotes. A pick that the pick itself refuses says so and names
-  no phase: other projects hold all of the part, or this project's other picks use all of it (`needs.PickPlan`).
+  no phase (`needs.PickPlan`). The reason is the problem `plan_holds` gives, in its own words: too few of the part are
+  free (other projects hold them, this project's other picks use them, or both), or another need's pick cannot get its
+  part. A pick that lets a hold go says whose it was: "Frees what the old pick held." for the need's old pick, and
+  "Frees a part this project held without a pick." for a hold given by hand.
 - `makes_stale`: the phases the step can make out of date. It lists only the phases that hold something now. With
   requirements.json there, a pick names `requirements`. Write the parts list names `build` when `.spark/build.json` is
   there and `breadboard` when breadboard.md is there. A build names none.
