@@ -1,7 +1,7 @@
 """
 The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Renderer of a planned layout as
-`breadboard.svg`, the breadboard under the parts in the old wiring page's look (`BoardBackground`, which only draws
-what `board_marks` made: the board's body, letters, numbers and rail signs, P969, with their `BoardPalette`, P953), the
+`breadboard.svg`, the breadboard under the parts in the old wiring page's look (`BoardBackground`, which draws
+the holes and the gap band from the surface, and the marks that `board_marks` made, P969, with their `BoardPalette`, P953), the
 Strategies that place a drawn part's pad labels (P945), and the Service that places each jumper's pill (`PillLayout`,
 `WirePill`, P953). Moved out of `drawing`, whose planner and Wokwi diagram it reads. `sheet` writes the file;
 `part_shape` names a part's label layout; `wire_routing` gives each jumper its way; `part_captions` places each part's

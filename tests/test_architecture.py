@@ -408,7 +408,7 @@ class TheBreadboardAreaTest(unittest.TestCase):
     """W6-B3 (P694): the breadboard's modules live in `scripts/spark/breadboard/`, its `__init__.py` imports nothing, and
     each module imports alone. `scripts/` keeps the CLI `breadboard.py`, which defines `main` only."""
     BREADBOARD = ROOT / "scripts" / "spark" / "breadboard"
-    #: The eighteen modules of the area, by the names of its page (`areas/breadboard.md`); `part_shape` came in W6-D3b,
+    #: The twenty-three modules of the area, by the names of its page (`areas/breadboard.md`); `part_shape` came in W6-D3b,
     #: `before_power` in P826, `svg_diagram` in P945, `picture_check` and `picture_makers` in P946, `feature_check`,
     #: `feature_measure` and `features_picture` in P956, `spacing`, `wire_routing` and `part_captions` in P953, `board_marks` in P969.
     MODULES = ["before_power", "bench_changes", "board_marks", "breadboard_codes", "drawing", "drawing_catalog", "drawing_match", "feature_check",
