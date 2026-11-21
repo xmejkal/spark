@@ -25,9 +25,27 @@
  },
  {
   "file": "tests/test_json_contracts.py",
-  "name": "the checks' scan reads no table of the records or of design",
-  "find": "\"checks\": (records_codes, design_codes, codes)}",
-  "replace": "\"checks\": (design_codes, codes)}"
+  "name": "the checks' scan names no Code of the records' table",
+  "find": "NAMED_CODES = {\"checks\": {records_codes: (records_codes.BOARD_FILE_MISSING, records_codes.RECORD_FILE_BROKEN),\n                          design_codes: (design_codes.NO_PROJECT_FOLDER,)}}",
+  "replace": "NAMED_CODES = {\"checks\": {design_codes: (design_codes.NO_PROJECT_FOLDER,)}}"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the checks' scan drops one of the records' Codes it names",
+  "find": "(records_codes.BOARD_FILE_MISSING, records_codes.RECORD_FILE_BROKEN),",
+  "replace": "(records_codes.BOARD_FILE_MISSING,),"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "a table the scan names Code by Code lets any Code of it pass",
+  "find": "not any(held is one for one in just[named])",
+  "replace": "False"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "FORWARDED_CODES names the forwarded code in another class's call than VendorPinsCheck.call",
+  "find": "(\"check.py\", \"VendorPinsCheck.call\", ",
+  "replace": "(\"check.py\", \"OrderCheck.call\", "
  },
  {
   "file": "tests/test_json_contracts.py",

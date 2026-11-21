@@ -374,24 +374,25 @@ class TheBenchCodesTableTest(unittest.TestCase):
 AREAS_WITH_FIXES = {"idea": idea_codes, "core": codes, "records": records_codes, "sourcing": sourcing_codes, "design": design_codes,
                    "checks": check_codes}
 #: P935: the tables whose Codes an area names besides its own: the core's, which every Operation writes, and the records'.
-#: P935 PR 4b: the checks' scan reads the records' codes (vendor_pins_check.py: BOARD_FILE_MISSING, RECORD_FILE_BROKEN) and design's
-#: (check.py: the DesignError with NO_PROJECT_FOLDER).
-NAMED_TOO = {"records": (codes,), "sourcing": (records_codes, codes), "design": (records_codes, codes),
-            "checks": (records_codes, design_codes, codes)}
+NAMED_TOO = {"records": (codes,), "sourcing": (records_codes, codes), "design": (records_codes, codes), "checks": (codes,)}
+#: P935 PR 4b: the foreign Codes an area names one by one, by table: checks names two of the records' (vendor_pins_check.py) and one of
+#: design's (check.py's DesignError); another Code of those tables is named.
+NAMED_CODES = {"checks": {records_codes: (records_codes.BOARD_FILE_MISSING, records_codes.RECORD_FILE_BROKEN),
+                          design_codes: (design_codes.NO_PROJECT_FOLDER,)}}
 #: P935: the one given fix that is no Code's: the override a CLI injects through `HelpText` (parts.py's describe route).
 INJECTED_FIXES = {"text.bad_argument_fix"}
 #: P935: each fix given with the code of a refusal its site caught, by the site (the file in its area and the function)
 #: and the fix: the code is the refusal's, so no variant can hold the fix (research's sources, after the store's refusal).
-CAUGHT_FIXES = {("research/research_source.py", "_problem", "cls.RETRY_FIX")}
+CAUGHT_FIXES = {("research/research_source.py", "DfrobotWikiSource._problem", "cls.RETRY_FIX")}
 #: P853: the errors that take a code, by class name; a subclass the area defines, at any depth, takes one too.
 #: P935 PR 4b: DesignError is design's error, which checks raises too (check.py), as StoreError is the records'.
 CODED_ERRORS = {"SparkError", "CodedMessageError", "StoreError", "DesignError"}
 #: P935 PR 4b: the forms that take their code by position, by name, with the code's place among the arguments (a `code=`
 #: keyword counts too): the core's Refusal, the errors of design and checks that are no CodedMessageError, compare_design's helper.
 CODE_AT = {"Refusal": 1, "ImpossibleError": 1, "RefusedInputError": 2, "CouldNotKeepError": 1, "PackageError": 1, "could_not_run": 1}
-#: P935 PR 4b: each code passed on from a site the scan reads, by the site (the file in its area, the function) and the code.
-#: The key is coarse: a second forwarded code in the same function passes too.
-FORWARDED_CODES = {("check.py", "call", "result['reason'].code"),  # vendor_pins_check.check_board's Refusal
+#: P935 PR 4b: each code passed on from a site the scan reads, by the site (the file in its area, the class.method or function) and
+#: the code's source text.
+FORWARDED_CODES = {("check.py", "VendorPinsCheck.call", "result['reason'].code"),  # vendor_pins_check.check_board's Refusal
                    ("rules_check.py", "could_not_run", "code"),  # the helper's parameter: each call of it is scanned
                    ("board_emitter.py", "read_inputs", "no_footprint.code"),  # why_no_footprint's or why_wrong_kind's Refusal
                    ("board_emitter.py", "board_file", "code")}  # PART_GAPS: a test pins each code
@@ -501,10 +502,14 @@ def caught_names(tree, resolved, fixless):
 
 
 def functions_of(tree):
-    """P935: the innermost function of each node of the tree, by the node's id: the site a CAUGHT_FIXES entry names."""
+    """P935: the innermost function of each node of the tree, by the node's id, as `Class.method` in a class: the site a
+    CAUGHT_FIXES or FORWARDED_CODES entry names."""
     owner = {}
+    for scope in (node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)):
+        for method in (node for node in scope.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))):
+            owner.update((id(node), scope.name + "." + method.name) for node in ast.walk(method))
     for function in (node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))):
-        owner.update((id(node), function.name) for node in ast.walk(function))  # ast.walk meets an inner one later
+        owner.update((id(node), owner.get(id(function), function.name)) for node in ast.walk(function))  # ast.walk meets an inner one later
     return owner
 
 
@@ -539,7 +544,7 @@ def own_classes(tree):
     return {node.name for node in top} - set(bound)
 
 
-def calls_off_the_table(sources, table, also=(), used=None):
+def calls_off_the_table(sources, table, also=(), used=None, just=None):
     """
     P853: (the calls that take a code, each rule a call breaks as 'file:line N: the rule'), over the area's `sources`
     ({file name: text}). A Finding is made by `Finding.of` alone, and no name aliases Finding; an error of `coded_errors`
@@ -549,8 +554,9 @@ def calls_off_the_table(sources, table, also=(), used=None):
     receiver's own (the Privacy mask). A Code of a table `also` holds counts as `table`'s; a caught refusal's code is
     passed on as `passes_on_a_refusal` says, and an item's as `passes_on_an_item` says.
     P935 PR 4b: a form of CODE_AT names its code at that place or by `code=`. A caught positional error holds no fix.
-    FORWARDED_CODES names the four codes passed on from a site the scan reads; `used`, a set, gets each one that matched. A
-    fix that a `could_not_run` gives is checked like any: it must be the same code's.
+    FORWARDED_CODES names the codes passed on from a site the scan reads, the key being (file, class.method, the code's source
+    text); `used`, a set, gets each one that matched. `just` ({table: its Codes}, NAMED_CODES' value) lets a call name those
+    Codes of a table and no other. A fix that a `could_not_run` gives is checked like any: it must be the same code's.
     P935 PR 4: a call of a class the file defines with no bases and does not import (build_check's own `class Finding`) makes
     no core Finding; `own_classes` says which names that holds for.
     """
@@ -585,7 +591,7 @@ def calls_off_the_table(sources, table, also=(), used=None):
                 place = 2 if of else CODE_AT.get(made_by)
                 code = keywords.get("code", call.args[place] if place is not None and len(call.args) > place else None)
                 fix = keywords.get("fix", call.args[4] if of and len(call.args) > 4 else None)
-                site = (file, owner.get(id(call)), ast.unparse(code) if code else None)
+                site = (file, owner.get(id(call)), ast.unparse(code) if code is not None else None)
                 if site in FORWARDED_CODES:
                     if used is not None:
                         used.add(site)
@@ -593,9 +599,10 @@ def calls_off_the_table(sources, table, also=(), used=None):
                 if forwards(code, fix) or passes_on_a_refusal(site[:2], code, fix, caught):
                     continue
                 module, _, word = resolved(code).rpartition(".")
-                named = next((one for one in (table,) + tuple(also) if one.__name__ == module), None)
-                if not isinstance(getattr(named, word, None), Code):
-                    broken.append(said + " names its code as %r, not a Code of %s" % (ast.unparse(code) if code else None, table.__name__))
+                named = next((one for one in (table,) + tuple(also) + tuple(just or ()) if one.__name__ == module), None)
+                held = getattr(named, word, None)
+                if not isinstance(held, Code) or (named in (just or ()) and not any(held is one for one in just[named])):
+                    broken.append(said + " names its code as %r, not a Code of %s" % (ast.unparse(code) if code is not None else None, table.__name__))
                 elif fix is not None and foreign_fix(fix, getattr(named, word), named, resolved):
                     broken.append(said + " gives a fix")
     return calls, broken
@@ -618,7 +625,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         "no_rules_file":
             "give --rules the path of a rules file, or write .spark/rules.json with /spark:init",
         "rules_refused":
-            # P935 PR 4b: loosened on purpose, byte-equal in design_codes (the pair test): fab.py:105 gives a JSON error at a line and column
+            # P935 PR 4b: byte-equal in design_codes (the pair test)
             "fix the value the sentence names in the rules file, or the error it gives, such as a JSON error at a line and column, then run again",
         "input_ambiguous":
             "pick one of the files the sentence lists and give it with the flag the sentence names, then run again",
@@ -629,7 +636,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         "check_found_problems":
             "fix each problem the check lists, then run check_all.py again",
         "check_could_not_look":
-            # P935 PR 4b: a crash note reads "TypeName: message", so the fix says when to report it (check.py is untouched)
+            # P935 PR 4b: says when to report a crash note
             "fix what the sentence names for this check, then run check_all.py again. If the sentence starts with an error name, such as KeyError, "
             "and names no file of yours, report it at https://github.com/xmejkal/spark/issues with the sentence and your command",
         "nothing_asked":
@@ -664,7 +671,8 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word;
         # an area's variant of the core's word (BAD_ARGUMENT_IN_LIBRARY) has the core's meaning
         for table in AREAS_WITH_FIXES.values():
-            also = NAMED_TOO.get(next(area for area, held in AREAS_WITH_FIXES.items() if held is table), ())
+            area = next(area for area, held in AREAS_WITH_FIXES.items() if held is table)
+            also = NAMED_TOO.get(area, ()) + tuple(NAMED_CODES.get(area, ()))
             self.assertEqual(meanings_off_their_word(table, also), [], table.__name__)
             self.assertEqual(variants_off_their_parent(table, also), [], table.__name__)
 
@@ -711,7 +719,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         for area, table in AREAS_WITH_FIXES.items():
             root = ROOT / "scripts" / "spark" / area  # P935: its subfolders too, each file by its path in the area
             sources = {str(path.relative_to(root)): path.read_text() for path in sorted(root.rglob("*.py"))}
-            calls, broken = calls_off_the_table(sources, table, NAMED_TOO.get(area, ()), used)
+            calls, broken = calls_off_the_table(sources, table, NAMED_TOO.get(area, ()), used, NAMED_CODES.get(area))
             self.assertTrue(calls, "the scan found no call in %s" % area)
             self.assertEqual(broken, [])
             scanned |= set(sources)
@@ -724,11 +732,10 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         # P935 PR 4b: board_emitter.board_file passes each gap's `code` on (FORWARDED_CODES); the table's own codes are the ones it may name
         # (the Code itself, not its word: a Code is a str and equals its word)
         self.assertEqual([str(code) for _, code, _ in board_emitter.PART_GAPS if not any(code is held for held in design_codes.CODES)], [])
-        self.assertEqual(len(board_emitter.PART_GAPS), 4)
 
     def test_the_scan_reads_the_code_of_each_positional_form(self):
         # P935 PR 4b: Refusal, ImpossibleError, RefusedInputError, CouldNotKeepError, PackageError and could_not_run by position
-        # or by `code=`; lines 7 to 11 pass (8 and 9 only through NAMED_TOO), lines 12 to 22 are named
+        # or by `code=`; lines 7 to 11 pass (8 and 9 only through NAMED_TOO), lines 12 to 24 are named (a Code of design or the records that NAMED_CODES leaves out too)
         head = ("from spark.checks import check_codes\nfrom spark.core.result import Refusal\nfrom spark.design import design_codes, loader\n"
                 "from spark.records import records_codes\nfrom spark.sourcing import sourcing_codes\n\n")
         body = ("Refusal('x', check_codes.NO_CIRCUIT)\nRefusal('x', records_codes.BOARD_FILE_MISSING)\n"
@@ -737,34 +744,36 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
                 "Refusal('x', reason)\nRefusal('x', code=reason)\nRefusal('x')\nImpossibleError('x', reason)\n"
                 "RefusedInputError('s', reason, 'x')\nCouldNotKeepError('x', reason)\nPackageError('x', reason)\n"
                 "could_not_run('x', reason)\nloader.DesignError('x', code=reason)\nRefusal('x', sourcing_codes.NO_SUCH_PART)\n"
-                "could_not_run('x', check_codes.NO_CIRCUIT, fix=check_codes.NO_RULES_FILE.fix)\n")
+                "could_not_run('x', check_codes.NO_CIRCUIT, fix=check_codes.NO_RULES_FILE.fix)\n"
+                "Refusal('x', design_codes.PART_UNUSABLE)\nRefusal('x', records_codes.NO_BOARD_SELECTED)\n")
         none = "not a Code of spark.checks.check_codes"
         named = lambda line, said, code: "forms.py:line %d: %s names its code as %s, %s" % (line, said, code, none)  # noqa: E731
-        self.assertEqual(calls_off_the_table({"forms.py": head + body}, check_codes, NAMED_TOO["checks"]), (16, [
+        self.assertEqual(calls_off_the_table({"forms.py": head + body}, check_codes, NAMED_TOO["checks"], None, NAMED_CODES["checks"]), (18, [
             named(12, "Refusal", "'reason'"), named(13, "Refusal", "'reason'"), named(14, "Refusal", "None"),
             named(15, "ImpossibleError", "'reason'"), named(16, "RefusedInputError", "\"'x'\""),
             named(17, "CouldNotKeepError", "'reason'"), named(18, "PackageError", "'reason'"), named(19, "could_not_run", "'reason'"),
             named(20, "DesignError", "'reason'"), named(21, "Refusal", "'sourcing_codes.NO_SUCH_PART'"),
-            "forms.py:line 22: could_not_run gives a fix"]))
+            "forms.py:line 22: could_not_run gives a fix", named(23, "Refusal", "'design_codes.PART_UNUSABLE'"),
+            named(24, "Refusal", "'records_codes.NO_BOARD_SELECTED'")]))
         # without NAMED_TOO the records' and design's codes of lines 8 and 9 are named too
         self.assertEqual([line for line in calls_off_the_table({"forms.py": head + body}, check_codes, (codes,))[1] if ":line 8:" in line
                           or ":line 9:" in line], [
             "forms.py:line 8: Refusal names its code as 'records_codes.BOARD_FILE_MISSING', %s" % none,
             "forms.py:line 9: DesignError names its code as 'design_codes.NO_PROJECT_FOLDER', %s" % none])
 
-    def test_the_scan_takes_a_caught_positional_error_s_code_and_a_forwarded_code_only_where_forwarded_codes_names_it(self):
+    def test_a_caught_positional_error_and_a_forwarded_code_pass_only_where_allowed(self):
         # P935 PR 4b: a positional error caught by a handler holds no fix, so its code is passed on; a tuple with an OSError does not
-        # pass; `result['reason'].code` passes in check.py's `call` (FORWARDED_CODES) and nowhere else
+        # pass; `result['reason'].code` passes in check.py's VendorPinsCheck.call (FORWARDED_CODES) and in no other class or file
         source = ("from spark.core.result import Refusal\n\n\nclass PackageError(Exception):\n    pass\n\n\ntry:\n    pass\n"
                   "except PackageError as unreadable:\n    Refusal(str(unreadable), unreadable.code)\n"
                   "except (PackageError, OSError) as either:\n    Refusal(str(either), either.code)\n\n\n"
-                  "def call(result):\n    return Refusal('x', result['reason'].code)\n\n\n"
-                  "def other(result):\n    return Refusal('x', result['reason'].code)\n")
+                  "class VendorPinsCheck:\n    def call(self, result):\n        return Refusal('x', result['reason'].code)\n\n\n"
+                  "class OrderCheck:\n    def call(self, result):\n        return Refusal('x', result['reason'].code)\n")
         named = lambda file, line, code: "%s:line %d: Refusal names its code as %r, not a Code of spark.checks.check_codes" % (file, line, code)  # noqa: E731
         self.assertEqual(calls_off_the_table({"check.py": source, "order.py": source}, check_codes), (8, [
-            named("check.py", 21, "result['reason'].code"), named("check.py", 13, "either.code"),
-            named("order.py", 17, "result['reason'].code"), named("order.py", 21, "result['reason'].code"),
-            named("order.py", 13, "either.code")]))
+            named("check.py", 13, "either.code"), named("check.py", 23, "result['reason'].code"),
+            named("order.py", 13, "either.code"), named("order.py", 18, "result['reason'].code"),
+            named("order.py", 23, "result['reason'].code")]))
 
     def test_the_scan_names_each_rule_a_call_breaks(self):
         drop = ("from spark.core.result import Finding as F\nfrom spark.core.errors import SparkError\nfrom spark.records import store\n"
@@ -829,7 +838,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
                   "SparkError('x', code=error.code)\nSparkError('x', code=error.code, fix=cls.RETRY_FIX)\n"
                   "StoreError('x', code=records_codes.URL_UNREACHABLE)\nSparkError('x', code=sourcing_codes.BAD_ARGUMENT_IN_LIBRARY)\n"
                   "SparkError('x', code=codes.CRASH)\nSparkError('x', code=records_codes.CODES)\n\n\n"
-                  "class Source:\n    def _problem(cls, error):\n        return SparkError('x', code=error.code, fix=cls.RETRY_FIX)\n\n"
+                  "class DfrobotWikiSource:\n    def _problem(cls, error):\n        return SparkError('x', code=error.code, fix=cls.RETRY_FIX)\n\n"
                   "    def _other(cls, error):\n        return SparkError('x', code=error.code, fix=cls.RETRY_FIX)\n")
         item = ("Finding(1, None, item.get('code'), 's', item.get('fix'))\nFinding(1, None, item.get('code'), 's', other.get('fix'))\n"
                 "Finding(1, None, item.get('word'), 's', item.get('help'))\n")

@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import emit_footprint  # noqa: E402
-from spark.design import footprint_emitter  # noqa: E402
+from spark.design import design_codes, footprint_emitter  # noqa: E402
 
 #: Produced by `tools/generate-firebeetle-footprint.py` in the smart-bin project, from DFRobot's
 #: published dimension drawing, and checked by hand against the module. It is the only independent
@@ -407,5 +407,6 @@ class TheBoardToDrawTest(unittest.TestCase):
         (root / ".spark" / "rules.json").write_text("{not json")
         _, _, refused = footprint_emitter.board_to_draw(str(root), "firebeetle2-esp32s3")
         self.assertEqual(refused.code, "rules_refused")
+        self.assertIs(refused.code, design_codes.RULES_REFUSED)  # P935 PR 4b: the Code, not its word as a plain str
         self.assertTrue(refused.startswith("no board or rules to generate from: "), refused)
 # --- end MVP ---
