@@ -528,6 +528,141 @@ class TheBuildRecordStoreTest(unittest.TestCase):
         (project / BUILD_RECORD_FILE).write_text("[" * 200000)
         self.assertEqual(BuildRecordStore(project).written_sha256(), {})
 
+def a_project_built_with_no_simulation(code="board_not_in_wokwi", status="could-not-run"):
+    """A built project whose board and build ended ok and whose simulation stage ended in `status` with `code`, as the
+    p934 walk's FireBeetle 2 ESP32-C6 build records it (P977)."""
+    project = a_built_project(status)
+    record = BuildRecordStore(project).read()
+    record["stages"] = [{"name": "board", "status": "ok"}, {"name": "build", "status": "ok"},
+                        {"name": "simulation", "status": status, "code": code}]
+    BuildRecordStore(project, clock=FakeClock()).write({key: value for key, value in record.items() if key not in ("schema", "at")})
+    return project
+
+
+def a_firmware(project):
+    (project / "firmware").mkdir()
+    (project / "firmware" / "main.py").write_text("print(1)\n")
+    return project
+
+
+NO_MODEL = "No simulation: Wokwi has no model of this board, so the board is the test."
+
+
+class TheGuideTest(FlowTest):
+    """P977: `data.guide` says what to do now, what is done, what comes later and what the person set aside."""
+
+    def test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now(self):
+        said, code = show(a_project_built_with_no_simulation())
+        self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "build"))
+        self.assertEqual(said["data"]["guide"], {
+            "now": {"phase": "firmware", "by": "claude", "offer": None, "needs": [],
+                    "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
+                            "firmware. Spark cannot see your wiring."},
+            "done": ["idea", "needs", "parts", "requirements", "build (no simulation)"],
+            "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL})
+
+    def test_with_the_firmware_written_the_deploy_is_now_and_the_simulate_stays_later(self):
+        said, _ = show(a_firmware(a_project_built_with_no_simulation()))
+        self.assertEqual(said["data"]["guide"], {
+            "now": {"phase": "deploy", "by": "your terminal", "offer": None, "needs": [],
+                    "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
+                            "run the deploy in your terminal."},
+            "done": ["idea", "needs", "parts", "requirements", "build (no simulation)", "firmware"],
+            "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL})
+
+    def test_any_other_cause_of_a_simulation_that_could_not_run_stops_at_the_build(self):
+        for code in ("simulation_fact_missing", "converter_lacks_part", None):
+            with self.subTest(code=code):
+                guide = show(a_project_built_with_no_simulation(code))[0]["data"]["guide"]
+                self.assertEqual((guide["now"]["phase"], guide["now"]["says"], guide["now"]["offer"], guide["no_simulation"]),
+                                 ("build", "The build phase could not run. Ask Claude what it says.", "build", None))
+                self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements"])
+
+    def test_a_board_only_build_of_a_board_wokwi_has_no_model_of_is_passed_and_the_firmware_is_one_job(self):
+        project = a_board_only_project("could-not-run")
+        record = BuildRecordStore(project).read()
+        record["stages"][-1]["code"] = "board_not_in_wokwi"
+        BuildRecordStore(project, clock=FakeClock()).write({key: value for key, value in record.items() if key not in ("schema", "at")})
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
+                         ("firmware", "Ask Claude in the chat to write the firmware for this board."))
+        self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements", "build (no simulation)"])
+
+    def test_a_build_of_a_board_wokwi_has_no_model_of_is_stale_when_the_parts_list_changed(self):
+        project = a_project_built_with_no_simulation()
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6-fresh", "parts": ["led-red-5mm"]}))
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"], guide["no_simulation"]),
+                         ("build", "The parts list changed since the last build. Ask Claude to build again.", None))
+
+    def test_a_simulation_with_problems_is_not_passed(self):
+        guide = show(a_project_built_with_no_simulation("diagram_unwired", "problems"))[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
+                         ("build", "The build phase has problems. Ask Claude to go through them with you."))
+
+    def test_a_passed_build_with_a_simulate_that_has_problems_makes_the_simulate_now(self):
+        project = a_firmware(a_project_built_with_no_simulation())
+        (project / "sim").mkdir()
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = 42\n')
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
+                         ("simulate", "The simulate phase has problems. Ask Claude to go through them with you."))
+        self.assertEqual((guide["later"], guide["no_simulation"]), (["deploy"], NO_MODEL))
+
+    def test_an_image_no_run_tested_makes_the_simulate_now(self):
+        project = a_firmware(a_built_project())
+        (project / "sim").mkdir()
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+        (project / "sim" / "image.bin").write_bytes(b"an image")
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
+                         ("simulate", "your terminal", "Ask Claude for the scenario command, and run it in your terminal. "
+                                                       "It uses Wokwi CI minutes."))
+        self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements", "build", "firmware"])
+
+    def test_a_fresh_project_starts_at_the_idea(self):
+        project = Path(tempfile.mkdtemp()) / "plant-alarm"
+        project.mkdir()
+        self.assertEqual(show(project)[0]["data"]["guide"], {
+            "now": {"phase": "idea", "by": "you", "offer": None, "needs": [],
+                    "says": "Tell Claude your goal in the chat, in your own words."},
+            "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
+            "set_aside": [], "no_simulation": None})
+
+    def test_needs_set_aside_do_not_count_and_a_picked_one_counts_as_picked(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture"},
+            {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True},
+            {"id": "dry", "does": "sense", "what": "soil-moisture", "aside": True, "pick": [{"part": "x-many"}]}])
+        said, _ = show(project)
+        self.assertEqual((statuses(said)["parts"], says(said, "parts")), ("partial", ["1 of 2 needs picked", "set aside: wet, dry"]))
+        self.assertFalse([key for key in offers(said, "parts") if key.startswith("pick:wet:")])
+        self.assertTrue([key for key in offers(said, "parts") if key.startswith("pick:dry:")])
+        guide = said["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["needs"], guide["now"]["says"], guide["set_aside"]),
+                         ("parts", "you", ["soil"], "1 need(s) have no part yet: soil. Tell Claude a pick for each, or to set it aside.",
+                          ["wet", "dry"]))
+        self.assertEqual(guide["done"], ["idea", "needs"])
+
+    def test_every_need_picked_or_set_aside_makes_the_parts_ok_and_the_parts_list_now(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
+        said, _ = show(project)
+        self.assertEqual(statuses(said)["parts"], "ok")
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"], said["data"]["guide"]["now"]["says"]),
+                         ("requirements", "requirements", "Ask Claude in the chat to write the parts list from your picks."))
+
+    def test_the_build_record_keeps_the_code_of_a_stage_that_did_not_end_ok_and_no_detail(self):
+        from spark.build import kept_files
+        from spark.build.stages import Stage
+        project = a_built_project()
+        kept_files.keep_build_record(project, project / "requirements.json",
+                                     [Stage("board", "ok"), Stage("simulation", "could-not-run", "/a/detail", "board_not_in_wokwi")], [])
+        self.assertEqual(BuildRecordStore(project).read()["stages"], [
+            {"name": "board", "status": "ok"}, {"name": "simulation", "status": "could-not-run", "code": "board_not_in_wokwi"}])
+
+
 def offer_of(envelope, key):
     """The offer dict whose key is `key`, from any phase."""
     return next(offer for phase in envelope["data"]["phases"] for offer in phase["offers"] if offer["key"] == key)

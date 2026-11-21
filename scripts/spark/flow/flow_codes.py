@@ -30,6 +30,8 @@ NO_NEEDS_MESSAGE = "no needs yet: Claude writes them from your goal"
 #: The needs and parts of a project with requirements.json and no needs: nobody wrote needs, so nothing is open there.
 HAND_WRITTEN_MESSAGE = "a hand-written project: requirements.json and no needs"
 PICKED_MESSAGE = "%d of %d needs picked"
+#: The needs the person set aside (P977): they left them out of this board, so they do not count as open.
+ASIDE_MESSAGE = "set aside: %s"
 NO_REQUIREMENTS_MESSAGE = "no requirements.json yet"
 NOTHING_TO_COMPARE_MESSAGE = "requirements.json, with no needs to compare it with, so spark did not judge it"
 REQUIREMENTS_STALE_MESSAGE = "requirements.json differs from what the picks give"
@@ -134,4 +136,36 @@ ONE_AT_A_TIME = "One at a time: start at step 1"
 STEP_OF = "Step %d of %d"
 BACK, NEXT, ALL_STEPS, PICTURE = "Back", "Next", "All steps", "Picture"
 BACK_LABEL, NEXT_LABEL = "Back to step %d", "Next: step %d"
+
+#: The guide (P977, the PO, 2026-11-21: "nothing says what to do now"): one sentence for the phase to act on now, keyed by
+#: (phase, status). Each names who acts. A phase and status with none here gets PROBLEMS_NOW or COULD_NOT_RUN_NOW.
+IDEA_NOW = "Tell Claude your goal in the chat, in your own words."
+PARTS_NOW = "%d need(s) have no part yet: %s. Tell Claude a pick for each, or to set it aside."
+REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your picks."
+REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
+BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
+BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
+BUILD_PARTIAL_NOW = "The build stopped. Ask Claude to go through its lines with you."
+SHEET_NOW = "No wiring sheet yet. Ask Claude to build the board."
+SHEET_STALE_NOW = "The wiring sheet is out of date. Ask Claude to build the board again."
+#: The firmware with a current wiring sheet: two jobs in any order, and the count of the sheet's steps.
+TWO_JOBS_NOW = ("Two jobs, in any order: wire the breadboard (%d steps, power off), and ask Claude to write the firmware. "
+                "Spark cannot see your wiring.")
+FIRMWARE_NOW = "Ask Claude in the chat to write the firmware for this board."
+SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes."
+DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then run the deploy "
+              "in your terminal.")
+PROBLEMS_NOW = "The %s phase has problems. Ask Claude to go through them with you."
+COULD_NOT_RUN_NOW = "The %s phase could not run. Ask Claude what it says."
+NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW,
+                 (REQUIREMENTS, NOT_STARTED): REQUIREMENTS_NOW, (REQUIREMENTS, STALE): REQUIREMENTS_STALE_NOW,
+                 (BUILD, NOT_STARTED): BUILD_NOW, (BUILD, STALE): BUILD_STALE_NOW, (BUILD, PARTIAL): BUILD_PARTIAL_NOW,
+                 (BREADBOARD, NOT_STARTED): SHEET_NOW, (BREADBOARD, STALE): SHEET_STALE_NOW, (FIRMWARE, NOT_STARTED): FIRMWARE_NOW,
+                 (SIMULATE, NOT_STARTED): SIMULATE_NOW, (SIMULATE, None): SIMULATE_NOW, (DEPLOY, NOT_STARTED): DEPLOY_NOW}
+#: A build whose only stop is a board Wokwi has no model of counts as done (the PO, 2026-11-21), and these say why.
+NO_SIMULATION_NOW = "No simulation: Wokwi has no model of this board, so the board is the test."
+BUILT_NO_SIMULATION = "build (no simulation)"
+SIMULATE_NO_MODEL = "simulate (no Wokwi model of this board)"
+#: The offer that does the job of a phase to act on now: (the phase that holds it, its key).
+JOB_OFFERS = {REQUIREMENTS: (REQUIREMENTS, WRITE_REQUIREMENTS), BUILD: (BUILD, BUILD_BOARD), BREADBOARD: (BUILD, BUILD_BOARD)}
 # --- end MVP ---

@@ -3,8 +3,8 @@
 Step 2 of 8 in [the journey](../journey.md). Next: [Research](research.md).
 
 **Partly.** [`/spark:idea`](../../../commands/idea.md) turns a goal in your words into needs, then matches each need
-against your drawer and spark's records. It marks each need: have, have-unknown, know or gap. Then a part is picked per
-need (`parts.py --pick`), what you own is reserved, and the picks become a requirements file
+against your drawer and spark's records. It marks each need: have, have-unknown, know or gap; a need you leave out is
+set aside on your word. Then a part is picked per need (`parts.py --pick`), what you own is reserved, and the picks become a requirements file
 (`parts.py --requirements`) ([P97](https://github.com/xmejkal/spark/issues/18)). Those steps ran for this page, in
 [a recorded run](recorded-run.md#a-recorded-run-a-button-and-an-led) below; the conversation did not.
 

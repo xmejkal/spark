@@ -190,9 +190,20 @@ def pick_offer(project, need, candidate, plan, listed):
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK))
 
 
+def counted(matched):
+    """The needs that count for the parts (P977): each with a pick, and each the person did not set aside."""
+    return [need for need in matched if need.get("pick") or not need.get("aside")]
+
+
+def set_aside(matched):
+    """The ids of the needs the person set aside (P977), picked or not: a picked one still counts as picked."""
+    return [need["need"] for need in matched if need.get("aside")]
+
+
 class PartsReader(PhaseReader):
     """Strategy: the picks of the needs (`needs.match`): problems when a need cannot be matched, partial while some need
-    has no pick, and every candidate offered as a pick."""
+    that counts has no pick, and every candidate offered as a pick. A need set aside with no pick does not count, has no
+    pick offer and is named (P977)."""
 
     PHASE, BY = flow_codes.PARTS, flow_codes.BY_YOU
 
@@ -203,12 +214,14 @@ class PartsReader(PhaseReader):
         if not matched:
             status, said = without_needs(project)
             return self.phase(status, [said])
-        picked = sum(1 for need in matched if need.get("pick"))
-        status = OK if picked == len(matched) else flow_codes.PARTIAL if picked else flow_codes.NOT_STARTED
+        open_needs, aside = counted(matched), set_aside(matched)
+        picked = sum(1 for need in open_needs if need.get("pick"))
+        status = OK if picked == len(open_needs) else flow_codes.PARTIAL if picked else flow_codes.NOT_STARTED
         # the list is read as the pick reads it: one that cannot be read stops this phase, as needs.match does
         plan, listed = needs.PickPlan(project), store.find_listed_name(project) is not None
-        picks = [pick_offer(project, need["need"], candidate, plan, listed) for need in matched for candidate in need["candidates"]]
-        return self.phase(status, [flow_codes.PICKED_MESSAGE % (picked, len(matched))], picks)
+        picks = [pick_offer(project, need["need"], candidate, plan, listed) for need in open_needs for candidate in need["candidates"]]
+        said = [flow_codes.PICKED_MESSAGE % (picked, len(open_needs))] + ([flow_codes.ASIDE_MESSAGE % ", ".join(aside)] if aside else [])
+        return self.phase(status, said, picks)
 
 
 class RequirementsReader(PhaseReader):

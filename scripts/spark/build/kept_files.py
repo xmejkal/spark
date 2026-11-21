@@ -499,7 +499,8 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
         return []
     records = records or BuildRecordStore(destination)
     try:
-        record = {"status": STATUS_FOR[verdict(stages)], "stages": [{"name": stage.name, "status": stage.status} for stage in stages],
+        # each stage's code when it did not end ok (P977), which the flow's guide reads; never its detail, which can hold a path
+        record = {"status": STATUS_FOR[verdict(stages)], "stages": [dict({"name": stage.name, "status": stage.status}, **({"code": stage.code} if stage.code else {})) for stage in stages],
                   "missing_facts": [item for entry in kept for item in entry.get("missing_facts", [])],
                   "requirements": _named_from(Path(requirements), destination), "requirements_sha256": sha256_of(requirements),
                   WRITTEN_SHA256: _written_sha256(records, kept)}

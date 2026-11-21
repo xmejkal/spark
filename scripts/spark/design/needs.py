@@ -2,7 +2,8 @@
 What a goal needs, and what the store offers for each (P96; docs/2026-10-04-store-design.md §5.3, §6.2, §8 S and M).
 
 A need is a verb and a few words — `{"id": "soil", "does": "sense", "what": "soil-moisture"}` — with a condition only when
-it decides a part, and later a mark: have, have-unknown, know or gap. The file is `<project>/.spark/needs.json`. It holds
+it decides a part, and later a mark: have, have-unknown, know or gap. `aside: true` says the person left the need out of
+this board (P977): Claude sets it with --needs-set only on their words, and every later write keeps it. The file is `<project>/.spark/needs.json`. It holds
 no part numbers, no owned counts, no places and no reasons: it belongs to a project, which may be public (§5.8). Why a
 need is marked as it is, is said to the person, and 1c's history keeps it. Every write sets, never adds.
 """
@@ -31,7 +32,9 @@ CHECKS = {"does": (lambda v: v in VERBS, "`does` is one of %s" % ", ".join(VERBS
           "mark": (lambda v: v is None or v in MARKS, "`mark` is one of %s, or null" % ", ".join(MARKS)),
           "pick": (lambda v: v is None or (isinstance(v, list) and all(
               isinstance(p, dict) and len(p) == 1 and next(iter(p)) in PICKS and isinstance(next(iter(p.values())), str)
-              and store.PLAIN.fullmatch(next(iter(p.values()))) for p in v)), '`pick` is a list of {"part"|"board"|"entry": id}, set with --pick')}
+              and store.PLAIN.fullmatch(next(iter(p.values()))) for p in v)), '`pick` is a list of {"part"|"board"|"entry": id}, set with --pick'),
+          # P977: the person left the need out of this board, in their own words; a field, not a mark
+          "aside": (lambda v: v is None or v is True, "`aside` is true, or null: the person set the need aside")}
 NEED_FIELDS = tuple(CHECKS)
 FILE = Path(".spark") / "needs.json"
 

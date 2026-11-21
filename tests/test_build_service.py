@@ -318,7 +318,8 @@ class ABoardWithNoWokwiPartInTheFullBuildTest(unittest.TestCase):
         board = dict(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()), id=self.BOARD, wokwi_part_type=None)
         stages = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}], boards=[(self.BOARD, board)])
         self.assertEqual([(stage.name, stage.status) for stage in stages][-2:], [("build", OK), ("simulation", COULD_NOT_RUN)])
-        self.assertEqual((stages[-1].code, stages[-1].detail), ("simulation_fact_missing", "the board record names no wokwi_part_type"))
+        # P977: the board's own code, board_not_in_wokwi, which the flow's guide passes
+        self.assertEqual((stages[-1].code, stages[-1].detail), ("board_not_in_wokwi", "the board record names no wokwi_part_type"))
         self.assertFalse((self.project / SHIM_ARGS).exists())  # the converter never ran
         self.assertEqual((verdict(stages), vouches_for_a_build(stages)), (EXIT_COULD_NOT_RUN, False))
 
@@ -401,7 +402,7 @@ class EachEndingSaysItsDetailTest(unittest.TestCase):
         stages = board_alone({"name": "x"}, Path(tempfile.mkdtemp()))
         self.assertEqual([(stage.name, stage.status, stage.detail, stage.code) for stage in stages],
                          [(name, SKIPPED, "board only: nothing to wire", "board_only") for name in ("parts", "schematic", "footprint", "build")]
-                         + [("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type", "simulation_fact_missing")])
+                         + [("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type", "board_not_in_wokwi")])  # P977
 
     def test_a_crash_no_stage_caught(self):
         built = RequirementsBuildService(FakeBuildService(crashes)).build()
