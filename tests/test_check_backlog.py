@@ -67,7 +67,7 @@ import board_read  # noqa: E402
 import check_backlog  # noqa: E402
 
 BODY = "### Needed by\n\n%s\n\n### Value proven by\n\nx\n\n### Proof\n\n_No response_\n"
-IN_FLIGHT_SAYS = "its limit is 4: the spark lane finishes one before starting another"
+IN_FLIGHT_SAYS = "its limit is 5: the spark lane finishes one before starting another"
 #: A draft on a board, as board_read.QUERY answers it: no issue content, a Status all the same.
 DRAFT = {"content": {}, "status": {"name": "Build", "updatedAt": "2026-11-13T10:00:00Z"}, "slice": None, "waitingOn": None,
          "waitingSince": None}
@@ -187,10 +187,10 @@ class TheBacklogCheckTest(unittest.TestCase):
                                  ["#6 P6 — x: no `Needed by` — W14: an item names the design that needs it",
                                   "#6 P6 — x: on no slice of the story map"])
 
-    def test_a_second_item_in_build_passes_and_a_third_is_named_with_all_three(self):
-        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build")]), [])
-        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build")]),
-                         ["Build (spark) holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
+    def test_a_third_item_in_build_passes_and_a_fourth_is_named_with_all_four(self):
+        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build")]), [])
+        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build")]),
+                         ["Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 3: finish one before starting another"])
 
     def test_a_second_item_in_review_passes_and_a_third_is_named(self):
         self.assertEqual(check_backlog.problems([item(1, "Review"), item(2, "Review")]), [])
@@ -213,14 +213,14 @@ class TheBacklogCheckTest(unittest.TestCase):
 
     def test_a_spark_card_and_a_sound_card_do_not_share_a_place(self):
         # P730 (the PO, 2026-11-09): the slices "pixel-games" and "graphics library" own 1 place in Ready and 1 in Build, and
-        # the spark cards stay within 4 and 2. Each lane is full on its own, and the board holds both.
+        # the spark cards stay within 4 and 3. Each lane is full on its own, and the board holds both.
         sound = item(10, "Build", slice_="pixel-games"), item(11, slice_="graphics library")
         spark = [item(1, "Build"), item(2, "Build"), item(3), item(4), item(5), item(6)]
         self.assertEqual(check_backlog.problems(spark + list(sound)), [])
 
-    def test_a_third_spark_card_in_build_is_named_with_its_lane(self):
-        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build")]),
-                         ["Build (spark) holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
+    def test_a_fourth_spark_card_in_build_is_named_with_its_lane(self):
+        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build")]),
+                         ["Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 3: finish one before starting another"])
 
     def test_a_fifth_spark_card_in_ready_is_named_with_its_lane(self):
         self.assertEqual(check_backlog.problems([item(n) for n in (1, 2, 3, 4, 5)]),
@@ -234,21 +234,22 @@ class TheBacklogCheckTest(unittest.TestCase):
 
     def test_a_card_with_no_slice_counts_as_spark_s(self):
         # The gate names a card on no slice apart; it fills spark's places, never the sound lane's.
-        cards = [item(1, "Build", slice_=""), item(2, "Build", slice_=None), item(3, "Build", slice_="pixel-games")]
+        cards = [item(1, "Build", slice_=""), item(2, "Build", slice_=None), item(3, "Build", slice_="pixel-games"),
+                 item(5, "Build", slice_="")]
         said = check_backlog.problems(cards)
         self.assertEqual([line for line in said if "holds" in line], [])
-        self.assertEqual(len(said), 2, said)
+        self.assertEqual(len(said), 3, said)
         self.assertEqual(check_backlog.lane_of(cards[0]).name, "spark")
         self.assertEqual(check_backlog.lane_of(cards[1]).name, "spark")
         self.assertEqual(check_backlog.lane_of(cards[2]).name, "sound")
         self.assertEqual([line for line in check_backlog.problems(cards + [item(4, "Build", slice_="")]) if "holds" in line],
-                         ["Build (spark) holds 3 (#1, #2, #4) — its limit is 2: finish one before starting another"])
+                         ["Build (spark) holds 4 (#1, #2, #5, #4) — its limit is 3: finish one before starting another"])
 
     def test_an_expedite_lends_its_own_lane_one_place_and_the_other_none(self):
         rushed = item(9, "Build", slice_="pixel-games", labels=("story", "expedite"))
         self.assertEqual(check_backlog.problems([item(1, "Build", slice_="pixel-games"), rushed]), [])
-        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), rushed])
-        self.assertEqual(said, ["Build (spark) holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
+        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build"), rushed])
+        self.assertEqual(said, ["Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 3: finish one before starting another"])
 
     def test_each_lane_has_its_own_flight_and_both_full_pass(self):
         # P918 (the PO, 2026-11-18: "A flight total per lane"): spark flies 4 and sound 2. On one total of 4 this board failed.
@@ -267,16 +268,18 @@ class TheBacklogCheckTest(unittest.TestCase):
                          ["In flight (sound) holds 3 (#10, #11, #12) — its limit is 2: the sound lane finishes one before "
                           "starting another"])
 
-    def test_a_fifth_spark_card_in_flight_is_named_with_its_lane_and_sound_s_cards_are_not_in_it(self):
+    def test_a_sixth_spark_card_in_flight_is_named_with_its_lane_and_sound_s_cards_are_not_in_it(self):
         spark = [item(1, "Discovery"), item(2, "Discovery"), item(3, "Design"), item(4, "Build"), item(5, "Review")]
+        self.assertEqual(check_backlog.problems(spark + [item(10, "Review", slice_="pixel-games")]), [])
+        spark.append(item(6, "Build"))
         self.assertEqual(check_backlog.problems(spark + [item(10, "Review", slice_="pixel-games")]),
-                         ["In flight (spark) holds 5 (#1, #2, #3, #4, #5) — " + IN_FLIGHT_SAYS])
+                         ["In flight (spark) holds 6 (#1, #2, #3, #4, #5, #6) — " + IN_FLIGHT_SAYS])
 
     def test_a_card_with_no_slice_flies_in_the_spark_lane(self):
-        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review", slice_="pixel-games")]
+        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(7, "Build"), item(4, "Review", slice_="pixel-games")]
         self.assertEqual(check_backlog.problems(spark + [item(5, "Discovery", slice_=None)]), [])
         self.assertEqual(check_backlog.problems(spark + [item(5, "Discovery", slice_=None), item(6, "Design")]),
-                         ["In flight (spark) holds 5 (#1, #2, #3, #5, #6) — " + IN_FLIGHT_SAYS])
+                         ["In flight (spark) holds 6 (#1, #2, #3, #7, #5, #6) — " + IN_FLIGHT_SAYS])
 
     def test_a_bin_card_flies_in_the_spark_lane_whatever_its_slice(self):
         # The bin's board has no sound slice today; the rule does not lean on that (P918: a bin card is spark's).
@@ -284,17 +287,18 @@ class TheBacklogCheckTest(unittest.TestCase):
         on_a_sound_slice = item(19, "Build", slice_="pixel-games")
         self.assertEqual(check_backlog.lane_of(dict(on_a_sound_slice, board=check_backlog.BIN_BOARD)).name, "spark")
         self.assertEqual(check_backlog.problems(sound, bin_items=[on_a_sound_slice]), [])
-        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
+        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review"), item(5, "Build")]
         self.assertEqual(check_backlog.problems(spark, bin_items=[on_a_sound_slice]),
-                         ["In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — " + IN_FLIGHT_SAYS])
+                         ["In flight (spark) holds 6 (#1, #2, #3, #4, #5, bin #19) — " + IN_FLIGHT_SAYS])
 
     def test_an_expedite_lends_its_own_lane_s_flight_one_place_and_the_other_none(self):
         rushed = item(12, "Review", slice_="pixel-games", labels=("story", "expedite"))
         sound = [item(10, "Discovery", slice_="pixel-games"), item(11, "Build", slice_="graphics library")]
         self.assertEqual(check_backlog.problems(sound + [rushed]), [])
-        spark = [item(1, "Discovery"), item(2, "Discovery"), item(3, "Design"), item(4, "Build"), item(5, "Review")]
+        spark = [item(1, "Discovery"), item(2, "Discovery"), item(3, "Design"), item(4, "Build"), item(5, "Review"),
+                 item(6, "Build")]
         self.assertEqual(check_backlog.problems(spark + [rushed]),
-                         ["In flight (spark) holds 5 (#1, #2, #3, #4, #5) — " + IN_FLIGHT_SAYS])
+                         ["In flight (spark) holds 6 (#1, #2, #3, #4, #5, #6) — " + IN_FLIGHT_SAYS])
 
     # P928's first slice (the PO, 2026-11-19: "optimize the board and lets go"): a card in a working stage that waits on
     # the PO leaves its stage limit and its lane's flight, and counts in its lane's waiting total, 2 for each lane.
@@ -372,8 +376,8 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(len(said), 1, said)
         self.assertIn("Waiting on the PO (spark) holds 3 (#1, #2, #9) — its limit is 2", said[0])
         # The expedite that waits is not among Build's cards, so Build gets no extra place from it.
-        self.assertEqual(check_backlog.problems([item(3, "Build"), item(4, "Build"), item(5, "Build"), rushed]),
-                         ["Build (spark) holds 3 (#3, #4, #5) — its limit is 2: finish one before starting another"])
+        self.assertEqual(check_backlog.problems([item(3, "Build"), item(4, "Build"), item(5, "Build"), item(6, "Build"), rushed]),
+                         ["Build (spark) holds 4 (#3, #4, #5, #6) — its limit is 3: finish one before starting another"])
 
     def test_an_undated_wait_on_the_po_is_still_named_and_counts_as_the_newest(self):
         cards = [item(1, "Review", waiting="the PO", since="2026-11-10"), item(2, "Build", waiting="the PO"),
@@ -405,14 +409,14 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(said, ["#8 P8 — x: no `Needed by` — W14: an item names the design that needs it",
                                 "#8 P8 — x: on no slice of the story map"])
 
-    def test_a_card_in_each_working_stage_is_four_in_flight_the_cap_and_passes(self):
+    def test_a_card_in_each_working_stage_and_one_more_is_five_in_flight_the_cap_and_passes(self):
         self.assertEqual(check_backlog.problems([item(1, "Discovery"), item(2, "Design"), item(3, "Build"),
-                                                 item(4, "Review")]), [])
+                                                 item(4, "Review"), item(5, "Build")]), [])
 
-    def test_five_in_flight_is_too_many_even_with_no_stage_over_its_limit(self):
+    def test_six_in_flight_is_too_many_even_with_no_stage_over_its_limit(self):
         self.assertEqual(check_backlog.problems([item(1, "Discovery"), item(2, "Discovery"), item(3, "Design"),
-                                                 item(4, "Build"), item(5, "Review")]),
-                         ["In flight (spark) holds 5 (#1, #2, #3, #4, #5) — " + IN_FLIGHT_SAYS])
+                                                 item(4, "Build"), item(5, "Review"), item(6, "Build")]),
+                         ["In flight (spark) holds 6 (#1, #2, #3, #4, #5, #6) — " + IN_FLIGHT_SAYS])
 
     def test_an_epic_in_discovery_or_design_rides_on_its_stories(self):
         # R9's experiment A (the PO, 2026-10-18, broad form): an epic takes no slot in any stage. An epic and two
@@ -426,15 +430,15 @@ class TheBacklogCheckTest(unittest.TestCase):
                                                          item(3, stage), item(4, stage)]),
                                  ["%s holds 3 (#2, #3, #4) — its limit is 2: finish one before starting another" % stage])
 
-    def test_an_epic_in_discovery_is_not_a_fifth_card_in_flight(self):
-        # Four stories fill the flight; the epic beside them is no fifth. Before R9 this board failed (P136 and P94).
+    def test_an_epic_in_discovery_is_not_a_sixth_card_in_flight(self):
+        # Five stories fill the flight; the epic beside them is no sixth. Before R9 this board failed (P136 and P94).
         self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Discovery"),
-                                                 item(3, "Design"), item(4, "Build"), item(5, "Review")]), [])
-        # The other side: a fifth story beside the epic is still named.
+                                                 item(3, "Design"), item(4, "Build"), item(5, "Review"), item(7, "Build")]), [])
+        # The other side: a sixth story beside the epic is still named.
         self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Discovery"),
                                                  item(3, "Design"), item(4, "Build"), item(5, "Review"),
-                                                 item(6, "Review")]),
-                         ["In flight (spark) holds 5 (#2, #3, #4, #5, #6) — " + IN_FLIGHT_SAYS])
+                                                 item(6, "Review"), item(7, "Build")]),
+                         ["In flight (spark) holds 6 (#2, #3, #4, #5, #6, #7) — " + IN_FLIGHT_SAYS])
 
     def test_an_epic_in_ready_is_not_counted_there(self):
         # An epic counts in no stage (R9's experiment A), and Ready is a queue, not work.
@@ -455,12 +459,12 @@ class TheBacklogCheckTest(unittest.TestCase):
 
     def test_one_expedite_may_take_a_stage_one_over_its_limit(self):
         rushed = item(9, "Build", labels=("story", "expedite"))
-        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), rushed]), [])
+        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), rushed]), [])
 
     def test_a_stage_two_over_its_limit_fails_even_with_an_expedite(self):
         rushed = item(9, "Build", labels=("story", "expedite"))
-        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), rushed])
-        self.assertEqual(said, ["Build (spark) holds 4 (#1, #2, #3, #9) — its limit is 2: finish one before starting another"])
+        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build"), rushed])
+        self.assertEqual(said, ["Build (spark) holds 5 (#1, #2, #3, #4, #9) — its limit is 3: finish one before starting another"])
 
     def test_two_expedites_are_named(self):
         said = check_backlog.problems([item(1, "Build", labels=("story", "expedite")), item(2, "Review", labels=("story", "expedite"))])
@@ -477,21 +481,23 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(check_backlog.problems([story, orphan]),
                          ["2 cards labelled expedite (#1, #3) — one at a time, on the PO's word"])
 
-    def test_an_expedite_lets_five_fly(self):
-        cards = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review"), item(9, "Build", labels=("story", "expedite"))]
+    def test_an_expedite_lets_six_fly(self):
+        cards = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review"), item(5, "Build"),
+                 item(9, "Build", labels=("story", "expedite"))]
         self.assertEqual(check_backlog.problems(cards), [])
 
     def test_an_expedite_epic_in_build_is_not_the_work_and_allows_nothing(self):
         epic = item(9, "Build", labels=("epic", "expedite"))
         said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build"), epic])
-        self.assertEqual(said, ["Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another"])
+        self.assertEqual(said, ["Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 3: finish one before starting another"])
 
     def test_two_expedites_in_one_stage_get_no_extra_place(self):
         # The allowance is for exactly one: with two the gate names the lane AND holds the stage to its limit.
-        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build", labels=("story", "expedite")),
+        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(5, "Build"),
+                                       item(3, "Build", labels=("story", "expedite")),
                                        item(4, "Build", labels=("story", "expedite"))])
         self.assertEqual(said, ["2 cards labelled expedite (#3, #4) — one at a time, on the PO's word",
-                                "Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another"])
+                                "Build (spark) holds 5 (#1, #2, #5, #3, #4) — its limit is 3: finish one before starting another"])
 
     def test_an_expedite_lends_its_own_stage_the_extra_place_and_no_other(self):
         # The expedite sits in Build; Review, with three, is still over its limit of 2.
@@ -517,10 +523,10 @@ class TheBacklogCheckTest(unittest.TestCase):
                          ["Ready (spark) holds 5 (#1, #2, #3, #4, #9) — its limit is 4: the PO moves one back to Idea"])
 
     def test_the_bin_s_cards_in_flight_count_in_the_same_total(self):
-        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
+        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review"), item(5, "Build")]
         bin_cards = [item(19, "Build")]
         said = check_backlog.problems(spark, bin_items=bin_cards)
-        self.assertEqual(said, ["In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — its limit is 4: the spark lane finishes one before starting another"])
+        self.assertEqual(said, ["In flight (spark) holds 6 (#1, #2, #3, #4, #5, bin #19) — its limit is 5: the spark lane finishes one before starting another"])
 
     def test_the_bin_s_cards_do_not_fill_spark_s_stages(self):
         said = check_backlog.problems([item(1, "Build"), item(2, "Build")], bin_items=[item(19, "Build")])
@@ -546,9 +552,9 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(check_backlog.problems(spark, bin_items=[item(19, "Build", labels=("story", "expedite"))]), [])
 
     def test_a_bin_expedite_lends_none_of_spark_s_stages_a_place(self):
-        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build")],
+        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build"), item(5, "Build")],
                                       bin_items=[item(19, "Build", labels=("story", "expedite"))])
-        self.assertEqual(said, ["Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another"])
+        self.assertEqual(said, ["Build (spark) holds 5 (#1, #2, #3, #4, #5) — its limit is 3: finish one before starting another"])
 
     def test_one_expedite_on_each_board_is_two_and_both_are_named(self):
         said = check_backlog.problems([item(1, "Build", labels=("story", "expedite"))],
@@ -556,31 +562,32 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(said, ["2 cards labelled expedite (#1, bin #19) — one at a time, on the PO's word"])
 
     def test_two_expedites_in_the_flight_across_both_boards_get_no_extra_place(self):
-        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build", labels=("story", "expedite")), item(4, "Review")]
+        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build", labels=("story", "expedite")), item(4, "Review"),
+                 item(5, "Build")]
         said = check_backlog.problems(spark, bin_items=[item(19, "Build", labels=("story", "expedite"))])
         self.assertEqual(said, ["2 cards labelled expedite (#3, bin #19) — one at a time, on the PO's word",
-                                "In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — its limit is 4: the spark lane finishes one before starting another"])
+                                "In flight (spark) holds 6 (#1, #2, #3, #4, #5, bin #19) — its limit is 5: the spark lane finishes one before starting another"])
 
     def test_a_done_bin_card_keeps_its_label_and_is_not_counted_as_an_expedite(self):
         finished = item(19, "Done", labels=("story", "expedite"))
         self.assertEqual(check_backlog.problems([item(1, "Build", labels=("story", "expedite"))], bin_items=[finished]), [])
 
-    def test_the_bin_s_fifth_card_flies_in_every_working_stage_but_an_epic_does_not(self):
-        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
+    def test_the_bin_s_sixth_card_flies_in_every_working_stage_but_an_epic_does_not(self):
+        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review"), item(5, "Build")]
         for stage in ("Discovery", "Design", "Build", "Review"):
             with self.subTest(status=stage):
                 self.assertEqual(check_backlog.problems(spark, bin_items=[item(19, stage)]),
-                                 ["In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — its limit is 4: the spark lane finishes one before starting another"])
+                                 ["In flight (spark) holds 6 (#1, #2, #3, #4, #5, bin #19) — its limit is 5: the spark lane finishes one before starting another"])
         # R9's experiment A: the bin's epic counts nowhere, as spark's does not.
         self.assertEqual(check_backlog.problems(spark, bin_items=[item(19, "Discovery", labels=("epic",))]), [])
 
     def test_a_bench_card_of_the_bin_sits_outside_the_flight_total(self):
         # The spec §1: "A bench session is your hands, so it sits outside them" — the labelled card alone, not the bin's others.
-        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
+        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review"), item(5, "Build")]
         bench = item(19, "Build", labels=("story", "bench"))
         self.assertEqual(check_backlog.problems(spark, bin_items=[bench]), [])
         self.assertEqual(check_backlog.problems(spark, bin_items=[bench, item(20, "Build")]),
-                         ["In flight (spark) holds 5 (#1, #2, #3, #4, bin #20) — its limit is 4: the spark lane finishes one before starting another"])
+                         ["In flight (spark) holds 6 (#1, #2, #3, #4, #5, bin #20) — its limit is 5: the spark lane finishes one before starting another"])
 
     def test_the_bin_s_undated_wait_is_named_apart_from_spark_s(self):
         said = check_backlog.problems([item(3, "Discovery", waiting="the PO")], bin_items=[item(19, "Idea", waiting="the PO")])
@@ -640,8 +647,8 @@ class TheBacklogCheckTest(unittest.TestCase):
     def test_a_task_with_no_parent_story_counts_as_a_card(self):
         orphan = item(9, "Build", labels=("task",), parent=None)
         self.assertTrue(check_backlog.counts(orphan))
-        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), orphan])
-        self.assertEqual(said, ["Build (spark) holds 4 (#1, #2, #3, #9) — its limit is 2: finish one before starting another"])
+        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build"), orphan])
+        self.assertEqual(said, ["Build (spark) holds 5 (#1, #2, #3, #4, #9) — its limit is 3: finish one before starting another"])
 
     def test_a_task_under_its_story_rides_on_it(self):
         self.assertFalse(check_backlog.counts(item(9, "Build", labels=("task",), parent=1)))
@@ -649,10 +656,10 @@ class TheBacklogCheckTest(unittest.TestCase):
                                                  item(9, "Build", labels=("task",), parent=1)]), [])
 
     def test_a_parent_matters_for_tasks_only_a_story_under_its_epic_still_counts(self):
-        stories = [item(n, "Build", parent=24) for n in (1, 2, 3, 4)]
-        self.assertEqual([check_backlog.counts(story) for story in stories], [True, True, True, True])
+        stories = [item(n, "Build", parent=24) for n in (1, 2, 3, 4, 5)]
+        self.assertEqual([check_backlog.counts(story) for story in stories], [True, True, True, True, True])
         self.assertEqual(check_backlog.problems(stories),
-                         ["Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another"])
+                         ["Build (spark) holds 5 (#1, #2, #3, #4, #5) — its limit is 3: finish one before starting another"])
 
     def test_a_story_under_its_epic_is_still_judged_on_needed_by(self):
         self.assertEqual(check_backlog.problems([item(4, parent=24, needed="")]),
@@ -700,20 +707,20 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(boards_asked(asked), [(2, None), (1, None)])
 
     def test_main_counts_a_task_with_no_parent_story_as_a_card(self):
-        items = [item(1, "Build"), item(2, "Build"), item(3, "Build"), item(9, "Build", labels=("task",))]
+        items = [item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build"), item(9, "Build", labels=("task",))]
         code, printed = self.said(gh_pages(items)[0])
         self.assertEqual(code, 1)
-        self.assertIn("    Build (spark) holds 4 (#1, #2, #3, #9) — its limit is 2: finish one before starting another", printed)
+        self.assertIn("    Build (spark) holds 5 (#1, #2, #3, #4, #9) — its limit is 3: finish one before starting another", printed)
 
     def test_main_counts_a_task_under_a_closed_story_as_a_card(self):
-        # The story was finished: its task is the work still open, and it counts where it stands — Build holds three.
+        # The story was finished: its task is the work still open, and it counts where it stands — Build holds four.
         task = as_node(item(9, "Build", labels=("task",), parent=1))
         task["content"]["parent"]["closed"] = True
-        code, printed = self.said(gh_pages([item(1, "Build"), item(2, "Build"), task])[0])
+        code, printed = self.said(gh_pages([item(1, "Build"), item(2, "Build"), item(3, "Build"), task])[0])
         self.assertEqual(code, 1)
-        self.assertIn("    Build (spark) holds 3 (#1, #2, #9) — its limit is 2: finish one before starting another", printed)
+        self.assertIn("    Build (spark) holds 4 (#1, #2, #3, #9) — its limit is 3: finish one before starting another", printed)
         task["content"]["parent"]["closed"] = False
-        self.assertEqual(self.said(gh_pages([item(1, "Build"), item(2, "Build"), task])[0])[0], 0)
+        self.assertEqual(self.said(gh_pages([item(1, "Build"), item(2, "Build"), item(3, "Build"), task])[0])[0], 0)
 
     def test_fetch_reads_both_boards_with_each_task_s_parent_from_its_card(self):
         bin_repository = "xmejkal/sisuo-brain-transplant"
@@ -766,20 +773,20 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertNotIn("could not be read", printed)
 
     def test_an_unread_bin_board_does_not_hide_a_broken_limit(self):
-        code, printed = self.said(gh_pages([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build")],
-                                           subprocess.TimeoutExpired("gh", 60))[0])
+        code, printed = self.said(gh_pages([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build"),
+                                            item(5, "Build")], subprocess.TimeoutExpired("gh", 60))[0])
         self.assertEqual(code, 1)
-        self.assertIn("    Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another", printed)
+        self.assertIn("    Build (spark) holds 5 (#1, #2, #3, #4, #5) — its limit is 3: finish one before starting another", printed)
         self.assertIn("the bin's board could not be read (TimeoutExpired)", printed)
 
     def test_main_counts_the_bin_s_cards_in_flight_and_a_bin_task_under_its_story_rides_on_it(self):
         bin_repository = "xmejkal/sisuo-brain-transplant"
-        spark_cards = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
+        spark_cards = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review"), item(5, "Build")]
         bin_cards = [item(19, "Build", repository=bin_repository), item(20, "Build", labels=("task",), parent=19, repository=bin_repository)]
         code, printed = self.said(gh_pages(spark_cards, bin_cards)[0])
         self.assertEqual(code, 1)
-        self.assertIn("  backlog: 4 open, 1 problem(s); the bin: 2 open", printed)
-        self.assertIn("    In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — its limit is 4: the spark lane finishes one before starting another", printed)
+        self.assertIn("  backlog: 5 open, 1 problem(s); the bin: 2 open", printed)
+        self.assertIn("    In flight (spark) holds 6 (#1, #2, #3, #4, #5, bin #19) — its limit is 5: the spark lane finishes one before starting another", printed)
         self.assertNotIn("could not be read", printed)
 
     def test_a_spark_board_that_cannot_be_listed_skips_the_look_and_passes(self):
@@ -896,19 +903,19 @@ class TheWholeBoardTest(unittest.TestCase):
         self.assertEqual(len([number for number, _ in boards_asked(asked) if number == 2]), 50)
 
     def test_a_bin_board_read_in_part_is_the_bin_s_unread_line_and_spark_is_judged_alone(self):
-        spark = [item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build")]
+        spark = [item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build"), item(5, "Build")]
         code, printed = self.said(gh_pages(spark, [item(19, "Build"), item(20, "Build")], says={1: 25})[0])
         self.assertEqual(code, 1)
-        self.assertEqual(printed, "  backlog: 4 open, 1 problem(s)\n"
-                                  "    Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another\n"
+        self.assertEqual(printed, "  backlog: 5 open, 1 problem(s)\n"
+                                  "    Build (spark) holds 5 (#1, #2, #3, #4, #5) — its limit is 3: finish one before starting another\n"
                                   "  backlog: the bin's board could not be read (it holds 25 items, 2 were read) — its cards were "
                                   "not counted or checked\n"
                                   "  backlog: the board read cost 3 GraphQL points in 3 calls; 3,997 of 5,000 left this hour\n")
 
     def test_a_draft_or_a_pull_request_is_no_card_and_no_short_read(self):
-        # A draft in Build would make Build hold three; it is no backlog item, so the limits hold (P811).
-        code, printed = self.said(gh_pages([item(1, "Build"), item(2, "Build"), DRAFT])[0])
-        self.assertEqual((code, printed), (0, "  backlog: 2 open, the limits hold; the bin: 0 open\n"))
+        # A draft in Build would make Build hold four; it is no backlog item, so the limits hold (P811).
+        code, printed = self.said(gh_pages([item(1, "Build"), item(2, "Build"), item(3, "Build"), DRAFT])[0])
+        self.assertEqual((code, printed), (0, "  backlog: 3 open, the limits hold; the bin: 0 open\n"))
 
     def test_a_board_whose_items_hold_no_issue_is_could_not_run_not_zero_open(self):
         # Else "0 open, the limits hold" would pass over a board nobody read (W1).
@@ -1016,11 +1023,12 @@ class TheStageTest(unittest.TestCase):
 
     def test_a_bin_board_with_no_status_on_any_card_is_set_aside_and_spark_is_judged_alone(self):
         # One convention for the bin's failing: read in part or with no Status on any card, it is the bin's unread line
-        # with its cause, and spark's board is judged alone — here Build holds four, so the gate still fails.
-        code, printed = self.gate([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build")], [item(19, None), item(20, None)])
+        # with its cause, and spark's board is judged alone — here Build holds five, so the gate still fails.
+        code, printed = self.gate([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build"), item(5, "Build")],
+                                  [item(19, None), item(20, None)])
         self.assertEqual(code, 1)
-        self.assertEqual(printed, "  backlog: 4 open, 1 problem(s)\n"
-                                  "    Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another\n"
+        self.assertEqual(printed, "  backlog: 5 open, 1 problem(s)\n"
+                                  "    Build (spark) holds 5 (#1, #2, #3, #4, #5) — its limit is 3: finish one before starting another\n"
                                   "  backlog: the bin's board could not be read (no card of its 2 has a Status) — its cards were "
                                   "not counted or checked\n" + COST)
 
@@ -1081,8 +1089,8 @@ class TheGateSaysWhatItIsTest(unittest.TestCase):
         done, asked = self.gate("--help")
         said = " ".join(done.stdout.split())  # argparse wraps to the terminal; the words are what is pinned
         self.assertEqual((done.returncode, asked), (0, ""), "--help ran the gate: " + done.stdout)
-        for words in ("Discovery 2, Design 2, Review 2", "spark: Ready 4, Build 2; sound: Ready 1, Build 1",
-                      "a lane with too many cards in flight, Discovery, Design, Build and Review together: spark 4, sound 2",
+        for words in ("Discovery 2, Design 2, Review 2", "spark: Ready 4, Build 3; sound: Ready 1, Build 1",
+                      "a lane with too many cards in flight, Discovery, Design, Build and Review together: spark 5, sound 2",
                       "sound is pixel-games, graphics library", "every card of the bin's are the spark lane's",
                       "a lane with too many cards that wait on the PO in a working stage: spark 2, sound 2",
                       "in neither its stage nor its lane's flight", "expedite",

@@ -55,9 +55,10 @@ SPARK = board.to_items(project(
     node(15, "R2.6 — A fourth cold test", "Idea", waiting="the PO", since="2026-10-05"),
     {"content": {}, "status": None}))
 BIN = board.to_items(project(node(1, "B1 — Identify the audio module", "Idea", waiting="the PO", since="2026-09-25")))
-# Spark's four cards in flight are the cap (P146); a fifth, flying on the bin's board, breaks it.
+# Spark's five cards in flight are the cap (P146, P978); a sixth, flying on the bin's board, breaks it.
 SPARK_AT_THE_CAP = board.to_items(project(node(1, "P1 — a", "Discovery"), node(2, "P2 — b", "Design"),
-                                          node(3, "P3 — c", "Build"), node(4, "P4 — d", "Review")))
+                                          node(3, "P3 — c", "Build"), node(4, "P4 — d", "Review"),
+                                          node(5, "P5 — f", "Build")))
 BIN_FIFTH = board.to_items(project(node(19, "B19 — e", "Build")))
 
 
@@ -171,8 +172,9 @@ class TheCoreTest(unittest.TestCase):
         bench = board.to_items(project(node(7, "B7 — c", "Build", labels=("bench",))))
         lines = board.status_lines([("spark", SPARK_AT_THE_CAP), ("bin", bench)], [], [], set(), TODAY)
         self.assertEqual(lines[:2], [
-            "spark — 4 open, the limits hold · trial check 2026-11-02",
-            "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, bin Build B7 (#7) 2 d (bench)"])
+            "spark — 5 open, the limits hold · trial check 2026-11-02",
+            "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, Build P5 (#5) 2 d, "
+            "bin Build B7 (#7) 2 d (bench)"])
 
     def test_a_card_in_flight_that_waits_on_the_po_is_marked_and_one_that_waits_on_hardware_is_not(self):
         # P928's first slice: the gate counts such a card apart (check_backlog.waits_apart), so the line says which they are.
@@ -272,9 +274,9 @@ class TheCoreTest(unittest.TestCase):
     def test_the_status_counts_the_bin_s_cards_in_the_same_flight_total(self):
         lines = board.status_lines([("spark", SPARK_AT_THE_CAP), ("bin", BIN_FIFTH)], [], [], set(), TODAY)
         self.assertEqual(lines[:3], [
-            "spark — 4 open, 1 problem(s) · trial check 2026-11-02",
-            "  ! In flight (spark) holds 5 (#1, #2, #3, #4, bin #19) — its limit is 4: the spark lane finishes one before starting another",
-            "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, bin Build B19 (#19) 2 d"])
+            "spark — 5 open, 1 problem(s) · trial check 2026-11-02",
+            "  ! In flight (spark) holds 6 (#1, #2, #3, #4, #5, bin #19) — its limit is 5: the spark lane finishes one before starting another",
+            "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, Build P5 (#5) 2 d, bin Build B19 (#19) 2 d"])
 
     def test_the_status_says_when_the_bin_board_was_not_given(self):
         lines = board.status_lines([("spark", SPARK)], [], [], set(), TODAY)
@@ -310,20 +312,20 @@ class TheCoreTest(unittest.TestCase):
         self.assertEqual(state, "ON_TRACK")
 
     def test_a_close_is_at_risk_when_a_limit_breaks_even_with_no_one_waiting(self):
-        # Build's limit is 2 for spark's session (P730, the PO, 2026-11-09): SPARK holds one card in Build, so a second is
-        # the limit and a third breaks it.
-        at_the_limit = SPARK + board.to_items(project(node(27, "P102d — Proofs", "Build")))
-        state, _ = board.close_update("two in Build", [("spark", at_the_limit)], set(), TODAY, TODAY)
+        # Build's limit is 3 for spark's session (P730, the PO, 2026-11-09; P978, the PO, 2026-11-21): SPARK holds one card
+        # in Build, so a third is the limit and a fourth breaks it.
+        at_the_limit = SPARK + board.to_items(project(node(27, "P102d — Proofs", "Build"), node(29, "P102f — More proofs", "Build")))
+        state, _ = board.close_update("three in Build", [("spark", at_the_limit)], set(), TODAY, TODAY)
         self.assertEqual(state, "ON_TRACK")
         crowded = at_the_limit + board.to_items(project(node(28, "P102e — A discovery skill", "Build")))
-        state, _ = board.close_update("three in Build", [("spark", crowded)], set(), TODAY, TODAY)
+        state, _ = board.close_update("four in Build", [("spark", crowded)], set(), TODAY, TODAY)
         self.assertEqual(state, "AT_RISK")
 
     def test_a_close_is_at_risk_when_the_bin_s_cards_break_the_flight_total(self):
         # The close reads the verdict the status prints (the session-status design: no second rule).
-        state, _ = board.close_update("five in flight", [("spark", SPARK_AT_THE_CAP), ("bin", BIN_FIFTH)], set(), TODAY, TODAY)
+        state, _ = board.close_update("six in flight", [("spark", SPARK_AT_THE_CAP), ("bin", BIN_FIFTH)], set(), TODAY, TODAY)
         self.assertEqual(state, "AT_RISK")
-        state, _ = board.close_update("four in flight", [("spark", SPARK_AT_THE_CAP), ("bin", [])], set(), TODAY, TODAY)
+        state, _ = board.close_update("five in flight", [("spark", SPARK_AT_THE_CAP), ("bin", [])], set(), TODAY, TODAY)
         self.assertEqual(state, "ON_TRACK")
 
     def test_status_offline_says_why_and_exits_zero(self):

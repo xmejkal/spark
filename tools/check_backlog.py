@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05-backlog-in-github-design.md §3 and
-§8; raised on 2026-10-06 at the PO's word, P146, and again that evening to two per working stage and four in flight).
+§8; raised on 2026-10-06 at the PO's word, P146, and again that evening to two per working stage and four in flight; P978, the PO, 2026-11-21: Build 3 and flight 5 for spark).
 A card is asked for its Needed by and slice from Ready on — the commitment — not in Idea, Discovery or Design (P146).
 A card that waits on someone is asked since when, in any open stage and a riding task too: a Waiting on with no Waiting
 since is named (P146).
@@ -68,8 +68,9 @@ class Lane:
 #: slice, and every card of the bin (lane_of). Ready and Build since P730 (the PO, 2026-11-09): spark 4 and 2, sound, the
 #: slices "pixel-games" and "graphics library", 1 and 1. The flight since P918 (the PO, 2026-11-18): spark 4, the number
 #: that was the whole board's since 2026-10-06 evening (P146), and sound 2. The cards that wait on the PO since P928's
-#: first slice (2026-11-19, the plan council's number, the PO's to change): 2 in each lane.
-LANES = (Lane("spark", (), (("Ready", 4), ("Build", 2)), 4, 2),
+#: first slice (2026-11-19, the plan council's number, the PO's to change): 2 in each lane. P978, the PO, 2026-11-21: Build 3
+#: and flight 5 for spark.
+LANES = (Lane("spark", (), (("Ready", 4), ("Build", 3)), 5, 2),
          Lane("sound", ("pixel-games", "graphics library"), (("Ready", 1), ("Build", 1)), 2, 2))
 #: The stages held across the whole board (§3); Idea and Done carry no limit. Every working stage takes 2, the PO's call of
 #: 2026-10-06 evening (P146). Ready and Build are not here: LANES holds them (P730).
