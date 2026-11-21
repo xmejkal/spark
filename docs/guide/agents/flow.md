@@ -160,9 +160,14 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json
 ```
 
 With `--json` it prints the envelope with `op` `write-flow-page`. Its `data` holds `file` (`page.html`, relative to the
-project), `did` (`wrote`), `stands_at`, `phases`, each only `{phase, status}`, `fingerprint` and `guide`, as `show`'s. A page that cannot be written is one
+project), `did` (`wrote`), `stands_at`, `phases`, each only `{phase, status}`, `fingerprint` and `guide`, as `show`'s,
+and `artifact`: the id of the Artifact the page is published as, or `null`. A page that cannot be written is one
 `unchecked` item with the code `page_not_written`, and the exit is 2. A phase that holds problems does not change this
 status. Read it with `show`.
+
+`--artifact ID` keeps the id in `.spark/page.json` before it writes the page: `{"artifact": ID}`, the id only, never a
+path ([P829](https://github.com/xmejkal/spark/issues/1187)). An id that is no UUID in lower case is a `bad_argument`, exit 2, and nothing is
+written. A record that spark cannot read, or that holds no such id, answers `null`.
 
 For an agent or a later script, the page has hooks. Each rail entry and each section has `data-phase` (the phase name) and
 `data-status` (the flow's code, or `none` for no status). The `<body>` has `data-stands-at` (the first open phase, or `none`
@@ -215,7 +220,7 @@ exactly one such offer, the NOW line carries its `data-key` and `data-makes-stal
 shows the offer's label, its effect and "These steps may be marked out of date: …" when there are any, with Send and
 Cancel. Send writes the row `requests/<id>`: `{id, key, seen, at}`, a new UUID, the offer's key, the page's
 `data-fingerprint` and the time. One request waits at a time: until its answer, the other buttons are grey, and Copy (it
-copies the command that carries the request to spark, which P829's next PR adds) and Withdraw stand under the intro. A
+copies `/spark:page`, the command that carries the request to spark) and Withdraw stand under the intro. A
 write the database refuses puts the page back and says "Could not send. Nothing ran.". Withdraw deletes the row, and
 only once the delete is done says "Withdrawn. If Claude had already started it, its answer shows here.": it keeps
 watching that request's answer. The script watches the latest request by `at`, and ignores a snapshot older than the
@@ -278,3 +283,26 @@ envelope's. A refusal is one `unchecked` item, and its fix tells you what to do:
 A stale refusal is normal: a second Build from the same page is stale once the first one ran. The exit is 0 when the step
 ran ok, 1 when it ran with problems and 2 when nothing ran or the step could not run. Only a wrong argument answers
 with no `data`.
+
+## The published page
+
+`/spark:page` publishes the page and carries its requests ([P829](https://github.com/xmejkal/spark/issues/1187),
+[`commands/page.md`](../../../commands/page.md)). It is the only command that publishes or republishes the page. In
+this order:
+
+1. The first time, on the person's yes: `publish_files` with `page.html` as `index.html`, then at once
+   `flow.py page --artifact ID`, which keeps the id, so a step that fails after it never leaves a second Artifact. Then
+   `declare_capabilities` with `{"db": {"rules": [{"path": "", "read": "view", "write": "owner"}]}, "user": {}}`
+   (viewers read, only the owner writes, and the script asks who views).
+2. The ten newest rows of `requests` by `at`, and the rows of `answers` whose `for` is one of their ids. For each
+   request with no answer, the oldest first: the row to `.spark/page-request.json` as the page wrote it,
+   `flow.py run-request` in the foreground, `flow.py page`, the republish, and last the answer row `answers/<id>`,
+   `run-request`'s `data` unchanged. A refusal goes on to the next request; a step that ran with problems or could not
+   run stops the turn. With no request waiting, the page is still written and republished.
+3. A republish is `get_artifact` (its version, and its `read` as `shared_live` when shared), `list_files`, then
+   `publish_files` with that `base_version`. An Artifact that is not found is gone: the person is asked whether to
+   publish again, and a new `--artifact` replaces the id.
+
+The answer comes after the republish, so the page that shows it is already the new one when the person reloads. A
+republish with `publish_files` keeps the database's rows and the declaration: checked on 2026-11-21, a row written before
+the republish read back the same after it.
