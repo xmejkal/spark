@@ -58,32 +58,41 @@ DEPLOY_COMMAND = "then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in 
 #: (`phase_readers.makes_stale`). The build makes none: the simulation's own staleness is P880's.
 MAKES_STALE = {PICK: (REQUIREMENTS,), WRITE_REQUIREMENTS: (BUILD, BREADBOARD), BUILD_BOARD: ()}
 
-#: The label of each offer, the words of its button (P829). <label> is the part's own name.
-PICK_LABEL = "Pick %s for %s"
+#: The label of each offer, the words of its button (P829). <label> is the part's own name, in quotes, so a name that
+#: starts with a digit never runs into a count.
+PICK_LABEL = "Pick “%s” for %s"
 DROP_LABEL = "Drop the %s need"
 REQUIREMENTS_LABEL = "Write the parts list"
 BUILD_LABEL = "Build the board"
 #: The effect of each offer: plain sentences that name every write (P829, the PO, 2026-11-21). The real run on a copy of
 #: button-light showed each one (docs/observations/rows/p829-run-request.md).
-PICK_MESSAGE = "Saves %s as the pick for the %s need in this project."
-RESERVE_MESSAGE = "Uses 1 of your %s %s for the %s."
-RESERVE_MANY_MESSAGE = "Uses 1 of your %s for the %s."
-RESERVE_UNKNOWN_MESSAGE = "Uses 1 of your %s for the %s, if you have one: spark does not know how many you have."
+PICK_MESSAGE = "Saves “%s” as the pick for the %s need in this project."
+RESERVE_MESSAGE = "Uses 1 of your %s “%s” for the %s."
+RESERVE_MANY_MESSAGE = "Uses 1 of your “%s” for the %s."
+RESERVE_UNKNOWN_MESSAGE = "Uses 1 of your “%s” for the %s, if you have one: spark does not know how many you have."
 TO_GET_MESSAGE = "You have none, so it goes on the list to get."
-#: A pick of a part that other projects hold all of is refused, and nothing is written (`needs.plan_holds`).
-ALL_HELD_MESSAGE = "All your %s are used by %s, so spark refuses this pick and saves nothing."
+#: A pick that `needs.plan_holds` refuses writes nothing: other projects hold all of the part, or this project's other
+#: picks use what is left.
+ALL_HELD_MESSAGE = "All your “%s” are used by %s, so spark refuses this pick and saves nothing."
+OWN_PICKS_MESSAGE = "Your other picks in this project already use all your “%s”, so spark refuses this pick and saves nothing."
+#: A re-pick lets go of what the need's old pick held (`needs.released_holds`).
+FREES_MESSAGE = "Frees what the old pick held."
 LIST_PROJECT_MESSAGE = "Adds this project to your list of projects."
 PICK_HISTORY_MESSAGE = "May note the choice in your history."
 DROP_MESSAGE = "To drop this need, tell Claude: “drop the %s need”."
 REQUIREMENTS_MESSAGE = "Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay."
 SHELVE_MESSAGE = "May copy a part's record from spark's catalog into your store."
 ORIGIN_MESSAGE = "Notes which parts spark wrote, in .spark/requirements-origin.json."
-BUILD_MESSAGE = ("Builds the board and saves its files in this project: the board file and its footprint, the dist folder "
-                 "with the schematic and PCB pictures, the wiring sheet and its record, the breadboard picture, the pin map "
-                 "your firmware imports, the simulation files, the build record in .spark/build.json and this page.")
+BUILD_MESSAGE = ("Saves its files in this project: the board file and its footprint, the dist folder with the schematic "
+                 "and PCB pictures, the wiring sheet and its record, the breadboard picture, the Wokwi drawing "
+                 "breadboard.json when Wokwi has a part for each part drawn, the pin map your firmware imports, the "
+                 "simulation files, the build record in .spark/build.json and this page.")
 REPLACE_MESSAGE = ("A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you "
                    "changed is left alone.")
 BUILD_REFUSED_MESSAGE = "If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted."
+#: A build whose board tool (tscircuit) is not installed does not finish: kept_files removes what described an earlier build.
+NO_TOOL_MESSAGE = ("If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this "
+                   "page are deleted.")
 #: A parts list that says board_only and names no part: the build skips every stage but the board and the simulation.
 BOARD_ONLY_BUILD_EFFECT = ("This board needs no parts, so nothing is built or wired. Saves the pin map your firmware "
                            "imports, the simulation files and the build record in .spark/build.json.")

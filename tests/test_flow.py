@@ -179,15 +179,15 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(said["data"]["stands_at"], "parts")
         self.assertIn("1 of 2 needs picked", says(said, "parts"))
         effects = {offer["key"]: offer["effect"] for offer in said["data"]["phases"][2]["offers"]}
-        self.assertEqual(effects["pick:wet:x-held"], "All your A soil probe are used by smartbin-local, so spark refuses this pick and saves nothing.")
-        self.assertEqual(effects["pick:wet:x-many"], "Saves A soil probe as the pick for the wet need in this project. Uses 1 of your A soil "
-                                                     "probe for the wet. Adds this project to your list of projects. May note the choice in your history.")
-        self.assertEqual(effects["pick:wet:x-unknown"], "Saves A soil probe as the pick for the wet need in this project. Uses 1 of your A "
-                                                        "soil probe for the wet, if you have one: spark does not know how many you have. Adds "
+        self.assertEqual(effects["pick:wet:x-held"], "All your “A soil probe” are used by smartbin-local, so spark refuses this pick and saves nothing.")
+        self.assertEqual(effects["pick:wet:x-many"], "Saves “A soil probe” as the pick for the wet need in this project. Uses 1 of your “A soil "
+                                                     "probe” for the wet. Adds this project to your list of projects. May note the choice in your history.")
+        self.assertEqual(effects["pick:wet:x-unknown"], "Saves “A soil probe” as the pick for the wet need in this project. Uses 1 of your “A "
+                                                        "soil probe” for the wet, if you have one: spark does not know how many you have. Adds "
                                                         "this project to your list of projects. May note the choice in your history.")
         self.assertEqual(said["data"]["phases"][1]["offers"][0]["effect"], "To drop this need, tell Claude: “drop the soil need”.")
         labels = {offer["key"]: offer["label"] for offer in said["data"]["phases"][2]["offers"]}
-        self.assertEqual(labels["pick:wet:x-many"], "Pick A soil probe for wet")
+        self.assertEqual(labels["pick:wet:x-many"], "Pick “A soil probe” for wet")
 
     def test_every_need_picked_makes_the_parts_ok(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -573,7 +573,10 @@ class TheBuildOfferTest(FlowTest):
         said, _ = show(a_built_project())
         build = offer_of(said, "build")
         self.assertEqual(build["label"], "Build the board")
-        self.assertTrue(build["effect"].startswith("Builds the board and saves its files in this project: the board file"))
+        self.assertTrue(build["effect"].startswith("Saves its files in this project: the board file"))
+        self.assertIn("the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn", build["effect"])
+        self.assertIn("If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page "
+                      "are deleted.", build["effect"])
         self.assertIn("If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted.", build["effect"])
         self.assertTrue(build["effect"].endswith("Runs no simulation and costs nothing."))
         self.assertNotIn("history", build["effect"])
@@ -590,6 +593,59 @@ class TheBuildOfferTest(FlowTest):
         self.assertIn("This board needs no wiring, so the old dist folder is deleted.", effect)
         self.assertTrue(effect.startswith("This board needs no parts, so nothing is built or wired."))
         self.assertNotIn("board file", effect)
+
+
+class TheReviewRoundTest(FlowTest):
+    """P829's review: a broken list of projects keeps the build offer, and each pick sentence holds only when it is true."""
+
+    def a_part(self, part, entry=None):
+        """Put the soil probe `part` in the scratch catalog, and `entry` (a drawer entry's fields) in the drawer."""
+        (self.home / "catalog" / (part + ".json")).write_text(json.dumps({"schema": 1, "id": part, "name": "A soil probe", "kind": "sensor",
+                                                                         "function": [{"does": "sense", "what": "soil-moisture"}]}))
+        if entry is not None:
+            (self.home / "drawer" / (part + ".json")).write_text(json.dumps(dict({"schema": 1, "label": part, "is": {"part": part}}, **entry)))
+
+    def test_a_broken_list_of_projects_keeps_the_build_offer_without_the_history(self):
+        project = Path(tempfile.mkdtemp()) / "plant-alarm"
+        project.mkdir()
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        (self.home / "projects.json").write_text("{broken")
+        said, _ = show(project)
+        self.assertEqual(table(said)["build"], (NS, ["build"]))
+        self.assertNotIn("history", offer_of(said, "build")["effect"])
+
+    def test_a_part_you_own_none_of_goes_on_the_list_to_get(self):
+        self.a_part("x-none")
+        said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL))
+        effect = offer_of(said, "pick:soil:x-none")["effect"]
+        self.assertIn("You have none, so it goes on the list to get.", effect)
+        self.assertNotIn("Uses 1", effect)
+
+    def test_a_pick_on_a_listed_project_does_not_list_it_again(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        self.assertIn("Adds this project to your list of projects.", offer_of(show(project)[0], "pick:soil:x-many")["effect"])
+        store.add_project(project)
+        self.assertNotIn("Adds this project", offer_of(show(project)[0], "pick:soil:x-many")["effect"])
+
+    def test_a_pick_the_project_s_other_picks_leave_no_piece_for_is_refused(self):
+        self.a_part("x-one", {"count": 1})
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-one"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture"}])
+        said, _ = show(project)
+        self.assertEqual(offer_of(said, "pick:wet:x-one")["effect"],
+                         "Your other picks in this project already use all your “A soil probe”, so spark refuses this pick and saves nothing.")
+        self.assertEqual(offer_of(said, "pick:wet:x-one")["makes_stale"], [])
+        self.assertIn("Uses 1 of your 1 “A soil probe” for the soil.", offer_of(said, "pick:soil:x-one")["effect"])
+
+    def test_a_re_pick_frees_what_the_old_pick_held(self):
+        (self.home / "drawer" / "many.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": "many",
+                                                                    "is": {"part": "x-many"}, "used_in": {"plant-alarm": 1}}))
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]}])
+        said, _ = show(project)
+        self.assertIn("Frees what the old pick held.", offer_of(said, "pick:soil:x-unknown")["effect"])
+        self.assertNotIn("Frees", offer_of(said, "pick:soil:x-many")["effect"])
 
 
 class FingerprintTest(FlowTest):
@@ -626,7 +682,7 @@ class FingerprintTest(FlowTest):
         before = show(project)[0]["data"]["fingerprint"]
         (self.home / "drawer" / "many.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": 3, "is": {"part": "x-many"}}))
         after = show(project)[0]
-        self.assertIn("Uses 1 of your 3 A soil probe for the soil.", offer_of(after, "pick:soil:x-many")["effect"])
+        self.assertIn("Uses 1 of your 3 “A soil probe” for the soil.", offer_of(after, "pick:soil:x-many")["effect"])
         self.assertNotEqual(after["data"]["fingerprint"], before)
 
     def test_no_other_file_changes_it(self):

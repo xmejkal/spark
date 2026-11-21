@@ -154,16 +154,29 @@ def candidate_label(candidate):
     return candidate.get("label") or candidate["id"] or candidate["entry"]
 
 
-def pick_offer(project, need, candidate, listed):
-    """The Offer to pick `candidate` for `need`. When other projects hold all the person owns of it, spark refuses the
-    pick and writes nothing (`needs.plan_holds`), so the offer says so and names no phase. `listed` says whether the
-    project is on the person's list already."""
-    key = "%s:%s:%s" % (flow_codes.PICK, need, candidate["id"] or candidate["entry"])
-    label = flow_codes.PICK_LABEL % (candidate_label(candidate), need)
-    if candidate.get("free") == 0 and candidate.get("held_by"):
-        return Offer(key, label, flow_codes.ALL_HELD_MESSAGE % (candidate_label(candidate), ", ".join(candidate["held_by"])), ())
+def is_listed(project):
+    """True when the project is on the person's list, False when it is not, None when the list cannot be read: then no
+    sentence says either, and the phase that reads the store says why."""
+    try:
+        return store.find_listed_name(project) is not None
+    except store.StoreError:
+        return None
+
+
+def pick_offer(project, need, candidate, plan, listed):
+    """The Offer to pick `candidate` for `need`. `plan` is the project's `needs.PickPlan`, the pick's own rule: a pick it
+    refuses writes nothing, so the offer says so and names no phase. A re-pick says it frees the old pick's hold. `listed`
+    is `is_listed(project)`."""
+    pick_id = candidate["id"] or candidate["entry"]
+    key, label = "%s:%s:%s" % (flow_codes.PICK, need, pick_id), flow_codes.PICK_LABEL % (candidate_label(candidate), need)
+    changes, problems = plan.holds(need, pick_id)
+    if problems:
+        if candidate.get("free") == 0 and candidate.get("held_by"):
+            return Offer(key, label, flow_codes.ALL_HELD_MESSAGE % (candidate_label(candidate), ", ".join(candidate["held_by"])), ())
+        return Offer(key, label, flow_codes.OWN_PICKS_MESSAGE % candidate_label(candidate), ())
     said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)]
-    said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
+    said += [flow_codes.FREES_MESSAGE] if plan.released(changes) else []
+    said += [flow_codes.LIST_PROJECT_MESSAGE] if listed is False else []
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK))
 
 
@@ -182,8 +195,8 @@ class PartsReader(PhaseReader):
             return self.phase(status, [said])
         picked = sum(1 for need in matched if need.get("pick"))
         status = OK if picked == len(matched) else flow_codes.PARTIAL if picked else flow_codes.NOT_STARTED
-        listed = store.find_listed_name(project) is not None
-        picks = [pick_offer(project, need["need"], candidate, listed) for need in matched for candidate in need["candidates"]]
+        plan, listed = needs.PickPlan(project), is_listed(project)
+        picks = [pick_offer(project, need["need"], candidate, plan, listed) for need in matched for candidate in need["candidates"]]
         return self.phase(status, [flow_codes.PICKED_MESSAGE % (picked, len(matched))], picks)
 
 
@@ -237,8 +250,8 @@ def build_effect(project):
         said = [flow_codes.BOARD_ONLY_BUILD_EFFECT, flow_codes.BUILD_REFUSED_MESSAGE]
         said += [flow_codes.DIST_REMOVED_MESSAGE] if (Path(project) / "dist").is_dir() else []
     else:
-        said = [flow_codes.BUILD_MESSAGE, flow_codes.REPLACE_MESSAGE, flow_codes.BUILD_REFUSED_MESSAGE]
-        said += [flow_codes.BUILT_HISTORY_MESSAGE] if store.find_listed_name(project) is not None else []
+        said = [flow_codes.BUILD_MESSAGE, flow_codes.REPLACE_MESSAGE, flow_codes.BUILD_REFUSED_MESSAGE, flow_codes.NO_TOOL_MESSAGE]
+        said += [flow_codes.BUILT_HISTORY_MESSAGE] if is_listed(project) else []
     return " ".join(said + [flow_codes.NO_SIMULATION_MESSAGE])
 
 

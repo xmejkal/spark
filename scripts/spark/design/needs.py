@@ -432,6 +432,29 @@ def _picks_given(given, known, entries, ids):
     return picked, notes, problems
 
 
+class PickPlan:
+    """
+    Service: what a pick of one candidate does to the drawer, worked out as `plan_pick` works it out (`_resolve`, then
+    `plan_holds`), with the project's needs, the drawer and the records read once (P829: each offer of the flow says what
+    its pick does). A pick `plan_holds` refuses gives problems. Nothing is written here.
+    """
+
+    def __init__(self, project):
+        self.name, self.current, self.entries = store.plan_listed_name(project), read(project), drawer.entries()
+        self.known = {row[:2]: row[2] for row in drawer.linkable(project)}
+
+    def holds(self, need_id, pick_id):
+        """(drawer changes, problems) of picking `pick_id` alone for the need `need_id`, the other needs as they are."""
+        pick = _resolve(pick_id, self.known, self.entries)
+        after = [dict(need, pick=[pick] if pick else []) if need["id"] == need_id else need for need in self.current]
+        changes, _notes, problems = plan_holds(self.name, after, self.entries)
+        return changes, problems
+
+    def released(self, changes):
+        """The holds of this project that `changes` let go (`released_holds`)."""
+        return released_holds(changes, self.name)
+
+
 def plan_pick(project, given, passed_over=()):
     """
     What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
