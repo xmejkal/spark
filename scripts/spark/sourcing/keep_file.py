@@ -1,9 +1,10 @@
 """
 `parts.py --keep`: put a file you already have into your store, as an Operation on the core (P726 PR 2). It was
-`part_handlers._op_keep`. A JPEG loses its location (EXIF GPS) before it is kept (P75), and the line that says so is said
-before a store's refusal (P423). The dry run answers the entry and keeps nothing. With `--part` (P784) the entry is listed
-in that part record's `documents` too, through `record_home.set_fields`, so `--kept` finds the file by its URL and its
-record: the record is checked before the file is kept, so a refusal keeps nothing (all or nothing, §6.4).
+`part_handlers._op_keep`. A JPEG, known by its bytes and not its name, loses its location (EXIF GPS) before it is
+kept (P75), and the line that says so is said before a store's refusal (P423). The dry run answers the entry and keeps
+nothing. With `--part` (P784) the entry is listed in that part record's `documents` too, through
+`record_home.set_fields`, so `--kept` finds the file by its URL and its record: the record is checked before the file is
+kept, so a refusal keeps nothing (all or nothing, §6.4).
 """
 
 import json
@@ -59,7 +60,7 @@ class KeepFile(PartOperation):
         path = Path(file)
         if not path.is_file():
             return Answer(unchecked=[_cannot("--keep: no file at %s" % path, code=records_codes.FILE_REFUSED)])
-        located = path.name.lower().endswith((".jpg", ".jpeg")) and datasheets.without_location(path.read_bytes())[1]
+        located = datasheets.without_location(path.read_bytes())[1]
         said = (["  removed the location (EXIF GPS) from %s before keeping it" % printable(path.name)]
                 if located else ())
         listed = None
