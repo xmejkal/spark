@@ -34,7 +34,7 @@ PAGE_FIX = "make the project folder writable and run it again"
 #: The record of the Artifact the page is published as (P829 PR 4), from the project's folder: its id only, never a path.
 PUBLISHED_FILE = Path(".spark") / "page.json"
 #: An Artifact's id (its slug) as the Artifact tools answer it: a UUID in lower case. Its own pattern, not the request id's
-#: (run_request imports the build, which imports this module).
+#: (run_request imports the build, which imports this module). Read with `fullmatch`: `$` alone lets a trailing newline in.
 ARTIFACT_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 #: The Finding of an --artifact that is no Artifact id: its sentence, and what to do.
 ARTIFACT_SENTENCE = "--artifact is no Artifact id: an id is a UUID in lower case, as get_artifact answers it"
@@ -80,7 +80,7 @@ class PublishedPageStore:
         except (OSError, ValueError):
             return None
         artifact = held.get("artifact") if isinstance(held, dict) else None
-        return artifact if isinstance(artifact, str) and ARTIFACT_PATTERN.match(artifact) else None
+        return artifact if isinstance(artifact, str) and ARTIFACT_PATTERN.fullmatch(artifact) else None
 
     def write(self, artifact):
         """Keep `artifact`, an Artifact id, as the project's published page."""
@@ -188,7 +188,7 @@ class WriteFlowPage(Operation):
 
     def run(self, project, artifact=None, *, outside):
         renderer = self.renderer or FlowHtmlPage()
-        if artifact is not None and not ARTIFACT_PATTERN.match(artifact):
+        if artifact is not None and not ARTIFACT_PATTERN.fullmatch(artifact):
             return OperationResult(findings=[Finding.of(COULD_NOT_RUN, "--artifact", codes.BAD_ARGUMENT, ARTIFACT_SENTENCE, ARTIFACT_FIX)],
                                    lines=[ARTIFACT_SENTENCE])
         published = PublishedPageStore(project)

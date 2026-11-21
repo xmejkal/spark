@@ -1486,7 +1486,8 @@ class ThePublishedPageTest(unittest.TestCase):
         self.assertFalse((project / ".spark" / "page.json").exists())
 
     def test_an_id_that_is_no_uuid_is_a_bad_argument_and_writes_nothing(self):
-        for given in ("../page.html", "/tmp/x/index.html", "CD9A5AC3-F053-4A6A-BC9C-AB6F687F4096", ""):
+        for given in ("../page.html", "/tmp/x/index.html", "CD9A5AC3-F053-4A6A-BC9C-AB6F687F4096", "",
+                      "cd9a5ac3-f053-4a6a-bc9c-ab6f687f4096\n"):
             with self.subTest(given=given):
                 project = a_built_project()
                 envelope, code = self.page(project, "--artifact", given)
@@ -1496,7 +1497,8 @@ class ThePublishedPageTest(unittest.TestCase):
                 self.assertFalse((project / "page.html").exists())
 
     def test_a_record_spark_cannot_use_answers_no_artifact(self):
-        for held in ("not json", '{"artifact": "/tmp/x"}', '["cd9a5ac3-f053-4a6a-bc9c-ab6f687f4096"]', '{"artifact": 5}'):
+        for held in ("not json", '{"artifact": "/tmp/x"}', '["cd9a5ac3-f053-4a6a-bc9c-ab6f687f4096"]', '{"artifact": 5}',
+                     '{"artifact": "cd9a5ac3-f053-4a6a-bc9c-ab6f687f4096\\n"}'):
             with self.subTest(held=held):
                 project = a_built_project()
                 (project / ".spark" / "page.json").write_text(held, encoding="utf-8")

@@ -290,12 +290,18 @@ with no `data`.
 [`commands/page.md`](../../../commands/page.md)). It is the only command that publishes or republishes the page. In
 this order:
 
-1. The first time, on the person's yes: `publish_files` with `page.html` as `index.html`, then `declare_capabilities`
-   with `{"db": {"rules": [{"path": "", "read": "view", "write": "owner"}]}, "user": {}}` (viewers read, only the
-   owner writes, and the script asks who views), then `flow.py page --artifact ID`, which keeps the id.
-2. For each request in `requests` that has no answer, the oldest by `at` first: the row to `.spark/page-request.json`
-   as the page wrote it, `flow.py run-request`, `flow.py page`, then `get_artifact` and `publish_files` with its
-   `base_version`, and last the answer row `answers/<id>`, `run-request`'s `data` unchanged.
+1. The first time, on the person's yes: `publish_files` with `page.html` as `index.html`, then at once
+   `flow.py page --artifact ID`, which keeps the id, so a step that fails after it never leaves a second Artifact. Then
+   `declare_capabilities` with `{"db": {"rules": [{"path": "", "read": "view", "write": "owner"}]}, "user": {}}`
+   (viewers read, only the owner writes, and the script asks who views).
+2. The ten newest rows of `requests` by `at`, and the rows of `answers` whose `for` is one of their ids. For each
+   request with no answer, the oldest first: the row to `.spark/page-request.json` as the page wrote it,
+   `flow.py run-request` in the foreground, `flow.py page`, the republish, and last the answer row `answers/<id>`,
+   `run-request`'s `data` unchanged. A refusal goes on to the next request; a step that ran with problems or could not
+   run stops the turn. With no request waiting, the page is still written and republished.
+3. A republish is `get_artifact` (its version, and its `read` as `shared_live` when shared), `list_files`, then
+   `publish_files` with that `base_version`. An Artifact that is not found is gone: the person is asked whether to
+   publish again, and a new `--artifact` replaces the id.
 
 The answer comes after the republish, so the page that shows it is already the new one when the person reloads. A
 republish with `publish_files` keeps the database's rows and the declaration: checked on 2026-11-21, a row written before
