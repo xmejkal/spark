@@ -1,7 +1,7 @@
 """
 `parts.py --fact-set`: a record's facts filled in its own home, as an Operation on the core (P726 PR 3). It was
 `parts._op_fact_set`. The chain facts, `facts` entries by name (a bench result and its source, P374), what the record says of
-itself, a board's onboard levels (P464), and what the sheet reads (`legs`, `host_requirements`, P741); never spark's library.
+itself, a board's onboard levels (P464) and its joined pads (P962), and what the sheet reads (`legs`, `host_requirements`, P741); never spark's library.
 The CLI reads the file and hands the object in (`Argument.payload`).
 """
 
@@ -28,7 +28,7 @@ class SetFacts(PartOperation):
     name = "fact-set"
     data_keys = ('part', 'path', 'was', 'now', 'written', 'shelf_copy')
     arguments = (Argument(("--fact-set",), "part_and_facts", str,
-                          "fill what a record owes — a JSON object of the facts the chain reads, or `facts` entries {value, verified, source} by name (a bench result is verified true and its source says who, when and how; a text in it has its control characters turned into a space and is cut at 1000 characters, and a key with a control character is refused), or its about, description and tags, or a board's onboard LED or button level, `pin_roles` {onboard_led|onboard_button: {active_level: {value, verified, source}}} (a board of the project's own, merged role by role), or what the sheet reads, `legs` {pin of pin_order: how to tell the leg apart} (merged leg by leg), `host_requirements` [the lines the host board must meet] (replaced as a whole, like tags) and `short_name`, what the steps call the part, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
+                          "fill what a record owes — a JSON object of the facts the chain reads, or `facts` entries {value, verified, source} by name (a bench result is verified true and its source says who, when and how; a text in it has its control characters turned into a space and is cut at 1000 characters, and a key with a control character is refused), or its about, description and tags, or a board's onboard LED or button level, `pin_roles` {onboard_led|onboard_button: {active_level: {value, verified, source}}} (a board of the project's own, merged role by role), or a board's joined pads, `joined_pads` {value: [[pad, pad], ...], verified, source, why_it_matters, cites} (the groups of pads its maker's schematic joins inside the board, each pad in header_order; written to physical.header.joined_pads of a board of the project's own, replaced as a whole), or what the sheet reads, `legs` {pin of pin_order: how to tell the leg apart} (merged leg by leg), `host_requirements` [the lines the host board must meet] (replaced as a whole, like tags) and `short_name`, what the steps call the part, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
                           nargs=2, metavar=("PART", "FILE"), payload=1),
                  ANSWER_ARGUMENTS["project"], ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, WRITES)
@@ -45,7 +45,7 @@ class SetFacts(PartOperation):
         wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])] + drawer.list_provenance_key_problems(facts)
         if wrong:
             return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
-        return set_fields(part_id, project, facts, dry_run, lambda record, after, path: missing_facts.board_write_problems(record, after, path, facts, project) if "pin_roles" in facts else (
+        return set_fields(part_id, project, facts, dry_run, lambda record, after, path: missing_facts.board_write_problems(record, after, path, facts, project) if any(key in facts for key in missing_facts.BOARD_WRITE_KEYS) else (
             ["%s is absent — a write fills a fact, it never empties one" % key for key in facts if _absent(key, facts[key])]
             + drawer.list_sheet_key_problems(facts, record)
             + sorted(set(provenance.list_entry_problems(facts.get("facts"), record.get("facts"))) | set(broken_problems(after, path)) - set(broken_problems(record, path)))))

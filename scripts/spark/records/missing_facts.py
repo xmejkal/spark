@@ -33,13 +33,33 @@ def list_missing_facts(board):
             and board_records.names_pins(entry) and provenance.read_value(entry, LEVEL_FACT) is None]
 
 
+#: The keys a write to a board record may hold: the onboard levels (P464) and the pads the board joins (P962).
+BOARD_WRITE_KEYS = ("pin_roles", "joined_pads")
+JOINED_PADS = "joined_pads"
+
+
 def level_write_problems(values):
     """
-    Every way `values` is no write of an active level to a board: only {"pin_roles": {role: {"active_level": fact}}},
-    a role of the table, the fact a {value, verified, source} that passes `provenance.fact_problems`. Empty means it holds.
+    Every way `values` is no write to a board (the name is P464's): only `BOARD_WRITE_KEYS`. `pin_roles` is
+    {role: {"active_level": fact}}, a role of the table, the fact a {value, verified, source} that passes
+    `provenance.fact_problems`. `joined_pads` is a fact that passes it too, with a value that is not empty. Empty means it holds.
     """
-    roles = values.get("pin_roles")
-    if set(values) != {"pin_roles"} or not isinstance(roles, dict) or not roles:
+    if not values or not set(values) <= set(BOARD_WRITE_KEYS):
+        return ["a board takes only pin_roles and joined_pads: {role: {%s: {value, verified, source}}}, "
+                "{value: [[pad, pad], ...], verified, source}" % LEVEL_FACT]
+    problems = _level_problems(values["pin_roles"]) if "pin_roles" in values else []
+    if JOINED_PADS in values:
+        fact = values[JOINED_PADS]
+        if isinstance(fact, dict) and fact.get("value") in (None, []):
+            problems.append("%s is absent — a write fills a fact, it never empties one" % JOINED_PADS)
+        else:
+            problems += provenance.fact_problems(JOINED_PADS, fact)
+    return problems
+
+
+def _level_problems(roles):
+    """`level_write_problems` of the `pin_roles` of a write."""
+    if not isinstance(roles, dict) or not roles:
         return ["a board takes only pin_roles: {role: {%s: {value, verified, source}}}" % LEVEL_FACT]
     problems = []
     for role, entry in roles.items():

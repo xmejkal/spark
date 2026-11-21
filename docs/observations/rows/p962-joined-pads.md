@@ -1,0 +1,19 @@
+# P962 PR 1: a board record says which pads the board joins (joined_pads), and --fact-set writes it: rows
+
+Card: [P962 #1380](https://github.com/xmejkal/spark/issues/1380). This file holds the acted, raised and rejected
+findings only. The plan check had a lens on the everyday model and the refuter on Opus; the lead's revisions
+(`p962-revisions.md`) decide where they differ from the plan. Then come the build's own findings. 2026-11-21.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | the fact's source is DFRobot's schematic V1.1 (zip sha256 a6e57af3..., member `V1.1 Schematics.pdf` sha256 0f914806..., page 1), and the text layer shows power names (power symbols), not net labels: "the power name 3V3" and "the power name GND" | revision 1 | acted | in the walk's source text, which the session writes after the merge; this PR holds no vendor file and no store write |
+| 2 | the field holds every joined group the schematic shows, not power only: [3V3, 3V3_2], [GND1, GND2], [SDA, IO19], [SCL, IO20] | revision 2 | acted | `board_rules.joined_pad_problems` accepts a group with no rail; `test_the_pads_of_one_group_share_their_rail` holds `[["SDA", "IO19"], ["SCL", "IO20"]]`; the contract text in `boards/README.md`, `scripts.md` and `breadboard-codes.md` says "every group" |
+| 3 | the pin assigner may give SDA and IO19 (or SCL and IO20) to two different signals, and both pads then reach one net | revision 2 | raised | to a card, for the lead to file |
+| 4 | keep `joined_pads` (the record) and `joined_pins` (a geometry entry) as two words | the plan check, point 3 | acted | the reader is `board_pads.JoinedPads`; PR 2 adds `joined_pins` to the geometry and the names table |
+| 5 | a joined end votes by its group's first pad | the plan check, point 1 | rejected | dropped because revision 5 settles it: it would always lean to the side of 3V3. It is PR 2's seating, not PR 1's |
+| 6 | `level_write_problems` is named for active levels, and now holds a second key | the plan check, point 3 | acted | the name stays (it is P464's and four tests and a mutation row name it), and its docstring says so; the new table `BOARD_WRITE_KEYS` and the sibling `_level_problems` carry the split |
+| 7 | the plan cites `set_facts.py:45`, `record_home.py:96`, `:63-76`, `missing_facts.py:36-43`, `:67-77`, `drawer.py:42`, `board_rules.py:170-207`, `:435` and `record_kind.py:306-315` on 573da4f1 | the plan | acted | checked on 9ea23c34: only `set_facts.py` moved, from line 45 to 48 (its `refuse` lambda); every other cited line is where the plan says. After this PR the lines of the touched files shift by the new code. No rule changed |
+| 8 | a group whose pads share no rail entry but one pad names a rail (3V3 with NC1) | the build | acted | refused as "more than one rail": the plan says "one `power_pads` rail, or none", read as all pads on the one rail or all on none; `test_the_pads_of_one_group_share_their_rail` pins both |
+| 9 | `joined_pad_problems` was first appended to `RULES` after `board_feature_problems` | the build, `--anchors` | acted | broke the row "P956: feature_problems is not in the board's rules"; the rule sits after `pad_problems` now and no other row moved. The p464 row on `"board" if "pin_roles" in values` was re-anchored to `"board" if board else "part"` |
+| 10 | a `--fact-set` of `joined_pads` into a part's record | the plan, risks | acted | the key routes to a board home, so a part id gets "no record called"; `test_a_part_key_beside_joined_pads_is_refused` pins the mix |
+| 11 | `JoinedPads.from_record` reads a field that breaks the contract as no group, not as its good groups | the build | acted | one conservative rule: `validate` refuses the field, and the reader never half-reads it; `test_a_broken_field_reads_as_no_group` |

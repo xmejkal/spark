@@ -84,6 +84,7 @@ class LevelWriteProblemsTest(unittest.TestCase):
             with self.subTest(given=sorted(given)):
                 self.assertEqual(missing_facts.level_write_problems(given), [])
         for given in ({"joined_pads": joined, "name": "x"}, {"joined_pads": None}, {"joined_pads": "x"}, {"joined_pads": {}},
+                      {"joined_pads": dict(joined, value=[])}, {"joined_pads": dict(joined, value=None)},
                       {"joined_pads": joined, "pin_roles": {}}):
             with self.subTest(given=copy.deepcopy(given)):
                 self.assertTrue(missing_facts.level_write_problems(given))

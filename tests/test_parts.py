@@ -3109,7 +3109,14 @@ class JoinedPadsAreWrittenToABoardTest(unittest.TestCase):
         said, code = self.write(home, project, {"joined_pads": self.JOINED}, "--dry-run")
         self.assertEqual((code, said["data"]["written"]), (0, False))
         self.assertEqual(said["data"]["was"], {"joined_pads": None})
-        self.assertIn("would set firebeetle2-esp32c6", said["lines"][0] if "lines" in said else json.dumps(said))
+        self.assertEqual(self.stored(project), board)
+        given = Path(tempfile.mkdtemp()) / "joined.json"
+        given.write_text(json.dumps({"joined_pads": self.JOINED}))
+        with in_store(home), contextlib.redirect_stdout(io.StringIO()) as out:
+            code = parts.main(["--fact-set", "firebeetle2-esp32c6", str(given), "--project", str(project), "--dry-run"])
+        self.assertEqual(code, 0)
+        self.assertIn("would set firebeetle2-esp32c6", out.getvalue())
+        self.assertIn("joined_pads null →", out.getvalue())
         self.assertEqual(self.stored(project), board)
 
     def test_the_write_lands_in_physical_header_and_keeps_the_rest_of_the_header(self):

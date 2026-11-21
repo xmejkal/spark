@@ -44,7 +44,7 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "a board write is looked up as a part record",
-  "find": "\"board\" if \"pin_roles\" in values else \"part\"",
+  "find": "\"board\" if board else \"part\"",
   "replace": "\"part\""
  },
  {
