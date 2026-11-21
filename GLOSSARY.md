@@ -396,7 +396,7 @@ not "geometry" (that is Wokwi's pixels, `data/wokwi-geometry.json`).
 
 A **scene** is everything a view of the drawn breadboard draws, each thing with its place: the board's marks, each
 part's body and caption, and each jumper's way, its cells on the half-pitch grid, its colour's word and its pill
-(`BreadboardScene`, `breadboard_scene.py`, P969). `BreadboardSceneMaker` makes it once, and a view only draws it. Before
+(`BreadboardScene`, `breadboard_scene.py`, P969). `BreadboardSceneMaker` makes it once, and a view draws it. Before
 it, the SVG renderer routed the wires and placed every label itself, so a second view would have routed again or placed
 its labels another way. The word is the usual graphics word (a scene graph). It is not "wiring": `PageWiring` and
 `wiring_steps` are the steps.
@@ -404,7 +404,7 @@ its labels another way. The word is the usual graphics word (a scene graph). It 
 ### Measure — the room a label takes in one view
 
 A label **measure** (`LabelMeasure`, a Strategy) says how big a pill or a caption is as one view draws it, in the
-scene's px. The scene maker places every pill and caption through it, so no view places a label. `PxLabelMeasure` is
+scene's px. The scene maker places every pill and caption through it, so no view places a pill or a caption. `PxLabelMeasure` is
 the SVG's (the pill's sizes, the caption's font size from the palette); a view in characters would add a measure in
 character cells (the PO, 2026-11-21). It is not `FeatureMeasurer`, which measures a board's features on a photo.
 

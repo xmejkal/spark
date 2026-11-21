@@ -334,7 +334,7 @@ class TheModuleSvgTest(unittest.TestCase):
         # P969 PR 3: the canvas reads each body of the scene; here the wires run round the module and its caption sits
         # below it, so the scene is drawn with no wire and each caption moved onto the board
         scene = breadboard_scene.BreadboardSceneMaker().make(self.layout)
-        board = scene.board
+        board = scene.marks.box()
         bare = scene._replace(jumpers=(), parts=tuple(part._replace(caption=part.caption._replace(
             x=board.left + 10, y=board.top + 10)) for part in scene.parts))
         x, y, width, height = [float(n) for n in ElementTree.fromstring(

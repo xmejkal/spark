@@ -4,7 +4,7 @@ The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Rend
 the holes and the gap band from the surface, and the marks that `board_marks` made, P969, with their `BoardPalette`, P953), the
 Strategies that place a drawn part's pad labels (P945), and each jumper's pill. `breadboard_scene` makes the scene
 (P969): it routes each jumper (`wire_routing`), places each pill (`wire_pills`) and each part's caption
-(`part_captions`), and picks each wire's colour, so this module only draws. Moved out of `drawing`, whose planner it
+(`part_captions`), and picks each wire's colour, so this module places only the pad labels. Moved out of `drawing`, whose planner it
 reads. `sheet` writes the file; `part_shape` names a part's label layout; `part_captions` writes each part's line of the
 note.
 """
@@ -180,7 +180,8 @@ class SvgBreadboardDiagram:
         return self.draw(self.scene_maker.make(layout))
 
     def draw(self, scene):
-        """The picture of a BreadboardScene, which places everything: this only draws it."""
+        """The picture of a BreadboardScene, which places the wires, the pills and the captions: this draws them, and
+        places each pad label itself (PadLabelLayout)."""
         ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)
         layout = scene.layout
         pictures = {part.id: self.pictures.picture(part.type, part.record) for part in layout.parts}
@@ -204,7 +205,7 @@ class SvgBreadboardDiagram:
         """(left, top, width, height) of the canvas, rounded: the board's body, every part's body (a body may hang past
         the holes: a module seated by one edge, a board's USB end), every wire, pill and caption, with MARGIN_PX round
         them, and NOTE_PX a line of the note under them."""
-        boxes = [scene.board] + [part.body for part in scene.parts]
+        boxes = [scene.marks.box()] + [part.body for part in scene.parts]
         boxes += [BodyBox(min(x for x, _ in one.path.points), min(y for _, y in one.path.points),
                           max(x for x, _ in one.path.points), max(y for _, y in one.path.points))
                   for one in scene.jumpers if one.path.points]

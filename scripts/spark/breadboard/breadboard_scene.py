@@ -3,8 +3,9 @@ The drawn breadboard as one scene (P969, #1388): `BreadboardScene`, everything a
 thing with its place, made once by `BreadboardSceneMaker` before any view. The maker reads the board's marks
 (`board_marks`), routes the jumpers (a `wire_routing.JumperRouter`), picks each wire's colour (`wiring_steps`), and
 places the pills (`wire_pills`) and the captions (`part_captions`) through a `LabelMeasure`, the room a label takes as
-one view draws it. So no view places anything: `svg_diagram` draws the scene in px, and a view in characters reads the
-same scene through its grid (`SceneGrid`). Nothing here draws.
+one view draws it. So no view places a pill or a caption: `svg_diagram` draws the scene in px, and a view in
+characters reads the same scene through its grid (`SceneGrid`). The pad labels are not in the scene yet: `svg_diagram`
+places them. Nothing here draws.
 """
 
 import collections
@@ -80,10 +81,10 @@ ScenePart = collections.namedtuple("ScenePart", "part body caption")
 SceneJumper = collections.namedtuple("SceneJumper", "jumper path cells color pill")
 
 
-class BreadboardScene(collections.namedtuple("BreadboardScene", "layout marks board parts jumpers joined grid")):
+class BreadboardScene(collections.namedtuple("BreadboardScene", "layout marks parts jumpers joined grid")):
     """
     Value: everything a view of one drawn breadboard draws, each with its place in px: the BreadboardLayout it was made
-    from, the board's BoardMarks and its body (`board`), each part (ScenePart) and each jumper (SceneJumper) in the
+    from, the breadboard's BoardMarks, each part (ScenePart) and each jumper (SceneJumper) in the
     layout's order, the hole groups that join something (`joined`), and its SceneGrid. `wire_notes()` gives the
     sentences of the wires drawn dashed and of those not drawn.
     """
@@ -134,7 +135,7 @@ class BreadboardSceneMaker:
                             + [caption.box() for caption in captions.values()]
                             + [BodyBox(x, y, x, y) for path in paths.values() for x, y in path.points])
         parts = tuple(ScenePart(part, body, captions[part.id]) for part, body in zip(layout.parts, bodies))
-        return BreadboardScene(layout, marks, marks.box(), parts, self._jumpers(layout, paths, pills, grid),
+        return BreadboardScene(layout, marks, parts, self._jumpers(layout, paths, pills, grid),
                                frozenset(self._joined_groups(layout)), grid)
 
     def _jumpers(self, layout, paths, pills, grid):

@@ -37,15 +37,16 @@ def planned(fixture):
         return sheet._plan_layout(sheet._read_build(DATA / fixture / "requirements.json"))
 
 
-class CountingJumperRouter(wire_routing.JumperRouter):
-    """The track router, counting the times it routes a layout."""
+class CountingTrackJumperRouter(wire_routing.TrackJumperRouter):
+    """The track router, counting the times it routes a layout: given to the maker and to the renderer, it sees a route
+    in either."""
 
     def __init__(self):
         self.calls = 0
 
     def route(self, layout, obstacles):
         self.calls += 1
-        return wire_routing.TrackJumperRouter().route(layout, obstacles)
+        return super().route(layout, obstacles)
 
 
 class CellLabels(breadboard_scene.LabelMeasure):
@@ -97,6 +98,21 @@ def wire_cells(jumper):
     return found + [(cell, ":" if dashed else "+") for cell in cells[1:-1]]
 
 
+def runs(jumper, grid):
+    """{cell: character} of a jumper's way, read from its own px points: '-' on a run across a row, '|' on a run along
+    a column, '+' at a bend; ':' on each of them when the wire is dashed."""
+    dashed, found = bool(jumper.path.fallback), {}
+    points = jumper.path.points
+    for (x1, y1), (x2, y2) in zip(points, points[1:]):
+        assert y1 == y2 or x1 == x2, ((x1, y1), (x2, y2))  # a run lies across a row or along a column
+        (u1, v1), (u2, v2) = grid.cell(x1, y1), grid.cell(x2, y2)
+        cells = [(u, v1) for u in range(min(u1, u2), max(u1, u2) + 1)] if y1 == y2 else \
+            [(u1, v) for v in range(min(v1, v2), max(v1, v2) + 1)]
+        found.update({cell: ":" if dashed else "-" if y1 == y2 else "|" for cell in cells})
+    found.update({grid.cell(x, y): ":" if dashed else "+" for x, y in points[1:-1]})
+    return found
+
+
 def walk_scene(router=None):
     return breadboard_scene.BreadboardSceneMaker(router=router).make(planned("walk-c6"))
 
@@ -104,13 +120,14 @@ def walk_scene(router=None):
 class TheSceneTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.router = CountingJumperRouter()
+        cls.router = CountingTrackJumperRouter()
         cls.scene = walk_scene(cls.router)
         cls.rough = rough_text(cls.scene)
 
     def test_the_walk_is_routed_once_and_drawn_in_today_s_bytes(self):
-        # (1) the scene is made once, before any view: the rough view and the picture read it, and nothing routes again
-        text = svg_diagram.SvgBreadboardDiagram().draw(self.scene)
+        # (1) the scene is made once, before any view: the rough view and the picture read it, and nothing routes again,
+        # in the maker or in the renderer, which both hold the counting router
+        text = svg_diagram.SvgBreadboardDiagram(router=self.router).draw(self.scene)
         self.assertIn("#", self.rough)
         self.assertEqual(self.router.calls, 1)
         self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
@@ -127,21 +144,18 @@ class TheSceneTest(unittest.TestCase):
                 self.assertEqual(rows[v - grid.low[1]][u - grid.low[0]:u - grid.low[0] + len(step)], step)
         self.assertEqual(sorted(jumper.jumper.step for jumper in self.scene.jumpers if jumper.path.fallback), [6, 7, 10, 11])
         for jumper in self.scene.jumpers:
+            # each wire alone, so no other wire covers it: its characters are those of its own runs and bends
             alone = rough_text(self.scene._replace(jumpers=(jumper,))).split("\n")
             u, v = grid.cell(jumper.pill.x, jumper.pill.y)
             pill = {(u + index, v) for index in range(len(str(jumper.jumper.step)))}
-            drawn = {alone[v - grid.low[1]][u - grid.low[0]] for (u, v), _ in wire_cells(jumper) if (u, v) not in pill}
+            expected = {cell: character for cell, character in runs(jumper, grid).items() if cell not in pill}
             with self.subTest(step=jumper.jumper.step):
-                if jumper.path.fallback:
-                    self.assertEqual(drawn, {":"})
-                else:  # a wire with no run across (the walk's 8, a stub into a rail) has no '-'
-                    self.assertTrue(drawn and drawn <= {"-", "|", "+"}, drawn)
+                self.assertEqual({cell: alone[cell[1] - grid.low[1]][cell[0] - grid.low[0]] for cell in expected}, expected)
 
-    def test_the_scene_holds_the_board_its_parts_and_its_wires_in_layout_order(self):
+    def test_the_scene_holds_its_parts_and_its_wires_in_layout_order(self):
         layout = self.scene.layout
         self.assertEqual([part.part.id for part in self.scene.parts], [part.id for part in layout.parts])
         self.assertEqual([jumper.jumper for jumper in self.scene.jumpers], list(layout.jumpers))
-        self.assertEqual(self.scene.board, self.scene.marks.box())
         self.assertEqual(self.scene.wire_notes(), ["wires 6, 7, 10 and 11 bend more than 4 times to go around the parts "
                                                    "and are drawn dashed"])
 
