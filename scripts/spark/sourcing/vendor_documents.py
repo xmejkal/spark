@@ -144,6 +144,9 @@ class DfrobotDocumentFinder(VendorDocumentFinder):
             return Decline(self.NAME, 'the DFRobot wiki page %s lists no document named "Dimension"' % page,
                            ('a dimension drawing: the page\'s "Dimension" document',))
         url, file_format = found
+        if not self._on_host(url):
+            return Decline(self.NAME, 'the DFRobot wiki page %s names a "Dimension" document off dfrobot.com, %s, so it is not '
+                           'fetched' % (page, url), ('a dimension drawing on dfrobot.com',))
         return FoundFile(DRAWING, url, "Dimension", file_format in DfrobotWikiSource.KEEPABLE_FORMATS or keepable_url(url))
 
 

@@ -17,5 +17,6 @@
  {"file": "scripts/spark/sourcing/find_documents.py", "name": "P952: a decline of the top view gives no photo step", "find": "([_photo_step(part_id, project)] if kept.top_declined else [])", "replace": "[]"},
  {"file": "scripts/spark/sourcing/find_documents.py", "name": "P952: a fetched file is kept under its URL's name, not the listed entry's", "find": "name = next((entry[\"file\"] for _, entry in same_url if board_records.names_a_kept_file(entry)), None) or datasheets.document_name(found.url)", "replace": "name = datasheets.document_name(found.url)"},
  {"file": "scripts/spark/sourcing/find_documents.py", "name": "P952: the same bytes under another URL are kept under the URL's name", "find": "        name = same_bytes[\"file\"] if same_bytes else name\n", "replace": "\n"},
- {"file": "scripts/spark/sourcing/find_documents.py", "name": "P952: changed bytes at a listed URL give no note", "find": "        if changed and was is None:", "replace": "        if False:"}
+ {"file": "scripts/spark/sourcing/find_documents.py", "name": "P952: changed bytes at a listed URL give no note", "find": "        if changed and was is None:", "replace": "        if False:"},
+ {"file": "scripts/spark/sourcing/vendor_documents.py", "name": "P952 review: a Dimension document off dfrobot.com is fetched", "find": "        if not self._on_host(url):\n            return Decline(self.NAME, 'the DFRobot wiki page %s names a \"Dimension\"", "replace": "        if False:\n            return Decline(self.NAME, 'the DFRobot wiki page %s names a \"Dimension\""}
 ]
