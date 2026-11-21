@@ -17,6 +17,7 @@
  {"file": "scripts/spark/breadboard/sheet.py", "name": "P969 PR 4: a scene is made though no drawing is drawn", "find": "scene = maker.make(planned.layout) if drawn else None", "replace": "scene = maker.make(planned.layout)"},
  {"file": "scripts/spark/breadboard/sheet.py", "name": "P969 PR 4: each drawing makes the scene again", "find": "return scene, [renderer.text(scene) for _, renderer in drawn]", "replace": "return scene, [renderer.text(maker.make(planned.layout)) for _, renderer in drawn]"},
  {"file": "scripts/spark/breadboard/sheet.py", "name": "P969 PR 4: the sheet's colour line picks its own colours", "find": "for number, color in planned.scene.colors().items())", "replace": "for number, color in JUMPER_COLORS.of(roles).items())"},
+ {"file": "scripts/spark/breadboard/sheet.py", "name": "P969 PR 4: the written sheet is not given the drawings' scene", "find": "planned, seated, colors = planned._replace(scene=scene), read.steps.anchored()", "replace": "planned, seated, colors = planned, read.steps.anchored()"},
  {"file": "scripts/spark/breadboard/sheet.py", "name": "P969 PR 4: the record keeps no colours", "find": "scene.colors() if scene else {}", "replace": "{}"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "P969 PR 4: the Wokwi diagram picks its own colours", "find": "colors = scene.colors()", "replace": "colors = wiring_steps.JumperColors().of({jumper.step: jumper.role for jumper in layout.jumpers})"}
 ]

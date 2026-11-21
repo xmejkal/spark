@@ -279,11 +279,6 @@ def _plan_layout(read):
     return drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
 
 
-def drawing_text(requirements_path, circuit_path=None, read=None):
-    """The Wokwi diagram's text, drawn from the layout's scene, or NotDrawnError with what stopped it."""
-    return EDITABLE_DRAWING.text(SCENE_MAKER.make(_plan_layout(read or _read_build(requirements_path, circuit_path))))
-
-
 #: One plan of the layout for a sheet and its drawings: the layout, or what stopped it (a NotDrawnError, with its code and
 #: subject), and the earlier parts it could not keep as the person left them ([NotKeptResult]), the fresh layout, each
 #: end the layout joins differently from the points ([DrawingDiffersResult], P279), and the scene the drawings were
@@ -363,16 +358,21 @@ def _drawing_lines(planned):
     return lines
 
 
+def _planned_alone(read):
+    """The plan of a sheet written with no drawing beside it: the layout planned once and its scene made once."""
+    planned = _plan_once(read)
+    return planned._replace(scene=SCENE_MAKER.make(planned.layout)) if planned.layout else planned
+
+
 def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_lines=None):
     """The sheet, as Markdown, for a requirements file whose project has been built with --keep (or its circuit).
-    `planned` is the layout `write()` already planned, with the scene it drew, so the sheet says what the drawings show;
-    a sheet written alone makes the scene here. `change_lines` is the section of changes, its heading first (P300,
-    P875), None on a first build."""
+    `planned` is the layout `write()` already planned, with the scene it drew (a layout needs its scene), so the sheet
+    says what the drawings show and makes no scene of its own; with no `planned`, a sheet written alone plans once and
+    makes its scene once (`_planned_alone`). `change_lines` is the section of changes, its heading first (P300, P875),
+    None on a first build."""
     requirements_path = Path(requirements_path)
     read = read or _read_build(requirements_path, circuit_path)
-    planned = planned or _plan_once(read)
-    if planned.layout and not planned.scene:
-        planned = planned._replace(scene=SCENE_MAKER.make(planned.layout))
+    planned = planned or _planned_alone(read)
     built, circuit, resistors, steps = read.built, read.circuit, read.resistors, read.steps
     supplies = _supplies(circuit, built.parts)
     have = _have(requirements_path, {part["id"] for part in built.parts} | {built.board.get("id")})
