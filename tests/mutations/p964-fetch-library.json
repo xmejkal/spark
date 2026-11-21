@@ -2,7 +2,7 @@
  {
   "file": "scripts/spark/sourcing/datasheets.py",
   "name": "fetch writes spark's library (P964)",
-  "find": "    if record_homes.in_library(path):",
+  "find": "    if home_rules.in_library(path):",
   "replace": "    if False:"
  },
  {
@@ -28,5 +28,11 @@
   "name": "the shared library refusal has no fix (P964)",
   "find": "fix=sourcing_codes.LIBRARY_RECORD.fix, code=sourcing_codes.LIBRARY_RECORD)",
   "replace": "code=sourcing_codes.LIBRARY_RECORD)"
+ },
+ {
+  "file": "scripts/spark/sourcing/fetch_documents.py",
+  "name": "the fetch refusal of the library loses its fix (P964 review)",
+  "find": "        if getattr(broken, \"code\", None) == sourcing_codes.LIBRARY_RECORD:",
+  "replace": "        if False:"
  }
 ]

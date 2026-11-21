@@ -10,7 +10,7 @@ from spark.core.operation import COMMON_ARGUMENTS, FETCHES, JSON_DEST, READS, WR
 from spark.records import records_codes
 from spark.records.answer_operation import ANSWER_ARGUMENTS
 from spark.records.record_kind import Answer, DEFINITION_SUFFIX, _problem, record_home
-from spark.sourcing import datasheets
+from spark.sourcing import datasheets, record_home as home_rules, sourcing_codes
 from spark.sourcing.part_operation import PartOperation
 
 
@@ -29,6 +29,12 @@ class FetchDocuments(PartOperation):
     arguments = (Argument(("--fetch",), "part_id", str, "download the datasheets and images a record cites, into your store; never spark's library", metavar="PART"),
                  ANSWER_ARGUMENTS["project"], ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, WRITES, FETCHES)
+
+    def answer_refusal(self, broken, values):
+        """A record of spark's library is the one shared problem, with its sentence and fix (P964)."""
+        if getattr(broken, "code", None) == sourcing_codes.LIBRARY_RECORD:
+            return Answer(problems=[home_rules.library_problem(values["part_id"])])
+        return super().answer_refusal(broken, values)
 
     def effects_of(self, values):
         return (READS,) if values["dry_run"] else self.effects

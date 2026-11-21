@@ -1306,6 +1306,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                     said, code = run_json(argv)
                 self.assertEqual((said["status"], code), ("problems", 1))
                 self.assertEqual([(item["subject"], item["code"]) for item in said["problems"]], [("l9110s-module", "library_record")])
+                self.assertIn("run the same command again with --project", said["problems"][0]["fix"])
         self.assertEqual(asked, [])
         self.assertEqual((library / "l9110s-module.json").read_bytes(), before)
         self.assertFalse((home / "sources").exists())

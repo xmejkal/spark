@@ -17,7 +17,7 @@ from pathlib import Path
 from spark.records import board_records, record_kind, records_codes, store, tool_finder
 from spark.records.record_kind import (
     Answer, _cannot, DEFINITION_SUFFIX, _parse, _problem, record_home, _write_record)
-from spark.sourcing import matching, offers, record_home as record_homes, sourcing_codes
+from spark.sourcing import matching, offers, record_home as home_rules, sourcing_codes
 from spark.sourcing.part_records import load, PartError
 
 
@@ -354,7 +354,7 @@ def fetch_path(part_id, project=None):
     if home is None:
         raise PartError("no record called %r to fetch for", part_id, code=sourcing_codes.NO_SUCH_PART)
     path = home / (part_id + DEFINITION_SUFFIX)
-    if record_homes.in_library(path):
+    if home_rules.in_library(path):
         raise PartError("%s is in spark's own library, which is changed in spark's repository, not by parts.py", part_id,
                         code=sourcing_codes.LIBRARY_RECORD)
     return path

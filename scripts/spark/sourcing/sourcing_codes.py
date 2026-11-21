@@ -26,8 +26,8 @@ PART_CONTRACT_BROKEN_REPLIES = codes.Code(PART_CONTRACT_BROKEN, PART_CONTRACT_BR
 PROMOTION_WOULD_OVERWRITE = codes.Code("promotion_would_overwrite", "the library already holds a record of this id, and a promotion never overwrites one",
                                  "keep the record that is there, or move it away by hand first")
 #: parts.py wrote nothing because the record is in spark's own library (P964); research.py says BAD_ARGUMENT_IN_LIBRARY for the same fact (P982).
-LIBRARY_RECORD = codes.Code("library_record", "the record is in spark's own library, which is changed in spark's repository, never by parts.py",
-                      "copy the record into the project's parts/ (a board into its boards/), then run again with --project <the project's folder>")
+LIBRARY_RECORD = codes.Code("library_record", "the record is in spark's own library, which is changed in spark's repository",
+                      "copy the record into the project's parts/ folder (a board into boards/), then run the same command again with --project <that project's folder>")
 #: A variant of the core's BAD_ARGUMENT: research asked for a record of spark's own library (research_part).
 BAD_ARGUMENT_IN_LIBRARY = codes.Code(codes.BAD_ARGUMENT, codes.BAD_ARGUMENT.meaning,
                                "spark's library is changed in spark's repository; research a copy of the record in the project's parts/")
