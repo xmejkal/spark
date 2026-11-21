@@ -1,0 +1,68 @@
+[
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "a key spark does not offer now runs (P829)",
+  "find": "if key not in offered:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "a page read before the project changed runs (P829)",
+  "find": "if request.seen != fingerprint[:SHORT]:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "a drop asked from the page is not said to belong in the chat (P829)",
+  "find": "IN_CHAT = (flow_codes.NEEDS_DROP,)",
+  "replace": "IN_CHAT = ()"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "an id that is no UUID is read (P829)",
+  "find": "ID_PATTERN = re.compile(r\"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$\")",
+  "replace": "ID_PATTERN = re.compile(r\"^.*$\")"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "a seen that is not 12 hex digits is read (P829)",
+  "find": "SEEN_PATTERN = re.compile(r\"^[0-9a-f]{12}$\")",
+  "replace": "SEEN_PATTERN = re.compile(r\"^.*$\")"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "the request file stays, so one request can run twice (P829)",
+  "find": "request_file_of(project).unlink(missing_ok=True)",
+  "replace": "pass"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "the answer gives the page's old fingerprint, not the one after the run (P829)",
+  "find": "after = fingerprint_of(project, read_flow(project, self.readers)[0])",
+  "replace": "after = fingerprint"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "a refusal does not say which request it answers (P829)",
+  "find": "data = {\"for\": id_of(request), \"key\": key_of(request), \"ran\": False,",
+  "replace": "data = {\"ran\": False,"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "the build from the page keeps nothing in the project (P829)",
+  "find": "\"keep\": project,",
+  "replace": "\"keep\": None,"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "a pick from the page is a dry run (P829)",
+  "find": "\"passed_over\": NO_PASSED_OVER, \"dry_run\": False}",
+  "replace": "\"passed_over\": NO_PASSED_OVER, \"dry_run\": True}"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "a kind the page never runs is run (P829)",
+  "find": "    if kind not in KIND_RUNS:\n        return request_codes.REQUEST_NOT_OFFERED\n",
+  "replace": ""
+ }
+]

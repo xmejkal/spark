@@ -182,6 +182,13 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
         self.readers = [FakeReader(("pick:light:led-red-5mm",))]
         self.refused("build", "request_not_offered")
 
+    def test_an_offered_key_of_a_kind_the_page_never_runs_runs_nothing(self):
+        """A later phase may offer a deploy or a simulation; the page runs only a pick, the parts list and the build (D9)."""
+        self.readers = [FakeReader(OFFERED + ("deploy", "simulate:main"))]
+        for key in ("deploy", "simulate:main"):
+            with self.subTest(key=key):
+                self.refused(key, "request_not_offered")
+
     def test_a_drop_is_asked_in_the_chat_and_runs_nothing(self):
         envelope = self.refused("needs-drop:light", "request_in_chat")
         self.assertEqual(envelope["data"]["line"], "nothing ran: a need is dropped in the chat, never from the page")
