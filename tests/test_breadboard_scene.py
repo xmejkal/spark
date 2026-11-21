@@ -10,6 +10,7 @@ both drawings and its colour line read it (P969 PR 4).
 
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -25,7 +26,8 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import breadboard_scene, drawing, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
+from spark.breadboard import board_marks, breadboard_scene, drawing, label_measure, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
+from spark.breadboard.spacing import BodyBox  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
 NS = {"svg": "http://www.w3.org/2000/svg"}
@@ -51,10 +53,10 @@ class CountingTrackJumperRouter(wire_routing.TrackJumperRouter):
         return super().route(layout, obstacles)
 
 
-class CellLabels(breadboard_scene.LabelMeasure):
+class CellLabels(label_measure.LabelMeasure):
     """A view that writes one character a cell: a pill is its words and two cells for its number, one cell high; a
     caption is one cell high and a cell a character wide; a pad's label starts the next cell from its pad, its letters
-    on the pad's line."""
+    on the pad's line; a board's mark on its cell's line, with no drop."""
 
     def pill(self, words):
         return (len(words) + 2) * HALF_PITCH, HALF_PITCH
@@ -64,6 +66,9 @@ class CellLabels(breadboard_scene.LabelMeasure):
 
     def pad_label(self):
         return HALF_PITCH, 0
+
+    def mark_drop(self, size):
+        return 0
 
 
 class NotedPictures(part_pictures.PictogramPartPictures):
@@ -308,7 +313,7 @@ class TheMakerTest(unittest.TestCase):
                             [label.place for part in px.parts for label in part.labels])
 
     def test_the_px_measure_is_the_svg_s_pill_and_caption(self):
-        measure = breadboard_scene.PxLabelMeasure(7)
+        measure = label_measure.PxLabelMeasure(7)
         width, height = measure.pill("SDI to D11")
         self.assertAlmostEqual(width, 9.6 + 3.6 + 3.57 * 10)
         self.assertEqual(height, 9.6)
@@ -362,6 +367,57 @@ class TheSheetTest(unittest.TestCase):
         said = line.split("each signal: ", 1)[1].rstrip(".").split(", ")
         self.assertEqual(len(said), len(self.planned.layout.jumpers))
         self.assertTrue(all(one.split(" ")[1] == "white" for one in said), line)
+
+
+class TheLeftoversTest(unittest.TestCase):
+    """P969 PR 4b: the scene gives its extent and each board's USB end, its marks take the maker's measure, and the
+    picture draws them at the scene's sizes, so the picture computes none of them."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.scene = walk_scene()
+
+    def test_the_scene_gives_one_extent_box_that_the_grid_and_the_canvas_read(self):
+        scene, extent = self.scene, self.scene.grid.extent
+        held = [scene.marks.box()] + [part.body for part in scene.parts] + [part.caption.box() for part in scene.parts]
+        held += [jumper.pill.box() for jumper in scene.jumpers]
+        held += [BodyBox(x, y, x, y) for jumper in scene.jumpers for x, y in jumper.path.points]
+        self.assertEqual(extent, BodyBox(min(box.left for box in held), min(box.top for box in held),
+                                         max(box.right for box in held), max(box.bottom for box in held)))
+        grid = scene.grid
+        self.assertEqual(grid.low, (math.floor((extent.left - grid.x0) / grid.step), math.floor((extent.top - grid.y0) / grid.step)))
+        self.assertEqual(grid.high, (math.ceil((extent.right - grid.x0) / grid.step), math.ceil((extent.bottom - grid.y0) / grid.step)))
+        x, y, width, height = [float(n) for n in ElementTree.fromstring(
+            svg_diagram.SvgBreadboardDiagram().text(scene)).get("viewBox").split()]
+        self.assertAlmostEqual(x, extent.left - 19.2, places=3)
+        self.assertAlmostEqual(y, extent.top - 19.2, places=3)
+        self.assertAlmostEqual(x + width, extent.right + 19.2, places=2)
+        self.assertAlmostEqual(y + height, extent.bottom + 19.2 + 9.6 * len(scene.notes()), places=2)
+
+    def test_the_board_s_usb_end_is_marked_in_its_own_frame(self):
+        # P969 revisions 28 and 31: UsbEnd, its box in the board's own frame, which the picture draws; its place on
+        # the sheet had no reader, so it went (P974)
+        board, module = self.scene.parts
+        self.assertIsNone(module.usb_end)
+        box = board.usb_end.box
+        self.assertEqual((box.right - box.left, round(box.bottom - box.top, 6)), (34, 12))
+
+    def test_the_picture_draws_the_marks_at_the_scene_s_sizes(self):
+        # revision 21: a palette with other sizes given to the maker only; the picture keeps only its own colours
+        own = board_marks.BoardPalette.load()
+        scene = breadboard_scene.BreadboardSceneMaker(palette=board_marks.BoardPalette(
+            own.colors, dict(own.sizes, rail_sign=17, gap_band=48))).make(self.scene.layout)
+        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(scene))
+        signs = [text for text in root.iter("{%s}text" % NS["svg"]) if text.text in ("+", "−")]
+        self.assertEqual({text.get("font-size") for text in signs}, {"17"})
+        (band,) = [rect for rect in root.iter("{%s}rect" % NS["svg"]) if rect.get("fill") == own.colors["gap"]]
+        self.assertEqual(float(band.get("height")), 48)
+        self.assertAlmostEqual(float(band.get("y")) + 24, (89.4 + 118.2) / 2)  # about the middle of rows e and f
+
+    def test_the_maker_gives_the_marks_its_measure(self):
+        scene = breadboard_scene.BreadboardSceneMaker(measure=CellLabels()).make(self.scene.layout)
+        for (_, row_y, *_), (_, _, baseline) in zip(scene.marks.rail_lines(), scene.marks.signs()):
+            self.assertEqual(baseline, row_y)
 
 
 if __name__ == "__main__":
