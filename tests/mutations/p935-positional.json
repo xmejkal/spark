@@ -1,0 +1,68 @@
+[
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan reads a RefusedInputError's code at the second place again",
+  "find": "\"RefusedInputError\": 2",
+  "replace": "\"RefusedInputError\": 1"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "a caught positional error is no longer one that holds no fix",
+  "find": "{\"SparkError\"})) | set(CODE_AT)",
+  "replace": "{\"SparkError\"}))"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the helper's parameter is forwarded from another function than could_not_run",
+  "find": "(\"rules_check.py\", \"could_not_run\", \"code\")",
+  "replace": "(\"rules_check.py\", \"call\", \"code\")"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "DesignError is no coded error of the checks' scan",
+  "find": "\"StoreError\", \"DesignError\"}",
+  "replace": "\"StoreError\"}"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the checks' scan reads no table of the records or of design",
+  "find": "\"checks\": (records_codes, design_codes, codes)}",
+  "replace": "\"checks\": (design_codes, codes)}"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "no form is positional",
+  "find": "positional = made_by in CODE_AT",
+  "replace": "positional = False"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "FORWARDED_CODES names an allowance no site uses",
+  "find": "(\"board_emitter.py\", \"board_file\", \"code\")}",
+  "replace": "(\"board_emitter.py\", \"board_file\", \"code\"), (\"gone.py\", \"f\", \"code\")}"
+ },
+ {
+  "file": "scripts/spark/design/board_emitter.py",
+  "name": "a part gap names its code as a plain word",
+  "find": "(parts_without_an_outline, design_codes.NO_OUTLINE,",
+  "replace": "(parts_without_an_outline, \"no_outline\","
+ },
+ {
+  "file": "scripts/spark/design/footprint_emitter.py",
+  "name": "a rules file that is refused is told as a board that cannot be used",
+  "find": "Refusal(NO_BOARD_MESSAGE % refused, refused.code)",
+  "replace": "Refusal(NO_BOARD_MESSAGE % refused, design_codes.BOARD_UNUSABLE)"
+ },
+ {
+  "file": "scripts/spark/checks/check_codes.py",
+  "name": "the fix of a check that could not look no longer says when to report it",
+  "find": "again. If the sentence starts with an error name, such as KeyError, \"\n                                  \"and names no file of yours, report it at https://github.com/xmejkal/spark/issues with the sentence and your command\")",
+  "replace": "again\")"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan reads a Refusal's code at no place",
+  "find": "\"Refusal\": 1",
+  "replace": "\"Refusal\": 0"
+ }
+]

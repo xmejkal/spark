@@ -121,6 +121,7 @@ MAY_READ = {
     "check_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and no code shared with another table (P693)",
     "design_codes.RULES_REFUSED": AGREEMENT + ": its fix against check_codes' equal literal of the word (P935)",
     "check_codes.RULES_REFUSED": AGREEMENT + ": its fix against design_codes' equal literal of the word (P935)",
+    "board_emitter.PART_GAPS": AGREEMENT + ": each gap's code against design_codes' own table, the allowance FORWARDED_CODES names (P935 PR 4b)",
     "design_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the one it shares with check_codes (P700)",
     "build_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the four it shares with other tables (P701)",
     "records_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the two it shares with other tables (P716)",

@@ -501,10 +501,10 @@ def render(result):
 def rules_or_reason(circuit_path, rules_path):
     """`(rules, None)`, or `(None, the Refusal that says why nothing can run)`: a file that is missing, or rules that
     fab.read_rules refuses."""
-    for path, what, code in ((circuit_path, "built design", check_codes.NO_CIRCUIT),
-                             (rules_path, "rules", check_codes.NO_RULES_FILE)):
-        if not path.is_file():
-            return None, Refusal("no %s at %s" % (what, path), code)
+    if not circuit_path.is_file():
+        return None, Refusal("no built design at %s" % circuit_path, check_codes.NO_CIRCUIT)
+    if not rules_path.is_file():
+        return None, Refusal("no rules at %s" % rules_path, check_codes.NO_RULES_FILE)
     try:
         return fab.read_rules(rules_path), None
     except fab.RulesError as refused:
