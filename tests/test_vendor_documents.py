@@ -89,6 +89,13 @@ class TheDrawingTest(unittest.TestCase):
         found, _ = find(documents=(("Dimension", "https://dfimg.dfrobot.com/wiki/1/DFR0975_dimension.zip", "application/zip"),))
         self.assertEqual(found.drawing, FoundFile("drawing", "https://dfimg.dfrobot.com/wiki/1/DFR0975_dimension.zip", "Dimension", False))
 
+    def test_a_dimension_document_off_dfrobot_com_declines(self):
+        for url in ("https://evil.example.net/dim.pdf", "https://notdfrobot.com/dim.pdf"):
+            with self.subTest(url=url):
+                found, _ = find(documents=(("Dimension", url, "application/pdf"),))
+                self.assertIsInstance(found.drawing, Decline)
+                self.assertIn(url, found.drawing.reason)
+
     def test_a_page_that_lists_no_dimension_document_or_no_list_declines(self):
         for documents in ((("Schematics", wiki.SCHEMATICS, "application/zip"),), None):
             with self.subTest(documents=documents):
