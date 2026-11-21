@@ -19,7 +19,7 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import board_marks, breadboard_scene, drawing, sheet, svg_diagram, wire_pills, wire_routing  # noqa: E402
+from spark.breadboard import board_marks, breadboard_scene, drawing, label_measure, sheet, svg_diagram, wire_pills, wire_routing  # noqa: E402
 from spark.breadboard.spacing import BodyBox  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
@@ -35,7 +35,7 @@ def routed(fixture):
     with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
         layout = sheet._plan_layout(sheet._read_build(DATA / fixture / "requirements.json"))
     bodies = [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
-    marks = board_marks.BoardMarks(layout.geometry.surface, board_marks.BoardPalette.load().sizes, breadboard_scene.PxLabelMeasure(7))
+    marks = board_marks.BoardMarks(layout.geometry.surface, board_marks.BoardPalette.load().sizes, label_measure.PxLabelMeasure(7))
     return layout, bodies, wire_routing.TrackJumperRouter.routing(layout, marks.obstacles(bodies))
 
 
@@ -216,7 +216,7 @@ class TheFallbackTest(unittest.TestCase):
         layout, bodies, _ = routed("button-light-xiao")
         jumper = next(one for one in layout.jumpers if one.step == 5)
         wall = BodyBox(jumper.other.x - 12, jumper.other.y - 12, jumper.other.x + 12, jumper.other.y + 12)
-        marks = board_marks.BoardMarks(layout.geometry.surface, board_marks.BoardPalette.load().sizes, breadboard_scene.PxLabelMeasure(7))
+        marks = board_marks.BoardMarks(layout.geometry.surface, board_marks.BoardPalette.load().sizes, label_measure.PxLabelMeasure(7))
         routing = wire_routing.TrackJumperRouter.routing(layout, marks.obstacles(bodies + [wall]))
         self.assertEqual(routing.paths[5], wire_routing.JumperPath((), 0, "no_way"))
 
@@ -255,7 +255,7 @@ class TheTrackGridTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.surface = drawing.Surface.load_full()
-        cls.marks = board_marks.BoardMarks(cls.surface, board_marks.BoardPalette.load().sizes, breadboard_scene.PxLabelMeasure(7))
+        cls.marks = board_marks.BoardMarks(cls.surface, board_marks.BoardPalette.load().sizes, label_measure.PxLabelMeasure(7))
 
     def grid(self, bodies=()):
         return wire_routing.TrackGrid(self.surface, self.marks.obstacles(bodies))
