@@ -1,12 +1,13 @@
 """
 The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Renderer of a breadboard's scene as
 `breadboard.svg`, the breadboard under the parts in the old wiring page's look (`BoardBackground`, which draws
-the terminal holes from the surface, and the gap band, the rail holes and the marks that `board_marks` made, P969, with
-their `BoardPalette`, P953), and each jumper's pill. `breadboard_scene` makes the scene (P969): it routes each jumper
-(`wire_routing`), places each pill (`wire_pills`), each part's caption (`part_captions`), each pad's label and each USB
-mark, picks each wire's colour, says each pad's state, writes each part's line of the note and gives the extent, so
-this module places nothing and decides no state or warning: it draws the scene in px, on a canvas MARGIN_PX round the
-scene's extent with the note under it. Two drawing details stay here (P969 revision 20): each note line's baseline and
+the terminal holes from the surface, and the gap band, the rail holes and the marks that `board_marks` made, P969, in
+the colours of a `BoardPalette`, P953), and each jumper's pill. `breadboard_scene` makes the scene (P969): it routes
+each jumper (`wire_routing`), places each pill (`wire_pills`), each part's caption (`part_captions`) and each pad's
+label, gives each board's USB end, picks each wire's colour, says each pad's state, writes each part's line of the
+note and bounds the extent, so this module places nothing and decides no state or warning: it draws the scene in px,
+at the sizes of its marks and in its own palette's colours, on a canvas MARGIN_PX round the scene's extent with the
+note under it. Two drawing details stay here (P969 revision 20): each note line's baseline and
 the inside of a pill. `sheet` makes the scene once, for this picture and the Wokwi diagram, and writes the file.
 """
 
@@ -45,14 +46,15 @@ class BoardBackground:
 
     def draw(self, root, marks):
         """The board of `marks` (a BoardMarks): its body, its gap band, the terminal holes of its surface and its rail
-        holes, then the marks at their baselines."""
-        colors, sizes = self.palette
+        holes, then the marks at their baselines, each at the marks' sizes, in the palette's colours."""
+        colors, sizes = self.palette.colors, marks.sizes
         surface, box = marks.surface, marks.box()
         width, height = str(_round_px(box.right - box.left)), str(_round_px(box.bottom - box.top))
         _element(root, "rect", x=box.left, y=box.top, width=width, height=height, rx=sizes["board_rx"],
                  fill=colors["board"], stroke=colors["edge"], **{"stroke-width": sizes["edge_width"]})
         band = marks.gap_band()
-        _element(root, "rect", x=band.left, y=band.top, width=width, height=sizes["gap_band"], fill=colors["gap"])
+        _element(root, "rect", x=band.left, y=band.top, width=band.right - band.left, height=band.bottom - band.top,
+                 fill=colors["gap"])
         for holes, color, size in ((surface.terminal, colors["hole"], sizes["hole"]),
                                    (marks.rail_holes(), colors["rail_hole"], sizes["rail_hole"])):
             if holes:
@@ -64,7 +66,7 @@ class BoardBackground:
                                                                                             "text-anchor": "middle"})
 
     def _rails(self, root, marks):
-        colors, sizes = self.palette
+        colors, sizes = self.palette.colors, marks.sizes
         for (rail, _, y, left, right), (_, x, baseline) in zip(marks.rail_lines(), marks.signs()):
             plus = marks.plus(rail)
             color = colors["plus" if plus else "minus"]
@@ -86,7 +88,7 @@ class SvgBreadboardDiagram:
     that needs more bends is drawn dashed, and the note says so, as it says of a wire with no way at all. A part drawn from its record also gets its pad labels where
     the scene placed them, in the part's own frame, and a board its USB end's mark. The note under the picture holds the
     scene's lines (`notes()`). Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
-    same bytes. The canvas holds the scene's extent (`extent()`), with MARGIN_PX round it, in Wokwi's px, so
+    same bytes. The canvas holds the scene's extent (its grid's `extent`), with MARGIN_PX round it, in Wokwi's px, so
     its view box may start left of or above 0. The root sets the font once. Each jumper's group carries `data-step`, its step's
     number, and holds its pill; each part's group carries `data-part`, its id, so a player finds them (P949); a key is never an `id`.
     """
@@ -131,24 +133,24 @@ class SvgBreadboardDiagram:
             self._part(root, part.part, layout.geometry, part.picture)
         self._wires(root, scene)
         for part in scene.parts:
-            self._label(root, part, layout.geometry)  # last, so no wire or other part covers a pin
-        self._words(root, [part.caption for part in scene.parts], notes, (left + self.MARGIN_PX, top + height))
+            self._label(root, part, layout.geometry, scene.marks.sizes)  # last, so no wire or other part covers a pin
+        self._words(root, scene, notes, (left + self.MARGIN_PX, top + height))
         return ElementTree.tostring(root, encoding="unicode") + "\n"
 
     def _canvas(self, scene, note_lines):
         """(left, top, width, height) of the canvas, rounded: the scene's extent, with MARGIN_PX round it, and NOTE_PX a
         line of the note under it."""
-        extent = scene.extent()
+        extent = scene.grid.extent
         left, top = extent.left - self.MARGIN_PX, extent.top - self.MARGIN_PX
         width = _round_px(extent.right + self.MARGIN_PX - left)
         height = _round_px(extent.bottom + self.MARGIN_PX - top + self.NOTE_PX * note_lines)
         return _round_px(left), _round_px(top), width, height
 
-    def _words(self, root, captions, notes, corner):
+    def _words(self, root, scene, notes, corner):
         """Each part's caption, its record's name in the title colour or an id muted, then the note's lines up from the
-        canvas's bottom left `corner`, its margin in: the parts' lines, then the wires'."""
-        colors, sizes = self.palette
-        for caption in captions:
+        canvas's bottom left `corner`, its margin in: the parts' lines, then the wires', at the scene's sizes."""
+        colors, sizes = self.palette.colors, scene.marks.sizes
+        for caption in (part.caption for part in scene.parts):
             _element(root, "text", caption.words, x=caption.x, y=caption.y,
                      fill=colors["title" if caption.named else "grid_text"],
                      **{"class": "caption", "font-size": caption.size, "font-weight": PartCaption.WEIGHT})
@@ -175,12 +177,12 @@ class SvgBreadboardDiagram:
         if picture.credit:
             ElementTree.SubElement(group, _svg("title")).text = picture.credit
 
-    def _pad_labels(self, root, part, part_px):
+    def _pad_labels(self, root, part, part_px, sizes):
         """A ScenePart's pad labels (P412, P945), each where the scene placed it, with a dashed ring on a doubtful pad,
         then its USB end's mark when it has one. Drawn in the part's own frame, so it turns with the part. A label is
         bold yellow on a pad in use, muted on a pad with no net (NC), else dim, each with the palette's thin dark
-        outline."""
-        colors, sizes = self.palette
+        outline, at the scene's `sizes`."""
+        colors = self.palette.colors
         group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part.part, part_px), "class": "pad-labels"})
         for label in part.labels:
             place = label.place
@@ -195,17 +197,17 @@ class SvgBreadboardDiagram:
                 look, **{"text-anchor": place.anchor, "stroke-width": sizes["pad_halo"], "paint-order": "stroke"}))
             if place.rotate:
                 text.set("transform", "rotate(%s %s %s)" % (place.rotate, _round_px(place.x), _round_px(place.y)))
-        if part.usb_mark:
-            mark = part.usb_mark.box
+        if part.usb_end:
+            mark = part.usb_end.box
             ElementTree.SubElement(group, _svg("rect"), {
                 "x": str(_round_px(mark.left)), "y": str(_round_px(mark.top)), "width": str(_round_px(mark.right - mark.left)),
                 "height": str(_round_px(mark.bottom - mark.top)), "rx": "3", "fill": "#cfd8dc", "stroke": "#455a64",
                 "stroke-width": "1"})
 
-    def _label(self, root, part, geometry):
+    def _label(self, root, part, geometry, sizes):
         """A ScenePart's pad labels, when it has any, and the dot on each of its pins in its state's colour."""
         if part.labels:
-            self._pad_labels(root, part, geometry.part(part.part.type))
+            self._pad_labels(root, part, geometry.part(part.part.type), sizes)
         for pin, hole in part.part.holes.items():
             state = part.pads[pin]
             ElementTree.SubElement(root, _svg("circle"), {"cx": str(_round_px(hole.x)), "cy": str(_round_px(hole.y)),

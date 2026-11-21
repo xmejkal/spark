@@ -1,8 +1,9 @@
 """
 What the breadboard prints on itself (P969, #1388): `BoardPalette`, the picture's look as data, and `BoardMarks`, the
 board's body, its gap band, its rail holes, its row letters, its column numbers, each rail's line and each rail's + or -
-sign, each with its place and its box in px, and each mark's baseline from the scene's label measure. The facts are made from the surface and the sizes alone, with no picture drawn, so the router, the pills
-and any other view read the marks one way. `svg_diagram` draws them; `wire_routing` keeps its wires clear of them.
+sign, each with its place and its box in px, and each mark's baseline from the drop of the scene's label measure
+(`label_measure`). The facts are made from the surface, the sizes and the measure alone, with no picture drawn, so the
+router, the pills and any other view read the marks one way. `svg_diagram` draws them; `wire_routing` keeps its wires clear of them.
 """
 
 import collections
@@ -27,8 +28,8 @@ class BoardPalette(collections.namedtuple("BoardPalette", "colors sizes")):
 class BoardMarks(collections.namedtuple("BoardMarks", "surface sizes measure")):
     """Value: the marks printed on one breadboard `surface`, at the `sizes` of a BoardPalette (px): the body, the gap
     band between its halves, the rail holes and which rail is +, the row letters and column numbers (`texts`), each
-    rail's line (`rail_lines`) and its sign (`signs`), each mark's baseline through the `measure` (a
-    `breadboard_scene.LabelMeasure`), and the boxes that a wire (`obstacles`) and a pill (`sign_boxes`) keep clear of.
+    rail's line (`rail_lines`) and its sign (`signs`), each mark's baseline through the drop of the `measure` (a
+    `label_measure.LabelMeasure`), and the boxes that a wire (`obstacles`) and a pill (`sign_boxes`) keep clear of.
     It draws nothing."""
 
     def box(self):
@@ -55,8 +56,9 @@ class BoardMarks(collections.namedtuple("BoardMarks", "surface sizes measure")):
         return rail.endswith("p")
 
     def baseline(self, middle, size):
-        """The baseline of a mark `size` px high whose letters' middle lies at `middle`, as the measure draws it."""
-        return middle + self.measure.baseline(size)
+        """The baseline, a y, of a mark `size` px high whose letters' middle lies at `middle`: the measure's drop below
+        it."""
+        return middle + self.measure.mark_drop(size)
 
     def texts(self):
         """(text, x, y of its middle, font size) of each row letter, at the left edge, then each column number (1 and
@@ -97,7 +99,8 @@ class BoardMarks(collections.namedtuple("BoardMarks", "surface sizes measure")):
 
     def sign_boxes(self):
         """The box of each rail's + or - sign, which a pill keeps clear of (a wire may pass it, so `obstacles` leaves
-        it out): 0.6 of its size wide, from 0.75 of its size above its baseline to 0.25 below."""
+        it out): 0.6 of its size wide, from 0.4 of its size above the middle of its letters, its rail's holes, to 0.6
+        below, whatever the measure's drop."""
         size = self.sizes["rail_sign"]
-        return tuple(BodyBox(x - 0.3 * size, baseline - 0.75 * size, x + 0.3 * size, baseline + 0.25 * size)
-                     for _, x, baseline in self.signs())
+        return tuple(BodyBox(x - 0.3 * size, middle - 0.4 * size, x + 0.3 * size, middle + 0.6 * size)
+                     for (_, middle, *_), (_, x, _) in zip(self.rail_lines(), self.signs()))

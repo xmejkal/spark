@@ -405,11 +405,12 @@ its labels another way. The word is the usual graphics word (a scene graph). It 
 
 ### Measure — the room a label takes in one view
 
-A label **measure** (`LabelMeasure`, a Strategy) says how big a pill or a caption is as one view draws it, and how
-far a pad's label lies from its pad, in the scene's px, and where a board mark's baseline lies. The scene maker places
-every label through it (each pill, caption and pad label, and the board's marks), so no view places a label. `PxLabelMeasure` is the SVG's (the pill's sizes, the caption's font
-size from the palette, a pad label's 5 px gap); a view in characters would add a measure in
-character cells (the PO, 2026-11-21). It is not `FeatureMeasurer`, which measures a board's features on a photo.
+A label **measure** (`LabelMeasure`, a Strategy in `label_measure.py`) says how big a pill or a caption is as one view
+draws it, how far a pad's label lies from its pad, in the scene's px, and the **drop** of a label or a board's mark: how
+far its baseline lies below the middle of its letters. A *baseline* is the y it gives. The scene maker places every
+label through it (each pill, caption and pad label, and the board's marks), so no view places a label.
+`PxLabelMeasure` is the SVG's (the pill's sizes, the caption's font size from the palette, a pad label's 5 px gap); a
+view in characters would add a measure in character cells (the PO, 2026-11-21). It is not `FeatureMeasurer`, which measures a board's features on a photo.
 
 ---
 
