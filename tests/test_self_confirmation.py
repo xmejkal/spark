@@ -119,6 +119,8 @@ MAY_READ = {
     "sheet.REFUSALS": PINNED,
     "firmware_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the five it shares with board_codes (P684)",
     "check_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and no code shared with another table (P693)",
+    "design_codes.RULES_REFUSED": AGREEMENT + ": its fix against check_codes' equal literal of the word (P935)",
+    "check_codes.RULES_REFUSED": AGREEMENT + ": its fix against design_codes' equal literal of the word (P935)",
     "design_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the one it shares with check_codes (P700)",
     "build_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the four it shares with other tables (P701)",
     "records_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the two it shares with other tables (P716)",

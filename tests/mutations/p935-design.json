@@ -74,7 +74,7 @@
  {
   "file": "tests/test_json_contracts.py",
   "name": "the design area names no table beside its own",
-  "find": ", \"design\": (records_codes, codes)}",
-  "replace": "}"
+  "find": ", \"design\": (records_codes, codes),",
+  "replace": ","
  }
 ]

@@ -42,7 +42,7 @@ class CheckDesign(Operation):
         """Every check over `project` and `paths` (boards, circuit, rules, package, each a plain value)."""
         said = check.run_every_check(project, **paths)
         if "reason" in said:
-            findings = [Finding(COULD_NOT_RUN, None, check_codes.PROJECT_UNUSABLE, str(said["reason"]), None)]
+            findings = [Finding.of(COULD_NOT_RUN, None, check_codes.PROJECT_UNUSABLE, str(said["reason"]))]
         else:
             findings = check.findings_of(said["results"])
         return OperationResult(said, findings, lines=check.render_every_check(said, project).split("\n"))

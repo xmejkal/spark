@@ -591,9 +591,9 @@ def findings_of(results):
     """The Findings by `verdict`'s rule (P804): problems for each check with problems, could-not-run for each that could not
     look or holds `unchecked`, whatever its own status, and could-not-run for the run when every check was skipped. The
     subject is the check's name, the sentence its reason or its first unchecked note."""
-    findings = [Finding(PROBLEMS, r["check"], check_codes.CHECK_FOUND_PROBLEMS, "%d problem(s)" % len(r["problems"]), None)
+    findings = [Finding.of(PROBLEMS, r["check"], check_codes.CHECK_FOUND_PROBLEMS, "%d problem(s)" % len(r["problems"]))
                 for r in results if r.get("problems")]
-    findings += [Finding(COULD_NOT_RUN, r["check"], check_codes.CHECK_COULD_NOT_LOOK, str(r.get("reason") or (r.get("unchecked") or [r["what"]])[0]),
-                         None) for r in results if r.get("unchecked") or r["status"] == COULD_NOT_RUN]
-    nothing = [Finding(COULD_NOT_RUN, None, check_codes.NOTHING_ASKED, check_codes.CODES[check_codes.NOTHING_ASKED], None)]
+    findings += [Finding.of(COULD_NOT_RUN, r["check"], check_codes.CHECK_COULD_NOT_LOOK, str(r.get("reason") or (r.get("unchecked") or [r["what"]])[0]))
+                 for r in results if r.get("unchecked") or r["status"] == COULD_NOT_RUN]
+    nothing = [Finding.of(COULD_NOT_RUN, None, check_codes.NOTHING_ASKED, check_codes.NOTHING_ASKED.meaning)]
     return findings + (nothing if all(r["status"] == SKIPPED for r in results) else [])

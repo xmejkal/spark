@@ -224,11 +224,17 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
                  (lambda: rules.write_text("[]"), "rules_refused"),
                  (lambda: rules.write_text("{}"), "circuit_not_json"),
                  (lambda: circuit.write_text("[]"), "no_rule_stated")]
+        fixes = {"no_circuit": "give the path of the built circuit, usually dist/board/circuit.json, or build the board first with /spark:build",
+                 "no_rules_file": "give --rules the path of a rules file, or write .spark/rules.json with /spark:init",
+                 "no_rule_stated": "ask the person which I2C lines and which pins must not float, name them in i2c_buses and must_not_float "
+                                   "in the rules file, then run again"}
         for make, code in steps:
             make()
             with self.subTest(code=code):
                 result = rules_check.compare(circuit, rules)
                 self.assertEqual((result["status"], result["reason"].code), ("could-not-run", code))
+                # P935 PR 4: three refusals carry the fix of their code; the other two carry none
+                self.assertEqual(result.get("fix"), fixes.get(code))
         self.assertEqual(json.loads(json.dumps(result))["reason"], result["reason"], "the JSON holds the sentence alone")
 
 
