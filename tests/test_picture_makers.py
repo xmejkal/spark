@@ -281,8 +281,8 @@ class TheBuildDrawsAKeptPictureTest(unittest.TestCase):
 
     def test_the_sheet_draws_with_the_build_s_makers(self):
         renderer = next(one for one in sheet.DRAWING_RENDERERS if isinstance(one, svg_diagram.SvgBreadboardDiagram))
-        self.assertIsInstance(renderer.pictures, MadePartPictures)
-        self.assertEqual([maker.NAME for maker in renderer.pictures.chain.makers], ["stored", "features"])  # P956
+        self.assertIsInstance(renderer.scene_maker.pictures, MadePartPictures)
+        self.assertEqual([maker.NAME for maker in renderer.scene_maker.pictures.chain.makers], ["stored", "features"])  # P956
 
 
 if __name__ == "__main__":

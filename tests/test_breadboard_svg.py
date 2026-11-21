@@ -25,7 +25,7 @@ from fakes import FakePartPictures  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import drawing, part_captions, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
+from spark.breadboard import board_marks as board_marks_module, breadboard_scene, drawing, part_captions, part_pictures, sheet, svg_diagram, wire_pills, wire_routing, wiring_steps  # noqa: E402
 from test_breadboard_layout import EPAPER, RECORD_BOARD, epaper_inputs, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -307,11 +307,11 @@ class TheModuleSvgTest(unittest.TestCase):
 
     def test_a_label_of_a_bottom_edge_row_sits_above_its_pad(self):
         # P953 PR 4b: it reads bottom to top, on a module turned by 0 or half round
-        place = svg_diagram.IntoBodyLabels().place(50, 160, {"center": [100, 83]}, 0)
+        place = breadboard_scene.IntoBodyLabels(breadboard_scene.PxLabelMeasure(7)).place(50, 160, {"center": [100, 83]}, 0)
         self.assertEqual((place.y < 160, abs(place.x - 50) <= 4.8, place.anchor, place.rotate), (True, True, "start", -90))
-        place = svg_diagram.IntoBodyLabels().place(50, 4.8, {"center": [100, 83]}, 0)
+        place = breadboard_scene.IntoBodyLabels(breadboard_scene.PxLabelMeasure(7)).place(50, 4.8, {"center": [100, 83]}, 0)
         self.assertEqual((place.y > 4.8, place.anchor), (True, "end"))
-        place = svg_diagram.IntoBodyLabels().place(50, 4.8, {"center": [100, 83]}, 180)
+        place = breadboard_scene.IntoBodyLabels(breadboard_scene.PxLabelMeasure(7)).place(50, 4.8, {"center": [100, 83]}, 180)
         self.assertEqual((place.y > 4.8, abs(place.x - 50) <= 4.8, place.anchor, (180 + place.rotate) % 360),
                          (True, True, "start", 270))
 
@@ -329,6 +329,23 @@ class TheModuleSvgTest(unittest.TestCase):
         bottom = self.module.top + self.part_px["size"][1]
         self.assertGreater(bottom, max(hole.y for hole in self.layout.geometry.surface.holes))
         self.assertGreaterEqual(float(self.root.get("height")), bottom + svg_diagram.SvgBreadboardDiagram.MARGIN_PX)
+
+    def test_the_canvas_holds_each_body_when_no_wire_or_caption_reaches_past_it(self):
+        # P969 PR 3: the canvas reads each body of the scene; here the wires run round the module and its caption sits
+        # below it, so the scene is drawn with no wire and each caption moved onto the board
+        scene = breadboard_scene.BreadboardSceneMaker().make(self.layout)
+        board = scene.marks.box()
+        bare = scene._replace(jumpers=(), parts=tuple(part._replace(caption=part.caption._replace(
+            x=board.left + 10, y=board.top + 10)) for part in scene.parts))
+        x, y, width, height = [float(n) for n in ElementTree.fromstring(
+            svg_diagram.SvgBreadboardDiagram().draw(bare)).get("viewBox").split()]
+        self.assertGreater(max(part.body.bottom for part in scene.parts), board.bottom + 19.2)
+        for part in scene.parts:
+            with self.subTest(part.part.id):
+                self.assertLessEqual(x, part.body.left - 19.2 + 0.01)
+                self.assertLessEqual(y, part.body.top - 19.2 + 0.01)
+                self.assertGreaterEqual(x + width, part.body.right + 19.2 - 0.01)
+                self.assertGreaterEqual(y + height, part.body.bottom + 19.2 - 0.01)
 
 
 WALK = ROOT / "tests" / "data" / "breadboard" / "walk-c6"
@@ -664,13 +681,13 @@ class ThePillsTest(unittest.TestCase):
         for fixture, (_, layout) in self.drawn.items():
             with self.subTest(fixture):
                 bodies = [svg_diagram.BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
-                background = svg_diagram.BoardBackground(svg_diagram.BoardPalette.load())
-                obstacles = background.obstacles(layout.geometry.surface, bodies)
+                marks = board_marks_module.BoardMarks(layout.geometry.surface, board_marks_module.BoardPalette.load().sizes)
+                obstacles = marks.obstacles(bodies)
                 paths = wire_routing.TrackJumperRouter().route(layout, obstacles)
-                signs = background.sign_boxes(layout.geometry.surface)
+                signs = marks.sign_boxes()
                 self.assertEqual(len(signs), 4)
-                pills = svg_diagram.PillLayout(4.0, 3.4).place(layout.jumpers, paths,
-                                                               obstacles._replace(marks=obstacles.marks + signs))
+                pills = wire_pills.PillLayout(4.0, 3.4, breadboard_scene.PxLabelMeasure(7)).place(layout.jumpers, paths,
+                                                                                                  obstacles._replace(marks=obstacles.marks + signs))
                 self.assertEqual(sorted(pills), sorted(jumper.step for jumper in layout.jumpers))
                 for step, pill in pills.items():
                     box = pill.box()
@@ -904,7 +921,8 @@ class TheNoteTest(unittest.TestCase):
             ("NoRecord", None))]
         layout = drawing.BreadboardLayout(None, parts, [], Geometry())
         pictures = {part.id: part_pictures.Picture("", (0, 0, 1, 1), "") for part in parts}
-        self.assertEqual(part_captions.PartNotes.lines(layout, pictures), [
+        self.assertEqual([part_captions.PartNotes.line(part, layout.geometry.part(part.type), pictures[part.id])
+                          for part in layout.parts], [
             "Maker Module: pads and header side not verified.", "nameless-module: pads and header side not verified.",
             "NoRecord: pads and header side not verified."])
 

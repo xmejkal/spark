@@ -109,6 +109,7 @@ MAY_READ = {
     "wiring_steps.JOIN": "a kind of step, which picks the steps the test counts: vocabulary, not a value",
     "wiring_steps.RESISTOR": "a kind of end, which picks the steps the test counts: vocabulary, not a value",
     "sheet.DRAWING_RENDERERS": STRUCTURE,
+    "wire_pills.WIRE_SIZES_PX": "the wire's sizes: an input to the router test's touch rule (a wire reaches half its under-stroke), and in the pills' own test compared with the literal numbers of the praised page at spark's pitch (P969)",
     "kept_moves.CODES": AGREEMENT, "kept_moves.MESSAGES": AGREEMENT,
     "board_grant.CODE_FOR_WHY": STRUCTURE + ": the map the test checks the raise sites against",
     "board_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and against the codes the bench scripts raise and write",

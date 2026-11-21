@@ -1,6 +1,7 @@
 """
 The way each jumper runs on the drawn breadboard (P953, #1359): around the parts, on tracks between the holes, never
-over a part's body. `svg_diagram` draws each JumperPath that a JumperRouter gives it.
+over a part's body. The scene maker (`breadboard_scene`, P969) asks a JumperRouter once for every JumperPath, and
+each view draws the scene it made.
 
 The grid (`TrackGrid`) has a cell every half a pitch, from the first column and row a. A hole lies on an even cell. A
 track is an odd line: a horizontal track lies half a pitch off a row of holes, a vertical one half a pitch off a column,

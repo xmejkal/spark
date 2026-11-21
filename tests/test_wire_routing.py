@@ -19,7 +19,7 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import drawing, sheet, svg_diagram, wire_routing  # noqa: E402
+from spark.breadboard import board_marks, drawing, sheet, svg_diagram, wire_pills, wire_routing  # noqa: E402
 from spark.breadboard.spacing import BodyBox  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
@@ -27,7 +27,7 @@ DATA = ROOT / "tests" / "data" / "breadboard"
 FIXTURES = ("walk-c6", "button-light-xiao", "button-light", "epaper")
 NS = {"svg": "http://www.w3.org/2000/svg"}
 #: Half the white under-stroke, in px: how far a wire reaches either side of its line.
-HALF_STROKE = svg_diagram.SvgBreadboardDiagram.UNDER_STROKE_PX / 2
+HALF_STROKE = wire_pills.WIRE_SIZES_PX.under_stroke / 2
 
 
 def routed(fixture):
@@ -35,8 +35,8 @@ def routed(fixture):
     with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
         layout = sheet._plan_layout(sheet._read_build(DATA / fixture / "requirements.json"))
     bodies = [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
-    background = svg_diagram.BoardBackground(svg_diagram.BoardPalette.load())
-    return layout, bodies, wire_routing.TrackJumperRouter.routing(layout, background.obstacles(layout.geometry.surface, bodies))
+    marks = board_marks.BoardMarks(layout.geometry.surface, board_marks.BoardPalette.load().sizes)
+    return layout, bodies, wire_routing.TrackJumperRouter.routing(layout, marks.obstacles(bodies))
 
 
 def pieces(points):
@@ -216,8 +216,8 @@ class TheFallbackTest(unittest.TestCase):
         layout, bodies, _ = routed("button-light-xiao")
         jumper = next(one for one in layout.jumpers if one.step == 5)
         wall = BodyBox(jumper.other.x - 12, jumper.other.y - 12, jumper.other.x + 12, jumper.other.y + 12)
-        background = svg_diagram.BoardBackground(svg_diagram.BoardPalette.load())
-        routing = wire_routing.TrackJumperRouter.routing(layout, background.obstacles(layout.geometry.surface, bodies + [wall]))
+        marks = board_marks.BoardMarks(layout.geometry.surface, board_marks.BoardPalette.load().sizes)
+        routing = wire_routing.TrackJumperRouter.routing(layout, marks.obstacles(bodies + [wall]))
         self.assertEqual(routing.paths[5], wire_routing.JumperPath((), 0, "no_way"))
 
         class Walled(wire_routing.JumperRouter):
@@ -253,10 +253,10 @@ class TheTrackGridTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.surface = drawing.Surface.load_full()
-        cls.background = svg_diagram.BoardBackground(svg_diagram.BoardPalette.load())
+        cls.marks = board_marks.BoardMarks(cls.surface, board_marks.BoardPalette.load().sizes)
 
     def grid(self, bodies=()):
-        return wire_routing.TrackGrid(self.surface, self.background.obstacles(self.surface, bodies))
+        return wire_routing.TrackGrid(self.surface, self.marks.obstacles(bodies))
 
     def test_every_terminal_hole_is_an_even_cell_and_not_free(self):
         grid = self.grid()

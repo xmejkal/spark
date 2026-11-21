@@ -1,7 +1,8 @@
 """
 Each drawn part's words on the breadboard picture outside its body (P953, #1359): its caption, the human name from its
-record (`PartCaption`, `Caption`), and its line of the note under the picture (`PartNotes`). `svg_diagram`'s renderer
-places them after the wires and their pills and draws them; nothing here draws.
+record (`PartCaption`, `Caption`), and its line of the note under the picture (`PartNotes`). The scene maker
+(`breadboard_scene`) places the captions after the wires and their pills and writes each part's line of the note, and
+`svg_diagram` draws them; nothing here draws.
 """
 
 import collections
@@ -9,23 +10,20 @@ import collections
 from spark.breadboard.spacing import BodyBox
 
 
-class Caption(collections.namedtuple("Caption", "words named x y size")):
+class Caption(collections.namedtuple("Caption", "words named x y size width")):
     """Value: one part's caption (P953): its words, `named` when they are the record's name (else an id, drawn muted),
-    the start of its baseline (x, y) and its font size in px."""
+    the start of its baseline (x, y), its font size and its width in px, as the view's label measure gives them (P969)."""
 
-    #: The width a character takes, the room added to the words' width, and the reach of the letters above and below
-    #: the baseline, each times the size. Chrome draws the fixtures' names 0.50 to 0.54 of the size a character wide.
-    PER_CHARACTER, ROOM, ASCENT, DESCENT = 0.55, 0.5, 0.75, 0.25
+    #: The reach of the letters above and below the baseline, each times the size.
+    ASCENT, DESCENT = 0.75, 0.25
 
     def box(self):
-        return BodyBox(self.x, self.y - self.ASCENT * self.size,
-                       self.x + (self.PER_CHARACTER * len(self.words) + self.ROOM) * self.size,
-                       self.y + self.DESCENT * self.size)
+        return BodyBox(self.x, self.y - self.ASCENT * self.size, self.x + self.width, self.y + self.DESCENT * self.size)
 
 
 class PartCaption:
     """
-    Renderer helper: each part's caption (P953), its human name outside its body: the record's `name` up to its first
+    Service: places each part's caption (P953), its human name outside its body, for the scene maker: the record's `name` up to its first
     comma, else the record's id, else the part's own id. It lies GAP px above the body, left-aligned with it; below the
     body when anything it must keep clear of is in that box: a body, a printed letter, number or rail sign, a wire, an
     end dot, a pill or a caption placed before it, by CLEAR px. When both are taken, it moves out a pitch at a time
@@ -41,8 +39,9 @@ class PartCaption:
     #: and the wires that leave its pads.
     FARTHEST = 9
 
-    def __init__(self, size, pitch):
-        self.size, self.pitch = size, pitch
+    def __init__(self, measure, pitch):
+        """`measure` (a LabelMeasure) gives each caption's size and width; `pitch` is the board's, in px."""
+        self.measure, self.pitch = measure, pitch
 
     @staticmethod
     def words(part):
@@ -57,8 +56,9 @@ class PartCaption:
         taken, captions = list(taken), {}
         for part, body in zip(parts, bodies):
             words, named = self.words(part)
-            caption = Caption(words, named, body.left, body.top - self.GAP - Caption.DESCENT * self.size, self.size)
-            below = body.bottom + self.GAP + Caption.ASCENT * self.size
+            size, width = self.measure.caption(words)
+            caption = Caption(words, named, body.left, body.top - self.GAP - Caption.DESCENT * size, size, width)
+            below = body.bottom + self.GAP + Caption.ASCENT * size
             tries = [caption._replace(x=body.left + step * self.pitch, y=y + side * away * self.pitch)
                      for step in range(int((body.right - body.left) // self.pitch) + 1) for away in range(self.FARTHEST + 1)
                      for side, y in ((-1, caption.y), (1, below))]
@@ -69,21 +69,17 @@ class PartCaption:
 
 
 class PartNotes:
-    """Renderer helper: the note under the picture (P953), one line for each part that has a fact not verified: its
-    caption's words, then the `words` of each such group of its part_px, "DFRobot FireBeetle 2 ESP32-C6: pads, row side
-    and USB end not verified.", then its picture's own note (P946). It follows the caption's rule: a record id only
-    where the record has no name."""
+    """Service: a part's line of the note under the drawing (P953), for the scene maker: its caption's words, then the
+    `words` of each group of its part_px that is not verified, "DFRobot FireBeetle 2 ESP32-C6: pads, row side and USB
+    end not verified.", then its picture's own note (P946); "" for a part with neither. It follows the caption's rule:
+    a record id only where the record has no name."""
 
     @staticmethod
-    def lines(layout, pictures):
-        lines = []
-        for part in layout.parts:
-            words = [note["words"] for note in layout.geometry.part(part.type).get("notes", [])]
-            said = ["%s: %s not verified." % (PartCaption.words(part)[0], _listed(words))] if words else []
-            said += [pictures[part.id].note] if pictures[part.id].note else []
-            if said:
-                lines.append(" ".join(said))
-        return lines
+    def line(part, part_px, picture):
+        words = [note["words"] for note in part_px.get("notes", [])]
+        said = ["%s: %s not verified." % (PartCaption.words(part)[0], _listed(words))] if words else []
+        said += [picture.note] if picture.note else []
+        return " ".join(said)
 
 
 def _listed(words):
