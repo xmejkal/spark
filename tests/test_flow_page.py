@@ -299,7 +299,9 @@ class TheBenchLineTest(unittest.TestCase):
         text = page_of(a_phase("deploy", "not-started"))
         bench = html.escape(BENCH)
         self.assertEqual(text.count(bench), 1)
-        rest = text.replace(bench, "")
+        # P977 PR 2: the guide's deploy sentence asks "When the breadboard is wired, ...", a condition for the person and no claim
+        # that the board is wired, so it stands outside this check (the guide has its own tests); the rest of the page does not.
+        rest = re.sub(r'<section id="guide">.*?</section>', "", text.replace(bench, ""), flags=re.S)
         for word in ("wired", "flashed", "none recorded"):
             self.assertNotIn(word, rest)
 
@@ -1215,6 +1217,131 @@ class TheGuidingOrderTest(unittest.TestCase):
         self.assertEqual(html_list.items(two_records), ["<li>Panel: one</li>", "<li>Panel: two</li>"])
         self.assertIn("CONFLICT", lines[1])
         self.assertEqual(lines[2:], ["<li>Panel: three</li>", "<li>Other: four</li>"])
+
+
+def a_guide(**changes):
+    """A guide as `data.guide` holds it: a now with its sentence and no wiring steps, and the lists beside it."""
+    guide = {"now": {"phase": "build", "by": ["claude"], "says": "Ask Claude to build the board.", "offer": "build", "needs": [],
+                     "steps": None},
+             "done": ["idea", "needs"], "later": ["firmware", "deploy"], "set_aside": ["stick"], "no_simulation": None}
+    return dict(guide, **changes)
+
+
+def guide_page(guide, wiring=None, phases=("one",)):
+    """The text of FlowHtmlPage's page of these phases, with `guide` (P977 PR 2)."""
+    page = FlowPage("t", [a_phase(name).to_dict() for name in phases], phases[0], [], [], wiring, None, None, guide)
+    return FlowHtmlPage().text(page)
+
+
+def guide_lines(text):
+    """(the labelled lines of the page's guide section as (label, the rest of the line), the section's markup)."""
+    section = text.split('<section id="guide">')[1].split("</section>")[0]
+    return re.findall(r"<p><strong>([^<]*)</strong> (.*?)</p>", section), section
+
+
+class TheGuideSectionTest(unittest.TestCase):
+    """P977 PR 2: the page draws data.guide under the intro and above the rail."""
+
+    def test_the_guide_stands_between_the_intro_and_the_rail_with_the_hook_id(self):
+        text = guide_page(a_guide())
+        self.assertEqual(text.count('<section id="guide">'), 1)
+        order = [text.index(mark) for mark in ('class="intro"', '<section id="guide">', '<nav aria-label="Phases">')]
+        self.assertEqual(order, sorted(order))
+
+    def test_each_line_shows_its_items_in_order_and_an_empty_list_shows_no_line(self):
+        lines, _section = guide_lines(guide_page(a_guide()))
+        self.assertEqual(lines, [("NOW", "Ask Claude to build the board."), ("DONE", "idea, needs"), ("LATER", "firmware, deploy"),
+                                 ("SET ASIDE", "stick")])
+        lines, _section = guide_lines(guide_page(a_guide(done=[], set_aside=[])))
+        self.assertEqual([label for label, _rest in lines], ["NOW", "LATER"])
+        lines, _section = guide_lines(guide_page(a_guide(later=[])))
+        self.assertEqual([label for label, _rest in lines], ["NOW", "DONE", "SET ASIDE"])
+
+    def test_no_simulation_is_its_own_line_under_later(self):
+        text = guide_page(a_guide(no_simulation="No simulation: Wokwi has no model of this board."))
+        _lines, section = guide_lines(text)
+        self.assertIn("<p>No simulation: Wokwi has no model of this board.</p>", section)
+        self.assertLess(section.index("firmware, deploy"), section.index("No simulation: Wokwi"))
+        self.assertLess(section.index("No simulation: Wokwi"), section.index("SET ASIDE"))
+        self.assertNotIn("No simulation", guide_page(a_guide()))
+
+    def test_a_null_now_draws_no_now_line(self):
+        lines, _section = guide_lines(guide_page(a_guide(now=None)))
+        self.assertEqual([label for label, _rest in lines], ["DONE", "LATER", "SET ASIDE"])
+        self.assertNotIn("NOW", guide_page(a_guide(now=None)))
+
+    def test_the_step_link_shows_with_steps_in_now_and_wiring_steps_on_the_page(self):
+        now = dict(a_guide()["now"], steps=3)
+        wiring = PageWiring([(1, "Put the board in."), (2, "Run a jumper."), (3, "Run another.")], [], [], None)
+        lines, section = guide_lines(guide_page(a_guide(now=now), wiring))
+        self.assertEqual(lines[0], ("NOW", 'Ask Claude to build the board. <a href="#step-1">Start wiring at step 1</a>'))
+
+    def test_the_step_link_goes_to_the_first_step_s_own_number(self):
+        now = dict(a_guide()["now"], steps=2)
+        wiring = PageWiring([(5, "Put the board in."), (6, "Run a jumper.")], [], [], None)
+        self.assertIn('<a href="#step-5">Start wiring at step 5</a>', guide_page(a_guide(now=now), wiring))
+
+    def test_no_step_link_without_steps_in_now_or_without_wiring_steps_on_the_page(self):
+        wiring = PageWiring([(1, "Put the board in.")], [], [], None)
+        for guide, shown in ((a_guide(), wiring), (a_guide(now=dict(a_guide()["now"], steps=4)), None),
+                             (a_guide(now=dict(a_guide()["now"], steps=4)), PageWiring([], [], [], "no sheet yet"))):
+            self.assertNotIn("Start wiring", guide_page(guide, shown))
+
+    def test_with_a_guide_the_stands_at_line_goes_and_without_one_it_stays(self):
+        self.assertNotIn("The project stands at", guide_page(a_guide()))
+        self.assertNotIn("No phase is open", guide_page(a_guide()))
+        plain = guide_page(None)
+        self.assertIn("<p>The project stands at: one.</p>", plain)
+        self.assertNotIn('id="guide"', plain)
+
+    def test_a_text_with_an_angle_bracket_or_an_ampersand_is_escaped(self):
+        now = dict(a_guide()["now"], says="<b>go</b> & wait")
+        text = guide_page(a_guide(now=now, done=["<i>idea</i>"], later=["a&b"], set_aside=["<u>x</u>"], no_simulation="<s>none</s>"))
+        for raw in ("<b>go", "<i>idea", "<u>x", "<s>none", "a&b"):
+            self.assertNotIn(raw, text)
+        for escaped in ("&lt;b&gt;go&lt;/b&gt; &amp; wait", "&lt;i&gt;idea&lt;/i&gt;", "a&amp;b", "&lt;u&gt;x&lt;/u&gt;", "&lt;s&gt;none&lt;/s&gt;"):
+            self.assertIn(escaped, text)
+
+    def test_the_guide_adds_no_script_and_loads_nothing(self):
+        text = guide_page(a_guide(), PageWiring([(1, "x")], [], [], None)).lower()
+        self.assertNotIn("<script", text)
+        self.assertNotIn("http", text)
+
+
+class TheGuideThroughWritePageTest(unittest.TestCase):
+    """The guide is computed once in write_page, masked, drawn, and answered as Written.guide."""
+
+    def test_write_page_draws_the_guide_it_answers(self):
+        store = FakeStore()
+        written = write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one", OK), a_phase("two", "not-started")),
+                             parts_of([]), store=store)
+        text = store.written[0][2]
+        self.assertEqual(text.count('<section id="guide">'), 1)
+        self.assertEqual(written.guide["done"], ["one"])
+        self.assertIn("<strong>DONE</strong> one</p>", text)
+        self.assertNotIn("The project stands at", text)
+
+    def test_write_page_computes_the_guide_once(self):
+        calls = []
+
+        def counting(project, phases):
+            calls.append(project)
+            return a_guide()
+
+        with mock.patch("spark.flow.write_flow_page.guide_of", counting):
+            write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one")), parts_of([]), store=FakeStore())
+        self.assertEqual(len(calls), 1)
+
+    def test_no_home_path_reaches_the_guide_on_the_page_or_in_what_is_answered(self):
+        home = Path(tempfile.mkdtemp()).resolve()
+        guide = a_guide(done=["read %s/secret" % home], now=dict(a_guide()["now"], says="see %s/notes" % home))
+        store = FakeStore()
+        with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}), \
+                mock.patch("spark.flow.write_flow_page.guide_of", lambda *_args: guide):
+            written = write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("one")), parts_of([]), store=store)
+        self.assertNotIn(str(home), store.written[0][2])
+        self.assertIn("~/notes", store.written[0][2])
+        self.assertEqual((written.guide["done"], written.guide["now"]["says"]), (["read ~/secret"], "see ~/notes"))
 
 
 if __name__ == "__main__":

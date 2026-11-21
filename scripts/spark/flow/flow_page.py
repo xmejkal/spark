@@ -33,7 +33,10 @@ PageWiring = namedtuple("PageWiring", "steps before_power records why_missing")
 #: Pictures, `notes` fixed lines and `wiring` a PageWiring or None (no section). `fingerprint` is the flow's
 #: (`fingerprint.fingerprint_of`, P829) and `written` the newest change time of its files, both None when not known. A page
 #: is masked before it is rendered.
-FlowPage = namedtuple("FlowPage", "title phases stands_at pictures notes wiring fingerprint written", defaults=(None, None, None))
+#: `guide` is the flow's guide (`guide.guide_of`, P977), a dict, or None for a page from a caller that has none: then the page
+#: says where the project stands in one line.
+FlowPage = namedtuple("FlowPage", "title phases stands_at pictures notes wiring fingerprint written guide",
+                      defaults=(None, None, None, None))
 
 TICK = MARKS[OK][1]
 
@@ -196,6 +199,8 @@ class FlowHtmlPage:
              "h1,h2{font-family:var(--display);line-height:1.2}"
              "nav ol{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:0;padding:0}"
              "a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}"
+             "#guide{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}"
+             "#guide p{margin:6px 0}"
              ".phase{border-top:1px solid var(--line);padding:4px 0}"
              "summary{cursor:pointer}summary h2{display:inline}"
              "p,li{overflow-wrap:anywhere}"
@@ -209,8 +214,8 @@ class FlowHtmlPage:
     INLINER = SvgInliner()
 
     def text(self, page):
-        head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._intro(page), self._rail(page), self._stands_at(page)]
-        return "\n".join(head + [part for part in self._body(page) if part] + ["</body>", "</html>"]) + "\n"
+        head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._intro(page), self._guide(page), self._rail(page), self._stands_at(page)]
+        return "\n".join([part for part in head if part] + [part for part in self._body(page) if part] + ["</body>", "</html>"]) + "\n"
 
     @staticmethod
     def _wiring_first(page):
@@ -238,8 +243,35 @@ class FlowHtmlPage:
                           '<body data-stands-at="%s" data-fingerprint="%s" data-written="%s">' % (
                               _text(page.stands_at or "none"), _text((page.fingerprint or "none")[:SHORT]), _text(page.written or "none"))])
 
+    def _guide(self, page):
+        """The guide (P977 PR 2) in `<section id="guide">`, under the intro: NOW with its sentence (and, when the guide's now
+        holds the wiring and the page holds steps, a link to the first), then DONE, LATER (with the line on why there is no
+        simulation) and SET ASIDE. A list with no item draws no line. Nothing with no guide, or a guide with no line."""
+        guide = page.guide
+        if guide is None:
+            return ""
+        now = guide["now"]
+        link = ""
+        if now and now.get("steps") and self._wiring_first(page) and page.wiring.steps:
+            first = page.wiring.steps[0][0]
+            link = ' <a href="#step-%d">%s</a>' % (first, _text(flow_codes.START_WIRING % first))
+        lines = [self._guide_line(flow_codes.GUIDE_NOW, [now["says"]], link) if now else "",
+                 self._guide_line(flow_codes.GUIDE_DONE, guide["done"], ""),
+                 self._guide_line(flow_codes.GUIDE_LATER, guide["later"], ""),
+                 "<p>%s</p>" % _text(guide["no_simulation"]) if guide["no_simulation"] else "",
+                 self._guide_line(flow_codes.GUIDE_SET_ASIDE, guide["set_aside"], "")]
+        lines = [line for line in lines if line]
+        return "\n".join(['<section id="guide">'] + lines + ["</section>"]) if lines else ""
+
+    @staticmethod
+    def _guide_line(label, items, link):
+        """One line of the guide: its label in `<strong>` and its items, comma apart, or nothing when there is none."""
+        return "<p><strong>%s</strong> %s%s</p>" % (_text(label), _text(", ".join(items)), link) if items else ""
+
     @staticmethod
     def _stands_at(page):
+        if page.guide is not None:  # the guide says where the project stands (P977)
+            return ""
         return "<p>%s</p>" % _text(flow_codes.STANDS_AT_LINE % page.stands_at if page.stands_at else flow_codes.NOTHING_OPEN_LINE)
 
     @staticmethod

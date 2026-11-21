@@ -19,9 +19,10 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
 - `stands_at`: the first phase that is open. It passes a phase whose `status` is `ok` or `null`. Only `ok` is a pass
   that spark judged. The deploy is never done here, so `stands_at` always names a phase.
 - `guide` ([P977](https://github.com/xmejkal/spark/issues/1407)): what the person does now. `now` is `{phase, by, says,
-  offer, needs}`: the phase to act on, who acts (a list: `["you", "claude"]` when the firmware and the wiring are two
-  jobs, else one item), one sentence for the person, the key of the offer that does the job (or `null`) and, for the
-  parts, the needs with no pick. While no need is written, `now` is the idea. `now` is `null` only with a phase list a
+  offer, needs, steps}`: the phase to act on, who acts (a list: `["you", "claude"]` when the firmware and the wiring are two
+  jobs, else one item), one sentence for the person, the key of the offer that does the job (or `null`), for the
+  parts, the needs with no pick, and `steps`, the number of the wiring's steps when the wiring is part of now (the two jobs
+  of the firmware), else `null`. While no need is written, `now` is the idea. `now` is `null` only with a phase list a
   test swaps in. `done` names the phases before `now`; the breadboard is in it only once `now` is past the firmware's
   two jobs and the sheet is current, as `breadboard (spark cannot see it)`. `later` names the phases after `now`. An
   item of `done` or `later` can carry a suffix in parentheses: match on the name before it. `set_aside` lists the needs
@@ -93,7 +94,12 @@ the breadboard phase too when the sheet exists ([P886](https://github.com/xmejka
 
 `flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It reads the
 same phases as `show`, so a person reads them from the disk, in a browser, with no script. A line under the title says
-what the page is and that every change goes through Claude in the chat. Then comes a rail of links, one for each phase,
+what the page is and that every change goes through Claude in the chat. Under it stands the guide
+([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: `data.guide` as one line each, NOW with its
+sentence, DONE, LATER and SET ASIDE, and a list with no item draws no line. When `now.steps` is set and the page holds wiring
+steps, the NOW line ends in the link "Start wiring at step N" to the first step's own `#step-N`. The sentence about why there is
+no simulation stands as a line of its own under LATER. A `now` that is `null` draws no NOW line. With a guide the line "The
+project stands at" is not drawn; a page from a caller that gives no guide keeps it. Then comes a rail of links, one for each phase,
 and one section for each phase. Each section is folded (`<details>`) under its heading: the phase name, a mark and a
 status word. Opened, it shows who does it, what it says and its offers as plain text. A section `Wiring` comes when the
 project holds a `requirements.json` ([P828](https://github.com/xmejkal/spark/issues/1186)). If the section holds wiring steps,

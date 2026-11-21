@@ -152,8 +152,8 @@
  {
   "file": "scripts/spark/flow/write_flow_page.py",
   "name": "the page answers an empty guide (P977)",
-  "find": "privacy.masked(guide_of(project, phases)))",
-  "replace": "{})"
+  "find": "page.fingerprint, page.guide)",
+  "replace": "page.fingerprint, {})"
  },
  {
   "file": "scripts/spark/flow/guide.py",

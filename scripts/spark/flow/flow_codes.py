@@ -117,6 +117,10 @@ PAGE_INTRO = "Where this project stands. This page only shows it. To change anyt
 #: Said under the intro when the page holds wiring steps, so the wiring comes first and the phases are folded below it.
 WIRING_FIRST = "The wiring and its pictures come first. The phases are below, each folded: click one to read it."
 NOTHING_OPEN_LINE = "No phase is open."
+#: The guide on the page (P977 PR 2): the label of each line, and the link to the first wiring step, drawn when the guide's
+#: now holds the wiring (`now.steps`).
+GUIDE_NOW, GUIDE_DONE, GUIDE_LATER, GUIDE_SET_ASIDE = "NOW", "DONE", "LATER", "SET ASIDE"
+START_WIRING = "Start wiring at step %d"
 NOT_DRAWN_HERE = "Not drawn here. The build draws it: run /spark:build --keep."
 NO_PICTURE_FILE = "Not drawn: %s is not in the project yet. The build with --keep writes it."
 UNREADABLE_PICTURE = "Not drawn: %s cannot be read."
