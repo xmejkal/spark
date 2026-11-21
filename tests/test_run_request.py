@@ -272,6 +272,32 @@ class TheVerbTest(unittest.TestCase):
             self.assertEqual((code, envelope["op"], [item["code"] for item in envelope["unchecked"]]), (2, "run-request", ["request_not_offered"]))
             self.assertFalse((project / ".spark" / "page-request.json").exists())
 
+    def test_a_refused_pick_and_the_current_pick_are_no_offers_so_a_request_for_either_runs_nothing(self):
+        """P976 (#1416): a pick spark would refuse (none free) and the need's current pick are not offered; another is."""
+        with tempfile.TemporaryDirectory() as home, tempfile.TemporaryDirectory() as folder:
+            for part, entry in (("x-held", {"count": 3, "used_in": {"smartbin-local": 3}}), ("x-many", {"count": "many"})):
+                for kind, held in (("catalog", {"id": part, "name": "A soil probe", "kind": "sensor",
+                                                "function": [{"does": "sense", "what": "soil-moisture"}]}),
+                                   ("drawer", dict({"label": part, "is": {"part": part}}, **entry))):
+                    (Path(home) / kind).mkdir(exist_ok=True)
+                    (Path(home) / kind / (part + ".json")).write_text(json.dumps(dict({"schema": 1}, **held)))
+            project = Path(folder) / "plant-alarm"
+            (project / ".spark").mkdir(parents=True)
+            (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+                {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]},
+                {"id": "wet", "does": "sense", "what": "soil-moisture"}]}))
+            pick = FakeStep("pick")
+            with mock.patch.dict(os.environ, {"SPARK_HOME": home}):
+                for key, code in (("pick:soil:x-held", "request_not_offered"), ("pick:soil:x-many", "request_not_offered"),
+                                  ("pick:wet:x-held", "request_not_offered"), ("pick:wet:x-many", None)):
+                    seen = fingerprint_of(project, read_flow(project)[0])[:12]
+                    (project / ".spark" / "page-request.json").write_text(json.dumps({"id": ID, "key": key, "seen": seen}))
+                    with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+                        run_cli(HelpText("flow.py", tool="flow"), RunRequest(operations={"pick": pick}),
+                                ["--project", str(project), "--json"], outside_builder=build_bare_outside_world, outside=FakeOutsideWorld())
+                    self.assertEqual([item["code"] for item in json.loads(out.getvalue())["unchecked"]], [code] if code else [], key)
+            self.assertEqual([values["project_and_picks"][1] for values in pick.ran], ["wet=x-many"])
+
     def test_the_real_build_offer_of_a_hand_written_project_runs_the_build(self):
         with tempfile.TemporaryDirectory() as home, tempfile.TemporaryDirectory() as folder:
             project = Path(folder) / "bl"
