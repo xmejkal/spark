@@ -370,9 +370,9 @@ class TheBenchCodesTableTest(unittest.TestCase):
 
 
 #: P853: each area whose codes are Codes, with its table. An area joins when its codes take their fix (P935).
-AREAS_WITH_FIXES = {"idea": idea_codes, "core": codes, "records": records_codes, "sourcing": sourcing_codes}
+AREAS_WITH_FIXES = {"idea": idea_codes, "core": codes, "records": records_codes, "sourcing": sourcing_codes, "design": design_codes}
 #: P935: the tables whose Codes an area names besides its own: the core's, which every Operation writes, and the records'.
-NAMED_TOO = {"records": (codes,), "sourcing": (records_codes, codes)}
+NAMED_TOO = {"records": (codes,), "sourcing": (records_codes, codes), "design": (records_codes, codes)}
 #: P935: the one given fix that is no Code's: the override a CLI injects through `HelpText` (parts.py's describe route).
 INJECTED_FIXES = {"text.bad_argument_fix"}
 #: P935: each fix given with the code of a refusal its site caught, by the site (the file in its area and the function)
@@ -687,6 +687,21 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             "research/other.py:line 29: " + named % "error.code",
             "other.py:line 9: spark.core.result.Finding makes a Finding: Finding.of takes the fix from its Code",
             "other.py:line 10: spark.core.result.Finding makes a Finding: Finding.of takes the fix from its Code"]))
+
+    def test_the_scan_reads_the_of_error_and_of_lines_of_a_coded_error_like_its_constructor(self):
+        # P935 PR 3: DesignError.of_error (loader.py) was not seen: the call's name ends in of_error, not in the class's
+        head = ("from spark.core.errors import CodedMessageError\nfrom spark.design import design_codes\n\n\n"
+                "class DesignError(CodedMessageError):\n    pass\n\n\n")
+        calls = ("DesignError.of_error(e, code=design_codes.PART_UNUSABLE)\n"
+                 "DesignError.of_lines(lines, code=design_codes.BOARD_UNUSABLE, fix='f')\n"
+                 "DesignError.of_error(e, code=reason)\n"
+                 "DesignError.of_lines(lines, **kw)\n"
+                 "Other.of_error(e, code=reason)\n")
+        self.assertEqual(calls_off_the_table({"design.py": head + calls}, design_codes), (4, [
+            "design.py:line 10: DesignError.of_lines gives a fix",
+            "design.py:line 11: DesignError.of_error names its code as 'reason', not a Code of spark.design.design_codes",
+            "design.py:line 12: DesignError.of_lines passes keywords by **",
+            "design.py:line 12: DesignError.of_lines names its code as None, not a Code of spark.design.design_codes"]))
 
 
 class TheDrawingCodeTest(unittest.TestCase):

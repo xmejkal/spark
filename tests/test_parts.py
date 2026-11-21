@@ -3783,6 +3783,33 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
             said, code = run_json(["--audit"])
         self.assertEqual((code, [(p["subject"], p["code"]) for p in said["problems"]]), (1, [("x-bad", "record_file_broken"), ("x", "drawer_entry_dangling")]))
 
+    def test_the_audit_s_problems_and_refusals_carry_the_fix_of_their_code(self):
+        # P935 PR 3: a broken record and a dangling entry had fix null in --json; the broken record's fix is the audit's own
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-bad.json").write_text(json.dumps({"schema": 2, "id": "x-bad", "name": "B", "kind": "rtc"}))
+        (home / "drawer").mkdir()
+        (home / "drawer" / "x.json").write_text(json.dumps({"schema": 1, "label": "x", "count": 1, "is": {"part": "gone-part"}}))
+        with in_store(home):
+            said, _ = run_json(["--audit"])
+        self.assertEqual([(p["code"], p["fix"]) for p in said["problems"]], [
+            ("record_file_broken", "fix the record that `subject` names, then run `parts.py --audit` again"),
+            ("drawer_entry_dangling", "point the entry's `is` at a record that exists, or research the part with /spark:research")])
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root reads a file with no permission")
+    def test_a_drawer_file_the_disk_will_not_give_is_could_not_run_with_the_fix_of_its_code(self):
+        # P935 PR 3: the audit's OSError path, pinned as the text it said before UNREADABLE_FIX moved to the code
+        home = Path(tempfile.mkdtemp())
+        (home / "drawer").mkdir()
+        locked = home / "drawer" / "x.json"
+        locked.write_text(json.dumps({"schema": 1, "label": "x", "count": 1, "is": {"part": "gone-part"}}))
+        locked.chmod(0)
+        self.addCleanup(locked.chmod, 0o600)
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((code, said["unchecked"][0]["code"], said["unchecked"][0]["fix"]),
+                         (2, "record_unreadable", "fix the file the sentence names, then run --audit again"))
+
     def test_audit_s_help_lists_its_own_arguments_alone(self):
         err = io.StringIO()
         with self.assertRaises(SystemExit), contextlib.redirect_stdout(err):
@@ -3938,6 +3965,15 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         self.assertEqual(tally["unchecked"][0]["code"], "project_not_listed")
         self.assertEqual((offer_code, offer["problems"][0]["code"], offer["problems"][0]["subject"]), (1, "offer_unknown", "nothing-like-this"))
         self.assertEqual(match["unchecked"][0]["code"], "no_needs_yet")
+
+    def test_the_goal_refusals_that_moved_say_what_they_said(self):
+        # P935 PR 3: the texts of --pick's bad pairs and --tally's unlisted project, as their constants said them
+        project = Path(tempfile.mkdtemp())
+        with in_store(Path(tempfile.mkdtemp())):
+            pick, _ = run_json(["--pick", str(project), "no-equals-sign"])
+            tally, _ = run_json(["--tally", str(project)])
+        self.assertEqual(pick["unchecked"][0]["fix"], "parts.py --match <project> lists each need's candidates and their ids")
+        self.assertEqual(tally["unchecked"][0]["fix"], "mark a step with parts.py --step <project> <step> in a Claude Code session: that puts it on the list")
 
     def test_a_needs_file_that_is_not_json_is_could_not_run_with_the_store_s_code(self):
         project = Path(tempfile.mkdtemp())
