@@ -134,7 +134,7 @@
  {
   "file": "tests/test_json_contracts.py",
   "name": "the scan takes a name of another table's module that is no Code",
-  "find": "if not isinstance(getattr(named, word, None), Code):",
-  "replace": "if named is None:"
+  "find": "if not isinstance(held, Code) or (named in",
+  "replace": "if named is None or (named in"
  }
 ]

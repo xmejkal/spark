@@ -14,7 +14,7 @@
  {
   "file": "scripts/spark/checks/check_codes.py",
   "name": "the refused rules file's fix is not the design area's (the pair differs)",
-  "find": "\"fix the value the sentence names in the rules file, then run again\")",
+  "find": "\"fix the value the sentence names in the rules file, or the error it gives, such as a JSON error at a line and column, then run again\")",
   "replace": "\"fix the rules file\")"
  },
  {

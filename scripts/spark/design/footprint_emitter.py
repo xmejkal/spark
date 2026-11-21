@@ -179,6 +179,7 @@ def footprint_stop(board_id: str, project: Path = None) -> str:
 
 #: What a board whose header geometry and pad order do not fit each other is told (P411): `main` and the spine's footprint stage.
 DISAGREES_MESSAGE = "the board definition disagrees with itself: %s"
+NO_BOARD_MESSAGE = "no board or rules to generate from: %s"
 
 
 def kind_problem(physical):
@@ -325,9 +326,11 @@ def board_to_draw(project_flag, board_id):
         project = Path(project_flag) if project_flag else board_records.project_or_library()
         board = board_records.load(project, board_id)
         rules = loader.rules_in(project)
+    except loader.DesignError as refused:  # a rules file that is refused carries its own code (P434)
+        return None, None, Refusal(NO_BOARD_MESSAGE % refused, refused.code)
     except Exception as exc:  # noqa: BLE001 — the message is the product
-        code = (exc.code if isinstance(exc, loader.DesignError) else design_codes.BOARD_UNUSABLE if project
-                else design_codes.NO_PROJECT_FOLDER)  # no project: the folder it is looked for from is gone
-        return None, None, Refusal("no board or rules to generate from: %s" % exc, code)
+        if not project:  # no project: the folder it is looked for from is gone
+            return None, None, Refusal(NO_BOARD_MESSAGE % exc, design_codes.NO_PROJECT_FOLDER)
+        return None, None, Refusal(NO_BOARD_MESSAGE % exc, design_codes.BOARD_UNUSABLE)
     return board, rules, None
 # --- end MVP ---
