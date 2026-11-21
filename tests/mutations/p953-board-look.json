@@ -9,7 +9,7 @@
  {"file": "scripts/spark/breadboard/drawing.py", "name": "Wokwi's half board keeps a gap too", "find": "board.get(\"body_gap_columns\", 0)", "replace": "board.get(\"body_gap_columns\", 4)"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "two jumpers into one row keep the holes in claim order", "find": "jumpers = ends_toward_their_runs(jumpers)", "replace": "jumpers = jumpers"},
  {"file": "scripts/spark/breadboard/svg_diagram.py", "name": "the page is transparent", "find": "fill=self.palette.colors[\"page\"])", "replace": "fill=\"none\")"},
- {"file": "scripts/spark/breadboard/svg_diagram.py", "name": "a rail's line lies toward the other rail of its pair", "find": "away = (1 if row[0].y > partner else -1)", "replace": "away = (-1 if row[0].y > partner else 1)"},
+ {"file": "scripts/spark/breadboard/board_marks.py", "name": "a rail's line lies toward the other rail of its pair", "find": "away = (1 if row[0].y > partner else -1)", "replace": "away = (-1 if row[0].y > partner else 1)"},
  {"file": "data/breadboards.json", "name": "the numbers are every 10th column", "find": "\"numbers_every\": 5", "replace": "\"numbers_every\": 10"},
  {"file": "scripts/spark/breadboard/sheet.py", "name": "the sheet does not say the parts are crowded", "find": "if planned.layout.crowded:", "replace": "if False:"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "a body may reach past the board's last column", "find": " or box.right > right_end)", "replace": ")"},

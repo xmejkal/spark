@@ -25,7 +25,7 @@ from fakes import FakePartPictures  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import drawing, part_captions, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
+from spark.breadboard import board_marks as board_marks_module, drawing, part_captions, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
 from test_breadboard_layout import EPAPER, RECORD_BOARD, epaper_inputs, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -664,10 +664,10 @@ class ThePillsTest(unittest.TestCase):
         for fixture, (_, layout) in self.drawn.items():
             with self.subTest(fixture):
                 bodies = [svg_diagram.BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
-                background = svg_diagram.BoardBackground(svg_diagram.BoardPalette.load())
-                obstacles = background.obstacles(layout.geometry.surface, bodies)
+                marks = board_marks_module.BoardMarks(layout.geometry.surface, board_marks_module.BoardPalette.load().sizes)
+                obstacles = marks.obstacles(bodies)
                 paths = wire_routing.TrackJumperRouter().route(layout, obstacles)
-                signs = background.sign_boxes(layout.geometry.surface)
+                signs = marks.sign_boxes()
                 self.assertEqual(len(signs), 4)
                 pills = svg_diagram.PillLayout(4.0, 3.4).place(layout.jumpers, paths,
                                                                obstacles._replace(marks=obstacles.marks + signs))
