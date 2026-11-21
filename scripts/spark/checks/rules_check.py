@@ -238,12 +238,11 @@ def read_inputs(circuit_path, rules_path):
     """Value: ((the circuit, the rules), None), or (None, the could-not-run answer that says which of the two cannot be read)."""
     if not circuit_path.is_file():
         return None, could_not_run("no built design at %s" % circuit_path, check_codes.NO_CIRCUIT,
-                                   fix="build it first: `make`, or `tsci build`")
+                                   fix=check_codes.NO_CIRCUIT.fix)
     if not rules_path.is_file():
         return None, could_not_run(
             "no rules at %s" % rules_path, check_codes.NO_RULES_FILE,
-            fix="a rules file says which nets are an I2C bus and which pins must not float — "
-                "things no netlist format records")
+            fix=check_codes.NO_RULES_FILE.fix)
     try:
         rules = fab.read_rules(rules_path)  # --- MVP --- (P455): the one reader, so a refused file is a sentence naming it
     except fab.RulesError as refused:
@@ -272,8 +271,7 @@ def compare(circuit_path, rules_path):
             "the rules file states no rule to compare: i2c_buses and must_not_float are both "
             "empty, which is what `/spark:init` writes and where they have stayed", check_codes.NO_RULE_STATED,
             design=circuit_path.name, checked=0,
-            fix="name the I2C lines and the pins that must never float — a netlist records "
-                "neither, which is why this file exists")
+            fix=check_codes.NO_RULE_STATED.fix)
     return {
         "tool": "compare_design",
         "status": status_of(failures),
