@@ -1,4 +1,5 @@
 [
  {"file": "scripts/spark/breadboard/board_marks.py", "name": "P969 PR 1: a letter's or number's box is half as wide", "find": "BodyBox(x - 0.3 * size * len(text), y - 0.4 * size, x + 0.3 * size * len(text), y + 0.4 * size)", "replace": "BodyBox(x - 0.15 * size * len(text), y - 0.4 * size, x + 0.15 * size * len(text), y + 0.4 * size)"},
- {"file": "scripts/spark/breadboard/board_marks.py", "name": "P969 PR 1: a rail sign's box stops at its baseline", "find": "baseline + 0.25 * size)", "replace": "baseline)"}
+ {"file": "scripts/spark/breadboard/board_marks.py", "name": "P969 PR 1: a rail sign's box stops at its baseline", "find": "baseline + 0.25 * size)", "replace": "baseline)"},
+ {"file": "scripts/spark/breadboard/wire_pills.py", "name": "P969 PR 2: a wire's box leaves out its under-stroke", "find": "reach, dot = sizes.under_stroke / 2, sizes.end_dot + sizes.end_ring / 2", "replace": "reach, dot = 0, sizes.end_dot + sizes.end_ring / 2"}
 ]
