@@ -207,7 +207,7 @@ def need_picks(project, need, plan, listed):
     for candidate in (c for c in need["candidates"] if is_plausible(c) and not is_current_pick(need, pick_id_of(c))):
         picked, changes, problems = plan.holds(need["need"], pick_id_of(candidate))
         if not problems:
-            offered.append(pick_offer(project, need["need"], candidate, plan, listed, changes))
+            offered.append(pick_offer(project, need["need"], candidate, listed, plan.freed(changes, need["need"])))
             continue
         other = other_pick_refusal(plan, need["need"], picked, problems)
         if other:
@@ -216,14 +216,14 @@ def need_picks(project, need, plan, listed):
     return offered[:OFFERS_PER_NEED], more_line(need["need"], len(offered) - OFFERS_PER_NEED, refused)
 
 
-def pick_offer(project, need, candidate, plan, listed, changes):
-    """The Offer to pick `candidate` for `need`, one `plan` (the project's `needs.PickPlan`) does not refuse: `changes`
-    are the drawer changes its `holds` gave. A pick that lets a hold go says whose it was. `listed` says whether the
+def pick_offer(project, need, candidate, listed, freed):
+    """The Offer to pick `candidate` for `need`, one the project's `needs.PickPlan` does not refuse. `freed` is what its
+    `freed` gave for the pick's drawer changes: a pick that lets a hold go says whose it was. `listed` says whether the
     project is on the person's list."""
     pick_id = pick_id_of(candidate)
     key, label = "%s:%s:%s" % (flow_codes.PICK, need, pick_id), flow_codes.PICK_LABEL % (candidate_label(candidate), need)
     said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)]
-    of_old, unpicked = plan.freed(changes, need)
+    of_old, unpicked = freed
     said += [flow_codes.FREES_MESSAGE] if of_old else []
     said += [flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else []
     said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
