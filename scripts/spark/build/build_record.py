@@ -51,7 +51,7 @@ def is_build_record(record):
 class BuildRecordStore:
     """
     Store: the record of a project's last build, `<project>/.spark/build.json`: `{"schema", "status", "stages": [{name,
-    status}], "missing_facts", "requirements", "requirements_sha256", "written_sha256", "at"}`. `write` adds the schema and the time, from
+    status, and code when the stage did not end ok (P977)}], "missing_facts", "requirements", "requirements_sha256", "written_sha256", "at"}`. `write` adds the schema and the time, from
     `clock` (SystemClock), through `writer` (TextFileWriter); a test gives a fake of each. `read` raises store.StoreError
     for a file that is no JSON or is no build record (`is_build_record`), and OSError for one it cannot open.
     """

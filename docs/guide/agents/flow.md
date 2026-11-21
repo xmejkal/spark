@@ -8,7 +8,7 @@ files and the store, and writes nothing. `flow.py` with no verb shows too. `flow
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" show --project . --json
 ```
 
-With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and `op` `show-flow`. Its `data` holds three keys:
+With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and `op` `show-flow`. Its `data` holds four keys:
 
 - `phases`: the nine phases in order, `idea`, `needs`, `parts`, `requirements`, `build`, `breadboard`, `firmware`,
   `simulate` and `deploy`. Each is `{phase, status, mark, by, says, offers}`.
@@ -18,6 +18,20 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   an offer. The page carries its first 12 hex digits ([P829](https://github.com/xmejkal/spark/issues/1187)).
 - `stands_at`: the first phase that is open. It passes a phase whose `status` is `ok` or `null`. Only `ok` is a pass
   that spark judged. The deploy is never done here, so `stands_at` always names a phase.
+- `guide` ([P977](https://github.com/xmejkal/spark/issues/1407)): what the person does now. `now` is `{phase, by, says,
+  offer, needs}`: the phase to act on, who acts (a list: `["you", "claude"]` when the firmware and the wiring are two
+  jobs, else one item), one sentence for the person, the key of the offer that does the job (or `null`) and, for the
+  parts, the needs with no pick. While no need is written, `now` is the idea. `now` is `null` only with a phase list a
+  test swaps in. `done` names the phases before `now`; the breadboard is in it only once `now` is past the firmware's
+  two jobs and the sheet is current, as `breadboard (spark cannot see it)`. `later` names the phases after `now`. An
+  item of `done` or `later` can carry a suffix in parentheses: match on the name before it. `set_aside` lists the needs
+  the person set aside (`aside: true`). To bring one back, the person tells Claude, which writes `{"id", "aside": null}`
+  with `--needs-set`. A build whose only stop is a simulation stage with the code `board_not_in_wokwi` is counted as
+  done: `done` says `build (no simulation)`, a simulate with no status or not started is in `later` as `simulate (no
+  Wokwi model of this board)`, and `no_simulation` says why (else `null`). The build phase keeps `could-not-run`, so the
+  exit stays 2. Else the simulate is `now` while a run failed on its image, a file under `firmware/` changed after the
+  image, or no run tested it, each with its own sentence and who acts (`claude` for the first two, which name the failed log
+  or ask for a new image). Relay `now.says` as it is.
 
 The words of a phase:
 
@@ -119,7 +133,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json
 ```
 
 With `--json` it prints the envelope with `op` `write-flow-page`. Its `data` holds `file` (`page.html`, relative to the
-project), `did` (`wrote`), `stands_at`, `phases`, each only `{phase, status}`, and `fingerprint`. A page that cannot be written is one
+project), `did` (`wrote`), `stands_at`, `phases`, each only `{phase, status}`, `fingerprint` and `guide`, as `show`'s. A page that cannot be written is one
 `unchecked` item with the code `page_not_written`, and the exit is 2. A phase that holds problems does not change this
 status. Read it with `show`.
 

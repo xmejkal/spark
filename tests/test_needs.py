@@ -161,6 +161,37 @@ class TheNeedsFileTest(unittest.TestCase):
         self.assertEqual(said["data"]["changes"], [{"need": "soil", "new": False, "was": {"mark": None}, "now": {"mark": "have"}}])
         self.assertEqual(run(["--needs-set", str(self.project), marked])[0]["data"]["changes"], [])
 
+    def test_a_need_set_aside_on_the_person_s_word_keeps_it_on_a_later_write(self):
+        """P977: `aside: true` says the person left the need out of this board. It is a field, not a mark."""
+        run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense", "what": "soil-moisture"}])])
+        said, code = run(["--needs-set", str(self.project), a_file([{"id": "soil", "aside": True}])])
+        self.assertEqual((code, said["data"]["changes"]), (0, [{"need": "soil", "new": False, "was": {"aside": None}, "now": {"aside": True}}]))
+        run(["--needs-set", str(self.project), a_file([{"id": "soil", "mark": "gap"}])])
+        self.assertEqual(self.saved()["needs"], [{"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True, "mark": "gap"}])
+
+    def test_the_needs_and_match_text_show_a_need_set_aside(self):
+        """P977: list_needs and match_needs print `[aside]` on the line of a need set aside."""
+        run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True},
+                                                       {"id": "wet", "does": "sense", "what": "soil-moisture"}])])
+        for flag in ("--needs", "--match"):
+            with self.subTest(flag=flag):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                    parts.main([flag, str(self.project)])
+                lines = out.getvalue().splitlines()
+                soil = [line for line in lines if line.lstrip().startswith("soil")]
+                self.assertEqual(len(soil), 1, lines)
+                self.assertTrue(soil[0].endswith("  [aside]"), soil)
+                self.assertFalse([line for line in lines if line.lstrip().startswith("wet") and "[aside]" in line])
+
+    def test_aside_is_true_or_null_and_anything_else_refuses_the_write(self):
+        for aside in ("yes", False, 1):
+            with self.subTest(aside=aside):
+                said, code = run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense", "what": "x", "aside": aside}])])
+                self.assertEqual((said["status"], code), ("problems", 1))
+                self.assertIn("`aside` is true, or null", json.dumps(said["problems"]))
+        self.assertFalse((self.project / ".spark" / "needs.json").exists())
+
     def test_a_need_holds_no_reason_count_place_or_pick(self):
         for extra in ({"why": "owned"}, {"count": 8}, {"place": "box 3"}, {"pick": [{"part": "x"}]}):
             with self.subTest(extra=extra):

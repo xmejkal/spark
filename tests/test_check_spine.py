@@ -3304,7 +3304,7 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
         "schematic_refused", "schematic_noted", "disagreement.code", "stage_crashed", "tool_missing",
         "tool_cannot_build", "design_not_built", "stage_timed_out", "part_stranded", "design_not_built", "not_routed",
         "simulation_fact_missing", "diagram_unwired", "every_part_skipped", "chip_not_compiled",
-        "simulation_fact_missing", "board_only", "simulation_fact_missing",
+        "board_not_in_wokwi", "board_only", "simulation_fact_missing",  # P977: the board with no Wokwi part has its own code
         "broken.code", "stage_timed_out", "stage_crashed",
     ]
 
