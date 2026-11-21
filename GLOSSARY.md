@@ -169,8 +169,8 @@ conflict on that line in git, for a person to resolve. `python3 tools/mutate.py 
 and the ledger, never guessed ([P787](https://github.com/xmejkal/spark/issues/1088)). *Critical*: the row carries
 `"tier": "critical"`, a fifth key written by hand into the table's text, and runs every sweep. The mark goes on a row that
 guards a store write, a deploy, an erase or a refusal that protects the person (the PO's criterion), one row per guarded
-rule; at most 40 rows carry it (the PO's cap, 2026-11-12; `tests/test_ledger.py` fails above it and on a mark whose file
-is gone), so adding one means dropping one. *New*: no ledger line at the row's file's
+rule; at most 50 rows carry it (the PO's cap, 2026-11-12, raised from 40 by P981 on 2026-11-22; `tests/test_ledger.py` fails above it and on a mark whose file
+is gone), so a mark past the cap means dropping one. *New*: no ledger line at the row's file's
 current blob (never run, or the file changed since), or a line there that says `escaped` (a missing test: it runs
 again) or `refused` once (`--anchors`' business). *Proving*: caught once at the current blob. *Proven*: caught twice or
 more there; an edit of the file makes it new again, by the blob rule alone. *Retired*: refused in two sweeps at the

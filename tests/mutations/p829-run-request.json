@@ -2,12 +2,14 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "a key spark does not offer now runs (P829)",
+  "tier": "critical",
   "find": "if key not in offered or kind_of(key) not in KIND_RUNS:",
   "replace": "if kind_of(key) not in KIND_RUNS:"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "a page read before the project changed runs (P829)",
+  "tier": "critical",
   "find": "if request.seen != fingerprint[:SHORT]:",
   "replace": "if False:"
  },
@@ -32,6 +34,7 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "the request file stays, so one request can run twice (P829)",
+  "tier": "critical",
   "find": "        path.unlink()\n",
   "replace": "        pass\n"
  },
