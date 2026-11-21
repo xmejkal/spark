@@ -715,7 +715,7 @@ class TheFlowAreaTest(unittest.TestCase):
     alone, and `flow_operations.OPERATIONS` maps each op to its Operation. `scripts/` keeps the CLI `flow.py`."""
     FLOW = ROOT / "scripts" / "spark" / "flow"
     #: The modules of the area, by the names of its page (`areas/flow.md`).
-    MODULES = ["flow_codes", "flow_operations", "flow_page", "phase_readers", "show_flow", "write_flow_page"]
+    MODULES = ["fingerprint", "flow_codes", "flow_operations", "flow_page", "phase_readers", "show_flow", "write_flow_page"]
 
     def test_the_area_holds_its_modules_and_scripts_holds_no_copy(self):
         self.assertEqual(sorted(path.stem for path in self.FLOW.glob("*.py") if path.name != "__init__.py"), self.MODULES)

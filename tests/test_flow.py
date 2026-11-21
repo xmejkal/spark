@@ -27,11 +27,17 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import flow  # noqa: E402
-from fakes import FakeClock, FakeTextFileWriter  # noqa: E402
+from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import SimulateReader  # noqa: E402
-from spark.flow.show_flow import ShowFlow  # noqa: E402
+from spark.flow.show_flow import ShowFlow, read_flow  # noqa: E402
+from spark.flow.fingerprint import fingerprint_of  # noqa: E402
+from spark.core.cli import run_operation  # noqa: E402
+from spark.core.outcomes import OK  # noqa: E402
+from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
+from spark.design.write_requirements import WriteRequirements  # noqa: E402
+from spark.flow.flow_codes import STALE  # noqa: E402
 from spark.records import store  # noqa: E402
 
 #: A built project: requirements.json, the board it names and the circuit a finished build kept with its built-from.json.
@@ -173,10 +179,16 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(said["data"]["stands_at"], "parts")
         self.assertIn("1 of 2 needs picked", says(said, "parts"))
         effects = {offer["key"]: offer["effect"] for offer in said["data"]["phases"][2]["offers"]}
-        self.assertEqual(effects["pick:wet:x-held"], "replaces the picks of need wet in needs.json; you have 3; held by smartbin-local")
-        self.assertEqual(effects["pick:wet:x-many"], "replaces the picks of need wet in needs.json; you have many")
-        self.assertEqual(effects["pick:wet:x-unknown"], "replaces the picks of need wet in needs.json; how many you have is unknown")
-        self.assertEqual(said["data"]["phases"][1]["offers"][0]["effect"], "drops need soil from needs.json and frees its holds")
+        self.assertEqual(effects["pick:wet:x-held"], "Too few “A soil probe” are free for this pick (3 owned, held by smartbin-local — 1 picked "
+                                                     "here), so spark refuses this pick and saves nothing.")
+        self.assertEqual(effects["pick:wet:x-many"], "Saves “A soil probe” as the pick for the wet need in this project. Uses 1 of your “A soil "
+                                                     "probe” for the wet. Adds this project to your list of projects. May note the choice in your history.")
+        self.assertEqual(effects["pick:wet:x-unknown"], "Saves “A soil probe” as the pick for the wet need in this project. Uses 1 of your “A "
+                                                        "soil probe” for the wet, if you have one: spark does not know how many you have. Adds "
+                                                        "this project to your list of projects. May note the choice in your history.")
+        self.assertEqual(said["data"]["phases"][1]["offers"][0]["effect"], "To drop this need, tell Claude: “drop the soil need”.")
+        labels = {offer["key"]: offer["label"] for offer in said["data"]["phases"][2]["offers"]}
+        self.assertEqual(labels["pick:wet:x-many"], "Pick “A soil probe” for wet")
 
     def test_every_need_picked_makes_the_parts_ok(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -515,6 +527,242 @@ class TheBuildRecordStoreTest(unittest.TestCase):
         (project / ".spark").mkdir()
         (project / BUILD_RECORD_FILE).write_text("[" * 200000)
         self.assertEqual(BuildRecordStore(project).written_sha256(), {})
+
+def offer_of(envelope, key):
+    """The offer dict whose key is `key`, from any phase."""
+    return next(offer for phase in envelope["data"]["phases"] for offer in phase["offers"] if offer["key"] == key)
+
+
+SOIL = [{"id": "soil", "does": "sense", "what": "soil-moisture"}]
+#: The three files a click changes, named here and not read from the module, so a file dropped there fails.
+THREE_FILES = (Path(".spark") / "needs.json", Path("requirements.json"), Path(".spark") / "build.json")
+
+
+class MakesStaleTest(FlowTest):
+    """P829: an offer names only the phases it may make out of date that hold something now."""
+
+    def test_with_no_requirements_json_a_pick_names_nothing(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        said, _ = show(project)
+        self.assertEqual(offer_of(said, "pick:soil:x-many")["makes_stale"], [])
+        self.assertEqual(offer_of(said, "requirements")["makes_stale"], [])
+
+    def test_with_requirements_json_a_pick_names_the_requirements(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        said, _ = show(project)
+        self.assertEqual(offer_of(said, "pick:soil:x-many")["makes_stale"], ["requirements"])
+        self.assertEqual(offer_of(said, "build")["makes_stale"], [])
+
+    def test_with_a_build_a_requirements_write_names_the_build_and_the_breadboard(self):
+        said, _ = show(with_needs(a_built_project(), SOIL))
+        self.assertEqual(offer_of(said, "requirements")["makes_stale"], ["build", "breadboard"])
+        self.assertEqual(offer_of(said, "build")["makes_stale"], [])
+
+    def test_a_refused_pick_and_a_drop_name_nothing(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        said, _ = show(project)
+        self.assertEqual(offer_of(said, "pick:soil:x-held")["makes_stale"], [])
+        self.assertEqual(offer_of(said, "needs-drop:soil")["makes_stale"], [])
+
+
+class TheBuildOfferTest(FlowTest):
+    """P829: the build offer names what the build writes, from the real run on a copy of button-light."""
+
+    def test_a_build_names_its_files_and_that_it_runs_no_simulation(self):
+        said, _ = show(a_built_project())
+        build = offer_of(said, "build")
+        self.assertEqual(build["label"], "Build the board")
+        self.assertTrue(build["effect"].startswith("Saves its files in this project: the board file"))
+        self.assertIn("the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn", build["effect"])
+        self.assertIn("If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page "
+                      "are deleted.", build["effect"])
+        self.assertIn("If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted.", build["effect"])
+        self.assertTrue(build["effect"].endswith("Runs no simulation and costs nothing."))
+        self.assertNotIn("history", build["effect"])
+
+    def test_a_listed_project_notes_the_build_in_the_history(self):
+        project = a_built_project()
+        store.add_project(project)
+        self.assertIn("Notes the build in your history.", offer_of(show(project)[0], "build")["effect"])
+
+    def test_a_board_only_parts_list_says_dist_is_deleted_and_names_no_board_file(self):
+        project = a_built_project()
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "board_only": True, "parts": []}))
+        effect = offer_of(show(project)[0], "build")["effect"]
+        self.assertIn("This board needs no wiring, so the old dist folder is deleted.", effect)
+        self.assertTrue(effect.startswith("This board needs no parts, so nothing is built or wired."))
+        self.assertNotIn("board file", effect)
+
+
+class TheReviewRoundTest(FlowTest):
+    """P829's review: a broken list of projects keeps the build offer, and each pick sentence holds only when it is true."""
+
+    def a_part(self, part, entry=None):
+        """Put the soil probe `part` in the scratch catalog, and `entry` (a drawer entry's fields) in the drawer."""
+        (self.home / "catalog" / (part + ".json")).write_text(json.dumps({"schema": 1, "id": part, "name": "A soil probe", "kind": "sensor",
+                                                                         "function": [{"does": "sense", "what": "soil-moisture"}]}))
+        if entry is not None:
+            (self.home / "drawer" / (part + ".json")).write_text(json.dumps(dict({"schema": 1, "label": part, "is": {"part": part}}, **entry)))
+
+    def test_a_broken_list_of_projects_keeps_the_build_offer_without_the_history(self):
+        project = Path(tempfile.mkdtemp()) / "plant-alarm"
+        project.mkdir()
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        (self.home / "projects.json").write_text("{broken")
+        said, _ = show(project)
+        self.assertEqual(table(said)["build"], (NS, ["build"]))
+        self.assertNotIn("history", offer_of(said, "build")["effect"])
+
+    def test_a_part_you_own_none_of_goes_on_the_list_to_get(self):
+        self.a_part("x-none")
+        said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL))
+        effect = offer_of(said, "pick:soil:x-none")["effect"]
+        self.assertIn("You have none, so it goes on the list to get.", effect)
+        self.assertNotIn("Uses 1", effect)
+
+    def test_a_pick_on_a_listed_project_does_not_list_it_again(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        self.assertIn("Adds this project to your list of projects.", offer_of(show(project)[0], "pick:soil:x-many")["effect"])
+        store.add_project(project)
+        self.assertNotIn("Adds this project", offer_of(show(project)[0], "pick:soil:x-many")["effect"])
+
+    def test_a_pick_the_project_s_other_picks_leave_no_piece_for_is_refused(self):
+        self.a_part("x-one", {"count": 1})
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-one"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture"}])
+        said, _ = show(project)
+        self.assertEqual(offer_of(said, "pick:wet:x-one")["effect"],
+                         "Too few “A soil probe” are free for this pick (1 owned — 2 picked here), so spark refuses this pick and saves nothing.")
+        self.assertEqual(offer_of(said, "pick:wet:x-one")["makes_stale"], [])
+        self.assertIn("Uses 1 of your 1 “A soil probe” for the soil.", offer_of(said, "pick:soil:x-one")["effect"])
+
+    def test_a_pick_is_refused_when_another_need_s_pick_cannot_get_its_part(self):
+        self.a_part("x-one", {"count": 1, "used_in": {"other": 1}})
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-one"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture"}])
+        said, _ = show(project)
+        self.assertEqual(offer_of(said, "pick:wet:x-many")["effect"], "The pick for soil cannot get “x-one” (1 owned, held by other — 1 "
+                                                                       "picked here), so spark refuses this pick and saves nothing.")
+        self.assertNotIn("refuses", offer_of(said, "pick:soil:x-many")["effect"])
+
+    def test_a_part_held_by_another_project_and_by_this_one_names_both_in_the_refusal(self):
+        self.a_part("x-two", {"count": 2, "used_in": {"other": 1, "plant-alarm": 1}})
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-two"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture"}])
+        said, _ = show(project)
+        self.assertEqual(offer_of(said, "pick:wet:x-two")["effect"], "Too few “A soil probe” are free for this pick (2 owned, held by other — "
+                                                                      "2 picked here), so spark refuses this pick and saves nothing.")
+
+    def test_a_first_pick_frees_a_hold_given_by_hand_and_names_no_old_pick(self):
+        (self.home / "drawer" / "many.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": "many",
+                                                                    "is": {"part": "x-many"}, "used_in": {"plant-alarm": 2}}))
+        said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL))
+        effect = offer_of(said, "pick:soil:x-unknown")["effect"]
+        self.assertIn("Frees a part this project held without a pick.", effect)
+        self.assertNotIn("old pick", effect)
+
+    def test_a_re_pick_frees_what_the_old_pick_held(self):
+        (self.home / "drawer" / "many.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": "many",
+                                                                    "is": {"part": "x-many"}, "used_in": {"plant-alarm": 1}}))
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]}])
+        said, _ = show(project)
+        self.assertIn("Frees what the old pick held.", offer_of(said, "pick:soil:x-unknown")["effect"])
+        self.assertNotIn("without a pick", offer_of(said, "pick:soil:x-unknown")["effect"])
+        self.assertNotIn("Frees", offer_of(said, "pick:soil:x-many")["effect"])
+
+
+class FingerprintTest(FlowTest):
+    """P829: the fingerprint is the sha256 of the offers and the three files a click changes, and of nothing else."""
+
+    def test_show_prints_the_fingerprint_of_the_flow(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        said, _ = show(project)
+        self.assertEqual(said["data"]["fingerprint"], fingerprint_of(project, read_flow(project)[0]))
+        self.assertRegex(said["data"]["fingerprint"], "^[0-9a-f]{64}$")
+
+    def test_it_changes_when_any_one_of_the_three_files_changes(self):
+        for name in THREE_FILES:
+            with self.subTest(name=str(name)):
+                project = Path(tempfile.mkdtemp())
+                for each in THREE_FILES:
+                    (project / each).parent.mkdir(parents=True, exist_ok=True)
+                    (project / each).write_text("{}")
+                before = fingerprint_of(project, [])
+                (project / name).write_text('{"a": 1}')
+                self.assertNotEqual(fingerprint_of(project, []), before)
+
+    def test_a_missing_file_that_becomes_empty_changes_it(self):
+        for name in THREE_FILES:
+            with self.subTest(name=str(name)):
+                project = Path(tempfile.mkdtemp())
+                before = fingerprint_of(project, [])
+                (project / name).parent.mkdir(parents=True, exist_ok=True)
+                (project / name).write_text("")
+                self.assertNotEqual(fingerprint_of(project, []), before)
+
+    def test_it_changes_when_the_drawer_count_in_an_offer_changes(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        before = show(project)[0]["data"]["fingerprint"]
+        (self.home / "drawer" / "many.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": 3, "is": {"part": "x-many"}}))
+        after = show(project)[0]
+        self.assertIn("Uses 1 of your 3 “A soil probe” for the soil.", offer_of(after, "pick:soil:x-many")["effect"])
+        self.assertNotEqual(after["data"]["fingerprint"], before)
+
+    def test_no_other_file_changes_it(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        before = show(project)[0]["data"]["fingerprint"]
+        (project / "firmware").mkdir()
+        (project / "firmware" / "main.py").write_text("print('ready')\n")
+        (project / "README.md").write_text("notes\n")
+        (project / ".spark" / "page-request.json").write_text("{}")
+        self.assertEqual(show(project)[0]["data"]["fingerprint"], before)
+
+
+class TheRunOnButtonLightTest(unittest.TestCase):
+    """P829: on a copy of button-light with a scratch store, a real pick and a real parts list turn out of date only the
+    phases their offers named."""
+
+    def setUp(self):
+        home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.project = Path(tempfile.mkdtemp()) / "bl"
+        shutil.copytree(ROOT / "tests" / "data" / "breadboard" / "button-light", self.project)
+        with_needs(self.project, [{"id": "brain", "does": "compute", "what": "control"},
+                                  {"id": "button", "does": "input", "what": "button"},
+                                  {"id": "light", "does": "indicate", "what": "light"}])
+
+    def turned_stale(self, operation, values, key):
+        """(the phases that turned stale when `operation` ran with `values`, the makes_stale of the offer `key` before)."""
+        before = show(self.project)[0]
+        result = run_operation(operation, values, FakeOutsideWorld(clock=FakeClock()))
+        self.assertEqual(result.status(), OK, result.lines)
+        after = show(self.project)[0]
+        turned = {phase for phase, status in statuses(after).items() if status == STALE and statuses(before)[phase] != STALE}
+        return turned, set(offer_of(before, key)["makes_stale"])
+
+    def test_a_pick_and_a_parts_list_make_stale_only_what_their_offers_name(self):
+        picks = [str(self.project), "brain=xiao-esp32-c6", "button=tactile-button", "light=led-red-5mm"]  # another board than the file names
+        turned, named = self.turned_stale(PickParts(), {"project_and_picks": picks, "passed_over": NO_PASSED_OVER, "dry_run": False},
+                                          "pick:brain:xiao-esp32-c6")
+        self.assertEqual(turned, {"requirements"})
+        self.assertLessEqual(turned, named)
+        (self.project / "breadboard.md").write_text("# the sheet\n")
+        (self.project / "dist" / "board" / "built-from.json").write_text(json.dumps({"requirements": json.loads((self.project / "requirements.json").read_text())}))
+        BuildRecordStore(self.project, clock=FakeClock()).write({"status": OK, "stages": [{"name": "build", "status": OK}], "missing_facts": [],
+                                                                "requirements": "requirements.json",
+                                                                "requirements_sha256": sha256_of(self.project / "requirements.json")})
+        turned, named = self.turned_stale(WriteRequirements(), {"project": str(self.project), "dry_run": False, "replies": None}, "requirements")
+        self.assertEqual(turned, {"build", "breadboard"})
+        self.assertLessEqual(turned, named)
+
 
 if __name__ == "__main__":
     unittest.main()

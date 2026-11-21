@@ -8,10 +8,14 @@ files and the store, and writes nothing. `flow.py` with no verb shows too. `flow
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" show --project . --json
 ```
 
-With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and `op` `show-flow`. Its `data` holds two keys:
+With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and `op` `show-flow`. Its `data` holds three keys:
 
 - `phases`: the nine phases in order, `idea`, `needs`, `parts`, `requirements`, `build`, `breadboard`, `firmware`,
   `simulate` and `deploy`. Each is `{phase, status, mark, by, says, offers}`.
+- `fingerprint`: the sha256 of the current offers (each `key`, `effect` and `makes_stale`, as canonical JSON) and of
+  `.spark/needs.json`, `requirements.json` and `.spark/build.json`. It changes when one of these files changes, or when
+  an offer changes: a pick's effect changes with the drawer count. No other file of the project changes it, except through
+  an offer. The page carries its first 12 hex digits ([P829](https://github.com/xmejkal/spark/issues/1187)).
 - `stands_at`: the first phase that is open. It passes a phase whose `status` is `ok` or `null`. Only `ok` is a pass
   that spark judged. The deploy is never done here, so `stands_at` always names a phase.
 
@@ -23,7 +27,21 @@ The words of a phase:
 | `mark` | the glyph a page shows for the status |
 | `by` | who does the phase: `you`, `claude` or `your terminal` |
 | `says` | sentences for a person. A value nobody recorded reads `unknown` |
-| `offers` | `{key, effect}`: a next step, and one line that says what it does. `flow.py` runs none |
+| `offers` | `{key, label, effect, makes_stale}`: a next step, with the four keys under this table. `flow.py` runs none |
+
+An offer has four keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
+
+- `key`: the step, such as `pick:light:led-red-5mm`, `requirements` or `build`.
+- `label`: the words of its button, such as `Build the board`.
+- `effect`: plain sentences that name every write the step makes, such as `Uses 1 of your 3 “DFRobot FireBeetle 2
+  ESP32-S3” for the brain.` The part's name stands in quotes. A pick that the pick itself refuses says so and names
+  no phase (`needs.PickPlan`). The reason is the problem `plan_holds` gives, in its own words: too few of the part are
+  free (other projects hold them, this project's other picks use them, or both), or another need's pick cannot get its
+  part. A pick that lets a hold go says whose it was: "Frees what the old pick held." for the need's old pick, and
+  "Frees a part this project held without a pick." for a hold given by hand.
+- `makes_stale`: the phases the step can make out of date. It lists only the phases that hold something now. With
+  requirements.json there, a pick names `requirements`. Write the parts list names `build` when `.spark/build.json` is
+  there and `breadboard` when breadboard.md is there. A build names none.
 
 A `null` status means spark does not judge the phase, and `says` tells where it stands. The idea has `null`. A
 hand-written project (requirements.json and no needs) has `null` for its needs and parts. Written firmware and a
@@ -97,13 +115,14 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json
 ```
 
 With `--json` it prints the envelope with `op` `write-flow-page`. Its `data` holds `file` (`page.html`, relative to the
-project), `did` (`wrote`), `stands_at` and `phases`, each only `{phase, status}`. A page that cannot be written is one
+project), `did` (`wrote`), `stands_at`, `phases`, each only `{phase, status}`, and `fingerprint`. A page that cannot be written is one
 `unchecked` item with the code `page_not_written`, and the exit is 2. A phase that holds problems does not change this
 status. Read it with `show`.
 
 For an agent or a later script, the page has hooks. Each rail entry and each section has `data-phase` (the phase name) and
 `data-status` (the flow's code, or `none` for no status). The `<body>` has `data-stands-at` (the first open phase, or `none`
-when no phase is open). All the pictures stand together in the section `id="pictures"`, which the rail links to. The
+when no phase is open). Each offer is an `<li>` with `data-key` (its key), the `<body>` has `data-fingerprint` (the first
+12 hex digits of the fingerprint) and `data-written` (the newest change time of the three files, with its zone, or `none`). All the pictures stand together in the section `id="pictures"`, which the rail links to. The
 wiring is in the section `id="wiring"`, which the rail links to as "Wiring". Its steps are the items of `<ol id="steps">`,
 each `<li id="step-N" value="N">`, and the lines before power are a `<ul>` of their own, never inside the steps.
 

@@ -1,0 +1,92 @@
+[
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "a pick names no phase that may go out of date (P829)",
+  "find": "MAKES_STALE = {PICK: (REQUIREMENTS,), WRITE_REQUIREMENTS: (BUILD, BREADBOARD), BUILD_BOARD: ()}",
+  "replace": "MAKES_STALE = {PICK: (), WRITE_REQUIREMENTS: (BUILD, BREADBOARD), BUILD_BOARD: ()}"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "an offer names a phase that holds nothing yet (P829)",
+  "find": "return tuple(phase for phase in flow_codes.MAKES_STALE[kind] if phase in held)",
+  "replace": "return flow_codes.MAKES_STALE[kind]"
+ },
+ {
+  "file": "scripts/spark/flow/fingerprint.py",
+  "name": "the fingerprint misses a change of the build record (P829)",
+  "find": "FILES = (needs.FILE, Path(REQUIREMENTS_FILE), BUILD_RECORD_FILE)",
+  "replace": "FILES = (needs.FILE, Path(REQUIREMENTS_FILE))"
+ },
+ {
+  "file": "scripts/spark/flow/fingerprint.py",
+  "name": "the fingerprint misses a change of the drawer count in an offer (P829)",
+  "find": "digest.update(json.dumps(offers, sort_keys=True, ensure_ascii=False).encode(\"utf-8\"))",
+  "replace": "pass"
+ },
+ {
+  "file": "scripts/spark/flow/fingerprint.py",
+  "name": "a missing file reads as an empty one in the fingerprint (P829)",
+  "find": "else MISSING)",
+  "replace": "else b\"\")"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "a pick does not say it uses one of what you own (P829)",
+  "find": "RESERVE_MESSAGE = \"Uses 1 of your %s “%s” for the %s.\"",
+  "replace": "RESERVE_MESSAGE = \"\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "the build offer does not say what a refused parts list deletes (P829)",
+  "find": "BUILD_REFUSED_MESSAGE = \"If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted.\"",
+  "replace": "BUILD_REFUSED_MESSAGE = \"\""
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "a list of projects that cannot be read turns the build phase to could-not-run (P829 review)",
+  "find": "    except store.StoreError:\n        return None",
+  "replace": "    except ZeroDivisionError:\n        return None"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "a part you own none of is said to be used from your drawer (P829 review)",
+  "find": "return flow_codes.RESERVE_MESSAGE % (owned, label, need) if owned else flow_codes.TO_GET_MESSAGE",
+  "replace": "return flow_codes.RESERVE_MESSAGE % (owned, label, need) if True else flow_codes.TO_GET_MESSAGE"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "a pick on a listed project says it lists the project (P829 review)",
+  "find": "said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]",
+  "replace": "said += [flow_codes.LIST_PROJECT_MESSAGE]"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "a pick the pick's own rule refuses is offered as one that saves (P829 review)",
+  "find": "    if problems:\n        return Offer(key, label, refusal(",
+  "replace": "    if False:\n        return Offer(key, label, refusal("
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "a re-pick does not say it frees the old pick's hold (P829 review)",
+  "find": "said += [flow_codes.FREES_MESSAGE] if of_old else []",
+  "replace": "said += []"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "a refusal blames the picked part when another need's pick cannot get its part (P829 review 2)",
+  "find": "own = next((problem for problem in problems if problem[\"subject\"] == picked), None)",
+  "replace": "own = problems[0]"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "a pick that frees a hold given by hand does not say so (P829 review 2)",
+  "find": "said += [flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else []",
+  "replace": "said += []"
+ },
+ {
+  "file": "scripts/spark/design/needs.py",
+  "name": "a hold given by hand reads as the old pick's (P829 review 2)",
+  "find": "of_old = [hold for hold in released if",
+  "replace": "of_old = released or [hold for hold in released if"
+ }
+]

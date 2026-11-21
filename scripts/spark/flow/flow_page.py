@@ -15,6 +15,7 @@ from spark.breadboard import before_power, part_pictures, picture_check
 from spark.breadboard.svg_diagram import PAD_MARKS
 from spark.breadboard.tabbed_page import token_styles
 from spark.flow import flow_codes
+from spark.flow.fingerprint import SHORT
 from spark.flow.phase_readers import MARKS
 from spark.core.outcomes import COULD_NOT_RUN, OK
 
@@ -29,8 +30,10 @@ ShownPhase = namedtuple("ShownPhase", "mark word")
 #: wiring to show (None when there is).
 PageWiring = namedtuple("PageWiring", "steps before_power records why_missing")
 #: Value: what a page holds. `phases` are the Phase dicts of the flow, `stands_at` the first open phase or None, `pictures`
-#: Pictures, `notes` fixed lines and `wiring` a PageWiring or None (no section). A page is masked before it is rendered.
-FlowPage = namedtuple("FlowPage", "title phases stands_at pictures notes wiring", defaults=(None,))
+#: Pictures, `notes` fixed lines and `wiring` a PageWiring or None (no section). `fingerprint` is the flow's
+#: (`fingerprint.fingerprint_of`, P829) and `written` the newest change time of its files, both None when not known. A page
+#: is masked before it is rendered.
+FlowPage = namedtuple("FlowPage", "title phases stands_at pictures notes wiring fingerprint written", defaults=(None, None, None))
 
 TICK = MARKS[OK][1]
 
@@ -215,7 +218,8 @@ class FlowHtmlPage:
         return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
                           '<meta name="viewport" content="width=device-width, initial-scale=1">',
                           '<title>%s</title>' % _text(page.title), '<style>%s</style>' % style, '</head>',
-                          '<body data-stands-at="%s">' % _text(page.stands_at or "none")])
+                          '<body data-stands-at="%s" data-fingerprint="%s" data-written="%s">' % (
+                              _text(page.stands_at or "none"), _text((page.fingerprint or "none")[:SHORT]), _text(page.written or "none"))])
 
     @staticmethod
     def _stands_at(page):
@@ -241,7 +245,8 @@ class FlowHtmlPage:
                  "<h2>%s %s <span>%s</span></h2>" % (_mark(shown), _text(phase["phase"]), _text(shown.word)),
                  "<p>Done by: %s</p>" % _text(phase["by"])]
         lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
-        offers = ["<li><code>%s</code>: %s</li>" % (_text(offer["key"]), _text(offer["effect"])) for offer in phase["offers"]]
+        offers = ['<li data-key="%s">%s: %s</li>' % (_text(offer["key"]), _text(offer["label"]), _text(offer["effect"]))
+                  for offer in phase["offers"]]
         return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</section>"])
 
     def _wiring(self, page):

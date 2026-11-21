@@ -432,6 +432,38 @@ def _picks_given(given, known, entries, ids):
     return picked, notes, problems
 
 
+class PickPlan:
+    """
+    Service: what a pick of one candidate does to the drawer, worked out as `plan_pick` works it out (`_resolve`, then
+    `plan_holds`), with the project's needs, the drawer and the records read once (P829: each offer of the flow says what
+    its pick does). A pick `plan_holds` refuses gives problems. Nothing is written here.
+    """
+
+    def __init__(self, project):
+        self.name, self.current, self.entries = store.plan_listed_name(project), read(project), drawer.entries()
+        self.known = {row[:2]: row[2] for row in drawer.linkable(project)}
+
+    def holds(self, need_id, pick_id):
+        """(the key the pick names, drawer changes, problems) of picking `pick_id` alone for the need `need_id`, the other
+        needs as they are. Each problem's subject is the key of the part that cannot be held (`plan_holds`)."""
+        pick = _resolve(pick_id, self.known, self.entries)
+        after = [dict(need, pick=[pick] if pick else []) if need["id"] == need_id else need for need in self.current]
+        changes, _notes, problems = plan_holds(self.name, after, self.entries)
+        return (next(iter(pick.values())) if pick else None), changes, problems
+
+    def needs_picking(self, key, but):
+        """The ids of the needs other than `but` whose picks name `key`."""
+        return [need["id"] for need in self.current if need["id"] != but and any(key in pick.values() for pick in need.get("pick") or [])]
+
+    def freed(self, changes, need_id):
+        """(the holds `changes` let go that the need's old pick held, the other holds they let go): a hold is the old
+        pick's when its drawer entry is that pick (its `is`, or the entry itself, `released_holds`)."""
+        old = [pick for need in self.current if need["id"] == need_id for pick in need.get("pick") or []]
+        released = released_holds(changes, self.name)
+        of_old = [hold for hold in released if (self.entries.get(hold["entry"]) or {}).get("is") in old or {"entry": hold["entry"]} in old]
+        return of_old, [hold for hold in released if hold not in of_old]
+
+
 def plan_pick(project, given, passed_over=()):
     """
     What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
