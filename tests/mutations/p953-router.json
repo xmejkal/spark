@@ -10,5 +10,5 @@
  {"file": "scripts/spark/breadboard/wire_routing.py", "name": "a wire may pass beside another jumper's end", "find": "        return search.close or self.rings.get(cell, set()) <= {search.step}", "replace": "        return True"},
  {"file": "scripts/spark/breadboard/wire_routing.py", "name": "a run may lie along a hole's column", "find": "if move == (came + 2) % 4 or ((v if axis == HORIZONTAL else u) % 2 == 0 and not on_its_column):", "replace": "if move == (came + 2) % 4:"},
  {"file": "scripts/spark/breadboard/svg_diagram.py", "name": "a dashed wire is drawn solid", "find": "                drawn.set(\"stroke-dasharray\", self.DASHES)", "replace": "                pass"},
- {"file": "scripts/spark/breadboard/svg_diagram.py", "name": "a wire with no way is not named in the note", "find": "for fallback, words in ((wire_routing.BENDS, self.DASHED_NOTE), (wire_routing.NO_WAY, self.NOT_DRAWN_NOTE)):", "replace": "for fallback, words in ((wire_routing.BENDS, self.DASHED_NOTE),):"}
+ {"file": "scripts/spark/breadboard/breadboard_scene.py", "name": "a wire with no way is not named in the note", "find": "for fallback, words in ((wire_routing.BENDS, self.DASHED_NOTE), (wire_routing.NO_WAY, self.NOT_DRAWN_NOTE)):", "replace": "for fallback, words in ((wire_routing.BENDS, self.DASHED_NOTE),):"}
 ]

@@ -8,5 +8,5 @@
  {"file": "scripts/spark/breadboard/svg_diagram.py", "name": "the wire drawn in its colour's word, not the palette's hex", "find": "        hexes = self.palette.colors[\"wires\"]", "replace": "        hexes = {word: word for word in self.palette.colors[\"wires\"]}"},
  {"file": "data/breadboards.json", "name": "the palette's orange back to the old page's #e0730b (3.17:1 with white)", "find": "   \"orange\": \"#b85c00\",", "replace": "   \"orange\": \"#e0730b\","},
  {"file": "scripts/spark/breadboard/wire_pills.py", "name": "the wire's old sizes", "find": "WIRE_SIZES_PX = WireSizes(4.0, 2.2, 3.0, 0.8)", "replace": "WIRE_SIZES_PX = WireSizes(5, 2.5, 3, 1)"},
- {"file": "scripts/spark/breadboard/svg_diagram.py", "name": "the review of PR #1377: a pill does not keep clear of the rail signs", "find": "obstacles._replace(marks=obstacles.marks + marks.sign_boxes()))", "replace": "obstacles)"}
+ {"file": "scripts/spark/breadboard/breadboard_scene.py", "name": "the review of PR #1377: a pill does not keep clear of the rail signs", "find": "obstacles._replace(marks=obstacles.marks + marks.sign_boxes()))", "replace": "obstacles)"}
 ]

@@ -2,8 +2,9 @@
 Where each jumper's pill goes on the drawn breadboard (P969, #1388): `WirePill`, the label on a wire with its step's
 number and the two pads it joins (P953), `PillLayout`, the Service that places each in step order clear of everything,
 `WireSizes`, the wire's sizes in px, and `wire_boxes`, the boxes a wire, its end dots and its pill take. The places are
-made from the jumpers, their paths and the obstacles alone, with no picture drawn, so the picture and any other view
-read them one way. `svg_diagram` draws them; `wire_routing` gives the paths.
+made from the jumpers, their paths, the obstacles and a label measure alone, with no picture drawn, so the picture and
+any other view read them one way. The scene maker (`breadboard_scene`) places them; `svg_diagram` draws them;
+`wire_routing` gives the paths.
 """
 
 import collections
@@ -18,32 +19,25 @@ WireSizes = collections.namedtuple("WireSizes", "under_stroke stroke end_dot end
 WIRE_SIZES_PX = WireSizes(4.0, 2.2, 3.0, 0.8)
 
 
-class WirePill(collections.namedtuple("WirePill", "step words x y turned free")):
+class WirePill(collections.namedtuple("WirePill", "step words x y turned free width height")):
     """
-    Value: one jumper's pill (P953), the PO's "7  SDI to D11": its step's number in a white disc at its left end, then
-    its words (`Jumper.pill_words`). (x, y) is its centre in px; `turned` when it lies along a column, turned a quarter
-    back so it reads bottom to top; `free` is False when no place clear of everything was found and it sits on the
-    middle of its wire's longest run. The sizes are the old page's at spark's pitch (the visual spec, section 7).
+    Value: one jumper's pill (P953), the PO's "7  SDI to D11": its step's number at its left end, then its words
+    (`Jumper.pill_words`). (x, y) is its centre in px; `turned` when it lies along a column, turned a quarter back so
+    it reads bottom to top; `free` is False when no place clear of everything was found and it sits on the middle of
+    its wire's longest run. `width`, along its words, and `height`, across them, are the room it takes in px, as the
+    view's label measure gives them (P969, `breadboard_scene.LabelMeasure`).
     """
-
-    #: Its height and round ends, the disc's radius and centre from the left end, the room the disc takes, the gap
-    #: before the words, the room after them, and the width a character of the words takes, in px.
-    HEIGHT, DISC_R, DISC_AT, DISC_ROOM, WORDS_GAP, END_ROOM, PER_CHARACTER = 9.6, 3.4, 4.8, 9.6, 1.6, 3.6, 3.57
-
-    @property
-    def width(self):
-        return self.DISC_ROOM + self.END_ROOM + self.PER_CHARACTER * len(self.words)
 
     def box(self):
         """Its BodyBox as drawn: turned along a column when `turned`."""
-        across, along = (self.HEIGHT, self.width) if self.turned else (self.width, self.HEIGHT)
+        across, along = (self.height, self.width) if self.turned else (self.width, self.height)
         return BodyBox(self.x - across / 2, self.y - along / 2, self.x + across / 2, self.y + along / 2)
 
 
 class PillLayout:
     """
     Service: where each jumper's pill goes (P953), in step order, over the jumpers, their paths and the obstacles it
-    is given; the renderer builds one, and no caller swaps it. A pill lies on a straight piece of its own wire,
+    is given, each pill as big as the label `measure` says; the scene maker builds one, and no caller swaps it. A pill lies on a straight piece of its own wire,
     centred on its line: first the runs across, longest first, then the runs along a column, turned. On a piece it
     starts at the middle and slides along it, SLIDE px at a time either way, until it is clear of every body and
     printed letter, number or rail sign, every end dot, every other wire and every pill placed before it, by CLEAR px. A pill
@@ -56,10 +50,10 @@ class PillLayout:
     #: How far a pill slides at a time, and the space it keeps from everything it must not touch, in px.
     SLIDE, CLEAR = 1.2, 1.0
 
-    def __init__(self, under_stroke, end_dot):
+    def __init__(self, under_stroke, end_dot, measure):
         """`under_stroke` is the wire's white under-stroke's width and `end_dot` the radius of an end's dot with its
-        ring, in px: how far a wire and a dot reach."""
-        self.reach, self.dot = under_stroke / 2, end_dot
+        ring, in px: how far a wire and a dot reach. `measure` (a LabelMeasure) gives each pill's width and height."""
+        self.reach, self.dot, self.measure = under_stroke / 2, end_dot, measure
 
     def place(self, jumpers, paths, obstacles):
         """{step: WirePill} of every jumper, `paths` its JumperPaths and `obstacles` the drawing's
@@ -81,7 +75,7 @@ class PillLayout:
         piece, longest first: either side of a piece along a column, above or below one across. Then past each end,
         along the wire's last piece there."""
         pieces = sorted(_pieces(points), key=lambda piece: (piece[0][1] != piece[1][1], -_length(piece)))
-        pill = WirePill(jumper.step, jumper.pill_words, 0, 0, False, True)
+        pill = self._pill(jumper)
         for (x1, y1), (x2, y2) in pieces:
             turned = x1 == x2
             low, high = sorted((y1, y2) if turned else (x1, x2))
@@ -95,7 +89,7 @@ class PillLayout:
             for offset in self._slides((high - low) / 2 if along else (high - low - pill.width) / 2):
                 middle = (low + high) / 2 + offset
                 for side, reach in ((side, reach) for reach in (self.reach, self.dot) for side in (-1, 1)):
-                    away = side * ((pill.width if along else pill.HEIGHT) / 2 + reach + 2 * self.CLEAR)
+                    away = side * ((pill.width if along else pill.height) / 2 + reach + 2 * self.CLEAR)
                     yield pill._replace(x=x1 + away, y=middle) if along else pill._replace(x=middle, y=y1 + away)
         for (x1, y1), (x2, y2) in [(points[1], points[0]), (points[-2], points[-1])] if len(points) > 1 else ():
             turned, sign = x1 == x2, 1 if (y2 - y1 if x1 == x2 else x2 - x1) > 0 else -1
@@ -114,12 +108,15 @@ class PillLayout:
                     or any(box.meets(BodyBox(min(a[0], b[0]), min(a[1], b[1]), max(a[0], b[0]), max(a[1], b[1])),
                                      self.reach + clear) for a, b in pieces))
 
-    @staticmethod
-    def _fallback(jumper, points):
+    def _pill(self, jumper):
+        """The jumper's pill at (0, 0), across, free, as big as the measure says."""
+        return WirePill(jumper.step, jumper.pill_words, 0, 0, False, True, *self.measure.pill(jumper.pill_words))
+
+    def _fallback(self, jumper, points):
         """The pill on the middle of the wire's longest run, or of the line between its holes when it is not drawn."""
         pieces = _pieces(points) or [((jumper.one.x, jumper.one.y), (jumper.other.x, jumper.other.y))]
         (x1, y1), (x2, y2) = max(pieces, key=_length)
-        return WirePill(jumper.step, jumper.pill_words, (x1 + x2) / 2, (y1 + y2) / 2, x1 == x2 and y1 != y2, False)
+        return self._pill(jumper)._replace(x=(x1 + x2) / 2, y=(y1 + y2) / 2, turned=x1 == x2 and y1 != y2, free=False)
 
 
 def _pieces(points):

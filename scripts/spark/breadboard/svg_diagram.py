@@ -1,23 +1,25 @@
 """
-The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Renderer of a planned layout as
+The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Renderer of a breadboard's scene as
 `breadboard.svg`, the breadboard under the parts in the old wiring page's look (`BoardBackground`, which draws
 the holes and the gap band from the surface, and the marks that `board_marks` made, P969, with their `BoardPalette`, P953), the
-Strategies that place a drawn part's pad labels (P945), and each jumper's pill, which `wire_pills` places and draws no
-picture of (P969, `PillLayout`, `WirePill`, P953). Moved out of `drawing`, whose planner and Wokwi diagram it reads.
-`sheet` writes the file; `part_shape` names a part's label layout; `wire_routing` gives each jumper its way; `part_captions` places each part's
-caption and writes its line of the note.
+Strategies that place a drawn part's pad labels (P945), and each jumper's pill. `breadboard_scene` makes the scene
+(P969): it routes each jumper (`wire_routing`), places each pill (`wire_pills`) and each part's caption
+(`part_captions`), and picks each wire's colour, so this module places only the pad labels. Moved out of `drawing`, whose planner it
+reads. `sheet` writes the file; `part_shape` names a part's label layout; `part_captions` writes each part's line of the
+note.
 """
 
 import collections
 import math
 import xml.etree.ElementTree as ElementTree
 
-from spark.breadboard import part_pictures, wire_routing, wiring_steps
-from spark.breadboard.board_marks import BoardMarks, BoardPalette
+from spark.breadboard import part_pictures, wiring_steps
+from spark.breadboard.board_marks import BoardPalette
+from spark.breadboard.breadboard_scene import BreadboardSceneMaker
 from spark.breadboard.drawing import _round_px
 from spark.breadboard.part_captions import PartCaption, PartNotes
 from spark.breadboard.spacing import BodyBox
-from spark.breadboard.wire_pills import WIRE_SIZES_PX, PillLayout, wire_boxes
+from spark.breadboard.wire_pills import WIRE_SIZES_PX
 
 #: Where a drawn part's pad labels go, the `labels` of its part_px: beside each pad, inside a board's body; or from a
 #: row of pads along an edge into the module's body, turned along the column (P945).
@@ -94,14 +96,10 @@ class BoardBackground:
     def __init__(self, palette):
         self.palette = palette
 
-    def marks(self, surface):
-        """The BoardMarks of the surface at this palette's sizes."""
-        return BoardMarks(surface, self.palette.sizes)
-
-    def draw(self, root, surface):
+    def draw(self, root, marks):
+        """The board of `marks` (a BoardMarks): its body, the gap band and the holes from its surface, then the marks."""
         colors, sizes = self.palette
-        marks = self.marks(surface)
-        box = marks.box()
+        surface, box = marks.surface, marks.box()
         width, height = str(_round_px(box.right - box.left)), str(_round_px(box.bottom - box.top))
         _element(root, "rect", x=box.left, y=box.top, width=width, height=height, rx=sizes["board_rx"],
                  fill=colors["board"], stroke=colors["edge"], **{"stroke-width": sizes["edge_width"]})
@@ -133,12 +131,13 @@ class BoardBackground:
 
 class SvgBreadboardDiagram:
     """
-    Renderer: a BreadboardLayout as an SVG picture in Wokwi's px, for the sheet to show (P268, #302): a white page, the
+    Renderer: a BreadboardScene as an SVG picture in Wokwi's px, for the sheet to show (P268, #302; `draw(scene)`, and
+    `text(layout)` draws the scene that its BreadboardSceneMaker made of the layout, P969): a white page, the
     breadboard in its `palette`'s look (BoardBackground, P953), each part as its picture at its holes, turned about its measured center as Wokwi turns it, with
-    a dot on each pin, used or free (`PAD_MARKS`), and its caption outside its body (PartCaption), then each jumper on the way its `router` gives it
+    a dot on each pin, used or free (`PAD_MARKS`), and its caption outside its body, then each jumper on the way the scene maker's `router` gave it
     (P953: around the parts, on tracks between the holes) as the praised page draws a wire: a white under-stroke, the
     color of what it carries on top (its word in `palette`'s `wires`) and a dot at each end, with its pill where
-    PillLayout puts it: its step's number and the two pads it joins (WirePill). A wire
+    the scene puts it: its step's number and the two pads it joins (WirePill). A wire
     that needs more bends is drawn dashed, and the note says so, as it says of a wire with no way at all. A part drawn from its record also gets its pad labels, placed by the
     PadLabelLayout its part_px names (`label_layouts`, keyed by the part_px's `labels`), each in the steps' words and
     read bottom to top. The note under the picture holds a line per part (PartNotes), then the wires'. Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
@@ -162,66 +161,65 @@ class SvgBreadboardDiagram:
     NO_NET = "NC"
     #: The dashes of a wire that needs more bends than a wire may have.
     DASHES = "4 2"
-    #: What the note says of the wires drawn dashed, and of the wires not drawn, filled with their numbers.
-    DASHED_NOTE = ("wire %s bends more than 4 times to go around the parts and is drawn dashed",
-                   "wires %s bend more than 4 times to go around the parts and are drawn dashed")
-    NOT_DRAWN_NOTE = ("wire %s finds no way around the parts and is not drawn", "wires %s find no way around the parts "
-                      "and are not drawn")
+    #: A pill's disc: its radius and its centre from the pill's left end, and the gap between the disc and the words,
+    #: in px (the visual spec, section 7, P953).
+    DISC_R, DISC_AT, WORDS_GAP = 3.4, 4.8, 1.6
 
     def __init__(self, colors=None, pictures=None, label_layouts=None, router=None, palette=None):
-        self.colors = colors or wiring_steps.JumperColors()
-        self.router = router or wire_routing.TrackJumperRouter()
         self.pictures = pictures or part_pictures.PictogramPartPictures()
         self.label_layouts = label_layouts or {LABELS_BESIDE: BesideLabels(), LABELS_INTO_BODY: IntoBodyLabels()}
         self.palette = palette or BoardPalette.load()
-        self.pill_layout = PillLayout(WIRE_SIZES_PX.under_stroke, WIRE_SIZES_PX.end_dot + WIRE_SIZES_PX.end_ring / 2)
+        self.scene_maker = BreadboardSceneMaker(colors, router, self.palette)
 
     def why_not_written(self, layout):
         """None: the picture is written for any layout."""
         return None
 
     def text(self, layout):
+        """The picture of the layout's scene, made by this renderer's scene maker."""
+        return self.draw(self.scene_maker.make(layout))
+
+    def draw(self, scene):
+        """The picture of a BreadboardScene, which places the wires, the pills and the captions: this draws them, and
+        places each pad label itself (PadLabelLayout)."""
         ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)
-        surface = layout.geometry.surface
+        layout = scene.layout
         pictures = {part.id: self.pictures.picture(part.type, part.record) for part in layout.parts}
-        background = BoardBackground(self.palette)
-        marks = background.marks(surface)
-        # a body may hang past the holes (a module seated by one edge, a board's USB end): the canvas holds it
-        boxes = [marks.box()] + [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
-        obstacles = marks.obstacles(boxes[1:])
-        paths = self.router.route(layout, obstacles)
-        pills = self.pill_layout.place(layout.jumpers, paths,
-                                       obstacles._replace(marks=obstacles.marks + marks.sign_boxes()))
-        captions = PartCaption(self.palette.sizes["caption"], surface.pitch).place(layout.parts, boxes[1:], boxes[1:] + list(
-            obstacles.marks + marks.sign_boxes()) + wire_boxes(layout.jumpers, paths, pills))
-        boxes += [BodyBox(min(x for x, _ in path.points), min(y for _, y in path.points), max(x for x, _ in path.points),
-                          max(y for _, y in path.points)) for path in paths.values() if path.points]
-        boxes += [pill.box() for pill in pills.values()] + [caption.box() for caption in captions.values()]
-        wired = self._wire_notes(paths)
+        wired = scene.wire_notes()
         notes = PartNotes.lines(layout, pictures) + ([", ".join(wired)] if wired else [])
-        left, top = min(box.left for box in boxes) - self.MARGIN_PX, min(box.top for box in boxes) - self.MARGIN_PX
-        width = _round_px(max(box.right for box in boxes) + self.MARGIN_PX - left)
-        height = _round_px(max(box.bottom for box in boxes) + self.MARGIN_PX - top + self.NOTE_PX * len(notes))
-        left, top = _round_px(left), _round_px(top)
+        left, top, width, height = self._canvas(scene, len(notes))
         root = ElementTree.Element(_svg("svg"), {"width": str(width), "height": str(height),
                                                    "viewBox": "%s %s %s %s" % (left, top, width, height),
                                                    "font-family": self.FONT})
         _element(root, "rect", x=left, y=top, width=width, height=height, fill=self.palette.colors["page"])
-        background.draw(root, surface)
+        BoardBackground(self.palette).draw(root, scene.marks)
         for part in layout.parts:
             self._part(root, part, layout.geometry, pictures[part.id])
-        self._wires(root, layout, paths, pills)
-        joined = self._joined_groups(layout)
+        self._wires(root, scene)
         for part in layout.parts:
-            self._label(root, part, layout.geometry, joined)  # last, so no wire or other part covers a pin
-        self._words(root, captions, notes, (left + self.MARGIN_PX, top + height))
+            self._label(root, part, layout.geometry, scene.joined)  # last, so no wire or other part covers a pin
+        self._words(root, [part.caption for part in scene.parts], notes, (left + self.MARGIN_PX, top + height))
         return ElementTree.tostring(root, encoding="unicode") + "\n"
+
+    def _canvas(self, scene, note_lines):
+        """(left, top, width, height) of the canvas, rounded: the board's body, every part's body (a body may hang past
+        the holes: a module seated by one edge, a board's USB end), every wire, pill and caption, with MARGIN_PX round
+        them, and NOTE_PX a line of the note under them."""
+        boxes = [scene.marks.box()] + [part.body for part in scene.parts]
+        boxes += [BodyBox(min(x for x, _ in one.path.points), min(y for _, y in one.path.points),
+                          max(x for x, _ in one.path.points), max(y for _, y in one.path.points))
+                  for one in scene.jumpers if one.path.points]
+        boxes += [one.pill.box() for one in scene.jumpers] + [part.caption.box() for part in scene.parts]
+        left, top = min(box.left for box in boxes) - self.MARGIN_PX, min(box.top for box in boxes) - self.MARGIN_PX
+        width = _round_px(max(box.right for box in boxes) + self.MARGIN_PX - left)
+        height = _round_px(max(box.bottom for box in boxes) + self.MARGIN_PX - top + self.NOTE_PX * note_lines)
+        return _round_px(left), _round_px(top), width, height
 
     def _words(self, root, captions, notes, corner):
         """Each part's caption, its record's name in the title colour or an id muted, then the note's lines up from the
         canvas's bottom left `corner`, its margin in: the parts' lines, then the wires'."""
         colors, sizes = self.palette
-        for caption in captions.values():
+        for caption in captions:
             _element(root, "text", caption.words, x=caption.x, y=caption.y,
                      fill=colors["title" if caption.named else "grid_text"],
                      **{"class": "caption", "font-size": caption.size, "font-weight": PartCaption.WEIGHT})
@@ -276,16 +274,6 @@ class SvgBreadboardDiagram:
                 "x": str(_round_px(cx - 17)), "y": str(_round_px(height - 12)), "width": "34", "height": "12", "rx": "3",
                 "fill": "#cfd8dc", "stroke": "#455a64", "stroke-width": "1"})
 
-    @staticmethod
-    def _joined_groups(layout):
-        """The hole groups that join something: the group of each jumper's end, and each group with pins of two parts."""
-        parts_in = collections.defaultdict(set)
-        for part in layout.parts:
-            for hole in part.holes.values():
-                parts_in[hole.group].add(part.id)
-        ends = {hole.group for jumper in layout.jumpers for hole in (jumper.one, jumper.other)}
-        return ends | {group for group, parts in parts_in.items() if len(parts) > 1}
-
     def _label(self, root, part, geometry, joined):
         """A part's pad labels, when it is drawn from its record, and the dot on each of its pins, used or free."""
         part_px = geometry.part(part.type)
@@ -297,22 +285,11 @@ class SvgBreadboardDiagram:
                                                           "r": "2.5", "fill": PAD_MARKS[state].fill, "stroke": "#20262b",
                                                           "stroke-width": "0.6", "data-pad": state})
 
-    def _wire_notes(self, paths):
-        """The note's sentences of the wires drawn dashed and of the wires not drawn, each by its step's number."""
-        said = []
-        for fallback, words in ((wire_routing.BENDS, self.DASHED_NOTE), (wire_routing.NO_WAY, self.NOT_DRAWN_NOTE)):
-            steps = sorted(step for step, path in paths.items() if path.fallback == fallback)
-            if steps:
-                numbers = ", ".join(map(str, steps[:-1])) + " and %d" % steps[-1] if len(steps) > 1 else str(steps[0])
-                said.append(words[len(steps) > 1] % numbers)
-        return said
-
-    def _wires(self, root, layout, paths, pills):
-        """Each jumper on its way, its color's word drawn in the palette's hex (`wires`), with its pill."""
+    def _wires(self, root, scene):
+        """Each jumper of the scene on its way, its colour's word drawn in the palette's hex (`wires`), with its pill."""
         hexes = self.palette.colors["wires"]
-        colors = self.colors.of({jumper.step: jumper.role for jumper in layout.jumpers})
-        for jumper in layout.jumpers:
-            self._jumper(root, jumper, paths[jumper.step], hexes[colors[jumper.step]], pills[jumper.step])
+        for one in scene.jumpers:
+            self._jumper(root, one.jumper, one.path, hexes[one.color], one.pill)
 
     def _jumper(self, root, jumper, path, color, pill):
         """One jumper as one group: its way from its first hole to its other, drawn twice (white under, its color on top,
@@ -332,20 +309,19 @@ class SvgBreadboardDiagram:
                 "fill": color, "stroke": "#ffffff", "stroke-width": str(WIRE_SIZES_PX.end_ring)})
         self._pill(group, pill, color)
 
-    @staticmethod
-    def _pill(group, pill, color):
+    def _pill(self, group, pill, color):
         """A WirePill drawn across, in its wire's color with a white edge: the white disc with the step's number in the
         wire's color, then the words in white; turned a quarter back about its centre when it lies along a column."""
-        left, top = pill.x - pill.width / 2, pill.y - pill.HEIGHT / 2
+        left, top = pill.x - pill.width / 2, pill.y - pill.height / 2
         drawn = _element(group, "g", **{"class": "pill"})
         if pill.turned:
             drawn.set("transform", "rotate(-90 %s %s)" % (_round_px(pill.x), _round_px(pill.y)))
-        _element(drawn, "rect", x=left, y=top, width=pill.width, height=pill.HEIGHT, rx=pill.HEIGHT / 2, fill=color,
+        _element(drawn, "rect", x=left, y=top, width=pill.width, height=pill.height, rx=pill.height / 2, fill=color,
                  stroke="#ffffff", **{"stroke-width": 0.53})
-        _element(drawn, "circle", cx=left + pill.DISC_AT, cy=pill.y, r=pill.DISC_R, fill="#ffffff")
-        _element(drawn, "text", str(pill.step), x=left + pill.DISC_AT, y=pill.y + 1.9, fill=color,
+        _element(drawn, "circle", cx=left + self.DISC_AT, cy=pill.y, r=self.DISC_R, fill="#ffffff")
+        _element(drawn, "text", str(pill.step), x=left + self.DISC_AT, y=pill.y + 1.9, fill=color,
                  **{"font-size": 5.3, "font-weight": "800", "text-anchor": "middle"})
-        _element(drawn, "text", pill.words, x=left + pill.DISC_AT + pill.DISC_R + pill.WORDS_GAP, y=top + 7.0,
+        _element(drawn, "text", pill.words, x=left + self.DISC_AT + self.DISC_R + self.WORDS_GAP, y=top + 7.0,
                  fill="#ffffff", **{"font-size": 6.1, "font-weight": "700"})
 
 
