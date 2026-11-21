@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.breadboard import board_marks as board_marks_module, breadboard_scene, drawing, part_captions, part_pictures, sheet, svg_diagram, wire_pills, wire_routing, wiring_steps  # noqa: E402
+from spark.breadboard.spacing import BodyBox  # noqa: E402
 from test_breadboard_layout import EPAPER, RECORD_BOARD, epaper_inputs, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -645,7 +646,7 @@ class ThePillsTest(unittest.TestCase):
             with self.subTest(fixture):
                 groups = ElementTree.fromstring(text).findall(".//svg:g[@class='wire']", NS)
                 bodies = [(box.left, box.top, box.right, box.bottom) for box in (
-                    svg_diagram.BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts)]
+                    BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts)]
                 dots = [(float(dot.get("cx")), float(dot.get("cy")), float(dot.get("r")) + float(dot.get("stroke-width")) / 2)
                         for group in groups for dot in group.findall("svg:circle", NS)]
                 self.assertEqual(len(dots), 2 * len(layout.jumpers))
@@ -680,8 +681,9 @@ class ThePillsTest(unittest.TestCase):
         # it, or, on a stub too short to hold it (a jumper into a rail), beside it or past its end, within 6 px of it
         for fixture, (_, layout) in self.drawn.items():
             with self.subTest(fixture):
-                bodies = [svg_diagram.BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
-                marks = board_marks_module.BoardMarks(layout.geometry.surface, board_marks_module.BoardPalette.load().sizes)
+                bodies = [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
+                marks = board_marks_module.BoardMarks(layout.geometry.surface, board_marks_module.BoardPalette.load().sizes,
+                                                      breadboard_scene.PxLabelMeasure(7))
                 obstacles = marks.obstacles(bodies)
                 paths = wire_routing.TrackJumperRouter().route(layout, obstacles)
                 signs = marks.sign_boxes()
@@ -862,7 +864,7 @@ class TheLabelsTest(unittest.TestCase):
                 found = captions(root)
                 self.assertEqual(len(root.findall("svg:text[@class='caption']", NS)), len(layout.parts))
                 self.assertEqual(sorted(found), sorted(expected[fixture]))
-                bodies = [svg_diagram.BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
+                bodies = [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
                 for words, caption in found.items():
                     self.assertFalse([body for body in bodies if boxes_meet(caption_box(caption), body)], words)
                     self.assertEqual((caption.get("font-size"), caption.get("font-weight")), ("7", "600"))
@@ -875,7 +877,7 @@ class TheLabelsTest(unittest.TestCase):
         # the review of PR #1379: slid right along the board it sat under pill 12 and read as that pill's words
         _, layout = self.drawn["walk-c6"]
         board = next(part for part in layout.parts if part.id == wiring_steps.THE_BOARD)
-        body = svg_diagram.BodyBox.of(board, layout.geometry.part(board.type))
+        body = BodyBox.of(board, layout.geometry.part(board.type))
         caption = captions(self.walk)["DFRobot FireBeetle 2 ESP32-C6"]
         self.assertAlmostEqual(float(caption.get("x")), body.left, places=2)
         self.assertLessEqual(caption_box(caption)[3], body.top)

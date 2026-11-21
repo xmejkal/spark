@@ -19,7 +19,7 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import board_marks, sheet, wire_pills, wire_routing  # noqa: E402
+from spark.breadboard import board_marks, breadboard_scene, sheet, wire_pills, wire_routing  # noqa: E402
 from spark.breadboard.spacing import BodyBox  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
@@ -48,7 +48,8 @@ class TheWirePillsTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
             layout = sheet._plan_layout(sheet._read_build(DATA / "button-light-xiao" / "requirements.json"))
         bodies = [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
-        marks = board_marks.BoardMarks(layout.geometry.surface, board_marks.BoardPalette.load().sizes)
+        marks = board_marks.BoardMarks(layout.geometry.surface, board_marks.BoardPalette.load().sizes,
+                                       breadboard_scene.PxLabelMeasure(7))
         paths = wire_routing.TrackJumperRouter().route(layout, marks.obstacles(bodies))
         pieces = [grown(a, b, 2.0) for path in paths.values() for a, b in zip(path.points, path.points[1:])
                   if a != b]

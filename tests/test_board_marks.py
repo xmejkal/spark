@@ -64,7 +64,7 @@ class TheBoardMarksTest(unittest.TestCase):
         # (b) the walk's SVG prints each letter, number and sign inside a box that the marks give the router and the pills
         layout = walk_layout()
         surface = layout.geometry.surface
-        marks = board_marks.BoardMarks(surface, board_marks.BoardPalette.load().sizes)
+        marks = board_marks.BoardMarks(surface, board_marks.BoardPalette.load().sizes, breadboard_scene.PxLabelMeasure(7))
         boxes = list(marks.obstacles(()).marks) + list(marks.sign_boxes())
         root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(breadboard_scene.BreadboardSceneMaker().make(layout)))
         texts = centred_texts(root)

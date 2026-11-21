@@ -3,10 +3,12 @@ The drawn breadboard as one scene (P969, #1388): `BreadboardScene`, everything a
 thing with its place, made once by `BreadboardSceneMaker` before any view. The maker reads the board's marks
 (`board_marks`), routes the jumpers (a `wire_routing.JumperRouter`), picks each wire's colour (`wiring_steps`), and
 places the pills (`wire_pills`), the captions (`part_captions`) and each pad's label (a `PadLabelLayout`) through a
-`LabelMeasure`, the room a label takes as one view draws it. It also says each pad's state (in use or free), makes
-each part's picture from the `part_pictures.PartPictures` it is given, and writes each part's line of the note
-(`PartNotes`). So no view places a label or decides a pad's state or a warning: `svg_diagram` draws the scene in px,
-and a view in characters reads the same scene through its grid (`SceneGrid`). Nothing here draws.
+`LabelMeasure`, the room a label takes as one view draws it, which also sets each board mark's baseline. It also says
+each pad's state (in use or free), places each board's USB mark on the sheet (`UsbMark`), makes each part's picture
+from the `part_pictures.PartPictures` it is given, and writes each part's line of the note (`PartNotes`); the scene
+gives its one extent box (`extent()`). So no view places a label or decides a pad's state or a warning: `svg_diagram`
+draws the scene in px, and a view in characters reads the same scene through its grid (`SceneGrid`). Nothing here
+draws.
 """
 
 import collections
@@ -24,7 +26,8 @@ class LabelMeasure:
     maker places every pill, caption and pad label for that view: `pill(words)` gives (width, height) of a wire's pill
     with these words, along its words and across them; `caption(words)` gives (size, width) of a part's caption, its
     height and its width; `pad_label()` gives (gap, middle) of a pad's label: the room between the pad and the near end
-    of its words, along them, and how far its baseline lies from the middle of its letters, across them."""
+    of its words, along them, and how far its baseline lies from the middle of its letters, across them;
+    `baseline(size)` gives how far below the middle of its letters a board's mark of that size has its baseline."""
 
     def pill(self, words):
         raise NotImplementedError
@@ -35,12 +38,16 @@ class LabelMeasure:
     def pad_label(self):
         raise NotImplementedError
 
+    def baseline(self, size):
+        raise NotImplementedError
+
 
 class PxLabelMeasure(LabelMeasure):
     """Strategy: the labels as the SVG draws them, in its px: a pill PILL_HEIGHT high, with DISC_ROOM for the white
     disc with its number, END_ROOM after its words, and PER_CHARACTER a character of its words (6.1 px bold); a
     caption at the palette's `caption_size`, CAPTION_PER_CHARACTER of it a character plus CAPTION_ROOM of it; a pad's
-    label PAD_GAP from its pad, its baseline PAD_MIDDLE from the middle of its letters."""
+    label PAD_GAP from its pad, its baseline PAD_MIDDLE from the middle of its letters; a board's mark's baseline
+    MARK_BASELINE of its size below the middle of its letters."""
 
     #: The pill's height, the room its disc takes, the room after its words, and the width a character of its words takes,
     #: in px: the old page's at spark's pitch (the visual spec, section 7, P953).
@@ -50,6 +57,8 @@ class PxLabelMeasure(LabelMeasure):
     CAPTION_PER_CHARACTER, CAPTION_ROOM = 0.55, 0.5
     #: The room between a pad and its label, and how far a label's baseline lies from the middle of its letters, in px.
     PAD_GAP, PAD_MIDDLE = 5, 2
+    #: How far below the middle of its letters a board's letter, number or sign has its baseline, times its size.
+    MARK_BASELINE = 0.35
 
     def __init__(self, caption_size):
         self.caption_size = caption_size
@@ -62,6 +71,9 @@ class PxLabelMeasure(LabelMeasure):
 
     def pad_label(self):
         return self.PAD_GAP, self.PAD_MIDDLE
+
+    def baseline(self, size):
+        return size * self.MARK_BASELINE
 
 
 #: Where a drawn part's pad labels go, the `labels` of its part_px: beside each pad, inside a board's body; or from a
@@ -137,15 +149,15 @@ class PadLabel(collections.namedtuple("PadLabel", "pad word place at state doubt
 class SceneGrid(collections.namedtuple("SceneGrid", "x0 y0 step low high")):
     """Value: the half-pitch grid of one scene: `cell(x, y)` and `point(cell)` turn px into cells and back, from the
     first column and row a, as the router's TrackGrid does; `low` and `high` are the cells of the corners of its
-    extent, which holds everything the scene draws."""
+    extent, the scene's `extent()`, which holds everything the scene draws."""
 
     @classmethod
-    def of(cls, surface, boxes):
-        """The grid of the surface whose extent holds every BodyBox of `boxes`."""
+    def of(cls, surface, extent):
+        """The grid of the surface whose cells hold the BodyBox `extent`."""
         step = surface.pitch / 2
         x0, y0 = min(hole.x for hole in surface.terminal), min(surface.letters_y.values())
-        low = (math.floor((min(box.left for box in boxes) - x0) / step), math.floor((min(box.top for box in boxes) - y0) / step))
-        high = (math.ceil((max(box.right for box in boxes) - x0) / step), math.ceil((max(box.bottom for box in boxes) - y0) / step))
+        low = (math.floor((extent.left - x0) / step), math.floor((extent.top - y0) / step))
+        high = (math.ceil((extent.right - x0) / step), math.ceil((extent.bottom - y0) / step))
         return cls(x0, y0, step, low, high)
 
     def cell(self, x, y):
@@ -155,9 +167,13 @@ class SceneGrid(collections.namedtuple("SceneGrid", "x0 y0 step low high")):
         return self.x0 + cell[0] * self.step, self.y0 + cell[1] * self.step
 
 
+#: Value: the mark at a board's USB end: its BodyBox in the board's own frame (for a view that turns the part), and
+#: `at`, its BodyBox on the sheet, the part turned and placed (for a view that draws on the sheet's grid), as a
+#: PadLabel has its place and `at`.
+UsbMark = collections.namedtuple("UsbMark", "box at")
 #: Value: one part in the scene: its PlacedPart, its BodyBox, its Caption, its Picture (`part_pictures`), its line of
 #: the note ("" when it has none), {pin: PAD_USED or PAD_FREE} of its holes, its PadLabels (none unless it is drawn
-#: from its record) and its USB end's mark, a BodyBox in its own frame (None unless it is a board drawn from its record).
+#: from its record) and its USB end's UsbMark (None unless it is a board drawn from its record).
 ScenePart = collections.namedtuple("ScenePart", "part body caption picture note pads labels usb_mark")
 #: Value: one jumper in the scene: its Jumper, its JumperPath in px, the grid's cell of each of the path's points, its
 #: colour's word (`wiring_steps.JumperColors`) and its WirePill.
@@ -168,7 +184,8 @@ class BreadboardScene(collections.namedtuple("BreadboardScene", "layout marks pa
     """
     Value: everything a view of one drawn breadboard draws, each with its place in px: the BreadboardLayout it was made
     from, the breadboard's BoardMarks, each part (ScenePart) and each jumper (SceneJumper) in the
-    layout's order, the hole groups that join something (`joined`), and its SceneGrid. `colors()` gives each wire's
+    layout's order, the hole groups that join something (`joined`), and its SceneGrid. `extent()` gives the one box
+    that holds everything it draws, which its grid and a view's canvas read. `colors()` gives each wire's
     colour word, picked once here for every drawing and the sheet's colour line; `wire_notes()` gives the sentences of
     the wires drawn dashed and of those not drawn; `notes()` gives the lines of the note under the drawing, each
     part's and then the wires'.
@@ -179,6 +196,15 @@ class BreadboardScene(collections.namedtuple("BreadboardScene", "layout marks pa
                    "wires %s bend more than 4 times to go around the parts and are drawn dashed")
     NOT_DRAWN_NOTE = ("wire %s finds no way around the parts and is not drawn", "wires %s find no way around the parts "
                       "and are not drawn")
+
+    def extent(self):
+        """The BodyBox that holds the board's body, every part's body (a body may hang past the holes: a module seated
+        by one edge, a board's USB end) and caption, and every wire's points and pill."""
+        boxes = [self.marks.box()] + [part.body for part in self.parts] + [part.caption.box() for part in self.parts]
+        boxes += [one.pill.box() for one in self.jumpers]
+        boxes += [BodyBox(x, y, x, y) for one in self.jumpers for x, y in one.path.points]
+        return BodyBox(min(box.left for box in boxes), min(box.top for box in boxes),
+                       max(box.right for box in boxes), max(box.bottom for box in boxes))
 
     def colors(self):
         """{step number: its wire's colour word}, in step order."""
@@ -221,7 +247,7 @@ class BreadboardSceneMaker:
 
     def make(self, layout):
         surface = layout.geometry.surface
-        marks = BoardMarks(surface, self.palette.sizes)
+        marks = BoardMarks(surface, self.palette.sizes, self.measure)
         bodies = [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
         obstacles = marks.obstacles(bodies)
         paths = self.router.route(layout, obstacles)
@@ -229,13 +255,13 @@ class BreadboardSceneMaker:
                                        obstacles._replace(marks=obstacles.marks + marks.sign_boxes()))
         captions = PartCaption(self.measure, surface.pitch).place(layout.parts, bodies, bodies + list(
             obstacles.marks + marks.sign_boxes()) + wire_boxes(layout.jumpers, paths, pills))
-        grid = SceneGrid.of(surface, [marks.box()] + bodies + [pill.box() for pill in pills.values()]
-                            + [caption.box() for caption in captions.values()]
-                            + [BodyBox(x, y, x, y) for path in paths.values() for x, y in path.points])
         joined = frozenset(self._joined_groups(layout))
         parts = tuple(self._part(part, layout.geometry.part(part.type), body, captions[part.id], joined)
                       for part, body in zip(layout.parts, bodies))
-        return BreadboardScene(layout, marks, parts, self._jumpers(layout, paths, pills, grid), joined, grid)
+        scene = BreadboardScene(layout, marks, parts, self._jumpers(layout, paths, pills), joined, None)
+        grid = SceneGrid.of(surface, scene.extent())
+        return scene._replace(grid=grid, jumpers=tuple(
+            one._replace(cells=tuple(grid.cell(x, y) for x, y in one.path.points)) for one in scene.jumpers))
 
     def _part(self, part, part_px, body, caption, joined):
         """The ScenePart of one part: its picture and its line of the note, each pin's state (in use when its hole's
@@ -243,7 +269,7 @@ class BreadboardSceneMaker:
         picture = self.pictures.picture(part.type, part.record)
         pads = {pin: PAD_USED if hole.group in joined else PAD_FREE for pin, hole in part.holes.items()}
         return ScenePart(part, body, caption, picture, PartNotes.line(part, part_px, picture), pads,
-                         self._labels(part, part_px, pads), self._usb_mark(part_px))
+                         self._labels(part, part_px, pads), self._usb_mark(part, part_px))
 
     def _labels(self, part, part_px, pads):
         """The PadLabel of each pad of a part drawn from its record (P412, P945), in its part_px's order, placed by the
@@ -259,20 +285,23 @@ class BreadboardSceneMaker:
         return tuple(labels)
 
     @staticmethod
-    def _usb_mark(part_px):
-        """The mark at a board's USB end, in its own frame, when it is drawn from its record and its part_px asks for
-        one: 34 px wide and 12 high, at the middle of its bottom edge, named in no word, since its place is not
-        verified. None for any other part."""
+    def _usb_mark(part, part_px):
+        """The UsbMark at a board's USB end, when it is drawn from its record and its part_px asks for one: 34 px wide
+        and 12 high in its own frame, at the middle of its bottom edge, named in no word, since its place is not
+        verified; on the sheet, its corners turned with the part and moved to its corner. None for any other part."""
         if not (part_px.get("pad_labels") and part_px.get("usb_mark")):
             return None
         cx, height = part_px["center"][0], part_px["size"][1]
-        return BodyBox(cx - 17, height - 12, cx + 17, height)
+        box = BodyBox(cx - 17, height - 12, cx + 17, height)
+        corners = rotate({0: (box.left, box.top), 1: (box.right, box.bottom)}, part_px["center"], part.rotate).values()
+        xs, ys = [part.left + x for x, _ in corners], [part.top + y for _, y in corners]
+        return UsbMark(box, BodyBox(min(xs), min(ys), max(xs), max(ys)))
 
-    def _jumpers(self, layout, paths, pills, grid):
-        """The SceneJumper of each jumper, in the layout's order, with its colour's word."""
+    def _jumpers(self, layout, paths, pills):
+        """The SceneJumper of each jumper, in the layout's order, with its colour's word; its cells come with the grid."""
         colors = self.colors.of({jumper.step: jumper.role for jumper in layout.jumpers})
-        return tuple(SceneJumper(jumper, paths[jumper.step], tuple(grid.cell(x, y) for x, y in paths[jumper.step].points),
-                                 colors[jumper.step], pills[jumper.step]) for jumper in layout.jumpers)
+        return tuple(SceneJumper(jumper, paths[jumper.step], (), colors[jumper.step], pills[jumper.step])
+                     for jumper in layout.jumpers)
 
     @staticmethod
     def _joined_groups(layout):
