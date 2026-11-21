@@ -61,9 +61,9 @@
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
-  "name": "a pick the pick's own rule refuses is offered as one that saves (P829 review)",
-  "find": "    if problems:\n        return Offer(key, label, refusal(",
-  "replace": "    if False:\n        return Offer(key, label, refusal("
+  "name": "a pick the pick's own rule refuses is offered as one that saves (P829 review; P976 moved its anchor: a refused pick is no offer)",
+  "find": "        if own:\n            refused += 1\n        elif problems:",
+  "replace": "        if False:\n            refused += 1\n        elif False:"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",

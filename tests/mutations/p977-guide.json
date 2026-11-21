@@ -134,8 +134,8 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the guide does not list the open needs (P977)",
-  "find": "\"needs\": open_needs if now.phase == flow_codes.PARTS else []}",
-  "replace": "\"needs\": []}"
+  "find": "\"needs\": open_needs if now.phase == flow_codes.PARTS else [], \"steps\": count}",
+  "replace": "\"needs\": [], \"steps\": count}"
  },
  {
   "file": "scripts/spark/flow/guide.py",

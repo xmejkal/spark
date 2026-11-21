@@ -73,10 +73,19 @@ RESERVE_MESSAGE = "Uses 1 of your %s “%s” for the %s."
 RESERVE_MANY_MESSAGE = "Uses 1 of your “%s” for the %s."
 RESERVE_UNKNOWN_MESSAGE = "Uses 1 of your “%s” for the %s, if you have one: spark does not know how many you have."
 TO_GET_MESSAGE = "You have none, so it goes on the list to get."
-#: A pick that `needs.plan_holds` refuses writes nothing. The reason is the problem plan_holds gives: too few of this
-#: part are free, or another need's pick cannot get its part. Each holds the problem's own sentence.
-NOT_FREE_MESSAGE = "Too few “%s” are free for this pick (%s), so spark refuses this pick and saves nothing."
+#: A pick that `needs.plan_holds` refuses writes nothing, so it is no offer (P976). When another need's pick cannot get
+#: its part, the need's says line holds the problem's own sentence once: `<need>: <sentence>`, and the need gets no offers.
 OTHER_PICK_MESSAGE = "The pick for %s cannot get “%s” (%s), so spark refuses this pick and saves nothing."
+NEED_REFUSED_LINE = "%s: %s"
+#: The says line of a need with picks left out: how many more are not shown, and how many its own part refuses, then
+#: LIST_PICKS_MESSAGE. A count of 0 is left out. Each %s after a count is that count's word, from PICK_WORDS and BE_WORDS.
+MORE_PICKS_MESSAGE = "Not shown for %s: %d more %s."
+MORE_AND_REFUSED_MESSAGE = "Not shown for %s: %d more %s, %d refused (too few free)."
+REFUSED_PICKS_MESSAGE = "%d %s for %s %s refused: too few are free."
+LIST_PICKS_MESSAGE = "Claude can list them with parts.py --match."
+PICK_WORDS, BE_WORDS = ("pick", "picks"), ("is", "are")
+#: The says line of a need with candidates and none that holds its words or scores above 0: it gets no offers.
+NO_PLAUSIBLE_MESSAGE = "No pick fits %s by its words. Ask Claude to run parts.py --match."
 #: What a pick lets go (`needs.released_holds`): the hold of the need's old pick, or a hold no pick explained.
 FREES_MESSAGE = "Frees what the old pick held."
 FREES_UNPICKED_MESSAGE = "Frees a part this project held without a pick."
