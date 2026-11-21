@@ -505,6 +505,16 @@ offer's makes_stale or effect. **The failure behind it:** a hash of the project'
 effect says "You have none, so it goes on the list to get." until the person adds three to the drawer, and then "Uses 1
 of your 3 …", with no file of the project changed. So the offers count too.
 
+### Page request
+
+One click on the project's page, written down for spark: `{id, key, seen, at}`, the page's own id for it (a UUID), the
+offer's key, the first 12 hex digits of the fingerprint the page was read at, and when it was sent (`PageRequest` in
+`scripts/spark/flow/run_request.py`, P829). `/spark:page` writes it as `.spark/page-request.json`, and
+`flow.py run-request` reads it, deletes it and runs the step only when spark offers that key now and `seen` is the
+fingerprint now. The values of the step come from spark's offer, never from the request. **The failure behind it:** a
+page stays open while the project changes. A second Build from the same page, or a pick the drawer no longer allows,
+would run on a project the person no longer sees. So a request that is out of date runs nothing and says so.
+
 ### Fit
 
 One offer as a matcher sees it for one need: a `score` from 0 to 1, the reasons (`why`), and `exact`, which is what

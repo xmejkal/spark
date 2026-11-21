@@ -1,23 +1,26 @@
 """
 The page of a project (P827, #1185): the flow's phases as one plain HTML file, `page.html`, each with a status word and a
 mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it. The page
-adds no tick of its own: a phase whose status is not ok never shows one (`shown_phase`). It has no script, loads nothing
-from the web and is the same bytes for the same flow. The breadboard stands in it as plain shapes (`SvgInliner`, P949),
+adds no tick of its own: a phase whose status is not ok never shows one (`shown_phase`). It loads nothing from the web and is
+the same bytes for the same flow. Its one script (P829 PR 3) does nothing from disk: `page_words` writes every word it
+shows. The breadboard stands in it as plain shapes (`SvgInliner`, P949),
 with its keys for a player and a legend of its pads; every other picture is an <img>.
 """
 
 import base64
 import html
+import json
 import xml.etree.ElementTree as ElementTree
 from collections import namedtuple
+from pathlib import Path
 
 from spark.breadboard import before_power, part_pictures, picture_check
 from spark.breadboard.svg_diagram import PAD_MARKS
 from spark.breadboard.tabbed_page import token_styles
-from spark.flow import flow_codes
+from spark.flow import flow_codes, request_codes
 from spark.flow.fingerprint import SHORT
 from spark.flow.phase_readers import MARKS
-from spark.core.outcomes import COULD_NOT_RUN, OK
+from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 
 # --- MVP ---
 #: Value: one picture of the project: its title, its SVG text or None, and why there is none. The page keeps no renderer's
@@ -39,6 +42,10 @@ FlowPage = namedtuple("FlowPage", "title phases stands_at pictures notes wiring 
                       defaults=(None, None, None, None))
 
 TICK = MARKS[OK][1]
+#: The page's one script (P829 PR 3): it adds the buttons only in a published page with the Artifact database, and does
+#: nothing from disk. Its words stand beside it in an inert JSON block with WORDS_ID.
+PAGE_SCRIPT = Path(__file__).resolve().with_name("page_script.js")
+WORDS_ID = "spark-words"
 
 
 def word_of(status):
@@ -60,6 +67,52 @@ def shown_phase(phase):
 
 def _text(value):
     return html.escape(str(value))
+
+
+def is_sendable(offer):
+    """True when the page sends the offer dict `offer` from a button (P829): a pick, the parts list or the build."""
+    return offer["key"].split(":", 1)[0] in flow_codes.SENDABLE
+
+
+def _makes_stale(offer):
+    """The attribute a sendable offer carries for the script and an agent: the phases it can make out of date, space
+    apart. Nothing for an offer the page does not send."""
+    return ' data-makes-stale="%s"' % _text(" ".join(offer["makes_stale"])) if is_sendable(offer) else ""
+
+
+def sendable_now(page):
+    """The one sendable offer dict of the phase the guide's NOW names, or None when that phase has none or more than one
+    (P829 review): the NOW line then carries its key, and the script puts its button there too."""
+    now = (page.guide or {}).get("now")
+    if not now:
+        return None
+    offers = [offer for phase in page.phases if phase["phase"] == now["phase"] for offer in phase["offers"] if is_sendable(offer)]
+    return offers[0] if len(offers) == 1 else None
+
+
+def page_words(phases, wiring_first=False):
+    """
+    Every word the page's script shows (P829 PR 3, the plan's section 9), as one dict: per sendable offer its label (the
+    button and the confirm's title) and the confirm's lines (its effect, the phases it may make out of date, the wait),
+    the fixed words of the buttons and the status line, and the words of each answer. A refusal's words are keyed by
+    its code's meaning, the `line` that `flow.py run-request` answers. The script fills in a time, a label or a line.
+    `intro` is the published page's intro, with the wiring line when the wiring comes first (`wiring_first`).
+    """
+    offers = {}
+    for offer in (offer for phase in phases for offer in phase["offers"] if is_sendable(offer)):
+        stale = [flow_codes.CONFIRM_STALE % ", ".join(offer["makes_stale"])] if offer["makes_stale"] else []
+        offers[offer["key"]] = {"label": offer["label"], "says": [offer["effect"]] + stale}
+    meanings = {str(code): meaning for code, meaning in request_codes.CODES.items()}
+    marks = {status: MARKS[status][1] for status in (OK, PROBLEMS, COULD_NOT_RUN)}
+    return {"offers": offers, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY,
+            "withdraw": flow_codes.WITHDRAW, "command": flow_codes.PAGE_COMMAND, "waiting": flow_codes.WAITING_SAYS,
+            "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "page_from": flow_codes.PAGE_FROM,
+            "not_sent": flow_codes.NOT_SENT_SAYS, "not_withdrawn": flow_codes.NOT_WITHDRAWN_SAYS,
+            "intro": " ".join([flow_codes.PUBLISHED_INTRO] + ([flow_codes.WIRING_FIRST] if wiring_first else [])),
+            "ok": dict(flow_codes.RAN_OK_SAYS), "ran": flow_codes.RAN_OTHER_SAYS, "problems": flow_codes.RAN_PROBLEMS_SAYS,
+            "could_not_run": flow_codes.COULD_NOT_RUN_SAYS,
+            "refused": {meanings[name]: said for name, said in flow_codes.REFUSED_SAYS.items()},
+            "marks": dict(marks, **{"not-run": flow_codes.NOT_RUN_MARK})}
 
 
 def _mark(shown):
@@ -215,7 +268,17 @@ class FlowHtmlPage:
 
     def text(self, page):
         head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._intro(page), self._guide(page), self._rail(page), self._stands_at(page)]
-        return "\n".join([part for part in head if part] + [part for part in self._body(page) if part] + ["</body>", "</html>"]) + "\n"
+        return "\n".join([part for part in head if part] + [part for part in self._body(page) if part]
+                         + [self._script(page), "</body>", "</html>"]) + "\n"
+
+    def _script(self, page):
+        """The page's words (`page_words`) as an inert JSON block, then its one script (P829 PR 3), as one block before
+        `</body>`: without it the page is the page with no script, byte for byte, but the script's hooks (`data-makes-stale` on
+        a sendable offer, and `data-key` with it on the NOW line, `sendable_now`).
+        A `<` in the words is written `\\u003c`, so no text closes the block."""
+        words = json.dumps(page_words(page.phases, self._wiring_first(page)), ensure_ascii=False, sort_keys=True).replace("<", "\\u003c")
+        return '<script type="application/json" id="%s">%s</script>\n<script>%s</script>' % (
+            WORDS_ID, words, PAGE_SCRIPT.read_text(encoding="utf-8"))
 
     @staticmethod
     def _wiring_first(page):
@@ -255,7 +318,7 @@ class FlowHtmlPage:
         if now and now.get("steps") and self._wiring_first(page) and page.wiring.steps:
             first = page.wiring.steps[0][0]
             link = ' <a href="#step-%d">%s</a>' % (first, _text(flow_codes.ONE_AT_A_TIME % first))
-        lines = [self._guide_line(flow_codes.GUIDE_NOW % now["phase"], [now["says"]], link) if now else "",
+        lines = [self._guide_line(flow_codes.GUIDE_NOW % now["phase"], [now["says"]], link, sendable_now(page)) if now else "",
                  self._guide_line(flow_codes.GUIDE_DONE, guide["done"], ""),
                  self._guide_line(flow_codes.GUIDE_LATER, guide["later"], ""),
                  "<p>%s</p>" % _text(guide["no_simulation"]) if guide["no_simulation"] else "",
@@ -264,9 +327,11 @@ class FlowHtmlPage:
         return "\n".join(['<section id="guide">'] + lines + ["</section>"]) if lines else ""
 
     @staticmethod
-    def _guide_line(label, items, link):
-        """One line of the guide: its label in `<strong>` and its items, comma apart, or nothing when there is none."""
-        return "<p><strong>%s</strong> %s%s</p>" % (_text(label), _text(", ".join(items)), link) if items else ""
+    def _guide_line(label, items, link, offer=None):
+        """One line of the guide: its label in `<strong>` and its items, comma apart, or nothing when there is none. A line
+        with the sendable `offer` of its phase carries its key and `data-makes-stale`, so the script puts its button there."""
+        hooks = ' data-key="%s"%s' % (_text(offer["key"]), _makes_stale(offer)) if offer else ""
+        return "<p%s><strong>%s</strong> %s%s</p>" % (hooks, _text(label), _text(", ".join(items)), link) if items else ""
 
     @staticmethod
     def _stands_at(page):
@@ -299,7 +364,7 @@ class FlowHtmlPage:
                      "" if folded else " open", _mark(shown), _text(phase["phase"]), _text(shown.word)),
                  '<div id="phase-%s">' % _text(phase["phase"]), "<p>Done by: %s</p>" % _text(phase["by"])]
         lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
-        offers = ['<li data-key="%s">%s: %s</li>' % (_text(offer["key"]), _text(offer["label"]), _text(offer["effect"]))
+        offers = ['<li data-key="%s"%s>%s: %s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(offer["label"]), _text(offer["effect"]))
                   for offer in phase["offers"]]
         return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</div>", "</details>", "</section>"])
 

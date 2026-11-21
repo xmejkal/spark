@@ -40,6 +40,7 @@ The [journey guide](journey.md) shows these commands on real runs.
 | `/spark:identify` | a module you own, from a photo |
 | `/spark:build` | you have a [requirements file](../../GLOSSARY.md#the-requirements-file) |
 | `/spark:deploy` | a scenario passed and the board is on USB |
+| `/spark:page` | you want the project's page as a private Artifact, or you used a button on it |
 
 ### `/spark:init`
 
@@ -163,15 +164,8 @@ It does not:
 - verify a pinout;
 - track prices.
 
-**What research has cost.** The agents run on your account, so you pay for their tokens and time. Measured from their
-transcripts on 2026-10-03 as tool calls, tokens processed and time (`scripts/cost.py <transcript>` measures one run
-today, but counts network requests, documents read, new tokens apart from cache reads and minutes, so its numbers for the
-same run differ)
-([P80 in the backlog's archive](../../scrum/PRODUCT_BACKLOG.md#p80--parts-research-is-lean-and-professional--slice-4-the-pos-request-of-2026-10-03--done-2026-10-03-581fa8a)):
-
-- the full research protocol P80 replaced: a median of 78 tool calls, about 5.0 M tokens processed and about 25 minutes;
-- one LED, the Kingbright L-7113ID, on a lean brief: 19 calls, about 0.55 M tokens, 148 s;
-- `part-finder`'s first use: 14 calls, 91 s, about 0.17 M tokens.
+**What research has cost** is on [its own page](research-cost.md): the agents run on your account, so you pay for their
+tokens and time.
 
 Nobody has measured today's route end to end: `datasheet-reader` has not yet run on a real need. Page:
 [`commands/research.md`](../../commands/research.md).
@@ -191,8 +185,7 @@ out of the bag. Page: [`commands/identify.md`](../../commands/identify.md).
 A requirements file becomes a board that builds, with a Wokwi diagram generated from it, or it names the stage that
 stopped it. It runs no simulation. It runs in seconds, with no agents ([journey: Build](journey/build.md)).
 
-With `--keep .` it writes `board.tsx`, its footprint, `dist/`, `breadboard.md` (the parts and how to wire them), `breadboard.json` (the same wiring on a Wokwi breadboard, for the
-XIAO ESP32-C6 today),
+With `--keep .` it writes `board.tsx`, its footprint, `dist/`, `breadboard.md` (the parts and how to wire them), `breadboard.json` (the same wiring on a Wokwi breadboard, for the XIAO ESP32-C6 today),
 `firmware/pins.py` (the pins the firmware imports) and `sim/` (the Wokwi project) into the project. After a build whose build stage ended ok, a `board.tsx` that spark wrote and nobody changed is `replaced`
 (`unchanged` when this build made the same board; the previous version is `.spark/previous/board.tsx.txt`). Any other is left alone,
 and so is one when the build did not finish or the replace failed. `dist/` is built from the requirements file, not from your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)). To check an edited `board.tsx`, build it with `npx --no tsci build board.tsx`; to regenerate it, delete it. When its traces join other
@@ -224,6 +217,13 @@ Puts the flash image that passed the simulation on the board on USB ([journey: B
 after the person's yes, typed in their own terminal, or their deploy grant. After the flash it names the image's
 sha256 and whose yes it was, then reads the board back and waits for the firmware's `ready`. The steps are in
 [`commands/deploy.md`](../../commands/deploy.md).
+
+### `/spark:page`
+
+The first time, it asks, then publishes `page.html` as a private Artifact and keeps its id in `.spark/page.json`. On
+the page, a button and Send leave a request; type `/spark:page`, and Claude hands it to `flow.py run-request`, which
+runs it only when spark still offers it. Reload the page for the answer. A stale answer means the project changed since
+you clicked: reload and click again. Claude runs no step itself. Page: [`commands/page.md`](../../commands/page.md).
 
 ## Skills
 

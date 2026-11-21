@@ -1,0 +1,128 @@
+[
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "from disk, with no database, the script still makes its buttons (P829)",
+  "find": "  if (!db) return null;",
+  "replace": "  if (false) return null;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "a second send while one waits writes a second row (P829)",
+  "find": "    if (this.waiting()) return null;",
+  "replace": "    if (false) return null;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "the request row lacks the page's fingerprint (P829)",
+  "find": "const row = { id: this.makeId(), key: key, seen: this.seen, at: this.now().toISOString() };",
+  "replace": "const row = { id: this.makeId(), key: key, at: this.now().toISOString() };"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "a request with no answer says done (P829)",
+  "find": "if (!answer) return { mark: \"\", text: fill(words.waiting, clock(request.at)), grey: false };",
+  "replace": "if (!answer) return { mark: \"\", text: \"done\", grey: false };"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "Withdraw deletes no row (P829)",
+  "find": "      await this.channel.withdraw(waiting.id);\n",
+  "replace": "      ;\n"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "an answer's line reaches the prototype of the refusal words (P829)",
+  "find": "const refused = own(words.refused, answer.line);",
+  "replace": "const refused = words.refused[answer.line];"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "the withdrawn row's own snapshot puts the wait back on (P829)",
+  "find": "    if (local && local.withdrawn && request.id === local.id) return;\n",
+  "replace": "\n"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "a need's drop gets a button on the page (P829, P883)",
+  "find": "SENDABLE = (PICK, WRITE_REQUIREMENTS, BUILD_BOARD)",
+  "replace": "SENDABLE = (PICK, WRITE_REQUIREMENTS, BUILD_BOARD, NEEDS_DROP)"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "a label with </script> closes the words block (P829)",
+  "find": "ensure_ascii=False, sort_keys=True).replace(\"<\", \"\\\\u003c\")",
+  "replace": "ensure_ascii=False, sort_keys=True)"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a story run that needs node runs without it, and the page script's tests skip (P829)",
+  "find": "    if needs_node(story) and which(\"node\") is None:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "the other need's refusal names the part by its key (P829 row 26)",
+  "find": "plan.name_of(other[\"subject\"]), other[\"sentence\"])",
+  "replace": "other[\"subject\"], other[\"sentence\"])"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "a withdraw says withdrawn before the delete is done (P829 review 1)",
+  "find": "    this.note = null;\n    try {\n      await this.channel.withdraw(waiting.id);",
+  "replace": "    this.note = null;\n    this.latest = Object.assign({}, waiting, { withdrawn: true });\n    try {\n      await this.channel.withdraw(waiting.id);"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "the answer of a withdrawn request is never shown (P829 review 1)",
+  "find": "    this.channel.watchAnswer(waiting.id, (answer) => this.heardWithdrawn(waiting.id, answer));\n",
+  "replace": "\n"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "a send the database refuses still says sent and keeps the buttons grey (P829 review 2)",
+  "find": "      [this.latest, this.answer, this.note] = before.concat(this.words.not_sent);",
+  "replace": "      this.note = null;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "a withdraw the database refuses says nothing (P829 review 2)",
+  "find": "      this.note = this.words.not_withdrawn;",
+  "replace": "      this.note = null;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "a viewer who is not the owner gets the buttons (P829 review 3)",
+  "find": "  if (!user || !(await user.isOwner())) return null;",
+  "replace": "  if (false) return null;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "a snapshot older than the page's own send puts the buttons back (P829 review 8)",
+  "find": "    if (local && (!request || String(request.at) < String(local.at))) return;",
+  "replace": "    if (false) return;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "Copy stays when nothing waits (P829 review 9)",
+  "find": "    this.copy.hidden = !waiting;",
+  "replace": "    this.copy.hidden = false;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "the NOW line gets no button (P829 review 5)",
+  "find": "this.doc.querySelectorAll(\"[data-makes-stale]\")",
+  "replace": "this.doc.querySelectorAll(\"li[data-makes-stale]\")"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "the NOW line carries no key (P829 review 5)",
+  "find": "    return offers[0] if len(offers) == 1 else None",
+  "replace": "    return None"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "the NOW line carries a key when its phase has two sendable offers (P829 review 5)",
+  "find": "    return offers[0] if len(offers) == 1 else None",
+  "replace": "    return offers[0] if offers else None"
+ }
+]

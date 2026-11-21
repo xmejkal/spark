@@ -9,7 +9,7 @@ from pathlib import Path
 
 #: The modules that import nothing of spark. A planted tree holds them, or rule U1 reports each one as missing.
 LEAF_NAMES = ("board_codes", "breadboard_codes", "build_codes", "check_codes", "codes", "deploy_stages", "design_codes",
-              "firmware_codes", "flow_codes", "idea_codes", "outcomes", "provenance", "records_codes", "sourcing_codes",
+              "firmware_codes", "flow_codes", "idea_codes", "outcomes", "provenance", "records_codes", "request_codes", "sourcing_codes",
               "text_guards", "zone_time")
 
 

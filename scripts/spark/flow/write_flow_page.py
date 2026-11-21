@@ -6,6 +6,8 @@ reads the same phases as `flow.py show` (`show_flow.read_flow`). A build with --
 """
 
 import datetime
+import json
+import re
 from collections import namedtuple
 from pathlib import Path
 
@@ -18,8 +20,10 @@ from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture
 from spark.flow.phase_readers import REQUIREMENTS_FILE
 from spark.flow.guide import guide_of
 from spark.flow.show_flow import privacy_for, read_flow
-from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Operation
+from spark.core import codes
+from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Argument, Operation
 from spark.core.outcomes import COULD_NOT_RUN
+from spark.records import store
 from spark.core.result import Finding, OperationResult
 from spark.core.zone_time import stamp
 
@@ -27,6 +31,14 @@ from spark.core.zone_time import stamp
 #: The Finding of a page that cannot be written: its sentence, and what to do.
 PAGE_SENTENCE = "%s was not written: %s"
 PAGE_FIX = "make the project folder writable and run it again"
+#: The record of the Artifact the page is published as (P829 PR 4), from the project's folder: its id only, never a path.
+PUBLISHED_FILE = Path(".spark") / "page.json"
+#: An Artifact's id (its slug) as the Artifact tools answer it: a UUID in lower case. Its own pattern, not the request id's
+#: (run_request imports the build, which imports this module). Read with `fullmatch`: `$` alone lets a trailing newline in.
+ARTIFACT_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+#: The Finding of an --artifact that is no Artifact id: its sentence, and what to do.
+ARTIFACT_SENTENCE = "--artifact is no Artifact id: an id is a UUID in lower case, as get_artifact answers it"
+ARTIFACT_FIX = "give the id of the published page, the slug that publish_files or get_artifact answers"
 #: Value: what `write_page` wrote: the path, the masked phases, where the project stands, the flow's fingerprint and the
 #: masked guide (P977).
 Written = namedtuple("Written", "path phases stands_at fingerprint guide")
@@ -51,6 +63,29 @@ class FlowPageStore:
         path = Path(project) / file_name
         path.write_text(text, encoding="utf-8")
         return path
+
+
+class PublishedPageStore:
+    """Store: `.spark/page.json` of one project, the id of the Artifact its page is published as (P829 PR 4). `read`
+    gives the id, or None when there is no record or spark cannot use it; `write` keeps `{"artifact": id}`, the id only,
+    through the store's one atomic write. An OSError from the write is the caller's."""
+
+    def __init__(self, project):
+        self.path = Path(project) / PUBLISHED_FILE
+
+    def read(self):
+        """The id the record holds, or None: no record, no JSON object, or an id that is no Artifact id."""
+        try:
+            held = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        artifact = held.get("artifact") if isinstance(held, dict) else None
+        return artifact if isinstance(artifact, str) and ARTIFACT_PATTERN.fullmatch(artifact) else None
+
+    def write(self, artifact):
+        """Keep `artifact`, an Artifact id, as the project's published page."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        store.write_file(self.path, json.dumps({"artifact": artifact}) + "\n")
 
 
 def kept_pictures(project):
@@ -132,24 +167,34 @@ def write_kept_page(project, tabs):
 class WriteFlowPage(Operation):
     """
     Operation: write the project's page. It answers the file (relative to the project), what it did, where the project
-    stands, each phase's status, the flow's fingerprint (P829) and the guide (P977). A page that cannot be written is one could-not-run Finding. The phases' own problems
+    stands, each phase's status, the flow's fingerprint (P829), the guide (P977) and the Artifact the page is published as
+    (P829 PR 4: `--artifact` keeps its id in .spark/page.json first, through PublishedPageStore). A page that cannot be written is one could-not-run Finding. The phases' own problems
     do not change its status: `flow.py show` reports those. `readers`, `parts`, `renderer` and `store` are what a test
     swaps (None: the real ones).
     """
 
     name = "write-flow-page"
     summary = "Write page.html in the project: each phase of the flow with a status word and a mark, and the project's pictures (P827)."
-    arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
+    arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"),
+                 Argument(("--artifact",), "artifact", str, "the id of the Artifact the page is published as (P829): kept in "
+                          ".spark/page.json, the id only, and answered as data.artifact by every later page", metavar="ID"),
+                 COMMON_ARGUMENTS["json"])
     effects = (READS, WRITES)
-    data_keys = ("file", "did", "stands_at", "phases", "fingerprint", "guide")
+    data_keys = ("file", "did", "stands_at", "phases", "fingerprint", "guide", "artifact")
     privacy_for = staticmethod(privacy_for)
 
     def __init__(self, readers=None, parts=None, renderer=None, store=None):
         self.readers, self.parts, self.renderer, self.store = readers, parts, renderer, store
 
-    def run(self, project, *, outside):
+    def run(self, project, artifact=None, *, outside):
         renderer = self.renderer or FlowHtmlPage()
+        if artifact is not None and not ARTIFACT_PATTERN.fullmatch(artifact):
+            return OperationResult(findings=[Finding.of(COULD_NOT_RUN, "--artifact", codes.BAD_ARGUMENT, ARTIFACT_SENTENCE, ARTIFACT_FIX)],
+                                   lines=[ARTIFACT_SENTENCE])
+        published = PublishedPageStore(project)
         try:
+            if artifact is not None:
+                published.write(artifact)
             written = write_page(project, self.readers, self.parts, renderer, self.store)
         except (OSError, UnicodeError) as refused:  # a text the file cannot hold (a lone surrogate) is a page not written
             said = PAGE_SENTENCE % (renderer.FILE_NAME, refused)
@@ -157,6 +202,6 @@ class WriteFlowPage(Operation):
                                    lines=[said])
         data = {"file": renderer.FILE_NAME, "did": "wrote", "stands_at": written.stands_at,
                 "phases": [{"phase": phase["phase"], "status": phase["status"]} for phase in written.phases],
-                "fingerprint": written.fingerprint, "guide": written.guide}
+                "fingerprint": written.fingerprint, "guide": written.guide, "artifact": published.read()}
         return OperationResult(data, lines=["wrote %s: %s" % (renderer.FILE_NAME, renderer.PURPOSE_MESSAGE)])
 # --- end MVP ---

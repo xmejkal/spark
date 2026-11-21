@@ -3,6 +3,7 @@
 Part of the [guide for AI agents](../agents.md). `flow.py show` says where a project stands, phase by phase
 ([P825](https://github.com/xmejkal/spark/issues/1183)). The phases go from the idea to the deploy. It reads the project's
 files and the store, and writes nothing. `flow.py` with no verb shows too. `flow.py page` writes the same phases as a page ([below](#the-page)).
+`flow.py run-request` runs the step the page asked for ([a page request](#a-page-request)).
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" show --project . --json
@@ -91,7 +92,7 @@ even when it is stored as the drawer entry of its record. Nor is a pick that the
 screen: 2 more picks, 1 refused (too few free). Claude can list them with parts.py --match.` A count of 0 is left out.
 A need with candidates and none plausible gets no offers and the line `No pick fits <need> by its words. Ask Claude to
 run parts.py --match.` When another need's pick cannot get its part, the need gets no offers, and its line holds that
-problem's own sentence once, such as `wet: The pick for soil cannot get “x-one” (…), so spark refuses this pick and
+problem's own sentence once, with the part by its name (its record's, else its drawer label), such as `wet: The pick for soil cannot get “Soil probe” (…), so spark refuses this pick and
 saves nothing.`
 
 The build phase reads `.spark/build.json`. If the folder of `check_spine.py --keep` is a project, the build writes this
@@ -109,7 +110,7 @@ the breadboard phase too when the sheet exists ([P886](https://github.com/xmejka
 ## The page
 
 `flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It reads the
-same phases as `show`, so a person reads them from the disk, in a browser, with no script. A line under the title says
+same phases as `show`, so a person reads them from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). A line under the title says
 what the page is and that every change goes through Claude in the chat. Under it stands the guide
 ([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: `data.guide` as one line each, NOW with its
 phase in parentheses and its sentence, DONE, LATER and SET ASIDE, and a list with no item draws no line.
@@ -152,16 +153,21 @@ it shows the schematic and the PCB, so a script in a hand-edited `breadboard.svg
 dot on each pin is yellow when its row joins a wire or another part and gold when it is free. Under the picture a
 legend names the states that the dots draw: "pad in use" and "pad free". "Pad held: do not use" shows only when a pad
 is held, and spark draws none yet ([P950](https://github.com/xmejkal/spark/issues/1354)). The page takes the colours of
-the wiring page that the PO chose as the model, light and dark, with the system's fonts. It still has no script and loads nothing.
+the wiring page that the PO chose as the model, light and dark, with the system's fonts. It loads nothing.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json
 ```
 
 With `--json` it prints the envelope with `op` `write-flow-page`. Its `data` holds `file` (`page.html`, relative to the
-project), `did` (`wrote`), `stands_at`, `phases`, each only `{phase, status}`, `fingerprint` and `guide`, as `show`'s. A page that cannot be written is one
+project), `did` (`wrote`), `stands_at`, `phases`, each only `{phase, status}`, `fingerprint` and `guide`, as `show`'s,
+and `artifact`: the id of the Artifact the page is published as, or `null`. A page that cannot be written is one
 `unchecked` item with the code `page_not_written`, and the exit is 2. A phase that holds problems does not change this
 status. Read it with `show`.
+
+`--artifact ID` keeps the id in `.spark/page.json` before it writes the page: `{"artifact": ID}`, the id only, never a
+path ([P829](https://github.com/xmejkal/spark/issues/1187)). An id that is no UUID in lower case is a `bad_argument`, exit 2, and nothing is
+written. A record that spark cannot read, or that holds no such id, answers `null`.
 
 For an agent or a later script, the page has hooks. Each rail entry and each section has `data-phase` (the phase name) and
 `data-status` (the flow's code, or `none` for no status). The `<body>` has `data-stands-at` (the first open phase, or `none`
@@ -176,7 +182,7 @@ links Back, Next, All steps and Picture. Picture shows only when the breadboard 
 button walks the steps. The links "Wiring", "Pictures", "All steps" and "Picture" leave that view, and the browser's Back
 returns to the step. In a
 browser that does not know the CSS `:has()`, every step shows. When the page prints, every step shows. In a published
-Artifact, the fragment may not survive a reload of the outer page. The page has no script and no checkbox on a step, and
+Artifact, the fragment may not survive a reload of the outer page. The steps need no script, the page has no checkbox on a step, and
 it never says that the board is wired.
 
 The words on the page:
@@ -195,5 +201,108 @@ The page adds no tick. A phase that is not `ok` never shows the tick, whatever m
 mark. A code that the flow does not know shows as itself. No color says a status. The page does not know whether the board is
 wired or flashed, and says so in one line. Every text on it is masked, so no path of the home folder reaches the file.
 
+### The page script
+
+The page ends with one script and its words ([P829](https://github.com/xmejkal/spark/issues/1187)): an inert block
+`<script type="application/json" id="spark-words">`, then one `<script>` with no `src`, whose text is
+`scripts/spark/flow/page_script.js`. Python writes every word the script shows into the block: per offer it may send its
+label and the lines of its confirm, the published page's intro, and the words of the wait and of each answer. The script
+fills in only a time, a label or spark's own line, and never shows a key or the fingerprint. Without the block the page
+is the page with no script, byte for byte, but its hooks (below). The markup holds no `<button`, `<input`, `onclick` or
+`<iframe`.
+
+From disk, or wherever `claude.use("db")` gives no database, the script does nothing. Nor does it for a viewer who is not
+the artifact's owner (`(await claude.use("user")).isOwner()`), so the published page declares `db` and `user`. For the
+owner it puts the published intro in place of the line under the title, and adds a button to each offer whose kind the
+page sends: a pick, the parts list and the build. A need's drop has none; it is asked in the chat. Such an offer's
+`<li>` carries `data-makes-stale`, the phases it can make out of date, space apart. When the phase of the guide's NOW has
+exactly one such offer, the NOW line carries its `data-key` and `data-makes-stale` too, and gets the same button. A click
+shows the offer's label, its effect and "These steps may be marked out of date: …" when there are any, with Send and
+Cancel. Send writes the row `requests/<id>`: `{id, key, seen, at}`, a new UUID, the offer's key, the page's
+`data-fingerprint` and the time. One request waits at a time: until its answer, the other buttons are grey, and Copy (it
+copies `/spark:page`, the command that carries the request to spark) and Withdraw stand under the intro. A
+write the database refuses puts the page back and says "Could not send. Nothing ran.". Withdraw deletes the row, and
+only once the delete is done says "Withdrawn. If Claude had already started it, its answer shows here.": it keeps
+watching that request's answer. The script watches the latest request by `at`, and ignores a snapshot older than the
+page's own request, then the row `answers/<id>`.
+
+The answer row holds `flow.py run-request`'s `data` unchanged ([a page request](#a-page-request)). The script says it in
+the page's words: what ran ok by its kind, the step's first problem (`line`), or why it could not run. A refusal shows as
+its code's own words only when `line` is exactly that code's meaning, in grey; any other `line` with `ran: false` shows
+as could not run. Never "done" alone.
+
 Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect
 line says and ask the person first.
+
+## A page request
+
+`flow.py run-request` runs the step that the person asked for on the page ([P829](https://github.com/xmejkal/spark/issues/1187)).
+The request is one file, `.spark/page-request.json` in the project: `{id, key, seen, at}`, the page's id for the click
+(a UUID), the offer's key, the first 12 hex digits of the fingerprint the page was read at, and when it was sent. Spark
+does not read `at`. Claude writes the file from the page's request, as the page sent it. Never write a key or a `seen`
+of your own into it.
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" run-request --project . --json
+```
+
+It reads the file and deletes it at once, so one request runs once at most. A file it cannot delete, and anything that
+is no regular file (a folder), runs nothing and is left. Then it reads the flow, as `show` does. It runs the step only
+when `seen` is the fingerprint now, the key is one of the offers now, and its kind is `pick`, `requirements` or `build`.
+The fingerprint comes first, so a second click on a pick, which is no offer once it ran, is stale. The values of the
+step come from spark's offer, never from the request: a pick of that one part for that need, the parts list with no
+`--dry-run` and no `--replies`, so it removes nothing, and the build of the project's `requirements.json` with `--keep`
+the project. The step writes what the offer's effect says. A deploy, a simulation, a look or a grant is never an offer
+here, so a request for one runs nothing.
+
+After any run, run `flow.py page`, so the page carries the new fingerprint (only the build writes the page by itself),
+and `flow.py show` for the next step.
+
+The envelope has `op` `run-request`. Its `data` holds:
+
+- `for`: the request's id, so the page matches the answer to its click, or `null` when the id is no UUID.
+- `key` and `label`: the offer's key and the words of its button, or `null` when the key is no offer now. A key that is
+  no offer never reaches the answer.
+- `ran`: `true` when the step ran, `false` when nothing ran.
+- `status` and `mark`: how the step ended, as a phase's (`ok`, `problems` or `could-not-run`). A refusal is
+  `could-not-run`.
+- `line`: one sentence. For a step, its first problem or reason, or `ran <label>: ok` when it ended ok. For a refusal,
+  the code's meaning below.
+- `fingerprint`: the fingerprint after the run, the whole sha256.
+
+The text output starts with `ran <label>: <status word>`. A step's own `problems` and `unchecked` items are the
+envelope's. A refusal is one `unchecked` item, and its fix tells you what to do:
+
+| code | meaning | what to do |
+| --- | --- | --- |
+| `request_malformed` | the file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or could not be deleted | write the page's request to the file as the page sent it; if it was written that way, ask the person to click again |
+| `request_in_chat` | the key is a need's drop, which is asked in the chat | tell Claude in the chat, for example: drop the light need |
+| `request_stale` | the project changed after the page was read: `seen` is not the fingerprint now | write the page again with `flow.py page`, then click again |
+| `request_not_offered` | spark does not offer the key now, or the page never runs its kind | write the page again with `flow.py page`, then click again |
+
+A stale refusal is normal: a second Build from the same page is stale once the first one ran. The exit is 0 when the step
+ran ok, 1 when it ran with problems and 2 when nothing ran or the step could not run. Only a wrong argument answers
+with no `data`.
+
+## The published page
+
+`/spark:page` publishes the page and carries its requests ([P829](https://github.com/xmejkal/spark/issues/1187),
+[`commands/page.md`](../../../commands/page.md)). It is the only command that publishes or republishes the page. In
+this order:
+
+1. The first time, on the person's yes: `publish_files` with `page.html` as `index.html`, then at once
+   `flow.py page --artifact ID`, which keeps the id, so a step that fails after it never leaves a second Artifact. Then
+   `declare_capabilities` with `{"db": {"rules": [{"path": "", "read": "view", "write": "owner"}]}, "user": {}}`
+   (viewers read, only the owner writes, and the script asks who views).
+2. The ten newest rows of `requests` by `at`, and the rows of `answers` whose `for` is one of their ids. For each
+   request with no answer, the oldest first: the row to `.spark/page-request.json` as the page wrote it,
+   `flow.py run-request` in the foreground, `flow.py page`, the republish, and last the answer row `answers/<id>`,
+   `run-request`'s `data` unchanged. A refusal goes on to the next request; a step that ran with problems or could not
+   run stops the turn. With no request waiting, the page is still written and republished.
+3. A republish is `get_artifact` (its version, and its `read` as `shared_live` when shared), `list_files`, then
+   `publish_files` with that `base_version`. An Artifact that is not found is gone: the person is asked whether to
+   publish again, and a new `--artifact` replaces the id.
+
+The answer comes after the republish, so the page that shows it is already the new one when the person reloads. A
+republish with `publish_files` keeps the database's rows and the declaration: checked on 2026-11-21, a row written before
+the republish read back the same after it.
