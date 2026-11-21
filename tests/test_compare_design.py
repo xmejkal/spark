@@ -17,7 +17,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.checks import check, rules_check  # noqa: E402
+from spark.checks import check, check_codes, rules_check  # noqa: E402
 import compare_design  # noqa: E402
 
 
@@ -224,11 +224,14 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
                  (lambda: rules.write_text("[]"), "rules_refused"),
                  (lambda: rules.write_text("{}"), "circuit_not_json"),
                  (lambda: circuit.write_text("[]"), "no_rule_stated")]
+        fixes = {str(code): code.fix for code in (check_codes.NO_CIRCUIT, check_codes.NO_RULES_FILE, check_codes.NO_RULE_STATED)}
         for make, code in steps:
             make()
             with self.subTest(code=code):
                 result = rules_check.compare(circuit, rules)
                 self.assertEqual((result["status"], result["reason"].code), ("could-not-run", code))
+                # P935 PR 4: three refusals carry the fix of their code; the other two carry none
+                self.assertEqual(result.get("fix"), fixes.get(code))
         self.assertEqual(json.loads(json.dumps(result))["reason"], result["reason"], "the JSON holds the sentence alone")
 
 

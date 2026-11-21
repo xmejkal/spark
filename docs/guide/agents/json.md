@@ -130,7 +130,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `check_all.py` | `project` (with `--project`), `resolved`, `results`, `status`, `tool`, `unmeasured` |
 | `check_physics.py` | `design`, `findings`, `status`, `tool` |
 | `check_footprints.py` | `findings`, `status`, `tool`; a refusal: `message`, `status`, `tool`, `code` (P688) |
-| `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`; a rules file naming no rule gives `fix` and `reason` instead of `problems`; a rules file that cannot be read or is refused gives `reason` (its old "not valid JSON" sentence for a broken rules file is now "could not be read") |
+| `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`; a missing circuit, a missing rules file and a rules file naming no rule give `fix` and `reason` instead of `problems`, the `fix` that the refusal's code holds (P935); a rules file that cannot be read or is refused, and a circuit that is not JSON, give `reason` only (its old "not valid JSON" sentence for a broken rules file is now "could not be read") |
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
 | `check_vendor_pins.py` | **a bare list**, one entry per board file ([its keys](#check_vendor_pinspy)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
