@@ -153,7 +153,7 @@ class TheRepliesFileThatCannotBeReadTest(unittest.TestCase):
         with self.assertRaises(SparkError) as raised:
             EntryRemoval._load(Path(tempfile.mkdtemp()) / "no-such-replies.json")
         self.assertEqual((raised.exception.code, raised.exception.fix, raised.exception.status),
-                         ("bad_argument", 'write the replies file as {"replies": {"<key>": true}} with the key of the run before, or leave out --replies', 2))
+                         ("bad_argument", 'write the replies file as {"replies": {"<key>": true}} with the key of the run before, or leave out --replies', "could-not-run"))
 
 
 if __name__ == "__main__":
