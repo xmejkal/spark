@@ -1321,26 +1321,15 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
         self.assertIn("<strong>DONE</strong> one</p>", text)
         self.assertNotIn("The project stands at", text)
 
-    def test_write_page_computes_the_guide_once(self):
-        calls = []
-
-        def counting(project, phases):
-            calls.append(project)
-            return a_guide()
-
-        write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one")), parts_of([]), store=FakeStore(), guide=counting)
-        self.assertEqual(len(calls), 1)
-
     def test_no_home_path_reaches_the_guide_on_the_page_or_in_what_is_answered(self):
         home = Path(tempfile.mkdtemp()).resolve()
-        guide = a_guide(done=["read %s/secret" % home], now=dict(a_guide()["now"], says="see %s/notes" % home))
-        store = FakeStore()
+        store = FakeStore()  # a phase's name reaches the guide's DONE line
         with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
-            written = write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("one")), parts_of([]), store=store,
-                                 guide=lambda *_args: guide)
+            written = write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("read %s/secret" % home)),
+                                 parts_of([]), store=store)
         self.assertNotIn(str(home), store.written[0][2])
-        self.assertIn("~/notes", store.written[0][2])
-        self.assertEqual((written.guide["done"], written.guide["now"]["says"]), (["read ~/secret"], "see ~/notes"))
+        self.assertIn("<strong>DONE</strong> read ~/secret</p>", store.written[0][2])
+        self.assertEqual(written.guide["done"], ["read ~/secret"])
 
 
 if __name__ == "__main__":

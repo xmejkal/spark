@@ -81,7 +81,7 @@
   "file": "scripts/spark/flow/write_flow_page.py",
   "name": "the answer's guide is computed a second time (P977 PR 2)",
   "find": "page.fingerprint, page.guide)",
-  "replace": "page.fingerprint, (guide or guide_of)(project, phases))"
+  "replace": "page.fingerprint, guide_of(project, phases))"
  },
  {
   "file": "scripts/spark/flow/guide.py",

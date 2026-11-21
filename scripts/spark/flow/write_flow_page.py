@@ -101,16 +101,16 @@ def newest_change(project):
     return stamp(datetime.datetime.fromtimestamp(max(times))) if times else None
 
 
-def write_page(project, readers=None, parts=None, renderer=None, store=None, guide=None):
+def write_page(project, readers=None, parts=None, renderer=None, store=None):
     """
     Read the flow of `project`, build its FlowPage, mask it, render it and write it: a Written. `parts` is a function
-    `project -> PageParts` (None: `kept_parts`), `store` a FlowPageStore, `guide` a function `(project, phases) -> guide` (None: `guide_of`). A `renderer` has `FILE_NAME`, `PURPOSE_MESSAGE`
+    `project -> PageParts` (None: `kept_parts`), `store` a FlowPageStore. A `renderer` has `FILE_NAME`, `PURPOSE_MESSAGE`
     and `text(page)`: the page's phases are dicts, its pictures Pictures, and a renderer shows a phase through
     `flow_page.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
     """
     phases, stands_at = read_flow(project, readers)
     shown = (parts or kept_parts)(project)
-    guide = (guide or guide_of)(project, phases)  # once: the page draws it and the answer holds it
+    guide = guide_of(project, phases)  # once: the page draws it and the answer holds it
     page = FlowPage(page_title(Path(project).resolve().name), [phase.to_dict() for phase in phases], stands_at,
                     shown.pictures, (flow_codes.BENCH_NOTE,), shown.wiring, fingerprint_of(project, phases), newest_change(project), guide)
     privacy = privacy_for(project)
