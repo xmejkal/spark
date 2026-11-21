@@ -296,6 +296,7 @@ class TheBenchCodesTableTest(unittest.TestCase):
         # P700: a refused rules file is one code in design_codes and check_codes, an equal literal with the same meaning
         self.assertEqual(sorted(set(design_codes.CODES) & set(check_codes.CODES)), ["rules_refused"])
         self.assertEqual(design_codes.CODES["rules_refused"], check_codes.CODES["rules_refused"])
+        self.assertEqual(design_codes.RULES_REFUSED.fix, check_codes.RULES_REFUSED.fix)  # P935 PR 4: the pair holds one fix
         # P701: four build codes are equal literals of another leaf, with the same sentence; no other code is shared
         shared = {"board_unusable": design_codes, "no_project_folder": design_codes, "tool_missing": board_codes,
                   "input_ambiguous": check_codes}
@@ -370,9 +371,11 @@ class TheBenchCodesTableTest(unittest.TestCase):
 
 
 #: P853: each area whose codes are Codes, with its table. An area joins when its codes take their fix (P935).
-AREAS_WITH_FIXES = {"idea": idea_codes, "core": codes, "records": records_codes, "sourcing": sourcing_codes, "design": design_codes}
+AREAS_WITH_FIXES = {"idea": idea_codes, "core": codes, "records": records_codes, "sourcing": sourcing_codes, "design": design_codes,
+                   "checks": check_codes}
 #: P935: the tables whose Codes an area names besides its own: the core's, which every Operation writes, and the records'.
-NAMED_TOO = {"records": (codes,), "sourcing": (records_codes, codes), "design": (records_codes, codes)}
+NAMED_TOO = {"records": (codes,), "sourcing": (records_codes, codes), "design": (records_codes, codes),
+            "checks": (codes,)}
 #: P935: the one given fix that is no Code's: the override a CLI injects through `HelpText` (parts.py's describe route).
 INJECTED_FIXES = {"text.bad_argument_fix"}
 #: P935: each fix given with the code of a refusal its site caught, by the site (the file in its area and the function)
@@ -509,6 +512,21 @@ def passes_on_an_item(call):
             and ast.unparse(got[0].func.value) == ast.unparse(got[1].func.value))
 
 
+def own_classes(tree):
+    """P935 PR 4: the names of the classes a file defines at its top level with no bases, and that nothing else in the file binds
+    (an assignment, a walrus or loop target, a parameter, an import, a nested class or one with a base): a call of one makes no
+    core Finding. Any `import *` may bind any name, so then there are none."""
+    top = [node for node in tree.body if isinstance(node, ast.ClassDef) and not node.bases]
+    bound = [alias.name for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) for alias in node.names]
+    if "*" in bound:
+        return set()
+    bound += [(alias.asname or alias.name).partition(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names]
+    bound += [node.id for node in ast.walk(tree) if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)]
+    bound += [node.arg for node in ast.walk(tree) if isinstance(node, ast.arg)]
+    bound += [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and not any(node is one for one in top)]
+    return {node.name for node in top} - set(bound)
+
+
 def calls_off_the_table(sources, table, also=()):
     """
     P853: (the calls that take a code, each rule a call breaks as 'file:line N: the rule'), over the area's `sources`
@@ -518,6 +536,8 @@ def calls_off_the_table(sources, table, also=()):
     (`fix_parts`); a forward passes `x.code` with `x.fix`; a `_replace` gives no code, and a fix only made from the
     receiver's own (the Privacy mask). A Code of a table `also` holds counts as `table`'s; a caught refusal's code is
     passed on as `passes_on_a_refusal` says, and an item's as `passes_on_an_item` says.
+    P935 PR 4: a call of a class the file defines with no bases and does not import (build_check's own `class Finding`) makes
+    no core Finding; `own_classes` says which names that holds for.
     """
     trees = {name: ast.parse(text) for name, text in sources.items()}
     errors, calls, broken = coded_errors(trees.values()), 0, []
@@ -525,6 +545,7 @@ def calls_off_the_table(sources, table, also=()):
     for file, tree in trees.items():
         resolved, owner = resolver(tree), functions_of(tree)
         caught = caught_names(tree, resolved, fixless)
+        own = own_classes(tree)
         for alias in (node for node in ast.walk(tree) if isinstance(node, ast.Assign) and resolved(node.value).endswith("Finding")):
             broken.append("%s:line %d: %s aliases Finding: Finding.of takes the fix from its Code" % (file, alias.lineno, ast.unparse(alias.targets[0])))
         for call in (node for node in ast.walk(tree) if isinstance(node, ast.Call)):
@@ -535,7 +556,8 @@ def calls_off_the_table(sources, table, also=()):
             coded = of or made_by in errors  # P935 PR 3: `E.of_error(...)` and `E.of_lines(...)` take their keywords like `E(...)`
             if None in keywords and (coded or replaces):
                 broken.append(said + " passes keywords by **")
-            if name.endswith(("Finding", "Finding._make", "Finding.__new__")) and not passes_on_an_item(call):
+            if (name.endswith(("Finding", "Finding._make", "Finding.__new__")) and name.partition(".")[0] not in own
+                    and not passes_on_an_item(call)):
                 broken.append(said + " makes a Finding: Finding.of takes the fix from its Code")
             elif replaces:
                 if "code" in keywords:
@@ -566,6 +588,52 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             for code, meaning in table.CODES.items():
                 self.assertEqual((type(code), code.meaning), (Code, meaning))
                 self.assertTrue(code.fix.strip(), code)
+
+    #: P935 PR 4: the fix of each of the checks' 19 codes, as the PO read it (the plan check changed seven)
+    CHECK_FIXES = {
+        "no_circuit":
+            "give the path of the built circuit, usually dist/board/circuit.json, or build the board first with /spark:build",
+        "no_rules_file":
+            "give --rules the path of a rules file, or write .spark/rules.json with /spark:init",
+        "rules_refused":
+            "fix the value the sentence names in the rules file, then run again",
+        "input_ambiguous":
+            "pick one of the files the sentence lists and give it with the flag the sentence names, then run again",
+        "check_crashed":
+            "if the sentence names your input file, fix that file and run again, or else report it at https://github.com/xmejkal/spark/issues with the sentence and the command you ran",
+        "project_unusable":
+            "give --project a folder that exists, or leave out --project and give each input with its own flag",
+        "check_found_problems":
+            "fix each problem the check lists, then run check_all.py again",
+        "check_could_not_look":
+            "fix what the sentence names for this check, then run check_all.py again",
+        "nothing_asked":
+            "run again with --project and your project folder, or give the inputs with --circuit, --rules, --package or --boards",
+        "circuit_not_json":
+            "build the board again with /spark:build, or give the path of the circuit.json that a build wrote",
+        "no_rule_stated":
+            "ask the person which I2C lines and which pins must not float, name them in i2c_buses and must_not_float in the rules file, then run again",
+        "no_vendor_variant":
+            "ask the person for the board's folder under variants/ in the Arduino core and add it to the board file as vendor.arduino_variant, or say in the board file why it has no vendor header, then run again",
+        "no_cached_header":
+            "run check_vendor_pins.py once without --offline on a board file that a project owns, so that it fetches and keeps the header",
+        "header_has_no_pins":
+            "make sure vendor.arduino_variant names this board's variant, or compare the pins with the header by hand",
+        "board_has_no_project":
+            "put the board file in the boards/ folder of a project that /spark:init set up, then run again",
+        "header_not_fetched":
+            "fix what gh says in the sentence (`gh auth status` shows your sign-in), then run again",
+        "header_not_kept":
+            "make the folder that holds the file the sentence names writable, then run again",
+        "no_package":
+            "in the project folder, give the path of the fab package, or export one with `npx --no tsci export board.tsx -f gerbers -o board-gerbers.zip`",
+        "no_bom_in_package":
+            "in the project folder, export the package again with `npx --no tsci export board.tsx -f gerbers -o board-gerbers.zip`, which writes bom.csv",
+    }
+
+    def test_the_checks_codes_hold_the_fix_the_po_read(self):
+        self.assertEqual({str(code): code.fix for code in check_codes.CODES}, self.CHECK_FIXES)
+        self.assertEqual(len(check_codes.CODES), 19)
 
     def test_each_code_constant_of_the_table_is_a_word_of_codes_with_that_word_s_meaning(self):
         # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word;
@@ -720,6 +788,24 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             "design.py:line 11: DesignError.of_error names its code as 'reason', not a Code of spark.design.design_codes",
             "design.py:line 12: DesignError.of_lines passes keywords by **",
             "design.py:line 12: DesignError.of_lines names its code as None, not a Code of spark.design.design_codes"]))
+
+    def test_the_scan_takes_a_class_the_file_defines_with_no_bases_for_no_core_finding(self):
+        # P935 PR 4: build_check.py and physics_check.py define their own `class Finding`; the refuter's two near misses stay flagged
+        own = "class Finding:\n    pass\n\n\nFinding('a', 'b', 'c')\n"
+        copied = ("from collections import namedtuple\n\n\nclass Finding(namedtuple('F', 'a b c d e')):\n    pass\n\n\n"
+                  "Finding(1, None, 'x', 's', None)\n")
+        derived = "from spark.core import result\n\n\nclass Finding(result.Finding):\n    pass\n\n\nFinding(1, None, 'x', 's', None)\n"
+        rebound = ("from spark.core import result\n\n\nclass Finding:\n    pass\n\n\nFinding = getattr(result, 'Finding')\n"
+                   "Finding(1, None, 'x', 's', None)\n")
+        nested = "def make():\n    class Finding:\n        pass\n\n\nFinding(1, None, 'x', 's', None)\n"
+        core = "from spark.core.result import Finding\n\n\nFinding(1, None, 'x', 's', None)\n"
+        rule = "Finding makes a Finding: Finding.of takes the fix from its Code"
+        self.assertEqual(calls_off_the_table({"own.py": own}, check_codes)[1], [])
+        self.assertEqual(calls_off_the_table({"copied.py": copied}, check_codes)[1], ["copied.py:line 8: " + rule])
+        self.assertEqual(calls_off_the_table({"derived.py": derived}, check_codes)[1], ["derived.py:line 8: " + rule])
+        self.assertEqual(calls_off_the_table({"rebound.py": rebound}, check_codes)[1], ["rebound.py:line 9: " + rule])
+        self.assertEqual(calls_off_the_table({"nested.py": nested}, check_codes)[1], ["nested.py:line 6: " + rule])
+        self.assertEqual(calls_off_the_table({"core.py": core}, check_codes)[1], ["core.py:line 4: spark.core.result." + rule])
 
 
 class TheDrawingCodeTest(unittest.TestCase):

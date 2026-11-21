@@ -1,0 +1,56 @@
+[
+ {
+  "file": "scripts/spark/checks/check_codes.py",
+  "name": "a code of the checks area holds a blank fix (no_circuit)",
+  "find": "\"give the path of the built circuit, usually dist/board/circuit.json, or build the board first with /spark:build\")",
+  "replace": "\"\")"
+ },
+ {
+  "file": "scripts/spark/checks/check_codes.py",
+  "name": "the fab package's export command is changed to a vague one",
+  "find": "of the fab package, or export one with `npx --no tsci export board.tsx -f gerbers -o board-gerbers.zip`\")",
+  "replace": "of the fab package, or export it first\")"
+ },
+ {
+  "file": "scripts/spark/checks/check_codes.py",
+  "name": "the refused rules file's fix is not the design area's (the pair differs)",
+  "find": "\"fix the value the sentence names in the rules file, then run again\")",
+  "replace": "\"fix the rules file\")"
+ },
+ {
+  "file": "scripts/spark/checks/check.py",
+  "name": "a check that found problems is a plain Finding with fix null again",
+  "find": "Finding.of(PROBLEMS, r[\"check\"], check_codes.CHECK_FOUND_PROBLEMS, \"%d problem(s)\" % len(r[\"problems\"]))",
+  "replace": "Finding(PROBLEMS, r[\"check\"], check_codes.CHECK_FOUND_PROBLEMS, \"%d problem(s)\" % len(r[\"problems\"]), None)"
+ },
+ {
+  "file": "scripts/spark/checks/check.py",
+  "name": "a run of skipped checks is told as one check that could not look",
+  "find": "check_codes.NOTHING_ASKED, check_codes.NOTHING_ASKED.meaning)",
+  "replace": "check_codes.CHECK_COULD_NOT_LOOK, check_codes.NOTHING_ASKED.meaning)"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "an unusable project is a plain Finding with fix null again",
+  "find": "Finding.of(COULD_NOT_RUN, None, check_codes.PROJECT_UNUSABLE, str(said[\"reason\"]))",
+  "replace": "Finding(COULD_NOT_RUN, None, check_codes.PROJECT_UNUSABLE, str(said[\"reason\"]), None)"
+ },
+ {
+  "file": "scripts/spark/checks/rules_check.py",
+  "name": "a missing circuit is told with a fix of its own again",
+  "find": "fix=check_codes.NO_CIRCUIT.fix)",
+  "replace": "fix=\"build it first\")"
+ },
+ {
+  "file": "scripts/spark/checks/rules_check.py",
+  "name": "a rules file that names no rule is told with the missing rules file's fix",
+  "find": "fix=check_codes.NO_RULE_STATED.fix)",
+  "replace": "fix=check_codes.NO_RULES_FILE.fix)"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "a class the file rebinds or nests still counts as its own class",
+  "find": "    return {node.name for node in top} - set(bound)",
+  "replace": "    return {node.name for node in top}"
+ }
+]
