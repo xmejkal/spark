@@ -512,6 +512,21 @@ def passes_on_an_item(call):
             and ast.unparse(got[0].func.value) == ast.unparse(got[1].func.value))
 
 
+def own_classes(tree):
+    """P935 PR 4: the names of the classes a file defines at its top level with no bases, and that nothing else in the file binds
+    (an assignment, a walrus or loop target, a parameter, an import, a nested class or one with a base): a call of one makes no
+    core Finding. Any `import *` may bind any name, so then there are none."""
+    top = [node for node in tree.body if isinstance(node, ast.ClassDef) and not node.bases]
+    bound = [alias.name for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) for alias in node.names]
+    if "*" in bound:
+        return set()
+    bound += [(alias.asname or alias.name).partition(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names]
+    bound += [node.id for node in ast.walk(tree) if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)]
+    bound += [node.arg for node in ast.walk(tree) if isinstance(node, ast.arg)]
+    bound += [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and not any(node is one for one in top)]
+    return {node.name for node in top} - set(bound)
+
+
 def calls_off_the_table(sources, table, also=()):
     """
     P853: (the calls that take a code, each rule a call breaks as 'file:line N: the rule'), over the area's `sources`
@@ -522,7 +537,7 @@ def calls_off_the_table(sources, table, also=()):
     receiver's own (the Privacy mask). A Code of a table `also` holds counts as `table`'s; a caught refusal's code is
     passed on as `passes_on_a_refusal` says, and an item's as `passes_on_an_item` says.
     P935 PR 4: a call of a class the file defines with no bases and does not import (build_check's own `class Finding`) makes
-    no core Finding; a class with a base (a copy of the core's, or its subclass) is no such class.
+    no core Finding; `own_classes` says which names that holds for.
     """
     trees = {name: ast.parse(text) for name, text in sources.items()}
     errors, calls, broken = coded_errors(trees.values()), 0, []
@@ -530,7 +545,7 @@ def calls_off_the_table(sources, table, also=()):
     for file, tree in trees.items():
         resolved, owner = resolver(tree), functions_of(tree)
         caught = caught_names(tree, resolved, fixless)
-        own = {node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and not node.bases}
+        own = own_classes(tree)
         for alias in (node for node in ast.walk(tree) if isinstance(node, ast.Assign) and resolved(node.value).endswith("Finding")):
             broken.append("%s:line %d: %s aliases Finding: Finding.of takes the fix from its Code" % (file, alias.lineno, ast.unparse(alias.targets[0])))
         for call in (node for node in ast.walk(tree) if isinstance(node, ast.Call)):
@@ -780,11 +795,16 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         copied = ("from collections import namedtuple\n\n\nclass Finding(namedtuple('F', 'a b c d e')):\n    pass\n\n\n"
                   "Finding(1, None, 'x', 's', None)\n")
         derived = "from spark.core import result\n\n\nclass Finding(result.Finding):\n    pass\n\n\nFinding(1, None, 'x', 's', None)\n"
+        rebound = ("from spark.core import result\n\n\nclass Finding:\n    pass\n\n\nFinding = getattr(result, 'Finding')\n"
+                   "Finding(1, None, 'x', 's', None)\n")
+        nested = "def make():\n    class Finding:\n        pass\n\n\nFinding(1, None, 'x', 's', None)\n"
         core = "from spark.core.result import Finding\n\n\nFinding(1, None, 'x', 's', None)\n"
         rule = "Finding makes a Finding: Finding.of takes the fix from its Code"
         self.assertEqual(calls_off_the_table({"own.py": own}, check_codes)[1], [])
         self.assertEqual(calls_off_the_table({"copied.py": copied}, check_codes)[1], ["copied.py:line 8: " + rule])
         self.assertEqual(calls_off_the_table({"derived.py": derived}, check_codes)[1], ["derived.py:line 8: " + rule])
+        self.assertEqual(calls_off_the_table({"rebound.py": rebound}, check_codes)[1], ["rebound.py:line 9: " + rule])
+        self.assertEqual(calls_off_the_table({"nested.py": nested}, check_codes)[1], ["nested.py:line 6: " + rule])
         self.assertEqual(calls_off_the_table({"core.py": core}, check_codes)[1], ["core.py:line 4: spark.core.result." + rule])
 
 

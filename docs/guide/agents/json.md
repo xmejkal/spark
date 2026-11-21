@@ -123,14 +123,14 @@ The requirements files, which buildability and physics also read, are not listed
 
 ## The other scripts' JSON
 
-Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the test fails when a shape changes):
+Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the test fails when a shape changes). For `compare_design.py`: a rules file that names no rule gives `design`, `checked`, `fix` and `reason` instead of `problems`. The `fix` of `compare_design.py` is the one its refusal's code holds (P935). Its old "not valid JSON" sentence for a broken rules file is now "could not be read". The keys:
 
 | script | top-level keys |
 | --- | --- |
 | `check_all.py` | `project` (with `--project`), `resolved`, `results`, `status`, `tool`, `unmeasured` |
 | `check_physics.py` | `design`, `findings`, `status`, `tool` |
 | `check_footprints.py` | `findings`, `status`, `tool`; a refusal: `message`, `status`, `tool`, `code` (P688) |
-| `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`; a missing circuit, a missing rules file or a rules file naming no rule gives `fix` and `reason` and no `problems`; a refused rules file or a circuit that is not JSON gives `reason` only |
+| `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`. A missing circuit or rules file gives only `tool`, `status`, `reason` and `fix`. A rules file that cannot be read or is refused, or a circuit that is not JSON, gives `reason` and no `fix` |
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
 | `check_vendor_pins.py` | **a bare list**, one entry per board file ([its keys](#check_vendor_pinspy)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
@@ -140,7 +140,6 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 | `flow.py` | the envelope, as `parts.py`'s. `show` has `data.phases` and `data.stands_at`. `page` has `data.file`, `data.did`, `data.stands_at` and `data.phases` ([its keys](flow.md)) |
 | `bench.py` | the envelope, as `parts.py`'s, with `tool` `bench` and `op` `show-bench`: `data.boards`, one row per board on USB ([its keys](bench.md)) |
-
 ### check_spine.py
 
 - `stages` names the stage that stopped it. `check_spine.py --help` lists every stage and the status and code of each way it can end (P852). An `ok` build stage's `detail` can end with a pour short that spark dropped ([P957](https://github.com/xmejkal/spark/issues/1365)). tsci 0.0.2600 can say that a copper pour shorts a trace when the copper does not touch, so the build measures each such short on the circuit's copper. A gap of at least the board's `min_trace_to_pad_edge_clearance` is dropped and named after `0 errors`: `a pour short tsci reported is dropped: pcb_copper_pour_39 and source_trace_1_0 on top are 0.5124 mm apart, at least the board's clearance of 0.1 mm`. Tell the person. A real contact, a short to a pad or a via, and a short that spark cannot measure still stop the build. A stage of a `"board_only": true` design is `skipped`, which is never `ok`; so is the simulation stage of a design whose every part's record skips the simulation (P778), and such a build is not noted in the store. Each entry of `stages` has `name`, `status` and `detail`, and an entry that does not end `ok` also has `code`, the word to decide on, never the detail (P701; the PO, 2026-11-20: "Every stage with a code", [P936](https://github.com/xmejkal/spark/issues/1332)). The four skipped stages of a `board_only` design have the code `board_only`, and the skipped simulation stage of a design whose every part is skipped has `every_part_skipped`. A skip is never a problem: the build's status stays `ok`. `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed.

@@ -5,7 +5,7 @@ check_footprints.py, compare_design.py, check_vendor_pins.py and check_bom.py.
 A leaf: it imports nothing of spark but `spark.core.codes`. Each refusal names its code, so an agent decides on the code and never
 on the English sentence (no magic strings, P260). A refusal that returns a sentence returns a `Refusal` (`spark.core.result`), a str
 with a `code`, so every text and JSON stays byte-equal; one that raises gives its error a `code`. A `Finding.of` takes the fix from
-its code. Two checks write a code in their JSON (check_bom.py's and check_vendor_pins.py's boards); the rest wait in the library
+its code. Two checks write a code in their JSON (check_footprints.py's and check_vendor_pins.py's); the rest wait in the library
 for the Operation that comes later. A check's findings keep their `rule`.
 
 RULES_REFUSED is also design_codes' word, an equal literal in two leaves, with the same meaning and the same fix. INPUT_AMBIGUOUS

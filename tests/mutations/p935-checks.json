@@ -46,5 +46,11 @@
   "name": "a rules file that names no rule is told with the missing rules file's fix",
   "find": "fix=check_codes.NO_RULE_STATED.fix)",
   "replace": "fix=check_codes.NO_RULES_FILE.fix)"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "a class the file rebinds or nests still counts as its own class",
+  "find": "    return {node.name for node in top} - set(bound)",
+  "replace": "    return {node.name for node in top}"
  }
 ]
