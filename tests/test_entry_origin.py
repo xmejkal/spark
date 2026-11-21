@@ -18,7 +18,8 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.design.entry_origin import EntryOriginStore, UnexplainedEntries, WrittenEntry, rows_present  # noqa: E402
+from spark.core.errors import SparkError  # noqa: E402
+from spark.design.entry_origin import EntryOriginStore, EntryRemoval, UnexplainedEntries, WrittenEntry, rows_present  # noqa: E402
 
 #: What `need_requirements._merge_parts` gives `find`: the indexes a pick explains, `kept` for the rest, the rows it adds.
 Merged = namedtuple("Merged", "explained kept written")
@@ -143,6 +144,16 @@ class TheRecordTest(unittest.TestCase):
         self.record.save([LED], [WrittenEntry("light", LED)])
         held = json.loads(self.record.path.read_text())
         self.assertEqual((held["schema"], held["written"], len(held["parts_sha256"])), (1, [{"need": "light", "entry": LED}], 64))
+
+
+class TheRepliesFileThatCannotBeReadTest(unittest.TestCase):
+    """P935 PR 3: `EntryRemoval._load` says what it said when its fix was a constant of this file."""
+
+    def test_an_unreadable_replies_file_is_a_bad_argument_with_this_operation_s_fix(self):
+        with self.assertRaises(SparkError) as raised:
+            EntryRemoval._load(Path(tempfile.mkdtemp()) / "no-such-replies.json")
+        self.assertEqual((raised.exception.code, raised.exception.fix, raised.exception.status),
+                         ("bad_argument", 'write the replies file as {"replies": {"<key>": true}} with the key of the run before, or leave out --replies', "could-not-run"))
 
 
 if __name__ == "__main__":
