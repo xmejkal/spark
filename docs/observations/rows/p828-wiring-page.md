@@ -24,3 +24,22 @@ holds the acted, raised and rejected findings only (rules.md). 2026-11-17.
 | 16 | the one-at-a-time rule and `:has()` ran in no browser | the builder, both reviews | raised | the PO: the bench checklist in PR #1260 and on #1186 |
 | 17 | hand the before-power renderer in, so that the flow's renderer imports nothing of the breadboard area | plan lens | rejected | dropped because the PR lens found that the flow area already imports the breadboard area in three places, and a hand-in adds a parameter for no gain |
 | 18 | the refusal's backticks show as plain characters on the page | PR lens | rejected | dropped because the words are the sheet's own, and the page keeps them as they are |
+
+Step 2 (PR #1410, 2026-11-21): the page opens on the wiring and folds its phases, after the PO said at the bench that the
+page "just doesn't guide a person". Plan check: a UX lens and the refuter (Opus). PR review: a lens (Sonnet) and the
+refuter (Opus).
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 19 | the guide's rule puts "now" at the build for p934, never at the wiring, and reads `unserved` as the person's choice | plan UX lens, plan refuter | raised | P977 #1407: its plan is rewritten and checked again before it is built |
+| 20 | ship the page-only half first and the guide's facts after | plan UX lens | acted | this PR is the page-only half |
+| 21 | a rail link scrolls to a closed fold and opens nothing | PR lens | acted | the rail's target is a div inside the details; Chrome opened the needs phase on a click |
+| 22 | a page with no wiring steps folds away the only guidance | PR lens | acted | only a page with wiring steps folds its phases |
+| 23 | the intro says "the build wrote a wiring sheet" when no breadboard.md exists | PR refuter | acted | WIRING_FIRST names no sheet |
+| 24 | the guiding tests do not run when the test file runs alone | PR lens, PR refuter | acted | the class stands above the main block |
+| 25 | the fixture test passes with the name said once per line | PR refuter | acted | it counts one name line per run of two or more |
+| 26 | the rail lists Wiring and Pictures last while the page shows them first | PR refuter | acted | with wiring steps, the rail's links come first |
+| 27 | two records of one short name join a run, and a run's name escape is untested | PR lens, PR refuter | acted | the run key holds the record, a test holds `A&B` |
+| 28 | the firmware, simulate and deploy hints show placeholders a person cannot run | plan UX lens | raised | card [P979 #1411](https://github.com/xmejkal/spark/issues/1411) |
+| 29 | a printed page shows a folded phase's heading only | PR lens, PR refuter | rejected | dropped because no use of a printed page is known, and the wiring steps print whole |
+| 30 | a screen reader may drop the h2 role inside a summary | PR refuter | rejected | dropped because it is unverified here and HTML allows a heading in a summary |
