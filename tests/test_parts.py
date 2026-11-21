@@ -3077,6 +3077,99 @@ class ALevelIsWrittenToABoardTest(unittest.TestCase):
         self.assertEqual(self.stored(project), board)
 
 
+class JoinedPadsAreWrittenToABoardTest(unittest.TestCase):
+    """P962 (#1380): `--fact-set` writes a board's `joined_pads` to `physical.header` of the project's own board record."""
+
+    JOINED = {"value": [["3V3", "3V3_2"], ["GND1", "GND2"], ["SDA", "IO19"], ["SCL", "IO20"]], "verified": False,
+              "source": "the maker's schematic V1.1, page 1, connectors P1 and P2, read from its text layer",
+              "why_it_matters": "the steps run one jumper for each group",
+              "cites": {"document": "firebeetle2-c6-schematic-v1-1", "at": "page 1, connectors P1 and P2"}}
+    LEVEL = {"value": 0, "verified": True, "source": "the PO's bench"}
+
+    def a_project(self):
+        """(the scratch store, a project whose own board is a copy of the walk fixture's, with no joined pads)."""
+        home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "project"
+        (project / "boards").mkdir(parents=True)
+        board = json.loads((ROOT / "tests" / "data" / "breadboard" / "walk-c6" / "boards" / "firebeetle2-esp32c6.json").read_text())
+        board["physical"]["header"].pop("joined_pads", None)
+        (project / "boards" / "firebeetle2-esp32c6.json").write_text(json.dumps(board, indent=2))
+        return home, project, board
+
+    def write(self, home, project, values, *more):
+        given = Path(tempfile.mkdtemp()) / "joined.json"
+        given.write_text(json.dumps(values))
+        with in_store(home):
+            return run_json(["--fact-set", "firebeetle2-esp32c6", str(given), "--project", str(project)] + list(more))
+
+    def stored(self, project):
+        return json.loads((project / "boards" / "firebeetle2-esp32c6.json").read_text())
+
+    def test_a_dry_run_says_what_it_would_set_and_writes_nothing(self):
+        home, project, board = self.a_project()
+        said, code = self.write(home, project, {"joined_pads": self.JOINED}, "--dry-run")
+        self.assertEqual((code, said["data"]["written"]), (0, False))
+        self.assertEqual(said["data"]["was"], {"joined_pads": None})
+        self.assertEqual(self.stored(project), board)
+        given = Path(tempfile.mkdtemp()) / "joined.json"
+        given.write_text(json.dumps({"joined_pads": self.JOINED}))
+        with in_store(home), contextlib.redirect_stdout(io.StringIO()) as out:
+            code = parts.main(["--fact-set", "firebeetle2-esp32c6", str(given), "--project", str(project), "--dry-run"])
+        self.assertEqual(code, 0)
+        self.assertIn("would set firebeetle2-esp32c6", out.getvalue())
+        self.assertIn("joined_pads null →", out.getvalue())
+        self.assertEqual(self.stored(project), board)
+
+    def test_the_write_lands_in_physical_header_and_keeps_the_rest_of_the_header(self):
+        home, project, board = self.a_project()
+        said, code = self.write(home, project, {"joined_pads": self.JOINED})
+        self.assertEqual((code, said["data"]["written"]), (0, True))
+        after = self.stored(project)
+        self.assertEqual(after["physical"]["header"]["joined_pads"], self.JOINED)
+        self.assertNotIn("joined_pads", after)
+        self.assertEqual({key: value for key, value in after["physical"]["header"].items() if key != "joined_pads"}, board["physical"]["header"])
+        self.assertEqual({key: value for key, value in after["physical"].items() if key != "header"},
+                         {key: value for key, value in board["physical"].items() if key != "header"})
+        self.assertEqual({key: value for key, value in after.items() if key != "physical"}, {key: value for key, value in board.items() if key != "physical"})
+        again, code = self.write(home, project, {"joined_pads": dict(self.JOINED, value=[["GND1", "GND2"]])})
+        self.assertEqual((code, again["data"]["was"]["joined_pads"]), (0, self.JOINED))  # replaced as a whole, and `was` holds the old value
+        self.assertEqual(self.stored(project)["physical"]["header"]["joined_pads"]["value"], [["GND1", "GND2"]])
+
+    def test_a_group_with_a_pad_not_on_the_board_is_refused_and_nothing_is_written(self):
+        home, project, board = self.a_project()
+        for joined, text in ((dict(self.JOINED, value=[["3V3", "3V4"]]), "'3V4', which is not a pad in header_order"),
+                             (dict(self.JOINED, value=[["3V3", "GND1"]]), "pads on more than one rail"),
+                             (dict(self.JOINED, value=[["3V3"]]), "a group is a list of two pads or more"),
+                             (dict(self.JOINED, cites={"document": "nope", "at": "page 1"}), "cites 'nope', which documents does not hold"),
+                             (dict(self.JOINED, value=None), "it never empties one"),
+                             ({key: value for key, value in self.JOINED.items() if key != "source"}, "has no 'source'")):
+            with self.subTest(joined=joined):
+                said, code = self.write(home, project, {"joined_pads": joined})
+                self.assertEqual(code, 1, said)
+                self.assertIn(text, " ".join(problem["sentence"] for problem in said["problems"]))
+                self.assertEqual(self.stored(project), board)
+
+    def test_joined_pads_and_pin_roles_are_written_together(self):
+        home, project, board = self.a_project()
+        said, code = self.write(home, project, {"joined_pads": self.JOINED, "pin_roles": {"onboard_led": {"active_level": self.LEVEL}}})
+        self.assertEqual((code, said["data"]["written"]), (0, True), said)
+        after = self.stored(project)
+        self.assertEqual((after["physical"]["header"]["joined_pads"], after["pin_roles"]["onboard_led"]["active_level"]), (self.JOINED, self.LEVEL))
+
+    def test_a_part_key_beside_joined_pads_is_refused(self):
+        home, project, board = self.a_project()
+        for values in ({"joined_pads": self.JOINED, "about": "x"}, {"joined_pads": self.JOINED, "legs": {"A": "x"}}):
+            with self.subTest(values=values):
+                self.assertEqual(self.write(home, project, values)[1], 1)
+                self.assertEqual(self.stored(project), board)
+
+    def test_the_text_of_joined_pads_is_cleaned_and_cut(self):
+        home, project, board = self.a_project()
+        dirty = dict(self.JOINED, source="schematic\x07\nX" + "y" * 5000)
+        self.assertEqual(self.write(home, project, {"joined_pads": dirty})[1], 0)
+        source = self.stored(project)["physical"]["header"]["joined_pads"]["source"]
+        self.assertEqual((len(source) <= 1000, any(ord(each) < 32 for each in source)), (True, False))
+
+
 class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
     """P97 (§5.4): what a record owes is filled once, in its own home, through parts.py — never in spark's library."""
 

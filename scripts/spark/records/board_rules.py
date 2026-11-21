@@ -167,6 +167,13 @@ def power_problems(board, validation):
 # --- end MVP ---
 
 
+def header_pads(physical):
+    """The set of pad labels in the `header_order` of `physical`, a row that starts with `//` being a comment. Never raises."""
+    order = physical.get("header_order") if isinstance(physical, dict) else None
+    return {pad for key, labels in (order.items() if isinstance(order, dict) else ())
+            if not str(key).startswith("//") and isinstance(labels, list) for pad in labels}
+
+
 def pad_problems(board, validation):
     """Every way the pads of `physical` break the contract: a pin with no pad, an alias to no pad, a doubtful pad that is no pad."""
     # A pad every pin can be reached at. The geometry in `physical` is precise to 0.01 mm, and
@@ -178,11 +185,7 @@ def pad_problems(board, validation):
     physical = board.get("physical") or {}
     order = physical.get("header_order") or {}
     if order:
-        pads = set()
-        for key, labels in order.items():
-            if key.startswith("//"):
-                continue
-            pads |= set(labels)
+        pads = header_pads(physical)
         aliases = board_pads.BoardPads.from_record(board).aliases
         for name in sorted(board.get("pins") or {}):
             if name not in pads and aliases.get(name) not in pads:
@@ -204,6 +207,45 @@ def pad_problems(board, validation):
                 problems.append("physical.header.doubtful_pads holds %r, but each entry is a pad label" % (name,))
             elif name not in pads:
                 problems.append("physical.header.doubtful_pads names %r, which is not a pad in header_order" % (name,))
+    return problems
+
+
+def joined_pad_problems(board, validation):
+    """
+    Every way `physical.header.joined_pads` (P962) breaks the contract: no fact, a value that is no list of groups, a
+    group of fewer than two pads, a pad that is not in `header_order`, in two groups or in `doubtful_pads`, and a group
+    whose pads do not share one `power_pads` rail (a pad that names none counts as no rail, so a rail joined to a signal
+    is refused). A board with no `joined_pads` has none. `cites` is `record_kind.document_problems`' to check.
+    """
+    physical = board.get("physical")
+    header = physical.get("header") if isinstance(physical, dict) else None
+    if not isinstance(header, dict) or "joined_pads" not in header:
+        return []
+    where, fact = "physical.header.joined_pads", header["joined_pads"]
+    problems = provenance.fact_problems(where, fact)
+    value = fact.get("value") if isinstance(fact, dict) else None
+    if not isinstance(value, list):
+        return problems + ["%s.value is %r; it must be a list of groups, each a list of two pads or more" % (where, value)]
+    pads, doubtful = header_pads(physical), header.get("doubtful_pads")
+    power = board.get("power_pads") if isinstance(board.get("power_pads"), dict) else {}
+    seen = set()
+    for group in value:
+        if not (isinstance(group, list) and len(group) >= 2 and all(isinstance(pad, str) for pad in group)):
+            problems.append("%s.value holds %r; a group is a list of two pads or more" % (where, group))
+            continue
+        for pad in group:
+            if pad not in pads:
+                problems.append("%s names %r, which is not a pad in header_order" % (where, pad))
+            if pad in seen:
+                problems.append("%s names %r in more than one group; a pad is in one group only" % (where, pad))
+            seen.add(pad)
+            if isinstance(doubtful, list) and pad in doubtful:
+                problems.append("%s names %r, which is in doubtful_pads; a doubtful pad may have no net, so it is joined to nothing" % (where, pad))
+        rails = {power[pad].get("rail") if isinstance(power.get(pad), dict) else None for pad in group if pad in pads}
+        if len(rails) > 1:
+            problems.append("%s group %r has pads on more than one rail (%s; a pad with none counts as none); a joined group is one net. "
+                            "Fix: add the pad to power_pads with that rail, or leave it out of the group"
+                            % (where, group, ", ".join(sorted(map(str, rails)))))
     return problems
 
 
@@ -432,7 +474,7 @@ def board_feature_problems(board, validation):
 
 
 #: The board's rules, in the order `board_records.BOARD` runs them after the shared schema and required-key checks.
-RULES = (id_problems, wokwi_power_pin_problems, pin_problems, gpio_list_problems, pad_problems, pin_role_problems,
+RULES = (id_problems, wokwi_power_pin_problems, pin_problems, gpio_list_problems, pad_problems, joined_pad_problems, pin_role_problems,
          adc2_role_problems, power_problems, forbidden_key_problems, fab_key_problems, power_pad_rail_problems,
          selector_name_problems, drill_problems, footprint_export_problems, plain_id_problems, board_document_problems,
          board_feature_problems)

@@ -59,6 +59,10 @@ re-implementing a lookup.
    `physical.header.doubtful_pads` lists the pads whose net is in doubt, such as a ground pad silkscreened NC. The
    drawn breadboard needs it: write `[]` when none is doubtful, after checking. With several ground pads, the drawing
    wires `GND` to the first one in `power_pads` that is not doubtful (P955).
+   `physical.header.joined_pads` (optional, P962) is a fact `{value, verified, source, why_it_matters, cites}` whose value
+   lists every group of pads that the maker's schematic joins inside the board, such as `[["3V3", "3V3_2"], ["GND1", "GND2"]]`.
+   A group holds two pads or more of `header_order`, a pad is in one group only and in no `doubtful_pads`, and the pads of
+   a group share one `power_pads` rail: every pad of a power group needs its own `power_pads` entry with that rail, and a group that mixes such a pad with one that has no entry is refused (`--fact-set` cannot write `power_pads`: add the entry to the record by hand first). `parts.py --fact-set` writes it, with a dry run first.
 2. **Get the pin map from the vendor's Arduino variant header**, not from a pinout picture:
    `espressif/arduino-esp32` → `variants/<board>/pins_arduino.h`. Pinout diagrams are drawn by
    marketing; the header is what the toolchain compiles against. Cross-check it against the

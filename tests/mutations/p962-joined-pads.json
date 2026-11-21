@@ -1,0 +1,122 @@
+[
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962: a joined pad that is no pad of the header_order passes",
+  "find": "            if pad not in pads:\n                problems.append(\"%s names %r, which is not a pad in header_order\" % (where, pad))",
+  "replace": "            if False:\n                problems.append(\"%s names %r, which is not a pad in header_order\" % (where, pad))"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962: a pad in two groups passes",
+  "find": "            if pad in seen:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962: a group on two rails passes",
+  "find": "        if len(rails) > 1:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962: a doubtful pad may be joined",
+  "find": "            if isinstance(doubtful, list) and pad in doubtful:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962: a group of one pad passes",
+  "find": "if not (isinstance(group, list) and len(group) >= 2 and all(isinstance(pad, str) for pad in group)):",
+  "replace": "if not (isinstance(group, list) and len(group) >= 1 and all(isinstance(pad, str) for pad in group)):"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P962: a write of joined_pads goes to a part's home",
+  "find": "board = any(key in values for key in missing_facts.BOARD_WRITE_KEYS)",
+  "replace": "board = \"pin_roles\" in values"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P962: joined_pads is written at the top level too",
+  "find": "        del after[missing_facts.JOINED_PADS]\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P962: joined_pads replaces the rest of the header",
+  "find": "dict(physical, header=dict(header, joined_pads=values[missing_facts.JOINED_PADS]))",
+  "replace": "dict(physical, header={\"joined_pads\": values[missing_facts.JOINED_PADS]})"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P962: the old joined pads are not in `was`",
+  "find": "        was[missing_facts.JOINED_PADS] = header.get(missing_facts.JOINED_PADS)\n",
+  "replace": "        was[missing_facts.JOINED_PADS] = None\n"
+ },
+ {
+  "file": "scripts/spark/records/board_pads.py",
+  "name": "P962: a pad in two groups is read",
+  "find": "if len(set(pads)) == len(pads) else cls(())",
+  "replace": "if True else cls(())"
+ },
+ {
+  "file": "scripts/spark/records/board_pads.py",
+  "name": "P962: a group of one pad is read",
+  "find": "isinstance(group, list) and len(group) >= 2 and all(isinstance(pad, str) for pad in group) for group in value",
+  "replace": "isinstance(group, list) and len(group) >= 1 and all(isinstance(pad, str) for pad in group) for group in value"
+ },
+ {
+  "file": "scripts/spark/records/board_pads.py",
+  "name": "P962: a pad in no group has no group",
+  "find": "next((group for group in self.groups if pad in group), (pad,))",
+  "replace": "next((group for group in self.groups if pad in group), ())"
+ },
+ {
+  "file": "scripts/spark/records/missing_facts.py",
+  "name": "P962: a board write may hold any key beside joined_pads",
+  "find": "if not values or not set(values) <= set(BOARD_WRITE_KEYS):",
+  "replace": "if not values or not set(values) & set(BOARD_WRITE_KEYS):"
+ },
+ {
+  "file": "scripts/spark/records/missing_facts.py",
+  "name": "P962: a write may empty the joined pads",
+  "find": "fact.get(\"value\") in (None, [])",
+  "replace": "fact.get(\"value\") is None"
+ },
+ {
+  "file": "scripts/spark/sourcing/drawer.py",
+  "name": "P962: --fact-set refuses joined_pads",
+  "find": " + (\"own_socket\",) + (\"joined_pads\",)\n",
+  "replace": " + (\"own_socket\",)\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/set_facts.py",
+  "name": "P962: a write of joined_pads is checked as a part's",
+  "find": "if any(key in facts for key in missing_facts.BOARD_WRITE_KEYS) else (",
+  "replace": "if \"pin_roles\" in facts else ("
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962 review: joined_pad_problems is not in the board's rules",
+  "find": "gpio_list_problems, pad_problems, joined_pad_problems, pin_role_problems,",
+  "replace": "gpio_list_problems, pad_problems, pin_role_problems,"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962 review: a comment row of the header_order is read as pads",
+  "find": "if not str(key).startswith(\"//\") and isinstance(labels, list)",
+  "replace": "if isinstance(labels, (list, str))"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962 review: the joined_pads fact is not checked as a fact",
+  "find": "    problems = provenance.fact_problems(where, fact)\n    value = fact.get(\"value\") if isinstance(fact, dict) else None\n    if not isinstance(value, list):",
+  "replace": "    problems = []\n    value = fact.get(\"value\") if isinstance(fact, dict) else None\n    if not isinstance(value, list):"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962 review: a value that is no list is read as groups",
+  "find": "    if not isinstance(value, list):\n        return problems + [",
+  "replace": "    if not isinstance(value, list):\n        value = []\n    if False:\n        return problems + ["
+ }
+]

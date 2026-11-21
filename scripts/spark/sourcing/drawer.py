@@ -39,7 +39,7 @@ Link = namedtuple("Link", "target where path question")
 
 
 #: The keys of a part record that hold a fact with its source (P374): `--fact-set` writes them, a bench result among them.
-PROVENANCE_KEYS = ("facts", "body_mm", "pin_order_proof", "pin_roles", "physical", "physical_proof") + ("own_socket",)
+PROVENANCE_KEYS = ("facts", "body_mm", "pin_order_proof", "pin_roles", "physical", "physical_proof") + ("own_socket",) + ("joined_pads",)
 #: A source is a sentence ("bench, date, tool, who"), so these keys keep up to this many characters of a text, above the longest record text.
 PROVENANCE_MAX = 1000
 #: The keys the breadboard sheet reads as text (P741): `legs`, how to tell each leg apart, by a pin of `pin_order`,

@@ -62,13 +62,19 @@ def refresh_shelf_copy(path, record, project_name, dry_run):
 
 def merge_values(record, values):
     """`record` with `values` set, and the values it had: `facts` takes the written names over the held ones, the other names stay
-    (P374); `legs` the same, leg by leg (P741); `pictures` view by view (P946)."""
+    (P374); `legs` the same, leg by leg (P741); `pictures` view by view (P946); `joined_pads` into `physical.header` (P962)."""
     after, was = dict(record, **values), {key: record.get(key) for key in values}
     if isinstance(values.get("legs"), dict):
         held = record.get("legs") if isinstance(record.get("legs"), dict) else {}
         after["legs"], was["legs"] = dict(held, **values["legs"]), {pin: held.get(pin) for pin in values["legs"]}
     if isinstance(values.get("pin_roles"), dict):  # P464: role by role, so a role keeps its gpio and note
         after["pin_roles"], was["pin_roles"] = missing_facts.merged_roles(record, values)
+    if missing_facts.JOINED_PADS in values:  # P962: the pads a board joins live in its header, replaced as a whole
+        physical = record.get("physical") if isinstance(record.get("physical"), dict) else {}
+        header = physical.get("header") if isinstance(physical.get("header"), dict) else {}
+        del after[missing_facts.JOINED_PADS]
+        after["physical"] = dict(physical, header=dict(header, joined_pads=values[missing_facts.JOINED_PADS]))
+        was[missing_facts.JOINED_PADS] = header.get(missing_facts.JOINED_PADS)
     for field in ("facts", "pictures"):
         if isinstance(values.get(field), dict):
             held = record.get(field) if isinstance(record.get(field), dict) else {}
@@ -91,9 +97,11 @@ def set_fields(part_id, project, values, dry_run, refuse):
     copy — never spark's library, which is changed in spark's repository. A shelf copy that follows the record is made
     current whether or not this write changed anything (`refresh_shelf_copy`), and the answer says what became of it.
     `refuse(record, after, path)` says what is wrong with the result, and anything it says refuses the write. Values that
-    hold `pin_roles` reach a board's record (P464), others a part's; `write_fields` writes a home already found.
+    hold a key of `missing_facts.BOARD_WRITE_KEYS` reach a board's record (P464, P962), others a part's; `write_fields`
+    writes a home already found.
     """
-    return write_fields(part_id, record_path(part_id, project, "board" if "pin_roles" in values else "part"), values, dry_run, refuse)
+    board = any(key in values for key in missing_facts.BOARD_WRITE_KEYS)
+    return write_fields(part_id, record_path(part_id, project, "board" if board else "part"), values, dry_run, refuse)
 
 
 def write_fields(part_id, home, values, dry_run, refuse):

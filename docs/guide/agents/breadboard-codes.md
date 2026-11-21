@@ -155,3 +155,13 @@ pad. Look at the drawing next to the maker's picture, and let the person judge i
 | `feature_no_anchor` | fewer than two anchors at pads half the board apart, or an anchor that names no pad |
 | `feature_pad_label` | a label's text is a pad's label, which spark draws, or holds a web address (`http` or `www.`) |
 | `feature_unreadable` | the features file is no JSON, lacks a field, or names a picture that the record's `documents` do not hold |
+
+## A board's joined pads
+
+A board record may say which pads its maker's schematic joins inside the board ([P962](https://github.com/xmejkal/spark/issues/1380)), as `physical.header.joined_pads`: a fact whose value is a list of groups of pad keys, such as `[["3V3", "3V3_2"], ["GND1", "GND2"]]`. It lists every group the schematic shows, not the power pads only. `source` names the document, its sha256 and page, and `cites` (optional) names an entry of the record's `documents` that is not marked `kept: false`. Spark does not check the store for the file. The field is optional, and a board with no field behaves as before. No step, drawing or check reads it yet. `boards.py --validate` refuses a broken field. Write it with a dry run first:
+
+```
+parts.py --fact-set <board id> joined-pads.json --project . --dry-run
+```
+
+`joined-pads.json` is `{"joined_pads": {"value": [[...]], "verified": false, "source": "...", "why_it_matters": "...", "cites": {"document": "...", "at": "..."}}}`. Write `verified: true` only for a meter reading on the bench. A doubtful pad (`doubtful_pads`) is in no group.

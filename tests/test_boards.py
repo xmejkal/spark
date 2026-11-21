@@ -250,6 +250,118 @@ class BoardPadsTest(unittest.TestCase):
                 self.assertEqual((pads.pad_of("MOSI"), pads.alias_pads()), ("MOSI", frozenset()))
 
 
+# --- MVP --- (P962 #1380) a board record's joined pads
+class TheJoinedPadsTest(unittest.TestCase):
+    """P962: `physical.header.joined_pads`, the groups of pads the maker's schematic joins inside the board, as a fact."""
+
+    HEADER = {"row_a": ["SDA", "IO19", "GND2", "3V3_2"], "row_b": ["GND1", "3V3", "SCL", "IO20", "NC1"]}
+    SHA = "0" * 64
+
+    def fact(self, value, **more):
+        return dict({"value": value, "verified": False, "source": "the maker's schematic, page 1",
+                     "why_it_matters": "the steps run one jumper for each group",
+                     "cites": {"document": "schematic", "at": "page 1"}}, **more)
+
+    def problems(self, joined, doubtful=None, documents=True):
+        header = {} if joined is None else {"joined_pads": joined}
+        if doubtful is not None:
+            header["doubtful_pads"] = doubtful
+        board = definition("b", pins={"SDA": 0, "SCL": 1}, power_pads={
+            "GND1": {"rail": "ground"}, "GND2": {"rail": "ground"}, "3V3": {"rail": "logic"}, "3V3_2": {"rail": "logic"}},
+            physical={"footprint_module": "X", "footprint_export": "X", "header_order": self.HEADER, "header": header})
+        if documents:
+            board["documents"] = {"schematic": {"sha256": self.SHA, "file": "V1.1 Schematics.pdf"}}
+        root = project(active="b", own={"b": board})
+        path = root / "boards" / "b.json"
+        return [problem for problem in board_records.validate(json.loads(path.read_text()), path)
+                if "joined_pads" in problem or "documents" in problem or "cites" in problem]
+
+    def test_joined_pads_is_a_fact_with_value_verified_and_source(self):
+        good = self.fact([["3V3", "3V3_2"], ["GND1", "GND2"], ["SDA", "IO19"]])
+        self.assertEqual(self.problems(good), [])
+        without = lambda key: {name: item for name, item in good.items() if name != key}  # noqa: E731
+        for broken, said in ((dict(good, source=None), "source"), (without("verified"), "verified"),
+                             (without("why_it_matters"), "why_it_matters"), ("3V3", "is '3V3'"),
+                             (self.fact("3V3"), "list of groups"), (self.fact(None), "list of groups")):
+            with self.subTest(broken=broken):
+                self.assertTrue([p for p in self.problems(broken) if said in p], self.problems(broken))
+
+    def test_a_joined_pad_must_be_a_pad_of_the_header_order(self):
+        problems = self.problems(self.fact([["3V3", "NOPE"]]))
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("'NOPE'", problems[0])
+
+    def test_a_comment_row_of_the_header_order_holds_no_pad(self):
+        board = definition("b", pins={"SDA": 0}, physical={"footprint_module": "X", "footprint_export": "X", "header": {
+            "joined_pads": self.fact([["SDA", "N"]])}, "header_order": {"//": "NOPE: a comment", "row": ["SDA", "IO19"]}},
+            documents={"schematic": {"sha256": self.SHA, "file": "x.pdf"}})
+        path = project(active="b", own={"b": board}) / "boards" / "b.json"
+        self.assertTrue([p for p in board_records.validate(json.loads(path.read_text()), path) if "'N'" in p and "not a pad" in p])
+
+    def test_a_group_holds_two_pads_or_more(self):
+        for value in ([["3V3"]], [[]], ["3V3", "3V3_2"], [["3V3", 3]], [[None, "3V3"]]):
+            with self.subTest(value=value):
+                self.assertTrue(self.problems(self.fact(value)), value)
+
+    def test_a_pad_is_in_one_group_only(self):
+        problems = self.problems(self.fact([["3V3", "3V3_2"], ["3V3", "GND1"]]))
+        self.assertTrue([p for p in problems if "'3V3'" in p and "more than one group" in p], problems)
+        self.assertTrue([p for p in self.problems(self.fact([["3V3", "3V3_2", "3V3"]])) if "more than one group" in p])
+
+    def test_the_pads_of_one_group_share_their_rail(self):
+        self.assertTrue([p for p in self.problems(self.fact([["3V3", "GND1"]])) if "rail" in p])
+        mixed = self.problems(self.fact([["3V3", "NC1"]]))  # a rail pad joined to a pad that names none
+        self.assertTrue([p for p in mixed if "more than one rail" in p], mixed)
+        self.assertTrue([p for p in mixed if "add the pad to power_pads with that rail" in p], mixed)  # --fact-set cannot write power_pads
+        self.assertEqual(self.problems(self.fact([["SDA", "IO19"], ["SCL", "IO20"]])), [])  # no rail at all
+
+    def test_a_doubtful_pad_is_joined_to_nothing(self):
+        problems = self.problems(self.fact([["GND1", "GND2"]]), doubtful=["GND2"])
+        self.assertTrue([p for p in problems if "'GND2'" in p and "doubtful" in p], problems)
+        self.assertEqual(self.problems(self.fact([["GND1", "GND2"]]), doubtful=["NC1"]), [])
+
+    def test_the_cites_name_a_document_of_the_record(self):
+        other = self.problems(self.fact([["3V3", "3V3_2"]], cites={"document": "other", "at": "page 1"}))
+        self.assertTrue([p for p in other if "cites" in p and "'other'" in p], other)
+        self.assertTrue([p for p in self.problems(self.fact([["3V3", "3V3_2"]]), documents=False) if "cites" in p])
+
+    def test_a_board_with_no_joined_pads_has_no_problem(self):
+        self.assertEqual(self.problems(None), [])
+
+
+class JoinedPadsReaderTest(unittest.TestCase):
+    """P962: the one reader of a board record's `physical.header.joined_pads`."""
+
+    def record(self, value):
+        return {"physical": {"header": {"joined_pads": {"value": value, "verified": False, "source": "x"}}}}
+
+    def test_a_pad_s_group_comes_from_the_record(self):
+        joined = board_pads.JoinedPads.from_record(self.record([["3V3", "3V3_2"], ["GND1", "GND2", "GND3"]]))
+        self.assertEqual((joined.group_of("3V3_2"), joined.group_of("GND3")), (("3V3", "3V3_2"), ("GND1", "GND2", "GND3")))
+        self.assertEqual(joined.groups, (("3V3", "3V3_2"), ("GND1", "GND2", "GND3")))
+
+    def test_a_pad_in_no_group_is_its_own_group(self):
+        joined = board_pads.JoinedPads.from_record(self.record([["3V3", "3V3_2"]]))
+        self.assertEqual(joined.group_of("SDA"), ("SDA",))
+        for record in ({}, {"physical": None}, {"physical": {"header": None}}, {"physical": {"header": {}}}):
+            with self.subTest(record=record):
+                self.assertEqual(board_pads.JoinedPads.from_record(record).group_of("3V3"), ("3V3",))
+
+    def test_a_broken_field_reads_as_no_group(self):
+        for value in ("3V3", [["3V3"]], ["3V3", "3V3_2"], [["3V3", 3]], [["3V3", "A"], ["A", "B"]], None, {"a": 1}):
+            with self.subTest(value=value):
+                joined = board_pads.JoinedPads.from_record(self.record(value))
+                self.assertEqual((joined.groups, joined.group_of("3V3")), ((), ("3V3",)))
+        self.assertEqual(board_pads.JoinedPads.from_record({"physical": {"header": {"joined_pads": "x"}}}).groups, ())
+        self.assertEqual(board_pads.JoinedPads.from_record("not a record").groups, ())
+
+    def test_only_a_shape_fault_reads_as_no_group_the_rules_are_validate_s(self):
+        # a field with no source, or a group on two rails, breaks a rule of `validate` and not the shape: the reader of a record that was not validated reads its groups
+        record = {"physical": {"header": {"joined_pads": {"value": [["3V3", "GND1"]], "verified": False}}}}
+        self.assertEqual(board_pads.JoinedPads.from_record(record).groups, (("3V3", "GND1"),))
+# --- end MVP ---
+
+
 class AnAliasIsWrittenAsCodeTest(unittest.TestCase):
     """P512 fix-commit refuter: board.tsx traces `.Mcu > .<pad>`, so an alias value that is no name is refused."""
 
