@@ -1,7 +1,7 @@
 [
  {"file": "scripts/spark/breadboard/wire_routing.py", "name": "jumper bends on a hole", "find": "return [other.y + toward * (pitch / 2 + depth * pitch)", "replace": "return [other.y + toward * (depth * pitch)"},
  {"file": "scripts/spark/breadboard/svg_diagram.py", "name": "a part is not turned", "find": "_round_px(part.top), part.rotate,", "replace": "_round_px(part.top), 0,"},
- {"file": "scripts/spark/breadboard/svg_diagram.py", "name": "a jumper in the wrong color", "find": "            self._jumper(root, jumper, paths[jumper.step], hexes[colors[jumper.step]], pills[jumper.step])", "replace": "            self._jumper(root, jumper, paths[jumper.step], hexes[colors.get(jumper.step + 1, \"gray\")], pills[jumper.step])"},
+ {"file": "scripts/spark/breadboard/breadboard_scene.py", "name": "a jumper in the wrong color", "find": "colors[jumper.step], pills[jumper.step])", "replace": "colors.get(jumper.step + 1, \"gray\"), pills[jumper.step])"},
  {"file": "scripts/spark/breadboard/part_pictures.py", "name": "no fallback pictogram", "find": "            wokwi_type, FALLBACK]", "replace": "            wokwi_type]"},
  {"file": "scripts/spark/breadboard/sheet.py", "name": "the picture shown though not drawn", "find": "                                              planned.stopped)]\n", "replace": "                                              planned.stopped)] + [\"\", DRAWING_RENDERERS[-1].SHEET_MESSAGE]\n"}
 ]

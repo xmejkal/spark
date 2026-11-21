@@ -330,6 +330,23 @@ class TheModuleSvgTest(unittest.TestCase):
         self.assertGreater(bottom, max(hole.y for hole in self.layout.geometry.surface.holes))
         self.assertGreaterEqual(float(self.root.get("height")), bottom + svg_diagram.SvgBreadboardDiagram.MARGIN_PX)
 
+    def test_the_canvas_holds_each_body_when_no_wire_or_caption_reaches_past_it(self):
+        # P969 PR 3: the canvas reads each body of the scene; here the wires run round the module and its caption sits
+        # below it, so the scene is drawn with no wire and each caption moved onto the board
+        scene = breadboard_scene.BreadboardSceneMaker().make(self.layout)
+        board = scene.board
+        bare = scene._replace(jumpers=(), parts=tuple(part._replace(caption=part.caption._replace(
+            x=board.left + 10, y=board.top + 10)) for part in scene.parts))
+        x, y, width, height = [float(n) for n in ElementTree.fromstring(
+            svg_diagram.SvgBreadboardDiagram().draw(bare)).get("viewBox").split()]
+        self.assertGreater(max(part.body.bottom for part in scene.parts), board.bottom + 19.2)
+        for part in scene.parts:
+            with self.subTest(part.part.id):
+                self.assertLessEqual(x, part.body.left - 19.2 + 0.01)
+                self.assertLessEqual(y, part.body.top - 19.2 + 0.01)
+                self.assertGreaterEqual(x + width, part.body.right + 19.2 - 0.01)
+                self.assertGreaterEqual(y + height, part.body.bottom + 19.2 - 0.01)
+
 
 WALK = ROOT / "tests" / "data" / "breadboard" / "walk-c6"
 
