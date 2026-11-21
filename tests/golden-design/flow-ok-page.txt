@@ -10,8 +10,8 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 </head>
 <body data-stands-at="build" data-fingerprint="b43d63777aab" data-written="<time>">
 <h1>button light circuit</h1>
-<p class="intro">Where this project stands. This page only shows: to change anything, tell Claude in the chat. The build wrote a wiring sheet, so the wiring comes first. Each phase is folded below it: open one to read it.</p>
-<nav aria-label="Phases"><ol>
+<p class="intro">Where this project stands. This page only shows it. To change anything, tell Claude in the chat. The wiring and its pictures come first. The phases are below, each folded: click one to read it.</p>
+<nav aria-label="Phases"><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a><ol>
 <li data-phase="idea" data-status="none"><a href="#phase-idea"><span aria-hidden="true">·</span> idea <span>not checked by spark</span></a></li>
 <li data-phase="needs" data-status="none"><a href="#phase-needs"><span aria-hidden="true">·</span> needs <span>not checked by spark</span></a></li>
 <li data-phase="parts" data-status="none"><a href="#phase-parts"><span aria-hidden="true">·</span> parts <span>not checked by spark</span></a></li>
@@ -21,7 +21,7 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <li data-phase="firmware" data-status="none"><a href="#phase-firmware"><span aria-hidden="true">·</span> firmware <span>not checked by spark</span></a></li>
 <li data-phase="simulate" data-status="not-started"><a href="#phase-simulate"><span aria-hidden="true">○</span> simulate <span>not started</span></a></li>
 <li data-phase="deploy" data-status="not-started"><a href="#phase-deploy"><span aria-hidden="true">○</span> deploy <span>not started</span></a></li>
-</ol><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a></nav>
+</ol></nav>
 <p>The project stands at: build.</p>
 <section id="wiring">
 <h2>Wiring</h2>
@@ -53,61 +53,79 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <div class="picture"><h3>PCB</h3><p>Not drawn here. The build draws it: run /spark:build --keep.</p></div>
 </section>
 <section class="legend"><h2>Marks</h2><ul><li><span aria-hidden="true">✓</span> ok</li><li><span aria-hidden="true">✗</span> problems</li><li><span aria-hidden="true">?</span> could not run</li><li><span aria-hidden="true">○</span> not started</li><li><span aria-hidden="true">◐</span> partly done</li><li><span aria-hidden="true">↻</span> out of date</li><li><span aria-hidden="true">·</span> not checked by spark: spark does not judge this phase, so no mark says it is done</li></ul></section>
-<section class="phase" id="phase-idea" data-phase="idea" data-status="none">
+<section class="phase" data-phase="idea" data-status="none">
 <details><summary><h2><span aria-hidden="true">·</span> idea <span>not checked by spark</span></h2></summary>
+<div id="phase-idea">
 <p>Done by: you</p>
 <p>Tell Claude your goal in the chat</p>
+</div>
 </details>
 </section>
-<section class="phase" id="phase-needs" data-phase="needs" data-status="none">
+<section class="phase" data-phase="needs" data-status="none">
 <details><summary><h2><span aria-hidden="true">·</span> needs <span>not checked by spark</span></h2></summary>
+<div id="phase-needs">
 <p>Done by: claude</p>
 <p>a hand-written project: requirements.json and no needs</p>
+</div>
 </details>
 </section>
-<section class="phase" id="phase-parts" data-phase="parts" data-status="none">
+<section class="phase" data-phase="parts" data-status="none">
 <details><summary><h2><span aria-hidden="true">·</span> parts <span>not checked by spark</span></h2></summary>
+<div id="phase-parts">
 <p>Done by: you</p>
 <p>a hand-written project: requirements.json and no needs</p>
+</div>
 </details>
 </section>
-<section class="phase" id="phase-requirements" data-phase="requirements" data-status="none">
+<section class="phase" data-phase="requirements" data-status="none">
 <details><summary><h2><span aria-hidden="true">·</span> requirements <span>not checked by spark</span></h2></summary>
+<div id="phase-requirements">
 <p>Done by: claude</p>
 <p>requirements.json, with no needs to compare it with, so spark did not judge it</p>
+</div>
 </details>
 </section>
-<section class="phase" id="phase-build" data-phase="build" data-status="not-started">
+<section class="phase" data-phase="build" data-status="not-started">
 <details><summary><h2><span aria-hidden="true">○</span> build <span>not started</span></h2></summary>
+<div id="phase-build">
 <p>Done by: claude</p>
 <p>no build recorded yet</p>
 <ul><li data-key="build">Build the board: Saves its files in this project: the board file and its footprint, the dist folder with the schematic and PCB pictures, the wiring sheet and its record, the breadboard picture, the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn, the pin map your firmware imports, the simulation files, the build record in .spark/build.json and this page. A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you changed is left alone. If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted. If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page are deleted. Runs no simulation and costs nothing.</li></ul>
+</div>
 </details>
 </section>
-<section class="phase" id="phase-breadboard" data-phase="breadboard" data-status="not-started">
+<section class="phase" data-phase="breadboard" data-status="not-started">
 <details><summary><h2><span aria-hidden="true">○</span> breadboard <span>not started</span></h2></summary>
+<div id="phase-breadboard">
 <p>Done by: you</p>
 <p>no breadboard.md yet</p>
+</div>
 </details>
 </section>
-<section class="phase" id="phase-firmware" data-phase="firmware" data-status="none">
+<section class="phase" data-phase="firmware" data-status="none">
 <details><summary><h2><span aria-hidden="true">·</span> firmware <span>not checked by spark</span></h2></summary>
+<div id="phase-firmware">
 <p>Done by: claude</p>
 <p>firmware/main.py written <time></p>
+</div>
 </details>
 </section>
-<section class="phase" id="phase-simulate" data-phase="simulate" data-status="not-started">
+<section class="phase" data-phase="simulate" data-status="not-started">
 <details><summary><h2><span aria-hidden="true">○</span> simulate <span>not started</span></h2></summary>
+<div id="phase-simulate">
 <p>Done by: your terminal</p>
 <p>no sim/wokwi.toml in &lt;project&gt;: build with /spark:build --keep . first</p>
 <p>run ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/&lt;name&gt;.scenario.yaml in your terminal: it uses Wokwi CI minutes</p>
+</div>
 </details>
 </section>
-<section class="phase" id="phase-deploy" data-phase="deploy" data-status="not-started">
+<section class="phase" data-phase="deploy" data-status="not-started">
 <details><summary><h2><span aria-hidden="true">○</span> deploy <span>not started</span></h2></summary>
+<div id="phase-deploy">
 <p>Done by: your terminal</p>
 <p>ask Claude to look at the board first</p>
 <p>then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in your terminal</p>
+</div>
 </details>
 </section>
 <section class="notes"><h2>Notes</h2><p>This page reads the project&#x27;s files. It does not know whether the board is wired or flashed.</p></section>

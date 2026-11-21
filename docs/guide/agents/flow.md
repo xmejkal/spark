@@ -82,9 +82,9 @@ same phases as `show`, so a person reads them from the disk, in a browser, with 
 what the page is and that every change goes through Claude in the chat. Then comes a rail of links, one for each phase,
 and one section for each phase. Each section is folded (`<details>`) under its heading: the phase name, a mark and a
 status word. Opened, it shows who does it, what it says and its offers as plain text. A section `Wiring` comes when the
-project holds a `requirements.json` ([P828](https://github.com/xmejkal/spark/issues/1186)). If the section holds a sheet,
+project holds a `requirements.json` ([P828](https://github.com/xmejkal/spark/issues/1186)). If the section holds wiring steps,
 the wiring, the pictures and the marks come first and the folded phases after them, so a person at the bench finds step 1
-at once. If it holds no sheet, the phases come first. In "Before you power it", the host requirements of one part that
+at once. If it holds no sheet, the phases come first, each open. In "Before you power it", the host requirements of one part that
 stand together are one item, with the part's name once. It has the lines "Before you power it" first, then
 the wiring steps, one connection each, which a person can follow to wire a breadboard. When the project is not built, or
 was built from other requirements, the section shows no steps and says why in the refusal's own words. A failure that is not the sheet's own refusal gives one fixed sentence: run the build again. The sentence about the Breadboard picture shows only when that picture is drawn. The pictures
@@ -128,7 +128,7 @@ For an agent or a later script, the page has hooks. Each rail entry and each sec
 when no phase is open). Each offer is an `<li>` with `data-key` (its key), the `<body>` has `data-fingerprint` (the first
 12 hex digits of the fingerprint) and `data-written` (the newest change time of the three files, with its zone, or `none`). All the pictures stand together in the section `id="pictures"`, which the rail links to. The
 wiring is in the section `id="wiring"`, which the rail links to as "Wiring". Its steps are the items of `<ol id="steps">`,
-each `<li id="step-N" value="N">`, and the lines before power are a `<ul>` of their own, never inside the steps.
+each `<li id="step-N" value="N">`, and the lines before power are a `<ul>` of their own, never inside the steps. In that list, a run of one record's host requirements is one `<li>` with the part's name in `<strong>` and a nested `<ul>` of its lines. Each phase's rail link targets `<div id="phase-NAME">` inside the phase's `<details>`, so following it opens a folded phase.
 
 One at a time lives in the URL. The link "One at a time: start at step 1" goes to `#step-1`. While a step is the target of
 the URL, the page shows that step alone, with its menu, the element `class="nav"`. The menu says "Step N of M" and has the

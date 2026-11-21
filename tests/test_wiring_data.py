@@ -163,7 +163,7 @@ class TheHtmlLinesTest(unittest.TestCase):
         words = list(zip(data.before_power.items, [line.removeprefix("- ").replace("**", "").replace("`", "") for line in markdown]))
         # P828 step 2: host requirements of one part that stand together are one line, its name once and then their words.
         expected = []
-        for _key, run in itertools.groupby(words, key=lambda pair: pair[0].subject if pair[0].kind == "host-requirement" else id(pair)):
+        for _key, run in itertools.groupby(words, key=lambda pair: (pair[0].record, pair[0].subject) if pair[0].kind == "host-requirement" else id(pair)):
             run = list(run)
             expected.append(run[0][1] if len(run) == 1 else run[0][0].subject + "".join(item.said for item, _line in run))
         self.assertGreater(len(words), len(expected), "the motor fixture has a part with two host requirements")
