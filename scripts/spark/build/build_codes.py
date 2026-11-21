@@ -12,7 +12,7 @@ its code.
 Every code is a Code with its fix (P935 PR 5). Four are equal literals of another leaf, with the same meaning:
 BOARD_UNUSABLE and NO_PROJECT_FOLDER are design_codes', TOOL_MISSING board_codes' and firmware_codes', INPUT_AMBIGUOUS
 check_codes'. BOARD_UNUSABLE and INPUT_AMBIGUOUS hold the other leaf's fix too (a test pins each pair); NO_PROJECT_FOLDER
-and TOOL_MISSING hold the build's own fix, because the build's step says more (R5 of docs/observations/rows/p935-build.md).
+and TOOL_MISSING hold the build's own fix, because the build's step says more (row 12 of docs/observations/rows/p935-build.md).
 """
 
 from spark.core.codes import Code

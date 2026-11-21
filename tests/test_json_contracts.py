@@ -305,7 +305,7 @@ class TheBenchCodesTableTest(unittest.TestCase):
                          sorted(shared))
         self.assertEqual([build_codes.CODES[code] for code in shared], [table.CODES[code] for code, table in shared.items()])
         self.assertEqual(build_codes.CODES["tool_missing"], firmware_codes.CODES["tool_missing"])
-        # P935 PR 5: two pairs hold one fix (the other two hold the build's own, R5 of rows/p935-build.md)
+        # P935 PR 5: two pairs hold one fix (the other two hold the build's own, row 12 of rows/p935-build.md)
         self.assertEqual(build_codes.BOARD_UNUSABLE.fix, design_codes.BOARD_UNUSABLE.fix)
         self.assertEqual(build_codes.INPUT_AMBIGUOUS.fix, check_codes.INPUT_AMBIGUOUS.fix)
         # P716: two records codes are equal literals of another leaf, with the same sentence; no other code is shared

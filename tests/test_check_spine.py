@@ -77,7 +77,7 @@ from fakes import FakeTscircuitExport, amplifier_alone, fake_tsci  # noqa: E402
 
 
 def stage(name, status):
-    # P935 PR 5: a Stage that does not end ok holds the Code of its real ending, here the build's (a Finding takes the fix from it)
+    # P935 PR 5: a Stage that does not end ok holds a Code of build_codes, as stages.py makes it (a Finding takes the fix from it); no test here reads which one
     return Stage(name, status, "", None if status in (check_spine.OK, check_spine.SKIPPED) else
                  build_codes.DESIGN_NOT_BUILT if status == check_spine.PROBLEMS else build_codes.TOOL_MISSING)
 
