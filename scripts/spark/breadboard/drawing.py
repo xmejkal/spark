@@ -8,6 +8,7 @@ from `BreadboardSteps.anchored()`, so it never decides the wiring again. Where W
 only the jumpers are connections. Power and ground go to the rails (P953, `rails`).
 
     BreadboardPlanner(geometry, catalog).plan(steps)  ->  BreadboardLayout  ->  WokwiBreadboardDiagram().render(layout)
+    BreadboardLayout  ->  BreadboardSceneMaker().make(layout)  ->  BreadboardScene  ->  SvgBreadboardDiagram().draw(scene)
 """
 
 import collections

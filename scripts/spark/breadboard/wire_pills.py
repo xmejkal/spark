@@ -2,8 +2,9 @@
 Where each jumper's pill goes on the drawn breadboard (P969, #1388): `WirePill`, the label on a wire with its step's
 number and the two pads it joins (P953), `PillLayout`, the Service that places each in step order clear of everything,
 `WireSizes`, the wire's sizes in px, and `wire_boxes`, the boxes a wire, its end dots and its pill take. The places are
-made from the jumpers, their paths and the obstacles alone, with no picture drawn, so the picture and any other view
-read them one way. `svg_diagram` draws them; `wire_routing` gives the paths.
+made from the jumpers, their paths, the obstacles and a label measure alone, with no picture drawn, so the picture and
+any other view read them one way. The scene maker (`breadboard_scene`) places them; `svg_diagram` draws them;
+`wire_routing` gives the paths.
 """
 
 import collections

@@ -1,11 +1,12 @@
 """
-The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Renderer of a planned layout as
+The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Renderer of a breadboard's scene as
 `breadboard.svg`, the breadboard under the parts in the old wiring page's look (`BoardBackground`, which draws
 the holes and the gap band from the surface, and the marks that `board_marks` made, P969, with their `BoardPalette`, P953), the
-Strategies that place a drawn part's pad labels (P945), and each jumper's pill, which `wire_pills` places and draws no
-picture of (P969, `PillLayout`, `WirePill`, P953). Moved out of `drawing`, whose planner and Wokwi diagram it reads.
-`sheet` writes the file; `part_shape` names a part's label layout; `wire_routing` gives each jumper its way; `part_captions` places each part's
-caption and writes its line of the note.
+Strategies that place a drawn part's pad labels (P945), and each jumper's pill. `breadboard_scene` makes the scene
+(P969): it routes each jumper (`wire_routing`), places each pill (`wire_pills`) and each part's caption
+(`part_captions`), and picks each wire's colour, so this module only draws. Moved out of `drawing`, whose planner it
+reads. `sheet` writes the file; `part_shape` names a part's label layout; `part_captions` writes each part's line of the
+note.
 """
 
 import collections
@@ -130,12 +131,13 @@ class BoardBackground:
 
 class SvgBreadboardDiagram:
     """
-    Renderer: a BreadboardLayout as an SVG picture in Wokwi's px, for the sheet to show (P268, #302): a white page, the
+    Renderer: a BreadboardScene as an SVG picture in Wokwi's px, for the sheet to show (P268, #302; `draw(scene)`, and
+    `text(layout)` draws the scene that its BreadboardSceneMaker made of the layout, P969): a white page, the
     breadboard in its `palette`'s look (BoardBackground, P953), each part as its picture at its holes, turned about its measured center as Wokwi turns it, with
-    a dot on each pin, used or free (`PAD_MARKS`), and its caption outside its body (PartCaption), then each jumper on the way its `router` gives it
+    a dot on each pin, used or free (`PAD_MARKS`), and its caption outside its body, then each jumper on the way the scene maker's `router` gave it
     (P953: around the parts, on tracks between the holes) as the praised page draws a wire: a white under-stroke, the
     color of what it carries on top (its word in `palette`'s `wires`) and a dot at each end, with its pill where
-    PillLayout puts it: its step's number and the two pads it joins (WirePill). A wire
+    the scene puts it: its step's number and the two pads it joins (WirePill). A wire
     that needs more bends is drawn dashed, and the note says so, as it says of a wire with no way at all. A part drawn from its record also gets its pad labels, placed by the
     PadLabelLayout its part_px names (`label_layouts`, keyed by the part_px's `labels`), each in the steps' words and
     read bottom to top. The note under the picture holds a line per part (PartNotes), then the wires'. Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
