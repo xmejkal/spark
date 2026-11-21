@@ -444,15 +444,24 @@ class PickPlan:
         self.known = {row[:2]: row[2] for row in drawer.linkable(project)}
 
     def holds(self, need_id, pick_id):
-        """(drawer changes, problems) of picking `pick_id` alone for the need `need_id`, the other needs as they are."""
+        """(the key the pick names, drawer changes, problems) of picking `pick_id` alone for the need `need_id`, the other
+        needs as they are. Each problem's subject is the key of the part that cannot be held (`plan_holds`)."""
         pick = _resolve(pick_id, self.known, self.entries)
         after = [dict(need, pick=[pick] if pick else []) if need["id"] == need_id else need for need in self.current]
         changes, _notes, problems = plan_holds(self.name, after, self.entries)
-        return changes, problems
+        return (next(iter(pick.values())) if pick else None), changes, problems
 
-    def released(self, changes):
-        """The holds of this project that `changes` let go (`released_holds`)."""
-        return released_holds(changes, self.name)
+    def needs_picking(self, key, but):
+        """The ids of the needs other than `but` whose picks name `key`."""
+        return [need["id"] for need in self.current if need["id"] != but and any(key in pick.values() for pick in need.get("pick") or [])]
+
+    def freed(self, changes, need_id):
+        """(the holds `changes` let go that the need's old pick held, the other holds they let go): a hold is the old
+        pick's when its drawer entry is that pick (its `is`, or the entry itself, `released_holds`)."""
+        old = [pick for need in self.current if need["id"] == need_id for pick in need.get("pick") or []]
+        released = released_holds(changes, self.name)
+        of_old = [hold for hold in released if (self.entries.get(hold["entry"]) or {}).get("is") in old or {"entry": hold["entry"]} in old]
+        return of_old, [hold for hold in released if hold not in of_old]
 
 
 def plan_pick(project, given, passed_over=()):

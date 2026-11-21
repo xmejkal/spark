@@ -56,19 +56,37 @@
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "a pick on a listed project says it lists the project (P829 review)",
-  "find": "said += [flow_codes.LIST_PROJECT_MESSAGE] if listed is False else []",
+  "find": "said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]",
   "replace": "said += [flow_codes.LIST_PROJECT_MESSAGE]"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "a pick the pick's own rule refuses is offered as one that saves (P829 review)",
-  "find": "    if problems:\n        if candidate.get(\"free\") == 0",
-  "replace": "    if False:\n        if candidate.get(\"free\") == 0"
+  "find": "    if problems:\n        return Offer(key, label, refusal(",
+  "replace": "    if False:\n        return Offer(key, label, refusal("
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "a re-pick does not say it frees the old pick's hold (P829 review)",
-  "find": "said += [flow_codes.FREES_MESSAGE] if plan.released(changes) else []",
+  "find": "said += [flow_codes.FREES_MESSAGE] if of_old else []",
   "replace": "said += []"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "a refusal blames the picked part when another need's pick cannot get its part (P829 review 2)",
+  "find": "own = next((problem for problem in problems if problem[\"subject\"] == picked), None)",
+  "replace": "own = problems[0]"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "a pick that frees a hold given by hand does not say so (P829 review 2)",
+  "find": "said += [flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else []",
+  "replace": "said += []"
+ },
+ {
+  "file": "scripts/spark/design/needs.py",
+  "name": "a hold given by hand reads as the old pick's (P829 review 2)",
+  "find": "of_old = [hold for hold in released if",
+  "replace": "of_old = released or [hold for hold in released if"
  }
 ]

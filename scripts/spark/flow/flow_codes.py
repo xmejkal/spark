@@ -71,12 +71,13 @@ RESERVE_MESSAGE = "Uses 1 of your %s “%s” for the %s."
 RESERVE_MANY_MESSAGE = "Uses 1 of your “%s” for the %s."
 RESERVE_UNKNOWN_MESSAGE = "Uses 1 of your “%s” for the %s, if you have one: spark does not know how many you have."
 TO_GET_MESSAGE = "You have none, so it goes on the list to get."
-#: A pick that `needs.plan_holds` refuses writes nothing: other projects hold all of the part, or this project's other
-#: picks use what is left.
-ALL_HELD_MESSAGE = "All your “%s” are used by %s, so spark refuses this pick and saves nothing."
-OWN_PICKS_MESSAGE = "Your other picks in this project already use all your “%s”, so spark refuses this pick and saves nothing."
-#: A re-pick lets go of what the need's old pick held (`needs.released_holds`).
+#: A pick that `needs.plan_holds` refuses writes nothing. The reason is the problem plan_holds gives: too few of this
+#: part are free, or another need's pick cannot get its part. Each holds the problem's own sentence.
+NOT_FREE_MESSAGE = "Too few “%s” are free for this pick (%s), so spark refuses this pick and saves nothing."
+OTHER_PICK_MESSAGE = "The pick for %s cannot get “%s” (%s), so spark refuses this pick and saves nothing."
+#: What a pick lets go (`needs.released_holds`): the hold of the need's old pick, or a hold no pick explained.
 FREES_MESSAGE = "Frees what the old pick held."
+FREES_UNPICKED_MESSAGE = "Frees a part this project held without a pick."
 LIST_PROJECT_MESSAGE = "Adds this project to your list of projects."
 PICK_HISTORY_MESSAGE = "May note the choice in your history."
 DROP_MESSAGE = "To drop this need, tell Claude: “drop the %s need”."

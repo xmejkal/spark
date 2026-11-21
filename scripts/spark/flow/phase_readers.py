@@ -155,28 +155,38 @@ def candidate_label(candidate):
 
 
 def is_listed(project):
-    """True when the project is on the person's list, False when it is not, None when the list cannot be read: then no
-    sentence says either, and the phase that reads the store says why."""
+    """True when the project is on the person's list, False when it is not, None when the list cannot be read: then the
+    build's history sentence is left out and the build is still offered."""
     try:
         return store.find_listed_name(project) is not None
     except store.StoreError:
         return None
 
 
+def refusal(plan, need, candidate, picked, problems):
+    """The sentence of a pick `plan` refuses, from the problem `plan_holds` gave: too few of the picked part are free, or
+    another need's pick cannot get its part. Each says the problem's own sentence."""
+    own = next((problem for problem in problems if problem["subject"] == picked), None)
+    if own:
+        return flow_codes.NOT_FREE_MESSAGE % (candidate_label(candidate), own["sentence"])
+    other = problems[0]
+    return flow_codes.OTHER_PICK_MESSAGE % (", ".join(plan.needs_picking(other["subject"], need)) or "another need", other["subject"], other["sentence"])
+
+
 def pick_offer(project, need, candidate, plan, listed):
     """The Offer to pick `candidate` for `need`. `plan` is the project's `needs.PickPlan`, the pick's own rule: a pick it
-    refuses writes nothing, so the offer says so and names no phase. A re-pick says it frees the old pick's hold. `listed`
-    is `is_listed(project)`."""
+    refuses writes nothing, so the offer says why and names no phase. A pick that lets a hold go says whose it was.
+    `listed` says whether the project is on the person's list."""
     pick_id = candidate["id"] or candidate["entry"]
     key, label = "%s:%s:%s" % (flow_codes.PICK, need, pick_id), flow_codes.PICK_LABEL % (candidate_label(candidate), need)
-    changes, problems = plan.holds(need, pick_id)
+    picked, changes, problems = plan.holds(need, pick_id)
     if problems:
-        if candidate.get("free") == 0 and candidate.get("held_by"):
-            return Offer(key, label, flow_codes.ALL_HELD_MESSAGE % (candidate_label(candidate), ", ".join(candidate["held_by"])), ())
-        return Offer(key, label, flow_codes.OWN_PICKS_MESSAGE % candidate_label(candidate), ())
+        return Offer(key, label, refusal(plan, need, candidate, picked, problems), ())
     said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)]
-    said += [flow_codes.FREES_MESSAGE] if plan.released(changes) else []
-    said += [flow_codes.LIST_PROJECT_MESSAGE] if listed is False else []
+    of_old, unpicked = plan.freed(changes, need)
+    said += [flow_codes.FREES_MESSAGE] if of_old else []
+    said += [flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else []
+    said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK))
 
 
@@ -195,7 +205,8 @@ class PartsReader(PhaseReader):
             return self.phase(status, [said])
         picked = sum(1 for need in matched if need.get("pick"))
         status = OK if picked == len(matched) else flow_codes.PARTIAL if picked else flow_codes.NOT_STARTED
-        plan, listed = needs.PickPlan(project), is_listed(project)
+        # the list is read as the pick reads it: one that cannot be read stops this phase, as needs.match does
+        plan, listed = needs.PickPlan(project), store.find_listed_name(project) is not None
         picks = [pick_offer(project, need["need"], candidate, plan, listed) for need in matched for candidate in need["candidates"]]
         return self.phase(status, [flow_codes.PICKED_MESSAGE % (picked, len(matched))], picks)
 

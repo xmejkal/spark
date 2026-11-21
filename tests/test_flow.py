@@ -179,7 +179,8 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(said["data"]["stands_at"], "parts")
         self.assertIn("1 of 2 needs picked", says(said, "parts"))
         effects = {offer["key"]: offer["effect"] for offer in said["data"]["phases"][2]["offers"]}
-        self.assertEqual(effects["pick:wet:x-held"], "All your “A soil probe” are used by smartbin-local, so spark refuses this pick and saves nothing.")
+        self.assertEqual(effects["pick:wet:x-held"], "Too few “A soil probe” are free for this pick (3 owned, held by smartbin-local — 1 picked "
+                                                     "here), so spark refuses this pick and saves nothing.")
         self.assertEqual(effects["pick:wet:x-many"], "Saves “A soil probe” as the pick for the wet need in this project. Uses 1 of your “A soil "
                                                      "probe” for the wet. Adds this project to your list of projects. May note the choice in your history.")
         self.assertEqual(effects["pick:wet:x-unknown"], "Saves “A soil probe” as the pick for the wet need in this project. Uses 1 of your “A "
@@ -634,9 +635,36 @@ class TheReviewRoundTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture"}])
         said, _ = show(project)
         self.assertEqual(offer_of(said, "pick:wet:x-one")["effect"],
-                         "Your other picks in this project already use all your “A soil probe”, so spark refuses this pick and saves nothing.")
+                         "Too few “A soil probe” are free for this pick (1 owned — 2 picked here), so spark refuses this pick and saves nothing.")
         self.assertEqual(offer_of(said, "pick:wet:x-one")["makes_stale"], [])
         self.assertIn("Uses 1 of your 1 “A soil probe” for the soil.", offer_of(said, "pick:soil:x-one")["effect"])
+
+    def test_a_pick_is_refused_when_another_need_s_pick_cannot_get_its_part(self):
+        self.a_part("x-one", {"count": 1, "used_in": {"other": 1}})
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-one"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture"}])
+        said, _ = show(project)
+        self.assertEqual(offer_of(said, "pick:wet:x-many")["effect"], "The pick for soil cannot get “x-one” (1 owned, held by other — 1 "
+                                                                       "picked here), so spark refuses this pick and saves nothing.")
+        self.assertNotIn("refuses", offer_of(said, "pick:soil:x-many")["effect"])
+
+    def test_a_part_held_by_another_project_and_by_this_one_names_both_in_the_refusal(self):
+        self.a_part("x-two", {"count": 2, "used_in": {"other": 1, "plant-alarm": 1}})
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-two"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture"}])
+        said, _ = show(project)
+        self.assertEqual(offer_of(said, "pick:wet:x-two")["effect"], "Too few “A soil probe” are free for this pick (2 owned, held by other — "
+                                                                      "2 picked here), so spark refuses this pick and saves nothing.")
+
+    def test_a_first_pick_frees_a_hold_given_by_hand_and_names_no_old_pick(self):
+        (self.home / "drawer" / "many.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": "many",
+                                                                    "is": {"part": "x-many"}, "used_in": {"plant-alarm": 2}}))
+        said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL))
+        effect = offer_of(said, "pick:soil:x-unknown")["effect"]
+        self.assertIn("Frees a part this project held without a pick.", effect)
+        self.assertNotIn("old pick", effect)
 
     def test_a_re_pick_frees_what_the_old_pick_held(self):
         (self.home / "drawer" / "many.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": "many",
@@ -645,6 +673,7 @@ class TheReviewRoundTest(FlowTest):
             {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]}])
         said, _ = show(project)
         self.assertIn("Frees what the old pick held.", offer_of(said, "pick:soil:x-unknown")["effect"])
+        self.assertNotIn("without a pick", offer_of(said, "pick:soil:x-unknown")["effect"])
         self.assertNotIn("Frees", offer_of(said, "pick:soil:x-many")["effect"])
 
 
