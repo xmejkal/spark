@@ -538,9 +538,10 @@ class TheMatcherTest(unittest.TestCase):
                                                                     "function": [{"does": "sense", "what": "temperature"},
                                                                                  {"does": "sound", "what": "beeper"}]}))
         found = {c["id"] or c["entry"]: c for c in self.alone({"id": "heat", "does": "sense", "what": "temperature"})["candidates"]}
+        # P976: the default matcher is word-overlap (the PO's yes, 2026-11-21), so `why` names where each word is
         self.assertEqual(found["ntc"], {"id": None, "kind": None, "entry": "ntc", "owes": [], "broken": False, "proof": [], "in": "drawer",
                                         "label": "an NTC thermistor", "what": ["temperature"], "what_matches": True,
-                                        "score": 1.0, "why": ["same words"], "held_by": [], "owned": 3, "free": 3, "unsure": False,
+                                        "score": 1.0, "why": ["temperature: in functions"], "held_by": [], "owned": 3, "free": 3, "unsure": False,
                                         "limits": []})
         combo = found["y-combo"]
         self.assertEqual((combo["kind"], combo["entry"], combo["in"], combo["label"], combo["what"], combo["proof"], combo["what_matches"]),
@@ -550,7 +551,8 @@ class TheMatcherTest(unittest.TestCase):
         self.catalog({"id": "y-range", "name": "A rangefinder", "function": [{"does": "sense", "what": "distance"}],
                       "about": "Tells how far away a thing is."})
         found = {c["id"]: c for c in self.alone({"id": "far", "does": "sense", "what": "distance"})["candidates"] if c["id"]}
-        self.assertEqual((found["y-range"]["score"], found["y-range"]["why"]), (1.0, ["same words"]))
+        # P976: the default matcher is word-overlap (the PO's yes, 2026-11-21), so `why` names where each word is
+        self.assertEqual((found["y-range"]["score"], found["y-range"]["why"]), (1.0, ["distance: in functions"]))
         self.assertNotIn("about", found["y-range"])
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
@@ -563,6 +565,14 @@ class TheMatcherTest(unittest.TestCase):
         said, _ = run(["--match", str(self.project), "--matcher", "word-overlap"])
         first = [c for c in said["data"]["needs"][0]["candidates"] if c["id"] == "y-range"][0]
         self.assertEqual((first["score"], first["why"], first["what_matches"]), (0.8, ["range: in tags"], False))
+
+    def test_word_overlap_is_the_default_matcher(self):
+        # P976 (the PO's yes, 2026-11-21): --match with no --matcher finds a part by its tags
+        self.catalog({"id": "y-range", "name": "A rangefinder", "function": [{"does": "sense", "what": "distance"}], "tags": ["range"]})
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "far", "does": "sense", "what": "range"}]}))
+        said, _ = run(["--match", str(self.project)])
+        first = [c for c in said["data"]["needs"][0]["candidates"] if c["id"] == "y-range"][0]
+        self.assertEqual((first["score"], first["why"]), (0.8, ["range: in tags"]))
 
     def test_the_score_orders_candidates_that_tie_on_owned_and_layer(self):
         self.catalog({"id": "y-aaa", "name": "Alpha probe", "function": [{"does": "sense", "what": "distance"}], "tags": ["range"]},
@@ -598,7 +608,9 @@ class TheMatcherTest(unittest.TestCase):
             (self.home / "drawer" / ("t%d.json" % number)).write_text(json.dumps(
                 {"schema": 1, "label": "thermometer %d" % number, "count": 1, "function": [{"does": "sense", "what": "temperature"}]}))
         (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "wet", "does": "sense", "what": "soil-moisture"}]}))
-        for extra, said in (([], "more, none with the need's words"), (["--matcher", "word-overlap"], "more, each scoring under 0.5")):
+        # P976 (the PO's yes, 2026-11-21): word-overlap is the default, so same-words is named and the default says the scores
+        for extra, said in ((["--matcher", "same-words"], "more, none with the need's words"), ([], "more, each scoring under 0.5"),
+                            (["--matcher", "word-overlap"], "more, each scoring under 0.5")):
             with self.subTest(extra=extra):
                 out = io.StringIO()
                 with contextlib.redirect_stdout(out):
@@ -1682,7 +1694,8 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         (self.project / "boards" / "xiao-esp32-c6.json").unlink()
         pages, seen, start = [], [], 0
         while True:
-            said, _ = run(["--match", str(self.project)] + (["--from", str(start)] if start else []))
+            # P976: word-overlap is the default since the PO's yes (2026-11-21); these weights are same-words' candidates
+            said, _ = run(["--match", str(self.project), "--matcher", "same-words"] + (["--from", str(start)] if start else []))
             pages.append(len(json.dumps(said["data"]["needs"])))
             seen += [need["need"] for need in said["data"]["needs"]]
             if not (said["truncated"] and said["truncated"]["next"]):

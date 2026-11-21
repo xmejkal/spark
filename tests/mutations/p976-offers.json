@@ -1,0 +1,62 @@
+[
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: a candidate with none of the need's words and a score of 0 takes an offer's place (test_flow.OffersPerNeedTest)",
+  "find": "    return bool(candidate[\"what_matches\"]) or candidate[\"score\"] > 0",
+  "replace": "    return True"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: a candidate that holds the need's word only in its tags is not offered (test_flow.OffersPerNeedTest)",
+  "find": "    return bool(candidate[\"what_matches\"]) or candidate[\"score\"] > 0",
+  "replace": "    return bool(candidate[\"what_matches\"])"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: the need's current pick is offered again (test_flow.OffersPerNeedTest, test_flow.ThePhasesTest)",
+  "find": "if is_plausible(c) and not is_current_pick(need, pick_id_of(c))):",
+  "replace": "if is_plausible(c)):"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: more than three picks are offered for one need (test_flow.OffersPerNeedTest)",
+  "find": "OFFERS_PER_NEED = 3",
+  "replace": "OFFERS_PER_NEED = 4"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: a refusal by another need's pick is counted, not said (test_flow.TheReviewRoundTest)",
+  "find": "        if other:\n            return [], [flow_codes.NEED_REFUSED_LINE",
+  "replace": "        if False:\n            return [], [flow_codes.NEED_REFUSED_LINE"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: the says line counts every offered pick as more, not those past the three (test_flow.OffersPerNeedTest)",
+  "find": "more_line(need[\"need\"], len(offered) - OFFERS_PER_NEED, refused)",
+  "replace": "more_line(need[\"need\"], len(offered), refused)"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: a need with more picks and refused ones does not say the refused (test_flow.OffersPerNeedTest)",
+  "find": "    if more > 0 and refused:",
+  "replace": "    if more > 0 and False:"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P976: a need whose only left-out picks are refused says nothing of them (test_flow.OffersPerNeedTest, test_flow.ThePhasesTest)",
+  "find": "    return [flow_codes.REFUSED_PICKS_MESSAGE % (refused, need)] if refused else []",
+  "replace": "    return []"
+ },
+ {
+  "file": "scripts/spark/design/needs.py",
+  "name": "P976: same-words is the default matcher again (test_flow.OffersPerNeedTest, test_needs.TheMatcherTest)",
+  "find": "MATCHER = \"word-overlap\"",
+  "replace": "MATCHER = \"same-words\""
+ },
+ {
+  "file": "scripts/spark/design/match_needs.py",
+  "name": "P976: the sentence below the cut is keyed on the default matcher again (test_needs.TheMatcherTest)",
+  "find": "if chosen.name == matching.SameWords.name else",
+  "replace": "if chosen.name == needs.MATCHER else"
+ }
+]

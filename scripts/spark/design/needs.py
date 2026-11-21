@@ -116,8 +116,9 @@ def write(project, needs):
 #: Where a candidate lives, nearest first (§5.5); anything else is one of the person's other projects, after these.
 LAYERS = (offers.DRAWER, "project", "shelf", "library", "catalog")
 
-#: `--match`'s matcher (P211). A default changes only with the PO's yes, after he reads the matchers' numbers on his needs.
-MATCHER = "same-words"
+#: `--match`'s matcher (P211), and so the parts phase's: word-overlap since the PO's yes of 2026-11-21 (P976). A default
+#: changes only with the PO's yes, after he reads the matchers' numbers on his needs.
+MATCHER = "word-overlap"
 
 
 def offer(key, project=None):
