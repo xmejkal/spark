@@ -397,7 +397,8 @@ not "geometry" (that is Wokwi's pixels, `data/wokwi-geometry.json`).
 A **scene** is everything a view of the drawn breadboard draws, each thing with its place: the board's marks, each
 part's body, caption, picture, pad labels, pad states (in use or free) and line of the note, and each jumper's way,
 its cells on the half-pitch grid, its colour's word and its pill (`BreadboardScene`, `breadboard_scene.py`, P969).
-`BreadboardSceneMaker` makes it once, and a view draws it. Before
+`BreadboardSceneMaker` makes it once, and a view draws it: the sheet makes one scene (`sheet.SCENE_MAKER`, which
+chooses the router), and the Wokwi diagram, the picture and the sheet's colour line read it. Before
 it, the SVG renderer routed the wires and placed every label itself, so a second view would have routed again or placed
 its labels another way. The word is the usual graphics word (a scene graph). It is not "wiring": `PageWiring` and
 `wiring_steps` are the steps.

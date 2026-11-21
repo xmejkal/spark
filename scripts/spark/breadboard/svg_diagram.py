@@ -6,7 +6,7 @@ P953), and each jumper's pill. `breadboard_scene` makes the scene (P969): it rou
 each pill (`wire_pills`), each part's caption (`part_captions`) and each pad's label, picks each wire's colour, says each
 pad's state, and writes each part's line of the note, so this module places no label and decides no state or warning:
 it draws the scene in px, on a canvas framed round it with the note under it. Moved out of `drawing`, whose planner it
-reads. `sheet` writes the file.
+reads. `sheet` makes the scene once, for this picture and the Wokwi diagram, and writes the file.
 """
 
 import collections
@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ElementTree
 
 from spark.breadboard import part_pictures
 from spark.breadboard.board_marks import BoardPalette
-from spark.breadboard.breadboard_scene import PAD_FREE, PAD_HELD, PAD_USED, BreadboardSceneMaker
+from spark.breadboard.breadboard_scene import PAD_FREE, PAD_HELD, PAD_USED
 from spark.breadboard.drawing import _round_px
 from spark.breadboard.part_captions import PartCaption
 from spark.breadboard.spacing import BodyBox
@@ -78,10 +78,10 @@ class BoardBackground:
 
 class SvgBreadboardDiagram:
     """
-    Renderer: a BreadboardScene as an SVG picture in Wokwi's px, for the sheet to show (P268, #302; `draw(scene)`, and
-    `text(layout)` draws the scene that its BreadboardSceneMaker made of the layout, P969): a white page, the
+    Renderer: a BreadboardScene as an SVG picture in Wokwi's px, for the sheet to show (P268, #302; `text(scene)`, the
+    scene the sheet made once, P969): a white page, the
     breadboard in its `palette`'s look (BoardBackground, P953), each part as the scene's picture at its holes, turned about its measured center as Wokwi turns it, with
-    a dot on each pin in its state's colour (`PAD_MARKS`), and its caption outside its body, then each jumper on the way the scene maker's `router` gave it
+    a dot on each pin in its state's colour (`PAD_MARKS`), and its caption outside its body, then each jumper on the way the scene maker's router gave it
     (P953: around the parts, on tracks between the holes) as the praised page draws a wire: a white under-stroke, the
     color of what it carries on top (its word in `palette`'s `wires`) and a dot at each end, with its pill where
     the scene puts it: its step's number and the two pads it joins (WirePill). A wire
@@ -110,19 +110,14 @@ class SvgBreadboardDiagram:
     #: in px (the visual spec, section 7, P953).
     DISC_R, DISC_AT, WORDS_GAP = 3.4, 4.8, 1.6
 
-    def __init__(self, colors=None, pictures=None, router=None, palette=None):
+    def __init__(self, palette=None):
         self.palette = palette or BoardPalette.load()
-        self.scene_maker = BreadboardSceneMaker(colors, router, self.palette, pictures=pictures)
 
     def why_not_written(self, layout):
         """None: the picture is written for any layout."""
         return None
 
-    def text(self, layout):
-        """The picture of the layout's scene, made by this renderer's scene maker."""
-        return self.draw(self.scene_maker.make(layout))
-
-    def draw(self, scene):
+    def text(self, scene):
         """The picture of a BreadboardScene, which places the wires, the pills, the captions and the pad labels, says
         each pad's state and holds each part's picture and the note's lines: this draws them."""
         ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)

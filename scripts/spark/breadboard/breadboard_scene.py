@@ -168,9 +168,10 @@ class BreadboardScene(collections.namedtuple("BreadboardScene", "layout marks pa
     """
     Value: everything a view of one drawn breadboard draws, each with its place in px: the BreadboardLayout it was made
     from, the breadboard's BoardMarks, each part (ScenePart) and each jumper (SceneJumper) in the
-    layout's order, the hole groups that join something (`joined`), and its SceneGrid. `wire_notes()` gives the
-    sentences of the wires drawn dashed and of those not drawn; `notes()` gives the lines of the note under the
-    drawing, each part's and then the wires'.
+    layout's order, the hole groups that join something (`joined`), and its SceneGrid. `colors()` gives each wire's
+    colour word, picked once here for every drawing and the sheet's colour line; `wire_notes()` gives the sentences of
+    the wires drawn dashed and of those not drawn; `notes()` gives the lines of the note under the drawing, each
+    part's and then the wires'.
     """
 
     #: What the note says of the wires drawn dashed, and of the wires not drawn, filled with their numbers.
@@ -178,6 +179,10 @@ class BreadboardScene(collections.namedtuple("BreadboardScene", "layout marks pa
                    "wires %s bend more than 4 times to go around the parts and are drawn dashed")
     NOT_DRAWN_NOTE = ("wire %s finds no way around the parts and is not drawn", "wires %s find no way around the parts "
                       "and are not drawn")
+
+    def colors(self):
+        """{step number: its wire's colour word}, in step order."""
+        return dict(sorted((jumper.jumper.step, jumper.color) for jumper in self.jumpers))
 
     def wire_notes(self):
         """The note's sentences of the wires drawn dashed and of the wires not drawn, each by its step's number."""

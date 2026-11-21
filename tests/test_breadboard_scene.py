@@ -151,8 +151,8 @@ class TheSceneTest(unittest.TestCase):
 
     def test_the_walk_is_routed_once_and_drawn_in_today_s_bytes(self):
         # (1) the scene is made once, before any view: the rough view and the picture read it, and nothing routes again,
-        # in the maker or in the renderer, which both hold the counting router
-        text = svg_diagram.SvgBreadboardDiagram(router=self.router).draw(self.scene)
+        # in the maker, which holds the counting router, or in the renderer, which holds no router since P969 PR 4
+        text = svg_diagram.SvgBreadboardDiagram().text(self.scene)
         self.assertIn("#", self.rough)
         self.assertEqual(self.router.calls, 1)
         self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
@@ -271,7 +271,7 @@ class TheMakerTest(unittest.TestCase):
         scene = breadboard_scene.BreadboardSceneMaker(router=wire_routing.LaneJumperRouter()).make(layout)
         lanes = wire_routing.LaneJumperRouter().route(layout, None)
         self.assertEqual({jumper.jumper.step: jumper.path for jumper in scene.jumpers}, lanes)
-        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().draw(scene))
+        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(scene))
         for step, path in lanes.items():
             drawn = root.find("svg:g[@data-step='%d']" % step, NS).find("svg:path", NS).get("d")
             self.assertEqual(drawn, "M" + "L".join("%s %s" % point for point in path.points), step)
@@ -359,7 +359,7 @@ class TheSheetTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
             text = sheet.sheet(self.requirements, read=self.read, planned=self.planned._replace(scene=scene))
         line = next(line for line in text.splitlines() if "Each jumper has the color" in line)
-        said = line.split(": ", 1)[1].rstrip(".").split(", ")
+        said = line.split("each signal: ", 1)[1].rstrip(".").split(", ")
         self.assertEqual(len(said), len(self.planned.layout.jumpers))
         self.assertTrue(all(one.split(" ")[1] == "white" for one in said), line)
 

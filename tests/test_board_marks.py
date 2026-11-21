@@ -20,7 +20,7 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import board_marks, sheet, svg_diagram  # noqa: E402
+from spark.breadboard import board_marks, breadboard_scene, sheet, svg_diagram  # noqa: E402
 
 WALK = ROOT / "tests" / "data" / "breadboard" / "walk-c6"
 NS = {"svg": "http://www.w3.org/2000/svg"}
@@ -66,7 +66,7 @@ class TheBoardMarksTest(unittest.TestCase):
         surface = layout.geometry.surface
         marks = board_marks.BoardMarks(surface, board_marks.BoardPalette.load().sizes)
         boxes = list(marks.obstacles(()).marks) + list(marks.sign_boxes())
-        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(layout))
+        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(breadboard_scene.BreadboardSceneMaker().make(layout)))
         texts = centred_texts(root)
         self.assertGreater(len(texts), 20)
         self.assertGreaterEqual(len([text for text, *_ in texts if text in ("+", "−")]), 4)

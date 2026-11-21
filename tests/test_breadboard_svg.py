@@ -41,7 +41,7 @@ def xiao_svg(pictures=None):
     with in_store():
         read = sheet._read_build(XIAO / "requirements.json")
         layout = sheet._plan_layout(read)
-    return svg_diagram.SvgBreadboardDiagram(pictures=pictures).text(layout), layout
+    return svg_diagram.SvgBreadboardDiagram().text(breadboard_scene.BreadboardSceneMaker(pictures=pictures).make(layout)), layout
 
 
 class ThePictogramsTest(unittest.TestCase):
@@ -213,7 +213,7 @@ def record_svg():
     with in_store():
         read = sheet._read_build(RECORD_BOARD / "requirements.json")
     layout = drawing.BreadboardPlanner(*record_inputs(read)).plan(read.steps)
-    return svg_diagram.SvgBreadboardDiagram().text(layout), layout
+    return svg_diagram.SvgBreadboardDiagram().text(breadboard_scene.BreadboardSceneMaker().make(layout)), layout
 
 
 class TheRecordBoardSvgTest(unittest.TestCase):
@@ -257,7 +257,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         self.assertEqual(len(self.root.findall("svg:line", NS)), 4)
 
     def test_the_same_layout_gives_the_same_bytes(self):
-        self.assertEqual(self.text, svg_diagram.SvgBreadboardDiagram().text(self.layout))
+        self.assertEqual(self.text, svg_diagram.SvgBreadboardDiagram().text(breadboard_scene.BreadboardSceneMaker().make(self.layout)))
 
     def test_the_picture_is_the_one_looked_at_on_2026_11_20(self):
         # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose. P949: the keys,
@@ -288,7 +288,7 @@ class TheModuleSvgTest(unittest.TestCase):
             read = sheet._read_build(EPAPER / "requirements.json")
         geometry, catalog = epaper_inputs(read)
         cls.layout = drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
-        cls.text = svg_diagram.SvgBreadboardDiagram().text(cls.layout)
+        cls.text = svg_diagram.SvgBreadboardDiagram().text(breadboard_scene.BreadboardSceneMaker().make(cls.layout))
         cls.root = ElementTree.fromstring(cls.text)
         cls.module = next(part for part in cls.layout.parts if part.id == "Epaper2in9BwrMhEtLive")
         cls.part_px = geometry.part(cls.module.type)
@@ -338,7 +338,7 @@ class TheModuleSvgTest(unittest.TestCase):
         bare = scene._replace(jumpers=(), parts=tuple(part._replace(caption=part.caption._replace(
             x=board.left + 10, y=board.top + 10)) for part in scene.parts))
         x, y, width, height = [float(n) for n in ElementTree.fromstring(
-            svg_diagram.SvgBreadboardDiagram().draw(bare)).get("viewBox").split()]
+            svg_diagram.SvgBreadboardDiagram().text(bare)).get("viewBox").split()]
         self.assertGreater(max(part.body.bottom for part in scene.parts), board.bottom + 19.2)
         for part in scene.parts:
             with self.subTest(part.part.id):
@@ -354,7 +354,7 @@ WALK = ROOT / "tests" / "data" / "breadboard" / "walk-c6"
 def walk_svg(palette=None):
     with in_store():
         layout = sheet._plan_layout(sheet._read_build(WALK / "requirements.json"))
-    return svg_diagram.SvgBreadboardDiagram(palette=palette).text(layout), layout
+    return svg_diagram.SvgBreadboardDiagram(palette=palette).text(breadboard_scene.BreadboardSceneMaker(palette=palette).make(layout)), layout
 
 
 def svg_all(root, tag):
@@ -425,7 +425,7 @@ class TheBoardLookTest(unittest.TestCase):
         self.assertGreater(float(bottom.pop()), 195)
 
     def test_the_same_layout_gives_the_same_bytes(self):
-        self.assertTrue(self.text == svg_diagram.SvgBreadboardDiagram().text(self.layout))
+        self.assertTrue(self.text == svg_diagram.SvgBreadboardDiagram().text(breadboard_scene.BreadboardSceneMaker().make(self.layout)))
 
     def test_the_font_family_is_set_once_on_the_root(self):
         # a part's own picture may set its own font; every text spark writes takes the root's
@@ -492,7 +492,7 @@ def epaper_svg():
     with in_store():
         read = sheet._read_build(EPAPER / "requirements.json")
     layout = drawing.BreadboardPlanner(*epaper_inputs(read)).plan(read.steps)
-    return svg_diagram.SvgBreadboardDiagram().text(layout), layout
+    return svg_diagram.SvgBreadboardDiagram().text(breadboard_scene.BreadboardSceneMaker().make(layout)), layout
 
 
 class TheWireStyleTest(unittest.TestCase):
@@ -537,7 +537,7 @@ def fixture_svg(fixture):
     with in_store():
         layout = sheet._plan_layout(sheet._read_build(ROOT / "tests" / "data" / "breadboard" / fixture / "requirements.json"))
         renderer = next(one for one in sheet.DRAWING_RENDERERS if isinstance(one, svg_diagram.SvgBreadboardDiagram))
-        return renderer.text(layout), layout
+        return renderer.text(sheet.SCENE_MAKER.make(layout)), layout
 
 
 def pill_of(group):
