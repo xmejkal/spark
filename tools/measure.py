@@ -246,8 +246,8 @@ PARAMETERS = 5                              # R3, without self or cls
 #: U1: the modules that import nothing of spark but a leaf of LEAF_PACKAGE, so that every reader can use them without
 #: importing another reader.
 LEAVES = ("board_codes", "breadboard_codes", "build_codes", "check_codes", "codes", "deploy_stages", "design_codes",
-          "firmware_codes", "flow_codes", "idea_codes", "outcomes", "provenance", "records_codes", "sourcing_codes", "text_guards",
-          "zone_time")
+          "firmware_codes", "flow_codes", "idea_codes", "outcomes", "provenance", "records_codes", "request_codes", "sourcing_codes",
+          "text_guards", "zone_time")
 #: U1: the one package whose leaves a leaf may import, because a test keeps its `__init__.py` and spark's empty: a leaf of
 #: another package would run that package's `__init__`, which may import anything (P853).
 LEAF_PACKAGE = "spark.core"

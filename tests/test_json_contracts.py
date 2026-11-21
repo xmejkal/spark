@@ -58,6 +58,7 @@ import compare_design  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 import emit_footprint  # noqa: E402
 from spark.firmware import firmware_codes  # noqa: E402
+from spark.flow import request_codes  # noqa: E402
 import grant  # noqa: E402
 import import_firmware  # noqa: E402
 from spark.core import outcomes  # noqa: E402
@@ -277,7 +278,7 @@ class TheBenchCodesTableTest(unittest.TestCase):
 
     def test_the_tables_hold_each_constant_of_their_module_once_with_a_sentence_and_share_no_code(self):
         for module in (board_codes, codes, firmware_codes, breadboard_codes, check_codes, design_codes, build_codes,
-                       records_codes, sourcing_codes, idea_codes):
+                       records_codes, sourcing_codes, idea_codes, request_codes):
             # P935: a variant, a Code named after its parent (BAD_ARGUMENT_REPLIES_UNREADABLE), is the second constant
             # of its word; EveryCodeHoldsItsFixTest holds it to its word's meaning and to a fix of its own
             constants = {name: value for name, value in vars(module).items() if name.isupper() and isinstance(value, str)
@@ -373,6 +374,9 @@ class TheBenchCodesTableTest(unittest.TestCase):
 #: P853: each area whose codes are Codes, with its table. An area joins when its codes take their fix (P935).
 AREAS_WITH_FIXES = {"idea": idea_codes, "core": codes, "records": records_codes, "sourcing": sourcing_codes, "design": design_codes,
                    "checks": check_codes}
+#: P829: a table of Codes in an area whose other codes are plain words yet (the flow's `flow_codes`), so the scan of the
+#: area's Findings would name those: each Code holds its meaning and its fix, as an area's in AREAS_WITH_FIXES does.
+TABLES_OUTSIDE_THE_SCAN = {"flow": request_codes}
 #: P935: the tables whose Codes an area names besides its own: the core's, which every Operation writes, and the records'.
 NAMED_TOO = {"records": (codes,), "sourcing": (records_codes, codes), "design": (records_codes, codes), "checks": (codes,)}
 #: P935 PR 4b: the foreign Codes an area names one by one, by table: checks names two of the records' (vendor_pins_check.py) and one of
@@ -613,7 +617,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
     makes names one of them and gives no fix of its own, so none goes out without the code's fix."""
 
     def test_each_code_of_the_table_holds_its_meaning_and_a_fix(self):
-        for table in AREAS_WITH_FIXES.values():
+        for table in list(AREAS_WITH_FIXES.values()) + list(TABLES_OUTSIDE_THE_SCAN.values()):
             for code, meaning in table.CODES.items():
                 self.assertEqual((type(code), code.meaning), (Code, meaning))
                 self.assertTrue(code.fix.strip(), code)
@@ -675,6 +679,8 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             also = NAMED_TOO.get(area, ()) + tuple(NAMED_CODES.get(area, ()))
             self.assertEqual(meanings_off_their_word(table, also), [], table.__name__)
             self.assertEqual(variants_off_their_parent(table, also), [], table.__name__)
+        for table in TABLES_OUTSIDE_THE_SCAN.values():
+            self.assertEqual((meanings_off_their_word(table, (codes,)), variants_off_their_parent(table, (codes,))), ([], []), table.__name__)
 
     def test_a_code_of_the_core_s_word_named_by_its_word_in_an_area_s_table_is_named(self):
         # P935 PR 2's review: only a variant, named past its word, takes the core's meaning; a second BAD_ARGUMENT does not

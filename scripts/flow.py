@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Say where a project stands, or write it as the project's page.html (P825, P827).
+Say where a project stands, write it as the project's page.html, or run the step the page asked for (P825, P827, P829).
 
-Its `--help` sentence is the summary of the verb's Operation, ShowFlow's or WriteFlowPage's (P937), and EPILOG is the
-CLI's own text.
+Its `--help` sentence is the summary of the verb's Operation, ShowFlow's, WriteFlowPage's or RunRequest's (P937), and
+EPILOG is the CLI's own text.
 """
 
 import sys
@@ -12,11 +12,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.cli import HelpText, run_cli
 from spark.core.outside import build_bare_outside_world
+from spark.flow.run_request import RunRequest
 from spark.flow.show_flow import ShowFlow
 from spark.flow.write_flow_page import WriteFlowPage
 
-#: The verbs, each the Operation it runs. With no verb word, flow.py shows. `run-request` comes with P829.
-VERBS = {"show": ShowFlow, "page": WriteFlowPage}
+#: The verbs, each the Operation it runs. With no verb word, flow.py shows.
+VERBS = {"show": ShowFlow, "page": WriteFlowPage, "run-request": RunRequest}
 DEFAULT_VERB = "show"
 
 EPILOG = """flow.py show reads the project's files and the store, and writes nothing. It says each phase in order: idea,
@@ -39,6 +40,15 @@ data-fingerprint (the first 12 hex digits of the fingerprint) and data-written (
 below). With --json it prints data.file, data.did, data.stands_at, data.phases (each phase and its status),
 data.fingerprint and data.guide.
 
+flow.py run-request reads .spark/page-request.json, the page's request {id, key, seen, at}, and deletes it at once. It
+runs the step only when seen is the first 12 hex digits of the fingerprint now, the key is an offer now, and its kind
+is pick, requirements or build. The values come from spark's offer, never from the request. Else it runs nothing:
+request_malformed (no regular file, no JSON object, an id that is no UUID, a key that is no text, a seen that is not 12
+hex digits, or a file it cannot delete), request_in_chat (a need's drop), request_stale (the project changed after the
+page was read) or request_not_offered (not an offer now, or a kind the page never runs). With --json it prints
+data.for, data.key, data.label, data.ran, data.status, data.mark, data.line and data.fingerprint, the one after the
+run, a refusal too; key and label only of an offer. After a run, write the page again with flow.py page.
+
 The fingerprint is the sha256 of the current offers and of .spark/needs.json, requirements.json and .spark/build.json. It
 changes when an offer or one of these files changes. No other file of the project changes it, except through an offer.
 
@@ -53,7 +63,8 @@ requirements the picks cannot give, a build that failed, a firmware line in sim/
 phase could not be read or its last build could not run, or an argument is wrong. Problems win: with both, the status is
 problems and the exit 1, and the phase that could not run is listed under unchecked. Every phase answers either way.
 For page, 0 means the page was written and 2 that it could not be written or an argument is wrong. A phase's own
-problems do not change them."""
+problems do not change them. For run-request, 0 means the step ran ok, 1 that it ran with problems, and 2 that nothing
+ran, the step could not run or an argument is wrong."""
 
 
 def operation_for(argv):
