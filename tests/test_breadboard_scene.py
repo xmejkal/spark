@@ -10,6 +10,7 @@ both drawings and its colour line read it (P969 PR 4).
 
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -26,6 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.breadboard import breadboard_scene, drawing, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
+from spark.breadboard.spacing import BodyBox  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
 NS = {"svg": "http://www.w3.org/2000/svg"}
@@ -64,6 +66,9 @@ class CellLabels(breadboard_scene.LabelMeasure):
 
     def pad_label(self):
         return HALF_PITCH, 0
+
+    def baseline(self, size):
+        return 0
 
 
 class NotedPictures(part_pictures.PictogramPartPictures):
@@ -362,6 +367,48 @@ class TheSheetTest(unittest.TestCase):
         said = line.split("each signal: ", 1)[1].rstrip(".").split(", ")
         self.assertEqual(len(said), len(self.planned.layout.jumpers))
         self.assertTrue(all(one.split(" ")[1] == "white" for one in said), line)
+
+
+class TheLeftoversTest(unittest.TestCase):
+    """P969 PR 4b: the scene gives the extent and the USB mark's place on the sheet, and its marks take the maker's
+    measure, so the picture computes none of them."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.scene = walk_scene()
+
+    def test_the_scene_gives_one_extent_box_that_the_grid_and_the_canvas_read(self):
+        scene, extent = self.scene, self.scene.extent()
+        held = [scene.marks.box()] + [part.body for part in scene.parts] + [part.caption.box() for part in scene.parts]
+        held += [jumper.pill.box() for jumper in scene.jumpers]
+        held += [BodyBox(x, y, x, y) for jumper in scene.jumpers for x, y in jumper.path.points]
+        self.assertEqual(extent, BodyBox(min(box.left for box in held), min(box.top for box in held),
+                                         max(box.right for box in held), max(box.bottom for box in held)))
+        grid = scene.grid
+        self.assertEqual(grid.low, (math.floor((extent.left - grid.x0) / grid.step), math.floor((extent.top - grid.y0) / grid.step)))
+        self.assertEqual(grid.high, (math.ceil((extent.right - grid.x0) / grid.step), math.ceil((extent.bottom - grid.y0) / grid.step)))
+        x, y, width, height = [float(n) for n in ElementTree.fromstring(
+            svg_diagram.SvgBreadboardDiagram().text(scene)).get("viewBox").split()]
+        self.assertAlmostEqual(x, extent.left - 19.2, places=3)
+        self.assertAlmostEqual(y, extent.top - 19.2, places=3)
+        self.assertAlmostEqual(x + width, extent.right + 19.2, places=2)
+        self.assertAlmostEqual(y + height, extent.bottom + 19.2 + 9.6 * len(scene.notes()), places=2)
+
+    def test_the_board_s_usb_mark_has_its_place_on_the_sheet(self):
+        board, module = self.scene.parts
+        self.assertIsNone(module.usb_mark)
+        box, at = board.usb_mark.box, board.usb_mark.at
+        self.assertEqual((box.right - box.left, round(box.bottom - box.top, 6)), (34, 12))  # in the board's own frame
+        self.assertEqual(board.part.rotate, 90)
+        self.assertEqual((round(at.right - at.left, 6), round(at.bottom - at.top, 6)), (12, 34))  # turned with the board
+        body = board.body
+        self.assertTrue(body.left - 0.01 <= at.left < at.right <= body.right + 0.01, (at, body))
+        self.assertTrue(body.top - 0.01 <= at.top < at.bottom <= body.bottom + 0.01, (at, body))
+
+    def test_the_maker_gives_the_marks_its_measure(self):
+        scene = breadboard_scene.BreadboardSceneMaker(measure=CellLabels()).make(self.scene.layout)
+        for (_, row_y, *_), (_, _, baseline) in zip(scene.marks.rail_lines(), scene.marks.signs()):
+            self.assertEqual(baseline, row_y)
 
 
 if __name__ == "__main__":

@@ -75,5 +75,45 @@ class TheBoardMarksTest(unittest.TestCase):
                 self.assertTrue([box for box in boxes if holds(box, glyphs)])
 
 
+class MiddleBaselines(breadboard_scene.PxLabelMeasure):
+    """The SVG's measure, but a mark's baseline on the middle of its letters, as a view in characters writes it."""
+
+    def baseline(self, size):
+        return 0
+
+
+class TheMarksSayWhatTheBackgroundDrewTest(unittest.TestCase):
+    """P969 PR 4b: what the picture's background read from the surface itself comes from the marks: the rail holes,
+    which rail is +, the gap band's place, and a mark's baseline through the label measure."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.surface = walk_layout().geometry.surface
+        cls.sizes = board_marks.BoardPalette.load().sizes
+        cls.marks = board_marks.BoardMarks(cls.surface, cls.sizes, breadboard_scene.PxLabelMeasure(cls.sizes["caption"]))
+
+    def test_the_rail_holes_and_the_plus_rails_come_from_the_marks(self):
+        holes = self.marks.rail_holes()
+        self.assertEqual(len(holes), len(self.surface.holes) - len(self.surface.terminal))
+        self.assertEqual({hole.group for hole in holes}, {"tp", "tn", "bp", "bn"})
+        self.assertEqual({rail: self.marks.plus(rail) for rail in self.surface.rails},
+                         {"tp": True, "tn": False, "bp": True, "bn": False})
+
+    def test_the_gap_band_lies_between_the_two_halves_across_the_board(self):
+        band, box = self.marks.gap_band(), self.marks.box()
+        self.assertEqual((band.left, band.right), (box.left, box.right))
+        self.assertAlmostEqual((band.top + band.bottom) / 2, (89.4 + 118.2) / 2)  # rows e and f of the full board
+        self.assertAlmostEqual(band.bottom - band.top, 24)
+
+    def test_a_mark_s_baseline_comes_from_the_measure(self):
+        middle = board_marks.BoardMarks(self.surface, self.sizes, MiddleBaselines(7))
+        for (_, row_y, *_), (_, _, baseline) in zip(middle.rail_lines(), middle.signs()):
+            self.assertEqual(baseline, row_y)
+        for (_, row_y, *_), (_, _, baseline) in zip(self.marks.rail_lines(), self.marks.signs()):
+            self.assertAlmostEqual(baseline - row_y, 0.35 * 8.5)  # the palette's rail sign, 8.5 px
+        self.assertAlmostEqual(self.marks.baseline(100, 10), 103.5)
+        self.assertAlmostEqual(breadboard_scene.PxLabelMeasure(7).baseline(10), 3.5)
+
+
 if __name__ == "__main__":
     unittest.main()
