@@ -443,22 +443,25 @@ def made_from_its_own_fix(call, fix):
     return any(isinstance(node, ast.Attribute) and node.attr == "fix" and ast.unparse(node.value) == receiver for node in ast.walk(fix))
 
 
-def meanings_off_their_word(table):
+def meanings_off_their_word(table, also=()):
     """P935: the Code constants of `table` whose meaning is not their word's in `table.CODES`; a variant, named past its
-    word, may take the meaning of a core's word instead."""
-    return [name for name, code in vars(table).items() if isinstance(code, Code)
-            and table.CODES.get(code, codes.CODES.get(code) if name != code.upper() else None) != code.meaning]
+    word, may take the meaning of the word in the core's table or in a table `also` holds (design's audit variant of a
+    records word)."""
+    def word_s_meaning(name, code):
+        found = [one.CODES[code] for one in (table,) + (tuple(also) + (codes,) if name != code.upper() else ()) if code in one.CODES]
+        return found[0] if found else None
+    return [name for name, code in vars(table).items() if isinstance(code, Code) and word_s_meaning(name, code) != code.meaning]
 
 
-def variants_off_their_parent(table):
+def variants_off_their_parent(table, also=()):
     """P935: the Code constants of `table` named past their word that are no variant. A variant is named after its parent,
-    the constant named by its word (`<PARENT>_...`) in `table` or the core's, and holds a fix of its own, so an alias of a
-    code is none."""
+    the constant named by its word (`<PARENT>_...`) in `table`, the core's or a table `also` holds, and holds a fix of its
+    own, so an alias of a code is none."""
     broken = []
     for name, code in vars(table).items():
         if not isinstance(code, Code) or name == code.upper():
             continue
-        parent = getattr(table, code.upper(), None) or getattr(codes, code.upper(), None)
+        parent = next((found for one in (table, codes) + tuple(also) if (found := getattr(one, code.upper(), None))), None)
         if not name.startswith(code.upper() + "_") or parent is None:
             broken.append("%s is not named after its parent %s" % (name, code.upper()))
         elif code.fix == parent.fix:
@@ -528,7 +531,8 @@ def calls_off_the_table(sources, table, also=()):
             name, keywords = resolved(call.func), {keyword.arg: keyword.value for keyword in call.keywords}
             said = "%s:line %d: %s" % (file, call.lineno, name.rpartition(".")[2] if name.rpartition(".")[2] in errors else name)
             of, replaces = name.endswith("Finding.of"), name.endswith("_replace")
-            coded = of or name.rpartition(".")[2] in errors
+            made_by = name.rpartition(".")[0].rpartition(".")[2] if name.endswith((".of_error", ".of_lines")) else name.rpartition(".")[2]
+            coded = of or made_by in errors  # P935 PR 3: `E.of_error(...)` and `E.of_lines(...)` take their keywords like `E(...)`
             if None in keywords and (coded or replaces):
                 broken.append(said + " passes keywords by **")
             if name.endswith(("Finding", "Finding._make", "Finding.__new__")) and not passes_on_an_item(call):
@@ -567,8 +571,9 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word;
         # an area's variant of the core's word (BAD_ARGUMENT_IN_LIBRARY) has the core's meaning
         for table in AREAS_WITH_FIXES.values():
-            self.assertEqual(meanings_off_their_word(table), [], table.__name__)
-            self.assertEqual(variants_off_their_parent(table), [], table.__name__)
+            also = NAMED_TOO.get(next(area for area, held in AREAS_WITH_FIXES.items() if held is table), ())
+            self.assertEqual(meanings_off_their_word(table, also), [], table.__name__)
+            self.assertEqual(variants_off_their_parent(table, also), [], table.__name__)
 
     def test_a_code_of_the_core_s_word_named_by_its_word_in_an_area_s_table_is_named(self):
         # P935 PR 2's review: only a variant, named past its word, takes the core's meaning; a second BAD_ARGUMENT does not
@@ -594,6 +599,19 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         planted.HERE_CRASH = Code("crash", "m", "look")
         self.assertEqual(variants_off_their_parent(planted), ["BAD_ARGUMENT_SAME holds its parent's fix",
                                                               "HERE_CRASH is not named after its parent CRASH"])
+
+    def test_an_area_s_variant_of_another_area_s_word_takes_that_word_s_meaning_and_parent(self):
+        # P935 PR 3: design's RECORD_FILE_BROKEN_AUDIT, a variant of a records word, read through NAMED_TOO
+        other, planted = types.ModuleType("other"), types.ModuleType("planted")
+        other.RECORD_GONE = Code("record_gone", "a record is gone", "look")
+        other.CODES = {"record_gone": "a record is gone"}
+        planted.RECORD_GONE_HERE = Code("record_gone", "a record is gone", "look here")
+        planted.RECORD_GONE_SAME = Code("record_gone", "a record is gone", "look")
+        planted.RECORD_GONE_WORDS = Code("record_gone", "another meaning", "look there")
+        planted.CODES = {}
+        self.assertEqual(meanings_off_their_word(planted, (other,)), ["RECORD_GONE_WORDS"])
+        self.assertEqual(meanings_off_their_word(planted), ["RECORD_GONE_HERE", "RECORD_GONE_SAME", "RECORD_GONE_WORDS"])
+        self.assertEqual(variants_off_their_parent(planted, (other,)), ["RECORD_GONE_SAME holds its parent's fix"])
 
     def test_every_finding_and_error_of_the_area_names_a_code_of_the_table_and_gives_no_fix(self):
         scanned = set()
