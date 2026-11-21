@@ -1681,9 +1681,10 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_a_photo_with_no_location_and_any_other_file_are_kept_unchanged(self):
         photo, _ = photo_with_location()
         plain = photo.replace(b"\x25\x88", b"\x0f\x01", 1)  # the GPS pointer becomes the camera maker's tag
-        # a PDF that holds a photo's EXIF GPS block is no JPEG: a kept source keeps its exact bytes
+        # a PDF that holds a photo's EXIF GPS block is no JPEG: a kept source keeps its exact bytes; nor are bytes that
+        # start with FF but not FF D8, whatever their name
         for payload, name in ((plain, "plain.jpg"), (b"%PDF-1.4 whatever", "ds.pdf"),
-                              (b"%PDF-1.4 " + photo, "ds-with-photo.pdf")):
+                              (b"%PDF-1.4 " + photo, "ds-with-photo.pdf"), (b"\xff\xe1" + photo[2:], "almost.jpg")):
             kept, said = self._keep_photo(payload, name)
             self.assertEqual(kept, payload, name)
             self.assertNotIn("location", said.lower(), name)
