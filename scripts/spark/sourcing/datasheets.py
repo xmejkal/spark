@@ -17,7 +17,7 @@ from pathlib import Path
 from spark.records import board_records, record_kind, records_codes, store, tool_finder
 from spark.records.record_kind import (
     Answer, _cannot, DEFINITION_SUFFIX, _parse, _problem, record_home, _write_record)
-from spark.sourcing import matching, offers, sourcing_codes
+from spark.sourcing import matching, offers, record_home as record_homes, sourcing_codes
 from spark.sourcing.part_records import load, PartError
 
 
@@ -347,6 +347,19 @@ def fetch_plan(record):
     return plan
 
 
+def fetch_path(part_id, project=None):
+    """The record file `--fetch` would change, or a PartError: no record (`no_such_part`), or a record in spark's own library
+    (`library_record`, P964), which parts.py never writes. Asked before any download, on a dry run too."""
+    home = record_home(part_id, project)
+    if home is None:
+        raise PartError("no record called %r to fetch for", part_id, code=sourcing_codes.NO_SUCH_PART)
+    path = home / (part_id + DEFINITION_SUFFIX)
+    if record_homes.in_library(path):
+        raise PartError("%s is in spark's own library, which is changed in spark's repository, not by parts.py", part_id,
+                        code=sourcing_codes.LIBRARY_RECORD)
+    return path
+
+
 def fetch_documents(part_id, project=None, fetch=None):
     """
     Download every cited datasheet or image into the store and point at each from the record's `documents`: its URL,
@@ -354,10 +367,7 @@ def fetch_documents(part_id, project=None, fetch=None):
     a version is what the document PRINTS, not a guess (P61). A document the store would refuse by name stops the whole
     fetch before any download (`fetch_plan`). `fetch(url) -> bytes or None` is a parameter for the tests.
     """
-    home = record_home(part_id, project)
-    if home is None:
-        raise PartError("no record called %r to fetch for", part_id, code=sourcing_codes.NO_SUCH_PART)
-    path = home / (part_id + DEFINITION_SUFFIX)
+    path = fetch_path(part_id, project)
     record = json.loads(path.read_text())
     documents = dict(record.get("documents") or {})
     for url, name in fetch_plan(record):

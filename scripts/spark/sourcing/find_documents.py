@@ -93,7 +93,7 @@ class FindDocuments(PartOperation):
                    else "no record of a board called %r — `boards.py --list` finds what exists" % part_id)
             return Answer(problems=[_problem(part_id, why, code=sourcing_codes.NO_SUCH_PART)])
         if record_home.in_library(path):
-            return Answer(problems=[_problem(part_id, record_home.LIBRARY_REFUSAL % part_id)])
+            return Answer(problems=[record_home.library_problem(part_id)])
         finder = next((finder for finder in self.finders if finder.knows(record)), None)
         if finder is None:
             return self._declined(part_id, project, Decline("vendor", "no finder knows the vendor of %s: its vendor and sources "

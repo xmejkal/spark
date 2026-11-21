@@ -10,9 +10,8 @@ from spark.core.operation import COMMON_ARGUMENTS, FETCHES, JSON_DEST, READS, WR
 from spark.records import records_codes
 from spark.records.answer_operation import ANSWER_ARGUMENTS
 from spark.records.record_kind import Answer, DEFINITION_SUFFIX, _problem, record_home
-from spark.sourcing import datasheets, sourcing_codes
+from spark.sourcing import datasheets
 from spark.sourcing.part_operation import PartOperation
-from spark.sourcing.part_records import PartError
 
 
 # --- MVP ---
@@ -27,7 +26,7 @@ class FetchDocuments(PartOperation):
 
     name = "fetch"
     data_keys = ('documents', 'would_fetch', 'failed')
-    arguments = (Argument(("--fetch",), "part_id", str, "download the datasheets and images a record cites, into your store", metavar="PART"),
+    arguments = (Argument(("--fetch",), "part_id", str, "download the datasheets and images a record cites, into your store; never spark's library", metavar="PART"),
                  ANSWER_ARGUMENTS["project"], ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, WRITES, FETCHES)
 
@@ -36,10 +35,7 @@ class FetchDocuments(PartOperation):
 
     def build_answer(self, part_id, project, dry_run):
         if dry_run:
-            home = record_home(part_id, project)
-            if home is None:
-                raise PartError("no record called %r to fetch for", part_id, code=sourcing_codes.NO_SUCH_PART)
-            wanted = [url for url, _ in datasheets.fetch_plan(json.loads((home / (part_id + DEFINITION_SUFFIX)).read_text()))]
+            wanted = [url for url, _ in datasheets.fetch_plan(json.loads(datasheets.fetch_path(part_id, project).read_text()))]  # P964: refuses a library record first
             return Answer({"documents": None, "would_fetch": wanted, "failed": []}, ["  would fetch %s" % url for url in wanted]
                           or ["  %s cites no datasheet or image URL to keep" % part_id])
         kept = datasheets.fetch_documents(part_id, project)

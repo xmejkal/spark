@@ -35,7 +35,7 @@
  {"file": "scripts/spark/sourcing/datasheets.py", "name": "the refusal does not say which document it is",
   "find": "\"%s: %s — nothing was fetched\", url, problem, code=records_codes.FILE_NAME_REFUSED)", "replace": "\"%s — nothing was fetched\", problem, code=records_codes.FILE_NAME_REFUSED)"},
  {"file": "scripts/spark/sourcing/fetch_documents.py", "name": "a dry run of --fetch fetches",
-  "find": "        if dry_run:\n            home = record_home(part_id, project)", "replace": "        if False:\n            home = record_home(part_id, project)"},
+  "find": "        if dry_run:\n            wanted = [", "replace": "        if False:\n            wanted = ["},
  {"file": "scripts/spark/records/store.py", "name": "a control character in a name is not refused, so a NUL byte reaches the operating system",
   "find": "    if CONTROL.search(name):\n", "replace": "    if False:\n"},
  {"file": "scripts/spark/records/store.py", "name": "a HEAD reads the document, so a redirect turns a question into a download",
