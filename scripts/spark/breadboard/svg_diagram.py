@@ -1,20 +1,20 @@
 """
 The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Renderer of a planned layout as
-`breadboard.svg`, the breadboard under the parts in the old wiring page's look (`BoardPalette`, `BoardBackground`,
-P953), the Strategies that place a drawn part's pad labels (P945), and the Service that places each jumper's pill
-(`PillLayout`, `WirePill`, P953). Moved out of `drawing`, whose planner and Wokwi diagram it reads. `sheet` writes the
-file; `part_shape` names a part's label layout; `wire_routing` gives each jumper its way; `part_captions` places each
-part's caption and writes its line of the note.
+`breadboard.svg`, the breadboard under the parts in the old wiring page's look (`BoardBackground`, which only draws
+what `board_marks` made: the board's body, letters, numbers and rail signs, P969, with their `BoardPalette`, P953), the
+Strategies that place a drawn part's pad labels (P945), and the Service that places each jumper's pill (`PillLayout`,
+`WirePill`, P953). Moved out of `drawing`, whose planner and Wokwi diagram it reads. `sheet` writes the file;
+`part_shape` names a part's label layout; `wire_routing` gives each jumper its way; `part_captions` places each part's
+caption and writes its line of the note.
 """
 
 import collections
-import json
 import math
 import xml.etree.ElementTree as ElementTree
-from pathlib import Path
 
 from spark.breadboard import part_pictures, wire_routing, wiring_steps
-from spark.breadboard.drawing import BREADBOARDS_FILE, _round_px
+from spark.breadboard.board_marks import BoardMarks, BoardPalette
+from spark.breadboard.drawing import _round_px
 from spark.breadboard.part_captions import PartCaption, PartNotes
 from spark.breadboard.spacing import BodyBox
 
@@ -77,16 +77,6 @@ class IntoBodyLabels(PadLabelLayout):
         return LabelPlace(x + self.MIDDLE, y - 5, "start", -90)
 
 
-class BoardPalette(collections.namedtuple("BoardPalette", "colors sizes")):
-    """Value: the breadboard picture's look (P953): `colors`, {what: hex}, and `sizes`, {what: px}, the `palette` and
-    `sizes_px` of data/breadboards.json. Another look is another file, with no code."""
-
-    @classmethod
-    def load(cls, path=BREADBOARDS_FILE):
-        data = json.loads(Path(path).read_text())
-        return cls(data["palette"], data["sizes_px"])
-
-
 class BoardBackground:
     """
     Renderer helper: the breadboard under the parts, as the old wiring page draws it (P953): the board's body with its
@@ -103,15 +93,14 @@ class BoardBackground:
     def __init__(self, palette):
         self.palette = palette
 
-    def box(self, surface):
-        """The board's body: every hole and `board_pad` round them."""
-        pad = self.palette.sizes["board_pad"]
-        return BodyBox(min(hole.x for hole in surface.holes) - pad, min(hole.y for hole in surface.holes) - pad,
-                       max(hole.x for hole in surface.holes) + pad, max(hole.y for hole in surface.holes) + pad)
+    def marks(self, surface):
+        """The BoardMarks of the surface at this palette's sizes."""
+        return BoardMarks(surface, self.palette.sizes)
 
     def draw(self, root, surface):
         colors, sizes = self.palette
-        box = self.box(surface)
+        marks = self.marks(surface)
+        box = marks.box()
         width, height = str(_round_px(box.right - box.left)), str(_round_px(box.bottom - box.top))
         _element(root, "rect", x=box.left, y=box.top, width=width, height=height, rx=sizes["board_rx"],
                  fill=colors["board"], stroke=colors["edge"], **{"stroke-width": sizes["edge_width"]})
@@ -125,59 +114,14 @@ class BoardBackground:
             if holes:
                 _element(root, "path", d="".join("M%s %sh0" % (_round_px(hole.x), _round_px(hole.y)) for hole in holes),
                          stroke=color, **{"stroke-width": size, "stroke-linecap": "square"})
-        self._rails(root, surface)
-        for text, x, y, size in self.texts(surface):
+        self._rails(root, marks)
+        for text, x, y, size in marks.texts():
             _element(root, "text", text, x=x, y=y + size * 0.35, fill=colors["grid_text"], **{"font-size": size,
                                                                                             "text-anchor": "middle"})
 
-    def texts(self, surface):
-        """(text, x, y of its middle, font size) of each row letter, at the left edge, then each column number (1 and
-        every `numbers_every`), above the top rails and below the bottom rails."""
-        sizes = self.palette.sizes
-        left = min(hole.x for hole in surface.terminal) - surface.pitch
-        letters = [(letter, left, y, sizes["letters"]) for letter, y in surface.letters_y.items()]
-        columns = sorted({hole.column: hole.x for hole in surface.terminal}.items())
-        said = [(column, x) for column, x in columns if column == 1 or column % sizes["numbers_every"] == 0]
-        return letters + [(str(column), x, y, sizes["numbers"]) for y in (
-            min(hole.y for hole in surface.holes) - surface.pitch, max(hole.y for hole in surface.holes) + surface.pitch)
-            for column, x in said]
-
-    def rail_lines(self, surface):
-        """(its rail, its holes' y, its line's y, left, right) of each rail: the line lies on the side of its holes away
-        from the other rail of its pair."""
-        rail_holes = [hole for hole in surface.holes if not hole.column]
-        found = []
-        for rail in surface.rails:
-            row = [hole for hole in rail_holes if hole.group == rail]
-            partner = next((hole.y for hole in rail_holes if hole.group != rail and hole.group[0] == rail[0]), None)
-            away = (1 if row[0].y > partner else -1) if partner is not None else (-1 if rail.endswith("p") else 1)
-            found.append((rail, row[0].y, row[0].y + away * self.palette.sizes["rail_line_off"],
-                          min(hole.x for hole in row), max(hole.x for hole in row)))
-        return found
-
-    def obstacles(self, surface, bodies):
-        """The Obstacles a wire keeps clear of: the board, the `bodies`, each letter's and number's box (0.6 of its
-        size wide a character, 0.8 of it high), and each rail's line."""
-        marks = [BodyBox(x - 0.3 * size * len(text), y - 0.4 * size, x + 0.3 * size * len(text), y + 0.4 * size)
-                 for text, x, y, size in self.texts(surface)]
-        return wire_routing.Obstacles(self.box(surface), tuple(bodies), tuple(marks),
-                                      tuple((y, left, right) for _, _, y, left, right in self.rail_lines(surface)))
-
-    def sign_boxes(self, surface):
-        """The box of each rail's + or - sign, which a pill keeps clear of (a wire may pass it, so `obstacles` leaves
-        it out): 0.6 of its size wide, from 0.75 of its size above its baseline to 0.25 below."""
-        size = self.palette.sizes["rail_sign"]
-        return tuple(BodyBox(x - 0.3 * size, baseline - 0.75 * size, x + 0.3 * size, baseline + 0.25 * size)
-                     for _, x, baseline in self._signs(surface))
-
-    def _signs(self, surface):
-        """(its rail, x, baseline) of each rail's sign, at the rail's left end."""
-        size = self.palette.sizes["rail_sign"]
-        return [(rail, left - surface.pitch, row_y + size * 0.35) for rail, row_y, _, left, _ in self.rail_lines(surface)]
-
-    def _rails(self, root, surface):
+    def _rails(self, root, marks):
         colors, sizes = self.palette
-        for (rail, _, y, left, right), (_, x, baseline) in zip(self.rail_lines(surface), self._signs(surface)):
+        for (rail, _, y, left, right), (_, x, baseline) in zip(marks.rail_lines(), marks.signs()):
             plus = rail.endswith("p")
             color = colors["plus" if plus else "minus"]
             _element(root, "line", x1=left, y1=y, x2=right, y2=y,
@@ -357,14 +301,15 @@ class SvgBreadboardDiagram:
         surface = layout.geometry.surface
         pictures = {part.id: self.pictures.picture(part.type, part.record) for part in layout.parts}
         background = BoardBackground(self.palette)
+        marks = background.marks(surface)
         # a body may hang past the holes (a module seated by one edge, a board's USB end): the canvas holds it
-        boxes = [background.box(surface)] + [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
-        obstacles = background.obstacles(surface, boxes[1:])
+        boxes = [marks.box()] + [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
+        obstacles = marks.obstacles(boxes[1:])
         paths = self.router.route(layout, obstacles)
         pills = self.pill_layout.place(layout.jumpers, paths,
-                                       obstacles._replace(marks=obstacles.marks + background.sign_boxes(surface)))
+                                       obstacles._replace(marks=obstacles.marks + marks.sign_boxes()))
         captions = PartCaption(self.palette.sizes["caption"], surface.pitch).place(layout.parts, boxes[1:], boxes[1:] + list(
-            obstacles.marks + background.sign_boxes(surface)) + self._wire_boxes(layout, paths, pills))
+            obstacles.marks + marks.sign_boxes()) + self._wire_boxes(layout, paths, pills))
         boxes += [BodyBox(min(x for x, _ in path.points), min(y for _, y in path.points), max(x for x, _ in path.points),
                           max(y for _, y in path.points)) for path in paths.values() if path.points]
         boxes += [pill.box() for pill in pills.values()] + [caption.box() for caption in captions.values()]
