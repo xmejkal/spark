@@ -114,7 +114,7 @@ at it before you measure it.
 | `no_vendor_finder` | a page: the board's `vendor` and `sources` name no DFRobot page | the photo step: `/spark:identify`, then `--features-set` |
 | `no_sku` | the page's address: the board has no `sku` | write the `sku`, then run again |
 | `no_top_view` | a picture in the page's "Board Overview" section | the photo step |
-| `no_dimension_drawing` | a document that the page names "Dimension" | keep a drawing from another page with `parts.py --keep` |
+| `no_dimension_drawing` | a document on dfrobot.com that the page names "Dimension" | keep a drawing from another page with `parts.py --keep` |
 
 ## A board's measured features
 

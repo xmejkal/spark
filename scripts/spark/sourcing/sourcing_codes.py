@@ -56,7 +56,7 @@ NO_VENDOR_FINDER = codes.Code("no_vendor_finder", "no finder knows the board's m
                         "take a photo of the board's component side (/spark:identify), then measure it with parts.py --features-set")
 NO_TOP_VIEW = codes.Code("no_top_view", "the maker's page has no picture in its \"Board Overview\" section, so no top view was kept",
                    NO_VENDOR_FINDER.fix)
-NO_DIMENSION_DRAWING = codes.Code("no_dimension_drawing", "the maker's page lists no document named \"Dimension\", so no dimension drawing was kept",
+NO_DIMENSION_DRAWING = codes.Code("no_dimension_drawing", "the maker's page lists no document named \"Dimension\" on dfrobot.com, so no dimension drawing was kept",
                             "keep a dimension drawing from another page of the maker with parts.py --keep FILE --url URL")
 
 #: Each code and the one sentence that says what it means.
