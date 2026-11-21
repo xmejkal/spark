@@ -2,13 +2,13 @@
 The drawn breadboard (P267, #300): the sheet's steps on a breadboard, each part's legs in holes and each
 step's jumper in the color of what it carries, written as `breadboard.json`, a second Wokwi diagram, and as `breadboard.svg`.
 
-A pure planner turns the steps into holes, and a renderer turns the holes into a diagram. The planner reads the steps
-from `BreadboardSteps.anchored()`, so it never decides the wiring again. Where Wokwi draws each pin and hole comes from
-`data/wokwi-geometry.json`, measured once in Wokwi. A leg over a hole connects in Wokwi with no connection entry, so
-only the jumpers are connections. Power and ground go to the rails (P953, `rails`).
+A pure planner turns the steps into holes, the scene maker makes their scene once (P969), and a renderer draws it. The
+planner reads the steps from `BreadboardSteps.anchored()`, so it never decides the wiring again. Where Wokwi draws each
+pin and hole comes from `data/wokwi-geometry.json`, measured once in Wokwi. A leg over a hole connects in Wokwi with no
+connection entry, so only the jumpers are connections. Power and ground go to the rails (P953, `rails`).
 
-    BreadboardPlanner(geometry, catalog).plan(steps)  ->  BreadboardLayout  ->  WokwiBreadboardDiagram().render(layout)
-    BreadboardLayout  ->  BreadboardSceneMaker().make(layout)  ->  BreadboardScene  ->  SvgBreadboardDiagram().draw(scene)
+    BreadboardPlanner(geometry, catalog).plan(steps)  ->  BreadboardLayout  ->  BreadboardSceneMaker().make(layout)
+    BreadboardScene  ->  WokwiBreadboardDiagram().text(scene), SvgBreadboardDiagram().text(scene)
 """
 
 import collections
@@ -33,11 +33,11 @@ DrawnPart = collections.namedtuple("DrawnPart", "type attrs pins record", defaul
 #: record, as its DrawnPart has it.
 PlacedPart = collections.namedtuple("PlacedPart", "id type attrs left top rotate holes record", defaults=(None,))
 #: One jumper between two holes, for the step it belongs to, with the bends of its route as Wokwi writes them (strings
-#: such as "v-20"), empty when it runs straight, what it carries (`wiring_steps.role_of`), which picks its color, and the
-#: words of its pill in a picture (`wiring_steps.pill_words`, P953).
+#: such as "v-20"), empty when it runs straight, what it carries (`wiring_steps.role_of`), from which the scene picks its
+#: colour (P969), and the words of its pill in a picture (`wiring_steps.pill_words`, P953).
 Jumper = collections.namedtuple("Jumper", "one other step route role pill_words", defaults=((), wiring_steps.SIGNAL, ""))
-#: Value: the whole drawing as holes, the `geometry` it was planned on, which any renderer reads, and `crowded`, the id of
-#: each part placed closer to the part before it than its surface's `body_gap_columns`, since the board had no room.
+#: Value: the whole drawing as holes, the `geometry` it was planned on, which the scene maker reads, and `crowded`, the id
+#: of each part placed closer to the part before it than its surface's `body_gap_columns`, since the board had no room.
 BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts jumpers geometry crowded", defaults=((),))
 
 
@@ -542,9 +542,9 @@ class StepHoles:
 
 
 class WokwiBreadboardDiagram:
-    """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in the color of what it carries. Its constructor takes
-    the colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
-    below, `text(layout)` and `why_not_written(layout)`, which `sheet.DRAWING_RENDERERS` and the build read."""
+    """Renderer: a BreadboardScene's layout as a Wokwi diagram, each jumper in the scene's colour word (`colors()`, P969).
+    Every drawing renderer has the four class attributes below, `text(scene)` and `why_not_written(layout)`, which
+    decides before the sheet makes the scene; `sheet.DRAWING_RENDERERS` and the build read them."""
 
     #: The file it writes, beside the sheet.
     FILE_NAME = "breadboard.json"
@@ -560,8 +560,7 @@ class WokwiBreadboardDiagram:
     #: Why no file is written, filled with each drawn part that Wokwi has no part for.
     DECLINED_MESSAGE = "Wokwi has no part for %s"
 
-    def __init__(self, colors=None, breadboard_id="bb1"):
-        self.colors = colors or wiring_steps.JumperColors()
+    def __init__(self, breadboard_id="bb1"):
         self.breadboard_id = breadboard_id
 
     def why_not_written(self, layout):
@@ -576,22 +575,23 @@ class WokwiBreadboardDiagram:
         said = names[0] if len(names) == 1 else "%s and %s" % (", ".join(names[:-1]), names[-1])
         return NotWritten(Path(self.FILE_NAME), self, NO_WOKWI_PART, None, self.DECLINED_MESSAGE % said)
 
-    def render(self, layout):
+    def render(self, scene):
+        layout = scene.layout
         parts = [{"type": layout.breadboard, "id": self.breadboard_id, "top": 0, "left": 0, "attrs": {}}]
         for part in layout.parts:
             drawn = {"type": part.type, "id": part.id, "top": _round_px(part.top), "left": _round_px(part.left)}
             drawn.update({"rotate": part.rotate} if part.rotate else {})
             drawn["attrs"] = dict(part.attrs or {})
             parts.append(drawn)
-        colors = self.colors.of({jumper.step: jumper.role for jumper in layout.jumpers})
+        colors = scene.colors()
         connections = [["%s:%s" % (self.breadboard_id, jumper.one.name), "%s:%s" % (self.breadboard_id,
                         jumper.other.name), colors[jumper.step], list(jumper.route)] for jumper in layout.jumpers]
         return {"version": 1, "author": "spark", "editor": "wokwi", "parts": parts, "connections": connections,
                 "dependencies": {}}
 
-    def text(self, layout):
-        """The diagram as the file holds it: the same layout gives the same bytes."""
-        return json.dumps(self.render(layout), indent=2, ensure_ascii=False) + "\n"
+    def text(self, scene):
+        """The diagram of a BreadboardScene as the file holds it: the same scene gives the same bytes."""
+        return json.dumps(self.render(scene), indent=2, ensure_ascii=False) + "\n"
 
 
 def _round_px(value):

@@ -19,7 +19,7 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import board_marks, drawing, sheet, svg_diagram, wire_pills, wire_routing  # noqa: E402
+from spark.breadboard import board_marks, breadboard_scene, drawing, sheet, svg_diagram, wire_pills, wire_routing  # noqa: E402
 from spark.breadboard.spacing import BodyBox  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
@@ -224,7 +224,8 @@ class TheFallbackTest(unittest.TestCase):
             def route(self, layout, obstacles):
                 return routing.paths
 
-        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram(router=Walled()).text(layout))
+        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(
+            breadboard_scene.BreadboardSceneMaker(router=Walled()).make(layout)))
         group = root.find("svg:g[@data-step='5']", NS)
         self.assertEqual((len(group.findall("svg:path", NS)), len(group.findall("svg:circle", NS))), (0, 2))
         # P953 PR 4b: a note line is found by its class, in the grid text's grey
@@ -235,7 +236,7 @@ class TheFallbackTest(unittest.TestCase):
     def test_a_dashed_wire_is_dashed_in_its_colour_only(self):
         # P953 PR 3: the XIAO has no dashed wire now (its 7 was), so the walk's dashed wire 6 and its solid wire 3
         layout, _, _ = routed("walk-c6")
-        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(layout))
+        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(breadboard_scene.BreadboardSceneMaker().make(layout)))
         under, color = root.find("svg:g[@data-step='6']", NS).findall("svg:path", NS)
         self.assertEqual((under.get("stroke-dasharray"), color.get("stroke-dasharray")), (None, "4 2"))
         self.assertIsNone(root.find("svg:g[@data-step='3']", NS).findall("svg:path", NS)[1].get("stroke-dasharray"))
@@ -244,7 +245,8 @@ class TheFallbackTest(unittest.TestCase):
         layout, _, _ = routed("epaper")
         paths = wire_routing.LaneJumperRouter().route(layout, None)
         self.assertEqual({path.bends for path in paths.values()}, {2})
-        self.assertIn("M", svg_diagram.SvgBreadboardDiagram(router=wire_routing.LaneJumperRouter()).text(layout))
+        self.assertIn("M", svg_diagram.SvgBreadboardDiagram().text(
+            breadboard_scene.BreadboardSceneMaker(router=wire_routing.LaneJumperRouter()).make(layout)))
 
 
 class TheTrackGridTest(unittest.TestCase):

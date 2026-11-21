@@ -29,6 +29,7 @@ from spark.breadboard import part_shape  # noqa: E402
 from spark.breadboard import rails  # noqa: E402
 from spark.breadboard import spacing  # noqa: E402
 from spark.breadboard.drawing import HoleLedger, NotDrawnError, WokwiGeometry, rotate  # noqa: E402
+from spark.breadboard.breadboard_scene import BreadboardSceneMaker  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 RECORD_BOARD = ROOT / "tests" / "data" / "breadboard" / "button-light"
@@ -42,6 +43,11 @@ def in_store():
 def xiao_read():
     with in_store():
         return sheet._read_build(XIAO / "requirements.json")
+
+
+def drawing_text(requirements_path):
+    """The Wokwi diagram's text as the sheet writes it: the planned layout's scene, made by the sheet's maker."""
+    return drawing.WokwiBreadboardDiagram().text(sheet.SCENE_MAKER.make(sheet._plan_layout(sheet._read_build(requirements_path))))
 
 
 class TheTurnTest(unittest.TestCase):
@@ -124,7 +130,8 @@ class TheSheetNamesTheWireColorsTest(unittest.TestCase):
             read = sheet._read_build(EPAPER / "requirements.json")
         planned = sheet._plan_once(read)
         jumpers = [jumper._replace(role="unknown") if jumper.step == 4 else jumper for jumper in planned.layout.jumpers]
-        planned = planned._replace(layout=planned.layout._replace(jumpers=jumpers))
+        layout = planned.layout._replace(jumpers=jumpers)
+        planned = planned._replace(layout=layout, scene=sheet.SCENE_MAKER.make(layout))
         self.assertIn("3 red, 4 gray (role not known), 5 green,",
                       sheet.sheet(EPAPER / "requirements.json", read=read, planned=planned))
 
@@ -224,7 +231,7 @@ class TheXiaoLayoutTest(unittest.TestCase):
         jumper_steps = [number for number, one in enumerate(seated, 1)
                         if one.act == wiring_steps.JOIN and one.subject.kind != wiring_steps.RESISTOR]
         self.assertEqual([jumper.step for jumper in self.layout.jumpers], jumper_steps)
-        drawn = json.loads(drawing.WokwiBreadboardDiagram().text(self.layout))
+        drawn = json.loads(drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(self.layout)))
         roles = {jumper.step: jumper.role for jumper in self.layout.jumpers}
         self.assertEqual([wire[2] for wire in drawn["connections"]],
                          [wiring_steps.JumperColors().of(roles)[number] for number in jumper_steps])
@@ -237,20 +244,20 @@ class TheXiaoLayoutTest(unittest.TestCase):
         self.assertEqual(min(hole.column for hole in button.holes.values()), 12)
 
     def test_the_same_build_gives_the_same_bytes(self):
-        once = drawing.WokwiBreadboardDiagram().text(self.layout)
-        self.assertEqual(once, drawing.WokwiBreadboardDiagram().text(sheet._plan_layout(xiao_read())))
+        once = drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(self.layout))
+        self.assertEqual(once, drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(sheet._plan_layout(xiao_read()))))
 
     def test_the_drawing_keeps_the_bytes_wokwi_showed(self):
         # The screenshot in docs/discovery/2026-10-16-p267-wokwi-holes/ shows exactly these bytes (P267, PR #303).
         # A refactor must not move a part by a rounding step: P270 changes the units inside, never the file.
         with in_store():
-            text = sheet.drawing_text(XIAO / "requirements.json")
+            text = drawing_text(XIAO / "requirements.json")
         self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
                          # P953: the three ground jumpers go to the bottom - rail (bn.6, bn.14, bn.10); no part moved
                          "51af5c2905f30b678888b241a52dd115a7a7ad142cde56ce2929b6498b0cb528")
 
     def test_every_hole_named_exists_on_a_half_board(self):
-        drawn = json.loads(drawing.WokwiBreadboardDiagram().text(self.layout))
+        drawn = json.loads(drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(self.layout)))
         names = {"bb1:" + hole.name for hole in GEOMETRY.surface.holes}
         for wire in drawn["connections"]:
             self.assertLessEqual(set(wire[:2]), names)
@@ -558,8 +565,8 @@ class TheSpaceBetweenPartsTest(unittest.TestCase):
         self.assertEqual(layout.crowded, ("LedRed5mm",))
         with in_store():
             crowded = sheet.sheet(RECORD_BOARD / "requirements.json", read=read,
-                                  planned=sheet.PlannedLayout(layout, None, [], layout, ()))
-            spaced = sheet.sheet(RECORD_BOARD / "requirements.json", read=read, planned=sheet._plan_once(read))
+                                  planned=sheet.PlannedLayout(layout, None, [], layout, (), sheet.SCENE_MAKER.make(layout)))
+            spaced = sheet.sheet(RECORD_BOARD / "requirements.json", read=read, planned=sheet._planned_alone(read))
         self.assertEqual(crowded.count("The parts are closer than 4 columns because the breadboard is full."), 1)
         self.assertNotIn("closer than", spaced)
 
@@ -751,7 +758,7 @@ class TheWokwiLineNamesTheCauseTest(unittest.TestCase):
         with in_store():
             read = sheet._read_build(EPAPER / "requirements.json")
         self.assertIn("There is no Wokwi diagram: Wokwi has no part for the board and e-paper. Use the picture.",
-                      sheet.sheet(EPAPER / "requirements.json", read=read, planned=sheet._plan_once(read)))
+                      sheet.sheet(EPAPER / "requirements.json", read=read, planned=sheet._planned_alone(read)))
 
 
 class EachStepNamesItsHolesTest(unittest.TestCase):

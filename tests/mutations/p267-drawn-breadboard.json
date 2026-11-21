@@ -68,8 +68,8 @@
  {
   "file": "scripts/spark/breadboard/sheet.py",
   "name": "the sheet plans a second time",
-  "find": "    planned = planned or _plan_once(read)",
-  "replace": "    planned = _plan_once(read)"
+  "find": "    planned = planned or _planned_alone(read)",
+  "replace": "    planned = _planned_alone(read)"
  },
  {
   "file": "scripts/spark/breadboard/drawing.py",

@@ -234,7 +234,7 @@ These write:
   `wiring-record.json` whole or not at all. A project built before the record has none: the first rebuild counts a jumper
   that equals the fresh plan's as spark's. A failed build never removes
   `wiring-record.json`. Never read an empty list as proof that nothing changed on the bench: read the sheet. The list stays until another design is built, but not after a record that cannot be read. Spark has no witness that the person wired a sheet.
-  Each drawing is one entry of `sheet.DRAWING_RENDERERS`, all from one plan of the layout (P270). `breadboard.svg` (P268) is
+  Each drawing is one entry of `sheet.DRAWING_RENDERERS`, all from one plan of the layout (P270) and its one scene (P969: the wires routed once, each wire's colour picked once for both drawings and the sheet's colour line). `breadboard.svg` (P268) is
   the picture `breadboard.md` shows inline: part pictures from `part_pictures.PictogramPartPictures`, a pill on each jumper
   ([the pills](breadboard-codes.md#the-pills-and-the-wire-colours)), a caption by each part and a note line per part ([the captions](breadboard-codes.md#the-labels-the-captions-and-the-note)).
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check

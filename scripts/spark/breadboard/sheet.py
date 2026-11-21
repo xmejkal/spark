@@ -1,7 +1,8 @@
 """
 The breadboard sheet from a built design (P191): the parts, each resistor they ask for, the numbered wiring steps, the
 drawings and the changes on the bench, written beside the requirements file. The CLI `breadboard.py` calls `write`.
-Its refusals carry the codes of `breadboard_codes`.
+Its refusals carry the codes of `breadboard_codes`. The sheet plans the layout once and makes its scene once
+(`SCENE_MAKER`, P969), so it chooses the router, and each drawing in `DRAWING_RENDERERS` draws that one scene.
 """
 
 import collections
@@ -21,6 +22,7 @@ from spark.records import store
 from spark.breadboard import bench_changes
 from spark.breadboard import before_power
 from spark.breadboard import breadboard_codes
+from spark.breadboard import breadboard_scene
 from spark.breadboard import drawing
 from spark.breadboard import drawing_catalog
 from spark.breadboard import drawing_match
@@ -49,19 +51,22 @@ WIRING_VIEWS = (
     ("Diagram", "Each line is one step, with its number.", wiring_steps.MermaidDiagram()),
 )
 
-#: The one palette of jumper colors, by what each carries, for the sheet's color line and the drawing's jumpers alike.
+#: The one palette of jumper colors, by what each carries: the scene picks each jumper's color with it, once, and the
+#: sheet's color line, the record and both drawings say the scene's words.
 JUMPER_COLORS = wiring_steps.JumperColors()
 #: What the sheet says of the colors, filled with each jumper's number and color.
 COLORS_MESSAGE = ("Each jumper has the color of what it carries, red for power, black for ground and another color for "
                   "each signal: %s.")
 #: What a jumper's color adds on the sheet when no record says what it carries.
 ROLE_NOT_KNOWN = " (role not known)"
-#: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
-#: new entry here, and nothing else changes.
-DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(JUMPER_COLORS),
-                     svg_diagram.SvgBreadboardDiagram(JUMPER_COLORS, pictures=picture_makers.MadePartPictures(
-                         picture_makers.PictureMakerChain(picture_makers.MAKERS[name]() for name in picture_makers.BUILD_MAKERS),
-                         part_pictures.PictogramPartPictures())))
+#: What makes the scene of the planned layout, once, before any drawing (P969): the colors above, the track router and
+#: the build's part pictures. Another router is another maker here, and no renderer changes.
+SCENE_MAKER = breadboard_scene.BreadboardSceneMaker(JUMPER_COLORS, pictures=picture_makers.MadePartPictures(
+    picture_makers.PictureMakerChain(picture_makers.MAKERS[name]() for name in picture_makers.BUILD_MAKERS),
+    part_pictures.PictogramPartPictures()))
+#: The drawings written beside the sheet, in order: each a renderer of the one scene of the planned layout (P270,
+#: P969). A new drawing is a new entry here, and nothing else changes.
+DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(), svg_diagram.SvgBreadboardDiagram())
 #: What the sheet says once when a part sits closer to the part before it than the free columns the planner keeps (P953).
 CROWDED_MESSAGE = "The parts are closer than %d columns because the breadboard is full."
 #: What the sheet says before power is applied, from `wiring_data`'s before_power.
@@ -274,15 +279,12 @@ def _plan_layout(read):
     return drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
 
 
-def drawing_text(requirements_path, circuit_path=None, read=None):
-    """The Wokwi diagram's text, or NotDrawnError with what stopped it."""
-    return EDITABLE_DRAWING.text(_plan_layout(read or _read_build(requirements_path, circuit_path)))
-
-
 #: One plan of the layout for a sheet and its drawings: the layout, or what stopped it (a NotDrawnError, with its code and
-#: subject), and the earlier parts it could not keep as the person left them ([NotKeptResult]), the fresh layout, and
-#: each end the layout joins differently from the points ([DrawingDiffersResult], P279).
-PlannedLayout = collections.namedtuple("PlannedLayout", "layout stopped not_kept fresh differs", defaults=(None, ()))
+#: subject), and the earlier parts it could not keep as the person left them ([NotKeptResult]), the fresh layout, each
+#: end the layout joins differently from the points ([DrawingDiffersResult], P279), and the scene the drawings were
+#: drawn from (P969; None until `write` made it, or when no drawing is drawn).
+PlannedLayout = collections.namedtuple("PlannedLayout", "layout stopped not_kept fresh differs scene",
+                                       defaults=(None, (), None))
 
 
 def _plan_once(read, earlier_path=None, record=None):
@@ -331,14 +333,14 @@ def holds_parts(path):
 
 
 def _drawing_lines(planned):
-    """The sheet's lines on the drawings beside it: the jumper colors, each drawing, the board it was drawn from and any
-    point it joins differently; or why none is written."""
+    """The sheet's lines on the drawings beside it: the jumper colors, the scene's words, each drawing, the board it was
+    drawn from and any point it joins differently; or why none is written."""
     if not planned.layout:
         return ["", "%s not written: %s." % (" and ".join(renderer.FILE_NAME for renderer in DRAWING_RENDERERS),
                                               planned.stopped)]
     roles = {jumper.step: jumper.role for jumper in planned.layout.jumpers}
     colors = COLORS_MESSAGE % ", ".join("%d %s%s" % (number, color, ROLE_NOT_KNOWN if roles[number] == wiring_steps.UNKNOWN
-                                                      else "") for number, color in JUMPER_COLORS.of(roles).items())
+                                                      else "") for number, color in planned.scene.colors().items())
     drawn = [renderer for renderer in DRAWING_RENDERERS if not renderer.why_not_written(planned.layout)]
     first, *others = drawn
     lines = ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
@@ -356,13 +358,21 @@ def _drawing_lines(planned):
     return lines
 
 
+def _planned_alone(read):
+    """The plan of a sheet written with no drawing beside it: the layout planned once and its scene made once."""
+    planned = _plan_once(read)
+    return planned._replace(scene=SCENE_MAKER.make(planned.layout)) if planned.layout else planned
+
+
 def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_lines=None):
     """The sheet, as Markdown, for a requirements file whose project has been built with --keep (or its circuit).
-    `planned` is the layout `write()` already planned, so the sheet says what the drawings show. `change_lines` is the
-    section of changes, its heading first (P300, P875), None on a first build."""
+    `planned` is the layout `write()` already planned, with the scene it drew (a layout needs its scene), so the sheet
+    says what the drawings show and makes no scene of its own; with no `planned`, a sheet written alone plans once and
+    makes its scene once (`_planned_alone`). `change_lines` is the section of changes, its heading first (P300, P875),
+    None on a first build."""
     requirements_path = Path(requirements_path)
     read = read or _read_build(requirements_path, circuit_path)
-    planned = planned or _plan_once(read)
+    planned = planned or _planned_alone(read)
     built, circuit, resistors, steps = read.built, read.circuit, read.resistors, read.steps
     supplies = _supplies(circuit, built.parts)
     have = _have(requirements_path, {part["id"] for part in built.parts} | {built.board.get("id")})
@@ -440,11 +450,13 @@ def _drawn_or_not(paths, planned):
                                       str(planned.stopped), planned.stopped.record) for path, renderer, _ in said]
 
 
-def _texts(drawn, paths, planned):
-    """The text of each drawing in `drawn`, all rendered before any file is written: a renderer that fails removes the
-    drawings beside the sheet and raises."""
+def _texts(drawn, paths, planned, maker):
+    """(the scene, the text of each drawing in `drawn`), all made before any file is written: `maker` makes the scene of
+    the layout once, and every drawing draws it; with no drawing drawn, no scene is made (None). A renderer or the
+    maker that fails removes the drawings beside the sheet and raises."""
     try:
-        return [renderer.text(planned.layout) for _, renderer in drawn]
+        scene = maker.make(planned.layout) if drawn else None
+        return scene, [renderer.text(scene) for _, renderer in drawn]
     except Exception:
         for path, _ in paths:
             path.unlink(missing_ok=True)
@@ -453,7 +465,8 @@ def _texts(drawn, paths, planned):
 
 def write(requirements_path, out, circuit_path=None):
     """Write the sheet to `out`, and each drawing beside it when the layout can be planned; what `check_spine --keep`
-    calls beside the kept board. The layout is planned once. A drawing left from an earlier build is removed, since it
+    calls beside the kept board. The layout is planned once, and its scene made once, which both drawings, the sheet's
+    color line and the record's colors read (P969). A drawing left from an earlier build is removed, since it
     describes another one. The record beside the sheet is staged, the sheet is written, then the record is put in place."""
     read = _read_build(requirements_path, circuit_path)
     paths = [(Path(out).parent / renderer.FILE_NAME, renderer) for renderer in DRAWING_RENDERERS]
@@ -462,13 +475,12 @@ def write(requirements_path, out, circuit_path=None):
     earlier_path = Path(out).parent / EDITABLE_DRAWING.FILE_NAME
     record = bench_changes.WiringLog.read(store.path)
     planned = _plan_once(read, earlier_path, record)
-    seated = read.steps.anchored()
-    colors = JUMPER_COLORS.of({jumper.step: jumper.role for jumper in planned.layout.jumpers}) if planned.layout else {}
+    drawn, not_written = _drawn_or_not(paths, planned)
+    scene, texts = _texts(drawn, paths, planned, SCENE_MAKER)
+    planned, seated, colors = planned._replace(scene=scene), read.steps.anchored(), scene.colors() if scene else {}
     new_record = bench_changes.WiringLog.from_build(seated, colors, record, _spark_jumpers(
         planned, earlier_path, record), store.now())
     changes = bench_changes.changes_between(new_record.base, seated, colors) if new_record.base else []
-    drawn, not_written = _drawn_or_not(paths, planned)
-    texts = _texts(drawn, paths, planned)
     if not Path(out).parent.is_dir():
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), str(out))
     staged = store.stage(new_record)
