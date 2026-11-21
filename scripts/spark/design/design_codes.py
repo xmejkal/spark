@@ -25,7 +25,7 @@ REQUIREMENTS_FIELD_WRONG = codes.Code('requirements_field_wrong', 'a field of th
 NAME_USED_TWICE = codes.Code('name_used_twice', 'two parts or two signals of the design have one name, so the build would make them one',
                               'give one of the two a name of its own in the requirements file, then run again')
 NO_PROJECT_FOLDER = codes.Code('no_project_folder', '--project names no folder, or the folder a project is looked for from is gone',
-                                'give --project a folder that exists, or keep the requirements file inside the project folder')
+                                'give --project a folder that exists, or run from the project folder, with the requirements file in it')
 PART_UNUSABLE = codes.Code('part_unusable', 'a part the design names is unknown, or its record cannot be read or breaks the part contract',
                             'fix the record the sentence names (`parts.py --validate` lists its problems), or give an id that `parts.py --need <words>` finds')
 BOARD_UNUSABLE = codes.Code('board_unusable', 'the board the design names is unknown, or its record cannot be read or breaks the board contract',
@@ -34,7 +34,7 @@ RULES_REFUSED = codes.Code('rules_refused', 'the rules file cannot be used: it i
                             'fix the value the sentence names in the rules file, then run again')
 #: `parts.py --requirements` (P877): an entry that spark wrote for a pick that is gone, in `data.unexplained`.
 ENTRY_PICK_GONE = codes.Code('entry_pick_gone', "an entry of the requirements file that spark wrote for a pick that is gone: said by --requirements, removed only on the person's yes",
-                              'ask the person, on their yes, answer data.remove_key with true in a replies file of your own and run again with --replies')
+                              'ask the person. On their yes, answer data.remove_key with true in a replies file of your own and run again with --replies')
 #: assign_pins: an ImpossibleError, a signal no pin can take.
 UNKNOWN_BUS = codes.Code('unknown_bus', 'a signal is on a bus spark does not know',
                           'put the signal on a bus the sentence lists, or drop `bus`')
@@ -53,7 +53,7 @@ PIN_TAKEN = codes.Code('pin_taken', 'a signal names a pin another signal already
 NO_PIN_LEFT = codes.Code('no_pin_left', 'no free pin of the board can do what a signal needs',
                           'free a pin (fewer signals, or a part on a bus), or use a board with more pins of this kind')
 SIGNAL_NAME_UNUSABLE = codes.Code('signal_name_unusable', "a signal's name is no Python name, or a name the pin map gives the board's own part",
-                                   "rename the signal: letters, digits and _, and not a name the pin map gives the board's own part")
+                                   "rename the signal: a Python name (letters, digits and _, not starting with a digit), and not a name the pin map gives the board's own part")
 #: board_emitter: a part record lacks what a board is placed and traced from.
 NO_PART_FOOTPRINT = codes.Code('no_part_footprint', 'a part record states no footprint',
                                 'add the footprint to the part record from its datasheet (/spark:research), then run again')

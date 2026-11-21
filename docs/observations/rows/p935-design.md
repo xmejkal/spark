@@ -13,7 +13,7 @@ plan. Then come the build's own findings. 2026-11-21.
 | 5 | `UNREADABLE_FIX` goes; the store's refusal at `audit_records.py:101` reads `RECORD_UNREADABLE.fix`, with a comment | the plan check | acted | the row `p707-operations.json:16` is re-anchored |
 | 6 | `audit_records.py:96` gives records' `START_FIX` to a core `bad_argument`: p935-core-codes.md row 8 | the plan | rejected | dropped because START_FIX is the records area's own fix, in its own module |
 | 7 | a fix that says "the sentence names" is weak for an agent | the plan check (the lens) | rejected | dropped because each `--json` item holds its sentence and its fix together, so an agent reads both |
-| 8 | when the store's `catalog/` folder cannot be read, `parts.py --audit --json` answers ok with nothing unchecked (the refuter, chmod 000) | the plan check (the refuter) | raised | a card, for the lead to file |
+| 8 | when the store's `catalog/` folder cannot be read, `parts.py --audit --json` answers ok with nothing unchecked (the refuter, chmod 000) | the plan check (the refuter) | raised | card P973 https://github.com/xmejkal/spark/issues/1394 |
 | 9 | `ImpossibleError(msg, code)`, `RefusedInputError(stage, why, code)` and the core's `Refusal(text, code)` take a code by position, so the scan does not see them | the plan | raised | the checks PR teaches the scan the positional forms |
 | 10 | most design fixes reach nobody yet: the build turns a caught code into `Finding(..., None)` (`build_service.py:504`) | the plan | raised | the build PR makes them reach the person; this PR claims nothing about them reaching the person |
 | 11 | RULES_REFUSED, BOARD_UNUSABLE and NO_PROJECT_FOLDER are equal literals in design and check/build; the leaves cannot import each other (U1) | the plan | raised | the checks and build PRs write the same fix for each, with a test that the pairs are equal |
@@ -23,5 +23,8 @@ plan. Then come the build's own findings. 2026-11-21.
 | 15 | the scan did not see `DesignError.of_error` and `SparkError.of_error`; `X.of_error` and `X.of_lines` of a coded error are now read like `X(...)` | the plan | acted | `calls_off_the_table`; a planted test of four lines and a near miss; records' and sourcing's `of_lines` sites join the scan and pass |
 | 16 | a variant whose parent is another leaf's word (`RECORD_FILE_BROKEN_AUDIT`) failed the meaning and the parent checks | the build | acted | both helpers take the tables `NAMED_TOO` names; a planted test for each |
 | 17 | seven mutation rows of earlier tables had their anchors moved by the edits | the build | acted | `p700-design-codes.json`, `p707-operations.json`, `p726-design-operations.json`, `p935-sourcing-records.json`; `tools/mutate.py --anchors` refuses the same 20 rows as main |
+| 18 | ENTRY_PICK_GONE's fix read wrong with a comma after "yes" | review lens | acted | two sentences: "ask the person. On their yes, answer ..."; no test pinned the text |
+| 19 | SIGNAL_NAME_UNUSABLE's fix let "1led" pass, which `isidentifier()` refuses | review refuter | acted | the fix says "a Python name (letters, digits and _, not starting with a digit)"; no test pinned the text |
+| 20 | NO_PROJECT_FOLDER's fix "keep the requirements file inside the project folder" is false at `footprint_emitter.py:329`, where a working folder is missing | review lens (nit) and review refuter | acted | "give --project a folder that exists, or run from the project folder, with the requirements file in it"; no test pinned the text |
 
 The rows: tests/mutations/p935-design.json.
