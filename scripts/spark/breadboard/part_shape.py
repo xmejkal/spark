@@ -18,7 +18,7 @@ import json
 import math
 from pathlib import Path
 
-from spark.breadboard import drawing, svg_diagram
+from spark.breadboard import breadboard_scene, drawing
 from spark.breadboard.drawing import NotDrawnError
 from spark.design import footprint_emitter
 
@@ -39,7 +39,7 @@ def _px(mm):
     return round(mm * PX_PER_MM, 3)
 
 
-def project_to_px(shape, usb_mark=True, labels=svg_diagram.LABELS_BESIDE, full_surface=True):
+def project_to_px(shape, usb_mark=True, labels=breadboard_scene.LABELS_BESIDE, full_surface=True):
     """The `part_px` of a shape: the dict the planner and the renderers read. It scales to px and derives the `center` the
     turn goes about. `covers_holes` is a drawing convention, not a measured fact: the body of a board hides the holes under
     it. `notes` holds the sentence, the words that the picture's note says it by (P953) and the why of each group that is
@@ -47,7 +47,7 @@ def project_to_px(shape, usb_mark=True, labels=svg_diagram.LABELS_BESIDE, full_s
     flags say what this source can do, so no caller compares a source's name: `wokwi_part` (Wokwi has a part with these
     pins), `pad_labels` (the picture names each pad), `full_surface` (the board is drawn on the 63-column breadboard),
     `usb_mark` (the picture marks a USB end: a board's) and `labels` (where a pad's label goes, a key of
-    `drawing.PAD_LABEL_LAYOUTS`)."""
+    the scene maker's label layouts, `breadboard_scene.LABELS_BESIDE` or `LABELS_INTO_BODY`)."""
     width, height = shape.size
     notes = [{"group": name, "sentence": group["note"], "words": group["words"], "why": group["why_it_matters"]}
              for name, group in shape.groups.items() if group["verified"] is False]
@@ -350,7 +350,7 @@ class ModuleShapeSource(ShapeSource):
         shape = self.find_shape(record)
         if shape is None:
             return None
-        part_px = project_to_px(shape, usb_mark=False, labels=svg_diagram.LABELS_INTO_BODY, full_surface=False)
+        part_px = project_to_px(shape, usb_mark=False, labels=breadboard_scene.LABELS_INTO_BODY, full_surface=False)
         return dict(part_px, name=record.get("short_name") or record.get("id"))
 
     def find_pin_names(self, record):

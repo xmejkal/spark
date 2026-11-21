@@ -1,7 +1,7 @@
 """
 The drawn breadboard as one scene (P969, #1388): everything a view draws, each thing with its place, made once by
-the scene maker before any view, and the pills and captions placed through a label measure
-(scripts/spark/breadboard/breadboard_scene.py).
+the scene maker before any view, and the pills, captions and pad labels placed through a label measure; each part's
+pad states and its line of the note (scripts/spark/breadboard/breadboard_scene.py).
 
     python3 -m unittest tests.test_breadboard_scene
     python3 tests/test_breadboard_scene.py --rough     # prints the walk's scene as rough text
@@ -23,7 +23,7 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import breadboard_scene, sheet, svg_diagram, wire_routing  # noqa: E402
+from spark.breadboard import breadboard_scene, part_pictures, sheet, svg_diagram, wire_routing  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
 NS = {"svg": "http://www.w3.org/2000/svg"}
@@ -51,7 +51,8 @@ class CountingTrackJumperRouter(wire_routing.TrackJumperRouter):
 
 class CellLabels(breadboard_scene.LabelMeasure):
     """A view that writes one character a cell: a pill is its words and two cells for its number, one cell high; a
-    caption is one cell high and a cell a character wide."""
+    caption is one cell high and a cell a character wide; a pad's label starts the next cell from its pad, its letters
+    on the pad's line."""
 
     def pill(self, words):
         return (len(words) + 2) * HALF_PITCH, HALF_PITCH
@@ -59,10 +60,28 @@ class CellLabels(breadboard_scene.LabelMeasure):
     def caption(self, words):
         return HALF_PITCH, len(words) * HALF_PITCH
 
+    def pad_label(self):
+        return HALF_PITCH, 0
+
+
+class NotedPictures(part_pictures.PictogramPartPictures):
+    """spark's pictograms, with a note on the board's picture, as a kept picture that no maker shows gets one."""
+
+    NOTE = "FireBeetle 2 ESP32-C6: kept picture not shown (no frame)"
+
+    def picture(self, wokwi_type, record=None):
+        picture = super().picture(wokwi_type, record)
+        return picture._replace(note=self.NOTE) if isinstance(record, dict) and "c6" in record.get("id", "") else picture
+
+
+#: The rough view's character of a pad in use and of a free pad.
+ROUGH_PADS = {"used": "@", "free": "o"}
+
 
 def rough_text(scene):
-    """The scene as plain text, one character a cell of its grid: '.' a hole, '#' a part's body, '-' and '|' a wire's
-    runs and '+' its bends, ':' a dashed wire, and each jumper's step at its pill's cell."""
+    """The scene as plain text, one character a cell of its grid: '.' a hole, '#' a part's body, each pad label's first
+    letter at its place on the sheet, '@' a pad in use and 'o' a free one, '-' and '|' a wire's runs and '+' its bends,
+    ':' a dashed wire, and each jumper's step at its pill's cell; then the note's lines."""
     grid = scene.grid
     rows = [[" "] * (grid.high[0] - grid.low[0] + 1) for _ in range(grid.high[1] - grid.low[1] + 1)]
 
@@ -76,6 +95,10 @@ def rough_text(scene):
         for u in range(left, right + 1):
             for v in range(top, bottom + 1):
                 put((u, v), "#")
+        for label in part.labels:
+            put(grid.cell(*label.at), label.word[0])
+        for pin, hole in part.part.holes.items():
+            put(grid.cell(hole.x, hole.y), ROUGH_PADS[part.pads[pin]])
     for jumper in scene.jumpers:
         for cell, character in wire_cells(jumper):
             put(cell, character)
@@ -83,7 +106,7 @@ def rough_text(scene):
         u, v = grid.cell(jumper.pill.x, jumper.pill.y)
         for index, character in enumerate(str(jumper.jumper.step)):
             put((u + index, v), character)
-    return "\n".join("".join(row).rstrip() for row in rows)
+    return "\n".join(["".join(row).rstrip() for row in rows] + scene.notes())
 
 
 def wire_cells(jumper):
@@ -160,6 +183,51 @@ class TheSceneTest(unittest.TestCase):
                                                    "and are drawn dashed"])
 
 
+    def test_the_rough_view_gets_the_pad_states_the_pad_labels_and_the_note_from_the_scene(self):
+        # (6) P969 PR 3b: a view that draws no picture still gets every pad's state, every label and every warning
+        rows, grid = self.rough.split("\n"), self.scene.grid
+        states = []
+        for part in self.scene.parts:
+            for pin, hole in part.part.holes.items():
+                u, v = grid.cell(hole.x, hole.y)
+                with self.subTest(part=part.part.id, pin=pin):
+                    self.assertEqual(rows[v - grid.low[1]][u - grid.low[0]], ROUGH_PADS[part.pads[pin]])
+                states.append(part.pads[pin])
+        self.assertEqual(set(states), {"used", "free"})
+        self.assertEqual(rows[-3:], ["DFRobot FireBeetle 2 ESP32-C6: pads, row side and USB end not verified.",
+                                     "MH-ET LIVE 2.9 Inch E-paper Module: pads and header side not verified.",
+                                     "wires 6, 7, 10 and 11 bend more than 4 times to go around the parts and are drawn dashed"])
+        for part in self.scene.parts:
+            pins = {grid.cell(hole.x, hole.y) for hole in part.part.holes.values()}
+            for label in part.labels:
+                # each label alone, so no other label covers it: its first letter at its place on the sheet
+                alone = rough_text(self.scene._replace(jumpers=(), parts=(part._replace(labels=(label,)),))).split("\n")
+                u, v = grid.cell(*label.at)
+                with self.subTest(part=part.part.id, pad=label.pad):
+                    self.assertNotIn((u, v), pins)
+                    self.assertEqual(alone[v - grid.low[1]][u - grid.low[0]], label.word[0])
+
+    def test_each_pad_label_lies_by_its_pad_on_the_sheet_and_reads_bottom_to_top(self):
+        # its place on the sheet is its place in the part's frame, turned with the part: within a pitch of its pad's hole
+        labels = 0
+        for part in self.scene.parts:
+            for label in part.labels:
+                hole = part.part.holes[label.pad]
+                with self.subTest(part=part.part.id, pad=label.pad):
+                    self.assertLessEqual(max(abs(label.at[0] - hole.x), abs(label.at[1] - hole.y)), 2 * HALF_PITCH)
+                    self.assertIn((part.part.rotate + label.place.rotate) % 360, (0, 270))
+                labels += 1
+        self.assertEqual(labels, 32 + 8)
+        self.assertEqual([part.part.rotate for part in self.scene.parts], [90, 0])  # the board is turned
+
+    def test_the_maker_says_each_picture_s_note_with_no_picture_drawn(self):
+        # the maker makes each part's picture from the pictures it is given, so a picture's note reaches every view
+        scene = breadboard_scene.BreadboardSceneMaker(pictures=NotedPictures()).make(self.scene.layout)
+        self.assertEqual(scene.notes()[0], "DFRobot FireBeetle 2 ESP32-C6: pads, row side and USB end not verified. "
+                                           "FireBeetle 2 ESP32-C6: kept picture not shown (no frame)")
+        self.assertEqual(scene.parts[0].picture.note, NotedPictures.NOTE)
+
+
 class TheGridTest(unittest.TestCase):
     def test_each_point_s_cell_lies_within_half_a_cell_of_it(self):
         # (3) on the XIAO, whose rail holes lie a third of a cell off the grid (on the walk every point is on it)
@@ -222,6 +290,21 @@ class TheMakerTest(unittest.TestCase):
         self.assertNotEqual([(one.caption.x, one.caption.y) for one in cells.parts],
                             [(one.caption.x, one.caption.y) for one in px.parts])
 
+    def test_the_maker_places_the_pad_labels_through_its_measure(self):
+        # P969 PR 3b: another view's measure moves the pad labels: each starts a cell from its pad, on the pad's line
+        layout = planned("walk-c6")
+        px = breadboard_scene.BreadboardSceneMaker().make(layout)
+        cells = breadboard_scene.BreadboardSceneMaker(measure=CellLabels()).make(layout)
+        offsets = {}
+        for part in cells.parts:
+            part_px = layout.geometry.part(part.part.type)
+            for label in part.labels:
+                x, y = part_px["pins"][label.pad]
+                offsets.setdefault(part_px["labels"], set()).add((round(abs(label.place.x - x), 6), round(abs(label.place.y - y), 6)))
+        self.assertEqual(offsets, {"beside": {(HALF_PITCH, 0)}, "into-body": {(0, HALF_PITCH)}})
+        self.assertNotEqual([label.place for part in cells.parts for label in part.labels],
+                            [label.place for part in px.parts for label in part.labels])
+
     def test_the_px_measure_is_the_svg_s_pill_and_caption(self):
         measure = breadboard_scene.PxLabelMeasure(7)
         width, height = measure.pill("SDI to D11")
@@ -230,6 +313,7 @@ class TheMakerTest(unittest.TestCase):
         size, width = measure.caption("FireBeetle")
         self.assertEqual(size, 7)
         self.assertAlmostEqual(width, (0.55 * 10 + 0.5) * 7)
+        self.assertEqual(measure.pad_label(), (5, 2))
 
 
 if __name__ == "__main__":
