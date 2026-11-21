@@ -25,6 +25,12 @@ from spark.breadboard.spacing import BodyBox  # noqa: E402
 DATA = ROOT / "tests" / "data" / "breadboard"
 
 
+def grown(one, other, by):
+    """The box of the line from `one` to `other`, `by` px more on every side."""
+    return BodyBox(min(one[0], other[0]) - by, min(one[1], other[1]) - by, max(one[0], other[0]) + by,
+                   max(one[1], other[1]) + by)
+
+
 class TheWirePillsTest(unittest.TestCase):
     def test_the_module_loads_with_no_picture_code(self):
         # the pills' places leave the SVG renderer: importing them loads no svg_diagram
@@ -44,10 +50,9 @@ class TheWirePillsTest(unittest.TestCase):
         bodies = [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
         marks = board_marks.BoardMarks(layout.geometry.surface, board_marks.BoardPalette.load().sizes)
         paths = wire_routing.TrackJumperRouter().route(layout, marks.obstacles(bodies))
-        grown = lambda x1, y1, x2, y2, by: BodyBox(min(x1, x2) - by, min(y1, y2) - by, max(x1, x2) + by, max(y1, y2) + by)
-        pieces = [grown(*a, *b, 2.0) for path in paths.values() for a, b in zip(path.points, path.points[1:])
+        pieces = [grown(a, b, 2.0) for path in paths.values() for a, b in zip(path.points, path.points[1:])
                   if a != b]
-        dots = [grown(hole.x, hole.y, hole.x, hole.y, 3.4) for jumper in layout.jumpers
+        dots = [grown((hole.x, hole.y), (hole.x, hole.y), 3.4) for jumper in layout.jumpers
                 for hole in (jumper.one, jumper.other)]
         self.assertTrue(pieces and dots)
         self.assertEqual(wire_pills.wire_boxes(layout.jumpers, paths, {}), pieces + dots)
