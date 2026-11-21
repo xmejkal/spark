@@ -83,7 +83,8 @@ class TheTableTest(unittest.TestCase):
             if ending.code is None:
                 self.assertIs(ending, DESIGN_ERROR)
             else:
-                self.assertIn(ending.code, build_codes.CODES, ending)
+                # P935 PR 5: by identity, so an ending holds the table's Code, never a plain word of the same letters
+                self.assertTrue(any(ending.code is held for held in build_codes.CODES), ending)
             self.assertNotEqual(ending.status, OK, ending)
 
     def test_each_ending_is_named_and_a_call_site_ends_a_stage_with_it(self):

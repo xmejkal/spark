@@ -9,7 +9,7 @@ its code. Two checks write a code in their JSON (check_footprints.py's and check
 for the Operation that comes later. A check's findings keep their `rule`.
 
 RULES_REFUSED is also design_codes' word, an equal literal in two leaves, with the same meaning and the same fix. INPUT_AMBIGUOUS
-is also build_codes' word, a plain str there, with the same meaning.
+is also build_codes' word, an equal literal in two leaves, with the same meaning and the same fix (P935 PR 5).
 """
 
 from spark.core import codes

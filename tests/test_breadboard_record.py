@@ -28,6 +28,7 @@ import breadboard  # noqa: E402
 from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import bench_changes  # noqa: E402
 import check_spine  # noqa: E402
+from spark.build import build_codes  # noqa: E402
 from spark.build.stages import Stage  # noqa: E402
 from fakes import run_build_board  # noqa: E402
 from test_breadboard_keep import BUTTON_ONLY, FULL, LED_ONLY, build, change_requirements, new_project  # noqa: E402
@@ -373,14 +374,14 @@ class CheckSpineTest(unittest.TestCase):
     def test_a_build_that_did_not_finish_keeps_the_record(self):
         project = self.rebuilt()
         earlier = (project / bench_changes.WiringLog.FILE_NAME).read_text()
-        self.keep(project, FULL, [Stage("build", check_spine.PROBLEMS, "1 error")])
+        self.keep(project, FULL, [Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)])
         self.assertFalse((project / "breadboard.md").exists())
         self.assertEqual((project / bench_changes.WiringLog.FILE_NAME).read_text(), earlier)
 
     def test_a_build_that_did_not_finish_keeps_the_list_for_the_next_build(self):
         project = self.rebuilt()
         first, _ = self.keep(project, FULL)
-        self.keep(project, FULL, [Stage("build", check_spine.PROBLEMS, "1 error")])
+        self.keep(project, FULL, [Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)])
         again, _ = self.keep(project, FULL)
         changed = [entry for entry in again if entry["did"] == "changed"]
         self.assertEqual([entry["code"] for entry in changed], ["added"] * 5)  # P953: board GND stays on the - rail

@@ -12,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
@@ -21,12 +22,13 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from fakes import FakeBuildService, FakeTscircuitEngine, FakeTscircuitExport  # noqa: E402
 from golden_design import fed_circuit  # noqa: E402
-from spark.build import board_engine, kept_files  # noqa: E402
+from spark.build import board_engine, build_codes, kept_files  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from spark.build.build_service import BuildInputs, BuildService, board_alone  # noqa: E402
 from spark.build.requirements_build import RequirementsBuildService  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS, SKIPPED  # noqa: E402
-from spark.build.build_service import every_part_skipped, verdict, vouches_for_a_build  # noqa: E402
+from spark.build.build_service import every_part_skipped, findings_of, verdict, vouches_for_a_build  # noqa: E402
 
 REFERENCE = {"board": "firebeetle2-esp32s3", "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
 #: The display whose record skips the simulation (Wokwi has no ST7789V part), and a diagram of the board alone: no wire but the serial monitor's.
@@ -408,3 +410,39 @@ class EachEndingSaysItsDetailTest(unittest.TestCase):
         built = RequirementsBuildService(FakeBuildService(crashes)).build()
         self.addCleanup(shutil.rmtree, built.workdir)
         self.assertEqual([(stage.name, stage.detail) for stage in built.stages], [("check_spine", "RuntimeError: boom")])
+
+
+class ACustomChipThatIsNotCompiledIsAStageTest(unittest.TestCase):
+    """P935 PR 5: the chip_not_compiled ending, through BuildService._sim_folder and stage_chips with nothing mocked inside
+    them: the wokwi-cli is a tool that fails, or none is found. The stage holds the build's Code, with its fix, and the
+    findings of the build carry that fix."""
+
+    def sim_stage(self, find_tool):
+        """The stages `_sim_folder` leaves for one chip whose binary is not there."""
+        chips_folder, workdir = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, chips_folder, True)
+        self.addCleanup(shutil.rmtree, workdir, True)
+        for suffix in (".chip.c", ".chip.json"):
+            (chips_folder / ("tof" + suffix)).write_text("x")
+        stages = []
+        service = BuildService(FakeTscircuitEngine(), board_emitter.BoardEmitter(assume_missing_sizes=True), find_tool=find_tool)
+        self.assertIsNone(service._sim_folder(BuildInputs({}, workdir), {}, {}, [(chips_folder, "tof")], stages))
+        return stages
+
+    def test_a_wokwi_cli_that_fails_leaves_the_chip_not_compiled_with_its_fix(self):
+        stages = self.sim_stage(lambda name, project: SimpleNamespace(command=["/usr/bin/false"]))
+        self.assertEqual([(stage.name, stage.status, stage.code) for stage in stages], [("simulation", COULD_NOT_RUN, "chip_not_compiled")])
+        self.assertTrue(stages[0].detail.startswith("chip tof did not compile:"))
+        self.assertIs(stages[0].code, build_codes.CHIP_NOT_COMPILED)
+        [found] = findings_of(stages)
+        self.assertEqual((found.code, found.fix), ("chip_not_compiled",
+                         "if the sentence says the chip has no compiled binary, ask the person to run /spark:setup. Otherwise fix the "
+                         "error it shows in the chip's .chip.c beside its record. Then build again"))
+
+    def test_no_wokwi_cli_leaves_the_chip_not_compiled_with_the_tool_error_in_the_sentence(self):
+        def missing(name, project):
+            raise tool_finder.ToolError("wokwi-cli is not installed", code="tool_missing")
+        stages = self.sim_stage(missing)
+        self.assertEqual(stages[0].detail, "chip tof has no compiled binary — wokwi-cli is not installed; `chip compile` runs locally and needs no account")
+        self.assertIs(stages[0].code, build_codes.CHIP_NOT_COMPILED)
+        self.assertTrue(findings_of(stages)[0].fix.startswith("if the sentence says the chip has no compiled binary, ask the person to run /spark:setup."))

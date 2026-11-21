@@ -44,7 +44,8 @@ from spark.records import board_records  # noqa: E402
 from spark.build import build_record  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
-from spark.build import build_service  # noqa: E402
+from spark.build import build_codes, build_service  # noqa: E402
+from spark.design import design_codes  # noqa: E402
 from spark.build import requirements_build  # noqa: E402
 from spark.build import kept_files  # noqa: E402
 from spark.build import build_board  # noqa: E402
@@ -76,7 +77,9 @@ from fakes import FakeTscircuitExport, amplifier_alone, fake_tsci  # noqa: E402
 
 
 def stage(name, status):
-    return Stage(name, status)
+    # P935 PR 5: a Stage that does not end ok holds a Code of build_codes, as stages.py makes it (a Finding takes the fix from it); no test here reads which one
+    return Stage(name, status, "", None if status in (check_spine.OK, check_spine.SKIPPED) else
+                 build_codes.DESIGN_NOT_BUILT if status == check_spine.PROBLEMS else build_codes.TOOL_MISSING)
 
 
 class ABoardWithNoCopperIsNotBuiltTest(unittest.TestCase):
@@ -547,7 +550,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into.mkdir(); (into / "breadboard.json").write_text("{}")
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)], args, self.workdir())
         self.assertFalse((into / "breadboard.json").exists())
         self.assertIn("no drawn breadboard: the build did not finish in this run; removed", err.getvalue())
 
@@ -564,7 +567,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         earlier = (into / "breadboard.json").read_text()
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)], args, self.workdir())
         self.assertEqual((into / "breadboard.json").read_text(), earlier)
         self.assertIn("left alone: %s (it may hold your moves" % (into / "breadboard.json"), err.getvalue())
         self.assertFalse((into / "breadboard.svg").exists())
@@ -578,7 +581,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)], args, self.workdir())
         self.assertFalse((into / "breadboard.md").exists())
         self.assertIn("no breadboard sheet: the build did not finish", err.getvalue())
 
@@ -592,7 +595,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into.mkdir(); (into / "breadboard.md").write_text("# an earlier build's sheet")
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            run_build_board([Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)], args, self.workdir())
         self.assertFalse((into / "breadboard.md").exists())
         self.assertIn("removed", err.getvalue())
 
@@ -630,7 +633,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
     def test_the_pin_map_needs_no_finished_build(self):
         # It is made from the requirements alone, so a machine without the board engine still gets it.
         into = Path(tempfile.mkdtemp()) / "project"
-        self.keep_with_pins(into, stages=[Stage("build", check_spine.COULD_NOT_RUN, "no tsci")])
+        self.keep_with_pins(into, stages=[Stage("build", check_spine.COULD_NOT_RUN, "no tsci", build_codes.TOOL_MISSING)])
         self.assertTrue((into / "firmware" / "pins.py").is_file())
 
     def test_a_pin_map_spark_wrote_earlier_is_rewritten(self):
@@ -996,7 +999,9 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         self.build(self.BOARD_A)
         args = argparse.Namespace(json=True, keep=self.project, requirements=str(self.project / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            run_build_board([Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")], args)
+            # P935 PR 5: the planted Stage holds the Code of its real ending; without one, Finding.of raised and this run crashed unseen
+            code = run_build_board([Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON", design_codes.REQUIREMENTS_UNREADABLE)], args)
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
         self.assertEqual(self.record()["written_sha256"], {"board.tsx": self.sha256(self.BOARD_A)})
         self.assertEqual([entry["did"] for entry in self.build(self.BOARD_B)], ["replaced"])
 
@@ -1104,7 +1109,7 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         # F4
         self.build(self.BOARD_A)
         for _ in range(2):
-            entries = self.build(self.BOARD_B, stages=[Stage("build", check_spine.COULD_NOT_RUN, "timed out")])
+            entries = self.build(self.BOARD_B, stages=[Stage("build", check_spine.COULD_NOT_RUN, "timed out", build_codes.STAGE_TIMED_OUT)])
             self.assertEqual(entries[0]["did"], "left alone")
             self.assertEqual(self.board.read_text(), self.BOARD_A)
         self.assertFalse(self.previous.exists())
@@ -1153,7 +1158,7 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
     def test_an_unfinished_build_says_why_it_did_not_replace_the_board(self):
         # G3
         self.build(self.BOARD_A)
-        entries = self.build(self.BOARD_B, stages=[Stage("build", check_spine.COULD_NOT_RUN, "timed out")])
+        entries = self.build(self.BOARD_B, stages=[Stage("build", check_spine.COULD_NOT_RUN, "timed out", build_codes.STAGE_TIMED_OUT)])
         self.assertEqual((entries[0]["did"], entries[0]["why"]), ("left alone", "this build did not finish, so spark did not replace it"))
 
     def test_a_previous_version_that_cannot_be_put_in_place_is_named_where_it_waits(self):
@@ -1212,7 +1217,7 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         # pin: the unfinished build never reaches a replace
         self.build(self.BOARD_A)
         self.block_dist()
-        entries = self.build_with_dist(self.BOARD_B, stages=[Stage("build", check_spine.COULD_NOT_RUN, "timed out")])
+        entries = self.build_with_dist(self.BOARD_B, stages=[Stage("build", check_spine.COULD_NOT_RUN, "timed out", build_codes.STAGE_TIMED_OUT)])
         self.assertEqual((entries["board.tsx"]["did"], entries["dist"]["did"]), ("left alone", "not kept"))
         self.assertEqual((self.board.read_text(), self.record()["written_sha256"]), (self.BOARD_A, {"board.tsx": self.sha256(self.BOARD_A)}))
 
@@ -3428,13 +3433,14 @@ class TheKeepRecordsTheBuildTest(unittest.TestCase):
 
     def test_a_build_that_could_not_run_is_recorded_too(self):
         project = self.a_project()
-        self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")])
+        self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON", design_codes.REQUIREMENTS_UNREADABLE)])
         self.assertEqual((self.record(project)["status"], self.record(project)["stages"]),
-                         ("could-not-run", [{"name": "requirements", "status": "could-not-run"}]))
+                         # P935 PR 5: the Stage holds the Code of its real ending, so its entry carries the code (P936)
+                         ("could-not-run", [{"name": "requirements", "status": "could-not-run", "code": "requirements_unreadable"}]))
 
     def test_a_keep_folder_that_is_no_project_gets_no_record_and_no_spark_folder(self):
         project = self.a_project(boards=False)
-        kept = self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")])
+        kept = self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON", design_codes.REQUIREMENTS_UNREADABLE)])
         self.assertFalse((project / ".spark").exists())
         self.assertNotIn("build.json", kept)
 
@@ -3448,14 +3454,14 @@ class TheKeepRecordsTheBuildTest(unittest.TestCase):
     def test_a_record_that_cannot_be_written_is_not_kept_and_says_why(self):
         project = self.a_project()
         (project / ".spark").write_text("a file where the folder goes")
-        kept = self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")])
+        kept = self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON", design_codes.REQUIREMENTS_UNREADABLE)])
         self.assertEqual(kept["build.json"]["did"], "not kept")
         self.assertTrue(kept["build.json"]["why"])
 
     def test_a_requirements_file_outside_the_project_is_recorded_as_given(self):
         project, elsewhere = self.a_project(), Path(tempfile.mkdtemp()) / "requirements.json"
         shutil.copy(self.BUILT / "requirements.json", elsewhere)
-        self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON")], elsewhere)
+        self.keep(project, [Stage("requirements", check_spine.COULD_NOT_RUN, "not JSON", design_codes.REQUIREMENTS_UNREADABLE)], elsewhere)
         self.assertEqual(self.record(project)["requirements"], str(elsewhere.resolve()))
 
     def test_paths_typed_relative_to_another_folder_are_recorded_so_flow_reads_the_build_as_current(self):
@@ -3499,9 +3505,9 @@ class TheBuildIsAnOperationTest(unittest.TestCase):
     def test_the_findings_answer_what_verdict_answers(self):
         cases = {"ok": [Stage("build", check_spine.OK, "fine")],
                  "skipped": [Stage("build", check_spine.SKIPPED, "board only"), Stage("simulation", check_spine.OK, "ran")],
-                 "could not run": [Stage("build", check_spine.COULD_NOT_RUN, "no tsci", "tool_missing")],
-                 "problems and could not run": [Stage("schematic-notes", check_spine.PROBLEMS, "a size", "schematic_noted"),
-                                                Stage("build", check_spine.COULD_NOT_RUN, "no tsci", "tool_missing")]}
+                 "could not run": [Stage("build", check_spine.COULD_NOT_RUN, "no tsci", build_codes.TOOL_MISSING)],
+                 "problems and could not run": [Stage("schematic-notes", check_spine.PROBLEMS, "a size", build_codes.SCHEMATIC_NOTED),
+                                                Stage("build", check_spine.COULD_NOT_RUN, "no tsci", build_codes.TOOL_MISSING)]}
         for name, stages in cases.items():
             with self.subTest(case=name):
                 result = OperationResult(findings=build_service.findings_of(stages))
