@@ -99,6 +99,23 @@ picture that is refused at the build is drawn as the part's pictogram, with a no
 | `picture_pad_label` | no text is a pad's printed label: spark draws the labels over the picture |
 | `picture_too_big` | at most 250000 bytes with no embedded JPEG, 400000 with one |
 
+## A board's top view and drawing
+
+`parts.py --find-documents <board> --project .` ([P952](https://github.com/xmejkal/spark/issues/1358)) finds a DFRobot
+board's top view and dimension drawing on the maker's wiki page by its `sku`, keeps them in the person's store and lists
+them in the board's `documents`. It draws nothing and writes no `pictures` block. The top view is the first picture in
+the page's "Board Overview" section, and the drawing is the document that the page names "Dimension". A drawing in a
+zip is listed with `kept: false`. A file that the record keeps already is not fetched again. The run reaches the
+network, so Claude Code asks before it runs. spark does not check that the picture shows your board's revision: look
+at it before you measure it.
+
+| code | what the run did not find | next |
+| --- | --- | --- |
+| `no_vendor_finder` | a page: the board's `vendor` and `sources` name no DFRobot page | the photo step: `/spark:identify`, then `--features-set` |
+| `no_sku` | the page's address: the board has no `sku` | write the `sku`, then run again |
+| `no_top_view` | a picture in the page's "Board Overview" section | the photo step |
+| `no_dimension_drawing` | a document on dfrobot.com that the page names "Dimension" | keep a drawing from another page with `parts.py --keep` |
+
 ## A board's measured features
 
 A board's main features can be measured on the maker's top view and drawn in their real colours
@@ -106,8 +123,8 @@ A board's main features can be measured on the maker's top view and drawn in the
 socket, the display connector, the crystal, the inductors, the groups of small resistors and capacitors, the mounting
 holes and the silkscreen words that name no pad. Boards only in this version.
 
-1. Keep the maker's top view in the record's `documents` (`parts.py --keep`). It must be a component-side top view,
-   never a mirrored one.
+1. Keep the maker's top view in the record's `documents`: `parts.py --find-documents` for a DFRobot board (above). It
+   must be a component-side top view, never a mirrored one.
 2. Look at the picture and write a features file in its pixels: `{picture: {document, outline_px: [left, top, right,
    bottom], usb_edge}, measured_by, colour, anchors: [{pad, x_px, y_px}], features: [{name, kind, x_px, y_px, w_px,
    h_px, colour}]}`. `outline_px` is the PCB's outline in the picture. `usb_edge` is the picture's edge (`top`,

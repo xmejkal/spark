@@ -79,7 +79,7 @@ class DropNeedFlag(AnswerOperation):
 
 
 #: The order `--describe` lists the operations in: the order of the old table, so the page and the golden read as before.
-ORDER = ("list", "show", "validate", "signals", "unverified", "need", "skeleton", "sources", "fetch", "keep", "keep-picture", "picture-frame", "read", "kept", "promote",
+ORDER = ("list", "show", "validate", "signals", "unverified", "need", "skeleton", "sources", "fetch", "find-documents", "keep", "keep-picture", "picture-frame", "read", "kept", "promote",
          "catalog", "drawer", "drawer-set", "drawer-import", "function-set", "fact-set", "features-set", "audit", "needs", "needs-set", "match", "offer",
          "pick", "needs-drop", "requirements", "step", "tally", "describe")
 #: Every Operation parts.py offers, by the `op` it prints, in `ORDER`: the ONE registry the route and `--describe` read, so

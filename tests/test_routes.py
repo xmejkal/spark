@@ -408,7 +408,7 @@ class TheNetworkIsThePersonsYesTest(unittest.TestCase):
         self.assertFalse(self.pre_approves("a.py --drawer", "a.py --drawer-set x"))
 
     def test_describe_names_the_network_operations_this_test_guards(self):
-        self.assertEqual(sorted(self.network_lines()[0]), ["--fetch", "--sources"])
+        self.assertEqual(sorted(self.network_lines()[0]), ["--fetch", "--find-documents", "--sources"])  # P952 adds the third
 
     def test_no_command_or_skill_pre_approves_a_network_operation(self):
         _, lines = self.network_lines()

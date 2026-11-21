@@ -5,6 +5,7 @@ nothing (the wave 5 cycles, P676), as design's `design_operations` is.
 """
 
 from spark.sourcing.fetch_documents import FetchDocuments
+from spark.sourcing.find_documents import FindDocuments
 from spark.sourcing.import_drawer import ImportDrawer
 from spark.sourcing.find_kept import FindKept
 from spark.sourcing.keep_file import KeepFile
@@ -29,7 +30,7 @@ from spark.sourcing.write_skeleton import WriteSkeleton
 
 # --- MVP ---
 OPERATIONS = {operation.name: operation for operation in (
-    ListParts, ShowPart, ValidateParts, ListSignals, ListUnverified, WriteSkeleton, ResolveSources, FetchDocuments, KeepFile,
+    ListParts, ShowPart, ValidateParts, ListSignals, ListUnverified, WriteSkeleton, ResolveSources, FetchDocuments, FindDocuments, KeepFile,
     KeepPicture, DrawPictureFrame,
     ReadDatasheet, FindKept, PromoteRecord, ListCatalog, ListDrawer, MarkStep, SetDrawer, ImportDrawer, SetFunction, SetFacts, SetFeatures)}
 # --- end MVP ---

@@ -28,6 +28,7 @@ import golden_checks  # noqa: E402
 import golden_design  # noqa: E402
 import golden_firmware  # noqa: E402
 import features_fixture  # noqa: E402
+import wiki_fixture  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from fakes import fake_pdftotext  # noqa: E402
 from golden_firmware import LOG_MARK  # noqa: E402
@@ -116,6 +117,8 @@ SHEET = ("sheet.pdf", "%PDF-1.4 golden\n")
 PICTURE = ("picture.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 8"><rect width="5" height="8"/></svg>\n')
 SYNTHETIC_BOARD = planted("boards/%s.json" % features_fixture.BOARD_ID, features_fixture.board())
 FEATURES = planted("features.json", features_fixture.features_file())
+#: P952: the walk's FireBeetle 2 ESP32-C6, its top view and drawing not yet kept.
+WIKI_BOARD = planted("boards/%s.json" % wiki_fixture.BOARD_ID, wiki_fixture.board())
 SHEET_KEPT = STORE + "sources/52d4d0818e899676cc5d6b002096ebd21d4108b2df2bb7d7cc4717d38325a0b3/sheet.pdf"
 ORDERS = planted("in.json", {"source": "dfrobot", "lines": 1, "stated": 1,
                              "items": [{"sku": "DFR0954", "name": "MAX98357 I2S Amplifier", "count": 2}]})
@@ -155,6 +158,10 @@ CASES = [
     Case("parts-fetch-ok-dry-run.txt", "parts.py", ["--fetch", "golden-led", "--dry-run"] + WITH, 0, (SMALL_LED,)),
     Case("parts-fetch-problems-no-record.json", "parts.py", ["--fetch", "no-such-part", "--json"] + WITH, 1),
     Case("parts-fetch-problems-no-record-dry-run.txt", "parts.py", ["--fetch", "no-such-part", "--dry-run"] + WITH, 1),
+    # P952: the dry run names the page and reaches nothing; spark's library is refused before any fetch
+    Case("parts-find-documents-ok-dry-run.txt", "parts.py", ["--find-documents", wiki_fixture.BOARD_ID, "--dry-run"] + WITH, 0,
+         (WIKI_BOARD,)),
+    Case("parts-find-documents-problems-library.json", "parts.py", ["--find-documents", "firebeetle2-esp32s3", "--json"] + WITH, 1),
     Case("parts-keep-ok.txt", "parts.py", ["--keep", "sheet.pdf", "--url", CLOSED_URL], 0, (SHEET,),
          written=(SHEET_KEPT,)),
     Case("parts-keep-could-not-run-no-file.txt", "parts.py", ["--keep", "missing.pdf"], 2),
