@@ -168,9 +168,11 @@ def is_listed(project):
 
 
 def other_pick_sentence(plan, need, problems):
-    """The sentence of a pick refused because another need's pick cannot get its part: the problem's own sentence."""
+    """The sentence of a pick refused because another need's pick cannot get its part: the part by its name, and the
+    problem's own sentence."""
     other = problems[0]
-    return flow_codes.OTHER_PICK_MESSAGE % (", ".join(plan.needs_picking(other["subject"], need)) or "another need", other["subject"], other["sentence"])
+    return flow_codes.OTHER_PICK_MESSAGE % (", ".join(plan.needs_picking(other["subject"], need)) or "another need",
+                                            plan.name_of(other["subject"]), other["sentence"])
 
 
 def pick_id_of(candidate):

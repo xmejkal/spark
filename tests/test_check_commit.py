@@ -148,6 +148,24 @@ class TheGateEnforcesTheBoardTest(unittest.TestCase):
             self.assertEqual(check_commit.main(["HEAD"]), check_commit.EXIT_PROBLEMS)
 
 
+class TheGateNeedsNodeForThePageScriptTest(unittest.TestCase):
+    """P829 PR 3: test_flow_script skips without node, and a skip is no pass, so a story run that holds it stops."""
+
+    @staticmethod
+    def story(*modules):
+        return check_commit.story_tests.StoryTests(modules, check_commit.story_tests.CHOSEN, None, 10)
+
+    def test_without_node_a_story_run_that_holds_the_page_script_could_not_run(self):
+        self.assertEqual(check_commit.node_refusal(self.story("test_flow_page", "test_flow_script"), lambda _name: None),
+                         "could not run: the story run holds test_flow_script, which runs the page script with node, "
+                         "and node is not installed")
+
+    def test_with_node_or_without_the_page_script_the_story_runs(self):
+        self.assertIsNone(check_commit.node_refusal(self.story("test_flow_script"), lambda _name: "/usr/bin/node"))
+        self.assertIsNone(check_commit.node_refusal(self.story("test_flow_page"), lambda _name: None))
+        self.assertIsNone(check_commit.node_refusal(None, lambda _name: None), "the full run")
+
+
 #: A test that passes and leaves a folder in the temp folder behind it — the shape of 1,888 of the 2,291 entries.
 LEAKING_TEST = ("import tempfile, unittest\nclass L(unittest.TestCase):\n"
                 "    def test_leaves_a_folder(self): tempfile.mkdtemp(prefix='left-behind-')\n")

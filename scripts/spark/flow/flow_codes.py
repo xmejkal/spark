@@ -112,6 +112,36 @@ DIST_REMOVED_MESSAGE = "This board needs no wiring, so the old dist folder is de
 BUILT_HISTORY_MESSAGE = "Notes the build in your history."
 NO_SIMULATION_MESSAGE = "Runs no simulation and costs nothing."
 
+#: The page's script (P829 PR 3): the kinds of offer the page sends from its buttons (a drop is asked in the chat, P883),
+#: and every word the script shows. Python writes them into the page's inert words block; the script fills in only a
+#: time, an offer's label or spark's own line. No word says "done" alone.
+SENDABLE = (PICK, WRITE_REQUIREMENTS, BUILD_BOARD)
+CONFIRM_STALE = "These steps may be marked out of date: %s."
+CONFIRM_CLOSED = "If Claude Code is closed, this waits until you open it."
+SEND, CANCEL, COPY, WITHDRAW = "Send", "Cancel", "Copy", "Withdraw"
+#: What Copy puts on the clipboard: the command that carries the request to spark.
+PAGE_COMMAND = "/spark:page"
+WAITING_SAYS = "Sent at %s, waits for your next message to Claude. Nothing has run yet. In Claude Code, type /spark:page."
+WITHDRAWN_SAYS = "Withdrawn. Nothing ran."
+WAITING_FOR = "Waiting for Claude: %s."
+PAGE_FROM = "Page from %s."
+NEW_STATE = "The page now shows the new state."
+#: What the page says when a step ran ok, by its kind: what it did and what is not done yet.
+RAN_OK_SAYS = {PICK: "Picked and reserved. Nothing is built yet. " + NEW_STATE,
+               WRITE_REQUIREMENTS: "The parts list is written. Nothing is built yet. " + NEW_STATE,
+               BUILD_BOARD: "The board builds. It is not wired, not flashed and not simulated yet. " + NEW_STATE}
+#: A step of another kind that ran ok, with spark's own line (`ran <label>: ok`); the page sends no other kind today.
+RAN_OTHER_SAYS = "Spark says: %s. " + NEW_STATE
+RAN_PROBLEMS_SAYS = "Ran, with problems: %s. " + NEW_STATE
+COULD_NOT_RUN_SAYS = "Could not run: %s. " + NEW_STATE
+#: What the page says of each refusal of `flow.py run-request`, by the code's name: nothing ran, in grey, never red.
+REFUSED_SAYS = {"request_stale": "Nothing ran. The project changed after you clicked. Reload this page and click again.",
+                "request_not_offered": "Nothing ran. This button is no longer offered. Reload the page.",
+                "request_in_chat": "Nothing ran. A need is dropped in the chat: tell Claude which one.",
+                "request_malformed": "Nothing ran. The request could not be read. Reload the page and click again."}
+#: The mark of a request that ran nothing: a dash, grey.
+NOT_RUN_MARK = "–"
+
 #: The page of the project (P827): its code when the file cannot be written, the words a status has no word for, and the
 #: bench note. This page does not look at the board, and the note says so.
 PAGE_NOT_WRITTEN = "page_not_written"
@@ -121,7 +151,7 @@ NOT_CHECKED_LEGEND = "spark does not judge this phase, so no mark says it is don
 BENCH_NOTE = "This page reads the project's files. It does not know whether the board is wired or flashed."
 STANDS_AT_LINE = "The project stands at: %s."
 #: The line under the page's title (P828 step 2, the PO, 2026-11-21: "it just doesn't guide a person"): what the page
-#: is and how to act on it. The page has no script, so every action is a message to Claude.
+#: is and how to act on it. From disk every action is a message to Claude.
 PAGE_INTRO = "Where this project stands. This page only shows it. To change anything, tell Claude in the chat."
 #: Said under the intro when the page holds wiring steps, so the wiring comes first and the phases are folded below it.
 WIRING_FIRST = "Below: the wiring and its pictures, then each phase, folded: click one to read it."

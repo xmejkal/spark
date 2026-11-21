@@ -1,0 +1,144 @@
+{
+ "title": "Button light",
+ "phases": [
+  {
+   "phase": "idea",
+   "status": null,
+   "mark": "·",
+   "by": "you",
+   "says": [
+    "Tell Claude your goal in the chat"
+   ],
+   "offers": []
+  },
+  {
+   "phase": "needs",
+   "status": "ok",
+   "mark": "✓",
+   "by": "claude",
+   "says": [
+    "2 need(s): button, light"
+   ],
+   "offers": []
+  },
+  {
+   "phase": "parts",
+   "status": "partial",
+   "mark": "◐",
+   "by": "you",
+   "says": [
+    "1 of 2 needs picked"
+   ],
+   "offers": [
+    {
+     "key": "pick:light:led-red-5mm",
+     "label": "Pick “Red LED 5 mm” for light",
+     "effect": "Saves “Red LED 5 mm” as the pick for the light need in this project. Uses 1 of your 3 “Red LED 5 mm” for the light. May note the choice in your history.",
+     "makes_stale": [
+      "requirements"
+     ]
+    },
+    {
+     "key": "needs-drop:light",
+     "label": "Drop the light need",
+     "effect": "To drop this need, tell Claude: “drop the light need”.",
+     "makes_stale": []
+    }
+   ]
+  },
+  {
+   "phase": "requirements",
+   "status": "stale",
+   "mark": "↻",
+   "by": "claude",
+   "says": [
+    "requirements.json differs from what the picks give"
+   ],
+   "offers": [
+    {
+     "key": "requirements",
+     "label": "Write the parts list",
+     "effect": "Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay.",
+     "makes_stale": [
+      "build",
+      "breadboard"
+     ]
+    }
+   ]
+  },
+  {
+   "phase": "build",
+   "status": "ok",
+   "mark": "✓",
+   "by": "claude",
+   "says": [
+    "the last build, 2026-11-21T15:40:00+01:00: ok"
+   ],
+   "offers": [
+    {
+     "key": "build",
+     "label": "Build the board",
+     "effect": "Saves its files in this project. Runs no simulation and costs nothing.",
+     "makes_stale": []
+    }
+   ]
+  }
+ ],
+ "stands_at": "parts",
+ "pictures": [
+  [
+   "Breadboard",
+   "<svg><rect width=\"4\" height=\"2\"/></svg>",
+   null
+  ],
+  [
+   "Schematic",
+   null,
+   "Not drawn here."
+  ]
+ ],
+ "notes": [
+  "This page reads the project's files. It does not know whether the board is wired or flashed."
+ ],
+ "wiring": [
+  [
+   [
+    1,
+    "Put the board on the breadboard."
+   ],
+   [
+    2,
+    "Run a jumper from D2 to the button."
+   ]
+  ],
+  [],
+  [],
+  null
+ ],
+ "fingerprint": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+ "written": "2026-11-21T15:40:00+01:00",
+ "guide": {
+  "now": {
+   "phase": "parts",
+   "by": [
+    "you"
+   ],
+   "says": "1 need has no part yet: light. Tell Claude a pick for each, or to set it aside.",
+   "offer": null,
+   "needs": [
+    "light"
+   ],
+   "steps": null
+  },
+  "done": [
+   "idea",
+   "needs"
+  ],
+  "later": [
+   "requirements",
+   "build"
+  ],
+  "set_aside": [],
+  "no_simulation": null
+ }
+}

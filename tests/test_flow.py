@@ -37,6 +37,7 @@ from spark.flow.show_flow import ShowFlow, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.outcomes import OK  # noqa: E402
+from spark.design import needs  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import STALE  # noqa: E402
@@ -856,10 +857,17 @@ class TheReviewRoundTest(FlowTest):
         said, _ = show(project)
         # P976: the refusal is said once, in the need's says line, and the need gets no offers
         self.assertEqual([line for line in says(said, "parts") if "cannot get" in line],
-                         ["wet: The pick for soil cannot get “x-one” (1 owned, held by other — 1 picked here), so spark refuses this "
-                          "pick and saves nothing."])
+                         ["wet: The pick for soil cannot get “A soil probe” (1 owned, held by other — 1 picked here), so spark refuses "
+                          "this pick and saves nothing."])
         self.assertEqual([key for key in offers(said, "parts") if key.startswith("pick:wet:")], [])
         self.assertNotIn("refuses", offer_of(said, "pick:soil:x-many")["effect"])
+
+    def test_the_refusal_names_a_part_by_its_record_s_name_else_its_drawer_label_else_its_key(self):
+        # P829 row 26 (the PO, 2026-11-21): the person reads the part's name, never the key spark files it under
+        self.a_part("x-one", {"count": 1})
+        (self.home / "drawer" / "y-old.json").write_text(json.dumps({"schema": 1, "label": "Old probe from the shed", "count": 1}))
+        plan = needs.PickPlan(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL))
+        self.assertEqual([plan.name_of(key) for key in ("x-one", "y-old", "z-none")], ["A soil probe", "Old probe from the shed", "z-none"])
 
     def test_a_part_held_by_another_project_and_by_this_one_is_counted_as_refused(self):
         self.a_part("x-two", {"count": 2, "used_in": {"other": 1, "plant-alarm": 1}})

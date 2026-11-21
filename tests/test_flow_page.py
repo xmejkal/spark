@@ -37,7 +37,7 @@ from spark.breadboard.tabbed_page import SvgExportResult  # noqa: E402
 from spark.build.stages import Stage  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, OK, SKIPPED  # noqa: E402
 from spark.breadboard import before_power, sheet  # noqa: E402
-from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TICK, shown_phase, word_of  # noqa: E402
+from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TICK, page_words, shown_phase, word_of  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
@@ -57,6 +57,33 @@ BENCH = "This page reads the project's files. It does not know whether the board
 NOT_WRITTEN = "page_not_written"
 NOT_DRAWN_HERE = "Not drawn here. The build draws it: run /spark:build --keep."
 NO_BREADBOARD_FILE = "Not drawn: breadboard.svg is not in the project yet. The build with --keep writes it."
+#: The page's script (P829 PR 3), as the page holds it, and its block: the inert words, then the script, before </body>.
+PAGE_SCRIPT = (ROOT / "scripts" / "spark" / "flow" / "page_script.js").read_text(encoding="utf-8")
+SCRIPT_BLOCK = re.compile(r'<script type="application/json" id="spark-words">.*?</script>\n<script>.*?</script>\n', re.S)
+#: A page with an offer of each kind and today's page of it, written by the renderer before the script (P829 PR 3).
+SAMPLE = ROOT / "tests" / "data" / "flow-page"
+
+
+def without_script(text):
+    """`text` without the script block and the sendable offers' data-makes-stale: the page as it was before the script."""
+    return re.sub(r' data-makes-stale="[^"]*"', "", SCRIPT_BLOCK.sub("", text, count=1))
+
+
+def scripts_of(text):
+    """Each <script> of `text`, as (its attributes, its text)."""
+    return [(dict(re.findall(r'([a-z-]+)="([^"]*)"', attributes)), body)
+            for attributes, body in re.findall(r"<script([^>]*)>(.*?)</script>", text, re.S)]
+
+
+def assert_spark_s_script_only(test, text):
+    """The page runs spark's script only (P829 PR 3, D7): one script with no src and no type, whose text is page_script.js,
+    beside the inert words block, and no frame, web address, control in the markup or handler."""
+    scripts = scripts_of(text)
+    test.assertEqual([attributes for attributes, _body in scripts], [{"type": "application/json", "id": "spark-words"}, {}])
+    test.assertEqual(scripts[1][1], PAGE_SCRIPT)
+    test.assertEqual(text.lower().count("<script"), 2)
+    for word in ("<iframe", "http", "<button", "<input", "onclick"):
+        test.assertNotIn(word, text.lower())
 
 
 class FakeReader:
@@ -154,7 +181,7 @@ class FlowOfNPhasesTest(unittest.TestCase):
         self.assertEqual(([attrs["data-phase"] for attrs, _ in parsed.rail], len(parsed.sections)), (["only"], 1))
 
     def test_the_page_holds_no_phase_name_the_flow_did_not_give(self):
-        text = page_of(a_phase("alpha"), a_phase("beta")).lower()
+        text = without_script(page_of(a_phase("alpha"), a_phase("beta"))).lower()
         for name in NINE:
             self.assertNotIn(name, text)
 
@@ -253,9 +280,7 @@ class TheDocumentTest(unittest.TestCase):
 
     def test_the_page_runs_nothing_and_loads_nothing(self):
         for text in (self.text, page_of(a_phase("one"), pictures=[Picture("Breadboard", "<svg/>", None)])):
-            self.assertNotIn("<script", text.lower())
-            self.assertNotIn("<iframe", text.lower())
-            self.assertNotIn("http", text.lower())
+            assert_spark_s_script_only(self, text)
 
     def test_a_sentence_with_an_angle_bracket_is_escaped(self):
         text = page_of(a_phase("one", says=["<b>bold</b> & more"], offers=[Offer("a<b", "<i>x</i>", "<i>y</i>", ())]), project="<p>")
@@ -271,7 +296,7 @@ class TheDocumentTest(unittest.TestCase):
 
     def test_an_offer_shows_its_label_and_effect_and_keeps_its_key_in_data_key(self):
         text = page_of(a_phase("one", offers=[Offer("build", "Build the board", "Builds the board.", ())]))
-        self.assertIn('<li data-key="build">Build the board: Builds the board.</li>', text)
+        self.assertIn('<li data-key="build" data-makes-stale="">Build the board: Builds the board.</li>', text)
         self.assertNotIn(">build<", text)
         self.assertNotIn("<code>", text)
         self.assertNotIn("<button", text)
@@ -302,7 +327,7 @@ class TheBenchLineTest(unittest.TestCase):
         # P977 PR 2: the guide's deploy sentence asks "When the breadboard is wired, ...", a condition for the person and no claim
         # that the board is wired, so only that sentence stands outside this check; the rest of the guide and the page do not.
         deploy = html.escape("When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then run the deploy in your terminal.")
-        rest = text.replace(bench, "").replace(deploy, "")
+        rest = without_script(text).replace(bench, "").replace(deploy, "")
         for word in ("wired", "flashed", "none recorded"):
             self.assertNotIn(word, rest)
 
@@ -310,7 +335,7 @@ class TheBenchLineTest(unittest.TestCase):
         project = a_built_project()
         FlowPageStore().write(project, "page.html", FlowHtmlPage().text(
             FlowPage("t", [phase.to_dict() for phase in read_flow(project)[0]], None, [], [])))
-        text = (project / "page.html").read_text()
+        text = without_script((project / "page.html").read_text())
         for word in ("wired", "flashed"):
             self.assertNotIn(word, text)
 
@@ -755,9 +780,7 @@ class TheWiringWordsTest(unittest.TestCase):
             self.assertNotIn(word, rail.lower())
 
     def test_the_page_still_runs_nothing_and_loads_nothing_with_wiring_and_three_pictures(self):
-        text = page_of_wiring(PageWiring(THREE, self.ITEMS, ["rec"], None), THREE_PICTURES).lower()
-        for word in ("<script", "<iframe", "http", "<button", "<input", "onclick"):
-            self.assertNotIn(word, text)
+        assert_spark_s_script_only(self, page_of_wiring(PageWiring(THREE, self.ITEMS, ["rec"], None), THREE_PICTURES))
 
     def test_a_record_s_marks_and_signs_come_out_as_text_in_a_line_before_power(self):
         item = an_item(said="2**8 or 2**9, a ` tick, a & b and x <= y")
@@ -863,7 +886,8 @@ class TheInlinePictureTest(unittest.TestCase):
                 text = page_of(a_phase("one"), pictures=[Picture("Breadboard", svg, None)])
                 self.assertNotIn(FIGURE, text)
                 self.assertEqual(text.count("data:image/svg+xml;base64,"), 1)
-                self.assertNotIn("<script", text.lower())
+                self.assertNotIn("alert(1)", text)
+                self.assertEqual([body for _attributes, body in scripts_of(text)][1:], [PAGE_SCRIPT], "the only script is spark's")
                 self.assertNotIn("onload", text.lower())
         # the control: plain shapes, an attribute that starts with "o" and a text that says "on" stand in the page
         text = page_of(a_phase("one"), pictures=[Picture("Breadboard", '<svg><rect opacity="1"/><text>on</text></svg>', None)])
@@ -1305,9 +1329,7 @@ class TheGuideSectionTest(unittest.TestCase):
             self.assertIn(escaped, text)
 
     def test_the_guide_adds_no_script_and_loads_nothing(self):
-        text = guide_page(a_guide(), PageWiring([(1, "x")], [], [], None)).lower()
-        self.assertNotIn("<script", text)
-        self.assertNotIn("http", text)
+        assert_spark_s_script_only(self, guide_page(a_guide(), PageWiring([(1, "x")], [], [], None)))
 
 
 class TheGuideThroughWritePageTest(unittest.TestCase):
@@ -1340,6 +1362,82 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
         self.assertNotIn(str(home), store.written[0][2])
         self.assertIn("<strong>DONE</strong> read ~/secret</p>", store.written[0][2])
         self.assertEqual(written.guide["done"], ["read ~/secret"])
+
+
+
+def sample_page():
+    """The FlowPage of tests/data/flow-page/sample-page.json: an offer of each kind, a guide, wiring and two pictures."""
+    sample = json.loads((SAMPLE / "sample-page.json").read_text(encoding="utf-8"))
+    return FlowPage(sample["title"], sample["phases"], sample["stands_at"], [Picture(*each) for each in sample["pictures"]],
+                    tuple(sample["notes"]), PageWiring(*sample["wiring"]), sample["fingerprint"], sample["written"], sample["guide"])
+
+
+def words_of(text):
+    """The words block of a page, read as JSON."""
+    return json.loads(scripts_of(text)[0][1])
+
+
+class ThePageScriptTest(unittest.TestCase):
+    """P829 PR 3: the page holds one inert words block and one script; without them it is the page before the script."""
+
+    def setUp(self):
+        self.text = FlowHtmlPage().text(sample_page())
+
+    def test_the_page_without_its_script_is_the_page_before_the_script_byte_for_byte(self):
+        self.assertEqual(without_script(self.text), (SAMPLE / "before-script.html").read_text(encoding="utf-8"))
+        self.assertEqual(self.text.count(PAGE_SCRIPT), 1)
+        self.assertLess(self.text.index("<script>"), self.text.index("</body>"))
+
+    def test_only_a_pick_the_parts_list_and_the_build_carry_data_makes_stale(self):
+        self.assertIn('<li data-key="pick:light:led-red-5mm" data-makes-stale="requirements">', self.text)
+        self.assertIn('<li data-key="requirements" data-makes-stale="build breadboard">', self.text)
+        self.assertIn('<li data-key="build" data-makes-stale="">', self.text)
+        self.assertIn('<li data-key="needs-drop:light">Drop the light need: ', self.text)
+
+    def test_the_words_block_holds_each_sendable_offer_s_confirm_and_no_drop(self):
+        words = words_of(self.text)
+        self.assertEqual(sorted(words["offers"]), ["build", "pick:light:led-red-5mm", "requirements"])
+        self.assertEqual(words["offers"]["requirements"], {"label": "Write the parts list", "says": [
+            "Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay.",
+            "These steps may be marked out of date: build, breadboard.",
+            "If Claude Code is closed, this waits until you open it."]})
+        self.assertEqual(words["offers"]["build"]["says"], [
+            "Saves its files in this project. Runs no simulation and costs nothing.", "If Claude Code is closed, this waits until you open it."])
+        self.assertEqual(words["offers"]["pick:light:led-red-5mm"]["label"], "Pick “Red LED 5 mm” for light")
+
+    def test_the_words_block_holds_the_plan_s_words_and_never_done_alone(self):
+        words = words_of(self.text)
+        self.assertEqual(words, page_words(sample_page().phases))
+        self.assertEqual(words["waiting"], "Sent at %s, waits for your next message to Claude. Nothing has run yet. In Claude Code, "
+                                           "type /spark:page.")
+        self.assertEqual(words["ok"], {
+            "pick": "Picked and reserved. Nothing is built yet. The page now shows the new state.",
+            "requirements": "The parts list is written. Nothing is built yet. The page now shows the new state.",
+            "build": "The board builds. It is not wired, not flashed and not simulated yet. The page now shows the new state."})
+        self.assertEqual(words["refused"], {
+            "the project changed after the page was read, so nothing ran":
+                "Nothing ran. The project changed after you clicked. Reload this page and click again.",
+            "the request names a step that spark does not offer now, so nothing ran":
+                "Nothing ran. This button is no longer offered. Reload the page.",
+            "the request names a step that is asked in the chat, never from the page, so nothing ran":
+                "Nothing ran. A need is dropped in the chat: tell Claude which one.",
+            "the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or "
+            "could not be deleted, so nothing ran": "Nothing ran. The request could not be read. Reload the page and click again."})
+        self.assertEqual(words["marks"], {"ok": "✓", "problems": "✗", "could-not-run": "?", "not-run": "–"})
+        said = [words[name] for name in ("send", "cancel", "copy", "withdraw", "withdrawn", "waiting_for", "page_from", "ran",
+                                         "problems", "could_not_run")] + list(words["ok"].values()) + list(words["refused"].values())
+        self.assertEqual(said[:7], ["Send", "Cancel", "Copy", "Withdraw", "Withdrawn. Nothing ran.", "Waiting for Claude: %s.",
+                                    "Page from %s."])
+        for line in said:
+            self.assertNotEqual(line.strip(". ").lower(), "done")
+        self.assertNotIn("0123456789ab", json.dumps(words))
+
+    def test_a_label_with_markup_cannot_close_the_words_block(self):
+        phase = a_phase("build", offers=[Offer("build", "</script><script>alert(1)</script>", "x", ())])
+        text = FlowHtmlPage().text(FlowPage("t", [phase.to_dict()], None, [], []))
+        self.assertEqual(len(scripts_of(text)), 2)
+        self.assertEqual(words_of(text)["offers"]["build"]["label"], "</script><script>alert(1)</script>")
+        self.assertIn("\\u003c/script>\\u003cscript>alert(1)", text)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,68 @@
+[
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "from disk, with no database, the script still makes its buttons (P829)",
+  "find": "  if (!db) return null;",
+  "replace": "  if (false) return null;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "a second send while one waits writes a second row (P829)",
+  "find": "    if (this.waiting()) return null;",
+  "replace": "    if (false) return null;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "the request row lacks the page's fingerprint (P829)",
+  "find": "const row = { id: this.makeId(), key: key, seen: this.seen, at: this.now().toISOString() };",
+  "replace": "const row = { id: this.makeId(), key: key, at: this.now().toISOString() };"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "a request with no answer says done (P829)",
+  "find": "if (!answer) return { mark: \"\", text: fill(words.waiting, clock(request.at)), grey: false };",
+  "replace": "if (!answer) return { mark: \"\", text: \"done\", grey: false };"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "Withdraw deletes no row (P829)",
+  "find": "    this.channel.withdraw(waiting.id);\n",
+  "replace": "    ;\n"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "an answer's line reaches the prototype of the refusal words (P829)",
+  "find": "const refused = own(words.refused, answer.line);",
+  "replace": "const refused = words.refused[answer.line];"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "the older request a withdraw uncovers replaces 'Withdrawn' (P829)",
+  "find": "if (this.latest && this.latest.withdrawn && !(request && String(request.at) > String(this.latest.at))) return;",
+  "replace": "if (false) return;"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "a need's drop gets a button on the page (P829, P883)",
+  "find": "SENDABLE = (PICK, WRITE_REQUIREMENTS, BUILD_BOARD)",
+  "replace": "SENDABLE = (PICK, WRITE_REQUIREMENTS, BUILD_BOARD, NEEDS_DROP)"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "a label with </script> closes the words block (P829)",
+  "find": "words = json.dumps(page_words(page.phases), ensure_ascii=False, sort_keys=True).replace(\"<\", \"\\\\u003c\")",
+  "replace": "words = json.dumps(page_words(page.phases), ensure_ascii=False, sort_keys=True)"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a story run that needs node runs without it, and the page script's tests skip (P829)",
+  "find": "    if needs_node(story) and which(\"node\") is None:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "the other need's refusal names the part by its key (P829 row 26)",
+  "find": "plan.name_of(other[\"subject\"]), other[\"sentence\"])",
+  "replace": "other[\"subject\"], other[\"sentence\"])"
+ }
+]
