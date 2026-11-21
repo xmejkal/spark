@@ -672,7 +672,9 @@ class CheckDesignIsAnOperationTest(unittest.TestCase):
         found, = check.findings_of([self.result("physics", "ok", unchecked=["no rail"])])
         self.assertEqual((found.severity, found.subject, found.code, found.sentence),
                          (outcomes.COULD_NOT_RUN, "physics", "check_could_not_look", "no rail"))
-        self.assertEqual(found.fix, "fix what the sentence names for this check, then run check_all.py again")  # P935 PR 4: the code's fix
+        # P935 PR 4: the code's fix; P935 PR 4b changed its text on purpose (a crash note reads "TypeName: message")
+        self.assertEqual(found.fix, "fix what the sentence names for this check, then run check_all.py again. If the sentence starts with an error name, "
+                                    "such as KeyError, and names no file of yours, report it at https://github.com/xmejkal/spark/issues with the sentence and your command")
 
     def test_each_finding_of_the_run_carries_the_fix_of_its_code(self):
         problems = check.findings_of([self.result("physics", "problems", problems=["a short"])])

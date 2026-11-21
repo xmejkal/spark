@@ -230,8 +230,8 @@ def check_board(path: Path, offline: bool, repo: str):
     else:
         try:
             header, wrote = keep_live_header(path, variant, repo)
-        except CouldNotKeepError as refused:
-            return unchecked_board(path, Refusal(str(refused), refused.code))
+        except CouldNotKeepError as not_kept:
+            return unchecked_board(path, Refusal(str(not_kept), not_kept.code))
         source = "%s %s" % (repo, VARIANT_PATH % variant)
 
     vendor_pins = parse_pins(header)

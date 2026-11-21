@@ -21,7 +21,7 @@ NO_CIRCUIT = codes.Code("no_circuit", "there is no built circuit at the path giv
 NO_RULES_FILE = codes.Code("no_rules_file", "there is no rules file at the path given, so no rule can be checked",
                            "give --rules the path of a rules file, or write .spark/rules.json with /spark:init")
 RULES_REFUSED = codes.Code("rules_refused", "the rules file cannot be used: it is not JSON, or a value is of the wrong kind or below its lowest",
-                           "fix the value the sentence names in the rules file, then run again")
+                           "fix the value the sentence names in the rules file, or the error it gives, such as a JSON error at a line and column, then run again")
 #: check_all.py: what stops one check, or the whole run.
 INPUT_AMBIGUOUS = codes.Code("input_ambiguous", "an input matched more than one file, and nothing chose between them",
                              "pick one of the files the sentence lists and give it with the flag the sentence names, then run again")
@@ -34,7 +34,8 @@ PROJECT_UNUSABLE = codes.Code("project_unusable", "the folder --project names is
 CHECK_FOUND_PROBLEMS = codes.Code("check_found_problems", "a check ran and found problems in the design",
                                   "fix each problem the check lists, then run check_all.py again")
 CHECK_COULD_NOT_LOOK = codes.Code("check_could_not_look", "a check was asked for and could not look, or left part of its input unchecked",
-                                  "fix what the sentence names for this check, then run check_all.py again")
+                                  "fix what the sentence names for this check, then run check_all.py again. If the sentence starts with an error name, such as KeyError, "
+                                  "and names no file of yours, report it at https://github.com/xmejkal/spark/issues with the sentence and your command")
 NOTHING_ASKED = codes.Code("nothing_asked", "every check was skipped, because no input was given or found, so the answer says nothing about the board",
                            "run again with --project and your project folder, or give the inputs with --circuit, --rules, --package or --boards")
 #: compare_design.py.

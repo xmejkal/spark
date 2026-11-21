@@ -31,7 +31,7 @@ PART_UNUSABLE = codes.Code('part_unusable', 'a part the design names is unknown,
 BOARD_UNUSABLE = codes.Code('board_unusable', 'the board the design names is unknown, or its record cannot be read or breaks the board contract',
                              'fix the board record the sentence names, or give a board id that boards.py --list shows')
 RULES_REFUSED = codes.Code('rules_refused', 'the rules file cannot be used: it is not JSON, or a value is of the wrong kind or below its lowest',
-                            'fix the value the sentence names in the rules file, then run again')
+                            'fix the value the sentence names in the rules file, or the error it gives, such as a JSON error at a line and column, then run again')
 #: `parts.py --requirements` (P877): an entry that spark wrote for a pick that is gone, in `data.unexplained`.
 ENTRY_PICK_GONE = codes.Code('entry_pick_gone', "an entry of the requirements file that spark wrote for a pick that is gone: said by --requirements, removed only on the person's yes",
                               'ask the person. On their yes, answer data.remove_key with true in a replies file of your own and run again with --replies')
