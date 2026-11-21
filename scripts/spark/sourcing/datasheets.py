@@ -74,10 +74,11 @@ EXIF_TYPE_BYTES = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 
 
 def without_location(payload):
     """
-    A JPEG with its GPS block emptied, and whether it had one (P75). A phone writes where a photo
-    was taken into it — all five of irrigation's did — and a person photographing a module at home
-    for /spark:identify must not publish their address by committing the file. Emptied in place:
-    every GPS value zeroed and the block's entry count set to 0, so nothing else in the file moves.
+    A JPEG with its GPS block emptied, and whether it had one (P75). Any payload: one that does not start with a
+    JPEG's start marker (FF D8) comes back unchanged, whatever its name. A phone writes where a photo was taken into
+    it — all five of irrigation's did — and a person photographing a module at home for /spark:identify must not
+    publish their address by committing the file. Emptied in place: every GPS value zeroed and the block's entry count
+    set to 0, so nothing else in the file moves.
     """
     start = payload.find(b"Exif\x00\x00")
     if not payload.startswith(b"\xff\xd8") or start < 0:
@@ -112,11 +113,11 @@ def without_location(payload):
 
 def keep_in_store(payload, name, dry_run=False):
     """
-    Put a file in the store under its checksum, checked (§6.2), and return the checksum (P62a) — a photo without its
-    location (P75). A dry run asks the name rule the real run enforces, so it refuses what the real run would refuse.
+    Put a file in the store under its checksum, checked (§6.2), and return the checksum (P62a) — a JPEG, known by its
+    bytes whatever its name, without its location (P75). A dry run asks the name rule the real run enforces, so it
+    refuses what the real run would refuse.
     """
-    if name.lower().endswith((".jpg", ".jpeg")):
-        payload = without_location(payload)[0]
+    payload = without_location(payload)[0]
     if not dry_run:
         return store.keep(payload, name)
     problem = store.file_name_problem(name)
