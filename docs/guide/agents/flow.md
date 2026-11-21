@@ -30,7 +30,8 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   done: `done` says `build (no simulation)`, a simulate with no status or not started is in `later` as `simulate (no
   Wokwi model of this board)`, and `no_simulation` says why (else `null`). The build phase keeps `could-not-run`, so the
   exit stays 2. Else the simulate is `now` while a run failed on its image, a file under `firmware/` changed after the
-  image, or no run tested it, each with its own sentence. Relay `now.says` as it is.
+  image, or no run tested it, each with its own sentence and who acts (`claude` for the first two, which name the failed log
+  or ask for a new image). Relay `now.says` as it is.
 
 The words of a phase:
 

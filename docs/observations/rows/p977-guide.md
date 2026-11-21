@@ -26,3 +26,7 @@ findings of the plan check (plan v4, rounds 2 and 3) and of PR 1's review (a len
 | 18 | names: no "pass" for a could-not-run build or a skipped simulate | review lens 10 | acted | `no_model_phases`, `stops_only_for_no_model`, `NO_MODEL_CODES`; "counted as done" in flow.md and the `--help` |
 | 19 | three sentences in plainer words | review lens 11 | acted | `NO_SIMULATION_NOW`, `COULD_NOT_RUN_NOW`, `BUILD_PARTIAL_NOW` |
 | 20 | flow.md: when now is null, the suffix in parentheses, how a need set aside comes back | review lens 12 | acted | the `guide` item of flow.md |
+| 21 | "The last run failed on this image" can be false: logs are one per scenario, and `failed_runs` gives any failed log | second refuter 1 | acted | the simulate stays open (the deploy refuses any failure); `RUN_FAILED_NOW` names the failed log; `test_a_failed_run_beside_a_later_passed_run_is_named_…` |
+| 22 | `now.by` said the terminal while the sentence for a failed run or changed firmware says "Ask Claude" | second refuter 2 | acted | `flow_codes.IMAGE_NOW` holds who acts per fact: `["claude"]` for those two |
+| 23 | with the firmware not started, a current sheet and no step count, the breadboard was in neither done nor later | second refuter 3 | acted | two jobs need a count; `test_a_sheet_whose_steps_cannot_be_counted_…` |
+| 24 | done lists "breadboard (spark cannot see it)" while the deploy's sentence opens "When the breadboard is wired" | second refuter | rejected | the label hedges: spark cannot see the wiring, and the deploy sentence asks the person to check it |

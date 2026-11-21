@@ -74,19 +74,19 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "a run that failed on the image reads as no run (P977 review 2)",
-  "find": "        if image.failed_runs():\n            return flow_codes.RUN_FAILED\n",
+  "find": "        if failed:\n            return ImageFact(flow_codes.RUN_FAILED, failed[0][0].name)\n",
   "replace": ""
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "firmware changed after a passed run leaves the image tested (P977 review 3)",
-  "find": "        if image.find_newer_files():\n            return flow_codes.IMAGE_OLDER\n",
+  "find": "        if image.find_newer_files():\n            return ImageFact(flow_codes.IMAGE_OLDER, None)\n",
   "replace": ""
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "an image no run tested is taken as done (P977)",
-  "find": " or (phase.phase == flow_codes.SIMULATE and fact in OPEN_IMAGE_FACTS)",
+  "find": " or (phase.phase == flow_codes.SIMULATE and fact.fact in OPEN_IMAGE_FACTS)",
   "replace": ""
  },
  {
@@ -154,5 +154,23 @@
   "name": "the page answers an empty guide (P977)",
   "find": "privacy.masked(guide_of(project, phases)))",
   "replace": "{})"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "a failed run reads as the last run, not the failed log by name (P977 second refuter, 1)",
+  "find": "failed[0][0].name)",
+  "replace": "\"the last run\")"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "a failed run and changed firmware name the terminal while the sentence asks Claude (P977 second refuter, 2)",
+  "find": "IMAGE_NOW = {RUN_FAILED: ([BY_CLAUDE], RUN_FAILED_NOW), IMAGE_OLDER: ([BY_CLAUDE], IMAGE_OLDER_NOW),",
+  "replace": "IMAGE_NOW = {RUN_FAILED: ([BY_TERMINAL], RUN_FAILED_NOW), IMAGE_OLDER: ([BY_TERMINAL], IMAGE_OLDER_NOW),"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "a sheet whose steps cannot be counted drops the breadboard from every list (P977 second refuter, 3)",
+  "find": "    two_jobs = count is not None",
+  "replace": "    two_jobs = bool(beside_sheet)"
  }
 ]

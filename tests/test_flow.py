@@ -32,6 +32,7 @@ from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import SimulateReader  # noqa: E402
+from spark.flow.guide import guide_of  # noqa: E402
 from spark.flow.show_flow import ShowFlow, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
@@ -582,6 +583,14 @@ class TheGuideTest(FlowTest):
             "done": ["idea", "needs", "parts", "requirements", "build (no simulation)"],
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL})
 
+    def test_a_sheet_whose_steps_cannot_be_counted_leaves_the_firmware_one_job_and_the_breadboard_done(self):
+        project = a_project_built_with_no_simulation()
+        phases, _ = read_flow(project)
+        guide = guide_of(project, phases, steps=lambda _project: None)
+        self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
+                         ("firmware", ["claude"], "Ask Claude in the chat to write the firmware for this board."))
+        self.assertIn("breadboard (spark cannot see it)", guide["done"])
+
     def test_with_the_firmware_written_the_deploy_is_now_and_the_simulate_stays_later(self):
         said, _ = show(a_firmware(a_project_built_with_no_simulation()))
         self.assertEqual(said["data"]["guide"], {
@@ -649,16 +658,23 @@ class TheGuideTest(FlowTest):
 
     def test_a_run_that_failed_on_the_image_has_its_own_sentence(self):
         guide = show(a_run(an_image(a_firmware(a_built_project())), "failed"))[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
+                         ("simulate", ["claude"], "A run failed on this image (one.log). Ask Claude to go through its log with you."))
+
+    def test_a_failed_run_beside_a_later_passed_run_is_named_and_keeps_the_simulate_open(self):
+        project = a_run(an_image(a_firmware(a_built_project())), "failed")
+        (project / "sim" / "runs" / "two.log").write_text("verdict: passed\nimage sha256: %s\n\n" % hashlib.sha256(b"an image").hexdigest())
+        guide = show(project)[0]["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
-                         ("simulate", "The last run failed on this image. Ask Claude to go through its log with you."))
+                         ("simulate", "A run failed on this image (one.log). Ask Claude to go through its log with you."))
 
     def test_firmware_changed_after_a_passed_run_leaves_the_simulate_open(self):
         project = a_run(an_image(a_firmware(a_built_project())), "passed")
         self.assertEqual(show(project)[0]["data"]["guide"]["now"]["phase"], "deploy")  # the run tested this image
         os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
         guide = show(project)[0]["data"]["guide"]
-        self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
-                         ("simulate", "Your firmware changed after the image. Ask Claude to make the image again, then run the scenario."))
+        self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
+                         ("simulate", ["claude"], "Your firmware changed after the image. Ask Claude to make the image again, then run the scenario."))
         self.assertNotIn("simulate", guide["done"])
 
     def test_a_fresh_project_starts_at_the_idea(self):

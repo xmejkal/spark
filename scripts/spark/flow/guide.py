@@ -4,6 +4,7 @@ acts and one sentence for it, the phases done and later, the needs set aside, an
 and never writes. `flow.py show` and `flow.py page` answer it as `data.guide`.
 """
 
+from collections import namedtuple
 from pathlib import Path
 
 from spark.breadboard import sheet
@@ -23,6 +24,9 @@ NO_MODEL_CODES = (build_codes.BOARD_NOT_IN_WOKWI,)
 #: What reading the wiring sheet can raise: its own refusals, and a circuit.json that is no JSON, holds a value of the
 #: wrong type or shape, or is nested too deep (tests/test_flow_page.py's TheMissingWiringTest).
 SHEET_UNREADABLE = sheet.REFUSALS + (ValueError, KeyError, TypeError, AttributeError, IndexError, RecursionError)
+#: Value: what the runs say of the image (a fact of flow_codes, or None) and the name of a log that failed on it, or None.
+ImageFact = namedtuple("ImageFact", "fact log")
+NO_IMAGE_FACT = ImageFact(None, None)
 #: What the image's runs say that leaves the simulate open: a run failed on it, firmware changed after it, or none ran.
 OPEN_IMAGE_FACTS = (flow_codes.RUN_FAILED, flow_codes.IMAGE_OLDER, flow_codes.IMAGE_UNTESTED)
 
@@ -53,23 +57,24 @@ def no_model_phases(project, by_name):
 
 
 def image_fact(project):
-    """What the runs say of the image sim/wokwi.toml names (flow_codes): RUN_FAILED, IMAGE_OLDER, IMAGE_UNTESTED or
-    IMAGE_TESTED. None when there is no image or a log cannot be read: the simulate phase says why."""
+    """The ImageFact of the image sim/wokwi.toml names: RUN_FAILED with the first failed log's name, IMAGE_OLDER,
+    IMAGE_UNTESTED or IMAGE_TESTED. NO_IMAGE_FACT when there is no image or a log cannot be read: the phase says why."""
     try:
         image = ProjectImage(project)
-        if image.failed_runs():
-            return flow_codes.RUN_FAILED
+        failed = image.failed_runs()
+        if failed:
+            return ImageFact(flow_codes.RUN_FAILED, failed[0][0].name)
         if image.find_newer_files():
-            return flow_codes.IMAGE_OLDER
-        return flow_codes.IMAGE_TESTED if image.find_passed_logs() else flow_codes.IMAGE_UNTESTED
+            return ImageFact(flow_codes.IMAGE_OLDER, None)
+        return ImageFact(flow_codes.IMAGE_TESTED if image.find_passed_logs() else flow_codes.IMAGE_UNTESTED, None)
     except (DeployError, OSError):
-        return None
+        return NO_IMAGE_FACT
 
 
 def is_open(phase, fact):
     """True when the person acts on `phase` before the next: a status that is neither ok nor None, or a simulate with no
     status whose image `fact` leaves it open."""
-    return phase.status not in (OK, None) or (phase.phase == flow_codes.SIMULATE and fact in OPEN_IMAGE_FACTS)
+    return phase.status not in (OK, None) or (phase.phase == flow_codes.SIMULATE and fact.fact in OPEN_IMAGE_FACTS)
 
 
 def now_phase(phases, no_model, fact):
@@ -95,15 +100,17 @@ def is_sheet_current(project, by_name):
     return breadboard is not None and breadboard.status is None and (Path(project) / sheet.SHEET).is_file()
 
 
-def now_sentence(now, open_needs, fact):
-    """The sentence of the phase to act on now: a simulate with no status by its image `fact`, else by (phase, status)
-    in flow_codes.NOW_SENTENCES, else the problems or could-not-run line."""
+def who_and_sentence(now, open_needs, fact):
+    """(who acts, the sentence) of the phase to act on now: a simulate with no status by its ImageFact `fact`
+    (flow_codes.IMAGE_NOW), else the phase's own `by` and its sentence by (phase, status) in flow_codes.NOW_SENTENCES,
+    else the problems or could-not-run line."""
     if now.phase == flow_codes.SIMULATE and now.status is None:
-        return flow_codes.IMAGE_NOW[fact]
+        by, said = flow_codes.IMAGE_NOW[fact.fact]
+        return by, said % fact.log if fact.fact == flow_codes.RUN_FAILED else said
     said = flow_codes.NOW_SENTENCES.get((now.phase, now.status))
     if said == flow_codes.PARTS_NOW:
-        return said % (len(open_needs), ", ".join(open_needs))
-    return said or (flow_codes.PROBLEMS_NOW if now.status == PROBLEMS else flow_codes.COULD_NOT_RUN_NOW) % now.phase
+        return [now.by], said % (len(open_needs), ", ".join(open_needs))
+    return [now.by], said or (flow_codes.PROBLEMS_NOW if now.status == PROBLEMS else flow_codes.COULD_NOT_RUN_NOW) % now.phase
 
 
 def job_offer(now, by_name):
@@ -116,7 +123,7 @@ def now_of(now, by_name, open_needs, fact, count):
     """`{phase, by, says, offer, needs}` of the phase to act on now. With `count`, the steps of a current wiring sheet
     beside firmware not started, it is two jobs, the person's and Claude's."""
     by, says = ([flow_codes.BY_YOU, flow_codes.BY_CLAUDE], flow_codes.TWO_JOBS_NOW % count) if count is not None else \
-        ([now.by], now_sentence(now, open_needs, fact))
+        who_and_sentence(now, open_needs, fact)
     return {"phase": now.phase, "by": by, "says": says, "offer": job_offer(now, by_name),
             "needs": open_needs if now.phase == flow_codes.PARTS else []}
 
@@ -149,12 +156,14 @@ def guide_of(project, phases, steps=count_steps):
     by_name, listed = {phase.phase: phase for phase in phases}, readable(lambda: needs.read(project), [])
     no_model = no_model_phases(project, by_name)
     simulate = by_name.get(flow_codes.SIMULATE)
-    fact = image_fact(project) if simulate and simulate.status is None and flow_codes.SIMULATE not in no_model else None
+    fact = image_fact(project) if simulate and simulate.status is None and flow_codes.SIMULATE not in no_model else NO_IMAGE_FACT
     now = now_phase(phases, no_model, fact)
     at = phases.index(now) if now else len(phases)
     open_needs = [need["id"] for need in counted(listed) if not need.get("pick")]
-    two_jobs = now and now.phase == flow_codes.FIRMWARE and now.status == flow_codes.NOT_STARTED and is_sheet_current(project, by_name)
-    said = now_of(now, by_name, open_needs, fact, steps(project) if two_jobs else None) if now else None
+    beside_sheet = now and now.phase == flow_codes.FIRMWARE and now.status == flow_codes.NOT_STARTED and is_sheet_current(project, by_name)
+    count = steps(project) if beside_sheet else None
+    two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
+    said = now_of(now, by_name, open_needs, fact, count) if now else None
     wired = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
     later = [label(phase, no_model) for index, phase in enumerate(phases)
              if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]

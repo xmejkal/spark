@@ -165,9 +165,12 @@ NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (PARTS, NOT_STARTED): PARTS_NOW, (PARTS
 #: What the runs say of the image a simulate with no status names (`ProjectImage`): a run on it did not pass, a file
 #: under firmware/ changed after it, no run tested it, or a passed run tested it. The first three leave it open.
 RUN_FAILED, IMAGE_OLDER, IMAGE_UNTESTED, IMAGE_TESTED = "run-failed", "image-older", "image-untested", "image-tested"
-RUN_FAILED_NOW = "The last run failed on this image. Ask Claude to go through its log with you."
+#: A run failed on the image: logs are one per scenario, so it names the failed log, never "the last run".
+RUN_FAILED_NOW = "A run failed on this image (%s). Ask Claude to go through its log with you."
 IMAGE_OLDER_NOW = "Your firmware changed after the image. Ask Claude to make the image again, then run the scenario."
-IMAGE_NOW = {RUN_FAILED: RUN_FAILED_NOW, IMAGE_OLDER: IMAGE_OLDER_NOW, IMAGE_UNTESTED: SIMULATE_NOW}
+#: Who acts on each fact, and its sentence: Claude reads a failed log and makes the image; the terminal runs a scenario.
+IMAGE_NOW = {RUN_FAILED: ([BY_CLAUDE], RUN_FAILED_NOW), IMAGE_OLDER: ([BY_CLAUDE], IMAGE_OLDER_NOW),
+             IMAGE_UNTESTED: ([BY_TERMINAL], SIMULATE_NOW)}
 #: A build whose only stop is a board Wokwi has no model of is counted as done (the PO, 2026-11-21), and these say why.
 NO_SIMULATION_NOW = "No simulation: Wokwi has no model of this board. You test it on the real board."
 BUILT_NO_SIMULATION = "build (no simulation)"
