@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "a key spark does not offer now runs (P829)",
-  "find": "if key not in offered:",
-  "replace": "if False:"
+  "find": "if key not in offered or kind_of(key) not in KIND_RUNS:",
+  "replace": "if kind_of(key) not in KIND_RUNS:"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
@@ -32,8 +32,14 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "the request file stays, so one request can run twice (P829)",
-  "find": "request_file_of(project).unlink(missing_ok=True)",
-  "replace": "pass"
+  "find": "        path.unlink()\n",
+  "replace": "        pass\n"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "a request the folder will not let go runs, and could run again (P829 review)",
+  "find": "    except OSError:\n        return None\n    try:",
+  "replace": "    except OSError:\n        pass\n    try:"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
@@ -44,8 +50,26 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "a refusal does not say which request it answers (P829)",
-  "find": "data = {\"for\": id_of(request), \"key\": key_of(request), \"ran\": False,",
-  "replace": "data = {\"ran\": False,"
+  "find": "data = {\"for\": id_of(request), \"key\": offer.key if offer else None,",
+  "replace": "data = {\"key\": offer.key if offer else None,"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "a refusal copies a key that is no offer, any length, into the answer (P829 review)",
+  "find": "\"key\": offer.key if offer else None,",
+  "replace": "\"key\": key_of(request),"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "a second click on a pick is not offered, not stale (P829 review)",
+  "find": "    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n    if key not in offered or kind_of(key) not in KIND_RUNS:\n        return request_codes.REQUEST_NOT_OFFERED\n",
+  "replace": "    if key not in offered or kind_of(key) not in KIND_RUNS:\n        return request_codes.REQUEST_NOT_OFFERED\n    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "an ok step's line names the machine key, not the offer's label (P829 review)",
+  "find": "\"line\": line_of(offer.label, result)",
+  "replace": "\"line\": line_of(offer.key, result)"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
@@ -62,7 +86,7 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "a kind the page never runs is run (P829)",
-  "find": "    if kind not in KIND_RUNS:\n        return request_codes.REQUEST_NOT_OFFERED\n",
-  "replace": ""
+  "find": "if key not in offered or kind_of(key) not in KIND_RUNS:",
+  "replace": "if key not in offered:"
  }
 ]

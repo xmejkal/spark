@@ -41,12 +41,13 @@ below). With --json it prints data.file, data.did, data.stands_at, data.phases (
 data.fingerprint and data.guide.
 
 flow.py run-request reads .spark/page-request.json, the page's request {id, key, seen, at}, and deletes it at once. It
-runs the step only when the key is an offer now, its kind is pick, requirements or build, and seen is the first 12 hex
-digits of the fingerprint now. The values come from spark's offer, never from the request. Else it runs nothing:
-request_malformed (no file, no JSON object, or an id that is no UUID, a key that is no text, a seen that is not 12 hex
-digits), request_in_chat (a need's drop), request_not_offered (not an offer now, or a kind the page never runs) or
-request_stale (the project changed after the page was read). With --json it prints data.for, data.key, data.ran,
-data.status, data.mark, data.line and data.fingerprint, the one after the run, a refusal too.
+runs the step only when seen is the first 12 hex digits of the fingerprint now, the key is an offer now, and its kind
+is pick, requirements or build. The values come from spark's offer, never from the request. Else it runs nothing:
+request_malformed (no regular file, no JSON object, an id that is no UUID, a key that is no text, a seen that is not 12
+hex digits, or a file it cannot delete), request_in_chat (a need's drop), request_stale (the project changed after the
+page was read) or request_not_offered (not an offer now, or a kind the page never runs). With --json it prints
+data.for, data.key, data.label, data.ran, data.status, data.mark, data.line and data.fingerprint, the one after the
+run, a refusal too; key and label only of an offer. After a run, write the page again with flow.py page.
 
 The fingerprint is the sha256 of the current offers and of .spark/needs.json, requirements.json and .spark/build.json. It
 changes when an offer or one of these files changes. No other file of the project changes it, except through an offer.

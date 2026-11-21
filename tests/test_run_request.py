@@ -121,8 +121,9 @@ class EachKindRunsItsStepTest(RunRequestTest):
         self.assertEqual(self.ran(), {"pick": [{"project_and_picks": [str(self.project), "light=led-red-5mm"],
                                                 "passed_over": (), "dry_run": False}]})
         self.assertIs(self.steps["pick"].ran[0]["passed_over"], NO_PASSED_OVER)  # the flag left out, never a payload
-        self.assertEqual(envelope["data"], {"for": ID, "key": "pick:light:led-red-5mm", "ran": True, "status": "ok", "mark": "✓",
-                                            "line": "ran pick:light:led-red-5mm: ok", "fingerprint": self.fingerprint()})
+        self.assertEqual(envelope["data"], {"for": ID, "key": "pick:light:led-red-5mm", "label": "label of pick:light:led-red-5mm", "ran": True,
+                                            "status": "ok", "mark": "✓", "line": "ran label of pick:light:led-red-5mm: ok",
+                                            "fingerprint": self.fingerprint()})
 
     def test_the_parts_list_runs_the_requirements_write_with_no_dry_run_and_no_replies(self):
         self.ask("requirements")
@@ -150,6 +151,20 @@ class EachKindRunsItsStepTest(RunRequestTest):
         self.assertEqual((code, envelope["data"]["ran"], envelope["data"]["status"], envelope["data"]["line"]),
                          (2, True, "could-not-run", "tsci is not installed"))
 
+    def test_the_text_says_which_step_ran_by_its_label_and_how_it_ended(self):
+        for result, code, first in ((OperationResult({}, [Finding("problems", "board", "a_code", "the board has no pins", "fix it")]), 1,
+                                     "ran label of build: problems"),
+                                    (OperationResult({}, [Finding("could-not-run", None, "a_code", "tsci is not installed", "install it")]), 2,
+                                     "ran label of build: could not run"),
+                                    (OperationResult({}, lines=["", "built"]), 0, "ran label of build: ok")):
+            with self.subTest(first=first):
+                self.steps["build"] = FakeStep("build-board", result)
+                self.ask("build")
+                with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+                    exit_code = run_cli(HelpText("flow.py", tool="flow"), RunRequest(readers=self.readers, operations=self.steps),
+                                        ["--project", str(self.project)], outside_builder=build_bare_outside_world, outside=FakeOutsideWorld())
+                self.assertEqual((exit_code, out.getvalue().splitlines()[0]), (code, first))
+
     def test_the_answer_holds_no_path_of_the_project_or_the_home_folder(self):
         self.steps["build"] = FakeStep("build-board", OperationResult({"at": str(self.project)}, lines=["wrote %s and %s" % (self.project, Path.home())]))
         self.ask("build")
@@ -176,7 +191,14 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
         for key in ("deploy", "simulate", "look", "grant", "pick:light:x --keep /", "pick:light:x=y", "pick:light:led-red-5mm:2", "build "):
             with self.subTest(key=key):
                 envelope = self.refused(key, "request_not_offered")
-                self.assertEqual(envelope["data"]["key"], key)
+                self.assertEqual((envelope["data"]["key"], envelope["data"]["label"]), (None, None))
+
+    def test_a_refusal_never_copies_a_key_that_is_no_offer(self):
+        key = "pick:light:" + "\x1b[2J" + "x" * 185
+        self.assertEqual(len(key), 200)
+        envelope = self.refused(key, "request_not_offered")
+        self.assertIsNone(envelope["data"]["key"])
+        self.assertNotIn("x" * 185, json.dumps(envelope))
 
     def test_a_kind_spark_offers_now_that_is_not_offered_in_this_project_runs_nothing(self):
         self.readers = [FakeReader(("pick:light:led-red-5mm",))]
@@ -191,7 +213,7 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
 
     def test_a_drop_is_asked_in_the_chat_and_runs_nothing(self):
         envelope = self.refused("needs-drop:light", "request_in_chat")
-        self.assertEqual(envelope["data"]["line"], "nothing ran: a need is dropped in the chat, never from the page")
+        self.assertEqual(envelope["data"]["line"], "the request names a step that is asked in the chat, never from the page, so nothing ran")
 
     def test_a_page_read_before_the_project_changed_is_stale_and_runs_nothing(self):
         self.refused("build", "request_stale", seen="0123456789ab")
@@ -206,19 +228,50 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
         envelope, code = self.run_request()
         self.assertEqual((code, [item["code"] for item in envelope["unchecked"]], len(self.steps["build"].ran)), (2, ["request_stale"], 1))
 
+    def test_a_double_click_on_a_pick_is_stale_though_the_pick_is_no_offer_any_more(self):
+        """After the pick, the need's pick is the current one, so spark no longer offers it (P976); the second click is stale."""
+        reader = FakeReader(OFFERED)
+        self.readers = [reader]
+        needs_file = self.project / ".spark" / "needs.json"
+
+        def picked():
+            needs_file.write_text("{}")
+            reader.keys = ("needs-drop:light", "requirements", "build")
+        self.steps["pick"] = FakeStep("pick", then=picked)
+        seen = self.seen()
+        self.ask("pick:light:led-red-5mm", seen=seen)
+        self.assertEqual(self.run_request()[1], 0)
+        self.ask("pick:light:led-red-5mm", seen=seen)
+        envelope, code = self.run_request()
+        self.assertEqual((code, [item["code"] for item in envelope["unchecked"]], len(self.steps["pick"].ran)), (2, ["request_stale"], 1))
+        self.assertEqual((envelope["data"]["key"], envelope["data"]["label"]), (None, None))
+
     def test_a_refusal_answers_whom_it_is_for_and_says_nothing_ran(self):
         envelope = self.refused("deploy", "request_not_offered")
-        self.assertEqual(envelope["data"], {"for": ID, "key": "deploy", "ran": False, "status": "could-not-run", "mark": "?",
-                                            "line": "nothing ran: spark does not offer this step now", "fingerprint": self.fingerprint()})
+        self.assertEqual(envelope["data"], {"for": ID, "key": None, "label": None, "ran": False, "status": "could-not-run", "mark": "?",
+                                            "line": "the request names a step that spark does not offer now, so nothing ran",
+                                            "fingerprint": self.fingerprint()})
+
+    def test_a_refusal_of_an_offered_key_names_its_offer(self):
+        envelope = self.refused("build", "request_stale", seen="0123456789ab")
+        self.assertEqual((envelope["data"]["key"], envelope["data"]["label"]), ("build", "label of build"))
+
+    def test_each_refusal_tells_claude_how_to_get_a_new_page_first(self):
+        fixes = {}
+        for key, code, seen in (("deploy", "request_not_offered", None), ("build", "request_stale", "0123456789ab")):
+            fixes[code] = self.refused(key, code, seen=seen)["unchecked"][0]["fix"]
+        self.assertEqual(fixes, {"request_not_offered": "write the page again with flow.py page, then click again: the page shows the steps "
+                                                        "spark offers now",
+                                 "request_stale": "write the page again with flow.py page, then click again"})
 
     def test_a_stale_refusal_says_the_project_changed(self):
         envelope = self.refused("build", "request_stale", seen="0123456789ab")
-        self.assertEqual(envelope["data"]["line"], "nothing ran: the project changed after the page was read")
+        self.assertEqual(envelope["data"]["line"], "the project changed after the page was read, so nothing ran")
 
 
 class AMalformedRequestRunsNothingTest(RunRequestTest):
     def test_an_id_that_is_no_uuid_is_malformed(self):
-        for request_id in ("0b5e2f3a-1c4d-4e6f-8a9b-0c1d2e3f4a5b;rm", "x", "", 7, None):
+        for request_id in ("0b5e2f3a-1c4d-4e6f-8a9b-0c1d2e3f4a5b;rm", " %s " % ID, ID + "\n", "x", "", 7, None):
             with self.subTest(request_id=request_id):
                 envelope = self.refused("build", "request_malformed", request_id=request_id)
                 self.assertIsNone(envelope["data"]["for"])
@@ -244,7 +297,31 @@ class AMalformedRequestRunsNothingTest(RunRequestTest):
                 self.assertEqual((code, [item["code"] for item in envelope["unchecked"]], self.ran()), (2, ["request_malformed"], {}))
         envelope, code = self.run_request()
         self.assertEqual((code, [item["code"] for item in envelope["unchecked"]], envelope["data"]["for"]), (2, ["request_malformed"], None))
-        self.assertEqual(envelope["data"]["line"], "nothing ran: the request could not be read")
+        self.assertEqual(envelope["data"]["line"], "the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or could not be deleted, so nothing ran")
+        self.assertEqual(envelope["unchecked"][0]["fix"], "write the page's request to .spark/page-request.json as the page sent it. If it was "
+                                                          "written that way, ask the person to click again")
+
+    def test_a_request_file_that_is_a_folder_is_malformed_and_left_alone_every_time(self):
+        folder = self.project / ".spark" / "page-request.json"
+        folder.mkdir(parents=True)
+        for _ in range(2):
+            with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+                code = run_cli(HelpText("flow.py", tool="flow"), RunRequest(readers=self.readers, operations=self.steps),
+                               ["--project", str(self.project), "--json"], outside_builder=build_bare_outside_world, outside=FakeOutsideWorld())
+            self.assertEqual((code, [item["code"] for item in json.loads(out.getvalue())["unchecked"]], err.getvalue()), (2, ["request_malformed"], ""))
+        self.assertTrue(folder.is_dir())
+        self.assertNotIn(str(self.project), out.getvalue())
+
+    def test_a_request_the_folder_will_not_let_go_runs_nothing(self):
+        """A file that cannot be deleted could run again, so it runs nothing now."""
+        self.ask("build")
+        spark = self.project / ".spark"
+        spark.chmod(0o500)
+        self.addCleanup(spark.chmod, 0o700)
+        if os.access(spark, os.W_OK):
+            self.skipTest("this user may write a read-only folder (root), so the delete cannot be refused")
+        envelope, code = self.run_request()
+        self.assertEqual((code, [item["code"] for item in envelope["unchecked"]], self.ran()), (2, ["request_malformed"], {}))
 
 
 class TheRequestFileIsGoneTest(RunRequestTest):

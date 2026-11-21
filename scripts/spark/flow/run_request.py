@@ -30,16 +30,11 @@ ID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a
 SEEN_PATTERN = re.compile(r"^[0-9a-f]{12}$")
 #: The kinds of offer that are asked in the chat, never from the page: a need's drop.
 IN_CHAT = (flow_codes.NEEDS_DROP,)
-#: Value: one request, as the file holds it: the page's id, the offer's key, the fingerprint's first digits the page was
-#: read at, and when it was sent. A field the file lacks is None.
-PageRequest = namedtuple("PageRequest", "id key seen at")
-#: The line of a step that ran: its key and its status.
+#: Value: one request, as the file holds it: the page's id, the offer's key and the fingerprint's first digits the page
+#: was read at. A field the file lacks is None; the page's `at` is its own, and spark does not read it.
+PageRequest = namedtuple("PageRequest", "id key seen")
+#: The line of a step that ran: its offer's label and its status. A refusal's line is its code's meaning.
 RAN_LINE = "ran %s: %s"
-#: The line of each refusal, which says that nothing ran.
-REFUSED_LINES = {request_codes.REQUEST_MALFORMED: "nothing ran: the request could not be read",
-                 request_codes.REQUEST_IN_CHAT: "nothing ran: a need is dropped in the chat, never from the page",
-                 request_codes.REQUEST_NOT_OFFERED: "nothing ran: spark does not offer this step now",
-                 request_codes.REQUEST_STALE: "nothing ran: the project changed after the page was read"}
 
 
 def pick_values(project, key):
@@ -73,14 +68,20 @@ def request_file_of(project):
 
 
 def read_request(project):
-    """The PageRequest of `project`, or None when there is no file, or it is no JSON object. The file is deleted at once,
-    read or not, so one request runs once at most."""
+    """The PageRequest of `project`, or None when there is no regular file (a folder is left as it is and never read), it
+    is no JSON object, or it cannot be deleted. The file is deleted at once, read or not, so one request runs once at
+    most: one the folder will not let go could run again, so it is None."""
+    path = request_file_of(project)
+    if not path.is_file():
+        return None
     try:
-        text = request_file_of(project).read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError):
         text = None
-    finally:
-        request_file_of(project).unlink(missing_ok=True)
+    try:
+        path.unlink()
+    except OSError:
+        return None
     try:
         held = json.loads(text) if text is not None else None
     except ValueError:
@@ -98,30 +99,33 @@ def key_of(request):
     return request.key if request and isinstance(request.key, str) and request.key else None
 
 
+def kind_of(key):
+    """The kind of an offer's key: the word before its first colon."""
+    return key.split(":", 2)[0]
+
+
 def refusal_of(request, offered, fingerprint):
-    """The code that refuses `request`, or None when it may run: it cannot be read, its kind is asked in the chat, its key
-    is not among the keys spark `offered` now or its kind is none the page runs, or its `seen` is not `fingerprint` now."""
+    """The code that refuses `request`, or None when it may run: it cannot be read, its kind is asked in the chat, its `seen`
+    is not `fingerprint` now, or its key is not among the keys spark `offered` now or its kind is none the page runs. The
+    page comes before the offers, so a second click on a pick, which is no offer once it ran, is stale."""
     key = key_of(request)
     if id_of(request) is None or key is None or not (isinstance(request.seen, str) and SEEN_PATTERN.fullmatch(request.seen)):
         return request_codes.REQUEST_MALFORMED
-    kind = key.split(":", 2)[0]
-    if kind in IN_CHAT:
+    if kind_of(key) in IN_CHAT:
         return request_codes.REQUEST_IN_CHAT
-    if key not in offered:
-        return request_codes.REQUEST_NOT_OFFERED
-    if kind not in KIND_RUNS:
-        return request_codes.REQUEST_NOT_OFFERED
     if request.seen != fingerprint[:SHORT]:
         return request_codes.REQUEST_STALE
+    if key not in offered or kind_of(key) not in KIND_RUNS:
+        return request_codes.REQUEST_NOT_OFFERED
     return None
 
 
-def line_of(key, result):
-    """One sentence for the step `key` ran: the sentence of its first Finding of the run's status, or, when it ended ok,
-    spark's own line. A step's first line is no sentence: the build's is blank."""
+def line_of(label, result):
+    """One sentence for the step whose offer has `label`: the sentence of its first Finding of the run's status, or, when it
+    ended ok, spark's own line. A step's first line is no sentence: the build's is blank."""
     status = result.status()
     found = [finding.sentence for finding in result.findings if finding.severity == status]
-    return found[0] if found else RAN_LINE % (key, MARKS[status][0] or OK)
+    return found[0] if found else RAN_LINE % (label, MARKS[status][0] or OK)
 
 
 class RunRequest(Operation):
@@ -138,7 +142,7 @@ class RunRequest(Operation):
                "spark offers it now and the project has not changed since the page was read (P829).")
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS, RUNS, WRITES)
-    data_keys = ("for", "key", "ran", "status", "mark", "line", "fingerprint")
+    data_keys = ("for", "key", "label", "ran", "status", "mark", "line", "fingerprint")
     privacy_for = staticmethod(privacy_for)
 
     def __init__(self, readers=None, operations=None):
@@ -148,19 +152,21 @@ class RunRequest(Operation):
         request = read_request(project)
         phases = read_flow(project, self.readers)[0]
         fingerprint = fingerprint_of(project, phases)
-        refused = refusal_of(request, {offer.key for phase in phases for offer in phase.offers}, fingerprint)
+        offers = {offer.key: offer for phase in phases for offer in phase.offers}
+        refused = refusal_of(request, offers, fingerprint)
+        # the key and the label only of an offer spark holds now: a request's own text, any length, never reaches the answer
+        offer = offers.get(key_of(request))
         if refused:
-            line = REFUSED_LINES[refused]
-            data = {"for": id_of(request), "key": key_of(request), "ran": False,
-                    "status": COULD_NOT_RUN, "mark": MARKS[COULD_NOT_RUN][1], "line": line, "fingerprint": fingerprint}
-            return OperationResult(data, [Finding.of(COULD_NOT_RUN, None, refused, line)], lines=[line])
-        kind = request.key.split(":", 2)[0]
+            data = {"for": id_of(request), "key": offer.key if offer else None, "label": offer.label if offer else None, "ran": False,
+                    "status": COULD_NOT_RUN, "mark": MARKS[COULD_NOT_RUN][1], "line": refused.meaning, "fingerprint": fingerprint}
+            return OperationResult(data, [Finding.of(COULD_NOT_RUN, None, refused, refused.meaning)], lines=[refused.meaning])
+        kind = kind_of(offer.key)
         step = self.operations.get(kind) or KIND_RUNS[kind].operation()
-        result = run_operation(step, KIND_RUNS[kind].values(project, request.key), outside=outside)
+        result = run_operation(step, KIND_RUNS[kind].values(project, offer.key), outside=outside)
         after = fingerprint_of(project, read_flow(project, self.readers)[0])
         status = result.status()
-        data = {"for": request.id, "key": request.key, "ran": True, "status": status, "mark": MARKS[status][1],
-                "line": line_of(request.key, result), "fingerprint": after}
-        return OperationResult(data, result.findings, lines=[RAN_LINE % (request.key, MARKS[status][0] or OK)] + list(result.lines),
+        data = {"for": request.id, "key": offer.key, "label": offer.label, "ran": True, "status": status, "mark": MARKS[status][1],
+                "line": line_of(offer.label, result), "fingerprint": after}
+        return OperationResult(data, result.findings, lines=[RAN_LINE % (offer.label, MARKS[status][0] or OK)] + list(result.lines),
                                diagnostics=result.diagnostics)
 # --- end MVP ---
