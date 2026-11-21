@@ -1,10 +1,11 @@
 /*
  * The page's one script (P829 PR 3, #1187). From disk it does nothing: the page stays as it is. In a published page with
- * the Artifact database, it adds a button to each offer the page may send (a pick, the parts list, the build), asks the
- * person to confirm with the offer's own words, and writes one request row {id, key, seen, at}. One request waits at a
- * time, with Copy and Withdraw; the answer row that /spark:page writes shows under the intro. Python writes every word
- * in the inert block "spark-words"; this script fills in only a time, an offer's label or spark's own line. It never
- * shows the key or the fingerprint, and never "done" alone. Rows from the database are data: set as text only.
+ * the Artifact database, for the artifact's owner only, it says how the page is used in the intro, adds a button to each
+ * offer the page may send (a pick, the parts list, the build), asks the person to confirm with the offer's own words, and
+ * writes one request row {id, key, seen, at}. One request waits at a time, with Copy and Withdraw; the answer row that
+ * /spark:page writes shows under the intro. Python writes every word in the inert block "spark-words"; this script fills
+ * in only a time, an offer's label or spark's own line. It never shows the key or the fingerprint, and never "done"
+ * alone. Rows from the database are data: set as text only.
  */
 "use strict";
 
@@ -43,13 +44,14 @@ function sentence(line) {
 
 /**
  * What the page says of the latest request and its answer: {mark, text, grey}, or null when there is no request. Pure.
- * A request that waits, one withdrawn, an ok by its kind, problems, could not run, and a refusal in grey. Never a word
+ * A request that waits, one withdrawn with no answer yet, an ok by its kind, problems, could not run, and a refusal in
+ * grey. A withdrawn request whose answer came says the answer: Claude may have run it before the withdraw. Never a word
  * alone: each text is one of the page's sentences.
  */
 function shownState(request, answer, words) {
   if (!request) return null;
   const notRun = words.marks["not-run"];
-  if (request.withdrawn) return { mark: notRun, text: words.withdrawn, grey: true };
+  if (request.withdrawn && !answer) return { mark: notRun, text: words.withdrawn, grey: true };
   if (!answer) return { mark: "", text: fill(words.waiting, clock(request.at)), grey: false };
   if (answer.ran !== true) {
     const refused = own(words.refused, answer.line);
@@ -64,9 +66,10 @@ function shownState(request, answer, words) {
 }
 
 /**
- * Strategy: RequestChannel, how a request leaves the page and its answer comes back: send(row), watch(heard) and
- * withdraw(id). DbChannel is its one implementation (P829): an Adapter on the Artifact database. watch calls
- * heard(request, answer) with the latest request (by `at`) and its answer, or null for either.
+ * Strategy: RequestChannel, how a request leaves the page and its answer comes back: send(row) and withdraw(id), each a
+ * Promise; watch(heard), which calls heard(request, answer) with the latest request (by `at`) and its answer, or null
+ * for either; and watchAnswer(id, heard), which calls heard(answer) for one request. DbChannel is its one implementation
+ * (P829): an Adapter on the Artifact database (`collection`, `doc`, `set`, `delete`, `orderBy`, `limit`, `onSnapshot`).
  */
 class DbChannel {
   constructor(db) {
@@ -81,39 +84,44 @@ class DbChannel {
     return this.db.collection(REQUESTS).doc(id).delete();
   }
 
+  watchAnswer(id, heard) {
+    return this.db.collection(ANSWERS).doc(id).onSnapshot((row) => heard(row.exists ? row.data() : null), () => {});
+  }
+
   watch(heard) {
     let id = null;
     let request = null;
     let answer = null;
     let stop = null;
-    const quiet = () => {};
     return this.db.collection(REQUESTS).orderBy("at", "desc").limit(1).onSnapshot((found) => {
       const latest = found.empty ? null : found.docs[0];
       request = latest ? latest.data() : null;
-      if ((latest ? latest.id : null) !== id) {
+      if ((latest ? latest.id : null) !== id) {  // a new latest request: its answer is watched once, never per snapshot
         if (stop) stop();
         id = latest ? latest.id : null;
         answer = null;
-        stop = id ? this.db.collection(ANSWERS).doc(id).onSnapshot((row) => {
-          answer = row.exists ? row.data() : null;
+        stop = id ? this.watchAnswer(id, (row) => {
+          answer = row;
           heard(request, answer);
-        }, quiet) : null;
+        }) : null;
       }
       heard(request, answer);
-    }, quiet);
+    }, () => {});
   }
 }
 
 /**
- * Controller: one request at a time. `send` writes a row only while none waits; `withdraw` deletes the waiting one;
- * `heard` takes what the channel watched. `seen` is the page's fingerprint (its first 12 hex digits), `makeId` gives a
- * UUID and `now` a Date. `listen(changed)` is told each change.
+ * Controller: one request at a time. `send` writes a row only while none waits; `withdraw` deletes the waiting one and
+ * says so once the delete is done, and keeps listening for its answer; `heard` takes what the channel watched. A write
+ * the database refuses puts the state back and says so in `note`. `seen` is the page's fingerprint (its first 12 hex
+ * digits), `makeId` gives a UUID and `now` a Date. `listen(changed)` is told each change.
  */
 class Requests {
   constructor(channel, words, seen, makeId, now) {
     Object.assign(this, { channel, words, seen, makeId, now });
     this.latest = null;
     this.answer = null;
+    this.note = null;
     this.listeners = [];
   }
 
@@ -129,33 +137,59 @@ class Requests {
     return this.latest && !this.latest.withdrawn && !this.answer ? this.latest : null;
   }
 
-  send(key) {
+  async send(key) {
     if (this.waiting()) return null;
+    const before = [this.latest, this.answer];
     const row = { id: this.makeId(), key: key, seen: this.seen, at: this.now().toISOString() };
-    this.latest = row;
-    this.answer = null;
-    this.channel.send(row);
+    [this.latest, this.answer, this.note] = [row, null, null];
     this.changed();
+    try {
+      await this.channel.send(row);
+    } catch (refused) {
+      [this.latest, this.answer, this.note] = before.concat(this.words.not_sent);
+      this.changed();
+      return null;
+    }
     return row;
   }
 
-  withdraw() {
+  async withdraw() {
     const waiting = this.waiting();
     if (!waiting) return;
-    this.channel.withdraw(waiting.id);
+    this.note = null;
+    try {
+      await this.channel.withdraw(waiting.id);
+    } catch (refused) {
+      this.note = this.words.not_withdrawn;
+      this.changed();
+      return;
+    }
+    if (this.latest !== waiting) return;  // an answer or a newer request came while the delete ran
     this.latest = Object.assign({}, waiting, { withdrawn: true });
+    this.channel.watchAnswer(waiting.id, (answer) => this.heardWithdrawn(waiting.id, answer));
+    this.changed();
+  }
+
+  heardWithdrawn(id, answer) {
+    if (!answer || !this.latest || this.latest.id !== id || !this.latest.withdrawn) return;
+    this.answer = answer;
     this.changed();
   }
 
   heard(request, answer) {
-    // a withdrawn request stays said until a newer one comes: the older one the delete uncovers is not news
-    if (this.latest && this.latest.withdrawn && !(request && String(request.at) > String(this.latest.at))) return;
+    const local = this.latest;
+    // a snapshot older than what this page knows, or with no request, is not news: the page's own row may not be there yet
+    if (local && (!request || String(request.at) < String(local.at))) return;
+    // the withdrawn row itself, before the delete reaches the snapshot: its answer comes through heardWithdrawn
+    if (local && local.withdrawn && request.id === local.id) return;
+    if (!local || request.id !== local.id || Boolean(answer) !== Boolean(this.answer)) this.note = null;
     this.latest = request;
     this.answer = answer;
     this.changed();
   }
 
   shown() {
+    if (this.note) return { mark: this.words.marks["not-run"], text: this.note, grey: true };
     return shownState(this.latest, this.answer, this.words);
   }
 }
@@ -167,12 +201,17 @@ function labelOf(words, key) {
 }
 
 /**
- * View: the buttons, the confirm and the status line, made with createElement and addEventListener, every text set as
- * text. The status panel stands under the intro.
+ * View: the intro, the status panel, the buttons and the confirm, made with createElement and addEventListener, every
+ * text set as text. The panel stands under the intro; a button stands on each element that carries `data-makes-stale`
+ * (a sendable offer, and the guide's line of what to do now when its phase has one sendable offer).
  */
 class PageView {
   constructor(win, requests, words) {
     Object.assign(this, { win, doc: win.document, requests, words });
+    this.panel = this.doc.createElement("section");
+    this.status = this.doc.createElement("p");
+    this.copy = this.button(words.copy, () => this.copyCommand());
+    this.withdraw = this.button(words.withdraw, () => this.requests.withdraw());
     this.buttons = [];
     this.box = null;
   }
@@ -186,8 +225,16 @@ class PageView {
   }
 
   draw() {
+    this.drawPanel();
+    this.drawButtons();
+    this.requests.listen(() => this.render());
+    this.render();
+  }
+
+  drawPanel() {
     const doc = this.doc;
-    this.panel = doc.createElement("section");
+    const intro = doc.querySelector(".intro");
+    intro.textContent = this.words.intro;
     this.panel.id = "request";
     const written = doc.body.getAttribute("data-written");
     if (written && written !== "none") {
@@ -195,24 +242,21 @@ class PageView {
       from.textContent = fill(this.words.page_from, clock(written));
       this.panel.appendChild(from);
     }
-    this.status = doc.createElement("p");
     this.status.setAttribute("aria-live", "polite");
-    this.copy = this.button(this.words.copy, () => this.copyCommand());
-    this.withdraw = this.button(this.words.withdraw, () => this.requests.withdraw());
     [this.status, this.copy, this.withdraw].forEach((part) => this.panel.appendChild(part));
-    const intro = doc.querySelector(".intro");
     intro.parentNode.insertBefore(this.panel, intro.nextSibling);
-    doc.querySelectorAll("li[data-makes-stale]").forEach((item) => {
+  }
+
+  drawButtons() {
+    this.doc.querySelectorAll("[data-makes-stale]").forEach((item) => {
       const key = item.getAttribute("data-key");
       const offer = own(this.words.offers, key);
       if (!offer) return;
       const made = this.button(offer.label, () => this.confirm(item, key, offer));
-      item.appendChild(doc.createTextNode(" "));
+      item.appendChild(this.doc.createTextNode(" "));
       item.appendChild(made);
       this.buttons.push(made);
     });
-    this.requests.listen(() => this.render());
-    this.render();
   }
 
   confirm(item, key, offer) {
@@ -262,11 +306,16 @@ class PageView {
   }
 }
 
-/** Start the page in `win`: nothing at all without the Artifact database, so the page from disk stays as it is. */
+/**
+ * Start the page in `win`: nothing at all without the Artifact database, or for a viewer who is not the artifact's
+ * owner (`user.isOwner()`), so the page from disk, and the page a viewer reads, stays as it is.
+ */
 async function start(win) {
   const claude = win.claude;
   const db = claude && typeof claude.use === "function" ? await claude.use("db") : null;
   if (!db) return null;
+  const user = await claude.use("user");
+  if (!user || !(await user.isOwner())) return null;
   const words = JSON.parse(win.document.getElementById(WORDS_ID).textContent);
   const channel = new DbChannel(db);
   const requests = new Requests(channel, words, win.document.body.getAttribute("data-fingerprint"),

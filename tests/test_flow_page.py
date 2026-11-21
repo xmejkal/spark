@@ -65,8 +65,10 @@ SAMPLE = ROOT / "tests" / "data" / "flow-page"
 
 
 def without_script(text):
-    """`text` without the script block and the sendable offers' data-makes-stale: the page as it was before the script."""
-    return re.sub(r' data-makes-stale="[^"]*"', "", SCRIPT_BLOCK.sub("", text, count=1))
+    """`text` without the script block and the script's hooks (data-makes-stale on a sendable offer, data-key with it on the
+    NOW line): the page as it was before the script."""
+    text = re.sub(r'<p data-key="[^"]*" data-makes-stale="[^"]*">', "<p>", SCRIPT_BLOCK.sub("", text, count=1))
+    return re.sub(r' data-makes-stale="[^"]*"', "", text)
 
 
 def scripts_of(text):
@@ -1399,21 +1401,22 @@ class ThePageScriptTest(unittest.TestCase):
         self.assertEqual(sorted(words["offers"]), ["build", "pick:light:led-red-5mm", "requirements"])
         self.assertEqual(words["offers"]["requirements"], {"label": "Write the parts list", "says": [
             "Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay.",
-            "These steps may be marked out of date: build, breadboard.",
-            "If Claude Code is closed, this waits until you open it."]})
-        self.assertEqual(words["offers"]["build"]["says"], [
-            "Saves its files in this project. Runs no simulation and costs nothing.", "If Claude Code is closed, this waits until you open it."])
+            "These steps may be marked out of date: build, breadboard."]})
+        self.assertEqual(words["offers"]["build"]["says"], ["Saves its files in this project. Runs no simulation and costs nothing."])
         self.assertEqual(words["offers"]["pick:light:led-red-5mm"]["label"], "Pick “Red LED 5 mm” for light")
 
     def test_the_words_block_holds_the_plan_s_words_and_never_done_alone(self):
         words = words_of(self.text)
-        self.assertEqual(words, page_words(sample_page().phases))
-        self.assertEqual(words["waiting"], "Sent at %s, waits for your next message to Claude. Nothing has run yet. In Claude Code, "
-                                           "type /spark:page.")
+        self.assertEqual(words, page_words(sample_page().phases, wiring_first=True))
+        self.assertEqual(page_words([])["intro"], "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.")
+        self.assertEqual(words["waiting"], "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.")
         self.assertEqual(words["ok"], {
-            "pick": "Picked and reserved. Nothing is built yet. The page now shows the new state.",
-            "requirements": "The parts list is written. Nothing is built yet. The page now shows the new state.",
-            "build": "The board builds. It is not wired, not flashed and not simulated yet. The page now shows the new state."})
+            "pick": "Saved as the pick. Nothing is built yet. Reload to see the new state.",
+            "requirements": "The parts list is written. Nothing is built yet. Reload to see the new state.",
+            "build": "The board builds. It is not wired, not flashed and not simulated yet. Reload to see the new state."})
+        self.assertEqual(words["intro"], "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next "
+                                         "/spark:page. Below: the wiring and its pictures, then each phase, folded: click one to read it.")
+        self.assertEqual((words["not_sent"], words["not_withdrawn"]), ("Could not send. Nothing ran.", "Could not withdraw. The request still waits."))
         self.assertEqual(words["refused"], {
             "the project changed after the page was read, so nothing ran":
                 "Nothing ran. The project changed after you clicked. Reload this page and click again.",
@@ -1426,11 +1429,24 @@ class ThePageScriptTest(unittest.TestCase):
         self.assertEqual(words["marks"], {"ok": "✓", "problems": "✗", "could-not-run": "?", "not-run": "–"})
         said = [words[name] for name in ("send", "cancel", "copy", "withdraw", "withdrawn", "waiting_for", "page_from", "ran",
                                          "problems", "could_not_run")] + list(words["ok"].values()) + list(words["refused"].values())
-        self.assertEqual(said[:7], ["Send", "Cancel", "Copy", "Withdraw", "Withdrawn. Nothing ran.", "Waiting for Claude: %s.",
-                                    "Page from %s."])
+        self.assertEqual(said[:7], ["Send", "Cancel", "Copy", "Withdraw", "Withdrawn. If Claude had already started it, its answer shows here.",
+                                    "Waiting for Claude: %s.", "Page from %s."])
         for line in said:
             self.assertNotEqual(line.strip(". ").lower(), "done")
         self.assertNotIn("0123456789ab", json.dumps(words))
+
+    def test_the_now_line_carries_the_key_of_its_phase_s_one_sendable_offer(self):
+        self.assertIn('<p data-key="pick:light:led-red-5mm" data-makes-stale="requirements"><strong>NOW (parts)</strong> ', self.text)
+        self.assertEqual(self.text.count('data-key="pick:light:led-red-5mm"'), 2)
+
+    def test_the_now_line_carries_no_key_with_two_sendable_offers_or_none(self):
+        page = sample_page()
+        two = [dict(phase, offers=phase["offers"] + [dict(phase["offers"][0], key="pick:light:led-green")]) if phase["phase"] == "parts"
+               else phase for phase in page.phases]
+        for phases in (two, [phase for phase in page.phases if phase["phase"] != "parts"]):
+            with self.subTest(len(phases)):
+                text = FlowHtmlPage().text(page._replace(phases=phases))
+                self.assertIn("<p><strong>NOW (parts)</strong> ", text)
 
     def test_a_label_with_markup_cannot_close_the_words_block(self):
         phase = a_phase("build", offers=[Offer("build", "</script><script>alert(1)</script>", "x", ())])

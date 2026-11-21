@@ -62,8 +62,8 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "a null now still draws a NOW line (P977 PR 2)",
-  "find": "[now[\"says\"]], link) if now else \"\"",
-  "replace": "[now[\"says\"] if now else \"\"], link) if True else \"\""
+  "find": "[now[\"says\"]], link, sendable_now(page)) if now else \"\"",
+  "replace": "[now[\"says\"] if now else \"\"], link, sendable_now(page)) if True else \"\""
  },
  {
   "file": "scripts/spark/flow/write_flow_page.py",

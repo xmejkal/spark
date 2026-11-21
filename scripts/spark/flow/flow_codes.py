@@ -117,17 +117,22 @@ NO_SIMULATION_MESSAGE = "Runs no simulation and costs nothing."
 #: time, an offer's label or spark's own line. No word says "done" alone.
 SENDABLE = (PICK, WRITE_REQUIREMENTS, BUILD_BOARD)
 CONFIRM_STALE = "These steps may be marked out of date: %s."
-CONFIRM_CLOSED = "If Claude Code is closed, this waits until you open it."
 SEND, CANCEL, COPY, WITHDRAW = "Send", "Cancel", "Copy", "Withdraw"
 #: What Copy puts on the clipboard: the command that carries the request to spark.
 PAGE_COMMAND = "/spark:page"
-WAITING_SAYS = "Sent at %s, waits for your next message to Claude. Nothing has run yet. In Claude Code, type /spark:page."
-WITHDRAWN_SAYS = "Withdrawn. Nothing ran."
+WAITING_SAYS = "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code."
+#: Said once the delete is done: Claude may have started the request before it, so its answer still shows.
+WITHDRAWN_SAYS = "Withdrawn. If Claude had already started it, its answer shows here."
+#: A write the database refused: the page puts its state back.
+NOT_SENT_SAYS = "Could not send. Nothing ran."
+NOT_WITHDRAWN_SAYS = "Could not withdraw. The request still waits."
+#: The intro of the published page, for its owner: the script puts it in place of PAGE_INTRO.
+PUBLISHED_INTRO = "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page."
 WAITING_FOR = "Waiting for Claude: %s."
 PAGE_FROM = "Page from %s."
-NEW_STATE = "The page now shows the new state."
+NEW_STATE = "Reload to see the new state."
 #: What the page says when a step ran ok, by its kind: what it did and what is not done yet.
-RAN_OK_SAYS = {PICK: "Picked and reserved. Nothing is built yet. " + NEW_STATE,
+RAN_OK_SAYS = {PICK: "Saved as the pick. Nothing is built yet. " + NEW_STATE,
                WRITE_REQUIREMENTS: "The parts list is written. Nothing is built yet. " + NEW_STATE,
                BUILD_BOARD: "The board builds. It is not wired, not flashed and not simulated yet. " + NEW_STATE}
 #: A step of another kind that ran ok, with spark's own line (`ran <label>: ok`); the page sends no other kind today.

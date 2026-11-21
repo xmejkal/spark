@@ -80,22 +80,35 @@ def _makes_stale(offer):
     return ' data-makes-stale="%s"' % _text(" ".join(offer["makes_stale"])) if is_sendable(offer) else ""
 
 
-def page_words(phases):
+def sendable_now(page):
+    """The one sendable offer dict of the phase the guide's NOW names, or None when that phase has none or more than one
+    (P829 review): the NOW line then carries its key, and the script puts its button there too."""
+    now = (page.guide or {}).get("now")
+    if not now:
+        return None
+    offers = [offer for phase in page.phases if phase["phase"] == now["phase"] for offer in phase["offers"] if is_sendable(offer)]
+    return offers[0] if len(offers) == 1 else None
+
+
+def page_words(phases, wiring_first=False):
     """
     Every word the page's script shows (P829 PR 3, the plan's section 9), as one dict: per sendable offer its label (the
     button and the confirm's title) and the confirm's lines (its effect, the phases it may make out of date, the wait),
     the fixed words of the buttons and the status line, and the words of each answer. A refusal's words are keyed by
     its code's meaning, the `line` that `flow.py run-request` answers. The script fills in a time, a label or a line.
+    `intro` is the published page's intro, with the wiring line when the wiring comes first (`wiring_first`).
     """
     offers = {}
     for offer in (offer for phase in phases for offer in phase["offers"] if is_sendable(offer)):
         stale = [flow_codes.CONFIRM_STALE % ", ".join(offer["makes_stale"])] if offer["makes_stale"] else []
-        offers[offer["key"]] = {"label": offer["label"], "says": [offer["effect"]] + stale + [flow_codes.CONFIRM_CLOSED]}
+        offers[offer["key"]] = {"label": offer["label"], "says": [offer["effect"]] + stale}
     meanings = {str(code): meaning for code, meaning in request_codes.CODES.items()}
     marks = {status: MARKS[status][1] for status in (OK, PROBLEMS, COULD_NOT_RUN)}
     return {"offers": offers, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY,
             "withdraw": flow_codes.WITHDRAW, "command": flow_codes.PAGE_COMMAND, "waiting": flow_codes.WAITING_SAYS,
             "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "page_from": flow_codes.PAGE_FROM,
+            "not_sent": flow_codes.NOT_SENT_SAYS, "not_withdrawn": flow_codes.NOT_WITHDRAWN_SAYS,
+            "intro": " ".join([flow_codes.PUBLISHED_INTRO] + ([flow_codes.WIRING_FIRST] if wiring_first else [])),
             "ok": dict(flow_codes.RAN_OK_SAYS), "ran": flow_codes.RAN_OTHER_SAYS, "problems": flow_codes.RAN_PROBLEMS_SAYS,
             "could_not_run": flow_codes.COULD_NOT_RUN_SAYS,
             "refused": {meanings[name]: said for name, said in flow_codes.REFUSED_SAYS.items()},
@@ -258,12 +271,12 @@ class FlowHtmlPage:
         return "\n".join([part for part in head if part] + [part for part in self._body(page) if part]
                          + [self._script(page), "</body>", "</html>"]) + "\n"
 
-    @staticmethod
-    def _script(page):
+    def _script(self, page):
         """The page's words (`page_words`) as an inert JSON block, then its one script (P829 PR 3), as one block before
-        `</body>`: without it the page is the page with no script, byte for byte, but the sendable offers' `data-makes-stale`.
+        `</body>`: without it the page is the page with no script, byte for byte, but the script's hooks (`data-makes-stale` on
+        a sendable offer, and `data-key` with it on the NOW line, `sendable_now`).
         A `<` in the words is written `\\u003c`, so no text closes the block."""
-        words = json.dumps(page_words(page.phases), ensure_ascii=False, sort_keys=True).replace("<", "\\u003c")
+        words = json.dumps(page_words(page.phases, self._wiring_first(page)), ensure_ascii=False, sort_keys=True).replace("<", "\\u003c")
         return '<script type="application/json" id="%s">%s</script>\n<script>%s</script>' % (
             WORDS_ID, words, PAGE_SCRIPT.read_text(encoding="utf-8"))
 
@@ -305,7 +318,7 @@ class FlowHtmlPage:
         if now and now.get("steps") and self._wiring_first(page) and page.wiring.steps:
             first = page.wiring.steps[0][0]
             link = ' <a href="#step-%d">%s</a>' % (first, _text(flow_codes.ONE_AT_A_TIME % first))
-        lines = [self._guide_line(flow_codes.GUIDE_NOW % now["phase"], [now["says"]], link) if now else "",
+        lines = [self._guide_line(flow_codes.GUIDE_NOW % now["phase"], [now["says"]], link, sendable_now(page)) if now else "",
                  self._guide_line(flow_codes.GUIDE_DONE, guide["done"], ""),
                  self._guide_line(flow_codes.GUIDE_LATER, guide["later"], ""),
                  "<p>%s</p>" % _text(guide["no_simulation"]) if guide["no_simulation"] else "",
@@ -314,9 +327,11 @@ class FlowHtmlPage:
         return "\n".join(['<section id="guide">'] + lines + ["</section>"]) if lines else ""
 
     @staticmethod
-    def _guide_line(label, items, link):
-        """One line of the guide: its label in `<strong>` and its items, comma apart, or nothing when there is none."""
-        return "<p><strong>%s</strong> %s%s</p>" % (_text(label), _text(", ".join(items)), link) if items else ""
+    def _guide_line(label, items, link, offer=None):
+        """One line of the guide: its label in `<strong>` and its items, comma apart, or nothing when there is none. A line
+        with the sendable `offer` of its phase carries its key and `data-makes-stale`, so the script puts its button there."""
+        hooks = ' data-key="%s"%s' % (_text(offer["key"]), _makes_stale(offer)) if offer else ""
+        return "<p%s><strong>%s</strong> %s%s</p>" % (hooks, _text(label), _text(", ".join(items)), link) if items else ""
 
     @staticmethod
     def _stands_at(page):
