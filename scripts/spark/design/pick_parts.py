@@ -5,21 +5,19 @@ a need that its own part serves says what a run does not test of the part (`note
 reads and hands in (`Argument.payload`).
 """
 
-from spark.core import codes
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument
 from spark.records import store
 from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
 from spark.records.record_kind import Answer, _cannot, _note
 from spark.sourcing import drawer
 from spark.sourcing.write_answers import names_your_entries, write_lines
-from spark.design import needs
+from spark.design import design_codes, needs
 
 # --- MVP ---
 #: The help of `--passed-over`, worded as parts.py's OPTIONS row was.
 PASSED_OVER_HELP = "with --pick: the parts passed over and why, a JSON list in FILE (- for stdin) of {need, id, why, by}"
 #: The refusal of a pick with no NEED=ID pairs.
 PAIRS_SENTENCE = "--pick takes the project, then NEED=ID for each pick: light=led-red-5mm"
-PAIRS_FIX = "parts.py --match <project> lists each need's candidates and their ids"
 #: The default of `--passed-over`: no file given. An object of its own, so a file that holds `null` is still a payload the
 #: planner refuses (a `None` would read as the flag left out).
 NO_PASSED_OVER = ()
@@ -67,7 +65,7 @@ class PickParts(AnswerOperation):
         target, given = project_and_picks[0], project_and_picks[1:]
         pairs = [tuple(one.split("=", 1)) for one in given if "=" in one]
         if not pairs or len(pairs) != len(given):
-            return Answer(unchecked=[_cannot(PAIRS_SENTENCE, PAIRS_FIX, code=codes.BAD_ARGUMENT)])
+            return Answer(unchecked=[_cannot(PAIRS_SENTENCE, design_codes.BAD_ARGUMENT_PICK_PAIRS.fix, code=design_codes.BAD_ARGUMENT_PICK_PAIRS)])
         reasons = [] if passed_over is NO_PASSED_OVER else passed_over
         history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
         listed, keys_before = store.find_listed_name(target) is not None, needs.entry_keys(needs.read(target))

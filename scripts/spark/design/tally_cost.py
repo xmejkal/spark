@@ -12,8 +12,6 @@ from spark.sourcing import drawer, run_cost
 from spark.design import design_codes, needs
 
 # --- MVP ---
-#: The fix of a folder nobody listed.
-NOT_LISTED_FIX = "mark a step with parts.py --step <project> <step> in a Claude Code session: that puts it on the list"
 #: The fix of a step whose cost is not known.
 NO_TRANSCRIPT_FIX = "mark each step with parts.py --step <project> <step> in a Claude Code session"
 
@@ -32,7 +30,7 @@ class TallyCost(AnswerOperation):
         name = store.find_listed_name(project)
         if name is None:
             return Answer(unchecked=[_cannot("%s is not on your list of projects, so no step of it was marked" % project,
-                                             NOT_LISTED_FIX, code=design_codes.PROJECT_NOT_LISTED)])
+                                             design_codes.PROJECT_NOT_LISTED.fix, code=design_codes.PROJECT_NOT_LISTED)])
         history, entries, listed = store.events(), drawer.entries(), needs.read(project)
         picks = [(need["id"], pick) for need in listed for pick in need.get("pick") or []]
         unpicked = [need["id"] for need in listed if not need.get("pick")]  # C-2: the picks are counted against the needs they serve

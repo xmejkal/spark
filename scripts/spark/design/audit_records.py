@@ -12,7 +12,7 @@ from spark.core.operation import JSON_DEST, COMMON_ARGUMENTS, READS, Argument, O
 from spark.core.renderers import FullEnvelope
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines
-from spark.records import board_records, record_kind, records_codes, store
+from spark.records import board_records, record_kind, store
 from spark.records.answer_operation import START_FIX, START_SENTENCE
 from spark.records.record_kind import Answer, _cannot, owes, _parse, _shape_problems, _with_project
 from spark.sourcing import drawer
@@ -20,8 +20,6 @@ from spark.sourcing.part_records import broken_problems, function_of
 from spark.design import design_codes, footprint_emitter
 
 # --- MVP ---
-#: The fix of a store that could not be read: the file is named in the sentence.
-UNREADABLE_FIX = "fix the file the sentence names, then run --audit again"
 #: The sentence of a drawer entry that points at a record nobody has.
 DANGLING_SENTENCE = "points at a record nobody has"
 
@@ -98,9 +96,9 @@ class AuditRecords(Operation):
         try:
             counts, owed, broken, silent, dangling, stops = walk(project)
         except CodedMessageError as unreadable:  # a store's refusal: could-not-run, never a traceback
-            return refused(str(unreadable), unreadable.code, UNREADABLE_FIX)
+            return refused(str(unreadable), unreadable.code, design_codes.RECORD_UNREADABLE.fix)  # the store's code, this Operation's fix: the file is in the sentence
         except OSError as unreadable:
-            return refused("--audit: %s" % unreadable, design_codes.RECORD_UNREADABLE, UNREADABLE_FIX)
+            return refused("--audit: %s" % unreadable, design_codes.RECORD_UNREADABLE, design_codes.RECORD_UNREADABLE.fix)
         shown, truncated = store.page_with_store(owed, start, "audit", ["--audit"] + _with_project(project))
         lines = ["  %-12s %3d current, %3d owe facts, %3d broken" % (layer, row["current"], row["owed"], row["broken"])
                  for layer, row in counts.items()]
@@ -110,8 +108,8 @@ class AuditRecords(Operation):
                   % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []
         lines += ["  drawer entry %s points at a record nobody has" % entry for entry in dangling]
         lines += ["  %s (%s) %s" % (s["id"], s["layer"], s["stop_line"]) for s in stops]
-        findings = [Finding(outcomes.PROBLEMS, b["id"], records_codes.RECORD_FILE_BROKEN, "broken: " + "; ".join(b["problems"]), None) for b in broken]
-        findings += [Finding(outcomes.PROBLEMS, entry, design_codes.DRAWER_ENTRY_DANGLING, DANGLING_SENTENCE, None) for entry in dangling]
+        findings = [Finding.of(outcomes.PROBLEMS, b["id"], design_codes.RECORD_FILE_BROKEN_AUDIT, "broken: " + "; ".join(b["problems"])) for b in broken]
+        findings += [Finding.of(outcomes.PROBLEMS, entry, design_codes.DRAWER_ENTRY_DANGLING, DANGLING_SENTENCE) for entry in dangling]
         data = {"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling,
                 "stops_at_footprint": [{key: s[key] for key in ("id", "layer", "stops_why")} for s in stops]}
         return OperationResult(data, findings, (), [guard_lines(line) for line in lines], truncated=truncated, notes=(), assumptions=())
