@@ -19,7 +19,7 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import board_marks, drawing, sheet, svg_diagram, wire_routing  # noqa: E402
+from spark.breadboard import board_marks, drawing, sheet, svg_diagram, wire_pills, wire_routing  # noqa: E402
 from spark.breadboard.spacing import BodyBox  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
@@ -27,7 +27,7 @@ DATA = ROOT / "tests" / "data" / "breadboard"
 FIXTURES = ("walk-c6", "button-light-xiao", "button-light", "epaper")
 NS = {"svg": "http://www.w3.org/2000/svg"}
 #: Half the white under-stroke, in px: how far a wire reaches either side of its line.
-HALF_STROKE = svg_diagram.SvgBreadboardDiagram.UNDER_STROKE_PX / 2
+HALF_STROKE = wire_pills.WIRE_SIZES_PX.under_stroke / 2
 
 
 def routed(fixture):
