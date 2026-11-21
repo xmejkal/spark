@@ -14,8 +14,8 @@
  {
   "file": "scripts/spark/sourcing/datasheets.py",
   "name": "the store keeps a photo as it came",
-  "find": "        payload = without_location(payload)[0]",
-  "replace": "        pass"
+  "find": "    payload = without_location(payload)[0]",
+  "replace": "    pass"
  },
  {
   "file": "scripts/spark/sourcing/datasheets.py",
