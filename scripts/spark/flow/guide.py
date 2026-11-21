@@ -109,7 +109,7 @@ def who_and_sentence(now, open_needs, fact):
         return by, said % fact.log if fact.fact == flow_codes.RUN_FAILED else said
     said = flow_codes.NOW_SENTENCES.get((now.phase, now.status))
     if said == flow_codes.PARTS_NOW:
-        return [now.by], said % (len(open_needs), ", ".join(open_needs))
+        return [now.by], said % (flow_codes.ONE_NEED_HAS if len(open_needs) == 1 else flow_codes.MANY_NEEDS_HAVE % len(open_needs), ", ".join(open_needs))
     return [now.by], said or (flow_codes.PROBLEMS_NOW if now.status == PROBLEMS else flow_codes.COULD_NOT_RUN_NOW) % now.phase
 
 
@@ -120,12 +120,12 @@ def job_offer(now, by_name):
 
 
 def now_of(now, by_name, open_needs, fact, count):
-    """`{phase, by, says, offer, needs}` of the phase to act on now. With `count`, the steps of a current wiring sheet
-    beside firmware not started, it is two jobs, the person's and Claude's."""
+    """`{phase, by, says, offer, needs, steps}` of the phase to act on now. With `count`, the steps of a current wiring
+    sheet beside firmware not started, it is two jobs, the person's and Claude's, and `steps` is that count (else None)."""
     by, says = ([flow_codes.BY_YOU, flow_codes.BY_CLAUDE], flow_codes.TWO_JOBS_NOW % count) if count is not None else \
         who_and_sentence(now, open_needs, fact)
     return {"phase": now.phase, "by": by, "says": says, "offer": job_offer(now, by_name),
-            "needs": open_needs if now.phase == flow_codes.PARTS else []}
+            "needs": open_needs if now.phase == flow_codes.PARTS else [], "steps": count}
 
 
 def label(phase, no_model):
@@ -150,7 +150,7 @@ def done_of(phases, at, no_model, wired):
 def guide_of(project, phases, steps=count_steps):
     """
     What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, needs}, "done", "later", "set_aside", "no_simulation"}`. `steps` counts the wiring
+    `{"now": {phase, by, says, offer, needs, steps}, "done", "later", "set_aside", "no_simulation"}`. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`).
     """
     by_name, listed = {phase.phase: phase for phase in phases}, readable(lambda: needs.read(project), [])
@@ -165,8 +165,8 @@ def guide_of(project, phases, steps=count_steps):
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
     said = now_of(now, by_name, open_needs, fact, count) if now else None
     wired = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
-    later = [label(phase, no_model) for index, phase in enumerate(phases)
-             if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]
+    later = [label(phase, no_model) + (flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else "")
+             for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]
     return {"now": said, "done": done_of(phases, at, no_model, wired), "later": later,
             "set_aside": [need["id"] for need in set_aside(listed)],
             "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None}
