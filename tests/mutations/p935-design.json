@@ -1,0 +1,80 @@
+[
+ {
+  "file": "scripts/spark/design/design_codes.py",
+  "name": "a code of the design area holds a blank fix",
+  "find": "'give the path of a requirements file, or write one with parts.py --requirements')",
+  "replace": "'')"
+ },
+ {
+  "file": "scripts/spark/design/design_codes.py",
+  "name": "a variant of the core's bad_argument holds its parent's fix",
+  "find": "\"parts.py --match <project> lists each need's candidates and their ids\")",
+  "replace": "codes.BAD_ARGUMENT.fix)"
+ },
+ {
+  "file": "scripts/spark/design/design_codes.py",
+  "name": "the fix of a project nobody listed is changed",
+  "find": "'mark a step with parts.py --step <project> <step> in a Claude Code session: that puts it on the list')",
+  "replace": "'mark a step')"
+ },
+ {
+  "file": "scripts/spark/design/design_codes.py",
+  "name": "the audit's broken record is told with the records' fix, which names a file it does not name",
+  "find": "\"fix the record that `subject` names, then run `parts.py --audit` again\")",
+  "replace": "\"fix the file the sentence names by hand, then run again\")"
+ },
+ {
+  "file": "scripts/spark/design/design_codes.py",
+  "name": "the audit's variant of a records word has another meaning",
+  "find": "RECORD_FILE_BROKEN_AUDIT = codes.Code(\"record_file_broken\", \"a file spark reads a record from is not JSON, or not in its shape: fix it by hand\",",
+  "replace": "RECORD_FILE_BROKEN_AUDIT = codes.Code(\"record_file_broken\", \"a file spark reads a record from is broken\","
+ },
+ {
+  "file": "scripts/spark/design/audit_records.py",
+  "name": "a dangling entry is a plain Finding with fix null again",
+  "find": "Finding.of(outcomes.PROBLEMS, entry, design_codes.DRAWER_ENTRY_DANGLING, DANGLING_SENTENCE)",
+  "replace": "Finding(outcomes.PROBLEMS, entry, design_codes.DRAWER_ENTRY_DANGLING, DANGLING_SENTENCE, None)"
+ },
+ {
+  "file": "scripts/spark/design/audit_records.py",
+  "name": "a dangling entry is told as a record the disk would not give",
+  "find": "entry, design_codes.DRAWER_ENTRY_DANGLING, DANGLING_SENTENCE)",
+  "replace": "entry, design_codes.RECORD_UNREADABLE, DANGLING_SENTENCE)"
+ },
+ {
+  "file": "scripts/spark/design/audit_records.py",
+  "name": "a drawer file the disk would not give is told with no fix",
+  "find": "design_codes.RECORD_UNREADABLE, design_codes.RECORD_UNREADABLE.fix)",
+  "replace": "design_codes.RECORD_UNREADABLE, None)"
+ },
+ {
+  "file": "scripts/spark/design/pick_parts.py",
+  "name": "a pick with no NEED=ID pairs is refused with fix null again",
+  "find": "_cannot(PAIRS_SENTENCE, design_codes.BAD_ARGUMENT_PICK_PAIRS.fix, code=",
+  "replace": "_cannot(PAIRS_SENTENCE, None, code="
+ },
+ {
+  "file": "scripts/spark/design/entry_origin.py",
+  "name": "an unreadable replies file shows the core's fix, not this Operation's",
+  "find": "code=design_codes.BAD_ARGUMENT_REQUIREMENTS_REPLIES, status=unreadable.status)",
+  "replace": "code=unreadable.code, status=unreadable.status)"
+ },
+ {
+  "file": "scripts/spark/design/needs.py",
+  "name": "a needs file that is not JSON is refused with a plain str for its code",
+  "find": "\"%s is not JSON (%s)\", path, broken, code=records_codes.RECORD_FILE_BROKEN)",
+  "replace": "\"%s is not JSON (%s)\", path, broken, code=\"record_file_broken\")"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the scan reads no of_error or of_lines call as its error's constructor",
+  "find": "made_by = name.rpartition(\".\")[0].rpartition(\".\")[2] if name.endswith((\".of_error\", \".of_lines\")) else name.rpartition(\".\")[2]",
+  "replace": "made_by = name.rpartition(\".\")[2]"
+ },
+ {
+  "file": "tests/test_json_contracts.py",
+  "name": "the design area names no table beside its own",
+  "find": ", \"design\": (records_codes, codes)}",
+  "replace": "}"
+ }
+]
