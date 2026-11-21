@@ -29,6 +29,7 @@ from spark.breadboard import part_shape  # noqa: E402
 from spark.breadboard import rails  # noqa: E402
 from spark.breadboard import spacing  # noqa: E402
 from spark.breadboard.drawing import HoleLedger, NotDrawnError, WokwiGeometry, rotate  # noqa: E402
+from spark.breadboard.breadboard_scene import BreadboardSceneMaker  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 RECORD_BOARD = ROOT / "tests" / "data" / "breadboard" / "button-light"
@@ -224,8 +225,8 @@ class TheXiaoLayoutTest(unittest.TestCase):
         jumper_steps = [number for number, one in enumerate(seated, 1)
                         if one.act == wiring_steps.JOIN and one.subject.kind != wiring_steps.RESISTOR]
         self.assertEqual([jumper.step for jumper in self.layout.jumpers], jumper_steps)
-        drawn = json.loads(drawing.WokwiBreadboardDiagram().text(self.layout))
-        roles = {jumper.step: jumper.role for jumper in self.layout.jumpers}
+        drawn = json.loads(drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(self.layout)))
+        roles ={jumper.step: jumper.role for jumper in self.layout.jumpers}
         self.assertEqual([wire[2] for wire in drawn["connections"]],
                          [wiring_steps.JumperColors().of(roles)[number] for number in jumper_steps])
         self.assertEqual(roles[jumper_steps[0]], "signal")
@@ -237,8 +238,8 @@ class TheXiaoLayoutTest(unittest.TestCase):
         self.assertEqual(min(hole.column for hole in button.holes.values()), 12)
 
     def test_the_same_build_gives_the_same_bytes(self):
-        once = drawing.WokwiBreadboardDiagram().text(self.layout)
-        self.assertEqual(once, drawing.WokwiBreadboardDiagram().text(sheet._plan_layout(xiao_read())))
+        once = drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(self.layout))
+        self.assertEqual(once, drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(sheet._plan_layout(xiao_read()))))
 
     def test_the_drawing_keeps_the_bytes_wokwi_showed(self):
         # The screenshot in docs/discovery/2026-10-16-p267-wokwi-holes/ shows exactly these bytes (P267, PR #303).
@@ -250,8 +251,8 @@ class TheXiaoLayoutTest(unittest.TestCase):
                          "51af5c2905f30b678888b241a52dd115a7a7ad142cde56ce2929b6498b0cb528")
 
     def test_every_hole_named_exists_on_a_half_board(self):
-        drawn = json.loads(drawing.WokwiBreadboardDiagram().text(self.layout))
-        names = {"bb1:" + hole.name for hole in GEOMETRY.surface.holes}
+        drawn = json.loads(drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(self.layout)))
+        names ={"bb1:" + hole.name for hole in GEOMETRY.surface.holes}
         for wire in drawn["connections"]:
             self.assertLessEqual(set(wire[:2]), names)
 

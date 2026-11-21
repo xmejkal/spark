@@ -1,13 +1,15 @@
 """
 The drawn breadboard as one scene (P969, #1388): everything a view draws, each thing with its place, made once by
 the scene maker before any view, and the pills, captions and pad labels placed through a label measure; each part's
-pad states and its line of the note (scripts/spark/breadboard/breadboard_scene.py).
+pad states and its line of the note (scripts/spark/breadboard/breadboard_scene.py). The sheet makes the scene once, and
+both drawings and its colour line read it (P969 PR 4).
 
     python3 -m unittest tests.test_breadboard_scene
     python3 tests/test_breadboard_scene.py --rough     # prints the walk's scene as rough text
 """
 
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -23,7 +25,7 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import breadboard_scene, part_pictures, sheet, svg_diagram, wire_routing  # noqa: E402
+from spark.breadboard import breadboard_scene, drawing, part_pictures, sheet, svg_diagram, wire_routing, wiring_steps  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
 NS = {"svg": "http://www.w3.org/2000/svg"}
@@ -149,8 +151,8 @@ class TheSceneTest(unittest.TestCase):
 
     def test_the_walk_is_routed_once_and_drawn_in_today_s_bytes(self):
         # (1) the scene is made once, before any view: the rough view and the picture read it, and nothing routes again,
-        # in the maker or in the renderer, which both hold the counting router
-        text = svg_diagram.SvgBreadboardDiagram(router=self.router).draw(self.scene)
+        # in the maker, which holds the counting router, or in the renderer, which holds no router since P969 PR 4
+        text = svg_diagram.SvgBreadboardDiagram().text(self.scene)
         self.assertIn("#", self.rough)
         self.assertEqual(self.router.calls, 1)
         self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
@@ -269,7 +271,7 @@ class TheMakerTest(unittest.TestCase):
         scene = breadboard_scene.BreadboardSceneMaker(router=wire_routing.LaneJumperRouter()).make(layout)
         lanes = wire_routing.LaneJumperRouter().route(layout, None)
         self.assertEqual({jumper.jumper.step: jumper.path for jumper in scene.jumpers}, lanes)
-        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().draw(scene))
+        root = ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(scene))
         for step, path in lanes.items():
             drawn = root.find("svg:g[@data-step='%d']" % step, NS).find("svg:path", NS).get("d")
             self.assertEqual(drawn, "M" + "L".join("%s %s" % point for point in path.points), step)
@@ -314,6 +316,52 @@ class TheMakerTest(unittest.TestCase):
         self.assertEqual(size, 7)
         self.assertAlmostEqual(width, (0.55 * 10 + 0.5) * 7)
         self.assertEqual(measure.pad_label(), (5, 2))
+
+
+class AllWhite(wiring_steps.JumperColors):
+    """A colour pick of its own: every wire white, a word no role gives."""
+
+    def of(self, roles):
+        return {number: "white" for number in sorted(roles)}
+
+
+class TheSheetTest(unittest.TestCase):
+    """P969 PR 4: the sheet makes the scene once, on the XIAO, and both drawings and its colour line read it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.requirements = DATA / "button-light-xiao" / "requirements.json"
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            cls.read = sheet._read_build(cls.requirements)
+            cls.planned = sheet._plan_once(cls.read)
+
+    def test_the_sheet_routes_once_for_both_drawings(self):
+        router = CountingTrackJumperRouter()
+        paths = [(Path(tempfile.mkdtemp()) / renderer.FILE_NAME, renderer) for renderer in sheet.DRAWING_RENDERERS]
+        scene, texts = sheet._texts(paths, paths, self.planned, breadboard_scene.BreadboardSceneMaker(router=router))
+        self.assertEqual(router.calls, 1)
+        self.assertIs(scene.layout, self.planned.layout)
+        self.assertEqual(hashlib.sha256(texts[0].encode()).hexdigest(),
+                         "51af5c2905f30b678888b241a52dd115a7a7ad142cde56ce2929b6498b0cb528")  # the XIAO's Wokwi diagram
+        self.assertTrue(texts[1].startswith("<svg"), texts[1][:40])
+
+    def test_no_scene_is_made_when_no_drawing_is_drawn(self):
+        router = CountingTrackJumperRouter()
+        stopped = sheet.PlannedLayout(None, drawing.NotDrawnError("no room", drawing.NO_HOLE_LEFT), [])
+        self.assertEqual(sheet._texts([], [], stopped, breadboard_scene.BreadboardSceneMaker(router=router)), (None, []))
+        self.assertEqual(router.calls, 0)
+
+    def test_the_diagram_and_the_sheet_s_colour_line_say_the_scene_s_colours(self):
+        # the colours are picked once, in the scene: the Wokwi diagram and the sheet say its words, never their own
+        scene = breadboard_scene.BreadboardSceneMaker(colors=AllWhite()).make(self.planned.layout)
+        drawn = json.loads(drawing.WokwiBreadboardDiagram().text(scene))
+        self.assertEqual({wire[2] for wire in drawn["connections"]}, {"white"})
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            text = sheet.sheet(self.requirements, read=self.read, planned=self.planned._replace(scene=scene))
+        line = next(line for line in text.splitlines() if "Each jumper has the color" in line)
+        said = line.split("each signal: ", 1)[1].rstrip(".").split(", ")
+        self.assertEqual(len(said), len(self.planned.layout.jumpers))
+        self.assertTrue(all(one.split(" ")[1] == "white" for one in said), line)
 
 
 if __name__ == "__main__":

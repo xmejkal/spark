@@ -22,7 +22,7 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import drawing, part_pictures, picture_makers, sheet, svg_diagram  # noqa: E402
+from spark.breadboard import breadboard_scene, drawing, part_pictures, picture_makers, sheet, svg_diagram  # noqa: E402
 from spark.breadboard.picture_makers import (  # noqa: E402
     Decline, FramePictureMaker, MadePartPictures, PartPictureMaker, PictureCandidate, PictureMakerChain, PictureRequest,
     StoredPictureMaker)
@@ -242,7 +242,8 @@ class TheBuildDrawsAKeptPictureTest(unittest.TestCase):
             read = sheet._read_build(project / "requirements.json")
             layout = drawing.BreadboardPlanner(*sheet._drawing_inputs(read)).plan(read.steps)
             pictures = MadePartPictures(PictureMakerChain([StoredPictureMaker()]), part_pictures.PictogramPartPictures())
-            return ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram(pictures=pictures).text(layout))
+            return ElementTree.fromstring(svg_diagram.SvgBreadboardDiagram().text(
+                breadboard_scene.BreadboardSceneMaker(pictures=pictures).make(layout)))
 
     def test_a_kept_picture_replaces_the_box_and_spark_draws_every_pad_and_label_over_it(self):
         root = self.draw()
@@ -280,9 +281,8 @@ class TheBuildDrawsAKeptPictureTest(unittest.TestCase):
         self.assertTrue(any(rect.get("fill") == "#16202a" for rect in board.iter(SVG + "rect")))
 
     def test_the_sheet_draws_with_the_build_s_makers(self):
-        renderer = next(one for one in sheet.DRAWING_RENDERERS if isinstance(one, svg_diagram.SvgBreadboardDiagram))
-        self.assertIsInstance(renderer.scene_maker.pictures, MadePartPictures)
-        self.assertEqual([maker.NAME for maker in renderer.scene_maker.pictures.chain.makers], ["stored", "features"])  # P956
+        self.assertIsInstance(sheet.SCENE_MAKER.pictures, MadePartPictures)
+        self.assertEqual([maker.NAME for maker in sheet.SCENE_MAKER.pictures.chain.makers], ["stored", "features"])  # P956
 
 
 if __name__ == "__main__":
