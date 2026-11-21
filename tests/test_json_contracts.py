@@ -305,6 +305,9 @@ class TheBenchCodesTableTest(unittest.TestCase):
                          sorted(shared))
         self.assertEqual([build_codes.CODES[code] for code in shared], [table.CODES[code] for code, table in shared.items()])
         self.assertEqual(build_codes.CODES["tool_missing"], firmware_codes.CODES["tool_missing"])
+        # P935 PR 5: two pairs hold one fix (the other two hold the build's own, R5 of rows/p935-build.md)
+        self.assertEqual(build_codes.BOARD_UNUSABLE.fix, design_codes.BOARD_UNUSABLE.fix)
+        self.assertEqual(build_codes.INPUT_AMBIGUOUS.fix, check_codes.INPUT_AMBIGUOUS.fix)
         # P716: two records codes are equal literals of another leaf, with the same sentence; no other code is shared
         others += (build_codes,)
         self.assertEqual(sorted(code for code in records_codes.CODES if any(code in other.CODES for other in others)),
@@ -372,13 +375,15 @@ class TheBenchCodesTableTest(unittest.TestCase):
 
 #: P853: each area whose codes are Codes, with its table. An area joins when its codes take their fix (P935).
 AREAS_WITH_FIXES = {"idea": idea_codes, "core": codes, "records": records_codes, "sourcing": sourcing_codes, "design": design_codes,
-                   "checks": check_codes}
+                   "checks": check_codes, "build": build_codes}
 #: P935: the tables whose Codes an area names besides its own: the core's, which every Operation writes, and the records'.
 NAMED_TOO = {"records": (codes,), "sourcing": (records_codes, codes), "design": (records_codes, codes), "checks": (codes,)}
 #: P935 PR 4b: the foreign Codes an area names one by one, by table: checks names two of the records' (vendor_pins_check.py) and one of
 #: design's (check.py's DesignError); another Code of those tables is named.
 NAMED_CODES = {"checks": {records_codes: (records_codes.BOARD_FILE_MISSING, records_codes.RECORD_FILE_BROKEN),
-                          design_codes: (design_codes.NO_PROJECT_FOLDER,)}}
+                          design_codes: (design_codes.NO_PROJECT_FOLDER,)},
+               # P935 PR 5: build names one of the records' (build_record.py's two reads of a record file)
+               "build": {records_codes: (records_codes.RECORD_FILE_BROKEN,)}}
 #: P935: the one given fix that is no Code's: the override a CLI injects through `HelpText` (parts.py's describe route).
 INJECTED_FIXES = {"text.bad_argument_fix"}
 #: P935: each fix given with the code of a refusal its site caught, by the site (the file in its area and the function)
@@ -395,7 +400,9 @@ CODE_AT = {"Refusal": 1, "ImpossibleError": 1, "RefusedInputError": 2, "CouldNot
 FORWARDED_CODES = {("check.py", "VendorPinsCheck.call", "result['reason'].code"),  # vendor_pins_check.check_board's Refusal
                    ("rules_check.py", "could_not_run", "code"),  # the helper's parameter: each call of it is scanned
                    ("board_emitter.py", "read_inputs", "no_footprint.code"),  # why_no_footprint's or why_wrong_kind's Refusal
-                   ("board_emitter.py", "board_file", "code")}  # PART_GAPS: a test pins each code
+                   ("board_emitter.py", "board_file", "code"),  # PART_GAPS: a test pins each code
+                   # P935 PR 5: each Stage's code is its ending's Code of build_codes (test_stages pins by identity) or a design error's (the design scan)
+                   ("build_service.py", "findings_of", "stage.code")}
 
 
 def dotted(node):
@@ -666,6 +673,69 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
     def test_the_checks_codes_hold_the_fix_the_po_read(self):
         self.assertEqual({str(code): code.fix for code in check_codes.CODES}, self.CHECK_FIXES)
         self.assertEqual(len(check_codes.CODES), 19)
+
+    #: P935 PR 5: the fix of each of the build's 26 codes, as the PO read it (the plan check changed twelve)
+    BUILD_FIXES = {
+        "board_unusable":
+            # byte-equal in design_codes (the pair test)
+            "fix the board record the sentence names, or give a board id that boards.py --list shows",
+        "board_only_with_parts":
+            'in the requirements file, remove "board_only": true to build the parts, or remove the parts to build the board alone, then build again',
+        "no_parts":
+            'add the parts to the requirements file (`parts.py --requirements` writes them), or add "board_only": true if the project runs on the board alone, then build again',
+        "stage_crashed":
+            "if the sentence names a file of yours, fix that file and build again. Otherwise report it at https://github.com/xmejkal/spark/issues with the sentence and the command you ran",
+        "stage_timed_out":
+            "build again. If it runs past its limit again, report it at https://github.com/xmejkal/spark/issues with the sentence and the command you ran",
+        "schematic_refused":
+            "do what the sentence asks in the part record or the requirements file that it names, then build again",
+        "schematic_noted":
+            "tell the person each note. If a value the emitter assumed is wrong, write the right one in the part record or the requirements file that the note names, then build again",
+        "tool_missing":
+            "ask the person to run /spark:setup, which installs the tool that the sentence names, then build again",
+        "tool_cannot_build":
+            "ask the person to run /spark:setup, or `npm i @tscircuit/cli` in the project folder, then build again",
+        "design_not_built":
+            "fix the first error or the engine's last lines that the sentence shows, in the requirements file or a part record, then build again",
+        "not_routed":
+            "build again with one part fewer to find the part whose net cannot be routed, then fix that part's record. If no part is at fault, report it at https://github.com/xmejkal/spark/issues with the requirements file",
+        "part_stranded":
+            "join the part that the sentence names to the net it is missing, in its record's pins or in the requirements file, then build again",
+        "simulation_fact_missing":
+            "add simulation.wokwi, or simulation.skip with a reason, to the record that the sentence names (/spark:research finds the facts), then build again. The board built",
+        "chip_not_compiled":
+            "if the sentence says the chip has no compiled binary, ask the person to run /spark:setup. Otherwise fix the error it shows in the chip's .chip.c beside its record. Then build again",
+        "board_not_in_wokwi":
+            "if Wokwi has a part for this board, write it in the board record's wokwi_part_type and build again. Else test the firmware on the board itself: the board built",
+        "converter_lacks_part":
+            "test that part on the bench. The design built. Report the component that the sentence names at https://github.com/xmejkal/spark/issues so that the converter can map it",
+        "no_diagram":
+            # the same text as stage_crashed
+            "if the sentence names a file of yours, fix that file and build again. Otherwise report it at https://github.com/xmejkal/spark/issues with the sentence and the command you ran",
+        "diagram_unwired":
+            "report it at https://github.com/xmejkal/spark/issues with the requirements file: the converter wired none of the parts",
+        "board_only":
+            "nothing to fix: the firmware is written for the board alone; firmware/pins.py, written with --keep, holds the pin map",
+        "every_part_skipped":
+            "nothing to fix in the design: no simulation shows these parts, so test them on the bench; each record's simulation.skip says why",
+        "no_project_folder":
+            "give --project a folder that exists, or run init_project.py from the project folder",
+        "tools_file_unreadable":
+            "fix the tools file that the sentence names so that it holds JSON, or move it away, then run init_project.py again",
+        "unknown_board":
+            "give --board one of the boards that the sentence lists, then run init_project.py again",
+        "answers_unusable":
+            "fix the file that the sentence names: the answers must be one JSON object of the brief's fields that it lists, or fix the brief that it names. Then run init_project.py again",
+        "nothing_to_do":
+            "nothing to fix: the project is set up. Give --force to merge what is derived into rules.json, which keeps your answers",
+        "input_ambiguous":
+            # byte-equal in check_codes (the pair test)
+            "pick one of the files the sentence lists and give it with the flag the sentence names, then run again",
+    }
+
+    def test_the_build_s_codes_hold_the_fix_the_po_read(self):
+        self.assertEqual({str(code): code.fix for code in build_codes.CODES}, self.BUILD_FIXES)
+        self.assertEqual(len(build_codes.CODES), 26)
 
     def test_each_code_constant_of_the_table_is_a_word_of_codes_with_that_word_s_meaning(self):
         # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word;

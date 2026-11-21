@@ -501,7 +501,7 @@ def verdict(stages):
 def findings_of(stages):
     """The Findings of the chain, by the rule `verdict` answers by (P804): one for each stage that found problems or could
     not run, of its status, with the stage's name as the subject, its detail as the sentence and its own code."""
-    return [Finding(stage.status, stage.name, stage.code, stage.detail, None) for stage in stages if stage.status in (PROBLEMS, COULD_NOT_RUN)]
+    return [Finding.of(stage.status, stage.name, stage.code, stage.detail) for stage in stages if stage.status in (PROBLEMS, COULD_NOT_RUN)]
 
 
 def vouches_for_a_build(stages):

@@ -36,9 +36,9 @@ class Stage:
 
 class StageEnding(namedtuple("StageEnding", "code status message")):
     """
-    Value: one way a stage ends that is not ok: its `code` (build_codes), its status, and `message`, the template of the
-    stage's detail. The code is None only for DESIGN_ERROR, whose code is the design error's own. Every message
-    is filled with %, so a literal % is written %%.
+    Value: one way a stage ends that is not ok: its `code` (a Code of build_codes, with its meaning and its fix), its
+    status, and `message`, the template of the stage's detail. The code is None only for DESIGN_ERROR, whose code is the
+    design error's own. Every message is filled with %, so a literal % is written %%.
     """
 
 

@@ -6,7 +6,6 @@ endings (`_endings`), so the help and the page list each stage and how it can en
 
 import textwrap
 
-from spark.build import build_codes
 from spark.core.operation_help_table import table_cell
 
 # --- MVP ---
@@ -23,7 +22,7 @@ TABLE_HEAD = ("| stage | what it is | how it ends when not ok |", "|---|---|---|
 
 class StageHelpTable:
     """Renderer: each stage's name and summary, then one line for each status and code it can end with, the code's
-    meaning from `build_codes.CODES`. It takes StageDefinitions and decides nothing again."""
+    `meaning`. It takes StageDefinitions and decides nothing again."""
 
     @staticmethod
     def render(definitions):
@@ -61,7 +60,7 @@ def _endings(definition, code_said):
 
 
 def _code_and_meaning(code):
-    return "%s: %s" % (code, build_codes.CODES[code])
+    return "%s: %s" % (code, code.meaning)
 
 
 def _code_alone(code):
