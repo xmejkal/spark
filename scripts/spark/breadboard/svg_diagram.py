@@ -4,8 +4,9 @@ The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Rend
 the holes and the gap band from the surface, and the marks that `board_marks` made, P969, with their `BoardPalette`,
 P953), and each jumper's pill. `breadboard_scene` makes the scene (P969): it routes each jumper (`wire_routing`), places
 each pill (`wire_pills`), each part's caption (`part_captions`) and each pad's label, picks each wire's colour, says each
-pad's state, and writes each part's line of the note, so this module places nothing and decides nothing: it draws the
-scene in px. Moved out of `drawing`, whose planner it reads. `sheet` writes the file.
+pad's state, and writes each part's line of the note, so this module places no label and decides no state or warning:
+it draws the scene in px, on a canvas framed round it with the note under it. Moved out of `drawing`, whose planner it
+reads. `sheet` writes the file.
 """
 
 import collections
