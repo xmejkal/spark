@@ -24,20 +24,26 @@ needs, parts, requirements, build, breadboard, firmware, simulate and deploy. Ea
 could-not-run, not-started, partial or stale, or none), who does it (you, claude or your terminal), what it says and its
 offers. The idea has no status. A hand-written project (requirements.json and no needs) has none for its needs and
 parts. Written firmware and a simulated image have none, because what their sentences say is for you to judge. An offer
-is a key, such as pick:soil:x-led, with one line that says what taking it does. flow.py runs no offer. The last line
-names the first phase that is not done.
+is a key, such as pick:soil:x-led, with a label (the words of its button, such as Build the board), its effect (plain
+sentences that name every write it makes) and makes_stale (the phases it can make out of date, only those that hold
+something now). flow.py runs no offer. The last line names the first phase that is not done.
 
 flow.py page writes page.html in the project: the same phases, each with its status word and a mark, the wiring of a built
 project (the lines before power, then the steps, one at a time or all at once) and the pictures the project holds: the
 breadboard, and the schematic and the PCB that the build with --keep kept as files. The page adds no tick of its own: a
 phase that is not ok never shows one. Only the build with --keep draws the schematic and the PCB. The page does not know
-whether the board is wired or flashed. With --json it prints data.file, data.did, data.stands_at and data.phases (each
-phase and its status).
+whether the board is wired or flashed. Each offer shows its label and its effect. The page's <body> carries
+data-fingerprint (the first 12 hex digits of the fingerprint) and data-written (the newest change time of the three files
+below). With --json it prints data.file, data.did, data.stands_at, data.phases (each phase and its status) and
+data.fingerprint.
+
+The fingerprint is the sha256 of the current offers and of .spark/needs.json, requirements.json and .spark/build.json. It
+changes when an offer or one of these files changes, and with no other file.
 
 The build phase reads .spark/build.json, which check_spine.py --keep writes when its folder is a project. It is stale when
 requirements.json changed after that build.
 
-With --json it prints one envelope: data.phases and data.stands_at (docs/guide/agents/flow.md).
+With --json it prints one envelope: data.phases, data.stands_at and data.fingerprint (docs/guide/agents/flow.md).
 
 Exit codes: 0 no phase holds problems or could not run, 1 a phase holds problems (a need that cannot be matched,
 requirements the picks cannot give, a build that failed, a firmware line in sim/wokwi.toml that spark cannot use), 2 a

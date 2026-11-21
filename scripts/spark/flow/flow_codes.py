@@ -54,7 +54,7 @@ LOOK_FIRST_MESSAGE = "ask Claude to look at the board first"
 SCENARIO_COMMAND = "run ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml in your terminal: it uses Wokwi CI minutes"
 DEPLOY_COMMAND = "then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in your terminal"
 
-#: The phases each kind of offer may make out of date (P829). An offer names one only when the phase holds something now
+#: The phases each kind of offer can make out of date (P829). An offer names one only when the phase holds something now
 #: (`phase_readers.makes_stale`). The build makes none: the simulation's own staleness is P880's.
 MAKES_STALE = {PICK: (REQUIREMENTS,), WRITE_REQUIREMENTS: (BUILD, BREADBOARD), BUILD_BOARD: ()}
 
@@ -63,7 +63,7 @@ PICK_LABEL = "Pick %s for %s"
 DROP_LABEL = "Drop the %s need"
 REQUIREMENTS_LABEL = "Write the parts list"
 BUILD_LABEL = "Build the board"
-#: The effect of each offer: plain sentences that name every write (P829; the PO, 2026-11-21). The real run on a copy of
+#: The effect of each offer: plain sentences that name every write (P829, the PO, 2026-11-21). The real run on a copy of
 #: button-light showed each one (docs/observations/rows/p829-run-request.md).
 PICK_MESSAGE = "Saves %s as the pick for the %s need in this project."
 RESERVE_MESSAGE = "Uses 1 of your %s %s for the %s."

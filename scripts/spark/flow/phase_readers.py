@@ -34,7 +34,7 @@ MARKS = {OK: (None, "✓"), PROBLEMS: ("problems", "✗"), COULD_NOT_RUN: ("coul
 #: The reasons of a ProjectImage that say only that nothing was simulated yet; any other reason is a problem.
 NOT_SIMULATED_YET = (firmware_codes.NO_SIM_TOML, firmware_codes.NO_IMAGE)
 #: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (the words of its button), its effect (plain
-#: sentences that name every write taking it makes) and `makes_stale`, the phases it may make out of date (P829).
+#: sentences that name every write taking it makes) and `makes_stale`, the phases it can make out of date (P829).
 Offer = namedtuple("Offer", "key label effect makes_stale")
 #: The file whose presence says a phase holds something now, for `makes_stale`.
 HELD_FILES = {flow_codes.REQUIREMENTS: Path(REQUIREMENTS_FILE), flow_codes.BUILD: BUILD_RECORD_FILE,
@@ -94,7 +94,7 @@ def read_built_from(project):
 
 
 def makes_stale(project, kind):
-    """The phases an offer of `kind` may make out of date in `project`: those of `flow_codes.MAKES_STALE` that hold
+    """The phases an offer of `kind` can make out of date in `project`: those of `flow_codes.MAKES_STALE` that hold
     something now (`HELD_FILES`). A phase that holds nothing cannot go out of date."""
     held = {phase for phase, name in HELD_FILES.items() if (Path(project) / name).is_file()}
     return tuple(phase for phase in flow_codes.MAKES_STALE[kind] if phase in held)

@@ -493,6 +493,16 @@ One thing a need can match: a record with the drawer entries that say they are i
 It lives in `scripts/spark/sourcing/matching.py` as `Offer`. `parts.py --offer KEY` prints its whole text. **The
 failure behind it:** a chooser saw only a score and a label for a candidate, not what the part says of itself.
 
+### Fingerprint
+
+The sha256 of a project's flow as a click sees it: the current offers of `flow.py show` (each key, effect and
+makes_stale, as canonical JSON) and the bytes of `.spark/needs.json`, `requirements.json` and `.spark/build.json`
+(`fingerprint_of` in `scripts/spark/flow/fingerprint.py`, P829). `flow.py show --json` and `flow.py page --json` print
+it, and the page carries its first 12 hex digits as `data-fingerprint`. A missing file counts apart from an empty one.
+No other file changes it. **The failure behind it:** a hash of the project's files alone misses the drawer. A pick's
+effect says "You have none, so it goes on the list to get." until the person adds three to the drawer, and then "Uses 1
+of your 3 …", with no file of the project changed. So the offers count too.
+
 ### Fit
 
 One offer as a matcher sees it for one need: a `score` from 0 to 1, the reasons (`why`), and `exact`, which is what

@@ -2,7 +2,7 @@
 The fingerprint of a project's flow (P829): the sha256 of its current offers and of the three files a click changes, so a
 page that was read before the project changed can be told apart from the project now. The offers count, because one
 reads the drawer: "You have none" becomes "Uses 1 of your 3" with no file of the project changed. The page carries its first
-SHORT hex digits; the person never sees it.
+SHORT hex digits. The person never sees it.
 """
 
 import hashlib
