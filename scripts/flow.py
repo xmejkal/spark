@@ -38,7 +38,7 @@ below). With --json it prints data.file, data.did, data.stands_at, data.phases (
 data.fingerprint.
 
 The fingerprint is the sha256 of the current offers and of .spark/needs.json, requirements.json and .spark/build.json. It
-changes when an offer or one of these files changes, and with no other file.
+changes when an offer or one of these files changes. No other file of the project changes it, except through an offer.
 
 The build phase reads .spark/build.json, which check_spine.py --keep writes when its folder is a project. It is stale when
 requirements.json changed after that build.
