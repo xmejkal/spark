@@ -12,6 +12,7 @@ import datetime
 import html
 import html.parser
 import io
+import itertools
 import json
 import os
 import re
@@ -35,7 +36,7 @@ from spark.build.build_record import BuildRecordStore, sha256_of  # noqa: E402
 from spark.breadboard.tabbed_page import SvgExportResult  # noqa: E402
 from spark.build.stages import Stage  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, OK, SKIPPED  # noqa: E402
-from spark.breadboard import sheet  # noqa: E402
+from spark.breadboard import before_power, sheet  # noqa: E402
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
@@ -507,6 +508,11 @@ class ParsedWiring(html.parser.HTMLParser):
         self._stack.pop()
 
 
+#: P828 step 2: the line under the title, and its second sentence when the page holds wiring steps, as the PO reads them.
+PAGE_INTRO = "Where this project stands. This page only shows it. To change anything, tell Claude in the chat."
+WIRING_FIRST = "The wiring and its pictures come first. The phases are below, each folded: click one to read it."
+
+
 def page_of_wiring(wiring, pictures=()):
     """The text of a page whose wiring is `wiring`, on one fake phase."""
     store = FakeStore()
@@ -568,8 +574,14 @@ class TheWiringTest(unittest.TestCase):
 
     def test_the_before_power_heading_and_lines_come_before_the_first_step(self):
         self.assertIn(("h3", "Before you power it"), self.parsed.headings)
-        self.assertEqual(len(self.parsed.before), len(self.data.before_power.items))
-        self.assertTrue(self.data.before_power.items)
+        items = self.data.before_power.items
+        # P828 step 2: a part's host requirements stand under its name, given once as a line of its own.
+        heads = [line for line in self.parsed.before if line in {item.subject for item in items}]
+        self.assertEqual(len(self.parsed.before) - len(heads), len(items))
+        runs = [len(list(run)) for _key, run in itertools.groupby(
+            items, key=lambda item: (item.record, item.subject) if item.kind == "host-requirement" else id(item))]
+        self.assertEqual(len(heads), sum(1 for size in runs if size > 1), "one name line for each run of two or more")
+        self.assertTrue(items)
         first = self.text.index('id="step-1"')
         self.assertLess(self.text.index("<h3>Before you power it</h3>"), first)
         self.assertLess(self.text.index("</ul>"), first)
@@ -581,11 +593,15 @@ class TheWiringTest(unittest.TestCase):
         self.assertNotIn("<li>", steps)
         self.assertNotIn("Before you power it", steps)
 
-    def test_the_section_stands_between_the_last_phase_and_the_pictures_with_a_link_in_the_rail(self):
+    def test_a_page_with_a_sheet_opens_on_the_wiring_then_the_pictures_then_the_phases_with_a_link_in_the_rail(self):
+        # P828 step 2 (the PO, 2026-11-21: "it just doesn't guide a person"): the person at the bench finds step 1 first.
         text = page_of_wiring(PageWiring(THREE, [], [], None), THREE_PICTURES)
-        order = [text.index(mark) for mark in ('id="phase-one"', '<section id="wiring">', '<section id="pictures">')]
+        order = [text.index(mark) for mark in ('<section id="wiring">', '<section id="pictures">', '<section class="legend">',
+                                                'id="phase-one"', '<section class="notes">')]
         self.assertEqual(order, sorted(order))
-        self.assertIn('</ol><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a></nav>', text)
+        self.assertIn(WIRING_FIRST, text)
+        # The rail follows the page: the wiring and its pictures first, then the phases.
+        self.assertIn('<nav aria-label="Phases"><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a><ol>', text)
         self.assertEqual(len(Parsed(text).rail), 1)
 
     def test_the_section_holds_its_heading_the_fixed_sentence_the_lines_the_link_and_the_steps_in_that_order(self):
@@ -1139,6 +1155,63 @@ class TheKeepStepTest(unittest.TestCase):
         self.assertEqual(err.getvalue().count("no page: the flow page could not be written (TypeError)"), 0)
         self.assertIn("wrote " + str(project / "page.html"), err.getvalue())
         self.assertIn("is no build record", (project / "page.html").read_text(encoding="utf-8"))
+
+
+class TheGuidingOrderTest(unittest.TestCase):
+    """P828 step 2: the line under the title, the order with no sheet, the folded phases and the grouped lines before power."""
+
+    def test_a_page_with_no_sheet_keeps_the_phases_first_and_says_no_wiring_comes_first(self):
+        for wiring in (PageWiring([], [], [], "no sheet yet"), None):
+            text = page_of_wiring(wiring, THREE_PICTURES)
+            order = [text.index(mark) for mark in ('id="phase-one"', '<section id="pictures">')]
+            self.assertEqual(order, sorted(order), wiring)
+            self.assertNotIn(WIRING_FIRST, text)
+
+    def test_with_no_wiring_steps_every_phase_stands_open_and_the_rail_keeps_its_links_last(self):
+        text = page_of_wiring(None, THREE_PICTURES)
+        self.assertIn("<details open><summary><h2>", text)
+        self.assertNotIn("<details><summary>", text)
+        self.assertIn('</ol><a href="#pictures">Pictures</a></nav>', text)
+
+    def test_a_rail_link_targets_the_text_inside_the_fold_so_the_browser_opens_it(self):
+        # A fragment inside a closed <details> (not its summary) opens it, with no script (HTML's ancestor revealing).
+        text = page_of_wiring(PageWiring(THREE, [], [], None), THREE_PICTURES)
+        section = text.split('<section class="phase"')[1].split("</section>")[0]
+        self.assertIn('<a href="#phase-one">', text)
+        self.assertLess(section.index("</summary>"), section.index('<div id="phase-one">'))
+        self.assertLess(section.index('<div id="phase-one">'), section.index("Done by:"))
+        self.assertEqual(text.count('id="phase-one"'), 1)
+
+    def test_the_intro_stands_under_the_title_and_above_the_rail(self):
+        text = page_of_wiring(None, THREE_PICTURES)
+        self.assertLess(text.index("</h1>"), text.index(PAGE_INTRO))
+        self.assertLess(text.index(PAGE_INTRO), text.index('<nav aria-label="Phases">'))
+
+    def test_every_phase_is_folded_closed_under_a_summary_that_holds_its_heading(self):
+        text = page_of_wiring(PageWiring(THREE, [], [], None), THREE_PICTURES)
+        sections = text.split('<section class="phase"')[1:]
+        self.assertTrue(sections)
+        for section in sections:
+            body = section.split("</section>")[0]
+            self.assertEqual(body.count("<details>"), 1)
+            self.assertNotIn("<details open", body)
+            self.assertLess(body.index("<details><summary><h2>"), body.index("</h2></summary>"))
+            self.assertLess(body.index("</h2></summary>"), body.index("Done by:"))
+
+    def test_host_requirements_of_one_part_stand_under_its_name_once_and_a_conflict_stands_alone(self):
+        html_list = before_power.BeforePowerHtmlList()
+        def item(kind, subject, said):
+            return {"kind": kind, "subject": subject, "pin": "GPIO4", "record": "r", "said": said, "users": []}
+        host, conflict = "host-requirement", "conflict"
+        lines = html_list.items([item(host, "Panel", "one"), item(host, "Panel", "two"), item(conflict, "Panel", "short"),
+                                 item(host, "Panel", "three"), item(host, "Other", "four")])
+        self.assertEqual(lines[0], "<li><strong>Panel</strong><ul><li>one</li><li>two</li></ul></li>")
+        signs = html_list.items([item(host, "A&B", "x < y"), item(host, "A&B", "z")])
+        self.assertEqual(signs, ["<li><strong>A&amp;B</strong><ul><li>x &lt; y</li><li>z</li></ul></li>"])
+        two_records = [dict(item(host, "Panel", "one"), record="a"), dict(item(host, "Panel", "two"), record="b")]
+        self.assertEqual(html_list.items(two_records), ["<li>Panel: one</li>", "<li>Panel: two</li>"])
+        self.assertIn("CONFLICT", lines[1])
+        self.assertEqual(lines[2:], ["<li>Panel: three</li>", "<li>Other: four</li>"])
 
 
 if __name__ == "__main__":

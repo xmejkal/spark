@@ -7,6 +7,7 @@ page reads; `BeforePowerList` gives the sheet's "Before you power it" lines from
 
 import collections
 import html
+import itertools
 import re
 
 from spark.design import board_components, power_rails
@@ -116,8 +117,25 @@ class BeforePowerHtmlList:
         return "<li>%s</li>" % text
 
     def items(self, items):
-        """One `<li>` line for each item (a dict), in the order given."""
-        return [self.templates[item["kind"]].format(**self._fields(item)) for item in items]
+        """One `<li>` line for each item (a dict), in the order given. A run, the host requirements of one record that
+        stand together, is one `<li>` (P828 step 2): the part's name once, then the run's lines, so a long name is not
+        read eight times. Any other kind stands alone, so a CONFLICT never joins a run."""
+        lines = []
+        for _key, run in itertools.groupby(items, key=self._run_key):
+            run = list(run)
+            lines.append(self._host_run(run) if len(run) > 1 else self.templates[run[0]["kind"]].format(**self._fields(run[0])))
+        return lines
+
+    @staticmethod
+    def _run_key(item):
+        """The key that joins neighbours into a run: a host requirement's record and name, else a key of its own."""
+        return (HOST_REQUIREMENT, item["record"], item["subject"]) if item["kind"] == HOST_REQUIREMENT else object()
+
+    @staticmethod
+    def _host_run(run):
+        """A run as one `<li>`: the part's name in `<strong>`, then a list of the run's lines."""
+        said = "".join("<li>%s</li>" % html.escape(str(item["said"])) for item in run)
+        return "<li><strong>%s</strong><ul>%s</ul></li>" % (html.escape(str(run[0]["subject"])), said)
 
     @staticmethod
     def _fields(item):

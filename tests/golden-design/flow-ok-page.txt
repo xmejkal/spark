@@ -6,11 +6,12 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>button light circuit</title>
-<style>:root{--bg:#eef1f3;--ink:#1c262e;--muted:#566570;--line:#c3ccd3;--signal:#c8500f;--backdrop:#fff;--display:ui-serif,Georgia,serif;--body:system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:light}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}}:root[data-theme="dark"]{--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}body{max-width:1180px;margin:0 auto;padding:12px 16px;font:16px/1.55 var(--body);background:var(--bg);color:var(--ink)}h1,h2{font-family:var(--display);line-height:1.2}nav ol{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:0;padding:0}a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}.phase{border-top:1px solid var(--line);padding:4px 0}p,li{overflow-wrap:anywhere}img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}.fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:6px}.fig svg{display:block;width:100%;height:auto}.pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;color:var(--muted)}.sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;vertical-align:-2px;border:1px solid var(--line)}#steps>li .nav{display:none}#steps>li:target .nav{display:block}#steps:has(>li:target)>li:not(:target){display:none}@media print{#steps>li{display:list-item!important}#steps .nav{display:none!important}}</style>
+<style>:root{--bg:#eef1f3;--ink:#1c262e;--muted:#566570;--line:#c3ccd3;--signal:#c8500f;--backdrop:#fff;--display:ui-serif,Georgia,serif;--body:system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:light}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}}:root[data-theme="dark"]{--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}body{max-width:1180px;margin:0 auto;padding:12px 16px;font:16px/1.55 var(--body);background:var(--bg);color:var(--ink)}h1,h2{font-family:var(--display);line-height:1.2}nav ol{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:0;padding:0}a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}.phase{border-top:1px solid var(--line);padding:4px 0}summary{cursor:pointer}summary h2{display:inline}p,li{overflow-wrap:anywhere}img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}.fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:6px}.fig svg{display:block;width:100%;height:auto}.pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;color:var(--muted)}.sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;vertical-align:-2px;border:1px solid var(--line)}#steps>li .nav{display:none}#steps>li:target .nav{display:block}#steps:has(>li:target)>li:not(:target){display:none}@media print{#steps>li{display:list-item!important}#steps .nav{display:none!important}}</style>
 </head>
 <body data-stands-at="build" data-fingerprint="b43d63777aab" data-written="<time>">
 <h1>button light circuit</h1>
-<nav aria-label="Phases"><ol>
+<p class="intro">Where this project stands. This page only shows it. To change anything, tell Claude in the chat. The wiring and its pictures come first. The phases are below, each folded: click one to read it.</p>
+<nav aria-label="Phases"><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a><ol>
 <li data-phase="idea" data-status="none"><a href="#phase-idea"><span aria-hidden="true">·</span> idea <span>not checked by spark</span></a></li>
 <li data-phase="needs" data-status="none"><a href="#phase-needs"><span aria-hidden="true">·</span> needs <span>not checked by spark</span></a></li>
 <li data-phase="parts" data-status="none"><a href="#phase-parts"><span aria-hidden="true">·</span> parts <span>not checked by spark</span></a></li>
@@ -20,67 +21,16 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <li data-phase="firmware" data-status="none"><a href="#phase-firmware"><span aria-hidden="true">·</span> firmware <span>not checked by spark</span></a></li>
 <li data-phase="simulate" data-status="not-started"><a href="#phase-simulate"><span aria-hidden="true">○</span> simulate <span>not started</span></a></li>
 <li data-phase="deploy" data-status="not-started"><a href="#phase-deploy"><span aria-hidden="true">○</span> deploy <span>not started</span></a></li>
-</ol><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a></nav>
+</ol></nav>
 <p>The project stands at: build.</p>
-<section class="phase" id="phase-idea" data-phase="idea" data-status="none">
-<h2><span aria-hidden="true">·</span> idea <span>not checked by spark</span></h2>
-<p>Done by: you</p>
-<p>Tell Claude your goal in the chat</p>
-</section>
-<section class="phase" id="phase-needs" data-phase="needs" data-status="none">
-<h2><span aria-hidden="true">·</span> needs <span>not checked by spark</span></h2>
-<p>Done by: claude</p>
-<p>a hand-written project: requirements.json and no needs</p>
-</section>
-<section class="phase" id="phase-parts" data-phase="parts" data-status="none">
-<h2><span aria-hidden="true">·</span> parts <span>not checked by spark</span></h2>
-<p>Done by: you</p>
-<p>a hand-written project: requirements.json and no needs</p>
-</section>
-<section class="phase" id="phase-requirements" data-phase="requirements" data-status="none">
-<h2><span aria-hidden="true">·</span> requirements <span>not checked by spark</span></h2>
-<p>Done by: claude</p>
-<p>requirements.json, with no needs to compare it with, so spark did not judge it</p>
-</section>
-<section class="phase" id="phase-build" data-phase="build" data-status="not-started">
-<h2><span aria-hidden="true">○</span> build <span>not started</span></h2>
-<p>Done by: claude</p>
-<p>no build recorded yet</p>
-<ul><li data-key="build">Build the board: Saves its files in this project: the board file and its footprint, the dist folder with the schematic and PCB pictures, the wiring sheet and its record, the breadboard picture, the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn, the pin map your firmware imports, the simulation files, the build record in .spark/build.json and this page. A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you changed is left alone. If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted. If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page are deleted. Runs no simulation and costs nothing.</li></ul>
-</section>
-<section class="phase" id="phase-breadboard" data-phase="breadboard" data-status="not-started">
-<h2><span aria-hidden="true">○</span> breadboard <span>not started</span></h2>
-<p>Done by: you</p>
-<p>no breadboard.md yet</p>
-</section>
-<section class="phase" id="phase-firmware" data-phase="firmware" data-status="none">
-<h2><span aria-hidden="true">·</span> firmware <span>not checked by spark</span></h2>
-<p>Done by: claude</p>
-<p>firmware/main.py written <time></p>
-</section>
-<section class="phase" id="phase-simulate" data-phase="simulate" data-status="not-started">
-<h2><span aria-hidden="true">○</span> simulate <span>not started</span></h2>
-<p>Done by: your terminal</p>
-<p>no sim/wokwi.toml in &lt;project&gt;: build with /spark:build --keep . first</p>
-<p>run ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/&lt;name&gt;.scenario.yaml in your terminal: it uses Wokwi CI minutes</p>
-</section>
-<section class="phase" id="phase-deploy" data-phase="deploy" data-status="not-started">
-<h2><span aria-hidden="true">○</span> deploy <span>not started</span></h2>
-<p>Done by: your terminal</p>
-<p>ask Claude to look at the board first</p>
-<p>then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in your terminal</p>
-</section>
 <section id="wiring">
 <h2>Wiring</h2>
 <p>Read the lines before power first.</p>
 <h3>Before you power it</h3>
 <ul>
 <li>TactileButton A has no resistor: the firmware must pull it up with Pin.PULL_UP, as <code>pins.py</code> says (P204)</li>
-<li>6x6 mm tactile push button: Decide the polarity against deep sleep, not convenience. MicroPython&#x27;s esp32.wake_on_ext1(pins, level) takes ONE level for every pin in the mask, on every chip (ports/esp32/modesp32.c, v1.29.0), so a board with two wake sources must have them assert in the same direction. Both directions are an OR on the S3 and C6: WAKEUP_ALL_LOW is a true AND only on the original ESP32, and ESP-IDF aliases it to ANY_LOW on every later chip (components/esp_hw_support/include/esp_sleep.h, v5.5.2). Prefer wiring a wake button to 3V3 behind a pull-down and arming WAKEUP_ANY_HIGH: low-level wake has an open MicroPython bug, micropython#17334 (&#x27;stuck pin&#x27;, reported on a C6, v1.25.0). Corrected 2026-10-01 (spark P63): this line used to say ALL_LOW is an AND here, which is false on these chips.</li>
-<li>6x6 mm tactile push button: Debounce in firmware, not hardware, unless the button is also a wake source — a wake pin&#x27;s first edge is the one that matters and it is not debounced by anything.</li>
-<li>Kingbright L-7113ID 5 mm red LED: A series resistor between the GPIO and the anode, always: without it the LED&#x27;s current is set only by the pin&#x27;s drive strength, and it either runs far past 30 mA or droops the pin&#x27;s level.</li>
-<li>Kingbright L-7113ID 5 mm red LED: Keep it off the chip&#x27;s strapping pins: an LED and resistor to ground load the pin while the chip samples its straps at reset, and can change how it boots. (Reasoned from the circuit, not from this datasheet.)</li>
-<li>Kingbright L-7113ID 5 mm red LED: On a breadboard: the LONG lead (anode) goes to the resistor; the short lead, on the side of the flat in the rim, goes to ground. Once the leads are trimmed equal, the flat is the mark that survives.</li>
+<li><strong>6x6 mm tactile push button</strong><ul><li>Decide the polarity against deep sleep, not convenience. MicroPython&#x27;s esp32.wake_on_ext1(pins, level) takes ONE level for every pin in the mask, on every chip (ports/esp32/modesp32.c, v1.29.0), so a board with two wake sources must have them assert in the same direction. Both directions are an OR on the S3 and C6: WAKEUP_ALL_LOW is a true AND only on the original ESP32, and ESP-IDF aliases it to ANY_LOW on every later chip (components/esp_hw_support/include/esp_sleep.h, v5.5.2). Prefer wiring a wake button to 3V3 behind a pull-down and arming WAKEUP_ANY_HIGH: low-level wake has an open MicroPython bug, micropython#17334 (&#x27;stuck pin&#x27;, reported on a C6, v1.25.0). Corrected 2026-10-01 (spark P63): this line used to say ALL_LOW is an AND here, which is false on these chips.</li><li>Debounce in firmware, not hardware, unless the button is also a wake source — a wake pin&#x27;s first edge is the one that matters and it is not debounced by anything.</li></ul></li>
+<li><strong>Kingbright L-7113ID 5 mm red LED</strong><ul><li>A series resistor between the GPIO and the anode, always: without it the LED&#x27;s current is set only by the pin&#x27;s drive strength, and it either runs far past 30 mA or droops the pin&#x27;s level.</li><li>Keep it off the chip&#x27;s strapping pins: an LED and resistor to ground load the pin while the chip samples its straps at reset, and can change how it boots. (Reasoned from the circuit, not from this datasheet.)</li><li>On a breadboard: the LONG lead (anode) goes to the resistor; the short lead, on the side of the flat in the rim, goes to ground. Once the leads are trimmed equal, the flat is the mark that survives.</li></ul></li>
 </ul>
 <p>Each record whole, with what it asks of the board: <code>parts.py --show led-red-5mm</code>, <code>parts.py --show tactile-button</code>.</p>
 <p><a href="#step-1">One at a time: start at step 1</a></p>
@@ -103,6 +53,81 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <div class="picture"><h3>PCB</h3><p>Not drawn here. The build draws it: run /spark:build --keep.</p></div>
 </section>
 <section class="legend"><h2>Marks</h2><ul><li><span aria-hidden="true">✓</span> ok</li><li><span aria-hidden="true">✗</span> problems</li><li><span aria-hidden="true">?</span> could not run</li><li><span aria-hidden="true">○</span> not started</li><li><span aria-hidden="true">◐</span> partly done</li><li><span aria-hidden="true">↻</span> out of date</li><li><span aria-hidden="true">·</span> not checked by spark: spark does not judge this phase, so no mark says it is done</li></ul></section>
+<section class="phase" data-phase="idea" data-status="none">
+<details><summary><h2><span aria-hidden="true">·</span> idea <span>not checked by spark</span></h2></summary>
+<div id="phase-idea">
+<p>Done by: you</p>
+<p>Tell Claude your goal in the chat</p>
+</div>
+</details>
+</section>
+<section class="phase" data-phase="needs" data-status="none">
+<details><summary><h2><span aria-hidden="true">·</span> needs <span>not checked by spark</span></h2></summary>
+<div id="phase-needs">
+<p>Done by: claude</p>
+<p>a hand-written project: requirements.json and no needs</p>
+</div>
+</details>
+</section>
+<section class="phase" data-phase="parts" data-status="none">
+<details><summary><h2><span aria-hidden="true">·</span> parts <span>not checked by spark</span></h2></summary>
+<div id="phase-parts">
+<p>Done by: you</p>
+<p>a hand-written project: requirements.json and no needs</p>
+</div>
+</details>
+</section>
+<section class="phase" data-phase="requirements" data-status="none">
+<details><summary><h2><span aria-hidden="true">·</span> requirements <span>not checked by spark</span></h2></summary>
+<div id="phase-requirements">
+<p>Done by: claude</p>
+<p>requirements.json, with no needs to compare it with, so spark did not judge it</p>
+</div>
+</details>
+</section>
+<section class="phase" data-phase="build" data-status="not-started">
+<details><summary><h2><span aria-hidden="true">○</span> build <span>not started</span></h2></summary>
+<div id="phase-build">
+<p>Done by: claude</p>
+<p>no build recorded yet</p>
+<ul><li data-key="build">Build the board: Saves its files in this project: the board file and its footprint, the dist folder with the schematic and PCB pictures, the wiring sheet and its record, the breadboard picture, the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn, the pin map your firmware imports, the simulation files, the build record in .spark/build.json and this page. A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you changed is left alone. If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted. If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page are deleted. Runs no simulation and costs nothing.</li></ul>
+</div>
+</details>
+</section>
+<section class="phase" data-phase="breadboard" data-status="not-started">
+<details><summary><h2><span aria-hidden="true">○</span> breadboard <span>not started</span></h2></summary>
+<div id="phase-breadboard">
+<p>Done by: you</p>
+<p>no breadboard.md yet</p>
+</div>
+</details>
+</section>
+<section class="phase" data-phase="firmware" data-status="none">
+<details><summary><h2><span aria-hidden="true">·</span> firmware <span>not checked by spark</span></h2></summary>
+<div id="phase-firmware">
+<p>Done by: claude</p>
+<p>firmware/main.py written <time></p>
+</div>
+</details>
+</section>
+<section class="phase" data-phase="simulate" data-status="not-started">
+<details><summary><h2><span aria-hidden="true">○</span> simulate <span>not started</span></h2></summary>
+<div id="phase-simulate">
+<p>Done by: your terminal</p>
+<p>no sim/wokwi.toml in &lt;project&gt;: build with /spark:build --keep . first</p>
+<p>run ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/&lt;name&gt;.scenario.yaml in your terminal: it uses Wokwi CI minutes</p>
+</div>
+</details>
+</section>
+<section class="phase" data-phase="deploy" data-status="not-started">
+<details><summary><h2><span aria-hidden="true">○</span> deploy <span>not started</span></h2></summary>
+<div id="phase-deploy">
+<p>Done by: your terminal</p>
+<p>ask Claude to look at the board first</p>
+<p>then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in your terminal</p>
+</div>
+</details>
+</section>
 <section class="notes"><h2>Notes</h2><p>This page reads the project&#x27;s files. It does not know whether the board is wired or flashed.</p></section>
 </body>
 </html>

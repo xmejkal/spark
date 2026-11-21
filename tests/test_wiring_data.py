@@ -8,6 +8,7 @@ renderer's output.
 
 import contextlib
 import html
+import itertools
 import io
 import json
 import os
@@ -159,8 +160,14 @@ class TheHtmlLinesTest(unittest.TestCase):
             "off-board-supply", "conflict", "firmware-pull", "unused-pin", "host-requirement"})
         markdown = before_power.BeforePowerList().render(data.before_power)[:len(data.before_power.items)]
         lines = before_power.BeforePowerHtmlList().items([item._asdict() for item in data.before_power.items])
-        self.assertEqual([self.as_text(line) for line in lines],
-                         [line.removeprefix("- ").replace("**", "").replace("`", "") for line in markdown])
+        words = list(zip(data.before_power.items, [line.removeprefix("- ").replace("**", "").replace("`", "") for line in markdown]))
+        # P828 step 2: host requirements of one part that stand together are one line, its name once and then their words.
+        expected = []
+        for _key, run in itertools.groupby(words, key=lambda pair: (pair[0].record, pair[0].subject) if pair[0].kind == "host-requirement" else id(pair)):
+            run = list(run)
+            expected.append(run[0][1] if len(run) == 1 else run[0][0].subject + "".join(item.said for item, _line in run))
+        self.assertGreater(len(words), len(expected), "the motor fixture has a part with two host requirements")
+        self.assertEqual([self.as_text(line) for line in lines], expected)
         self.assertTrue(all(line.startswith("<li>") and line.endswith("</li>") for line in lines))
         self.assertIn("<strong>CONFLICT</strong>", "".join(lines))
         self.assertIn("<code>parts.py --show</code>", "".join(lines))

@@ -197,6 +197,7 @@ class FlowHtmlPage:
              "nav ol{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:0;padding:0}"
              "a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}"
              ".phase{border-top:1px solid var(--line);padding:4px 0}"
+             "summary{cursor:pointer}summary h2{display:inline}"
              "p,li{overflow-wrap:anywhere}"
              "img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}"
              ".fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:6px}"
@@ -208,10 +209,26 @@ class FlowHtmlPage:
     INLINER = SvgInliner()
 
     def text(self, page):
-        head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._rail(page), self._stands_at(page)]
-        body = [self._phase(phase) for phase in page.phases] + [self._wiring(page), self._pictures(page.pictures), self._legend(),
-                                                                  self._notes(page.notes)]
-        return "\n".join(head + [part for part in body if part] + ["</body>", "</html>"]) + "\n"
+        head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._intro(page), self._rail(page), self._stands_at(page)]
+        return "\n".join(head + [part for part in self._body(page) if part] + ["</body>", "</html>"]) + "\n"
+
+    @staticmethod
+    def _wiring_first(page):
+        """True when the page holds wiring steps to follow, so the wiring comes first and the phases are folded."""
+        return bool(page.wiring) and not page.wiring.why_missing
+
+    def _intro(self, page):
+        """What the page is and how to act on it, and, with a sheet, that the wiring comes first (P828 step 2)."""
+        said = [flow_codes.PAGE_INTRO] + ([flow_codes.WIRING_FIRST] if self._wiring_first(page) else [])
+        return '<p class="intro">%s</p>' % _text(" ".join(said))
+
+    def _body(self, page):
+        """With wiring steps, the wiring, its pictures and the marks come first and the phases after them, folded (P828
+        step 2): the person at the bench finds step 1 at once. Else the phases come first and open, as before."""
+        first = self._wiring_first(page)
+        phases = [self._phase(phase, folded=first) for phase in page.phases]
+        shown = [self._wiring(page), self._pictures(page.pictures), self._legend()]
+        return (shown + phases if first else phases + shown) + [self._notes(page.notes)]
 
     def _open(self, page):
         style = token_styles(self.TOKENS_LIGHT, self.TOKENS_DARK) + self.STYLE + (self.WIRING.STYLE if page.wiring else "")
@@ -237,17 +254,22 @@ class FlowHtmlPage:
                 self._data(phase), _text(phase["phase"]), _mark(shown), _text(phase["phase"]), _text(shown.word)))
         links = ['<a href="#wiring">%s</a>' % _text(flow_codes.WIRING_HEADING)] if page.wiring else []
         links += ['<a href="#pictures">Pictures</a>'] if page.pictures else []
+        if self._wiring_first(page):  # the rail follows the page: the wiring and its pictures first (P828 step 2)
+            return '<nav aria-label="Phases">%s<ol>\n%s\n</ol></nav>' % (" ".join(links), "\n".join(entries))
         return '<nav aria-label="Phases"><ol>\n%s\n</ol>%s</nav>' % ("\n".join(entries), " ".join(links))
 
-    def _phase(self, phase):
+    def _phase(self, phase, folded=False):
+        """A phase's section: its heading in a `<summary>`, its text in a `<div>` that holds the rail's target, so a rail
+        link opens a folded phase (a fragment inside a closed `<details>` opens it, with no script)."""
         shown = shown_phase(phase)
-        lines = ['<section class="phase" id="phase-%s" %s>' % (_text(phase["phase"]), self._data(phase)),
-                 "<h2>%s %s <span>%s</span></h2>" % (_mark(shown), _text(phase["phase"]), _text(shown.word)),
-                 "<p>Done by: %s</p>" % _text(phase["by"])]
+        lines = ['<section class="phase" %s>' % self._data(phase),
+                 "<details%s><summary><h2>%s %s <span>%s</span></h2></summary>" % (
+                     "" if folded else " open", _mark(shown), _text(phase["phase"]), _text(shown.word)),
+                 '<div id="phase-%s">' % _text(phase["phase"]), "<p>Done by: %s</p>" % _text(phase["by"])]
         lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
         offers = ['<li data-key="%s">%s: %s</li>' % (_text(offer["key"]), _text(offer["label"]), _text(offer["effect"]))
                   for offer in phase["offers"]]
-        return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</section>"])
+        return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</div>", "</details>", "</section>"])
 
     def _wiring(self, page):
         drawn = any(each.title == flow_codes.BREADBOARD_TITLE and each.svg for each in page.pictures)
