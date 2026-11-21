@@ -131,7 +131,6 @@ def _length(piece):
     return abs(x2 - x1) + abs(y2 - y1)
 
 
-
 def wire_boxes(jumpers, paths, pills, sizes=WIRE_SIZES_PX):
     """The BodyBoxes of the wires, which a caption keeps clear of: each piece with its white under-stroke, each end
     dot with its ring, and each pill."""

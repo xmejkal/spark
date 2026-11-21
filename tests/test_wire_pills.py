@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import suite_temp  # noqa: E402,F401
@@ -18,7 +19,10 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import wire_pills  # noqa: E402
+from spark.breadboard import board_marks, sheet, wire_pills, wire_routing  # noqa: E402
+from spark.breadboard.spacing import BodyBox  # noqa: E402
+
+DATA = ROOT / "tests" / "data" / "breadboard"
 
 
 class TheWirePillsTest(unittest.TestCase):
@@ -33,3 +37,17 @@ class TheWirePillsTest(unittest.TestCase):
     def test_the_wire_sizes_are_the_praised_pages_at_spark_s_pitch(self):
         self.assertEqual(tuple(wire_pills.WIRE_SIZES_PX), (4.0, 2.2, 3.0, 0.8))
         self.assertEqual(wire_pills.WIRE_SIZES_PX._fields, ("under_stroke", "stroke", "end_dot", "end_ring"))
+
+    def test_the_wire_boxes_are_each_piece_grown_by_half_the_under_stroke_then_each_end_hole_by_its_dot(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            layout = sheet._plan_layout(sheet._read_build(DATA / "button-light-xiao" / "requirements.json"))
+        bodies = [BodyBox.of(part, layout.geometry.part(part.type)) for part in layout.parts]
+        marks = board_marks.BoardMarks(layout.geometry.surface, board_marks.BoardPalette.load().sizes)
+        paths = wire_routing.TrackJumperRouter().route(layout, marks.obstacles(bodies))
+        grown = lambda x1, y1, x2, y2, by: BodyBox(min(x1, x2) - by, min(y1, y2) - by, max(x1, x2) + by, max(y1, y2) + by)
+        pieces = [grown(*a, *b, 2.0) for path in paths.values() for a, b in zip(path.points, path.points[1:])
+                  if a != b]
+        dots = [grown(hole.x, hole.y, hole.x, hole.y, 3.4) for jumper in layout.jumpers
+                for hole in (jumper.one, jumper.other)]
+        self.assertTrue(pieces and dots)
+        self.assertEqual(wire_pills.wire_boxes(layout.jumpers, paths, {}), pieces + dots)
