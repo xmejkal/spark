@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import suite_temp  # noqa: E402,F401
 import wiki_fixture as wiki  # noqa: E402
 from fakes import FakeStoreFetch  # noqa: E402
+from photo_fixture import photo_with_location  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -252,6 +253,18 @@ class FindDocumentsTest(unittest.TestCase):
         self.assertTrue(any("zip" in note["sentence"] for note in envelope["notes"]), envelope["notes"])
         self.find()
         self.assertEqual(self.fetch.asked.count(wiki.PAGE), 1, "a listed zip and a kept top view: a second run fetches nothing")
+
+    def test_a_top_view_whose_bytes_are_a_jpeg_is_kept_and_listed_with_no_location(self):
+        # a possible case: today's top view is a true PNG, but a .png name with JPEG bytes loses its GPS all the same,
+        # and the listed sha256 (the dry run's) is the kept file's (the real run's)
+        photo, latitude = photo_with_location()
+        self.fetch.answers[wiki.TOP_VIEW] = photo
+        envelope, code = self.find()
+        self.assertEqual(code, 0, envelope)
+        sha = self.record()["documents"][envelope["data"]["top_view"]["key"]]["sha256"]
+        kept = (store.place("sources") / sha / "f24d6c2eaa74dacadb153d6f43c12432_0x0.png").read_bytes()
+        self.assertNotIn(latitude, kept, "the coordinates are still in the file")
+        self.assertEqual(hashlib.sha256(kept).hexdigest(), sha)
 
     def test_the_answer_next_is_the_features_step_with_the_top_views_key(self):
         envelope, _ = self.find()

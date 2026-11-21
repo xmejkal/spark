@@ -53,6 +53,7 @@ from spark.sourcing import part_rules  # noqa: E402
 from spark.design import power_rails  # noqa: E402
 from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
+from photo_fixture import photo_with_location  # noqa: E402
 
 
 def in_store(home):
@@ -1617,18 +1618,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertTrue(any("facts.idle_ua" in p and "'ds'" in p for p in part_records.validate(definition,
                                                                                                 written(definition))))
 
-    @staticmethod
-    def _photo_with_location():
-        """A minimal JPEG whose EXIF carries a GPS block: latitude N 50° 5' 12.34" — as a phone writes it."""
-        import struct
-        latitude = struct.pack("<6I", 50, 1, 5, 1, 1234, 100)
-        tiff = (b"II*\x00" + struct.pack("<I", 8)
-                + struct.pack("<H", 1) + struct.pack("<HHII", 0x8825, 4, 1, 26) + struct.pack("<I", 0)
-                + struct.pack("<H", 2) + struct.pack("<HHI4s", 1, 2, 2, b"N\x00\x00\x00")
-                + struct.pack("<HHII", 2, 5, 3, 56) + struct.pack("<I", 0) + latitude)
-        exif = b"Exif\x00\x00" + tiff
-        return b"\xff\xd8\xff\xe1" + struct.pack(">H", len(exif) + 2) + exif + b"\xff\xd9", latitude
-
     def _keep_photo(self, payload, name="module.jpg"):
         import tempfile
         home = self._home(); store, local = home / "sources", Path(tempfile.mkdtemp()) / name
@@ -1643,7 +1632,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_a_kept_photo_does_not_say_where_it_was_taken(self):
         """P75: all five of irrigation's phone photos carried latitude, longitude and altitude."""
         import struct
-        photo, latitude = self._photo_with_location()
+        photo, latitude = photo_with_location()
         kept, said = self._keep_photo(photo)
         self.assertNotIn(latitude, kept, "the coordinates are still in the file")
         self.assertNotIn(b"N\x00\x00\x00", kept[kept.index(b"Exif"):], "the hemisphere is still in the file")
@@ -1652,10 +1641,20 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual(len(kept), len(photo), "nothing else in the file may move")
         self.assertIn("location", said.lower())
 
+    def test_jpeg_bytes_kept_under_a_png_name_do_not_say_where_they_were_taken(self):
+        import struct
+        photo, latitude = photo_with_location()
+        kept, said = self._keep_photo(photo, "module.png")
+        self.assertNotIn(latitude, kept, "the coordinates are still in the file")
+        gps_entries = struct.unpack_from("<H", kept, kept.index(b"II*\x00") + 26)[0]
+        self.assertEqual(gps_entries, 0, "the GPS block still lists entries")
+        self.assertEqual(len(kept), len(photo), "nothing else in the file may move")
+        self.assertIn("  removed the location (EXIF GPS) from module.png before keeping it\n", said)
+
     def test_the_photo_s_name_with_an_override_shows_as_a_question_mark_in_the_line_that_says_the_location_went(self):
         # P423: the name is the person's own; the store refuses it after the line was printed
         import tempfile
-        photo, _ = self._photo_with_location()
+        photo, _ = photo_with_location()
         local = Path(tempfile.mkdtemp()) / "mod\u202eule.jpg"
         local.write_bytes(photo)
         with in_store(self._home()), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
@@ -1665,7 +1664,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_a_store_that_cannot_be_written_refuses_the_photo_after_the_line_that_says_the_location_went(self):
         # P717 (the refuter): keep_local's OSError is answered by --keep itself, so its line is not lost
         import tempfile
-        photo, _ = self._photo_with_location()
+        photo, _ = photo_with_location()
         local = Path(tempfile.mkdtemp()) / "module.jpg"
         local.write_bytes(photo)
         home = self._home()
@@ -1680,9 +1679,11 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertTrue(said.startswith(location_went + "parts.py: --keep: "), said)
 
     def test_a_photo_with_no_location_and_any_other_file_are_kept_unchanged(self):
-        photo, _ = self._photo_with_location()
+        photo, _ = photo_with_location()
         plain = photo.replace(b"\x25\x88", b"\x0f\x01", 1)  # the GPS pointer becomes the camera maker's tag
-        for payload, name in ((plain, "plain.jpg"), (b"%PDF-1.4 whatever", "ds.pdf")):
+        # a PDF that holds a photo's EXIF GPS block is no JPEG: a kept source keeps its exact bytes
+        for payload, name in ((plain, "plain.jpg"), (b"%PDF-1.4 whatever", "ds.pdf"),
+                              (b"%PDF-1.4 " + photo, "ds-with-photo.pdf")):
             kept, said = self._keep_photo(payload, name)
             self.assertEqual(kept, payload, name)
             self.assertNotIn("location", said.lower(), name)
