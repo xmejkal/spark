@@ -7,6 +7,7 @@ first phase still open, and the offers each phase holds. It reads and never writ
 from pathlib import Path
 
 from spark.flow import flow_codes
+from spark.flow.fingerprint import fingerprint_of
 from spark.flow.phase_readers import MARKS, READERS
 from spark.records import store
 from spark.core.operation import COMMON_ARGUMENTS, READS, Operation
@@ -51,8 +52,8 @@ def read_flow(project, readers=None):
 
 class ShowFlow(Operation):
     """
-    Operation: where a project stands. It asks each PhaseReader in order and answers `data.phases` (each Phase as a dict)
-    and `data.stands_at`, the first phase whose status is neither ok nor None. A phase that holds problems or could not run
+    Operation: where a project stands. It asks each PhaseReader in order and answers `data.phases` (each Phase as a dict),
+    `data.stands_at`, the first phase whose status is neither ok nor None, and `data.fingerprint` (`fingerprint_of`, P829). A phase that holds problems or could not run
     adds one Finding of that status, so the exit says so; every phase still answers. `readers` are the PhaseReaders a test
     swaps (None: `READERS`).
     """
@@ -61,7 +62,7 @@ class ShowFlow(Operation):
     summary = "Say where a project stands, phase by phase from the idea to the deploy, and what each phase offers next (P825)."
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS,)
-    data_keys = ("phases", "stands_at")
+    data_keys = ("phases", "stands_at", "fingerprint")
     privacy_for = staticmethod(privacy_for)
 
     def __init__(self, readers=None):
@@ -74,5 +75,6 @@ class ShowFlow(Operation):
                     for phase in phases if phase.status in (PROBLEMS, COULD_NOT_RUN)]
         lines = [line for phase in phases for line in phase_line(phase)]
         lines += [STANDS_AT_LINE % stands_at] if stands_at else []
-        return OperationResult({"phases": [phase.to_dict() for phase in phases], "stands_at": stands_at}, findings, lines=lines)
+        data = {"phases": [phase.to_dict() for phase in phases], "stands_at": stands_at, "fingerprint": fingerprint_of(project, phases)}
+        return OperationResult(data, findings, lines=lines)
 # --- end MVP ---

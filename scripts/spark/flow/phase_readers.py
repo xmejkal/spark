@@ -9,7 +9,7 @@ import json
 from collections import namedtuple
 from pathlib import Path
 
-from spark.build.build_record import BuildRecordStore, sha256_of
+from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256_of
 from spark.build.stages import BUILD, SIMULATION
 from spark.breadboard import sheet
 from spark.design import need_requirements, needs
@@ -33,8 +33,12 @@ MARKS = {OK: (None, "✓"), PROBLEMS: ("problems", "✗"), COULD_NOT_RUN: ("coul
          flow_codes.STALE: ("out of date", "↻"), None: (None, "·")}
 #: The reasons of a ProjectImage that say only that nothing was simulated yet; any other reason is a problem.
 NOT_SIMULATED_YET = (firmware_codes.NO_SIM_TOML, firmware_codes.NO_IMAGE)
-#: Value: one offer of a phase: its key (`pick:soil:x-led`) and the line that says what taking it does.
-Offer = namedtuple("Offer", "key effect")
+#: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (the words of its button), its effect (plain
+#: sentences that name every write taking it makes) and `makes_stale`, the phases it may make out of date (P829).
+Offer = namedtuple("Offer", "key label effect makes_stale")
+#: The file whose presence says a phase holds something now, for `makes_stale`.
+HELD_FILES = {flow_codes.REQUIREMENTS: Path(REQUIREMENTS_FILE), flow_codes.BUILD: BUILD_RECORD_FILE,
+              flow_codes.BREADBOARD: Path(sheet.SHEET)}
 
 
 class Phase(namedtuple("Phase", "phase status mark by says offers")):
@@ -42,7 +46,7 @@ class Phase(namedtuple("Phase", "phase status mark by says offers")):
     its glyph from MARKS, who does it, what it says (sentences for a person; a null value reads `unknown`) and its Offers."""
 
     def to_dict(self):
-        return dict(self._asdict(), offers=[offer._asdict() for offer in self.offers])
+        return dict(self._asdict(), offers=[dict(offer._asdict(), makes_stale=list(offer.makes_stale)) for offer in self.offers])
 
 
 class PhaseReader:
@@ -89,6 +93,13 @@ def read_built_from(project):
         return None
 
 
+def makes_stale(project, kind):
+    """The phases an offer of `kind` may make out of date in `project`: those of `flow_codes.MAKES_STALE` that hold
+    something now (`HELD_FILES`). A phase that holds nothing cannot go out of date."""
+    held = {phase for phase, name in HELD_FILES.items() if (Path(project) / name).is_file()}
+    return tuple(phase for phase in flow_codes.MAKES_STALE[kind] if phase in held)
+
+
 def problem_lines(problems):
     """Each problem item ({subject, sentence, …}) as one line, `subject: sentence`."""
     return ["%s: %s" % (problem["subject"], problem["sentence"]) for problem in problems]
@@ -121,19 +132,39 @@ class NeedsReader(PhaseReader):
         if not ids:
             status, said = without_needs(project)
             return self.phase(status, [said])
-        drops = [Offer("%s:%s" % (flow_codes.NEEDS_DROP, need), flow_codes.DROP_MESSAGE % need) for need in ids]
+        # a drop is asked in the chat (P829), so its offer names no phase that goes out of date
+        drops = [Offer("%s:%s" % (flow_codes.NEEDS_DROP, need), flow_codes.DROP_LABEL % need, flow_codes.DROP_MESSAGE % need, ())
+                 for need in ids]
         return self.phase(OK, [flow_codes.NEEDS_MESSAGE % (len(ids), ", ".join(ids))], drops)
 
 
-def pick_effect(need, candidate):
-    """The effect line of picking `candidate` (a row of `needs.match`) for `need`: what it replaces, how many the person
-    has (`owned`: a number, "many" or "unknown") and, when none is free, which projects hold them."""
-    owned = candidate["owned"]
-    said = [flow_codes.PICK_MESSAGE % need,
-            flow_codes.OWNED_UNKNOWN_MESSAGE if owned == "unknown" else flow_codes.OWNED_MESSAGE % owned]
+def reserve_sentence(need, candidate):
+    """What a pick of `candidate` (a row of `needs.match`) does with what the person owns (`owned`: a number, "many" or
+    "unknown"): uses one, or puts it on the list to get when they own none."""
+    owned, label = candidate["owned"], candidate_label(candidate)
+    if owned == "unknown":
+        return flow_codes.RESERVE_UNKNOWN_MESSAGE % (label, need)
+    if owned == "many":
+        return flow_codes.RESERVE_MANY_MESSAGE % (label, need)
+    return flow_codes.RESERVE_MESSAGE % (owned, label, need) if owned else flow_codes.TO_GET_MESSAGE
+
+
+def candidate_label(candidate):
+    """The part's own name, or its id when its record names none."""
+    return candidate.get("label") or candidate["id"] or candidate["entry"]
+
+
+def pick_offer(project, need, candidate, listed):
+    """The Offer to pick `candidate` for `need`. When other projects hold all the person owns of it, spark refuses the
+    pick and writes nothing (`needs.plan_holds`), so the offer says so and names no phase. `listed` says whether the
+    project is on the person's list already."""
+    key = "%s:%s:%s" % (flow_codes.PICK, need, candidate["id"] or candidate["entry"])
+    label = flow_codes.PICK_LABEL % (candidate_label(candidate), need)
     if candidate.get("free") == 0 and candidate.get("held_by"):
-        said.append(flow_codes.HELD_MESSAGE % ", ".join(candidate["held_by"]))
-    return "; ".join(said)
+        return Offer(key, label, flow_codes.ALL_HELD_MESSAGE % (candidate_label(candidate), ", ".join(candidate["held_by"])), ())
+    said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)]
+    said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
+    return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK))
 
 
 class PartsReader(PhaseReader):
@@ -151,8 +182,8 @@ class PartsReader(PhaseReader):
             return self.phase(status, [said])
         picked = sum(1 for need in matched if need.get("pick"))
         status = OK if picked == len(matched) else flow_codes.PARTIAL if picked else flow_codes.NOT_STARTED
-        picks = [Offer("%s:%s:%s" % (flow_codes.PICK, need["need"], candidate["id"] or candidate["entry"]), pick_effect(need["need"], candidate))
-                 for need in matched for candidate in need["candidates"]]
+        listed = store.find_listed_name(project) is not None
+        picks = [pick_offer(project, need["need"], candidate, listed) for need in matched for candidate in need["candidates"]]
         return self.phase(status, [flow_codes.PICKED_MESSAGE % (picked, len(matched))], picks)
 
 
@@ -165,7 +196,9 @@ class RequirementsReader(PhaseReader):
 
     def read(self, project):
         held, listed = read_requirements(project), needs.read(project)
-        offers = [Offer(flow_codes.WRITE_REQUIREMENTS, flow_codes.REQUIREMENTS_MESSAGE)] if listed else []
+        effect = " ".join((flow_codes.REQUIREMENTS_MESSAGE, flow_codes.SHELVE_MESSAGE, flow_codes.ORIGIN_MESSAGE))
+        offers = [Offer(flow_codes.WRITE_REQUIREMENTS, flow_codes.REQUIREMENTS_LABEL, effect,
+                        makes_stale(project, flow_codes.WRITE_REQUIREMENTS))] if listed else []
         if held is None:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_MESSAGE], offers)
         if not listed:
@@ -187,6 +220,28 @@ def why_build_stale(project, record):
     return None
 
 
+def is_board_only(project):
+    """True when requirements.json says board_only and names no part, so the build builds the board alone (P387). A file
+    that cannot be read says no: the requirements phase reports it."""
+    try:
+        held = read_requirements(project)
+    except store.StoreError:
+        return False
+    return isinstance(held, dict) and held.get(need_requirements.BOARD_ONLY) is True and not held.get("parts")
+
+
+def build_effect(project):
+    """The effect of the build offer in `project`: what it saves, what it replaces or deletes, the history note of a
+    project on the person's list, and that it runs no simulation. A board-only parts list saves less and deletes dist/."""
+    if is_board_only(project):
+        said = [flow_codes.BOARD_ONLY_BUILD_EFFECT, flow_codes.BUILD_REFUSED_MESSAGE]
+        said += [flow_codes.DIST_REMOVED_MESSAGE] if (Path(project) / "dist").is_dir() else []
+    else:
+        said = [flow_codes.BUILD_MESSAGE, flow_codes.REPLACE_MESSAGE, flow_codes.BUILD_REFUSED_MESSAGE]
+        said += [flow_codes.BUILT_HISTORY_MESSAGE] if store.find_listed_name(project) is not None else []
+    return " ".join(said + [flow_codes.NO_SIMULATION_MESSAGE])
+
+
 def skipped_stages(record):
     """The names of the stages the build `record` skipped, in the record's order."""
     return [stage.get("name") for stage in record.get("stages") or [] if stage.get("status") == SKIPPED]
@@ -201,7 +256,8 @@ class BuildReader(PhaseReader):
 
     def read(self, project):
         record = BuildRecordStore(project).read()
-        offers = [Offer(flow_codes.BUILD_BOARD, flow_codes.BUILD_MESSAGE)] if (project / REQUIREMENTS_FILE).is_file() else []
+        offers = ([Offer(flow_codes.BUILD_BOARD, flow_codes.BUILD_LABEL, build_effect(project), makes_stale(project, flow_codes.BUILD_BOARD))]
+                  if (project / REQUIREMENTS_FILE).is_file() else [])
         if record is None:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_BUILD_MESSAGE], offers)
         says = [flow_codes.BUILT_MESSAGE % (record.get("at") or flow_codes.UNKNOWN, record.get("status") or flow_codes.UNKNOWN)]

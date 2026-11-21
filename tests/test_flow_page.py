@@ -8,6 +8,7 @@ It covers `flow_page`, `write_flow_page`, `show_flow.read_flow` and the keep ste
 """
 
 import contextlib
+import datetime
 import html
 import html.parser
 import io
@@ -38,6 +39,8 @@ from spark.breadboard import sheet  # noqa: E402
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
+from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
+from spark.core import zone_time  # noqa: E402
 from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
 
 #: The built fixture test_flow.py builds its projects from.
@@ -254,9 +257,10 @@ class TheDocumentTest(unittest.TestCase):
             self.assertNotIn("http", text.lower())
 
     def test_a_sentence_with_an_angle_bracket_is_escaped(self):
-        text = page_of(a_phase("one", says=["<b>bold</b> & more"], offers=[Offer("a<b", "<i>x</i>")]), project="<p>")
+        text = page_of(a_phase("one", says=["<b>bold</b> & more"], offers=[Offer("a<b", "<i>x</i>", "<i>y</i>", ())]), project="<p>")
         self.assertNotIn("<b>", text)
         self.assertNotIn("<i>", text)
+        self.assertIn('data-key="a&lt;b"', text)
         self.assertIn("&lt;b&gt;bold&lt;/b&gt; &amp; more", text)
         self.assertIn("a&lt;b", text)
 
@@ -264,9 +268,11 @@ class TheDocumentTest(unittest.TestCase):
         phases = [a_phase("one"), a_phase("two", None)]
         self.assertEqual(page_of(*phases), page_of(*phases))
 
-    def test_an_offer_is_plain_text_with_no_button(self):
-        text = page_of(a_phase("one", offers=[Offer("build", "builds the board")]))
-        self.assertIn("<code>build</code>: builds the board", text)
+    def test_an_offer_shows_its_label_and_effect_and_keeps_its_key_in_data_key(self):
+        text = page_of(a_phase("one", offers=[Offer("build", "Build the board", "Builds the board.", ())]))
+        self.assertIn('<li data-key="build">Build the board: Builds the board.</li>', text)
+        self.assertNotIn(">build<", text)
+        self.assertNotIn("<code>", text)
         self.assertNotIn("<button", text)
 
     def test_the_pictures_stand_together_after_the_phases_and_before_the_legend_with_a_link_in_the_rail(self):
@@ -350,7 +356,13 @@ class TheCommandTest(unittest.TestCase):
         project = a_built_project()
         envelope, code = run_flow("page", "--project", str(project), "--json")
         self.assertEqual((code, envelope["op"], envelope["status"]), (0, "write-flow-page", OK))
-        self.assertEqual(sorted(envelope["data"]), ["did", "file", "phases", "stands_at"])
+        self.assertEqual(sorted(envelope["data"]), ["did", "file", "fingerprint", "phases", "stands_at"])
+        self.assertEqual(envelope["data"]["fingerprint"], fingerprint_of(project, read_flow(project)[0]))
+        body = re.search(r'<body data-stands-at="[^"]*" data-fingerprint="([0-9a-f]{12})" data-written="([^"]*)">',
+                         (project / "page.html").read_text(encoding="utf-8"))
+        self.assertEqual(body.group(1), envelope["data"]["fingerprint"][:12])
+        written = max((project / name).stat().st_mtime for name in FILES if (project / name).is_file())
+        self.assertEqual(body.group(2), zone_time.stamp(datetime.datetime.fromtimestamp(written)))
         self.assertEqual((envelope["data"]["file"], envelope["data"]["did"]), ("page.html", "wrote"))
         self.assertTrue((project / "page.html").is_file())
         for phase in envelope["data"]["phases"]:

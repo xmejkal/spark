@@ -5,6 +5,7 @@ reads the same phases as `flow.py show` (`show_flow.read_flow`). A build with --
 `write_kept_page`, with the three pictures it drew.
 """
 
+import datetime
 from collections import namedtuple
 from pathlib import Path
 
@@ -12,19 +13,21 @@ from spark.breadboard import sheet, tabbed_page
 from spark.breadboard.svg_diagram import SvgBreadboardDiagram
 from spark.breadboard.tabbed_page import page_title
 from spark.flow import flow_codes
+from spark.flow.fingerprint import FILES, fingerprint_of
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture
 from spark.flow.phase_readers import REQUIREMENTS_FILE
 from spark.flow.show_flow import privacy_for, read_flow
 from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Operation
 from spark.core.outcomes import COULD_NOT_RUN
 from spark.core.result import Finding, OperationResult
+from spark.core.zone_time import stamp
 
 # --- MVP ---
 #: The Finding of a page that cannot be written: its sentence, and what to do.
 PAGE_SENTENCE = "%s was not written: %s"
 PAGE_FIX = "make the project folder writable and run it again"
-#: Value: what `write_page` wrote: the path, the masked phases and where the project stands.
-Written = namedtuple("Written", "path phases stands_at")
+#: Value: what `write_page` wrote: the path, the masked phases, where the project stands and the flow's fingerprint.
+Written = namedtuple("Written", "path phases stands_at fingerprint")
 #: The titles of the pictures, in the order of a build's three tabs.
 BREADBOARD_TITLE, SCHEMATIC_TITLE, PCB_TITLE = flow_codes.BREADBOARD_TITLE, "Schematic", "PCB"
 #: Value: what a page shows of the project besides its phases: its pictures and its wiring (a PageWiring or None).
@@ -85,7 +88,15 @@ def masked_page(page, privacy):
     masked = privacy.masked
     pictures = [Picture(*masked(tuple(picture))) for picture in page.pictures]
     wiring = PageWiring(*masked(tuple(page.wiring))) if page.wiring else None
-    return FlowPage(masked(page.title), masked(page.phases), masked(page.stands_at), pictures, masked(page.notes), wiring)
+    return FlowPage(masked(page.title), masked(page.phases), masked(page.stands_at), pictures, masked(page.notes), wiring,
+                    page.fingerprint, page.written)
+
+
+def newest_change(project):
+    """The newest change time of the fingerprint's files in `project`, in the machine's zone (`zone_time.stamp`), or None
+    when none is there. Python writes it, so the page stays the same bytes for the same flow (P829)."""
+    times = [path.stat().st_mtime for path in (Path(project) / name for name in FILES) if path.is_file()]
+    return stamp(datetime.datetime.fromtimestamp(max(times))) if times else None
 
 
 def write_page(project, readers=None, parts=None, renderer=None, store=None):
@@ -98,13 +109,13 @@ def write_page(project, readers=None, parts=None, renderer=None, store=None):
     phases, stands_at = read_flow(project, readers)
     shown = (parts or kept_parts)(project)
     page = FlowPage(page_title(Path(project).resolve().name), [phase.to_dict() for phase in phases], stands_at,
-                    shown.pictures, (flow_codes.BENCH_NOTE,), shown.wiring)
+                    shown.pictures, (flow_codes.BENCH_NOTE,), shown.wiring, fingerprint_of(project, phases), newest_change(project))
     privacy = privacy_for(project)
     page = masked_page(page, privacy)
     renderer = renderer or FlowHtmlPage()
     # masked again once rendered: the inline breadboard's parse turns a character reference (&#47;) into a path
     path = (store or FlowPageStore()).write(project, renderer.FILE_NAME, privacy.masked(renderer.text(page)))
-    return Written(path, page.phases, page.stands_at)
+    return Written(path, page.phases, page.stands_at, page.fingerprint)
 
 
 def write_kept_page(project, tabs):
@@ -118,7 +129,7 @@ def write_kept_page(project, tabs):
 class WriteFlowPage(Operation):
     """
     Operation: write the project's page. It answers the file (relative to the project), what it did, where the project
-    stands and each phase's status. A page that cannot be written is one could-not-run Finding. The phases' own problems
+    stands, each phase's status and the flow's fingerprint (P829). A page that cannot be written is one could-not-run Finding. The phases' own problems
     do not change its status: `flow.py show` reports those. `readers`, `parts`, `renderer` and `store` are what a test
     swaps (None: the real ones).
     """
@@ -127,7 +138,7 @@ class WriteFlowPage(Operation):
     summary = "Write page.html in the project: each phase of the flow with a status word and a mark, and the project's pictures (P827)."
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS, WRITES)
-    data_keys = ("file", "did", "stands_at", "phases")
+    data_keys = ("file", "did", "stands_at", "phases", "fingerprint")
     privacy_for = staticmethod(privacy_for)
 
     def __init__(self, readers=None, parts=None, renderer=None, store=None):
@@ -142,6 +153,7 @@ class WriteFlowPage(Operation):
             return OperationResult(findings=[Finding(COULD_NOT_RUN, renderer.FILE_NAME, flow_codes.PAGE_NOT_WRITTEN, said, PAGE_FIX)],
                                    lines=[said])
         data = {"file": renderer.FILE_NAME, "did": "wrote", "stands_at": written.stands_at,
-                "phases": [{"phase": phase["phase"], "status": phase["status"]} for phase in written.phases]}
+                "phases": [{"phase": phase["phase"], "status": phase["status"]} for phase in written.phases],
+                "fingerprint": written.fingerprint}
         return OperationResult(data, lines=["wrote %s: %s" % (renderer.FILE_NAME, renderer.PURPOSE_MESSAGE)])
 # --- end MVP ---
