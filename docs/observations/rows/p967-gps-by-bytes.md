@@ -1,0 +1,16 @@
+# P967: the store removes a photo's GPS by its bytes, not by its file name: rows
+
+Card: [P967 #1385](https://github.com/xmejkal/spark/issues/1385), found by P952's refuter (row 20 of
+`p952-find-documents.md`). This file holds the acted, raised and rejected findings only. The plan check had the refuter
+on Opus; the lead's revisions decide where they differ from the plan. Then come the build's own findings. 2026-11-21.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | `keep_in_store` and `--keep`'s line asked the file's name for `.jpg` or `.jpeg`; `without_location` already decides by the bytes (FF D8), so both name tests go | the plan | acted | `datasheets.keep_in_store`, `keep_file.KeepFile.build_answer`; `test_jpeg_bytes_kept_under_a_png_name_do_not_say_where_they_were_taken` (red before the fix); two mutation rows |
+| 2 | a P952 top view whose bytes are a JPEG guards a possible case, not today's: DFRobot's top view is a true PNG; today's case is a JPEG a person keeps with `--keep` under another name | the plan check, revision 2 | acted | the test's comment says so; `test_a_top_view_whose_bytes_are_a_jpeg_is_kept_and_listed_with_no_location` also proves the dry run's sha256 is the kept file's; a mutation row |
+| 3 | a PDF, ZIP or SVG that holds a photo's EXIF GPS block is no JPEG and is kept byte for byte, as a kept source must be | the plan | rejected | dropped because the sources rule wants exact bytes and a sha256 that matches the source; the near miss `ds-with-photo.pdf` in `test_a_photo_with_no_location_and_any_other_file_are_kept_unchanged` pins the start test; a mutation row |
+| 4 | the kept file keeps its given name; the extension is not corrected to the bytes | the plan | rejected | dropped because records cite `<sha256>/<name>`, P952 holds a file by its listed `file`, and the dry and real keeps must name one file; a wrong extension is its own card if a reader breaks on it |
+| 5 | the old row "the store keeps a photo as it came" (`sprint-10-p75.json`) lost its anchor: the line now has four spaces | the build, `--anchors` | acted | its `find` and `replace` re-anchored at four spaces |
+| 6 | 20 mutation rows are refused by `tools/mutate.py --anchors` | the build | rejected | dropped because they are the same 20 that main refuses, in files this PR does not touch; none of P967's or P75's rows is refused |
+| 7 | the store keeps no location in any image it keeps: HEIC first (the iPhone's default; an `Exif` item in the `meta` box, a strip rewrites the `iloc` offsets, or a refusal that says "convert it to JPEG first"), then XMP GPS in a JPEG and a second EXIF APP1, PNG `eXIf` and `tEXt`/`zTXt`/`iTXt`, WebP's RIFF `EXIF` and `XMP ` chunks. PNG and WebP reach the store today through `--keep` (any file), research and `--fetch` (`KEEPABLE` allows `.webp`) | the plan, revision 1 | raised | to a card, for the lead to file |
+| 8 | files kept before P967 as JPEG bytes under a name that is not `.jpg` or `.jpeg` keep their GPS in the store until a new keep | the plan, risks | raised | to the lead: a read-only scan of the PO's `sources` folder, offered to him; a re-keep or a deletion of a file it finds is his |
