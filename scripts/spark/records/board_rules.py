@@ -243,7 +243,8 @@ def joined_pad_problems(board, validation):
                 problems.append("%s names %r, which is in doubtful_pads; a doubtful pad may have no net, so it is joined to nothing" % (where, pad))
         rails = {power[pad].get("rail") if isinstance(power.get(pad), dict) else None for pad in group if pad in pads}
         if len(rails) > 1:
-            problems.append("%s group %r has pads on more than one rail (%s; a pad with none counts as none); a joined group is one net"
+            problems.append("%s group %r has pads on more than one rail (%s; a pad with none counts as none); a joined group is one net. "
+                            "Fix: add the pad to power_pads with that rail, or leave it out of the group"
                             % (where, group, ", ".join(sorted(map(str, rails)))))
     return problems
 

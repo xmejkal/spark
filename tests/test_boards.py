@@ -291,6 +291,13 @@ class TheJoinedPadsTest(unittest.TestCase):
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("'NOPE'", problems[0])
 
+    def test_a_comment_row_of_the_header_order_holds_no_pad(self):
+        board = definition("b", pins={"SDA": 0}, physical={"footprint_module": "X", "footprint_export": "X", "header": {
+            "joined_pads": self.fact([["SDA", "N"]])}, "header_order": {"//": "NOPE: a comment", "row": ["SDA", "IO19"]}},
+            documents={"schematic": {"sha256": self.SHA, "file": "x.pdf"}})
+        path = project(active="b", own={"b": board}) / "boards" / "b.json"
+        self.assertTrue([p for p in board_records.validate(json.loads(path.read_text()), path) if "'N'" in p and "not a pad" in p])
+
     def test_a_group_holds_two_pads_or_more(self):
         for value in ([["3V3"]], [[]], ["3V3", "3V3_2"], [["3V3", 3]], [[None, "3V3"]]):
             with self.subTest(value=value):

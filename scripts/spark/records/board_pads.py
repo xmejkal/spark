@@ -49,9 +49,10 @@ class JoinedPads:
     @classmethod
     def from_record(cls, record):
         """
-        The groups of a board record. It never raises: a record with no field, and a field that breaks the contract
-        (a value that is no list of lists of two pads or more, or a pad in two groups: `board_rules` refuses it), read
-        as no group.
+        The groups of a board record. It never raises: a record with no field reads as no group, and so does a field
+        with a shape fault (a value that is no list of lists of two pads or more, or a pad in two groups). Only the
+        shape is checked here. The rules (a pad of `header_order`, one rail, a source) are `board_rules`' to refuse, so
+        a caller reads a record that `validate` passed.
         """
         physical = record.get("physical") if isinstance(record, dict) else None
         header = physical.get("header") if isinstance(physical, dict) else None

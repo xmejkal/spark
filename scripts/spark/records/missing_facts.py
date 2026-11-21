@@ -60,7 +60,7 @@ def level_write_problems(values):
 def _level_problems(roles):
     """`level_write_problems` of the `pin_roles` of a write."""
     if not isinstance(roles, dict) or not roles:
-        return ["a board takes only pin_roles: {role: {%s: {value, verified, source}}}" % LEVEL_FACT]
+        return ["a board takes only pin_roles and joined_pads, and pin_roles is {role: {%s: {value, verified, source}}}" % LEVEL_FACT]
     problems = []
     for role, entry in roles.items():
         if role not in ACTIVE_LEVEL_MEANING:

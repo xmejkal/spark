@@ -94,5 +94,29 @@
   "name": "P962: a write of joined_pads is checked as a part's",
   "find": "if any(key in facts for key in missing_facts.BOARD_WRITE_KEYS) else (",
   "replace": "if \"pin_roles\" in facts else ("
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962 review: joined_pad_problems is not in the board's rules",
+  "find": "gpio_list_problems, pad_problems, joined_pad_problems, pin_role_problems,",
+  "replace": "gpio_list_problems, pad_problems, pin_role_problems,"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962 review: a comment row of the header_order is read as pads",
+  "find": "if not str(key).startswith(\"//\") and isinstance(labels, list)",
+  "replace": "if isinstance(labels, (list, str))"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962 review: the joined_pads fact is not checked as a fact",
+  "find": "    problems = provenance.fact_problems(where, fact)\n    value = fact.get(\"value\") if isinstance(fact, dict) else None\n    if not isinstance(value, list):",
+  "replace": "    problems = []\n    value = fact.get(\"value\") if isinstance(fact, dict) else None\n    if not isinstance(value, list):"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "P962 review: a value that is no list is read as groups",
+  "find": "    if not isinstance(value, list):\n        return problems + [",
+  "replace": "    if not isinstance(value, list):\n        value = []\n    if False:\n        return problems + ["
  }
 ]
