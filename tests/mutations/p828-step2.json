@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "a page with no sheet opens on the wiring too",
+  "find": "return bool(page.wiring) and not page.wiring.why_missing",
+  "replace": "return page.wiring is not None"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "a page with a sheet keeps the phases first",
+  "find": "return (shown + phases if self._sheet(page) else phases + shown)",
+  "replace": "return (phases + shown if self._sheet(page) else phases + shown)"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "every phase opens unfolded",
+  "find": "\"<details><summary><h2>",
+  "replace": "\"<details open><summary><h2>"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "the intro is not said",
+  "find": "said = [flow_codes.PAGE_INTRO] + ",
+  "replace": "said = [] + "
+ },
+ {
+  "file": "scripts/spark/breadboard/before_power.py",
+  "name": "a conflict joins the part's host requirements",
+  "find": "return (HOST_REQUIREMENT, item[\"subject\"]) if item[\"kind\"] == HOST_REQUIREMENT else object()",
+  "replace": "return item[\"subject\"]"
+ },
+ {
+  "file": "scripts/spark/breadboard/before_power.py",
+  "name": "the part's name is said once more for each line",
+  "find": "lines.append(self._host_run(run) if len(run) > 1 else",
+  "replace": "lines.append(self._host_run(run) if len(run) > 99 else"
+ }
+]

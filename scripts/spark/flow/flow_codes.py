@@ -109,6 +109,11 @@ NOT_CHECKED_WORD = "not checked by spark"
 NOT_CHECKED_LEGEND = "spark does not judge this phase, so no mark says it is done"
 BENCH_NOTE = "This page reads the project's files. It does not know whether the board is wired or flashed."
 STANDS_AT_LINE = "The project stands at: %s."
+#: The line under the page's title (P828 step 2, the PO, 2026-11-21: "it just doesn't guide a person"): what the page
+#: is and how to act on it. The page has no script, so every action is a message to Claude.
+PAGE_INTRO = "Where this project stands. This page only shows: to change anything, tell Claude in the chat."
+#: Said under the intro when a sheet exists, so the wiring comes first and the phases are folded below it.
+WIRING_FIRST = "The build wrote a wiring sheet, so the wiring comes first. Each phase is folded below it: open one to read it."
 NOTHING_OPEN_LINE = "No phase is open."
 NOT_DRAWN_HERE = "Not drawn here. The build draws it: run /spark:build --keep."
 NO_PICTURE_FILE = "Not drawn: %s is not in the project yet. The build with --keep writes it."
