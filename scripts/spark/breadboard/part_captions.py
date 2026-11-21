@@ -1,8 +1,8 @@
 """
 Each drawn part's words on the breadboard picture outside its body (P953, #1359): its caption, the human name from its
 record (`PartCaption`, `Caption`), and its line of the note under the picture (`PartNotes`). The scene maker
-(`breadboard_scene`) places the captions after the wires and their pills, and `svg_diagram` draws them; nothing here
-draws.
+(`breadboard_scene`) places the captions after the wires and their pills and writes each part's line of the note, and
+`svg_diagram` draws them; nothing here draws.
 """
 
 import collections
@@ -69,21 +69,17 @@ class PartCaption:
 
 
 class PartNotes:
-    """Renderer helper: the note under the picture (P953), one line for each part that has a fact not verified: its
-    caption's words, then the `words` of each such group of its part_px, "DFRobot FireBeetle 2 ESP32-C6: pads, row side
-    and USB end not verified.", then its picture's own note (P946). It follows the caption's rule: a record id only
-    where the record has no name."""
+    """Service: a part's line of the note under the drawing (P953), for the scene maker: its caption's words, then the
+    `words` of each group of its part_px that is not verified, "DFRobot FireBeetle 2 ESP32-C6: pads, row side and USB
+    end not verified.", then its picture's own note (P946); "" for a part with neither. It follows the caption's rule:
+    a record id only where the record has no name."""
 
     @staticmethod
-    def lines(layout, pictures):
-        lines = []
-        for part in layout.parts:
-            words = [note["words"] for note in layout.geometry.part(part.type).get("notes", [])]
-            said = ["%s: %s not verified." % (PartCaption.words(part)[0], _listed(words))] if words else []
-            said += [pictures[part.id].note] if pictures[part.id].note else []
-            if said:
-                lines.append(" ".join(said))
-        return lines
+    def line(part, part_px, picture):
+        words = [note["words"] for note in part_px.get("notes", [])]
+        said = ["%s: %s not verified." % (PartCaption.words(part)[0], _listed(words))] if words else []
+        said += [picture.note] if picture.note else []
+        return " ".join(said)
 
 
 def _listed(words):

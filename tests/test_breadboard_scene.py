@@ -75,7 +75,7 @@ class NotedPictures(part_pictures.PictogramPartPictures):
 
 
 #: The rough view's character of a pad in use and of a free pad.
-ROUGH_PADS = {breadboard_scene.PAD_USED: "@", breadboard_scene.PAD_FREE: "o"}
+ROUGH_PADS = {"used": "@", "free": "o"}
 
 
 def rough_text(scene):
@@ -193,7 +193,7 @@ class TheSceneTest(unittest.TestCase):
                 with self.subTest(part=part.part.id, pin=pin):
                     self.assertEqual(rows[v - grid.low[1]][u - grid.low[0]], ROUGH_PADS[part.pads[pin]])
                 states.append(part.pads[pin])
-        self.assertEqual(set(states), {breadboard_scene.PAD_USED, breadboard_scene.PAD_FREE})
+        self.assertEqual(set(states), {"used", "free"})
         self.assertEqual(rows[-3:], ["DFRobot FireBeetle 2 ESP32-C6: pads, row side and USB end not verified.",
                                      "MH-ET LIVE 2.9 Inch E-paper Module: pads and header side not verified.",
                                      "wires 6, 7, 10 and 11 bend more than 4 times to go around the parts and are drawn dashed"])
@@ -300,9 +300,8 @@ class TheMakerTest(unittest.TestCase):
             part_px = layout.geometry.part(part.part.type)
             for label in part.labels:
                 x, y = part_px["pins"][label.pad]
-                offsets.setdefault(part_px["labels"], set()).add((abs(label.place.x - x), abs(label.place.y - y)))
-        self.assertEqual(offsets, {breadboard_scene.LABELS_BESIDE: {(HALF_PITCH, 0)},
-                                   breadboard_scene.LABELS_INTO_BODY: {(0, HALF_PITCH)}})
+                offsets.setdefault(part_px["labels"], set()).add((round(abs(label.place.x - x), 6), round(abs(label.place.y - y), 6)))
+        self.assertEqual(offsets, {"beside": {(HALF_PITCH, 0)}, "into-body": {(0, HALF_PITCH)}})
         self.assertNotEqual([label.place for part in cells.parts for label in part.labels],
                             [label.place for part in px.parts for label in part.labels])
 

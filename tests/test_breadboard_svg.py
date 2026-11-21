@@ -307,11 +307,11 @@ class TheModuleSvgTest(unittest.TestCase):
 
     def test_a_label_of_a_bottom_edge_row_sits_above_its_pad(self):
         # P953 PR 4b: it reads bottom to top, on a module turned by 0 or half round
-        place = svg_diagram.IntoBodyLabels().place(50, 160, {"center": [100, 83]}, 0)
+        place = breadboard_scene.IntoBodyLabels(breadboard_scene.PxLabelMeasure(7)).place(50, 160, {"center": [100, 83]}, 0)
         self.assertEqual((place.y < 160, abs(place.x - 50) <= 4.8, place.anchor, place.rotate), (True, True, "start", -90))
-        place = svg_diagram.IntoBodyLabels().place(50, 4.8, {"center": [100, 83]}, 0)
+        place = breadboard_scene.IntoBodyLabels(breadboard_scene.PxLabelMeasure(7)).place(50, 4.8, {"center": [100, 83]}, 0)
         self.assertEqual((place.y > 4.8, place.anchor), (True, "end"))
-        place = svg_diagram.IntoBodyLabels().place(50, 4.8, {"center": [100, 83]}, 180)
+        place = breadboard_scene.IntoBodyLabels(breadboard_scene.PxLabelMeasure(7)).place(50, 4.8, {"center": [100, 83]}, 180)
         self.assertEqual((place.y > 4.8, abs(place.x - 50) <= 4.8, place.anchor, (180 + place.rotate) % 360),
                          (True, True, "start", 270))
 
@@ -921,7 +921,8 @@ class TheNoteTest(unittest.TestCase):
             ("NoRecord", None))]
         layout = drawing.BreadboardLayout(None, parts, [], Geometry())
         pictures = {part.id: part_pictures.Picture("", (0, 0, 1, 1), "") for part in parts}
-        self.assertEqual(part_captions.PartNotes.lines(layout, pictures), [
+        self.assertEqual([part_captions.PartNotes.line(part, layout.geometry.part(part.type), pictures[part.id])
+                          for part in layout.parts], [
             "Maker Module: pads and header side not verified.", "nameless-module: pads and header side not verified.",
             "NoRecord: pads and header side not verified."])
 

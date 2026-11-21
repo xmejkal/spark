@@ -1,83 +1,29 @@
 """
 The drawn breadboard as a picture (P268, #302): `SvgBreadboardDiagram`, the Renderer of a breadboard's scene as
 `breadboard.svg`, the breadboard under the parts in the old wiring page's look (`BoardBackground`, which draws
-the holes and the gap band from the surface, and the marks that `board_marks` made, P969, with their `BoardPalette`, P953), the
-Strategies that place a drawn part's pad labels (P945), and each jumper's pill. `breadboard_scene` makes the scene
-(P969): it routes each jumper (`wire_routing`), places each pill (`wire_pills`) and each part's caption
-(`part_captions`), and picks each wire's colour, so this module places only the pad labels. Moved out of `drawing`, whose planner it
-reads. `sheet` writes the file; `part_shape` names a part's label layout; `part_captions` writes each part's line of the
-note.
+the holes and the gap band from the surface, and the marks that `board_marks` made, P969, with their `BoardPalette`,
+P953), and each jumper's pill. `breadboard_scene` makes the scene (P969): it routes each jumper (`wire_routing`), places
+each pill (`wire_pills`), each part's caption (`part_captions`) and each pad's label, picks each wire's colour, says each
+pad's state, and writes each part's line of the note, so this module places nothing and decides nothing: it draws the
+scene in px. Moved out of `drawing`, whose planner it reads. `sheet` writes the file.
 """
 
 import collections
-import math
 import xml.etree.ElementTree as ElementTree
 
-from spark.breadboard import part_pictures, wiring_steps
+from spark.breadboard import part_pictures
 from spark.breadboard.board_marks import BoardPalette
-from spark.breadboard.breadboard_scene import BreadboardSceneMaker
+from spark.breadboard.breadboard_scene import PAD_FREE, PAD_HELD, PAD_USED, BreadboardSceneMaker
 from spark.breadboard.drawing import _round_px
-from spark.breadboard.part_captions import PartCaption, PartNotes
+from spark.breadboard.part_captions import PartCaption
 from spark.breadboard.spacing import BodyBox
 from spark.breadboard.wire_pills import WIRE_SIZES_PX
 
-#: Where a drawn part's pad labels go, the `labels` of its part_px: beside each pad, inside a board's body; or from a
-#: row of pads along an edge into the module's body, turned along the column (P945).
-LABELS_BESIDE, LABELS_INTO_BODY = "beside", "into-body"
-
-
-#: Value: where one pad's label goes in the part's own frame: its anchor point, its `text-anchor` and its turn in degrees.
-LabelPlace = collections.namedtuple("LabelPlace", "x y anchor rotate")
-
-#: Value: what the dot on a part's pin says, its fill and the legend's words (P949, the praised page's colours).
+#: Value: what the dot on a part's pin says, its fill and the legend's words (P949, the praised page's colours), by the
+#: pad's state (`breadboard_scene`), in the legend's order.
 PadMark = collections.namedtuple("PadMark", "fill words")
-#: The states of a pin's dot, in the legend's order: its row joins a wire or another part, its row joins nothing, or
-#: something on the board is already wired to it. spark draws no pad held yet: that needs the board record's onboard
-#: roles (P950).
-PAD_USED, PAD_FREE, PAD_HELD = "used", "free", "held"
 PAD_MARKS = {PAD_USED: PadMark("#ffd34d", "pad in use"), PAD_FREE: PadMark("#c9a24b", "pad free"),
              PAD_HELD: PadMark("#5bc0eb", "pad held: do not use")}
-
-
-class PadLabelLayout:
-    """Strategy: where a drawn part's pad label goes, beside its pad, in the part's own frame. `place(x, y, part_px, turn)`
-    gives the LabelPlace of the pad at (x, y) of a part turned by `turn` degrees on the sheet. One reading direction
-    (P953): a label's own turn plus the part's is 0 or -90, so every turned label reads bottom to top; a place that would
-    read the other way is turned half round about the middle of its letters, its anchor flipped."""
-
-    #: How far a label's baseline lies from the middle of its letters, across its text, in px.
-    MIDDLE = 2
-
-    def place(self, x, y, part_px, turn):
-        place = self._place(x, y, part_px)
-        if (turn + place.rotate) % 360 in (0, 270):
-            return place
-        radians = math.radians(place.rotate)
-        up_x, up_y = round(math.sin(radians)), -round(math.cos(radians))  # the text's up, in the part's frame
-        return LabelPlace(place.x + 2 * self.MIDDLE * up_x, place.y + 2 * self.MIDDLE * up_y,
-                          {"start": "end", "end": "start"}[place.anchor], place.rotate - 180)
-
-    def _place(self, x, y, part_px):
-        """The LabelPlace in the part's frame, before the reading direction."""
-        raise NotImplementedError
-
-
-class BesideLabels(PadLabelLayout):
-    """Strategy: a board's pads in two rows down its sides: each label beside its pad, toward the board's middle."""
-
-    def _place(self, x, y, part_px):
-        inward = x < part_px["center"][0]
-        return LabelPlace(x + (5 if inward else -5), y + self.MIDDLE, "start" if inward else "end", 0)
-
-
-class IntoBodyLabels(PadLabelLayout):
-    """Strategy: a module's one row of pads along an edge: each label runs along the pad's column into the body, below a pad on the
-    top edge and above one on the bottom edge, turned a quarter so that labels one pitch apart do not overlap."""
-
-    def _place(self, x, y, part_px):
-        if y < part_px["center"][1]:
-            return LabelPlace(x + self.MIDDLE, y + 5, "end", -90)
-        return LabelPlace(x + self.MIDDLE, y - 5, "start", -90)
 
 
 class BoardBackground:
@@ -133,14 +79,14 @@ class SvgBreadboardDiagram:
     """
     Renderer: a BreadboardScene as an SVG picture in Wokwi's px, for the sheet to show (P268, #302; `draw(scene)`, and
     `text(layout)` draws the scene that its BreadboardSceneMaker made of the layout, P969): a white page, the
-    breadboard in its `palette`'s look (BoardBackground, P953), each part as its picture at its holes, turned about its measured center as Wokwi turns it, with
-    a dot on each pin, used or free (`PAD_MARKS`), and its caption outside its body, then each jumper on the way the scene maker's `router` gave it
+    breadboard in its `palette`'s look (BoardBackground, P953), each part as the scene's picture at its holes, turned about its measured center as Wokwi turns it, with
+    a dot on each pin in its state's colour (`PAD_MARKS`), and its caption outside its body, then each jumper on the way the scene maker's `router` gave it
     (P953: around the parts, on tracks between the holes) as the praised page draws a wire: a white under-stroke, the
     color of what it carries on top (its word in `palette`'s `wires`) and a dot at each end, with its pill where
     the scene puts it: its step's number and the two pads it joins (WirePill). A wire
-    that needs more bends is drawn dashed, and the note says so, as it says of a wire with no way at all. A part drawn from its record also gets its pad labels, placed by the
-    PadLabelLayout its part_px names (`label_layouts`, keyed by the part_px's `labels`), each in the steps' words and
-    read bottom to top. The note under the picture holds a line per part (PartNotes), then the wires'. Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
+    that needs more bends is drawn dashed, and the note says so, as it says of a wire with no way at all. A part drawn from its record also gets its pad labels where
+    the scene placed them, in the part's own frame, and a board its USB end's mark. The note under the picture holds the
+    scene's lines (`notes()`). Built with ElementTree, so every text is escaped, and rounded once, so the same layout gives the
     same bytes. The canvas holds the board's body, every part's body, every wire, every pill and every caption, with MARGIN_PX round them, in Wokwi's px, so
     its view box may start left of or above 0. The root sets the font once. Each jumper's group carries `data-step`, its step's
     number, and holds its pill; each part's group carries `data-part`, its id, so a player finds them (P949); a key is never an `id`.
@@ -157,19 +103,15 @@ class SvgBreadboardDiagram:
     NOTE_PX = 9.6
     #: The one font of every text spark writes, set on the root.
     FONT = "Helvetica,Arial,sans-serif"
-    #: The word of a pad with no net, whose label is drawn muted.
-    NO_NET = "NC"
     #: The dashes of a wire that needs more bends than a wire may have.
     DASHES = "4 2"
     #: A pill's disc: its radius and its centre from the pill's left end, and the gap between the disc and the words,
     #: in px (the visual spec, section 7, P953).
     DISC_R, DISC_AT, WORDS_GAP = 3.4, 4.8, 1.6
 
-    def __init__(self, colors=None, pictures=None, label_layouts=None, router=None, palette=None):
-        self.pictures = pictures or part_pictures.PictogramPartPictures()
-        self.label_layouts = label_layouts or {LABELS_BESIDE: BesideLabels(), LABELS_INTO_BODY: IntoBodyLabels()}
+    def __init__(self, colors=None, pictures=None, router=None, palette=None):
         self.palette = palette or BoardPalette.load()
-        self.scene_maker = BreadboardSceneMaker(colors, router, self.palette)
+        self.scene_maker = BreadboardSceneMaker(colors, router, self.palette, pictures=pictures)
 
     def why_not_written(self, layout):
         """None: the picture is written for any layout."""
@@ -180,24 +122,22 @@ class SvgBreadboardDiagram:
         return self.draw(self.scene_maker.make(layout))
 
     def draw(self, scene):
-        """The picture of a BreadboardScene, which places the wires, the pills and the captions: this draws them, and
-        places each pad label itself (PadLabelLayout)."""
+        """The picture of a BreadboardScene, which places the wires, the pills, the captions and the pad labels, says
+        each pad's state and holds each part's picture and the note's lines: this draws them."""
         ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)
         layout = scene.layout
-        pictures = {part.id: self.pictures.picture(part.type, part.record) for part in layout.parts}
-        wired = scene.wire_notes()
-        notes = PartNotes.lines(layout, pictures) + ([", ".join(wired)] if wired else [])
+        notes = scene.notes()
         left, top, width, height = self._canvas(scene, len(notes))
         root = ElementTree.Element(_svg("svg"), {"width": str(width), "height": str(height),
                                                    "viewBox": "%s %s %s %s" % (left, top, width, height),
                                                    "font-family": self.FONT})
         _element(root, "rect", x=left, y=top, width=width, height=height, fill=self.palette.colors["page"])
         BoardBackground(self.palette).draw(root, scene.marks)
-        for part in layout.parts:
-            self._part(root, part, layout.geometry, pictures[part.id])
+        for part in scene.parts:
+            self._part(root, part.part, layout.geometry, part.picture)
         self._wires(root, scene)
-        for part in layout.parts:
-            self._label(root, part, layout.geometry, scene.joined)  # last, so no wire or other part covers a pin
+        for part in scene.parts:
+            self._label(root, part, layout.geometry)  # last, so no wire or other part covers a pin
         self._words(root, [part.caption for part in scene.parts], notes, (left + self.MARGIN_PX, top + height))
         return ElementTree.tostring(root, encoding="unicode") + "\n"
 
@@ -246,41 +186,39 @@ class SvgBreadboardDiagram:
         if picture.credit:
             ElementTree.SubElement(group, _svg("title")).text = picture.credit
 
-    def _pad_labels(self, root, part, part_px, used):
-        """A part drawn from its record (P412, P945): each pad's label where its PadLabelLayout puts it, a dashed ring on a
-        doubtful pad, and on a board a mark at the USB end (named in no word, since its place is not verified). Drawn in
-        the part's own frame, so it turns with the part. A label says the pad in the steps' words
-        (`wiring_steps.pad_word`, P953): bold yellow on a pad in `used`, muted on a pad with no net (NC), else dim, each
-        with the palette's thin dark outline."""
-        cx, _ = part_px["center"]
-        height = part_px["size"][1]
+    def _pad_labels(self, root, part, part_px):
+        """A ScenePart's pad labels (P412, P945), each where the scene placed it, with a dashed ring on a doubtful pad,
+        then its USB end's mark when it has one. Drawn in the part's own frame, so it turns with the part. A label is
+        bold yellow on a pad in use, muted on a pad with no net (NC), else dim, each with the palette's thin dark
+        outline."""
         colors, sizes = self.palette
-        layout = self.label_layouts[part_px.get("labels", LABELS_BESIDE)]
-        group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part, part_px), "class": "pad-labels"})
-        for pad, (x, y) in part_px["pins"].items():
-            if pad in part_px["doubtful"]:
+        group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part.part, part_px), "class": "pad-labels"})
+        for label in part.labels:
+            place = label.place
+            if label.doubtful:
+                x, y = part_px["pins"][label.pad]
                 ElementTree.SubElement(group, _svg("circle"), {
                     "cx": str(_round_px(x)), "cy": str(_round_px(y)), "r": "4", "fill": "none", "stroke": "#e65100",
                     "stroke-width": "1", "stroke-dasharray": "2 1.5"})
-            place, word = layout.place(x, y, part_px, part.rotate), wiring_steps.pad_word(pad)
-            look = {"font-size": sizes["pad_label_used"], "font-weight": "700", "fill": colors["pad_used"]} if pad in used else {
-                "font-size": sizes["pad_label"], "fill": colors["pad_none" if word == self.NO_NET else "pad_free"]}
-            label = _element(group, "text", word, x=place.x, y=place.y, stroke=colors["pad_halo"], **dict(
+            look = {"font-size": sizes["pad_label_used"], "font-weight": "700", "fill": colors["pad_used"]} if label.state == PAD_USED else {
+                "font-size": sizes["pad_label"], "fill": colors["pad_none" if label.no_net() else "pad_free"]}
+            text = _element(group, "text", label.word, x=place.x, y=place.y, stroke=colors["pad_halo"], **dict(
                 look, **{"text-anchor": place.anchor, "stroke-width": sizes["pad_halo"], "paint-order": "stroke"}))
             if place.rotate:
-                label.set("transform", "rotate(%s %s %s)" % (place.rotate, _round_px(place.x), _round_px(place.y)))
-        if part_px.get("usb_mark"):
+                text.set("transform", "rotate(%s %s %s)" % (place.rotate, _round_px(place.x), _round_px(place.y)))
+        if part.usb_mark:
+            mark = part.usb_mark
             ElementTree.SubElement(group, _svg("rect"), {
-                "x": str(_round_px(cx - 17)), "y": str(_round_px(height - 12)), "width": "34", "height": "12", "rx": "3",
-                "fill": "#cfd8dc", "stroke": "#455a64", "stroke-width": "1"})
+                "x": str(_round_px(mark.left)), "y": str(_round_px(mark.top)), "width": str(_round_px(mark.right - mark.left)),
+                "height": str(_round_px(mark.bottom - mark.top)), "rx": "3", "fill": "#cfd8dc", "stroke": "#455a64",
+                "stroke-width": "1"})
 
-    def _label(self, root, part, geometry, joined):
-        """A part's pad labels, when it is drawn from its record, and the dot on each of its pins, used or free."""
-        part_px = geometry.part(part.type)
-        if part_px.get("pad_labels"):
-            self._pad_labels(root, part, part_px, {pin for pin, hole in part.holes.items() if hole.group in joined})
-        for hole in part.holes.values():
-            state = PAD_USED if hole.group in joined else PAD_FREE
+    def _label(self, root, part, geometry):
+        """A ScenePart's pad labels, when it has any, and the dot on each of its pins in its state's colour."""
+        if part.labels:
+            self._pad_labels(root, part, geometry.part(part.part.type))
+        for pin, hole in part.part.holes.items():
+            state = part.pads[pin]
             ElementTree.SubElement(root, _svg("circle"), {"cx": str(_round_px(hole.x)), "cy": str(_round_px(hole.y)),
                                                           "r": "2.5", "fill": PAD_MARKS[state].fill, "stroke": "#20262b",
                                                           "stroke-width": "0.6", "data-pad": state})
