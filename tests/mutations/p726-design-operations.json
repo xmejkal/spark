@@ -12,7 +12,7 @@
   {"file": "scripts/spark/records/answer_operation.py", "name": "P726: a coded refusal loses its code",
    "find": "        return Answer(unchecked=[_cannot(str(broken), code=broken.code)])", "replace": "        return Answer(unchecked=[_cannot(str(broken))])"},
   {"file": "scripts/spark/design/tally_cost.py", "name": "P726: a folder nobody listed has no code",
-   "find": "                                             NOT_LISTED_FIX, code=design_codes.PROJECT_NOT_LISTED)])", "replace": "                                             NOT_LISTED_FIX)])"},
+   "find": "                                             design_codes.PROJECT_NOT_LISTED.fix, code=design_codes.PROJECT_NOT_LISTED)])", "replace": "                                             design_codes.PROJECT_NOT_LISTED.fix)])"},
   {"file": "scripts/spark/design/show_offer.py", "name": "P726: an unknown offer has no code",
    "find": "            return Answer(problems=[_problem(key, OFFER_UNKNOWN_SENTENCE % key, code=design_codes.OFFER_UNKNOWN)])", "replace": "            return Answer(problems=[_problem(key, OFFER_UNKNOWN_SENTENCE % key)])"},
   {"file": "scripts/spark/design/match_needs.py", "name": "P726: a project with no needs has no code",

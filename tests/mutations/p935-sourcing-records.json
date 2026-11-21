@@ -110,8 +110,8 @@
  {
   "file": "tests/test_json_contracts.py",
   "name": "a second BAD_ARGUMENT in an area's table takes the core's meaning unnoticed",
-  "find": "codes.CODES.get(code) if name != code.upper() else None)",
-  "replace": "codes.CODES.get(code))"
+  "find": "(tuple(also) + (codes,) if name != code.upper() else ())",
+  "replace": "(tuple(also) + (codes,))"
  },
  {
   "file": "tests/test_json_contracts.py",
@@ -128,8 +128,8 @@
  {
   "file": "tests/test_json_contracts.py",
   "name": "an area's variant of the core's word has no parent",
-  "find": " or getattr(codes, code.upper(), None)",
-  "replace": ""
+  "find": "(table, codes) + tuple(also)",
+  "replace": "(table,) + tuple(also)"
  },
  {
   "file": "tests/test_json_contracts.py",

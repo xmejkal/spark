@@ -31,7 +31,6 @@ NOTE_OTHER_KEY = "the replies file holds an answer for other entries or other by
 NOTE_UNWRITTEN = "requirements-origin.json could not be written, so every entry is read as yours from the next run"
 #: Why the previous version could not be kept, with the path from the project's folder.
 KEEP_FAILED = "the previous version could not be kept: %s (%s)"
-REPLIES_FIX = 'write the replies file as {"replies": {"<key>": true}} with the key of the run before, or leave out --replies'
 
 #: Value: one row of the record, the need an entry was added for and the entry as spark wrote it (a bare part id, or {part, name}).
 WrittenEntry = collections.namedtuple("WrittenEntry", "need entry")
@@ -191,7 +190,7 @@ class EntryRemoval:
         try:
             return RepliesStore(replies).load()
         except SparkError as unreadable:
-            raise SparkError.of_error(unreadable, code=unreadable.code, fix=REPLIES_FIX, status=unreadable.status) from None
+            raise SparkError.of_error(unreadable, code=design_codes.BAD_ARGUMENT_REQUIREMENTS_REPLIES, status=unreadable.status) from None
 
     def settle(self, found, dry_run):
         """After the file is written: put the staged previous version in place, then write the record last. Nothing on a dry run or
