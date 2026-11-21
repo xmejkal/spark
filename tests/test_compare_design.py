@@ -17,7 +17,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.checks import check, check_codes, rules_check  # noqa: E402
+from spark.checks import check, rules_check  # noqa: E402
 import compare_design  # noqa: E402
 
 
@@ -224,7 +224,10 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
                  (lambda: rules.write_text("[]"), "rules_refused"),
                  (lambda: rules.write_text("{}"), "circuit_not_json"),
                  (lambda: circuit.write_text("[]"), "no_rule_stated")]
-        fixes = {str(code): code.fix for code in (check_codes.NO_CIRCUIT, check_codes.NO_RULES_FILE, check_codes.NO_RULE_STATED)}
+        fixes = {"no_circuit": "give the path of the built circuit, usually dist/board/circuit.json, or build the board first with /spark:build",
+                 "no_rules_file": "give --rules the path of a rules file, or write .spark/rules.json with /spark:init",
+                 "no_rule_stated": "ask the person which I2C lines and which pins must not float, name them in i2c_buses and must_not_float "
+                                   "in the rules file, then run again"}
         for make, code in steps:
             make()
             with self.subTest(code=code):

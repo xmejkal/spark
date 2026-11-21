@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_all  # noqa: E402
-from spark.checks import build_check, check, check_codes  # noqa: E402
+from spark.checks import build_check, check  # noqa: E402
 from spark.checks.check_design import CheckDesign  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
@@ -672,16 +672,18 @@ class CheckDesignIsAnOperationTest(unittest.TestCase):
         found, = check.findings_of([self.result("physics", "ok", unchecked=["no rail"])])
         self.assertEqual((found.severity, found.subject, found.code, found.sentence),
                          (outcomes.COULD_NOT_RUN, "physics", "check_could_not_look", "no rail"))
-        self.assertEqual(found.fix, check_codes.CHECK_COULD_NOT_LOOK.fix)  # P935 PR 4: the fix comes from the code
+        self.assertEqual(found.fix, "fix what the sentence names for this check, then run check_all.py again")  # P935 PR 4: the code's fix
 
     def test_each_finding_of_the_run_carries_the_fix_of_its_code(self):
         problems = check.findings_of([self.result("physics", "problems", problems=["a short"])])
-        self.assertEqual([(found.code, found.fix) for found in problems], [("check_found_problems", check_codes.CHECK_FOUND_PROBLEMS.fix)])
+        self.assertEqual([(found.code, found.fix) for found in problems], [("check_found_problems", "fix each problem the check lists, then run check_all.py again")])
 
     def test_a_run_of_skipped_checks_is_the_nothing_asked_finding_with_its_meaning_and_fix(self):
         found, = check.findings_of([self.result("rules", "skipped"), self.result("bom", "skipped")])
         self.assertEqual((found.severity, found.subject, found.code, found.sentence, found.fix),
-                         (outcomes.COULD_NOT_RUN, None, "nothing_asked", check_codes.NOTHING_ASKED.meaning, check_codes.NOTHING_ASKED.fix))
+                         (outcomes.COULD_NOT_RUN, None, "nothing_asked",
+                          "every check was skipped, because no input was given or found, so the answer says nothing about the board",
+                          "run again with --project and your project folder, or give the inputs with --circuit, --rules, --package or --boards"))
 
     def test_run_operation_with_plain_values_gives_the_json_document_and_the_exit(self):
         folder = Path(tempfile.mkdtemp())
@@ -706,7 +708,8 @@ class CheckDesignIsAnOperationTest(unittest.TestCase):
         missing = str(Path(tempfile.mkdtemp()) / "nowhere")
         result = run_operation(CheckDesign(), {"project": missing}, FakeOutsideWorld())
         self.assertEqual([(found.severity, found.code) for found in result.findings], [(outcomes.COULD_NOT_RUN, "project_unusable")])
-        self.assertEqual([found.fix for found in result.findings], [check_codes.PROJECT_UNUSABLE.fix])  # P935 PR 4
+        self.assertEqual([found.fix for found in result.findings],
+                         ["give --project a folder that exists, or leave out --project and give each input with its own flag"])  # P935 PR 4
         self.assertEqual(result.lines, ["  [????] check_all          %s" % result.data["reason"]])
 
 
