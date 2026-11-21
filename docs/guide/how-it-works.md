@@ -37,7 +37,7 @@ means. The build's output prints the stages below, from one table, `stages.BUILD
 | schematic-notes | what the board emitter notes about a board it wrote; listed only when there is a note, and the build goes on | problems: `schematic_noted` |
 | footprint | the board's footprint that board.tsx imports, drawn with the design's rules | could-not-run: a design error, with its own code (design_codes), `stage_crashed`; skipped: `board_only` |
 | build | the board engine (tsci) builds board.tsx, and the copper is counted | could-not-run: `tool_missing`, `stage_timed_out`, `tool_cannot_build`; problems: `design_not_built`, `part_stranded`, `not_routed`; skipped: `board_only` |
-| simulation | the Wokwi diagram, its chips and wokwi.toml; no simulation runs | could-not-run: `tool_missing`, `simulation_fact_missing`, `chip_not_compiled`, `stage_timed_out`, `converter_lacks_part`; problems: `no_diagram`, `diagram_unwired`; skipped: `every_part_skipped` |
+| simulation | the Wokwi diagram, its chips and wokwi.toml; no simulation runs | could-not-run: `tool_missing`, `simulation_fact_missing`, `board_not_in_wokwi`, `chip_not_compiled`, `stage_timed_out`, `converter_lacks_part`; problems: `no_diagram`, `diagram_unwired`; skipped: `every_part_skipped` |
 | check_spine | not a stage the build runs: an error of the run itself that no stage caught | could-not-run: `stage_crashed` |
 
 <!-- /spark:stages build-board -->

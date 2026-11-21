@@ -10,6 +10,7 @@ It covers the area's modules `show_flow`, `phase_readers` and `flow_codes`, and 
 
 import contextlib
 import datetime
+import hashlib
 import io
 import json
 import os
@@ -31,6 +32,7 @@ from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import SimulateReader  # noqa: E402
+from spark.flow.guide import guide_of  # noqa: E402
 from spark.flow.show_flow import ShowFlow, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
@@ -181,8 +183,8 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(said["data"]["stands_at"], "parts")
         # P976: the refused pick is no offer; the says line counts it for each need.
         self.assertEqual(says(said, "parts"), ["1 of 2 needs picked",
-                                               "1 pick(s) for soil are refused. Ask Claude, or run parts.py --match.",
-                                               "1 pick(s) for wet are refused. Ask Claude, or run parts.py --match."])
+                                               "1 pick for soil is refused: too few are free. Claude can list them with parts.py --match.",
+                                               "1 pick for wet is refused: too few are free. Claude can list them with parts.py --match."])
         effects = {offer["key"]: offer["effect"] for offer in said["data"]["phases"][2]["offers"]}
         self.assertEqual(effects["pick:wet:x-many"], "Saves “A soil probe” as the pick for the wet need in this project. Uses 1 of your “A soil "
                                                      "probe” for the wet. Adds this project to your list of projects. May note the choice in your history.")
@@ -533,6 +535,199 @@ class TheBuildRecordStoreTest(unittest.TestCase):
         (project / BUILD_RECORD_FILE).write_text("[" * 200000)
         self.assertEqual(BuildRecordStore(project).written_sha256(), {})
 
+def a_project_built_with_no_simulation(code="board_not_in_wokwi", status="could-not-run"):
+    """A built project whose board and build ended ok and whose simulation stage ended in `status` with `code`, as the
+    p934 walk's FireBeetle 2 ESP32-C6 build records it (P977)."""
+    project = a_built_project(status)
+    record = BuildRecordStore(project).read()
+    record["stages"] = [{"name": "board", "status": "ok"}, {"name": "build", "status": "ok"},
+                        {"name": "simulation", "status": status, "code": code}]
+    BuildRecordStore(project, clock=FakeClock()).write({key: value for key, value in record.items() if key not in ("schema", "at")})
+    return project
+
+
+def a_firmware(project):
+    (project / "firmware").mkdir()
+    (project / "firmware" / "main.py").write_text("print(1)\n")
+    return project
+
+
+# P977 review: the sentences the review asked for, and `now.by` a list (two jobs name the person and Claude)
+NO_MODEL = "No simulation: Wokwi has no model of this board. You test it on the real board."
+
+
+def a_run(project, verdict, image=b"an image"):
+    """A run log in sim/runs/ that names `verdict` and the sha256 of `image`, as run_scenario.py writes its header."""
+    (project / "sim" / "runs").mkdir(parents=True, exist_ok=True)
+    (project / "sim" / "runs" / "one.log").write_text("verdict: %s\nimage sha256: %s\n\nwhat the board printed\n"
+                                                       % (verdict, hashlib.sha256(image).hexdigest()))
+    return project
+
+
+def an_image(project, image=b"an image"):
+    """sim/wokwi.toml naming sim/image.bin, which holds `image`, an hour after firmware/ was written."""
+    (project / "sim").mkdir(exist_ok=True)
+    (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+    (project / "sim" / "image.bin").write_bytes(image)
+    for path in (project / "firmware").rglob("*"):
+        os.utime(path, (1_700_000_000, 1_700_000_000))
+    os.utime(project / "sim" / "image.bin", (1_700_003_600, 1_700_003_600))
+    return project
+
+
+class TheGuideTest(FlowTest):
+    """P977: `data.guide` says what to do now, what is done, what comes later and what the person set aside."""
+
+    def test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now(self):
+        said, code = show(a_project_built_with_no_simulation())
+        self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "build"))
+        self.assertEqual(said["data"]["guide"], {
+            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [],
+                    "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
+                            "firmware. Spark cannot see your wiring."},
+            "done": ["idea", "needs", "parts", "requirements", "build (no simulation)"],
+            "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL})
+
+    def test_a_sheet_whose_steps_cannot_be_counted_leaves_the_firmware_one_job_and_the_breadboard_done(self):
+        project = a_project_built_with_no_simulation()
+        phases, _ = read_flow(project)
+        guide = guide_of(project, phases, steps=lambda _project: None)
+        self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
+                         ("firmware", ["claude"], "Ask Claude in the chat to write the firmware for this board."))
+        self.assertIn("breadboard (spark cannot see it)", guide["done"])
+
+    def test_with_the_firmware_written_the_deploy_is_now_and_the_simulate_stays_later(self):
+        said, _ = show(a_firmware(a_project_built_with_no_simulation()))
+        self.assertEqual(said["data"]["guide"], {
+            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [],
+                    "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
+                            "run the deploy in your terminal."},
+            "done": ["idea", "needs", "parts", "requirements", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
+            "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL})
+
+    def test_any_other_cause_of_a_simulation_that_could_not_run_stops_at_the_build(self):
+        for code in ("simulation_fact_missing", "converter_lacks_part", None):
+            with self.subTest(code=code):
+                guide = show(a_project_built_with_no_simulation(code))[0]["data"]["guide"]
+                self.assertEqual((guide["now"]["phase"], guide["now"]["says"], guide["now"]["offer"], guide["no_simulation"]),
+                                 ("build", "The build phase could not run. Ask Claude to read you why.", "build", None))
+                self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements"])
+
+    def test_a_board_only_build_of_a_board_wokwi_has_no_model_of_is_passed_and_the_firmware_is_one_job(self):
+        project = a_board_only_project("could-not-run")
+        record = BuildRecordStore(project).read()
+        record["stages"][-1]["code"] = "board_not_in_wokwi"
+        BuildRecordStore(project, clock=FakeClock()).write({key: value for key, value in record.items() if key not in ("schema", "at")})
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
+                         ("firmware", "Ask Claude in the chat to write the firmware for this board."))
+        self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements", "build (no simulation)"])
+
+    def test_a_build_of_a_board_wokwi_has_no_model_of_is_stale_when_the_parts_list_changed(self):
+        project = a_project_built_with_no_simulation()
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6-fresh", "parts": ["led-red-5mm"]}))
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"], guide["no_simulation"]),
+                         ("build", "The parts list changed since the last build. Ask Claude to build again.", None))
+
+    def test_a_simulation_with_problems_is_not_passed(self):
+        guide = show(a_project_built_with_no_simulation("diagram_unwired", "problems"))[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
+                         ("build", "The build phase has problems. Ask Claude to go through them with you."))
+
+    def test_a_passed_build_with_a_simulate_that_has_problems_makes_the_simulate_now(self):
+        project = a_firmware(a_project_built_with_no_simulation())
+        (project / "sim").mkdir()
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = 42\n')
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
+                         ("simulate", "The simulate phase has problems. Ask Claude to go through them with you."))
+        self.assertEqual((guide["later"], guide["no_simulation"]), (["deploy"], NO_MODEL))
+
+    def test_an_image_no_run_tested_makes_the_simulate_now(self):
+        project = a_firmware(a_built_project())
+        (project / "sim").mkdir()
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+        (project / "sim" / "image.bin").write_bytes(b"an image")
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
+                         ("simulate", ["your terminal"], "Ask Claude for the scenario command, and run it in your terminal. "
+                                                         "It uses Wokwi CI minutes."))
+        self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements", "build", "breadboard (spark cannot see it)", "firmware"])
+
+    def test_an_old_image_on_a_board_wokwi_has_no_model_of_is_counted_as_done(self):
+        guide = show(an_image(a_firmware(a_project_built_with_no_simulation())))[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["later"], guide["no_simulation"]),
+                         ("deploy", ["simulate (no Wokwi model of this board)"], NO_MODEL))
+        self.assertNotIn("simulate", guide["done"])
+
+    def test_a_run_that_failed_on_the_image_has_its_own_sentence(self):
+        guide = show(a_run(an_image(a_firmware(a_built_project())), "failed"))[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
+                         ("simulate", ["claude"], "A run failed on this image (one.log). Ask Claude to go through its log with you."))
+
+    def test_a_failed_run_beside_a_later_passed_run_is_named_and_keeps_the_simulate_open(self):
+        project = a_run(an_image(a_firmware(a_built_project())), "failed")
+        (project / "sim" / "runs" / "two.log").write_text("verdict: passed\nimage sha256: %s\n\n" % hashlib.sha256(b"an image").hexdigest())
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
+                         ("simulate", "A run failed on this image (one.log). Ask Claude to go through its log with you."))
+
+    def test_firmware_changed_after_a_passed_run_leaves_the_simulate_open(self):
+        project = a_run(an_image(a_firmware(a_built_project())), "passed")
+        self.assertEqual(show(project)[0]["data"]["guide"]["now"]["phase"], "deploy")  # the run tested this image
+        os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
+                         ("simulate", ["claude"], "Your firmware changed after the image. Ask Claude to make the image again, then run the scenario."))
+        self.assertNotIn("simulate", guide["done"])
+
+    def test_a_fresh_project_starts_at_the_idea(self):
+        project = Path(tempfile.mkdtemp()) / "plant-alarm"
+        project.mkdir()
+        self.assertEqual(show(project)[0]["data"]["guide"], {
+            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [],
+                    "says": "Tell Claude your goal in the chat, in your own words."},
+            "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
+            "set_aside": [], "no_simulation": None})
+
+    def test_needs_set_aside_do_not_count_and_a_picked_one_counts_as_picked(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture"},
+            {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True},
+            {"id": "dry", "does": "sense", "what": "soil-moisture", "aside": True, "pick": [{"part": "x-many"}]}])
+        said, _ = show(project)
+        # P976: the refused pick (x-held) of each need with offers is counted in its own line
+        self.assertEqual((statuses(said)["parts"], says(said, "parts")), ("partial", [
+            "1 of 2 needs picked", "set aside: wet, dry", "1 pick for soil is refused: too few are free. Claude can list them with parts.py --match.",
+            "1 pick for dry is refused: too few are free. Claude can list them with parts.py --match."]))
+        self.assertFalse([key for key in offers(said, "parts") if key.startswith("pick:wet:")])
+        self.assertTrue([key for key in offers(said, "parts") if key.startswith("pick:dry:")])
+        guide = said["data"]["guide"]
+        self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["needs"], guide["now"]["says"], guide["set_aside"]),
+                         ("parts", ["you"], ["soil"], "1 need(s) have no part yet: soil. Tell Claude a pick for each, or to set it aside.",
+                          ["wet", "dry"]))
+        self.assertEqual(guide["done"], ["idea", "needs"])
+
+    def test_every_need_picked_or_set_aside_makes_the_parts_ok_and_the_parts_list_now(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
+        said, _ = show(project)
+        self.assertEqual(statuses(said)["parts"], "ok")
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"], said["data"]["guide"]["now"]["says"]),
+                         ("requirements", "requirements", "Ask Claude in the chat to write the parts list from your picks."))
+
+    def test_the_build_record_keeps_the_code_of_a_stage_that_did_not_end_ok_and_no_detail(self):
+        from spark.build import kept_files
+        from spark.build.stages import Stage
+        project = a_built_project()
+        kept_files.keep_build_record(project, project / "requirements.json",
+                                     [Stage("board", "ok"), Stage("simulation", "could-not-run", "/a/detail", "board_not_in_wokwi")], [])
+        self.assertEqual(BuildRecordStore(project).read()["stages"], [
+            {"name": "board", "status": "ok"}, {"name": "simulation", "status": "could-not-run", "code": "board_not_in_wokwi"}])
+
+
 def offer_of(envelope, key):
     """The offer dict whose key is `key`, from any phase."""
     return next(offer for phase in envelope["data"]["phases"] for offer in phase["offers"] if offer["key"] == key)
@@ -642,7 +837,7 @@ class TheReviewRoundTest(FlowTest):
         said, _ = show(project)
         # P976: the refused pick is no offer; the says line counts it (x-held is refused too)
         self.assertNotIn("pick:wet:x-one", offers(said, "parts"))
-        self.assertIn("2 pick(s) for wet are refused. Ask Claude, or run parts.py --match.", says(said, "parts"))
+        self.assertIn("2 picks for wet are refused: too few are free. Claude can list them with parts.py --match.", says(said, "parts"))
         self.assertNotIn("pick:soil:x-one", offers(said, "parts"))  # P976: the current pick is no offer
 
     def test_a_pick_is_refused_when_another_need_s_pick_cannot_get_its_part(self):
@@ -666,7 +861,7 @@ class TheReviewRoundTest(FlowTest):
         said, _ = show(project)
         # P976: the refused pick is no offer; the says line counts it (x-held is refused too)
         self.assertNotIn("pick:wet:x-two", offers(said, "parts"))
-        self.assertIn("2 pick(s) for wet are refused. Ask Claude, or run parts.py --match.", says(said, "parts"))
+        self.assertIn("2 picks for wet are refused: too few are free. Claude can list them with parts.py --match.", says(said, "parts"))
 
     def test_a_first_pick_frees_a_hold_given_by_hand_and_names_no_old_pick(self):
         (self.home / "drawer" / "many.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": "many",
@@ -692,9 +887,10 @@ class OffersPerNeedTest(FlowTest):
     order, never the current pick or a refused one; the rest is one says line per need. The store's three soil probes are
     owned, so they rank first, and none holds the need's word."""
 
-    def probe(self, part, what="zorbleflux", tags=(), entry=None):
-        """Put the probe `part` in the scratch catalog, doing `what` with `tags`, and `entry` (a drawer entry's fields) in the drawer."""
-        record = {"schema": 1, "id": part, "name": "Probe " + part, "kind": "sensor", "function": [{"does": "sense", "what": what}]}
+    def probe(self, part, what="zorbleflux", tags=(), entry=None, does="sense"):
+        """Put the probe `part` in the scratch catalog, doing (`does`) `what` with `tags`, and `entry` (a drawer entry's fields)
+        in the drawer."""
+        record = {"schema": 1, "id": part, "name": "Probe " + part, "kind": "sensor", "function": [{"does": does, "what": what}]}
         (self.home / "catalog" / (part + ".json")).write_text(json.dumps(dict(record, tags=list(tags)) if tags else record))
         if entry is not None:
             (self.home / "drawer" / (part + ".json")).write_text(json.dumps(dict({"schema": 1, "label": part, "is": {"part": part}}, **entry)))
@@ -716,21 +912,21 @@ class OffersPerNeedTest(FlowTest):
     def test_three_plausible_picks_are_offered_and_the_refused_one_is_counted(self):
         said, _ = show(self.project)
         self.assertEqual(offers(said, "parts"), ["pick:probe:c-1", "pick:probe:c-2", "pick:probe:c-3"])
-        self.assertEqual(says(said, "parts"), ["1 of 1 needs picked", "1 pick(s) for probe are refused. Ask Claude, or run parts.py --match."])
+        self.assertEqual(says(said, "parts"), ["1 of 1 needs picked", "1 pick for probe is refused: too few are free. Claude can list them with parts.py --match."])
 
     def test_a_fourth_plausible_pick_is_counted_and_not_offered(self):
         self.probe("c-4")
         said, _ = show(self.project)
         self.assertEqual(offers(said, "parts"), ["pick:probe:c-1", "pick:probe:c-2", "pick:probe:c-3"])
         self.assertEqual(says(said, "parts")[1:],
-                         ["1 more pick(s) for probe are not shown, and 1 are refused. Ask Claude, or run parts.py --match."])
+                         ["Not shown for probe: 1 more pick, 1 refused (too few free). Claude can list them with parts.py --match."])
 
     def test_with_none_refused_the_line_says_only_how_many_more(self):
         self.gone("a-refused")
         self.probe("c-4")
         self.probe("c-5")
         said, _ = show(self.project)
-        self.assertEqual(says(said, "parts")[1:], ["2 more pick(s) for probe are not shown. Ask Claude, or run parts.py --match."])
+        self.assertEqual(says(said, "parts")[1:], ["Not shown for probe: 2 more picks. Claude can list them with parts.py --match."])
 
     def test_a_part_with_the_need_s_word_only_in_its_tags_is_offered_by_the_default_matcher(self):
         # word-overlap is the default (the PO's yes, 2026-11-21): same-words would not offer c-0
@@ -740,10 +936,33 @@ class OffersPerNeedTest(FlowTest):
         said, _ = show(self.project)
         self.assertEqual(offers(said, "parts"), ["pick:probe:c-1", "pick:probe:c-0"])
 
-    def test_a_need_with_no_plausible_pick_has_no_offers_and_no_line_about_more(self):
+    def test_a_need_with_candidates_and_no_plausible_pick_says_so(self):
+        # the review of PR #1416: a need with no offer is never silent
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "odd", "does": "sense", "what": "quuxwobble"}])
         said, _ = show(project)
+        self.assertEqual((offers(said, "parts"), says(said, "parts")),
+                         ([], ["0 of 1 needs picked", "No pick fits odd by its words. Ask Claude to run parts.py --match."]))
+
+    def test_a_need_with_no_candidate_at_all_has_no_line(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "odd", "does": "keep-time", "what": "quuxwobble"}])
+        said, _ = show(project)
         self.assertEqual((offers(said, "parts"), says(said, "parts")), ([], ["0 of 1 needs picked"]))
+
+    def test_a_board_is_plausible_for_a_compute_need_whatever_its_words(self):
+        # the review of PR #1416: "control", "brain" or "mcu" names no board's words, and a board is what a compute need wants
+        self.probe("c-cpu", what="coprocessor", does="compute")  # a part, not a board, with none of the need's words
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "brain", "does": "compute", "what": "control"}])
+        said, _ = show(project)
+        self.assertIn("pick:brain:xiao-esp32-c6", offers(said, "parts"))
+        self.assertNotIn("pick:brain:c-cpu", offers(said, "parts"))
+
+    def test_a_current_pick_stored_as_its_drawer_entry_is_not_offered_again(self):
+        # the review of PR #1416: the drawer entry "many" is the record x-many, so a pick of either is the same pick
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm",
+                             [{"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"entry": "many"}]}])
+        said, _ = show(project)
+        self.assertNotIn("pick:soil:x-many", offers(said, "parts"))
+        self.assertIn("pick:soil:x-unknown", offers(said, "parts"))
 
 
 class FingerprintTest(FlowTest):
@@ -820,7 +1039,7 @@ class TheRunOnButtonLightTest(unittest.TestCase):
     def test_a_pick_and_a_parts_list_make_stale_only_what_their_offers_name(self):
         picks = [str(self.project), "brain=xiao-esp32-c6", "button=tactile-button", "light=led-red-5mm"]  # another board than the file names
         turned, named = self.turned_stale(PickParts(), {"project_and_picks": picks, "passed_over": NO_PASSED_OVER, "dry_run": False},
-                                          "pick:button:tactile-button")  # P976: no board holds "control", so brain has no offer
+                                          "pick:brain:xiao-esp32-c6")
         self.assertEqual(turned, {"requirements"})
         self.assertLessEqual(turned, named)
         (self.project / "breadboard.md").write_text("# the sheet\n")

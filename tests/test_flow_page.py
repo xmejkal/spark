@@ -357,7 +357,10 @@ class TheCommandTest(unittest.TestCase):
         project = a_built_project()
         envelope, code = run_flow("page", "--project", str(project), "--json")
         self.assertEqual((code, envelope["op"], envelope["status"]), (0, "write-flow-page", OK))
-        self.assertEqual(sorted(envelope["data"]), ["did", "file", "fingerprint", "phases", "stands_at"])
+        # P977: the page answers the guide too
+        self.assertEqual(sorted(envelope["data"]), ["did", "file", "fingerprint", "guide", "phases", "stands_at"])
+        self.assertEqual(envelope["data"]["guide"], run_flow("show", "--project", str(project), "--json")[0]["data"]["guide"])
+        self.assertEqual(envelope["data"]["guide"]["now"]["phase"], "firmware")
         self.assertEqual(envelope["data"]["fingerprint"], fingerprint_of(project, read_flow(project)[0]))
         body = re.search(r'<body data-stands-at="[^"]*" data-fingerprint="([0-9a-f]{12})" data-written="([^"]*)">',
                          (project / "page.html").read_text(encoding="utf-8"))

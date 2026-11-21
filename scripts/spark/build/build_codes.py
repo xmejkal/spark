@@ -28,6 +28,8 @@ DESIGN_NOT_BUILT, NOT_ROUTED, PART_STRANDED = "design_not_built", "not_routed", 
 #: The simulation project.
 SIMULATION_FACT_MISSING, CHIP_NOT_COMPILED = "simulation_fact_missing", "chip_not_compiled"
 CONVERTER_LACKS_PART, NO_DIAGRAM, DIAGRAM_UNWIRED = "converter_lacks_part", "no_diagram", "diagram_unwired"
+#: The board's record names no Wokwi part (P977): no simulation can run, and the flow's guide passes such a build.
+BOARD_NOT_IN_WOKWI = "board_not_in_wokwi"
 #: A stage the build skipped, which is never ok and never a problem (P936, the PO 2026-11-20): it had nothing to do.
 BOARD_ONLY = Code("board_only", "the requirements say board_only and name no part, so the project runs on the board alone "
                   "and this stage has nothing to wire", "nothing to fix: the firmware is written for the board alone; "
@@ -56,6 +58,7 @@ CODES = {
     PART_STRANDED: "a part of the built board reaches no ground, has an end on nothing, or is not on the net that feeds it",
     SIMULATION_FACT_MISSING: "a part or the board lacks the record the simulation is made from, or a part record cannot be read",
     CHIP_NOT_COMPILED: "a custom chip the simulation needs has no compiled binary, or did not compile",
+    BOARD_NOT_IN_WOKWI: "the board's record names no Wokwi part, so Wokwi has no model of it and nothing is simulated",
     CONVERTER_LACKS_PART: "the diagram converter has no Wokwi part for a component: its mapping lacks it, the design built",
     NO_DIAGRAM: "the diagram converter wrote no diagram",
     DIAGRAM_UNWIRED: "the diagram holds the parts and no wire joins them",

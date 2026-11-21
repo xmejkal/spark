@@ -25,6 +25,7 @@ class ListNeeds(AnswerOperation):
         listed = needs.read(project)
         return Answer({"needs": listed}, ["  %-10s %s / %s%s%s" % (n["id"], n.get("does"), n.get("what"),
                                                                    "  (%s)" % n["condition"] if n.get("condition") else "",
-                                                                   "  [%s]" % n["mark"] if n.get("mark") else "") for n in listed]
+                                                                   "  [%s]" % n["mark"] if n.get("mark") else "")
+                                                       + ("  [aside]" if n.get("aside") else "") for n in listed]
                       or [NO_NEEDS_LINE])
 # --- end MVP ---

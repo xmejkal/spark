@@ -45,7 +45,7 @@ class MatchNeeds(AnswerOperation):
         lines = []
         for need in matched:
             lines.append("  %s — %s / %s%s%s" % (need["need"], need["does"], need["what"], "  (%s)" % need["condition"] if need["condition"] else "",
-                                                "  [%s]" % need["mark"] if need["mark"] else ""))
+                                                "  [%s]" % need["mark"] if need["mark"] else "") + ("  [aside]" if need["aside"] else ""))
             for c in need["candidates"]:
                 lines.append("      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
                                                       "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),

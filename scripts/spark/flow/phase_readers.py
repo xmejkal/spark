@@ -38,6 +38,8 @@ NOT_SIMULATED_YET = (firmware_codes.NO_SIM_TOML, firmware_codes.NO_IMAGE)
 Offer = namedtuple("Offer", "key label effect makes_stale")
 #: The parts phase offers at most this many picks per need (P976, the PO, 2026-11-21: "so many unrelated things").
 OFFERS_PER_NEED = 3
+#: The verb of the need a board serves (`needs`' board need): a board is a plausible pick for it whatever its words.
+COMPUTE = "compute"
 #: The file whose presence says a phase holds something now, for `makes_stale`.
 HELD_FILES = {flow_codes.REQUIREMENTS: Path(REQUIREMENTS_FILE), flow_codes.BUILD: BUILD_RECORD_FILE,
               flow_codes.BREADBOARD: Path(sheet.SHEET)}
@@ -165,12 +167,8 @@ def is_listed(project):
         return None
 
 
-def other_pick_refusal(plan, need, picked, problems):
-    """None when `plan` refuses the pick for its own part (too few are free); else the sentence of another need's pick
-    that cannot get its part, the problem's own sentence."""
-    own = next((problem for problem in problems if problem["subject"] == picked), None)
-    if own:
-        return None
+def other_pick_sentence(plan, need, problems):
+    """The sentence of a pick refused because another need's pick cannot get its part: the problem's own sentence."""
     other = problems[0]
     return flow_codes.OTHER_PICK_MESSAGE % (", ".join(plan.needs_picking(other["subject"], need)) or "another need", other["subject"], other["sentence"])
 
@@ -180,40 +178,51 @@ def pick_id_of(candidate):
     return candidate["id"] or candidate["entry"]
 
 
-def is_plausible(candidate):
-    """True when `candidate` holds the need's words or the matcher scores it above 0 (P976): owned junk takes no place."""
+def is_plausible(need, candidate):
+    """True when `candidate` holds the need's words or the matcher scores it above 0 (P976): owned junk takes no place. A
+    board is plausible for a compute need whatever its words: the board is what a compute need picks."""
+    if need["does"] == COMPUTE and candidate["kind"] == "board":
+        return True
     return bool(candidate["what_matches"]) or candidate["score"] > 0
 
 
-def is_current_pick(need, pick_id):
-    """True when the need's pick already names `pick_id`."""
-    return any(pick_id in pick.values() for pick in need.get("pick") or [])
+def counted_words(count, words):
+    """The word of `words` (one, many) that goes with `count`."""
+    return words[0] if count == 1 else words[1]
 
 
-def more_line(need, more, refused):
+def left_out_lines(need, more, refused):
     """The says lines of a need with picks left out (P976): how many more, how many refused; a count of 0 is left out."""
     if more > 0 and refused:
-        return [flow_codes.MORE_AND_REFUSED_MESSAGE % (more, need, refused)]
-    if more > 0:
-        return [flow_codes.MORE_PICKS_MESSAGE % (more, need)]
-    return [flow_codes.REFUSED_PICKS_MESSAGE % (refused, need)] if refused else []
+        said = flow_codes.MORE_AND_REFUSED_MESSAGE % (need, more, counted_words(more, flow_codes.PICK_WORDS), refused)
+    elif more > 0:
+        said = flow_codes.MORE_PICKS_MESSAGE % (need, more, counted_words(more, flow_codes.PICK_WORDS))
+    elif refused:
+        said = flow_codes.REFUSED_PICKS_MESSAGE % (refused, counted_words(refused, flow_codes.PICK_WORDS), need,
+                                                   counted_words(refused, flow_codes.BE_WORDS))
+    else:
+        return []
+    return [said + " " + flow_codes.LIST_PICKS_MESSAGE]
 
 
 def need_picks(project, need, plan, listed):
     """(the pick Offers of one matched `need`, its says lines), P976: its plausible candidates in the matcher's order, but
-    its current pick and those `plan` refuses, at most OFFERS_PER_NEED. When another need's pick cannot get its part, the
-    need gets no offers and one line with that sentence."""
+    its current pick and those `plan` refuses, at most OFFERS_PER_NEED. A need with candidates and none plausible, or one
+    whose pick another need's pick refuses, gets no offers and one line that says why."""
+    plausible = [candidate for candidate in need["candidates"] if is_plausible(need, candidate)]
+    if need["candidates"] and not plausible:
+        return [], [flow_codes.NO_PLAUSIBLE_MESSAGE % need["need"]]
     offered, refused = [], 0
-    for candidate in (c for c in need["candidates"] if is_plausible(c) and not is_current_pick(need, pick_id_of(c))):
+    for candidate in (c for c in plausible if not plan.is_current(need["need"], pick_id_of(c))):
         picked, changes, problems = plan.holds(need["need"], pick_id_of(candidate))
-        if not problems:
+        own = next((problem for problem in problems if problem["subject"] == picked), None)
+        if own:
+            refused += 1
+        elif problems:
+            return [], [flow_codes.NEED_REFUSED_LINE % (need["need"], other_pick_sentence(plan, need["need"], problems))]
+        else:
             offered.append(pick_offer(project, need["need"], candidate, listed, plan.freed(changes, need["need"])))
-            continue
-        other = other_pick_refusal(plan, need["need"], picked, problems)
-        if other:
-            return [], [flow_codes.NEED_REFUSED_LINE % (need["need"], other)]
-        refused += 1
-    return offered[:OFFERS_PER_NEED], more_line(need["need"], len(offered) - OFFERS_PER_NEED, refused)
+    return offered[:OFFERS_PER_NEED], left_out_lines(need["need"], len(offered) - OFFERS_PER_NEED, refused)
 
 
 def pick_offer(project, need, candidate, listed, freed):
@@ -230,9 +239,21 @@ def pick_offer(project, need, candidate, listed, freed):
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK))
 
 
+def counted(listed):
+    """The needs that count for the parts (P977): each with a pick, and each the person did not set aside. `listed` are
+    needs as `needs.read` or `needs.match` gives them; the guide reads the same rule."""
+    return [need for need in listed if need.get("pick") or not need.get("aside")]
+
+
+def set_aside(listed):
+    """The needs the person set aside (P977), picked or not: a picked one still counts as picked."""
+    return [need for need in listed if need.get("aside")]
+
+
 class PartsReader(PhaseReader):
     """Strategy: the picks of the needs (`needs.match`): problems when a need cannot be matched, partial while some need
-    has no pick, and every candidate offered as a pick."""
+    that counts has no pick, and every candidate offered as a pick. A need set aside with no pick does not count, has no
+    pick offer and is named (P977)."""
 
     PHASE, BY = flow_codes.PARTS, flow_codes.BY_YOU
 
@@ -243,12 +264,14 @@ class PartsReader(PhaseReader):
         if not matched:
             status, said = without_needs(project)
             return self.phase(status, [said])
-        picked = sum(1 for need in matched if need.get("pick"))
-        status = OK if picked == len(matched) else flow_codes.PARTIAL if picked else flow_codes.NOT_STARTED
+        open_needs, aside = counted(matched), [need["need"] for need in set_aside(matched)]
+        picked = sum(1 for need in open_needs if need.get("pick"))
+        status = OK if picked == len(open_needs) else flow_codes.PARTIAL if picked else flow_codes.NOT_STARTED
         # the list is read as the pick reads it: one that cannot be read stops this phase, as needs.match does
         plan, listed = needs.PickPlan(project), store.find_listed_name(project) is not None
-        picks, said = [], [flow_codes.PICKED_MESSAGE % (picked, len(matched))]
-        for need in matched:
+        picks = []
+        said = [flow_codes.PICKED_MESSAGE % (picked, len(open_needs))] + ([flow_codes.ASIDE_MESSAGE % ", ".join(aside)] if aside else [])
+        for need in open_needs:
             offered, lines = need_picks(project, need, plan, listed)
             picks, said = picks + offered, said + lines
         return self.phase(status, said, picks)

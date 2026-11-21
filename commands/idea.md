@@ -76,7 +76,9 @@ before you mark any need. Show the person, for each need, the
 owned option and the simpler one beside it, with what each would cost — in 1b, what it still owes; spark knows no
 prices. Then mark each need — `have` (owned, with a record), `have-unknown` (owned, no record),
 `know` (a record, not owned) or `gap` (nothing similar) — and **say why in the conversation**: the reason is not
-written to the project. Write the marks with `--needs-set` (`{"id", "mark"}`).
+written to the project. Write the marks with `--needs-set` (`{"id", "mark"}`). When the person says to leave a need
+out of this board, and only then, write `{"id", "aside": true}` ([P977](https://github.com/xmejkal/spark/issues/1407)).
+Every later write keeps it. A need set aside with no pick does not count as open.
 
 What `--match` tells you about each candidate, and how to read it:
 
