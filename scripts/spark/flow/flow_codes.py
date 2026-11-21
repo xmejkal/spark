@@ -115,8 +115,11 @@ STANDS_AT_LINE = "The project stands at: %s."
 #: is and how to act on it. The page has no script, so every action is a message to Claude.
 PAGE_INTRO = "Where this project stands. This page only shows it. To change anything, tell Claude in the chat."
 #: Said under the intro when the page holds wiring steps, so the wiring comes first and the phases are folded below it.
-WIRING_FIRST = "The wiring and its pictures come first. The phases are below, each folded: click one to read it."
+WIRING_FIRST = "Below: the wiring and its pictures, then each phase, folded: click one to read it."
 NOTHING_OPEN_LINE = "No phase is open."
+#: The guide on the page (P977 PR 2): the label of each line (NOW also names its phase, to tie it to the rail). The link to the
+#: first wiring step is the wiring section's own (ONE_AT_A_TIME), drawn when the guide's now holds the wiring (`now.steps`).
+GUIDE_NOW, GUIDE_DONE, GUIDE_LATER, GUIDE_SET_ASIDE = "NOW (%s)", "DONE", "LATER", "SET ASIDE"
 NOT_DRAWN_HERE = "Not drawn here. The build draws it: run /spark:build --keep."
 NO_PICTURE_FILE = "Not drawn: %s is not in the project yet. The build with --keep writes it."
 UNREADABLE_PICTURE = "Not drawn: %s cannot be read."
@@ -132,7 +135,7 @@ WIRING_PICTURE_INTRO = ("In the Breadboard picture below, each jumper carries a 
                         "pads it joins: find the holes there.")
 WIRING_UNREADABLE = "The wiring could not be read from the build's files. Run the build again with --keep."
 BREADBOARD_TITLE = "Breadboard"
-ONE_AT_A_TIME = "One at a time: start at step 1"
+ONE_AT_A_TIME = "One at a time: start at step %d"
 STEP_OF = "Step %d of %d"
 BACK, NEXT, ALL_STEPS, PICTURE = "Back", "Next", "All steps", "Picture"
 BACK_LABEL, NEXT_LABEL = "Back to step %d", "Next: step %d"
@@ -140,7 +143,10 @@ BACK_LABEL, NEXT_LABEL = "Back to step %d", "Next: step %d"
 #: The guide (P977, the PO, 2026-11-21: "nothing says what to do now"): one sentence for the phase to act on now, keyed by
 #: (phase, status). Each names who acts. A phase and status with none here gets PROBLEMS_NOW or COULD_NOT_RUN_NOW.
 IDEA_NOW = "Tell Claude your goal in the chat, in your own words."
-PARTS_NOW = "%d need(s) have no part yet: %s. Tell Claude a pick for each, or to set it aside."
+PARTS_NOW = "%s no part yet: %s. Tell Claude a pick for each, or to set it aside."
+ONE_NEED_HAS, MANY_NEEDS_HAVE = "1 need has", "%d needs have"
+#: A phase in `later` whose status is ok: it is done now, and a change before it can make it stale (the PO's lens, PR 2 review).
+LATER_BUT_DONE = " (done, may change)"
 REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your picks."
 REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
 BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."

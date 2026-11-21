@@ -91,7 +91,7 @@ def masked_page(page, privacy):
     pictures = [Picture(*masked(tuple(picture))) for picture in page.pictures]
     wiring = PageWiring(*masked(tuple(page.wiring))) if page.wiring else None
     return FlowPage(masked(page.title), masked(page.phases), masked(page.stands_at), pictures, masked(page.notes), wiring,
-                    page.fingerprint, page.written)
+                    page.fingerprint, page.written, masked(page.guide))
 
 
 def newest_change(project):
@@ -110,14 +110,15 @@ def write_page(project, readers=None, parts=None, renderer=None, store=None):
     """
     phases, stands_at = read_flow(project, readers)
     shown = (parts or kept_parts)(project)
+    guide = guide_of(project, phases)  # once: the page draws it and the answer holds it
     page = FlowPage(page_title(Path(project).resolve().name), [phase.to_dict() for phase in phases], stands_at,
-                    shown.pictures, (flow_codes.BENCH_NOTE,), shown.wiring, fingerprint_of(project, phases), newest_change(project))
+                    shown.pictures, (flow_codes.BENCH_NOTE,), shown.wiring, fingerprint_of(project, phases), newest_change(project), guide)
     privacy = privacy_for(project)
     page = masked_page(page, privacy)
     renderer = renderer or FlowHtmlPage()
     # masked again once rendered: the inline breadboard's parse turns a character reference (&#47;) into a path
     path = (store or FlowPageStore()).write(project, renderer.FILE_NAME, privacy.masked(renderer.text(page)))
-    return Written(path, page.phases, page.stands_at, page.fingerprint, privacy.masked(guide_of(project, phases)))
+    return Written(path, page.phases, page.stands_at, page.fingerprint, page.guide)
 
 
 def write_kept_page(project, tabs):

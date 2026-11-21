@@ -576,8 +576,9 @@ class TheGuideTest(FlowTest):
     def test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now(self):
         said, code = show(a_project_built_with_no_simulation())
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "build"))
+        # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [],
+            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "needs", "parts", "requirements", "build (no simulation)"],
@@ -594,7 +595,7 @@ class TheGuideTest(FlowTest):
     def test_with_the_firmware_written_the_deploy_is_now_and_the_simulate_stays_later(self):
         said, _ = show(a_firmware(a_project_built_with_no_simulation()))
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [],
+            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "needs", "parts", "requirements", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
@@ -681,7 +682,7 @@ class TheGuideTest(FlowTest):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         self.assertEqual(show(project)[0]["data"]["guide"], {
-            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [],
+            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None})
@@ -697,9 +698,16 @@ class TheGuideTest(FlowTest):
         self.assertTrue([key for key in offers(said, "parts") if key.startswith("pick:dry:")])
         guide = said["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["needs"], guide["now"]["says"], guide["set_aside"]),
-                         ("parts", ["you"], ["soil"], "1 need(s) have no part yet: soil. Tell Claude a pick for each, or to set it aside.",
+                         ("parts", ["you"], ["soil"], "1 need has no part yet: soil. Tell Claude a pick for each, or to set it aside.",
                           ["wet", "dry"]))
         self.assertEqual(guide["done"], ["idea", "needs"])
+
+    def test_several_needs_with_no_pick_are_a_counted_plural(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "pump", "does": "move", "what": "water"},
+            {"id": "led", "does": "indicate", "what": "light"}])
+        self.assertEqual(show(project)[0]["data"]["guide"]["now"]["says"],
+                         "3 needs have no part yet: soil, pump, led. Tell Claude a pick for each, or to set it aside.")
 
     def test_every_need_picked_or_set_aside_makes_the_parts_ok_and_the_parts_list_now(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
