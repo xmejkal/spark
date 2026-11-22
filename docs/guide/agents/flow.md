@@ -314,7 +314,7 @@ The envelope has `op` `run-request`. Its `data` holds:
 - `note`: `null`, or one sentence beside an ok answer. A build whose only stage that could not run is the simulation,
   with code `board_not_in_wokwi`, built the board, the sheet and the pin map
   ([P1008](https://github.com/xmejkal/spark/issues/1467)). Its `status` is then `ok`, its `line` is `ran <label>: ok`,
-  and `note` is the simulation's sentence. The guide counts such a build as done, too. The envelope keeps the build's
+  and `note` is the meaning of that code. The guide counts such a build as done, too. The envelope keeps the build's
   own `unchecked` item, so its `status` stays `could-not-run` and the exit stays 2. Decide on `data.status`.
 - `fingerprint`: the fingerprint after the run, the whole sha256.
 

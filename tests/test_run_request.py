@@ -163,7 +163,7 @@ class EachKindRunsItsStepTest(RunRequestTest):
         self.assertEqual((code, envelope["status"], [item["code"] for item in envelope["unchecked"]]), (2, "could-not-run", ["board_not_in_wokwi"]))
         self.assertEqual({key: envelope["data"][key] for key in ("ran", "status", "mark", "line", "note")},
                          {"ran": True, "status": "ok", "mark": "✓", "line": "ran label of build: ok",
-                          "note": "the board record names no wokwi_part_type"})
+                          "note": "the board's record names no Wokwi part, so Wokwi has no model of it and nothing is simulated"})
 
     def test_a_build_that_also_stopped_before_the_simulation_still_could_not_run(self):
         """A crash writes no build record, so an older one that stopped only at the simulation never makes it ok."""

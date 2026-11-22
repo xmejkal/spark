@@ -19,7 +19,7 @@ from spark.design.pick_parts import NO_PASSED_OVER, PickParts
 from spark.design.write_requirements import WriteRequirements
 from spark.flow import flow_codes, request_codes
 from spark.flow.fingerprint import SHORT, fingerprint_of
-from spark.flow.guide import stops_only_for_no_model
+from spark.flow.guide import NO_MODEL_CODES, stops_only_for_no_model
 from spark.flow.phase_readers import MARKS, REQUIREMENTS_FILE
 from spark.flow.show_flow import privacy_for, read_flow
 
@@ -131,13 +131,13 @@ def line_of(label, result):
 
 def answer_of(kind, result):
     """(status, note) of the answer of a step of `kind` that ran: a build that could not run only because Wokwi has no
-    model of the board answers ok, with its simulation's sentence as the note, as the guide counts it done (P1008). It
+    model of the board answers ok, with its code's meaning as the note (never a record's field name), as the guide counts it done (P1008). It
     asks the guide's rule of the run's own Findings, one per stopped stage, never .spark/build.json: a crashed build
     leaves an older record there. Any other run answers its own status and no note."""
     status = result.status()
     stopped = {"stages": [{"name": finding.subject, "status": finding.severity, "code": finding.code} for finding in result.findings]}
     if kind == flow_codes.BUILD_BOARD and status == COULD_NOT_RUN and stops_only_for_no_model(stopped):
-        return OK, result.findings[0].sentence
+        return OK, next(code.meaning for code in NO_MODEL_CODES if code == result.findings[0].code)
     return status, None
 
 

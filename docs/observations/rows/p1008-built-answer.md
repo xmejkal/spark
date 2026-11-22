@@ -12,3 +12,7 @@ findings only.
 | 4 | the refusal's data lacks `note`, and two tests pin the whole data | plan lens 1 | acted | `note: None` in the refusal. Both tests updated |
 | 5 | the page shows only the kind's ok words, so the note never reaches the person | plan lens 4 | acted | `page_script.js` appends `words.note` ("Note: %s.") when the note is a non-empty string. Row 5 |
 | 6 | exit 2 with an ok answer breaks /spark:page | plan refuter 3 | rejected | the refuter's own check: page.md steps 6 and 7 branch on `data.ran` and `data.status` only |
+| 7 | the note shows a record's field name ("names no wokwi_part_type") to the person | PR refuter 3 | acted | fixed: the note is the meaning of the code in `NO_MODEL_CODES` |
+| 8 | no test covers a board-only build with no Wokwi part, which also answers ok | PR refuter 4 | raised | dropped because the guide counts it done by the same rule, and the MVP needs no more |
+| 9 | no mutation row changes the note's value | PR lens | raised | dropped because the built-with-a-note test asserts the note's text |
+| 10 | a real build mixes a blocking Finding with the simulation's | PR refuter 1 | rejected | the refuter's own check: `BuildBoard.run` makes Findings only from `findings_of`, keep results are diagnostics |
