@@ -43,13 +43,13 @@ def row(fit, context, said, mine=None):
             "in": context["in"], "owned": counts(context["holding"], mine)[0], "score": fit.score, "why": fit.why}
 
 
-def rank_key(row):
+def rank_key(row, overlap=0):
     """
     The order of rows: what is owned first; among those, what holds any of the words, then a record before a drawer entry
-    with none (P991: a pick of a record is one spark can build from), then the best score. A caller adds its own
-    tie-breaks after it.
+    with none (P991: a pick of a record is one spark can build from), then the most condition words (`overlap`,
+    `Matcher.condition_overlap`, P1015; `--need` gives none), then the best score. A caller adds its own tie-breaks after it.
     """
-    return (row["owned"] == 0, row["score"] <= 0, row["id"] is None, -row["score"])
+    return (row["owned"] == 0, row["score"] <= 0, row["id"] is None, -overlap, -row["score"])
 
 
 def pointing_at(entries):
