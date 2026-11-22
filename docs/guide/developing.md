@@ -369,8 +369,10 @@ prints the state of both boards at every session start (the PO's session-start h
 reads each board whole, 100 cards a page, and judges where a card stands by the gate's one rule: spark's board read in
 part, or a card in a stage the gate does not know, makes the status one could-not-run line naming it; a card with no
 *Status* is said; and the bin's board read in part, or with no *Status* on any card, is set aside and said as the gate
-says it, spark's cards counted alone. `python3 tools/board.py close "the day's one line"` posts the day-close as a status update on spark's board — one a
-day, a second refused with exit 1; `--dry-run` prints it and posts nothing.
+says it, spark's cards counted alone. Then `filed in 7 days: N, closed: M` counts spark's issues in the last 7 UTC
+days, and `last retro: R11, D days ago` reads `scrum/RETROSPECTIVES.md` ([P1020](https://github.com/xmejkal/spark/issues/1487)). `!` marks N over M, D over 7, or a line not read.
+`python3 tools/board.py close "the day's one line"` posts the day-close as a status update on spark's board, one a
+day, a second refused with exit 1. `--dry-run` prints it and posts nothing. The close carries the two lines, is at risk when one slips, and posts nothing and exits 1 when one was not read.
 
 [`scripts/cost.py`](../../scripts/cost.py) is not a team tool. It ships with the plugin: `parts.py --step` and `--tally`
 import it to count what a project's run cost, and on one transcript it says what that run cost

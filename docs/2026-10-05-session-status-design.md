@@ -67,6 +67,12 @@ spark — 28 open, the limits hold · trial check 2026-11-02
 - **Offline,** or when `gh` is logged out, it prints one line: `board: skipped — <why>`. A session start must never
   fail. Each `gh` call at a session start gives up after 8 seconds, so a stalled network costs seconds, not minutes.
   2026-10-09 (P146 council): the word is could-not-run, W1 — the line reads `board: could-not-run — <why>`.
+- **The inflow and the retro's age** (2026-11-22, P1020, the PO in R11.1). After the board's lines, before the disk
+  line, come two more: `filed in 7 days: N, closed: M` and `last retro: R11, D days ago`. N and M count the issues of
+  spark's repository filed and closed in the last 7 days, today included, from one GraphQL query of two searches.
+  GitHub reads a search's dates in UTC, so the window ends on the UTC date. The retro is the newest `## R<n> — <date>`
+  heading in `scrum/RETROSPECTIVES.md`, and D counts from the Mac's date. A line is marked `!` when N is larger than M,
+  when D is larger than 7, or when it says could-not-run. The status asks for the inflow only after it read the boards.
 
 ### `board.py close [--date D] [--dry-run] LINE|-`
 
@@ -75,6 +81,9 @@ spark — 28 open, the limits hold · trial check 2026-11-02
   - a start date of the day it closes (today, or `--date` for a day missed);
   - the status *on track*, or *at risk* when a limit is broken or something has waited on the PO more than 3 days;
   - a body of Claude's one line, then a two-line snapshot of the board: in flight, and what waits on the PO.
+  - 2026-11-22 (P1020): the body ends with the inflow and the retro's age, and either one slipping makes the close
+    *at risk*. A close whose inflow or retro was not read prints that line, posts nothing and exits 1. With
+    `--date`, the two lines still count from today.
 - The line arrives as an argument, or on stdin with `-`. It is never built into a shell command line.
 - `--dry-run` prints the update and posts nothing.
 - **Closing a day twice** is refused, with the date of the first close, so a retry cannot post twice.

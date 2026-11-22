@@ -82,10 +82,14 @@ choice after a three-lens council).
   *"Ready is down to N"* at one or two. It reads each board whole, page by page, and *"N open"* counts all of it;
   spark's board read in part, or a card in a stage the gate does not know, makes the whole status one could-not-run
   line naming it; a card with no Status is said and stands in Idea; and the bin's board read in part, or with no Status
-  on any card, is set aside and said, spark's cards counted alone — as the gate does it (P168, P167).
+  on any card, is set aside and said, spark's cards counted alone — as the gate does it (P168, P167). Two more lines
+  give the inflow, *"filed in 7 days: N, closed: M"*, and the retro's age, *"last retro: R11, D days ago"*, each marked
+  `!` when it slips or was not read (P1020).
 - **The day-close** posts Claude's line, then what is in flight and every wait, as a status update on the spark board —
   at risk when the gate finds a problem (a broken limit, a missing *Needed by* or slice, an undated wait, a second
-  expedite) or a wait is older than three days. A day has one close; a second for the same day is refused. A session
+  expedite) or a wait is older than three days. It is at risk too when more cards were filed than closed in 7 days, or
+  when the last retro is more than 7 days old, and it carries those two lines (P1020). If either one was not read,
+  it posts nothing. A day has one close; a second for the same day is refused. A session
   that opens with *"! the day of … has no close"* writes that day's close first, with `--date`.
 - **The weekly look** has no command: `tools/board.py` posts only the day-close, and reads every status update that
   carries a start date as a day's close. So the weekly look's update is posted by hand with no start date.

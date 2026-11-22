@@ -206,12 +206,15 @@ class TheCoreTest(unittest.TestCase):
         self.assertEqual(body.split("\n\n")[2],
                          "waits on the PO: bin B1 (#1) since 2026-09-25, 12 d !, R2.6 (#15) since 2026-10-05, 2 d")
 
-    def status_from_main(self, items, closes, days):
-        """What `status` prints on 2026-10-09 for spark's `items`, and the work_days mock; `days` are the days with a commit."""
+    def status_from_main(self, items, closes, days, inflow=(0, 0)):
+        """
+        What `status` prints on 2026-10-09 for spark's `items`, and the work_days mock; `days` are the days with a commit,
+        `inflow` what gather() hands over as the inflow (P1020).
+        """
         out = io.StringIO()
         shown = types.SimpleNamespace(date=FixedToday, timedelta=dt.timedelta)
         with mock.patch.object(board, "dt", shown), \
-                mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], closes, "P", None)), \
+                mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], closes, "P", None, inflow)), \
                 mock.patch.object(board, "work_days", side_effect=lambda dirs, since: {d for d in days if d >= since}) as git, \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
@@ -386,13 +389,19 @@ class TheCoreTest(unittest.TestCase):
         self.assertFalse(gh.called)
         self.assertEqual(out.getvalue(), "board: could-not-run — gh: To get started with GitHub CLI, please run: gh auth login\n")
 
-    def test_close_dry_run_posts_nothing(self):
+    def close_from_main(self, inflow, *argv):
+        """(exit code, what `close` prints, whether it called gh) over SPARK, gather() handing over `inflow` (P1020)."""
         out = io.StringIO()
-        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", None)), \
+        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", None, inflow)), \
                 mock.patch.object(board, "_gh") as gh, contextlib.redirect_stdout(out):
-            self.assertEqual(board.main(["close", "P102c built", "--dry-run"]), 0)
-        self.assertFalse(gh.called)
-        self.assertIn("dry run", out.getvalue())
+            done = board.main(["close", *argv])
+        return done, out.getvalue(), gh.called
+
+    def test_close_dry_run_posts_nothing(self):
+        done, out, posted = self.close_from_main((0, 0), "P102c built", "--dry-run")
+        self.assertEqual(done, 0)
+        self.assertFalse(posted)
+        self.assertIn("dry run", out)
 
 
 class TheFinalReviewTest(unittest.TestCase):
@@ -446,7 +455,7 @@ class TheFinalReviewTest(unittest.TestCase):
 
     def test_status_says_could_not_run_whatever_breaks(self):
         out = io.StringIO()
-        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", None)), \
+        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", None, (0, 0))), \
                 mock.patch.object(board, "status_lines", side_effect=AttributeError("'NoneType' object has no attribute 'get'")), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
@@ -507,7 +516,7 @@ class TheWholeBoardTest(unittest.TestCase):
         # counted alone and the bin's unread line says why, in the gate's words.
         gh, asked = self.paged_gh(101, bin_cards=[node(19, "B19 — e", "Build"), node(20, "B20 — f", "Build")], bin_says=25)
         with mock.patch.object(board, "_gh", gh):
-            boards, _, _, _, bin_why = board.gather()
+            boards, _, _, _, bin_why, _ = board.gather()
         self.assertEqual(([name for name, _ in boards], bin_why), (["spark"], "it holds 25 items, 2 were read"))
         out = io.StringIO()
         with mock.patch.object(board, "_gh", gh), mock.patch.object(board, "work_days", return_value=set()), \
@@ -525,14 +534,14 @@ class TheWholeBoardTest(unittest.TestCase):
     def test_a_board_of_101_items_is_read_whole_in_two_pages(self):
         gh, asked = self.paged_gh(101)
         with mock.patch.object(board, "_gh", gh):
-            boards, _, _, _, _ = board.gather()
+            boards, _, _, _, _, _ = board.gather()
         self.assertEqual(len(dict(boards)["spark"]), 101)
         self.assertEqual([after for number, after in asked if number == 2], [None, "100"])
 
     def test_a_board_of_501_items_is_read_whole_in_six_pages_and_the_bin_s_in_one(self):
         gh, asked = self.paged_gh(501)
         with mock.patch.object(board, "_gh", gh):
-            boards, _, _, _, _ = board.gather()
+            boards, _, _, _, _, _ = board.gather()
         self.assertEqual(len(dict(boards)["spark"]), 501)
         self.assertEqual([after for number, after in asked if number == 2], [None, "100", "200", "300", "400", "500"])
         self.assertEqual([after for number, after in asked if number == 1], [None])
@@ -579,7 +588,7 @@ class TheStageTest(unittest.TestCase):
     def test_a_card_in_a_stage_the_gate_does_not_know_makes_the_status_could_not_run_naming_it(self):
         items = board.to_items(project(node(1, "P1 — a", "Build"), node(7, "P7 — b", "Doing")))
         out = io.StringIO()
-        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None)), \
+        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None, (0, 0))), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
         self.assertEqual(without_disk(out.getvalue()), 'board: could-not-run — #7 P7 — b is in a stage the gate does not know: "Doing"\n')
@@ -592,7 +601,7 @@ class TheStageTest(unittest.TestCase):
     def test_a_close_over_a_card_in_an_unknown_stage_is_could_not_run_and_posts_nothing(self):
         items = board.to_items(project(node(7, "P7 — b", "Doing")))
         out = io.StringIO()
-        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None)), \
+        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None, (0, 0))), \
                 mock.patch.object(board, "_gh") as gh, contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["close", "x"]), 1)
         self.assertFalse(gh.called)
@@ -610,7 +619,7 @@ class TheStageTest(unittest.TestCase):
     def test_a_board_whose_every_card_has_no_stage_is_could_not_run_naming_the_shape(self):
         items = board.to_items(project(unstaged(2, "P2 — b"), unstaged(5, "P5 — c")))
         out = io.StringIO()
-        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None)), \
+        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None, (0, 0))), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
         self.assertEqual(without_disk(out.getvalue()), "board: could-not-run — no card of the 2 on the spark board has a Status — the field's keys may "
@@ -620,7 +629,7 @@ class TheStageTest(unittest.TestCase):
         # The gate's convention for the bin's failing, read by the status too: the bin's unread line with its cause.
         gh, _ = TheWholeBoardTest.paged_gh(self, 1, bin_cards=[unstaged(20, "B20 — d"), unstaged(21, "B21 — e")])
         with mock.patch.object(board, "_gh", gh):
-            boards, _, _, _, bin_why = board.gather()
+            boards, _, _, _, bin_why, _ = board.gather()
         self.assertEqual(([name for name, _ in boards], bin_why), (["spark"], "no card of its 2 has a Status"))
         out = io.StringIO()
         with mock.patch.object(board, "_gh", gh), mock.patch.object(board, "work_days", return_value=set()), \
@@ -633,6 +642,186 @@ class TheStageTest(unittest.TestCase):
     def test_a_board_with_every_card_staged_says_nothing_of_stages(self):
         lines = board.status_lines([("spark", SPARK), ("bin", BIN)], [], [], set(), TODAY)
         self.assertEqual([line for line in lines if "no stage" in line], [])
+
+
+# The real file's order (the refuter, round 2): R1, then R2 to R4 on one date with R4 before R3, as the real file puts
+# R8 before R7, then the newest, R11, before R10.
+RETROS = """# Retrospectives
+
+## R1 — 2026-09-25, on the two days before the team existed
+
+## R2 — 2026-09-29, on the cold test
+
+## R4 — 2026-09-29, night, on Sprint 4
+
+## R3 — 2026-09-29, evening, on the audit sprint
+
+## R11 — 2026-11-22, on 33 days after R10
+
+## R10 — 2026-10-20, on two days after R9
+"""
+INFLOW_ANSWER = {"data": {"filed": {"issueCount": 192}, "closed": {"issueCount": 100}}}
+#: 00:30 in Prague on New Year's Day is still the old year in UTC.
+PRAGUE_NEW_YEAR = dt.datetime(2026, 1, 1, 0, 30, tzinfo=dt.timezone(dt.timedelta(hours=1)))
+
+
+class TheInflowAndRetroTest(unittest.TestCase):
+    """
+    P1020 (#1487): the status and the day close print the inflow ("filed in 7 days: N, closed: M") and the retro's age
+    ("last retro: R11, D days ago"). The close is at risk when N is larger than M or D is larger than 7. A look not made
+    is could-not-run and slips (W1). No test calls the real gh: gather() and inflow_counts() take the gh to ask, and
+    the tests that drive main() reuse the helpers that patch gather() (T2: a test file adds no mock.patch).
+    """
+
+    def boards_gh(self, inflow_answer, says=None):
+        """A gh with spark's board of one card and an empty bin, which answers the inflow's query with `inflow_answer`."""
+        gh, pages = TheWholeBoardTest.paged_gh(self, 1, says=says)
+        inflows = []
+
+        def ask(*args, timeout=None):
+            if "query=" + board.INFLOW in args:
+                inflows.append((len(pages), args))
+                if isinstance(inflow_answer, Exception):
+                    raise inflow_answer
+                return inflow_answer
+            return gh(*args)
+        return ask, inflows
+
+    def test_more_filed_than_closed_slips_and_as_many_or_fewer_does_not(self):
+        retro = ("R11", TODAY)
+        self.assertEqual(board.inflow_and_retro_lines((192, 100), retro, TODAY)[0], ("filed in 7 days: 192, closed: 100", True))
+        self.assertEqual(board.inflow_and_retro_lines((100, 100), retro, TODAY)[0], ("filed in 7 days: 100, closed: 100", False))
+        self.assertEqual(board.inflow_and_retro_lines((100, 192), retro, TODAY)[0], ("filed in 7 days: 100, closed: 192", False))
+
+    def test_a_retro_seven_days_old_does_not_slip_eight_does_and_one_dated_tomorrow_does_not(self):
+        def said(days):
+            return board.inflow_and_retro_lines((0, 0), ("R11", TODAY - dt.timedelta(days=days)), TODAY)[1]
+        self.assertEqual(said(7), ("last retro: R11, 7 days ago", False))
+        self.assertEqual(said(8), ("last retro: R11, 8 days ago", True))
+        self.assertEqual(said(-1), ("last retro: R11, -1 days ago", False))
+        self.assertEqual(board.RETRO_DAYS, 7)
+
+    def test_an_inflow_or_a_retro_not_read_is_could_not_run_with_its_cause_and_slips(self):
+        said = board.inflow_and_retro_lines("gh did not answer in 8 s", "no retro heading", TODAY)
+        self.assertEqual(said, [("filed in 7 days: could-not-run — gh did not answer in 8 s", True),
+                                ("last retro: could-not-run — no retro heading", True)])
+
+    def test_the_newest_retro_is_found_by_its_date_and_a_tie_by_its_number(self):
+        self.assertEqual(board.last_retro(RETROS), ("R11", dt.date(2026, 11, 22)))
+        # R2 to R4 share a date: the highest number wins, wherever it stands in the file.
+        early = RETROS.split("## R11")[0]
+        self.assertEqual(board.last_retro(early), ("R4", dt.date(2026, 9, 29)))
+        self.assertIsNone(board.last_retro("# Retrospectives\n\nNo retro yet.\n"))
+
+    def test_the_shipped_retrospectives_give_r11_or_a_later_retro(self):
+        name, date = board.read_retro()
+        self.assertGreaterEqual((date, int(name[1:])), (dt.date(2026, 11, 22), 11))
+
+    def test_a_retro_file_missing_or_with_no_heading_gives_its_cause(self):
+        folder = Path(tempfile.mkdtemp())
+        self.assertEqual(board.read_retro(folder / "RETROS.md"), "RETROS.md: No such file or directory")
+        (folder / "RETROS.md").write_text("# Retrospectives\n", encoding="utf-8")
+        self.assertEqual(board.read_retro(folder / "RETROS.md"), "no heading '## R<n> — <date>' in RETROS.md")
+
+    def test_a_retro_heading_with_no_real_date_or_a_file_that_is_no_utf_8_gives_its_cause(self):
+        # The PR review (P1020): a typo in one heading must not lose the board's lines or end the close in a traceback.
+        folder = Path(tempfile.mkdtemp())
+        (folder / "RETROS.md").write_text("## R12 — 2026-11-31, on a typo\n", encoding="utf-8")
+        self.assertEqual(board.read_retro(folder / "RETROS.md"), "RETROS.md: day is out of range for month")
+        (folder / "RETROS.md").write_bytes(b"## R12 \xff\n")
+        self.assertTrue(board.read_retro(folder / "RETROS.md").startswith("RETROS.md: 'utf-8' codec can't decode"))
+
+    def test_the_close_refuses_over_a_retro_not_read_alone_and_over_an_inflow_not_read_alone(self):
+        self.assertEqual(board.not_made(board.inflow_and_retro_lines((1, 2), "no heading", TODAY)),
+                         ["last retro: could-not-run — no heading"])
+        self.assertEqual(board.not_made(board.inflow_and_retro_lines("gh failed", ("R11", TODAY), TODAY)),
+                         ["filed in 7 days: could-not-run — gh failed"])
+        self.assertEqual(board.not_made(board.inflow_and_retro_lines((1, 2), ("R11", TODAY), TODAY)), [])
+
+    def test_the_inflow_asks_one_query_with_both_searches_over_seven_days(self):
+        asked = []
+
+        def ask(*args):
+            asked.append(args)
+            return INFLOW_ANSWER
+        self.assertEqual(board.inflow_counts(dt.date(2026, 11, 22), ask), (192, 100))
+        self.assertEqual(len(asked), 1)
+        self.assertIn("filed=repo:xmejkal/spark is:issue created:2026-11-16..2026-11-22", asked[0])
+        self.assertIn("closed=repo:xmejkal/spark is:issue closed:2026-11-16..2026-11-22", asked[0])
+
+    def test_an_inflow_that_cannot_be_read_is_unreadable_with_its_cause(self):
+        def refused(*args):
+            raise RuntimeError("gh: HTTP 502")
+        with self.assertRaisesRegex(board_read.Unreadable, "^gh: HTTP 502$"):
+            board.inflow_counts(TODAY, refused)
+        with self.assertRaisesRegex(board_read.Unreadable, "^TypeError$"):
+            board.inflow_counts(TODAY, lambda *args: {"data": {"filed": None}})
+
+    def test_the_utc_date_of_a_prague_time_after_midnight_is_the_day_before(self):
+        self.assertEqual(board.utc_today(PRAGUE_NEW_YEAR), dt.date(2025, 12, 31))
+
+    def test_gather_asks_the_inflow_last_over_the_utc_date_and_hands_it_over(self):
+        ask, inflows = self.boards_gh(INFLOW_ANSWER)
+        gathered = board.gather(ask=ask, now=PRAGUE_NEW_YEAR)
+        self.assertEqual(gathered[5], (192, 100))
+        self.assertEqual(len(inflows), 1)
+        pages_before, args = inflows[0]
+        self.assertEqual(pages_before, 2, "both boards were read before the inflow was asked")
+        self.assertIn("closed=repo:xmejkal/spark is:issue closed:2025-12-25..2025-12-31", args)
+
+    def test_gather_hands_over_the_cause_of_an_inflow_not_read_and_still_the_boards(self):
+        ask, _ = self.boards_gh(StopIteration())
+        gathered = board.gather(ask=ask)
+        self.assertEqual((len(dict(gathered[0])["spark"]), gathered[5]), (1, "StopIteration"))
+
+    def test_a_board_not_read_asks_no_inflow(self):
+        ask, inflows = self.boards_gh(INFLOW_ANSWER, says=130)
+        with self.assertRaisesRegex(RuntimeError, "holds 130 items, 1 were read"):
+            board.gather(ask=ask)
+        self.assertEqual(inflows, [])
+
+    def test_the_two_lines_come_after_the_missing_close_and_before_the_disk_line_marked_when_they_slip(self):
+        said = board.inflow_and_retro_lines((192, 100), ("R11", TODAY), TODAY)
+        low = board.disk_line(7_900_000_000)
+        lines = board.status_lines([("spark", SPARK), ("bin", BIN)], [], [(dt.date(2026, 10, 5), "closed")],
+                                   {dt.date(2026, 10, 6)}, TODAY, disk=low, inflow_and_retro=said)
+        self.assertEqual(lines[-4:], ["  ! the day of 2026-10-06 has no close — write it first",
+                                      "  ! filed in 7 days: 192, closed: 100", "  last retro: R11, 0 days ago", low])
+
+    def test_the_two_lines_print_with_no_close_on_the_board(self):
+        said = board.inflow_and_retro_lines((1, 2), ("R11", TODAY), TODAY)
+        lines = board.status_lines([("spark", SPARK), ("bin", BIN)], [], [], set(), TODAY, inflow_and_retro=said)
+        self.assertEqual(lines[-2:], ["  filed in 7 days: 1, closed: 2", "  last retro: R11, 0 days ago"])
+
+    def test_the_close_is_at_risk_on_either_slip_alone_and_on_track_on_neither(self):
+        def close(inflow, retro_days):
+            said = board.inflow_and_retro_lines(inflow, ("R11", TODAY - dt.timedelta(days=retro_days)), TODAY)
+            return board.close_update("x", [("spark", SPARK)], set(), TODAY, TODAY, inflow_and_retro=said)
+        self.assertEqual(close((192, 100), 0)[0], "AT_RISK")
+        self.assertEqual(close((100, 192), 8)[0], "AT_RISK")
+        state, body = close((100, 192), 7)
+        self.assertEqual(state, "ON_TRACK")
+        self.assertEqual(body.split("\n\n")[3:], ["filed in 7 days: 100, closed: 192", "last retro: R11, 7 days ago"])
+
+    def test_the_status_prints_the_inflow_and_the_shipped_retro(self):
+        lines, _ = TheCoreTest.status_from_main(self, SPARK, [], set(), inflow=(3, 4))
+        self.assertIn("  filed in 7 days: 3, closed: 4", lines)
+        self.assertTrue(any(line.lstrip(" !").startswith("last retro: R") for line in lines))
+
+    def test_an_inflow_not_read_still_prints_the_board_and_says_could_not_run_marked(self):
+        lines, _ = TheCoreTest.status_from_main(self, SPARK, [], set(), inflow="gh did not answer in 8 s")
+        self.assertEqual(lines[0], "spark — 5 open, the limits hold · trial check 2026-11-02")
+        self.assertIn("  ! filed in 7 days: could-not-run — gh did not answer in 8 s", lines)
+
+    def test_a_close_over_an_inflow_not_read_says_could_not_run_posts_nothing_and_fails(self):
+        done, out, posted = TheCoreTest.close_from_main(self, "gh: HTTP 502", "P1020 built")
+        self.assertEqual((done, out, posted), (1, "filed in 7 days: could-not-run — gh: HTTP 502\n", False))
+
+    def test_a_close_carries_the_two_lines_and_is_at_risk_on_their_slip(self):
+        done, out, posted = TheCoreTest.close_from_main(self, (192, 100), "P1020 built", "--dry-run")
+        self.assertEqual((done, posted), (0, False))
+        self.assertIn("(AT_RISK)", out)
+        self.assertIn("filed in 7 days: 192, closed: 100", out)
 
 
 class TheHelpTest(unittest.TestCase):
@@ -671,6 +860,14 @@ class TheHelpTest(unittest.TestCase):
             "than three days", "refuses a day already closed (exit 1)", "or a card is in a stage the gate does not know",
             "--dry-run print the update and post nothing",
             "--date DATE the day to close, YYYY-MM-DD", "(default: today)"))
+
+    def test_the_helps_say_the_two_lines_of_p1020_and_when_they_put_the_close_at_risk(self):
+        self.assert_says(self.help_of("status"), (
+            "'filed in 7 days: N, closed: M'", "'last retro: R11, D days ago'", "7 days in UTC", "always exits 0"))
+        self.assert_says(self.help_of("close"), (
+            "It is at risk too when more cards were filed than closed in 7 days or the last retro is more than 7 days old",
+            "or the inflow or the last retro could not be read",
+            "the inflow and the retro's age still count from today"))
 
     def test_the_top_help_names_both_verbs_with_what_they_do(self):
         self.assert_says(self.help_of(), ("both boards", "status print the state of both boards",
