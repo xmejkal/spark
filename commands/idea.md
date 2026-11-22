@@ -158,7 +158,9 @@ be built from; one that owes only its outline (`body_mm`) is written with a warn
 placeholder size, and one that owes its `simulation` is written with a warning that spark cannot simulate it yet, so /spark:deploy asks the person's yes for firmware that no simulation tested (P996). Fill each owed fact once, in the record's own home, from its
 source: a JSON object of the facts (`footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation`, or `facts`
 entries {value, verified, source} by name; a bench result is `verified: true` and its `source` says who, when and how)
-in a file written with the Write tool, then
+in a file written with the Write tool. When a bench result changes what the host board must meet, for example the
+driver that draws, put `host_requirements` in the same file: the lines that the sheet prints, replaced as a whole
+([P1012](https://github.com/xmejkal/spark/issues/1471)). `legs` says how each leg is told apart. Then
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set <part> <file> --project <project> --dry-run
