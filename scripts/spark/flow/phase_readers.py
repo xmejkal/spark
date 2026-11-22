@@ -111,10 +111,13 @@ def problem_lines(problems):
     return ["%s: %s" % (problem["subject"], problem["sentence"]) for problem in problems]
 
 
-def without_needs(project):
-    """(status, sentence) of the needs and parts of a project with no needs: a hand-written project (requirements.json and
-    no needs) has nothing open there, so its status is None; any other is not started."""
+def without_needs(project, phase):
+    """(status, sentence) of the `phase` (needs or parts) of a project with no needs. With requirements.json there is
+    nothing open there, so its status is None, and the sentence says what is true: needs.json holds no need (the last
+    was dropped), or there is no needs file (a hand-written project). Any other project is not started."""
     if (Path(project) / REQUIREMENTS_FILE).is_file():
+        if (Path(project) / needs.FILE).is_file():
+            return None, flow_codes.NO_NEED_LEFT_MESSAGE if phase == flow_codes.NEEDS else flow_codes.NO_PICK_BEHIND_MESSAGE
         return None, flow_codes.HAND_WRITTEN_MESSAGE
     return flow_codes.NOT_STARTED, flow_codes.NO_NEEDS_MESSAGE
 
@@ -136,7 +139,7 @@ class NeedsReader(PhaseReader):
     def read(self, project):
         ids = [need["id"] for need in needs.read(project)]
         if not ids:
-            status, said = without_needs(project)
+            status, said = without_needs(project, self.PHASE)
             return self.phase(status, [said])
         # a drop is asked in the chat (P829), so its offer names no phase that goes out of date
         drops = [Offer("%s:%s" % (flow_codes.NEEDS_DROP, need), flow_codes.DROP_LABEL % need, flow_codes.DROP_MESSAGE % need, ())
@@ -266,7 +269,7 @@ class PartsReader(PhaseReader):
         if problems:
             return self.phase(PROBLEMS, problem_lines(problems))
         if not matched:
-            status, said = without_needs(project)
+            status, said = without_needs(project, self.PHASE)
             return self.phase(status, [said])
         open_needs, aside = counted(matched), [need["need"] for need in set_aside(matched)]
         picked = sum(1 for need in open_needs if need.get("pick"))

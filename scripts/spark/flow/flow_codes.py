@@ -29,6 +29,9 @@ NEEDS_MESSAGE = "%d need(s): %s"
 NO_NEEDS_MESSAGE = "no needs yet: Claude writes them from your goal"
 #: The needs and parts of a project with requirements.json and no needs: nobody wrote needs, so nothing is open there.
 HAND_WRITTEN_MESSAGE = "a hand-written project: requirements.json and no needs"
+#: The needs and parts of a project whose needs.json holds no need and whose requirements.json stays: the last need was dropped (P984).
+NO_NEED_LEFT_MESSAGE = "no need is left: the last one was dropped"
+NO_PICK_BEHIND_MESSAGE = "no need or pick is behind the parts list"
 PICKED_MESSAGE = "%d of %d needs picked"
 #: The needs the person set aside (P977): they left them out of this board, so they do not count as open.
 ASIDE_MESSAGE = "set aside: %s"
