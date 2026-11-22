@@ -23,6 +23,7 @@ import io
 import json
 import os
 import re
+import shlex
 import shutil
 import stat
 import sys
@@ -414,6 +415,23 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
         self.assertEqual(([row["write"] for row in alone["assumptions"]], alone["next"]), ([None], []))
         self.assertNotIn("next:", out.getvalue())
         self.assertIn("repair the file by hand", out.getvalue())
+
+    def test_the_next_step_carries_the_project_and_writes_when_run_as_printed(self):
+        # P987 review: the step had no --project, so a listed project's record was refused when run as printed
+        home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "plant-alarm"
+        (project / "parts").mkdir(parents=True)
+        (project / "parts" / "x-good.json").write_text(json.dumps(part("x-good", facts={
+            "f": {"value": 1, "verified": False, "source": "the maker's page", "why_it_matters": "it matters"}})))
+        (home / "projects.json").write_text(json.dumps({"plant-alarm": str(project)}))
+        facts = Path(tempfile.mkdtemp()) / "facts.json"
+        facts.write_text(json.dumps({"facts": {"f": {"value": 1, "verified": True, "source": "bench, 2026-11-22, a meter"}}}))
+        with in_store(home):
+            said, _ = run_json(["--unverified", "x-good", "--project", str(project)])
+            argv = [str(facts) if arg == "<file>" else arg for arg in said["next"][0]["argv"]]
+            wrote, code = run_json(argv)
+        self.assertEqual(said["next"][0]["argv"], ["--fact-set", "x-good", "<file>", "--project", str(project)])
+        self.assertEqual((code, wrote["data"]["written"]), (0, True), wrote)
+        self.assertTrue(json.loads((project / "parts" / "x-good.json").read_text())["facts"]["f"]["verified"])
 
 
 class FromPartsToAPinMapTest(unittest.TestCase):
@@ -3073,7 +3091,8 @@ class ALevelIsWrittenToABoardTest(unittest.TestCase):
         said, code = self.write(home, here, values, part_id="only-in-b")
         self.assertEqual((code, [item.get("code") for item in said["problems"]]), (1, ["other_project_record"]))
         self.assertIn("only-in-b is only in proj-b", said["problems"][0]["sentence"])
-        self.assertIn("--project <the folder", said["problems"][0]["fix"])
+        self.assertTrue(any(said["problems"][0]["fix"].startswith("run the same command again with --project %s," % shlex.quote(str(folder)))
+                            for folder in (project, project.resolve())), said["problems"][0]["fix"])
         with in_store(home):
             self.assertEqual(run_json(["--fact-set", "only-in-b", self.given(values)])[1], 1)
         with in_store(home):
@@ -3535,8 +3554,11 @@ class AWriterChangesOnlyTheNamedProjectTest(unittest.TestCase):
         self.assertIn("irrigation", problem["sentence"])
         self.assertTrue(str(self.irrigation) in problem["sentence"] or str(self.irrigation.resolve()) in problem["sentence"],
                         problem["sentence"])
-        self.assertTrue(problem["fix"].startswith("run the same command again with --project <the folder the sentence names>"),
-                        problem["fix"])
+        self.assertIn(problem["fix"], [
+            "run the same command again with --project %s, or copy the record into the parts/ folder (a board into boards/) "
+            "of the project you work on and name that project with --project" % shlex.quote(str(folder))
+            for folder in (self.irrigation, self.irrigation.resolve())])
+        self.assertIn("another project on your list: spark writes only the project --project names", problem["sentence"])
         self.assertEqual(asked, [], "nothing was fetched")
         self.assertEqual(self.snapshot(), before, "irrigation and the store are as they were")
 
