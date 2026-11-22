@@ -164,9 +164,9 @@ Imported by the scripts above, and not run on their own:
 | [`parts/`](../../parts/) | part records, each fact with its source and whether anyone checked it |
 | [`data/fabrication.json`](../../data/fabrication.json) | what a board house can make (minimum annular ring, via and drill sizes) and what a physical part is (package power ratings). Every script reads it rather than restating it |
 
-**Your own files win.** A project's own `boards/<id>.json` or `parts/*.json` beats the shipped one of the same name.
-For parts, a record on your shelf also beats spark's library, in every project; the project's own record beats both.
-Your board house's numbers go in `.spark/rules.json` under `fabrication`.
+**Your own files win.** A project's own `boards/<id>.json` or `parts/*.json` beats the shipped one of the same name. For
+parts, a record on your shelf also beats spark's library, in every project; the project's own record beats both. spark
+writes only the project `--project` names. Your board house's numbers go in `.spark/rules.json` under `fabrication`.
 
 ### Your own dev board
 

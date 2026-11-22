@@ -27,6 +27,16 @@ PROMOTION_WOULD_OVERWRITE = codes.Code("promotion_would_overwrite", "the library
 #: parts.py wrote nothing because the record is in spark's own library (P964); research.py says it too (P982).
 LIBRARY_RECORD = codes.Code("library_record", "the record is in spark's own library, which is changed in spark's repository",
                       "copy the record into the project's parts/ folder (a board into boards/), then run the same command again with --project <that project's folder>")
+#: parts.py wrote nothing because the record is only in another project on the person's list (P987): a writer changes
+#: only the project the run names, or the project a shelf copy came from.
+OTHER_PROJECT_RECORD = codes.Code("other_project_record",
+                                  "the record is only in another project on the person's list, and parts.py writes only the project the run names",
+                                  "run the same command again with --project <that project's folder>, or copy the record into the parts/ "
+                                  "folder (a board into boards/) of the project you work on and name that project with --project")
+#: A variant of OTHER_PROJECT_RECORD: the fix a refusal carries, filled with that project's folder, quoted for a shell.
+OTHER_PROJECT_RECORD_FOLDER = codes.Code(OTHER_PROJECT_RECORD, OTHER_PROJECT_RECORD.meaning,
+                                         "run the same command again with --project %s, or copy the record into the parts/ folder "
+                                         "(a board into boards/) of the project you work on and name that project with --project")
 #: run_cost: what a project's history and its session transcripts lack, so the cost of its steps is not known.
 STEP_LINE_BROKEN = codes.Code("step_line_broken", "a step line in the history has no start spark can read as a time: fix it by hand",
                         "fix the step line the sentence names in the history by hand")
@@ -60,7 +70,7 @@ NO_DIMENSION_DRAWING = codes.Code("no_dimension_drawing", "the maker's page list
 
 #: Each code and the one sentence that says what it means.
 CODES = {code: code.meaning for code in (
-    NO_SUCH_PART, LIBRARY_RECORD, PART_CONTRACT_BROKEN, PROMOTION_WOULD_OVERWRITE, STEP_LINE_BROKEN, NO_STEP_MARKED, STEP_WITHOUT_SESSION,
+    NO_SUCH_PART, LIBRARY_RECORD, OTHER_PROJECT_RECORD, PART_CONTRACT_BROKEN, PROMOTION_WOULD_OVERWRITE, STEP_LINE_BROKEN, NO_STEP_MARKED, STEP_WITHOUT_SESSION,
     NO_TRANSCRIPT, TRANSCRIPT_UNREADABLE, TRANSCRIPT_ENDS_EARLY, UNKNOWN_MATCHER, NO_SKU, NO_DOCUMENT_LIST, MORE_DOCUMENTS,
     NO_VENDOR_FINDER, NO_TOP_VIEW, NO_DIMENSION_DRAWING)}
 # --- end MVP ---

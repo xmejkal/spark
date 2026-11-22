@@ -15,7 +15,7 @@ run or change something, Claude quotes it to you and carries on. (Each command p
 A command page's header, `allowed-tools`, lists the operations Claude may run without asking you, each by name. Five
 operations that reach the network are on no command's or skill's list:
 
-- `parts.py --fetch` downloads a datasheet (never for a record of spark's library);
+- `parts.py --fetch` downloads a datasheet (never for a record of spark's library, and never a record only another of your projects holds);
 - `parts.py --sources` asks every URL a record cites whether it answers;
 - `tools.py --install` installs a tool;
 - `tools.py --on` turns a tool on and installs it;
@@ -153,7 +153,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --validate --project .
 
 `--validate` refuses a record that gives a pin order without saying where it was read, that cites a document the record does not include or whose
 `cites` is not an object `{document, at}`, or whose pin name is no wiring name (`+5V`, `IN+`: the silkscreen goes in `printed`, `pin` gets letters,
-digits and _). `parts.py --unverified <id>` lists what nobody has checked (a guessed outline too), each item with what depends on it and where a bench result goes back (`--fact-set`).
+digits and _). `parts.py --unverified <id>` lists what nobody has checked (a guessed outline too), each item with what depends on it and where a bench result goes back (`--fact-set <id> FILE --project .`).
 
 A candidate not chosen whose datasheet was kept goes to the catalog in your store, with no seller listings. One seen
 only in a search is listed in the chosen record's alternatives.

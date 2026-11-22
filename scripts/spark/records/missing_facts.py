@@ -84,15 +84,12 @@ def merged_roles(record, values):
     return merged, was
 
 
-def board_write_problems(record, after, path, values, project):
+def board_write_problems(record, after, path, values):
     """
-    What refuses a write of `values` to a board record: a board that is not in `project`'s own boards/ (another listed
-    project's board is that project's to change), else `level_write_problems`, else each problem
-    `board_records.validate` finds in `after` that `record` did not have.
+    What refuses a write of `values` to a board record: `level_write_problems`, else each problem `board_records.validate`
+    finds in `after` that `record` did not have. A board only another listed project holds never reaches here: the writer's
+    `record_home.record_path` refuses it (`other_project_record`, P987), and a board of spark's library is refused before.
     """
-    if project is None or path.parent.resolve() != (project / "boards").resolve():
-        return ["%s is not a board of %s: pass --project <the folder of the project that owns it>, or copy it into this project's boards/ first"
-                % (path.stem, "this project (%s)" % project if project else "a project (no --project was given)")]
     return level_write_problems(values) or sorted(set(board_records.validate(after, path))
                                                   - set(board_records.validate(record, path)))
 # --- end MVP ---
