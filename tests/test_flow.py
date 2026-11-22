@@ -775,6 +775,20 @@ class TheGuideTest(FlowTest):
         self.assertEqual((guide["now"]["phase"], guide["done"]),
                          ("firmware", ["idea", "requirements (no needs or picks behind it)", "build", "breadboard (spark cannot see it)"]))
 
+    def test_a_project_whose_last_need_was_dropped_lists_no_needs_or_parts_as_done(self):
+        project = with_needs(a_built_project(), [])
+        phases, _ = read_flow(project)
+        guide = guide_of(project, phases, steps=lambda _project: None)
+        self.assertEqual((guide["now"]["phase"], guide["done"]),
+                         ("firmware", ["idea", "requirements (no needs or picks behind it)", "build", "breadboard (spark cannot see it)"]))
+
+    def test_every_need_set_aside_with_a_requirements_file_that_cannot_be_read_keeps_the_requirements_now(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True}])
+        (project / "requirements.json").write_text("{not json")
+        said, _ = show(project)
+        self.assertEqual((statuses(said)["requirements"], said["data"]["guide"]["now"]["phase"]), ("could-not-run", "requirements"))
+
     def test_every_need_set_aside_makes_the_parts_now_and_not_the_parts_list(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
             {"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True},
@@ -782,8 +796,8 @@ class TheGuideTest(FlowTest):
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual(guide["now"], {
             "phase": "parts", "by": ["you"], "offer": None, "needs": [], "steps": None,
-            "says": "Every need is set aside, so there is no pick to write the parts list from. Tell Claude which need to bring "
-                    "back, then pick a part for it."})
+            "says": "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, "
+                    "then pick a part."})
         self.assertEqual((guide["done"], guide["later"], guide["set_aside"]), (
             ["idea", "needs"], ["requirements", "build", "breadboard", "firmware", "simulate", "deploy"], ["soil", "wet"]))
 

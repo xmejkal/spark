@@ -82,8 +82,8 @@ def now_phase(phases, no_model, fact, all_aside=False):
     while every need is set aside (P980: there is no pick to write the parts list from). The deploy is never done here, so
     there is one; None only in a flow of other readers, which a test gives."""
     now = next((phase for phase in phases if phase.phase not in no_model and is_open(phase, fact)), None)
-    if now and now.phase == flow_codes.REQUIREMENTS and all_aside:
-        return next(phase for phase in phases if phase.phase == flow_codes.PARTS)
+    if now and now.phase == flow_codes.REQUIREMENTS and now.status != COULD_NOT_RUN and all_aside:  # a broken file is not hidden
+        return next((phase for phase in phases if phase.phase == flow_codes.PARTS), now)
     if now and now.phase == flow_codes.NEEDS and now.status == flow_codes.NOT_STARTED:
         return phases[0]
     return now
@@ -138,22 +138,22 @@ def label(phase, no_model):
     return phase.phase
 
 
-def is_hand_written(by_name):
-    """True when the needs phase has no status: no needs are written, so the requirements have none behind them (a hand-
-    written project, or one whose last need was dropped). An unreadable needs.json gives could-not-run, so false."""
+def has_no_picks(by_name):
+    """True when the needs phase has no status: no needs are written, so the requirements have no picks behind them (a
+    requirements.json written by hand, or a last need dropped). An unreadable needs.json gives could-not-run, so false."""
     needs_phase = by_name.get(flow_codes.NEEDS)
     return needs_phase is not None and needs_phase.status is None
 
 
-def done_of(phases, at, no_model, wired, hand_written=False):
+def done_of(phases, at, no_model, wired, no_picks=False):
     """The names of the phases before `at`: a simulate with no model is later, and the breadboard is there only when
-    `wired` (a current sheet once the wiring is no longer part of now), with what spark cannot see. With `hand_written`
+    `wired` (a current sheet once the wiring is no longer part of now), with what spark cannot see. With `no_picks`
     the needs and parts are left out (nobody did them) and the requirements say so (P980)."""
     done = []
     for phase in phases[:at]:
-        if hand_written and phase.phase in (flow_codes.NEEDS, flow_codes.PARTS):
+        if no_picks and phase.phase in (flow_codes.NEEDS, flow_codes.PARTS):
             continue
-        if hand_written and phase.phase == flow_codes.REQUIREMENTS:
+        if no_picks and phase.phase == flow_codes.REQUIREMENTS:
             done.append(flow_codes.REQUIREMENTS_NO_PICKS)
         elif phase.phase == flow_codes.BREADBOARD:
             done += [flow_codes.SHEET_UNSEEN] if wired else []
@@ -183,7 +183,7 @@ def guide_of(project, phases, steps=count_steps):
     wired = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
     later = [label(phase, no_model) + (flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else "")
              for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]
-    return {"now": said, "done": done_of(phases, at, no_model, wired, is_hand_written(by_name)), "later": later,
+    return {"now": said, "done": done_of(phases, at, no_model, wired, has_no_picks(by_name)), "later": later,
             "set_aside": [need["id"] for need in set_aside(listed)],
             "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None}
 # --- end MVP ---

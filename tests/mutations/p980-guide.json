@@ -14,7 +14,7 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "every need aside keeps the parts list now (P980)",
-  "find": "if now and now.phase == flow_codes.REQUIREMENTS and all_aside:",
+  "find": "if now and now.phase == flow_codes.REQUIREMENTS and now.status != COULD_NOT_RUN and all_aside:",
   "replace": "if False:"
  },
  {
@@ -22,5 +22,11 @@
   "name": "the all-aside parts has no sentence (P980)",
   "find": "(PARTS, OK_WORD): ALL_ASIDE_NOW,",
   "replace": ""
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "every need aside hides a requirements that could not run (P980)",
+  "find": " and now.status != COULD_NOT_RUN and all_aside:",
+  "replace": " and all_aside:"
  }
 ]

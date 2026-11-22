@@ -196,8 +196,8 @@ ONE_NEED_HAS, MANY_NEEDS_HAVE = "1 need has", "%d needs have"
 LATER_BUT_DONE = " (done, may change)"
 REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your picks."
 #: Every need set aside (P980): the parts phase is ok, but the parts list has no pick to be written from.
-ALL_ASIDE_NOW = "Every need is set aside, so there is no pick to write the parts list from. Tell Claude which need to bring back, then pick a part for it."
-#: What `done` says of a requirements file with no needs or picks behind it (P980). Not "hand-written": a project whose last need was dropped is the same.
+ALL_ASIDE_NOW = "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, then pick a part."
+#: What `done` says of a requirements file with no needs or picks behind it (P980). Not "hand-written" only: a project whose last need was dropped is the same.
 REQUIREMENTS_NO_PICKS = "requirements (no needs or picks behind it)"
 REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
 BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."

@@ -27,12 +27,15 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   firmware), else `null`.
 
   While no need is written, `now` is the idea. `now` is `null` only with a phase list a
-  test swaps in. `done` names the phases before `now` that were done. With no needs or picks behind the parts list
-  (a hand-written project, or one whose last need was dropped), `needs` and `parts` are left out and `done` says
-  `requirements (no needs or picks behind it)`. With every need set aside, the parts phase is `ok` (there is nothing left
-  to pick) but there is no pick to write the parts list from, so `now` is `parts` and tells the person to bring a need
-  back and pick a part for it. The requirements offer stays on the page, and a click on it is refused (no board is
-  picked); a later card may hide it. The breadboard is in `done` only once `now` is past the firmware's
+  test swaps in. `done` names the phases before `now` that were done. With no picks behind the parts list (a
+  requirements.json written by hand, or a project whose last need was dropped), `needs` and `parts` are left out and
+  `done` says `requirements (no needs or picks behind it)`.
+
+  With every need set aside, the parts phase is `ok` (nothing is left to pick), but no pick can make the parts list, so
+  `now` is `parts` and tells the person to bring a need back and pick a part. `stands_at` can still say `requirements`.
+  The requirements offer stays on the page and a click on it is refused (no board is picked): do not run the
+  requirements offer; ask the person which need to bring back. A requirements phase that could not run stays `now`. The
+  breadboard is in `done` only once `now` is past the firmware's
   two jobs and the sheet is current, as `breadboard (spark cannot see it)`. `later` names the phases after `now`; one whose status is
   `ok` carries the suffix ` (done, may change)`, because a change before it can make it stale. An item of `done` or
   `later` can carry a suffix in parentheses: match on the name before it.
