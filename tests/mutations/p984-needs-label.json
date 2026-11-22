@@ -1,0 +1,6 @@
+[
+ {"file": "scripts/spark/flow/phase_readers.py", "name": "P984: a dropped last need reads as hand-written", "find": "if (Path(project) / needs.FILE).is_file():", "replace": "if False:"},
+ {"file": "scripts/spark/flow/phase_readers.py", "name": "P984: the needs phase says the parts sentence", "find": "flow_codes.NO_NEED_LEFT_MESSAGE if phase == flow_codes.NEEDS else flow_codes.NO_PICK_BEHIND_MESSAGE", "replace": "flow_codes.NO_PICK_BEHIND_MESSAGE"},
+ {"file": "scripts/spark/flow/phase_readers.py", "name": "P984: the parts phase says the needs sentence", "find": "flow_codes.NO_NEED_LEFT_MESSAGE if phase == flow_codes.NEEDS else flow_codes.NO_PICK_BEHIND_MESSAGE", "replace": "flow_codes.NO_NEED_LEFT_MESSAGE"},
+ {"file": "scripts/spark/flow/phase_readers.py", "name": "P984: a project with no needs file stops being hand-written", "find": "return None, flow_codes.HAND_WRITTEN_MESSAGE", "replace": "return None, flow_codes.NO_NEED_LEFT_MESSAGE"}
+]

@@ -265,6 +265,14 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(says(said, "needs"), ["a hand-written project: requirements.json and no needs"])
         self.assertIn(zone_time.stamp(FakeClock().now()), " ".join(says(said, "build")))
 
+    def test_a_project_whose_last_need_was_dropped_says_so_and_is_no_hand_written_project(self):
+        # P984: needs.json holds no need and requirements.json was written from picks: nothing was written by hand.
+        said, code = show(with_needs(a_built_project(), []))
+        self.assertEqual(code, 0)
+        self.assertEqual(says(said, "needs"), ["no need is left: the last one was dropped"])
+        self.assertEqual(says(said, "parts"), ["no need or pick is behind the parts list"])
+        self.assertEqual(table(said), BUILT_TABLE)
+
     def test_a_build_that_could_not_run_says_so_and_exits_2(self):
         said, code = show(a_built_project("could-not-run"))
         self.assertEqual((code, said["status"]), (2, "could-not-run"))
