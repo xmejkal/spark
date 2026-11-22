@@ -743,7 +743,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
 
     def test_each_code_constant_of_the_table_is_a_word_of_codes_with_that_word_s_meaning(self):
         # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word;
-        # an area's variant of the core's word (BAD_ARGUMENT_IN_LIBRARY) has the core's meaning
+        # an area's variant of the core's word (core's BAD_ARGUMENT_REPLIES_UNREADABLE) has the core's meaning
         for table in AREAS_WITH_FIXES.values():
             area = next(area for area, held in AREAS_WITH_FIXES.items() if held is table)
             also = NAMED_TOO.get(area, ()) + tuple(NAMED_CODES.get(area, ()))
@@ -769,7 +769,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
                                                               "LOST_X is not named after its parent LOST"])
 
     def test_an_area_s_variant_of_the_core_s_word_has_the_core_s_code_as_its_parent(self):
-        # P935 PR 2: sourcing's BAD_ARGUMENT_IN_LIBRARY
+        # P935 PR 2: sourcing's first variant of the core's word (gone with P982)
         planted = types.ModuleType("planted")
         planted.BAD_ARGUMENT_HERE = Code("bad_argument", "m", "look here")
         planted.BAD_ARGUMENT_SAME = Code("bad_argument", "m", "%s --help lists the arguments")
@@ -912,7 +912,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
                   "except (ValueError, SparkError) as said:\n    SparkError('x', code=said.code)\n"
                   "except Exception as broad:\n    SparkError('x', code=broad.code)\n"
                   "SparkError('x', code=error.code)\nSparkError('x', code=error.code, fix=cls.RETRY_FIX)\n"
-                  "StoreError('x', code=records_codes.URL_UNREACHABLE)\nSparkError('x', code=sourcing_codes.BAD_ARGUMENT_IN_LIBRARY)\n"
+                  "StoreError('x', code=records_codes.URL_UNREACHABLE)\nSparkError('x', code=sourcing_codes.LIBRARY_RECORD)\n"
                   "SparkError('x', code=codes.CRASH)\nSparkError('x', code=records_codes.CODES)\n\n\n"
                   "class DfrobotWikiSource:\n    def _problem(cls, error):\n        return SparkError('x', code=error.code, fix=cls.RETRY_FIX)\n\n"
                   "    def _other(cls, error):\n        return SparkError('x', code=error.code, fix=cls.RETRY_FIX)\n")

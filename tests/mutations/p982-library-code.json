@@ -1,0 +1,14 @@
+[
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "research refuses a library record with another code than library_record (P982)",
+  "find": "raise refusal(outside, SparkError(\"%s is a record of spark's own library\", part, code=LIBRARY_RECORD))",
+  "replace": "raise refusal(outside, SparkError(\"%s is a record of spark's own library\", part, code=PART_CONTRACT_BROKEN_REPLIES))"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "research does not refuse a record of spark's library (P982)",
+  "find": "if path.parent.resolve() == record_kind.LIBRARY.resolve():",
+  "replace": "if False:"
+ }
+]

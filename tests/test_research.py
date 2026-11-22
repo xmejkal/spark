@@ -570,7 +570,7 @@ class ResearchPartTest(unittest.TestCase):
     def test_an_unknown_id_and_a_library_record_carry_their_fixes(self):
         # P935 PR 2: the fixes moved onto the sourcing Codes, pinned as the person reads them
         for part, fix in (("nope", "parts.py --need <words> finds what exists; a new record starts with parts.py --skeleton"),
-                          ("led-red-5mm", "spark's library is changed in spark's repository; research a copy of the record in the project's parts/")):
+                          ("led-red-5mm", "copy the record into the project's parts/ folder (a board into boards/), then run the same command again with --project <that project's folder>")):
             result = run_operation(ResearchPart(), {"part": part, "project": self.project, "replies": None},
                                    FakeOutsideWorld(replies=DeferringReplyStrategy()))
             self.assertEqual([found.fix for found in result.findings], [fix], part)
@@ -578,7 +578,8 @@ class ResearchPartTest(unittest.TestCase):
     def test_a_library_record_is_refused_and_a_record_with_no_gaps_writes_no_file(self):
         result = run_operation(ResearchPart(), {"part": "led-red-5mm", "project": self.project, "replies": None},
                                FakeOutsideWorld(replies=DeferringReplyStrategy()))
-        self.assertEqual([found.code for found in result.findings], ["bad_argument"])
+        # P982: the library record's code is parts.py's `library_record`, not the core's `bad_argument`
+        self.assertEqual([found.code for found in result.findings], ["library_record"])
         proof = {"verified": False, "source": "s", "why_it_matters": "w", "not_published": ["thickness_mm", "mounting_holes", "header"]}
         self.path.write_text(json.dumps(dict(RECORD, physical_proof=proof)))
         result = self.research(DeferringReplyStrategy())
