@@ -20,13 +20,13 @@
  {
   "file": "scripts/spark/sourcing/part_facts.py",
   "name": "a draft is shelved whatever the contract says",
-  "find": "    if validate(copy, path):\n        return None",
+  "find": "    if contract(copy, path):\n        return None",
   "replace": "    if False:\n        return None"
  },
  {
   "file": "scripts/spark/sourcing/part_facts.py",
   "name": "a draft is reported as shelved",
-  "find": "    return not validate(_shelf_copy(path, project_name), Path(path))",
+  "find": "    return not shelf_of(path)[1](_shelf_copy(path, project_name), Path(path))",
   "replace": "    return True"
  },
  {

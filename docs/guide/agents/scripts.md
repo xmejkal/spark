@@ -74,8 +74,8 @@ never put them into a URL, a web search, a research agent's prompt or a commit.
 
 A scratch store hides three things, so tell the person:
 
-- **The shelf.** Part records then come from the library only, so physics, CONFLICT lines and `--unverified` can differ
-  from what they would see.
+- **The shelf.** Part records and board files (P989) then come from the library only, so physics, CONFLICT lines and
+  `--unverified` can differ from what they would see.
 - **The tools list and downloads.** `tools.py --status` then reads `[????]` for tools they have installed.
 - **The drawer.**
 

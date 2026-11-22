@@ -17,6 +17,7 @@ a file instead of re-implementing a lookup.
 """
 
 import json
+import os
 import re
 import sys
 import tempfile
@@ -1563,6 +1564,29 @@ class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):
         self.assertEqual((code, rows["null-board"]["stops_why"], rows["null-board"]["layer"]), (0, None, "project"))
         _, text = self.listed("--list", "--project", str(root))
         self.assertIn("    null-board (project)\n", text)
+
+    def test_a_shelf_board_is_listed_and_validated_as_the_shelf_s(self):
+        # P989: the layer is the one the records give, never guessed from the folder
+        home = Path(tempfile.mkdtemp())
+        (home / "shelf" / "boards").mkdir(parents=True)
+        (home / "shelf" / "boards" / "x-board.json").write_text(json.dumps(definition("x-board")))
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            code, out = self.listed("--list", "--project", str(project()), "--json")
+            _, text = self.listed("--list", "--project", str(project()))
+            _, valid = self.listed("--validate", "--project", str(project()))
+        rows = {row["id"]: row for row in json.loads(out)["data"]["boards"]}
+        self.assertEqual((code, rows["x-board"]["layer"]), (0, "shelf"))
+        self.assertIn("    x-board (shelf) stops at the footprint stage", text)  # the fixture has no physical.header
+        self.assertIn("  x-board (shelf): ok\n", valid)
+
+    def test_validate_in_a_folder_with_no_active_board_checks_every_board_file(self):
+        # P989 review (refuter 7): the drawer's refusal sends a person to `boards.py --validate --project .` in a folder
+        # that /spark:research wrote a board file into, with no boards/active.json: nothing is active, every file is checked
+        root = Path(tempfile.mkdtemp())
+        (root / "boards").mkdir()
+        (root / "boards" / "x-board.json").write_text(json.dumps(definition("x-board")))
+        _, valid = self.listed("--validate", "--project", str(root))
+        self.assertIn("       x-board (project): ok\n", valid)
 
     def test_a_prefix_of_list_picks_the_operation_as_argparse_would(self):
         code, out = self.listed("--li", "--project", str(project()))

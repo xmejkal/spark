@@ -10,8 +10,6 @@ from spark.records import board_records
 from spark.design import footprint_emitter
 
 # --- MVP ---
-#: The words of a board's layer in the text and the data: spark's own library, or the project's boards/.
-LIBRARY, PROJECT = "library", "project"
 #: One row of the text: the active mark, the id, the layer, and the stop line when the board stops at the footprint.
 ROW_LINE = "  %s %s (%s)%s"
 
@@ -42,8 +40,7 @@ class ListBoards(Operation):
         except board_records.BoardError:
             current = None  # nothing chosen: the library, or a project before init
         rows, lines = [], []
-        for board_id, (_, path) in sorted(board_records.records(project).items()):
-            layer = LIBRARY if path.parent == board_records.LIBRARY else PROJECT
+        for board_id, (layer, path) in sorted(board_records.records(project).items()):
             try:
                 board = board_records._read_json(path, "board definition")
             except board_records.BoardError:

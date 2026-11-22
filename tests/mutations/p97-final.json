@@ -146,19 +146,19 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "a shelf copy follows any project's record of its id (final 4)",
-  "find": "    return path, named if named and shelved_from(store.place(\"shelf\") / path.name) == named else None",
+  "find": "    return path, named if named and shelved_from(shelf / path.name) == named else None",
   "replace": "    return path, named"
  },
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "a current shelf copy is taken for a stale one (final 4)",
-  "find": "    if _parse(store.place(\"shelf\") / path.name) == copy:\n        return \"current\"",
+  "find": "    if _parse(store.place(shelf) / path.name) == copy:\n        return \"current\"",
   "replace": "    if False:\n        return \"current\""
  },
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "a stale shelf copy is taken for a current one (final 4)",
-  "find": "    if _parse(store.place(\"shelf\") / path.name) == copy:\n        return \"current\"",
+  "find": "    if _parse(store.place(shelf) / path.name) == copy:\n        return \"current\"",
   "replace": "    if True:\n        return \"current\""
  },
  {
@@ -182,8 +182,8 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "a dry run judges the shelf copy by the record as its file is, not as it would be (final 4)",
-  "find": "    copy = _shelf_copy(path, project_name, record)",
-  "replace": "    copy = _shelf_copy(path, project_name)"
+  "find": "    copy, (shelf, contract, _) = _shelf_copy(path, project_name, record), shelf_of(path)",
+  "replace": "    copy, (shelf, contract, _) = _shelf_copy(path, project_name), shelf_of(path)"
  },
  {
   "file": "scripts/spark/sourcing/record_home.py",

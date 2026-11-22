@@ -14,8 +14,8 @@ from spark.records import board_records, missing_facts, record_kind, store
 from spark.core.text_guards import printable
 from spark.records.record_kind import Answer, _parse, _problem, _write_record
 from spark.sourcing import drawer, sourcing_codes
-from spark.sourcing.part_facts import _shelf_copy, shelve
-from spark.sourcing.part_records import PartError, validate
+from spark.sourcing.part_facts import _shelf_copy, shelf_of, shelve
+from spark.sourcing.part_records import PartError
 
 
 # --- MVP ---
@@ -46,13 +46,14 @@ def record_path(part_id, project, kind="part"):
             raise PartError("%s is only in %s (%s), another project on your list: spark writes only the project --project names",
                             part_id, listed[0], folder, code=sourcing_codes.OTHER_PROJECT_RECORD, subject=part_id,
                             fix=sourcing_codes.OTHER_PROJECT_RECORD_FOLDER.fix % shlex.quote(printable(str(folder))))
-    if path is not None and path.parent == store.place("shelf"):
+    shelf = store.place("board-shelf" if kind == "board" else "shelf")  # P989: a board file's shelf is the shelf's boards/
+    if path is not None and path.parent == shelf:
         named = shelved_from(path)
         folder = store.projects().get(named) if named else None
-        home = folder / "parts" / path.name if folder is not None else None
+        home = folder / ("boards" if kind == "board" else "parts") / path.name if folder is not None else None
         return (home, named) if home is not None and home.is_file() else (path, None)
     named = store.find_listed_name(project) if where == "project" else None
-    return path, named if named and shelved_from(store.place("shelf") / path.name) == named else None
+    return path, named if named and shelved_from(shelf / path.name) == named else None
 
 
 def refresh_shelf_copy(path, record, project_name, dry_run):
@@ -61,10 +62,10 @@ def refresh_shelf_copy(path, record, project_name, dry_run):
     (the record filled in its project while the copy stayed, so every retry said "nothing to change") — said in words:
     current, refreshed, would refresh, or not refreshed and why: a copy that would not meet the contract is not written.
     """
-    copy = _shelf_copy(path, project_name, record)
-    if _parse(store.place("shelf") / path.name) == copy:
+    copy, (shelf, contract, _) = _shelf_copy(path, project_name, record), shelf_of(path)
+    if _parse(store.place(shelf) / path.name) == copy:
         return "current"
-    wrong = validate(copy, path)
+    wrong = contract(copy, path)
     if wrong:
         return "shelf copy not refreshed: %s" % "; ".join(wrong)
     if dry_run:

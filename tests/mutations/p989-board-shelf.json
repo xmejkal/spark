@@ -1,0 +1,66 @@
+[
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "P989: boards lose the shelf layer",
+  "find": "    rows.append((\"shelf\", place(\"shelf\" if kind == \"parts\" else \"board-shelf\")))\n",
+  "replace": "    rows += [(\"shelf\", place(\"shelf\"))] if kind == \"parts\" else []\n",
+  "tier": "critical"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "P989: the board shelf is not private",
+  "find": "           \"registered-projects\", \"launcher\", \"board-shelf\")",
+  "replace": "           \"registered-projects\", \"launcher\")"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_facts.py",
+  "name": "P989: a board file goes onto the parts' shelf",
+  "find": "    return (\"board-shelf\", board_records.validate, \"board\") if",
+  "replace": "    return (\"shelf\", board_records.validate, \"board\") if",
+  "tier": "critical"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_facts.py",
+  "name": "P989: a board file is held to the part contract",
+  "find": "    return (\"board-shelf\", board_records.validate, \"board\") if",
+  "replace": "    return (\"board-shelf\", validate, \"board\") if"
+ },
+ {
+  "file": "scripts/spark/sourcing/drawer.py",
+  "name": "P989: a drawer link never shelves a board file",
+  "find": "    return (path, where or None) if where is not None and where not in SPARKS_OWN else None",
+  "replace": "    return (path, where or None) if where is not None and where not in SPARKS_OWN and \"part\" in target else None",
+  "tier": "critical"
+ },
+ {
+  "file": "scripts/spark/sourcing/drawer.py",
+  "name": "P989: the refusal of an unlisted folder's board names the part contract",
+  "find": "            kind = part_facts.shelf_of(change[\"shelve\"][0])[2]\n",
+  "replace": "            kind = \"part\"\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P989: a writer of a board looks for its shelf copy in the parts' shelf",
+  "find": "    shelf = store.place(\"board-shelf\" if kind == \"board\" else \"shelf\")",
+  "replace": "    shelf = store.place(\"shelf\")",
+  "tier": "critical"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P989: a shelf board's home is looked for in its project's parts/",
+  "find": "folder / (\"boards\" if kind == \"board\" else \"parts\") / path.name",
+  "replace": "folder / \"parts\" / path.name"
+ },
+ {
+  "file": "scripts/spark/records/record_kind.py",
+  "name": "P989: a shelf board is written back past the store",
+  "find": "    for name in (\"shelf\", \"board-shelf\", \"catalog\"):",
+  "replace": "    for name in (\"shelf\", \"catalog\"):"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "P989: --validate calls a shelf board the project's",
+  "find": "    for board_id, (where, path) in board_records.records(project).items():  # P989: the layer the records give\n",
+  "replace": "    for board_id, (_, path) in board_records.records(project).items():\n        where = \"library\" if path.parent == board_records.LIBRARY else \"project\"\n"
+ }
+]
