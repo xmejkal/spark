@@ -48,13 +48,16 @@ NO_SHEET_MESSAGE = "no breadboard.md yet"
 SHEET_NOT_JUDGED_MESSAGE = "breadboard.md, spark does not judge the wiring"
 SHEET_STALE_MESSAGE = "breadboard.md is from other requirements than requirements.json"
 FIRMWARE_MESSAGE = "firmware/main.py written %s"
-NO_FIRMWARE_MESSAGE = "no firmware/main.py yet"
+NO_FIRMWARE_MESSAGE = "No firmware/main.py yet. Ask Claude to write it in the chat."
 TESTED_MESSAGE = "a passed run tested the current image"
 NEWER_MESSAGE = "changed after the image: %s"
-LOOK_FIRST_MESSAGE = "ask Claude to look at the board first"
-#: The commands a phase names, as sentences, with ${CLAUDE_PLUGIN_ROOT} as written and never a resolved path.
-SCENARIO_COMMAND = "run ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml in your terminal: it uses Wokwi CI minutes"
-DEPLOY_COMMAND = "then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in your terminal"
+LOOK_FIRST_MESSAGE = "Ask Claude to look at the board first (/spark:deploy)."
+#: What the simulate and deploy phases say (P979): the command's name and who acts, never a path or a placeholder, because the
+#: page masks every path. Claude takes the full line from commands/build.md and commands/deploy.md.
+NO_SIM_MESSAGE = "No simulation files yet (sim/wokwi.toml). Ask Claude to build the board."
+NO_IMAGE_MESSAGE = "No firmware image yet. The scenario run makes one. To skip the simulation, ask Claude to deploy firmware/ untested."
+IMAGE_UNTESTED_MESSAGE = "No run tested this image yet. To skip the simulation, ask Claude to deploy firmware/ untested."
+DEPLOY_HINT = "Then Claude gives you the deploy line to run in your terminal, where you type yes, unless your deploy grant answers for you."
 
 #: The phases each kind of offer can make out of date (P829). An offer names one only when the phase holds something now
 #: (`phase_readers.makes_stale`). The build makes none: the simulation's own staleness is P880's.
@@ -203,6 +206,8 @@ TWO_JOBS_NOW = ("Two jobs, in any order: wire the breadboard (%d steps, power of
                 "Spark cannot see your wiring.")
 FIRMWARE_NOW = "Ask Claude in the chat to write the firmware for this board."
 SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes."
+#: The simulate phase's closing hint is the same sentence (P979).
+SCENARIO_HINT = SIMULATE_NOW
 DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then run the deploy "
               "in your terminal.")
 PROBLEMS_NOW = "The %s phase has problems. Ask Claude to go through them with you."

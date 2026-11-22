@@ -1,0 +1,7 @@
+[
+ {"file": "scripts/spark/flow/phase_readers.py", "name": "P979: the library's sentence with its paths comes back for an image that is not there", "find": "NOT_SIMULATED_SAYS[missing.reason])", "replace": "[str(missing)])"},
+ {"file": "scripts/spark/flow/phase_readers.py", "name": "P979: no sim/wokwi.toml asks for a scenario, not for a build", "find": "firmware_codes.NO_SIM_TOML: [flow_codes.NO_SIM_MESSAGE]", "replace": "firmware_codes.NO_SIM_TOML: [flow_codes.SCENARIO_HINT]"},
+ {"file": "scripts/spark/flow/phase_readers.py", "name": "P979: the deploy loses its second step", "find": "[flow_codes.LOOK_FIRST_MESSAGE, flow_codes.DEPLOY_HINT]", "replace": "[flow_codes.LOOK_FIRST_MESSAGE]"},
+ {"file": "scripts/spark/flow/phase_readers.py", "name": "P979: a tested image loses the scenario hint", "find": "return self.phase(None, says + [flow_codes.SCENARIO_HINT])", "replace": "return self.phase(None, says)"},
+ {"file": "scripts/spark/flow/phase_readers.py", "name": "P979: an image no run tested gets the library's sentence again", "find": "if says != [flow_codes.TESTED_MESSAGE] and not image.failed_runs():", "replace": "if False:"}
+]
