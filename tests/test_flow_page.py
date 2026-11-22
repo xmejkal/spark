@@ -1429,6 +1429,15 @@ class ThePageScriptTest(unittest.TestCase):
         words = words_of(self.text)
         self.assertEqual(words, page_words(sample_page().phases, wiring_first=True))
         self.assertEqual(page_words([])["intro"], "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.")
+        # P993: where the script adds the NOW button, it puts the step and "Use the button." in place of the sentence
+        # that names Claude; the page from disk and `flow.py show` keep that sentence
+        self.assertEqual(page_words([])["now_button"], {
+            "Ask Claude in the chat to write the parts list from your picks.": "Write the parts list from your picks. Use the button.",
+            "Your picks changed. Ask Claude to write the parts list again.": "Your picks changed. Write the parts list again. Use the button.",
+            "Ask Claude in the chat to build the board. It takes seconds and costs nothing.":
+                "Build the board. It takes seconds and costs nothing. Use the button.",
+            "The parts list changed since the last build. Ask Claude to build again.":
+                "The parts list changed since the last build. Build the board again. Use the button."})
         self.assertEqual(words["waiting"], "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.")
         self.assertEqual(words["ok"], {
             "pick": "Saved as the pick. Nothing is built yet. Reload to see the new state.",

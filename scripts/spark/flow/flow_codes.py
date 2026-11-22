@@ -148,8 +148,6 @@ NOT_SENT_SAYS = "Could not send. Nothing ran."
 NOT_WITHDRAWN_SAYS = "Could not withdraw. The request still waits."
 #: The intro of the published page, for its owner: the script puts it in place of PAGE_INTRO.
 PUBLISHED_INTRO = "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page."
-#: Said on the published page before the button on the guide's NOW line (P993): the NOW sentence names the step only.
-USE_BUTTON = "Use the button."
 WAITING_FOR = "Waiting for Claude: %s."
 PAGE_FROM = "Page from %s."
 NEW_STATE = "Reload to see the new state."
@@ -213,14 +211,21 @@ PARTS_NOW = "%s no part yet: %s. Tell Claude a pick for each, or to set it aside
 ONE_NEED_HAS, MANY_NEEDS_HAVE = "1 need has", "%d needs have"
 #: A phase in `later` whose status is ok: it is done now, and a change before it can make it stale (the PO's lens, PR 2 review).
 LATER_BUT_DONE = " (done, may change)"
-REQUIREMENTS_NOW = "Write the parts list from your picks."
+REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your picks."
 #: Every need set aside (P980): the parts phase is ok, but the parts list has no pick to be written from.
 ALL_ASIDE_NOW = "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, then pick a part."
 #: What `done` says of a requirements file with no needs or picks behind it (P980). Not "hand-written" only: a project whose last need was dropped is the same.
 REQUIREMENTS_NO_PICKS = "requirements (no needs or picks behind it)"
-REQUIREMENTS_STALE_NOW = "Your picks changed. Write the parts list again."  # P993: each names the step, not the way
-BUILD_NOW = "Build the board. It takes seconds and costs nothing."
-BUILD_STALE_NOW = "The parts list changed since the last build. Build the board again."
+REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
+BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
+BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
+#: The NOW sentences that can carry the page's button (`flow_page.sendable_now`), each with what the published page says
+#: in its place where its script adds the button (P993): the step, and to use the button. The page from disk, a viewer
+#: who is not the owner and `flow.py show` keep the sentence that names Claude.
+NOW_BUTTON = {REQUIREMENTS_NOW: "Write the parts list from your picks. Use the button.",
+              REQUIREMENTS_STALE_NOW: "Your picks changed. Write the parts list again. Use the button.",
+              BUILD_NOW: "Build the board. It takes seconds and costs nothing. Use the button.",
+              BUILD_STALE_NOW: "The parts list changed since the last build. Build the board again. Use the button."}
 BUILD_PARTIAL_NOW = "The build stopped. Ask Claude what stopped it and what to do."
 SHEET_NOW = "No wiring sheet yet. Ask Claude to build the board."
 SHEET_STALE_NOW = "The wiring sheet is out of date. Ask Claude to build the board again."

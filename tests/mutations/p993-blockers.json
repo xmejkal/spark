@@ -31,20 +31,26 @@
  },
  {
   "file": "scripts/spark/flow/page_script.js",
-  "name": "P993: the NOW button stands with no sentence that says to use it (test_flow_script.PageScriptTest)",
-  "find": "const told = item.tagName === \"P\" &&",
-  "replace": "const told = false &&"
+  "name": "P993: the owner's NOW button line keeps the sentence that names Claude (test_flow_script.PageScriptTest)",
+  "find": "if (step) said.textContent = \" \" + step;",
+  "replace": "if (false) said.textContent = \" \" + step;"
  },
  {
   "file": "scripts/spark/flow/page_script.js",
-  "name": "P993 review: a pick's NOW line also says to use the button (test_flow_script.PageScriptTest)",
-  "find": "&& kindOf(key) !== \"pick\";",
-  "replace": "&& true;"
+  "name": "P993 review: a NOW sentence the words do not name is replaced too (test_flow_script.PageScriptTest)",
+  "find": "own(this.words.now_button, said.textContent.trim())",
+  "replace": "Object.values(this.words.now_button)[0]"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "P993 review: a pick stored as its drawer entry is named with no need (test_flow.TheBlockersTest)",
   "find": "if any(key in needs.as_record(pick, plan.known, plan.entries).values()",
   "replace": "if any(key in pick.values()"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P993: the words block names no NOW sentence to put the step in place of (test_flow_page)",
+  "find": "\"now_button\": flow_codes.NOW_BUTTON,",
+  "replace": "\"now_button\": {},"
  }
 ]

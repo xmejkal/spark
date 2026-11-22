@@ -683,7 +683,7 @@ class TheGuideTest(FlowTest):
         (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6-fresh", "parts": ["led-red-5mm"]}))
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["says"], guide["no_simulation"]),
-                         ("build", "The parts list changed since the last build. Build the board again.", None))  # P993
+                         ("build", "The parts list changed since the last build. Ask Claude to build again.", None))
 
     def test_a_simulation_with_problems_is_not_passed(self):
         guide = show(a_project_built_with_no_simulation("diagram_unwired", "problems"))[0]["data"]["guide"]
@@ -778,7 +778,7 @@ class TheGuideTest(FlowTest):
         said, _ = show(project)
         self.assertEqual(statuses(said)["parts"], "ok")
         self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"], said["data"]["guide"]["now"]["says"]),
-                         ("requirements", "requirements", "Write the parts list from your picks."))  # P993
+                         ("requirements", "requirements", "Ask Claude in the chat to write the parts list from your picks."))
 
     def test_a_hand_written_project_lists_no_needs_or_parts_as_done(self):
         project = a_built_project()

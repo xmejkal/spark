@@ -109,8 +109,9 @@ A pick whose record owes a fact is named with its need and the facts, such as `�
 for screen still lacks what spark needs: simulation. Ask Claude how to fill it in.` Before a requirements.json, the status is
 `problems` once every need that counts has a pick (exit 1, and the guide says the phase has problems), else
 `not-started`: the parts phase is `now` and holds the blocker. The guide's NOW sentence of the parts list and of the build
-names the step only (`Build the board. …`); on the published page the script adds `Use the button.` before the NOW
-line's button, but not before a pick's (that line already says to tell Claude a pick).
+names Claude (`Ask Claude in the chat to build the board. …`) in `flow.py show`, on the page from disk and for a viewer.
+Where the published page's script adds the NOW line's button for the owner, it puts the step and `Use the button.` in its
+place (`Build the board. … Use the button.`, the words block's `now_button`). A pick's NOW line stays as it is.
 
 The parts phase offers at most three picks per need ([P976](https://github.com/xmejkal/spark/issues/1406)). They are
 the need's plausible candidates in the order of `parts.py --match`: each holds the need's words or scores above 0 with

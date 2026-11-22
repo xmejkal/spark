@@ -253,10 +253,12 @@ class PageView {
       const offer = own(this.words.offers, key);
       if (!offer) return;
       const made = this.button(offer.label, () => this.confirm(item, key, offer));
-      // P993: the guide's line of what to do now (a <p>; an offer is an <li>) names the step only: with a button, use it.
-      // A pick's line already says "Tell Claude a pick", so it gets no second order.
-      const told = item.tagName === "P" && kindOf(key) !== "pick";
-      item.appendChild(this.doc.createTextNode(told ? " " + this.words.use_button + " " : " "));
+      // P993: the guide's line of what to do now (a <p>; an offer is an <li>) asks Claude in the chat; with its button
+      // here, its sentence becomes the step and "Use the button." (`now_button`). A sentence it does not name stays.
+      const said = item.tagName === "P" ? item.lastChild : null;
+      const step = said ? own(this.words.now_button, said.textContent.trim()) : undefined;
+      if (step) said.textContent = " " + step;
+      item.appendChild(this.doc.createTextNode(" "));
       item.appendChild(made);
       this.buttons.push(made);
     });
