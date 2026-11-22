@@ -31,7 +31,7 @@ means. The build's output prints the stages below, from one table, `stages.BUILD
 | stage | what it is | how it ends when not ok |
 |---|---|---|
 | requirements | the requirements file, read as a design before any folder is made | could-not-run: a design error, with its own code (design_codes) |
-| board | the board record the requirements name, from the project or spark's library | could-not-run: `board_unusable` |
+| board | the board record the requirements name, from the project, the store's shelf or spark's library | could-not-run: `board_unusable` |
 | parts | the part records the requirements name; listed only when it does not end ok | could-not-run: `board_only_with_parts`, `no_parts`, a design error, with its own code (design_codes); skipped: `board_only` |
 | schematic | board.tsx, written by the board emitter with the pin map made inside it | could-not-run: a design error, with its own code (design_codes), `stage_crashed`, `schematic_refused`; skipped: `board_only` |
 | schematic-notes | what the board emitter notes about a board it wrote; listed only when there is a note, and the build goes on | problems: `schematic_noted` |

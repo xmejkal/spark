@@ -32,6 +32,10 @@ from spark.records.board_records import (BoardError, _read_json, active_id, avai
 def _validate_all(project: Path, for_fab: bool) -> int:
     """Check every board file, not just the active one, and say what is wrong with each."""
     failed = False
+    try:
+        active = active_id(project)
+    except BoardError:
+        active = None  # P989 review: a folder with no boards/active.json has no active board, and every file is still checked
     for board_id, (where, path) in board_records.records(project).items():  # P989: the layer the records give
         try:
             board = _read_json(path, "board definition")
@@ -40,7 +44,7 @@ def _validate_all(project: Path, for_fab: bool) -> int:
             failed = True
             continue
         problems = validate(board, path, for_fab=for_fab)
-        marker = "active" if board_id == active_id(project) else "     "
+        marker = "active" if board_id == active else "     "
         if problems:
             print(f"  {marker}  {board_id} ({where}): {len(problems)} problem(s)")
             for problem in problems:

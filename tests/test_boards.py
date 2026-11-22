@@ -1579,6 +1579,15 @@ class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):
         self.assertIn("    x-board (shelf) stops at the footprint stage", text)  # the fixture has no physical.header
         self.assertIn("  x-board (shelf): ok\n", valid)
 
+    def test_validate_in_a_folder_with_no_active_board_checks_every_board_file(self):
+        # P989 review (refuter 7): the drawer's refusal sends a person to `boards.py --validate --project .` in a folder
+        # that /spark:research wrote a board file into, with no boards/active.json: nothing is active, every file is checked
+        root = Path(tempfile.mkdtemp())
+        (root / "boards").mkdir()
+        (root / "boards" / "x-board.json").write_text(json.dumps(definition("x-board")))
+        _, valid = self.listed("--validate", "--project", str(root))
+        self.assertIn("       x-board (project): ok\n", valid)
+
     def test_a_prefix_of_list_picks_the_operation_as_argparse_would(self):
         code, out = self.listed("--li", "--project", str(project()))
         self.assertEqual(code, 0)
