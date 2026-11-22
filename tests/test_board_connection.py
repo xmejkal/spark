@@ -132,7 +132,7 @@ class QuietBoardConnectionTest(unittest.TestCase):
     def test_a_refused_raw_repl_and_a_board_traceback_split_as_mpremote_s(self):
         with self.assertRaises(board_connection.BoardUnreachableError) as refused:
             quiet(Mpremote(fails=NO_RAW_REPL)).run_code("pass")
-        self.assertIn(board_connection.RAW_REPL_REFUSED, str(refused.exception))
+        self.assertIn("could not enter raw repl", str(refused.exception))
         raised = ("Traceback (most recent call last):\nZeroDivisionError: divide by zero\n", "")
         with self.assertRaises(board_connection.BoardCodeError):
             quiet(Mpremote(fails=raised)).run_code("1/0")

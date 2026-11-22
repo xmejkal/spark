@@ -49,7 +49,7 @@ class MicroPythonPlatformTest(unittest.TestCase):
         self.assertEqual((probe.python, probe.port), (MPREMOTE.command, "/dev/cu.usbmodem101"))
 
     def test_espressif_s_usb_serial_jtag_gets_the_quiet_connection(self):
-        made = self.platform.make_connection(["mpremote"], "/dev/cu.usbmodem101", None, board_connection.USB_SERIAL_JTAG)
+        made = self.platform.make_connection(["mpremote"], "/dev/cu.usbmodem101", None, "303a:1001")
         self.assertIsInstance(made, board_connection.QuietBoardConnection)
         self.assertEqual(made.command[:2], MPREMOTE.command + ["-c"])
 
@@ -61,7 +61,7 @@ class MicroPythonPlatformTest(unittest.TestCase):
     def test_a_board_shell_that_is_no_python_package_gets_mpremote_as_it_is(self):
         exe = tool_finder.Tool("mpremote", "board-shell", {"kind": "path"}, ["/usr/local/bin/mpremote"])
         platform = firmware_platform.MicroPythonPlatform(self.project, {"board-shell": exe}.__getitem__)
-        made = platform.make_connection(["mpremote"], "/dev/cu.usbmodem101", None, board_connection.USB_SERIAL_JTAG)
+        made = platform.make_connection(["mpremote"], "/dev/cu.usbmodem101", None, "303a:1001")
         self.assertIs(type(made), board_connection.BoardConnection)
 
     def test_a_missing_tool_shows_when_a_step_asks_for_it_not_before(self):
