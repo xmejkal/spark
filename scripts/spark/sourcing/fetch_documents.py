@@ -9,7 +9,7 @@ import json
 from spark.core.operation import COMMON_ARGUMENTS, FETCHES, JSON_DEST, READS, WRITES, Argument
 from spark.records import records_codes
 from spark.records.answer_operation import ANSWER_ARGUMENTS
-from spark.records.record_kind import Answer, DEFINITION_SUFFIX, _problem, record_home
+from spark.records.record_kind import Answer, _problem
 from spark.sourcing import datasheets, record_home as home_rules, sourcing_codes
 from spark.sourcing.part_operation import PartOperation
 
@@ -45,7 +45,8 @@ class FetchDocuments(PartOperation):
             return Answer({"documents": None, "would_fetch": wanted, "failed": []}, ["  would fetch %s" % url for url in wanted]
                           or ["  %s cites no datasheet or image URL to keep" % part_id])
         kept = datasheets.fetch_documents(part_id, project)
-        cited = [url for url, _ in datasheets.fetch_plan(json.loads((record_home(part_id, project) / (part_id + DEFINITION_SUFFIX)).read_text()))]
+        written, _ = datasheets.fetch_home(part_id, project)  # P983: the file the fetch wrote, never a stale shelf copy
+        cited = [url for url, _ in datasheets.fetch_plan(json.loads(written.read_text()))]
         failed = [url for url in cited if url not in {entry["url"] for entry in kept.values()}]
         lines = ["  %s/%s  <-  %s" % (entry["sha256"][:12], entry["file"], entry["url"]) for entry in kept.values()]
         lines += ["  NO  %s — %s" % (url, DOWNLOAD_FAILED) for url in failed]
