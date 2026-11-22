@@ -3,7 +3,7 @@ The rules a board record is held to (P724), as `part_records` holds a part's: on
 `(board, validation) -> list` of problems, in the order of `RULES`, which `board_records.BOARD` runs, and the names only
 they read (the forbidden keys, the fab keys, the shape of a label and a fact). The names `board_records` code and other
 modules read too (`PIN_ROLES`, `ADC2_UNUSABLE_WITH_WIFI`, `adc2_unread_gpio`, `POWER_FUNCTIONS`, `RADIO_FUNCTIONS`,
-`GPIO_MIN`,
+`BAND_WORDS`, `GPIO_MIN`,
 `GPIO_MAX`, `is_gpio`, `is_pin_map_constant`) live here, and `board_records` imports them, so
 `board_records.PIN_ROLES` still works. It imports the records area below it, never `board_records`.
 """
@@ -93,6 +93,10 @@ RADIO_FUNCTIONS = {
     "bluetooth_le": {"does": "communicate", "what": "onboard Bluetooth LE radio (BLE)"},
     "ieee802154": {"does": "communicate", "what": "onboard 802.15.4 radio (Thread, Zigbee)"},
 }
+#: The words that close the Wi-Fi words with the chip's band in the shown words (P1013): "(WiFi)" shows as
+#: "(WiFi; 2.4 GHz only)". No matcher reads them, so a need's "2.4 GHz" or "only" scores as before. "only" holds for a
+#: chip with one band: a chip with two bands needs other words before its wifi_band enters data/chips.json.
+BAND_WORDS = "; %s only)"
 # --- end MVP ---
 
 

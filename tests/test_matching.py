@@ -12,6 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from spark.sourcing import matching  # noqa: E402
 
 SENSE = {"does": "sense", "what": "range"}
+#: The shipped board records (P1013's score check reads two).
+BOARDS = Path(__file__).resolve().parent.parent / "boards"
 
 
 def an_offer(**said):
@@ -196,6 +198,15 @@ class TheOfferOnceTest(unittest.TestCase):
         whole = matching.Offer.from_record("p", "part", {"name": "P", "power": {"note": "x" * 500}}).as_dict()["facts"]["power"]
         self.assertEqual((len(cut), cut[-1]), (1000, "…"))
         self.assertNotIn("…", whole)
+
+    def test_an_entrys_function_keeps_only_does_and_what(self):
+        """P1013: a drawer entry's function is offered with its `does` and `what` alone, as a record's must be
+        (part_records.function_problems), so a `band` or a `role` a person wrote beside them is never shown or picked."""
+        said = [{"does": "communicate", "what": "onboard Wi-Fi radio (WiFi)", "band": "5 GHz", "role": "onboard_led"}]
+        kept = [{"does": "communicate", "what": "onboard Wi-Fi radio (WiFi)"}]
+        self.assertEqual(matching.Offer.from_entry("e", {"label": "E", "function": said}).functions, kept)
+        self.assertEqual(matching.Offer.from_record("p", "part", {"name": "P"}, [{"label": "P", "function": said}]).functions, kept)
+
 # --- end MVP ---
 
 
@@ -328,3 +339,18 @@ class TheMatchersTest(unittest.TestCase):
     def test_what_match_shows(self):
         self.assertEqual([matching.shown(r, e, s) for r, e, s in ((7, False, 0.0), (8, False, 0.0), (8, True, 0.0), (8, False, 0.5))],
                          [True, False, True, True])
+
+    def test_a_band_in_the_shown_words_never_moves_a_score(self):
+        """P1013: the band is shown beside the Wi-Fi words and never scored, so a need's "2.4", "GHz" or "only" scores as
+        it did before the band: the XIAO's function words hold no "ghz" and no "only"."""
+        for name, scores in (("xiao-esp32-c6", [(0.167, ["4: in functions"]), (0.25, ["4: in functions"]), (0.0, [])]),
+                             ("firebeetle2-esp32s3", [(0.1, ["2: in names"]), (0.15, ["2: in names"]), (0.0, [])])):
+            offer = matching.Offer.from_record(name, "board", json.loads((BOARDS / (name + ".json")).read_text()))
+            for need, (score, why) in zip(({"does": "communicate", "what": "2.4 GHz remote control receiver"},
+                                           {"what": "2.4 inch display"}, {"does": "communicate", "what": "only"}), scores):
+                with self.subTest(board=name, need=need["what"]):
+                    fit = matching.WordOverlap().score(need, offer)
+                    self.assertEqual((fit.score, fit.why), (score, why))
+        words = matching.WordOverlap.places({"does": None}, matching.Offer.from_record(
+            "xiao", "board", json.loads((BOARDS / "xiao-esp32-c6.json").read_text())))["functions"]
+        self.assertEqual((words & {"ghz", "only"}, "wifi" in words), (set(), True))

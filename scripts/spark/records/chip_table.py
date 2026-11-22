@@ -5,7 +5,9 @@ Each fact is cited to ESP-IDF v5.5.1. `adc2_used_by_wifi`: `board_rules.adc2_rol
 whose chip shares ADC2 with Wi-Fi names the `adc2_unusable_with_wifi` role. `adc2_oneshot_supported` and `adc2_gpio`
 (P813, the ESP32-C3): `board_rules.adc2_unread_gpio` reads them, and the pin assigner gives the chip's ADC2 pins no
 adc. P990: `wifi`, `bluetooth_le` and `ieee802154`, the chip's radios (RADIOS), cited to its kept soc_caps.h:
-`board_records.onboard_functions` offers each for a need. A lookup follows the reader rule in `outcomes`: a chip the table lacks or holds as null is NONE_RECORDED. It has no
+`board_records.onboard_functions` offers each for a need. P1013: `wifi_band`, the band of the chip's Wi-Fi in words,
+cited to its datasheet: `board_records` adds it to the chip's Wi-Fi function as `band`, which only the shown words
+read. A lookup follows the reader rule in `outcomes`: a chip the table lacks or holds as null is NONE_RECORDED. It has no
 row in test_outcomes' READERS, because it reads no file that may be absent: `load` reads the shipped table, a required
 thing, and raises.
 """
@@ -65,6 +67,12 @@ class ChipTable:
         """The names in RADIOS whose fact of `chip` is true, in RADIOS order (P990). () for a chip the table lacks, a chip
         that is no string, or a fact that is absent, null or false. () never means "no radio"."""
         return tuple(name for name in RADIOS if self._value(chip, name) is True)
+
+    def wifi_band(self, chip):
+        """The band of `chip`'s Wi-Fi in words, such as "2.4 GHz" (P1013), or None when the table holds no fact: it lacks
+        the chip or the fact, or holds no words. None never means "no band"."""
+        value = self._value(chip, "wifi_band")
+        return value if isinstance(value, str) and value.strip() else None
 
     def _flag(self, chip, name):
         value = self._value(chip, name)

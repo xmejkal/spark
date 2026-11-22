@@ -2,7 +2,8 @@
 The chip table (P809): `data/chips.json` holds each chip's `adc2_used_by_wifi`, cited to a kept ESP-IDF file, and
 `chip_table` reads it as RECORDED or NONE_RECORDED. P813: the ESP32-C3 also holds `adc2_oneshot_supported` (false), cited
 to the kept adc_oneshot.rst, and `adc2_gpio` (its ADC2 pin), cited to its kept adc_channel.h. P990: the ESP32, the S3
-and the C6 hold their radios, each true and cited to the chip's kept soc_caps.h, and `radios` reads them.
+and the C6 hold their radios, each true and cited to the chip's kept soc_caps.h, and `radios` reads them. P1013: the same
+three hold `wifi_band`, cited to a page of the chip's datasheet, and `wifi_band` reads it.
 """
 
 import json
@@ -16,6 +17,8 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parents[1]
 #: The radio facts a chip may hold (P990), the names the table's rows use.
 RADIOS = ("wifi", "bluetooth_le", "ieee802154")
+#: The datasheet each chip's `wifi_band` cites (P1013).
+DATASHEETS = {"esp32": "esp32-datasheet-v5-3", "esp32s3": "esp32-s3-datasheet-v2-2", "esp32c6": "esp32-c6-datasheet-v1-5"}
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.core import outcomes  # noqa: E402
@@ -31,7 +34,7 @@ class TheShippedTableTest(unittest.TestCase):
 
     def test_each_fact_is_a_bool_or_null_with_a_citation(self):
         for chip, facts in self.held["chips"].items():
-            for name in ("adc2_used_by_wifi", "adc2_oneshot_supported", "adc2_gpio"):
+            for name in ("adc2_used_by_wifi", "adc2_oneshot_supported", "adc2_gpio", "wifi_band"):
                 if name not in facts and name != "adc2_used_by_wifi":
                     continue
                 with self.subTest(chip=chip, fact=name):
@@ -39,12 +42,14 @@ class TheShippedTableTest(unittest.TestCase):
                     if name == "adc2_gpio":
                         self.assertTrue(isinstance(fact["value"], list) and fact["value"]
                                         and all(type(gpio) is int for gpio in fact["value"]), fact["value"])
+                    elif name == "wifi_band":
+                        self.assertTrue(isinstance(fact["value"], str) and fact["value"].strip(), fact["value"])
                     else:
                         self.assertIn(fact["value"], (True, False, None))
                     self.assertIn(fact["cites"]["document"], self.held["documents"])
                     self.assertTrue(fact["cites"]["at"])
             self.assertLessEqual(set(facts), {"adc2_used_by_wifi", "adc2_oneshot_supported", "adc2_gpio",
-                                              *RADIOS}, chip)
+                                              "wifi_band", *RADIOS}, chip)
 
     def test_a_chip_whose_adc2_oneshot_is_unsupported_names_its_adc2_pins(self):
         for chip, facts in self.held["chips"].items():
@@ -54,7 +59,7 @@ class TheShippedTableTest(unittest.TestCase):
 
     def test_the_c3_facts_are_the_sources(self):
         held = {chip: {name: fact["value"] for name, fact in facts.items()
-                       if name != "adc2_used_by_wifi" and name not in RADIOS}
+                       if name not in ("adc2_used_by_wifi", "wifi_band") and name not in RADIOS}
                 for chip, facts in self.held["chips"].items()}
         self.assertEqual({chip: facts for chip, facts in held.items() if facts},
                          {"esp32c3": {"adc2_oneshot_supported": False, "adc2_gpio": [5]}})
@@ -93,6 +98,27 @@ class TheShippedTableTest(unittest.TestCase):
                                                               "esp-idf-v5.5.1-esp32s3-soc_caps.h"),
                           "esp-idf-soc-caps-v5-5-1-esp32c6": ("43e1668e045daf9b419fff29c4c647d8f48b065b744a48a2ffebfaf8bb358169",
                                                               "esp-idf-v5.5.1-esp32c6-soc_caps.h")})
+
+    def test_the_shipped_wifi_bands_are_the_sources(self):
+        table = chip_table.load()
+        self.assertEqual({chip: table.wifi_band(chip) for chip in self.held["chips"] if table.wifi_band(chip)},
+                         {"esp32": "2.4 GHz", "esp32s3": "2.4 GHz", "esp32c6": "2.4 GHz"})
+
+    def test_each_wifi_band_cites_a_page_of_its_chips_datasheet_and_the_chip_has_wifi(self):
+        self.assertEqual({chip for chip, facts in self.held["chips"].items() if "wifi_band" in facts}, set(DATASHEETS))
+        for chip, facts in self.held["chips"].items():
+            if "wifi_band" in facts:
+                with self.subTest(chip=chip):
+                    self.assertEqual(facts["wifi_band"]["cites"]["document"], DATASHEETS[chip])
+                    self.assertTrue(facts["wifi_band"]["cites"]["at"].startswith("page "), facts["wifi_band"]["cites"]["at"])
+                    self.assertIs(facts["wifi"]["value"], True)
+
+    def test_the_band_documents_are_the_kept_datasheets(self):
+        documents = self.held["documents"]
+        self.assertEqual({key: (documents[key]["sha256"], documents[key]["version"]) for key in DATASHEETS.values()},
+                         {"esp32-datasheet-v5-3": ("a7917e6b47528c9dcab06837a49d452e582751335797db879f1cf2d17cd29adf", "5.3"),
+                          "esp32-s3-datasheet-v2-2": ("2d5a7cb7fd559d8d972bd88db32669c0196d23f22d7afaafb0f63d099b589a3f", "2.2"),
+                          "esp32-c6-datasheet-v1-5": ("372a5b42b2900c83ef4309149c8835e9ae2d1be19244995bf2fb83af4dc5edf1", "1.5")})
 
     def test_load_reads_the_shipped_table(self):
         self.assertEqual(chip_table.load().adc2_used_by_wifi("esp32s3"), chip_table.ChipFact(outcomes.RECORDED, True))
@@ -154,6 +180,21 @@ class TheLookupTest(unittest.TestCase):
         for chip in ("odd", "one", "absent", 5, None):
             with self.subTest(chip=chip):
                 self.assertEqual(table.radios(chip), ())
+
+    def test_wifi_band_gives_a_band_in_words_or_none_for_no_fact(self):
+        table = chip_table.ChipTable.from_dict({
+            "two": {"wifi_band": {"value": "2.4 GHz"}},
+            "open": {"wifi_band": {"value": None}},
+            "empty": {"wifi_band": {"value": ""}},
+            "blank": {"wifi_band": {"value": "  "}},
+            "number": {"wifi_band": {"value": 5}},
+            "flag": {"wifi_band": {"value": True}},
+            "bare": {"wifi_band": {}},
+        })
+        self.assertEqual(table.wifi_band("two"), "2.4 GHz")
+        for chip in ("open", "empty", "blank", "number", "flag", "bare", "absent", None):
+            with self.subTest(chip=chip):
+                self.assertIsNone(table.wifi_band(chip))
 
     def test_the_table_cannot_be_changed(self):
         with self.assertRaises(TypeError):

@@ -224,6 +224,13 @@ radio (Thread, Zigbee)`. The words in brackets are the words a need uses: spark 
 the need `wifi` meets only "(WiFi)". The ESP32's Bluetooth Classic has no name yet. A board that leaves out one of its
 chip's radios gets a board key when a real board needs one.
 
+Each of these three chips also holds `wifi_band`, `2.4 GHz`, cited to the printed pages of its Espressif datasheet that
+state it ([P1013](https://github.com/xmejkal/spark/issues/1472)): the ESP32 v5.3 (pages 2 and 53), the ESP32-S3 v2.2
+and the ESP32-C6 v1.5 (pages 3 and 70). Each datasheet gives the whole range of operating channels as 2412 to 2484 MHz,
+so `--match` shows the Wi-Fi words as `onboard Wi-Fi radio (WiFi; 2.4 GHz only)`. No matcher reads the band: a need's
+"2.4 GHz" or "only" scores as it did before, and `--offer` shows the words without it. A chip with no `wifi_band` shows
+no band, and that does not mean it has none.
+
 ## Simulation
 
 `wokwi_part_type` names the part the generated Wokwi diagram uses. If Wokwi has no model of the
