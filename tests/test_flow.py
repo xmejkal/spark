@@ -166,8 +166,7 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(says(said, "firmware"), ["No firmware/main.py yet. Ask Claude to write it in the chat."])
         self.assertEqual(says(said, "simulate"), ["No simulation files yet (sim/wokwi.toml). Ask Claude to build the board."])
         self.assertEqual(says(said, "deploy"), ["Ask Claude to look at the board first (/spark:deploy).",
-                                                "Then Claude gives you the deploy line to run in your terminal, where you type yes, "
-                                                "unless your deploy grant answers for you."])
+                                                "Claude then gives you the deploy line. Run it in your terminal and type yes, unless you gave Claude a standing yes for this board."])
         self.assertEqual([phase["by"] for phase in said["data"]["phases"]],
                          ["you", "claude", "you", "claude", "claude", "you", "claude", "your terminal", "your terminal"])
 
@@ -419,6 +418,17 @@ class ThePhasesTest(FlowTest):
             "No run tested this image yet. To skip the simulation, ask Claude to deploy firmware/ untested.",
             "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes."])
         self.assertIsNone(statuses(said)["simulate"])
+
+    def test_a_run_that_failed_on_the_image_keeps_the_library_s_sentence(self):
+        # P979: only an image no run named gets the flow's own untested sentence
+        project = a_built_project()
+        (project / "sim" / "runs").mkdir(parents=True)
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+        (project / "sim" / "image.bin").write_bytes(b"an image")
+        (project / "sim" / "runs" / "a.log").write_text(
+            "# a.log\nverdict: failed (wokwi-cli exit 1)\nimage sha256: %s\nbody\n" % hashlib.sha256(b"an image").hexdigest())
+        said, _ = show(project)
+        self.assertIn("did not pass on this image", says(said, "simulate")[0])
 
     def test_an_image_that_is_not_there_says_two_sentences_and_the_page_holds_no_placeholder(self):
         # P979: str(missing) was the library's sentence, with <store>, <project> and a script path

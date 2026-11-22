@@ -57,7 +57,7 @@ LOOK_FIRST_MESSAGE = "Ask Claude to look at the board first (/spark:deploy)."
 NO_SIM_MESSAGE = "No simulation files yet (sim/wokwi.toml). Ask Claude to build the board."
 NO_IMAGE_MESSAGE = "No firmware image yet. The scenario run makes one. To skip the simulation, ask Claude to deploy firmware/ untested."
 IMAGE_UNTESTED_MESSAGE = "No run tested this image yet. To skip the simulation, ask Claude to deploy firmware/ untested."
-DEPLOY_HINT = "Then Claude gives you the deploy line to run in your terminal, where you type yes, unless your deploy grant answers for you."
+DEPLOY_HINT = "Claude then gives you the deploy line. Run it in your terminal and type yes, unless you gave Claude a standing yes for this board."
 
 #: The phases each kind of offer can make out of date (P829). An offer names one only when the phase holds something now
 #: (`phase_readers.makes_stale`). The build makes none: the simulation's own staleness is P880's.

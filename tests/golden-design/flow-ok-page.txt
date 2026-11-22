@@ -127,7 +127,7 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <div id="phase-deploy">
 <p>Done by: your terminal</p>
 <p>Ask Claude to look at the board first (/spark:deploy).</p>
-<p>Then Claude gives you the deploy line to run in your terminal, where you type yes, unless your deploy grant answers for you.</p>
+<p>Claude then gives you the deploy line. Run it in your terminal and type yes, unless you gave Claude a standing yes for this board.</p>
 </div>
 </details>
 </section>

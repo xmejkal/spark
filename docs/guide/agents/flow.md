@@ -72,7 +72,8 @@ simulated image have `null`, because you judge them. Without firmware/main.py, o
 The hints of the simulate and deploy phases name the command and who acts, and hold no placeholder
 ([P979](https://github.com/xmejkal/spark/issues/1411)). The page masks every path, and the scripts live in the plugin, not
 in the project. So a hint says "ask Claude" and never gives a path: you take the full lines from `commands/build.md`
-(the scenario run) and `commands/deploy.md` (the dry run), and the image line from `look.py` and `deploy.py`. A
+(the scenario run) and `commands/deploy.md` (the dry run). The deploy line the person runs is the one `deploy.py` prints
+(`commands/deploy.md`, step 2), and the image line comes from `look.py` and `deploy.py`. A
 could-not-run line is the error's own sentence, masked.
 
 A phase that spark did not judge is never a pass, and a skipped stage is not one either
