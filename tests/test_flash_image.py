@@ -153,6 +153,17 @@ class TheImageTest(unittest.TestCase):
         self.assertIn("/main.py", out.getvalue())
 
     @needs_littlefs
+    def test_the_command_makes_the_output_s_folder(self):
+        # P1001: a board with no Wokwi part gets no sim/ from the build, and the image goes to sim/flash-with-firmware.bin
+        import contextlib
+        import io
+        with contextlib.redirect_stdout(io.StringIO()):
+            code = flash_image.main(["--micropython", str(self.root / "micropython.bin"), "--files", str(self.root / "fw"),
+                                     "-o", str(self.root / "sim" / "flash-with-firmware.bin")])
+        self.assertEqual(code, 0)
+        self.assertTrue((self.root / "sim" / "flash-with-firmware.bin").is_file())
+
+    @needs_littlefs
     def test_a_missing_interpreter_is_could_not_run_with_where_to_get_one(self):
         import contextlib
         import io

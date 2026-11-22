@@ -21,8 +21,9 @@ from spark.bench import board_start
 from spark.bench import deploy_gate
 from spark.records import deploy_record_store
 from spark.bench import download_mode
+from spark.bench import image_evidence
 from spark.bench import ready_probe
-from spark.firmware.project_image import DeployError, ProjectImage
+from spark.firmware.project_image import DeployError
 from spark.core.events import Event
 
 #: Value: what `plan` returns. `flasher` is the Flasher, `commands` are the flash commands it builds, `mpremote` is
@@ -78,7 +79,7 @@ class DeployService:
         a ToolError says why the image cannot go on the board yet: what costs nothing is checked before the tools.
         A run log that tested another image refuses the flash, unless the evidence makes it a note.
         """
-        image = ProjectImage(self.project)
+        image = image_evidence.image_of(self.project, self.evidence)
         why = self.evidence.why_not_ready(image)
         if why:
             raise DeployError(why + self.evidence.way_out(image), reason=board_codes.EVIDENCE_REFUSES)
@@ -104,7 +105,7 @@ class DeployService:
         `consent` the person's yes. It reports the gate's yes line, a BEGIN of the flash and a line per command (E2).
         GateClosedError, DeployError and tool_finder.ToolError say why nothing, or not everything, was flashed.
         """
-        image_path = ProjectImage(self.project).path.relative_to(self.project)
+        image_path = image_evidence.image_of(self.project, self.evidence).path.relative_to(self.project)
         deploy_gate.require_open_gate(look, token, consent, image_path, look.question_caveats())
         if consent.yes_kind == deploy_gate.GRANT:
             self.report(Event.line(DeployPhase.GATE, "yes: %s" % consent.who))
@@ -149,7 +150,7 @@ class DeployService:
         when the passed run's log cannot be read, and ToolError when a tool is missing: after the flash they are not
         turned into a sentence. `look` is the LookReport, `planned` the DeployPlan that `deploy` returned. Returns a DeployResult.
         """
-        image = ProjectImage(self.project)  # fresh: the flash and the person's wait are behind us
+        image = image_evidence.image_of(self.project, self.evidence)  # fresh: the flash and the person's wait are behind us
         expected = self.evidence.expected_files(image)
         moment = self.clock.now()  # once: the facts file and the board log share it
         starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), look.reading.mac, self.clock,

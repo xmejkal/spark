@@ -18,6 +18,7 @@ from spark.bench import board_grant
 from spark.records.brief import UnnamedMust
 from spark.design import loader
 from spark.firmware import image_builder
+from spark.firmware import project_image
 from spark.firmware import sim_project
 from spark.records import onboard_parts
 from spark.firmware.project_image import BUILD_IMAGE_HINT, NO_SIMULATION_FLAG
@@ -182,6 +183,13 @@ class CompileCheck:
         if kind == UNREADABLE:
             return UNREADABLE_REASON % (name, result.get("msg"))
         return BYTES_REASON % (name, result.get("msg"))
+
+
+def image_of(project, evidence):
+    """The project_image.ProjectImage that `evidence` stands for: the one sim/wokwi.toml names, or, for an evidence with no
+    simulation, sim/flash-with-firmware.bin when the build wrote no wokwi.toml because Wokwi has no part for the board
+    (P1001). DeployError says why there is none."""
+    return project_image.ProjectImage(project, default_without_toml=evidence.simulation == SIMULATION_NONE)
 
 
 class ImageEvidence(abc.ABC):

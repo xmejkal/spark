@@ -115,7 +115,7 @@ another chip.
 
 **No simulation (P337).** A walk on a real board may have no passed run, for example when the firmware uses PWM, which the simulator lacks. Then the board is the test. The flow:
 
-1. Build the image from `firmware/`: `${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py --project . --files firmware -o <the image: sim/flash-with-firmware.bin until a scenario run writes the `firmware = ` line of sim/wokwi.toml>`.
+1. Build the image from `firmware/`: `${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py --project . --files firmware -o <the image: sim/flash-with-firmware.bin until a scenario run writes the `firmware = ` line of sim/wokwi.toml>`. A board that Wokwi has no part for gets no sim/wokwi.toml, and the image is sim/flash-with-firmware.bin (P1001).
 2. `look.py --no-simulation --json`. It gives a token only when `firmware/main.py` exists, every `.py` file under `firmware/` compiles and the image holds `firmware/` as it is now. Else it says why, and names the build command.
 3. `deploy.py --no-simulation --json --token <the token>`. Its question starts with "no simulation tested this image". Only the person's typed yes answers it. A deploy grant never does, and deploy.py offers no grant line. The flag cannot be given with `--ignore-older-runs`.
 

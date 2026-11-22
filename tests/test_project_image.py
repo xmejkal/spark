@@ -48,6 +48,15 @@ class TheImageTest(unittest.TestCase):
         self.assertIn("build with /spark:build --keep . first", str(said.exception))
         self.assertEqual(said.exception.reason, "no_sim_toml")
 
+    def test_with_no_wokwi_toml_the_default_image_stands_for_the_project_when_asked(self):
+        # P1001: the build writes no wokwi.toml for a board Wokwi has no part for; a deploy with no simulation needs none
+        project = project_with_image()
+        (project / "sim" / "wokwi.toml").unlink()
+        self.assertEqual(ProjectImage(project, default_without_toml=True).path, project / "sim" / "flash-with-firmware.bin")
+        with self.assertRaises(DeployError) as said:
+            ProjectImage(project)
+        self.assertEqual(said.exception.reason, "no_sim_toml")
+
     def test_a_toml_with_no_image_file_is_a_deploy_error_that_says_to_run_a_scenario(self):
         project = project_with_image()
         (project / "sim" / "flash-with-firmware.bin").unlink()

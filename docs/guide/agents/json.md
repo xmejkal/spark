@@ -353,7 +353,7 @@ The column "needs the person" says whether the next step waits on the person's h
 | `answered_no` | deploy, stage `gate`, a look (nothing read), or the board question of grant, reach and live (nothing touched, P892) | the person answered no | stop | yes |
 | `relayed_yes_refused` | deploy, stage `gate` (exit 2), or grant (exit 1) | a yes that another program collected cannot open the erase or make a deploy grant ([P675](https://github.com/xmejkal/spark/issues/905)). `data.yes` stays null | give the person `data.run_in_terminal` (deploy) or the `grant.py --scope deploy` line as printed, and say that they type the yes in their own terminal. Never retry and never supply a yes | yes |
 | `grant_ended` | deploy, stage `gate` or `flash` | the deploy grant ended before the erase. At stage `flash`, `board_state` is `may_be_erased` | ask the person for a new grant or a typed yes. At stage `flash`, tell the person the board may be erased | yes |
-| `no_sim_toml` | deploy, stage `plan` or a look | the project has no `sim/wokwi.toml` | build first (`/spark:build --keep`) | no |
+| `no_sim_toml` | deploy, stage `plan` or a look | the project has no `sim/wokwi.toml`. Never with `--no-simulation`: the image is then `sim/flash-with-firmware.bin` ([P1001](https://github.com/xmejkal/spark/issues/1459)) | build first (`/spark:build --keep`) | no |
 | `firmware_line_bad` | deploy, stage `plan` or a look | the firmware line of `sim/wokwi.toml` cannot be read, or names an image outside `sim/` | fix the line as the sentence says, build again | no |
 | `no_image` | deploy, stage `plan` or a look | the image that `sim/wokwi.toml` names is not there yet (a build writes the `firmware = ` line as a comment, so until a run writes it the image is `sim/flash-with-firmware.bin`) | run a scenario, or the no-simulation way the sentence names | no |
 | `log_unreadable` | deploy, stage `plan` or a look | a run log in `sim/runs/` cannot be read | repair or remove the log, run look.py again | yes |
@@ -415,7 +415,7 @@ the sentence if you must tell which. The check is the word `--json` in the argum
 
 For firmware that no simulation can test (P337). Three steps, then the person's yes:
 
-1. `flash_image.py --project <p> --files firmware -o <image>`, where `<image>` is the file the `firmware = ` line of `sim/wokwi.toml` names. A build writes that line as a comment, so until a scenario run writes it, `<image>` is `sim/flash-with-firmware.bin`.
+1. `flash_image.py --project <p> --files firmware -o <image>`, where `<image>` is the file the `firmware = ` line of `sim/wokwi.toml` names. A build writes that line as a comment, so until a scenario run writes it, `<image>` is `sim/flash-with-firmware.bin`. It is the same with no `sim/wokwi.toml`, which the build does not write for a board that Wokwi has no part for (P1001).
 2. `look.py --project <p> --no-simulation --json`. It gives a token only when `firmware/main.py` exists, every `.py` file
    under `firmware/` compiles, no run in `sim/runs/` failed on the image, and the image holds `firmware/` as it is now. The compile runs in one child process for all the files. A source that
    kills the compiler, or one that takes longer than 30 s, is a refusal that names the last file the child began, for example

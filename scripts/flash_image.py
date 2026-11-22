@@ -32,14 +32,14 @@ MICROPYTHON_HELP = ("the interpreter .bin from micropython.org for the board's c
                     "start is not known. look.py --no-simulation rebuilds the image with the build in the tools list, not "
                     "with this file, so to use your own build, name it there")
 
+PROJECT_HELP = ("the project whose requirements.json names the board (default: the nearest folder up from here with "
+                "boards/active.json or .spark/, else here); with no board, the tools list's firmware-image download")
+
 
 def main(argv=None, find_tool=None):  # find_tool: a test's (a name -> Tool), into make_image (P725)
     parser = argparse.ArgumentParser(prog="flash_image.py", description=__doc__.split("\n\n")[0])
     parser.add_argument("--micropython", type=Path, help=MICROPYTHON_HELP)
-    parser.add_argument("--project", type=Path,
-                        help="the project whose requirements.json names the board (default: the nearest folder up from "
-                        "here with boards/active.json or .spark/, else here); with no board, the tools list's "
-                        "firmware-image download")
+    parser.add_argument("--project", type=Path, help=PROJECT_HELP)
     parser.add_argument("--files", required=True, type=Path, help="the directory whose files go into the image, as they are")
     parser.add_argument("--config", help="JSON written as /config.json into the image")
     parser.add_argument("-o", "--output", required=True, type=Path)
@@ -49,6 +49,7 @@ def main(argv=None, find_tool=None):  # find_tool: a test's (a name -> Tool), in
         print("flash_image.py: %s" % refusal, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     interpreter, micropython, files, flash = made
+    args.output.parent.mkdir(parents=True, exist_ok=True)  # P1001: a board with no Wokwi part gets no sim/ from the build
     args.output.write_bytes(flash)
     for destination, content in files:
         print("  %-28s %6d bytes" % (destination, len(content)))

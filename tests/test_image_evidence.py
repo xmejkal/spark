@@ -498,6 +498,16 @@ class NoSimulationEvidenceTest(unittest.TestCase):
     def test_it_is_an_image_evidence(self):
         self.assertIsInstance(NoSimulationEvidence(self.project), ImageEvidence)
 
+    def test_with_no_wokwi_toml_the_firmware_image_is_ready_and_a_passed_run_still_stops(self):
+        # P1001: a board Wokwi has no part for gets no wokwi.toml from the build; with no simulation, firmware/ is the test
+        (self.project / "sim" / "wokwi.toml").unlink()
+        image = image_evidence.image_of(self.project, NoSimulationEvidence(self.project))
+        self.assertEqual(image.path, self.project / "sim" / "flash-with-firmware.bin")
+        self.assertIsNone(NoSimulationEvidence(self.project).why_not_ready(image))
+        with self.assertRaises(DeployError) as said:
+            image_evidence.image_of(self.project, PassedRunEvidence(self.project))
+        self.assertEqual(said.exception.reason, "no_sim_toml")
+
     def test_firmware_that_uses_pwm_and_an_image_of_it_are_ready_with_no_run_log(self):
         self.assertIsNone(self.why())
 
