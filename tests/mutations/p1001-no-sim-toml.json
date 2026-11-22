@@ -16,5 +16,11 @@
   "name": "P1001: a passed-run evidence takes the default image with no wokwi.toml (test_image_evidence.NoSimulationEvidenceTest)",
   "find": "default_without_toml=evidence.simulation == SIMULATION_NONE)",
   "replace": "default_without_toml=True)"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "P1001: the image's folder is not made (test_flash_image)",
+  "find": "    args.output.parent.mkdir(parents=True, exist_ok=True)",
+  "replace": "    pass"
  }
 ]

@@ -49,6 +49,7 @@ def main(argv=None, find_tool=None):  # find_tool: a test's (a name -> Tool), in
         print("flash_image.py: %s" % refusal, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     interpreter, micropython, files, flash = made
+    args.output.parent.mkdir(parents=True, exist_ok=True)  # P1001: a board with no Wokwi part gets no sim/ from the build
     args.output.write_bytes(flash)
     for destination, content in files:
         print("  %-28s %6d bytes" % (destination, len(content)))
