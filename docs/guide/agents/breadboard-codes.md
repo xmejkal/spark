@@ -59,7 +59,7 @@ each at least 4.5:1 with white; the sheet and Wokwi keep the word (cyan is drawn
 ## The labels, the captions and the note
 
 A pad's label says the word the steps say for it (`wiring_steps.pad_word`, P953): `GND1` and `GND2` read `GND`, `NC3`
-reads `NC` in a muted grey, and `3V3_2` stays `3V3_2`, as the steps say it. A used pad's label is bold yellow, a free
+reads `NC` in a muted grey, and `3V3_2` stays `3V3_2`, as the steps say it. If the board's record joins 3V3_2 to 3V3, no jumper goes to 3V3_2. A used pad's label is bold yellow, a free
 one dim, each with a thin dark outline. Every turned text reads bottom to top: a label's turn plus its part's is 0 or
 -90. Each part has one caption outside its body (`class="caption"`): its record's `name` up to the first comma
 (`DFRobot FireBeetle 2 ESP32-C6`), or, with no name, its id in grey. It sits above the body, else below it, at the
@@ -158,7 +158,7 @@ pad. Look at the drawing next to the maker's picture, and let the person judge i
 
 ## A board's joined pads
 
-A board record may say which pads its maker's schematic joins inside the board ([P962](https://github.com/xmejkal/spark/issues/1380)), as `physical.header.joined_pads`: a fact whose value is a list of groups of pad keys, such as `[["3V3", "3V3_2"], ["GND1", "GND2"]]`. It lists every group the schematic shows, not the power pads only. `source` names the document, its sha256 and page, and `cites` (optional) names an entry of the record's `documents` that is not marked `kept: false`. Spark does not check the store for the file. The field is optional, and a board with no field behaves as before. The pin assigner reads it ([P971](https://github.com/xmejkal/spark/issues/1392)): it gives one group to one signal at most, and refuses a second one with `pin_taken`, naming the group. No step, drawing or other check reads it yet. `boards.py --validate` refuses a broken field. Write it with a dry run first:
+A board record may say which pads its maker's schematic joins inside the board ([P962](https://github.com/xmejkal/spark/issues/1380)), as `physical.header.joined_pads`: a fact whose value is a list of groups of pad keys, such as `[["3V3", "3V3_2"], ["GND1", "GND2"]]`. It lists every group the schematic shows, not the power pads only. `source` names the document, its sha256 and page, and `cites` (optional) names an entry of the record's `documents` that is not marked `kept: false`. Spark does not check the store for the file. The field is optional, and a board with no field behaves as before. The pin assigner reads it ([P971](https://github.com/xmejkal/spark/issues/1392)): it gives one group to one signal at most, and refuses a second one with `pin_taken`, naming the group. The steps read it too ([P1009](https://github.com/xmejkal/spark/issues/1468)). A point that holds two pads of one group runs one jumper, from the group's first pad in the sheet's order, and its step names the others: `board 3V3 (joined to 3V3_2 inside the board)`. The drawing draws that one jumper. No other check reads it yet. `boards.py --validate` refuses a broken field. Write it with a dry run first:
 
 ```
 parts.py --fact-set <board id> joined-pads.json --project . --dry-run

@@ -354,8 +354,8 @@ def printed_label(board, port):
 
 def pad_word(pad):
     """The word the steps say for a board's pad, which the picture prints beside it (P953): a ground pad is GND and a pad
-    with no net NC, whatever number its record's key adds; any other key as it is (3V3_2 stays 3V3_2 until a record says
-    that the two 3V3 pads are joined)."""
+    with no net NC, whatever number its record's key adds; any other key as it is (3V3_2 stays 3V3_2. If a record joins it to
+    3V3, `joined_as_one` makes the two one end)."""
     return re.sub(r"^(GND|NC)\d+$", r"\1", pad)
 
 
@@ -392,12 +392,27 @@ def _natural(text):
     return [int(piece) if piece.isdigit() else piece for piece in re.split(r"(\d+)", text)]
 
 
+# --- MVP --- (P1009, #1468) a group of joined pads takes one jumper
+def joined_as_one(ends, joined):
+    """The ends of one point with each group of the board's joined pads (`board_pads.JoinedPads`) as one end: the group's
+    first end stays and its words name the others ("board 3V3 (joined to 3V3_2 inside the board)"), and the others go.
+    A pad in no group, and every end of a part or a resistor, is its own key, so no two of them ever merge."""
+    others = collections.OrderedDict()
+    for one in ends:
+        group = joined.group_of(one.pin) if one.kind == BOARD else ()
+        others.setdefault(group if len(group) > 1 else one, (one, []))[1].append(one.pin)
+    return [first._replace(words="%s (joined to %s inside the board)" % (first.words, " and ".join(pins[1:])))
+            if len(pins) > 1 else first for first, pins in others.values()]
+# --- end MVP ---
+
+
 def wiring(board, circuit, design_parts, resistors, board_component):
     """The wiring: one numbered line per connection point, board labels first, and the same points as steps.
     `board_component` is the circuit's name for the board (`sheet.BOARD_COMPONENT`)."""
     records = {board_components.component_name(part): part for part in design_parts}
     shorts = board_components.short_names(design_parts)
     made = power_rails.rails_made_on_board(design_parts)
+    joined = board_pads.JoinedPads.from_record(board)
 
     def end(component, port):
         """One end of a connection, as a person finds it on the bench. Every end of a part or a resistor reads
@@ -421,7 +436,7 @@ def wiring(board, circuit, design_parts, resistors, board_component):
         return End(PART, component["name"], short, short + (" (%s)" % leg if leg else ""), port.get("name"),
                    power_rail=part_rail(record, port.get("name"), made), label=printed)
 
-    said = [one for one in (_said(point, end, design_parts) for point in points(circuit)) if one]
+    said = [one for one in (_said(point, end, design_parts, joined) for point in points(circuit)) if one]
     said.sort(key=lambda one: (not one[0], _natural(one[1])))
     placed = {one.component for _, _, step_point in said for one in step_point.ends}
     steps = BreadboardSteps(
@@ -429,11 +444,12 @@ def wiring(board, circuit, design_parts, resistors, board_component):
     return ["%d. %s" % (number, line) for number, (_, line, _) in enumerate(said, 1)], steps
 
 
-def _said(point, end, parts):
+def _said(point, end, parts, joined=board_pads.JoinedPads(())):
     """Value: (whether it starts at the board, its wiring line, its StepPoint) for one point, each end named by `end`;
     None for a board pad nothing else joins, which is no wire: 3V3, once the firmware pulls the button up (P204)."""
     ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
     ends.sort(key=lambda one: (one.kind != BOARD, _natural(one.words)))
+    ends = joined_as_one(ends, joined)
     line = " · ".join(one.words for one in ends)
     on_board = ends[0].kind == BOARD
     if on_board and len(ends) == 1:
