@@ -37,7 +37,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    start is the first answer.
 1. A need is a verb and a few words: `does` one of sense, input, indicate, sound, move, drive, power, keep-time, store,
    compute, communicate, connect, mount (`drive` is the driver, `move` the thing driven), and `what` (soil-moisture,
-   alarm, microcontroller). Add a `condition` only when it decides a part ("indoor pot, short probe; low power"). Write it in a part's own words ("e-paper"): it orders the candidates that the need's words found, and never changes a score (P1015).
+   alarm, microcontroller). Add a `condition` only when it decides a part ("indoor pot, short probe; low power"). Write it in a part's own words ("e-paper"): it orders the candidates inside each group of the order below, and never changes a score (P1015).
    Each need has an `id` (lower-case letters, digits and '-', e.g. "soil"). An `id` stays: there is no removing or renaming a need yet,
    so a wrong one is fixed by hand in `<project>/.spark/needs.json`, then checked with `parts.py --needs <project>`.
    **No part numbers** — a need says what is wanted, not which part.
