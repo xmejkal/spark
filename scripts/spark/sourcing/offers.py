@@ -4,8 +4,8 @@ one `matching.Offer` per readable record (a part or a board, of any layer) with 
 it, then one per live record-less entry; `from_store(project)` builds them for everything the person's store and spark's
 library hold. `pointing_at` and `counts` are the drawer arithmetic both `--match` (`spark.design.needs`) and `--need`
 (`spark.sourcing.datasheets`) share, and `row` and `rank_key` the keys of a Fit's row and its order that both say the same
-way (P783); only `--match` gives `rank_key` a need's condition overlap (P1015). It reads records through `record_kind._parse` and the drawer through `drawer`, and
-imports nothing of the design layer. Moved here from `needs.py` by P743, so that `--need` could use it.
+way (P783); only `--match` gives `rank_key` a need's condition hits (P1015). It reads records through
+`record_kind._parse` and the drawer through `drawer`, and imports nothing of the design layer. Moved here from `needs.py` by P743, so that `--need` could use it.
 """
 
 from spark.records.record_kind import _parse
@@ -43,13 +43,13 @@ def row(fit, context, said, mine=None):
             "in": context["in"], "owned": counts(context["holding"], mine)[0], "score": fit.score, "why": fit.why}
 
 
-def rank_key(row, overlap=0):
+def rank_key(row, hits=0):
     """
     The order of rows: what is owned first; among those, what holds any of the words, then a record before a drawer entry
-    with none (P991: a pick of a record is one spark can build from), then the most condition words (`overlap`,
-    `Matcher.condition_overlap`, P1015; `--need` gives none), then the best score. A caller adds its own tie-breaks after it.
+    with none (P991: a pick of a record is one spark can build from), then the most condition words (`hits`,
+    `Matcher.condition_hits`, P1015; `--need` gives none), then the best score. A caller adds its own tie-breaks after it.
     """
-    return (row["owned"] == 0, row["score"] <= 0, row["id"] is None, -overlap, -row["score"])
+    return (row["owned"] == 0, row["score"] <= 0, row["id"] is None, -hits, -row["score"])
 
 
 def pointing_at(entries):

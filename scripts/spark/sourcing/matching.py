@@ -221,7 +221,7 @@ class Matcher:
         """One offer's Fit for the need."""
         raise NotImplementedError
 
-    def condition_overlap(self, need, offer):
+    def condition_hits(self, need, offer):
         """
         How many of the need's condition words (P1015) the `what` of the offer's same-verb functions or its tags hold: a
         raw count that orders the candidates and never scores them. Names, about and description do not count.

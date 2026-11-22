@@ -221,7 +221,7 @@ class TheMatchersTest(unittest.TestCase):
                 fit = matching.WordOverlap().score({"does": "sense", "what": what}, an_offer(**said))
                 self.assertEqual(fit.score, score)
 
-    def test_condition_overlap_counts_functions_and_tags_only(self):
+    def test_condition_hits_count_functions_and_tags_only(self):
         # P1015: the condition words that the offer's same-verb functions and its tags hold; never its names or texts
         need = {"does": "indicate", "what": "display screen", "condition": "e-paper"}
         other = {"does": "indicate", "what": "x"}
@@ -235,12 +235,12 @@ class TheMatchersTest(unittest.TestCase):
                             (dict(functions=[{"does": "indicate", "what": "paper e"}]), 0)):
             with self.subTest(said=said):
                 for matcher in (matching.WordOverlap(), matching.SameWords()):
-                    self.assertEqual(matcher.condition_overlap(need, an_offer(**said)), count)
+                    self.assertEqual(matcher.condition_hits(need, an_offer(**said)), count)
         e_paper = an_offer(functions=[{"does": "indicate", "what": "a 2.9 inch three-colour e-paper picture"}])
-        self.assertEqual(matching.WordOverlap().condition_overlap(dict(need, condition="e paper"), e_paper), 1)
-        self.assertEqual(matching.WordOverlap().condition_overlap(dict(need, condition=None), e_paper), 0)
+        self.assertEqual(matching.WordOverlap().condition_hits(dict(need, condition="e paper"), e_paper), 1)
+        self.assertEqual(matching.WordOverlap().condition_hits(dict(need, condition=None), e_paper), 0)
         gdi = an_offer(functions=[{"does": "indicate", "what": "connector"}], tags=["GDI"])
-        self.assertEqual(matching.WordOverlap().condition_overlap(dict(need, condition="plugs into the board's GDI connector"), gdi), 2)
+        self.assertEqual(matching.WordOverlap().condition_hits(dict(need, condition="plugs into the board's GDI connector"), gdi), 2)
 
     def test_a_need_of_only_filler_scores_zero(self):
         offer = an_offer(functions=[{"does": "sense", "what": "the"}])
