@@ -2,7 +2,7 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "P987: a writer writes a record only another listed project holds again",
-  "find": "            raise PartError(\"%s is only in %s (%s), a project on your list that this run did not name: parts.py writes only the \"\n                            \"project it names\", part_id, listed[0], listed[1].parent.parent,\n                            code=sourcing_codes.OTHER_PROJECT_RECORD, subject=part_id, fix=sourcing_codes.OTHER_PROJECT_RECORD.fix)\n",
+  "find": "            raise PartError(\"%s is only in %s (%s), another project on your list: spark writes only the project --project names\",\n                            part_id, listed[0], folder, code=sourcing_codes.OTHER_PROJECT_RECORD, subject=part_id,\n                            fix=sourcing_codes.OTHER_PROJECT_RECORD_FOLDER.fix % shlex.quote(printable(str(folder))))\n",
   "replace": "            return listed[1], None\n",
   "tier": "critical"
  },
@@ -23,5 +23,17 @@
   "name": "P987: a PartError's problem loses its fix",
   "find": "fix=broken.fix, code=broken.code",
   "replace": "fix=None, code=broken.code"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P987 review: the fix names the placeholder again, not the folder",
+  "find": "fix=sourcing_codes.OTHER_PROJECT_RECORD_FOLDER.fix % shlex.quote(printable(str(folder))))",
+  "replace": "fix=sourcing_codes.OTHER_PROJECT_RECORD.fix)"
+ },
+ {
+  "file": "scripts/spark/sourcing/list_unverified.py",
+  "name": "P987 review: the --unverified step loses its --project again",
+  "find": "[\"--fact-set\", owners[0], \"<file>\"] + _with_project(project)",
+  "replace": "[\"--fact-set\", owners[0], \"<file>\"]"
  }
 ]

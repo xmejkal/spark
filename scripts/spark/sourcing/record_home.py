@@ -7,9 +7,11 @@ holds, P987), the copy made current again
 """
 
 import json
+import shlex
 from pathlib import Path
 
 from spark.records import board_records, missing_facts, record_kind, store
+from spark.core.text_guards import printable
 from spark.records.record_kind import Answer, _parse, _problem, _write_record
 from spark.sourcing import drawer, sourcing_codes
 from spark.sourcing.part_facts import _shelf_copy, shelve
@@ -40,9 +42,10 @@ def record_path(part_id, project, kind="part"):
         listed = next(((name, found_path) for found_kind, found, name, found_path in drawer.linkable(project)
                        if (found_kind, found) == (kind, part_id)), None)
         if listed is not None:
-            raise PartError("%s is only in %s (%s), a project on your list that this run did not name: parts.py writes only the "
-                            "project it names", part_id, listed[0], listed[1].parent.parent,
-                            code=sourcing_codes.OTHER_PROJECT_RECORD, subject=part_id, fix=sourcing_codes.OTHER_PROJECT_RECORD.fix)
+            folder = listed[1].parent.parent
+            raise PartError("%s is only in %s (%s), another project on your list: spark writes only the project --project names",
+                            part_id, listed[0], folder, code=sourcing_codes.OTHER_PROJECT_RECORD, subject=part_id,
+                            fix=sourcing_codes.OTHER_PROJECT_RECORD_FOLDER.fix % shlex.quote(printable(str(folder))))
     if path is not None and path.parent == store.place("shelf"):
         named = shelved_from(path)
         folder = store.projects().get(named) if named else None

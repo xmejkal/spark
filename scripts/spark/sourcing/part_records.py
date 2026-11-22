@@ -95,7 +95,8 @@ NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, di
 
 class PartError(CodedMessageError):
     """Error: a part definition that cannot be used, with the reason and its `sourcing_codes` code. `subject` is the id the
-    problem is on when the flag's value is not (a file, P987), and `fix` the fix the problem carries; both None by default."""
+    problem is on when the flag's value is not (a file, P987), and `fix` the fix the problem carries; both None by default.
+    `PartOperation.answer_refusal` is the one reader of both."""
 
     def __init__(self, template, *values, code, subject=None, fix=None):
         super().__init__(template, *values, code=code)

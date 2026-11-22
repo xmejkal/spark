@@ -31,8 +31,12 @@ LIBRARY_RECORD = codes.Code("library_record", "the record is in spark's own libr
 #: only the project the run names, or the project a shelf copy came from.
 OTHER_PROJECT_RECORD = codes.Code("other_project_record",
                                   "the record is only in another project on the person's list, and parts.py writes only the project the run names",
-                                  "run the same command again with --project <the folder the sentence names> to change that project's record, "
-                                  "or copy the record into this project's parts/ folder (a board into boards/) first")
+                                  "run the same command again with --project <that project's folder>, or copy the record into the parts/ "
+                                  "folder (a board into boards/) of the project you work on and name that project with --project")
+#: A variant of OTHER_PROJECT_RECORD: the fix a refusal carries, filled with that project's folder, quoted for a shell.
+OTHER_PROJECT_RECORD_FOLDER = codes.Code(OTHER_PROJECT_RECORD, OTHER_PROJECT_RECORD.meaning,
+                                         "run the same command again with --project %s, or copy the record into the parts/ folder "
+                                         "(a board into boards/) of the project you work on and name that project with --project")
 #: run_cost: what a project's history and its session transcripts lack, so the cost of its steps is not known.
 STEP_LINE_BROKEN = codes.Code("step_line_broken", "a step line in the history has no start spark can read as a time: fix it by hand",
                         "fix the step line the sentence names in the history by hand")

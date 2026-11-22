@@ -429,7 +429,7 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
             said, _ = run_json(["--unverified", "x-good", "--project", str(project)])
             argv = [str(facts) if arg == "<file>" else arg for arg in said["next"][0]["argv"]]
             wrote, code = run_json(argv)
-        self.assertEqual(said["next"][0]["argv"], ["--fact-set", "x-good", "<file>", "--project", str(project)])
+        self.assertEqual(said["next"][0]["argv"], ["--fact-set", "x-good", "<file>", "--project", str(project.resolve())])
         self.assertEqual((code, wrote["data"]["written"]), (0, True), wrote)
         self.assertTrue(json.loads((project / "parts" / "x-good.json").read_text())["facts"]["f"]["verified"])
 
