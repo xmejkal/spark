@@ -109,7 +109,9 @@ classDiagram
 
 - `needs.candidates` builds an `Offer` for every record and record-less entry and passes them all to the matcher.
   The costly checks (`owes`, `broken`, the board's footprint) run only for the offers it admits. The list is sorted
-  by owned first, then score, highest first, then layer and id.
+  by owned first, then score, highest first, then layer and id. Since P991 (2026-11-22), among what is owned, what holds the
+  need's words comes first, then a record before a drawer entry with none, then the score; another project's record ranks
+  with the shelf.
 - `parts.py --match` keeps the first 8 candidates and every candidate with `exact` or a score of `MIN_SHOWN` or more.
   Under `SameWords` that is today's cut. The JSON adds `score` and `why` per candidate. The text output adds the
   `about` line under each candidate.

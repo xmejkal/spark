@@ -113,6 +113,15 @@ run parts.py --match.` When another need's pick cannot get its part, the need ge
 problem's own sentence once, with the part by its name (its record's, else its drawer label), such as `wet: The pick for soil cannot get “Soil probe” (…), so spark refuses this pick and
 saves nothing.`
 
+Since [P991](https://github.com/xmejkal/spark/issues/1444), the order of `--match` puts a record the person owns before
+an owned drawer entry with none, so the first offers are what spark can build from. Each need with a pick has a first
+line that names it, such as `Picked for screen: “MH-ET LIVE 2.9 Inch E-paper Module, …”.`, with ", " between two picks.
+A drawer entry is named by the record it says it is, else by its label. A pick offer for a `compute` need whose
+candidate is no record spark knows asks the parts list's own rule (`need_requirements.board_problems`) with the pick
+made. When that refusal names the candidate, the effect says `Spark cannot build from this pick. The parts list would
+say: picked as the board, but a board needs a board file …` before the history sentence. A board that another need
+picks is the board the parts list places, so then the offer says nothing.
+
 The build phase reads `.spark/build.json`. If the folder of `check_spine.py --keep` is a project, the build writes this
 file and lists it under `kept`. It holds the build's `status`, its `stages`, the `requirements` file, its sha256 and the
 time. The file is named relative to the project when it is inside the project, else by its whole path. If the sha256 of that file is different now, the build phase is `stale`, and the breadboard phase is `stale` too.

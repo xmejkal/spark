@@ -1,7 +1,8 @@
 """
 `parts.py --need`: what you own and what spark knows for a need, before researching (P743), as an Operation on the core
 (P726). It was `goal_handlers._op_need`. The words go against what each record and drawer entry does, its tags, names and
-text, owned first; a catalog row says how to build with it. It writes nothing.
+text, owned first (among them, what holds the words, then a record before a drawer entry with none, P991); a catalog row
+says how to build with it. It writes nothing.
 """
 
 
@@ -40,7 +41,7 @@ class FindOffers(AnswerOperation):
     name = "need"
     data_keys = ('need', 'vendor_order', 'found', 'drafts', 'catalog', 'more', 'matcher')
     arguments = (Argument(("--need",), "words", str, "what you own and what spark knows for a need, before researching: the words against "
-                          "what each record (parts and boards, every layer) or drawer entry does, its tags, names and text, owned first (word-overlap); "
+                          "what each record (parts and boards, every layer) or drawer entry does, its tags, names and text, owned first, a record before an entry with none (word-overlap); "
                           "--matcher name-contains for the names alone", nargs="+", metavar="WORD"),
                  Argument(("--matcher",), "matcher", str, MATCHER_HELP, metavar="NAME"),
                  ANSWER_ARGUMENTS["project"],
