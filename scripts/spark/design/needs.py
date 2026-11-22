@@ -467,10 +467,17 @@ class PickPlan:
     def holds(self, need_id, pick_id):
         """(the key the pick names, drawer changes, problems) of picking `pick_id` alone for the need `need_id`, the other
         needs as they are. Each problem's subject is the key of the part that cannot be held (`plan_holds`)."""
-        pick = _resolve(pick_id, self.known, self.entries)
-        after = [dict(need, pick=[pick] if pick else []) if need["id"] == need_id else need for need in self.current]
-        changes, _notes, problems = plan_holds(self.name, after, self.entries)
+        pick = self.resolve(pick_id)
+        changes, _notes, problems = plan_holds(self.name, self.after(need_id, pick), self.entries)
         return (next(iter(pick.values())) if pick else None), changes, problems
+
+    def resolve(self, pick_id):
+        """The pick `pick_id` names, as `plan_pick` reads it (`_resolve`): {kind: key}, or None when nothing has that id."""
+        return _resolve(pick_id, self.known, self.entries)
+
+    def after(self, need_id, pick):
+        """The project's needs with `pick` (a `resolve`d pick, or None) as the need `need_id`'s only pick, the others as they are."""
+        return [dict(need, pick=[pick] if pick else []) if need["id"] == need_id else need for need in self.current]
 
     def is_current(self, need_id, pick_id):
         """True when the need's pick is what `pick_id` names: a drawer entry of a record spark knows is that record

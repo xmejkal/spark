@@ -228,20 +228,44 @@ def need_picks(project, need, plan, listed):
         elif problems:
             return [], [flow_codes.NEED_REFUSED_LINE % (need["need"], other_pick_sentence(plan, need["need"], problems))]
         else:
-            offered.append(pick_offer(project, need["need"], candidate, listed, plan.freed(changes, need["need"])))
+            offered.append(pick_offer(project, need["need"], candidate, listed, pick_notes(project, plan, need, candidate, changes)))
     return offered[:OFFERS_PER_NEED], left_out_lines(need["need"], len(offered) - OFFERS_PER_NEED, refused)
 
 
-def pick_offer(project, need, candidate, listed, freed):
-    """The Offer to pick `candidate` for `need`, one the project's `needs.PickPlan` does not refuse. `freed` is what its
-    `freed` gave for the pick's drawer changes: a pick that lets a hold go says whose it was. `listed` says whether the
-    project is on the person's list."""
+def pick_notes(project, plan, need, candidate, changes):
+    """The sentences the project's `needs.PickPlan` gives of a pick of `candidate` for the matched `need`, with its drawer
+    `changes`: a hold it lets go says whose it was (`freed`), and a board the parts list would refuse says so (P991)."""
+    of_old, unpicked = plan.freed(changes, need["need"])
+    refusal = board_file_refusal(project, plan, need, candidate)
+    return (([flow_codes.FREES_MESSAGE] if of_old else []) + ([flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else [])
+            + ([flow_codes.NO_BOARD_FILE_MESSAGE % refusal] if refusal else []))
+
+
+def board_file_refusal(project, plan, need, candidate):
+    """The sentence with which the parts list would refuse a pick of `candidate` for a compute `need` (P991): only for a
+    drawer entry that is no record spark knows, and only when the refusal names it — with a board picked by another need,
+    the parts list places that board and refuses nothing; with two, it asks for one board. None for any other pick."""
+    pick = plan.resolve(pick_id_of(candidate)) if need["does"] == COMPUTE else None
+    if not pick or "entry" not in pick:
+        return None
+    problems = need_requirements.board_problems(plan.after(need["need"], pick), plan.known, plan.entries, project)
+    return next((problem["sentence"] for problem in problems if problem["subject"] == pick["entry"]), None)
+
+
+def picked_line(plan, need):
+    """The says line that names the need's picks (P991): each by the name a person reads (`PickPlan.name_of`), a drawer
+    entry of a record spark knows by the record's; None for a need with no pick."""
+    names = ["“%s”" % plan.name_of(next(iter(needs.as_record(pick, plan.known, plan.entries).values())))
+             for pick in need.get("pick") or []]
+    return flow_codes.PICKED_FOR_MESSAGE % (need["need"], ", ".join(names)) if names else None
+
+
+def pick_offer(project, need, candidate, listed, notes):
+    """The Offer to pick `candidate` for `need`, one the project's `needs.PickPlan` does not refuse. `notes` are the
+    sentences `pick_notes` gave of it. `listed` says whether the project is on the person's list."""
     pick_id = pick_id_of(candidate)
     key, label = "%s:%s:%s" % (flow_codes.PICK, need, pick_id), flow_codes.PICK_LABEL % (candidate_label(candidate), need)
-    said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)]
-    of_old, unpicked = freed
-    said += [flow_codes.FREES_MESSAGE] if of_old else []
-    said += [flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else []
+    said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)] + notes
     said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK))
 
@@ -280,7 +304,8 @@ class PartsReader(PhaseReader):
         said = [flow_codes.PICKED_MESSAGE % (picked, len(open_needs))] + ([flow_codes.ASIDE_MESSAGE % ", ".join(aside)] if aside else [])
         for need in open_needs:
             offered, lines = need_picks(project, need, plan, listed)
-            picks, said = picks + offered, said + lines
+            named = picked_line(plan, need)
+            picks, said = picks + offered, said + ([named] if named else []) + lines
         return self.phase(status, said, picks)
 
 

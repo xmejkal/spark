@@ -97,6 +97,11 @@ FREES_MESSAGE = "Frees what the old pick held."
 FREES_UNPICKED_MESSAGE = "Frees a part this project held without a pick."
 LIST_PROJECT_MESSAGE = "Adds this project to your list of projects."
 PICK_HISTORY_MESSAGE = "May note the choice in your history."
+#: A pick the parts list would refuse because spark has no board file for it (P991): the refusal's own sentence, which
+#: starts with `need_requirements.NO_BOARD_FILE`.
+NO_BOARD_FILE_MESSAGE = "Spark cannot build from this pick. The parts list would say: %s."
+#: The says line that names a need's pick (P991): the need, then each pick's name in quotes (“…”), ", " between two.
+PICKED_FOR_MESSAGE = "Picked for %s: %s."
 DROP_MESSAGE = "To drop this need, tell Claude: “drop the %s need”."
 REQUIREMENTS_MESSAGE = "Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay."
 SHELVE_MESSAGE = "May copy a part's record from spark's catalog into your store."
