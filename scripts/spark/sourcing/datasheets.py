@@ -400,7 +400,8 @@ def _download(url):
 def need(words, project=None, matcher=None):
     """
     What the store holds for a search by words (P743, D15), so what exists is known before anything is researched: the rows
-    the matcher finds and `matching.shown` keeps, owned first, then the best score; the drafts among them; and how many fits
+    the matcher finds and `matching.shown` keeps, in `offers.rank_key`'s order (owned first, then a record, then the best
+    score); the drafts among them; and how many fits
     the cutoff dropped. An offer is a part or a board record of any layer with the drawer entries that say they are it, or a
     record-less entry (`offers.from_store`). Backlog R11: the RC car wrote three records by hand because nothing looked, and
     "nothing looked" was the first gap its diary named (G1).

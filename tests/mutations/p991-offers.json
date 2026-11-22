@@ -1,0 +1,86 @@
+[
+ {
+  "file": "scripts/spark/sourcing/offers.py",
+  "name": "P991: an owned drawer entry with no record ranks with an owned record at the same score (test_needs.TheMatcherTest, test_parts.ResearchStartsFromWhatExistsTest)",
+  "find": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is None, -row[\"score\"])",
+  "replace": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, -row[\"score\"])"
+ },
+ {
+  "file": "scripts/spark/sourcing/offers.py",
+  "name": "P991: an owned record with none of the words ranks before an owned entry that holds them (test_needs.TheMatcherTest)",
+  "find": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is None, -row[\"score\"])",
+  "replace": "    return (row[\"owned\"] == 0, row[\"id\"] is None, -row[\"score\"])"
+ },
+ {
+  "file": "scripts/spark/sourcing/offers.py",
+  "name": "P991: an owned entry with no record ranks before an owned record (test_needs.TheMatcherTest, test_parts.ResearchStartsFromWhatExistsTest)",
+  "find": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is None, -row[\"score\"])",
+  "replace": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is not None, -row[\"score\"])"
+ },
+ {
+  "file": "scripts/spark/design/needs.py",
+  "name": "P991: a record of another listed project ranks after the library, not with the shelf (test_needs.TheMatcherTest)",
+  "find": "(LAYERS.index(c[\"in\"] if c[\"in\"] in LAYERS else \"shelf\"),",
+  "replace": "(LAYERS.index(c[\"in\"]) if c[\"in\"] in LAYERS else len(LAYERS),"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P991 review: a drawer board offered for a need that does not compute says the board need's refusal (test_flow.RecordFirstOffersTest)",
+  "find": "    pick = plan.resolve(pick_id_of(candidate)) if need[\"does\"] == COMPUTE else None",
+  "replace": "    pick = plan.resolve(pick_id_of(candidate))"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P991: a pick of a board record is asked for a board file refusal as if it were a drawer entry (test_flow.RecordFirstOffersTest)",
+  "find": "    if not pick or \"entry\" not in pick:",
+  "replace": "    if not pick:"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P991: the board file refusal is asked of the needs as they are, not with the pick made (test_flow.RecordFirstOffersTest)",
+  "find": "    problems = need_requirements.board_problems(plan.after(need[\"need\"], pick), plan.known, plan.entries, project)",
+  "replace": "    problems = need_requirements.board_problems(plan.current, plan.known, plan.entries, project)"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P991: a drawer board offer never says that spark cannot build from it (test_flow.RecordFirstOffersTest)",
+  "find": "            + ([flow_codes.NO_BOARD_FILE_MESSAGE % candidate_label(candidate)] if refusal else []))",
+  "replace": "            + [])"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P991: a drawer board offer says a refusal that names no drawer entry, such as pick one board (test_flow.RecordFirstOffersTest)",
+  "find": "    return next((problem[\"sentence\"] for problem in problems if problem[\"subject\"] == pick[\"entry\"]), None)",
+  "replace": "    return next((problem[\"sentence\"] for problem in problems), None)"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P991: the parts phase does not name the picks (test_flow.RecordFirstOffersTest, test_flow.OffersPerNeedTest, test_flow.ThePhasesTest, test_flow.TheGuideTest)",
+  "find": "            named = picked_line(plan, need)",
+  "replace": "            named = None"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P991: a pick is named by its key, not by its name (test_flow.RecordFirstOffersTest)",
+  "find": "    names = [\"“%s”\" % plan.name_of(next(iter(needs.as_record(pick, plan.known, plan.entries).values())))",
+  "replace": "    names = [\"“%s”\" % next(iter(pick.values()))"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P991: a drawer entry of a known record is named by its label, not by the record's name (test_flow.RecordFirstOffersTest)",
+  "find": "    names = [\"“%s”\" % plan.name_of(next(iter(needs.as_record(pick, plan.known, plan.entries).values())))",
+  "replace": "    names = [\"“%s”\" % plan.name_of(next(iter(pick.values())))"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P991 review: a refused pick is counted, not named (test_flow.RecordFirstOffersTest, test_flow.OffersPerNeedTest, test_flow.ThePhasesTest)",
+  "find": "    names = \"; \".join(refused_part(candidate) for candidate in refused)",
+  "replace": "    names = str(len(refused))"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P991 review: a refused pick does not say who holds it (test_flow.RecordFirstOffersTest, test_flow.OffersPerNeedTest)",
+  "find": "    held = flow_codes.HELD_BY % \", \".join(candidate[\"held_by\"]) if candidate[\"held_by\"] else \"\"",
+  "replace": "    held = \"\""
+ }
+]

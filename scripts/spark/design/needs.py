@@ -116,7 +116,8 @@ def write(project, needs):
     store.write_file(path, json.dumps({"schema": 1, "needs": needs}, indent=2, ensure_ascii=False) + "\n")
 
 
-#: Where a candidate lives, nearest first (§5.5); anything else is one of the person's other projects, after these.
+#: Where a candidate lives, nearest first (§5.5); anything else is one of the person's other projects, which ranks with the
+#: shelf (P991: the shelf keeps a record of another project for every project, §5.5).
 LAYERS = (offers.DRAWER, "project", "shelf", "library", "catalog")
 
 #: `--match`'s matcher (P211), and so the parts phase's: word-overlap since the PO's yes of 2026-11-21 (P976). A default
@@ -201,18 +202,19 @@ def _candidate(need, fit, context, mine=None):
 
 
 def _rank(need, built, mine=None, matcher=None):
-    """The candidates for one need from the offers `built`, ranked: owned first, then the best score, then nearest. No limits yet."""
+    """The candidates for one need from the offers `built`, ranked by `offers.rank_key` (owned first; what holds the words,
+    then a record, then the best score), then nearest, another project with the shelf (P991). No limits yet."""
     context = {(offer.kind, offer.key): said for offer, said in built}
     ranked = (matcher or matching.matcher(MATCHER, "match")).rank(need, [offer for offer, _ in built])
     found = [_candidate(need, fit, context[(fit.offer.kind, fit.offer.key)], mine) for fit in ranked]
-    return sorted(found, key=lambda c: offers.rank_key(c) + (LAYERS.index(c["in"]) if c["in"] in LAYERS else len(LAYERS),
+    return sorted(found, key=lambda c: offers.rank_key(c) + (LAYERS.index(c["in"] if c["in"] in LAYERS else "shelf"),
                                                              c["id"] or c["entry"]))
 
 
 def candidates(need, known, entries, mine=None, matcher=None, definitions=None):
     """
-    The store's candidates for one need (§6.2's code half): every offer the matcher admits, owned first, then the best
-    score, then nearest. The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
+    The store's candidates for one need (§6.2's code half): every offer the matcher admits, in `_rank`'s order (owned
+    first, then a record, then the best score, then nearest). The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
     `mine`, the asking project, holds is free to it. A board candidate gets its `limits` (P397), and a part candidate those of its
     record (`limits_of_part`: a stand-in, a chip's note, a skip; P778); `definitions` is the dict that
     `role_limits` fills, so a caller that matches several needs reads each board's Wokwi definition once.
@@ -465,10 +467,17 @@ class PickPlan:
     def holds(self, need_id, pick_id):
         """(the key the pick names, drawer changes, problems) of picking `pick_id` alone for the need `need_id`, the other
         needs as they are. Each problem's subject is the key of the part that cannot be held (`plan_holds`)."""
-        pick = _resolve(pick_id, self.known, self.entries)
-        after = [dict(need, pick=[pick] if pick else []) if need["id"] == need_id else need for need in self.current]
-        changes, _notes, problems = plan_holds(self.name, after, self.entries)
+        pick = self.resolve(pick_id)
+        changes, _notes, problems = plan_holds(self.name, self.after(need_id, pick), self.entries)
         return (next(iter(pick.values())) if pick else None), changes, problems
+
+    def resolve(self, pick_id):
+        """The pick `pick_id` names, as `plan_pick` reads it (`_resolve`): {kind: key}, or None when nothing has that id."""
+        return _resolve(pick_id, self.known, self.entries)
+
+    def after(self, need_id, pick):
+        """The project's needs with `pick` (a `resolve`d pick, or None) as the need `need_id`'s only pick, the others as they are."""
+        return [dict(need, pick=[pick] if pick else []) if need["id"] == need_id else need for need in self.current]
 
     def is_current(self, need_id, pick_id):
         """True when the need's pick is what `pick_id` names: a drawer entry of a record spark knows is that record

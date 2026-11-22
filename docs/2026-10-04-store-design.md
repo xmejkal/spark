@@ -224,6 +224,8 @@ with a board until a record in `boards/` says its pins.
   without `owned`, `photo`, `photos`, `sourcing` and `alternatives` — and records `based_on` (the source and its
   digest), so every project finds it. Read order: project → shelf → library → catalog → shared.
 - Proposing parts, store first: drawer → project → shelf → library → catalog → shared → research.
+- Ranking (P991, 2026-11-22): a record of another project on the list ranks with the shelf, as its shelf copy would, before
+  the library; reading keeps the order above.
 
 ### 5.6 What a part does — `function`
 

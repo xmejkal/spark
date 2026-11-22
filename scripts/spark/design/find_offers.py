@@ -1,7 +1,8 @@
 """
 `parts.py --need`: what you own and what spark knows for a need, before researching (P743), as an Operation on the core
 (P726). It was `goal_handlers._op_need`. The words go against what each record and drawer entry does, its tags, names and
-text, owned first; a catalog row says how to build with it. It writes nothing.
+text, owned first (among them, what holds the words, then a record before a drawer entry with none, P991); a catalog row
+says how to build with it. It writes nothing.
 """
 
 

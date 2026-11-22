@@ -52,6 +52,9 @@ Merged = collections.namedtuple("Merged", "parts kept problems explained written
 UNSERVED = "unserved"
 #: The key a requirements file says the board alone with (P236): `--requirements` writes it, `check_spine` reads it.
 BOARD_ONLY = "board_only"
+#: What refuses a board picked from the drawer that spark has no board file for (§8 L): the start of its problem's
+#: sentence, which the page's pick offer says too (P991), so both say it one way.
+NO_BOARD_FILE = "picked as the board, but a board needs a board file — a record in boards/ — before spark can build with it, and it has none"
 #: The `why` of an unserved note: the codes `--requirements` writes and reads (C-2, F16). The values stay, because
 #: requirements.json keeps them.
 WHY_NO_PICK, WHY_GAP, WHY_NO_RECORD = "no pick", "a gap", "no record"
@@ -181,12 +184,18 @@ def _board_problems(board_picks, unfiled, project):
         builds = [board_id for board_id in filed if not stopping[board_id]]  # C-7: a board that stops is never suggested
         said = "; ".join(["spark has one that builds for %s" % ", ".join(builds) if builds else "spark has no board file that builds"]
                          + ["%s %s" % (board_id, line) for board_id, line in stopping.items() if line])
-        return [_problem(key, "picked as the board, but a board needs a board file — a record in boards/ — before spark can "
-                              "build with it, and it has none; %s" % said,
+        return [_problem(key, "%s; %s" % (NO_BOARD_FILE, said),
                          '%swrite a board file for %s first (docs/guide/how-it-works.md, "Your own dev board")'
                          % ("pick %s, or " % " or ".join(builds) if builds else "", key)) for key in unfiled]
     return [_problem("board", "pick one board — %s" % (
         "picked: " + ", ".join(board_picks) if board_picks else "none is picked"))]
+
+
+def board_problems(needs, known, entries, project):
+    """What refuses the board of `needs` (§8 L), as `requirements` reads their picks: `known` holds the (kind, id) of each
+    record spark knows, `entries` the drawer. The page asks it of a pick before it is made (P991)."""
+    picks = [next(iter(as_record(pick, known, entries).items())) for need in needs for pick in need.get("pick") or []]
+    return _board_problems(sorted({key for kind, key in picks if kind == "board"}), unfiled_boards(needs, known, entries), project)
 
 
 def _unserved(needs, known, entries):
@@ -297,7 +306,7 @@ def requirements(project, removing=None):
     known, entries, needs = {row[:2]: row for row in drawer.linkable(project)}, drawer.entries(), read(project)
     picks = [(need["id"], next(iter(as_record(pick, known, entries).items()))) for need in needs for pick in need.get("pick") or []]
     board_picks = sorted({key for _, (kind, key) in picks if kind == "board"})
-    problems = _board_problems(board_picks, unfiled_boards(needs, known, entries), project)
+    problems = board_problems(needs, known, entries, project)
     shelve, wanted, placeholder, wrong = _part_picks(picks, known)
     problems += wrong
     held, existing = _held_file(project)

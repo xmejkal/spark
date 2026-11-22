@@ -106,12 +106,23 @@ The parts phase offers at most three picks per need ([P976](https://github.com/x
 the need's plausible candidates in the order of `parts.py --match`: each holds the need's words or scores above 0 with
 the matcher. A board is plausible for a `compute` need whatever its words. The need's current pick is never offered,
 even when it is stored as the drawer entry of its record. Nor is a pick that the pick itself refuses
-(`needs.PickPlan`): too few of the part are free. One line of `says` per need counts the rest, such as `Not shown for
-screen: 2 more picks, 1 refused (too few free). Claude can list them with parts.py --match.` A count of 0 is left out.
+(`needs.PickPlan`): too few of the part are free. One line of `says` per need counts the rest and names each refused
+pick, with "none free" or "too few free" and the other projects that hold it (P991's review), such as `Not shown for
+board: 3 more picks; refused: “DFRobot FireBeetle 2 ESP32-C6” (none free, held by p934-epaper). Claude can list them
+with parts.py --match.` Two refused picks have "; " between them. A count of 0 is left out.
 A need with candidates and none plausible gets no offers and the line `No pick fits <need> by its words. Ask Claude to
 run parts.py --match.` When another need's pick cannot get its part, the need gets no offers, and its line holds that
 problem's own sentence once, with the part by its name (its record's, else its drawer label), such as `wet: The pick for soil cannot get “Soil probe” (…), so spark refuses this pick and
 saves nothing.`
+
+Since [P991](https://github.com/xmejkal/spark/issues/1444), the order of `--match` puts a record the person owns before
+an owned drawer entry with none, so the first offers are what spark can build from. Each need with a pick has a first
+line that names it, such as `Picked for screen: “MH-ET LIVE 2.9 Inch E-paper Module, …”.`, with ", " between two picks.
+A drawer entry is named by the record it says it is, else by its label. A pick offer for a `compute` need whose
+candidate is no record spark knows asks the parts list's own rule (`need_requirements.board_problems`) with the pick
+made. When that refusal names the candidate, the effect says `Spark cannot build from this pick: it has no board file
+for “Beetle ESP32 Microcontroller”.` before the history sentence. A board that another need picks is the board the
+parts list places, so then the offer says nothing. An offer for a need that does not compute never says it.
 
 The build phase reads `.spark/build.json`. If the folder of `check_spine.py --keep` is a project, the build writes this
 file and lists it under `kept`. It holds the build's `status`, its `stages`, the `requirements` file, its sha256 and the

@@ -62,14 +62,14 @@
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "a pick the pick's own rule refuses is offered as one that saves (P829 review; P976 moved its anchor: a refused pick is no offer)",
-  "find": "        if own:\n            refused += 1\n        elif problems:",
-  "replace": "        if False:\n            refused += 1\n        elif False:"
+  "find": "        if own:\n            refused.append(candidate)\n        elif problems:",
+  "replace": "        if False:\n            refused.append(candidate)\n        elif False:"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "a re-pick does not say it frees the old pick's hold (P829 review)",
-  "find": "said += [flow_codes.FREES_MESSAGE] if of_old else []",
-  "replace": "said += []"
+  "find": "([flow_codes.FREES_MESSAGE] if of_old else [])",
+  "replace": "([])"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
@@ -80,8 +80,8 @@
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "a pick that frees a hold given by hand does not say so (P829 review 2)",
-  "find": "said += [flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else []",
-  "replace": "said += []"
+  "find": "([flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else [])",
+  "replace": "([])"
  },
  {
   "file": "scripts/spark/design/needs.py",

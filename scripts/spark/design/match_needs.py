@@ -1,7 +1,9 @@
 """
 `parts.py --match`: each of a project's needs with the store's candidates, owned first, each with its score and why, as an
 Operation on the core (P726). It was `goal_handlers._op_match`. A board that serves a need through its own LED, button or
-display has `limits` (P397), and so has a part whose record skips the simulation or names a stand-in (P778). It writes nothing.
+display has `limits` (P397), and so has a part whose record skips the simulation or names a stand-in (P778). Among what is
+owned, what holds the need's words comes first, then a record before a drawer entry with none, and another project's record
+ranks with the shelf (P991). It writes nothing.
 """
 
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, Argument

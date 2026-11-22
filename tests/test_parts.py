@@ -952,6 +952,14 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertEqual([(r["id"] or r["entry"], r["owned"]) for r in rows], [("rangefinder-bits", 2), ("vl6180x-breakout", 0)])
         self.assertLess(rows[0]["score"], rows[1]["score"])
 
+    def test_need_puts_an_owned_record_before_an_owned_entry_with_no_record(self):
+        # P991: what the person owns with a record comes first among what they own, though an entry with none scores more
+        self.entry("relay-bits", {"label": "Relay load switch bits", "count": 2, "function": [{"does": "drive", "what": "load-switch"}]})
+        rows, drafts, more = datasheets.need(["load", "switch", "relay"])
+        self.assertEqual(([(r["id"] or r["entry"], r["owned"]) for r in rows], drafts, more),
+                         ([("l9110s-module", 8), ("relay-bits", 2), ("a-bag-of-reed-switches", "many")], [], 0))
+        self.assertLess(rows[0]["score"], rows[1]["score"])
+
     def test_need_finds_a_board_by_its_name(self):
         rows = datasheets.need(["ESP32-C6"])[0]
         self.assertEqual([(r["id"], r["is"], r["in"], r["owned"]) for r in rows if r["id"] == "xiao-esp32-c6"], [("xiao-esp32-c6", "board", "library", 0)])
