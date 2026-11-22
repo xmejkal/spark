@@ -175,7 +175,7 @@ finished its restart late, and deploy.py reads it again at once ([P245](https://
 A firmware that never reads its console leaves `ready unknown` with "could not enter raw repl": the board ignores
 Ctrl-C, so mpremote cannot stop it. The conversation's firmware reads the console without waiting ([P215](https://github.com/xmejkal/spark/issues/196)).
 Relay deploy.py's line as printed: it ends with mpremote's own words, and the board log under `sim/runs/board/`
-keeps all mpremote printed. Never run mpremote by hand to turn an unknown into a pass.
+keeps all mpremote printed. Never run mpremote by hand to turn an unknown into a pass. On a board on Espressif's USB-Serial/JTAG (303a:1001), such a call can leave the board deaf to spark until the next flash, so spark runs mpremote there with DTR and RTS off and 2.5 s of quiet ([P1007](https://github.com/xmejkal/spark/issues/1466)).
 
 ## 8. A passed run did only what its scenario's steps say
 

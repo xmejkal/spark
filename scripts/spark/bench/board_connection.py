@@ -23,6 +23,51 @@ RAW_REPL_REFUSED = "could not enter raw repl"
 PORT_NOT_OPENED = "failed to access"
 #: How long one mpremote call may take before the board counts as not answering, in seconds.
 DEFAULT_TIMEOUT_S = 20
+#: The USB id that `mpremote devs` lists for Espressif's own USB-Serial/JTAG (the FireBeetle 2 C6 on the P1007 bench,
+#: 2026-11-22: `/dev/cu.usbmodem1101 ... 303a:1001 Espressif USB JTAG/serial debug unit`).
+USB_SERIAL_JTAG = "303a:1001"
+#: How long the quiet connection sends nothing after its open, in seconds. The open restarts the C6, and a byte sent
+#: during that boot left its MicroPython deaf to the host until a ROM download. 2.5 s reached the raw REPL in 9 of 9
+#: runs on the P1007 bench (2026-11-22, 15:08 to 15:13 CET, comment on #1466).
+SETTLE_S = 2.5
+#: How long the quiet connection waits for a port that vanished during the settle, in seconds. In 1 of 9 bench runs the
+#: restart enumerated the USB device again, as board_console.PORT_BACK_S waits for after the P251 cure.
+PORT_BACK_S = 10
+#: Run with mpremote's Python, in place of `python -m mpremote` (P1007): mpremote itself with two changes. Its open
+#: leaves DTR and RTS off, as board_console's reads do. And it sends nothing for the settle before it enters the raw
+#: REPL, with one reopen of a port that vanished meanwhile: a failed reopen says mpremote's `failed to access`. argv:
+#: the settle, the wait for the port, then mpremote's own arguments.
+QUIET_MPREMOTE = """import os, sys, time, serial
+from mpremote import main as mpremote_main
+from mpremote.transport_serial import SerialTransport
+settle, port_back = float(sys.argv.pop(1)), float(sys.argv.pop(1))
+opened, entered = serial.Serial.open, SerialTransport.enter_raw_repl
+def quiet_open(port):
+    port.dtr = port.rts = False
+    opened(port)
+def drain(port):
+    time.sleep(settle)
+    port.read(port.in_waiting)
+def settled_enter(transport, *args, **kwargs):
+    try:
+        drain(transport.serial)
+    except (OSError, serial.SerialException):
+        end = time.monotonic() + port_back
+        while not os.path.exists(transport.device_name) and time.monotonic() < end:
+            time.sleep(0.1)
+        time.sleep(0.5)
+        try:
+            transport.serial.close()
+            transport.serial.open()
+            drain(transport.serial)
+        except (OSError, serial.SerialException) as gone:
+            sys.stderr.write("failed to access %s (it vanished and did not come back: %s)\\n" % (transport.device_name, gone))
+            sys.exit(1)
+    return entered(transport, *args, **kwargs)
+serial.Serial.open, SerialTransport.enter_raw_repl = quiet_open, settled_enter
+sys.argv[0] = "mpremote"
+sys.exit(mpremote_main.main())
+"""
 
 
 def _last_line(text):
@@ -101,6 +146,31 @@ class BoardConnection:
         except OSError as cannot:
             raise BoardUnreachableError(str(cannot)) from None
         return printed_text(done.stdout)
+
+
+class QuietBoardConnection(BoardConnection):
+    """
+    Adapter: a BoardConnection for a board on Espressif's USB-Serial/JTAG (P1007). Each call runs mpremote in its own
+    Python `python` through QUIET_MPREMOTE, so mpremote's words and exit codes stay as they are. Each call restarts the
+    board, waits SETTLE_S, and may wait PORT_BACK_S more, so its time limit holds both. `repl_command` stays mpremote's.
+    """
+
+    #: The seconds a call may spend before the board can answer: the settle, and a vanished port's wait and settle.
+    EXTRA_S = 2 * SETTLE_S + PORT_BACK_S + 1
+
+    def __init__(self, mpremote, python, port, run=subprocess.run, timeout_s=DEFAULT_TIMEOUT_S):
+        super().__init__(mpremote, port, run, timeout_s + self.EXTRA_S)
+        self.repl = self.command + ["repl"]
+        self.command = (list(python) + ["-c", QUIET_MPREMOTE, str(SETTLE_S), str(PORT_BACK_S)]
+                        + (["connect", port] if port else []))
+
+    def run_code(self, code, keep_running_for=None):
+        """BoardConnection.run_code, with EXTRA_S added to `keep_running_for`."""
+        return super().run_code(code, keep_running_for and keep_running_for + self.EXTRA_S)
+
+    def repl_command(self):
+        """mpremote's own REPL command, unchanged: the person's console."""
+        return self.repl
 
 
 class RetryingBoardConnection:

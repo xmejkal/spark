@@ -62,8 +62,9 @@ class FirmwarePlatform:
         cannot reach the board."""
         raise NotImplementedError
 
-    def make_connection(self, command, port, run):
-        """The connection to the board on `port`, through the shell's `command`."""
+    def make_connection(self, command, port, run, usb=None):
+        """The connection to the board on `port`, through the shell's `command`. `usb` is the port's USB id
+        (board_look.Port.usb), or None when it is not known."""
         raise NotImplementedError
 
     def make_ready_probe(self, connection):
@@ -105,7 +106,13 @@ class MicroPythonPlatform(FirmwarePlatform):
     def make_board_reader(self, run, hint):
         return board_look.EsptoolReader(self.find_tool("flasher"), run, hint)
 
-    def make_connection(self, command, port, run):
+    def make_connection(self, command, port, run, usb=None):
+        """The quiet connection for Espressif's USB-Serial/JTAG when the shell is a Python package (P1007), else
+        mpremote as it is."""
+        if usb == board_connection.USB_SERIAL_JTAG:
+            shell = self.find_tool("board-shell")
+            if shell.entry.get("kind") == "python":
+                return board_connection.QuietBoardConnection(command, shell.command, port, run)
         return board_connection.BoardConnection(command, port, run)
 
     def make_ready_probe(self, connection):

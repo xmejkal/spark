@@ -246,7 +246,7 @@ class FakeFirmwarePlatform(FirmwarePlatform):
         self.hints.append(hint)
         return self._part("board_reader")
 
-    def make_connection(self, command, port, run):
+    def make_connection(self, command, port, run, usb=None):
         return self._part("connection")
 
     def make_ready_probe(self, connection):

@@ -110,5 +110,107 @@ class BoardConnectionTest(unittest.TestCase):
                                                        ["fs", "cat", ":spark.json"]])
 
 
+def quiet(run, port="/dev/ttyX"):
+    return board_connection.QuietBoardConnection(["py", "-m", "mpremote"], ["py"], port, run, timeout_s=20)
+
+
+class QuietBoardConnectionTest(unittest.TestCase):
+    """P1007: on Espressif's USB-Serial/JTAG, mpremote runs through QUIET_MPREMOTE, and keeps its words."""
+
+    def test_each_call_runs_mpremote_s_own_arguments_through_the_quiet_script(self):
+        run = Mpremote("42\n")
+        self.assertEqual(quiet(run).run_code("print(6*7)"), "42\n")
+        self.assertEqual(run.ran[0][0], ["py", "-c", board_connection.QUIET_MPREMOTE, "2.5", "10",
+                                         "connect", "/dev/ttyX", "exec", "print(6*7)"])
+
+    def test_the_time_limit_holds_the_settle_and_a_vanished_port_s_wait(self):
+        run = Mpremote("")
+        quiet(run).read_file("pins.py")
+        quiet(run).run_code("import main", keep_running_for=20)
+        self.assertEqual([limit for _, limit in run.ran], [36.0, 36.0])
+
+    def test_a_refused_raw_repl_and_a_board_traceback_split_as_mpremote_s(self):
+        with self.assertRaises(board_connection.BoardUnreachableError) as refused:
+            quiet(Mpremote(fails=NO_RAW_REPL)).run_code("pass")
+        self.assertIn("could not enter raw repl", str(refused.exception))
+        raised = ("Traceback (most recent call last):\nZeroDivisionError: divide by zero\n", "")
+        with self.assertRaises(board_connection.BoardCodeError):
+            quiet(Mpremote(fails=raised)).run_code("1/0")
+
+    def test_the_output_until_the_time_limit_is_the_answer_of_code_left_running(self):
+        going = subprocess.TimeoutExpired(["py"], 36, output=b"ready\r\n")
+        self.assertEqual(quiet(Mpremote(raises=going)).run_code("import main", keep_running_for=20).strip(), "ready")
+
+    def test_the_person_s_repl_stays_mpremote_s(self):
+        self.assertEqual(quiet(Mpremote()).repl_command(), ["py", "-m", "mpremote", "connect", "/dev/ttyX", "repl"])
+
+    def test_the_quiet_script_compiles(self):
+        compile(board_connection.QUIET_MPREMOTE, "QUIET_MPREMOTE", "exec")
+
+
+#: A fake pyserial whose first open vanishes during the settle; with GONE set, the port never comes back (P1007).
+FAKE_SERIAL = """import os
+class SerialException(OSError):
+    pass
+class Serial:
+    opens = 0
+    def __init__(self):
+        self.dtr = self.rts = True
+    def open(self):
+        Serial.opens += 1
+        if Serial.opens > 1 and os.environ.get("GONE"):
+            raise SerialException("gone")
+        print("open dtr=%s rts=%s" % (self.dtr, self.rts))
+    @property
+    def in_waiting(self):
+        if Serial.opens == 1:
+            raise OSError(6, "Device not configured")
+        return 0
+    def read(self, size):
+        return b""
+    def close(self):
+        pass
+"""
+#: A fake mpremote that opens its port and enters the raw REPL, as mpremote's exec does.
+FAKE_MAIN = """import serial, sys
+from mpremote.transport_serial import SerialTransport
+def main():
+    transport = SerialTransport()
+    transport.device_name, transport.serial = sys.argv[2], serial.Serial()
+    transport.serial.open()
+    transport.enter_raw_repl()
+    print("entered")
+    return 0
+"""
+
+
+class QuietScriptTest(unittest.TestCase):
+    """P1007: QUIET_MPREMOTE itself, run against fake modules: DTR and RTS off, and one reopen of a vanished port."""
+
+    def run_script(self, gone):
+        import os
+        import tempfile
+        here = Path(tempfile.mkdtemp())
+        (here / "mpremote").mkdir()
+        (here / "mpremote" / "__init__.py").write_text("")
+        (here / "mpremote" / "main.py").write_text(FAKE_MAIN)
+        (here / "mpremote" / "transport_serial.py").write_text("class SerialTransport:\n    def enter_raw_repl(self):\n        pass\n")
+        (here / "serial.py").write_text(FAKE_SERIAL)
+        port = here / "port"
+        port.write_text("")
+        env = dict(os.environ, PYTHONPATH=str(here), **({"GONE": "1"} if gone else {}))
+        return subprocess.run([sys.executable, "-c", board_connection.QUIET_MPREMOTE, "0", "0.1", "connect", str(port), "exec", "x"],
+                              capture_output=True, text=True, env=env, timeout=30)
+
+    def test_a_port_that_vanished_is_opened_again_with_dtr_and_rts_off(self):
+        done = self.run_script(gone=False)
+        self.assertEqual((done.returncode, done.stdout.split("\n")), (0, ["open dtr=False rts=False"] * 2 + ["entered", ""]))
+
+    def test_a_port_that_does_not_come_back_is_mpremote_s_failed_to_access(self):
+        done = self.run_script(gone=True)
+        self.assertEqual(done.returncode, 1)
+        self.assertTrue(done.stderr.startswith("failed to access "), done.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
