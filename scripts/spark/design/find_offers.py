@@ -41,7 +41,7 @@ class FindOffers(AnswerOperation):
     name = "need"
     data_keys = ('need', 'vendor_order', 'found', 'drafts', 'catalog', 'more', 'matcher')
     arguments = (Argument(("--need",), "words", str, "what you own and what spark knows for a need, before researching: the words against "
-                          "what each record (parts and boards, every layer) or drawer entry does, its tags, names and text, owned first, a record before an entry with none (word-overlap); "
+                          "what each record (parts and boards, every layer) or drawer entry does, its tags, names and text, owned first (word-overlap); "
                           "--matcher name-contains for the names alone", nargs="+", metavar="WORD"),
                  Argument(("--matcher",), "matcher", str, MATCHER_HELP, metavar="NAME"),
                  ANSWER_ARGUMENTS["project"],

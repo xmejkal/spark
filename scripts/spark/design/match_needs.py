@@ -26,8 +26,7 @@ class MatchNeeds(AnswerOperation):
 
     name = "match"
     data_keys = ('needs',)
-    arguments = (Argument(("--match",), "project", str, "each of a project's needs with the store's candidates: owned first (among them, what holds the need's words, "
-                          "then a record before a drawer entry with none), what each owes, "
+    arguments = (Argument(("--match",), "project", str, "each of a project's needs with the store's candidates: owned first, what each owes, "
                           "each with its score and why; --matcher picks the matcher that ranks them; a board that serves a need through its own "
                           "LED, button or display has `limits`, the sentences for what a passed run does not test of it, and so has a part whose record skips the simulation or names a stand-in", metavar="PROJECT"),
                  Argument(("--matcher",), "matcher", str, MATCHER_HELP, metavar="NAME"),

@@ -37,8 +37,7 @@ from spark.flow.show_flow import ShowFlow, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.outcomes import OK  # noqa: E402
-from spark.design import need_requirements, needs  # noqa: E402
-from spark.flow import flow_codes  # noqa: E402
+from spark.design import needs  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import STALE  # noqa: E402
@@ -1076,7 +1075,7 @@ class RecordFirstOffersTest(FlowTest):
     its pick."""
 
     #: The start of the sentence an offer says when spark cannot build from its pick.
-    CANNOT = flow_codes.NO_BOARD_FILE_MESSAGE.split("%s")[0]
+    CANNOT = "Spark cannot build from this pick."
 
     def entry(self, key, fields):
         (self.home / "drawer" / (key + ".json")).write_text(json.dumps(dict({"schema": 1, "label": key, "count": 1}, **fields)))
@@ -1104,9 +1103,11 @@ class RecordFirstOffersTest(FlowTest):
 
     def test_a_drawer_board_with_no_board_file_says_its_pick_cannot_be_built_from(self):
         effects = self.board_effects([])
-        self.assertIn(need_requirements.NO_BOARD_FILE, effects["pick:board:beetle"])
-        self.assertIn(self.CANNOT, effects["pick:board:beetle"])
-        self.assertTrue(effects["pick:board:beetle"].endswith(flow_codes.PICK_HISTORY_MESSAGE))
+        # the parts list's own refusal, in its words, before the history sentence
+        self.assertIn("Spark cannot build from this pick. The parts list would say: picked as the board, but a board needs a board "
+                      "file — a record in boards/ — before spark can build with it, and it has none; spark has one that builds for ",
+                      effects["pick:board:beetle"])
+        self.assertTrue(effects["pick:board:beetle"].endswith(". May note the choice in your history."))
         self.assertEqual([key for key, effect in effects.items() if self.CANNOT in effect], ["pick:board:beetle"],
                          "a board spark has a file for says nothing of one")
 
