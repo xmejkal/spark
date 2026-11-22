@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/design/pin_assigner.py",
+  "name": "a picked pin leaves its joined pads free",
+  "find": "        taken_gpio |= joined.holds(label)\n        why = _why(needs, pin)",
+  "replace": "        taken_gpio.add(pin[\"gpio\"])\n        why = _why(needs, pin)"
+ },
+ {
+  "file": "scripts/spark/design/pin_assigner.py",
+  "name": "the refusal names no group",
+  "find": "% (signal[\"name\"], label, gpio) + joined.said(label, assignments), design_codes.PIN_TAKEN)",
+  "replace": "% (signal[\"name\"], label, gpio), design_codes.PIN_TAKEN)"
+ },
+ {
+  "file": "scripts/spark/design/pin_assigner.py",
+  "name": "no group is read",
+  "find": "board_pads.JoinedPads.from_record(board), dict(board[\"pins\"]))",
+  "replace": "board_pads.JoinedPads(()), dict(board[\"pins\"]))"
+ },
+ {
+  "file": "scripts/spark/design/pin_assigner.py",
+  "name": "a label of the same pad is blamed on the join",
+  "find": "self.pads.pad_of(entry[\"pin\"]) != pad for entry",
+  "replace": "True for entry"
+ },
+ {
+  "file": "scripts/spark/design/pin_assigner.py",
+  "name": "the join is blamed on any pin taken",
+  "find": "entry[\"pin\"] in names and self.pads",
+  "replace": "True and self.pads"
+ }
+]

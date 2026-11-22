@@ -29,6 +29,7 @@ was never actually satisfiable.
 """
 
 from collections import namedtuple
+from dataclasses import dataclass
 from pathlib import Path
 
 from spark.records import board_pads
@@ -180,6 +181,46 @@ def candidates(board):
     return found
 
 
+# --- MVP --- (P971, #1392) a board's joined pads are one pin
+@dataclass(frozen=True)
+class JoinedPins:
+    """
+    Value: which GPIOs the board's labels make one pin. Two labels on one GPIO are one pin already; a record's
+    `physical.header.joined_pads` also says the pads that the maker's schematic joins inside the board, and a label
+    whose pad is in a group is the group's. A board with no groups holds each label's own GPIO.
+    """
+
+    pads: board_pads.BoardPads
+    joined: board_pads.JoinedPads
+    gpio_of: dict
+
+    @classmethod
+    def from_record(cls, board):
+        return cls(board_pads.BoardPads.from_record(board), board_pads.JoinedPads.from_record(board), dict(board["pins"]))
+
+    def labels(self, label):
+        """The labels of the pins that `label` is one with, itself included, in the group's order."""
+        group = self.joined.group_of(self.pads.pad_of(label))
+        found = [name for name in self.gpio_of if self.pads.pad_of(name) in group]
+        return sorted(found, key=lambda name: group.index(self.pads.pad_of(name)))
+
+    def holds(self, label):
+        """The GPIOs that taking `label` takes: its own and those of every label joined to it."""
+        return {self.gpio_of[name] for name in self.labels(label)}
+
+    def said(self, label, assignments):
+        """
+        The refusal's added words naming the joined labels, or "" when no label of another pad of the group took a pin:
+        a signal twice on one label, or an unjoined label on the same GPIO, is not the join's doing.
+        """
+        names = self.labels(label)
+        pad = self.pads.pad_of(label)
+        if not any(entry["pin"] in names and self.pads.pad_of(entry["pin"]) != pad for entry in assignments):
+            return ""
+        return "; the board joins %s inside itself, so they are one pin" % (", ".join(names[:-1]) + " and " + names[-1])
+# --- end MVP ---
+
+
 #: The lines a bus has, with the names vendors print for them — the parts library's definition,
 #: imported, so a record `parts.py --validate` calls fine is one this can place (close audit C6).
 BUS_LINES = part_rules.BUSES
@@ -232,7 +273,7 @@ def assign(board, signals):
 
     Returns a PinMap (assignments, leftover). Raises `ImpossibleError` rather than returning a partial map.
     """
-    available = candidates(board)
+    available, joined = candidates(board), JoinedPins.from_record(board)
     for signal in signals:
         unknown = set(signal.get("needs", [])) - set(CAPABILITIES)
         if unknown:
@@ -298,8 +339,8 @@ def assign(board, signals):
                 to_place.append(dict(signal, pin=None))
                 continue
             raise ImpossibleError("%s asks for %s (GPIO%d), which is already taken"
-                             % (signal["name"], label, gpio), design_codes.PIN_TAKEN)
-        taken_gpio.add(gpio)
+                             % (signal["name"], label, gpio) + joined.said(label, assignments), design_codes.PIN_TAKEN)
+        taken_gpio |= joined.holds(label)
         if line in SHARED_LINES:
             bus_holders[gpio] = (signal["bus"], line)
         assignments.append({
@@ -327,7 +368,7 @@ def assign(board, signals):
         label = min(usable,
                     key=lambda name: (_cost(usable[name], needs), usable[name]["gpio"]))
         pin = usable[label]
-        taken_gpio.add(pin["gpio"])
+        taken_gpio |= joined.holds(label)
         why = _why(needs, pin)
         if signal.get("line") == "SS" and board_dedicates_pins_to(board, signal.get("bus", "")):
             why = "a chip select — every SPI device has its own, and the board's SS pin is " \
