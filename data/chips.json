@@ -1,5 +1,5 @@
 {
- "//": "Facts about each ESP-IDF v5.5.1 chip that a board rule reads (P809), cited to the kept ESP-IDF files. adc2_used_by_wifi: true means a board of that chip names the adc2_unusable_with_wifi role in pin_roles (board_rules.adc2_role_problems); false means it has no ADC2 that Wi-Fi uses; null means the source says something else, and boards.py --validate says the role is not checked. adc2_oneshot_supported: false means ESP-IDF does not read the chip's ADC2 in oneshot mode, so the pin assigner gives the pins in adc2_gpio no adc ability, with no role (P813, the ESP32-C3 only). The chip keys are the board records' `chip` values.",
+ "//": "Facts about each ESP-IDF v5.5.1 chip that a board rule reads (P809), cited to the kept ESP-IDF files. adc2_used_by_wifi: true means a board of that chip names the adc2_unusable_with_wifi role in pin_roles (board_rules.adc2_role_problems); false means it has no ADC2 that Wi-Fi uses; null means the source says something else, and boards.py --validate says the role is not checked. adc2_oneshot_supported: false means ESP-IDF does not read the chip's ADC2 in oneshot mode, so the pin assigner gives the pins in adc2_gpio no adc ability, with no role (P813, the ESP32-C3 only). The chip keys are the board records' `chip` values. wifi, bluetooth_le and ieee802154 (P990): true means the chip has that radio, cited to the SOC_*_SUPPORTED line of its soc_caps.h. board_records.onboard_functions offers each radio of a board's chip for a need of communicate. A chip with no radio fact offers no radio, which never means it has none.",
  "documents": {
   "esp-idf-adc-oneshot-v5-5-1": {
    "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/docs/en/api-reference/peripherals/adc_oneshot.rst",
@@ -64,6 +64,22 @@
    "retrieved": "2026-11-14",
    "title": null,
    "version": "tag v5.5.1"
+  },
+  "esp-idf-soc-caps-v5-5-1-esp32": {
+   "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32/include/soc/soc_caps.h",
+   "sha256": "45e1fb7f6c226d07229613e0cabcbc67034913a454c9fed7178743255620b394",
+   "file": "esp-idf-v5.5.1-esp32-soc_caps.h",
+   "retrieved": "2026-11-14",
+   "title": null,
+   "version": "tag v5.5.1"
+  },
+  "esp-idf-soc-caps-v5-5-1-esp32s3": {
+   "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32s3/include/soc/soc_caps.h",
+   "sha256": "25ff368906aaee06e77022aa50227a2ab7c9b4739da1f34c48f64c87052925a4",
+   "file": "esp-idf-v5.5.1-esp32s3-soc_caps.h",
+   "retrieved": "2026-11-14",
+   "title": null,
+   "version": "tag v5.5.1"
   }
  },
  "chips": {
@@ -73,6 +89,20 @@
     "cites": {
      "document": "esp-idf-adc-oneshot-v5-5-1",
      "at": "Hardware Limitations, line 168: \"ADC2 is also used by Wi-Fi.\""
+    }
+   },
+   "wifi": {
+    "value": true,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32",
+     "at": "line 74: SOC_WIFI_SUPPORTED 1"
+    }
+   },
+   "bluetooth_le": {
+    "value": true,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32",
+     "at": "line 456: SOC_BLE_SUPPORTED (1), Bluetooth Low Energy hardware"
     }
    }
   },
@@ -124,6 +154,27 @@
      "document": "esp-idf-soc-caps-v5-5-1-esp32c6",
      "at": "line 102: SOC_ADC_PERIPH_NUM (1U): one ADC, no ADC2"
     }
+   },
+   "wifi": {
+    "value": true,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32c6",
+     "at": "line 38: SOC_WIFI_SUPPORTED 1"
+    }
+   },
+   "bluetooth_le": {
+    "value": true,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32c6",
+     "at": "line 630: SOC_BLE_SUPPORTED (1), Bluetooth Low Energy hardware"
+    }
+   },
+   "ieee802154": {
+    "value": true,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32c6",
+     "at": "line 33: SOC_IEEE802154_SUPPORTED 1, the radio of Thread and Zigbee"
+    }
    }
   },
   "esp32c61": {
@@ -168,6 +219,20 @@
     "cites": {
      "document": "esp-idf-adc-oneshot-v5-5-1",
      "at": "Hardware Limitations, line 168: \"ADC2 is also used by Wi-Fi.\""
+    }
+   },
+   "wifi": {
+    "value": true,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32s3",
+     "at": "line 29: SOC_WIFI_SUPPORTED 1"
+    }
+   },
+   "bluetooth_le": {
+    "value": true,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32s3",
+     "at": "line 597: SOC_BLE_SUPPORTED (1), Bluetooth Low Energy hardware"
     }
    }
   }
