@@ -33,8 +33,8 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
 
   With every need set aside, the parts phase is `ok` (nothing is left to pick), but no pick can make the parts list, so
   `now` is `parts` and tells the person to bring a need back and pick a part. `stands_at` can still say `requirements`.
-  The requirements offer stays on the page and a click on it is refused (no board is picked): do not run the
-  requirements offer; ask the person which need to bring back. A requirements phase that could not run stays `now`. The
+  The requirements phase has no offer then (no board is picked, P993): ask the person which need to bring back. A
+  requirements phase that could not run stays `now`. The
   breadboard is in `done` only once `now` is past the firmware's
   two jobs and the sheet is current, as `breadboard (spark cannot see it)`. `later` names the phases after `now`; one whose status is
   `ok` carries the suffix ` (done, may change)`, because a change before it can make it stale. An item of `done` or
@@ -102,6 +102,17 @@ A build that ended `ok` and skipped any other stage is `partial`. No build does 
 The offer keys are `needs-drop:<need>`, `pick:<need>:<id or entry>`, `requirements` and `build`. A pick's effect says
 how many the person has.
 
+Since [P993](https://github.com/xmejkal/spark/issues/1446), the requirements phase has the `requirements` offer only
+when the parts list's own rule (`need_requirements.requirements`) has no problems, so a click is never one that writes
+nothing. With problems, the rule's lines are the phase's `says` (after `no requirements.json yet` when there is no file).
+A pick whose record owes a fact is named with its need and the facts, such as `“MH-ET LIVE 2.9 Inch E-paper Module …”
+for screen still lacks what spark needs: simulation. Ask Claude how to fill it in.` Before a requirements.json, the status is
+`problems` once every need that counts has a pick (exit 1, and the guide says the phase has problems), else
+`not-started`: the parts phase is `now` and holds the blocker. The guide's NOW sentence of the parts list and of the build
+names Claude (`Ask Claude in the chat to build the board. …`) in `flow.py show`, on the page from disk and for a viewer.
+Where the published page's script adds the NOW line's button for the owner, it puts the step and `Use the button.` in its
+place (`Build the board. … Use the button.`, the words block's `now_button`). A pick's NOW line stays as it is.
+
 The parts phase offers at most three picks per need ([P976](https://github.com/xmejkal/spark/issues/1406)). They are
 the need's plausible candidates in the order of `parts.py --match`: each holds the need's words or scores above 0 with
 the matcher. A board is plausible for a `compute` need whatever its words. The need's current pick is never offered,
@@ -112,8 +123,8 @@ board: 3 more picks; refused: “DFRobot FireBeetle 2 ESP32-C6” (none free, he
 with parts.py --match.` Two refused picks have "; " between them. A count of 0 is left out.
 A need with candidates and none plausible gets no offers and the line `No pick fits <need> by its words. Ask Claude to
 run parts.py --match.` When another need's pick cannot get its part, the need gets no offers, and its line holds that
-problem's own sentence once, with the part by its name (its record's, else its drawer label), such as `wet: The pick for soil cannot get “Soil probe” (…), so spark refuses this pick and
-saves nothing.`
+problem's own sentence once, with the part by its name (its record's, else its drawer label), such as `Spark can save
+no new pick for wet: the pick for soil cannot get “Soil probe” (…).` (P993: the picks already saved stay.)
 
 Since [P991](https://github.com/xmejkal/spark/issues/1444), the order of `--match` puts a record the person owns before
 an owned drawer entry with none, so the first offers are what spark can build from. Each need with a pick has a first

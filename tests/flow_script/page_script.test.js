@@ -20,6 +20,8 @@ const WORDS = {
   withdrawn: "Withdrawn. If Claude had already started it, its answer shows here.",
   not_sent: "Could not send. Nothing ran.", not_withdrawn: "Could not withdraw. The request still waits.",
   waiting_for: "Waiting for Claude: %s.", page_from: "Page from %s.",
+  now_button: { "Ask Claude in the chat to build the board. It takes seconds and costs nothing.":
+                "Build the board. It takes seconds and costs nothing. Use the button." },
   ok: { pick: "Saved as the pick. Nothing is built yet. Reload to see the new state.",
         build: "The board builds. It is not wired, not flashed and not simulated yet. Reload to see the new state." },
   ran: "Spark says: %s. Reload to see the new state.",
@@ -32,6 +34,7 @@ const WORDS = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const AT = "2026-11-21T14:40:00.000Z";
 const WAITING = /^Sent at \d\d:\d\d\. Nothing has run yet\. To run it, type \/spark:page in Claude Code\.$/;
+const BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing.";
 const BUILT = "The board builds. It is not wired, not flashed and not simulated yet. Reload to see the new state.";
 
 /** Fake: an element with what the script calls. */
@@ -39,6 +42,8 @@ class FakeElement {
   constructor(tag, attributes = {}) {
     Object.assign(this, { tag, attributes, children: [], listeners: {}, style: {}, textContent: "", hidden: false, disabled: false });
   }
+  get tagName() { return this.tag.toUpperCase(); }
+  get lastChild() { return this.children[this.children.length - 1] || null; }
   getAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name) ? this.attributes[name] : null; }
   setAttribute(name, value) { this.attributes[name] = String(value); }
   addEventListener(kind, act) { this.listeners[kind] = act; }
@@ -50,11 +55,12 @@ class FakeElement {
 
 /** Fake: a page with an intro, one sendable offer and the guide's NOW line of it, and a window whose claude.use gives `db`
  * and a user who is the owner unless `owner` is false (null: no user capability). */
-function fakeWindow(db, owner = true) {
+function fakeWindow(db, owner = true, nowKey = "build") {
   const body = new FakeElement("body", { "data-fingerprint": "0123456789ab", "data-written": "2026-11-21T15:40:00+01:00" });
   const intro = body.appendChild(new FakeElement("p", { class: "intro" }));
   intro.textContent = "Where this project stands. This page only shows it. To change anything, tell Claude in the chat.";
-  const now = body.appendChild(new FakeElement("p", { "data-key": "build", "data-makes-stale": "" }));
+  const now = body.appendChild(new FakeElement("p", { "data-key": nowKey, "data-makes-stale": "" }));
+  now.appendChild(new FakeElement("#text")).textContent = nowKey === "build" ? " " + BUILD_NOW : " Tell Claude a pick for each.";
   const offer = body.appendChild(new FakeElement("li", { "data-key": "build", "data-makes-stale": "" }));
   const words = new FakeElement("script", { id: "spark-words" });
   words.textContent = JSON.stringify(WORDS);
@@ -115,6 +121,7 @@ test("with no database, or for a viewer who is not the owner, the script makes n
     assert.deepEqual(made, []);
     assert.equal(body.children.length, 3);
     assert.match(intro.textContent, /This page only shows it/);
+    assert.equal(body.children[1].children[0].textContent, " " + BUILD_NOW);  // P993: a viewer's NOW line keeps who acts
   }
   const nothing = fakeWindow(null);
   delete nothing.win.claude;
@@ -127,8 +134,15 @@ test("for the owner each sendable offer and the NOW line get a button, the intro
   const { win, made, offer, now, intro } = fakeWindow(db);
   await script.start(win);
   assert.deepEqual(buttons(made).map((made) => made.textContent), ["Copy", "Withdraw", "Build the board", "Build the board"]);
-  assert.equal(now.children[1].textContent, "Build the board");
+  assert.equal(now.children[2].textContent, "Build the board");
   assert.equal(offer.children[1].textContent, "Build the board");
+  // P993: with its button there, the NOW line names the step and says to use the button; an offer's line is as it was
+  assert.equal(now.children[0].textContent, " Build the board. It takes seconds and costs nothing. Use the button.");
+  assert.equal(offer.children[0].text, " ");
+  // P993 review: a NOW sentence the words do not name (the parts' "Tell Claude a pick") stays as it is
+  const picked = fakeWindow(fakeDb(), true, "pick:light:led-red-5mm");
+  await script.start(picked.win);
+  assert.equal(picked.now.children[0].textContent, " Tell Claude a pick for each.");
   assert.equal(intro.textContent, "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.");
   const panel = made.find((element) => element.tag === "section");
   assert.match(panel.children[0].textContent, /^Page from \d\d:\d\d\.$/);
@@ -154,7 +168,7 @@ test("a click opens the confirm with the offer's words, and Send writes the row 
   assert.equal(offer.children.length, 2, "the confirm is gone");
   assert.match(statusOf(made).textContent, WAITING);
   assert.deepEqual([copy.hidden, withdraw.hidden], [false, false]);
-  for (const button of [now.children[1], offer.children[1]]) {
+  for (const button of [now.children[2], offer.children[1]]) {
     assert.equal(button.disabled, true);
     assert.equal(button.title, "Waiting for Claude: Build the board.");
   }

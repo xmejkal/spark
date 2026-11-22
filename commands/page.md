@@ -18,6 +18,9 @@ It never runs a step itself.
 
 ## Publish the page, the first time
 
+0. `publish_files` attaches only the files that this session can read. When the project folder is not inside the
+   session's folders, first ask the person to type `/add-dir <the project's full path>`, and wait for it. Never copy
+   page.html to another folder.
 1. Read where the page stands:
 
    ```

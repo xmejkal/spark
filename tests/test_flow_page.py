@@ -442,6 +442,25 @@ class TheCommandTest(unittest.TestCase):
         self.assertNotIn("Traceback", out.getvalue() + err.getvalue())
         self.assertIn("page.html was not written", out.getvalue() + err.getvalue())
 
+    def test_a_pick_that_owes_a_fact_gives_no_parts_list_button_and_shows_what_it_owes(self):
+        # P993: the parts list would refuse and write nothing, so the page offers no button and says the blocker
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-probe.json").write_text(json.dumps({"schema": 1, "id": "x-probe", "name": "A soil probe", "kind": "sensor",
+                                                                   "function": [{"does": "sense", "what": "soil-moisture"}]}))
+        project = Path(tempfile.mkdtemp()) / "plant-alarm"
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"board": "xiao-esp32-c6"}]},
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-probe"}]}]}))
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            _, code = run_flow("page", "--project", str(project), "--json")
+        text = (project / "page.html").read_text(encoding="utf-8")
+        self.assertEqual(code, 0)
+        self.assertNotIn('data-key="requirements"', text)
+        self.assertIn("“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof, "
+                      "simulation. Ask Claude how to fill it in.", html.unescape(text))
+
     def test_a_phase_that_holds_problems_does_not_change_the_page_s_status(self):
         result = WriteFlowPage(readers=readers_of(a_phase("one", "problems")), parts=parts_of([]), store=FakeStore()).run(
             Path("."), outside=None)
@@ -1410,6 +1429,15 @@ class ThePageScriptTest(unittest.TestCase):
         words = words_of(self.text)
         self.assertEqual(words, page_words(sample_page().phases, wiring_first=True))
         self.assertEqual(page_words([])["intro"], "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.")
+        # P993: where the script adds the NOW button, it puts the step and "Use the button." in place of the sentence
+        # that names Claude; the page from disk and `flow.py show` keep that sentence
+        self.assertEqual(page_words([])["now_button"], {
+            "Ask Claude in the chat to write the parts list from your picks.": "Write the parts list from your picks. Use the button.",
+            "Your picks changed. Ask Claude to write the parts list again.": "Your picks changed. Write the parts list again. Use the button.",
+            "Ask Claude in the chat to build the board. It takes seconds and costs nothing.":
+                "Build the board. It takes seconds and costs nothing. Use the button.",
+            "The parts list changed since the last build. Ask Claude to build again.":
+                "The parts list changed since the last build. Build the board again. Use the button."})
         self.assertEqual(words["waiting"], "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.")
         self.assertEqual(words["ok"], {
             "pick": "Saved as the pick. Nothing is built yet. Reload to see the new state.",
