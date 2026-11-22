@@ -17,6 +17,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -255,6 +256,25 @@ class WithoutABuiltDesignTest(unittest.TestCase):
             init_project.main(["--project", str(a_project()), "--board", "no-such-board"])
         self.assertIn("  no board chosen. %s\n" % offered, out.getvalue())
         self.assertIn("no board called 'no-such-board'. %s\n" % offered, err.getvalue())
+
+
+class AShelfBoardIsOfferedTest(unittest.TestCase):
+    """P989 (#1442): a board file on the store's shelf is offered to every project: init's "Available:" and the build's
+    refusal of a drawer board with no board file both name it among the boards that build."""
+
+    def test_a_shelved_board_is_offered_by_init_and_by_the_drawer_board_refusal(self):
+        from spark.design import need_requirements
+        home = Path(tempfile.mkdtemp())
+        (home / "shelf" / "boards").mkdir(parents=True)
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        (home / "shelf" / "boards" / "x-board.json").write_text(json.dumps(dict(board, id="x-board")))
+        root = a_project()
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            offered = project_setup.boards_offered(root)
+            refused = need_requirements._board_problems([], ["dfrobot-dfr1117"], root)
+        self.assertIn("x-board", offered.split(";")[0].split(", "), offered)
+        builds = re.search(r"spark has one that builds for ([^;]*)", str(refused)).group(1)
+        self.assertIn("x-board", builds.split(", "), refused)
 
 
 class ForceMustNotEatWhatSomebodyMeasuredTest(unittest.TestCase):

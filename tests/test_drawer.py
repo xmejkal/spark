@@ -19,9 +19,9 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.sourcing import drawer  # noqa: E402
+from spark.sourcing import drawer, part_facts  # noqa: E402
 import parts  # noqa: E402
-from spark.records import record_kind, store  # noqa: E402
+from spark.records import board_records, record_kind, store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 
@@ -207,6 +207,46 @@ class TheDrawerTest(unittest.TestCase):
             parts.main(["--drawer-set", a_file([{"entry": "a-knob", "is": {"part": "knob-encoder"}}]),
                         "--project", str(project), "--dry-run"])
         self.assertIn("would put knob-encoder on your shelf", out.getvalue())
+
+    # --- P989 (#1442): a board file a project wrote reaches the store's shelf, as a part's record does ---
+
+    def a_board_in(self, project, board_id="x-board", drop=()):
+        """A board file in `project`'s boards/, made from spark's XIAO with its id changed, and the project's active.json."""
+        record = dict(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()), id=board_id)
+        (project / "boards").mkdir(parents=True, exist_ok=True)
+        (project / "boards" / (board_id + ".json")).write_text(json.dumps({k: v for k, v in record.items() if k not in drop}))
+        (project / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": board_id}))
+        return project / "boards" / (board_id + ".json")
+
+    def test_a_board_linked_from_another_project_goes_onto_the_board_shelf(self):
+        self.a_board_in(self.project)
+        run(["--drawer-set", a_file([{"label": "a C6 board", "count": 1}])])
+        link = a_file([{"entry": "a-c6-board", "is": {"board": "x-board"}}])
+        said, code = run(["--drawer-set", link, "--dry-run"])
+        self.assertEqual((said["status"], code, said["data"]["shelved"]), ("ok", 0, ["x-board"]), said)
+        self.assertFalse((self.home / "shelf").exists(), "a dry run shelves nothing")
+        said, code = run(["--drawer-set", link])
+        self.assertEqual((said["status"], code, said["data"]["shelved"]), ("ok", 0, ["x-board"]), said)
+        shelved = self.home / "shelf" / "boards" / "x-board.json"
+        self.assertEqual(json.loads(shelved.read_text())["based_on"]["project"], "irrigation")
+        self.assertEqual((stat.S_IMODE(shelved.stat().st_mode), stat.S_IMODE(shelved.parent.stat().st_mode)), (0o600, 0o700))
+        self.assertEqual(sorted(found.name for found in (self.home / "shelf").rglob("*")), ["boards", "x-board.json"],
+                         "no active.json, and nothing in the parts' shelf")
+        self.assertIn("x-board", board_records.available(None), "every project reads it")
+
+    def test_a_board_that_breaks_the_board_contract_is_not_shelved(self):
+        listed = self.a_board_in(self.project, drop=("pins",))
+        self.assertIsNone(part_facts.shelve(listed, "irrigation"))
+        self.assertFalse((self.home / "shelf").exists())
+        research = Path(tempfile.mkdtemp()) / "research"
+        self.a_board_in(research, "y-board", drop=("pins",))
+        run(["--drawer-set", a_file([{"label": "a C6 board", "count": 1}])])
+        said, code = run(["--drawer-set", a_file([{"entry": "a-c6-board", "is": {"board": "y-board"}}]), "--project", str(research)])
+        self.assertEqual((said["status"], code), ("problems", 1), said)
+        self.assertIn("y-board does not meet the board contract yet, and its folder is on no list", said["problems"][0]["sentence"])
+        self.assertIn("`boards.py --validate --project .`", said["problems"][0]["sentence"])
+        self.assertNotIn("is", self.entry("a-c6-board"))
+        self.assertFalse((self.home / "shelf").exists())
 
     def test_a_new_entry_with_a_count_and_no_label_is_still_refused(self):
         said, code = run(["--drawer-set", a_file([{"entry": "some-resistors", "count": 50}])])

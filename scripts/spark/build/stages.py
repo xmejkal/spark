@@ -126,7 +126,7 @@ CHECK_SPINE_CRASHED_ENDING = StageEnding(build_codes.STAGE_CRASHED, COULD_NOT_RU
 
 REQUIREMENTS = StageDefinition("requirements", "the requirements file, read as a design before any folder is made",
                                (DESIGN_ERROR,))
-BOARD = StageDefinition("board", "the board record the requirements name, from the project or spark's library",
+BOARD = StageDefinition("board", "the board record the requirements name, from the project, the store's shelf or spark's library",
                         (BOARD_UNUSABLE_ENDING,))
 PARTS = StageDefinition("parts", "the part records the requirements name; listed only when it does not end ok",
                         (BOARD_ONLY_WITH_PARTS_ENDING, NO_PARTS_ENDING, DESIGN_ERROR, BOARD_ONLY_ENDING))

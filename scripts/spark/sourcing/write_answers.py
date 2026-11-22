@@ -11,7 +11,7 @@ from pathlib import Path
 from spark.core.text_guards import printable
 from spark.records.record_kind import Answer
 from spark.sourcing import drawer
-from spark.sourcing.part_facts import shelvable
+from spark.sourcing.part_facts import shelf_of, shelvable
 
 
 # --- MVP ---
@@ -56,8 +56,8 @@ def drawer_answer(changes, questions, problems, dry_run):
             "would put" if dry_run or problems else "put", Path(path).stem,
             "" if project else ". Its folder is on no list, so a later change to the record there does not reach this copy")
         for path, project in wanted if shelvable(path, project)] + [
-        "  not shelved: %s — it does not meet the part contract yet, so it stays in its project and the entry still links to it"
-        % stem for stem in left]
+        "  not shelved: %s — it does not meet the %s contract yet, so it stays in its project and the entry still links to it"
+        % (Path(path).stem, shelf_of(path)[2]) for path, project in wanted if not shelvable(path, project)]
     return Answer({"changes": [{key: change[key] for key in ("entry", "new", "was", "now")} for change in made],
                    "questions": questions, "shelved": shelved, "not_shelved": left, "written": not (problems or dry_run)},
                   write_lines(made, problems, dry_run, said), problems=problems)
