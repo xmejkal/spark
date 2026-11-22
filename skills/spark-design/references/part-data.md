@@ -38,7 +38,7 @@ What makes it a good record:
   since parts became data (2026-09-24).
 - `legs` is optional and keyed by the pin names in `pin_order`. It names each pin as a person finds it on the part,
   and the breadboard sheet prints it ([P191](https://github.com/xmejkal/spark/issues/143)).
-- `parts.py --fact-set` writes both keys: `legs` leg by leg, and `host_requirements` as one whole list
+- `parts.py --fact-set <id> FILE --project .` writes both keys: `legs` leg by leg, and `host_requirements` as one whole list
   ([P741](https://github.com/xmejkal/spark/issues/1017)).
 
 A pull-up that the board's own internal pull-up can replace carries `"internal_will_do": true`. On a board that states

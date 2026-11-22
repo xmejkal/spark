@@ -3,7 +3,8 @@
 spark is three things:
 
 - a set of Python scripts;
-- a library of facts about boards and parts, each a [record](../../GLOSSARY.md#record--and-the-four-places-one-lives);
+- a library of facts about boards and parts, each a
+  [record](../../GLOSSARY.md#record--and-the-four-places-one-lives);
 - pages that tell Claude when to run which script.
 
 The [commands](commands.md) and skills are those pages. The scripts do the work, and each one runs on its own. This
@@ -165,8 +166,7 @@ Imported by the scripts above, and not run on their own:
 
 **Your own files win.** A project's own `boards/<id>.json` or `parts/*.json` beats the shipped one of the same name. For
 parts, a record on your shelf also beats spark's library, in every project; the project's own record beats both. spark
-reads every project on your list, but writes only the one you name with `--project` (P987). Your board house's numbers
-go in `.spark/rules.json` under `fabrication`.
+writes only the project `--project` names. Your board house's numbers go in `.spark/rules.json` under `fabrication`.
 
 ### Your own dev board
 
