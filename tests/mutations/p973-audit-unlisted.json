@@ -2,5 +2,6 @@
  {"file": "scripts/spark/design/audit_records.py", "name": "P973: an unlisted folder is not said", "find": "            if cannot:\n", "replace": "            if False:\n"},
  {"file": "scripts/spark/design/audit_records.py", "name": "P973: the catalog is not looked at", "find": "project, drafts=True) + store.layers(\"boards\"", "replace": "project) + store.layers(\"boards\""},
  {"file": "scripts/spark/design/audit_records.py", "name": "P973: a folder that cannot be listed is skipped", "find": "cannot.append(\"--audit: cannot list %s (%s)\" % (folder, raised.strerror))", "replace": "pass"},
- {"file": "scripts/spark/design/audit_records.py", "name": "P973: another listed project's folders are not looked at", "find": "for kind in (\"parts\", \"boards\")]", "replace": "for kind in ()]"}
+ {"file": "scripts/spark/design/audit_records.py", "name": "P973: another listed project's folders are not looked at", "find": "for kind in (\"parts\", \"boards\")]", "replace": "for kind in ()]"},
+ {"file": "scripts/spark/design/audit_records.py", "name": "P973: the drawer is not looked at", "find": "    folders += [(\"drawer\", store.place(\"drawer\"))]\n", "replace": ""}
 ]
