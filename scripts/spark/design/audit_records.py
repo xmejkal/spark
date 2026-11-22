@@ -4,7 +4,9 @@ Operation, because it says which board stops the chain at the footprint stage (`
 `walk` (it was `audit`) and the Operation's `run` (it was `_op_audit`) moved here from `goal_handlers` (W6-S3b). It writes nothing.
 """
 
+import os
 import shlex
+from pathlib import Path
 
 from spark.core import codes, outcomes
 from spark.core.errors import CodedMessageError
@@ -66,6 +68,25 @@ def walk(project=None):
     return counts, owed, broken, silent, dangling, stops
 
 
+def unlisted(project=None):
+    """
+    The sentences of the folders `walk` reads that the disk will not list (P973): glob and `drawer.entries` skip such a folder
+    in silence, so the audit would say ok with it unchecked. The project's own, the shelf, the catalog, the boards, the drawer,
+    and each listed project's parts/ and boards/ (`drawer.linkable` reads those).
+    """
+    folders = store.layers("parts", record_kind.LIBRARY, project, drafts=True) + store.layers("boards", board_records.LIBRARY, project)
+    folders += [("drawer", store.place("drawer"))]
+    folders += [(name, Path(root) / kind) for name, root in store.projects().items() for kind in ("parts", "boards")]
+    cannot = []
+    for _, folder in folders:
+        if folder.is_dir():
+            try:
+                os.listdir(folder)
+            except OSError as raised:
+                cannot.append("--audit: cannot list %s (%s)" % (folder, raised.strerror))
+    return cannot
+
+
 def refused(sentence, code, fix):
     """The could-not-run result of an audit that could not look: one unchecked item, its sentence on stderr (the text run
     prints no empty answer), through `Answer.to_result` (P726), the rule every parts.py Operation on the core shares."""
@@ -94,6 +115,10 @@ class AuditRecords(Operation):
             return refused(START_SENTENCE % start, codes.BAD_ARGUMENT, START_FIX)
         project = project.resolve() if project else None
         try:
+            cannot = unlisted(project)
+            if cannot:
+                return Answer(unchecked=[_cannot(sentence, design_codes.RECORD_UNREADABLE_FOLDER.fix, design_codes.RECORD_UNREADABLE_FOLDER)
+                                         for sentence in cannot]).to_result()
             counts, owed, broken, silent, dangling, stops = walk(project)
         except CodedMessageError as unreadable:  # a store's refusal: could-not-run, never a traceback
             return refused(str(unreadable), unreadable.code, design_codes.RECORD_UNREADABLE.fix)  # the store's code, this Operation's fix: the file is in the sentence

@@ -3866,6 +3866,67 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         self.assertEqual((code, said["unchecked"][0]["code"], said["unchecked"][0]["fix"]),
                          (2, "record_unreadable", "fix the file the sentence names, then run --audit again"))
 
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root lists a folder with no permission")
+    def test_a_catalog_folder_the_disk_will_not_list_is_could_not_run_and_named(self):
+        # P973: glob skips a folder it may not list, so the audit said ok with nothing checked
+        home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, True)
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-bad.json").write_text(json.dumps({"schema": 2, "id": "x-bad", "name": "B", "kind": "rtc"}))
+        (home / "catalog").chmod(0)
+        self.addCleanup((home / "catalog").chmod, 0o700)
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((code, said["status"], [(u["code"], u["sentence"]) for u in said["unchecked"]]),
+                         (2, "could-not-run", [("record_unreadable", "--audit: cannot list %s (Permission denied)" % (home / "catalog"))]))
+
+    def test_an_empty_readable_catalog_is_still_ok(self):
+        home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, True)
+        (home / "catalog").mkdir()
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((code, said["status"], said["unchecked"]), (0, "ok", []))
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root lists a folder with no permission")
+    def test_a_project_folder_at_mode_zero_is_could_not_run_with_no_traceback(self):
+        home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, True)
+        self.addCleanup(shutil.rmtree, project, True)
+        project.chmod(0)
+        self.addCleanup(project.chmod, 0o700)
+        err = io.StringIO()
+        with in_store(home), contextlib.redirect_stderr(err):
+            said, code = run_json(["--audit", "--project", str(project)])
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+        self.assertNotIn("Traceback", err.getvalue())
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root lists a folder with no permission")
+    def test_another_listed_project_s_parts_folder_the_disk_will_not_list_is_could_not_run(self):
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, True)
+        self.addCleanup(shutil.rmtree, other, True)
+        (other / "parts").mkdir()
+        (other / "parts").chmod(0o300)
+        self.addCleanup((other / "parts").chmod, 0o700)
+        (home / "projects.json").write_text(json.dumps({"irrigation": str(other)}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((code, said["status"], [(u["code"], u["sentence"]) for u in said["unchecked"]]),
+                         (2, "could-not-run", [("record_unreadable", "--audit: cannot list %s (Permission denied)" % (other / "parts"))]))
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root lists a folder with no permission")
+    def test_a_drawer_folder_the_disk_will_not_list_is_could_not_run_and_named(self):
+        home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, True)
+        (home / "drawer").mkdir()
+        (home / "drawer").chmod(0)
+        self.addCleanup((home / "drawer").chmod, 0o700)
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((code, said["status"], [(u["code"], u["sentence"]) for u in said["unchecked"]]),
+                         (2, "could-not-run", [("record_unreadable", "--audit: cannot list %s (Permission denied)" % (home / "drawer"))]))
+
     def test_audit_s_help_lists_its_own_arguments_alone(self):
         err = io.StringIO()
         with self.assertRaises(SystemExit), contextlib.redirect_stdout(err):
