@@ -45,8 +45,8 @@ and writes through spark (as P56 does for firmware).
 ## 3. Words this spec uses
 
 - **The store** — everything spark keeps on the person's machine, under one home (§6.1).
-- **A layer** — a place records are read from: the project, the **shelf** (parts the person chose before, from any
-  project), spark's **library** (shipped), the **catalog** (researched, not chosen), later a **shared** clone (P84).
+- **A layer** — a place records are read from: the project, the **shelf** (parts and board files the person chose
+  before, from any project), spark's **library** (shipped), the **catalog** (researched, not chosen), later a **shared** clone (P84).
 - **The drawer** — what the person owns. It is **not a layer**: an index of owned items, each pointing at a record
   in some layer, or at none.
 - **have** — owned, with a record. **have, unknown** — owned, no record: on the board it needs research (a board
@@ -125,6 +125,7 @@ Under the home (§6.1), all private (folders `0700`, files `0600`):
 drawer/<slug>.json            one owned item each; the slug is made by store.py, never a raw label or SKU
 drawer-import/<source>.json   an importer's last payload (SKU, name, count — nothing else)
 shelf/<id>.json               parts chosen before, copied from wherever they were, filtered (§5.5)
+shelf/boards/<id>.json        board files chosen before, the same way (§5.5, P989)
 catalog/<id>.json             researched, not chosen (P83)
 sources/<sha256>/<file>       kept documents (P61)
 downloads/                    tools' downloads (P82)
@@ -223,6 +224,10 @@ with a board until a record in `boards/` says its pins.
 - **The shelf** (P91): when an entry links to a record in another project, a filtered copy goes onto the shelf —
   without `owned`, `photo`, `photos`, `sourcing` and `alternatives` — and records `based_on` (the source and its
   digest), so every project finds it. Read order: project → shelf → library → catalog → shared.
+- A **board file** reaches the shelf the same way (P989, 2026-11-22), into `shelf/boards/`: an entry that links to a board
+  file that lives only in one project shelves it, and a write to a shelf board (`--fact-set`, `--features-set`,
+  `--find-documents`) changes the project it came from, then its shelf copy. Every project's `--match`, init and build
+  then see it. A board's read order is project → shelf → library; a board has no catalog.
 - Proposing parts, store first: drawer → project → shelf → library → catalog → shared → research.
 - Ranking (P991, 2026-11-22): a record of another project on the list ranks with the shelf, as its shelf copy would, before
   the library; reading keeps the order above.
