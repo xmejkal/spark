@@ -106,7 +106,7 @@ name of letters, digits and `_`. The board is written with a rail as code, and t
 name a signal: `power[0] rail is 'gnd rail', but a rail is a name — letters, digits and _ (ground, logic,
 motor, 5v): the board is written with it as code`.
 `--unverified` is the list to hand a person: each item, and what depends on it. Write a bench result back with
-`parts.py --fact-set <id> <file>`. Put it under the `write` key of its row, and give a `source` that names who did it, the date and the method.
+`parts.py --fact-set <id> <file> --project .`. Put it under the `write` key of its row, and give a `source` that names who did it, the date and the method.
 
 Then run `/spark:build`. `parts.py --promote <id> --project .` copies a verified record into the plugin's library, and
 the next project finds it with `--need`.
@@ -132,7 +132,7 @@ page 1. A skeleton's `body_mm` is a gap: the outline question is asked first. It
 `url_unreachable`, and the run goes on with the documents that the record keeps.
 
 Read the cited drawing and fill each value. A value that the drawing does not give stays null, and its question stays
-open. If the vendor did not publish it, say so in `physical_proof.not_published` with `parts.py --fact-set`. Then run
+open. If the vendor did not publish it, say so in `physical_proof.not_published` with `parts.py --fact-set <id> <file> --project .`. Then run
 the `next[0]` step, the same line with `--replies`. Run 2 writes `physical` and `physical_proof` (`verified: false`,
 read off a drawing). The header's answer uses the board record's words, `rows`, `pins`, `pitch_mm`, `flush_edge` (`-x` or
 `+x`) and `first_pad_from_edge_mm`, read with the header at the top, and `face`: `back` when the header and its labels

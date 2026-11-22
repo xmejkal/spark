@@ -23,6 +23,7 @@ import io
 import json
 import os
 import re
+import shlex
 import shutil
 import stat
 import sys
@@ -414,6 +415,23 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
         self.assertEqual(([row["write"] for row in alone["assumptions"]], alone["next"]), ([None], []))
         self.assertNotIn("next:", out.getvalue())
         self.assertIn("repair the file by hand", out.getvalue())
+
+    def test_the_next_step_carries_the_project_and_writes_when_run_as_printed(self):
+        # P987 review: the step had no --project, so a listed project's record was refused when run as printed
+        home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "plant-alarm"
+        (project / "parts").mkdir(parents=True)
+        (project / "parts" / "x-good.json").write_text(json.dumps(part("x-good", facts={
+            "f": {"value": 1, "verified": False, "source": "the maker's page", "why_it_matters": "it matters"}})))
+        (home / "projects.json").write_text(json.dumps({"plant-alarm": str(project)}))
+        facts = Path(tempfile.mkdtemp()) / "facts.json"
+        facts.write_text(json.dumps({"facts": {"f": {"value": 1, "verified": True, "source": "bench, 2026-11-22, a meter"}}}))
+        with in_store(home):
+            said, _ = run_json(["--unverified", "x-good", "--project", str(project)])
+            argv = [str(facts) if arg == "<file>" else arg for arg in said["next"][0]["argv"]]
+            wrote, code = run_json(argv)
+        self.assertEqual(said["next"][0]["argv"], ["--fact-set", "x-good", "<file>", "--project", str(project.resolve())])
+        self.assertEqual((code, wrote["data"]["written"]), (0, True), wrote)
+        self.assertTrue(json.loads((project / "parts" / "x-good.json").read_text())["facts"]["f"]["verified"])
 
 
 class FromPartsToAPinMapTest(unittest.TestCase):
@@ -3062,7 +3080,7 @@ class ALevelIsWrittenToABoardTest(unittest.TestCase):
         self.assertIn("spark's own library", said["problems"][0]["sentence"])
 
     def test_a_board_of_another_listed_project_or_of_no_project_is_refused(self):
-        # P464: a board is written from its own project only
+        # P464: a board is written from its own project only; P987: the refusal of every writer, which names the project
         home, project, board = self.a_project()
         (project / "boards" / "xiao-esp32-c6.json").rename(project / "boards" / "only-in-b.json")
         board = self.stored_as(project, "only-in-b")
@@ -3071,14 +3089,16 @@ class ALevelIsWrittenToABoardTest(unittest.TestCase):
         (home / "projects.json").write_text(json.dumps({"proj-b": str(project)}))
         values = {"pin_roles": {"onboard_led": {"active_level": self.BENCH}}}
         said, code = self.write(home, here, values, part_id="only-in-b")
-        self.assertEqual(code, 1)
-        self.assertIn("not a board of this project", said["problems"][0]["sentence"])
-        self.assertIn("pass --project <the folder", said["problems"][0]["sentence"])
+        self.assertEqual((code, [item.get("code") for item in said["problems"]]), (1, ["other_project_record"]))
+        self.assertIn("only-in-b is only in proj-b", said["problems"][0]["sentence"])
+        self.assertTrue(any(said["problems"][0]["fix"].startswith("run the same command again with --project %s," % shlex.quote(str(folder)))
+                            for folder in (project, project.resolve())), said["problems"][0]["fix"])
         with in_store(home):
             self.assertEqual(run_json(["--fact-set", "only-in-b", self.given(values)])[1], 1)
         with in_store(home):
             said = run_json(["--fact-set", "only-in-b", self.given(values)])[0]
-        self.assertIn("a project (no --project was given)", said["problems"][0]["sentence"])
+        self.assertEqual([item.get("code") for item in said["problems"]], ["other_project_record"])
+        self.assertIn("only-in-b is only in proj-b", said["problems"][0]["sentence"])
         self.assertNotIn("None", said["problems"][0]["sentence"])
         self.assertEqual(self.stored_as(project, "only-in-b"), board)
         self.assertEqual(self.write(home, project, values, part_id="only-in-b")[1], 0)
@@ -3423,7 +3443,8 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
                          '{"schema": 1, "id": "x-valve", "name": "A valve driver", "kind": "mosfet-driver", "needs": []}')
 
     def test_a_fetch_never_reaches_a_record_only_another_listed_project_holds(self):
-        # P983 refuter: record_path reaches every listed project, so --fetch wrote irrigation's record for a project not named
+        # P983 refuter: record_path reaches every listed project, so --fetch wrote irrigation's record for a project not named;
+        # P987: the refusal of every writer, which names the project
         home, other = self.a_valve_in_irrigation()
         (other / "parts" / "only-irr.json").write_text(
             '{"schema": 1, "id": "only-irr", "name": "A pump", "kind": "pump", "needs": [], "sources": ["https://v.example/pump.pdf"]}')
@@ -3434,7 +3455,8 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
                      ["--fetch", "only-irr", "--dry-run"], ["--fetch", "only-irr", "--project", str(mine), "--dry-run"]):
             with self.subTest(argv=argv), in_store(home), EverythingFoundIsKeptTest._library_is(Path(tempfile.mkdtemp()), asked):
                 said, code = run_json(argv)
-                self.assertEqual((code, [item["code"] for item in said["problems"]]), (1, ["no_such_part"]))
+                self.assertEqual((code, [item["code"] for item in said["problems"]]), (1, ["other_project_record"]))
+                self.assertIn("only-irr is only in irrigation", said["problems"][0]["sentence"])
         self.assertEqual(asked, [], "nothing was downloaded")
         self.assertEqual((other / "parts" / "only-irr.json").read_text(),
                          '{"schema": 1, "id": "only-irr", "name": "A pump", "kind": "pump", "needs": [], "sources": ["https://v.example/pump.pdf"]}')
@@ -3465,6 +3487,115 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
             said, _ = run_json(["--fact-set", "x-soil", self.facts({"footprint": "jst_ph_3"}), "--dry-run"])
         self.assertEqual((said["data"]["part"], said["data"]["was"], said["data"]["now"]),
                          ("x-soil", {"footprint": None}, {"footprint": "jst_ph_3"}))
+
+
+class AWriterChangesOnlyTheNamedProjectTest(unittest.TestCase):
+    """P987 (#1439): a writer of parts.py changes only the project the run names, or the project a shelf copy came from. A
+    record that only another listed project holds is refused with `other_project_record`, which names that project and
+    its folder, and nothing is written or fetched. Readers still read every listed project."""
+
+    PUMP = '{"schema": 1, "id": "only-irr", "name": "A pump", "kind": "pump", "needs": [], "sources": ["https://v.example/pump.pdf"]}'
+    LEVEL = {"value": 0, "verified": True, "source": "the PO's bench, 2026-11-22"}
+
+    def setUp(self):
+        """A store whose list names irrigation, which alone holds the part only-irr and the board only-irr-board, and an
+        unlisted project mine with empty parts/ and boards/; the files each writer is given."""
+        self.home, self.irrigation = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "irrigation"
+        (self.irrigation / "parts").mkdir(parents=True)
+        (self.irrigation / "boards").mkdir()
+        (self.irrigation / "parts" / "only-irr.json").write_text(self.PUMP)
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        (self.irrigation / "boards" / "only-irr-board.json").write_text(json.dumps(dict(board, id="only-irr-board"), indent=2))
+        (self.home / "projects.json").write_text(json.dumps({"irrigation": str(self.irrigation)}))
+        self.mine = Path(tempfile.mkdtemp()) / "mine"
+        (self.mine / "parts").mkdir(parents=True)
+        (self.mine / "boards").mkdir()
+        files = Path(tempfile.mkdtemp())
+        for name, text in (("facts.json", '{"footprint": "pinrow2"}'), ("function.json", '[{"does": "move", "what": "water"}]'),
+                           ("doc.txt", "a note"), ("features.json", "{}"),
+                           ("levels.json", json.dumps({"pin_roles": {"onboard_led": {"active_level": self.LEVEL}}}))):
+            (files / name).write_text(text)
+        shutil.copy(ROOT / "tests" / "data" / "pictures" / "epaper-synthetic.svg", files / "picture.svg")
+        self.files = files
+
+    def file(self, name):
+        return str(self.files / name)
+
+    def writers(self):
+        """{name: argv} of the eight writers, each on a record only irrigation holds."""
+        return {"fact-set": ["--fact-set", "only-irr", self.file("facts.json")],
+                "function-set": ["--function-set", "only-irr", self.file("function.json")],
+                "keep --part": ["--keep", self.file("doc.txt"), "--part", "only-irr"],
+                "keep-picture": ["--keep-picture", self.file("picture.svg"), "--part", "only-irr", "--made-by", "drawing",
+                                 "--likeness", "near", "--credit", "a synthetic picture"],
+                "features-set": ["--features-set", self.file("features.json"), "--part", "only-irr-board"],
+                "find-documents": ["--find-documents", "only-irr-board"],
+                "fetch": ["--fetch", "only-irr"],
+                "fact-set a board's level": ["--fact-set", "only-irr-board", self.file("levels.json")]}
+
+    def snapshot(self):
+        """Every file of irrigation and of the store, with its bytes: what a refusal must leave as it was."""
+        return {str(found): found.read_bytes() for folder in (self.irrigation, self.home) for found in sorted(folder.rglob("*"))
+                if found.is_file()}
+
+    def run_writer(self, argv):
+        """(the envelope, the exit code, the URLs the network door was asked for) of one run, spark's library as it ships."""
+        asked = []
+        with in_store(self.home), EverythingFoundIsKeptTest._library_is(record_kind.LIBRARY, asked):
+            said, code = run_json(argv)
+        return said, code, asked
+
+    def assert_refused(self, argv, part_id):
+        before = self.snapshot()
+        said, code, asked = self.run_writer(argv)
+        self.assertEqual((code, [item.get("code") for item in said["problems"]]), (1, ["other_project_record"]), said)
+        problem = said["problems"][0]
+        self.assertEqual(problem["subject"], part_id)
+        self.assertIn("irrigation", problem["sentence"])
+        self.assertTrue(str(self.irrigation) in problem["sentence"] or str(self.irrigation.resolve()) in problem["sentence"],
+                        problem["sentence"])
+        self.assertIn(problem["fix"], [
+            "run the same command again with --project %s, or copy the record into the parts/ folder (a board into boards/) "
+            "of the project you work on and name that project with --project" % shlex.quote(str(folder))
+            for folder in (self.irrigation, self.irrigation.resolve())])
+        self.assertIn("another project on your list: spark writes only the project --project names", problem["sentence"])
+        self.assertEqual(asked, [], "nothing was fetched")
+        self.assertEqual(self.snapshot(), before, "irrigation and the store are as they were")
+
+    def test_every_writer_refuses_a_record_only_another_listed_project_holds_and_names_it(self):
+        for name, argv in self.writers().items():
+            part_id = argv[argv.index("--part") + 1] if "--part" in argv else argv[1]
+            for project in ([], ["--project", str(self.mine)]):
+                for dry_run in ([], ["--dry-run"]):
+                    with self.subTest(writer=name, project=bool(project), dry_run=bool(dry_run)):
+                        self.assert_refused(argv + project + dry_run, part_id)
+
+    def test_a_board_writer_given_a_part_only_another_listed_project_holds_names_that_project_too(self):
+        # --features-set and --find-documents look for a board, then for a part only to say "is a part's record"
+        for argv in (["--features-set", self.file("features.json"), "--part", "only-irr"], ["--find-documents", "only-irr"]):
+            with self.subTest(argv=argv[0]):
+                self.assert_refused(argv + ["--project", str(self.mine)], "only-irr")
+
+    def test_a_fetch_of_a_board_only_another_listed_project_holds_is_no_part(self):
+        before = self.snapshot()
+        said, code, asked = self.run_writer(["--fetch", "only-irr-board", "--project", str(self.mine)])
+        self.assertEqual((code, [item.get("code") for item in said["problems"]], asked), (1, ["no_such_part"], []))
+        self.assertEqual(self.snapshot(), before)
+
+    def test_a_record_nobody_holds_keeps_its_old_refusal(self):
+        said, code, _ = self.run_writer(["--fact-set", "nosuch", self.file("facts.json"), "--project", str(self.mine)])
+        self.assertEqual((code, said["problems"]), (1, [{"subject": "nosuch", "sentence": said["problems"][0]["sentence"], "fix": None,
+                                                         "code": "no_such_part"}]))
+        self.assertNotIn("irrigation", said["problems"][0]["sentence"])
+
+    def test_naming_the_listed_project_writes_its_record(self):
+        said, code, _ = self.run_writer(["--fact-set", "only-irr", self.file("facts.json"), "--project", str(self.irrigation)])
+        self.assertEqual((code, said["data"]["written"]), (0, True))
+        self.assertEqual(json.loads((self.irrigation / "parts" / "only-irr.json").read_text())["footprint"], "pinrow2")
+
+    def test_a_reader_still_offers_a_record_only_another_listed_project_holds(self):
+        said, code, _ = self.run_writer(["--offer", "only-irr", "--project", str(self.mine)])
+        self.assertEqual((code, said["problems"]), (0, []), said)
 
 
 class ABenchResultGoesBackWithItsSourceTest(unittest.TestCase):

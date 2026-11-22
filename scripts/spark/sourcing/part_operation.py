@@ -16,7 +16,8 @@ class PartOperation(AnswerOperation):
     """
     Operation: a parts.py handler of the sourcing area on the core. A subclass gives `name`, `arguments` (its flag first),
     `effects` and `build_answer`, as `AnswerOperation` asks; `answer_refusal` turns a `PartError` into a problem whose
-    subject is the flag's value, and leaves every other coded refusal to the base.
+    subject is the error's own `subject` when it has one (P987), else the flag's value, with the error's `fix`, and leaves
+    every other coded refusal to the base.
     """
 
     def answer_refusal(self, broken, values):
@@ -24,5 +25,5 @@ class PartOperation(AnswerOperation):
             return super().answer_refusal(broken, values)
         value = values.get(self.arguments[0].dest)  # the str tokens alone: a loaded payload (PR 3) never names the part
         subject = " ".join(token for token in value if isinstance(token, str)) if isinstance(value, list) else (value if isinstance(value, str) else None)
-        return Answer(problems=[_problem(subject, str(broken), code=broken.code)])
+        return Answer(problems=[_problem(broken.subject if broken.subject is not None else subject, str(broken), fix=broken.fix, code=broken.code)])
 # --- end MVP ---

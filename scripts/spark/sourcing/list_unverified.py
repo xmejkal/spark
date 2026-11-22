@@ -9,7 +9,7 @@ from spark.core.outcomes import add_env, step
 from spark.records import store
 from spark.records.answer_operation import ANSWER_ARGUMENTS
 from spark.records.fact_needs import FactNeeds
-from spark.records.record_kind import Answer, WRITE_BACK_HINT
+from spark.records.record_kind import Answer, WRITE_BACK_HINT, _with_project
 from spark.sourcing.part_facts import unverified
 from spark.sourcing.part_operation import PartOperation
 
@@ -48,6 +48,6 @@ class ListUnverified(PartOperation):
                 entry["read_by"] = [need.to_dict() for need in read_by]
             assumptions.append(entry)
         owners = [q["part"] for q in questions if q["write"]]  # a row with no `write` cannot go back by --fact-set
-        follow = [add_env(step("fact-set", ["--fact-set", owners[0], "<file>"], WRITE_BACK_HINT, ["writes"]), store.read_given_env())] if owners else []
+        follow = [add_env(step("fact-set", ["--fact-set", owners[0], "<file>"] + _with_project(project), WRITE_BACK_HINT, ["writes"]), store.read_given_env())] if owners else []
         return Answer({"parts": list(part_ids)}, lines, assumptions=assumptions, next=follow)
 # --- end MVP ---

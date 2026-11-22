@@ -16,7 +16,7 @@ from pathlib import Path
 
 from spark.records import board_records, record_kind, records_codes, store, tool_finder
 from spark.records.record_kind import (
-    Answer, _cannot, DEFINITION_SUFFIX, _parse, _problem, record_home, _write_record)
+    Answer, _cannot, DEFINITION_SUFFIX, _parse, _problem, _write_record)
 from spark.sourcing import matching, offers, record_home as home_rules, sourcing_codes
 from spark.sourcing.part_records import load, PartError
 
@@ -350,12 +350,10 @@ def fetch_plan(record):
 def fetch_home(part_id, project=None):
     """The (record file, project whose shelf copy follows it) `--fetch` would change, found by the rule of every other writer
     (`record_home.record_path`, P983: a shelf copy's write goes to its project's record), or a PartError: no record
-    (`no_such_part`), or a record in spark's own library (`library_record`, P964), which parts.py never writes. Asked
-    before any download, on a dry run too. A record that only another listed project holds is no record here, as before
-    P983: a fetch never writes a project the person did not name, unless a shelf copy follows that project's record."""
+    (`no_such_part`), a record only another listed project holds (`other_project_record`, P987: a fetch never writes a
+    project the person did not name, unless a shelf copy follows that project's record), or a record in spark's own
+    library (`library_record`, P964), which parts.py never writes. Asked before any download, on a dry run too."""
     path, source = home_rules.record_path(part_id, project)
-    if record_home(part_id, project) is None:
-        path = None
     if path is None:
         raise PartError("no record called %r to fetch for", part_id, code=sourcing_codes.NO_SUCH_PART)
     if home_rules.in_library(path):

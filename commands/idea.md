@@ -160,6 +160,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set <part> <file> --project <proje
 ```
 
 and without `--dry-run`. A record in spark's own library is changed in spark's repository, not from here: say so. A
+record only another of the person's projects holds (`other_project_record`) is changed from that project: say which
+project the sentence names, and run again with `--project` set to its folder only on the person's yes. A
 shelf copy of the record follows it ("shelf copy refreshed"), even when the record already said it; "shelf copy not
 refreshed: …" says why it could not: tell the person. A source not kept yet is fetched only after the person's yes — it
 reaches the network, and no command's `allowed-tools` lets `parts.py --fetch` run unasked, so Claude Code asks before it

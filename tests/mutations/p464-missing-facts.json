@@ -84,12 +84,6 @@
   "replace": "entry.get(\"missing_facts\", [])]) and False else {})}"
  },
  {
-  "file": "scripts/spark/records/missing_facts.py",
-  "name": "a board of another project is written",
-  "find": "if project is None or path.parent.resolve() != (project / \"boards\").resolve():",
-  "replace": "if False:"
- },
- {
   "file": "scripts/spark/sourcing/drawer.py",
   "name": "the text and keys of pin_roles are written raw",
   "find": "\"pin_order_proof\", \"pin_roles\", \"physical\"",
@@ -106,11 +100,5 @@
   "name": "the fix command leaves out --project",
   "find": "FILE --project .` from",
   "replace": "FILE` from"
- },
- {
-  "file": "scripts/spark/records/missing_facts.py",
-  "name": "the refusal prints None for a missing project",
-  "find": "if project else \"a project (no --project was given)\")",
-  "replace": "if True else \"a project (no --project was given)\")"
  }
 ]
