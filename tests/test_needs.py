@@ -1511,6 +1511,58 @@ def a_project_with_picks(picks):
     return home, project
 
 
+# --- MVP --- P990: --match offers a board for a need of a radio of its chip
+class TheBoardsChipRadiosAreOfferedTest(unittest.TestCase):
+    """P990: the need communicate / wifi finds both C6 boards and the library's S3. The need communicate / zigbee finds the
+    C6 boards, and the S3 stays a candidate whose words do not match."""
+
+    C6 = ["onboard 802.15.4 radio (Thread, Zigbee)", "onboard Bluetooth LE radio (BLE)", "onboard Wi-Fi radio (WiFi)"]
+    S3 = ["onboard Bluetooth LE radio (BLE)", "onboard Wi-Fi radio (WiFi)"]
+
+    def setUp(self):
+        self.home, self.project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "radio-project"
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        run(["--needs-set", str(self.project), a_file([{"id": "wifi", "does": "communicate", "what": "wifi"},
+                                                        {"id": "mesh", "does": "communicate", "what": "zigbee"}])])
+        (self.project / "boards").mkdir()
+        shutil.copy(ROOT / "boards" / "xiao-esp32-c6.json", self.project / "boards")
+        shutil.copy(ROOT / "tests" / "data" / "breadboard" / "walk-c6" / "boards" / "firebeetle2-esp32c6.json", self.project / "boards")
+
+    def candidates(self, need_id):
+        """The need's candidates by id, each as (what, what_matches, score, why, limits), over every page of --match --json."""
+        said, _ = run(["--match", str(self.project)])
+        matched = list(said["data"]["needs"])
+        while said["truncated"] and said["truncated"]["next"]:
+            said, _ = run(["--match", str(self.project), "--from", str(len(matched))])
+            matched += said["data"]["needs"]
+        need = next(need for need in matched if need["need"] == need_id)
+        return {c["id"]: (c["what"], c["what_matches"], c["score"], c["why"], c["limits"]) for c in need["candidates"]}
+
+    def test_a_wifi_need_finds_every_board_whose_chip_has_wifi(self):
+        self.assertEqual(self.candidates("wifi"), {
+            "firebeetle2-esp32c6": (self.C6, True, 1.0, ["wifi: in functions"], []),
+            "xiao-esp32-c6": (self.C6, True, 1.0, ["wifi: in functions"], []),
+            "firebeetle2-esp32s3": (self.S3, True, 1.0, ["wifi: in functions"], [])})
+
+    def test_a_zigbee_need_finds_the_c6_boards_and_not_the_s3(self):
+        self.assertEqual(self.candidates("mesh"), {
+            "firebeetle2-esp32c6": (self.C6, True, 1.0, ["zigbee: in functions"], []),
+            "xiao-esp32-c6": (self.C6, True, 1.0, ["zigbee: in functions"], []),
+            "firebeetle2-esp32s3": (self.S3, False, 0.0, [], [])})
+
+    def test_the_text_names_the_radios_of_each_board(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--match", str(self.project)])
+        lines = out.getvalue().splitlines()
+        self.assertIn("                 xiao-esp32-c6 (project)                        onboard 802.15.4 radio (Thread, Zigbee), "
+                      "onboard Bluetooth LE radio (BLE), onboard Wi-Fi radio (WiFi)", lines)
+        self.assertIn("                 firebeetle2-esp32s3 (library)                  onboard Bluetooth LE radio (BLE), "
+                      "onboard Wi-Fi radio (WiFi) [other words]", lines)
+
+
 # --- MVP --- P397: a pick, or --match, that gives a need to a board's own part says what a passed run does not test of it
 class TheBoardsLimitsNoteTest(unittest.TestCase):
     """P397: the note of a pick that gives a button, a light or a display to the board, and the same sentences in --match."""
