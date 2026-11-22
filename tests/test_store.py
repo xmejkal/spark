@@ -252,7 +252,8 @@ class TheLayersTest(unittest.TestCase):
                          ["project", "shelf", "library", "catalog"])
         self.assertEqual([name for name, _ in store.layers("parts", self.library)], ["shelf", "library"])
         self.assertEqual([name for name, _ in store.layers("boards", self.library, self.project, drafts=True)],
-                         ["project", "library"], "boards have no shelf and no catalog")
+                         ["project", "shelf", "library"], "boards have the shelf, no catalog")  # P989: was ["project", "library"]
+        self.assertEqual(store.layers("boards", self.library)[0], ("shelf", self.home / "shelf" / "boards"), "a folder of its own")
 
     def test_the_nearest_layer_wins(self):
         self.put(self.library, "a.json")

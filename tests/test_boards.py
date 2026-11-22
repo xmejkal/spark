@@ -1564,6 +1564,20 @@ class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):
         _, text = self.listed("--list", "--project", str(root))
         self.assertIn("    null-board (project)\n", text)
 
+    def test_a_shelf_board_is_listed_and_validated_as_the_shelf_s(self):
+        # P989: the layer is the one the records give, never guessed from the folder
+        home = Path(tempfile.mkdtemp())
+        (home / "shelf" / "boards").mkdir(parents=True)
+        (home / "shelf" / "boards" / "x-board.json").write_text(json.dumps(definition("x-board")))
+        with mock.patch.dict("os.environ", {"SPARK_HOME": str(home)}):
+            code, out = self.listed("--list", "--project", str(project()), "--json")
+            _, text = self.listed("--list", "--project", str(project()))
+            _, valid = self.listed("--validate", "--project", str(project()))
+        rows = {row["id"]: row for row in json.loads(out)["data"]["boards"]}
+        self.assertEqual((code, rows["x-board"]["layer"]), (0, "shelf"))
+        self.assertIn("    x-board (shelf)\n", text)
+        self.assertIn("  x-board (shelf): ok\n", valid)
+
     def test_a_prefix_of_list_picks_the_operation_as_argparse_would(self):
         code, out = self.listed("--li", "--project", str(project()))
         self.assertEqual(code, 0)

@@ -3606,6 +3606,38 @@ class AWriterChangesOnlyTheNamedProjectTest(unittest.TestCase):
         self.assertEqual((code, said["problems"]), (0, []), said)
 
 
+    # --- P989 (#1442): a board's shelf copy follows its record as a part's does ---
+
+    def a_shelf_copy_of_the_board(self):
+        """only-irr-board's copy on the store's shelf, shelved from irrigation and stale on purpose: what every project reads."""
+        record = json.loads((self.irrigation / "boards" / "only-irr-board.json").read_text())
+        (self.home / "shelf" / "boards").mkdir(parents=True)
+        copy = self.home / "shelf" / "boards" / "only-irr-board.json"
+        copy.write_text(json.dumps(dict(record, based_on={"project": "irrigation", "digest": "0" * 64})))
+        return copy
+
+    def level(self, path):
+        return json.loads(path.read_text())["pin_roles"]["onboard_led"]["active_level"]
+
+    def test_a_shelf_copy_of_a_listed_project_s_board_is_filled_in_that_project_and_shelved_again(self):
+        copy, own = self.a_shelf_copy_of_the_board(), self.irrigation / "boards" / "only-irr-board.json"
+        argv = ["--fact-set", "only-irr-board", self.file("levels.json"), "--project", str(self.mine)]
+        said, code, _ = self.run_writer(argv)
+        again, _, _ = self.run_writer(argv)
+        self.assertEqual((code, Path(said["data"]["path"]).resolve(), said["data"]["shelf_copy"]),
+                         (0, own.resolve(), "shelf copy refreshed"), said)
+        self.assertEqual((self.level(own), self.level(copy)), (self.LEVEL, self.LEVEL))
+        self.assertEqual(list((self.mine / "boards").iterdir()), [], "mine is not written")
+        self.assertEqual(again["data"]["shelf_copy"], "current")
+
+    def test_a_shelf_board_whose_project_has_lost_it_is_filled_where_it_is_and_stays_private(self):
+        copy = self.a_shelf_copy_of_the_board()
+        (self.irrigation / "boards" / "only-irr-board.json").unlink()
+        said, code, _ = self.run_writer(["--fact-set", "only-irr-board", self.file("levels.json"), "--project", str(self.mine)])
+        self.assertEqual((code, Path(said["data"]["path"]).resolve()), (0, copy.resolve()), said)
+        self.assertEqual((self.level(copy), stat.S_IMODE(copy.stat().st_mode)), (self.LEVEL, 0o600), "written through the store")
+
+
 class ABenchResultGoesBackWithItsSourceTest(unittest.TestCase):
     """P374 (#479): `--fact-set` takes `facts` entries {value, verified, source}, `body_mm` and `pin_order_proof`; P373 lists what is left."""
 
