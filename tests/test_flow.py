@@ -1224,6 +1224,19 @@ class TheBlockersTest(FlowTest):
         self.assertEqual((code, table(said)["requirements"]), (0, (NS, [])))
         self.assertEqual(says(said, "requirements"), ["no requirements.json yet", "board: pick one board — none is picked"])
 
+    def test_a_pick_that_owes_only_its_simulation_stance_offers_the_parts_list_with_a_warning(self):
+        # P996 (the PO, 2026-11-22): "The simulation step should not stop us if we want and can deploy directly."
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        (self.home / "catalog" / "x-sim.json").write_text(json.dumps(dict({k: v for k, v in led.items() if k != "simulation"}, id="x-sim")))
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD + [
+            {"id": "light", "does": "indicate", "what": "light", "pick": [{"part": "x-sim"}]}])
+        said, code = show(project)
+        self.assertEqual((code, table(said)["requirements"]), (0, (NS, ["requirements"])))
+        self.assertEqual(says(said, "requirements"), [
+            "no requirements.json yet",
+            "“Kingbright L-7113ID 5 mm red LED” for light has no simulation stance yet. The parts list and the build go on, "
+            "and a deploy asks your yes for firmware that no simulation tested."])
+
     def test_a_pick_that_owes_a_fact_says_which_and_offers_no_parts_list(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD + [
             {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]}])

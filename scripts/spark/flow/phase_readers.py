@@ -306,6 +306,18 @@ def needs_holding(plan, key):
             if any(key in needs.as_record(pick, plan.known, plan.entries).values() for pick in need.get("pick") or [])]
 
 
+def named_pick(plan, key):
+    """A part pick as a person reads it: “<name>” for <needs>, or “<name>” when no need's pick is that record."""
+    named, by = "“%s”" % plan.name_of(key), ", ".join(needs_holding(plan, key))
+    return flow_codes.PICKED_BY % (named, by) if by else named
+
+
+def no_stance_lines(project, unsimulated):
+    """One warning line per part pick the parts list takes with no simulation stance (P996), or none."""
+    plan = needs.PickPlan(project) if unsimulated else None
+    return [flow_codes.NO_STANCE_MESSAGE % named_pick(plan, key) for key, _how in unsimulated]
+
+
 def blocker_lines(project, problems):
     """The parts list's problems as the person reads them (P993): a pick that owes a fact by its name, the needs that pick
     it and what it owes, in plain words; any other as its own line (`problem_lines`). The record decides, never the
@@ -313,9 +325,7 @@ def blocker_lines(project, problems):
     plan, said = needs.PickPlan(project), []
     for problem in problems:
         owed = owed_facts(plan, problem["subject"])
-        named = "“%s”" % plan.name_of(problem["subject"])
-        by = ", ".join(needs_holding(plan, problem["subject"]))
-        said += ([flow_codes.OWED_MESSAGE % (flow_codes.PICKED_BY % (named, by) if by else named, ", ".join(owed))] if owed
+        said += ([flow_codes.OWED_MESSAGE % (named_pick(plan, problem["subject"]), ", ".join(owed))] if owed
                  else problem_lines([problem]))
     return said
 
@@ -374,11 +384,12 @@ class RequirementsReader(PhaseReader):
         effect = " ".join((flow_codes.REQUIREMENTS_MESSAGE, flow_codes.SHELVE_MESSAGE, flow_codes.ORIGIN_MESSAGE))
         offers = [Offer(flow_codes.WRITE_REQUIREMENTS, flow_codes.REQUIREMENTS_LABEL, effect,
                         makes_stale(project, flow_codes.WRITE_REQUIREMENTS))]
+        warned = no_stance_lines(project, given.unsimulated)  # P996: said, never a blocker
         if held is None:
-            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_MESSAGE], offers)
+            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_MESSAGE] + warned, offers)
         if given.content != held:
-            return self.phase(flow_codes.STALE, [flow_codes.REQUIREMENTS_STALE_MESSAGE], offers)
-        return self.phase(OK, [REQUIREMENTS_FILE], offers)
+            return self.phase(flow_codes.STALE, [flow_codes.REQUIREMENTS_STALE_MESSAGE] + warned, offers)
+        return self.phase(OK, [REQUIREMENTS_FILE] + warned, offers)
 
 
 def why_build_stale(project, record):

@@ -52,11 +52,11 @@ class WriteRequirements(AnswerOperation):
     what the picks leave off the board, owe, or shelve; a refusal writes nothing (`needs.match`'s problems)."""
 
     name = "requirements"
-    data_keys = ('path', 'requirements', 'shelved', 'unplaced', 'kept', 'board_was', 'placeholder_outline', 'unserved', 'no_supply', 'no_driver', 'no_receiver', 'written',
-                 'unexplained', 'remove_key', 'previous')
+    data_keys = ('path', 'requirements', 'shelved', 'unplaced', 'kept', 'board_was', 'placeholder_outline', 'no_simulation_stance', 'unserved', 'no_supply',
+                 'no_driver', 'no_receiver', 'written', 'unexplained', 'remove_key', 'previous')
     arguments = (Argument(("--requirements",), "project", str,
                           "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline "
-                          "is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; "
+                          "or its simulation stance is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; "
                           "board_only when the board itself serves every need; it names each entry that spark wrote for a pick that is gone "
                           "(data.unexplained), and removes them on the person's yes in --replies", metavar="PROJECT"),
                  ANSWER_ARGUMENTS["dry_run"],
@@ -82,7 +82,8 @@ class WriteRequirements(AnswerOperation):
 
     def _answer_of(self, project, dry_run, found):
         """The answer for the picks `found`: the file written, or what a dry run would write, and what the picks leave off."""
-        content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver, no_driver, unexplained = found
+        (content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver, no_driver, unexplained,
+         unsimulated) = found
         path, changed = Path(project) / need_requirements.REQUIREMENTS, False
         # F16: the drawer keys the file names before this write — need_requirements.requirements has read it as JSON already
         held = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
@@ -103,9 +104,7 @@ class WriteRequirements(AnswerOperation):
         said += ["  board %s: %s" % (content["board"], stop)] if stop else []  # F12 (C-7): said, never refused
         said += [] if problems else _part_limit_lines(content["parts"], Path(project))  # P778: what the simulation cannot show of each part
         said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
-        said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
-                 "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + board_components.DEFAULT_BODY_MM + (how,))
-                 for part_id, how in ([] if problems else placeholder)]
+        said += [] if problems else _owed_lines(placeholder, unsimulated)
         said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
         said += ["  kept, not from a pick: %s" % ", ".join(need_requirements.entry_label(entry) for entry in unexplained.persons)
                  ] if unexplained.persons and not problems else []
@@ -116,9 +115,20 @@ class WriteRequirements(AnswerOperation):
         said += [] if problems else names_your_entries(need_requirements.REQUIREMENTS, need_requirements.unserved_keys(content) - named, dry_run)
         return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
                        "unplaced": unplaced, "kept": kept, "board_was": board_was, "placeholder_outline": [part_id for part_id, _ in placeholder],
+                       "no_simulation_stance": [part_id for part_id, _ in unsimulated],
                        "unserved": unserved, "no_supply": no_supply, "no_driver": no_driver,
                        "no_receiver": no_receiver, "written": not problems and not dry_run},
                       write_lines([], problems, dry_run, said), problems=problems)
+
+
+def _owed_lines(placeholder, unsimulated):
+    """The warning lines of the picks placed though their records owe a fact (each `(part id, where it is filled)`): the
+    outline the PCB step lays out at a placeholder size, and the simulation stance (P996: said, never refused)."""
+    return (["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
+             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + board_components.DEFAULT_BODY_MM + (how,))
+             for part_id, how in placeholder]
+            + ["  no simulation stance — %s: spark does not know how to simulate it. The board and its parts still build, and "
+               "/spark:deploy asks your yes for firmware that no simulation tested — %s" % (part_id, how) for part_id, how in unsimulated])
 
 
 def _gone_lines(unexplained):
