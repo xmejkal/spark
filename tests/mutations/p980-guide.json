@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "done lists a hand-written project's needs and parts (P980)",
+  "find": "phase.phase in (flow_codes.NEEDS, flow_codes.PARTS)",
+  "replace": "False"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "a requirements with no picks behind it loses its label (P980)",
+  "find": "done.append(flow_codes.REQUIREMENTS_NO_PICKS)",
+  "replace": "done.append(phase.phase)"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "every need aside keeps the parts list now (P980)",
+  "find": "if now and now.phase == flow_codes.REQUIREMENTS and now.status != COULD_NOT_RUN and all_aside:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "the all-aside parts has no sentence (P980)",
+  "find": "(PARTS, OK_WORD): ALL_ASIDE_NOW,",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "every need aside hides a requirements that could not run (P980)",
+  "find": " and now.status != COULD_NOT_RUN and all_aside:",
+  "replace": " and all_aside:"
+ }
+]

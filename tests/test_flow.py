@@ -592,6 +592,8 @@ def a_firmware(project):
     return project
 
 
+# P980: a project with no needs behind its requirements.json lists no needs or parts as done: the five tests below that
+# build a hand-written project say `requirements (no needs or picks behind it)` in `done`, on purpose.
 # P977 review: the sentences the review asked for, and `now.by` a list (two jobs name the person and Claude)
 NO_MODEL = "No simulation: Wokwi has no model of this board. You test it on the real board."
 
@@ -626,7 +628,7 @@ class TheGuideTest(FlowTest):
             "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring."},
-            "done": ["idea", "needs", "parts", "requirements", "build (no simulation)"],
+            "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL})
 
     def test_a_sheet_whose_steps_cannot_be_counted_leaves_the_firmware_one_job_and_the_breadboard_done(self):
@@ -643,7 +645,7 @@ class TheGuideTest(FlowTest):
             "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
-            "done": ["idea", "needs", "parts", "requirements", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
+            "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
             "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL})
 
     def test_any_other_cause_of_a_simulation_that_could_not_run_stops_at_the_build(self):
@@ -652,7 +654,7 @@ class TheGuideTest(FlowTest):
                 guide = show(a_project_built_with_no_simulation(code))[0]["data"]["guide"]
                 self.assertEqual((guide["now"]["phase"], guide["now"]["says"], guide["now"]["offer"], guide["no_simulation"]),
                                  ("build", "The build phase could not run. Ask Claude to read you why.", "build", None))
-                self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements"])
+                self.assertEqual(guide["done"], ["idea", "requirements (no needs or picks behind it)"])
 
     def test_a_board_only_build_of_a_board_wokwi_has_no_model_of_is_passed_and_the_firmware_is_one_job(self):
         project = a_board_only_project("could-not-run")
@@ -662,7 +664,7 @@ class TheGuideTest(FlowTest):
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
                          ("firmware", "Ask Claude in the chat to write the firmware for this board."))
-        self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements", "build (no simulation)"])
+        self.assertEqual(guide["done"], ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"])
 
     def test_a_build_of_a_board_wokwi_has_no_model_of_is_stale_when_the_parts_list_changed(self):
         project = a_project_built_with_no_simulation()
@@ -694,7 +696,7 @@ class TheGuideTest(FlowTest):
         self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
                          ("simulate", ["your terminal"], "Ask Claude for the scenario command, and run it in your terminal. "
                                                          "It uses Wokwi CI minutes."))
-        self.assertEqual(guide["done"], ["idea", "needs", "parts", "requirements", "build", "breadboard (spark cannot see it)", "firmware"])
+        self.assertEqual(guide["done"], ["idea", "requirements (no needs or picks behind it)", "build", "breadboard (spark cannot see it)", "firmware"])
 
     def test_an_old_image_on_a_board_wokwi_has_no_model_of_is_counted_as_done(self):
         guide = show(an_image(a_firmware(a_project_built_with_no_simulation())))[0]["data"]["guide"]
@@ -765,6 +767,39 @@ class TheGuideTest(FlowTest):
         self.assertEqual(statuses(said)["parts"], "ok")
         self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"], said["data"]["guide"]["now"]["says"]),
                          ("requirements", "requirements", "Ask Claude in the chat to write the parts list from your picks."))
+
+    def test_a_hand_written_project_lists_no_needs_or_parts_as_done(self):
+        project = a_built_project()
+        phases, _ = read_flow(project)
+        guide = guide_of(project, phases, steps=lambda _project: None)
+        self.assertEqual((guide["now"]["phase"], guide["done"]),
+                         ("firmware", ["idea", "requirements (no needs or picks behind it)", "build", "breadboard (spark cannot see it)"]))
+
+    def test_a_project_whose_last_need_was_dropped_lists_no_needs_or_parts_as_done(self):
+        project = with_needs(a_built_project(), [])
+        phases, _ = read_flow(project)
+        guide = guide_of(project, phases, steps=lambda _project: None)
+        self.assertEqual((guide["now"]["phase"], guide["done"]),
+                         ("firmware", ["idea", "requirements (no needs or picks behind it)", "build", "breadboard (spark cannot see it)"]))
+
+    def test_every_need_set_aside_with_a_requirements_file_that_cannot_be_read_keeps_the_requirements_now(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True}])
+        (project / "requirements.json").write_text("{not json")
+        said, _ = show(project)
+        self.assertEqual((statuses(said)["requirements"], said["data"]["guide"]["now"]["phase"]), ("could-not-run", "requirements"))
+
+    def test_every_need_set_aside_makes_the_parts_now_and_not_the_parts_list(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True},
+            {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
+        guide = show(project)[0]["data"]["guide"]
+        self.assertEqual(guide["now"], {
+            "phase": "parts", "by": ["you"], "offer": None, "needs": [], "steps": None,
+            "says": "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, "
+                    "then pick a part."})
+        self.assertEqual((guide["done"], guide["later"], guide["set_aside"]), (
+            ["idea", "needs"], ["requirements", "build", "breadboard", "firmware", "simulate", "deploy"], ["soil", "wet"]))
 
     def test_the_build_record_keeps_the_code_of_a_stage_that_did_not_end_ok_and_no_detail(self):
         from spark.build import kept_files

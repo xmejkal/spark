@@ -18,7 +18,8 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   an offer changes: a pick's effect changes with the drawer count. No other file of the project changes it, except through
   an offer. The page carries its first 12 hex digits ([P829](https://github.com/xmejkal/spark/issues/1187)).
 - `stands_at`: the first phase that is open. It passes a phase whose `status` is `ok` or `null`. Only `ok` is a pass
-  that spark judged. The deploy is never done here, so `stands_at` always names a phase.
+  that spark judged. The deploy is never done here, so `stands_at` always names a phase. With every need set aside it
+  can say `requirements` while `guide.now` says `parts`: see `guide` below.
 - `guide` ([P977](https://github.com/xmejkal/spark/issues/1407)): what the person does now. `now` is `{phase, by, says,
   offer, needs, steps}`: the phase to act on, who acts (a list: `["you", "claude"]` when the firmware and the wiring are two
   jobs, else one item), one sentence for the person, the key of the offer that does the job (or `null`), for the
@@ -26,7 +27,15 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   firmware), else `null`.
 
   While no need is written, `now` is the idea. `now` is `null` only with a phase list a
-  test swaps in. `done` names the phases before `now`; the breadboard is in it only once `now` is past the firmware's
+  test swaps in. `done` names the phases before `now` that were done. With no picks behind the parts list (a
+  requirements.json written by hand, or a project whose last need was dropped), `needs` and `parts` are left out and
+  `done` says `requirements (no needs or picks behind it)`.
+
+  With every need set aside, the parts phase is `ok` (nothing is left to pick), but no pick can make the parts list, so
+  `now` is `parts` and tells the person to bring a need back and pick a part. `stands_at` can still say `requirements`.
+  The requirements offer stays on the page and a click on it is refused (no board is picked): do not run the
+  requirements offer; ask the person which need to bring back. A requirements phase that could not run stays `now`. The
+  breadboard is in `done` only once `now` is past the firmware's
   two jobs and the sheet is current, as `breadboard (spark cannot see it)`. `later` names the phases after `now`; one whose status is
   `ok` carries the suffix ` (done, may change)`, because a change before it can make it stale. An item of `done` or
   `later` can carry a suffix in parentheses: match on the name before it.
