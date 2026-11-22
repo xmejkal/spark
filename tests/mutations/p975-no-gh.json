@@ -1,4 +1,4 @@
 [
- {"file": "scripts/spark/checks/vendor_pins_check.py", "name": "a missing gh is not caught", "find": "    except FileNotFoundError:\n        raise RuntimeError(GH_MISSING_MESSAGE) from None", "replace": "    except ZeroDivisionError:\n        raise RuntimeError(GH_MISSING_MESSAGE) from None"},
- {"file": "scripts/spark/checks/vendor_pins_check.py", "name": "the sentence stops saying gh is missing", "find": "GH_MISSING_MESSAGE = \"gh is not installed: spark reads", "replace": "GH_MISSING_MESSAGE = \"could not fetch: spark reads"}
+ {"file": "scripts/spark/checks/vendor_pins_check.py", "name": "a gh that cannot run is not caught", "find": "    except OSError:  # P975: no gh on PATH, or a gh that cannot run\n", "replace": "    except FileNotFoundError:  # P975: no gh on PATH, or a gh that cannot run\n"},
+ {"file": "scripts/spark/checks/vendor_pins_check.py", "name": "the sentence stops saying gh is missing", "find": "GH_MISSING_MESSAGE = \"gh is not installed or cannot run: spark reads", "replace": "GH_MISSING_MESSAGE = \"could not fetch: spark reads"}
 ]

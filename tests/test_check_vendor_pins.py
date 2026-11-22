@@ -385,8 +385,19 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         with mock.patch.dict(os.environ, {"PATH": str(Path(tempfile.mkdtemp()))}):
             result = vendor_pins_check.check_board(path, offline=False, repo="x/y")
         self.assertEqual((result["status"], result["reason"].code), ("could-not-run", "header_not_fetched"))
-        self.assertIn("gh is not installed: spark reads the vendor's header with it", result["reason"])
+        self.assertIn("gh is not installed or cannot run: spark reads the vendor's header with it", result["reason"])
         self.assertFalse(self._kept(project, "p975_no_gh").exists())
+
+    def test_a_gh_that_cannot_run_is_told_by_the_same_code(self):
+        # P975 review: a gh on PATH that is not executable raised PermissionError, which the handler did not catch either.
+        project, path = self._project(self._board("p975_gh_not_executable"))
+        folder = Path(tempfile.mkdtemp())
+        (folder / "gh").write_text("#!/bin/sh\n")
+        (folder / "gh").chmod(0o644)
+        with mock.patch.dict(os.environ, {"PATH": str(folder)}):
+            result = vendor_pins_check.check_board(path, offline=False, repo="x/y")
+        self.assertEqual((result["status"], result["reason"].code), ("could-not-run", "header_not_fetched"))
+        self.assertIn("gh is not installed or cannot run", result["reason"])
 
     def test_the_live_line_says_which_file_it_wrote(self):
         project, path = self._project(self._board("p179_said"))

@@ -59,7 +59,7 @@ NOT_A_SILKSCREEN_LABEL = re.compile(r"^(T\d+|LED_BUILTIN|BUILTIN_LED|RGB_BUILTIN
 CACHE_DIR = ".spark/cache"
 
 #: P975: the sentence when `gh` is not on PATH.
-GH_MISSING_MESSAGE = "gh is not installed: spark reads the vendor's header with it. Install the GitHub CLI (https://cli.github.com), or run with --offline."
+GH_MISSING_MESSAGE = "gh is not installed or cannot run: spark reads the vendor's header with it. Install the GitHub CLI (https://cli.github.com), or run with --offline."
 
 
 def fetch_variant_header(variant: str, repo: str) -> str:
@@ -69,7 +69,7 @@ def fetch_variant_header(variant: str, repo: str) -> str:
         result = subprocess.run(
             ["gh", "api", "repos/%s/contents/%s" % (repo, path), "--jq", ".content"],
             capture_output=True, text=True)
-    except FileNotFoundError:
+    except OSError:  # P975: no gh on PATH, or a gh that cannot run
         raise RuntimeError(GH_MISSING_MESSAGE) from None
     if result.returncode != 0:
         raise RuntimeError("could not fetch %s from %s: %s"
