@@ -110,7 +110,7 @@ for screen still lacks what spark needs: simulation. Ask Claude how to fill it i
 `problems` once every need that counts has a pick (exit 1, and the guide says the phase has problems), else
 `not-started`: the parts phase is `now` and holds the blocker. The guide's NOW sentence of the parts list and of the build
 names the step only (`Build the board. …`); on the published page the script adds `Use the button.` before the NOW
-line's button.
+line's button, but not before a pick's (that line already says to tell Claude a pick).
 
 The parts phase offers at most three picks per need ([P976](https://github.com/xmejkal/spark/issues/1406)). They are
 the need's plausible candidates in the order of `parts.py --match`: each holds the need's words or scores above 0 with

@@ -1237,6 +1237,14 @@ class TheBlockersTest(FlowTest):
         self.assertEqual((now["phase"], now["offer"], now["says"]),
                          ("requirements", None, "The requirements phase has problems. Ask Claude to go through them with you."))
 
+    def test_a_pick_stored_as_its_drawer_entry_is_named_with_its_need(self):
+        # P993 review (refuter): the pick names the entry, the owed problem names its record
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD + [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"entry": "many"}]}])
+        self.assertEqual(says(show(project)[0], "requirements")[1],
+                         "“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof, "
+                         "simulation. Ask Claude how to fill it in.")
+
     def test_every_need_set_aside_offers_no_parts_list_and_is_not_started(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
             {"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True},

@@ -17,3 +17,7 @@ Opus, one round. This file holds the acted, raised and rejected findings only. 2
 | 9 | the merged refusal sentence is long; rows 3 and 4 could fold into tests | plan council lens 4 and 7 | rejected | dropped because MVP first: the sentence is true and the rows are each caught by a test |
 | 10 | mutation row 4's anchor occurs four times | plan council refuter | acted | the anchor is `NO_NEW_PICK_MESSAGE % (need, `; `--anchors` refuses none of the new rows |
 | 11 | no page test for a pick that owes a fact | plan council refuter | acted | `test_flow_page.TheCommandTest.test_a_pick_that_owes_a_fact_gives_no_parts_list_button_and_shows_what_it_owes` |
+| 12 | "Ask Claude to fill it in" is not true for a record in spark's own library, filled by a commit in spark's repository | PR lens (Sonnet) | acted | fixed: `Ask Claude how to fill it in.` |
+| 13 | the requirements-file test pins no says line | PR lens (Sonnet) | acted | fixed: it pins both lines of the refusal |
+| 14 | the parts' NOW line can carry a pick button, so "Use the button." stood after "Tell Claude a pick" | PR refuter (Opus) | acted | fixed: the script adds it on a `<p>` whose key is no pick; a JS assertion and row 7 |
+| 15 | a pick stored as its drawer entry is named with no need | PR refuter (Opus) | acted | fixed: `needs_holding` reads each pick through `needs.as_record`; a test and row 8 |

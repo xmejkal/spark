@@ -32,7 +32,19 @@
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "P993: the NOW button stands with no sentence that says to use it (test_flow_script.PageScriptTest)",
-  "find": "item.tagName === \"P\" ?",
-  "replace": "item.tagName === \"LI\" ?"
+  "find": "const told = item.tagName === \"P\" &&",
+  "replace": "const told = false &&"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P993 review: a pick's NOW line also says to use the button (test_flow_script.PageScriptTest)",
+  "find": "&& kindOf(key) !== \"pick\";",
+  "replace": "&& true;"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P993 review: a pick stored as its drawer entry is named with no need (test_flow.TheBlockersTest)",
+  "find": "if any(key in needs.as_record(pick, plan.known, plan.entries).values()",
+  "replace": "if any(key in pick.values()"
  }
 ]

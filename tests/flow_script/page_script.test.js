@@ -51,11 +51,11 @@ class FakeElement {
 
 /** Fake: a page with an intro, one sendable offer and the guide's NOW line of it, and a window whose claude.use gives `db`
  * and a user who is the owner unless `owner` is false (null: no user capability). */
-function fakeWindow(db, owner = true) {
+function fakeWindow(db, owner = true, nowKey = "build") {
   const body = new FakeElement("body", { "data-fingerprint": "0123456789ab", "data-written": "2026-11-21T15:40:00+01:00" });
   const intro = body.appendChild(new FakeElement("p", { class: "intro" }));
   intro.textContent = "Where this project stands. This page only shows it. To change anything, tell Claude in the chat.";
-  const now = body.appendChild(new FakeElement("p", { "data-key": "build", "data-makes-stale": "" }));
+  const now = body.appendChild(new FakeElement("p", { "data-key": nowKey, "data-makes-stale": "" }));
   const offer = body.appendChild(new FakeElement("li", { "data-key": "build", "data-makes-stale": "" }));
   const words = new FakeElement("script", { id: "spark-words" });
   words.textContent = JSON.stringify(WORDS);
@@ -132,6 +132,10 @@ test("for the owner each sendable offer and the NOW line get a button, the intro
   assert.equal(offer.children[1].textContent, "Build the board");
   // P993: the NOW line's sentence names the step; with its button there it says to use it
   assert.deepEqual([now.children[0].text, offer.children[0].text], [" Use the button. ", " "]);
+  // P993 review: the parts' NOW line says "Tell Claude a pick", so its pick button gets no second order
+  const picked = fakeWindow(fakeDb(), true, "pick:light:led-red-5mm");
+  await script.start(picked.win);
+  assert.equal(picked.now.children[0].text, " ");
   assert.equal(intro.textContent, "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.");
   const panel = made.find((element) => element.tag === "section");
   assert.match(panel.children[0].textContent, /^Page from \d\d:\d\d\.$/);

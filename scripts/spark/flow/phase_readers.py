@@ -300,6 +300,12 @@ def owed_facts(plan, key):
     return [fact for fact in record_kind.owes(record) if fact not in need_requirements.LAYOUT_FACTS] if isinstance(record, dict) else []
 
 
+def needs_holding(plan, key):
+    """The ids of the needs whose picks are the record `key`, a pick of its drawer entry too (`needs.as_record`)."""
+    return [need["id"] for need in plan.current
+            if any(key in needs.as_record(pick, plan.known, plan.entries).values() for pick in need.get("pick") or [])]
+
+
 def blocker_lines(project, problems):
     """The parts list's problems as the person reads them (P993): a pick that owes a fact by its name, the needs that pick
     it and what it owes, in plain words; any other as its own line (`problem_lines`)."""
@@ -307,7 +313,7 @@ def blocker_lines(project, problems):
     for problem in problems:
         owed = owed_facts(plan, problem["subject"]) if problem["sentence"].startswith("owes ") else []
         named = "“%s”" % plan.name_of(problem["subject"])
-        by = ", ".join(plan.needs_picking(problem["subject"], None))
+        by = ", ".join(needs_holding(plan, problem["subject"]))
         said += ([flow_codes.OWED_MESSAGE % (flow_codes.PICKED_BY % (named, by) if by else named, ", ".join(owed))] if owed
                  else problem_lines([problem]))
     return said
