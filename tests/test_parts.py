@@ -43,7 +43,7 @@ from spark.records import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
-from spark.sourcing import brief_choices, datasheets, list_unverified, part_facts, part_records, record_home, sourcing_codes  # noqa: E402
+from spark.sourcing import brief_choices, datasheets, list_unverified, part_facts, part_records, record_home  # noqa: E402
 from spark.sourcing.set_drawer import SetDrawer  # noqa: E402
 from spark.core import cli  # noqa: E402
 from spark.core.errors import CodedMessageError  # noqa: E402
@@ -3535,7 +3535,8 @@ class AWriterChangesOnlyTheNamedProjectTest(unittest.TestCase):
         self.assertIn("irrigation", problem["sentence"])
         self.assertTrue(str(self.irrigation) in problem["sentence"] or str(self.irrigation.resolve()) in problem["sentence"],
                         problem["sentence"])
-        self.assertEqual(problem["fix"], sourcing_codes.OTHER_PROJECT_RECORD.fix)
+        self.assertTrue(problem["fix"].startswith("run the same command again with --project <the folder the sentence names>"),
+                        problem["fix"])
         self.assertEqual(asked, [], "nothing was fetched")
         self.assertEqual(self.snapshot(), before, "irrigation and the store are as they were")
 

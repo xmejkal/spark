@@ -90,7 +90,6 @@
 "R6:scripts/spark/sourcing/matching.py:SameWords": 1,
 "R6:scripts/spark/sourcing/matching.py:UnknownMatcherError": 1,
 "R6:scripts/spark/sourcing/matching.py:WordOverlap": 1,
-"R6:scripts/spark/sourcing/part_records.py:PartError": 1,
 "R6:scripts/spark/sourcing/run_cost.py:NoTranscriptError": 1,
 "T1:scripts/assign_pins.py:file-write": 1,
 "T1:scripts/emit_footprint.py:file-write": 1,
