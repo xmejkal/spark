@@ -1,7 +1,7 @@
 """
 A part record's own home (P726 PR 3; the functions were `part_handlers`' since W6-S3b): where a record's file is and which
 project's shelf copy follows it (`record_path`, `shelved_from`, §5.4 and §5.5; never a record only another listed project
-holds, P987), the copy made current again
+holds, P987; an orphan copy is adopted by the one listed project that holds it, `orphan_home`, P1006), the copy made current again
 (`refresh_shelf_copy`), a record with values set by name (`merge_values`), and the write of fields into that home
 (`set_fields`), never into spark's library. A `RecordHome` Value enters when a third caller needs (path, source) as one.
 """
@@ -48,12 +48,39 @@ def record_path(part_id, project, kind="part"):
                             fix=sourcing_codes.OTHER_PROJECT_RECORD_FOLDER.fix % shlex.quote(printable(str(folder))))
     shelf = store.place("board-shelf" if kind == "board" else "shelf")  # P989: a board file's shelf is the shelf's boards/
     if path is not None and path.parent == shelf:
-        named = shelved_from(path)
+        named = shelved_from(path) or orphan_home(path, kind)
         folder = store.projects().get(named) if named else None
         home = folder / ("boards" if kind == "board" else "parts") / path.name if folder is not None else None
         return (home, named) if home is not None and home.is_file() else (path, None)
     named = store.find_listed_name(project) if where == "project" else None
-    return path, named if named and shelved_from(shelf / path.name) == named else None
+    return path, named if named and named in (shelved_from(shelf / path.name), orphan_home(shelf / path.name, kind)) else None
+
+
+def orphan_home(copy_path, kind="part", listing=None):
+    """
+    The listed project an orphan shelf copy belongs to (P1006), or None. A copy is an orphan when it names no project (no
+    `based_on`: it was shelved while its folder was on no list), no catalog record has its id (a catalog copy names no
+    project by design), exactly one project on the person's list holds a record of its id, and that record is the same part:
+    its `name` and `kind` are the copy's. A project that holds another part under the same id never adopts the copy.
+    `listing` is (name, folder) of a folder a dry run would list, read as if it were on the list.
+    """
+    copy = _parse(copy_path) if Path(copy_path).is_file() else None
+    if not isinstance(copy, dict) or "based_on" in copy:
+        return None
+    if kind != "board" and (store.place("catalog") / Path(copy_path).name).is_file():
+        return None
+    folder = "boards" if kind == "board" else "parts"
+    listed = dict(store.projects(), **dict([listing] if listing else []))
+    holders = [(name, Path(root) / folder / Path(copy_path).name) for name, root in listed.items()
+               if (Path(root) / folder / Path(copy_path).name).is_file()]
+    if len(holders) != 1:
+        return None
+    record = _parse(holders[0][1])
+    same = isinstance(record, dict) and (record.get("name"), record.get("kind")) == (copy.get("name"), copy.get("kind"))
+    return holders[0][0] if same else None
+
+#: What `refresh_shelf_copy` says when it wrote the copy, and when a dry run would.
+REFRESHED, WOULD_REFRESH = "shelf copy refreshed", "would refresh the shelf copy"
 
 
 def refresh_shelf_copy(path, record, project_name, dry_run):
@@ -69,9 +96,48 @@ def refresh_shelf_copy(path, record, project_name, dry_run):
     if wrong:
         return "shelf copy not refreshed: %s" % "; ".join(wrong)
     if dry_run:
-        return "would refresh the shelf copy"
+        return WOULD_REFRESH
     shelve(path, project_name)
-    return "shelf copy refreshed"
+    return REFRESHED
+
+
+#: Said by a run that lists a folder, for each orphan copy of its records (P1006): adopted, would be, or refused and why.
+ADOPTED = "  adopted the shelf copy of %s: it was shelved while this folder was on no list, and now follows its record here"
+WOULD_ADOPT = "  would adopt the shelf copy of %s: it was shelved while this folder was on no list"
+NOT_ADOPTED = "  shelf copy of %s not adopted: %s"
+
+
+def list_project(folder, dry_run=False):
+    """
+    Put `folder` on the person's list (`store.add_project`; a dry run only names it) and adopt the orphan shelf copies of
+    its records (P1006): each copy `orphan_home` gives this project is refreshed from the record, with `based_on`.
+    Returns (name, [(id, what refresh_shelf_copy said)]) for each orphan copy found.
+    """
+    name, found = (store.plan_listed_name(folder) if dry_run else store.add_project(folder)), []
+    for kind, sub in (("part", "parts"), ("board", "boards")):
+        shelf = store.place("board-shelf" if kind == "board" else "shelf")
+        for path in sorted((Path(folder) / sub).glob("*.json")):
+            record = _parse(path)
+            if isinstance(record, dict) and orphan_home(shelf / path.name, kind, (name, Path(folder).resolve())) == name:
+                found.append((path.stem, refresh_shelf_copy(path, record, name, dry_run)))
+    return name, found
+
+
+def adoption_lines(found):
+    """The sentences of `list_project`'s orphan copies, one per copy."""
+    return [ADOPTED % one if said == REFRESHED else WOULD_ADOPT % one if said == WOULD_REFRESH else NOT_ADOPTED % (one, said)
+            for one, said in found]
+
+
+def adopted_ids(found):
+    """The ids of the copies `list_project` adopted, or would adopt in a dry run: `data.adopted` of --step and --pick."""
+    return [one for one, said in found if said in (REFRESHED, WOULD_REFRESH)]
+
+
+def listing_notes(folder):
+    """The init's sentences of `list_project`: the name on the list, then each orphan copy. store.StoreError says why not."""
+    name, found = list_project(folder)
+    return ["on your projects list as %r" % name] + [line.strip() for line in adoption_lines(found)]
 
 
 def merge_values(record, values):

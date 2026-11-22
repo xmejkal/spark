@@ -9,7 +9,7 @@ from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Arg
 from spark.records import store
 from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
 from spark.records.record_kind import Answer, _cannot, _note
-from spark.sourcing import drawer
+from spark.sourcing import drawer, record_home
 from spark.sourcing.write_answers import names_your_entries, write_lines
 from spark.design import design_codes, needs
 
@@ -70,8 +70,8 @@ class PickParts(AnswerOperation):
         history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
         listed, keys_before = store.find_listed_name(target) is not None, needs.entry_keys(needs.read(target))
         after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
+        _, adopted = record_home.list_project(target, dry_run) if not problems else (None, [])  # lists the folder first
         if not problems and not dry_run:
-            store.add_project(target)
             drawer.apply(changes)
             for event in events:
                 store.append_event(event)
@@ -87,7 +87,8 @@ class PickParts(AnswerOperation):
         wrote = [] if problems else what_a_pick_wrote(name, listed, history, events, needs.entry_keys(after) - keys_before, dry_run)
         return Answer({"project": name, "picks": picks,
                        "reserved": [{"entry": change["entry"], "used_in": change["now"]["used_in"]} for change in changes],
-                       "released": released, "written": not problems and not dry_run},
-                      write_lines(changes, problems, dry_run, said + ["  %s" % note for note in notes] + wrote), problems=problems,
+                       "released": released, "written": not problems and not dry_run,
+                       "adopted": record_home.adopted_ids(adopted)},
+                      write_lines(changes, problems, dry_run, said + ["  %s" % note for note in notes] + wrote + record_home.adoption_lines(adopted)), problems=problems,
                       notes=[_note(note) for note in notes])
 # --- end MVP ---

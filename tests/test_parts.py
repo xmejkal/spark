@@ -3428,6 +3428,84 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
                                  (True, ["  shelf copy refreshed"]))
                 self.assertEqual(self.shelved(home)["footprint"], "pinrow2")
 
+    def an_orphan_copy(self, home):
+        """The shelf copy as /spark:identify's link left it while irrigation was on no list: no based_on (P1006)."""
+        copy = self.shelved(home)
+        copy.pop("based_on")
+        (home / "shelf" / "x-valve.json").write_text(json.dumps(copy))
+
+    def test_an_orphan_shelf_copy_is_adopted_by_the_one_listed_project_that_holds_it(self):
+        # P1006: shelved while its folder was on no list, the copy named no project, and no write ever refreshed it
+        for through in ("its project", "the shelf copy"):
+            home, other = self.a_valve_in_irrigation()
+            self.an_orphan_copy(home)
+            with self.subTest(through=through), in_store(home):
+                said = self.text(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"})]
+                                 + (["--project", str(other)] if through == "its project" else []))
+                self.assertEqual(said.splitlines()[1:], ["  shelf copy refreshed"])
+                self.assertEqual(json.loads((other / "parts" / "x-valve.json").read_text())["footprint"], "pinrow2")
+                self.assertEqual((self.shelved(home)["footprint"], self.shelved(home)["based_on"]["project"]), ("pinrow2", "irrigation"))
+
+    def test_listing_a_folder_adopts_the_orphan_copy_of_its_record(self):
+        # P1006: the copy was shelved while the folder was on no list; --step lists the folder and the copy follows it
+        home, other = self.a_valve_in_irrigation(footprint="pinrow2")
+        self.an_orphan_copy(home)
+        (home / "projects.json").write_text("{}")
+        with in_store(home):
+            dry = self.text(["--step", str(other), "S", "--dry-run"])
+            self.assertNotIn("based_on", self.shelved(home), "a dry run adopts nothing")
+            said = self.text(["--step", str(other), "S"])
+        name = Path(other).name
+        self.assertIn("  adopted the shelf copy of x-valve: it was shelved while this folder was on no list, and now follows its record here", said.splitlines())
+        self.assertNotIn("  adopted", dry)
+        self.assertEqual((self.shelved(home)["based_on"]["project"], self.shelved(home)["footprint"]), (name, "pinrow2"))
+
+    def test_a_project_that_holds_another_part_under_the_id_never_adopts_the_copy(self):
+        # P1006 review: the copy came from an unlisted folder; garden holds another part named x-valve, so nothing is adopted
+        home, other = self.a_valve_in_irrigation()
+        self.an_orphan_copy(home)
+        (other / "parts" / "x-valve.json").write_text(json.dumps({"schema": 1, "id": "x-valve", "name": "Another valve",
+                                                                  "kind": "mosfet-driver", "needs": []}))
+        with in_store(home):
+            fact = self.text(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"})])
+            (home / "projects.json").write_text("{}")
+            step = self.text(["--step", str(other), "S"])
+        self.assertEqual((self.shelved(home)["name"], "based_on" in self.shelved(home)), ("A valve driver", False))
+        self.assertNotIn("shelf copy refreshed", fact)
+        self.assertNotIn("adopted", step)
+
+    def test_a_dry_run_says_it_would_adopt_and_the_json_names_the_adopted_ids(self):
+        home, other = self.a_valve_in_irrigation(footprint="pinrow2")
+        self.an_orphan_copy(home)
+        (home / "projects.json").write_text("{}")
+        with in_store(home):
+            dry = self.text(["--step", str(other), "S", "--dry-run"])
+            said, code = run_json(["--step", str(other), "S"])
+        self.assertIn("  would adopt the shelf copy of x-valve: it was shelved while this folder was on no list", dry.splitlines())
+        self.assertEqual((code, said["data"]["adopted"]), (0, ["x-valve"]))
+
+    def test_a_shelf_copy_is_not_adopted_when_the_catalog_or_two_projects_hold_its_id_or_it_names_a_project(self):
+        for holder in ("the catalog", "a second project", "a copy that names another project"):
+            home, other = self.a_valve_in_irrigation()
+            self.an_orphan_copy(home)
+            if holder == "a copy that names another project":
+                copy = dict(self.shelved(home), based_on={"project": "garden", "digest": "0" * 64})
+                (home / "shelf" / "x-valve.json").write_text(json.dumps(copy))
+            elif holder == "the catalog":
+                (home / "catalog").mkdir()
+                (home / "catalog" / "x-valve.json").write_text((other / "parts" / "x-valve.json").read_text())
+            else:
+                second = Path(tempfile.mkdtemp()) / "garden"
+                (second / "parts").mkdir(parents=True)
+                (second / "parts" / "x-valve.json").write_text((other / "parts" / "x-valve.json").read_text())
+                (home / "projects.json").write_text(json.dumps({"irrigation": str(other), "garden": str(second)}))
+            with self.subTest(holder=holder), in_store(home):
+                said = self.text(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"}), "--project", str(other)])
+                self.assertNotIn("shelf copy", said)
+                self.assertEqual(self.shelved(home).get("based_on", {}).get("project"),
+                                 "garden" if holder == "a copy that names another project" else None)
+                self.assertNotIn("footprint", self.shelved(home))
+
     def test_a_fetch_through_a_shelf_copy_keeps_the_documents_in_its_project_and_the_copy_follows(self):
         # P983: --fetch found the shelf copy by record_kind.record_home and wrote the copy itself, so the next write elsewhere
         # refreshed it from irrigation's record and the kept documents were lost; spark's library holds the id too
