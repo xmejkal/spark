@@ -203,6 +203,56 @@ class PinsAskedForByNameTest(unittest.TestCase):
         self.assertNotIn("P0", free)
 
 
+class JoinedPadsAreOnePinTest(unittest.TestCase):
+    """P971 (#1392): the pads that a board joins inside itself, in `physical.header.joined_pads`, are one pin."""
+
+    def joined(self, groups, **overrides):
+        """The test board with its P0 and P1 joined, or the groups given."""
+        record = board(**overrides)
+        record["physical"] = {"header": {"joined_pads": {"value": groups}}}
+        return record
+
+    def test_on_the_c6_sda_and_io19_never_go_to_two_signals(self):
+        import json
+        record = json.loads((ROOT / "tests" / "data" / "breadboard" / "walk-c6" / "boards" / "firebeetle2-esp32c6.json").read_text())
+        record["physical"]["header"]["joined_pads"] = {"value": [["3V3", "3V3_2"], ["GND1", "GND2"], ["SDA", "IO19"], ["SCL", "IO20"]]}
+        record["pins"].update({"IO19": 19, "IO20": 20})
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(record, [{"name": "EPD_RST", "pin": "SDA"}, {"name": "LED", "pin": "IO19"}])
+        self.assertEqual(refused.exception.code, "pin_taken")
+        self.assertIn("the board joins SDA and IO19 inside itself, so they are one pin", str(refused.exception))
+        assignments, _ = pin_assigner.assign(record, [{"name": "S%d" % number} for number in range(14)])
+        self.assertEqual(len([entry for entry in assignments if entry["pin"] in ("SDA", "IO19")]), 1)
+
+    def test_two_labels_of_one_pad_with_no_group_say_no_join(self):
+        record = board()
+        record["pins"]["SS"] = 0
+        record["physical"] = {"pad_aliases": {"SS": "P0"}}
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(record, [{"name": "A", "pin": "P0"}, {"name": "B", "pin": "SS"}])
+        self.assertNotIn("joins", str(refused.exception))
+
+    def test_a_named_pad_joined_to_a_taken_one_is_refused(self):
+        record = self.joined([["P0", "P1"]])
+        self.assertNotEqual(pin_assigner.board_pads.JoinedPads.from_record(record).groups, ())
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(record, [{"name": "A", "pin": "P0"}, {"name": "B", "pin": "P1"}])
+        self.assertEqual(refused.exception.code, "pin_taken")
+        self.assertIn("the board joins P0 and P1 inside itself, so they are one pin", str(refused.exception))
+
+    def test_a_named_pin_takes_its_joined_pads_out_of_play(self):
+        assignments, free = pin_assigner.assign(self.joined([["P0", "P1"]]), [{"name": "A", "pin": "P0"}, {"name": "LED"}])
+        self.assertNotEqual(placed(assignments)["LED"], "P1")
+        self.assertNotIn("P1", free)
+
+    def test_a_picked_pin_takes_its_joined_pads_out_of_play(self):
+        # P0 and P1 are the two plainest pins, so the first plain signal takes P0 and the second would take P1.
+        assignments, free = pin_assigner.assign(self.joined([["P0", "P1"]]), [{"name": "A"}, {"name": "B"}])
+        self.assertEqual(placed(assignments)["A"], "P0")
+        self.assertNotEqual(placed(assignments)["B"], "P1")
+        self.assertNotIn("P1", free)
+
+
 class RefusalTest(unittest.TestCase):
     def test_more_wake_signals_than_wake_pins_is_refused_with_the_reason(self):
         signals = [{"name": "W%d" % n, "needs": ["wake"]} for n in range(4)]

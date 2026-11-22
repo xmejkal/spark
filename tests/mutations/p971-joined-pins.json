@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/spark/design/pin_assigner.py",
+  "name": "a picked pin leaves its joined pads free",
+  "find": "        taken_gpio |= joined.holds(label)\n        why = _why(needs, pin)",
+  "replace": "        taken_gpio.add(pin[\"gpio\"])\n        why = _why(needs, pin)"
+ },
+ {
+  "file": "scripts/spark/design/pin_assigner.py",
+  "name": "the refusal names no group",
+  "find": "% (signal[\"name\"], label, gpio) + joined.said(label), design_codes.PIN_TAKEN)",
+  "replace": "% (signal[\"name\"], label, gpio), design_codes.PIN_TAKEN)"
+ },
+ {
+  "file": "scripts/spark/design/pin_assigner.py",
+  "name": "no group is read",
+  "find": "board_pads.JoinedPads.from_record(board), dict(board[\"pins\"]))",
+  "replace": "board_pads.JoinedPads(()), dict(board[\"pins\"]))"
+ }
+]
