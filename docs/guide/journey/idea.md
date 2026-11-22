@@ -19,7 +19,7 @@ In Claude Code, Claude asks at most three questions, one at a time, then writes 
 
 - each need is a verb and a few words;
 - no part numbers;
-- a `condition` only when it decides a part.
+- a `condition` only when it decides a part, in a part's own words ("e-paper"). It never changes a score. Among what you own, the candidates come in this order: what holds the need's words, then a record before a drawer entry ([P991](https://github.com/xmejkal/spark/issues/1444)), then the most `condition` words that the same-verb functions and tags hold, then the score ([P1015](https://github.com/xmejkal/spark/issues/1476)). The count is raw, with only a few filler words dropped, so "a push button" also lifts a joystick whose function says "push button".
 
 For *"tell me when my plant is thirsty"*:
 

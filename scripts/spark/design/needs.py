@@ -203,18 +203,24 @@ def _candidate(need, fit, context, mine=None):
 
 def _rank(need, built, mine=None, matcher=None):
     """The candidates for one need from the offers `built`, ranked by `offers.rank_key` (owned first; what holds the words,
-    then a record, then the best score), then nearest, another project with the shelf (P991). No limits yet."""
+    then a record, then the most condition words, P1015, then the best score), then nearest, another project with the
+    shelf (P991). No limits yet."""
     context = {(offer.kind, offer.key): said for offer, said in built}
-    ranked = (matcher or matching.matcher(MATCHER, "match")).rank(need, [offer for offer, _ in built])
-    found = [_candidate(need, fit, context[(fit.offer.kind, fit.offer.key)], mine) for fit in ranked]
-    return sorted(found, key=lambda c: offers.rank_key(c) + (LAYERS.index(c["in"] if c["in"] in LAYERS else "shelf"),
-                                                             c["id"] or c["entry"]))
+    chosen = matcher or matching.matcher(MATCHER, "match")
+    found = [(_candidate(need, fit, context[(fit.offer.kind, fit.offer.key)], mine), chosen.condition_hits(need, fit.offer))
+             for fit in chosen.rank(need, [offer for offer, _ in built])]
+
+    def order(pair):
+        c, hits = pair
+        return offers.rank_key(c, hits) + (LAYERS.index(c["in"] if c["in"] in LAYERS else "shelf"), c["id"] or c["entry"])
+    return [c for c, _ in sorted(found, key=order)]
 
 
 def candidates(need, known, entries, mine=None, matcher=None, definitions=None):
     """
     The store's candidates for one need (§6.2's code half): every offer the matcher admits, in `_rank`'s order (owned
-    first, then a record, then the best score, then nearest). The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
+    first, then a record, then the most condition words, then the best score, then nearest). The matcher is MATCHER's
+    unless one is given (P211). Similar enough is the chooser's call. What
     `mine`, the asking project, holds is free to it. A board candidate gets its `limits` (P397), and a part candidate those of its
     record (`limits_of_part`: a stand-in, a chip's note, a skip; P778); `definitions` is the dict that
     `role_limits` fills, so a caller that matches several needs reads each board's Wokwi definition once.

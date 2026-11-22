@@ -44,7 +44,7 @@ from spark.records import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
-from spark.sourcing import brief_choices, datasheets, list_unverified, part_facts, part_records, record_home  # noqa: E402
+from spark.sourcing import brief_choices, datasheets, list_unverified, offers, part_facts, part_records, record_home  # noqa: E402
 from spark.sourcing.set_drawer import SetDrawer  # noqa: E402
 from spark.core import cli  # noqa: E402
 from spark.core.errors import CodedMessageError  # noqa: E402
@@ -951,6 +951,13 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         rows = datasheets.need(["vl6180x", "rangefinder"])[0]
         self.assertEqual([(r["id"] or r["entry"], r["owned"]) for r in rows], [("rangefinder-bits", 2), ("vl6180x-breakout", 0)])
         self.assertLess(rows[0]["score"], rows[1]["score"])
+
+    def test_the_condition_hits_order_inside_a_group_and_lift_nothing_into_a_better_one(self):
+        # P1015: the condition hits come after "a record before a drawer entry" (P991) and before the score; a score of 0 stays below
+        rows = {"record-1.0": ({"id": "a", "owned": 2, "score": 1.0}, 0), "record-0.4": ({"id": "b", "owned": 2, "score": 0.4}, 1),
+                "record-0": ({"id": "c", "owned": 2, "score": 0.0}, 1), "entry-1.0": ({"id": None, "owned": 2, "score": 1.0}, 1)}
+        self.assertEqual(sorted(rows, key=lambda name: offers.rank_key(*rows[name])), ["record-0.4", "record-1.0", "entry-1.0", "record-0"])
+        self.assertEqual(offers.rank_key(rows["record-1.0"][0]), offers.rank_key(*rows["record-1.0"]), "no hits given is 0")
 
     def test_need_puts_an_owned_record_before_an_owned_entry_with_no_record(self):
         # P991: what the person owns with a record comes first among what they own, though an entry with none scores more

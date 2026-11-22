@@ -284,6 +284,41 @@ def a_store_with_a_drawer():
     return home
 
 
+class TheConditionOrdersTest(unittest.TestCase):
+    """P1015: a need's condition orders its candidates and leaves every score as it is (the walk p934-display's screen)."""
+
+    def setUp(self):
+        self.home, self.project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "a-screen"
+        for folder in ("catalog", "drawer"):
+            (self.home / folder).mkdir()
+        records = {"x-board": {"name": "A board", "function": [{"does": "indicate", "what": "onboard display screen"}]},
+                   "x-tft": {"name": "A TFT", "function": [{"does": "indicate", "what": "display"}]},
+                   "x-epaper": {"name": "A 2.9 inch module", "about": "A three-colour display screen."}}
+        for key, record in records.items():
+            (self.home / "catalog" / (key + ".json")).write_text(json.dumps(dict({"schema": 1, "id": key, "kind": "display"}, **record)))
+            entry = {"schema": 1, "label": key, "count": 1, "is": {"part": key}}
+            if key == "x-epaper":  # the e-paper's words are in its drawer entry's function, as in the walk
+                entry["function"] = [{"does": "indicate", "what": "a 2.9 inch three-colour e-paper picture"}]
+            (self.home / "drawer" / (key + ".json")).write_text(json.dumps(entry))
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        screen = {"does": "indicate", "what": "display screen"}
+        run(["--needs-set", str(self.project), a_file([dict(screen, id="screen", condition="e-paper"), dict(screen, id="plain")])])
+
+    def first_three(self, need):
+        said, _ = run(["--match", str(self.project)])
+        matched = list(said["data"]["needs"])
+        while said["truncated"] and said["truncated"]["next"]:
+            said, _ = run(["--match", str(self.project), "--from", str(len(matched))])
+            matched += said["data"]["needs"]
+        return [(c["id"], c["score"]) for c in [n for n in matched if n["need"] == need][0]["candidates"][:3]]
+
+    def test_the_condition_puts_the_owned_e_paper_first_and_keeps_each_score(self):
+        self.assertEqual(self.first_three("plain"), [("x-board", 1.0), ("x-tft", 0.5), ("x-epaper", 0.4)])
+        self.assertEqual(self.first_three("screen"), [("x-epaper", 0.4), ("x-board", 1.0), ("x-tft", 0.5)])
+
+
 class TheMatcherTest(unittest.TestCase):
     """§6.2's code half, §8 M: candidates by verb, store first, owned first, with owned and free counts and what each owes."""
 

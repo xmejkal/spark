@@ -1,0 +1,62 @@
+[
+ {
+  "file": "scripts/spark/sourcing/matching.py",
+  "name": "P1015: the condition hits are always 0 (test_matching.TheMatchersTest.test_condition_hits_count_functions_and_tags_only, test_needs.TheConditionOrdersTest)",
+  "find": "        return sum(1 for word in condition_words(need.get(\"condition\")) if word in held)",
+  "replace": "        return 0"
+ },
+ {
+  "file": "scripts/spark/sourcing/matching.py",
+  "name": "P1015: an offer's names count for the condition (test_matching.TheMatchersTest.test_condition_hits_count_functions_and_tags_only)",
+  "find": "for f in offer.functions if f.get(\"does\") == need.get(\"does\")] + list(offer.tags)",
+  "replace": "for f in offer.functions if f.get(\"does\") == need.get(\"does\")] + list(offer.tags) + list(offer.names)"
+ },
+ {
+  "file": "scripts/spark/sourcing/matching.py",
+  "name": "P1015: an offer's about text counts for the condition (test_matching.TheMatchersTest.test_condition_hits_count_functions_and_tags_only)",
+  "find": "for f in offer.functions if f.get(\"does\") == need.get(\"does\")] + list(offer.tags)",
+  "replace": "for f in offer.functions if f.get(\"does\") == need.get(\"does\")] + list(offer.tags) + [offer.about]"
+ },
+ {
+  "file": "scripts/spark/sourcing/matching.py",
+  "name": "P1015: a function of every verb counts for the condition (test_matching.TheMatchersTest.test_condition_hits_count_functions_and_tags_only)",
+  "find": "for f in offer.functions if f.get(\"does\") == need.get(\"does\")] + list(offer.tags)",
+  "replace": "for f in offer.functions] + list(offer.tags)"
+ },
+ {
+  "file": "scripts/spark/sourcing/matching.py",
+  "name": "P1015: a hyphen splits a condition word (test_matching.TheWordsTest.test_condition_words_keep_a_hyphenated_word_and_drop_one_letter)",
+  "find": "for word in re.split(r\"[^a-z0-9-]+\", str(text or \"\").lower())]",
+  "replace": "for word in re.split(r\"[^a-z0-9]+\", str(text or \"\").lower())]"
+ },
+ {
+  "file": "scripts/spark/sourcing/matching.py",
+  "name": "P1015: a one-letter condition word stays (test_matching.TheWordsTest.test_condition_words_keep_a_hyphenated_word_and_drop_one_letter)",
+  "find": "    return list(dict.fromkeys(fold(word) for word in found if len(word) > 1 and word not in FILLER))",
+  "replace": "    return list(dict.fromkeys(fold(word) for word in found if len(word) > 0 and word not in FILLER))"
+ },
+ {
+  "file": "scripts/spark/sourcing/matching.py",
+  "name": "P1015: an offer's hyphenated word gives no parts, so the condition \"e paper\" misses an \"e-paper\" (test_matching.TheWordsTest.test_condition_words_keep_a_hyphenated_word_and_drop_one_letter, test_matching.TheMatchersTest.test_condition_hits_count_functions_and_tags_only)",
+  "find": "([word] + word.split(\"-\") if parts else [word])",
+  "replace": "[word]"
+ },
+ {
+  "file": "scripts/spark/sourcing/offers.py",
+  "name": "P1015: the score orders before the condition hits (test_parts.ResearchStartsFromWhatExistsTest.test_the_condition_hits_order_inside_a_group_and_lift_nothing_into_a_better_one, test_needs.TheConditionOrdersTest)",
+  "find": "-hits, -row[\"score\"])",
+  "replace": "-row[\"score\"], -hits)"
+ },
+ {
+  "file": "scripts/spark/sourcing/offers.py",
+  "name": "P1015: the condition hits order before a record before a drawer entry (P991) (test_parts.ResearchStartsFromWhatExistsTest.test_the_condition_hits_order_inside_a_group_and_lift_nothing_into_a_better_one)",
+  "find": "row[\"id\"] is None, -hits,",
+  "replace": "-hits, row[\"id\"] is None,"
+ },
+ {
+  "file": "scripts/spark/design/needs.py",
+  "name": "P1015: _rank gives rank_key no condition hits (test_needs.TheConditionOrdersTest)",
+  "find": "offers.rank_key(c, hits)",
+  "replace": "offers.rank_key(c)"
+ }
+]

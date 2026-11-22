@@ -67,6 +67,17 @@ def need_words(what):
     return list(dict.fromkeys(fold(word) for word in words(what) if word not in FILLER))
 
 
+def condition_words(text, parts=False):
+    """
+    A need's condition words (P1015): lower case, split on what is not a letter, a digit or "-", so a hyphenated word
+    stays one ("e-paper"). No one-letter word, no filler word; each folded, each once, in order. `parts=True` is an
+    offer's side: each hyphenated word gives its parts as well, so the condition "e paper" finds an "e-paper".
+    """
+    whole = [word.strip("-") for word in re.split(r"[^a-z0-9-]+", str(text or "").lower())]
+    found = [one for word in whole for one in ([word] + word.split("-") if parts else [word])]
+    return list(dict.fromkeys(fold(word) for word in found if len(word) > 1 and word not in FILLER))
+
+
 def _text(value, key):
     """A text an offer shows: cleaned and capped, or None when it is no words."""
     return clean(value, TEXT_MAX[key]) if isinstance(value, str) and value.strip() else None
@@ -209,6 +220,15 @@ class Matcher:
     def score(self, need, offer):
         """One offer's Fit for the need."""
         raise NotImplementedError
+
+    def condition_hits(self, need, offer):
+        """
+        How many of the need's condition words (P1015) the `what` of the offer's same-verb functions or its tags hold: a
+        raw count that orders the candidates and never scores them. Names, about and description do not count.
+        """
+        held = {word for text in [f.get("what") for f in offer.functions if f.get("does") == need.get("does")] + list(offer.tags)
+                for word in condition_words(text, parts=True)}
+        return sum(1 for word in condition_words(need.get("condition")) if word in held)
 
     def fit(self, need, offer, score, why):
         """A Fit, with `exact` as SameWords says it whatever this matcher is, so `what_matches` keeps its meaning."""
