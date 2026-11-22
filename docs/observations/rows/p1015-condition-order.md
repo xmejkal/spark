@@ -21,6 +21,6 @@ acted, raised and rejected findings only.
 | 12 | commands/idea.md's "orders the candidates that the need's words found" is too narrow: the hits also order inside the `score <= 0` group and among parts not owned | PR review | acted | fixed: "it orders the candidates inside each group of the order below" |
 | 13 | docs/guide/agents/scripts.md:139's P1015 sentence is too long, and needs.py:222's docstring line is over 120 characters | PR review | acted | fixed: two sentences, plural; the docstring is wrapped, and offers.py's module docstring line too |
 | 14 | docs/guide/journey/idea.md:22's "come by" reads oddly | PR review | acted | fixed: "come in this order"; the page keeps 87 lines |
-| 15 | `_rank`'s nested `order` function could be written another way | PR lens 2 | rejected | dropped because it is optional: the nested function keeps P991's anchor on `_rank`'s line and reads plainly |
-| 16 | the new order can move a candidate across the rank-based cuts | PR refuter 1 | acted | the rank-based cuts (the first 8 of --match, the page's 3, _other_choice's first with free stock) can move by design; on the 14 measured needs none moved |
-| 17 | the card's Done when does not say what the build pins | PR refuter 7 | acted | spark-main updates the card's Done when |
+| 15 | `_rank`'s nested `order` function | PR lens 2 | rejected | dropped because it is optional; the nested function also keeps P991's anchor on `_rank`'s line |
+| 16 | the new order can move a candidate across the rank-based cuts | PR refuter 1 | acted | the rank-based cuts (the first 8 of --match, the page's 3, _other_choice's first with free stock) can move by design. On the 14 measured needs, the hidden set of --match and `_other_choice` did not move. The page's first 3 moved on the two e-paper walks only, which is the card's aim (PR body) |
+| 17 | the card's Done when | PR refuter 7 | acted | spark-main updates the card's Done when |
