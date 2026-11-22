@@ -12,6 +12,7 @@ from spark.core import codes, outcomes
 from spark.core.errors import CodedMessageError
 from spark.core.operation import JSON_DEST, COMMON_ARGUMENTS, READS, Argument, Operation
 from spark.core.renderers import FullEnvelope
+from spark.core.privacy import PastedLine, Privacy
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines
 from spark.records import board_records, record_kind, store
@@ -93,6 +94,11 @@ def refused(sentence, code, fix):
     return Answer(unchecked=[_cannot(sentence, fix, code)]).to_result()
 
 
+def privacy_for(project):
+    """The Privacy of an audit on `project`: its path, the store's and the home folder's masked (P985, P677)."""
+    return Privacy.of(project, store.home(), Path.home(), ())
+
+
 class AuditRecords(Operation):
     """
     Operation: `audit` as parts.py answers it: the counts per layer, the records that owe facts (paged from `--from`), the
@@ -109,6 +115,7 @@ class AuditRecords(Operation):
                  COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS,)
     json_renderer = FullEnvelope
+    privacy_for = staticmethod(privacy_for)
 
     def run(self, project, start, *, outside, audit=True):
         if start < 0:
@@ -129,13 +136,13 @@ class AuditRecords(Operation):
                  for layer, row in counts.items()]
         lines += ["  BROKEN %s (%s): %s" % (b["id"], b["layer"], "; ".join(b["problems"])) for b in broken]  # each, once
         lines += ["  %s (%s) owes: %s" % (o["id"], o["layer"], ", ".join(o["owes"])) for o in owed]
-        lines += ["  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"
-                  % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []
+        lines += [PastedLine("  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"  # a line a person runs: raw path
+                             % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent)))] if silent else []
         lines += ["  drawer entry %s points at a record nobody has" % entry for entry in dangling]
         lines += ["  %s (%s) %s" % (s["id"], s["layer"], s["stop_line"]) for s in stops]
         findings = [Finding.of(outcomes.PROBLEMS, b["id"], design_codes.RECORD_FILE_BROKEN_AUDIT, "broken: " + "; ".join(b["problems"])) for b in broken]
         findings += [Finding.of(outcomes.PROBLEMS, entry, design_codes.DRAWER_ENTRY_DANGLING, DANGLING_SENTENCE) for entry in dangling]
         data = {"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling,
                 "stops_at_footprint": [{key: s[key] for key in ("id", "layer", "stops_why")} for s in stops]}
-        return OperationResult(data, findings, (), [guard_lines(line) for line in lines], truncated=truncated, notes=(), assumptions=())
+        return OperationResult(data, findings, (), [PastedLine(guard_lines(line)) if isinstance(line, PastedLine) else guard_lines(line) for line in lines], truncated=truncated, notes=(), assumptions=())
 # --- end MVP ---

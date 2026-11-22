@@ -3856,7 +3856,7 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
                 text_code = parts.main(["--audit"])
         self.assertEqual((code, said["status"], said["unchecked"][0]["code"], said["problems"]), (2, "could-not-run", "record_file_broken", []))
         self.assertEqual((text_code, out.getvalue()), (2, ""))
-        self.assertTrue(err.getvalue().startswith("parts.py: %s is not JSON" % (home / "drawer" / "bad.json")), err.getvalue())
+        self.assertTrue(err.getvalue().startswith("parts.py: <store>/drawer/bad.json is not JSON"), err.getvalue())  # P985: the audit masks the store path
         self.assertNotIn("Traceback", err.getvalue())
 
     def test_a_control_character_in_a_record_s_name_does_not_reach_the_terminal(self):
@@ -3917,7 +3917,7 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         with in_store(home):
             said, code = run_json(["--audit"])
         self.assertEqual((code, said["status"], [(u["code"], u["sentence"]) for u in said["unchecked"]]),
-                         (2, "could-not-run", [("record_unreadable", "--audit: cannot list %s (Permission denied)" % (home / "catalog"))]))
+                         (2, "could-not-run", [("record_unreadable", "--audit: cannot list <store>/catalog (Permission denied)")]))  # P985: the masked form
 
     def test_an_empty_readable_catalog_is_still_ok(self):
         home = Path(tempfile.mkdtemp())
@@ -3964,7 +3964,33 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         with in_store(home):
             said, code = run_json(["--audit"])
         self.assertEqual((code, said["status"], [(u["code"], u["sentence"]) for u in said["unchecked"]]),
-                         (2, "could-not-run", [("record_unreadable", "--audit: cannot list %s (Permission denied)" % (home / "drawer"))]))
+                         (2, "could-not-run", [("record_unreadable", "--audit: cannot list <store>/drawer (Permission denied)")]))  # P985: the masked form
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root lists a folder with no permission")
+    def test_audit_masks_the_store_and_the_home_in_its_sentence_and_its_json(self):
+        # P985: --audit had no privacy_for, so it printed the raw store path, the home included
+        home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, True)
+        (home / "catalog").mkdir()
+        (home / "catalog").chmod(0)
+        self.addCleanup((home / "catalog").chmod, 0o700)
+        with in_store(home):
+            said, code = run_json(["--audit"])
+            text, _ = run_text(["--audit"])
+        self.assertEqual((code, [u["sentence"] for u in said["unchecked"]]),
+                         (2, ["--audit: cannot list <store>/catalog (Permission denied)"]))
+        self.assertNotIn(str(home), json.dumps(said) + text)
+
+    def test_audit_masks_the_project_but_keeps_the_function_set_hint_to_run(self):
+        # P985: the hint line is one a person runs, so its project path stays raw (a PastedLine)
+        home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, True)
+        self.addCleanup(shutil.rmtree, project, True)
+        (project / "parts").mkdir()
+        (project / "parts" / "x-local.json").write_text(json.dumps({"schema": 1, "id": "x-local", "name": "A probe", "kind": "sensor"}))
+        with in_store(home):
+            text, _ = run_text(["--audit", "--project", str(project)])
+        self.assertIn("--project %s: x-local" % project.resolve(), text)
 
     def test_audit_s_help_lists_its_own_arguments_alone(self):
         err = io.StringIO()

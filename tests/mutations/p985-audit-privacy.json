@@ -1,0 +1,5 @@
+[
+ {"file": "scripts/spark/design/audit_records.py", "name": "P985: the audit has no privacy_for", "find": "    privacy_for = staticmethod(privacy_for)\n", "replace": ""},
+ {"file": "scripts/spark/design/audit_records.py", "name": "P985: the audit does not mask the store", "find": "Privacy.of(project, store.home(), Path.home(), ())", "replace": "Privacy.of(project, None, Path.home(), ())"},
+ {"file": "scripts/spark/design/audit_records.py", "name": "P985: the function-set hint is masked like the rest", "find": "[PastedLine(\"  says nothing", "replace": "[(\"  says nothing"}
+]
