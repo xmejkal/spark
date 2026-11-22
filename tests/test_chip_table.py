@@ -186,12 +186,13 @@ class TheLookupTest(unittest.TestCase):
             "two": {"wifi_band": {"value": "2.4 GHz"}},
             "open": {"wifi_band": {"value": None}},
             "empty": {"wifi_band": {"value": ""}},
+            "blank": {"wifi_band": {"value": "  "}},
             "number": {"wifi_band": {"value": 5}},
             "flag": {"wifi_band": {"value": True}},
             "bare": {"wifi_band": {}},
         })
         self.assertEqual(table.wifi_band("two"), "2.4 GHz")
-        for chip in ("open", "empty", "number", "flag", "bare", "absent", None):
+        for chip in ("open", "empty", "blank", "number", "flag", "bare", "absent", None):
             with self.subTest(chip=chip):
                 self.assertIsNone(table.wifi_band(chip))
 

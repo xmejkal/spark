@@ -162,9 +162,7 @@
     }
    },
    "adc2_gpio": {
-    "value": [
-     5
-    ],
+    "value": [5],
     "cites": {
      "document": "esp-idf-adc-channel-v5-5-1-esp32c3",
      "at": "line 25: \"#define ADC2_CHANNEL_0_GPIO_NUM 5\", ADC2's one channel (P813)"

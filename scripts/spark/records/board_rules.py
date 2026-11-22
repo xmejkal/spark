@@ -94,7 +94,8 @@ RADIO_FUNCTIONS = {
     "ieee802154": {"does": "communicate", "what": "onboard 802.15.4 radio (Thread, Zigbee)"},
 }
 #: The words that close the Wi-Fi words with the chip's band in the shown words (P1013): "(WiFi)" shows as
-#: "(WiFi; 2.4 GHz only)". No matcher reads them, so a need's "2.4 GHz" or "only" scores as before.
+#: "(WiFi; 2.4 GHz only)". No matcher reads them, so a need's "2.4 GHz" or "only" scores as before. "only" holds for a
+#: chip with one band: a chip with two bands needs other words before its wifi_band enters data/chips.json.
 BAND_WORDS = "; %s only)"
 # --- end MVP ---
 

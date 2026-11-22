@@ -857,7 +857,8 @@ class TheBoardsChipRadiosTest(unittest.TestCase):
         self.assertEqual(board_records.shown_what(self.WIFI), "onboard Wi-Fi radio (WiFi; 2.4 GHz only)")
         self.assertEqual(board_records.shown_what({"what": "onboard Wi-Fi radio (WiFi)", "band": "5 GHz"}),
                          "onboard Wi-Fi radio (WiFi; 5 GHz only)")
-        for function in ({"what": "onboard Wi-Fi radio (WiFi)"}, dict(self.WIFI, band=""), dict(self.WIFI, band=5),
+        for function in ({"what": "onboard Wi-Fi radio (WiFi)"}, dict(self.WIFI, band=""), dict(self.WIFI, band="  "),
+                         dict(self.WIFI, band=5),
                          dict(self.WIFI, band=None)):
             with self.subTest(function=function):
                 self.assertEqual(board_records.shown_what(function), "onboard Wi-Fi radio (WiFi)")
