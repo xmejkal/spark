@@ -560,7 +560,7 @@ def _move_main(args, ask):
     try:
         boards, _, _, project_id, bin_why, _ = gather(ask=ask)
     except (OSError, subprocess.SubprocessError, RuntimeError, ValueError, KeyError, TypeError) as unreachable:
-        print("board: could-not-run — %s" % unreachable)
+        print("board: %s — %s" % (COULD_NOT_RUN, unreachable))
         return 1
     if bin_why is not None:  # the lane's flight would be counted without the bin's cards
         print("move: could-not-run — " + check_backlog.BIN_UNREAD % bin_why)
