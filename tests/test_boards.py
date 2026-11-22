@@ -17,6 +17,7 @@ a file instead of re-implementing a lookup.
 """
 
 import json
+import os
 import re
 import sys
 import tempfile
@@ -1569,7 +1570,7 @@ class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):
         home = Path(tempfile.mkdtemp())
         (home / "shelf" / "boards").mkdir(parents=True)
         (home / "shelf" / "boards" / "x-board.json").write_text(json.dumps(definition("x-board")))
-        with mock.patch.dict("os.environ", {"SPARK_HOME": str(home)}):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
             code, out = self.listed("--list", "--project", str(project()), "--json")
             _, text = self.listed("--list", "--project", str(project()))
             _, valid = self.listed("--validate", "--project", str(project()))
