@@ -81,6 +81,8 @@ class BoardStartService:
     def usb_of(self, port):
         """The USB id the board is listed with now (P1007: it changes when an S3 leaves download mode), or None."""
         row = self._listed(port)
+        if row is None and self.failed:  # a failed list is not a gone port: ask once more
+            row = self._listed(port)
         return row and row.usb
 
     def note(self, text):

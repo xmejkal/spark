@@ -34,9 +34,9 @@ SETTLE_S = 2.5
 #: restart enumerated the USB device again, as board_console.PORT_BACK_S waits for after the P251 cure.
 PORT_BACK_S = 10
 #: Run with mpremote's Python, in place of `python -m mpremote` (P1007): mpremote itself with two changes. Its open
-#: leaves DTR and RTS off: on USB-Serial/JTAG mpremote's DTR and RTS on hold the chip in reset. And it sends nothing
-#: for the settle before it enters the raw REPL, with one reopen of a port that vanished meanwhile. argv: the settle,
-#: the wait for the port, then mpremote's own arguments.
+#: leaves DTR and RTS off, as board_console's reads do. And it sends nothing for the settle before it enters the raw
+#: REPL, with one reopen of a port that vanished meanwhile: a failed reopen says mpremote's `failed to access`. argv:
+#: the settle, the wait for the port, then mpremote's own arguments.
 QUIET_MPREMOTE = """import os, sys, time, serial
 from mpremote import main as mpremote_main
 from mpremote.transport_serial import SerialTransport
@@ -52,13 +52,17 @@ def settled_enter(transport, *args, **kwargs):
     try:
         drain(transport.serial)
     except (OSError, serial.SerialException):
-        transport.serial.close()
         end = time.monotonic() + port_back
         while not os.path.exists(transport.device_name) and time.monotonic() < end:
             time.sleep(0.1)
         time.sleep(0.5)
-        transport.serial.open()
-        drain(transport.serial)
+        try:
+            transport.serial.close()
+            transport.serial.open()
+            drain(transport.serial)
+        except (OSError, serial.SerialException) as gone:
+            sys.stderr.write("failed to access %s (it vanished and did not come back: %s)\\n" % (transport.device_name, gone))
+            sys.exit(1)
     return entered(transport, *args, **kwargs)
 serial.Serial.open, SerialTransport.enter_raw_repl = quiet_open, settled_enter
 sys.argv[0] = "mpremote"

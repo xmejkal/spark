@@ -70,6 +70,11 @@ class BoardStartTest(unittest.TestCase):
         self.assertEqual([service.usb_of(ROM.device), service.usb_of(ROM.device), service.usb_of(ROM.device)],
                          ["303a:1001", "303a:4001", None])
 
+    def test_a_failed_list_is_asked_once_more_for_the_usb_id(self):
+        # P1007: a None would give the C6 plain mpremote, which leaves it deaf
+        service = self.service(board_look.LookStopError("devs failed", reason="x"), [ROM])
+        self.assertEqual(service.usb_of(ROM.device), "303a:1001")
+
     def test_a_port_that_is_not_listed_in_the_wait_is_none_after_it(self):
         service = self.service([])
         self.assertIsNone(name(service.find_port(ROM.device)))

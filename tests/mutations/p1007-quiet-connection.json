@@ -38,13 +38,19 @@
  {
   "file": "scripts/spark/bench/board_start.py",
   "name": "P1007: the USB id is the one from the first listing (test_board_start usb id test)",
-  "find": "        row = self._listed(port)\n        return row and row.usb",
-  "replace": "        row = getattr(self, 'first', None) or self._listed(port)\n        self.first = row\n        return row and row.usb"
+  "find": "        \"\"\"The USB id the board is listed with now (P1007: it changes when an S3 leaves download mode), or None.\"\"\"\n        row = self._listed(port)",
+  "replace": "        \"\"\"The USB id the board is listed with now (P1007: it changes when an S3 leaves download mode), or None.\"\"\"\n        row = getattr(self, 'first', None) or self._listed(port)\n        self.first = row"
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "P1007: every read uses the USB id of the first listing (test_deploy_gate usb id test)",
-  "find": "self.platform.make_connection(planned.mpremote, on, self.run, starter.usb_of(on))",
+  "find": "self.platform.make_connection(planned.mpremote, on, self.run, starter.usb_of(on) or (row and row.usb))",
   "replace": "self.platform.make_connection(planned.mpremote, on, self.run, row and row.usb)"
+ },
+ {
+  "file": "scripts/spark/bench/board_start.py",
+  "name": "P1007: a failed list gives no USB id (test_board_start failed list test)",
+  "find": "        if row is None and self.failed:  # a failed list is not a gone port: ask once more\n            row = self._listed(port)\n        return row and row.usb",
+  "replace": "        return row and row.usb"
  }
 ]
