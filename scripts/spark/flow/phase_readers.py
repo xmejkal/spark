@@ -308,10 +308,11 @@ def needs_holding(plan, key):
 
 def blocker_lines(project, problems):
     """The parts list's problems as the person reads them (P993): a pick that owes a fact by its name, the needs that pick
-    it and what it owes, in plain words; any other as its own line (`problem_lines`)."""
+    it and what it owes, in plain words; any other as its own line (`problem_lines`). The record decides, never the
+    rule's sentence: a part pick whose record owes a fact the circuit needs has that one problem from the rule."""
     plan, said = needs.PickPlan(project), []
     for problem in problems:
-        owed = owed_facts(plan, problem["subject"]) if problem["sentence"].startswith("owes ") else []
+        owed = owed_facts(plan, problem["subject"])
         named = "“%s”" % plan.name_of(problem["subject"])
         by = ", ".join(needs_holding(plan, problem["subject"]))
         said += ([flow_codes.OWED_MESSAGE % (flow_codes.PICKED_BY % (named, by) if by else named, ", ".join(owed))] if owed

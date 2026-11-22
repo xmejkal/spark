@@ -21,3 +21,4 @@ Opus, one round. This file holds the acted, raised and rejected findings only. 2
 | 13 | the requirements-file test pins no says line | PR lens (Sonnet) | acted | fixed: it pins both lines of the refusal |
 | 14 | the parts' NOW line can carry a pick button, so "Use the button." stood after "Tell Claude a pick" | PR refuter (Opus) | acted | fixed: the script adds it on a `<p>` whose key is no pick; a JS assertion and row 7 |
 | 15 | a pick stored as its drawer entry is named with no need | PR refuter (Opus) | acted | fixed: `needs_holding` reads each pick through `needs.as_record`; a test and row 8 |
+| 16 | the owed line was chosen by the rule's sentence (`startswith("owes ")`) | the hook's quick run, test_no_magic_strings | acted | fixed: the record's owed facts decide (`owed_facts`), never the sentence |
