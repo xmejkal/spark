@@ -26,8 +26,8 @@
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "P976: a refusal by another need's pick is not said, and the pick is offered (test_flow.TheReviewRoundTest)",
-  "find": "        elif problems:\n            return [], [flow_codes.NEED_REFUSED_LINE",
-  "replace": "        elif False:\n            return [], [flow_codes.NEED_REFUSED_LINE"
+  "find": "        elif problems:\n            return [], [other_pick_sentence",
+  "replace": "        elif False:\n            return [], [other_pick_sentence"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",

@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P993: the parts list is offered while its own rule refuses it (test_flow.TheBlockersTest, test_flow_page.TheCommandTest)",
+  "find": "        if given.problems:  # P993",
+  "replace": "        if False:  # P993"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P993: a refusal of the parts list is problems while a counted need has no pick (test_flow.TheBlockersTest, test_flow.ThePhasesTest)",
+  "find": "PROBLEMS if held is not None or is_all_picked(listed) else flow_codes.NOT_STARTED",
+  "replace": "PROBLEMS"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P993: every need set aside counts as all picked (test_flow.TheBlockersTest)",
+  "find": "    return bool(open_needs) and all(",
+  "replace": "    return all("
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P993: the line of a need whose new picks are refused does not name the need (test_flow.TheReviewRoundTest)",
+  "find": "NO_NEW_PICK_MESSAGE % (need, ",
+  "replace": "NO_NEW_PICK_MESSAGE % (\"\", "
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P993: a pick that owes a fact is said by its id and the rule's sentence, not by its name (test_flow.TheBlockersTest, test_flow_page.TheCommandTest)",
+  "find": "] if owed\n                 else problem_lines",
+  "replace": "] if False\n                 else problem_lines"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P993: the NOW button stands with no sentence that says to use it (test_flow_script.PageScriptTest)",
+  "find": "item.tagName === \"P\" ?",
+  "replace": "item.tagName === \"LI\" ?"
+ }
+]
