@@ -345,6 +345,30 @@ class TheMatcherTest(unittest.TestCase):
         found = [c["in"] for c in self.alone({"id": "mcu", "does": "compute", "what": "microcontroller"})["candidates"] if c["id"] == "my-own-board"]
         self.assertEqual(found, ["project"])
 
+    # P991: what the person owns with a record comes before what they own with none, and another project's record ranks
+    # with the shelf (the PO at the p934-display page, 2026-11-22: "the beetle 2 c6 that we created is not even there")
+    def test_an_owned_record_ranks_before_an_owned_entry_with_no_record_at_the_same_score(self):
+        self.catalog({"id": "y-speaker", "name": "A small speaker", "kind": "actuator", "function": [{"does": "sound", "what": "speaker"}]})
+        (self.home / "drawer" / "y-spk.json").write_text(json.dumps({"schema": 1, "label": "small speaker", "count": 1, "is": {"part": "y-speaker"}}))
+        found = [(c["id"] or c["entry"], c["owned"], c["score"]) for c in self.alone({"id": "alarm", "does": "sound", "what": "speaker"})["candidates"]]
+        self.assertEqual(found[:2], [("y-speaker", 1, 1.0), ("speaker", 2, 1.0)])
+
+    def test_an_owned_entry_with_the_need_s_words_ranks_before_an_owned_record_with_none(self):
+        self.catalog({"id": "y-buzzer", "name": "A buzzer", "kind": "actuator", "function": [{"does": "sound", "what": "buzzer"}]})
+        (self.home / "drawer" / "y-buz.json").write_text(json.dumps({"schema": 1, "label": "buzzer", "count": 1, "is": {"part": "y-buzzer"}}))
+        found = [(c["id"] or c["entry"], c["score"] > 0) for c in self.alone({"id": "alarm", "does": "sound", "what": "mp3-player"})["candidates"]]
+        self.assertLess(found.index(("mp3", True)), found.index(("y-buzzer", False)))
+
+    def test_a_record_in_another_listed_project_ranks_with_the_shelf_before_the_library(self):
+        other = Path(tempfile.mkdtemp()) / "other"
+        (other / "boards").mkdir(parents=True)
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        (other / "boards" / "my-c6.json").write_text(json.dumps(dict(board, id="my-c6")))
+        (self.home / "projects.json").write_text(json.dumps({"other": str(other)}))
+        (self.home / "drawer" / "c6.json").write_text(json.dumps({"schema": 1, "label": "my C6", "count": 1, "is": {"board": "my-c6"}}))
+        found = [(c["id"], c["in"], c["owned"]) for c in self.alone({"id": "mcu", "does": "compute", "what": "microcontroller"})["candidates"]]
+        self.assertEqual(found[:2], [("my-c6", "other", 1), ("firebeetle2-esp32s3", "library", 1)])
+
     def test_what_matches_only_through_a_function_with_the_need_s_verb(self):
         self.catalog({"id": "a-combo", "name": "A combo board", "function": [{"does": "sense", "what": "temperature"},
                                                                             {"does": "indicate", "what": "light"}]},
