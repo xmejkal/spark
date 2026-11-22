@@ -824,6 +824,289 @@ class TheInflowAndRetroTest(unittest.TestCase):
         self.assertIn("filed in 7 days: 192, closed: 100", out)
 
 
+def card(number, status, waiting=None, since=None, slice_="team tools", needed=True, repo="spark"):
+    """A board item with its own item id, PVTI_<number>, as board_read.QUERY answers it (P1021)."""
+    item = node(number, "P%d — c%d" % (number, number), status, waiting=waiting, since=since, slice_=slice_)
+    item["id"] = "PVTI_%d" % number
+    item["content"]["repository"]["name"] = repo
+    if not needed:
+        item["content"]["body"] = "### Value proven by\n\nx\n"
+    return item
+
+
+def boards_of(*spark_cards, bin_cards=()):
+    return [("spark", board.to_items(project(*spark_cards))), ("bin", board.to_items(project(*bin_cards)))]
+
+
+#: The project's fields as read_fields() gives them: each by its name, with its id and its options by name.
+MOVE_FIELDS = {"Status": {"id": "F_STATUS", "options": {stage: "O_" + stage for stage in board.check_backlog.STAGES}},
+               "Waiting on": {"id": "F_ON", "options": {"the PO": "O_PO", "hardware": "O_HW", "outside": "O_OUT"}},
+               "Waiting since": {"id": "F_SINCE", "options": {}}}
+MOVE_DAY = dt.date(2026, 11, 23)
+
+
+class FakeWrites:
+    """A gh that takes the move's writes: each call is kept, and each answer is the next of `answers` (default: no errors)."""
+
+    def __init__(self, *answers):
+        self.calls, self.answers = [], list(answers)
+
+    def __call__(self, *args):
+        self.calls.append(" ".join(args))
+        answer = self.answers.pop(0) if self.answers else {"data": {}}
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+
+class TheMoveTest(unittest.TestCase):
+    """
+    P1021 (#1488): `board.py move <card> <stage>` checks the gate's limits on a copy of the board first. It refuses a move
+    when a gate sentence is new after the move and names the card, and else writes the Status, and Waiting on and
+    Waiting since with --waiting-on. No test calls the real gh: move() and main() take the gh to ask (T2).
+    """
+
+    def refusals(self, boards, number, stage, waiting_on=None):
+        return board.move_problems(boards, number, stage, waiting_on, MOVE_DAY)
+
+    def test_a_fourth_card_into_spark_s_build_is_refused_and_the_sentence_names_it(self):
+        boards = boards_of(card(1, "Build"), card(2, "Build"), card(3, "Build"), card(4, "Ready"))
+        said = self.refusals(boards, 4, "Build")
+        self.assertEqual(len(said), 1)
+        self.assertTrue(said[0].startswith("Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 3"), said)
+
+    def test_a_third_card_into_spark_s_build_is_not_refused(self):
+        self.assertEqual(self.refusals(boards_of(card(1, "Build"), card(2, "Build"), card(4, "Ready")), 4, "Build"), [])
+
+    def test_a_sixth_card_into_spark_s_flight_is_refused(self):
+        boards = boards_of(card(1, "Discovery"), card(2, "Design"), card(3, "Build"), card(4, "Review"),
+                           card(5, "Build"), card(6, "Ready"))
+        said = self.refusals(boards, 6, "Build")
+        self.assertEqual(len(said), 1)
+        self.assertTrue(said[0].startswith("In flight (spark) holds 6"), said)
+
+    def test_a_third_card_into_review_is_refused_across_both_lanes(self):
+        boards = boards_of(card(1, "Review"), card(2, "Review", slice_="pixel-games"), card(3, "Build"))
+        said = self.refusals(boards, 3, "Review")
+        self.assertEqual(len(said), 1)
+        self.assertTrue(said[0].startswith("Review holds 3 (#1, #2, #3) — its limit is 2"), said)
+
+    def test_a_card_into_ready_with_no_needed_by_is_refused(self):
+        said = self.refusals(boards_of(card(7, "Idea", needed=False)), 7, "Ready")
+        self.assertEqual(len(said), 1)
+        self.assertIn("#7 P7 — c7: no `Needed by`", said[0])
+
+    def test_a_move_to_idea_or_to_done_is_never_refused_for_a_limit(self):
+        boards = boards_of(*(card(n, "Build") for n in range(1, 6)))
+        self.assertEqual(self.refusals(boards, 5, "Idea"), [])
+        self.assertEqual(self.refusals(boards, 1, "Done"), [])
+
+    def test_a_move_out_of_a_stage_over_its_limit_is_not_refused(self):
+        boards = boards_of(*(card(n, "Build") for n in range(1, 6)))
+        self.assertEqual(self.refusals(boards, 5, "Review"), [])
+
+    def test_an_old_broken_limit_that_does_not_name_the_card_does_not_refuse_it(self):
+        boards = boards_of(card(1, "Build"), card(2, "Build"), card(3, "Build"), card(4, "Build"), card(5, "Idea"))
+        self.assertEqual(self.refusals(boards, 5, "Discovery"), [])
+
+    def test_a_card_that_waits_on_the_po_in_build_fills_no_build_place(self):
+        boards = boards_of(card(1, "Build"), card(2, "Build"), card(3, "Build"), card(4, "Ready"))
+        self.assertEqual(self.refusals(boards, 4, "Build", "the PO"), [])
+
+    def test_a_third_card_that_waits_on_the_po_in_the_lane_is_refused_by_the_waiting_total(self):
+        boards = boards_of(card(1, "Build", "the PO", "2026-11-01"), card(2, "Design", "the PO", "2026-11-02"),
+                           card(3, "Ready"))
+        said = self.refusals(boards, 3, "Build", "the PO")
+        self.assertEqual(len(said), 1)
+        self.assertTrue(said[0].startswith("Waiting on the PO (spark) holds 3 (#1, #2, #3) — its limit is 2"), said)
+
+    def test_a_card_that_waits_with_no_date_is_not_refused_over_its_old_sentence(self):
+        self.assertEqual(self.refusals(boards_of(card(8, "Design", "hardware")), 8, "Build"), [])
+
+    def test_the_card_is_named_as_a_whole_token_never_inside_a_longer_number_or_as_a_bin_card(self):
+        self.assertTrue(board.names_card(1488, "Build (spark) holds 4 (#1, #1488) — its limit is 3"))
+        self.assertTrue(board.names_card(1488, "#1488 P1021 — x: on no slice of the story map"))
+        self.assertFalse(board.names_card(1488, "Build (spark) holds 4 (#1, #14880) — its limit is 3"))
+        self.assertFalse(board.names_card(1488, "In flight (spark) holds 6 (#1, bin #1488) — its limit is 5"))
+        self.assertFalse(board.names_card(148, "#1488 P1021 — x: on no slice of the story map"))
+
+    def test_a_card_of_another_repository_with_the_same_number_or_none_is_not_found(self):
+        boards = boards_of(card(9, "Idea", repo="sisuo-brain-transplant"))
+        with self.assertRaisesRegex(ValueError, "#9 is not a card of spark's board"):
+            self.refusals(boards, 9, "Ready")
+        with self.assertRaisesRegex(ValueError, "#10 is not a card of spark's board"):
+            self.refusals(boards, 10, "Ready")
+        with self.assertRaisesRegex(ValueError, "Shipped"):
+            self.refusals(boards_of(card(9, "Idea")), 9, "Shipped")
+
+    def test_the_copy_is_a_copy_and_the_board_keeps_its_cards(self):
+        boards = boards_of(card(1, "Build"), card(2, "Build"), card(3, "Build"), card(4, "Ready"))
+        self.refusals(boards, 4, "Build", "the PO")
+        self.assertEqual([(i["status"], i["waiting on"]) for i in dict(boards)["spark"]][3], ("Ready", None))
+
+    # The writes, through move() and a fake gh.
+
+    def move(self, boards, number, stage, waiting_on=None, gh=None, dry_run=False):
+        gh = gh or FakeWrites()
+        code, lines = board.move(boards, "PROJECT", MOVE_FIELDS, number, stage, waiting_on, MOVE_DAY, gh, dry_run=dry_run)
+        return code, lines, gh.calls
+
+    def test_a_move_that_fits_writes_the_status_in_one_call_with_the_item_s_id(self):
+        code, lines, calls = self.move(boards_of(card(4, "Ready")), 4, "Build")
+        self.assertEqual((code, lines, len(calls)), (0, ["moved #4 to Build"], 1))
+        for said in ("updateProjectV2ItemFieldValue", '"PROJECT"', '"PVTI_4"', '"F_STATUS"', '"O_Build"'):
+            self.assertIn(said, calls[0])
+
+    def test_a_refused_move_writes_nothing_and_says_each_sentence(self):
+        boards = boards_of(card(1, "Build"), card(2, "Build"), card(3, "Build"), card(4, "Ready"))
+        code, lines, calls = self.move(boards, 4, "Build")
+        self.assertEqual((code, calls), (1, []))
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(lines[0].startswith("move: refused — Build (spark) holds 4"), lines)
+
+    def test_a_wait_is_written_first_with_today_s_date_and_the_status_in_a_second_call(self):
+        code, lines, calls = self.move(boards_of(card(4, "Ready")), 4, "Build", "the PO")
+        self.assertEqual((code, lines), (0, ["moved #4 to Build, waiting on the PO since 2026-11-23"]))
+        self.assertEqual(len(calls), 2)
+        for said in ('"F_ON"', '"O_PO"', '"F_SINCE"', '"2026-11-23"', '"PVTI_4"'):
+            self.assertIn(said, calls[0])
+        self.assertNotIn('"F_STATUS"', calls[0])
+        self.assertIn('"O_Build"', calls[1])
+
+    def test_a_wait_on_the_same_one_keeps_its_date_and_a_changed_one_gets_today_s(self):
+        boards = boards_of(card(4, "Build", "the PO", "2026-11-01"))
+        code, lines, calls = self.move(boards, 4, "Review", "the PO")
+        self.assertEqual(lines, ["moved #4 to Review, waiting on the PO since 2026-11-01"])
+        self.assertIn('"2026-11-01"', calls[0])
+        code, lines, calls = self.move(boards, 4, "Review", "hardware")
+        self.assertEqual(lines, ["moved #4 to Review, waiting on hardware since 2026-11-23"])
+        self.assertIn('"2026-11-23"', calls[0])
+
+    def test_a_wait_that_fails_to_write_writes_no_status(self):
+        gh = FakeWrites({"errors": [{"message": "Could not resolve to a node"}]})
+        code, lines, calls = self.move(boards_of(card(4, "Ready")), 4, "Build", "the PO", gh=gh)
+        self.assertEqual((code, len(calls)), (1, 1))
+        self.assertEqual(lines, ["move: could-not-run — Could not resolve to a node: the Status was not written, "
+                                 "read the card's Waiting on and Waiting since"])
+        gh = FakeWrites(RuntimeError("gh did not answer in 60 s"))
+        code, lines, calls = self.move(boards_of(card(4, "Ready")), 4, "Build", "the PO", gh=gh)
+        self.assertEqual((code, len(calls)), (1, 1))
+        self.assertTrue(lines[0].startswith("move: could-not-run — gh did not answer in 60 s: the Status was not"))
+
+    def test_a_status_that_fails_after_its_wait_says_what_was_written(self):
+        gh = FakeWrites({"data": {}}, {"errors": [{"message": "HTTP 502"}]})
+        code, lines, calls = self.move(boards_of(card(4, "Ready")), 4, "Build", "the PO", gh=gh)
+        self.assertEqual((code, len(calls)), (1, 2))
+        self.assertEqual(lines, ["move: could-not-run — HTTP 502: Waiting on and Waiting since were written, "
+                                 "the Status was not"])
+
+    def test_a_move_to_done_writes_its_status_first_then_clears_both_waits(self):
+        boards = boards_of(card(4, "Review", "the PO", "2026-11-01"))
+        code, lines, calls = self.move(boards, 4, "Done")
+        self.assertEqual((code, lines), (0, ["moved #4 to Done, its wait cleared"]))
+        self.assertEqual(len(calls), 2)
+        self.assertIn('"O_Done"', calls[0])
+        self.assertNotIn("clearProjectV2ItemFieldValue", calls[0])
+        for said in ("clearProjectV2ItemFieldValue", '"F_ON"', '"F_SINCE"', '"PVTI_4"'):
+            self.assertIn(said, calls[1])
+
+    def test_a_move_to_done_whose_clear_fails_says_the_status_was_written(self):
+        boards = boards_of(card(4, "Review", "the PO", "2026-11-01"))
+        gh = FakeWrites({"data": {}}, {"errors": [{"message": "HTTP 502"}]})
+        code, lines, calls = self.move(boards, 4, "Done", gh=gh)
+        self.assertEqual((code, len(calls)), (1, 2))
+        self.assertEqual(lines, ["move: could-not-run — HTTP 502: the Status was written (Done), its wait was not cleared"])
+        gh = FakeWrites({"errors": [{"message": "HTTP 502"}]})
+        code, lines, calls = self.move(boards, 4, "Done", gh=gh)
+        self.assertEqual((code, len(calls), lines), (1, 1, ["move: could-not-run — HTTP 502: nothing was written"]))
+
+    def test_a_dry_run_writes_nothing(self):
+        code, lines, calls = self.move(boards_of(card(4, "Ready")), 4, "Build", "the PO", dry_run=True)
+        self.assertEqual((code, calls), (0, []))
+        self.assertEqual(lines, ["would move #4 to Build, waiting on the PO since 2026-11-23 (dry run — nothing written)"])
+
+    def test_a_wait_name_or_a_field_the_board_does_not_have_writes_nothing(self):
+        code, lines, calls = self.move(boards_of(card(4, "Ready")), 4, "Build", "Anna")
+        self.assertEqual((code, calls), (1, []))
+        self.assertEqual(lines, ["move: refused — 'Anna' is no option of Waiting on: the PO, hardware, outside"])
+        fields = dict(MOVE_FIELDS)
+        del fields["Waiting since"]
+        gh = FakeWrites()
+        code, lines = board.move(boards_of(card(4, "Ready")), "P", fields, 4, "Build", None, MOVE_DAY, gh)
+        self.assertEqual((code, gh.calls), (1, []))
+        self.assertEqual(lines, ["move: could-not-run — the board has no field 'Waiting since'"])
+
+    # main(), with a fake gh for the reads and the writes.
+
+    def main_gh(self, spark_cards, bin_answer=None):
+        """A gh that serves both boards, no PRs, the inflow, the fields and every write; returns it and its writes."""
+        writes = []
+        fields = {"data": {"node": {"fields": {"nodes": [
+            {"id": "F_STATUS", "name": "Status", "options": [{"id": "O_" + s, "name": s} for s in board.check_backlog.STAGES]},
+            {"id": "F_ON", "name": "Waiting on", "options": [{"id": "O_PO", "name": "the PO"}]},
+            {"id": "F_SINCE", "name": "Waiting since"}, {"id": "F_T", "name": "Title"}]}}}}
+
+        def gh(*args):
+            if "graphql" not in args:
+                return []
+            if "query=" + board.INFLOW in args:
+                return INFLOW_ANSWER
+            if "query=" + board.FIELDS_QUERY in args:
+                return fields
+            if "query=" + board_read.QUERY in args:
+                number = int(next(a for a in args if a.startswith("number=")).split("=")[1])
+                if number == 1 and bin_answer is not None:
+                    return bin_answer
+                cards = list(spark_cards) if number == 2 else []
+                return {"data": {"user": {"projectV2": {"id": "PROJECT", "statusUpdates": {"nodes": []}, "items": {
+                    "totalCount": len(cards), "nodes": cards, "pageInfo": {"hasNextPage": False, "endCursor": None}}}}}}
+            writes.append(args)
+            return {"data": {}}
+        return gh, writes
+
+    def run_main(self, gh, *argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            done = board.main(["move", *argv], ask=gh)
+        return done, out.getvalue()
+
+    def test_main_moves_a_card_that_fits_and_refuses_one_over_a_limit(self):
+        gh, writes = self.main_gh([card(1, "Build"), card(2, "Build"), card(3, "Build"), card(4, "Ready")])
+        self.assertEqual(self.run_main(gh, "4", "Review"), (0, "moved #4 to Review\n"))
+        self.assertEqual(len(writes), 1)
+        done, out = self.run_main(gh, "4", "Build")
+        self.assertEqual((done, len(writes)), (1, 1))
+        self.assertTrue(out.startswith("move: refused — Build (spark) holds 4"), out)
+        self.assertEqual(self.run_main(gh, "4", "Review", "--dry-run"),
+                         (0, "would move #4 to Review (dry run — nothing written)\n"))
+        self.assertEqual(len(writes), 1)
+
+    def test_main_writes_nothing_when_the_bin_s_board_or_spark_s_was_not_read(self):
+        unread = {"data": {"user": {"projectV2": {"id": "B", "statusUpdates": {"nodes": []}, "items": {
+            "totalCount": 9, "nodes": [], "pageInfo": {"hasNextPage": False, "endCursor": None}}}}}}
+        gh, writes = self.main_gh([card(4, "Ready")], bin_answer=unread)
+        done, out = self.run_main(gh, "4", "Build")
+        self.assertEqual((done, writes), (1, []))
+        self.assertEqual(out, "move: could-not-run — %s\n" % (board.check_backlog.BIN_UNREAD % "it holds 9 items, 0 were read"))
+
+        def offline(*args):
+            raise RuntimeError("could not resolve host")
+        self.assertEqual(self.run_main(offline, "4", "Build"), (1, "board: could-not-run — could not resolve host\n"))
+
+    def test_main_refuses_a_stage_it_does_not_know_and_a_wait_into_done_by_argparse(self):
+        gh, writes = self.main_gh([card(4, "Ready")])
+        for argv in (("4", "Shipped"), ("4", "Done", "--waiting-on", "the PO")):
+            with self.subTest(argv=argv), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as done:
+                board.main(["move", *argv], ask=gh)
+            self.assertEqual(done.exception.code, 2)
+        self.assertEqual(writes, [])
+
+    def test_main_says_a_card_that_is_not_on_spark_s_board(self):
+        gh, writes = self.main_gh([card(4, "Ready")])
+        self.assertEqual(self.run_main(gh, "5", "Build"), (1, "move: refused — #5 is not a card of spark's board\n"))
+        self.assertEqual(writes, [])
+
+
 class TheHelpTest(unittest.TestCase):
     """
     P146 council (C3): each verb's --help says what it prints or posts and how it exits — each claim read off the code:
@@ -868,6 +1151,12 @@ class TheHelpTest(unittest.TestCase):
             "It is at risk too when more cards were filed than closed in 7 days or the last retro is more than 7 days old",
             "or the inflow or the last retro could not be read",
             "the inflow and the retro's age still count from today"))
+
+    def test_the_move_help_says_what_it_checks_writes_and_refuses(self):
+        self.assert_says(self.help_of("move"), (
+            "move a card of spark's board to a stage", "checks the gate's limits on a copy of the board first",
+            "refuses the move (exit 1)", "names the card", "--waiting-on WHO", "Waiting since", "today's date",
+            "A move to Done clears both", "--dry-run", "writes nothing", "could-not-run"))
 
     def test_the_top_help_names_both_verbs_with_what_they_do(self):
         self.assert_says(self.help_of(), ("both boards", "status print the state of both boards",
