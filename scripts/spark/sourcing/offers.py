@@ -4,7 +4,7 @@ one `matching.Offer` per readable record (a part or a board, of any layer) with 
 it, then one per live record-less entry; `from_store(project)` builds them for everything the person's store and spark's
 library hold. `pointing_at` and `counts` are the drawer arithmetic both `--match` (`spark.design.needs`) and `--need`
 (`spark.sourcing.datasheets`) share, and `row` and `rank_key` the keys of a Fit's row and its order that both say the same
-way (P783). It reads records through `record_kind._parse` and the drawer through `drawer`, and
+way (P783); only `--match` gives `rank_key` a need's condition overlap (P1015). It reads records through `record_kind._parse` and the drawer through `drawer`, and
 imports nothing of the design layer. Moved here from `needs.py` by P743, so that `--need` could use it.
 """
 

@@ -219,7 +219,7 @@ def _rank(need, built, mine=None, matcher=None):
 def candidates(need, known, entries, mine=None, matcher=None, definitions=None):
     """
     The store's candidates for one need (§6.2's code half): every offer the matcher admits, in `_rank`'s order (owned
-    first, then a record, then the best score, then nearest). The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
+    first, then a record, then the most condition words, then the best score, then nearest). The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
     `mine`, the asking project, holds is free to it. A board candidate gets its `limits` (P397), and a part candidate those of its
     record (`limits_of_part`: a stand-in, a chip's note, a skip; P778); `definitions` is the dict that
     `role_limits` fills, so a caller that matches several needs reads each board's Wokwi definition once.

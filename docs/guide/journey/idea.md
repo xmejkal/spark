@@ -19,7 +19,7 @@ In Claude Code, Claude asks at most three questions, one at a time, then writes 
 
 - each need is a verb and a few words;
 - no part numbers;
-- a `condition` only when it decides a part.
+- a `condition` only when it decides a part, in a part's own words ("e-paper"): it orders the candidates and never changes a score ([P1015](https://github.com/xmejkal/spark/issues/1476)).
 
 For *"tell me when my plant is thirsty"*:
 
@@ -78,6 +78,9 @@ How to read the matches:
   (*distance*, *light*). Whether that fits is Claude's call, and Claude says so to you.
 - A candidate with an `about` line shows it under its row. With `--json`, each candidate has a `score` from 0 to 1 and a
   `why`. The default, `word-overlap`, ranks by shared words, tags and descriptions ([P976](https://github.com/xmejkal/spark/issues/1406)).
+- The order: what you own first; among it, what holds any of the need's words, then a record before a drawer entry with
+  none ([P991](https://github.com/xmejkal/spark/issues/1444)), then the most `condition` words held in its same-verb
+  functions and tags, then the score ([P1015](https://github.com/xmejkal/spark/issues/1476)). The count is raw, with only a few filler words dropped, so a condition such as "a push button" also lifts a joystick whose function says "push button".
 - `stops at the footprint stage (P121)` marks a board whose board file lacks a fact its footprint is drawn from, and the
   rest of the line names it (`its board file lacks physical.header`; with more, `lacks 3 fields (first: …)`; `--json`
   has the whole list as `stops_why`): the chain stops at its footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)). Both library boards build today (the XIAO since
