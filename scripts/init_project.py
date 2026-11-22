@@ -19,6 +19,7 @@ sys.path.insert(0, str(SCRIPTS))
 from spark.build import ai_files  # noqa: E402
 from spark.design import footprint_emitter  # noqa: E402
 from spark.records import store  # noqa: E402
+from spark.sourcing import record_home  # noqa: E402
 from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, answers_in, boards_offered, design_in,  # noqa: E402
                                        find_circuit, nets_in, package_file, rules_for, unanswered_fields,
                                        why_board_refused, why_project_refused, write, write_brief)
@@ -53,15 +54,17 @@ def main(argv=None):
         print(answers, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     try:
-        listed = "on your projects list as %r" % store.add_project(project)
+        name, adopted = record_home.list_project(project)
+        listed = "on your projects list as %r" % name
     except store.StoreError as refused:
-        listed = "not on your projects list: %s" % refused
+        listed, adopted = "not on your projects list: %s" % refused, []
 
     circuit, ambiguous = (args.circuit, None) if args.circuit else find_circuit(project)
 
     nets = nets_in(circuit)
     part_list, notes = design_in(project)
     notes.append(listed)
+    notes += [record_home.ADOPTED.strip() % one for one in adopted]
     if ambiguous:
         notes.append(ambiguous)
     unstated, written = [], []

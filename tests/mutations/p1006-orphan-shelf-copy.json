@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P1006: a shelf copy found through the shelf is never adopted (test_parts.ShelfCopyTest orphan tests)",
+  "find": "        named = shelved_from(path) or orphan_home(path, kind)",
+  "replace": "        named = shelved_from(path)"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P1006: a record found in its project never adopts the orphan copy (test_parts orphan tests)",
+  "find": "named in (shelved_from(shelf / path.name), orphan_home(shelf / path.name, kind))",
+  "replace": "named in (shelved_from(shelf / path.name),)"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P1006: a copy that names a project counts as an orphan (test_parts shelf tests)",
+  "find": "    if not isinstance(record, dict) or \"based_on\" in record:",
+  "replace": "    if not isinstance(record, dict):"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P1006: a catalog copy is adopted by a project (test_parts orphan tests)",
+  "find": "    if kind != \"board\" and (store.place(\"catalog\") / Path(copy_path).name).is_file():\n        return None",
+  "replace": "    if False:\n        return None"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P1006: two projects holding the id adopt the copy (test_parts orphan tests)",
+  "find": "    return holders[0] if len(holders) == 1 else None",
+  "replace": "    return holders[0] if holders else None"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P1006: listing a folder adopts nothing (test_parts.OwedFactsFilledInTheirHomeTest)",
+  "find": "            if isinstance(record, dict) and orphan_home(shelf / path.name, kind) == name \\",
+  "replace": "            if False and orphan_home(shelf / path.name, kind) == name \\"
+ }
+]

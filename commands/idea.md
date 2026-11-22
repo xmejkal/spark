@@ -114,7 +114,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set <part> <file> --project <p
 ```
 
 Show the person the file it prints, then run it without `--dry-run`. A record on the shelf that came from one of the
-person's projects is written in that project, and its shelf copy follows. spark's own library is not changed from here.
+person's projects is written in that project, and its shelf copy follows, also a copy shelved while its folder was on
+no list, once one listed project holds it (P1006). spark's own library is not changed from here.
 
 ## C — a part per need
 

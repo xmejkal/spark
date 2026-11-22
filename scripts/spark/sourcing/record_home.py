@@ -1,7 +1,7 @@
 """
 A part record's own home (P726 PR 3; the functions were `part_handlers`' since W6-S3b): where a record's file is and which
 project's shelf copy follows it (`record_path`, `shelved_from`, §5.4 and §5.5; never a record only another listed project
-holds, P987), the copy made current again
+holds, P987; an orphan copy is adopted by the one listed project that holds it, `orphan_home`, P1006), the copy made current again
 (`refresh_shelf_copy`), a record with values set by name (`merge_values`), and the write of fields into that home
 (`set_fields`), never into spark's library. A `RecordHome` Value enters when a third caller needs (path, source) as one.
 """
@@ -48,12 +48,28 @@ def record_path(part_id, project, kind="part"):
                             fix=sourcing_codes.OTHER_PROJECT_RECORD_FOLDER.fix % shlex.quote(printable(str(folder))))
     shelf = store.place("board-shelf" if kind == "board" else "shelf")  # P989: a board file's shelf is the shelf's boards/
     if path is not None and path.parent == shelf:
-        named = shelved_from(path)
+        named = shelved_from(path) or orphan_home(path, kind)
         folder = store.projects().get(named) if named else None
         home = folder / ("boards" if kind == "board" else "parts") / path.name if folder is not None else None
         return (home, named) if home is not None and home.is_file() else (path, None)
     named = store.find_listed_name(project) if where == "project" else None
-    return path, named if named and shelved_from(shelf / path.name) == named else None
+    return path, named if named and named in (shelved_from(shelf / path.name), orphan_home(shelf / path.name, kind)) else None
+
+
+def orphan_home(copy_path, kind="part"):
+    """
+    The listed project an orphan shelf copy belongs to (P1006), or None. A copy is an orphan when it names no project (no
+    `based_on`: it was shelved while its folder was on no list), no catalog record has its id (a catalog copy names no
+    project by design), and exactly one project on the person's list holds the record, so that project is its home.
+    """
+    record = _parse(copy_path) if Path(copy_path).is_file() else None
+    if not isinstance(record, dict) or "based_on" in record:
+        return None
+    if kind != "board" and (store.place("catalog") / Path(copy_path).name).is_file():
+        return None
+    folder = "boards" if kind == "board" else "parts"
+    holders = [name for name, root in store.projects().items() if (Path(root) / folder / Path(copy_path).name).is_file()]
+    return holders[0] if len(holders) == 1 else None
 
 
 def refresh_shelf_copy(path, record, project_name, dry_run):
@@ -73,6 +89,25 @@ def refresh_shelf_copy(path, record, project_name, dry_run):
     shelve(path, project_name)
     return "shelf copy refreshed"
 
+
+#: Said by a run that lists a folder and adopts an orphan copy of its records (P1006).
+ADOPTED = "  adopted the shelf copy of %s: it was shelved while this folder was on no list, and now follows its record here"
+
+
+def list_project(folder):
+    """
+    Put `folder` on the person's list (`store.add_project`) and adopt the orphan shelf copies of its records (P1006): each
+    copy `orphan_home` gives this project is refreshed from the record, with `based_on`. Returns (name, [ids adopted]).
+    """
+    name, adopted = store.add_project(folder), []
+    for kind, sub in (("part", "parts"), ("board", "boards")):
+        shelf = store.place("board-shelf" if kind == "board" else "shelf")
+        for path in sorted((Path(folder) / sub).glob("*.json")):
+            record = _parse(path)
+            if isinstance(record, dict) and orphan_home(shelf / path.name, kind) == name \
+                    and refresh_shelf_copy(path, record, name, False) == "shelf copy refreshed":
+                adopted.append(path.stem)
+    return name, adopted
 
 def merge_values(record, values):
     """`record` with `values` set, and the values it had: `facts` takes the written names over the held ones, the other names stay

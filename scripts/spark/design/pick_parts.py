@@ -9,7 +9,7 @@ from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Arg
 from spark.records import store
 from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
 from spark.records.record_kind import Answer, _cannot, _note
-from spark.sourcing import drawer
+from spark.sourcing import drawer, record_home
 from spark.sourcing.write_answers import names_your_entries, write_lines
 from spark.design import design_codes, needs
 
@@ -70,8 +70,9 @@ class PickParts(AnswerOperation):
         history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
         listed, keys_before = store.find_listed_name(target) is not None, needs.entry_keys(needs.read(target))
         after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
+        adopted = []
         if not problems and not dry_run:
-            store.add_project(target)
+            _, adopted = record_home.list_project(target)
             drawer.apply(changes)
             for event in events:
                 store.append_event(event)
@@ -88,6 +89,6 @@ class PickParts(AnswerOperation):
         return Answer({"project": name, "picks": picks,
                        "reserved": [{"entry": change["entry"], "used_in": change["now"]["used_in"]} for change in changes],
                        "released": released, "written": not problems and not dry_run},
-                      write_lines(changes, problems, dry_run, said + ["  %s" % note for note in notes] + wrote), problems=problems,
+                      write_lines(changes, problems, dry_run, said + ["  %s" % note for note in notes] + wrote + [record_home.ADOPTED % one for one in adopted]), problems=problems,
                       notes=[_note(note) for note in notes])
 # --- end MVP ---

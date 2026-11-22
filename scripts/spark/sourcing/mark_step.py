@@ -7,6 +7,7 @@ yet on the person's list is listed. The dry run says what it would write and wri
 from spark.core import codes
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument
 from spark.records import store
+from spark.sourcing import record_home
 from spark.records.answer_operation import ANSWER_ARGUMENTS, BAD_ARGUMENT_FIX
 from spark.records.record_kind import Answer, _cannot
 from spark.sourcing import run_cost
@@ -37,7 +38,8 @@ class MarkStep(PartOperation):
         if step not in run_cost.STEPS:
             return Answer(unchecked=[_cannot(NOT_A_STEP % ", ".join(run_cost.STEPS), BAD_ARGUMENT_FIX, code=codes.BAD_ARGUMENT)])
         listed = store.find_listed_name(target) is not None
-        event = run_cost.step_event(store.plan_listed_name(target) if dry_run else store.add_project(target), step)
+        name, adopted = (store.plan_listed_name(target), []) if dry_run else record_home.list_project(target)
+        event = run_cost.step_event(name, step)
         if not dry_run:
             store.append_event(event)
         # C-17: what a step writes is said — a line in the person's history, with the session's id, and the project on their list
@@ -45,5 +47,6 @@ class MarkStep(PartOperation):
                       ["  %s step %s of %s — a line in your history%s" % (
                           "would start" if dry_run else "started", step, event["project"],
                           ", with this Claude Code session's id" if event["session"] else run_cost.session_note())]
-                      + ([] if listed else ["  %s %s on your projects" % ("would list" if dry_run else "listed", event["project"])]))
+                      + ([] if listed else ["  %s %s on your projects" % ("would list" if dry_run else "listed", event["project"])])
+                      + [record_home.ADOPTED % one for one in adopted])
 # --- end MVP ---
