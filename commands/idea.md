@@ -43,7 +43,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    **No part numbers** — a need says what is wanted, not which part.
    A board carries some parts itself, and a need in the words of one of them is served by the board. For power, write
    `power` / `charger`, `power` / `voltage regulator`, `connect` / `battery input` or `sense` / `battery level`. For a
-   radio of the board's chip, write `communicate` / `wifi`, `ble`, `thread` or `zigbee`.
+   radio of the board's chip, write `communicate` / `wifi`, `ble`, `bluetooth`, `thread` or
+   `zigbee`.
    `power` / `battery` means the cell, so a board's charger does not match it. A need for a rail other than the
    board's 3.3 V names it, for example `power` / `5V regulator`, because `power` / `regulator` and `power` / `voltage
    regulator` match a board's own regulator.
