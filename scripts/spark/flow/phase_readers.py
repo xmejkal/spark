@@ -31,8 +31,10 @@ MAIN_FILE = Path("firmware") / "main.py"
 MARKS = {OK: (None, "✓"), PROBLEMS: ("problems", "✗"), COULD_NOT_RUN: ("could not run", "?"),
          flow_codes.NOT_STARTED: ("not started", "○"), flow_codes.PARTIAL: ("partly done", "◐"),
          flow_codes.STALE: ("out of date", "↻"), None: (None, "·")}
-#: The reasons of a ProjectImage that say only that nothing was simulated yet; any other reason is a problem.
-NOT_SIMULATED_YET = (firmware_codes.NO_SIM_TOML, firmware_codes.NO_IMAGE)
+#: The reasons of a ProjectImage that say only that nothing was simulated yet, each with its sentences; any other reason is a
+#: problem. Never the library's own sentence: it names a store, a project and a script path (P979).
+NOT_SIMULATED_SAYS = {firmware_codes.NO_SIM_TOML: [flow_codes.NO_SIM_MESSAGE],
+                      firmware_codes.NO_IMAGE: [flow_codes.NO_IMAGE_MESSAGE, flow_codes.SCENARIO_HINT]}
 #: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (the words of its button), its effect (plain
 #: sentences that name every write taking it makes) and `makes_stale`, the phases it can make out of date (P829).
 Offer = namedtuple("Offer", "key label effect makes_stale")
@@ -417,15 +419,18 @@ class SimulateReader(PhaseReader):
         try:
             image = ProjectImage(project)
         except DeployError as missing:
-            status = flow_codes.NOT_STARTED if missing.reason in NOT_SIMULATED_YET else PROBLEMS
-            return self.phase(status, [str(missing), flow_codes.SCENARIO_COMMAND])
+            if missing.reason in NOT_SIMULATED_SAYS:
+                return self.phase(flow_codes.NOT_STARTED, NOT_SIMULATED_SAYS[missing.reason])
+            return self.phase(PROBLEMS, [str(missing), flow_codes.SCENARIO_HINT])
         try:
             says = [image.why_untested() or flow_codes.TESTED_MESSAGE]
+            if says != [flow_codes.TESTED_MESSAGE] and not image.failed_runs():
+                says = [flow_codes.IMAGE_UNTESTED_MESSAGE]  # keyed on the fact: no run named this image
         except DeployError as unread:
             raise CodedMessageError("%s", unread, code=unread.reason)
         newer = image.find_newer_files()
         says += [flow_codes.NEWER_MESSAGE % ", ".join(newer)] if newer else []
-        return self.phase(None, says + [flow_codes.SCENARIO_COMMAND])
+        return self.phase(None, says + [flow_codes.SCENARIO_HINT])
 
 
 class DeployReader(PhaseReader):
@@ -434,7 +439,7 @@ class DeployReader(PhaseReader):
     PHASE, BY = flow_codes.DEPLOY, flow_codes.BY_TERMINAL
 
     def read(self, project):
-        return self.phase(flow_codes.NOT_STARTED, [flow_codes.LOOK_FIRST_MESSAGE, flow_codes.DEPLOY_COMMAND])
+        return self.phase(flow_codes.NOT_STARTED, [flow_codes.LOOK_FIRST_MESSAGE, flow_codes.DEPLOY_HINT])
 
 
 #: The readers of the nine phases, in the order of `flow_codes.PHASES`.

@@ -162,10 +162,11 @@ class ThePhasesTest(FlowTest):
                                        "deploy": (NS, [])})
         self.assertEqual(said["data"]["stands_at"], "needs")
         self.assertEqual(says(said, "idea"), ["Tell Claude your goal in the chat"])
-        self.assertEqual(says(said, "firmware"), ["no firmware/main.py yet"])
-        self.assertIn("no sim/wokwi.toml", says(said, "simulate")[0])
-        self.assertEqual(says(said, "deploy"), ["ask Claude to look at the board first",
-                                                "then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in your terminal"])
+        # P979: the hints name the command and who acts, with no placeholder and no path
+        self.assertEqual(says(said, "firmware"), ["No firmware/main.py yet. Ask Claude to write it in the chat."])
+        self.assertEqual(says(said, "simulate"), ["No simulation files yet (sim/wokwi.toml). Ask Claude to build the board."])
+        self.assertEqual(says(said, "deploy"), ["Ask Claude to look at the board first (/spark:deploy).",
+                                                "Claude then gives you the deploy line. Run it in your terminal and type yes, unless you gave Claude a standing yes for this board."])
         self.assertEqual([phase["by"] for phase in said["data"]["phases"]],
                          ["you", "claude", "you", "claude", "claude", "you", "claude", "your terminal", "your terminal"])
 
@@ -412,11 +413,39 @@ class ThePhasesTest(FlowTest):
         (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
         (project / "sim" / "image.bin").write_bytes(b"an image")
         said, _ = show(project)
-        self.assertIn("no run in sim/runs/ tested image.bin", says(said, "simulate")[0])
-        self.assertNotIn("older spark", says(said, "simulate")[0])  # P878: no log is there to blame
-        self.assertIn("run ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml in your terminal: "
-                      "it uses Wokwi CI minutes", says(said, "simulate"))
+        # P979: the untested sentence is the flow's own, keyed on the fact, and the scenario hint has no placeholder
+        self.assertEqual(says(said, "simulate"), [
+            "No run tested this image yet. To skip the simulation, ask Claude to deploy firmware/ untested.",
+            "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes."])
         self.assertIsNone(statuses(said)["simulate"])
+
+    def test_a_run_that_failed_on_the_image_keeps_the_library_s_sentence(self):
+        # P979: only an image no run named gets the flow's own untested sentence
+        project = a_built_project()
+        (project / "sim" / "runs").mkdir(parents=True)
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+        (project / "sim" / "image.bin").write_bytes(b"an image")
+        (project / "sim" / "runs" / "a.log").write_text(
+            "# a.log\nverdict: failed (wokwi-cli exit 1)\nimage sha256: %s\nbody\n" % hashlib.sha256(b"an image").hexdigest())
+        said, _ = show(project)
+        self.assertIn("did not pass on this image", says(said, "simulate")[0])
+
+    def test_an_image_that_is_not_there_says_two_sentences_and_the_page_holds_no_placeholder(self):
+        # P979: str(missing) was the library's sentence, with <store>, <project> and a script path
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        project = a_built_project()
+        (project / "sim").mkdir()
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+        said, _ = show(project)
+        self.assertEqual(statuses(said)["simulate"], NS)
+        self.assertEqual(says(said, "simulate"), [
+            "No firmware image yet. The scenario run makes one. To skip the simulation, ask Claude to deploy firmware/ untested.",
+            "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes."])
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            write_page(project, store=FlowPageStore())
+        text = (project / "page.html").read_text(encoding="utf-8")
+        for placeholder in ("${", "&lt;store&gt;", "&lt;project&gt;", "&lt;name&gt;", "SPARK_HOME"):
+            self.assertNotIn(placeholder, text)
 
     def test_a_firmware_line_spark_cannot_read_gives_the_simulate_phase_problems(self):
         project = a_built_project()
@@ -489,9 +518,19 @@ class TheCommandTest(FlowTest):
         self.assertEqual(sorted(show(project)[0]["data"]), sorted(ShowFlow.data_keys))
 
     def test_the_answer_names_no_home_path(self):
-        said, _ = show(a_built_project())
+        # P979: the no-sim sentence no longer holds the project's path, so an unreadable log (its sentence names the path) keeps this test on a masked one
+        project = a_built_project()
+        (project / "sim" / "runs").mkdir(parents=True)
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+        (project / "sim" / "image.bin").write_bytes(b"an image")
+        log = project / "sim" / "runs" / "a.log"
+        log.write_text("")
+        log.chmod(0)
+        self.addCleanup(log.chmod, 0o600)
+        said, _ = show(project)
         self.assertNotIn(str(Path.home()), json.dumps(said))
-        self.assertIn("<project>", json.dumps(said))
+        self.assertNotIn(str(project), json.dumps(said))
+        self.assertIn("cannot read sim/runs/a.log: [Errno 13]", json.dumps(said))  # the project's path is cut off the front (P979: `<project>` no longer appears)
 
 
 class TheBuildRecordStoreTest(unittest.TestCase):

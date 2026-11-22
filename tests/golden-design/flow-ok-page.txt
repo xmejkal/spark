@@ -118,8 +118,7 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <details><summary><h2><span aria-hidden="true">○</span> simulate <span>not started</span></h2></summary>
 <div id="phase-simulate">
 <p>Done by: your terminal</p>
-<p>no sim/wokwi.toml in &lt;project&gt;: build with /spark:build --keep . first</p>
-<p>run ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/&lt;name&gt;.scenario.yaml in your terminal: it uses Wokwi CI minutes</p>
+<p>No simulation files yet (sim/wokwi.toml). Ask Claude to build the board.</p>
 </div>
 </details>
 </section>
@@ -127,8 +126,8 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <details><summary><h2><span aria-hidden="true">○</span> deploy <span>not started</span></h2></summary>
 <div id="phase-deploy">
 <p>Done by: your terminal</p>
-<p>ask Claude to look at the board first</p>
-<p>then run ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run in your terminal</p>
+<p>Ask Claude to look at the board first (/spark:deploy).</p>
+<p>Claude then gives you the deploy line. Run it in your terminal and type yes, unless you gave Claude a standing yes for this board.</p>
 </div>
 </details>
 </section>
