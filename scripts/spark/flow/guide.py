@@ -77,10 +77,13 @@ def is_open(phase, fact):
     return phase.status not in (OK, None) or (phase.phase == flow_codes.SIMULATE and fact.fact in OPEN_IMAGE_FACTS)
 
 
-def now_phase(phases, no_model, fact):
-    """The phase to act on now: the first open one not counted as done, or the idea while no need is written. The deploy
-    is never done here, so there is one; None only in a flow of other readers, which a test gives."""
+def now_phase(phases, no_model, fact, all_aside=False):
+    """The phase to act on now: the first open one not counted as done, or the idea while no need is written, or the parts
+    while every need is set aside (P980: there is no pick to write the parts list from). The deploy is never done here, so
+    there is one; None only in a flow of other readers, which a test gives."""
     now = next((phase for phase in phases if phase.phase not in no_model and is_open(phase, fact)), None)
+    if now and now.phase == flow_codes.REQUIREMENTS and all_aside:
+        return next(phase for phase in phases if phase.phase == flow_codes.PARTS)
     if now and now.phase == flow_codes.NEEDS and now.status == flow_codes.NOT_STARTED:
         return phases[0]
     return now
@@ -135,12 +138,24 @@ def label(phase, no_model):
     return phase.phase
 
 
-def done_of(phases, at, no_model, wired):
+def is_hand_written(by_name):
+    """True when the needs phase has no status: no needs are written, so the requirements have none behind them (a hand-
+    written project, or one whose last need was dropped). An unreadable needs.json gives could-not-run, so false."""
+    needs_phase = by_name.get(flow_codes.NEEDS)
+    return needs_phase is not None and needs_phase.status is None
+
+
+def done_of(phases, at, no_model, wired, hand_written=False):
     """The names of the phases before `at`: a simulate with no model is later, and the breadboard is there only when
-    `wired` (a current sheet once the wiring is no longer part of now), with what spark cannot see."""
+    `wired` (a current sheet once the wiring is no longer part of now), with what spark cannot see. With `hand_written`
+    the needs and parts are left out (nobody did them) and the requirements say so (P980)."""
     done = []
     for phase in phases[:at]:
-        if phase.phase == flow_codes.BREADBOARD:
+        if hand_written and phase.phase in (flow_codes.NEEDS, flow_codes.PARTS):
+            continue
+        if hand_written and phase.phase == flow_codes.REQUIREMENTS:
+            done.append(flow_codes.REQUIREMENTS_NO_PICKS)
+        elif phase.phase == flow_codes.BREADBOARD:
             done += [flow_codes.SHEET_UNSEEN] if wired else []
         elif not (phase.phase == flow_codes.SIMULATE and phase.phase in no_model):
             done.append(label(phase, no_model))
@@ -157,7 +172,8 @@ def guide_of(project, phases, steps=count_steps):
     no_model = no_model_phases(project, by_name)
     simulate = by_name.get(flow_codes.SIMULATE)
     fact = image_fact(project) if simulate and simulate.status is None and flow_codes.SIMULATE not in no_model else NO_IMAGE_FACT
-    now = now_phase(phases, no_model, fact)
+    all_aside = bool(listed) and not counted(listed)
+    now = now_phase(phases, no_model, fact, all_aside)
     at = phases.index(now) if now else len(phases)
     open_needs = [need["id"] for need in counted(listed) if not need.get("pick")]
     beside_sheet = now and now.phase == flow_codes.FIRMWARE and now.status == flow_codes.NOT_STARTED and is_sheet_current(project, by_name)
@@ -167,7 +183,7 @@ def guide_of(project, phases, steps=count_steps):
     wired = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
     later = [label(phase, no_model) + (flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else "")
              for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]
-    return {"now": said, "done": done_of(phases, at, no_model, wired), "later": later,
+    return {"now": said, "done": done_of(phases, at, no_model, wired, is_hand_written(by_name)), "later": later,
             "set_aside": [need["id"] for need in set_aside(listed)],
             "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None}
 # --- end MVP ---

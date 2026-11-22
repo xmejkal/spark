@@ -13,7 +13,7 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <p class="intro">Where this project stands. This page only shows it. To change anything, tell Claude in the chat. Below: the wiring and its pictures, then each phase, folded: click one to read it.</p>
 <section id="guide">
 <p data-key="build" data-makes-stale=""><strong>NOW (build)</strong> Ask Claude in the chat to build the board. It takes seconds and costs nothing.</p>
-<p><strong>DONE</strong> idea, needs, parts, requirements</p>
+<p><strong>DONE</strong> idea, requirements (no needs or picks behind it)</p>
 <p><strong>LATER</strong> breadboard, firmware, simulate, deploy</p>
 </section>
 <nav aria-label="Phases"><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a><ol>

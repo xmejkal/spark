@@ -195,6 +195,10 @@ ONE_NEED_HAS, MANY_NEEDS_HAVE = "1 need has", "%d needs have"
 #: A phase in `later` whose status is ok: it is done now, and a change before it can make it stale (the PO's lens, PR 2 review).
 LATER_BUT_DONE = " (done, may change)"
 REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your picks."
+#: Every need set aside (P980): the parts phase is ok, but the parts list has no pick to be written from.
+ALL_ASIDE_NOW = "Every need is set aside, so there is no pick to write the parts list from. Tell Claude which need to bring back, then pick a part for it."
+#: What `done` says of a requirements file with no needs or picks behind it (P980). Not "hand-written": a project whose last need was dropped is the same.
+REQUIREMENTS_NO_PICKS = "requirements (no needs or picks behind it)"
 REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
 BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
 BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
@@ -212,7 +216,7 @@ DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude
               "in your terminal.")
 PROBLEMS_NOW = "The %s phase has problems. Ask Claude to go through them with you."
 COULD_NOT_RUN_NOW = "The %s phase could not run. Ask Claude to read you why."
-NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW,
+NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW, (PARTS, OK_WORD): ALL_ASIDE_NOW,
                  (REQUIREMENTS, NOT_STARTED): REQUIREMENTS_NOW, (REQUIREMENTS, STALE): REQUIREMENTS_STALE_NOW,
                  (BUILD, NOT_STARTED): BUILD_NOW, (BUILD, STALE): BUILD_STALE_NOW, (BUILD, PARTIAL): BUILD_PARTIAL_NOW,
                  (BREADBOARD, NOT_STARTED): SHEET_NOW, (BREADBOARD, STALE): SHEET_STALE_NOW, (FIRMWARE, NOT_STARTED): FIRMWARE_NOW,
