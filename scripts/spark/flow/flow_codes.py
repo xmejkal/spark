@@ -161,6 +161,8 @@ RAN_OK_SAYS = {PICK: "Saved as the pick. Nothing is built yet. " + NEW_STATE,
                BUILD_BOARD: "The board builds. It is not wired, not flashed and not simulated yet. " + NEW_STATE}
 #: A step of another kind that ran ok, with spark's own line (`ran <label>: ok`); the page sends no other kind today.
 RAN_OTHER_SAYS = "Spark says: %s. " + NEW_STATE
+#: The note after an ok answer that has one (P1008): a build that built while its simulation could not run.
+RAN_NOTE_SAYS = "Note: %s."
 RAN_PROBLEMS_SAYS = "Ran, with problems: %s. " + NEW_STATE
 COULD_NOT_RUN_SAYS = "Could not run: %s. " + NEW_STATE
 #: What the page says of each refusal of `flow.py run-request`, by the code's name: nothing ran, in grey, never red.

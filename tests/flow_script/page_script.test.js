@@ -25,6 +25,7 @@ const WORDS = {
   ok: { pick: "Saved as the pick. Nothing is built yet. Reload to see the new state.",
         build: "The board builds. It is not wired, not flashed and not simulated yet. Reload to see the new state." },
   ran: "Spark says: %s. Reload to see the new state.",
+  note: "Note: %s.",
   problems: "Ran, with problems: %s. Reload to see the new state.",
   could_not_run: "Could not run: %s. Reload to see the new state.",
   refused: { "the project changed after the page was read, so nothing ran":
@@ -269,6 +270,9 @@ test("the status line says each state in the page's words, and never done alone"
   assert.equal(script.shownState(null, null, WORDS), null);
   assert.match(said(null).text, WAITING);
   assert.deepEqual(said({ ran: true, status: "ok", line: "ran Build the board: ok" }), { mark: "✓", text: BUILT, grey: false });
+  assert.deepEqual(said({ ran: true, status: "ok", line: "ran Build the board: ok", note: "the board record names no wokwi_part_type" }),
+    { mark: "✓", text: BUILT + " Note: the board record names no wokwi_part_type.", grey: false });
+  assert.deepEqual(said({ ran: true, status: "ok", line: "ran Build the board: ok", note: null }), { mark: "✓", text: BUILT, grey: false });
   assert.deepEqual(said({ ran: true, status: "problems", line: "R1 has no footprint." }),
     { mark: "✗", text: "Ran, with problems: R1 has no footprint. Reload to see the new state.", grey: false });
   assert.deepEqual(said({ ran: true, status: "could-not-run", line: "tsci is not installed" }),

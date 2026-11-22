@@ -311,9 +311,14 @@ The envelope has `op` `run-request`. Its `data` holds:
   `could-not-run`.
 - `line`: one sentence. For a step, its first problem or reason, or `ran <label>: ok` when it ended ok. For a refusal,
   the code's meaning below.
+- `note`: `null`, or one sentence beside an ok answer. A build whose only stage that could not run is the simulation,
+  with code `board_not_in_wokwi`, built the board, the sheet and the pin map
+  ([P1008](https://github.com/xmejkal/spark/issues/1467)). Its `status` is then `ok`, its `line` is `ran <label>: ok`,
+  and `note` is the meaning of that code. The guide counts such a build as done, too. The envelope keeps the build's
+  own `unchecked` item, so its `status` stays `could-not-run` and the exit stays 2. Decide on `data.status`.
 - `fingerprint`: the fingerprint after the run, the whole sha256.
 
-The text output starts with `ran <label>: <status word>`. A step's own `problems` and `unchecked` items are the
+The text output starts with `ran <label>: <status word>`, the word of `data.status`. A step's own `problems` and `unchecked` items are the
 envelope's. A refusal is one `unchecked` item, and its fix tells you what to do:
 
 | code | meaning | what to do |
@@ -324,7 +329,7 @@ envelope's. A refusal is one `unchecked` item, and its fix tells you what to do:
 | `request_not_offered` | spark does not offer the key now, or the page never runs its kind | write the page again with `flow.py page`, then click again |
 
 A stale refusal is normal: a second Build from the same page is stale once the first one ran. The exit is 0 when the step
-ran ok, 1 when it ran with problems and 2 when nothing ran or the step could not run. Only a wrong argument answers
+ran ok, 1 when it ran with problems and 2 when nothing ran or the step could not run, also for a build with a `note`. Only a wrong argument answers
 with no `data`.
 
 ## The published page

@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1008: a build that stopped only at the simulation for no Wokwi part answers could-not-run (test_run_request built-with-a-note test)",
+  "find": "    if kind == flow_codes.BUILD_BOARD and status == COULD_NOT_RUN and stops_only_for_no_model(stopped):",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1008: a pick that could not run for the no-model code answers ok (test_run_request pick test)",
+  "find": "    if kind == flow_codes.BUILD_BOARD and status == COULD_NOT_RUN and stops_only_for_no_model(stopped):",
+  "replace": "    if status == COULD_NOT_RUN and stops_only_for_no_model(stopped):"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1008: a build that also stopped before the simulation answers ok (test_run_request still-could-not-run test)",
+  "find": "    if kind == flow_codes.BUILD_BOARD and status == COULD_NOT_RUN and stops_only_for_no_model(stopped):",
+  "replace": "    if kind == flow_codes.BUILD_BOARD and status == COULD_NOT_RUN and any(finding.code == \"board_not_in_wokwi\" for finding in result.findings):"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1008: the answer of an ok build with a note keeps the simulation's sentence as its line (test_run_request built-with-a-note test)",
+  "find": "        line = RAN_LINE % (offer.label, MARKS[status][0] or OK) if note else line_of(offer.label, result)",
+  "replace": "        line = line_of(offer.label, result)"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1008: the page drops the note of an ok build (page_script.test.js status line test)",
+  "find": "    return { mark: words.marks.ok, text: said + note, grey: false };",
+  "replace": "    return { mark: words.marks.ok, text: said, grey: false };"
+ }
+]

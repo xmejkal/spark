@@ -44,7 +44,7 @@ function sentence(line) {
 
 /**
  * What the page says of the latest request and its answer: {mark, text, grey}, or null when there is no request. Pure.
- * A request that waits, one withdrawn with no answer yet, an ok by its kind, problems, could not run, and a refusal in
+ * A request that waits, one withdrawn with no answer yet, an ok by its kind with its note (P1008), problems, could not run, and a refusal in
  * grey. A withdrawn request whose answer came says the answer: Claude may have run it before the withdraw. Never a word
  * alone: each text is one of the page's sentences.
  */
@@ -59,7 +59,9 @@ function shownState(request, answer, words) {
     return { mark: words.marks["could-not-run"], text: fill(words.could_not_run, sentence(answer.line)), grey: false };
   }
   if (answer.status === "ok") {
-    return { mark: words.marks.ok, text: own(words.ok, kindOf(request.key)) || fill(words.ran, sentence(answer.line)), grey: false };
+    const said = own(words.ok, kindOf(request.key)) || fill(words.ran, sentence(answer.line));
+    const note = typeof answer.note === "string" && answer.note ? " " + fill(words.note, sentence(answer.note)) : "";
+    return { mark: words.marks.ok, text: said + note, grey: false };
   }
   if (answer.status === "problems") return { mark: words.marks.problems, text: fill(words.problems, sentence(answer.line)), grey: false };
   return { mark: words.marks["could-not-run"], text: fill(words.could_not_run, sentence(answer.line)), grey: false };

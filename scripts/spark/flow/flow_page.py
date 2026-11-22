@@ -110,7 +110,7 @@ def page_words(phases, wiring_first=False):
             "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "page_from": flow_codes.PAGE_FROM,
             "not_sent": flow_codes.NOT_SENT_SAYS, "not_withdrawn": flow_codes.NOT_WITHDRAWN_SAYS,
             "intro": " ".join([flow_codes.PUBLISHED_INTRO] + ([flow_codes.WIRING_FIRST] if wiring_first else [])),
-            "ok": dict(flow_codes.RAN_OK_SAYS), "ran": flow_codes.RAN_OTHER_SAYS, "problems": flow_codes.RAN_PROBLEMS_SAYS,
+            "ok": dict(flow_codes.RAN_OK_SAYS), "ran": flow_codes.RAN_OTHER_SAYS, "note": flow_codes.RAN_NOTE_SAYS, "problems": flow_codes.RAN_PROBLEMS_SAYS,
             "could_not_run": flow_codes.COULD_NOT_RUN_SAYS,
             "refused": {meanings[name]: said for name, said in flow_codes.REFUSED_SAYS.items()},
             "marks": dict(marks, **{"not-run": flow_codes.NOT_RUN_MARK})}
