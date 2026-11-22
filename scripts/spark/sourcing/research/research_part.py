@@ -25,7 +25,7 @@ from spark.sourcing.part_records import PHYSICAL_KEYS, PartError, definition_pat
 from spark.sourcing.research import PHASE, REFUSED_LINE
 from spark.sourcing.research.merge import BODY, DOCUMENTS, body_sizes, fold_documents, fold_not_published, fold_replies, not_published_of
 from spark.sourcing.research.research_source import RESEARCH_SOURCES, DfrobotWikiSource, names_a_drawing, question_for
-from spark.sourcing.sourcing_codes import BAD_ARGUMENT_IN_LIBRARY, PART_CONTRACT_BROKEN_REPLIES
+from spark.sourcing.sourcing_codes import LIBRARY_RECORD, PART_CONTRACT_BROKEN_REPLIES
 
 # --- MVP ---
 SCRIPT, OP = "research.py", "research-part"
@@ -177,13 +177,13 @@ class ResearchPart(Operation):
     @staticmethod
     def _record(part, project, outside):
         """The record's path and the record. No record of that id is a SparkError with `definition_path`'s code (`no_such_part`),
-        and a record in spark's library is a SparkError `bad_argument`; each is said as an Event first."""
+        and a record in spark's library is a SparkError `library_record` (P982); each is said as an Event first."""
         try:
             path = definition_path(part, project)
         except PartError as missing:
             raise refusal(outside, SparkError("%s", missing, code=missing.code))
         if path.parent.resolve() == record_kind.LIBRARY.resolve():
-            raise refusal(outside, SparkError("%s is a record of spark's own library", part, code=BAD_ARGUMENT_IN_LIBRARY))
+            raise refusal(outside, SparkError("%s is a record of spark's own library", part, code=LIBRARY_RECORD))
         return path, json.loads(path.read_text(encoding="utf-8"))
 
     @staticmethod

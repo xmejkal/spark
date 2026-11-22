@@ -6,8 +6,7 @@ A leaf: it imports nothing of spark but `spark.core.codes`. Each refusal names i
 and never on the English sentence (no magic strings, P260). The errors are `errors.CodedMessageError`s, so a raise cannot
 leave its code out; a SparkError and `Finding.of` take the fix from the code. A variant is another Code of its parent's
 word and meaning, named after it, with a fix of its own; its parent may be the core's. A control character in a value,
-such as a project or a matcher name, shows as `?` (P444). No code of CODES is an equal literal of another leaf; the
-variant BAD_ARGUMENT_IN_LIBRARY is the core's word.
+such as a project or a matcher name, shows as `?` (P444). No code of CODES is an equal literal of another leaf.
 """
 
 from spark.core import codes
@@ -25,12 +24,9 @@ PART_CONTRACT_BROKEN_REPLIES = codes.Code(PART_CONTRACT_BROKEN, PART_CONTRACT_BR
                                     "fix the value in %s so the record meets its contract (the typed values are kept there), then run %s --replies %s")
 PROMOTION_WOULD_OVERWRITE = codes.Code("promotion_would_overwrite", "the library already holds a record of this id, and a promotion never overwrites one",
                                  "keep the record that is there, or move it away by hand first")
-#: parts.py wrote nothing because the record is in spark's own library (P964); research.py says BAD_ARGUMENT_IN_LIBRARY for the same fact (P982).
+#: parts.py wrote nothing because the record is in spark's own library (P964); research.py says it too (P982).
 LIBRARY_RECORD = codes.Code("library_record", "the record is in spark's own library, which is changed in spark's repository",
                       "copy the record into the project's parts/ folder (a board into boards/), then run the same command again with --project <that project's folder>")
-#: A variant of the core's BAD_ARGUMENT: research asked for a record of spark's own library (research_part).
-BAD_ARGUMENT_IN_LIBRARY = codes.Code(codes.BAD_ARGUMENT, codes.BAD_ARGUMENT.meaning,
-                               "spark's library is changed in spark's repository; research a copy of the record in the project's parts/")
 #: run_cost: what a project's history and its session transcripts lack, so the cost of its steps is not known.
 STEP_LINE_BROKEN = codes.Code("step_line_broken", "a step line in the history has no start spark can read as a time: fix it by hand",
                         "fix the step line the sentence names in the history by hand")

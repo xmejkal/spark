@@ -61,9 +61,9 @@
  },
  {
   "file": "scripts/spark/sourcing/sourcing_codes.py",
-  "name": "a library record's fix no longer says where the library is changed",
-  "find": "\"spark's library is changed in spark's repository; research",
-  "replace": "\"spark's library is changed elsewhere; research"
+  "name": "a library record's fix no longer says to copy the record into the project (P982: LIBRARY_RECORD's fix, the variant is gone)",
+  "find": "\"copy the record into the project's parts/ folder",
+  "replace": "\"change the record in the project's parts/ folder"
  },
  {
   "file": "scripts/spark/sourcing/research/research_source.py",
