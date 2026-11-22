@@ -159,8 +159,10 @@ placeholder size, and one that owes its `simulation` is written with a warning t
 source: a JSON object of the facts (`footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation`, or `facts`
 entries {value, verified, source} by name; a bench result is `verified: true` and its `source` says who, when and how)
 in a file written with the Write tool. When a bench result changes what the host board must meet, for example the
-driver that draws, put `host_requirements` in the same file: the lines that the sheet prints, replaced as a whole
-([P1012](https://github.com/xmejkal/spark/issues/1471)). `legs` says how each leg is told apart. Then
+driver whose picture shows on the screen, put `host_requirements` in the same file: the lines that the sheet prints.
+They are replaced as a whole, so copy the lines that still hold first
+([P1012](https://github.com/xmejkal/spark/issues/1471)). `legs` in the same file, {pin of `pin_order`: how to tell that
+leg apart}, is merged leg by leg. Then
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set <part> <file> --project <project> --dry-run
