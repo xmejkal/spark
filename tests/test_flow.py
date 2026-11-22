@@ -1075,6 +1075,9 @@ class RecordFirstOffersTest(FlowTest):
     person owns with a record is offered first, each need's pick is named, and an offer says when spark cannot build from
     its pick."""
 
+    #: The start of the sentence an offer says when spark cannot build from its pick.
+    CANNOT = flow_codes.NO_BOARD_FILE_MESSAGE.split("%s")[0]
+
     def entry(self, key, fields):
         (self.home / "drawer" / (key + ".json")).write_text(json.dumps(dict({"schema": 1, "label": key, "count": 1}, **fields)))
 
@@ -1102,28 +1105,28 @@ class RecordFirstOffersTest(FlowTest):
     def test_a_drawer_board_with_no_board_file_says_its_pick_cannot_be_built_from(self):
         effects = self.board_effects([])
         self.assertIn(need_requirements.NO_BOARD_FILE, effects["pick:board:beetle"])
-        self.assertIn(flow_codes.NO_BOARD_FILE_MESSAGE.split("%s")[0], effects["pick:board:beetle"])
+        self.assertIn(self.CANNOT, effects["pick:board:beetle"])
         self.assertTrue(effects["pick:board:beetle"].endswith(flow_codes.PICK_HISTORY_MESSAGE))
-        self.assertEqual([key for key, effect in effects.items() if "board file" in effect], ["pick:board:beetle"],
+        self.assertEqual([key for key, effect in effects.items() if self.CANNOT in effect], ["pick:board:beetle"],
                          "a board spark has a file for says nothing of one")
 
     def test_a_drawer_board_says_nothing_when_another_need_picks_the_board(self):
         # the walk's state: the button need picks the C6, so the parts list places the C6 as the board (one board pick)
         effects = self.board_effects([{"id": "button", "does": "input", "what": "button", "pick": [{"board": "xiao-esp32-c6"}]}])
         self.assertIn("pick:board:beetle", effects)
-        self.assertNotIn("board file", effects["pick:board:beetle"])
+        self.assertNotIn(self.CANNOT, effects["pick:board:beetle"])
 
     def test_a_drawer_board_says_nothing_when_two_boards_are_picked_elsewhere(self):
         # the refusal is then "pick one board", whose subject is no drawer entry
         effects = self.board_effects([{"id": "button", "does": "input", "what": "button", "pick": [{"board": "xiao-esp32-c6"}]},
                                       {"id": "led", "does": "indicate", "what": "light", "pick": [{"board": "firebeetle2-esp32s3"}]}])
         self.assertIn("pick:board:beetle", effects)
-        self.assertNotIn("board file", effects["pick:board:beetle"])
+        self.assertNotIn(self.CANNOT, effects["pick:board:beetle"])
 
     def test_an_entry_with_no_record_for_a_need_that_does_not_compute_says_nothing_of_a_board_file(self):
         self.entry("e-1", {"function": [{"does": "sense", "what": "zorbleflux"}]})
         said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "probe", "does": "sense", "what": "zorbleflux"}]))
-        self.assertNotIn("board file", offer_of(said, "pick:probe:e-1")["effect"])
+        self.assertNotIn(self.CANNOT, offer_of(said, "pick:probe:e-1")["effect"])
 
     def test_the_parts_phase_names_each_need_s_pick_by_its_name(self):
         # the drawer entry "many" carries `is` x-many, so its pick is named as the record; "spare" has no record: its label
