@@ -36,6 +36,16 @@ class TheWordsTest(unittest.TestCase):
     def test_filler_words_go_and_each_word_counts_once(self):
         self.assertEqual(matching.need_words("The sensors for a range, range"), ["sensor", "range"])
 
+    def test_condition_words_keep_a_hyphenated_word_and_drop_one_letter(self):
+        # P1015: a condition's words, and an offer's with the parts of each hyphenated word as well
+        for text, said in (("plugs into the board's GDI connector", ["plug", "into", "board", "gdi", "connector"]),
+                           ("e-paper", ["e-paper"]), ("a 3-way, b", ["3-way"]), ("e paper", ["paper"]), (None, []), ("", [])):
+            with self.subTest(text=text):
+                self.assertEqual(matching.condition_words(text), said)
+        self.assertEqual(matching.condition_words("a 2.9 inch three-colour e-paper picture", parts=True),
+                         ["inch", "three-colour", "three", "colour", "e-paper", "paper", "picture"])
+        self.assertEqual(matching.condition_words("paper e", parts=True), ["paper"])
+
 
 class TheOfferTest(unittest.TestCase):
     def test_a_tag_is_cleaned_of_control_and_bidi_characters_and_capped(self):
@@ -210,6 +220,27 @@ class TheMatchersTest(unittest.TestCase):
             with self.subTest(what=what, said=said):
                 fit = matching.WordOverlap().score({"does": "sense", "what": what}, an_offer(**said))
                 self.assertEqual(fit.score, score)
+
+    def test_condition_overlap_counts_functions_and_tags_only(self):
+        # P1015: the condition words that the offer's same-verb functions and its tags hold; never its names or texts
+        need = {"does": "indicate", "what": "display screen", "condition": "e-paper"}
+        other = {"does": "indicate", "what": "x"}
+        for said, count in ((dict(functions=[{"does": "indicate", "what": "a 2.9 inch three-colour e-paper picture"}]), 1),
+                            (dict(functions=[other], tags=["e-paper"]), 1),
+                            (dict(functions=[other], names=["E-paper display"]), 0),
+                            (dict(key="e-paper", functions=[other]), 0),
+                            (dict(functions=[other], about="An e-paper display."), 0),
+                            (dict(functions=[other], description="An e-paper display."), 0),
+                            (dict(functions=[other, {"does": "sense", "what": "e-paper"}]), 0),
+                            (dict(functions=[{"does": "indicate", "what": "paper e"}]), 0)):
+            with self.subTest(said=said):
+                for matcher in (matching.WordOverlap(), matching.SameWords()):
+                    self.assertEqual(matcher.condition_overlap(need, an_offer(**said)), count)
+        e_paper = an_offer(functions=[{"does": "indicate", "what": "a 2.9 inch three-colour e-paper picture"}])
+        self.assertEqual(matching.WordOverlap().condition_overlap(dict(need, condition="e paper"), e_paper), 1)
+        self.assertEqual(matching.WordOverlap().condition_overlap(dict(need, condition=None), e_paper), 0)
+        gdi = an_offer(functions=[{"does": "indicate", "what": "connector"}], tags=["GDI"])
+        self.assertEqual(matching.WordOverlap().condition_overlap(dict(need, condition="plugs into the board's GDI connector"), gdi), 2)
 
     def test_a_need_of_only_filler_scores_zero(self):
         offer = an_offer(functions=[{"does": "sense", "what": "the"}])
