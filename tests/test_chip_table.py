@@ -14,6 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
 ROOT = Path(__file__).resolve().parents[1]
+#: The radio facts a chip may hold (P990), the names the table's rows use.
+RADIOS = ("wifi", "bluetooth_le", "ieee802154")
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.core import outcomes  # noqa: E402
@@ -42,7 +44,7 @@ class TheShippedTableTest(unittest.TestCase):
                     self.assertIn(fact["cites"]["document"], self.held["documents"])
                     self.assertTrue(fact["cites"]["at"])
             self.assertLessEqual(set(facts), {"adc2_used_by_wifi", "adc2_oneshot_supported", "adc2_gpio",
-                                              *chip_table.RADIOS}, chip)
+                                              *RADIOS}, chip)
 
     def test_a_chip_whose_adc2_oneshot_is_unsupported_names_its_adc2_pins(self):
         for chip, facts in self.held["chips"].items():
@@ -52,7 +54,7 @@ class TheShippedTableTest(unittest.TestCase):
 
     def test_the_c3_facts_are_the_sources(self):
         held = {chip: {name: fact["value"] for name, fact in facts.items()
-                       if name != "adc2_used_by_wifi" and name not in chip_table.RADIOS}
+                       if name != "adc2_used_by_wifi" and name not in RADIOS}
                 for chip, facts in self.held["chips"].items()}
         self.assertEqual({chip: facts for chip, facts in held.items() if facts},
                          {"esp32c3": {"adc2_oneshot_supported": False, "adc2_gpio": [5]}})
@@ -74,7 +76,7 @@ class TheShippedTableTest(unittest.TestCase):
 
     def test_each_radio_fact_is_true_and_cites_its_chips_soc_caps_line(self):
         for chip, facts in self.held["chips"].items():
-            for name in chip_table.RADIOS:
+            for name in RADIOS:
                 if name in facts:
                     with self.subTest(chip=chip, radio=name):
                         self.assertIs(facts[name]["value"], True)
