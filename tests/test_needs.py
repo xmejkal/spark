@@ -2842,11 +2842,28 @@ class TheRequirementsFileTest(unittest.TestCase):
 
     def test_a_pick_that_owes_its_outline_and_a_fact_the_circuit_needs_is_still_refused(self):
         home, project = self.project([self.BOARD, ("light", [{"part": "x-dim"}])])
-        self.without(home, "x-dim", "body_mm", "simulation")
+        self.without(home, "x-dim", "body_mm", "footprint")  # P996: an owed simulation stance no longer refuses
         said, code = run(["--requirements", str(project)])
         self.assertEqual((said["status"], code, [(p["subject"], p["sentence"]) for p in said["problems"]]),
-                         ("problems", 1, [("x-dim", "owes body_mm, simulation — fill it in its own home with --fact-set")]))
+                         ("problems", 1, [("x-dim", "owes footprint, body_mm — fill it in its own home with --fact-set")]))
         self.assertFalse((project / "requirements.json").exists())
+
+    def test_a_pick_that_owes_only_its_simulation_stance_is_written_with_a_warning(self):
+        # P996 (the PO, 2026-11-22): "The simulation step should not stop us if we want and can deploy directly."
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-sim"}])])
+        self.without(home, "x-sim", "simulation")
+        dry = self.text(["--requirements", str(project), "--dry-run"])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, self.written(project)["parts"], said["data"]["placeholder_outline"],
+                          said["data"]["no_simulation_stance"]), ("ok", 0, ["x-sim"], [], ["x-sim"]))
+        self.assertIn("  no simulation yet — x-sim: spark cannot simulate it yet, so /spark:deploy asks your yes for firmware "
+                      "that no simulation tested — fill it in its own home with --fact-set\n", dry)
+
+    def test_a_pick_that_owes_its_outline_and_its_simulation_stance_is_written_with_both_warnings(self):
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-dim"}])])
+        self.without(home, "x-dim", "body_mm", "simulation")
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["data"]["placeholder_outline"], said["data"]["no_simulation_stance"]), (0, ["x-dim"], ["x-dim"]))
 
     def test_a_library_pick_that_owes_only_its_outline_says_it_is_filled_in_spark_s_repository(self):
         library = Path(tempfile.mkdtemp()) / "parts"

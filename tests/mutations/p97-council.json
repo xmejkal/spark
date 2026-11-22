@@ -38,14 +38,14 @@
  {
   "file": "scripts/spark/design/need_requirements.py",
   "name": "item 2: a pick laid out at a placeholder outline is placed without a word",
-  "find": "        placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []",
+  "find": "        placeholder += [(key, _how_to_fill(path))] if set(owed) & set(LAYOUT_FACTS) and not wrong else []",
   "replace": "        placeholder += []"
  },
  {
   "file": "scripts/spark/design/need_requirements.py",
   "name": "item 2: the placeholder warning sends a library record to --fact-set",
-  "find": "        placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []",
-  "replace": "        placeholder += [(key, \"fill it in its own home with --fact-set\")] if owed and not wrong else []"
+  "find": "        placeholder += [(key, _how_to_fill(path))] if set(owed) & set(LAYOUT_FACTS) and not wrong else []",
+  "replace": "        placeholder += [(key, \"fill it in its own home with --fact-set\")] if set(owed) & set(LAYOUT_FACTS) and not wrong else []"
  },
  {
   "file": "scripts/spark/design/need_requirements.py",

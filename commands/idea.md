@@ -149,9 +149,9 @@ pick lets go. For each candidate the person passed over, write their reason **in
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
 `--passed-over <file>`: the reason goes to the history in your store, never to the project.
 
-A part pick whose record owes a fact the circuit needs — `footprint`, `pin_order`, `pin_order_proof`, `simulation` — cannot
+A part pick whose record owes a fact the circuit needs — `footprint`, `pin_order`, `pin_order_proof` — cannot
 be built from; one that owes only its outline (`body_mm`) is written with a warning that the PCB step lays it out at a
-placeholder size. Fill each owed fact once, in the record's own home, from its
+placeholder size, and one that owes its `simulation` is written with a warning that spark cannot simulate it yet, so /spark:deploy asks the person's yes for firmware that no simulation tested (P996). Fill each owed fact once, in the record's own home, from its
 source: a JSON object of the facts (`footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation`, or `facts`
 entries {value, verified, source} by name; a bench result is `verified: true` and its `source` says who, when and how)
 in a file written with the Write tool, then
@@ -203,6 +203,8 @@ file is written:
 - `board <key>: stops at the footprint stage (P121): its board file lacks …`: the board picked lacks a fact its footprint
   is drawn from (`physical.header`, say), so the chain cannot generate its footprint; it is still a choice for the pin map;
 - `placeholder outline — …`: a pick whose record owes only its outline;
+- `no simulation yet — …`: a pick whose record owes `simulation` (`data.no_simulation_stance`); the board and its
+  parts still build;
 - `reserved, not placed — no record: …`: a pick with no record;
 - `kept, not from a pick: …`: an entry no pick explains and spark did not write;
 - `written for a pick that is gone: … (need …)`: an entry spark wrote that no pick explains now; ask the person, then remove it by a yes (above);

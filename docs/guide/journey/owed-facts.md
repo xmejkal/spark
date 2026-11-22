@@ -54,7 +54,7 @@ need without its condition, and the board.
 
 What happens today depends on what is owed. `--pick` takes the record either way; `--requirements` decides.
 
-**A fact the circuit needs** — `footprint`, `pin_order`, `pin_order_proof` or `simulation` — stops the building list.
+**A fact the circuit needs** — `footprint`, `pin_order` or `pin_order_proof` — stops the building list. An owed `simulation` no longer does ([P996](https://github.com/xmejkal/spark/issues/1453)): the pick is written with a `no simulation yet` warning.
 The soil probe was picked with the board (`--pick . soil=soil-probe board=firebeetle2-esp32s3`), and then:
 
 ```sh
