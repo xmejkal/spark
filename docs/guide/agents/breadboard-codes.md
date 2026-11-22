@@ -59,7 +59,7 @@ each at least 4.5:1 with white; the sheet and Wokwi keep the word (cyan is drawn
 ## The labels, the captions and the note
 
 A pad's label says the word the steps say for it (`wiring_steps.pad_word`, P953): `GND1` and `GND2` read `GND`, `NC3`
-reads `NC` in a muted grey, and `3V3_2` stays `3V3_2`, as the steps say it. If the board's record joins 3V3_2 to 3V3, no jumper goes to 3V3_2. A used pad's label is bold yellow, a free
+reads `NC` in a muted grey, and `3V3_2` stays `3V3_2`, as the steps say it. A used pad's label is bold yellow, a free
 one dim, each with a thin dark outline. Every turned text reads bottom to top: a label's turn plus its part's is 0 or
 -90. Each part has one caption outside its body (`class="caption"`): its record's `name` up to the first comma
 (`DFRobot FireBeetle 2 ESP32-C6`), or, with no name, its id in grey. It sits above the body, else below it, at the
