@@ -1,5 +1,5 @@
 {
- "//": "Facts about each ESP-IDF v5.5.1 chip that a board rule reads (P809), cited to the kept ESP-IDF files. adc2_used_by_wifi: true means a board of that chip names the adc2_unusable_with_wifi role in pin_roles (board_rules.adc2_role_problems); false means it has no ADC2 that Wi-Fi uses; null means the source says something else, and boards.py --validate says the role is not checked. adc2_oneshot_supported: false means ESP-IDF does not read the chip's ADC2 in oneshot mode, so the pin assigner gives the pins in adc2_gpio no adc ability, with no role (P813, the ESP32-C3 only). The chip keys are the board records' `chip` values. wifi, bluetooth_le and ieee802154 (P990): true means the chip has that radio, cited to the SOC_*_SUPPORTED line of its soc_caps.h. board_records.onboard_functions offers each radio of a board's chip for a need of communicate. A chip with no radio fact offers no radio, which never means it has none.",
+ "//": "Facts about each ESP-IDF v5.5.1 chip that a board rule reads (P809), cited to the kept ESP-IDF files. adc2_used_by_wifi: true means a board of that chip names the adc2_unusable_with_wifi role in pin_roles (board_rules.adc2_role_problems); false means it has no ADC2 that Wi-Fi uses; null means the source says something else, and boards.py --validate says the role is not checked. adc2_oneshot_supported: false means ESP-IDF does not read the chip's ADC2 in oneshot mode, so the pin assigner gives the pins in adc2_gpio no adc ability, with no role (P813, the ESP32-C3 only). The chip keys are the board records' `chip` values. wifi, bluetooth_le and ieee802154 (P990): true means the chip has that radio, cited to the SOC_*_SUPPORTED line of its soc_caps.h. board_records.onboard_functions offers each radio of a board's chip for a need of communicate. A chip with no radio fact offers no radio, which never means it has none. wifi_band (P1013): the band of the chip's Wi-Fi in words, cited to the pages of its Espressif datasheet that state it; board_records.shown_what prints it inside the Wi-Fi words of a --match line, and no matcher reads it. A chip with no wifi_band shows no band, which never means it has none.",
  "documents": {
   "esp-idf-adc-oneshot-v5-5-1": {
    "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/docs/en/api-reference/peripherals/adc_oneshot.rst",
@@ -80,6 +80,30 @@
    "retrieved": "2026-11-14",
    "title": null,
    "version": "tag v5.5.1"
+  },
+  "esp32-datasheet-v5-3": {
+   "url": "https://documentation.espressif.com/esp32_datasheet_en.pdf",
+   "sha256": "a7917e6b47528c9dcab06837a49d452e582751335797db879f1cf2d17cd29adf",
+   "file": "esp32_datasheet_en.pdf",
+   "retrieved": "2026-11-22",
+   "title": "ESP32 Series Datasheet",
+   "version": "5.3"
+  },
+  "esp32-s3-datasheet-v2-2": {
+   "url": "https://documentation.espressif.com/esp32-s3_datasheet_en.pdf",
+   "sha256": "2d5a7cb7fd559d8d972bd88db32669c0196d23f22d7afaafb0f63d099b589a3f",
+   "file": "esp32-s3_datasheet_en.pdf",
+   "retrieved": "2026-10-02",
+   "title": "ESP32-S3 Series Datasheet",
+   "version": "2.2"
+  },
+  "esp32-c6-datasheet-v1-5": {
+   "url": "https://documentation.espressif.com/esp32-c6_datasheet_en.pdf",
+   "sha256": "372a5b42b2900c83ef4309149c8835e9ae2d1be19244995bf2fb83af4dc5edf1",
+   "file": "esp32-c6_datasheet_en.pdf",
+   "retrieved": "2026-10-13",
+   "title": "ESP32-C6 Series Datasheet",
+   "version": "1.5"
   }
  },
  "chips": {
@@ -96,6 +120,13 @@
     "cites": {
      "document": "esp-idf-soc-caps-v5-5-1-esp32",
      "at": "line 74: SOC_WIFI_SUPPORTED 1"
+    }
+   },
+   "wifi_band": {
+    "value": "2.4 GHz",
+    "cites": {
+     "document": "esp32-datasheet-v5-3",
+     "at": "page 2, Product Overview: a single 2.4 GHz Wi-Fi-and-Bluetooth combo chip. Page 53, Table 5-6: operating frequency range 2412 ~ 2484 MHz"
     }
    },
    "bluetooth_le": {
@@ -131,7 +162,9 @@
     }
    },
    "adc2_gpio": {
-    "value": [5],
+    "value": [
+     5
+    ],
     "cites": {
      "document": "esp-idf-adc-channel-v5-5-1-esp32c3",
      "at": "line 25: \"#define ADC2_CHANNEL_0_GPIO_NUM 5\", ADC2's one channel (P813)"
@@ -160,6 +193,13 @@
     "cites": {
      "document": "esp-idf-soc-caps-v5-5-1-esp32c6",
      "at": "line 38: SOC_WIFI_SUPPORTED 1"
+    }
+   },
+   "wifi_band": {
+    "value": "2.4 GHz",
+    "cites": {
+     "document": "esp32-c6-datasheet-v1-5",
+     "at": "page 3, Features, Wi-Fi: 1T1R in 2.4 GHz band. Page 70, Table 6-1: center frequency range of operating channel 2412 ~ 2484 MHz"
     }
    },
    "bluetooth_le": {
@@ -226,6 +266,13 @@
     "cites": {
      "document": "esp-idf-soc-caps-v5-5-1-esp32s3",
      "at": "line 29: SOC_WIFI_SUPPORTED 1"
+    }
+   },
+   "wifi_band": {
+    "value": "2.4 GHz",
+    "cites": {
+     "document": "esp32-s3-datasheet-v2-2",
+     "at": "page 3, Features, Wi-Fi: supports 20 MHz and 40 MHz bandwidth in 2.4 GHz band. Page 70, Table 6-1: center frequency range of operating channel 2412 ~ 2484 MHz"
     }
    },
    "bluetooth_le": {
