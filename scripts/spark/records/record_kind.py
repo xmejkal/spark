@@ -478,7 +478,7 @@ def _parse(path):
 
 def _write_record(path, record):
     """A record back to its own home, whole (§6.1): through the store when it lives there (contained, private), else to its file."""
-    for name in ("shelf", "catalog"):
+    for name in ("shelf", "board-shelf", "catalog"):
         if path.parent == store.place(name):
             return store.write_json(name, path.stem, record)
     return store.write_file(path, json.dumps(record, indent=2, ensure_ascii=False) + "\n")

@@ -164,7 +164,8 @@ def active_id(project: Path) -> str:
 
 
 def records(project=None):
-    """{id: (layer, path)} for every board definition — the project's own winning over spark's library."""
+    """{id: (layer, path)} for every board definition — the project's own winning over the store's shelf (P989), and the
+    shelf over spark's library."""
     return store.records("boards", LIBRARY, project, skip=NOT_A_BOARD)
 
 
@@ -178,7 +179,7 @@ def definition_path(project: Path, board_id: str = None) -> Path:
 
 
 def available(project: Path) -> list:
-    """Every board that could be switched to — the project's own, plus the shipped library."""
+    """Every board that could be switched to — the project's own, the store's shelf (P989) and the shipped library."""
     return sorted(records(project))
 
 

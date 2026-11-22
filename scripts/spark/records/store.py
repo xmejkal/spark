@@ -98,7 +98,8 @@ def format_rerun_line(script, arguments):
 #: pointer (`documents`), never the file.
 #: `catalog`: everything research has read and not chosen (P83) — a candidate keeps its part facts (pinout, power,
 #: body, the cited facts: the PO, 2026-10-04) and no seller listings, which go stale before anyone reads them (W21).
-#: `boards`: one record per physical board the person deployed to, by its MAC (P215, D23, D44).
+#: `boards`: one record per physical board the person deployed to, by its MAC (P215, D23, D44) — not a board file.
+#: `board-shelf`: the board files the person chose before, from any project (P989): the shelf's own `boards` folder.
 #: `grants`: one live grant per physical board, by its MAC: the yes the person typed for a time limit (P253, D12).
 #: `known-boards`: one record per project folder, the board its looks read after the person's yes (P865).
 #: `registered-projects`: the projects that are not spark's and record their deploys, by name (P920).
@@ -106,7 +107,7 @@ def format_rerun_line(script, arguments):
 PLACES = {"sources": "sources", "catalog": "catalog", "downloads": "downloads", "tools": "tools.json",
           "drawer": "drawer", "drawer-import": "drawer-import", "shelf": "shelf", "projects": "projects.json",
           "history": "history.jsonl", "boards": "boards", "grants": "grants", "known-boards": "known-boards",
-          "registered-projects": "registered-projects.json", "launcher": "launcher/bench.py"}
+          "registered-projects": "registered-projects.json", "launcher": "launcher/bench.py", "board-shelf": "shelf/boards"}
 
 
 def place(name):
@@ -116,12 +117,13 @@ def place(name):
 
 def layers(kind, library, project=None, drafts=False):
     """
-    Where records of one kind are read from, nearest first (§5.5): the project's own, the shelf (parts the person
-    chose before, from any project), spark's library, then — only when drafts are asked for — the catalog.
+    Where records of one kind are read from, nearest first (§5.5): the project's own, the shelf (the parts and the board
+    files the person chose before, from any project; a board's in the shelf's `boards` folder, P989), spark's library,
+    then — only for parts, and only when drafts are asked for — the catalog.
     `library` is the plugin's folder for the kind, which the module that ships it names.
     """
     rows = [("project", Path(project) / kind)] if project else []
-    rows += [("shelf", place("shelf"))] if kind == "parts" else []
+    rows.append(("shelf", place("shelf" if kind == "parts" else "board-shelf")))
     rows.append(("library", Path(library)))
     rows += [("catalog", place("catalog"))] if kind == "parts" and drafts else []
     return rows
@@ -140,7 +142,7 @@ def records(kind, library, project=None, drafts=False, skip=()):
 #: The places only the person should see (§5.8): files 0600 in folders 0700, and never inside a git work tree,
 #: where one `git add .` would publish them.
 PRIVATE = ("drawer", "drawer-import", "shelf", "projects", "history", "boards", "grants", "known-boards",
-           "registered-projects", "launcher")
+           "registered-projects", "launcher", "board-shelf")
 
 #: A key names one file inside a place, and only that: lower-case letters, digits and '-'.
 PLAIN = re.compile(r"[a-z0-9][a-z0-9-]*")

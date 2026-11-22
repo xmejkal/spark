@@ -32,8 +32,7 @@ from spark.records.board_records import (BoardError, _read_json, active_id, avai
 def _validate_all(project: Path, for_fab: bool) -> int:
     """Check every board file, not just the active one, and say what is wrong with each."""
     failed = False
-    for board_id in available(project):
-        path = definition_path(project, board_id)
+    for board_id, (where, path) in board_records.records(project).items():  # P989: the layer the records give
         try:
             board = _read_json(path, "board definition")
         except BoardError as broken:
@@ -42,7 +41,6 @@ def _validate_all(project: Path, for_fab: bool) -> int:
             continue
         problems = validate(board, path, for_fab=for_fab)
         marker = "active" if board_id == active_id(project) else "     "
-        where = "library" if path.parent == board_records.LIBRARY else "project"
         if problems:
             print(f"  {marker}  {board_id} ({where}): {len(problems)} problem(s)")
             for problem in problems:
@@ -59,7 +57,7 @@ def _validate_all(project: Path, for_fab: bool) -> int:
 #: The flag that picks the Operation on the core. argparse takes a prefix of it too (`--li`), so the pick does (P707).
 LIST_FLAG = "--list"
 #: The CLI's own text in `boards.py --list --help`, after ListBoards' details (P855, P937): its --json.
-LIST_EPILOG = """--json prints one envelope (docs/guide/agents/json.md): data.boards rows with id, layer (library or project), active
+LIST_EPILOG = """--json prints one envelope (docs/guide/agents/json.md): data.boards rows with id, layer (library, shelf or project), active
 and stops_why (the sentence that names the missing fields, or null)."""
 
 

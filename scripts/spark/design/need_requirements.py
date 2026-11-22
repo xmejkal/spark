@@ -173,7 +173,7 @@ def _merge_parts(existing, wanted):
 def _board_problems(board_picks, unfiled, project):
     """
     What refuses the board (§8 L): it is one, picked as its record. A board picked from the drawer that spark has no board
-    file for is named, with the boards spark has a file for — the library's and the project's — that build, and those that stop
+    file for is named, with the boards spark has a file for — the library's, the shelf's (P989) and the project's — that build, and those that stop
     at the footprint stage, which are never suggested (C-7); no board, or two, is said so.
     """
     if len(board_picks) == 1:

@@ -10,7 +10,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from spark.records import provenance, record_kind, store
+from spark.records import board_records, provenance, record_kind, store
 from spark.records.record_kind import DEFINITION_SUFFIX, PIN_LISTS, record_home
 from spark.sourcing import sourcing_codes
 from spark.sourcing.part_records import any_record, load, PartError, validate
@@ -121,25 +121,33 @@ def _shelf_copy(path, project_name=None, record=None):
     return copy
 
 
+def shelf_of(path):
+    """
+    The shelf a record goes onto, and the contract its copy must meet, by its folder (P989): ("board-shelf", the board
+    contract, "board") for a board file, which lives in a folder named `boards`, else ("shelf", the part contract, "part").
+    """
+    return ("board-shelf", board_records.validate, "board") if Path(path).parent.name == "boards" else ("shelf", validate, "part")
+
+
 def shelvable(path, project_name=None):
-    """Whether a record may go onto the shelf: only one whose shelf copy meets the contract, or `--list` breaks in every project."""
-    return not validate(_shelf_copy(path, project_name), Path(path))
+    """Whether a record may go onto the shelf: only one whose shelf copy meets its contract, or `--list` breaks in every project."""
+    return not shelf_of(path)[1](_shelf_copy(path, project_name), Path(path))
 
 
 def shelve(path, project_name=None):
     """
     Put a record onto the person's shelf, so every project finds it (§5.5): a filtered copy — that says which project
     it came from and that record's digest, when it came from one; a catalog record names none, since nothing reads it.
-    Its folder (a simulation chip) travels with it. Returns whether the shelf changed — or None when the record does
-    not meet the contract (a draft stays where it is).
+    A board file goes onto the shelf's `boards` folder (`shelf_of`, P989). Its folder (a simulation chip) travels with it.
+    Returns whether the shelf changed — or None when the record does not meet its contract (a draft stays where it is).
     """
     path = Path(path)
-    copy = _shelf_copy(path, project_name)
-    if validate(copy, path):
+    copy, (shelf, contract, _) = _shelf_copy(path, project_name), shelf_of(path)
+    if contract(copy, path):
         return None
-    changed = store.write_json("shelf", path.stem, copy)
+    changed = store.write_json(shelf, path.stem, copy)
     if (path.parent / path.stem).is_dir():
-        store.copy_folder("shelf", path.parent / path.stem, path.stem)
+        store.copy_folder(shelf, path.parent / path.stem, path.stem)
     return changed
 
 

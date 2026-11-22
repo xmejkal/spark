@@ -1575,7 +1575,7 @@ class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):
             _, valid = self.listed("--validate", "--project", str(project()))
         rows = {row["id"]: row for row in json.loads(out)["data"]["boards"]}
         self.assertEqual((code, rows["x-board"]["layer"]), (0, "shelf"))
-        self.assertIn("    x-board (shelf)\n", text)
+        self.assertIn("    x-board (shelf) stops at the footprint stage", text)  # the fixture has no physical.header
         self.assertIn("  x-board (shelf): ok\n", valid)
 
     def test_a_prefix_of_list_picks_the_operation_as_argparse_would(self):

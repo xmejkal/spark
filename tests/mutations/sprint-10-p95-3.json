@@ -1,6 +1,6 @@
 [
  {"file": "scripts/spark/records/store.py", "name": "the shelf is not a layer",
-  "find": "    rows += [(\"shelf\", place(\"shelf\"))] if kind == \"parts\" else []", "replace": "    rows += []"},
+  "find": "    rows.append((\"shelf\", place(\"shelf\" if kind == \"parts\" else \"board-shelf\")))", "replace": "    rows += []"},
  {"file": "scripts/spark/records/store.py", "name": "the farthest layer wins",
   "find": "    for layer, folder in reversed(layers(kind, library, project, drafts)):", "replace": "    for layer, folder in layers(kind, library, project, drafts):"},
  {"file": "scripts/spark/records/store.py", "name": "the catalog is read without drafts being asked for",

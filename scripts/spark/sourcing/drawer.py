@@ -165,7 +165,7 @@ def entries():
 def find_nearest_records(kind, project=None):
     """
     {id: (layer, path)} of the records of `kind` ("part" or "board") in the nearest layers alone: the project's own (when a
-    project is given), then for a part the shelf, spark's library and the catalog, for a board spark's library. Never a
+    project is given), the shelf, spark's library, and for a part the catalog. Never a
     project on the person's list: `linkable` adds those, and a writer (`record_home.record_path`, P987) never reaches them.
     """
     return store.records("parts", record_kind.LIBRARY, project, drafts=True) if kind == "part" else board_records.records(project)
@@ -260,8 +260,8 @@ def resolve(target, known):
 
 
 def _shelve_from(target, where, path):
-    """What shelving a link needs — (path, project) — when the record is a part living only in one project."""
-    return (path, where or None) if where is not None and where not in SPARKS_OWN and "part" in target else None
+    """What shelving a link needs — (path, project) — when the record, a part or a board file (P989), lives only in one project."""
+    return (path, where or None) if where is not None and where not in SPARKS_OWN else None
 
 
 def _value_problems(entry_id, before, values):
@@ -353,10 +353,11 @@ def plan_set(items, project=None):
         problems += refused
         if change and change["shelve"] and change["shelve"][1] is None and not part_facts.shelvable(*change["shelve"]):
             # A folder on no list keeps a record only it can see: unshelved, the entry would point at nothing elsewhere (RX3).
+            kind = part_facts.shelf_of(change["shelve"][0])[2]
             problems.append(record_kind._problem(
-                entry_id, "%s does not meet the part contract yet, and its folder is on no list, "
-                          "so no other project could find it: fix it (`parts.py --validate --project .`) "
-                          "or put the folder on your list (/spark:init)" % Path(change["shelve"][0]).stem))
+                entry_id, "%s does not meet the %s contract yet, and its folder is on no list, "
+                          "so no other project could find it: fix it (`%ss.py --validate --project .`) "
+                          "or put the folder on your list (/spark:init)" % (Path(change["shelve"][0]).stem, kind, kind)))
             continue
         if change:
             changes.append(change)

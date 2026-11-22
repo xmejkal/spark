@@ -1,6 +1,6 @@
 [
  {"file": "scripts/spark/design/list_boards.py", "name": "P707: the active board loses its mark", "find": "\"*\" if board_id == current else \" \"", "replace": "\" \""},
- {"file": "scripts/spark/design/list_boards.py", "name": "P707: every board is called the library's", "find": "layer = LIBRARY if path.parent == board_records.LIBRARY else PROJECT", "replace": "layer = LIBRARY"},
+ {"file": "scripts/spark/design/list_boards.py", "name": "P707: every board is called the library's", "find": "rows.append({\"id\": board_id, \"layer\": layer,", "replace": "rows.append({\"id\": board_id, \"layer\": \"library\","},
  {"file": "scripts/spark/design/list_boards.py", "name": "P707: a board that builds carries a stops_why", "find": "footprint_emitter.why_no_footprint(board) if stops else None", "replace": "footprint_emitter.why_no_footprint(board)"},
  {"file": "scripts/spark/design/list_boards.py", "name": "P707: a board file that is not an object is said to stop", "find": "stops = isinstance(board, dict) and footprint_emitter.footprint_stop_line(board) or \"\"", "replace": "stops = footprint_emitter.footprint_stop_line(board) or \"\""},
  {"file": "scripts/spark/design/list_boards.py", "name": "P707: an unreadable board file is dropped from the list", "find": "            except board_records.BoardError:\n                board = None", "replace": "            except board_records.BoardError:\n                continue"},
