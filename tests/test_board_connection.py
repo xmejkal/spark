@@ -110,5 +110,43 @@ class BoardConnectionTest(unittest.TestCase):
                                                        ["fs", "cat", ":spark.json"]])
 
 
+def quiet(run, port="/dev/ttyX"):
+    return board_connection.QuietBoardConnection(["py", "-m", "mpremote"], ["py"], port, run, timeout_s=20)
+
+
+class QuietBoardConnectionTest(unittest.TestCase):
+    """P1007: on Espressif's USB-Serial/JTAG, mpremote runs through QUIET_MPREMOTE, and keeps its words."""
+
+    def test_each_call_runs_mpremote_s_own_arguments_through_the_quiet_script(self):
+        run = Mpremote("42\n")
+        self.assertEqual(quiet(run).run_code("print(6*7)"), "42\n")
+        self.assertEqual(run.ran[0][0], ["py", "-c", board_connection.QUIET_MPREMOTE, "2.5", "10",
+                                         "connect", "/dev/ttyX", "exec", "print(6*7)"])
+
+    def test_the_time_limit_holds_the_settle_and_a_vanished_port_s_wait(self):
+        run = Mpremote("")
+        quiet(run).read_file("pins.py")
+        quiet(run).run_code("import main", keep_running_for=20)
+        self.assertEqual([limit for _, limit in run.ran], [36.0, 36.0])
+
+    def test_a_refused_raw_repl_and_a_board_traceback_split_as_mpremote_s(self):
+        with self.assertRaises(board_connection.BoardUnreachableError) as refused:
+            quiet(Mpremote(fails=NO_RAW_REPL)).run_code("pass")
+        self.assertIn(board_connection.RAW_REPL_REFUSED, str(refused.exception))
+        raised = ("Traceback (most recent call last):\nZeroDivisionError: divide by zero\n", "")
+        with self.assertRaises(board_connection.BoardCodeError):
+            quiet(Mpremote(fails=raised)).run_code("1/0")
+
+    def test_the_output_until_the_time_limit_is_the_answer_of_code_left_running(self):
+        going = subprocess.TimeoutExpired(["py"], 36, output=b"ready\r\n")
+        self.assertEqual(quiet(Mpremote(raises=going)).run_code("import main", keep_running_for=20).strip(), "ready")
+
+    def test_the_person_s_repl_stays_mpremote_s(self):
+        self.assertEqual(quiet(Mpremote()).repl_command(), ["py", "-m", "mpremote", "connect", "/dev/ttyX", "repl"])
+
+    def test_the_quiet_script_compiles(self):
+        compile(board_connection.QUIET_MPREMOTE, "QUIET_MPREMOTE", "exec")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -81,8 +81,8 @@ class LiveScriptTest(unittest.TestCase):
         line = json.loads(said)
         self.assertEqual(code, 0)
         self.assertEqual((line["answer"], line["output"], line["reset"], line["port"]), ("ran", "1\n", "done", C6_PORT))
-        self.assertEqual([command[-4:] for command in ran if "devs" not in command],
-                         [["connect", C6_PORT, "exec", "print(1)"], ["mpremote", "connect", C6_PORT, "reset"]])
+        self.assertEqual([command[command.index("connect"):] for command in ran if "devs" not in command],
+                         [["connect", C6_PORT, "exec", "print(1)"], ["connect", C6_PORT, "reset"]])
         self.assertEqual(sorted(line), ["answer", "cure", "doctor", "gpio_numbers_in_code", "grant_why", "output", "pins_checked",
                                         "port", "reset", "why"])
 

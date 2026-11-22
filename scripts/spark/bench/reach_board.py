@@ -133,7 +133,7 @@ class ReachBoard(Operation):
             return stops.question_result(stopped, SCRIPT, dict(stopped.data, reached=False) if stopped.code == codes.NEEDS_REPLY else None)
         except SparkError as unreadable:  # the kept record or the replies file
             return stop_result(unreadable, SCRIPT, project, port)
-        result = board_reach.reach(platform.make_connection(platform.make_shell_command(), port, outside.run), probe, cure_first=cure_first)
+        result = board_reach.reach(platform.make_connection(platform.make_shell_command(), port, outside.run, row.usb), probe, cure_first=cure_first)
         diagnostics = []
         try:
             doctor = (None if result.entered else

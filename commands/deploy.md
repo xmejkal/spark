@@ -142,7 +142,7 @@ board waits in its download mode. deploy.py then asks you to press the board's R
 the port to go and come back, and reads the board again ([P243](https://github.com/xmejkal/spark/issues/252)). A restart counts only when mpremote
 answers after it ([P462](https://github.com/xmejkal/spark/issues/630)); one that leaves the board in download mode is printed and not counted.
 The write restarts the chip with `--after watchdog-reset`, and deploy.py finds the board's port again by its MAC, because the port's name and USB
-id can change after the flash (MicroPython brings its own USB serial port). A port that is not listed or does not come back is `port_gone`: no REPL line, no `watch` step, and
+id can change after the flash (MicroPython brings its own USB serial port). Each read asks for the port's USB id again. On Espressif's own USB-Serial/JTAG (303a:1001, for example the FireBeetle 2 C6), mpremote runs with DTR and RTS off and sends nothing for 2.5 s before its raw REPL, because its usual open and early Ctrl-C left that board deaf to the host until the next flash ([P1007](https://github.com/xmejkal/spark/issues/1466)). So do not run mpremote by hand on such a board before a deploy's check. A port that is not listed or does not come back is `port_gone`: no REPL line, no `watch` step, and
 `python3 -m mpremote devs` lists the ports. To see the firmware start by hand, run the line deploy.py
 prints, which opens mpremote's REPL, and press Ctrl-C, then Ctrl-D. Leave the REPL with Ctrl-X. While it is open, it
 holds the port, and the next deploy cannot read the board. deploy.py then runs the board doctor, which says another

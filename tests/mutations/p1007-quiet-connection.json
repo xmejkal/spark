@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/spark/bench/firmware_platform.py",
+  "name": "P1007: USB-Serial/JTAG gets mpremote as it is (test_firmware_platform quiet tests)",
+  "find": "        if usb == board_connection.USB_SERIAL_JTAG:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/spark/bench/firmware_platform.py",
+  "name": "P1007: any board gets the quiet connection (test_firmware_platform other id test)",
+  "find": "        if usb == board_connection.USB_SERIAL_JTAG:",
+  "replace": "        if True:"
+ },
+ {
+  "file": "scripts/spark/bench/firmware_platform.py",
+  "name": "P1007: a shell that is no Python package gets the quiet connection (test_firmware_platform no-python test)",
+  "find": "            if shell.entry.get(\"kind\") == \"python\":",
+  "replace": "            if True:"
+ },
+ {
+  "file": "scripts/spark/bench/board_connection.py",
+  "name": "P1007: the time limit leaves out the settle and the port's wait (test_board_connection time limit test)",
+  "find": "        super().__init__(mpremote, port, run, timeout_s + self.EXTRA_S)",
+  "replace": "        super().__init__(mpremote, port, run, timeout_s)"
+ },
+ {
+  "file": "scripts/spark/bench/board_connection.py",
+  "name": "P1007: code left running gets no extra time (test_board_connection time limit test)",
+  "find": "keep_running_for and keep_running_for + self.EXTRA_S",
+  "replace": "keep_running_for"
+ },
+ {
+  "file": "scripts/spark/bench/board_connection.py",
+  "name": "P1007: the person's REPL runs through the quiet script (test_board_connection repl test)",
+  "find": "        self.repl = self.command + [\"repl\"]",
+  "replace": "        self.repl = None"
+ },
+ {
+  "file": "scripts/spark/bench/board_start.py",
+  "name": "P1007: the USB id is the one from the first listing (test_board_start usb id test)",
+  "find": "        row = self._listed(port)\n        return row and row.usb",
+  "replace": "        row = getattr(self, 'first', None) or self._listed(port)\n        self.first = row\n        return row and row.usb"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_service.py",
+  "name": "P1007: every read uses the USB id of the first listing (test_deploy_gate usb id test)",
+  "find": "self.platform.make_connection(planned.mpremote, on, self.run, starter.usb_of(on))",
+  "replace": "self.platform.make_connection(planned.mpremote, on, self.run, row and row.usb)"
+ }
+]

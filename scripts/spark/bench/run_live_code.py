@@ -129,7 +129,7 @@ class RunLiveCode(Operation):
             named, port = port, port or row.device
             probe = platform.make_console_probe(port, outside.run)
             service = board_live.LiveTryService(board_grant.GrantService(finder, now=outside.clock.now),
-                                                platform.make_connection(platform.make_shell_command(), port, outside.run), probe,
+                                                platform.make_connection(platform.make_shell_command(), port, outside.run, row.usb), probe,
                                                 board_records.load(project),
                                                 board_doctor.BoardDoctorService.for_board(finder, probe),
                                                 platform.find_tool("board-shell"))

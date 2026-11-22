@@ -64,6 +64,12 @@ class BoardStartTest(unittest.TestCase):
     def test_no_mac_means_the_port_name_alone(self):
         self.assertEqual(name(self.service([ROM, OTHER], mac=None).find_port(OTHER.device)), OTHER.device)
 
+    def test_the_usb_id_is_the_one_the_board_is_listed_with_now(self):
+        # P1007: the S3 leaves download mode (303a:1001) for MicroPython (303a:4001), so each read asks the list again
+        service = self.service([ROM], [MICROPYTHON], [])
+        self.assertEqual([service.usb_of(ROM.device), service.usb_of(ROM.device), service.usb_of(ROM.device)],
+                         ["303a:1001", "303a:4001", None])
+
     def test_a_port_that_is_not_listed_in_the_wait_is_none_after_it(self):
         service = self.service([])
         self.assertIsNone(name(service.find_port(ROM.device)))

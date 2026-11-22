@@ -176,6 +176,11 @@ A firmware that never reads its console leaves `ready unknown` with "could not e
 Ctrl-C, so mpremote cannot stop it. The conversation's firmware reads the console without waiting ([P215](https://github.com/xmejkal/spark/issues/196)).
 Relay deploy.py's line as printed: it ends with mpremote's own words, and the board log under `sim/runs/board/`
 keeps all mpremote printed. Never run mpremote by hand to turn an unknown into a pass.
+On Espressif's own USB-Serial/JTAG (USB id 303a:1001, for example the FireBeetle 2 C6), deploy.py, reach.py and
+live.py run mpremote with two changes ([P1007](https://github.com/xmejkal/spark/issues/1466)). Its open leaves DTR and
+RTS off, and it sends nothing for 2.5 s before it enters the raw REPL. On the bench, mpremote's own open restarted the C6,
+and its Ctrl-C during that boot left MicroPython deaf to the host until the next flash or `esptool read-mac`. So a
+person's own mpremote call on such a board can turn the next check into `ready unknown` or an unreached board.
 
 ## 8. A passed run did only what its scenario's steps say
 

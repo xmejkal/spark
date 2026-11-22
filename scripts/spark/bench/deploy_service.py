@@ -158,8 +158,9 @@ class DeployService:
         row = starter.find_port(look.port)
         port = row and row.device
 
-        def read(on):
-            return self._read_board(image, look, on and self.platform.make_connection(planned.mpremote, on, self.run), expected, moment)
+        def read(on):  # P1007: the USB id the port has at this read picks the connection
+            connection = on and self.platform.make_connection(planned.mpremote, on, self.run, starter.usb_of(on))
+            return self._read_board(image, look, connection, expected, moment)
 
         board, start = read(port), None
         if port is None:

@@ -22,6 +22,7 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from spark.bench import board_connection  # noqa: E402
 from spark.bench import board_console  # noqa: E402
 from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_facts  # noqa: E402
@@ -719,6 +720,15 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertEqual(code, 0)
         self.assertIn("ready seen", said)
 
+    def test_each_read_uses_the_usb_id_the_port_has_then(self):
+        # P1007: the ROM's 303a:1001 is read through the quiet script, MicroPython's 303a:4001 by mpremote as it is
+        self.uncopied, self.answers_after_devs = self.unread, 5
+        micropython = "/dev/cu.usbmodem101 8CBFEAXXXXXX00FF 303a:4001 MicroPython"
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"), [self.LISTED] * 4 + [micropython])  # the look's two, the port, the first read
+        self.assertIn("ready seen", said)
+        quiet = [board_connection.QUIET_MPREMOTE in command for command in self.ran if "connect" in command]
+        self.assertEqual((quiet[0], quiet[-1]), (True, False))
+
     def test_a_board_found_on_a_moved_port_is_not_probed_for_download_mode(self):
         # the MAC match found it on another name: the console is not read there (P462, P472's try 6)
         probe = FakeConsoleProbe("waiting for download\n")
@@ -797,7 +807,7 @@ class TheBoardInDownloadModeTest(GateCase):
     def test_without_a_probe_the_default_reads_the_port_with_mpremote_s_python(self):
         code, said, _ = self.flash(None)
         self.assertEqual(code, 2)
-        probes = [command for command in self.ran if command[1:2] == ["-c"] and "serial" in command[2]]
+        probes = [command for command in self.ran if command[1:2] == ["-c"] and command[2] == board_console.READ_CONSOLE]
         self.assertEqual([command[:1] + command[3:] for command in probes],
                          [FOUND["board-shell"].command + [self.look().port, "2"]])
 

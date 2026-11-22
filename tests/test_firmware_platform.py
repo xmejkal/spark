@@ -12,6 +12,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from spark.bench import board_connection  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
@@ -46,6 +47,22 @@ class MicroPythonPlatformTest(unittest.TestCase):
     def test_the_console_probe_is_for_the_board_shell_and_the_port(self):
         probe = self.platform.make_console_probe("/dev/cu.usbmodem101", None)
         self.assertEqual((probe.python, probe.port), (MPREMOTE.command, "/dev/cu.usbmodem101"))
+
+    def test_espressif_s_usb_serial_jtag_gets_the_quiet_connection(self):
+        made = self.platform.make_connection(["mpremote"], "/dev/cu.usbmodem101", None, board_connection.USB_SERIAL_JTAG)
+        self.assertIsInstance(made, board_connection.QuietBoardConnection)
+        self.assertEqual(made.command[:2], MPREMOTE.command + ["-c"])
+
+    def test_any_other_usb_id_or_none_gets_mpremote_as_it_is(self):
+        for usb in ("10c4:ea60", None):
+            made = self.platform.make_connection(["mpremote"], "/dev/cu.usbmodem101", None, usb)
+            self.assertIs(type(made), board_connection.BoardConnection)
+
+    def test_a_board_shell_that_is_no_python_package_gets_mpremote_as_it_is(self):
+        exe = tool_finder.Tool("mpremote", "board-shell", {"kind": "path"}, ["/usr/local/bin/mpremote"])
+        platform = firmware_platform.MicroPythonPlatform(self.project, {"board-shell": exe}.__getitem__)
+        made = platform.make_connection(["mpremote"], "/dev/cu.usbmodem101", None, board_connection.USB_SERIAL_JTAG)
+        self.assertIs(type(made), board_connection.BoardConnection)
 
     def test_a_missing_tool_shows_when_a_step_asks_for_it_not_before(self):
         def missing(role):
