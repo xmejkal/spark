@@ -1,4 +1,8 @@
-# R11 retro (prepared 2026-11-22 for Petr, not yet held)
+# R11 retro (prepared and decided 2026-11-22)
+
+Petr decided on 2026-11-22 at about 20:50 CET: R11.1 yes, as written. R11.2 yes, with the lane check first. R10.3 is dropped,
+and P363 is closed as not planned. The cards are P1020 [#1487](https://github.com/xmejkal/spark/issues/1487) (R11.1)
+and P1021 [#1488](https://github.com/xmejkal/spark/issues/1488) (R11.2), at the top of Ready. R12 is due on 2026-11-29.
 
 > R10 set four actions. One held in part and three did not hold.
 > The board grew by 1.75 cards for each card closed. Nobody built the two tools that R10 asked for.

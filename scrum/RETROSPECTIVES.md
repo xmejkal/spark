@@ -231,6 +231,33 @@ found a commit that does not pass its own suite as committed (C3), a regression 
 three misnumbered commit messages — all of which this retro should have carried. R5 follows R4.3:
 the audit first, then the retro, citing its report.
 
+## R11 — 2026-11-22, on 33 days after R10
+
+Prepared by two facts agents (Sonnet), reviewed by a Lean and Agile lens and the refuter (Opus), and decided by Petr
+on 2026-11-22. The full page, with every number and its command:
+[`docs/discovery/2026-11-22-r11-retro/retro.md`](../docs/discovery/2026-11-22-r11-retro/retro.md).
+
+R11 came 26 days late, after 374 merged PRs. The board got 657 new cards and closed 375. The two R10 actions that
+needed a tool built were never built. The 62 inbox entries are sorted: a gate catches 6, a card holds 10, and 46 drop.
+
+### R10's actions, checked as written
+
+| | |
+| --- | --- |
+| **R10.1** | **held in part**: walk 2 ran on 10-22 and 10-23 with one look outside spark; later walks count no outside steps. Ended. |
+| **R10.2** | **not held**: 1.75 cards opened per card closed (657 to 375). Stays the rule, made visible by R11.1. |
+| **R10.3** | **not held**: the hook never ran factcheck. Dropped, P363 closed as not planned. |
+| **R10.4** | **not held**: 6 of 159 rows files hold the line. Dropped, the mutation ledger holds it. |
+
+### Actions, as Petr decided them (all to R12, due 2026-11-29)
+
+| # | change | decision | check at R12 |
+| --- | --- | --- | --- |
+| **R11.1** | `tools/board.py status` and the day close print the cards filed and closed in 7 days and the last retro's age; the day is at risk when more come in or the retro is over 7 days old. P1020 #1487. | yes | both lines print, and closed is at least filed from 11-23 to 11-29 |
+| **R11.2** | A slip that the learned rules hold twice becomes a check. The first: `tools/board.py move` counts the lane before a move. P1021 #1488. | yes, the lane check first | `board.py move` exists, and the inbox holds no `slip:lane` entry after R11 |
+
+---
+
 ## R10 — 2026-10-20, on two days after R9
 
 Prepared by a facts agent (Sonnet) and one Lean and Agile council agent (Opus), with the agent logs as the team's
