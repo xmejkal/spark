@@ -19,6 +19,7 @@ from spark.design.pick_parts import NO_PASSED_OVER, PickParts
 from spark.design.write_requirements import WriteRequirements
 from spark.flow import flow_codes, request_codes
 from spark.flow.fingerprint import SHORT, fingerprint_of
+from spark.flow.guide import stops_only_for_no_model
 from spark.flow.phase_readers import MARKS, REQUIREMENTS_FILE
 from spark.flow.show_flow import privacy_for, read_flow
 
@@ -128,6 +129,18 @@ def line_of(label, result):
     return found[0] if found else RAN_LINE % (label, MARKS[status][0] or OK)
 
 
+def answer_of(kind, result):
+    """(status, note) of the answer of a step of `kind` that ran: a build that could not run only because Wokwi has no
+    model of the board answers ok, with its simulation's sentence as the note, as the guide counts it done (P1008). It
+    asks the guide's rule of the run's own Findings, one per stopped stage, never .spark/build.json: a crashed build
+    leaves an older record there. Any other run answers its own status and no note."""
+    status = result.status()
+    stopped = {"stages": [{"name": finding.subject, "status": finding.severity, "code": finding.code} for finding in result.findings]}
+    if kind == flow_codes.BUILD_BOARD and status == COULD_NOT_RUN and stops_only_for_no_model(stopped):
+        return OK, result.findings[0].sentence
+    return status, None
+
+
 class RunRequest(Operation):
     """
     Operation: run the step the page asked for. It reads the request and deletes it (`read_request`), reads the flow, and
@@ -142,7 +155,7 @@ class RunRequest(Operation):
                "spark offers it now and the project has not changed since the page was read (P829).")
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS, RUNS, WRITES)
-    data_keys = ("for", "key", "label", "ran", "status", "mark", "line", "fingerprint")
+    data_keys = ("for", "key", "label", "ran", "status", "mark", "line", "note", "fingerprint")
     privacy_for = staticmethod(privacy_for)
 
     def __init__(self, readers=None, operations=None):
@@ -158,15 +171,17 @@ class RunRequest(Operation):
         offer = offers.get(key_of(request))
         if refused:
             data = {"for": id_of(request), "key": offer.key if offer else None, "label": offer.label if offer else None, "ran": False,
-                    "status": COULD_NOT_RUN, "mark": MARKS[COULD_NOT_RUN][1], "line": refused.meaning, "fingerprint": fingerprint}
+                    "status": COULD_NOT_RUN, "mark": MARKS[COULD_NOT_RUN][1], "line": refused.meaning, "note": None,
+                    "fingerprint": fingerprint}
             return OperationResult(data, [Finding.of(COULD_NOT_RUN, None, refused, refused.meaning)], lines=[refused.meaning])
         kind = kind_of(offer.key)
         step = self.operations.get(kind) or KIND_RUNS[kind].operation()
         result = run_operation(step, KIND_RUNS[kind].values(project, offer.key), outside=outside)
         after = fingerprint_of(project, read_flow(project, self.readers)[0])
-        status = result.status()
+        status, note = answer_of(kind, result)
+        line = RAN_LINE % (offer.label, MARKS[status][0] or OK) if note else line_of(offer.label, result)
         data = {"for": request.id, "key": offer.key, "label": offer.label, "ran": True, "status": status, "mark": MARKS[status][1],
-                "line": line_of(offer.label, result), "fingerprint": after}
+                "line": line, "note": note, "fingerprint": after}
         return OperationResult(data, result.findings, lines=[RAN_LINE % (offer.label, MARKS[status][0] or OK)] + list(result.lines),
                                diagnostics=result.diagnostics)
 # --- end MVP ---
