@@ -347,17 +347,26 @@ def fetch_plan(record):
     return plan
 
 
-def fetch_path(part_id, project=None):
-    """The record file `--fetch` would change, or a PartError: no record (`no_such_part`), or a record in spark's own library
-    (`library_record`, P964), which parts.py never writes. Asked before any download, on a dry run too."""
-    home = record_home(part_id, project)
-    if home is None:
+def fetch_home(part_id, project=None):
+    """The (record file, project whose shelf copy follows it) `--fetch` would change, found by the rule of every other writer
+    (`record_home.record_path`, P983: a shelf copy's write goes to its project's record), or a PartError: no record
+    (`no_such_part`), or a record in spark's own library (`library_record`, P964), which parts.py never writes. Asked
+    before any download, on a dry run too. A record that only another listed project holds is no record here, as before
+    P983: a fetch never writes a project the person did not name, unless a shelf copy follows that project's record."""
+    path, source = home_rules.record_path(part_id, project)
+    if record_home(part_id, project) is None:
+        path = None
+    if path is None:
         raise PartError("no record called %r to fetch for", part_id, code=sourcing_codes.NO_SUCH_PART)
-    path = home / (part_id + DEFINITION_SUFFIX)
     if home_rules.in_library(path):
         raise PartError("%s is in spark's own library, which is changed in spark's repository, not by parts.py", part_id,
                         code=sourcing_codes.LIBRARY_RECORD)
-    return path
+    return path, source
+
+
+def fetch_path(part_id, project=None):
+    """The record file `--fetch` would change (`fetch_home`)."""
+    return fetch_home(part_id, project)[0]
 
 
 def fetch_documents(part_id, project=None, fetch=None):
@@ -365,9 +374,10 @@ def fetch_documents(part_id, project=None, fetch=None):
     Download every cited datasheet or image into the store and point at each from the record's `documents`: its URL,
     checksum, file name and the date it was fetched — `title` and `version` stay null until someone reads them, because
     a version is what the document PRINTS, not a guess (P61). A document the store would refuse by name stops the whole
-    fetch before any download (`fetch_plan`). `fetch(url) -> bytes or None` is a parameter for the tests.
+    fetch before any download (`fetch_plan`). A shelf copy that follows the record is made current (P983). `fetch(url) ->
+    bytes or None` is a parameter for the tests.
     """
-    path = fetch_path(part_id, project)
+    path, source = fetch_home(part_id, project)
     record = json.loads(path.read_text())
     documents = dict(record.get("documents") or {})
     for url, name in fetch_plan(record):
@@ -376,6 +386,8 @@ def fetch_documents(part_id, project=None, fetch=None):
             documents[document_key(name, documents)] = document_entry(url, keep_in_store(payload, name), name, datetime.date.today().isoformat())
     record["documents"] = documents
     _write_record(path, record)
+    if source:
+        home_rules.refresh_shelf_copy(path, record, source, False)
     return documents
 
 
