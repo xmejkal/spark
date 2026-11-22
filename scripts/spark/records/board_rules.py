@@ -2,7 +2,8 @@
 The rules a board record is held to (P724), as `part_records` holds a part's: one named rule per function, each
 `(board, validation) -> list` of problems, in the order of `RULES`, which `board_records.BOARD` runs, and the names only
 they read (the forbidden keys, the fab keys, the shape of a label and a fact). The names `board_records` code and other
-modules read too (`PIN_ROLES`, `ADC2_UNUSABLE_WITH_WIFI`, `adc2_unread_gpio`, `POWER_FUNCTIONS`, `GPIO_MIN`,
+modules read too (`PIN_ROLES`, `ADC2_UNUSABLE_WITH_WIFI`, `adc2_unread_gpio`, `POWER_FUNCTIONS`, `RADIO_FUNCTIONS`,
+`GPIO_MIN`,
 `GPIO_MAX`, `is_gpio`, `is_pin_map_constant`) live here, and `board_records` imports them, so
 `board_records.PIN_ROLES` still works. It imports the records area below it, never `board_records`.
 """
@@ -83,6 +84,14 @@ POWER_FUNCTIONS = {
     "charger": {"does": "power", "what": "onboard charger"},
     "regulator": {"does": "power", "what": "onboard voltage regulator"},
     "battery_input": {"does": "connect", "what": "onboard battery input"},
+}
+
+#: What a radio of the board's chip offers a need, by its name in chip_table.RADIOS (P990). The words in brackets are the
+#: words a need uses: `matching.words` splits "Wi-Fi" into "wi" and "fi", so the need "wifi" meets only "(WiFi)".
+RADIO_FUNCTIONS = {
+    "wifi": {"does": "communicate", "what": "onboard Wi-Fi radio (WiFi)"},
+    "bluetooth_le": {"does": "communicate", "what": "onboard Bluetooth LE radio (BLE)"},
+    "ieee802154": {"does": "communicate", "what": "onboard 802.15.4 radio (Thread, Zigbee)"},
 }
 # --- end MVP ---
 
