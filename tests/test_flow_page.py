@@ -442,6 +442,25 @@ class TheCommandTest(unittest.TestCase):
         self.assertNotIn("Traceback", out.getvalue() + err.getvalue())
         self.assertIn("page.html was not written", out.getvalue() + err.getvalue())
 
+    def test_a_pick_that_owes_a_fact_gives_no_parts_list_button_and_shows_what_it_owes(self):
+        # P993: the parts list would refuse and write nothing, so the page offers no button and says the blocker
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-probe.json").write_text(json.dumps({"schema": 1, "id": "x-probe", "name": "A soil probe", "kind": "sensor",
+                                                                   "function": [{"does": "sense", "what": "soil-moisture"}]}))
+        project = Path(tempfile.mkdtemp()) / "plant-alarm"
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"board": "xiao-esp32-c6"}]},
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-probe"}]}]}))
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            _, code = run_flow("page", "--project", str(project), "--json")
+        text = (project / "page.html").read_text(encoding="utf-8")
+        self.assertEqual(code, 0)
+        self.assertNotIn('data-key="requirements"', text)
+        self.assertIn("“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof, "
+                      "simulation. Ask Claude to fill it in.", html.unescape(text))
+
     def test_a_phase_that_holds_problems_does_not_change_the_page_s_status(self):
         result = WriteFlowPage(readers=readers_of(a_phase("one", "problems")), parts=parts_of([]), store=FakeStore()).run(
             Path("."), outside=None)

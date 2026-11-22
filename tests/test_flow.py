@@ -183,8 +183,8 @@ class ThePhasesTest(FlowTest):
         # none of the need's words (the rangefinder) is offered.
         picks = ["pick:soil:x-unknown", "pick:wet:x-many", "pick:wet:x-unknown"]
         self.assertEqual(table(said), {"idea": (None, []), "needs": ("ok", ["needs-drop:soil", "needs-drop:wet"]), "parts": ("partial", picks),
-                                       "requirements": (NS, ["requirements"]), "build": (NS, []), "breadboard": (NS, []),
-                                       "firmware": (NS, []), "simulate": (NS, []), "deploy": (NS, [])})
+                                       "requirements": (NS, []), "build": (NS, []), "breadboard": (NS, []),
+                                       "firmware": (NS, []), "simulate": (NS, []), "deploy": (NS, [])})  # P993: no board is picked, so no parts list
         self.assertEqual(said["data"]["stands_at"], "parts")
         # P976: the refused pick is no offer; the says line counts it for each need. P991: the pick is named first, and the
         # review: a refused pick is named, with who holds it.
@@ -683,7 +683,7 @@ class TheGuideTest(FlowTest):
         (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6-fresh", "parts": ["led-red-5mm"]}))
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["says"], guide["no_simulation"]),
-                         ("build", "The parts list changed since the last build. Ask Claude to build again.", None))
+                         ("build", "The parts list changed since the last build. Build the board again.", None))  # P993
 
     def test_a_simulation_with_problems_is_not_passed(self):
         guide = show(a_project_built_with_no_simulation("diagram_unwired", "problems"))[0]["data"]["guide"]
@@ -773,12 +773,12 @@ class TheGuideTest(FlowTest):
 
     def test_every_need_picked_or_set_aside_makes_the_parts_ok_and_the_parts_list_now(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
-            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]},
-            {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"board": "xiao-esp32-c6"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])  # P993: a pick the parts list takes
         said, _ = show(project)
         self.assertEqual(statuses(said)["parts"], "ok")
         self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"], said["data"]["guide"]["now"]["says"]),
-                         ("requirements", "requirements", "Ask Claude in the chat to write the parts list from your picks."))
+                         ("requirements", "requirements", "Write the parts list from your picks."))  # P993
 
     def test_a_hand_written_project_lists_no_needs_or_parts_as_done(self):
         project = a_built_project()
@@ -829,6 +829,8 @@ def offer_of(envelope, key):
 
 
 SOIL = [{"id": "soil", "does": "sense", "what": "soil-moisture"}]
+#: A board need with a board of spark's library picked: with it the parts list's own rule refuses nothing (P993).
+BOARD = [{"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"board": "xiao-esp32-c6"}]}]
 #: The three files a click changes, named here and not read from the module, so a file dropped there fails.
 THREE_FILES = (Path(".spark") / "needs.json", Path("requirements.json"), Path(".spark") / "build.json")
 
@@ -837,7 +839,7 @@ class MakesStaleTest(FlowTest):
     """P829: an offer names only the phases it may make out of date that hold something now."""
 
     def test_with_no_requirements_json_a_pick_names_nothing(self):
-        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL + BOARD)  # P993: the parts list is offered
         said, _ = show(project)
         self.assertEqual(offer_of(said, "pick:soil:x-many")["makes_stale"], [])
         self.assertEqual(offer_of(said, "requirements")["makes_stale"], [])
@@ -850,7 +852,7 @@ class MakesStaleTest(FlowTest):
         self.assertEqual(offer_of(said, "build")["makes_stale"], [])
 
     def test_with_a_build_a_requirements_write_names_the_build_and_the_breadboard(self):
-        said, _ = show(with_needs(a_built_project(), SOIL))
+        said, _ = show(with_needs(a_built_project(), SOIL + BOARD))  # P993: the parts list is offered
         self.assertEqual(offer_of(said, "requirements")["makes_stale"], ["build", "breadboard"])
         self.assertEqual(offer_of(said, "build")["makes_stale"], [])
 
@@ -944,8 +946,8 @@ class TheReviewRoundTest(FlowTest):
         said, _ = show(project)
         # P976: the refusal is said once, in the need's says line, and the need gets no offers
         self.assertEqual([line for line in says(said, "parts") if "cannot get" in line],
-                         ["wet: The pick for soil cannot get “A soil probe” (1 owned, held by other — 1 picked here), so spark refuses "
-                          "this pick and saves nothing."])
+                         ["Spark can save no new pick for wet: the pick for soil cannot get “A soil probe” (1 owned, held by other — "
+                          "1 picked here)."])  # P993
         self.assertEqual([key for key in offers(said, "parts") if key.startswith("pick:wet:")], [])
         self.assertNotIn("refuses", offer_of(said, "pick:soil:x-many")["effect"])
 
@@ -1211,6 +1213,43 @@ class FingerprintTest(FlowTest):
         (project / "README.md").write_text("notes\n")
         (project / ".spark" / "page-request.json").write_text("{}")
         self.assertEqual(show(project)[0]["data"]["fingerprint"], before)
+
+
+class TheBlockersTest(FlowTest):
+    """P993: the parts list is offered only when its own rule refuses nothing, and its refusal is said before the click."""
+
+    def test_no_pick_offers_no_parts_list(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL + [{"id": "board", "does": "compute", "what": "microcontroller"}])
+        said, code = show(project)
+        self.assertEqual((code, table(said)["requirements"]), (0, (NS, [])))
+        self.assertEqual(says(said, "requirements"), ["no requirements.json yet", "board: pick one board — none is picked"])
+
+    def test_a_pick_that_owes_a_fact_says_which_and_offers_no_parts_list(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD + [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]}])
+        said, code = show(project)
+        self.assertEqual((code, table(said)["requirements"]), (1, ("problems", [])))
+        self.assertEqual(says(said, "requirements"), [
+            "no requirements.json yet",
+            "“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof, simulation. "
+            "Ask Claude to fill it in."])
+        now = said["data"]["guide"]["now"]
+        self.assertEqual((now["phase"], now["offer"], now["says"]),
+                         ("requirements", None, "The requirements phase has problems. Ask Claude to go through them with you."))
+
+    def test_every_need_set_aside_offers_no_parts_list_and_is_not_started(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True},
+            {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
+        said, code = show(project)
+        self.assertEqual((code, table(said)["requirements"], said["data"]["guide"]["now"]["phase"]), (0, (NS, []), "parts"))
+
+    def test_a_requirements_file_the_picks_cannot_give_has_no_offer(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]}])
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        said, _ = show(project)
+        self.assertEqual(table(said)["requirements"], ("problems", []))
 
 
 class TheRunOnButtonLightTest(unittest.TestCase):

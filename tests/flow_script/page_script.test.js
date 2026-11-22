@@ -19,7 +19,7 @@ const WORDS = {
   waiting: "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
   withdrawn: "Withdrawn. If Claude had already started it, its answer shows here.",
   not_sent: "Could not send. Nothing ran.", not_withdrawn: "Could not withdraw. The request still waits.",
-  waiting_for: "Waiting for Claude: %s.", page_from: "Page from %s.",
+  waiting_for: "Waiting for Claude: %s.", page_from: "Page from %s.", use_button: "Use the button.",
   ok: { pick: "Saved as the pick. Nothing is built yet. Reload to see the new state.",
         build: "The board builds. It is not wired, not flashed and not simulated yet. Reload to see the new state." },
   ran: "Spark says: %s. Reload to see the new state.",
@@ -39,6 +39,7 @@ class FakeElement {
   constructor(tag, attributes = {}) {
     Object.assign(this, { tag, attributes, children: [], listeners: {}, style: {}, textContent: "", hidden: false, disabled: false });
   }
+  get tagName() { return this.tag.toUpperCase(); }
   getAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name) ? this.attributes[name] : null; }
   setAttribute(name, value) { this.attributes[name] = String(value); }
   addEventListener(kind, act) { this.listeners[kind] = act; }
@@ -129,6 +130,8 @@ test("for the owner each sendable offer and the NOW line get a button, the intro
   assert.deepEqual(buttons(made).map((made) => made.textContent), ["Copy", "Withdraw", "Build the board", "Build the board"]);
   assert.equal(now.children[1].textContent, "Build the board");
   assert.equal(offer.children[1].textContent, "Build the board");
+  // P993: the NOW line's sentence names the step; with its button there it says to use it
+  assert.deepEqual([now.children[0].text, offer.children[0].text], [" Use the button. ", " "]);
   assert.equal(intro.textContent, "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.");
   const panel = made.find((element) => element.tag === "section");
   assert.match(panel.children[0].textContent, /^Page from \d\d:\d\d\.$/);

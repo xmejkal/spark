@@ -16,7 +16,7 @@ from spark.design import need_requirements, needs
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import flow_codes
-from spark.records import records_codes, store
+from spark.records import record_kind, records_codes, store
 from spark.core.errors import CodedMessageError
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS, SKIPPED
 from spark.core.zone_time import stamp
@@ -173,11 +173,11 @@ def is_listed(project):
 
 
 def other_pick_sentence(plan, need, problems):
-    """The sentence of a pick refused because another need's pick cannot get its part: the part by its name, and the
-    problem's own sentence."""
+    """The says line of `need` when another need's pick cannot get its part (P993): no new pick can be saved for it, the
+    part by its name, and the problem's own sentence."""
     other = problems[0]
-    return flow_codes.OTHER_PICK_MESSAGE % (", ".join(plan.needs_picking(other["subject"], need)) or "another need",
-                                            plan.name_of(other["subject"]), other["sentence"])
+    return flow_codes.NO_NEW_PICK_MESSAGE % (need, ", ".join(plan.needs_picking(other["subject"], need)) or "another need",
+                                             plan.name_of(other["subject"]), other["sentence"])
 
 
 def pick_id_of(candidate):
@@ -235,7 +235,7 @@ def need_picks(project, need, plan, listed):
         if own:
             refused.append(candidate)
         elif problems:
-            return [], [flow_codes.NEED_REFUSED_LINE % (need["need"], other_pick_sentence(plan, need["need"], problems))]
+            return [], [other_pick_sentence(plan, need["need"], problems)]
         else:
             offered.append(pick_offer(project, need["need"], candidate, listed, pick_notes(project, plan, need, candidate, changes)))
     return offered[:OFFERS_PER_NEED], left_out_lines(need["need"], len(offered) - OFFERS_PER_NEED, refused)
@@ -285,6 +285,34 @@ def counted(listed):
     return [need for need in listed if need.get("pick") or not need.get("aside")]
 
 
+def is_all_picked(listed):
+    """True when some need counts and each that counts has a pick (P993): the parts phase is done, so what refuses the
+    parts list is the requirements phase's own problem."""
+    open_needs = counted(listed)
+    return bool(open_needs) and all(need.get("pick") for need in open_needs)
+
+
+def owed_facts(plan, key):
+    """The facts the record of the part pick `key` owes that the circuit needs (P993), as the parts list's rule reads
+    them; [] when spark has no readable record of it."""
+    path = plan.paths.get(("part", key))
+    record = record_kind._parse(path) if path else None
+    return [fact for fact in record_kind.owes(record) if fact not in need_requirements.LAYOUT_FACTS] if isinstance(record, dict) else []
+
+
+def blocker_lines(project, problems):
+    """The parts list's problems as the person reads them (P993): a pick that owes a fact by its name, the needs that pick
+    it and what it owes, in plain words; any other as its own line (`problem_lines`)."""
+    plan, said = needs.PickPlan(project), []
+    for problem in problems:
+        owed = owed_facts(plan, problem["subject"]) if problem["sentence"].startswith("owes ") else []
+        named = "“%s”" % plan.name_of(problem["subject"])
+        by = ", ".join(plan.needs_picking(problem["subject"], None))
+        said += ([flow_codes.OWED_MESSAGE % (flow_codes.PICKED_BY % (named, by) if by else named, ", ".join(owed))] if owed
+                 else problem_lines([problem]))
+    return said
+
+
 def set_aside(listed):
     """The needs the person set aside (P977), picked or not: a picked one still counts as picked."""
     return [need for need in listed if need.get("aside")]
@@ -321,22 +349,26 @@ class PartsReader(PhaseReader):
 class RequirementsReader(PhaseReader):
     """Strategy: requirements.json against what the picks give (`need_requirements.requirements`): stale when they differ,
     problems when the picks cannot give one. A file with no needs beside it was written by hand: nothing is compared, so
-    it has no status (P878)."""
+    it has no status (P878). P993: the parts list is offered only when its own rule refuses nothing; before a file, a
+    refusal is problems once every need that counts has a pick, else the parts phase holds the blocker (not started)."""
 
     PHASE, BY = flow_codes.REQUIREMENTS, flow_codes.BY_CLAUDE
 
     def read(self, project):
         held, listed = read_requirements(project), needs.read(project)
-        effect = " ".join((flow_codes.REQUIREMENTS_MESSAGE, flow_codes.SHELVE_MESSAGE, flow_codes.ORIGIN_MESSAGE))
-        offers = [Offer(flow_codes.WRITE_REQUIREMENTS, flow_codes.REQUIREMENTS_LABEL, effect,
-                        makes_stale(project, flow_codes.WRITE_REQUIREMENTS))] if listed else []
-        if held is None:
-            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_MESSAGE], offers)
+        if not listed and held is None:
+            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_MESSAGE])
         if not listed:
             return self.phase(None, [flow_codes.NOTHING_TO_COMPARE_MESSAGE])
         given = need_requirements.requirements(project)
-        if given.problems:
-            return self.phase(PROBLEMS, problem_lines(given.problems), offers)
+        if given.problems:  # P993: the parts list would refuse and write nothing, so it is no offer, and its lines say why
+            said = ([flow_codes.NO_REQUIREMENTS_MESSAGE] if held is None else []) + blocker_lines(project, given.problems)
+            return self.phase(PROBLEMS if held is not None or is_all_picked(listed) else flow_codes.NOT_STARTED, said)
+        effect = " ".join((flow_codes.REQUIREMENTS_MESSAGE, flow_codes.SHELVE_MESSAGE, flow_codes.ORIGIN_MESSAGE))
+        offers = [Offer(flow_codes.WRITE_REQUIREMENTS, flow_codes.REQUIREMENTS_LABEL, effect,
+                        makes_stale(project, flow_codes.WRITE_REQUIREMENTS))]
+        if held is None:
+            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_MESSAGE], offers)
         if given.content != held:
             return self.phase(flow_codes.STALE, [flow_codes.REQUIREMENTS_STALE_MESSAGE], offers)
         return self.phase(OK, [REQUIREMENTS_FILE], offers)

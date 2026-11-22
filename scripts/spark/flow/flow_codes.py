@@ -80,9 +80,10 @@ RESERVE_MANY_MESSAGE = "Uses 1 of your “%s” for the %s."
 RESERVE_UNKNOWN_MESSAGE = "Uses 1 of your “%s” for the %s, if you have one: spark does not know how many you have."
 TO_GET_MESSAGE = "You have none, so it goes on the list to get."
 #: A pick that `needs.plan_holds` refuses writes nothing, so it is no offer (P976). When another need's pick cannot get
-#: its part, the need's says line holds the problem's own sentence once: `<need>: <sentence>`, and the need gets no offers.
-OTHER_PICK_MESSAGE = "The pick for %s cannot get “%s” (%s), so spark refuses this pick and saves nothing."
-NEED_REFUSED_LINE = "%s: %s"
+#: its part, the need's says line holds the problem's own sentence once, and the need gets no offers. P993: it says that
+#: no new pick can be saved, so it does not read as a refusal of the pick named above it: the need, the other needs, the
+#: part's name and the problem's sentence.
+NO_NEW_PICK_MESSAGE = "Spark can save no new pick for %s: the pick for %s cannot get “%s” (%s)."
 #: The says line of a need with picks left out: how many more are not shown, and each pick its own part refuses, by
 #: REFUSED_PART (P991 review, the PO: "even if taken"), "; " between two; then LIST_PICKS_MESSAGE. A count of 0 is left
 #: out. The %s after a count is that count's word, from PICK_WORDS.
@@ -104,6 +105,10 @@ PICK_HISTORY_MESSAGE = "May note the choice in your history."
 #: A pick the parts list would refuse because spark has no board file for it (P991): the part by its name. The parts
 #: list's own sentence starts with `need_requirements.NO_BOARD_FILE`.
 NO_BOARD_FILE_MESSAGE = "Spark cannot build from this pick: it has no board file for “%s”."
+#: A pick the parts list refuses because its record owes a fact the circuit needs (P993): the part by its name, the
+#: needs that pick it ("“…” for screen"), and the facts it owes, so the person reads the blocker before any click.
+OWED_MESSAGE = "%s still lacks what spark needs: %s. Ask Claude to fill it in."
+PICKED_BY = "%s for %s"
 #: The says line that names a need's pick (P991): the need, then each pick's name in quotes (“…”), ", " between two.
 PICKED_FOR_MESSAGE = "Picked for %s: %s."
 DROP_MESSAGE = "To drop this need, tell Claude: “drop the %s need”."
@@ -143,6 +148,8 @@ NOT_SENT_SAYS = "Could not send. Nothing ran."
 NOT_WITHDRAWN_SAYS = "Could not withdraw. The request still waits."
 #: The intro of the published page, for its owner: the script puts it in place of PAGE_INTRO.
 PUBLISHED_INTRO = "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page."
+#: Said on the published page before the button on the guide's NOW line (P993): the NOW sentence names the step only.
+USE_BUTTON = "Use the button."
 WAITING_FOR = "Waiting for Claude: %s."
 PAGE_FROM = "Page from %s."
 NEW_STATE = "Reload to see the new state."
@@ -206,14 +213,14 @@ PARTS_NOW = "%s no part yet: %s. Tell Claude a pick for each, or to set it aside
 ONE_NEED_HAS, MANY_NEEDS_HAVE = "1 need has", "%d needs have"
 #: A phase in `later` whose status is ok: it is done now, and a change before it can make it stale (the PO's lens, PR 2 review).
 LATER_BUT_DONE = " (done, may change)"
-REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your picks."
+REQUIREMENTS_NOW = "Write the parts list from your picks."
 #: Every need set aside (P980): the parts phase is ok, but the parts list has no pick to be written from.
 ALL_ASIDE_NOW = "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, then pick a part."
 #: What `done` says of a requirements file with no needs or picks behind it (P980). Not "hand-written" only: a project whose last need was dropped is the same.
 REQUIREMENTS_NO_PICKS = "requirements (no needs or picks behind it)"
-REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
-BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
-BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
+REQUIREMENTS_STALE_NOW = "Your picks changed. Write the parts list again."  # P993: each names the step, not the way
+BUILD_NOW = "Build the board. It takes seconds and costs nothing."
+BUILD_STALE_NOW = "The parts list changed since the last build. Build the board again."
 BUILD_PARTIAL_NOW = "The build stopped. Ask Claude what stopped it and what to do."
 SHEET_NOW = "No wiring sheet yet. Ask Claude to build the board."
 SHEET_STALE_NOW = "The wiring sheet is out of date. Ask Claude to build the board again."

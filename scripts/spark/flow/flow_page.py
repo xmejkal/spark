@@ -106,6 +106,7 @@ def page_words(phases, wiring_first=False):
     marks = {status: MARKS[status][1] for status in (OK, PROBLEMS, COULD_NOT_RUN)}
     return {"offers": offers, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY,
             "withdraw": flow_codes.WITHDRAW, "command": flow_codes.PAGE_COMMAND, "waiting": flow_codes.WAITING_SAYS,
+            "use_button": flow_codes.USE_BUTTON,
             "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "page_from": flow_codes.PAGE_FROM,
             "not_sent": flow_codes.NOT_SENT_SAYS, "not_withdrawn": flow_codes.NOT_WITHDRAWN_SAYS,
             "intro": " ".join([flow_codes.PUBLISHED_INTRO] + ([flow_codes.WIRING_FIRST] if wiring_first else [])),
