@@ -269,8 +269,7 @@ def assign(board, signals):
 
     Returns a PinMap (assignments, leftover). Raises `ImpossibleError` rather than returning a partial map.
     """
-    available = candidates(board)
-    joined = JoinedPins.from_record(board)
+    available, joined = candidates(board), JoinedPins.from_record(board)
     for signal in signals:
         unknown = set(signal.get("needs", [])) - set(CAPABILITIES)
         if unknown:
