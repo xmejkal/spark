@@ -322,10 +322,11 @@ def _power_functions(board):
             if isinstance(power.get(fact), dict) and is_pin_map_constant(power[fact].get("value"))]
 
 
-def _radio_functions(board):
-    """The function of each radio of the board's chip in `data/chips.json` (P990), in RADIOS order. The Wi-Fi function of a
-    chip with a band also holds it as `band` (P1013), which only `shown_what` reads."""
-    table, chip = chip_table.load(), board.get("chip")
+def _radio_functions(board, table=None):
+    """The function of each radio of the board's chip in `table`, a chip_table.ChipTable, by default `data/chips.json`
+    (P990), in RADIOS order. The Wi-Fi function of a chip with a band also holds it as `band` (P1013), which only
+    `shown_what` reads."""
+    table, chip = chip_table.load() if table is None else table, board.get("chip")
     band, functions = table.wifi_band(chip), []
     for name in table.radios(chip):
         functions.append(dict(RADIO_FUNCTIONS[name], band=band) if name == "wifi" and band else dict(RADIO_FUNCTIONS[name]))

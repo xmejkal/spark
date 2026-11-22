@@ -842,12 +842,11 @@ class TheBoardsChipRadiosTest(unittest.TestCase):
             "c": {"wifi": {"value": True}},
             "d": {"wifi": {"value": False}, "wifi_band": {"value": "2.4 GHz"}, "bluetooth_le": {"value": True}},
         })
-        with mock.patch.object(chip_table, "load", return_value=table):
-            self.assertEqual(board_records.onboard_functions({"chip": "a"}), [dict(self.WIFI, band="2.4 GHz")])
-            self.assertEqual(board_records.onboard_functions({"chip": "b"}), [dict(self.WIFI, band="5 GHz")])
-            self.assertEqual(board_records.onboard_functions({"chip": "c"}),
-                             [{"does": "communicate", "what": "onboard Wi-Fi radio (WiFi)"}])
-            self.assertEqual(board_records.onboard_functions({"chip": "d"}), [self.BLE])
+        self.assertEqual(board_records._radio_functions({"chip": "a"}, table), [dict(self.WIFI, band="2.4 GHz")])
+        self.assertEqual(board_records._radio_functions({"chip": "b"}, table), [dict(self.WIFI, band="5 GHz")])
+        self.assertEqual(board_records._radio_functions({"chip": "c"}, table),
+                         [{"does": "communicate", "what": "onboard Wi-Fi radio (WiFi)"}])
+        self.assertEqual(board_records._radio_functions({"chip": "d"}, table), [self.BLE])
 
     def test_no_radio_but_wifi_holds_a_band(self):
         for function in board_records.onboard_functions({"chip": "esp32c6"}):
