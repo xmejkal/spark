@@ -53,7 +53,8 @@ WiringChange = collections.namedtuple("WiringChange", "code kind name color befo
 def _end_key(end):
     if end.kind == wiring_steps.RESISTOR:
         return (end.kind, end.job or end.component, end.pin)
-    return (end.kind, end.words)
+    # a board end by its name, never its words: a joined pad's note (P1009) must not move a jumper that stayed
+    return (end.kind, end.name if end.kind == wiring_steps.BOARD else end.words)
 
 
 def _anchor_key(anchor):

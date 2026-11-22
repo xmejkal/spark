@@ -1,3 +1,4 @@
+import copy
 import os
 import re
 import sys
@@ -13,7 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from spark.breadboard.wiring_steps import (BOARD, PART, RESISTOR, BreadboardSteps, End, MermaidDiagram, NumberedList,  # noqa: E402
                               JumperColors, StepPoint, role_of, wiring)
-from spark.breadboard import drawing, sheet, wiring_steps  # noqa: E402
+from spark.breadboard import bench_changes, drawing, sheet, wiring_steps  # noqa: E402
+from spark.records import board_pads  # noqa: E402
 from spark.design import board_components  # noqa: E402
 
 EPAPER = Path(__file__).resolve().parent / "data" / "breadboard" / "epaper"
@@ -319,6 +321,55 @@ class TheRailByRoleTest(unittest.TestCase):
                          "pin, above the label VCC) — power: join board 3V3 to a + rail and the other ends to that rail")
         self.assertEqual(self.read.point_lines[5], "6. board GND · e-paper GND — ground: join board GND to a - rail and "
                                                    "the other ends to that rail")
+
+
+WALK_C6 = Path(__file__).resolve().parent / "data" / "breadboard" / "walk-c6"
+#: The FireBeetle 2 C6's groups of joined pads, as the store's record holds them since P962 (the fixture's record is older).
+C6_JOINED = {"value": [["3V3", "3V3_2"], ["GND1", "GND2"], ["SDA", "IO19"], ["SCL", "IO20"]]}
+
+
+def joined_walk():
+    """The walk-c6 fixture's read, its steps made again from a board record with the C6's joined pads."""
+    with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+        read = sheet._read_build(WALK_C6 / "requirements.json")
+    board = copy.deepcopy(read.built.board)
+    board.setdefault("physical", {}).setdefault("header", {})["joined_pads"] = C6_JOINED
+    lines, steps = wiring_steps.wiring(board, read.circuit, read.built.parts, read.resistors, sheet.BOARD_COMPONENT)
+    return read._replace(built=read.built._replace(board=board), point_lines=lines, steps=steps)
+
+
+class TheJoinedPadsTest(unittest.TestCase):
+    """P1009: the pads a board joins inside itself take one jumper, and its step names the others."""
+
+    def test_the_walk_runs_one_jumper_for_3v3_and_3v3_2(self):
+        steps = NumberedList().render(joined_walk().steps)
+        self.assertEqual(len(steps), 12)
+        self.assertEqual(steps[2:4], [
+            "3. Run a jumper from board 3V3 (joined to 3V3_2 inside the board) to a free + rail. Mark it 3V3.",
+            "4. Run a jumper from the row of e-paper VCC (back up, header at the top: the left end pin, above the label VCC) to the 3V3 rail."])
+
+    def test_a_group_of_three_is_one_end_and_two_parts_pins_of_one_name_stay_two(self):
+        ends = [board("3V3"), board("3V3_2"), board("3V3_3"), End(PART, "A", "A VCC", "A VCC", "VCC"),
+                End(PART, "B", "B VCC", "B VCC", "VCC")]
+        joined = board_pads.JoinedPads((("3V3", "3V3_2", "3V3_3"),))
+        self.assertEqual([one.words for one in wiring_steps.joined_as_one(ends, joined)],
+                         ["board 3V3 (joined to 3V3_2 and 3V3_3 inside the board)", "A VCC", "B VCC"])
+        self.assertEqual(wiring_steps.joined_as_one(ends, board_pads.JoinedPads(())), ends)
+
+    def test_two_ends_of_one_pad_word_on_two_rails_stay_two_with_no_group(self):
+        ends = [End(BOARD, "board", "board GND", "board GND", "GND", power_rail="a"),
+                End(BOARD, "board", "board GND", "board GND", "GND", power_rail="b")]
+        self.assertEqual(wiring_steps.joined_as_one(ends, board_pads.JoinedPads((("GND1", "GND2"),))), ends)
+
+    def test_the_picture_draws_one_jumper_for_the_group_and_the_bench_key_keeps_its_name(self):
+        read = joined_walk()
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            layout = sheet._plan_layout(read)
+        self.assertEqual(len(layout.jumpers), 10)
+        self.assertEqual({jumper.step: (jumper.one.name, jumper.other.name) for jumper in layout.jumpers if jumper.role != "signal"},
+                         {3: ("7b.j", "bp.5"), 4: ("49b.f", "bp.23"), 7: ("9b.j", "bn.7"), 8: ("48b.f", "bn.23")})
+        keys = [change for change in bench_changes.describe(read.steps.anchored()) if change.source.startswith("board 3V3")]
+        self.assertEqual([(change.key, change.source) for change in keys], [(("board", "board 3V3"), "board 3V3")])
 
 
 if __name__ == "__main__":

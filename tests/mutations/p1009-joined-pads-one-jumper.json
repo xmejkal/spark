@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/spark/breadboard/wiring_steps.py",
+  "name": "P1009: the steps read no joined pads, so 3V3_2 takes its own jumper again (TheJoinedPadsTest walk test)",
+  "find": "    joined = board_pads.JoinedPads.from_record(board)\n",
+  "replace": "    joined = board_pads.JoinedPads(())\n"
+ },
+ {
+  "file": "scripts/spark/breadboard/wiring_steps.py",
+  "name": "P1009: a board pad is never put in its group (TheJoinedPadsTest group of three)",
+  "find": "        group = joined.group_of(one.pin) if one.kind == BOARD else ()",
+  "replace": "        group = ()"
+ },
+ {
+  "file": "scripts/spark/breadboard/wiring_steps.py",
+  "name": "P1009: two parts' pins of one name are one end (TheJoinedPadsTest group of three)",
+  "find": "        group = joined.group_of(one.pin) if one.kind == BOARD else ()",
+  "replace": "        group = joined.group_of(one.pin) + ('x',)"
+ },
+ {
+  "file": "scripts/spark/breadboard/wiring_steps.py",
+  "name": "P1009: a pad in no group merges with another end of its word (TheJoinedPadsTest two rails test)",
+  "find": "        others.setdefault(group if len(group) > 1 else one, (one, []))[1].append(one.pin)",
+  "replace": "        others.setdefault(group or one, (one, []))[1].append(one.pin)"
+ },
+ {
+  "file": "scripts/spark/breadboard/wiring_steps.py",
+  "name": "P1009: only the second pad of a group is named (TheJoinedPadsTest group of three)",
+  "find": "\" and \".join(pins[1:])",
+  "replace": "\" and \".join(pins[1:2])"
+ },
+ {
+  "file": "scripts/spark/breadboard/bench_changes.py",
+  "name": "P1009: a board end's key takes the joined note, so the bench list moves the 3V3 jumper (TheJoinedPadsTest picture test)",
+  "find": "    return (end.kind, end.name if end.kind == wiring_steps.BOARD else end.words)",
+  "replace": "    return (end.kind, end.words)"
+ }
+]
