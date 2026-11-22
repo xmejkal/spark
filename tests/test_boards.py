@@ -803,9 +803,10 @@ class TheBoardsOwnPowerPartsTest(unittest.TestCase):
 
 
 class TheBoardsChipRadiosTest(unittest.TestCase):
-    """P990: a board offers each radio of its chip in `data/chips.json` for a need, after its power facts."""
+    """P990: a board offers each radio of its chip in `data/chips.json` for a need, after its power facts. P1013: the Wi-Fi
+    function carries the chip's band as `band`, and only the shown words print it."""
 
-    WIFI = {"does": "communicate", "what": "onboard Wi-Fi radio (WiFi)"}
+    WIFI = {"does": "communicate", "what": "onboard Wi-Fi radio (WiFi)", "band": "2.4 GHz"}
     BLE = {"does": "communicate", "what": "onboard Bluetooth LE radio (BLE)"}
     IEEE = {"does": "communicate", "what": "onboard 802.15.4 radio (Thread, Zigbee)"}
 
@@ -833,6 +834,36 @@ class TheBoardsChipRadiosTest(unittest.TestCase):
                 record = json.loads((board_records.LIBRARY / (name + ".json")).read_text())
                 self.assertEqual(sorted(function["what"] for function in board_records.onboard_functions(record)
                                         if function["does"] == "communicate"), offered)
+
+    def test_each_chip_gives_its_own_band_and_a_chip_with_no_band_or_no_wifi_gives_none(self):
+        table = chip_table.ChipTable.from_dict({
+            "a": {"wifi": {"value": True}, "wifi_band": {"value": "2.4 GHz"}},
+            "b": {"wifi": {"value": True}, "wifi_band": {"value": "5 GHz"}},
+            "c": {"wifi": {"value": True}},
+            "d": {"wifi": {"value": False}, "wifi_band": {"value": "2.4 GHz"}, "bluetooth_le": {"value": True}},
+        })
+        with mock.patch.object(chip_table, "load", return_value=table):
+            self.assertEqual(board_records.onboard_functions({"chip": "a"}), [dict(self.WIFI, band="2.4 GHz")])
+            self.assertEqual(board_records.onboard_functions({"chip": "b"}), [dict(self.WIFI, band="5 GHz")])
+            self.assertEqual(board_records.onboard_functions({"chip": "c"}),
+                             [{"does": "communicate", "what": "onboard Wi-Fi radio (WiFi)"}])
+            self.assertEqual(board_records.onboard_functions({"chip": "d"}), [self.BLE])
+
+    def test_no_radio_but_wifi_holds_a_band(self):
+        for function in board_records.onboard_functions({"chip": "esp32c6"}):
+            with self.subTest(what=function["what"]):
+                self.assertEqual("band" in function, function["what"] == "onboard Wi-Fi radio (WiFi)")
+
+    def test_the_shown_words_put_the_band_inside_the_brackets(self):
+        self.assertEqual(board_records.shown_what(self.WIFI), "onboard Wi-Fi radio (WiFi; 2.4 GHz only)")
+        self.assertEqual(board_records.shown_what({"what": "onboard Wi-Fi radio (WiFi)", "band": "5 GHz"}),
+                         "onboard Wi-Fi radio (WiFi; 5 GHz only)")
+        for function in ({"what": "onboard Wi-Fi radio (WiFi)"}, dict(self.WIFI, band=""), dict(self.WIFI, band=5),
+                         dict(self.WIFI, band=None)):
+            with self.subTest(function=function):
+                self.assertEqual(board_records.shown_what(function), "onboard Wi-Fi radio (WiFi)")
+        self.assertEqual(board_records.shown_what({"what": "wifi", "band": "2.4 GHz"}), "wifi",
+                         "words with no closing bracket stay as they are")
 
     def test_each_radio_of_the_chip_table_has_words(self):
         self.assertEqual(set(board_rules.RADIO_FUNCTIONS), set(chip_table.RADIOS))

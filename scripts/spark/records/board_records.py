@@ -28,7 +28,7 @@ from spark.records import records_codes
 from spark.records import store
 # Read here and, as board_records' own names, by pin_assigner, restricted_pins, onboard_parts and the tests (P724).
 from spark.records.board_rules import (ADC2_UNUSABLE_WITH_WIFI, adc2_unread_gpio, GPIO_MAX, GPIO_MIN,  # noqa: F401
-                                       is_gpio, is_pin_map_constant, PIN_ROLES, POWER_FUNCTIONS,
+                                       BAND_WORDS, is_gpio, is_pin_map_constant, PIN_ROLES, POWER_FUNCTIONS,
                                        RADIO_FUNCTIONS)
 
 #: Board definitions ship with this plugin as a LIBRARY, so a project can adopt a verified one
@@ -322,15 +322,35 @@ def _power_functions(board):
             if isinstance(power.get(fact), dict) and is_pin_map_constant(power[fact].get("value"))]
 
 
+def _radio_functions(board):
+    """The function of each radio of the board's chip in `data/chips.json` (P990), in RADIOS order. The Wi-Fi function of a
+    chip with a band also holds it as `band` (P1013), which only `shown_what` reads."""
+    table, chip = chip_table.load(), board.get("chip")
+    band, functions = table.wifi_band(chip), []
+    for name in table.radios(chip):
+        functions.append(dict(RADIO_FUNCTIONS[name], band=band) if name == "wifi" and band else dict(RADIO_FUNCTIONS[name]))
+    return functions
+
+
 def onboard_functions(board):
     """
     What the board offers a need through its own parts: one {"does", "what", "role"} per entry of `onboard_entries` that
     names its pins (`role` is its key in PIN_ROLES, P397), then one {"does", "what"} per power fact, then one per radio
-    of the board's chip in `data/chips.json` (P990). A power fact and a radio have no role.
+    of the board's chip in `data/chips.json` (P990), the Wi-Fi one with the chip's `band` (P1013). A power fact and a
+    radio have no role.
     """
     return ([{"does": spec.does, "what": spec.what, "role": role} for role, spec, entry in onboard_entries(board) if names_pins(entry)]
-            + _power_functions(board)
-            + [dict(RADIO_FUNCTIONS[name]) for name in chip_table.load().radios(board.get("chip"))])
+            + _power_functions(board) + _radio_functions(board))
+
+
+def shown_what(function):
+    """The words a `--match` line shows for `function` (P1013): its `what`, with its `band` inside the closing bracket, as
+    "onboard Wi-Fi radio (WiFi; 2.4 GHz only)". A `band` that is no words, or a `what` with no closing bracket, gives
+    `what` as it is. The matchers read `what` alone, so the band never moves a score."""
+    what, band = function.get("what"), function.get("band")
+    if isinstance(band, str) and band.strip() and isinstance(what, str) and what.endswith(")"):
+        return what[:-1] + BAND_WORDS % band
+    return what
 
 
 #: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.
