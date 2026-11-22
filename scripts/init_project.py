@@ -54,17 +54,15 @@ def main(argv=None):
         print(answers, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     try:
-        name, adopted = record_home.list_project(project)
-        listed = "on your projects list as %r" % name
+        listed = record_home.listing_notes(project)
     except store.StoreError as refused:
-        listed, adopted = "not on your projects list: %s" % refused, []
+        listed = ["not on your projects list: %s" % refused]
 
     circuit, ambiguous = (args.circuit, None) if args.circuit else find_circuit(project)
 
     nets = nets_in(circuit)
     part_list, notes = design_in(project)
-    notes.append(listed)
-    notes += [record_home.ADOPTED.strip() % one for one in adopted]
+    notes += listed
     if ambiguous:
         notes.append(ambiguous)
     unstated, written = [], []

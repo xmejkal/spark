@@ -72,6 +72,10 @@ def orphan_home(copy_path, kind="part"):
     return holders[0] if len(holders) == 1 else None
 
 
+#: What `refresh_shelf_copy` says when it wrote the copy.
+REFRESHED = "shelf copy refreshed"
+
+
 def refresh_shelf_copy(path, record, project_name, dry_run):
     """
     The shelf copy of a project's record made current again (§5.5) — after a write, and when an earlier write left it behind
@@ -87,7 +91,7 @@ def refresh_shelf_copy(path, record, project_name, dry_run):
     if dry_run:
         return "would refresh the shelf copy"
     shelve(path, project_name)
-    return "shelf copy refreshed"
+    return REFRESHED
 
 
 #: Said by a run that lists a folder and adopts an orphan copy of its records (P1006).
@@ -105,9 +109,15 @@ def list_project(folder):
         for path in sorted((Path(folder) / sub).glob("*.json")):
             record = _parse(path)
             if isinstance(record, dict) and orphan_home(shelf / path.name, kind) == name \
-                    and refresh_shelf_copy(path, record, name, False) == "shelf copy refreshed":
+                    and refresh_shelf_copy(path, record, name, False) == REFRESHED:
                 adopted.append(path.stem)
     return name, adopted
+
+
+def listing_notes(folder):
+    """The init's sentences of `list_project`: the name on the list, then each copy adopted. store.StoreError says why not."""
+    name, adopted = list_project(folder)
+    return ["on your projects list as %r" % name] + [ADOPTED.strip() % one for one in adopted]
 
 def merge_values(record, values):
     """`record` with `values` set, and the values it had: `facts` takes the written names over the held ones, the other names stay
