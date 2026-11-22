@@ -14,3 +14,7 @@ findings only.
 | 6 | `_end_key` changes the keys of kept wiring records | plan refuter 3 | rejected | the refuter's own check: every board end has `name` equal to `words` today |
 | 7 | the walk-c6 fixture's board record has no `joined_pads` | plan writer | raised | dropped because the tests add the groups in memory, and the old fixture keeps the case with no group. The MVP needs no more |
 | 8 | "no jumper goes to 3V3_2" in breadboard-codes.md is false when 3V3_2 sits on another point | PR lens 1 | acted | fixed: the sentence is gone, and the paragraph on `joined_pads` says it for one point |
+| 9 | the new tests sit after the `__main__` guard, so a run of the file as a script skips them | PR refuter 5 | acted | fixed: the class is above the guard |
+| 10 | "the group's first pad in the sheet's order" is a loose name for the sort by words | PR refuter 2 | acted | fixed: "first by name" |
+| 11 | the note leaks into a rail mark, a pill, a diagram node or before_power | PR refuter 3 | rejected | the refuter's own check: `joined_as_one` runs before the role and the rail, and those read `name`, not `words` |
+| 12 | the wiring line says the note twice | PR refuter 3 | raised | dropped because it is true, and a shorter line touches every role line. The MVP needs no more |

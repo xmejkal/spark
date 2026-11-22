@@ -323,10 +323,6 @@ class TheRailByRoleTest(unittest.TestCase):
                                                    "the other ends to that rail")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 WALK_C6 = Path(__file__).resolve().parent / "data" / "breadboard" / "walk-c6"
 #: The FireBeetle 2 C6's groups of joined pads, as the store's record holds them since P962 (the fixture's record is older).
 C6_JOINED = {"value": [["3V3", "3V3_2"], ["GND1", "GND2"], ["SDA", "IO19"], ["SCL", "IO20"]]}
@@ -374,3 +370,7 @@ class TheJoinedPadsTest(unittest.TestCase):
                          {3: ("7b.j", "bp.5"), 4: ("49b.f", "bp.23"), 7: ("9b.j", "bn.7"), 8: ("48b.f", "bn.23")})
         keys = [change for change in bench_changes.describe(read.steps.anchored()) if change.source.startswith("board 3V3")]
         self.assertEqual([(change.key, change.source) for change in keys], [(("board", "board 3V3"), "board 3V3")])
+
+
+if __name__ == "__main__":
+    unittest.main()
