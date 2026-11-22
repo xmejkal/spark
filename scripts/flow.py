@@ -24,7 +24,7 @@ EPILOG = """flow.py show reads the project's files and the store, and writes not
 needs, parts, requirements, build, breadboard, firmware, simulate and deploy. Each phase has a status (ok, problems,
 could-not-run, not-started, partial or stale, or none), who does it (you, claude or your terminal), what it says and its
 offers. The idea has no status. A hand-written project (requirements.json and no needs) has none for its needs and
-parts. Written firmware and a simulated image have none, because what their sentences say is for you to judge. An offer
+parts, and so has a project whose last need was dropped, which says so. Written firmware and a simulated image have none, because what their sentences say is for you to judge. An offer
 is a key, such as pick:soil:x-led, with a label (the words of its button, such as Build the board), its effect (plain
 sentences that name every write it makes) and makes_stale (the phases it can make out of date, only those that hold
 something now). flow.py runs no offer. The last line names the first phase that is not done. The guide (P977) says

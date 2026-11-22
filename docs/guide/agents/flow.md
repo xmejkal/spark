@@ -76,7 +76,7 @@ An offer has four keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
 A `null` status means spark does not judge the phase, and `says` tells where it stands. The idea has `null`. A
 hand-written project (requirements.json and no needs file) has `null` for its needs and parts, and says so. A project
 whose last need was dropped (needs.json holds no need, requirements.json stays) has `null` too, and says "no need is
-left: the last one was dropped" for its needs. Written firmware and a
+left: the last one was dropped" for its needs and "no need or pick is behind the parts list" for its parts. Written firmware and a
 simulated image have `null`, because you judge them. Without firmware/main.py, or without an image, they are
 `not-started`. A firmware line in sim/wokwi.toml that spark cannot use gives the simulate phase `problems`.
 
