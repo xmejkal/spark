@@ -208,10 +208,14 @@ class JoinedPins:
         """The GPIOs that taking `label` takes: its own and those of every label joined to it."""
         return {self.gpio_of[name] for name in self.labels(label)}
 
-    def said(self, label):
-        """The refusal's added words naming the joined labels, or "" for a label that no group joins."""
+    def said(self, label, assignments):
+        """
+        The refusal's added words naming the joined labels, or "" when no label of another pad of the group took a pin:
+        a signal twice on one label, or an unjoined label on the same GPIO, is not the join's doing.
+        """
         names = self.labels(label)
-        if len(self.joined.group_of(self.pads.pad_of(label))) < 2 or len(names) < 2:
+        pad = self.pads.pad_of(label)
+        if not any(entry["pin"] in names and self.pads.pad_of(entry["pin"]) != pad for entry in assignments):
             return ""
         return "; the board joins %s inside itself, so they are one pin" % (", ".join(names[:-1]) + " and " + names[-1])
 # --- end MVP ---
@@ -335,7 +339,7 @@ def assign(board, signals):
                 to_place.append(dict(signal, pin=None))
                 continue
             raise ImpossibleError("%s asks for %s (GPIO%d), which is already taken"
-                             % (signal["name"], label, gpio) + joined.said(label), design_codes.PIN_TAKEN)
+                             % (signal["name"], label, gpio) + joined.said(label, assignments), design_codes.PIN_TAKEN)
         taken_gpio |= joined.holds(label)
         if line in SHARED_LINES:
             bus_holders[gpio] = (signal["bus"], line)

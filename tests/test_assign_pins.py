@@ -232,6 +232,25 @@ class JoinedPadsAreOnePinTest(unittest.TestCase):
             pin_assigner.assign(record, [{"name": "A", "pin": "P0"}, {"name": "B", "pin": "SS"}])
         self.assertNotIn("joins", str(refused.exception))
 
+    def test_two_signals_on_one_named_label_say_no_join(self):
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(self.joined([["P0", "P1"]]), [{"name": "A", "pin": "P0"}, {"name": "B", "pin": "P0"}])
+        self.assertEqual(refused.exception.code, "pin_taken")
+        self.assertNotIn("joins", str(refused.exception))
+
+    def test_an_unjoined_label_on_the_same_gpio_says_no_join(self):
+        record = self.joined([["P0", "P1"]])
+        record["pins"]["Q"] = 0
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(record, [{"name": "A", "pin": "Q"}, {"name": "B", "pin": "P0"}])
+        self.assertEqual(refused.exception.code, "pin_taken")
+        self.assertNotIn("joins", str(refused.exception))
+
+    def test_a_group_with_a_pad_the_board_has_no_pin_for_says_no_join(self):
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(self.joined([["P0", "P9"]]), [{"name": "A", "pin": "P0"}, {"name": "B", "pin": "P0"}])
+        self.assertNotIn("joins", str(refused.exception))
+
     def test_a_named_pad_joined_to_a_taken_one_is_refused(self):
         record = self.joined([["P0", "P1"]])
         self.assertNotEqual(pin_assigner.board_pads.JoinedPads.from_record(record).groups, ())
