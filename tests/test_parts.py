@@ -23,6 +23,7 @@ import io
 import json
 import os
 import re
+import shutil
 import stat
 import sys
 import tempfile
@@ -1084,6 +1085,7 @@ class EachPartRefusalHasItsCodeTest(unittest.TestCase):
         (project / "parts" / "broken-part.json").write_text(json.dumps({"schema": 1, "id": "broken-part"}))
         asked = {"definition_path": (lambda: part_records.definition_path("no-such-part", project), "no_such_part"),
                  "fetch_documents": (lambda: datasheets.fetch_documents("no-such-part", project), "no_such_part"),
+                 "fetch_documents (library)": (lambda: self._fetch_a_library_part(), "library_record"),  # P964
                  "promote": (lambda: part_facts.promote("no-such-part", project), "no_such_part"),
                  "set_fields": (lambda: record_home.set_fields("no-such-part", project, {}, True, None),
                                 "no_such_part"),
@@ -1095,6 +1097,14 @@ class EachPartRefusalHasItsCodeTest(unittest.TestCase):
                     with self.assertRaises(CodedMessageError) as refused:
                         refusing()
                     self.assertEqual(refused.exception.code, code, str(refused.exception))
+
+    @staticmethod
+    def _fetch_a_library_part():
+        library = Path(tempfile.mkdtemp()) / "parts"
+        library.mkdir()
+        (library / "x-inlet.json").write_text(json.dumps({"schema": 1, "id": "x-inlet", "name": "An inlet", "kind": "connector"}))
+        with EverythingFoundIsKeptTest._library_is(library, []):
+            datasheets.fetch_documents("x-inlet", fetch=lambda url: b"pdf")
 
     def test_validate_s_items_carry_the_contract_s_code(self):
         # P785 (P366 row 13): the item had `code: null`, so an agent could decide on the sentence alone
@@ -1254,6 +1264,52 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                 self.assertEqual(asked, [], "the door was not asked once")
                 self.assertFalse((home / "sources").exists(), "nothing was kept")
                 self.assertEqual((home / "catalog" / "x-part.json").read_text(), before)
+
+    def _a_library_with_a_part(self):
+        """P964: a copy of spark's l9110s-module record in a scratch library, and the store it would be fetched into."""
+        library = Path(tempfile.mkdtemp()) / "parts"
+        library.mkdir()
+        shutil.copy(Path(__file__).resolve().parent.parent / "parts" / "l9110s-module.json", library / "l9110s-module.json")
+        return library, self._home()
+
+    @staticmethod
+    @contextlib.contextmanager
+    def _library_is(library, asked):
+        """P964: `library` is spark's library for one block, and the network door only records what it is asked."""
+        library_was, fetch_was = record_kind.LIBRARY, store.fetch
+        record_kind.LIBRARY, store.fetch = library, lambda url, method="GET": asked.append(url) or b"pdf"
+        try:
+            yield
+        finally:
+            record_kind.LIBRARY, store.fetch = library_was, fetch_was
+
+    def test_fetch_of_a_library_part_leaves_the_repository_file_unchanged(self):
+        library, home = self._a_library_with_a_part()
+        before = (library / "l9110s-module.json").read_bytes()
+        asked = []
+        with in_store(home), self._library_is(library, asked):
+            with self.assertRaises(CodedMessageError) as refused:
+                datasheets.fetch_documents("l9110s-module", fetch=asked.append)
+        self.assertEqual(refused.exception.code, "library_record", str(refused.exception))
+        self.assertIn("l9110s-module is in spark's own library", str(refused.exception))
+        self.assertEqual((library / "l9110s-module.json").read_bytes(), before)
+        self.assertEqual(asked, [], "nothing was downloaded")
+        self.assertFalse((home / "sources").exists(), "nothing was kept")
+
+    def test_fetch_cli_refuses_a_library_part_on_a_dry_run_too(self):
+        library, home = self._a_library_with_a_part()
+        before = (library / "l9110s-module.json").read_bytes()
+        asked = []
+        for argv in (["--fetch", "l9110s-module"], ["--fetch", "l9110s-module", "--dry-run"]):
+            with self.subTest(argv=argv):
+                with in_store(home), self._library_is(library, asked):
+                    said, code = run_json(argv)
+                self.assertEqual((said["status"], code), ("problems", 1))
+                self.assertEqual([(item["subject"], item["code"]) for item in said["problems"]], [("l9110s-module", "library_record")])
+                self.assertIn("run the same command again with --project", said["problems"][0]["fix"])
+        self.assertEqual(asked, [])
+        self.assertEqual((library / "l9110s-module.json").read_bytes(), before)
+        self.assertFalse((home / "sources").exists())
 
     def test_a_dry_run_of_a_fetch_says_what_it_would_fetch_and_reaches_nothing(self):
         home = self._home()
@@ -1517,7 +1573,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
 
     def test_keep_for_a_part_with_no_record_is_a_problem_on_its_id_and_keeps_nothing(self):
         home, project, local = self._keep_for_a_part()
-        for part_id, code_word in (("nobody", "no_such_part"), ("dfr0534-module", None)):  # a part nobody has; spark's own library
+        for part_id, code_word in (("nobody", "no_such_part"), ("dfr0534-module", "library_record")):  # a part nobody has; spark's own library (P964: the shared refusal names its code now)
             with self.subTest(part=part_id):
                 said, code = run_json(["--keep", str(local), "--part", part_id, "--project", str(project)])
                 self.assertEqual((said["status"], code, [(item["subject"], item.get("code")) for item in said["problems"]]),

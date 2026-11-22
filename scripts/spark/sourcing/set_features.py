@@ -48,7 +48,7 @@ class SetFeatures(PartOperation):
                    else "no record of a board called %r — `boards.py --list` finds what exists" % part_id)
             return Answer(problems=[_problem(part_id, why, code=sourcing_codes.NO_SUCH_PART)])
         if record_home.in_library(home):
-            return Answer(problems=[_problem(part_id, record_home.LIBRARY_REFUSAL % part_id)])
+            return Answer(problems=[record_home.library_problem(part_id)])
         shape, why = _frame(record)
         if shape is None:
             return Answer(problems=[_problem(part_id, "%s has no frame to measure in: %s" % (part_id, why), code=drawing.NO_HEADER_FACT)])

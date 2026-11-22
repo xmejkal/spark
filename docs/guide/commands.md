@@ -15,7 +15,7 @@ run or change something, Claude quotes it to you and carries on. (Each command p
 A command page's header, `allowed-tools`, lists the operations Claude may run without asking you, each by name. Five
 operations that reach the network are on no command's or skill's list:
 
-- `parts.py --fetch` downloads a datasheet;
+- `parts.py --fetch` downloads a datasheet (never for a record of spark's library);
 - `parts.py --sources` asks every URL a record cites whether it answers;
 - `tools.py --install` installs a tool;
 - `tools.py --on` turns a tool on and installs it;

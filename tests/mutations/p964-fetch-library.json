@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/spark/sourcing/datasheets.py",
+  "name": "fetch writes spark's library (P964)",
+  "find": "    if home_rules.in_library(path):",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/sourcing/datasheets.py",
+  "name": "the library refusal of a fetch has the wrong code (P964)",
+  "find": "                        code=sourcing_codes.LIBRARY_RECORD)",
+  "replace": "                        code=sourcing_codes.NO_SUCH_PART)"
+ },
+ {
+  "file": "scripts/spark/sourcing/fetch_documents.py",
+  "name": "a dry run of a fetch does not refuse the library (P964)",
+  "find": "json.loads(datasheets.fetch_path(part_id, project).read_text())",
+  "replace": "json.loads((record_home(part_id, project) / (part_id + DEFINITION_SUFFIX)).read_text())"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "the shared library refusal has no code (P964)",
+  "find": "fix=sourcing_codes.LIBRARY_RECORD.fix, code=sourcing_codes.LIBRARY_RECORD)",
+  "replace": "fix=sourcing_codes.LIBRARY_RECORD.fix)"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "the shared library refusal has no fix (P964)",
+  "find": "fix=sourcing_codes.LIBRARY_RECORD.fix, code=sourcing_codes.LIBRARY_RECORD)",
+  "replace": "code=sourcing_codes.LIBRARY_RECORD)"
+ },
+ {
+  "file": "scripts/spark/sourcing/fetch_documents.py",
+  "name": "the fetch refusal of the library loses its fix (P964 review)",
+  "find": "        if getattr(broken, \"code\", None) == sourcing_codes.LIBRARY_RECORD:",
+  "replace": "        if False:"
+ }
+]

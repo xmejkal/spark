@@ -91,6 +91,11 @@ def in_library(path):
 LIBRARY_REFUSAL = "%s is in spark's own library, which is changed in spark's repository, not by parts.py"
 
 
+def library_problem(part_id):
+    """The one refusal of a record in spark's own library (P964): a problem item on the id, with `library_record` and its fix."""
+    return _problem(part_id, LIBRARY_REFUSAL % part_id, fix=sourcing_codes.LIBRARY_RECORD.fix, code=sourcing_codes.LIBRARY_RECORD)
+
+
 def set_fields(part_id, project, values, dry_run, refuse):
     """
     Set fields of a part record in its own home (§5.4) — the catalog's, a project's, or a listed project's behind a shelf
@@ -112,7 +117,7 @@ def write_fields(part_id, home, values, dry_run, refuse):
         raise PartError("no record called %r — `parts.py --need` finds what exists", part_id,
                         code=sourcing_codes.NO_SUCH_PART)
     if in_library(path):
-        return Answer(problems=[_problem(part_id, LIBRARY_REFUSAL % part_id)])
+        return Answer(problems=[library_problem(part_id)])
     record = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(record, dict):
         return Answer(problems=[_problem(part_id, "%s is not a JSON object (%s) — repair the file by hand first" % (part_id, path))])

@@ -25,6 +25,9 @@ PART_CONTRACT_BROKEN_REPLIES = codes.Code(PART_CONTRACT_BROKEN, PART_CONTRACT_BR
                                     "fix the value in %s so the record meets its contract (the typed values are kept there), then run %s --replies %s")
 PROMOTION_WOULD_OVERWRITE = codes.Code("promotion_would_overwrite", "the library already holds a record of this id, and a promotion never overwrites one",
                                  "keep the record that is there, or move it away by hand first")
+#: parts.py wrote nothing because the record is in spark's own library (P964); research.py says BAD_ARGUMENT_IN_LIBRARY for the same fact (P982).
+LIBRARY_RECORD = codes.Code("library_record", "the record is in spark's own library, which is changed in spark's repository",
+                      "copy the record into the project's parts/ folder (a board into boards/), then run the same command again with --project <that project's folder>")
 #: A variant of the core's BAD_ARGUMENT: research asked for a record of spark's own library (research_part).
 BAD_ARGUMENT_IN_LIBRARY = codes.Code(codes.BAD_ARGUMENT, codes.BAD_ARGUMENT.meaning,
                                "spark's library is changed in spark's repository; research a copy of the record in the project's parts/")
@@ -61,7 +64,7 @@ NO_DIMENSION_DRAWING = codes.Code("no_dimension_drawing", "the maker's page list
 
 #: Each code and the one sentence that says what it means.
 CODES = {code: code.meaning for code in (
-    NO_SUCH_PART, PART_CONTRACT_BROKEN, PROMOTION_WOULD_OVERWRITE, STEP_LINE_BROKEN, NO_STEP_MARKED, STEP_WITHOUT_SESSION,
+    NO_SUCH_PART, LIBRARY_RECORD, PART_CONTRACT_BROKEN, PROMOTION_WOULD_OVERWRITE, STEP_LINE_BROKEN, NO_STEP_MARKED, STEP_WITHOUT_SESSION,
     NO_TRANSCRIPT, TRANSCRIPT_UNREADABLE, TRANSCRIPT_ENDS_EARLY, UNKNOWN_MATCHER, NO_SKU, NO_DOCUMENT_LIST, MORE_DOCUMENTS,
     NO_VENDOR_FINDER, NO_TOP_VIEW, NO_DIMENSION_DRAWING)}
 # --- end MVP ---
