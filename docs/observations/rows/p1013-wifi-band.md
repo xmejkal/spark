@@ -1,0 +1,18 @@
+# P1013: a chip's Wi-Fi band, cited, shown inside the Wi-Fi words of a `--match` line: rows
+
+Card: [P1013 #1472](https://github.com/xmejkal/spark/issues/1472). Plan v2, 2026-11-22. The plan council: round 1 a lens
+(Sonnet) and the refuter (Opus) on v1, round 2 the refuter (Opus) on v2. This file holds the acted, raised and rejected
+findings only.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | v1's ", 2.4 GHz only" in the scored `what` moves scores: a "2.4 GHz remote control receiver" need lifts the XIAO and the S3 to 0.5, a "2.4 inch display" need puts the LilyGO first, and the words read as a fourth function | round 1, the refuter (measured) | acted | v2: `what` stays and the band is the function's `band` key, which no matcher reads; `board_records.shown_what` prints it. `test_a_band_in_the_shown_words_never_moves_a_score` pins 0.167, 0.25, 0.0 (XIAO) and 0.1, 0.15, 0.0 (S3), the values on main; row 7 of `tests/mutations/p1013-wifi-band.json` |
+| 2 | the ESP32 has no kept datasheet, and its TRM says no "GHz", so v1 left it out | round 1 | acted | the ESP32 datasheet v5.3 is a free download that approved work needs: kept with `store.keep`, sha256 a7917e6b…29adf, printed page 2 "a single 2.4 GHz Wi-Fi-and-Bluetooth combo chip", page 53 Table 5-6 "Operating frequency range 2412 … 2484 MHz" |
+| 3 | "cited" can mean a source in the offer | round 1 | rejected | P782 keeps sources out of an offer. Cited means the citation in `data/chips.json` and the tests that pin it, as for P990 |
+| 4 | the kept C6 v1.5 and S3 v2.2 datasheets state the band (page 3) and the channel range 2412 to 2484 MHz (page 70, Table 6-1), with matching sha256 | round 1, the refuter | closed | measured again in the build with `pdftotext -layout` and `shasum -a 256`: the footers give printed page = PDF page |
+| 5 | a drawer entry's function may carry extra keys (drawer.py:127-129), and `Offer.from_entry` and `from_record` pass them through, so an entry's `band` would print uncited | round 2, the refuter | acted | `matching._entry_functions` gives an entry's function only `does` and `what`, as `part_records.function_problems` asks of a record; `test_an_entrys_function_keeps_only_does_and_what`, row 10. The drawer's check still takes the entry: the offer drops the keys, so no drawer is refused |
+| 6 | commands/idea.md says `--offer` prints the same words as `--match`, and after the change it does not | round 2, the refuter | acted | the sentence says `--offer` prints the Wi-Fi words without the band; `--offer` stays a chooser's text (`Offer._doing`), checked with `parts.py --offer xiao-esp32-c6` |
+| 7 | the `endswith(")")` guard in `shown_what` is untested | round 2, the refuter | acted | `test_the_shown_words_put_the_band_inside_the_brackets` gives `{"what": "wifi", "band": "2.4 GHz"}` and gets "wifi" |
+| 8 | mutation row 8's find text `"value": "2.4 GHz"` occurs three times in `data/chips.json` | round 2, the refuter | acted | rows 8 and 9 anchor on the C6's document key; `mutate.py --anchors`: 17 mutation(s) in 2 table(s): every anchor present, once |
+| 9 | the new citation test was green before the data, because no chip held the fact | the build | acted | the test first asserts that exactly the ESP32, the S3 and the C6 hold `wifi_band`; it was red before the data |
+| 10 | the score test cannot be red before the code: it pins today's scores | the build | closed | it is a guard; planted by hand, row 7's defect (the band in `what`) turned it red in all six cases, then the file was restored |
