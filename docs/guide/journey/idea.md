@@ -9,8 +9,8 @@ set aside on your word. Then a part is picked per need (`parts.py --pick`), what
 [a recorded run](recorded-run.md#a-recorded-run-a-button-and-an-led) below; the conversation did not.
 
 **Today, in full.** `--match` offers a board for a need that its own LED, buttons, display, charger, voltage regulator,
-battery input or battery-level pin serve ([P389](https://github.com/xmejkal/spark/issues/504)). Under such a board,
-`--match` prints what a passed run does not test of that part, and `--pick` puts the same sentences in a note
+battery input, battery-level pin or chip radio serve ([P389](https://github.com/xmejkal/spark/issues/504),
+[P990](https://github.com/xmejkal/spark/issues/1443)). Under such a board, `--match` prints what a passed run does not test of that part, and `--pick` puts the same sentences in a note
 ([P397](https://github.com/xmejkal/spark/issues/513)). The note names the bench as the test, and a part you own that has
 a Wokwi model as the other choice. When no part is listed and no need is left unserved, `parts.py --requirements`
 writes `"board_only": true` ([P387](https://github.com/xmejkal/spark/issues/497)). A later run names each entry that spark wrote for a pick that is gone, and removes it on the person's yes ([P877](https://github.com/xmejkal/spark/issues/1245)).
