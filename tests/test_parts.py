@@ -3457,8 +3457,32 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
             said = self.text(["--step", str(other), "S"])
         name = Path(other).name
         self.assertIn("  adopted the shelf copy of x-valve: it was shelved while this folder was on no list, and now follows its record here", said.splitlines())
-        self.assertNotIn("adopted", dry)
+        self.assertNotIn("  adopted", dry)
         self.assertEqual((self.shelved(home)["based_on"]["project"], self.shelved(home)["footprint"]), (name, "pinrow2"))
+
+    def test_a_project_that_holds_another_part_under_the_id_never_adopts_the_copy(self):
+        # P1006 review: the copy came from an unlisted folder; garden holds another part named x-valve, so nothing is adopted
+        home, other = self.a_valve_in_irrigation()
+        self.an_orphan_copy(home)
+        (other / "parts" / "x-valve.json").write_text(json.dumps({"schema": 1, "id": "x-valve", "name": "Another valve",
+                                                                  "kind": "mosfet-driver", "needs": []}))
+        with in_store(home):
+            fact = self.text(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"})])
+            (home / "projects.json").write_text("{}")
+            step = self.text(["--step", str(other), "S"])
+        self.assertEqual((self.shelved(home)["name"], "based_on" in self.shelved(home)), ("A valve driver", False))
+        self.assertNotIn("shelf copy refreshed", fact)
+        self.assertNotIn("adopted", step)
+
+    def test_a_dry_run_says_it_would_adopt_and_the_json_names_the_adopted_ids(self):
+        home, other = self.a_valve_in_irrigation(footprint="pinrow2")
+        self.an_orphan_copy(home)
+        (home / "projects.json").write_text("{}")
+        with in_store(home):
+            dry = self.text(["--step", str(other), "S", "--dry-run"])
+            said, code = run_json(["--step", str(other), "S"])
+        self.assertIn("  would adopt the shelf copy of x-valve: it was shelved while this folder was on no list", dry.splitlines())
+        self.assertEqual((code, said["data"]["adopted"]), (0, ["x-valve"]))
 
     def test_a_shelf_copy_is_not_adopted_when_the_catalog_or_two_projects_hold_its_id_or_it_names_a_project(self):
         for holder in ("the catalog", "a second project", "a copy that names another project"):

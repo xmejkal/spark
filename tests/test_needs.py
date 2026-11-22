@@ -1168,7 +1168,7 @@ class ThePicksTest(unittest.TestCase):
         said, code = run(["--pick", str(self.project), "soil=x-soil"])
         self.assertEqual((code, said["data"]), (0, {"project": "plant-alarm", "picks": [{"need": "soil", "pick": [{"part": "x-soil"}]}],
                                                      "reserved": [{"entry": "probe", "used_in": {"plant-alarm": 1}}], "released": [],
-                                                     "written": True}))
+                                                     "written": True, "adopted": []}))
 
     def test_a_dry_run_says_what_it_would_do_and_writes_nothing(self):
         said, code = run(["--pick", str(self.project), "soil=x-soil", "--dry-run"])

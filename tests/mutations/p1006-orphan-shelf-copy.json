@@ -14,8 +14,8 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "P1006: a copy that names a project counts as an orphan (test_parts shelf tests)",
-  "find": "    if not isinstance(record, dict) or \"based_on\" in record:",
-  "replace": "    if not isinstance(record, dict):"
+  "find": "    if not isinstance(copy, dict) or \"based_on\" in copy:",
+  "replace": "    if not isinstance(copy, dict):"
  },
  {
   "file": "scripts/spark/sourcing/record_home.py",
@@ -26,13 +26,25 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "P1006: two projects holding the id adopt the copy (test_parts orphan tests)",
-  "find": "    return holders[0] if len(holders) == 1 else None",
-  "replace": "    return holders[0] if holders else None"
+  "find": "    if len(holders) != 1:\n        return None",
+  "replace": "    if not holders:\n        return None"
  },
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "P1006: listing a folder adopts nothing (test_parts.OwedFactsFilledInTheirHomeTest)",
-  "find": "            if isinstance(record, dict) and orphan_home(shelf / path.name, kind) == name \\",
-  "replace": "            if False and orphan_home(shelf / path.name, kind) == name \\"
+  "find": "            if isinstance(record, dict) and orphan_home(shelf / path.name, kind, (name, Path(folder).resolve())) == name:",
+  "replace": "            if False and orphan_home(shelf / path.name, kind, (name, Path(folder).resolve())) == name:"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P1006 review: a project holding another part under the id adopts the copy (test_parts)",
+  "find": "    return holders[0][0] if same else None",
+  "replace": "    return holders[0][0]"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P1006 review: a dry run cannot see the folder it would list (test_parts)",
+  "find": "    listed = dict(store.projects(), **dict([listing] if listing else []))",
+  "replace": "    listed = dict(store.projects())"
  }
 ]

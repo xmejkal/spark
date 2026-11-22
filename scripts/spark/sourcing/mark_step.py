@@ -38,15 +38,15 @@ class MarkStep(PartOperation):
         if step not in run_cost.STEPS:
             return Answer(unchecked=[_cannot(NOT_A_STEP % ", ".join(run_cost.STEPS), BAD_ARGUMENT_FIX, code=codes.BAD_ARGUMENT)])
         listed = store.find_listed_name(target) is not None
-        name, adopted = (store.plan_listed_name(target), []) if dry_run else record_home.list_project(target)
+        name, adopted = record_home.list_project(target, dry_run)
         event = run_cost.step_event(name, step)
         if not dry_run:
             store.append_event(event)
         # C-17: what a step writes is said — a line in the person's history, with the session's id, and the project on their list
-        return Answer({"step": event, "written": not dry_run},
+        return Answer({"step": event, "written": not dry_run, "adopted": record_home.adopted_ids(adopted)},
                       ["  %s step %s of %s — a line in your history%s" % (
                           "would start" if dry_run else "started", step, event["project"],
                           ", with this Claude Code session's id" if event["session"] else run_cost.session_note())]
                       + ([] if listed else ["  %s %s on your projects" % ("would list" if dry_run else "listed", event["project"])])
-                      + [record_home.ADOPTED % one for one in adopted])
+                      + record_home.adoption_lines(adopted))
 # --- end MVP ---

@@ -70,9 +70,8 @@ class PickParts(AnswerOperation):
         history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
         listed, keys_before = store.find_listed_name(target) is not None, needs.entry_keys(needs.read(target))
         after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
-        adopted = []
+        _, adopted = record_home.list_project(target, dry_run) if not problems else (None, [])  # lists the folder first
         if not problems and not dry_run:
-            _, adopted = record_home.list_project(target)
             drawer.apply(changes)
             for event in events:
                 store.append_event(event)
@@ -88,7 +87,8 @@ class PickParts(AnswerOperation):
         wrote = [] if problems else what_a_pick_wrote(name, listed, history, events, needs.entry_keys(after) - keys_before, dry_run)
         return Answer({"project": name, "picks": picks,
                        "reserved": [{"entry": change["entry"], "used_in": change["now"]["used_in"]} for change in changes],
-                       "released": released, "written": not problems and not dry_run},
-                      write_lines(changes, problems, dry_run, said + ["  %s" % note for note in notes] + wrote + [record_home.ADOPTED % one for one in adopted]), problems=problems,
+                       "released": released, "written": not problems and not dry_run,
+                       "adopted": record_home.adopted_ids(adopted)},
+                      write_lines(changes, problems, dry_run, said + ["  %s" % note for note in notes] + wrote + record_home.adoption_lines(adopted)), problems=problems,
                       notes=[_note(note) for note in notes])
 # --- end MVP ---
