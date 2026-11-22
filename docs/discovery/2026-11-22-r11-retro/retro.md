@@ -163,8 +163,8 @@ handled them, and entry 31 is R10's own line. "Rule" names a written rule in `CL
 | 56 | 11-09 | copy_of copied ignored files | drop | fixed by P807 |
 | 57 | 11-18 | are subagents used well | card | P317 [#401](https://github.com/xmejkal/spark/issues/401) holds the refuter's worth |
 | 58 | 11-19 | two model tests offered, not run | drop | no stage waits on them |
-| 59 | 11-20 | the story run missed a breadboard test, main went red | card | new card, a bug in the gate |
-| 60 | 11-21 | a builder deleted the hook's output | card | new card: the hook keeps its output in a file |
+| 59 | 11-20 | the story run missed a breadboard test, main went red | card | P1017 [#1483](https://github.com/xmejkal/spark/issues/1483), a bug in the gate |
+| 60 | 11-21 | a builder deleted the hook's output | card | P1018 [#1484](https://github.com/xmejkal/spark/issues/1484): the hook keeps its output in a file |
 | 61 | 11-22 | a card moved without counting the lane | card | R11.2's first check, `tools/board.py move` |
 | 62 | 11-22 | times written from feel | card | R11.2's second check, the clock |
 
