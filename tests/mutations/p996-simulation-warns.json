@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/design/need_requirements.py",
+  "name": "P996: an owed simulation stance refuses the parts list again (test_needs.TheRequirementsFileTest, test_flow.TheBlockersTest)",
+  "find": "if set(owed) - set(LAYOUT_FACTS) - set(SIMULATION_FACTS)",
+  "replace": "if set(owed) - set(LAYOUT_FACTS)"
+ },
+ {
+  "file": "scripts/spark/design/need_requirements.py",
+  "name": "P996: a pick placed with no simulation stance is not listed (test_needs.TheRequirementsFileTest, test_flow.TheBlockersTest)",
+  "find": "        unsimulated += [(key, _how_to_fill(path))] if",
+  "replace": "        unsimulated += [] if"
+ },
+ {
+  "file": "scripts/spark/design/need_requirements.py",
+  "name": "P996: a pick that owes only its simulation stance is said as a placeholder outline (test_needs.TheRequirementsFileTest)",
+  "find": "placeholder += [(key, _how_to_fill(path))] if set(owed) & set(LAYOUT_FACTS)",
+  "replace": "placeholder += [(key, _how_to_fill(path))] if set(owed)"
+ },
+ {
+  "file": "scripts/spark/design/write_requirements.py",
+  "name": "P996: the no-simulation-stance warning line is dropped (test_needs.TheRequirementsFileTest)",
+  "find": "for part_id, how in unsimulated])",
+  "replace": "for part_id, how in []])"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P996: the page does not name the owed simulation stance (test_flow.TheBlockersTest)",
+  "find": "        warned = no_stance_lines(project, given.unsimulated)",
+  "replace": "        warned = []"
+ }
+]
