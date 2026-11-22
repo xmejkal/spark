@@ -196,7 +196,7 @@ def _candidate(need, fit, context, mine=None):
                 said["stops_why"] = footprint_emitter.why_no_footprint(record)  # the list, for Claude
                 said["stop_line"] = footprint_emitter.footprint_stop_line(record)  # the text shows it; `--match` drops it from the JSON
     said = dict({"kind": None, "owes": [], "broken": False, "proof": [], "limits": []}, **said,
-                what=sorted({f["what"] for f in offer.functions if f.get("does") == need["does"]}),
+                what=sorted({board_records.shown_what(f) for f in offer.functions if f.get("does") == need["does"]}),
                 what_matches=fit.exact, about=offer.about, held_by=drawer.holders_of(context["holding"], mine))
     return dict(offers.row(fit, context, said, mine), free=free, unsure=unsure)
 

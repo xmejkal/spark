@@ -93,6 +93,14 @@ def _list(value):
     return value if isinstance(value, list) else []
 
 
+def _entry_functions(entry):
+    """A drawer entry's functions, each with its `does` and `what` alone, as a record's must be
+    (`part_records.function_problems`, P1013): a `band` or a `role` a person wrote beside them is never shown or picked. A
+    function that is no dict is dropped."""
+    return [{key: function[key] for key in ("does", "what") if key in function}
+            for function in _list(entry.get("function")) if isinstance(function, dict)]
+
+
 def _only_notes(value):
     """A dict or a list that holds nothing but SOURCE_NOTES, at any depth (a `corroborated_by` of `cites` alone): bare, it says nothing."""
     if isinstance(value, dict):
@@ -138,7 +146,7 @@ class Offer:
         record = record if isinstance(record, dict) else {}
         said = [record] + [entry for entry in holding if isinstance(entry, dict)]
         functions = (part_records.function_of(record, board=kind == "board")
-                     + [f for entry in said[1:] for f in _list(entry.get("function"))])
+                     + [f for entry in said[1:] for f in _entry_functions(entry)])
         return cls(record_id, kind, functions, [record.get("name")] + part_records.aliases(record),
                    _first(said, "about"),
                    _first(said, "description"), [tag for one in said for tag in _list(one.get("tags"))],
@@ -147,7 +155,7 @@ class Offer:
     @classmethod
     def from_entry(cls, key, entry):
         """A drawer entry that is no record spark knows."""
-        return cls(key, "entry", _list(entry.get("function")), [entry.get("label")], entry.get("about"),
+        return cls(key, "entry", _entry_functions(entry), [entry.get("label")], entry.get("about"),
                    entry.get("description"), _list(entry.get("tags")))
 
     def _doing(self):

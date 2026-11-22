@@ -1549,10 +1549,10 @@ def a_project_with_picks(picks):
 # --- MVP --- P990: --match offers a board for a need of a radio of its chip
 class TheBoardsChipRadiosAreOfferedTest(unittest.TestCase):
     """P990: the need communicate / wifi finds both C6 boards and the library's S3. The need communicate / zigbee finds the
-    C6 boards, and the S3 stays a candidate whose words do not match."""
+    C6 boards, and the S3 stays a candidate whose words do not match. P1013: the Wi-Fi words show the chip's band."""
 
-    C6 = ["onboard 802.15.4 radio (Thread, Zigbee)", "onboard Bluetooth LE radio (BLE)", "onboard Wi-Fi radio (WiFi)"]
-    S3 = ["onboard Bluetooth LE radio (BLE)", "onboard Wi-Fi radio (WiFi)"]
+    C6 = ["onboard 802.15.4 radio (Thread, Zigbee)", "onboard Bluetooth LE radio (BLE)", "onboard Wi-Fi radio (WiFi; 2.4 GHz only)"]
+    S3 = ["onboard Bluetooth LE radio (BLE)", "onboard Wi-Fi radio (WiFi; 2.4 GHz only)"]
 
     def setUp(self):
         self.home, self.project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "radio-project"
@@ -1593,9 +1593,11 @@ class TheBoardsChipRadiosAreOfferedTest(unittest.TestCase):
             parts.main(["--match", str(self.project)])
         lines = out.getvalue().splitlines()
         self.assertIn("                 xiao-esp32-c6 (project)                        onboard 802.15.4 radio (Thread, Zigbee), "
-                      "onboard Bluetooth LE radio (BLE), onboard Wi-Fi radio (WiFi)", lines)
+                      "onboard Bluetooth LE radio (BLE), onboard Wi-Fi radio (WiFi; 2.4 GHz only)", lines)
         self.assertIn("                 firebeetle2-esp32s3 (library)                  onboard Bluetooth LE radio (BLE), "
-                      "onboard Wi-Fi radio (WiFi) [other words]", lines)
+                      "onboard Wi-Fi radio (WiFi; 2.4 GHz only) [other words]", lines)
+        self.assertIn("                 firebeetle2-esp32c6 (project)                  onboard 802.15.4 radio (Thread, Zigbee), "
+                      "onboard Bluetooth LE radio (BLE), onboard Wi-Fi radio (WiFi; 2.4 GHz only)", lines)
 
 
 # --- MVP --- P397: a pick, or --match, that gives a need to a board's own part says what a passed run does not test of it
