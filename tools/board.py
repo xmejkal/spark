@@ -240,8 +240,7 @@ def _gh(*args, timeout=CLOSE_TIMEOUT):
 def gather(timeout=CLOSE_TIMEOUT, ask=None, now=None):
     """
     (both boards, their open PRs, the spark board's closes, its id, why the bin's board was set aside or None, the
-    inflow). The spark
-    board read only in part (unread()) is RuntimeError: the status and the close say could-not-run over it, and judge
+    inflow: (filed, closed), or the cause it could not be read as a string). The spark board read only in part (unread()) is RuntimeError: the status and the close say could-not-run over it, and judge
     nothing (W1). The bin's board is read for the spark lane's flight, the expedite and its waits alone, so one read in part, or
     with no Status on any card (check_backlog.no_status_on), is left out of the boards and its cause handed back —
     spark's cards are counted alone and the bin's unread line says why, as the gate does it (check_backlog.fetch):
@@ -316,12 +315,15 @@ def last_retro(text):
 
 
 def read_retro(path=RETROS):
-    """last_retro() of the file at `path`, or the cause: a file not read, or one with no retro heading."""
+    """
+    last_retro() of the file at `path`, or the cause: a file not read, one that is no UTF-8, a heading whose date is no
+    real day, or no retro heading. A typo in one heading never loses the board's lines (the PR review of P1020).
+    """
     try:
-        text = path.read_text(encoding="utf-8")
-    except OSError as error:
-        return "%s: %s" % (path.name, error.strerror or type(error).__name__)
-    return last_retro(text) or "no heading '## R<n> — <date>' in %s" % path.name
+        newest = last_retro(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:  # UnicodeDecodeError is a ValueError, and so is 2026-11-31
+        return "%s: %s" % (path.name, getattr(error, "strerror", None) or str(error) or type(error).__name__)
+    return newest or "no heading '## R<n> — <date>' in %s" % path.name
 
 
 def inflow_and_retro_lines(inflow, retro, today):

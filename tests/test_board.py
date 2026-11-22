@@ -723,6 +723,21 @@ class TheInflowAndRetroTest(unittest.TestCase):
         (folder / "RETROS.md").write_text("# Retrospectives\n", encoding="utf-8")
         self.assertEqual(board.read_retro(folder / "RETROS.md"), "no heading '## R<n> — <date>' in RETROS.md")
 
+    def test_a_retro_heading_with_no_real_date_or_a_file_that_is_no_utf_8_gives_its_cause(self):
+        # The PR review (P1020): a typo in one heading must not lose the board's lines or end the close in a traceback.
+        folder = Path(tempfile.mkdtemp())
+        (folder / "RETROS.md").write_text("## R12 — 2026-11-31, on a typo\n", encoding="utf-8")
+        self.assertEqual(board.read_retro(folder / "RETROS.md"), "RETROS.md: day is out of range for month")
+        (folder / "RETROS.md").write_bytes(b"## R12 \xff\n")
+        self.assertTrue(board.read_retro(folder / "RETROS.md").startswith("RETROS.md: 'utf-8' codec can't decode"))
+
+    def test_the_close_refuses_over_a_retro_not_read_alone_and_over_an_inflow_not_read_alone(self):
+        self.assertEqual(board.not_made(board.inflow_and_retro_lines((1, 2), "no heading", TODAY)),
+                         ["last retro: could-not-run — no heading"])
+        self.assertEqual(board.not_made(board.inflow_and_retro_lines("gh failed", ("R11", TODAY), TODAY)),
+                         ["filed in 7 days: could-not-run — gh failed"])
+        self.assertEqual(board.not_made(board.inflow_and_retro_lines((1, 2), ("R11", TODAY), TODAY)), [])
+
     def test_the_inflow_asks_one_query_with_both_searches_over_seven_days(self):
         asked = []
 
