@@ -379,6 +379,15 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         self.assertIn("could not fetch", result["reason"])
         self.assertFalse(self._kept(project, "p693_unfetched").exists())
 
+    def test_a_missing_gh_is_told_by_its_code_and_says_gh_is_missing(self):
+        # P975: with no gh on PATH the run raised FileNotFoundError, not the RuntimeError the handler catches.
+        project, path = self._project(self._board("p975_no_gh"))
+        with mock.patch.dict(os.environ, {"PATH": str(Path(tempfile.mkdtemp()))}):
+            result = vendor_pins_check.check_board(path, offline=False, repo="x/y")
+        self.assertEqual((result["status"], result["reason"].code), ("could-not-run", "header_not_fetched"))
+        self.assertIn("gh is not installed: spark reads the vendor's header with it", result["reason"])
+        self.assertFalse(self._kept(project, "p975_no_gh").exists())
+
     def test_the_live_line_says_which_file_it_wrote(self):
         project, path = self._project(self._board("p179_said"))
         self.assertIn("wrote %s" % self._kept(project, "p179_said"), self._line(path))

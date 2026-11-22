@@ -49,7 +49,7 @@ the `[????]` rows.
   `requirements.json` that cannot be read. Only a project with no `requirements.json`, or no `board` in it, gets the
   `firmware-image` default. Never pass another chip's build with `--micropython`.
 - **The GitHub CLI `gh`, logged in** (`gh auth login`; `gh auth status` shows it), for `check_vendor_pins.py` unless it
-  is given `--offline`.
+  is given `--offline`. With no `gh` on PATH it answers `header_not_fetched` with the sentence "gh is not installed".
 - **tscircuit, to build a board.** npm installs it, and it runs on bun (`tsci` starts with `#!/usr/bin/env bun`); bun
   comes from npm or Homebrew.
 - **Node, for the simulation stage,** plus `wokwi-cli` to compile any chip that has no up-to-date binary. That compile
