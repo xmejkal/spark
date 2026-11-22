@@ -2,20 +2,20 @@
  {
   "file": "scripts/spark/sourcing/offers.py",
   "name": "P991: an owned drawer entry with no record ranks with an owned record at the same score (test_needs.TheMatcherTest, test_parts.ResearchStartsFromWhatExistsTest)",
-  "find": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is None, -row[\"score\"])",
-  "replace": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, -row[\"score\"])"
+  "find": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is None, -overlap, -row[\"score\"])",
+  "replace": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, -overlap, -row[\"score\"])"
  },
  {
   "file": "scripts/spark/sourcing/offers.py",
   "name": "P991: an owned record with none of the words ranks before an owned entry that holds them (test_needs.TheMatcherTest)",
-  "find": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is None, -row[\"score\"])",
-  "replace": "    return (row[\"owned\"] == 0, row[\"id\"] is None, -row[\"score\"])"
+  "find": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is None, -overlap, -row[\"score\"])",
+  "replace": "    return (row[\"owned\"] == 0, row[\"id\"] is None, -overlap, -row[\"score\"])"
  },
  {
   "file": "scripts/spark/sourcing/offers.py",
   "name": "P991: an owned entry with no record ranks before an owned record (test_needs.TheMatcherTest, test_parts.ResearchStartsFromWhatExistsTest)",
-  "find": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is None, -row[\"score\"])",
-  "replace": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is not None, -row[\"score\"])"
+  "find": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is None, -overlap, -row[\"score\"])",
+  "replace": "    return (row[\"owned\"] == 0, row[\"score\"] <= 0, row[\"id\"] is not None, -overlap, -row[\"score\"])"
  },
  {
   "file": "scripts/spark/design/needs.py",
