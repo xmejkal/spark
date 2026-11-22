@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/spark/firmware/project_image.py",
+  "name": "P1001: with no wokwi.toml the default image is never taken (test_project_image.TheImageTest, test_image_evidence.NoSimulationEvidenceTest)",
+  "find": "        elif default_without_toml:",
+  "replace": "        elif False:"
+ },
+ {
+  "file": "scripts/spark/bench/image_evidence.py",
+  "name": "P1001: the no-simulation evidence still needs wokwi.toml (test_image_evidence.NoSimulationEvidenceTest)",
+  "find": "default_without_toml=evidence.simulation == SIMULATION_NONE)",
+  "replace": "default_without_toml=False)"
+ },
+ {
+  "file": "scripts/spark/bench/image_evidence.py",
+  "name": "P1001: a passed-run evidence takes the default image with no wokwi.toml (test_image_evidence.NoSimulationEvidenceTest)",
+  "find": "default_without_toml=evidence.simulation == SIMULATION_NONE)",
+  "replace": "default_without_toml=True)"
+ }
+]

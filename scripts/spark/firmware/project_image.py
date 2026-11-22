@@ -35,21 +35,26 @@ class ProjectImage:
     """
     Value: the flash image of one project and the run logs about it. Its methods read the project's files and never
     write. `ProjectImage(project)` raises DeployError when sim/wokwi.toml or the image it names is missing; it reads no
-    log. `sha256` is read once, so build a new ProjectImage to see a changed file.
+    log. `sha256` is read once, so build a new ProjectImage to see a changed file. With `default_without_toml`, a project
+    with no sim/wokwi.toml stands for sim/flash-with-firmware.bin (P1001): the build writes no wokwi.toml for a board
+    that Wokwi has no part for, and a deploy with no simulation needs none.
     """
 
-    def __init__(self, project):
+    def __init__(self, project, default_without_toml=False):
         toml = project / "sim" / "wokwi.toml"
-        if not toml.is_file():
+        if toml.is_file():
+            named = sim_project.firmware_in(toml)
+            if named.state == outcomes.NOT_CHECKED:
+                raise DeployError("sim/wokwi.toml %s%s" % (named.why, named.fix()), reason=firmware_codes.FIRMWARE_LINE_BAD)
+            self.path = toml.parent / (named.name or sim_project.DEFAULT_IMAGE)
+            outside = sim_project.why_outside_sim(toml.parent, self.path)
+            if outside:
+                raise DeployError(outside, reason=firmware_codes.FIRMWARE_LINE_BAD)
+        elif default_without_toml:
+            self.path = toml.parent / sim_project.DEFAULT_IMAGE
+        else:
             raise DeployError("no sim/wokwi.toml in %s: build with /spark:build --keep . first" % project,
                               reason=firmware_codes.NO_SIM_TOML)
-        named = sim_project.firmware_in(toml)
-        if named.state == outcomes.NOT_CHECKED:
-            raise DeployError("sim/wokwi.toml %s%s" % (named.why, named.fix()), reason=firmware_codes.FIRMWARE_LINE_BAD)
-        self.path = toml.parent / (named.name or sim_project.DEFAULT_IMAGE)
-        outside = sim_project.why_outside_sim(toml.parent, self.path)
-        if outside:
-            raise DeployError(outside, reason=firmware_codes.FIRMWARE_LINE_BAD)
         if not self.path.is_file():
             build = BUILD_IMAGE_HINT % image_builder.build_command(project, self.path)
             raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it, "

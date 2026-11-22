@@ -30,6 +30,7 @@ from spark.records import board_records
 from spark.records import brief
 from spark.records import deploy_record_store
 from spark.bench import flasher
+from spark.bench import image_evidence
 from spark.core import outcomes
 from spark.firmware import image_builder
 from spark.firmware import project_image
@@ -496,7 +497,7 @@ class LookService:
         reading = self.reader.read(port)
         image, why, code, gaps = None, None, board_codes.EVIDENCE_REFUSES, RunGaps()
         try:
-            found = project_image.ProjectImage(project)
+            found = image_evidence.image_of(project, evidence)
             image = found.path
             why = evidence.why_not_ready(found)
             # --- MVP ---
