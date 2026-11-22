@@ -71,8 +71,10 @@ BOARD_DISAGREES = codes.Code('board_disagrees', 'the board record disagrees with
 #: audit_records (P707): a drawer entry whose record nobody has, and a record or drawer file the disk would not give.
 DRAWER_ENTRY_DANGLING = codes.Code('drawer_entry_dangling', 'a drawer entry points at a record nobody has: fix its `is`, or research the part',
                                     "point the entry's `is` at a record that exists, or research the part with /spark:research")
-RECORD_UNREADABLE = codes.Code('record_unreadable', 'a record or drawer file could not be read from disk: the sentence names it',
+RECORD_UNREADABLE = codes.Code('record_unreadable', 'a record, a drawer file or a folder of them could not be read from disk: the sentence names it',
                                 'fix the file the sentence names, then run --audit again')
+RECORD_UNREADABLE_FOLDER = codes.Code(RECORD_UNREADABLE, RECORD_UNREADABLE.meaning,
+                                      'give yourself read access to the folder the sentence names (chmod u+rx), then run --audit again')
 #: the goal Operations (P726): a project nobody listed, an offer key nothing has, a project with no needs yet.
 PROJECT_NOT_LISTED = codes.Code('project_not_listed', 'the folder is not on your list of projects, so no step of it was marked',
                                  'mark a step with parts.py --step <project> <step> in a Claude Code session: that puts it on the list')
