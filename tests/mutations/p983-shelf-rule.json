@@ -1,4 +1,5 @@
 [
  {"file": "scripts/spark/sourcing/datasheets.py", "name": "P983: --fetch finds a shelf record by record_kind.record_home again", "find": "    path, source = home_rules.record_path(part_id, project)\n", "replace": "    path, source = (store.records(\"parts\", record_kind.LIBRARY, project, drafts=True).get(part_id) or (None, None))[1], None\n"},
- {"file": "scripts/spark/sourcing/datasheets.py", "name": "P983: the shelf copy is not made current after a fetch", "find": "    if source:\n        home_rules.refresh_shelf_copy(path, record, source, False)\n", "replace": "    if False:\n        home_rules.refresh_shelf_copy(path, record, source, False)\n"}
+ {"file": "scripts/spark/sourcing/datasheets.py", "name": "P983: the shelf copy is not made current after a fetch", "find": "    if source:\n        home_rules.refresh_shelf_copy(path, record, source, False)\n", "replace": "    if False:\n        home_rules.refresh_shelf_copy(path, record, source, False)\n"},
+ {"file": "scripts/spark/sourcing/datasheets.py", "name": "P983: --fetch writes a record only another listed project holds", "find": "    if record_home(part_id, project) is None:\n        path = None\n", "replace": "    if False:\n        path = None\n"}
 ]

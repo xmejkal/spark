@@ -3422,6 +3422,23 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
         self.assertEqual((library / "x-valve.json").read_text(),
                          '{"schema": 1, "id": "x-valve", "name": "A valve driver", "kind": "mosfet-driver", "needs": []}')
 
+    def test_a_fetch_never_reaches_a_record_only_another_listed_project_holds(self):
+        # P983 refuter: record_path reaches every listed project, so --fetch wrote irrigation's record for a project not named
+        home, other = self.a_valve_in_irrigation()
+        (other / "parts" / "only-irr.json").write_text(
+            '{"schema": 1, "id": "only-irr", "name": "A pump", "kind": "pump", "needs": [], "sources": ["https://v.example/pump.pdf"]}')
+        mine = Path(tempfile.mkdtemp()) / "mine"
+        (mine / "parts").mkdir(parents=True)
+        asked = []
+        for argv in (["--fetch", "only-irr"], ["--fetch", "only-irr", "--project", str(mine)],
+                     ["--fetch", "only-irr", "--dry-run"], ["--fetch", "only-irr", "--project", str(mine), "--dry-run"]):
+            with self.subTest(argv=argv), in_store(home), EverythingFoundIsKeptTest._library_is(Path(tempfile.mkdtemp()), asked):
+                said, code = run_json(argv)
+                self.assertEqual((code, [item["code"] for item in said["problems"]]), (1, ["no_such_part"]))
+        self.assertEqual(asked, [], "nothing was downloaded")
+        self.assertEqual((other / "parts" / "only-irr.json").read_text(),
+                         '{"schema": 1, "id": "only-irr", "name": "A pump", "kind": "pump", "needs": [], "sources": ["https://v.example/pump.pdf"]}')
+
     def test_a_shelf_copy_that_would_break_the_contract_is_not_refreshed_and_says_why(self):
         home, other = self.a_valve_in_irrigation(needs=[{"signal": "VALVE", "pin": "GATE", "direction": "sideways"}])
         before = (home / "shelf" / "x-valve.json").read_text()
