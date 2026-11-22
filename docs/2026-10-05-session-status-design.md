@@ -82,7 +82,7 @@ spark — 28 open, the limits hold · trial check 2026-11-02
   - the status *on track*, or *at risk* when a limit is broken or something has waited on the PO more than 3 days;
   - a body of Claude's one line, then a two-line snapshot of the board: in flight, and what waits on the PO.
   - 2026-11-22 (P1020): the body ends with the inflow and the retro's age, and either one slipping makes the close
-    *at risk*. A close whose inflow or retro could not be read prints that line, posts nothing and exits 1. With
+    *at risk*. A close whose inflow or retro was not read prints that line, posts nothing and exits 1. With
     `--date`, the two lines still count from today.
 - The line arrives as an argument, or on stdin with `-`. It is never built into a shell command line.
 - `--dry-run` prints the update and posts nothing.

@@ -237,18 +237,23 @@ def _gh(*args, timeout=CLOSE_TIMEOUT):
     return json.loads(done.stdout) if done.stdout.strip() else None
 
 
-def gather(timeout=CLOSE_TIMEOUT):
+def gather(timeout=CLOSE_TIMEOUT, ask=None, now=None):
     """
-    (both boards, their open PRs, the spark board's closes, its id, why the bin's board was set aside or None). The spark
+    (both boards, their open PRs, the spark board's closes, its id, why the bin's board was set aside or None, the
+    inflow). The spark
     board read only in part (unread()) is RuntimeError: the status and the close say could-not-run over it, and judge
     nothing (W1). The bin's board is read for the spark lane's flight, the expedite and its waits alone, so one read in part, or
     with no Status on any card (check_backlog.no_status_on), is left out of the boards and its cause handed back —
     spark's cards are counted alone and the bin's unread line says why, as the gate does it (check_backlog.fetch):
-    one convention for the bin's failing, so the two readers cannot disagree over it.
+    one convention for the bin's failing, so the two readers cannot disagree over it. The inflow (inflow_of(), P1020)
+    is asked last, so a board not read asks no search and waits no second time. Every read goes through `ask` (gh's
+    arguments in, the answer's JSON out; default: gh, giving up after `timeout` seconds). `now` is the clock, an aware
+    datetime (default: the real one), which sets the inflow's UTC date.
     """
+    ask = ask or (lambda *args: _gh(*args, timeout=timeout))
     boards, prs, closes, project_id, bin_why = [], [], [], None, None
     for name, number, repo in BOARDS:
-        project = read_board(number, lambda *args: _gh(*args, timeout=timeout))
+        project = read_board(number, ask)
         items = to_items(project)
         if name == "spark":
             short = unread("the spark board", project)
@@ -262,29 +267,43 @@ def gather(timeout=CLOSE_TIMEOUT):
         if name == "spark" or bin_why is None:
             boards.append((name, items))
         prs += [(name, pr["number"], pr["title"], pr["draft"])
-                for pr in _gh("api", "repos/%s/%s/pulls?state=open" % (OWNER, repo), timeout=timeout)]
-    return boards, prs, closes, project_id, bin_why
+                for pr in ask("api", "repos/%s/%s/pulls?state=open" % (OWNER, repo))]
+    return boards, prs, closes, project_id, bin_why, inflow_of(utc_today(now), ask)
 
 
-def utc_today():
-    """Today's date in UTC: GitHub reads a search's dates in UTC, so the inflow's window ends on it (P1020)."""
-    return dt.datetime.now(dt.timezone.utc).date()
+def utc_today(now=None):
+    """
+    The date in UTC of `now`, an aware datetime (default: the clock). GitHub reads a search's dates in UTC, so the
+    inflow's window ends on it (P1020).
+    """
+    return (now or dt.datetime.now(dt.timezone.utc)).astimezone(dt.timezone.utc).date()
 
 
-def inflow_counts(day, timeout=CLOSE_TIMEOUT):
+def inflow_counts(day, ask):
     """
     (filed, closed): the issues of spark's repository filed and closed in the INFLOW_DAYS days that end on `day`, a UTC
-    date, from one GraphQL query (INFLOW). `is:issue` leaves the pull requests out. Any failure is Unreadable with its
-    cause, as board_read says it.
+    date, from one GraphQL query (INFLOW) asked through `ask`. `is:issue` leaves the pull requests out. Any failure is
+    Unreadable with its cause, as board_read says it.
     """
     window = "%s..%s" % ((day - dt.timedelta(days=INFLOW_DAYS - 1)).isoformat(), day.isoformat())
     asked = "repo:%s/spark is:issue %s:%s"
     try:
-        data = _gh("api", "graphql", "-f", "query=" + INFLOW, "-f", "filed=" + asked % (OWNER, "created", window),
-                   "-f", "closed=" + asked % (OWNER, "closed", window), timeout=timeout)["data"]
+        data = ask("api", "graphql", "-f", "query=" + INFLOW, "-f", "filed=" + asked % (OWNER, "created", window),
+                   "-f", "closed=" + asked % (OWNER, "closed", window))["data"]
         return data["filed"]["issueCount"], data["closed"]["issueCount"]
     except FAILURES as error:
         raise Unreadable(cause(error)) from None
+
+
+def inflow_of(day, ask):
+    """
+    inflow_counts(), or the cause it could not be read. A fake or broken gh can raise anything, and the status must
+    never fail over the inflow (a fake gh raises StopIteration).
+    """
+    try:
+        return inflow_counts(day, ask)
+    except Exception as error:  # any failure is the line's cause, never a traceback
+        return cause(error)
 
 
 def last_retro(text):
@@ -294,6 +313,15 @@ def last_retro(text):
         return None
     date, _, name = max(found)
     return name, date
+
+
+def read_retro(path=RETROS):
+    """last_retro() of the file at `path`, or the cause: a file not read, or one with no retro heading."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as error:
+        return "%s: %s" % (path.name, error.strerror or type(error).__name__)
+    return last_retro(text) or "no heading '## R<n> — <date>' in %s" % path.name
 
 
 def inflow_and_retro_lines(inflow, retro, today):
@@ -314,22 +342,6 @@ def inflow_and_retro_lines(inflow, retro, today):
         days = (today - date).days
         said.append(("last retro: %s, %d days ago" % (name, days), days > RETRO_DAYS))
     return said
-
-
-def inflow_and_retro(timeout, today):
-    """
-    The two lines of inflow_and_retro_lines(), each look in its own guard: a fake or broken gh can raise anything, and
-    the status must never fail. The inflow's window ends on the UTC date, the retro's age counts from `today`.
-    """
-    try:
-        inflow = inflow_counts(utc_today(), timeout)
-    except Exception as error:  # any failure is the line's cause, never a traceback (a fake gh raises StopIteration)
-        inflow = cause(error)
-    try:
-        retro = last_retro(RETROS.read_text(encoding="utf-8")) or "no heading '## R<n> — <date>' in %s" % RETROS.name
-    except OSError as error:
-        retro = "%s: %s" % (RETROS.name, error.strerror or type(error).__name__)
-    return inflow_and_retro_lines(inflow, retro, today)
 
 
 def not_made(said):
@@ -415,9 +427,9 @@ def main(argv=None):
     if args.verb == "status":
         disk = disk_status()  # its own guard: a disk not read never hides the board's lines
         try:
-            boards, prs, closes, _, bin_why = gather(STATUS_TIMEOUT)
+            boards, prs, closes, _, bin_why, inflow = gather(STATUS_TIMEOUT)
             since = max((day for day, _ in closes), default=today - dt.timedelta(days=14))
-            seen = inflow_and_retro(STATUS_TIMEOUT, today)  # only after the boards were read: no second wait offline
+            seen = inflow_and_retro_lines(inflow, read_retro(), today)
             print("\n".join(status_lines(boards, prs, closes, work_days(args.when_in or [os.getcwd()], since), today,
                                          bin_why=bin_why or "no bin board was given", disk=disk,
                                          inflow_and_retro=seen)))
@@ -427,11 +439,11 @@ def main(argv=None):
                 print(disk)
         return 0
     try:
-        boards, prs, closes, project_id, _ = gather()
+        boards, prs, closes, project_id, _, inflow = gather()
     except (OSError, subprocess.SubprocessError, RuntimeError, ValueError, KeyError, TypeError) as unreachable:
         print("board: could-not-run — %s" % unreachable)
         return 1
-    seen = inflow_and_retro(CLOSE_TIMEOUT, today)
+    seen = inflow_and_retro_lines(inflow, read_retro(), today)
     unmade = not_made(seen)
     if unmade:  # a short gh failure must not post an AT_RISK that stays on the board (W1)
         print("\n".join(unmade))
