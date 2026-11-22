@@ -198,15 +198,24 @@ def counted_words(count, words):
     return words[0] if count == 1 else words[1]
 
 
+def refused_part(candidate):
+    """A pick its own part refuses, as the says line names it (P991 review, the PO: "even if taken"): its name, none or
+    too few free, and the other projects that hold it (`held_by`)."""
+    held = flow_codes.HELD_BY % ", ".join(candidate["held_by"]) if candidate["held_by"] else ""
+    return flow_codes.REFUSED_PART % (candidate_label(candidate),
+                                      flow_codes.NONE_FREE if candidate["free"] == 0 else flow_codes.TOO_FEW_FREE, held)
+
+
 def left_out_lines(need, more, refused):
-    """The says lines of a need with picks left out (P976): how many more, how many refused; a count of 0 is left out."""
+    """The says lines of a need with picks left out (P976): how many more, and each refused candidate by name (P991
+    review); a count of 0 is left out."""
+    names = "; ".join(refused_part(candidate) for candidate in refused)
     if more > 0 and refused:
-        said = flow_codes.MORE_AND_REFUSED_MESSAGE % (need, more, counted_words(more, flow_codes.PICK_WORDS), refused)
+        said = flow_codes.MORE_AND_REFUSED_MESSAGE % (need, more, counted_words(more, flow_codes.PICK_WORDS), names)
     elif more > 0:
         said = flow_codes.MORE_PICKS_MESSAGE % (need, more, counted_words(more, flow_codes.PICK_WORDS))
     elif refused:
-        said = flow_codes.REFUSED_PICKS_MESSAGE % (refused, counted_words(refused, flow_codes.PICK_WORDS), need,
-                                                   counted_words(refused, flow_codes.BE_WORDS))
+        said = flow_codes.REFUSED_PICKS_MESSAGE % (need, names)
     else:
         return []
     return [said + " " + flow_codes.LIST_PICKS_MESSAGE]
@@ -219,12 +228,12 @@ def need_picks(project, need, plan, listed):
     plausible = [candidate for candidate in need["candidates"] if is_plausible(need, candidate)]
     if need["candidates"] and not plausible:
         return [], [flow_codes.NO_PLAUSIBLE_MESSAGE % need["need"]]
-    offered, refused = [], 0
+    offered, refused = [], []
     for candidate in (c for c in plausible if not plan.is_current(need["need"], pick_id_of(c))):
         picked, changes, problems = plan.holds(need["need"], pick_id_of(candidate))
         own = next((problem for problem in problems if problem["subject"] == picked), None)
         if own:
-            refused += 1
+            refused.append(candidate)
         elif problems:
             return [], [flow_codes.NEED_REFUSED_LINE % (need["need"], other_pick_sentence(plan, need["need"], problems))]
         else:
@@ -238,11 +247,11 @@ def pick_notes(project, plan, need, candidate, changes):
     of_old, unpicked = plan.freed(changes, need["need"])
     refusal = board_file_refusal(project, plan, need, candidate)
     return (([flow_codes.FREES_MESSAGE] if of_old else []) + ([flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else [])
-            + ([flow_codes.NO_BOARD_FILE_MESSAGE % refusal] if refusal else []))
+            + ([flow_codes.NO_BOARD_FILE_MESSAGE % candidate_label(candidate)] if refusal else []))
 
 
 def board_file_refusal(project, plan, need, candidate):
-    """The sentence with which the parts list would refuse a pick of `candidate` for a compute `need` (P991): only for a
+    """The sentence with which the parts list would refuse a pick of `candidate` for a compute `need` (P991), or None: only for a
     drawer entry that is no record spark knows, and only when the refusal names it — with a board picked by another need,
     the parts list places that board and refuses nothing; with two, it asks for one board. None for any other pick."""
     pick = plan.resolve(pick_id_of(candidate)) if need["does"] == COMPUTE else None

@@ -83,13 +83,17 @@ TO_GET_MESSAGE = "You have none, so it goes on the list to get."
 #: its part, the need's says line holds the problem's own sentence once: `<need>: <sentence>`, and the need gets no offers.
 OTHER_PICK_MESSAGE = "The pick for %s cannot get “%s” (%s), so spark refuses this pick and saves nothing."
 NEED_REFUSED_LINE = "%s: %s"
-#: The says line of a need with picks left out: how many more are not shown, and how many its own part refuses, then
-#: LIST_PICKS_MESSAGE. A count of 0 is left out. Each %s after a count is that count's word, from PICK_WORDS and BE_WORDS.
+#: The says line of a need with picks left out: how many more are not shown, and each pick its own part refuses, by
+#: REFUSED_PART (P991 review, the PO: "even if taken"), "; " between two; then LIST_PICKS_MESSAGE. A count of 0 is left
+#: out. The %s after a count is that count's word, from PICK_WORDS.
 MORE_PICKS_MESSAGE = "Not shown for %s: %d more %s."
-MORE_AND_REFUSED_MESSAGE = "Not shown for %s: %d more %s, %d refused (too few free)."
-REFUSED_PICKS_MESSAGE = "%d %s for %s %s refused: too few are free."
+MORE_AND_REFUSED_MESSAGE = "Not shown for %s: %d more %s; refused: %s."
+REFUSED_PICKS_MESSAGE = "Not shown for %s, refused: %s."
+#: A refused pick: its name, "none free" or "too few free", and the other projects that hold it (HELD_BY).
+REFUSED_PART = "“%s” (%s%s)"
+NONE_FREE, TOO_FEW_FREE, HELD_BY = "none free", "too few free", ", held by %s"
 LIST_PICKS_MESSAGE = "Claude can list them with parts.py --match."
-PICK_WORDS, BE_WORDS = ("pick", "picks"), ("is", "are")
+PICK_WORDS = ("pick", "picks")
 #: The says line of a need with candidates and none that holds its words or scores above 0: it gets no offers.
 NO_PLAUSIBLE_MESSAGE = "No pick fits %s by its words. Ask Claude to run parts.py --match."
 #: What a pick lets go (`needs.released_holds`): the hold of the need's old pick, or a hold no pick explained.
@@ -97,9 +101,9 @@ FREES_MESSAGE = "Frees what the old pick held."
 FREES_UNPICKED_MESSAGE = "Frees a part this project held without a pick."
 LIST_PROJECT_MESSAGE = "Adds this project to your list of projects."
 PICK_HISTORY_MESSAGE = "May note the choice in your history."
-#: A pick the parts list would refuse because spark has no board file for it (P991): the refusal's own sentence, which
-#: starts with `need_requirements.NO_BOARD_FILE`.
-NO_BOARD_FILE_MESSAGE = "Spark cannot build from this pick. The parts list would say: %s."
+#: A pick the parts list would refuse because spark has no board file for it (P991): the part by its name. The parts
+#: list's own sentence starts with `need_requirements.NO_BOARD_FILE`.
+NO_BOARD_FILE_MESSAGE = "Spark cannot build from this pick: it has no board file for “%s”."
 #: The says line that names a need's pick (P991): the need, then each pick's name in quotes (“…”), ", " between two.
 PICKED_FOR_MESSAGE = "Picked for %s: %s."
 DROP_MESSAGE = "To drop this need, tell Claude: “drop the %s need”."
