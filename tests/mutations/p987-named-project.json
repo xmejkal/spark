@@ -1,0 +1,27 @@
+[
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P987: a writer writes a record only another listed project holds again",
+  "find": "            raise PartError(\"%s is only in %s (%s), a project on your list that this run did not name: parts.py writes only the \"\n                            \"project it names\", part_id, listed[0], listed[1].parent.parent,\n                            code=sourcing_codes.OTHER_PROJECT_RECORD, subject=part_id, fix=sourcing_codes.OTHER_PROJECT_RECORD.fix)\n",
+  "replace": "            return listed[1], None\n",
+  "tier": "critical"
+ },
+ {
+  "file": "scripts/spark/sourcing/record_home.py",
+  "name": "P987: the refusal answers no_such_part",
+  "find": "code=sourcing_codes.OTHER_PROJECT_RECORD, subject=part_id",
+  "replace": "code=sourcing_codes.NO_SUCH_PART, subject=part_id"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_operation.py",
+  "name": "P987: a PartError's subject is the flag's value again",
+  "find": "_problem(broken.subject if broken.subject is not None else subject,",
+  "replace": "_problem(subject,"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_operation.py",
+  "name": "P987: a PartError's problem loses its fix",
+  "find": "fix=broken.fix, code=broken.code",
+  "replace": "fix=None, code=broken.code"
+ }
+]

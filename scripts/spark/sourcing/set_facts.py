@@ -45,7 +45,7 @@ class SetFacts(PartOperation):
         wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])] + drawer.list_provenance_key_problems(facts)
         if wrong:
             return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
-        return set_fields(part_id, project, facts, dry_run, lambda record, after, path: missing_facts.board_write_problems(record, after, path, facts, project) if any(key in facts for key in missing_facts.BOARD_WRITE_KEYS) else (
+        return set_fields(part_id, project, facts, dry_run, lambda record, after, path: missing_facts.board_write_problems(record, after, path, facts) if any(key in facts for key in missing_facts.BOARD_WRITE_KEYS) else (
             ["%s is absent — a write fills a fact, it never empties one" % key for key in facts if _absent(key, facts[key])]
             + drawer.list_sheet_key_problems(facts, record)
             + sorted(set(provenance.list_entry_problems(facts.get("facts"), record.get("facts"))) | set(broken_problems(after, path)) - set(broken_problems(record, path)))))

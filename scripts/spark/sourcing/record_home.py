@@ -1,6 +1,7 @@
 """
 A part record's own home (P726 PR 3; the functions were `part_handlers`' since W6-S3b): where a record's file is and which
-project's shelf copy follows it (`record_path`, `shelved_from`, §5.4 and §5.5), the copy made current again
+project's shelf copy follows it (`record_path`, `shelved_from`, §5.4 and §5.5; never a record only another listed project
+holds, P987), the copy made current again
 (`refresh_shelf_copy`), a record with values set by name (`merge_values`), and the write of fields into that home
 (`set_fields`), never into spark's library. A `RecordHome` Value enters when a third caller needs (path, source) as one.
 """
@@ -26,13 +27,22 @@ def shelved_from(path):
 
 def record_path(part_id, project, kind="part"):
     """
-    A part record's own file, and the project whose shelf copy follows it (§5.4, §5.5): the nearest layer that has it, the
-    catalog included, else a project on the person's list — except that a shelf copy of a listed project's record is not a
-    home: that project's record is. A record found in the project given names that project too, when the shelf holds a copy
-    of it shelved from there: the copy follows its record, however the record was reached. `kind` is "board" for a board's record (P464).
+    A part record's own file, and the project whose shelf copy follows it (§5.4, §5.5): the nearest layer that has it
+    (`drawer.find_nearest_records`: the project given, the shelf, spark's library, the catalog), or (None, None) when no
+    layer and no listed project has it — except that a shelf copy of a listed project's record is not a home: that
+    project's record is. A record found in the project given names that project too, when the shelf holds a copy of it
+    shelved from there: the copy follows its record, however the record was reached. `kind` is "board" for a board's
+    record (P464). Raises PartError `other_project_record` when only another project on the person's list holds it (P987):
+    a writer changes only the project the run names, or the project a shelf copy came from. It never writes.
     """
-    path, where = next(((path, where) for found_kind, found, where, path in drawer.linkable(project) if (found_kind, found) == (kind, part_id)),
-                       (None, None))
+    where, path = drawer.find_nearest_records(kind, project).get(part_id, (None, None))
+    if path is None:
+        listed = next(((name, found_path) for found_kind, found, name, found_path in drawer.linkable(project)
+                       if (found_kind, found) == (kind, part_id)), None)
+        if listed is not None:
+            raise PartError("%s is only in %s (%s), a project on your list that this run did not name: parts.py writes only the "
+                            "project it names", part_id, listed[0], listed[1].parent.parent,
+                            code=sourcing_codes.OTHER_PROJECT_RECORD, subject=part_id, fix=sourcing_codes.OTHER_PROJECT_RECORD.fix)
     if path is not None and path.parent == store.place("shelf"):
         named = shelved_from(path)
         folder = store.projects().get(named) if named else None
