@@ -1234,8 +1234,19 @@ class TheBlockersTest(FlowTest):
         self.assertEqual((code, table(said)["requirements"]), (0, (NS, ["requirements"])))
         self.assertEqual(says(said, "requirements"), [
             "no requirements.json yet",
-            "“Kingbright L-7113ID 5 mm red LED” for light has no simulation stance yet. The parts list and the build go on, "
+            "Spark cannot simulate “Kingbright L-7113ID 5 mm red LED” for light yet. The parts list and the build go on, "
             "and a deploy asks your yes for firmware that no simulation tested."])
+
+    def test_a_pick_with_a_broken_footprint_and_no_simulation_says_the_footprint(self):
+        # P996 review (refuter): the owed simulation blocks nothing, so the page says the fault that does
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        record = dict({k: v for k, v in led.items() if k != "simulation"}, id="x-sim", footprint=5)
+        (self.home / "catalog" / "x-sim.json").write_text(json.dumps(record))
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD + [
+            {"id": "light", "does": "indicate", "what": "light", "pick": [{"part": "x-sim"}]}])
+        said, _ = show(project)
+        self.assertEqual(table(said)["requirements"], ("problems", []))
+        self.assertEqual(says(said, "requirements")[1][:44], "x-sim: footprint is 5, but a footprint is th")
 
     def test_a_pick_that_owes_a_fact_says_which_and_offers_no_parts_list(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD + [
@@ -1244,7 +1255,7 @@ class TheBlockersTest(FlowTest):
         self.assertEqual((code, table(said)["requirements"]), (1, ("problems", [])))
         self.assertEqual(says(said, "requirements"), [
             "no requirements.json yet",
-            "“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof, simulation. "
+            "“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof. "
             "Ask Claude how to fill it in."])
         now = said["data"]["guide"]["now"]
         self.assertEqual((now["phase"], now["offer"], now["says"]),
@@ -1255,8 +1266,8 @@ class TheBlockersTest(FlowTest):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD + [
             {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"entry": "many"}]}])
         self.assertEqual(says(show(project)[0], "requirements")[1],
-                         "“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof, "
-                         "simulation. Ask Claude how to fill it in.")
+                         "“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof. "
+                         "Ask Claude how to fill it in.")
 
     def test_every_need_set_aside_offers_no_parts_list_and_is_not_started(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -1273,7 +1284,7 @@ class TheBlockersTest(FlowTest):
         self.assertEqual(table(said)["requirements"], ("problems", []))
         self.assertEqual(says(said, "requirements"), [
             "board: pick one board — none is picked",
-            "“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof, simulation. "
+            "“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof. "
             "Ask Claude how to fill it in."])
 
 

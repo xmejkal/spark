@@ -2856,9 +2856,8 @@ class TheRequirementsFileTest(unittest.TestCase):
         said, code = run(["--requirements", str(project)])
         self.assertEqual((said["status"], code, self.written(project)["parts"], said["data"]["placeholder_outline"],
                           said["data"]["no_simulation_stance"]), ("ok", 0, ["x-sim"], [], ["x-sim"]))
-        self.assertIn("  no simulation stance — x-sim: spark does not know how to simulate it. The board and its parts still "
-                      "build, and /spark:deploy asks your yes for firmware that no simulation tested — fill it in its own home "
-                      "with --fact-set\n", dry)
+        self.assertIn("  no simulation yet — x-sim: spark cannot simulate it yet, so /spark:deploy asks your yes for firmware "
+                      "that no simulation tested — fill it in its own home with --fact-set\n", dry)
 
     def test_a_pick_that_owes_its_outline_and_its_simulation_stance_is_written_with_both_warnings(self):
         home, project = self.project([self.BOARD, ("light", [{"part": "x-dim"}])])

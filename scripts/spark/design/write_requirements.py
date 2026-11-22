@@ -56,7 +56,7 @@ class WriteRequirements(AnswerOperation):
                  'no_driver', 'no_receiver', 'written', 'unexplained', 'remove_key', 'previous')
     arguments = (Argument(("--requirements",), "project", str,
                           "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline "
-                          "or its simulation stance is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; "
+                          "or its simulation is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; "
                           "board_only when the board itself serves every need; it names each entry that spark wrote for a pick that is gone "
                           "(data.unexplained), and removes them on the person's yes in --replies", metavar="PROJECT"),
                  ANSWER_ARGUMENTS["dry_run"],
@@ -123,12 +123,12 @@ class WriteRequirements(AnswerOperation):
 
 def _owed_lines(placeholder, unsimulated):
     """The warning lines of the picks placed though their records owe a fact (each `(part id, where it is filled)`): the
-    outline the PCB step lays out at a placeholder size, and the simulation stance (P996: said, never refused)."""
+    outline the PCB step lays out at a placeholder size, and the simulation (P996: said, never refused)."""
     return (["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
              "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + board_components.DEFAULT_BODY_MM + (how,))
              for part_id, how in placeholder]
-            + ["  no simulation stance — %s: spark does not know how to simulate it. The board and its parts still build, and "
-               "/spark:deploy asks your yes for firmware that no simulation tested — %s" % (part_id, how) for part_id, how in unsimulated])
+            + ["  no simulation yet — %s: spark cannot simulate it yet, so /spark:deploy asks your yes for firmware that no "
+               "simulation tested — %s" % (part_id, how) for part_id, how in unsimulated])
 
 
 def _gone_lines(unexplained):

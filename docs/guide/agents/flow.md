@@ -106,9 +106,9 @@ Since [P993](https://github.com/xmejkal/spark/issues/1446), the requirements pha
 when the parts list's own rule (`need_requirements.requirements`) has no problems, so a click is never one that writes
 nothing. With problems, the rule's lines are the phase's `says` (after `no requirements.json yet` when there is no file).
 A pick whose record owes a fact is named with its need and the facts, such as `“Soil probe” for soil
-still lacks what spark needs: footprint, pin_order. Ask Claude how to fill it in.` An owed simulation stance blocks
+still lacks what spark needs: footprint, pin_order. Ask Claude how to fill it in.` An owed `simulation` blocks
 nothing ([P996](https://github.com/xmejkal/spark/issues/1453)): the parts list is offered, and the phase says it as a
-warning, such as `“MH-ET LIVE 2.9 Inch E-paper Module, …” for screen has no simulation stance yet. The parts list and the
+warning, such as `Spark cannot simulate “MH-ET LIVE 2.9 Inch E-paper Module, …” for screen yet. The parts list and the
 build go on, and a deploy asks your yes for firmware that no simulation tested.` Before a requirements.json, the status is
 `problems` once every need that counts has a pick (exit 1, and the guide says the phase has problems), else
 `not-started`: the parts phase is `now` and holds the blocker. The guide's NOW sentence of the parts list and of the build

@@ -43,7 +43,7 @@ REQUIREMENTS = "requirements.json"
 #: the entries already in the file that no pick explains, the board the file named before, what refuses it, the picks laid out
 #: at a placeholder outline, the needs nothing on the board serves, what the board's power would lack (`_power_gaps`), which
 #: of the entries no pick explains spark wrote for a pick that is gone (`entry_origin.UnexplainedEntries`, P877), and the
-#: picks placed with no simulation stance, each with where theirs is filled (P996).
+#: picks placed though their records owe `simulation`, each with where theirs is filled (P996).
 Requirements = collections.namedtuple("Requirements", "content shelving unplaced kept board_was problems placeholder unserved "
                                                       "no_supply no_receiver no_driver unexplained unsimulated")
 #: Value: what `_merge_parts` gives: the parts after, the entries no pick explains (as {part, name}), the problems, the indexes of
@@ -75,11 +75,11 @@ def unserved_keys(content):
     return {key for note in (notes if isinstance(notes, list) else []) if isinstance(note, dict) and note.get("why") == WHY_NO_RECORD
             for key in (note.get("picks") if isinstance(note.get("picks"), list) else []) if isinstance(key, str)}
 #: The facts that place a part, not wire it (the PO, 2026-10-08; P165): a pick that owes only these is written, and the PCB step
-#: lays it out at a placeholder size, said; one that owes a fact the circuit needs — a footprint, a pin order and its proof, a
-#: simulation stance — is refused, as before.
+#: lays it out at a placeholder size, said; one that owes a fact the circuit needs — a footprint, a pin order and its proof —
+#: is refused, as before. An owed simulation is said, never refused (SIMULATION_FACTS, P996).
 LAYOUT_FACTS = ("body_mm",)
 #: P996 (the PO, 2026-11-22: "The simulation step should not stop us if we want and can deploy directly"): a pick that
-#: owes its simulation stance is written too, said; the build's simulation stage then never passes, and /spark:deploy asks
+#: owes its `simulation` is written too, said; the build's simulation stage then never passes, and /spark:deploy asks
 #: the person's yes for firmware that no simulation tested.
 SIMULATION_FACTS = ("simulation",)
 
@@ -262,7 +262,7 @@ def _how_to_fill(path):
 
 def _part_picks(picks, known):
     """(the records to shelve, the (need id, key) placed, the picks at a placeholder outline, the problems, the picks placed
-    with no simulation stance) of the part picks among `picks`, for `requirements`."""
+    though their records owe `simulation`) of the part picks among `picks`, for `requirements`."""
     shelve, wanted, placeholder, problems, unsimulated = [], [], [], [], []
     for need_id, (kind, key) in picks:
         if kind != "part":
@@ -302,7 +302,8 @@ def requirements(project, removing=None):
     The picks read into the project's requirements file (§5.3, §8 L): a `Requirements` of (the file as it would be, the records
     to shelve, the picks not placed, the entries it keeps that no pick explains, the board it named before, the problems, the
     picks laid out at a placeholder outline with where theirs is filled). The board pick, and every part pick whose record owes
-    nothing the circuit needs — one owing only its outline (`LAYOUT_FACTS`) is placed and said — and one in the catalog or in
+    nothing the circuit needs — one owing only its outline (`LAYOUT_FACTS`) or its simulation (`SIMULATION_FACTS`, P996) is
+    placed and said — and one in the catalog or in
     another project goes onto the shelf, so the build finds it; a pick with no record is reserved, not placed. A pick of a drawer
     entry is read as the record that entry is, when spark knows it (`as_record`). The file's own `parts` stay as they are and
     gain an entry for each pick they lack (`_merge_parts`); the keys the person added to the file (signals) stay. The file

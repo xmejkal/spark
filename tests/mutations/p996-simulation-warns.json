@@ -28,5 +28,11 @@
   "name": "P996: the page does not name the owed simulation stance (test_flow.TheBlockersTest)",
   "find": "        warned = no_stance_lines(project, given.unsimulated)",
   "replace": "        warned = []"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P996 review: the page names an owed simulation in place of the fault that refuses the parts list (test_flow.TheBlockersTest)",
+  "find": "passed = need_requirements.LAYOUT_FACTS + need_requirements.SIMULATION_FACTS",
+  "replace": "passed = need_requirements.LAYOUT_FACTS"
  }
 ]

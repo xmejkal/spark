@@ -297,7 +297,8 @@ def owed_facts(plan, key):
     them; [] when spark has no readable record of it."""
     path = plan.paths.get(("part", key))
     record = record_kind._parse(path) if path else None
-    return [fact for fact in record_kind.owes(record) if fact not in need_requirements.LAYOUT_FACTS] if isinstance(record, dict) else []
+    passed = need_requirements.LAYOUT_FACTS + need_requirements.SIMULATION_FACTS  # P996: neither refuses the parts list
+    return [fact for fact in record_kind.owes(record) if fact not in passed] if isinstance(record, dict) else []
 
 
 def needs_holding(plan, key):
@@ -313,7 +314,7 @@ def named_pick(plan, key):
 
 
 def no_stance_lines(project, unsimulated):
-    """One warning line per part pick the parts list takes with no simulation stance (P996), or none."""
+    """One warning line per part pick the parts list takes that spark cannot simulate yet (P996), or none."""
     plan = needs.PickPlan(project) if unsimulated else None
     return [flow_codes.NO_STANCE_MESSAGE % named_pick(plan, key) for key, _how in unsimulated]
 

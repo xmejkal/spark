@@ -108,8 +108,9 @@ NO_BOARD_FILE_MESSAGE = "Spark cannot build from this pick: it has no board file
 #: A pick the parts list refuses because its record owes a fact the circuit needs (P993): the part by its name, the
 #: needs that pick it ("“…” for screen"), and the facts it owes, so the person reads the blocker before any click.
 OWED_MESSAGE = "%s still lacks what spark needs: %s. Ask Claude how to fill it in."
-#: A pick the parts list takes with no simulation stance (P996): a warning, never a blocker. The %s is as OWED_MESSAGE's.
-NO_STANCE_MESSAGE = ("%s has no simulation stance yet. The parts list and the build go on, and a deploy asks your yes for "
+#: A pick the parts list takes though its record owes `simulation` (P996): a warning, never a blocker. The %s is the
+#: part's name in quotes with its needs (PICKED_BY).
+NO_STANCE_MESSAGE = ("Spark cannot simulate %s yet. The parts list and the build go on, and a deploy asks your yes for "
                      "firmware that no simulation tested.")
 PICKED_BY = "%s for %s"
 #: The says line that names a need's pick (P991): the need, then each pick's name in quotes (“…”), ", " between two.
