@@ -22,12 +22,14 @@ from dataclasses import dataclass
 from typing import Optional
 from pathlib import Path
 from spark.records import board_rules
+from spark.records import chip_table
 from spark.records import record_kind
 from spark.records import records_codes
 from spark.records import store
 # Read here and, as board_records' own names, by pin_assigner, restricted_pins, onboard_parts and the tests (P724).
 from spark.records.board_rules import (ADC2_UNUSABLE_WITH_WIFI, adc2_unread_gpio, GPIO_MAX, GPIO_MIN,  # noqa: F401
-                                       is_gpio, is_pin_map_constant, PIN_ROLES, POWER_FUNCTIONS)
+                                       is_gpio, is_pin_map_constant, PIN_ROLES, POWER_FUNCTIONS,
+                                       RADIO_FUNCTIONS)
 
 #: Board definitions ship with this plugin as a LIBRARY, so a project can adopt a verified one
 #: without copying a file it would then have to maintain. A project may still keep its own in
@@ -323,10 +325,12 @@ def _power_functions(board):
 def onboard_functions(board):
     """
     What the board offers a need through its own parts: one {"does", "what", "role"} per entry of `onboard_entries` that
-    names its pins (`role` is its key in PIN_ROLES, P397), then one {"does", "what"} per power fact, which has no role.
+    names its pins (`role` is its key in PIN_ROLES, P397), then one {"does", "what"} per power fact, then one per radio
+    of the board's chip in `data/chips.json` (P990). A power fact and a radio have no role.
     """
     return ([{"does": spec.does, "what": spec.what, "role": role} for role, spec, entry in onboard_entries(board) if names_pins(entry)]
-            + _power_functions(board))
+            + _power_functions(board)
+            + [dict(RADIO_FUNCTIONS[name]) for name in chip_table.load().radios(board.get("chip"))])
 
 
 #: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.

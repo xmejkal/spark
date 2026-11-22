@@ -210,6 +210,20 @@ these facts. `--validate` refuses a power fact with no source, a value that is a
 `power` block that is not an object. The offer words are `onboard charger`, `onboard voltage regulator` and `onboard
 battery input`. A need of `power` / `battery` means the cell, and no board part matches it.
 
+### The radios
+
+A board's radios are its chip's, so the board record does not name them. They are facts of the chip's row in
+`data/chips.json`, each `true` and cited to the `SOC_*_SUPPORTED` line of the chip's ESP-IDF v5.5.1 `soc_caps.h`
+([P990](https://github.com/xmejkal/spark/issues/1443)). The names are `wifi`, `bluetooth_le` and `ieee802154`. The
+ESP32 and the ESP32-S3 hold `wifi` and `bluetooth_le`. The ESP32-C6 holds all three. Every other chip holds no radio
+yet, and that does not mean it has none.
+
+`/spark:idea` offers every board of the chip for a need of `communicate` / `wifi`, `ble`, `bluetooth`, `thread` or
+`zigbee`. The offer words are `onboard Wi-Fi radio (WiFi)`, `onboard Bluetooth LE radio (BLE)` and `onboard 802.15.4
+radio (Thread, Zigbee)`. The words in brackets are the words a need uses: spark splits "Wi-Fi" into "wi" and "fi", so
+the need `wifi` meets only "(WiFi)". The ESP32's Bluetooth Classic has no name yet. A board that leaves out one of its
+chip's radios gets a board key when a real board needs one.
+
 ## Simulation
 
 `wokwi_part_type` names the part the generated Wokwi diagram uses. If Wokwi has no model of the

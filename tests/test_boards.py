@@ -34,6 +34,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import boards  # noqa: E402
 from spark.records import board_pads  # noqa: E402
 from spark.records import board_records  # noqa: E402
+from spark.records import board_rules  # noqa: E402
+from spark.records import chip_table  # noqa: E402
 from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -798,6 +800,42 @@ class TheBoardsOwnPowerPartsTest(unittest.TestCase):
     def test_the_xiao_offers_its_battery_pads(self):
         xiao = json.loads((board_records.LIBRARY / "xiao-esp32-c6.json").read_text())
         self.assertIn(self.BATTERY_INPUT, board_records.onboard_functions(xiao))
+
+
+class TheBoardsChipRadiosTest(unittest.TestCase):
+    """P990: a board offers each radio of its chip in `data/chips.json` for a need, after its power facts."""
+
+    WIFI = {"does": "communicate", "what": "onboard Wi-Fi radio (WiFi)"}
+    BLE = {"does": "communicate", "what": "onboard Bluetooth LE radio (BLE)"}
+    IEEE = {"does": "communicate", "what": "onboard 802.15.4 radio (Thread, Zigbee)"}
+
+    def test_a_board_offers_the_radios_of_its_chip(self):
+        for chip, offered in (("esp32c6", [self.WIFI, self.BLE, self.IEEE]), ("esp32s3", [self.WIFI, self.BLE]),
+                              ("esp32", [self.WIFI, self.BLE])):
+            with self.subTest(chip=chip):
+                self.assertEqual(board_records.onboard_functions({"chip": chip}), offered)
+
+    def test_a_chip_with_no_radio_fact_offers_none(self):
+        for board in ({"chip": "esp32h2"}, {"chip": "nope"}, {"chip": None}, {"chip": 5}, {}):
+            with self.subTest(board=board):
+                self.assertEqual(board_records.onboard_functions(board), [])
+
+    def test_the_radios_follow_the_power_functions(self):
+        board = {"chip": "esp32s3", "power": {"charger": {"value": "TP4054", "verified": True, "source": "s"}}}
+        self.assertEqual(board_records.onboard_functions(board),
+                         [{"does": "power", "what": "onboard charger"}, self.WIFI, self.BLE])
+
+    def test_the_shipped_boards_offer_their_chips_radios(self):
+        for name, offered in (("xiao-esp32-c6", ["onboard 802.15.4 radio (Thread, Zigbee)", "onboard Bluetooth LE radio (BLE)",
+                                                 "onboard Wi-Fi radio (WiFi)"]),
+                              ("firebeetle2-esp32s3", ["onboard Bluetooth LE radio (BLE)", "onboard Wi-Fi radio (WiFi)"])):
+            with self.subTest(board=name):
+                record = json.loads((board_records.LIBRARY / (name + ".json")).read_text())
+                self.assertEqual(sorted(function["what"] for function in board_records.onboard_functions(record)
+                                        if function["does"] == "communicate"), offered)
+
+    def test_each_radio_of_the_chip_table_has_words(self):
+        self.assertEqual(set(board_rules.RADIO_FUNCTIONS), set(chip_table.RADIOS))
 
 
 class TheOnboardRoleTableTest(unittest.TestCase):

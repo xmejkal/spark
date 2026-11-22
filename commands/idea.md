@@ -42,7 +42,9 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    so a wrong one is fixed by hand in `<project>/.spark/needs.json`, then checked with `parts.py --needs <project>`.
    **No part numbers** — a need says what is wanted, not which part.
    A board carries some parts itself, and a need in the words of one of them is served by the board. For power, write
-   `power` / `charger`, `power` / `voltage regulator`, `connect` / `battery input` or `sense` / `battery level`.
+   `power` / `charger`, `power` / `voltage regulator`, `connect` / `battery input` or `sense` / `battery level`. For a
+   radio of the board's chip, write `communicate` / `wifi`, `ble`, `bluetooth`, `thread` or
+   `zigbee`.
    `power` / `battery` means the cell, so a board's charger does not match it. A need for a rail other than the
    board's 3.3 V names it, for example `power` / `5V regulator`, because `power` / `regulator` and `power` / `voltage
    regulator` match a board's own regulator.
@@ -123,8 +125,9 @@ Pick with the person, need by need, from what `--match` offered: a record's id, 
 thing with no record (a speaker, a battery). The key of an entry that has a record is picked as that record, and the
 pick says so. If a part the board carries itself serves a need, pick the board for that need too
 (`light=xiao-esp32-c6`). `--match` offers it for such a need and shows `onboard LED light`, `onboard button`, `onboard
-display screen`, `onboard charger`, `onboard voltage regulator`, `onboard battery input` or `onboard battery level` in its
-`what` column. `--offer <board> --project <project>` prints the same words in the board's `does:` line (P389).
+display screen`, `onboard charger`, `onboard voltage regulator`, `onboard battery input`, `onboard battery level` or
+a radio of the board's chip (`onboard Wi-Fi radio (WiFi)`, `onboard Bluetooth LE radio (BLE)`, `onboard 802.15.4 radio
+(Thread, Zigbee)`, P990) in its `what` column. `--offer <board> --project <project>` prints the same words in the board's `does:` line (P389).
 Under such a board, `--match` prints what a passed run does not test of that part (P397), each sentence on its own line.
 Tell the person, in those words, before they pick it: a simulation that has no pin on the BOOT button's GPIO cannot press
 it, and the button is tested on the board.

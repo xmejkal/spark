@@ -93,6 +93,8 @@ MAY_READ = {
     "board_records.ADC2_UNUSABLE_WITH_WIFI": "a role's NAME, used to read a record's ADC2 role (P798) — vocabulary, not a value",
     "board_records.ONBOARD_ROLES":
         "the table of onboard roles, checked against the vocabulary of roles a board may declare",
+    "board_rules.RADIO_FUNCTIONS": "the words of each radio, checked against the radios the chip table may hold (P990)",
+    "chip_table.RADIOS": "the radios the chip table may hold, checked against the words of each radio (P990)",
     "board_records.WOKWI_DEFINITION": "a documents key's NAME, used to build a fixture — vocabulary, not a value",
     "picture_makers.BUILD_MAKERS": "the build's order under test (P946), compared with a literal; never an expectation taken from it",
     "picture_makers.MAKERS": "the registry under test (P946): its names are compared with a literal list",

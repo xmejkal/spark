@@ -72,6 +72,23 @@ class TheOfferTest(unittest.TestCase):
             with self.subTest(need=(does, what)):
                 self.assertFalse(matching.same_words({"does": does, "what": what}, offer))
 
+    def test_a_board_offers_its_chips_radios_for_the_words_of_each_and_for_no_others(self):
+        """P990: the C6 offers Wi-Fi, Bluetooth LE and 802.15.4, the S3 Wi-Fi and Bluetooth LE (data/chips.json)."""
+        c6 = matching.Offer.from_record("c6", "board", {"name": "C6", "chip": "esp32c6"})
+        s3 = matching.Offer.from_record("s3", "board", {"name": "S3", "chip": "esp32s3"})
+        for what in ("wifi", "wi-fi", "ble", "bluetooth", "radio"):
+            with self.subTest(need=what):
+                self.assertTrue(matching.same_words({"does": "communicate", "what": what}, c6))
+                self.assertTrue(matching.same_words({"does": "communicate", "what": what}, s3))
+        for what in ("thread", "zigbee", "802.15.4"):
+            with self.subTest(need=what):
+                self.assertTrue(matching.same_words({"does": "communicate", "what": what}, c6))
+                self.assertFalse(matching.same_words({"does": "communicate", "what": what}, s3), "the S3 has no 802.15.4")
+        for does, what in (("communicate", "lora"), ("communicate", "bluetooth classic"), ("communicate", "wireless"),
+                           ("connect", "wifi")):
+            with self.subTest(need=(does, what)):
+                self.assertFalse(matching.same_words({"does": does, "what": what}, c6))
+
     def test_a_part_record_with_pin_roles_offers_nothing_of_a_board(self):
         offer = matching.Offer.from_record("x", "part", {"kind": "rtc", "pin_roles": {"onboard_led": {"gpio": [2], "note": "x"}}})
         self.assertEqual(offer.functions, [{"does": "keep-time", "what": "rtc"}])
