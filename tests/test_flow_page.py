@@ -459,7 +459,7 @@ class TheCommandTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertNotIn('data-key="requirements"', text)
         self.assertIn("“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof, "
-                      "simulation. Ask Claude to fill it in.", html.unescape(text))
+                      "simulation. Ask Claude how to fill it in.", html.unescape(text))
 
     def test_a_phase_that_holds_problems_does_not_change_the_page_s_status(self):
         result = WriteFlowPage(readers=readers_of(a_phase("one", "problems")), parts=parts_of([]), store=FakeStore()).run(

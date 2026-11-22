@@ -1232,7 +1232,7 @@ class TheBlockersTest(FlowTest):
         self.assertEqual(says(said, "requirements"), [
             "no requirements.json yet",
             "“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof, simulation. "
-            "Ask Claude to fill it in."])
+            "Ask Claude how to fill it in."])
         now = said["data"]["guide"]["now"]
         self.assertEqual((now["phase"], now["offer"], now["says"]),
                          ("requirements", None, "The requirements phase has problems. Ask Claude to go through them with you."))
@@ -1250,6 +1250,10 @@ class TheBlockersTest(FlowTest):
         (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
         said, _ = show(project)
         self.assertEqual(table(said)["requirements"], ("problems", []))
+        self.assertEqual(says(said, "requirements"), [
+            "board: pick one board — none is picked",
+            "“A soil probe” for soil still lacks what spark needs: needs, footprint, pin_order, pin_order_proof, simulation. "
+            "Ask Claude how to fill it in."])
 
 
 class TheRunOnButtonLightTest(unittest.TestCase):

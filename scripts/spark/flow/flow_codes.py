@@ -107,7 +107,7 @@ PICK_HISTORY_MESSAGE = "May note the choice in your history."
 NO_BOARD_FILE_MESSAGE = "Spark cannot build from this pick: it has no board file for “%s”."
 #: A pick the parts list refuses because its record owes a fact the circuit needs (P993): the part by its name, the
 #: needs that pick it ("“…” for screen"), and the facts it owes, so the person reads the blocker before any click.
-OWED_MESSAGE = "%s still lacks what spark needs: %s. Ask Claude to fill it in."
+OWED_MESSAGE = "%s still lacks what spark needs: %s. Ask Claude how to fill it in."
 PICKED_BY = "%s for %s"
 #: The says line that names a need's pick (P991): the need, then each pick's name in quotes (“…”), ", " between two.
 PICKED_FOR_MESSAGE = "Picked for %s: %s."
