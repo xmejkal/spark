@@ -1,0 +1,160 @@
+# R11 retro (prepared 2026-11-22 for Petr, not yet held)
+
+> R10 set four actions. One held in part and three did not hold.
+> The board grew by 1.75 cards for each card closed. Nobody built the two tools that R10 asked for.
+> The inbox holds 62 entries: a gate catches 7 today, a card holds 11, and 44 drop.
+> R11.1, for you to decide: close as many cards as we open.
+> R11.2, for you to decide: a slip that the learned rules hold twice becomes a check, the clock first.
+
+R11 was due on 2026-10-27, or after 10 merged stories. It comes 26 days late, after 374 merged PRs. The facts below
+come from two read-only facts agents on Sonnet and from commands that the session ran on 2026-11-22 at about
+19:10 Prague time. P1016 [#1481](https://github.com/xmejkal/spark/issues/1481) holds this work.
+
+## R10's actions, checked as written
+
+| action | check at R11 | measured | verdict |
+| --- | --- | --- | --- |
+| R10.1 walk 2 by 10-27 with the board's button and LED | steps outside spark: 0 | Walk 2 ran on 10-22 and 10-23, inside the date. Its diary names one look outside spark that the person asked for (the button name). The six later walk diaries count no outside steps. Walk 4 (11-01) flashed an image with `mpremote` and `esptool` by hand. | held in part |
+| R10.2 a found row becomes a card only when it is a bug or blocks the next walk step | cards opened per card closed: 1 or less | 657 opened and 375 closed from 10-20 to 11-22 (1.75). The last 7 days: 201 and 104 (1.93). 402 open today. | not held |
+| R10.3 the push hook runs `tools/factcheck.py` on changed plan files | plans pushed with a factcheck result: all | `tools/pre-push` and `tools/check_commit.py` never call factcheck. P363 [#465](https://github.com/xmejkal/spark/issues/465) is still open. P786 (#1087) took the factcheck claim off the team pages. | not held |
+| R10.4 each rows file holds "N planted, M escaped, K real gaps" | stories with the line: all. Rate-limit hits: 0 | 6 of the 159 rows files that were added since 10-20 and still exist hold a "N planted" line. 4 inbox entries name a rate limit, the last on 11-08. | not held |
+
+The commands, as the facts agent ran them:
+
+```
+gh api -X GET search/issues -f q='repo:xmejkal/spark is:issue created:2026-10-20..2026-11-22' -q .total_count   # 657
+gh api -X GET search/issues -f q='repo:xmejkal/spark is:issue closed:2026-10-20..2026-11-22' -q .total_count    # 375
+/usr/bin/grep -n factcheck tools/pre-push tools/check_commit.py                                                  # no hits
+git log --since=2026-10-20 --diff-filter=A --name-only --format= -- 'docs/observations/rows/*' | sort -u          # 316 paths, 159 exist
+```
+
+What to do with each, proposed: R10.1 ends, because walks now record their gaps as rows and nobody reads an outside
+count. R10.2 is replaced by R11.1. R10.3 is dropped and P363 closes as not planned, because the refuter catches plan
+claims and P786 already took the claim off the team pages. R10.4 is dropped, because `tests/mutations/ledger.jsonl`
+and each PR's anchors file in `tests/mutations/` now hold what the line was for.
+
+## The two changes, for Petr to decide
+
+### R11.1 Close as many cards as we open
+
+The board holds 402 open cards: 131 are older than a month, 138 are from 10-23 to 11-08, and 133 are newer (40 of
+them are epics). R10.2 asked Claude to file fewer cards, and the ratio went from 2.5 (73 to 29) to 1.75, not to 1.
+A rule about filing alone did not hold, so this change adds a close step.
+
+The change: R10.2 stays. In addition, each day close closes one old card for each spark card that the day filed. The
+three-role council picks them among Idea cards older than 30 days whose body holds no words of the PO. Each closes
+as "not planned" with a one-line reason. A close is undone by a reopen, and the council's pick is delegated, his to
+change.
+
+The check at R12:
+
+```
+gh api -X GET search/issues -f q='repo:xmejkal/spark is:issue created:2026-11-23..<R12 date>' -q .total_count
+gh api -X GET search/issues -f q='repo:xmejkal/spark is:issue closed:2026-11-23..<R12 date>' -q .total_count
+gh api -X GET search/issues -f q='repo:xmejkal/spark is:issue is:open' -q .total_count
+```
+
+If the second number is equal to or larger than the first, and the third is under 402, the change held.
+
+### R11.2 A slip that the learned rules hold twice becomes a check
+
+The learned rules hold the same slip again and again. One slip is a time written from feel, not from the clock.
+It is in `learned-rules.md` at lines 240, 448, 455, 481, 491, 492, 506 and 522. It happened again today, when six card
+comments carried times up to an hour in the future. Moving a card without counting the lane first is at lines 369 and 524,
+and it happened again today. A third rule did not stop either slip.
+
+The change: an inbox entry can repeat a slip that the learned rules already hold twice. Then the fix is a check in a
+script or a hook, not a further rule. The check is filed as a card at the top of Ready. The first check is the clock.
+If a text holds a Prague time later than the clock, a Claude Code hook refuses it. The hook reads the body of
+`gh issue comment`, `gh issue create` and `gh issue edit`. It also reads writes to the store's handoff, diary and
+day-close files. A time in the past stays allowed, because past events carry true times. The lane count is the next check, with a `tools/board.py move` that counts before it
+moves.
+
+This change edits Petr's Claude Code settings (a hook), so it is his to decide.
+
+The check at R12:
+
+```
+sed -n '/R11 HELD/,$p' ~/.claude/projects/-Users-petr-Development-spark/memory/retro-inbox.md | /usr/bin/grep -c -i 'time\|clock\|date'
+```
+
+If the count is 0 and the hook's test refuses a body with a future time, the change held.
+
+## The inbox, sorted
+
+The verdicts: gate means that an automatic check catches it today. Card means that a card holds the work, named.
+Drop means that it is handled, decided or no longer true, with the reason. Entries 1 to 30 come before R10, which
+handled them, and entry 31 is R10's own line. "Rule" names a written rule in `CLAUDE.local.md`, `scrum/README.md` or
+`learned-rules.md`.
+
+| # | date | entry, short | verdict | why |
+| --- | --- | --- | --- | --- |
+| 1 | 10-15 | slice started while a PR was open | drop | rule "finish before switching" |
+| 2 | 10-15 | an epic without its label counted in Ready | drop | an epic counts nowhere (`tools/check_backlog.py:200`) |
+| 3 | 10-15 | one plan, two names for one thing | drop | rule: every plan checks its names |
+| 4 | 10-15 | typed sub-tasks per story | drop | R10.4 dropped typed tasks |
+| 5 | 10-15 | analyze logs before deleting them | drop | rule under "Never" |
+| 6 | 10-15 | mine the transcripts | card | P259 [#279](https://github.com/xmejkal/spark/issues/279), open |
+| 7 | 10-15 | an extra gaps round in every plan | drop | rule: the plan council's second round |
+| 8 | 10-15 | judge the experiments | drop | judged at R9 and R10 |
+| 9 | 10-15 | the weekly look and the refuter | drop | R10 kept the refuter |
+| 10 | 10-16 | a coach skill for the retro | card | P266 [#298](https://github.com/xmejkal/spark/issues/298), open, and P265 is done |
+| 11 | 10-16 | plan mode stopped writing agents | drop | learned rule AT272 |
+| 12 | 10-16 | "rate the assumptions" confused | drop | rule: teacher-style questions |
+| 13 | 10-16 | an edit script blew up a module | drop | learned rule: assert each anchor once |
+| 14 | 10-16 | two autonomous hours, what worked | drop | a record, no action |
+| 15 | 10-16 | a card that waits on the PO filled Design | drop | P928: cards that wait on the PO count apart |
+| 16 | 10-17 | pulled past the in-flight limit | gate | the push hook counts the lanes (W6) |
+| 17 | 10-17 | does an epic count in flight | drop | R9: an epic counts nowhere |
+| 18 | 10-17 | an agent detached HEAD | drop | R9.4: agents that use git get a worktree |
+| 19 | 10-17 | too many full-suite runs | drop | the story run replaced the full run per push (P714) |
+| 20 | 10-17 | two PRs on the same files | drop | R9 WIP C: same files never in parallel |
+| 21 | 10-18 | a spike started over the limit | gate | the push hook counts the lanes (W6) |
+| 22 | 10-18 | GraphQL limit from board edits | drop | joins 54, which names no hit since 11-08 |
+| 23 | 10-18 | are the stages used | drop | answered at R10 |
+| 24 | 10-18 | "Closes #N" closed a card before the bench | drop | learned rule: "Part of #N" |
+| 25 | 10-18 | one "yes" to a whole backlog | drop | rule: a card holds his words |
+| 26 | 10-18 | the classifier blocked merges in auto mode | drop | merges run in auto mode (#1477 to #1480 today) |
+| 27 | 10-18 | how useful is the refuter | card | P317 [#401](https://github.com/xmejkal/spark/issues/401), open |
+| 28 | 10-19 | `item-list --limit 400` used the limit | drop | joins 54 |
+| 29 | 10-19 | the P324 experiment | drop | judged at R10, dropped |
+| 30 | 10-20 | catch hallucinations, two proposals | drop | they became R10.3 and R10.4, checked above |
+| 31 | 10-20 | R10 held | drop | a marker |
+| 32 | 10-20 | two pushes of one branch at once | drop | once, no harm |
+| 33 | 10-22 | a card filed with no slice | gate | `tools/check_backlog.py` from Ready on |
+| 34 | 10-22 | "where are we, what works" | gate | README table, `tests/test_journey.py`, the session-start status |
+| 35 | 10-23 | two sessions on one backlog | drop | rule: when two sessions run, one stands down |
+| 36 | 10-23 | do the learned rules feed agents | drop | no agent slip in the inbox since, and R11.2 turns repeats into checks |
+| 37 | 10-26 | the push under 90 s | card | P495 [#677](https://github.com/xmejkal/spark/issues/677), gate clocks |
+| 38 | 10-26 | the first hook numbers | card | P495 [#677](https://github.com/xmejkal/spark/issues/677) |
+| 39 | 10-27 | the disk fell to 1.2 GB | gate | `tools/board.py status` warns under 10 GB |
+| 40 | 10-31 | the WIP limit counts cards, not PRs | drop | decided: every card counts (`scrum/README.md:129`) |
+| 41 | 10-31 | walk predictions | drop | the PO: walks run free-form, no predictions |
+| 42 | 11-01 | secondary limit, boards read in full | drop | joins 54 |
+| 43 | 11-01 | a full MAC in a commit and a card | gate | `tests/test_no_board_address.py` at every push, with no slip since 11-01 |
+| 44 | 11-01 | "this is taking way too long" | card | P495 [#677](https://github.com/xmejkal/spark/issues/677) |
+| 45 | 11-01 | twelve PRs in auto mode, what cost | drop | `mutate.py --tier` and `--budget` answer the widened run |
+| 46 | 11-02 | is P469 in flight | drop | P469 is no longer in flight |
+| 47 | 11-05 | the classifier blocked a merge | drop | merges run in auto mode |
+| 48 | 11-05 | a second writer after a clear | drop | rule: list the agents first after a restart |
+| 49 | 11-05 | the gate printed no test name | gate | `check_commit.py` prints the red tests (P797) |
+| 50 | 11-07 | a stack of PRs filled Review | drop | decided: every card counts |
+| 51 | 11-08 | the board read cost the GraphQL limit | drop | joins 54 |
+| 52 | 11-08 | mutate.py has no row selection or shards | drop | `--for`, `--tier` and `--budget` since P787 |
+| 53 | 11-08 | no failing test ids | drop | fixed by P797 and P787 |
+| 54 | 11-08 | use REST for the board and PR state | drop | no rate-limit entry since 11-08, and the next one reopens it |
+| 55 | 11-09 | architecture guards went silent | drop | `measure.py` reads every name of a spark import |
+| 56 | 11-09 | copy_of copied ignored files | drop | fixed by P807 |
+| 57 | 11-18 | are subagents used well | card | P317 [#401](https://github.com/xmejkal/spark/issues/401) holds the refuter's worth |
+| 58 | 11-19 | two model tests offered, not run | drop | no stage waits on them |
+| 59 | 11-20 | the story run missed a breadboard test, main went red | card | new card, a bug in the gate |
+| 60 | 11-21 | a builder deleted the hook's output | card | new card: the hook keeps its output in a file |
+| 61 | 11-22 | a card moved without counting the lane | card | R11.2's second check, `tools/board.py move` |
+| 62 | 11-22 | times written from feel | card | R11.2's first check, the clock |
+
+The rate-limit entries (22, 28, 42, 51, 54) have no hit since 11-08, so they drop, and the next hit reopens them.
+Entries 59 and 60 are real defects in the gate, so they become cards under R10.2. If Petr takes R11.2, entries 61
+and 62 become its cards.
+
+The sort, counted: gate 7 (16, 21, 33, 34, 39, 43, 49), card 11 (6, 10, 27, 37, 38, 44, 57, 59, 60, 61, 62), and
+drop 44.
