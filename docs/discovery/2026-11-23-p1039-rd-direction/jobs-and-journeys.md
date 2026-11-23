@@ -108,7 +108,7 @@ flowchart LR
 | 3 | wires from the page's picture | E display2 11:41 to 11:46 | no picture (a stale shelf copy). He wired from the text | partly | Q-A1 |
 | 4 | reads `look.py` and runs `deploy.py` in his own terminal | E display2 11:51, 13:24, tests/golden/look-ok.txt | loose lines (P1032 #1512). Claude learns the result from the logs | partly | Q17 |
 | 5 | watches the panel and the LED, and tells Claude | E display2 13:07, 13:36, 14:03 | Claude cannot see the panel. It did not know about the battery | partly | Q-A6, Q-A11 |
-| 6 | asks where the project stands, on the page or in the flow | E ★C19 | "deploy: not started" after 27 deploy attempts. "build: could not run" for a built board | not yet (the deploy) | Q14 |
+| 6 | asks where the project stands, on the page or in the flow | E ★C19 | "deploy: not started" after 27 deploy attempts. "build: could not run" for a built board | not yet (the deploy) | Q14 answered (D7): the chat told him. Q14b is open |
 
 ```mermaid
 flowchart LR
