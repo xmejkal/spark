@@ -1,0 +1,35 @@
+# P1027 slice 1: the needs phase says that the goal or the must lines changed after the needs were written: rows
+
+Card: [P1027 #1506](https://github.com/xmejkal/spark/issues/1506), from the P934 walk (project p934-display2) on
+2026-11-23. The plan was written on main 9c6d3642. It passed two rounds: round 1 was one lens (Sonnet) and the refuter
+(Opus), round 2 the refuter (Opus), each with a prototype on a copy of p934-display2. A "row" in the last column is a row
+of `tests/mutations/p1027-needs-basis.json`, counted from 1.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | Keep the needs and the files spark holds up to date when a goal changes, and build it now | the PO's words on the card, relayed by the epaper session on 2026-11-23 ("please ask the spark main session to prioritize and implement it now") | acted | this PR, slice 1 of the card |
+| 2 | Slice 1: `flow.py show` and the page mark the needs out of date, name what changed and ask for a review. Spark edits no need, must line or part record | spark-main in auto mode, delegated, the PO's to change (the card's "Done when" and "Value proven by") | acted | `TheReaderTest`. `test_the_read_and_the_page_write_nothing_in_the_project_or_the_store` compares the sha256 of every file of the project and the store before and after `show` and the page |
+| 3 | The record holds two hashes, the goal and the must lines, not the goal alone | plan section 2, council question 1 | acted | `needs_basis.stamp_of`. The value check changed a must line only, and the needs phase named `the must lines`. Rows 1 and 2 |
+| 4 | A project with no record (written before P1027) gets no extra line | plan round 1, item 2 | acted | `test_a_project_written_before_the_card_says_what_it_said_before`. `tests/test_flow.py` keeps its needs line. Row 13 |
+| 5 | Only a `--needs-set` that defines a need (`does`, `what`, `condition`) or is a review (`[]`) notes the stamp. A mark or `aside` alone does not, so it never clears the out-of-date mark | plan round 1 item 4, round 2 item D | acted | `needs_basis.DEFINING` and `due_stamp`. Tests `test_a_mark_only_or_aside_only_write_leaves_the_record`, `test_a_condition_only_write_defines_the_need_and_notes`, `test_a_mark_after_a_goal_change_leaves_the_needs_out_of_date`. Rows 6, 7 and 8 |
+| 6 | The record is `.spark/needs-basis.json`, the module `design/needs_basis.py`, the Store `NeedsBasisStore` | plan round 1, item 1 | acted | the data key of `--needs-set` is `basis_noted`, not the plan's `origin_noted`, to follow the rename (a build decision) |
+| 7 | An unreadable brief gives the reader one "cannot tell" line with the error's text, never could-not-run | plan round 1 item 3, round 2 item B | acted | `test_a_brief_that_cannot_be_read_says_spark_cannot_tell_with_the_error` (chmod 000) and `test_a_deeply_nested_brief_says_spark_cannot_tell_with_the_error`. Row 16 plants the OSError case |
+| 8 | The must lines are sorted before hashing, and a trailing space in the goal counts as a change | plan round 1, item 5 | acted | `test_the_same_must_lines_in_another_order_are_no_change`, `test_a_trailing_space_in_the_goal_is_a_change`. Row 4 |
+| 9 | The tests assert `status == "ok"` where the phase stays ok, and the guide's offer is None for a stale needs phase | plan round 1, item 6 | acted | `TheReaderTest`. The guide's `now` is pinned whole in the value test |
+| 10 | The three lines `written = …`, `if written and changes:`, `needs.write` of `set_needs.py` stay exactly, for the sprint-10-p96-fix-d row | plan round 1, item 7 | verified | `git diff origin/main -- scripts/spark/design/set_needs.py` adds lines after them only. `--anchors`: 33 refused, as on main |
+| 11 | `tests/golden-records/parts-describe-ok.txt` changes with the `--needs-set` help | plan round 1, item 7 | acted | one line, the help text. `parts-needs-set-ok.txt` stays the same, because its fixture has no brief |
+| 12 | The docs say which `--needs-set` counts as a review. `journey/idea.md` is not changed | plan round 1, item 8 | acted | `commands/idea.md` step S item 4, `docs/guide/agents/flow.md`, `json.md`, `how-it-works.md`, the `flow.py` help |
+| 13 | The writer treats an unreadable brief as no stamp, so `--needs-set` never fails on it | plan round 2, item A | acted | `test_a_brief_that_cannot_be_read_never_fails_the_write`, `test_a_deeply_nested_brief_never_fails_the_write` |
+| 14 | `NeedsBasisStore.held()` reads an OSError on the record as broken | plan round 2, item C | acted | `test_a_record_that_cannot_be_read_says_spark_cannot_tell` (chmod 000) and `test_a_record_that_is_a_folder_is_broken` |
+| 15 | `TheDesignAreaTest.MODULES` gains `needs_basis`, and `tools/map.py --write` writes the map again | plan round 2, item E | acted | the only other changed expectation, an inventory line |
+| 16 | After a `--needs-drop` or any review, run `--needs-set` with `[]` to note the goal the needs answer now | plan round 2, item F | acted | `commands/idea.md` step S item 4 |
+| 17 | A brief that is no JSON while a record is held gives the "cannot tell" line, `the brief cannot be read (bad-json)` | build | acted | the plan's table gave such a brief a line, and round 1 left only the null goal without one. `test_a_brief_that_is_no_json_now_says_spark_cannot_tell`. Row 15 |
+| 18 | A goal set back to null after the needs were written gives no line, as round 1 item 2 says | build | raised | this card (#1506), a later slice: a removed goal is a change spark does not name yet. `test_a_brief_with_no_goal_now_gives_no_line` pins today's rule |
+| 19 | The tests read the record's name and `BROKEN` as literals, not the module's constants | build, the first push's hook (`test_self_confirmation`) | acted | `RECORD` and `"broken"` in `tests/test_needs_basis.py` |
+| 20 | A row on the RecursionError catch of the reader goes red as an error, not a failure | build, the hand plant | acted | row 16 plants the OSError catch instead, red as a failure. The RecursionError catch is pinned by its test without a row |
+| 21 | The value check's `flow.py show` exits 1 | build, the value check | verified | the requirements phase has problems in the scratch store: its part record `epaper-2in9-bwr-mh-et-live` is in the PO's store, which the check did not use. The needs line is this change's |
+| 22 | Which need, which must line and which part record a change touches | the card, "Later slices" | raised | this card (#1506) |
+| 23 | A page button that marks the needs reviewed, and a page click refused while the needs are out of date (the fingerprint) | plan section 10 | raised | this card (#1506) |
+| 24 | requirements.json and the part records out of date because of a goal change, and the old goal text on the page | plan section 10 | raised | this card (#1506) |
+| 25 | The Wi-Fi must line and the wifi need of p934-display2 | the card, plan section 10 | raised | the PO's decision, on the battery card xmejkal/p934-epaper-clock#7. This slice read the project on a copy only |
+| 26 | The PR's review: one lens (Sonnet) and the refuter (Opus) | plan step 6 | raised | spark-main, before the merge |

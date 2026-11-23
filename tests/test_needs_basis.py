@@ -315,12 +315,13 @@ class TheReaderTest(WithAStore):
     def test_a_dropped_must_line_alone_names_the_must_lines(self):
         project = self.written_project()
         set_brief(project, must=MUST[1:])
-        self.assertEqual(needs_phase(show(project)[0])["says"][1], "the must lines changed after the needs were written")
+        self.assertEqual(needs_phase(show(project)[0])["says"], [NEEDS_LINE, "the must lines changed after the needs were written", REVIEW])
 
     def test_both_changes_name_both(self):
         project = self.written_project()
         set_brief(project, goal="another goal", must=[])
-        self.assertEqual(needs_phase(show(project)[0])["says"][1], "the goal and the must lines changed after the needs were written")
+        self.assertEqual(needs_phase(show(project)[0])["says"],
+                         [NEEDS_LINE, "the goal and the must lines changed after the needs were written", REVIEW])
 
     def test_the_must_lines_in_another_order_change_nothing(self):
         project = self.written_project()
