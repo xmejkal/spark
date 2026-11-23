@@ -805,6 +805,10 @@ class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
                      part_records.load("l9110s-module"), part_records.load("jst-ph-2-power-inlet")]
         self.assertEqual(power_rails.loads_across_a_pair(part_list), ["SpeakerTerminal"])
 
+
+class APartWithNoGroundPinTest(unittest.TestCase):
+    """P1026 (#1501): which parts the island check does not ask for a ground of their own (`parts_without_a_ground_pin`)."""
+
     @staticmethod
     def button_on(rail, **changes):
         """The library's tactile button with B on `rail` (P1026), and each of `changes` set on the record (None: removed)."""

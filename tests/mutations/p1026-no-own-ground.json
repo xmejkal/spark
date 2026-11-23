@@ -1,0 +1,10 @@
+[
+ {"file": "scripts/spark/design/power_rails.py", "name": "P1026: a part with three pins or more is not asked for a ground", "find": "                  if len(part.get(\"pin_order\") or ()) == 2\n", "replace": "                  if len(part.get(\"pin_order\") or ()) >= 2\n"},
+ {"file": "scripts/spark/design/power_rails.py", "name": "P1026: a two-pin part with no need is not asked for a ground", "find": "                  and part.get(\"needs\")\n", "replace": "                  and True\n"},
+ {"file": "scripts/spark/design/power_rails.py", "name": "P1026: a two-pin part with no power pin is not asked for a ground", "find": "                  and part.get(\"power\")\n", "replace": "                  and True\n"},
+ {"file": "scripts/spark/design/power_rails.py", "name": "P1026: a two-pin part whose power pin names no rail is not asked for a ground", "find": "                  and all(net_for(supply) for supply in part[\"power\"])\n", "replace": "                  and True\n"},
+ {"file": "scripts/spark/design/power_rails.py", "name": "P1026: a two-pin part with its pin on ground is not asked for a ground", "find": "                  and not any(net_for(supply) in GROUND_NETS for supply in part[\"power\"]))\n", "replace": "                  )\n"},
+ {"file": "scripts/spark/build/build_service.py", "name": "P1026: a part named as having no ground pin is asked for one all the same", "find": "    grounded |= {owner for owner in present if names.get(owner) in no_own_ground}\n", "replace": "    pass\n"},
+ {"file": "scripts/spark/build/build_service.py", "name": "P1026: islands_in never hands its list of parts with no ground pin to the ground question", "find": "    findings, present = _reaches_no_ground(board, names, passives, no_own_ground)\n", "replace": "    findings, present = _reaches_no_ground(board, names, passives)\n"},
+ {"file": "scripts/spark/build/build_service.py", "name": "P1026: the build stage hands the island check no part without a ground pin", "find": "                             no_own_ground=power_rails.parts_without_a_ground_pin(part_list),\n", "replace": "                             no_own_ground=(),\n"}
+]
