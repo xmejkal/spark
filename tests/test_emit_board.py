@@ -805,6 +805,38 @@ class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
                      part_records.load("l9110s-module"), part_records.load("jst-ph-2-power-inlet")]
         self.assertEqual(power_rails.loads_across_a_pair(part_list), ["SpeakerTerminal"])
 
+    @staticmethod
+    def button_on(rail, **changes):
+        """The library's tactile button with B on `rail` (P1026), and each of `changes` set on the record (None: removed)."""
+        button = part_records.load("tactile-button")
+        button["power"] = [dict(button["power"][0], rail=rail)]
+        for key, value in changes.items():
+            if value is None:
+                button.pop(key, None)
+            else:
+                button[key] = value
+        return button
+
+    def test_a_two_pin_part_between_a_pin_and_a_rail_is_named_so_the_island_check_asks_it_no_ground(self):
+        # P1026: the active-high wake button (B to 3V3, a pull-down on A) has no ground pin of its own; its return is A
+        self.assertEqual(power_rails.parts_without_a_ground_pin([self.button_on("logic")]), ["TactileButton"])
+        self.assertEqual(power_rails.parts_without_a_ground_pin([part_records.load("tactile-button")]), [])
+        self.assertEqual(power_rails.parts_without_a_ground_pin([self.button_on("agnd")]), [])
+
+    def test_a_part_with_three_pins_or_no_need_or_no_power_pin_is_still_asked_for_a_ground(self):
+        three_pins = {"id": "sensor", "pin_order": ["VCC", "OUT", "GND"],
+                      "needs": [{"signal": "OUT", "pin": "OUT", "direction": "out"}],
+                      "power": [{"pin": "VCC", "rail": "logic", "direction": "in"}]}
+        self.assertEqual(power_rails.parts_without_a_ground_pin([three_pins]), [])
+        self.assertEqual(power_rails.parts_without_a_ground_pin([part_records.load("speaker-terminal")]), [])
+        self.assertEqual(power_rails.parts_without_a_ground_pin([self.button_on("logic", power=None)]), [])
+        self.assertEqual(power_rails.parts_without_a_ground_pin([self.button_on("logic", power=None, pin_order=["A", None])]), [])
+
+    def test_a_two_pin_part_whose_power_pin_names_no_rail_is_still_asked_for_a_ground(self):
+        # the refuter of round 1: B on no rail is wired to nothing, so main's "reaches no ground" is the stop it keeps
+        self.assertEqual(power_rails.parts_without_a_ground_pin([self.button_on(None)]), [])
+        self.assertEqual(power_rails.parts_without_a_ground_pin([self.button_on("logic", pin_order=None)]), [])
+
 
 class DesignNotesTest(unittest.TestCase):
     """P706: the six note loops of `emit_board.main` are `board_emitter.design_notes`, so the build carries them in process
