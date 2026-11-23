@@ -656,6 +656,15 @@ class NoSimulationGrantTest(GrantCase):
         self.assertNotIn("Traceback", out + err)
         self.assertFalse((inside / "store" / "grants" / "direct_flashing_disallowed").exists())
 
+    def test_a_folder_in_the_file_s_place_is_a_line_not_a_traceback(self):
+        # P1029 review: write_file raises IsADirectoryError, an OSError, which is no StoreError
+        (self.home / "grants" / "direct_flashing_disallowed").mkdir(parents=True)
+        code, out, err = self.disallow_run()
+        self.assertEqual(code, 2)
+        self.assertNotIn("Traceback", out + err)
+        self.assertIn("grant.py: ", err)
+        self.assertFalse(board_grant.GrantStore().direct_flashing_allowed())
+
     def test_the_disallow_flag_or_a_prefix_of_it_picks_its_mode_with_its_own_help(self):
         for argv in (["--disallow-direct-flashing"], ["--disallow"], ["--d"]):
             self.assertIs(grant.operation_for(argv), DisallowDirectFlashing, argv)

@@ -127,7 +127,7 @@ MESSAGE_FOR = {
     WHY_IGNORE_OLDER_RUNS: "--ignore-older-runs is never covered by a deploy grant: the person types yes",
     WHY_NO_SIMULATION: "--no-simulation is covered only by a deploy grant given with --no-simulation: the person types yes",
     WHY_DIRECT_FLASHING_DISALLOWED: "direct flashing is disallowed in the store: the file grants/%s is there, or spark cannot "
-                                    "read the grants folder. So no deploy grant answers a --no-simulation deploy: the person "
+                                    "search the grants folder. So no deploy grant answers a --no-simulation deploy: the person "
                                     "types yes" % DIRECT_FLASHING_DISALLOWED,
     WHY_RELAYED_YES: "no deploy grant: a yes given through another program makes a live grant only. The person runs %s "
                      "in their own terminal" % DEPLOY_GRANT_COMMAND,
@@ -149,7 +149,8 @@ CODE_FOR_WHY = {WHY_NO_GRANT: board_codes.NO_GRANT, WHY_EXPIRED: board_codes.GRA
                 WHY_RELAYED_YES: board_codes.RELAYED_YES_REFUSED,
                 WHY_DIRECT_FLASHING_DISALLOWED: board_codes.DIRECT_FLASHING_DISALLOWED}
 #: What grant.py's refusal adds for disallowed direct flashing: the line that allows it again, for the person's own hands.
-ALLOW_AGAIN = ". To allow it again, the person deletes that file: rm %s"
+ALLOW_AGAIN = (". To allow it again: if the file is there, the person deletes it (rm %s). Else the person checks the "
+               "permissions of the grants folder")
 #: The exit code for a code that is no refusal but a run that could not finish: 2, as outcomes.py says.
 COULD_NOT_RUN_WHYS = (WHY_NO_MAC, WHY_BAD_MINUTES, WHY_BAD_SCOPE)
 
@@ -208,7 +209,7 @@ class GrantStore:
 
     def direct_flashing_allowed(self):
         """True only when no file is at grants/direct_flashing_disallowed (P1029). It fails closed: a file, a folder or a
-        dangling link there, or a grants place spark cannot read, disallows direct flashing."""
+        dangling link there, or a grants place spark cannot search, disallows direct flashing."""
         try:
             os.lstat(self.disallowed_path())
         except FileNotFoundError:

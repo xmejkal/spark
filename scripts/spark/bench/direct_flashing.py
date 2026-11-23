@@ -30,7 +30,7 @@ DISALLOWED_LINE = ("  direct flashing disallowed: no deploy grant answers a depl
 class DisallowDirectFlashing(Operation):
     """
     Operation: keep the file that disallows direct flashing, through GrantService.disallow_direct_flashing, with who
-    wrote it and when (the outside's clock). A store that refuses the write is one unchecked item. It has no `--json`.
+    wrote it and when (the outside's clock). A store that refuses the write, or a folder in the file's place, is one unchecked item. It has no `--json`.
     """
 
     name = "disallow-direct-flashing"
@@ -44,7 +44,7 @@ class DisallowDirectFlashing(Operation):
     def run(self, *, outside, disallow_direct_flashing=True):
         try:
             path = board_grant.GrantService(now=outside.clock.now).disallow_direct_flashing()
-        except store.StoreError as refused:
+        except (store.StoreError, OSError) as refused:  # OSError: a folder in the file's place (P1029 review)
             return OperationResult(None, [Finding(outcomes.COULD_NOT_RUN, None, board_codes.STORE_PROBLEM, str(refused), "")],
                                    diagnostics=[guard_lines("%s: %s" % (SCRIPT, refused))])
         return OperationResult({"direct_flashing_allowed": False},
