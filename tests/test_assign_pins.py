@@ -578,6 +578,21 @@ class TheHelpersEachHaveANameTest(unittest.TestCase):
         self.assertEqual(pin_assigner._why(set(), dict(d11, free={"D11": d11})),
                          "needs nothing special; the cheapest pin left could still pwm and wake, which is spent here")
 
+    def test_a_pin_with_no_free_pads_given_gets_the_assigners_own_words(self):
+        # The PR review of #1496: a caller that gives no `free` knows nothing of the other pads, so the why claims none.
+        miso = {"gpio": 21, "can": {"pwm"}, "roles": ["not_wake_capable", "spi"]}
+        self.assertEqual(pin_assigner._why(set(), miso),
+                         "needs nothing special; the cheapest pin left could still pwm, which is spent here")
+
+    def test_the_kept_pads_are_named_once_per_gpio(self):
+        # The PR review of #1496: on the XIAO C6, A0 and D0 are one GPIO, and the why named both.
+        free = {"A0": {"gpio": 0, "can": {"adc", "pwm"}, "roles": []}, "D0": {"gpio": 0, "can": {"adc", "pwm"}, "roles": []},
+                "A1": {"gpio": 1, "can": {"adc", "pwm"}, "roles": []}, "D1": {"gpio": 1, "can": {"adc", "pwm"}, "roles": []}}
+        mosi = {"gpio": 18, "can": {"pwm"}, "roles": ["spi"]}
+        self.assertEqual(pin_assigner._why(set(), dict(mosi, free=free)),
+                         "needs nothing special; the free pins with no bus role are kept for another job (adc: A0 and "
+                         "A1), so this SPI pad is spent here, though it could still pwm")
+
     def test_why_not_names_who_has_the_pins_or_says_no_pin_could(self):
         available = pin_assigner.candidates(self.board)
         adc = {label for label, pin in available.items() if "adc" in pin["can"]}
@@ -628,7 +643,8 @@ class PlainPadsFirstTest(unittest.TestCase):
         self.assertTrue({"SDA", "SCL"} <= set(free), sorted(free))
 
     def test_a_signal_that_needs_adc_takes_a_pad_with_no_bus_role_before_an_i2c_pad(self):
-        # On the S3 the I2C pads are ADC1 pins: an adc signal takes A0 to A3 and the others first.
+        # On the S3 the I2C pads are ADC1 pins: an adc signal takes A0 to A3 and the others first. This passes on main too
+        # (the bus penalty already orders pads that waste the same): it pins a property of the PO's order, not a defect.
         import json
         s3 = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         adc = [label for label, gpio in s3["pins"].items() if gpio in s3["adc_gpio"] and label not in ("SDA", "SCL")]
