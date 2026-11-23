@@ -126,11 +126,20 @@ def without_needs(project, phase):
 
 
 class IdeaReader(PhaseReader):
-    """Strategy: the idea is said in the chat, so the phase has no status and one sentence."""
+    """Strategy: the idea is said in the chat, so the phase has no status and one sentence. A need dropped after the must
+    lines were last gone through makes it out of date (P1027, slice 2), with the dropped ids and what Claude asks. A needs
+    file that cannot be read is the needs phase's to say, so it reads as no drop here."""
 
     PHASE, BY = flow_codes.IDEA, flow_codes.BY_YOU
 
     def read(self, project):
+        try:
+            ids = needs_basis.dropped(project, [need["id"] for need in needs.read(project)])
+        except (store.StoreError, OSError, RecursionError):
+            ids = []
+        if ids:
+            return self.phase(flow_codes.STALE, [flow_codes.IDEA_MESSAGE, flow_codes.NEEDS_DROPPED_MESSAGE % ", ".join(ids),
+                                                 flow_codes.MUST_ASK_MESSAGE])
         return self.phase(None, [flow_codes.IDEA_MESSAGE])
 
 
