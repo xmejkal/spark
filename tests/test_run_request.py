@@ -94,7 +94,7 @@ class RunRequestTest(unittest.TestCase):
         self.project = Path(tempfile.mkdtemp()) / "bl"
         shutil.copytree(BUTTON_LIGHT, self.project)
         self.readers = [FakeReader(OFFERED)]
-        self.steps = {"pick": FakeStep("pick"), "requirements": FakeStep("requirements"), "build": FakeStep("build-board")}
+        self.steps = {"pick": FakeStep("pick"), "requirements": FakeStep("requirements"), "build-board": FakeStep("build-board")}
 
     def seen(self):
         """The first 12 hex digits of the project's fingerprint now, as the page carries them."""
@@ -118,7 +118,7 @@ class RunRequestTest(unittest.TestCase):
         return json.loads(out.getvalue()), code
 
     def ran(self):
-        return {kind: step.ran for kind, step in self.steps.items() if step.ran}
+        return {op: step.ran for op, step in self.steps.items() if step.ran}
 
     def refused(self, key, code, **asked):
         """Ask for `key`, run, and check that nothing ran and the answer refused with `code`; the envelope."""
@@ -150,11 +150,11 @@ class EachKindRunsItsStepTest(RunRequestTest):
     def test_the_build_runs_the_build_of_the_project_s_requirements_kept_in_the_project(self):
         self.ask("build")
         envelope, code = self.run_request()
-        self.assertEqual((code, self.ran()), (0, {"build": [{"requirements": str(self.project / "requirements.json"), "keep": self.project,
+        self.assertEqual((code, self.ran()), (0, {"build-board": [{"requirements": str(self.project / "requirements.json"), "keep": self.project,
                                                              "sim_dir": None, "firmware": None}]}))
 
     def test_a_step_with_problems_answers_its_first_problem_and_exits_1(self):
-        self.steps["build"] = FakeStep("build-board", OperationResult({}, [Finding("problems", "board", "a_code", "the board has no pins", "fix it")]))
+        self.steps["build-board"] = FakeStep("build-board", OperationResult({}, [Finding("problems", "board", "a_code", "the board has no pins", "fix it")]))
         self.ask("build")
         envelope, code = self.run_request()
         self.assertEqual((code, envelope["status"], [item["code"] for item in envelope["problems"]]), (1, "problems", ["a_code"]))
@@ -162,7 +162,7 @@ class EachKindRunsItsStepTest(RunRequestTest):
                          {"ran": True, "status": "problems", "mark": "✗", "line": "the board has no pins"})
 
     def test_a_step_that_could_not_run_answers_its_reason_and_exits_2(self):
-        self.steps["build"] = FakeStep("build-board", OperationResult({}, [Finding("could-not-run", None, "a_code", "tsci is not installed", "install it")]))
+        self.steps["build-board"] = FakeStep("build-board", OperationResult({}, [Finding("could-not-run", None, "a_code", "tsci is not installed", "install it")]))
         self.ask("build")
         envelope, code = self.run_request()
         self.assertEqual((code, envelope["data"]["ran"], envelope["data"]["status"], envelope["data"]["line"]),
@@ -170,7 +170,7 @@ class EachKindRunsItsStepTest(RunRequestTest):
 
     def test_a_build_that_stopped_only_at_the_simulation_for_no_wokwi_part_answers_built_with_a_note(self):
         """P1008: the board, the sheet and the pin map were written; only Wokwi has no model of the board."""
-        self.steps["build"] = FakeStep("build-board", OperationResult({}, [NO_MODEL]))
+        self.steps["build-board"] = FakeStep("build-board", OperationResult({}, [NO_MODEL]))
         self.ask("build")
         envelope, code = self.run_request()
         self.assertEqual((code, envelope["status"], [item["code"] for item in envelope["unchecked"]]), (2, "could-not-run", ["board_not_in_wokwi"]))
@@ -186,7 +186,7 @@ class EachKindRunsItsStepTest(RunRequestTest):
         for findings in ([Finding("could-not-run", "build", "a_code", "tsci is not installed", "install it"), NO_MODEL],
                          [Finding("could-not-run", None, "crash", "the build crashed", "report it")]):
             with self.subTest(codes=[finding.code for finding in findings]):
-                self.steps["build"] = FakeStep("build-board", OperationResult({}, findings))
+                self.steps["build-board"] = FakeStep("build-board", OperationResult({}, findings))
                 self.ask("build")
                 envelope, code = self.run_request()
                 self.assertEqual((code, envelope["data"]["status"], envelope["data"]["note"]), (2, "could-not-run", None))
@@ -204,7 +204,7 @@ class EachKindRunsItsStepTest(RunRequestTest):
                                      "ran label of build: could not run"),
                                     (OperationResult({}, lines=["", "built"]), 0, "ran label of build: ok")):
             with self.subTest(first=first):
-                self.steps["build"] = FakeStep("build-board", result)
+                self.steps["build-board"] = FakeStep("build-board", result)
                 self.ask("build")
                 with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
                     exit_code = run_cli(HelpText("flow.py", tool="flow"), RunRequest(readers=self.readers, operations=self.steps),
@@ -212,7 +212,7 @@ class EachKindRunsItsStepTest(RunRequestTest):
                 self.assertEqual((exit_code, out.getvalue().splitlines()[0]), (code, first))
 
     def test_the_answer_holds_no_path_of_the_project_or_the_home_folder(self):
-        self.steps["build"] = FakeStep("build-board", OperationResult({"at": str(self.project)}, lines=["wrote %s and %s" % (self.project, Path.home())]))
+        self.steps["build-board"] = FakeStep("build-board", OperationResult({"at": str(self.project)}, lines=["wrote %s and %s" % (self.project, Path.home())]))
         self.ask("build")
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
             run_cli(HelpText("flow.py", tool="flow"), RunRequest(readers=self.readers, operations=self.steps),
@@ -224,7 +224,7 @@ class EachKindRunsItsStepTest(RunRequestTest):
 
     def test_the_fingerprint_of_the_answer_is_the_one_after_the_run(self):
         record = self.project / ".spark" / "build.json"
-        self.steps["build"] = FakeStep("build-board", then=lambda: record.write_text("{}"))
+        self.steps["build-board"] = FakeStep("build-board", then=lambda: record.write_text("{}"))
         self.ask("build")
         before = self.fingerprint()
         envelope, _ = self.run_request()
@@ -266,13 +266,13 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
 
     def test_a_second_build_from_the_same_page_is_stale_once_the_first_ran(self):
         record = self.project / ".spark" / "build.json"
-        self.steps["build"] = FakeStep("build-board", then=lambda: record.write_text("{}"))
+        self.steps["build-board"] = FakeStep("build-board", then=lambda: record.write_text("{}"))
         seen = self.seen()
         self.ask("build", seen=seen)
         self.assertEqual(self.run_request()[1], 0)
         self.ask("build", seen=seen)
         envelope, code = self.run_request()
-        self.assertEqual((code, [item["code"] for item in envelope["unchecked"]], len(self.steps["build"].ran)), (2, ["request_stale"], 1))
+        self.assertEqual((code, [item["code"] for item in envelope["unchecked"]], len(self.steps["build-board"].ran)), (2, ["request_stale"], 1))
 
     def test_a_double_click_on_a_pick_is_stale_though_the_pick_is_no_offer_any_more(self):
         """After the pick, the need's pick is the current one, so spark no longer offers it (P976); the second click is stale."""
@@ -379,6 +379,36 @@ class TheRequestFileIsGoneTest(RunRequestTest):
                 self.assertFalse((self.project / ".spark" / "page-request.json").exists())
 
 
+class OnlyAStepThePageRunsRunsTest(RunRequestTest):
+    """P1030: RunRequest runs the step of spark's own offer, by its op, parsed by that Operation's own arguments."""
+
+    def offer_with(self, step):
+        """The fake phase's offers, with the build's step replaced by `step`."""
+        class Reader(FakeReader):
+            def answer(self, project):
+                phase = super().answer(project)
+                return phase._replace(offers=[offer._replace(step=step) if offer.key == "build" else offer for offer in phase.offers])
+        self.readers = [Reader(OFFERED)]
+
+    def test_an_offer_whose_step_names_an_op_the_page_never_runs_runs_nothing(self):
+        for op in ("look", "needs-drop", "deploy"):
+            with self.subTest(op=op):
+                self.offer_with(NextStep(op, ["--project", str(self.project)], "a step the page never runs"))
+                self.refused("build", "request_not_offered")
+
+    def test_a_step_whose_argv_does_not_parse_is_refused_and_nothing_runs(self):
+        self.offer_with(offer_steps.build_step(self.project)._replace(argv=["--no-such-flag"]))
+        envelope = self.refused("build", "request_not_offered")
+        self.assertEqual(envelope["data"]["key"], "build")
+
+    def test_the_step_runs_by_its_op_with_its_own_argv(self):
+        self.offer_with(offer_steps.build_step(self.project)._replace(argv=[str(self.project / "requirements.json")]))
+        self.ask("build")
+        envelope, code = self.run_request()
+        self.assertEqual((code, self.ran()), (0, {"build-board": [{"requirements": str(self.project / "requirements.json"), "keep": None,
+                                                                   "sim_dir": None, "firmware": None}]}))
+
+
 class TheVerbTest(unittest.TestCase):
     def test_flow_py_run_request_reads_the_real_offers_and_refuses_a_step_that_is_not_offered(self):
         """button-light is written by hand: no needs, so the parts list is not offered, and a request for it runs nothing."""
@@ -431,7 +461,7 @@ class TheVerbTest(unittest.TestCase):
                 (project / ".spark" / "page-request.json").write_text(json.dumps({"id": ID, "key": "build", "seen": seen}))
                 build = FakeStep("build-board")
                 with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
-                    code = run_cli(HelpText("flow.py", tool="flow"), RunRequest(operations={"build": build}),
+                    code = run_cli(HelpText("flow.py", tool="flow"), RunRequest(operations={"build-board": build}),
                                    ["--project", str(project), "--json"], outside_builder=build_bare_outside_world, outside=FakeOutsideWorld())
             self.assertEqual((code, json.loads(out.getvalue())["data"]["ran"]), (0, True))
             self.assertEqual(build.ran, [{"requirements": str(project / "requirements.json"), "keep": project, "sim_dir": None, "firmware": None}])

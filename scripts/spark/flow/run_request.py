@@ -11,16 +11,17 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.build.build_board import BuildBoard
-from spark.core.cli import run_operation
+from spark.core.cli import run_operation, values_of
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, WRITES, Operation
+from spark.core.outcomes import BadArgumentError
 from spark.core.outcomes import COULD_NOT_RUN, OK
 from spark.core.result import Finding, OperationResult
-from spark.design.pick_parts import NO_PASSED_OVER, PickParts
+from spark.design.pick_parts import PickParts
 from spark.design.write_requirements import WriteRequirements
 from spark.flow import flow_codes, request_codes
 from spark.flow.fingerprint import SHORT, fingerprint_of
 from spark.flow.guide import NO_MODEL_CODES, stops_only_for_no_model
-from spark.flow.phase_readers import MARKS, REQUIREMENTS_FILE
+from spark.flow.phase_readers import MARKS
 from spark.flow.show_flow import privacy_for, read_flow
 
 # --- MVP ---
@@ -38,30 +39,8 @@ PageRequest = namedtuple("PageRequest", "id key seen")
 RAN_LINE = "ran %s: %s"
 
 
-def pick_values(project, key):
-    """The values of the pick `key` (`pick:<need>:<id or entry>`) names: that one pick, no reasons, no dry run."""
-    _, need, pick = key.split(":", 2)
-    return {"project_and_picks": [str(project), "%s=%s" % (need, pick)], "passed_over": NO_PASSED_OVER, "dry_run": False}
-
-
-def requirements_values(project, key):
-    """The values of the parts list: the project's, no dry run and no replies, so nothing spark wrote is removed."""
-    return {"project": str(project), "dry_run": False, "replies": None}
-
-
-def build_values(project, key):
-    """The values of the build: the project's requirements.json, kept in the project, its simulation project in sim/."""
-    return {"requirements": str(Path(project) / REQUIREMENTS_FILE),
-            "keep": project,
-            "sim_dir": None, "firmware": None}
-
-
-#: Value: the Operation a kind of offer runs and the function `(project, key) -> values` that gives its values.
-KindRun = namedtuple("KindRun", "operation values")
-#: The kinds the page may ask for, each with its run (P829): a pick, the parts list and the build.
-KIND_RUNS = {flow_codes.PICK: KindRun(PickParts, pick_values),
-             flow_codes.WRITE_REQUIREMENTS: KindRun(WriteRequirements, requirements_values),
-             flow_codes.BUILD_BOARD: KindRun(BuildBoard, build_values)}
+#: The Operations the page may run, by op: today's three (P829). Piece 4's catalogue of ops replaces this table (P793).
+STEP_OPERATIONS = {operation.name: operation for operation in (PickParts, WriteRequirements, BuildBoard)}
 
 
 def request_file_of(project):
@@ -107,8 +86,9 @@ def kind_of(key):
 
 def refusal_of(request, offered, fingerprint):
     """The code that refuses `request`, or None when it may run: it cannot be read, its kind is asked in the chat, its `seen`
-    is not `fingerprint` now, or its key is not among the keys spark `offered` now or its kind is none the page runs. The
-    page comes before the offers, so a second click on a pick, which is no offer once it ran, is stale."""
+    is not `fingerprint` now, or its key is not among the keys spark `offered` now, its kind is none the page runs or its
+    step's op is none of STEP_OPERATIONS. The page comes before the offers, so a second click on a pick, which is no offer
+    once it ran, is stale."""
     key = key_of(request)
     if id_of(request) is None or key is None or not (isinstance(request.seen, str) and SEEN_PATTERN.fullmatch(request.seen)):
         return request_codes.REQUEST_MALFORMED
@@ -116,7 +96,7 @@ def refusal_of(request, offered, fingerprint):
         return request_codes.REQUEST_IN_CHAT
     if request.seen != fingerprint[:SHORT]:
         return request_codes.REQUEST_STALE
-    if key not in offered or kind_of(key) not in KIND_RUNS:
+    if key not in offered or kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS:
         return request_codes.REQUEST_NOT_OFFERED
     return None
 
@@ -141,13 +121,22 @@ def answer_of(kind, result):
     return status, None
 
 
+def refused_answer(request, offer, fingerprint, refused):
+    """The answer of a request refused with `refused`: nothing ran. It names the key and the label only of an offer spark
+    holds now, so a request's own text, any length, never reaches the answer."""
+    data = {"for": id_of(request), "key": offer.key if offer else None, "label": offer.label if offer else None, "ran": False,
+            "status": COULD_NOT_RUN, "mark": MARKS[COULD_NOT_RUN][1], "line": refused.meaning, "note": None, "fingerprint": fingerprint}
+    return OperationResult(data, [Finding.of(COULD_NOT_RUN, None, refused, refused.meaning)], lines=[refused.meaning])
+
+
 class RunRequest(Operation):
     """
     Operation: run the step the page asked for. It reads the request and deletes it (`read_request`), reads the flow, and
     refuses with one could-not-run Finding of `request_codes` (`refusal_of`), or runs the kind's Operation through
-    `run_operation` with the values of spark's offer (`KIND_RUNS`). Its data says for which request, what ran and how it
-    ended, and the fingerprint after the run. A step's Findings and diagnostics are its own. `readers` and `operations`
-    ({kind: Operation}) are what a test swaps (None: the real ones).
+    `run_operation` with the values of spark's offer: its step, parsed by the Operation of the step's op (`values_of`). A
+    step whose argv does not parse is refused too. Its data says for which request, what ran and how it ended, and the
+    fingerprint after the run. A step's Findings and diagnostics are its own. `readers` and `operations` ({op: Operation})
+    are what a test swaps (None: the real ones).
     """
 
     name = "run-request"
@@ -167,18 +156,17 @@ class RunRequest(Operation):
         fingerprint = fingerprint_of(project, phases)
         offers = {offer.key: offer for phase in phases for offer in phase.offers}
         refused = refusal_of(request, offers, fingerprint)
-        # the key and the label only of an offer spark holds now: a request's own text, any length, never reaches the answer
         offer = offers.get(key_of(request))
         if refused:
-            data = {"for": id_of(request), "key": offer.key if offer else None, "label": offer.label if offer else None, "ran": False,
-                    "status": COULD_NOT_RUN, "mark": MARKS[COULD_NOT_RUN][1], "line": refused.meaning, "note": None,
-                    "fingerprint": fingerprint}
-            return OperationResult(data, [Finding.of(COULD_NOT_RUN, None, refused, refused.meaning)], lines=[refused.meaning])
-        kind = kind_of(offer.key)
-        step = self.operations.get(kind) or KIND_RUNS[kind].operation()
-        result = run_operation(step, KIND_RUNS[kind].values(project, offer.key), outside=outside)
+            return refused_answer(request, offer, fingerprint, refused)
+        step = offer.step
+        try:
+            values = values_of(STEP_OPERATIONS[step.op](), step.argv)[0]  # the real arguments, so a test's fake gets the real parse
+        except BadArgumentError:
+            return refused_answer(request, offer, fingerprint, request_codes.REQUEST_NOT_OFFERED)
+        result = run_operation(self.operations.get(step.op) or STEP_OPERATIONS[step.op](), values, outside=outside)
         after = fingerprint_of(project, read_flow(project, self.readers)[0])
-        status, note = answer_of(kind, result)
+        status, note = answer_of(kind_of(offer.key), result)
         line = RAN_LINE % (offer.label, MARKS[status][0] or OK) if note else line_of(offer.label, result)
         data = {"for": request.id, "key": offer.key, "label": offer.label, "ran": True, "status": status, "mark": MARKS[status][1],
                 "line": line, "note": note, "fingerprint": after}

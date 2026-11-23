@@ -3,8 +3,8 @@
   "file": "scripts/spark/flow/run_request.py",
   "name": "a key spark does not offer now runs (P829)",
   "tier": "critical",
-  "find": "if key not in offered or kind_of(key) not in KIND_RUNS:",
-  "replace": "if kind_of(key) not in KIND_RUNS:"
+  "find": "if key not in offered or kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS:",
+  "replace": "if key in offered and (kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS):"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
@@ -65,8 +65,8 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "a second click on a pick is not offered, not stale (P829 review)",
-  "find": "    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n    if key not in offered or kind_of(key) not in KIND_RUNS:\n        return request_codes.REQUEST_NOT_OFFERED\n",
-  "replace": "    if key not in offered or kind_of(key) not in KIND_RUNS:\n        return request_codes.REQUEST_NOT_OFFERED\n    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n"
+  "find": "    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n    if key not in offered or kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS:\n        return request_codes.REQUEST_NOT_OFFERED\n",
+  "replace": "    if key not in offered or kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS:\n        return request_codes.REQUEST_NOT_OFFERED\n    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
@@ -75,21 +75,21 @@
   "replace": "\"line\": line_of(offer.key, result)"
  },
  {
-  "file": "scripts/spark/flow/run_request.py",
+  "file": "scripts/spark/flow/offer_steps.py",
   "name": "the build from the page keeps nothing in the project (P829)",
-  "find": "\"keep\": project,",
-  "replace": "\"keep\": None,"
+  "find": "[str(whole(project) / REQUIREMENTS_FILE), \"--keep\", str(whole(project))]",
+  "replace": "[str(whole(project) / REQUIREMENTS_FILE)]"
  },
  {
-  "file": "scripts/spark/flow/run_request.py",
+  "file": "scripts/spark/flow/offer_steps.py",
   "name": "a pick from the page is a dry run (P829)",
-  "find": "\"passed_over\": NO_PASSED_OVER, \"dry_run\": False}",
-  "replace": "\"passed_over\": NO_PASSED_OVER, \"dry_run\": True}"
+  "find": "[\"--pick\", str(whole(project)), \"%s=%s\" % (need, pick_id)]",
+  "replace": "[\"--pick\", str(whole(project)), \"%s=%s\" % (need, pick_id), \"--dry-run\"]"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "a kind the page never runs is run (P829)",
-  "find": "if key not in offered or kind_of(key) not in KIND_RUNS:",
+  "find": "if key not in offered or kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS:",
   "replace": "if key not in offered:"
  }
 ]

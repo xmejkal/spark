@@ -1354,6 +1354,29 @@ class TheOfferStepTest(FlowTest):
         steps = self.steps_of(project.name)
         self.assertEqual(steps["build"].argv[2], str(Path.cwd() / project.name))  # the folder as the process sees it, whole
 
+    def test_each_step_parses_with_its_own_operation_to_the_values_the_page_ran_before(self):
+        from spark.core.cli import values_of
+        from spark.flow.run_request import STEP_OPERATIONS
+        import parts
+        project = with_needs(a_built_project(), SOIL)
+        whole, steps = project.absolute(), self.steps_of(project)
+        operations = dict(STEP_OPERATIONS, **{"needs-drop": parts.DropNeedFlag})
+        self.assertEqual({key: values_of(operations[step.op](), step.argv) for key, step in steps.items() if key in
+                          ("pick:soil:x-many", "build", "needs-drop:soil")},
+                         {"pick:soil:x-many": ({"project_and_picks": [str(whole), "soil=x-many"], "passed_over": NO_PASSED_OVER, "dry_run": False}, False),
+                          "build": ({"requirements": str(whole / "requirements.json"), "keep": whole, "sim_dir": None, "firmware": None}, False),
+                          "needs-drop:soil": ({"project_and_need": [str(whole), "soil"], "dry_run": False}, False)})
+        self.assertIs(values_of(PickParts(), steps["pick:soil:x-many"].argv)[0]["passed_over"], NO_PASSED_OVER)
+        self.assertEqual({step.op: step.effects for step in steps.values()},
+                         {op: tuple(operation.effects) for op, operation in operations.items() if op in ("pick", "build-board", "needs-drop")})
+
+    def test_the_parts_list_step_parses_with_its_own_operation(self):
+        from spark.core.cli import values_of
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD)
+        step = self.steps_of(project)["requirements"]
+        self.assertEqual((step.op, step.effects, values_of(WriteRequirements(), step.argv)),
+                         ("requirements", tuple(WriteRequirements.effects), ({"project": str(project.absolute()), "dry_run": False, "replies": None}, False)))
+
     def test_the_offers_in_data_keep_their_four_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))
         self.assertEqual({tuple(offer) for phase in said["data"]["phases"] for offer in phase["offers"]},

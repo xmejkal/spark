@@ -126,6 +126,14 @@ def parser_for(text, operation):
     return parser
 
 
+def values_of(operation, argv, text=None):
+    """(the values a CLI passes to `operation.run` for `argv`, and whether it asked for --json): the core's one parse, for
+    the CLI and for a step spark runs itself (P1030). `text` is the CLI's HelpText (None: the Operation's name). An Argument
+    left out keeps its own default object, and no payload is read. A bad argv raises BadArgumentError."""
+    values = vars(parser_for(text or HelpText(operation.name), operation).parse_args(list(argv)))
+    return values, values.pop(JSON_DEST, False)
+
+
 def load_payloads(operation, values, stdin):
     """
     The parsed `values` with each payload token replaced by the JSON it names (P726 PR 3): for an Argument with `payload`,
@@ -185,7 +193,7 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     parser, renderer, tool = parser_for(text, operation), operation.json_renderer, text.tool or operation.name
     argv = sys.argv[1:] if argv is None else list(argv)
     try:
-        values = vars(parser.parse_args(argv))
+        values, as_json = values_of(operation, argv, text)
     except outcomes.BadArgumentError as bad:
         refused = OperationResult(findings=[Finding.of(outcomes.COULD_NOT_RUN, None, codes.BAD_ARGUMENT, str(bad), text.bad_argument_fix or codes.BAD_ARGUMENT.fix % text.prog)])
         line = renderer.render_bad_argument(refused, tool, operation.name) if JSON_FLAG in argv else None
@@ -193,7 +201,6 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
             parser.exit_with_usage(guard_lines(str(bad) + (" — " + text.bad_argument_fix if text.bad_argument_fix else "")))
         print(line)
         return outcomes.EXIT_COULD_NOT_RUN
-    as_json = values.pop(JSON_DEST, False)
     privacy, reporter = _privacy_and_reporter(operation, values, as_json)
     try:
         values = load_payloads(operation, values, sys.stdin)
