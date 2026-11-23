@@ -120,15 +120,16 @@ class Privacy:
         return self.paths.sub(text)
 
     def mask_result(self, result):
-        """The OperationResult as a frontend and the trace may see it: `data`, `findings`, `next`, `lines`, `diagnostics`
-        and `notes` masked, the raw places only of their tokens."""
+        """The OperationResult as a frontend and the trace may see it: `data`, `findings`, `next`, `lines`, `diagnostics`,
+        `notes` and the `headline` masked, the raw places only of their tokens."""
         if self.paths.pattern is None:
             return result
         kept = [text for found in result.findings if found.code in self.pasted.codes for text in (found.sentence, found.fix) if text]
         findings = [self._masked_finding(found, kept, found.code in self.pasted.codes) for found in result.findings]
         steps = [step._replace(argv=self.masked(step.argv, raw=True), env=self.masked(step.env, raw=True), why=self.masked(step.why, kept))
                  for step in result.next]
-        return result._replace(data=self.masked(result.data, kept), findings=findings, next=steps,
+        return result._replace(headline=self._masked_headline(result.headline, kept),
+                               data=self.masked(result.data, kept), findings=findings, next=steps,
                                lines=self.masked(result.lines, kept), diagnostics=self.masked(result.diagnostics, kept),
                                notes=self.masked(result.notes, kept))
 
@@ -141,6 +142,12 @@ class Privacy:
         if event.text is None:
             return event
         return event._replace(text=self.secrets.sub(event.text) if event.raw else self.paths.sub(event.text))
+
+    def _masked_headline(self, headline, kept):
+        """The text view's Headline (P1032) masked as the lines are, its sentence and its notes; None stays None."""
+        if headline is None:
+            return None
+        return headline._replace(sentence=self.masked(headline.sentence, kept), text_notes=self.masked(headline.text_notes, kept))
 
     def _masked_finding(self, found, kept, raw):
         return found._replace(subject=self.masked(found.subject, kept, raw), sentence=self.masked(found.sentence, kept, raw),

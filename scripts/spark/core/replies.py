@@ -13,6 +13,7 @@ import difflib
 import getpass
 import json
 import math
+import os
 import sys
 from collections import namedtuple
 from pathlib import Path
@@ -23,6 +24,7 @@ from spark.core.codes import (BAD_ARGUMENT_REPLIES_UNREADABLE, BAD_ARGUMENT_REPL
 from spark.core.errors import SparkError
 from spark.core.result import Finding
 from spark.core.text_guards import guard_lines
+from spark.core.text_style import text_style_of
 
 # --- MVP ---
 #: The kinds of a Question: a yes or no, a value in `answer_form` and `unit`, or one of `choices`.
@@ -153,6 +155,10 @@ class Terminal:
     @property
     def live(self):
         return self.stdin.isatty() and self.stdout.isatty()
+
+    def text_style(self):
+        """The TextStyle of this terminal's stdout in this process's environment (P1032)."""
+        return text_style_of(self.stdout, os.environ)
 
     def say(self, text):
         self.stdout.write(guard_lines(self.mask(text)) + "\n")

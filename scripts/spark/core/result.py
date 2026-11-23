@@ -61,15 +61,36 @@ def output_schema():
             "properties": {"envelope": {"const": 1}, "status": {"enum": [outcomes.OK, outcomes.PROBLEMS, outcomes.COULD_NOT_RUN]}}}
 
 
-class OperationResult(namedtuple("OperationResult", "data findings next lines diagnostics notes truncated assumptions",
-                                 defaults=(None, (), (), (), (), None, None, None))):
+#: The four marks of a headline (P1032): what the text view's status line shows first, a symbol or its word.
+MARK_OK, MARK_STOP, MARK_WARNING, MARK_UNCHECKED = "ok", "stop", "warning", "unchecked"
+#: The mark each status gives when nothing finer is known: a problem is a stop, and could-not-run is not checked.
+MARK_OF_STATUS = {outcomes.OK: MARK_OK, outcomes.PROBLEMS: MARK_STOP, outcomes.COULD_NOT_RUN: MARK_UNCHECKED}
+
+
+class Headline(namedtuple("Headline", "sentence mark text_notes", defaults=((),))):
+    """
+    Value: the text view's status line of a result (P1032): its `sentence`, its `mark` (one of the four MARK_ words) and
+    `text_notes`, the text view's own notes, which the JSON never holds.
+    """
+
+    __slots__ = ()
+
+    @staticmethod
+    def of_status(status):
+        """The default mark of `status`: ok, stop for problems, unchecked for could-not-run."""
+        return MARK_OF_STATUS[status]
+
+
+class OperationResult(namedtuple("OperationResult", "data findings next lines diagnostics notes truncated assumptions headline",
+                                 defaults=(None, (), (), (), (), None, None, None, None))):
     """
     Result: what `Operation.run` returns. `data` is the answer as JSON values, `findings` the Findings, `next` the
     NextSteps, `lines` the report a person reads (stdout in a CLI), `diagnostics` the lines for the person beside the
     answer, such as the board doctor's or a crash's traceback (stderr in a CLI, a log in a server), and `notes` what
     was said and never failing, or None. `truncated` is `outcomes.page`'s note when a listing was cut, else None, and
     `assumptions` what the answer rests on that nobody has checked, or None (P707: both keys of `outcomes.envelope`, for
-    `audit` and the Operations P726 moves onto the core).
+    `audit` and the Operations P726 moves onto the core). `headline` is the text view's status line, a Headline (P1032):
+    None prints the lines as they are. `to_envelope` never reads it, so the JSON keeps its bytes.
     """
 
     def status(self):
