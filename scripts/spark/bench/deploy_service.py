@@ -23,6 +23,7 @@ from spark.records import deploy_record_store
 from spark.bench import download_mode
 from spark.bench import image_evidence
 from spark.bench import ready_probe
+from spark.firmware import sleep_calls
 from spark.firmware.project_image import DeployError
 from spark.core.events import Event
 
@@ -56,10 +57,11 @@ class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 fact
 
 def every_read(reads):
     """The last of `reads`, each (the facts, a board_facts.FactsLine, a ReadyResult), with the facts file written and the board's
-    files read when any read did (P1022): a read again after P245 can fail where the first read worked."""
+    files read when any read did (P1022): a read again after P245 can fail where the first read worked. `lost_board` is the
+    last read's."""
     facts, line, ready = reads[-1]
     return (facts, board_facts.FactsLine(line, any(read[1].written for read in reads), line.heard),
-            ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads)))
+            ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads), lost_board=ready.lost_board))
 
 
 def write_board_log(project, log):
@@ -82,6 +84,7 @@ class DeployService:
         self.project, self.platform, self.evidence = project, platform, evidence
         self.run, self.clock, self.report = outside.run, outside.clock, outside.report
         self.records = records or deploy_record_store.DeployRecordStore()
+        self.sleeps = sleep_calls.deep_sleep_calls(project)  # P1022 slice 3: read once, from firmware/
 
     def plan(self, port=None):
         """
@@ -228,7 +231,7 @@ class DeployService:
             return (self._facts_of(image, report, expected, moment), board_facts.FactsLine("facts file: not written: the board's port is gone", False),
                     ready_probe.ReadyResult(ready_probe.UNKNOWN, "", ""))
         facts, facts_line = self._put_facts(image, report, connection, expected, moment)
-        return facts, facts_line, self.platform.make_ready_probe(connection).check(expected)
+        return facts, facts_line, self.platform.make_ready_probe(connection).check(expected, sleeps=self.sleeps.places)
 
     def _facts_of(self, image, report, expected, moment):
         """The facts that spark puts on the board (D22)."""

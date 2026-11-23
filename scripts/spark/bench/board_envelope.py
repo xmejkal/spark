@@ -279,7 +279,7 @@ def deploy_data(reached):
         "commands": [list(command) for command in plan.commands] if plan else None,
         "look": report.to_dict() if report else None,
         "yes": {"kind": reached["yes_kind"], "who": reached["who"]} if consent else None,
-        "ready": {"verdict": ready.verdict, "sentence": ready.sentence} if ready else None,
+        "ready": {"verdict": ready.verdict, "sentence": ready.sentence, "lost_board": ready.lost_board} if ready else None,
         "facts_line": result.facts_line if result else None,
         "image_sha256": result.image_sha256 if result else None,
         "board_log": str(result.log_path) if result else None,

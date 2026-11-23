@@ -983,6 +983,47 @@ class TheReadyUnknownWordsTest(GateCase):
         self.assertNotIn("What spark knows:", said)
 
 
+#: What mpremote printed when `import main` lost the FireBeetle 2 C6 at the 13:58 deploy (p934-display2, 2026-11-23).
+SLEEPER_STDOUT = "ready, cpu 80 MHz, deep sleep, power-up\nredraw quote 13:58\ndeep sleep for 67 s\n"
+SLEEPER_STDERR = "Traceback (most recent call last):\nOSError: [Errno 6] Device not configured\n"
+SLEEPER_MAIN = "import machine\nprint('ready, cpu 80 MHz, deep sleep, power-up')\nmachine.deepsleep(67000)\n"
+
+
+@needs_littlefs
+class TheSleepingFirmwareTest(GateCase):
+    """P1022 slice 3: a firmware that deep-sleeps after `ready` (D1), and the words of ready unknown for it."""
+
+    board_log, fix_line = TheReadyUnknownWordsTest.board_log, TheReadyUnknownWordsTest.fix_line
+
+    def flash_sleeper(self, main=SLEEPER_MAIN, probe=None, *argv):
+        (self.project / "firmware" / "main.py").write_text(main)
+        self.prints = subprocess.CalledProcessError(1, ["mpremote"], SLEEPER_STDOUT, SLEEPER_STDERR)
+        self.run_the_scenario()
+        return self.deploy("--token", self.token(), *argv, consent=FakeConsent(True), probe=probe)
+
+    def test_the_13_58_sighting_is_ready_seen_and_reads_no_console(self):
+        probe = FakeConsoleProbe("")
+        code, said, _ = self.flash_sleeper(SLEEPER_MAIN, probe)
+        self.assertEqual(code, 0, said)
+        self.assertIn("ready seen: the firmware printed 'ready' and the board's 1 files match the image, then mpremote lost "
+                      "the board (OSError: [Errno 6] Device not configured). firmware/main.py calls deepsleep", said)
+        self.assertEqual(probe.asked, [])
+        self.assertIn("OSError: [Errno 6] Device not configured", self.board_log())
+
+    def test_the_13_58_sighting_says_lost_board_in_json(self):
+        code, said, _ = self.flash_sleeper(SLEEPER_MAIN, FakeConsoleProbe(""), "--json")
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(said)["data"]["ready"],
+                         {"verdict": "ready seen", "sentence": "the firmware printed 'ready' and the board's 1 files match the "
+                          "image, then mpremote lost the board (OSError: [Errno 6] Device not configured). firmware/main.py "
+                          "calls deepsleep", "lost_board": True})
+
+    def test_the_same_without_a_deepsleep_call_is_ready_unknown(self):
+        code, said, _ = self.flash_sleeper("print('ready')\n", FakeConsoleProbe(unread="[Errno 2] No such file"))
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: the firmware printed 'ready', then mpremote lost the board", said)
+
+
 class TheFactsAfterTheFlashTest(GateCase):
     """P215 step 3 (D22, D23, D44): the board holds what spark put there, and the store remembers the board by its MAC."""
 
