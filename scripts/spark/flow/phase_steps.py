@@ -8,20 +8,17 @@ read once more here (`guide.image_fact`): `guide_of` keeps its own inside, and e
 NextStep holds plain values only, so an event can carry it later.
 """
 
-from pathlib import Path
-
 from spark.bench.board_envelope import look_step
 from spark.bench.image_evidence import evidence_for
 from spark.core.operation import READS, RUNS, WRITES
 from spark.core.result import NextStep
 from spark.flow import flow_codes
-from spark.flow.guide import image_fact
+from spark.flow.guide import image_fact, scenario_names
 from spark.flow.offer_steps import build_step, whole
 from spark.records import store
 
 # --- MVP ---
-#: Where the conversation writes a project's scenarios, and the scenario a step names while there is none.
-SCENARIOS, SCENARIO_GLOB = Path("sim") / "scenarios", "*.scenario.yaml"
+#: The scenario a step names while there is none (`guide.scenario_names` finds the scenarios).
 SCENARIO_PLACEHOLDER = "sim/scenarios/<name>.scenario.yaml"
 
 
@@ -29,7 +26,7 @@ def scenario_steps(project):
     """One scenario run per scenario of the project, by name, or one with SCENARIO_PLACEHOLDER while there is none. The
     person runs it in their own terminal, and it spends Wokwi CI minutes, so it needs the person."""
     folder = whole(project)
-    found = sorted(path.relative_to(folder).as_posix() for path in (folder / SCENARIOS).glob(SCENARIO_GLOB))
+    found = scenario_names(folder)
     why = flow_codes.SCENARIO_WHY if found else flow_codes.SCENARIO_FIRST_WHY
     return [NextStep("run_scenario", [name, "--project", str(folder)], why, (READS, RUNS, WRITES), False, True,
                      store.read_given_env()) for name in found or [SCENARIO_PLACEHOLDER]]

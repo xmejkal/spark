@@ -277,11 +277,15 @@ IMAGE_OLDER_NOW = "Your firmware changed after the image. Ask Claude to make the
 #: Who acts on each fact, and its sentence: Claude reads a failed log and makes the image; the terminal runs a scenario.
 IMAGE_NOW = {RUN_FAILED: ([BY_CLAUDE], RUN_FAILED_NOW), IMAGE_OLDER: ([BY_CLAUDE], IMAGE_OLDER_NOW),
              IMAGE_UNTESTED: ([BY_TERMINAL], SIMULATE_NOW)}
+#: SIMULATE_NOW while no scenario is written (P1034): Claude writes one first, and the terminal still runs it.
+SCENARIO_FIRST_NOW = ("No scenario is written yet, so ask Claude to write one first. Then ask for the scenario command, and "
+                      "run it in your terminal. It uses Wokwi CI minutes.")
 #: A simulate not started with no sim/wokwi.toml (P1034): the build writes it, so the sentence asks for the build.
 NO_SIM_FILES = "no-sim-files"
 SIM_FILES_NOW = "No simulation files yet (sim/wokwi.toml). Ask Claude to build the board again. It takes seconds and costs nothing."
 #: Why a scenario run is the simulate's step (P1034): the person runs it, and it spends Wokwi CI minutes.
-SCENARIO_WHY = "The person runs it in their own terminal. It spends Wokwi CI minutes, so ask before each run."
+SCENARIO_WHY = ("The person runs it in their own terminal, with a Wokwi CI token in WOKWI_CLI_TOKEN. It spends Wokwi CI "
+                "minutes, so ask before each run.")
 #: Why the step names the placeholder scenario: no scenario is written yet, so Claude writes it first.
 SCENARIO_FIRST_WHY = "Claude first writes the scenario from the person's words, in place of <name>. " + SCENARIO_WHY
 #: Why the look is the deploy's step (P1034): the person wires and plugs the board in first.

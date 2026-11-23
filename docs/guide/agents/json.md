@@ -397,7 +397,7 @@ the sentence if you must tell which. The check is the word `--json` in the argum
   When mpremote could not enter the raw REPL for the facts copy (seen right after the reset), the copy and its read-back make one
   retry after 2 s, for each read of the board, and `facts_line` ends with `(written on a retry after: ...)`, or names the first try
   when the retry failed too ([P420](https://github.com/xmejkal/spark/issues/550)). No other copy failure is retried.
-- `needs_person: true` on a `next` step means the person must use their hands first. It is the `watch` step that follows a start the board never made
+- `needs_person: true` on a `next` step means the person acts first: with their hands, or by running the step in their own terminal. It is the `watch` step that follows a start the board never made
   (`download_mode_stayed`; `port_gone` gives no `watch` step) ([P433](https://github.com/xmejkal/spark/issues/575)), and the `live` and `watch` steps after `ready_unknown`, where `data.person_action` is null and the `fix` says what to do (P1022). A pick step of `flow.py show` has it too: a pick is the person's choice, so ask first (P1030). So do its `run_scenario` and `look` steps at the simulate and the deploy: the person runs a scenario in their own terminal, and plugs the board in before a look (P1034). The key is on a step only when it is true.
   The board doctor's `fix` and `data.person_action` are text for the person, not steps, so they carry no flag.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,

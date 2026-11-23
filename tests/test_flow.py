@@ -715,7 +715,8 @@ class TheGuideTest(FlowTest):
 
     def test_an_image_no_run_tested_makes_the_simulate_now(self):
         project = a_firmware(a_built_project())
-        (project / "sim").mkdir()
+        (project / "sim" / "scenarios").mkdir(parents=True)
+        (project / "sim" / "scenarios" / "a.scenario.yaml").write_text("name: a\n")  # P1034: with none, Claude writes one first
         (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
         (project / "sim" / "image.bin").write_bytes(b"an image")
         guide = show(project)[0]["data"]["guide"]
@@ -1496,7 +1497,16 @@ class TheNextOnlyStepTest(FlowTest):
 
     def test_with_no_scenario_the_step_names_the_placeholder_and_claude_writes_it_first(self):
         project = a_simulate_now(a_built_project())
-        self.assertEqual(show(project)[0]["next"], [self.scenario_step(project, SCENARIO_PLACEHOLDER, SCENARIO_FIRST_WHY)])
+        said = show(project)[0]
+        self.assertEqual(said["next"], [self.scenario_step(project, SCENARIO_PLACEHOLDER, SCENARIO_FIRST_WHY)])
+        self.assertEqual((said["data"]["guide"]["now"]["by"], said["data"]["guide"]["now"]["says"]), (["your terminal"],
+                         "No scenario is written yet, so ask Claude to write one first. Then ask for the scenario command, and "
+                         "run it in your terminal. It uses Wokwi CI minutes."))
+
+    def test_with_a_scenario_the_now_sentence_asks_for_the_scenario_command(self):
+        said = show(a_simulate_now(a_built_project(), "a.scenario.yaml"))[0]
+        self.assertEqual(said["data"]["guide"]["now"]["says"],
+                         "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes.")
 
     def test_a_simulate_with_its_toml_and_no_image_names_the_scenario_run_which_makes_the_image(self):
         project = a_firmware(a_built_project())
