@@ -62,7 +62,8 @@ The build phase reads .spark/build.json, which check_spine.py --keep writes when
 requirements.json changed after that build. The needs phase is stale when the goal or the must lines of the brief changed
 after parts.py --needs-set wrote the needs (.spark/needs-basis.json). Spark changes neither. A need dropped after the
 must lines were last gone through makes the idea phase out of date, and its next step is init_project.py --answers, on the
-person's yes.
+person's yes. After an ok run that writes to a project, the command ends its next with the same step (P1035):
+parts.py --pick and check_spine.py --keep so far.
 
 With --json it prints one envelope: data.phases, data.stands_at, data.fingerprint and data.guide
 (docs/guide/agents/flow.md).
