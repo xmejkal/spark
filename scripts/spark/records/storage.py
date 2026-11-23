@@ -111,6 +111,8 @@ class FileStorage(Storage):
         try:
             if not path.exists() and not path.is_symlink():
                 return None
+            if not path.is_file():  # a folder, a broken link or a FIFO: a read of a FIFO would wait for a writer
+                raise store.StoreError("%s cannot be read (not a regular file): fix it by hand", path, code=records_codes.FILE_REFUSED)
             return path.read_text(encoding="utf-8")
         except OSError as cannot:  # a folder in its place, or a file spark may not read
             raise store.StoreError("%s cannot be read (%s): fix it by hand", path, cannot, code=records_codes.FILE_REFUSED)

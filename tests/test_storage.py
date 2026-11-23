@@ -21,9 +21,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.records import store  # noqa: E402
 from spark.records import storage  # noqa: E402
-#: Read by name, not as `module.NAME`: each is an input or a second source, never an expectation (test_self_confirmation).
-from spark.records.storage import NAMESPACES, OUTSIDE, UNREADABLE  # noqa: E402
-from spark.records.store import PLACES, PLAIN  # noqa: E402
 from spark.records.deploy_record_store import DeployRecordStore, outside_deploy  # noqa: E402
 from spark.records.registered_project_store import RegisteredProjectStore  # noqa: E402
 
@@ -180,7 +177,7 @@ class StorageContract:
                 with self.assertRaises(store.StoreError) as refused:
                     made.get("boards", "a0-b1")
                 self.assertEqual(refused.exception.code, "record_file_broken")
-        self.plant(made, "boards", "c3", UNREADABLE)
+        self.plant(made, "boards", "c3", storage.UNREADABLE)
         with self.assertRaises(store.StoreError) as refused:
             made.get("boards", "c3")
         self.assertEqual(refused.exception.code, "file_refused")
@@ -265,7 +262,7 @@ class FileStorageContractTest(StorageContract, ScratchStoreCase):
     def plant(self, made, namespace, key, data):
         path = store.find_file(namespace, key)
         path.parent.mkdir(parents=True, exist_ok=True)
-        if data is UNREADABLE:
+        if data is storage.UNREADABLE:
             path.mkdir()
         elif isinstance(data, bytes):
             path.write_bytes(data)
@@ -310,6 +307,26 @@ class FileStorageTest(ScratchStoreCase):
         with self.assertRaises(store.StoreError) as refused:
             storage.FileStorage().get("boards", "a0-b1")
         self.assertEqual(refused.exception.code, "file_refused")
+
+    def test_what_is_no_regular_file_is_refused_and_never_read(self):
+        """Review of #1527: a FIFO in a record's place is refused before a read, which would wait for a writer."""
+        path = store.find_file("boards", "a0-b1")
+        path.parent.mkdir(parents=True)
+        os.mkfifo(path)
+        said = []
+
+        def get():
+            try:
+                storage.FileStorage().get("boards", "a0-b1")
+            except store.StoreError as refused:
+                said.append(refused.code)
+        runner = threading.Thread(target=get, daemon=True)
+        runner.start()
+        runner.join(5)
+        if runner.is_alive():  # let a waiting read go, so the thread ends
+            os.close(os.open(path, os.O_WRONLY | os.O_NONBLOCK))
+            runner.join(5)
+        self.assertEqual(said, ["file_refused"])
 
     def test_a_record_spark_may_not_read_is_refused(self):
         storage.FileStorage().put("boards", "a0-b1", {})
@@ -374,16 +391,16 @@ class TheNamespacesTest(unittest.TestCase):
     """Every place of the store is classified: served by the seam or outside it (tests 21 and 22)."""
 
     def test_every_place_is_served_or_outside_and_never_both(self):
-        self.assertEqual(NAMESPACES, ("registered-projects", "boards"))
-        self.assertEqual(set(NAMESPACES) & set(OUTSIDE), set())
-        self.assertEqual(sorted(NAMESPACES + OUTSIDE), sorted(PLACES))
-        self.assertEqual([name for name in NAMESPACES if not PLAIN.fullmatch(name)], [])
+        self.assertEqual(storage.NAMESPACES, ("registered-projects", "boards"))
+        self.assertEqual(set(storage.NAMESPACES) & set(storage.OUTSIDE), set())
+        self.assertEqual(sorted(storage.NAMESPACES + storage.OUTSIDE), sorted(store.PLACES))
+        self.assertEqual([name for name in storage.NAMESPACES if not store.PLAIN.fullmatch(name)], [])
 
     def test_the_class_of_a_namespace_is_the_store_s(self):
         self.assertEqual([storage.privacy_of(name) for name in ("registered-projects", "boards")], ["private", "private"])
         with self.assertRaises(ValueError):
             storage.privacy_of("grants")
-        self.assertEqual([name in OUTSIDE for name in ("grants", "launcher")], [True, True])
+        self.assertEqual([name in storage.OUTSIDE for name in ("grants", "launcher")], [True, True])
 
 
 if __name__ == "__main__":

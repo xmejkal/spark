@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import sys
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -247,3 +248,19 @@ class TheStoreOverAStorageTest(LastDeployCase):
         folder.chmod(0)
         self.addCleanup(folder.chmod, 0o700)
         self.assertEqual(self.answers(deploy_record_store.DeployRecordStore()), ("not-checked", "not-checked", "not_a_board_record"))
+
+    def test_a_fifo_in_the_place_of_a_record_is_refused_and_never_waited_on(self):
+        """Review of #1527: main refused what is not a regular file before it read. A read of a FIFO waits for a writer."""
+        folder = store.place("boards")
+        folder.mkdir(parents=True)
+        fifo = folder / (store.slug(MAC) + ".json")
+        os.mkfifo(fifo)
+        said = []
+        runner = threading.Thread(target=lambda: said.append(self.answers(deploy_record_store.DeployRecordStore())), daemon=True)
+        runner.start()
+        runner.join(5)
+        if runner.is_alive():  # let a waiting read go, so the thread ends: a writer that opens and closes gives it the end
+            os.close(os.open(fifo, os.O_WRONLY | os.O_NONBLOCK))
+            runner.join(5)
+        self.assertEqual(said, [("not-checked", "not-checked", "not_a_board_record")])
+

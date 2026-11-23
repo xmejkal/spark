@@ -55,5 +55,8 @@
   "replace": ":"},
  {"file": "scripts/spark/records/storage.py", "name": "an-unsearchable-folder-crashes",
   "find": "        try:\n            if not path.exists() and not path.is_symlink():\n                return None\n",
-  "replace": "        if not path.exists() and not path.is_symlink():\n            return None\n        try:\n"}
+  "replace": "        if not path.exists() and not path.is_symlink():\n            return None\n        try:\n"},
+ {"file": "scripts/spark/records/storage.py", "name": "a-fifo-is-read-and-waited-on",
+  "find": "            if not path.is_file():  # a folder, a broken link or a FIFO: a read of a FIFO would wait for a writer",
+  "replace": "            if False:  # a folder, a broken link or a FIFO: a read of a FIFO would wait for a writer"}
 ]
