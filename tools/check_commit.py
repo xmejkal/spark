@@ -12,9 +12,10 @@ audit, C3). A number a message carries must be measured on what the message desc
 archives the commit into a scratch directory and measures there. The push hook runs it.
 
 The story run (P714) runs the tests that tools/story_tests.py chooses from what the branch changed since origin/main, with
-the `@slow` tests skipped. A doubt about a file makes it the quick run (P425): every test but the slow ones, with a line
-that says why. Neither is the suite count. The full run, `--full`, runs every test, at a sweep: the end of a wave or an
-epic, or when the PO asks.
+the `@slow` tests skipped. It reads the texts of tests/ and scripts/ in the archive, so it follows the imports (P1017).
+A doubt about a file makes it the quick run (P425): every test but the slow ones, with a line that says why. Neither
+is the suite count. The full run, `--full`, runs every test, at a sweep: the end of a wave or an epic, or when the PO
+asks.
 
 The suite runs with a temp folder of its own, and whatever it leaves there fails the push (P172): one run
 left 2,291 entries, 26 MB, and nothing counted them. The archive itself goes when the gate ends.
@@ -139,11 +140,20 @@ def changed_files(root, commit, base="origin/main"):
     return listed.stdout.splitlines() if listed.returncode == 0 else None
 
 
+def story_texts(tree):
+    """
+    What `story_tests.select` reads of the archived `tree`: the texts of tests/test_*.py and tests/golden_*.py by stem,
+    and of scripts/ by the path from the tree's root (P1017).
+    """
+    def texts(folder, pattern, key=lambda found: found.stem):
+        return {key(found): found.read_text(errors="replace") for found in (tree / folder).glob(pattern)}
+    return (texts("tests", "test_*.py"), texts("tests", "golden_*.py"),
+            texts("scripts", "**/*.py", key=lambda found: found.relative_to(tree).as_posix()))
+
+
 def story_tests_in(tree, changed):
-    """The StoryTests for the files `changed`, from the test files of the archived `tree`."""
-    def texts(pattern):
-        return {found.stem: found.read_text(errors="replace") for found in (tree / "tests").glob(pattern)}
-    return story_tests.select(changed, texts("test_*.py"), texts("golden_*.py"))
+    """The StoryTests for the files `changed`, from the tests and scripts of the archived `tree`."""
+    return story_tests.select(changed, *story_texts(tree))
 
 
 def size_line(root, commit, base="origin/main"):

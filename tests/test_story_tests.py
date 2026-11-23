@@ -17,6 +17,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
+import check_commit  # noqa: E402
 import story_tests  # noqa: E402
 
 TESTS = {"test_widget": "import widget\n", "test_other": "import other  # and its __init__\n", "test_uses_widget_tests": "import test_widget\n",
@@ -139,6 +140,95 @@ class WhatTheChoiceRemovesTest(unittest.TestCase):
     def test_every_always_run_test_exists_in_this_repository(self):
         texts = {found.stem: "" for found in (ROOT / "tests").glob("test_*.py")}
         self.assertEqual(len(story_tests.select(["README.md"], texts, {}).modules), 19)
+
+
+#: P1017: a small tree of scripts/. top imports mid, mid imports low, and the package file of b imports its neighbour.
+SCRIPTS = {"scripts/spark/a/top.py": "from spark.a import mid\n", "scripts/spark/a/mid.py": "import spark.a.low\n",
+           "scripts/spark/a/low.py": "import json\n", "scripts/spark/a/other.py": "from spark.a.low import THING\n",
+           "scripts/spark/b/__init__.py": "from spark.b import neighbour\n", "scripts/spark/b/page.py": "",
+           "scripts/spark/b/neighbour.py": "", "scripts/flow.py": "from spark.flow import page\n",
+           "scripts/spark/flow/page.py": "import spark.a.top\n",
+           "scripts/spark/flow/__init__.py": "from spark.flow import page\n"}
+
+
+def walked(*changed, tests):
+    return story_tests.select(list(changed), tests, {}, SCRIPTS)
+
+
+class TheImportsThroughScriptsChooseTheTestsTest(unittest.TestCase):
+    """
+    P1017: a test runs the modules its imports reach through scripts/, so a change to one of them runs it. The walk only
+    adds tests to a story run that the name rule started. It never ends a doubt, so no change runs fewer tests than on main.
+    """
+
+    def assert_runs(self, story, *modules):
+        self.assertEqual((story.state, story.why), ("chosen", None))
+        self.assertEqual(set(story.modules) - {"test_docs"}, set(modules))
+
+    def test_a_test_runs_for_a_module_that_its_imports_reach_through_two_modules(self):
+        tests = {"test_x": "import spark.a.top\n", "test_names_it": "low\n", "test_apart": "import json\n"}
+        self.assert_runs(walked("scripts/spark/a/low.py", tests=tests), "test_x", "test_names_it")
+
+    def test_a_file_that_only_the_walk_finds_stays_the_quick_run_as_on_main(self):
+        # the PR review of #1493: a walk that ended the doubt dropped tests that reach a file through a child process
+        story = walked("scripts/spark/a/low.py", tests={"test_x": "import spark.a.top\n"})
+        self.assertEqual((story.state, story.modules), ("quick_run", ()))
+        self.assertIn("no test names scripts/spark/a/low.py", story.why)
+
+    def test_from_a_package_import_names_each_module(self):
+        tests = {"test_x": "from spark.a import other, top\n", "test_y": "from spark.a import other\n", "test_names_it": "mid\n"}
+        self.assert_runs(walked("scripts/spark/a/mid.py", tests=tests), "test_x", "test_names_it")
+
+    def test_each_form_of_import_reaches_its_file(self):
+        forms = {"test_plain": "import flow\n", "test_dotted": "import spark.flow.page\n", "test_from_spark": "from spark import flow\n",
+                 "test_from_module": "from spark.flow.page import Page\n", "test_late": "def late():\n    import spark.flow.page\n",
+                 "test_stdlib": "import json\n"}
+        story = walked("scripts/spark/a/top.py", tests=dict(forms, test_names_it="top\n"))
+        self.assertEqual(set(story.modules), {"test_plain", "test_dotted", "test_from_spark", "test_from_module", "test_late",
+                                              "test_names_it"})
+
+    def test_a_package_file_on_the_way_is_run_and_so_reaches_its_imports(self):
+        tests = {"test_x": "from spark.b.page import draw\n", "test_golden_b": "", "test_names_it": "neighbour\n"}
+        self.assert_runs(walked("scripts/spark/b/neighbour.py", tests=tests), "test_x", "test_golden_b", "test_names_it")
+
+    def test_a_text_that_does_not_parse_imports_nothing(self):
+        tests = {"test_broken": "def broken(:\nimport spark.a.top\n", "test_names_it": "low\n"}
+        self.assert_runs(walked("scripts/spark/a/low.py", tests=tests), "test_names_it")
+
+    def test_a_whole_tree_test_that_the_walk_finds_does_not_remove_the_doubt(self):
+        story = walked("scripts/spark/a/low.py", tests={"test_docs": "import spark.a.top\n"})
+        self.assertEqual(story.state, "quick_run")
+
+    def test_an_area_whose_modules_reach_the_change_runs_its_net(self):
+        tests = {"test_golden_design": "", "test_golden_a": "", "test_names_it": "low\n"}
+        self.assert_runs(walked("scripts/spark/a/low.py", tests=tests), "test_names_it", "test_golden_a", "test_golden_design")
+
+    def test_without_the_scripts_texts_the_choice_is_today_s(self):
+        tests = {"test_x": "import spark.a.top\n", "test_names_it": "low\n", "test_golden_a": "", "test_golden_design": ""}
+        story = story_tests.select(["scripts/spark/a/low.py"], tests, {})
+        self.assert_runs(story, "test_names_it", "test_golden_a")
+
+
+class TheBreadboardChangeOfP953Test(unittest.TestCase):
+    """
+    P1017's value: #1374 (P953 PR 3) changed these seven modules, merged green, and main went red in test_flow_page and
+    test_golden_design, which import none of them by name. A renamed module fails this loudly: update the list.
+    """
+
+    CHANGED = ("bench_changes", "drawing", "kept_moves", "rails", "spacing", "wire_routing", "wiring_steps")
+
+    @classmethod
+    def setUpClass(cls):
+        cls.texts = check_commit.story_texts(ROOT)
+
+    def test_each_breadboard_module_of_p953_pr3_runs_the_flow_page_and_the_design_net(self):
+        for module in self.CHANGED:
+            name = "scripts/spark/breadboard/%s.py" % module
+            with self.subTest(name):
+                self.assertTrue((ROOT / name).is_file(), "renamed? update CHANGED")
+                story = story_tests.select([name], *self.texts)
+                self.assertEqual(story.state, "chosen", story.why)
+                self.assertTrue({"test_flow_page", "test_golden_design"} <= set(story.modules), story.modules)
 
 
 if __name__ == "__main__":

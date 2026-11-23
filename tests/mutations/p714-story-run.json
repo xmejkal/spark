@@ -38,14 +38,14 @@
  {
   "file": "tools/story_tests.py",
   "name": "a module of an area does not run the area s net",
-  "find": "        named.add(GOLDEN_NET % GOLDEN_NET_ELSEWHERE.get(area.group(1), area.group(1)))\n",
-  "replace": "        pass\n"
+  "find": " | {GOLDEN_NET % GOLDEN_NET_ELSEWHERE.get(area, area) for area in areas}",
+  "replace": ""
  },
  {
   "file": "tools/story_tests.py",
   "name": "a build module runs a net that does not exist",
-  "find": "GOLDEN_NET_ELSEWHERE.get(area.group(1), area.group(1))",
-  "replace": "area.group(1)"
+  "find": "GOLDEN_NET_ELSEWHERE.get(area, area)",
+  "replace": "area"
  },
  {
   "file": "tools/story_tests.py",
