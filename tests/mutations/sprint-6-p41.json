@@ -8,8 +8,8 @@
  {
   "file": "scripts/boards.py",
   "name": "the board id the smart bin reads gains a prefix",
-  "find": "            print(active_id(project))",
-  "replace": "            print(\"board: \" + active_id(project))"
+  "find": "            print(project_board_id(project))",
+  "replace": "            print(\"board: \" + project_board_id(project))"
  },
  {
   "file": "scripts/boards.py",
