@@ -21,13 +21,17 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.records import store  # noqa: E402
 from spark.records import storage  # noqa: E402
+#: Read by name, not as `module.NAME`: each is an input or a second source, never an expectation (test_self_confirmation).
+from spark.records.storage import NAMESPACES, OUTSIDE, UNREADABLE  # noqa: E402
+from spark.records.store import PLACES, PLAIN  # noqa: E402
 from spark.records.deploy_record_store import DeployRecordStore, outside_deploy  # noqa: E402
 from spark.records.registered_project_store import RegisteredProjectStore  # noqa: E402
 
-MAC = "a0:b1:c2:d3:e4:f5"
-#: The sha256 of each file that the calls of `write_the_files` write, measured on main e521db8f (P1036's plan, section 5).
+MAC = "aa:bb:cc:dd:ee:f5"
+#: The sha256 of each file that the calls of `write_the_files` write, measured on main e521db8f with its modules
+#: (P1036's plan, section 5, measured again with this made-up MAC, which test_no_board_address allows).
 REGISTERED_SHA256 = "a1701105e93dd4f3c8fb788c95062e4a88f9c7a57fd83e0466115208081174e8"
-BOARD_SHA256 = "b90fca2f8e4473839ffb330d0550e634e4d041ffcc0563f1c58d97b521ecc029"
+BOARD_SHA256 = "6b353a51e87fab16e462e2dde9725e8e2723d188e9567d81aef382197d04d2bb"
 
 
 class ScratchStoreCase(unittest.TestCase):
@@ -57,7 +61,7 @@ class TheBytesStayTest(ScratchStoreCase):
 
     def test_the_files_keep_main_s_bytes_and_modes(self):
         write_the_files(RegisteredProjectStore(), DeployRecordStore())
-        registered, board = store.place("registered-projects"), store.place("boards") / "a0-b1-c2-d3-e4-f5.json"
+        registered, board = store.place("registered-projects"), store.place("boards") / "aa-bb-cc-dd-ee-f5.json"
         self.assertEqual([hashlib.sha256(each.read_bytes()).hexdigest() for each in (registered, board)],
                          [REGISTERED_SHA256, BOARD_SHA256])
         self.assertEqual([each.stat().st_mode & 0o777 for each in (registered, board, board.parent, self.home)],
@@ -87,9 +91,9 @@ class TheMemoryBytesTest(ScratchStoreCase):
         write_the_files(RegisteredProjectStore(), DeployRecordStore())
         memory = storage.MemoryStorage()
         write_the_files(RegisteredProjectStore(), DeployRecordStore(memory))
-        board = store.place("boards") / "a0-b1-c2-d3-e4-f5.json"
+        board = store.place("boards") / "aa-bb-cc-dd-ee-f5.json"
         self.assertEqual(sha256_of(board), BOARD_SHA256)
-        self.assertEqual(memory.get("boards", "a0-b1-c2-d3-e4-f5"), json.loads(board.read_bytes()))
+        self.assertEqual(memory.get("boards", "aa-bb-cc-dd-ee-f5"), json.loads(board.read_bytes()))
 
 
 class TheRecordPathIsNeverOpenedTest(unittest.TestCase):
@@ -176,7 +180,7 @@ class StorageContract:
                 with self.assertRaises(store.StoreError) as refused:
                     made.get("boards", "a0-b1")
                 self.assertEqual(refused.exception.code, "record_file_broken")
-        self.plant(made, "boards", "c3", storage.UNREADABLE)
+        self.plant(made, "boards", "c3", UNREADABLE)
         with self.assertRaises(store.StoreError) as refused:
             made.get("boards", "c3")
         self.assertEqual(refused.exception.code, "file_refused")
@@ -261,7 +265,7 @@ class FileStorageContractTest(StorageContract, ScratchStoreCase):
     def plant(self, made, namespace, key, data):
         path = store.find_file(namespace, key)
         path.parent.mkdir(parents=True, exist_ok=True)
-        if data is storage.UNREADABLE:
+        if data is UNREADABLE:
             path.mkdir()
         elif isinstance(data, bytes):
             path.write_bytes(data)
@@ -370,15 +374,16 @@ class TheNamespacesTest(unittest.TestCase):
     """Every place of the store is classified: served by the seam or outside it (tests 21 and 22)."""
 
     def test_every_place_is_served_or_outside_and_never_both(self):
-        self.assertEqual(set(storage.NAMESPACES) & set(storage.OUTSIDE), set())
-        self.assertEqual(sorted(storage.NAMESPACES + storage.OUTSIDE), sorted(store.PLACES))
-        self.assertEqual([name for name in storage.NAMESPACES if not store.PLAIN.fullmatch(name)], [])
+        self.assertEqual(NAMESPACES, ("registered-projects", "boards"))
+        self.assertEqual(set(NAMESPACES) & set(OUTSIDE), set())
+        self.assertEqual(sorted(NAMESPACES + OUTSIDE), sorted(PLACES))
+        self.assertEqual([name for name in NAMESPACES if not PLAIN.fullmatch(name)], [])
 
     def test_the_class_of_a_namespace_is_the_store_s(self):
-        self.assertEqual([storage.privacy_of(name) for name in storage.NAMESPACES], [storage.PRIVATE, storage.PRIVATE])
+        self.assertEqual([storage.privacy_of(name) for name in ("registered-projects", "boards")], ["private", "private"])
         with self.assertRaises(ValueError):
             storage.privacy_of("grants")
-        self.assertEqual([name in storage.OUTSIDE for name in ("grants", "launcher")], [True, True])
+        self.assertEqual([name in OUTSIDE for name in ("grants", "launcher")], [True, True])
 
 
 if __name__ == "__main__":
