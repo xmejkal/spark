@@ -16,6 +16,13 @@ item has a `code` (scripts/spark/bench/board_codes.py). A bad flag with --json p
 code bad_argument, exit 2); without --json it prints the usage and the error on stderr and exits 2. Exit codes do not
 change; the envelope's status is the exit code's.
 
+Without --json the text starts with the status line: a mark, `look:`, the status and one sentence. The marks are ✓ ok,
+✗ stop, ! warning and ? not checked (OK, STOP, WARN and ? where the terminal cannot show them). The facts under Board and
+Image come next, then the problems and the items not checked, each with its fix, then a note. The last part is Next,
+with the command alone on the last line. Two things give colour: a terminal and a rich package that imports. NO_COLOR
+removes it, FORCE_COLOR adds it, and TERM=dumb removes it. Claude's shell, a pipe and a file get the same lines with no
+codes. A stop and the board question print as before. --json and stderr do not change (P1032).
+
 Exit codes: 0 every field matches, there is a token and the last deploy was checked, 1 a field differs or the look found a stop, 2 it could not run
 or could not check something (a field unknown, no token, a last deploy it could not check), or it asks the person's yes before it reads
 (needs_reply), the person said no (answered_no), or another board is on USB (other_board), and the sentence says why. A crash is 2 too: with --json

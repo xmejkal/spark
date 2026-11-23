@@ -145,7 +145,8 @@ class Terminal:
     """Adapter: the person's terminal, stdin and stdout, behind spark's interface. The streams are bound when it is built, so a
     stream redirected before that is the one used. `live` says whether both are a tty. `say` shows masked, guarded text. `ask` shows a
     prompt and reads one line, stripped. It gives None when the input closed: Ctrl-C, or Ctrl-D (the end of the input). The caller
-    keeps what it has. The one class that reads a tty (rule X2): `TerminalConsentStrategy` and `TerminalReplyStrategy` go through it.
+    keeps what it has. The one class that reads a tty (rule X2): `TerminalConsentStrategy` and `TerminalReplyStrategy` go through it, and
+    `text_style` gives the text view's TextStyle of its stdout (P1032).
     `mask` is the run's Privacy where the caller has one (the deploy), so a line shows no home path. Research gives none yet."""
 
     def __init__(self, stdin=None, stdout=None, mask=None):
