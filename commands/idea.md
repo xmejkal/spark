@@ -180,7 +180,7 @@ before the real run, each "would release: …": a hold of this project that no p
 pick lets go. For each candidate the person passed over, write their reason **in their words** to a JSON file
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
 `--passed-over <file>`: the reason goes to the history in your store, never to the project.
-After a pick that wrote, `next` ends with the step `flow.py show` names now (P1035), and the text with its `next:` line.
+After a pick that wrote, `next` ends with the step `flow.py show` names now (P1035), and the text with its `next:` line. A `page.html` the project has is written again on disk; `/spark:page` republishes it.
 Relay it. A step with `needs_person` waits for the person.
 
 A part pick whose record owes a fact the circuit needs — `footprint`, `pin_order`, `pin_order_proof` — cannot

@@ -51,7 +51,8 @@ class PickParts(AnswerOperation):
     beyond the drawer, the notes; a refusal writes nothing."""
 
     name = "pick"
-    details = "After a pick that wrote, next ends with the step flow.py show names now for the project (P1035)."
+    details = ("After a pick that wrote, next ends with the step flow.py show names now for the project, and a page.html "
+               "the project has is written again on disk, never published (P1035).")
     data_keys = ('project', 'picks', 'reserved', 'released', 'written')
     arguments = (Argument(("--pick",), "project_and_picks", str,
                           "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "

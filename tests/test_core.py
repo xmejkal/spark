@@ -18,7 +18,8 @@ from spark.records import deploy_record_store, tool_finder  # noqa: E402
 from fakes import FakeDeployRecordStore, FakeFollowUp, FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
 from spark.core.codes import Code  # noqa: E402
-from spark.core.cli import DEFAULT_RUN, FOLLOW_FAILED_MESSAGE, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
+from spark.core.cli import (DEFAULT_RUN, FOLLOW_FAILED_MESSAGE, REFRESH_FAILED_MESSAGE, HelpText, RunOptions, TextReport,  # noqa: E402
+                             refreshes, run_cli, run_operation)
 from spark.core.renderers import FlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
@@ -1082,6 +1083,26 @@ class ReadsOnly(Writing):
         return (READS,)
 
 
+class Crashing(Writing):
+    """Operation: a run that writes and crashes."""
+
+    def run(self, project, found=None, *, outside):
+        raise RuntimeError("it broke")
+
+
+class AskedOnce(Writing):
+    """Operation: a run that writes and counts how often its written project is asked for (P1035 PR 2)."""
+
+    def __init__(self, raises=None):
+        self.asked, self.raises = 0, raises
+
+    def written_project(self, values):
+        self.asked += 1
+        if self.raises:
+            raise self.raises("the project at /opt/someone")
+        return Path(values["project"])
+
+
 #: The step a FakeFollowUp adds, with a project path in its argv and its why.
 THEN = NextStep("then", ["--project", "/opt/someone/p"], "then this, for /opt/someone/p")
 
@@ -1163,6 +1184,55 @@ class TheFollowUpTest(unittest.TestCase):
         line = json.loads(FlatJsonLine.render(OperationResult({"next": [own], "kept": []}, next=[THEN]), "t", "o"))
         self.assertEqual((line["next"], list(line)[-1]), ([own] + said, "next"))
         self.assertEqual(FlatJsonLine.render(OperationResult([1, 2], next=[THEN]), "t", "o"), "[1, 2]")
+
+    def test_an_ok_run_that_writes_refreshes_after_its_steps_with_a_line_and_a_note(self):
+        # P1035 PR 2 (D16): the refresh comes after the steps and their lines, and its sentence is a line and a note
+        follow_up = FakeFollowUp([THEN], refreshed="wrote the page again")
+        result = self.followed(Writing(), follow_up)
+        self.assertEqual(list(result.lines), ["  done", "line of then", "  wrote the page again"])
+        self.assertEqual(list(result.notes), [{"subject": "the page", "sentence": "wrote the page again"}])
+        self.assertEqual((follow_up.refreshed_at, [step.op for step in result.next], list(result.diagnostics)),
+                         ([Path("p")], ["own", "then"], []))
+
+    def test_a_refresh_that_wrote_nothing_adds_nothing(self):
+        follow_up = FakeFollowUp([THEN])
+        result = self.followed(Writing(), follow_up)
+        self.assertEqual((list(result.lines), result.notes, follow_up.refreshed_at), (["  done", "line of then"], None, [Path("p")]))
+
+    def test_no_refresh_after_a_run_that_is_not_ok_does_not_write_names_no_project_or_crashed(self):
+        for operation, found in ((Writing(), "problems"), (Writing(), "unchecked"), (ReadsOnly(), None), (NoProject(), None),
+                                 (Crashing(), None)):
+            with self.subTest(operation=type(operation).__name__, found=found):
+                follow_up = FakeFollowUp([], refreshed="wrote the page again")
+                result = self.followed(operation, follow_up, found)
+                self.assertEqual((follow_up.refreshed_at, result.notes), ([], None))
+                self.assertNotIn("  wrote the page again", list(result.lines))
+
+    def test_the_refresh_s_condition_is_an_ok_run_that_did_not_crash(self):
+        # the P1038 design's round 2 (B11): story 0c of P793 widens this one function, and a crash stays out by name
+        crash = OperationResult(findings=[Finding.of(outcomes.COULD_NOT_RUN, None, codes.CRASH, "RuntimeError")])
+        self.assertEqual([refreshes(OperationResult()), refreshes(OperationResult(findings=[PROBLEM])), refreshes(crash)],
+                         [True, False, False])
+
+    def test_a_refresh_that_raises_adds_one_diagnostics_line_and_the_result_stands(self):
+        alone = self.followed(Writing(), FakeFollowUp([THEN]))
+        result = self.followed(Writing(), FakeFollowUp([THEN], refreshed="wrote the page again", refresh_raises=OSError))
+        self.assertEqual(result._replace(diagnostics=()), alone._replace(diagnostics=()))
+        self.assertEqual(list(result.diagnostics), [REFRESH_FAILED_MESSAGE % ("OSError", "the page")])
+        self.assertEqual(REFRESH_FAILED_MESSAGE % ("OSError", "page.html"), "refresh: OSError raised, page.html not written again, the result stands")
+
+    def test_the_written_project_is_asked_once_for_the_steps_and_the_refresh(self):
+        # PR 1's architecture lens: _followed asks once and shares the project
+        operation, follow_up = AskedOnce(), FakeFollowUp([THEN], refreshed="wrote the page again")
+        self.followed(operation, follow_up)
+        self.assertEqual((operation.asked, follow_up.asked, follow_up.refreshed_at), (1, [Path("p")], [Path("p")]))
+
+    def test_a_written_project_that_raises_adds_one_line_and_neither_steps_nor_a_refresh(self):
+        follow_up = FakeFollowUp([THEN], refreshed="wrote the page again")
+        result = self.followed(AskedOnce(raises=KeyError), follow_up)
+        self.assertEqual(([step.op for step in result.next], list(result.lines), follow_up.asked, follow_up.refreshed_at),
+                         (["own"], ["  done"], [], []))
+        self.assertEqual(list(result.diagnostics), [FOLLOW_FAILED_MESSAGE % "KeyError"])
 
     def test_run_cli_hands_the_cli_s_follow_up_to_the_run(self):
         import contextlib
