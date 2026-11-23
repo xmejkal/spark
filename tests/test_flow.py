@@ -1799,9 +1799,9 @@ class ThePageRefreshTest(FlowTest):
     def open_needs(self, *ids):
         return with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": one, "does": "sense", "what": "soil-moisture"} for one in ids])
 
-    def with_page(self, text="an old page"):
-        project = self.open_needs("soil", "wet")
-        (project / "page.html").write_text(text, encoding="utf-8")
+    def with_page(self, needs=("soil", "wet")):
+        project = self.open_needs(*needs)
+        (project / "page.html").write_text("an old page", encoding="utf-8")
         return project
 
     def test_a_pick_writes_the_page_again_and_says_so_in_its_text_and_its_note(self):
@@ -1879,7 +1879,7 @@ class ThePageRefreshTest(FlowTest):
         for name, make, kind in (("folder", Path.mkdir, stat.S_ISDIR), ("fifo", os.mkfifo, stat.S_ISFIFO),
                                  ("link", lambda page: page.symlink_to(person), stat.S_ISLNK)):
             with self.subTest(name):
-                project = self.open_needs("soil", "wet")
+                project = self.open_needs("soil")  # one open need: the flow names its pick
                 make(project / "page.html")
                 self.assert_one_line_and_the_result_stands(project, FlowFollowUp(), "PageNotRegularError")
                 self.assertTrue(kind((project / "page.html").lstat().st_mode))
@@ -1893,7 +1893,7 @@ class ThePageRefreshTest(FlowTest):
                                         ("half written", FlowFollowUp(renderer=FakePageRenderer("a page \ud800")), "UnicodeEncodeError"),
                                         ("read-only", FlowFollowUp(), "PermissionError")):
             with self.subTest(name):
-                project = self.with_page()
+                project = self.with_page(("soil",))  # one open need: the flow names its pick
                 if name == "read-only":
                     project.chmod(0o555)
                     self.addCleanup(project.chmod, 0o755)

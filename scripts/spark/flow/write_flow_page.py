@@ -57,11 +57,12 @@ KEPT_PICTURES = (KeptPicture(BREADBOARD_TITLE, Path(SvgBreadboardDiagram.FILE_NA
 
 
 class FlowPageStore:
-    """Adapter: writes the page into the project folder, and says the path it wrote."""
+    """Adapter: writes the page into the project folder, and says the path it wrote. It writes through the store's one
+    whole-file write (`.part`, then a rename, P1035 PR 2), so a write that fails halfway leaves the old page whole."""
 
     def write(self, project, file_name, text):
         path = Path(project) / file_name
-        path.write_text(text, encoding="utf-8")
+        store.write_file(path, text)
         return path
 
 
