@@ -63,6 +63,9 @@ The entry holds the name, made_by (the registered tool), deployed (spark's clock
 
 With --json it prints one envelope: data.entry, data.mac and data.device (docs/guide/agents/bench.md).
 
+If no board is on USB, or the named port is not, and firmware/ of --project calls deepsleep, the fix says that the
+board can be in deep sleep, as look.py's fix does (P1049).
+
 Exit codes: 0 recorded; 2 nothing was written: the name is not registered, no board or two boards are on USB, the
 port is not listed, the board's serial holds no MAC, mpremote or the store failed, or an argument is wrong. Never 1."""
 NOTES = {"show": SHOW_NOTES, "register": REGISTER_NOTES, "record": RECORD_NOTES}

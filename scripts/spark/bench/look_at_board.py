@@ -113,7 +113,8 @@ and one next step for your hands, as the last line. Its look at the console can 
 When no board is on USB and the project's firmware calls deepsleep (read from firmware/, not from the board), the stop
 line is `no board found.` and the last line, the fix, says that the board can be in deep sleep (P1022). It names the
 calls, and says what to try in order: download mode with BOOT, a wait for the wake, then the cable. A firmware file
-that does not parse is named."""
+that does not parse is named. With --port, the board doctor can find the named port not on USB. If firmware/ then
+calls deepsleep, the doctor's next line is the same fix, and it opens with the named port (P1049)."""
 
 
 class LookAtBoard(Operation):

@@ -390,7 +390,8 @@ the same text, and `next` holds the look, live and watch steps. The board log ke
 failed facts copy.
 
 A firmware that deep-sleeps (P1022 slice 3): when the deploy's look finds no board and firmware/ calls deepsleep, it
-says what look.py says. A `ready` line that the firmware printed before mpremote lost the board counts as ready seen
+says what look.py says. With --port, the board doctor can find the named port not on USB. If firmware/ then calls
+deepsleep, the doctor's next line is the same fix, and it opens with the named port (P1049). A `ready` line that the firmware printed before mpremote lost the board counts as ready seen
 when the board's files match and firmware/ calls deepsleep; --json says `data.ready.lost_board`. Without a call it is
 ready unknown, and a file that differs is not seen. The ready unknown fix names the deepsleep calls, and on an
 ESP32-C6 over USB-Serial/JTAG it says that a download mode entered with BOOT outlasts esptool's restart: press RESET.
