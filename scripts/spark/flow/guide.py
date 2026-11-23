@@ -12,6 +12,7 @@ from spark.build import build_codes
 from spark.build.build_record import BuildRecordStore
 from spark.build.stages import SIMULATION
 from spark.design import needs
+from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import flow_codes
 from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, set_aside
@@ -58,16 +59,19 @@ def no_model_phases(project, by_name):
 
 def image_fact(project):
     """The ImageFact of the image sim/wokwi.toml names: RUN_FAILED with the first failed log's name, IMAGE_OLDER,
-    IMAGE_UNTESTED or IMAGE_TESTED. NO_IMAGE_FACT when there is no image or a log cannot be read: the phase says why."""
+    IMAGE_UNTESTED or IMAGE_TESTED. NO_SIM_FILES while sim/wokwi.toml is no file (P1034). NO_IMAGE_FACT when there is no
+    image or a log cannot be read: the phase says why."""
     try:
-        image = ProjectImage(project)
+        image = ProjectImage(Path(project))
         failed = image.failed_runs()
         if failed:
             return ImageFact(flow_codes.RUN_FAILED, failed[0][0].name)
         if image.find_newer_files():
             return ImageFact(flow_codes.IMAGE_OLDER, None)
         return ImageFact(flow_codes.IMAGE_TESTED if image.find_passed_logs() else flow_codes.IMAGE_UNTESTED, None)
-    except (DeployError, OSError):
+    except DeployError as missing:
+        return ImageFact(flow_codes.NO_SIM_FILES, None) if missing.reason == firmware_codes.NO_SIM_TOML else NO_IMAGE_FACT
+    except OSError:
         return NO_IMAGE_FACT
 
 
@@ -104,9 +108,11 @@ def is_sheet_current(project, by_name):
 
 
 def who_and_sentence(now, open_needs, fact):
-    """(who acts, the sentence) of the phase to act on now: a simulate with no status by its ImageFact `fact`
-    (flow_codes.IMAGE_NOW), else the phase's own `by` and its sentence by (phase, status) in flow_codes.NOW_SENTENCES,
-    else the problems or could-not-run line."""
+    """(who acts, the sentence) of the phase to act on now: a simulate with no sim/wokwi.toml by Claude (P1034), a
+    simulate with no status by its ImageFact `fact` (flow_codes.IMAGE_NOW), else the phase's own `by` and its sentence by
+    (phase, status) in flow_codes.NOW_SENTENCES, else the problems or could-not-run line."""
+    if now.phase == flow_codes.SIMULATE and fact.fact == flow_codes.NO_SIM_FILES:
+        return [flow_codes.BY_CLAUDE], flow_codes.SIM_FILES_NOW
     if now.phase == flow_codes.SIMULATE and now.status is None:
         by, said = flow_codes.IMAGE_NOW[fact.fact]
         return by, said % fact.log if fact.fact == flow_codes.RUN_FAILED else said
@@ -179,7 +185,8 @@ def guide_of(project, phases, steps=count_steps):
     by_name, listed = {phase.phase: phase for phase in phases}, readable(lambda: needs.read(project), [])
     no_model = no_model_phases(project, by_name)
     simulate = by_name.get(flow_codes.SIMULATE)
-    fact = image_fact(project) if simulate and simulate.status is None and flow_codes.SIMULATE not in no_model else NO_IMAGE_FACT
+    fact = image_fact(project) if simulate and simulate.status in (None, flow_codes.NOT_STARTED) and flow_codes.SIMULATE not in no_model \
+        else NO_IMAGE_FACT
     all_aside = bool(listed) and not counted(listed)
     now = now_phase(phases, no_model, fact, all_aside)
     at = phases.index(now) if now else len(phases)
