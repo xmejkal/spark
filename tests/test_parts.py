@@ -496,9 +496,9 @@ class ABusPinComesAfterThePlainPinsTest(unittest.TestCase):
     Found by a cold rebuild of the bin and left open as backlog P3 until 2026-09-29.
 
     A bus signal still lands on its own named pin: that path runs first and ignores penalties.
-    This is only about PLAIN signals: among pins that waste the same abilities a bus pin comes last,
-    and a pin that wastes one more (wake, ADC1) costs more than a bus pin. The order is the design's
-    (P3); P780 made the docs say it.
+    This is only about PLAIN signals. Since P1010 (the PO, 2026-11-22) a wake pin comes before a bus pin and an ADC1
+    pin after it: plain pads, then SPI, then I2C, then the pads kept for an ADC1 reading or another job. Until then
+    P780's order held: a bus pin last only among pins that waste the same abilities (P3).
     """
 
     def setUp(self):
@@ -749,14 +749,15 @@ class CountingPadsFromAFootprintNameTest(unittest.TestCase):
 
 class TheWalksBoardTest(unittest.TestCase):
     """P780, the T-Display walk's row 27: with a button and an LED, the LED took GPIO21 (I2C) while GPIO13, 25 and 32
-    were free. That is the order the PO kept on 2026-11-13: IO21 wastes no wake or ADC ability, IO13, 25 and 32 waste
-    more, and the bus penalty only breaks ties among equals."""
+    were free. The PO kept that order on 2026-11-13 and reversed it on 2026-11-22 (P1010, "Plain pads before bus
+    pads"): the LED takes IO13, a wake pin on ADC2 that reads no voltage with the radio on, and the I2C pins stay
+    free."""
 
-    def test_the_led_takes_the_i2c_pin_and_leaves_the_wake_and_adc_pins_free(self):
+    def test_the_led_takes_a_wake_pin_and_leaves_the_i2c_pins_free(self):
         board = json.loads((ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json").read_text())
         placed, _ = pin_assigner.assign(board, [{"name": "BUTTON", "needs": []}, {"name": "STATUS_LED", "needs": []}])
-        self.assertEqual({a["signal"]: a["pin"] for a in placed}, {"BUTTON": "IO17", "STATUS_LED": "IO21"})
-        self.assertFalse({a["gpio"] for a in placed} & {13, 25, 32})
+        self.assertEqual({a["signal"]: a["pin"] for a in placed}, {"BUTTON": "IO17", "STATUS_LED": "IO13"})
+        self.assertFalse({a["gpio"] for a in placed} & {21, 22, 32})
 
     def test_with_an_i2c_part_a_plain_signal_takes_an_adc2_pin_and_leaves_the_adc1_pins_free(self):
         """P798: the walk's three parts. An ADC2 pin reads no voltage with the radio on, so it is spent before ADC1."""

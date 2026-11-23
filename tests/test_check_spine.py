@@ -1870,11 +1870,17 @@ class APourShortTsciReportsIsMeasuredTest(unittest.TestCase):
 @unittest.skipUnless(test_converter.node() and board_engine.find_toolchain(ROOT), "needs the board engine and Node")
 class TheWalksC6BoardBuildsForRealTest(unittest.TestCase):
     """P957 (#1365): the walk P934's requirements and its C6 board file (14-pin row first), with the e-paper's record,
-    built by the real board engine. tsci reports a pour short on the MOSI trace that its copper does not make."""
+    built by the real board engine. tsci reports a pour short on the MOSI trace that its copper does not make. Since
+    P1010 the assigner puts EPD_RST on D11 and EPD_BUSY on MISO, and that board has no false short; so this copy of the
+    requirements pins the walk's map (D3, D7, SDA, SCL), and the scenario stays the one this test is for."""
 
     def test_the_build_stage_is_ok_and_names_the_dropped_short(self):
         project = Path(tempfile.mkdtemp()) / "epaper-c6"
         shutil.copytree(ROOT / "tests" / "data" / "breadboard" / "epaper-c6", project)
+        requirements = json.loads((project / "requirements.json").read_text())
+        requirements["signals"] = [{"name": name, "pin": pin} for name, pin in (
+            ("EPD_CS", "D3"), ("EPD_DC", "D7"), ("EPD_RST", "SDA"), ("EPD_BUSY", "SCL"))]
+        (project / "requirements.json").write_text(json.dumps(requirements))
         (project / ".spark").mkdir()
         (project / "parts").mkdir()
         shutil.copy(ROOT / "tests" / "data" / "breadboard" / "epaper" / "parts" / "epaper-2in9-bwr-mh-et-live.json", project / "parts")

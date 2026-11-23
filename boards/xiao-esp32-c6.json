@@ -171,14 +171,14 @@
         19,
         21
       ],
-      "note": "MOSI, MISO, SCK, SS — D10, D9, D8, D3. The hardware SPI bus: among pins that waste the same abilities a plain signal takes it last, so a later SPI part usually finds it free. Backlog P3, P780."
+      "note": "MOSI, MISO, SCK, SS — D10, D9, D8, D3. The hardware SPI bus: a plain signal takes it after every pin that is not kept for an ADC1 reading or another job, so a later SPI part usually finds it free. Backlog P3, P780, P1010."
     },
     "i2c": {
       "gpio": [
         22,
         23
       ],
-      "note": "SDA, SCL — D4, D5. The hardware I2C bus; same reasoning as spi."
+      "note": "SDA, SCL — D4, D5. The hardware I2C bus. Same reasoning as spi, and a plain signal takes it after the SPI pins (P1010)."
     },
     "usb": {
       "gpio": [
