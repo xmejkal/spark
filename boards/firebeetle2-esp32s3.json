@@ -281,14 +281,14 @@
         17,
         10
       ],
-      "note": "MOSI, MISO, SCK and SS: the hardware SPI bus, silkscreened MO, MI, SCK and A4. A design with no SPI may use them: among pins that waste the same abilities a plain signal takes them last (a tie-breaker), because the assigner spent the whole bus on two LEDs and a button when nothing marked it, and a later SPI part then had nowhere to go. Recorded 2026-09-29 (backlog P3); the order said as it is, P780."
+      "note": "MOSI, MISO, SCK and SS: the hardware SPI bus, silkscreened MO, MI, SCK and A4. A design with no SPI may use them: a plain signal takes them after every pin that is not kept for an ADC1 reading or another job, and before the I2C pins, because the assigner spent the whole bus on two LEDs and a button when nothing marked it, and a later SPI part then had nowhere to go. Recorded 2026-09-29 (backlog P3); the order since P1010 (the PO, 2026-11-22)."
     },
     "i2c": {
       "gpio": [
         1,
         2
       ],
-      "note": "SDA and SCL: the hardware I2C bus. Same reasoning as spi. The smart bin never hit this only because its rangefinder claims both pins before anything else is placed."
+      "note": "SDA and SCL: the hardware I2C bus. Same reasoning as spi, and a plain signal takes them after the SPI pins. On this board they are also ADC1 pins, so they are kept and come after the other ADC1 pins (P1010). The smart bin never hit this only because its rangefinder claims both pins before anything else is placed."
     }
   },
   "//deep_sleep": "How this chip is woken. Unlike the C6, the S3 has real RTC IO and defines SOC_PM_SUPPORT_EXT0_WAKEUP, so esp32.wake_on_ext0 exists - it takes a single pin at either polarity. What the S3 does NOT have is SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN, which the C6 does: its ext1 applies one trigger level to every pin at once. So with two wake sources the shared-polarity constraint is back, for the opposite reason to the C6's.",
