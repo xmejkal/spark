@@ -133,6 +133,10 @@ CASES = [
          LIVE_GRANT),
     Case("deploy-ok-ready-seen.json", "deploy.py", ["--json", "--token", LOOK_TOKEN], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0,
          DEPLOY_GRANT, "deploy-ok-ready-seen.json.stderr", True),
+    # P478: the text view of a deploy that reached ready, and of a stop at the kept board's chip: the headings and the status line
+    Case("deploy-ok-ready-seen.txt", "deploy.py", ["--token", LOOK_TOKEN], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0,
+         DEPLOY_GRANT, None, True),
+    Case("deploy-problems-stop.txt", "deploy.py", ["--token", LOOK_TOKEN], "c6-flash-id-kept-mac.txt", "mpremote-devs-one.txt", 1),
     # P919: the board kept for the project, its deploys and its two grants; it runs only mpremote devs
     Case("bench-ok.json", "bench.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0, DEPLOYS + LIVE_GRANT + DEPLOY_GRANT),
     # P920: a registered project records a deploy on a board whose serial is its MAC; it runs only mpremote devs

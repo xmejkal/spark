@@ -1,0 +1,22 @@
+[1/5] plan
+  why: spark checks the image and finds its tools first, so a wrong image stops before the board is touched
+
+[2/5] look
+  why: spark reads the chip and flash size, so another chip or too little flash for the image is stopped
+  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
+  port   /dev/cu.usbmodem101
+  mac    dc:da:0c:xx:xx:xx
+  spark's last deploy here: none in its store record (it keeps its own deploys and those that a registered project recorded)
+  micropython  no banner in the image
+  chip   differs   esp32c6
+  flash  same      4 MB
+  this board is an esp32c6, the project is for an esp32s3: deploy.py will refuse.
+  simulation: passed
+  the passed run's scenario has no set-control step (the step that presses a button or sets a sensor) and no expect-pin step (the step that reads a pin)
+  what this simulation cannot show, so test it on the board:
+  - ONBOARD_DISPLAY — spark adds no part to the diagram for the board's own display, so a passed run does not test what it shows. Test it on the board.
+
+[3/5] gate
+  why: the erase cannot be undone, so the write needs a yes for this board
+
+✗ deploy: problems. Not flashed: this board is an esp32c6, the project is for an esp32s3.

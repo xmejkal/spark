@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 import shlex
 import shutil
 import site
@@ -15,7 +16,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
-from suite_runs import needs_littlefs  # noqa: E402
+from suite_runs import needs_littlefs, needs_rich  # noqa: E402
 
 import golden_bench  # noqa: E402
 from spark.records import board_records  # noqa: E402
@@ -23,6 +24,9 @@ from spark.records import tool_finder  # noqa: E402
 from micropython_fakes import fake_interpreter  # noqa: E402
 from spark.bench import board_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
+
+#: An SGR code, the only escape code the coloured text view may add (P478).
+SGR = re.compile(r"\x1b\[[0-9;]*m")
 
 
 @needs_littlefs
@@ -65,6 +69,22 @@ class BenchGoldenTest(unittest.TestCase):
                  for key in ("problems", "unchecked") for item in json.loads(golden.read_text())[key]]
         self.assertTrue(items, "no golden holds an item, so the test would pass for nothing")
         self.assertEqual([name for name, item in items if item.get("code") not in {**board_codes.CODES, **codes.CODES}], [])
+
+    @needs_rich
+    def test_force_color_paints_the_headings_and_the_status_line_and_never_the_json(self):
+        # P478: a pipe with FORCE_COLOR=1 gets the text view with SGR codes; --json keeps its bytes on stdout and stderr
+        env = golden_bench.child_env(Path(tempfile.mkdtemp(dir=self.folder)), "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
+        said = {}
+        for colour in ({"FORCE_COLOR": "1"}, {}):
+            for argv in (("--dry-run",), ("--dry-run", "--json")):
+                done = golden_bench.run_child("deploy.py", ["--project", str(self.project), *argv], self.project, dict(env, **colour))
+                said[bool(colour), argv] = (done.returncode, done.stdout, done.stderr)
+        coloured, plain = said[True, ("--dry-run",)][1], said[False, ("--dry-run",)][1]
+        self.assertIn("\x1b[1m[1/5] plan", coloured)
+        self.assertRegex(coloured.splitlines()[-1], "^\x1b\\[[0-9;]*m✓")
+        self.assertEqual(SGR.sub("", coloured), plain)
+        self.assertNotRegex(plain, SGR)
+        self.assertEqual(said[True, ("--dry-run", "--json")], said[False, ("--dry-run", "--json")])
 
     def test_the_token_ends_in_the_image_hash(self):
         # The goldens print the image half as <image>, so this pins it: the first 4 hex of the image's sha256.
