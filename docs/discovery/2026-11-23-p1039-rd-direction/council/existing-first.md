@@ -337,11 +337,9 @@ Bodies read for the cards named in the task and for #213, #401, #345, #1310, #18
    a search, EX-21)
 6. "LLM agent benchmark embedded systems hardware-in-the-loop microcontroller firmware circuit wiring 2026" · whether
    benchmarks near spark's walks exist (c) · used (EX-20. Two arXiv abstracts fetched)
-7. "Ollama tool calling structured outputs JSON schema best open-weight models agentic coding 2026 context length
-   requirements" · which local models can drive tool calls and long JSON, and what they need (d) · used (EX-26,
+7. "Ollama tool calling structured outputs JSON schema best open-weight models agentic coding 2026 context length requirements" · which local models can drive tool calls and long JSON, and what they need (d) · used (EX-26,
    EX-27. Docker's study and Ollama's structured-outputs page fetched)
-8. "Codex CLI opencode Gemini CLI install Claude Code plugin .claude-plugin marketplace compatibility commands agents"
-   · whether spark's plugin bundle runs as-is in other harnesses (b) · used (EX-2, EX-16. The AWS labs comparison
+8. "Codex CLI opencode Gemini CLI install Claude Code plugin .claude-plugin marketplace compatibility commands agents" · whether spark's plugin bundle runs as-is in other harnesses (b) · used (EX-2, EX-16. The AWS labs comparison
    fetched)
 9. "Ollama Anthropic Messages API compatibility run Claude Code with local model" · whether spark's current harness
    can run on a local model (d) · used (EX-25. Ollama's compatibility page and blog fetched)
