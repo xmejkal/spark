@@ -80,7 +80,12 @@ firmware/ as it is now. Else it prints why not, and the command that builds the 
 
 When esptool's read of the board fails, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
-and one next step for your hands, as the last line. Its look at the console can restart the board."""
+and one next step for your hands, as the last line. Its look at the console can restart the board.
+
+When no board is on USB and the project's firmware calls deepsleep (read from firmware/, not from the board), the stop
+line is `no board found.` and the last line, the fix, says that the board can be in deep sleep (P1022). It names the
+calls, and says what to try in order: download mode with BOOT, a wait for the wake, then the cable. A firmware file
+that does not parse is named."""
 
 
 class LookAtBoard(Operation):

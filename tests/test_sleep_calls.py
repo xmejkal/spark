@@ -52,7 +52,7 @@ class DeepSleepCallsTest(unittest.TestCase):
     def test_a_driver_s_own_deepsleep_a_comment_a_docstring_and_lightsleep_do_not_count(self):
         for text in ("import machine\nEpd().deepsleep()\n", "import machine\nself.epd.deepsleep()\n",
                      "import machine\n# machine.deepsleep(1)\n", '"""machine.deepsleep(1)"""\nimport machine\n',
-                     "import machine\nmachine.lightsleep(1)\n", "def f(machine):\n    machine.deepsleep(1)\n",
+                     "import machine\nmachine.lightsleep(1)\n", "import machine\ndef f(machine):\n    machine.deepsleep(1)\n",
                      "from machine import deepsleep\ndef deepsleep(ms):\n    pass\ndeepsleep(1)\n"):
             with self.subTest(text=text):
                 self.assertEqual(sleep_calls.deep_sleep_calls(project_with(main__py=text)), sleep_calls.SleepCalls((), ()))

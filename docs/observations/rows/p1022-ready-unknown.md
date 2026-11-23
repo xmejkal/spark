@@ -41,3 +41,29 @@ passed two rounds, each with a prototype: round 1 was one lens (Sonnet) and the 
 | 32 | `return copies.append(board[1].heard) or board` hides a side effect | the review of #1516, the lens, a nit | acted | two lines: `reads.append(board)`, then `return board`. Row 17 is re-aimed at the board log's join |
 | 33 | Shorten the whole fix text | the review of #1516 | rejected | the numbered steps keep it readable, and each sentence carries one fact or one step |
 | 34 | Drop ReadyResult's `_replace` override | the review of #1516 | rejected | a row (27) and a test pin it: without it, `_replace` after a start code loses `files_read` |
+
+## Slice 3: a firmware that deep-sleeps, and a C6 left in download mode after the flash
+
+The plan (Opus) was written on main d102c8e8 and passed two rounds: round 1 one lens (Sonnet), the refuter (Opus) and the
+architect; round 2 the refuter (Opus), amendments A to G. D1 was decided by the council of 2026-11-23 16:21 CET
+(delegated, the PO's to change), with the architect's dissent on the card. A "row" here is a row of
+`tests/mutations/p1022-asleep.json`, counted from 1.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 35 | Under deep sleep look.py said no_port with the cable sentence, and the deploy's check said `ready unknown` after the firmware printed `ready, cpu 80 MHz, deep sleep, power-up` | the board logs of 2026-11-23 13:58 and 14:05 CET, p934-display2 (sighting a) | acted | `test_no_board_with_a_deepsleep_call_names_deep_sleep_and_keeps_the_cable_check_last`, `test_the_13_58_sighting_is_ready_seen_and_reads_no_console`. Rows 1 to 15 |
+| 36 | A deploy from a BOOT entry wrote and verified the image; the board stayed silent about 55 minutes until one RESET press | 2026-11-23 14:09 CET (sighting b), n = 1, the strap state not read | acted | the ready unknown fix says it as a condition on a C6 over 303a:1001: `test_the_14_09_sighting_on_the_c6_names_the_boot_entry_and_reset_first`. Rows 18, 19 |
+| 37 | The plan's look test of `port_not_listed` (`--port` with other boards listed) | plan, tests first | rejected | look.py and deploy.py read a `--port` the list does not hold (board_look.py 498, known_board), so only grant.py, live.py and record use `require_one_board(port)`. `asleep_fix` is asked for that code directly; the opening stays for the out-of-scope callers |
+| 38 | `own_usb_of` in board_records.py | plan, step 2 | rejected | board_records.py would pass R1's 600 lines (611). It is `download_mode.own_usb_of(project, usb)`, which also takes the port's 303a:1001 (round 2, B) |
+| 39 | `board_look.PLUG_IN`, with the NO_PORT raise built as `NO_BOARD + " " + PLUG_IN` | plan, step 2 | rejected | architecture rule V1 wants a string constant as a LookStopError's template. The raise keeps its literal; `NO_BOARD` names its first words |
+| 40 | A sentence of a fix that starts with "spark" reads as a broken one (row 28) | slice 2's review, the build | acted | UNPARSED became "These files of firmware/ did not parse, ...", SLEEP_WORDS "The check counts ...", the lost-board words "It counts as unknown, ..." |
+| 41 | The first push of step 2 failed `test_self_confirmation` (the tests read board_envelope's words) and `test_map` | the hook, 2026-11-23 16:55 CET | acted | the tests hold literals (test_look's OWN_USB_SLEEP and the like), map.md written again: commit a6b60027 |
+| 42 | A `ready` line, then a lost board, with no deepsleep call: the fix said the firmware did not start and no `ready` was seen | round 2, A | acted | `ReadyResult.lost_board` is set whatever the calls, and the fix says "the firmware printed `ready`, then mpremote lost the board. It counts as unknown, ...". Row 21 |
+| 43 | `port_went` is unproven: spark sees mpremote's error, never the port list | round 2, E | acted | `lost_board`, and the words "then mpremote lost the board (<its error>)" |
+| 44 | The p1022 row on `_replace` moved | round 2, D | acted | re-aimed: it drops `files_read` and keeps `lost_board` |
+| 45 | A probe that tells download mode from a silent firmware (esptool `--before no-reset`) | plan, what stays out 1 | raised | destination: a card that spark-main files from this row |
+| 46 | A `next` look step with needs_person on a no_port stop with a deepsleep call | plan, what stays out 2 | raised | destination: a card that spark-main files from this row |
+| 47 | grant.py, reach.py and live.py stop on no_port or port_not_listed without the asleep fix | plan, what stays out 4 | raised | destination: a card that spark-main files from this row |
+| 48 | The H2, H4 and E22 in CLASSIC_RESET_ONLY | plan, what stays out 5 | raised | destination: dropped until a board record names one (records grow by need) |
+| 49 | The FireBeetle 2 S3 record lacks the `usb` pin role, so its own-USB words are a condition | plan, what stays out 6 (round 2, F: the store's FireBeetle 2 C6 record has it) | raised | destination: a card that spark-main files from this row |
+| 50 | Each of the 21 rows planted once by hand in a scratch copy: row 6 (a parameter named machine still counts) escaped, because the test's file had no `import machine` | the build, 2026-11-23 17:1x CET | acted | the case is now `import machine` with `def f(machine)`; row 6 is caught. The other 20 were caught by the test each names |
