@@ -39,14 +39,22 @@ MAY_BE_ERASED, FLASHED_NOT_VERIFIED = "may_be_erased", "flashed_not_verified"
 
 #: The words that fill board_codes.READY_UNKNOWN's fix (P1022), each from a fact of the DeployResult: the board's files
 #: read or not (ReadyResult.files_read), what the console printed (DeployResult.console) and the facts file written or not.
-FILES_READ = "spark read the board's files, but mpremote did not start the firmware"
-FILES_NOT_READ = "spark did not read the board's files"
-CONSOLE_NOT_READ = "spark did not read the board's console, and did not see `ready`"
+FILES_READ = "The board's files were read, but mpremote did not start the firmware"
+FILES_NOT_READ = "The board's files were not read"
+CONSOLE_NOT_READ = "The board's console was not read, and spark did not see `ready`"
 CONSOLE_SILENT = "The board's console printed nothing, so spark did not see `ready`"
 CONSOLE_PRINTED = "The board's console printed `%s`, and no `ready`"
 CONSOLE_READY = "The board's console printed `%s`, so the firmware started"
 FACTS_WRITTEN = "The facts file spark.json was written and read back"
 FACTS_NOT_WRITTEN = "The facts file spark.json was not written"
+#: How many characters of a console line the fix quotes: the board's text reaches Claude, so it is short and plain.
+QUOTE_LIMIT = 80
+
+
+def quoted(line):
+    """The console line `line` as the fix quotes it: no backtick, no control character, and at most QUOTE_LIMIT characters."""
+    plain = "".join(character for character in line if character.isprintable() and character != "`")
+    return plain if len(plain) <= QUOTE_LIMIT else plain[:QUOTE_LIMIT - 3] + "..."
 
 
 def console_words(console):
@@ -56,7 +64,7 @@ def console_words(console):
         return CONSOLE_NOT_READ
     lines = [line.strip() for line in console.splitlines() if line.strip()]
     ready = [line for line in lines if download_mode.booted(line)]
-    return CONSOLE_READY % ready[0] if ready else CONSOLE_PRINTED % lines[0] if lines else CONSOLE_SILENT
+    return CONSOLE_READY % quoted(ready[0]) if ready else CONSOLE_PRINTED % quoted(lines[0]) if lines else CONSOLE_SILENT
 
 
 def ready_unknown_fix(result, places):

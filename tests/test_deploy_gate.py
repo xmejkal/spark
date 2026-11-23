@@ -843,7 +843,7 @@ class TheBoardInDownloadModeTest(GateCase):
 
 #: The fix of a ready_unknown deploy whose passed run's log names no files (P1022): the image is on the flash, nothing more.
 NO_FILES_FIX = ("The image is on the flash: spark did not flash again and did not erase again. Run the scenario again, so "
-                "that its log names the files. Only a deploy after that checks ready")
+                "that its log names the files. Only a deploy after that checks ready.")
 #: What mpremote printed on the FireBeetle 2 C6 (303a:1001) when the 13:19 deploy's facts copy and hash read failed,
 #: 2026-11-23 (P1022, the kept board log of p934-display2, the traceback's file lines left out).
 SETTLE_STDERR = ("spark: the 2.5 s settle heard b''\nTraceback (most recent call last):\n"
@@ -879,7 +879,7 @@ class TheReadyUnknownWordsTest(GateCase):
         self.assertIn(tries, log)
         self.assertLess(log.index("console with DTR and RTS off: nothing"), log.index(tries))  # its own block, after the read's
         fix = self.fix_line(said)
-        for words in ("spark did not read the board's files.", "The board's console printed nothing, so spark did not see `ready`.",
+        for words in ("The board's files were not read.", "The board's console printed nothing, so spark did not see `ready`.",
                       "The facts file spark.json was not written.", "it did not flash again and did not erase again",
                       "2. Press the board's RESET (R, top left, beside the USB-C) once. Left and right as seen with the metal shield"):
             self.assertIn(words, fix)
@@ -902,20 +902,44 @@ class TheReadyUnknownWordsTest(GateCase):
         code, said, _ = self.flash(FakeConsoleProbe("rst:0x15 (USB_UART_HPSYS),boot:0x1e\nentry 0x4086b910\n"))
         self.assertEqual(code, 2)
         fix = self.fix_line(said)
-        self.assertIn("spark read the board's files, but mpremote did not start the firmware.", fix)
+        self.assertIn("The board's files were read, but mpremote did not start the firmware.", fix)
         self.assertIn("The board's console printed `rst:0x15 (USB_UART_HPSYS),boot:0x1e`, and no `ready`.", fix)
 
     def test_a_console_that_was_not_read_is_said(self):
         self.unread = subprocess.CalledProcessError(1, ["mpremote"])
         code, said, _ = self.flash(None, platform=FakeProbePlatform(self.project, None, find_fake_tool))
         self.assertEqual(code, 2)
-        self.assertIn("spark did not read the board's console, and did not see `ready`.", self.fix_line(said))
+        self.assertIn("The board's console was not read, and spark did not see `ready`.", self.fix_line(said))
 
     def test_a_facts_copy_written_on_a_retry_keeps_the_first_try_s_output_in_the_board_log(self):
         self.uncopied = [subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)]
         code, _, _ = self.flash(None)
         self.assertEqual(code, 0)
         self.assertIn("the facts copy, the first try: mpremote printed:\nb''\n" + SETTLE_STDERR, self.board_log())
+
+    def test_a_facts_file_the_first_read_wrote_is_said_written_when_the_read_again_could_not_copy_it(self):
+        # the review of #1516 (the refuter, path A): the read again after a console that printed ready (P245)
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        refused = self.unread
+
+        def refuse_the_copies():
+            self.uncopied = refused
+        code, said, _ = self.flash(FakeConsoleProbe(C6_CONSOLE, on_console=refuse_the_copies))
+        self.assertEqual(code, 2)
+        self.assertIn("facts file: not written", said)  # the last read's line, as the board log keeps it
+        self.assertIn("The facts file spark.json was written and read back.", self.fix_line(said))
+
+    def test_files_the_first_read_hashed_are_said_read_when_the_read_again_could_not_hash_them(self):
+        # the review of #1516 (the refuter, path B): the first read hashed the files and could not start the firmware
+        self.prints = subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        refused = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+
+        def refuse_the_hashes():
+            self.unread = refused
+        code, said, _ = self.flash(FakeConsoleProbe(C6_CONSOLE, on_console=refuse_the_hashes))
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: mpremote could not read the board's files", said)  # the last read's sentence
+        self.assertIn("The board's files were read, but mpremote did not start the firmware.", self.fix_line(said))
 
     def test_a_board_left_in_download_mode_gets_the_person_action_and_no_fix_line(self):
         self.unread = self.uncopied = subprocess.CalledProcessError(1, ["mpremote"])

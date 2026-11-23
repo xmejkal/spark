@@ -53,14 +53,14 @@ READY_UNKNOWN = Code("ready_unknown", "the board could not be read after the fla
                      "%(console)s. %(facts)s. The firmware can be running or asleep, and not answering. What spark did not "
                      "do: it did not flash again and did not erase again. What to try, in order: 1. Wait a minute, then run "
                      "look.py. 2. Press the board's %(reset)s once%(orientation)s. Then run live.py: it says whether the board "
-                     "answers. live.py needs a live grant: if it refuses, it prints the grant line to run in your own terminal. "
+                     "answers, and it needs a live grant. If it refuses, it prints the grant line to run in your own terminal. "
                      "3. Open the REPL line. If live.py and the REPL also do not reach the board, the firmware does not read its "
                      "console, for example because it sleeps for a long time at start. Then change the firmware: sleep in short "
-                     "slices, and read the console. Do not deploy again for this")
+                     "slices, and read the console. Do not deploy again to fix this.")
 #: A variant of READY_UNKNOWN: the passed run's log names no files, so nothing on the board was read.
 READY_UNKNOWN_NO_FILES = Code(READY_UNKNOWN, READY_UNKNOWN.meaning,
                               "The image is on the flash: spark did not flash again and did not erase again. Run the scenario "
-                              "again, so that its log names the files. Only a deploy after that checks ready")
+                              "again, so that its log names the files. Only a deploy after that checks ready.")
 #: Why the board did not start after the write (P462): it still waits in download mode, or its port is gone.
 DOWNLOAD_MODE_STAYED, PORT_GONE = "download_mode_stayed", "port_gone"
 #: A stage needs a fact the record lacks (P464): the item of `missing_facts`, in the build's `kept` pin-map entry.

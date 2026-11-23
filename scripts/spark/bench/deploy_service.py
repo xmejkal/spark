@@ -54,6 +54,14 @@ class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 fact
             self.verdict, self.sentence, self.heard)
 
 
+def every_read(reads):
+    """The last of `reads`, each (the facts, a board_facts.FactsLine, a ReadyResult), with the facts file written and the board's
+    files read when any read did (P1022): a read again after P245 can fail where the first read worked."""
+    facts, line, ready = reads[-1]
+    return (facts, board_facts.FactsLine(line, any(read[1].written for read in reads), line.heard),
+            ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads)))
+
+
 def write_board_log(project, log):
     """The board's log (a BoardLog) in sim/runs/board/ beside the run logs, whose *.log glob does not reach it. Returns
     its path."""
@@ -158,12 +166,13 @@ class DeployService:
         starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), look.reading.mac, self.clock,
                                                 board_records.ButtonPlaces.of_project(self.project))
         row = starter.find_port(look.port)
-        port, copies = row and row.device, []  # P1022: what mpremote printed on each failed facts copy, a block of the board log
+        port, reads = row and row.device, []  # P1022: every read of the board, for the facts copies' block and the fix
 
         def read(on):  # P1007: the USB id the port has at this read picks the connection
             connection = on and self.platform.make_connection(planned.mpremote, on, self.run, starter.usb_of(on) or (row and row.usb))
             board = self._read_board(image, look, connection, expected, moment)
-            return copies.append(board[1].heard) or board
+            reads.append(board)
+            return board
 
         board, start = read(port), None
         if port is None:
@@ -171,13 +180,13 @@ class DeployService:
         elif (board[2].verdict == ready_probe.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
               and board_start.console_may_be_read(row, look.port)):
             board, start = self._after_silence(starter, row, board, read)
-        facts, facts_line, ready = board
+        facts, facts_line, ready = every_read(reads)  # board is the last of them
         if start and start.code:
             ready = ready._replace(sentence=start.sentence)
         image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
         log_path = write_board_log(self.project, BoardLog(moment, look.port, image_sha256,
                                                           facts_line, ready.verdict, ready.sentence,
-                                                          "".join(starter.heard) + ready.log + "".join(copies), self.evidence.simulation))
+                                                          "".join(starter.heard) + ready.log + "".join(read[1].heard for read in reads), self.evidence.simulation))
         shown_on = start.port if start else port  # the REPL names the port the board answered on, or none when it is gone
         repl = self.platform.make_connection(planned.mpremote, shown_on, self.run).repl_command()
         return DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)._replace(console=starter.console)
