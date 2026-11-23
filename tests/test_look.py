@@ -5,6 +5,8 @@ import contextlib
 import hashlib
 import io
 import json
+import os
+import re
 import sys
 import tempfile
 import unittest
@@ -31,12 +33,12 @@ from spark.records import deploy_record_store  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
-from fakes import FakeConsent, FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun  # noqa: E402
+from fakes import FakeConsent, FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun, Stream  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.events import Event  # noqa: E402
 from spark.core.operation import Argument  # noqa: E402
 from spark.core.operation_help_table import OperationHelpTable  # noqa: E402
-from suite_runs import needs_littlefs  # noqa: E402
+from suite_runs import needs_littlefs, needs_rich  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 from test_deploy import real_littlefs  # noqa: E402
 
@@ -56,8 +58,18 @@ MAYBE_OWN_USB_SLEEP = ("If the board's USB is the chip's own (USB-Serial/JTAG), 
 UNPARSED_MAIN = "These files of firmware/ did not parse, so spark does not know whether they call deepsleep: firmware/main.py."
 
 
+@contextlib.contextmanager
+def plain_environ(**set_):
+    """P1032: os.environ without FORCE_COLOR and NO_COLOR, so a shell that sets them changes no text, with `set_` added."""
+    with mock.patch.dict(os.environ, set_):
+        for name in ("FORCE_COLOR", "NO_COLOR"):
+            if name not in set_:
+                os.environ.pop(name, None)
+        yield
+
+
 class LookScriptCase(LookCase):
-    def go(self, *argv, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", text=None, fail=False):
+    def go(self, *argv, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", text=None, fail=False, **shown):
         """(exit code, stdout lines, stderr) of look.py with fake tools. The fakes answer from the fixtures."""
         def run(command, **kw):
             self.ran.append(command)
@@ -66,13 +78,14 @@ class LookScriptCase(LookCase):
         if self.KNOWS_THE_BOARD:  # P865: the store keeps the board this call reads, by the serial of the first row listed
             rows = data(devs).split()
             self.know_the_board(board_look.EsptoolReader.parse(text or data(esptool)).mac or MAC, known_board.comparable_key(rows[1]) if rows else None)
-        return self.go_with(FakeOutsideWorld(run=RealChildRun(run), find_tool=found), *argv)  # P458: the compile child is real
+        return self.go_with(FakeOutsideWorld(run=RealChildRun(run), find_tool=found), *argv, **shown)  # P458: the compile child is real
 
-    def go_with(self, outside, *argv):
+    def go_with(self, outside, *argv, stdout=None, environ=None):
         """(exit code, stdout lines, stderr) of look.py on `outside`, a FakeOutsideWorld, so no test patches
-        tool_finder.find (P442)."""
-        out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        tool_finder.find (P442). `stdout` is the stream it prints on (None: a pipe) and `environ` the variables set for
+        the run (P1032)."""
+        out, err = stdout or io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), plain_environ(**(environ or {})):
             code = look.main(["--project", str(self.project), *argv], outside=outside)
         return code, out.getvalue().splitlines(), err.getvalue()
 
@@ -452,6 +465,103 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(code, 2)
         self.assertIn("  mac    not read", said)
         self.assertEqual(said[-1], "  no token: the board's MAC could not be read")
+
+
+#: An SGR code, the only escape code the coloured text view adds (P1032).
+SGR = re.compile(r"\x1b\[[0-9;]*m")
+
+
+class TheTextViewTest(LookScriptCase):
+    """P1032: without --json the look prints a status line, its facts, the findings with their fix, a Note and Next."""
+
+    @needs_littlefs
+    def test_the_text_view_starts_with_the_status_line_and_ends_with_the_command(self):
+        self.run_the_scenario()
+        code, said, _ = self.go()
+        self.assertEqual(code, 0)
+        self.assertEqual(said[0], "✓ look: ok. The chip and the flash match the board record xiao-esp32-c6.")
+        self.assertTrue(said[-1].startswith("    SPARK_HOME="), said[-1])
+        self.assertIn("deploy.py --project ", said[-1])
+        self.assertTrue(said[-1].endswith(" --token %s --port /dev/cu.usbmodem101" % self.token()), said[-1])
+        self.assertEqual([line for line in said if line.lstrip().startswith("token")], [])
+
+    @needs_littlefs
+    def test_a_warning_has_its_mark_its_field_and_a_problem_with_its_fix(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        code, said, _ = self.go(esptool="s3-flash-id-8mb.txt")
+        self.assertEqual(code, 1)
+        self.assertEqual(said[0], "! look: problems. Warning: the flash differs from the board record firebeetle2-esp32s3. "
+                                  "deploy.py will ask you to accept it.")
+        item = said.index("    - the flash differs: 8 MB, the record says 16 or 4")
+        self.assertEqual(said[item + 1], "      fix: deploy.py asks the person to accept it")
+        self.assertEqual([line for line in said[1:] if "deploy.py will ask you" in line], [])
+
+    @needs_littlefs
+    def test_every_stop_headline_has_a_problem_after_it(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        for esptool, stop in (("c6-flash-id.txt", "this board is an esp32c6, the project is for an esp32s3"),
+                              ("s3-flash-id-2mb.txt", "the flash is 2 MB, the image needs 4 MB")):
+            with self.subTest(esptool=esptool):
+                code, said, _ = self.go(esptool=esptool)
+                self.assertEqual(code, 1)
+                self.assertEqual(said[0], "✗ look: problems. Stop: %s. deploy.py will refuse." % stop)
+                problems = said.index("  Problems")
+                self.assertIn("    - " + stop, said[problems:])
+
+    def test_a_stop_and_the_question_print_as_before(self):
+        # D1: a stop before the read prints on stderr only, and the board question keeps its lines
+        code, said, problems = self.go(devs="mpremote-devs-none.txt")
+        self.assertEqual((code, said, problems), (2, [], "look.py: %s\n" % NO_BOARD))
+
+    @needs_rich
+    @needs_littlefs
+    def test_on_a_terminal_the_look_is_coloured_and_in_a_pipe_it_is_plain(self):
+        self.run_the_scenario()
+        terminal = Stream(tty=True)
+        code, said, _ = self.go(stdout=terminal, environ={"TERM": "xterm"})
+        self.assertEqual(code, 0)
+        self.assertTrue(SGR.search("\n".join(said)), said)
+        self.assertEqual([SGR.sub("", line) for line in said], self.go()[1])
+        self.assertFalse(SGR.search("\n".join(self.go(environ={"TERM": "xterm"})[1])), "a pipe gets no code")
+
+    @needs_rich
+    @needs_littlefs
+    def test_force_color_on_a_pipe_gives_codes(self):
+        self.run_the_scenario()
+        self.assertTrue(SGR.search("\n".join(self.go(environ={"FORCE_COLOR": "1"})[1])))
+        self.assertFalse(SGR.search("\n".join(self.go(environ={"FORCE_COLOR": "1", "NO_COLOR": "1"})[1])))
+        self.assertFalse(SGR.search(self.go("--json", environ={"FORCE_COLOR": "1"})[1][-1]), "--json never gets a code")
+
+    @needs_littlefs
+    def test_the_look_s_view_and_deploy_s_lines_show_the_same_facts(self):
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(
+            sim_project.limits_note([("ONBOARD_DISPLAY", "no part for the display. Test it on the board.")]))
+        self.run_the_scenario()
+        report = self.look()
+        facts, deploy_s = "\n".join(look_at_board.look_facts(report)), "\n".join(board_look.report_lines(report, token=False))
+        values = [report.port, report.reading.mac, report.reading.chip, "%s MB" % report.reading.flash_mb,
+                  board_look.say_last_deploy(report.last_deploy), board_look.say_image_banner(report), report.simulation]
+        values += report.caveats + [board_look.say_limit(limit) for limit in report.limits]
+        self.assertEqual(len(report.limits), 1)
+        for value in values:
+            with self.subTest(value=value):
+                self.assertIn(value, facts)
+                self.assertIn(value, deploy_s)
+
+
+class TheQuestionTextTest(LookScriptCase):
+    """P1032, D1: the board question prints its lines as before, with no status line."""
+
+    KNOWS_THE_BOARD = False
+
+    def test_the_question_prints_its_sentence_its_fix_and_why_as_before(self):
+        code, said, _ = self.go()
+        envelope = json.loads(self.go("--json")[1][-1])
+        (item,) = envelope["unchecked"]
+        self.assertEqual((code, item["code"]), (2, "needs_reply"))
+        self.assertEqual(said, ["  " + item["sentence"], "  " + item["fix"], "  " + envelope["data"]["open"][0]["why"]])
 
 
 class TheMaskedTextTest(LookScriptCase):

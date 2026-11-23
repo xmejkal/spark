@@ -6,7 +6,7 @@ what the test runs and its measured seconds with the date. `SPARK_SUITE=quick` s
 `tools/check_commit.py` sets it for its quick run; a plain `python3 -m unittest discover -s tests` runs all.
 The skip's reason starts with SLOW_PREFIX, so the gate counts the slow skips apart from the real ones
 (a missing tool, a missing program).
-`needs_littlefs` skips with its own reason, not SLOW_PREFIX.
+`needs_littlefs` and `needs_rich` skip with their own reason, not SLOW_PREFIX.
 This module is not named `test_*.py`, so the suite never loads it as tests.
 """
 
@@ -37,6 +37,8 @@ def slow(reason):
 
 #: A test that builds or checks a flash image needs the littlefs package (P452); data/tools.json holds how to install it.
 needs_littlefs = unittest.skipUnless(importlib.util.find_spec("littlefs"), "the littlefs package is not installed: run /spark:setup")
+#: A test of the text view's colour needs the rich package (P1032); data/tools.json holds how to install it. A skip is no pass.
+needs_rich = unittest.skipUnless(importlib.util.find_spec("rich"), "the rich package is not installed: run /spark:setup add rich")
 
 
 def planted_folder(parent, name, age):

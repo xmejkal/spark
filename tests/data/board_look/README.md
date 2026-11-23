@@ -8,5 +8,7 @@ Fixtures for tests/test_board_look.py.
   serial is its MAC (P920: bench.py record takes the MAC from it). Hand-written.
 - esp32-classic-flash-id.txt, s3-flash-id-*.txt, c6-flash-id-kb.txt: hand-written in esptool's format. No classic ESP32
   or FireBeetle S3 was on the bench.
+- s3-flash-id-16mb-other-mac.txt: s3-flash-id-16mb.txt with a made-up MAC (02:00:00:00:12:34, a locally administered
+  address), so the look reads another board than the one the goldens keep (P1032). Hand-written.
 - A failed connect ("Failed to connect") has no fixture: the test for it feeds any non-zero exit and reads no output.
 - The C6 fixtures come from `flash-id` (hyphen) on the bench, and the code runs `flash-id` too. P219 step 3's recorded run on the PO's XIAO settles whether the output is the same.
