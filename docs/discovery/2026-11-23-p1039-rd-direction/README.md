@@ -60,7 +60,7 @@ flowchart LR
 
 ## What comes next, and what is open for the PO
 
-1. Q10 and Q11, and the account questions Q13 to Q18 about his own use.
+1. Q10 and Q11, and the account questions Q13b and Q14b to Q17, and the decision Q18. The first part of Q13 and Q14 are answered (D6, D7).
 2. His parts of Q2, Q3 and Q7: which run proves v0.10, what "software factory" means, which "Hermes", and a trial on his account.
 3. Whether this public folder can name the installed harness. It names none.
 4. His yes to file anything from [items.md](items.md). Nothing is filed.
