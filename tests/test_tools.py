@@ -721,7 +721,6 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
 
     def test_status_with_a_store_spark_cannot_read_says_one_line_and_exits_2(self):
         # P1041 (#1529): SPARK_HOME of mode 0 was a traceback at tool_finder._read and exit 1; a child, so PERSONAL is the store's
-        import subprocess
         home = Path(tempfile.mkdtemp())
         self.addCleanup(os.chmod, home, 0o700)
         os.chmod(home, 0)

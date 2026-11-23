@@ -18,6 +18,7 @@ import json
 import os
 import platform
 import shutil
+import stat
 import string
 import subprocess
 import sys
@@ -70,10 +71,16 @@ class ToolFinder:
 
 
 def _read(path):
-    if not path.is_file():
-        return {}
+    """A tools file as a dict; {} when there is none. A ToolError when it cannot be read (P1041) or is no tools file."""
     try:
+        if not stat.S_ISREG(path.stat().st_mode):  # a folder or a FIFO: a read of a FIFO would wait for a writer
+            raise ToolError("%s cannot be read (not a regular file) — fix it or delete it", path, code=records_codes.FILE_REFUSED)
         data = json.loads(path.read_text())
+    except (FileNotFoundError, NotADirectoryError):  # no file, a broken link, a parent that is a file: no layer, as before
+        return {}
+    except OSError as cannot:  # P1041: a file, or a folder on its way, that spark may not read, or a link loop
+        raise ToolError("%s cannot be read (%s) — fix it or its permissions", path, cannot.strerror or cannot,
+                        code=records_codes.FILE_REFUSED)
     except ValueError as broken:
         raise ToolError("%s is not JSON (%s) — fix it or delete it", path, broken, code=records_codes.TOOLS_LIST_BROKEN)
     if not isinstance(data, dict):
