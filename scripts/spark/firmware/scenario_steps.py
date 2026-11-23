@@ -61,6 +61,19 @@ WHY_LOG_UNREADABLE = "the log cannot be read"
 NO_MAIN = "no firmware/main.py in %s: the board would boot to a bare prompt and never print %r"
 
 
+def has_ready_line(output):
+    """True when a line of `output` has READY as its first word: the line is `ready`, or `ready` and then a character that
+    is not a letter, a digit or `_`. So `ready`, `ready:` and `ready, cpu 80 MHz` count, and `not ready`, `already`,
+    `readying`, `ready2` and `ready_led on` do not. The council decided it on 2026-11-23, delegated by the PO (P1025).
+    P245 had the exact line. download_mode.booted and ReadyProbe read the board with it. The simulation's wait keeps
+    wokwi-cli's own rule, so the board is stricter on purpose."""
+    for line in (line.strip() for line in output.splitlines()):
+        after = line[len(READY):len(READY) + 1]
+        if line.startswith(READY) and not (after.isalnum() or after == "_"):
+            return True
+    return False
+
+
 # --- MVP ---
 @dataclass(frozen=True)
 class StepNames:
