@@ -28,10 +28,10 @@ A synthesis of six lens reports (council/), written on 2026-11-23 by the archite
 | 12 | iterate the gadget after it runs | partly | 36 commits in the walk's own repository, with spark's deploy step still in use (E ★C20, one reading of two). The flow's nine phases end at deploy (E council/architecture.md:48, AR-18) |
 | 13 | PCB: Gerbers, parts list, rules | partly | a draft layout and a hand command, with the review skill as the gate before anything is fabricated. No walk made one (E ★C21) |
 | 14 | order the PCB | missing | "not designed yet" (E ★C21). The effect words have no word for money or an order (E ★C22) |
-| 15 | enclosure and 3D model | missing | P203 #163 is open (E ★C21). The CAD tool is H (council/architecture.md:175) |
+| 15 | enclosure and 3D model | missing | P203 #163, the design and its 3D model in a CAD program, is open (E ★C21). The CAD tool is H (council/architecture.md:175) |
 | 16 | print or fabricate, wait, receive | missing | a wait of days fits the flow's files and a phase reader, not one run (opinion, the architecture lens's, council/architecture.md:176) |
 
-Opinion (the architect's, Q3, not decided): the next product step is the end of the line (stages 9 to 12), not its extension (13 to 16). The PO's answers turn it around. After the first deploy he asked the chat where the gadget stood and did not open the flow (D7). The clock and the bin then needed a permanent build, on a perfboard or a PCB (D11). So the extension gets the first spike (D21). That every later stage fits the core as more Operations, effect words and phases is the architecture lens's reading, and no stage was tried (H ★C22). An unattended line that writes behaviour is a proposed no-go (D the firmware decision).
+Opinion (the architect's, Q3, not decided): the next product step is the end of the line (stages 9 to 12), not its extension (13 to 16). The PO's answers turn it around. After the first deploy he asked the chat where the gadget stood and did not open the flow (D7). The clock and the bin then needed a permanent build, on a perfboard (optional), then a PCB (D11). So the extension gets the first spike (D21). That every later stage fits the core as more Operations, effect words and phases is the architecture lens's reading, and no stage was tried (H ★C22). An unattended line that writes behaviour is a proposed no-go (D the firmware decision).
 
 ## The architecture today
 

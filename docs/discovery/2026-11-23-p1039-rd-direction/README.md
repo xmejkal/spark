@@ -4,11 +4,11 @@
 > architect. The proposal is seams in the core work now (P793 #1105) and no new epic. A direction gets a first spike
 > only after the PO's own answers show a pull for it. The PO confirmed this understanding (D5) and then answered every
 > question of his own (D8 to D21). Only the line past the breadboard has a pull: one spike for a permanent build, on a
-> perfboard or a PCB, which spark-main files (D21).
+> perfboard (optional), then a PCB, which spark-main files (D21).
 
 This folder is the discovery of the epic P1039 (#1522), run on 2026-11-23 at full depth. Six lenses on Opus read the
 product. The architect on Fable wrote the synthesis, and the refuter on Fable read it twice. A council of three
-answered the questions while the PO was away. The PO confirmed the understanding on 2026-11-23 (D5) and answered his own questions the same evening (D6 to D21). Ready for: an experiment, the permanent-build spike. The skill's output test passes.
+answered the questions while the PO was away. The PO confirmed the understanding on 2026-11-23 (D5) and answered his own questions the same evening (D8 to D21). Ready for: an experiment, the permanent-build spike. The skill's output test passes.
 
 ## The picture
 
@@ -70,7 +70,7 @@ flowchart LR
 
 ## What comes next, and what is open for the PO
 
-1. spark-main files one spike under #1522: the clock or the bin from the breadboard to a perfboard (optional) and a PCB, and where spark stops (D21, [items.md](items.md)).
+1. spark-main files one spike under #1522: the clock or the bin from the breadboard to a perfboard (optional), a PCB and toward an enclosure, and where spark stops (D21, [items.md](items.md)).
 2. Nothing else is open for the PO in this discovery. The other directions wait as lines under "later".
 
 ## The files
