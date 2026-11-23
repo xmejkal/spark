@@ -13,8 +13,7 @@ from pathlib import Path
 from spark.build.build_board import BuildBoard
 from spark.core.cli import run_operation, values_of
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, WRITES, Operation
-from spark.core.outcomes import BadArgumentError
-from spark.core.outcomes import COULD_NOT_RUN, OK
+from spark.core.outcomes import COULD_NOT_RUN, OK, BadArgumentError
 from spark.core.result import Finding, OperationResult
 from spark.design.pick_parts import PickParts
 from spark.design.write_requirements import WriteRequirements

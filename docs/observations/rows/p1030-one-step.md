@@ -29,3 +29,7 @@ counted from 1.
 | 19 | Step 2 made `docs/guide/map.md` stale: test_flow now imports run_request, which changes its tests column | the hook's quick run on 39006961 | acted | `tools/map.py --write` again, commit bd7652b7 |
 | 20 | `now_of` kept a `by_name` argument that only `job_offer` read | the build, step 4 | acted | the argument is gone |
 | 21 | Steps 3 and 4 are one commit | the build | acted | the hook's run of step 2 was still going, and the two steps share test_flow.py and the rows file |
+| 22 | the PR review found nothing to fix: anchors the same 33 as main, 11 planted rows red (the critical p829 row among them), the page runs exactly three Operations and refuses an argv that does not parse, next holds only the project, requirements and store paths | the PR review, the lens (Sonnet) and the refuter (Opus) | verified | the refuter's plants and probes on a scratch copy of 875fd07d |
+| 23 | docs/guide/agents/flow.md line 228 still said data-stands-at is the first open phase | the PR review, the refuter | acted | it says the guide's now phase |
+| 24 | run_request.py imported from spark.core.outcomes on two lines | the PR review, the lens | acted | one import line |
+| 25 | the NOW line's [build] is an offer key while the step's op is build-board | the PR review, the lens | rejected | flow.md names the key and the op as two words on purpose; the wording pass is piece 6 |

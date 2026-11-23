@@ -225,7 +225,7 @@ path ([P829](https://github.com/xmejkal/spark/issues/1187)). An id that is no UU
 written. A record that spark cannot read, or that holds no such id, answers `null`.
 
 For an agent or a later script, the page has hooks. Each rail entry and each section has `data-phase` (the phase name) and
-`data-status` (the flow's code, or `none` for no status). The `<body>` has `data-stands-at` (the first open phase, or `none`
+`data-status` (the flow's code, or `none` for no status). The `<body>` has `data-stands-at` (the guide's now phase, or `none`
 when no phase is open). Each offer is an `<li>` with `data-key` (its key), the `<body>` has `data-fingerprint` (the first
 12 hex digits of the fingerprint) and `data-written` (the newest change time of the three files, with its zone, or `none`). All the pictures stand together in the section `id="pictures"`, which the rail links to. The
 wiring is in the section `id="wiring"`, which the rail links to as "Wiring". Its steps are the items of `<ol id="steps">`,
