@@ -100,6 +100,9 @@ DEPLOY_QUESTION = ("let Claude erase ALL of the flash of the board %s (token %s)
 DEPLOY_NO_SIMULATION_QUESTION = ("let Claude erase ALL of the flash of the board %s (token %s) and write any passed image of "
                                  "any project, and also firmware that no simulation tested, so the board is the first place it "
                                  "runs, with no yes from you for each deploy, for %d minutes from your yes?")
+#: What the file that disallows direct flashing holds: who wrote it and when. Only its being there counts.
+DISALLOWED_TEXT = ("direct flashing disallowed by %s at %s. While this file is here, no deploy grant answers a deploy.py "
+                   "--no-simulation deploy. Delete it to allow it again.\n")
 #: What the standing yes adds for a grant given with --no-simulation, in the deploy's `yes:` line and its store record.
 NO_SIMULATION_WHO = ", also for images that no simulation tested"
 #: The command a person types for a deploy grant, by grant.py's whole path (P283).
@@ -273,18 +276,24 @@ class GrantService:
         self.finder, self.reader, self.grants, self.now = finder, reader, grants or GrantStore(), now
         self.user_name = user_name  # who typed the yes: a test gives a name
 
-    def issue(self, port, minutes, consent, before_look=lambda board: None, script="grant.py", scope=SCOPE_LIVE):
+    def issue(self, port, minutes, consent, before_look=lambda board: None, scope=SCOPE_LIVE, no_simulation=False):
         """The Grant of `scope` kept for the board on USB (or on `port`) for `minutes` from the yes, after one look and
         a yes from `consent`. `before_look(board)` gets the listed Port and runs just before the board restarts. A live grant
-        on a board whose USB serial cannot be its MAC is refused from the list alone, before any read (P892). Raises
-        GrantRefusedError, board_look.LookStopError, or GateClosedError when consent cannot ask. It saves nothing then."""
+        on a board whose USB serial cannot be its MAC is refused from the list alone, before any read (P892). A deploy
+        grant with `no_simulation` (P1029) also answers a deploy with no simulation; it is refused before the board is
+        touched while the store disallows direct flashing. Raises GrantRefusedError, board_look.LookStopError, or
+        GateClosedError when consent cannot ask. It saves nothing then."""
         if not 1 <= minutes <= MAX_MINUTES:
             raise GrantRefusedError(WHY_BAD_MINUTES)
         if scope not in SCOPES:
             raise GrantRefusedError(WHY_BAD_SCOPE)
         if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched
             raise GrantRefusedError(WHY_RELAYED_YES)
-        board = self.finder.require_one_board(script, port)
+        if no_simulation and scope != SCOPE_DEPLOY:  # P1029: before the board is touched
+            raise GrantRefusedError(WHY_BAD_SCOPE)
+        if no_simulation and not self.grants.direct_flashing_allowed():
+            raise GrantRefusedError(WHY_DIRECT_FLASHING_DISALLOWED)
+        board = self.finder.require_one_board("grant.py", port)
         if scope == SCOPE_LIVE and not may_be_mac(board.serial):  # P892, decision 6: before the board is touched
             raise GrantRefusedError(WHY_SERIAL_NOT_MAC)
         consent.require_ready()
@@ -295,11 +304,13 @@ class GrantService:
         if scope == SCOPE_LIVE and mac_key(board.serial) != mac:  # a deploy grant is found by the look's MAC instead
             raise GrantRefusedError(WHY_SERIAL_NOT_MAC)
         token = board_look.board_token(mac)
-        question = (DEPLOY_QUESTION if scope == SCOPE_DEPLOY else LIVE_QUESTION) % (mac, token, minutes)
+        question = (DEPLOY_NO_SIMULATION_QUESTION if no_simulation else
+                    (DEPLOY_QUESTION if scope == SCOPE_DEPLOY else LIVE_QUESTION)) % (mac, token, minutes)
         if not consent.ask(question):
             raise GrantRefusedError(WHY_ANSWERED_NO)
         now = self.now()
-        grant = Grant(mac, token, consent.granted_by(self.user_name), stamp(now), stamp(now + datetime.timedelta(minutes=minutes)), scope)
+        grant = Grant(mac, token, consent.granted_by(self.user_name), stamp(now), stamp(now + datetime.timedelta(minutes=minutes)), scope,
+                      no_simulation is True)
         self.grants.save(grant)
         return grant
 
@@ -320,6 +331,15 @@ class GrantService:
         refuses in the same cases, and deploy.py offers the grant line only here."""
         return (report.verdict == board_look.VERDICT_MATCH and not report.last_deploy_not_checked()
                 and self.refusal_of(evidence) is None)
+
+    def disallow_direct_flashing(self):
+        """Keep the file that disallows direct flashing (P1029), with who wrote it and when. It only narrows what a grant
+        answers, so it asks no yes. Returns its path; store.StoreError when the store refuses it."""
+        try:
+            login = self.user_name()
+        except (OSError, KeyError) as cannot:  # getpass finds no user: OSError since Python 3.13, KeyError before it
+            login = "not known (%s)" % cannot
+        return self.grants.save_disallowed(DISALLOWED_TEXT % (login, stamp(self.now())))
 
     def check(self, port=None, script="grant.py"):
         """A GrantCheckResult for the board on USB (or on `port`). It runs only `mpremote devs`: no contact with the
