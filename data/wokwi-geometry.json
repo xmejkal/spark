@@ -22,7 +22,7 @@
     "//wokwi-led": "Measured from the editor's pin overlays. Names as in wokwi-elements: A is the anode, C the cathode. Its center is (20, 25): wokwi-elements src/led-element.ts draws it 40 wide and 50 high, and the pins measured at 90 degrees agree (P267's refuter found (25, 20) recorded, transposed).",
     "wokwi-led": {"size": [40, 50], "center": [20, 25], "covers_holes": false, "pins": {"A": [25, 42], "C": [15, 42]}},
     "//wokwi-resistor": "Measured from the editor's pin overlays.",
-    "wokwi-resistor": {"size": [59.13, 11.34], "center": [29.5, 5.5], "covers_holes": false, "pins": {"1": [0, 5.65], "2": [58.8, 5.65]}},
+    "wokwi-resistor": {"size": [59.13, 11.34], "center": [29.5, 5.5], "covers_holes": true, "pins": {"1": [0, 5.65], "2": [58.8, 5.65]}},
     "//wokwi-pushbutton": "Measured from the editor's pin overlays. 1.l and 1.r are one contact, and 2.l and 2.r the other (joined_pins, P279). Wokwi's part page https://docs.wokwi.com/parts/wokwi-pushbutton, read 2026-10-18: 1.l / 1.r are the first contact, 2.l / 2.r the second, and 'since both belong to the same contact, they are always connected, even when the button is not pressed'.",
     "wokwi-pushbutton": {"size": [67.28, 45.35], "center": [33.5, 24.5], "covers_holes": false,
                          "pins": {"1.l": [0, 13], "2.l": [0, 32], "1.r": [67, 13], "2.r": [67, 32]},
