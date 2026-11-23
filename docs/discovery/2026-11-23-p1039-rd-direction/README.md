@@ -2,11 +2,11 @@
 
 > Short version: spark needs no second architecture to grow past the MVP, in the opinion of the lenses and the
 > architect. The proposal is seams in the core work now (P793 #1105) and no new epic. A direction gets a first spike
-> only after the PO's own answers show a pull for it. Nothing is decided past the frame, and nothing is filed.
+> only after the PO's own answers show a pull for it. The PO confirmed this understanding (D5). Nothing is filed.
 
 This folder is the discovery of the epic P1039 (#1522), run on 2026-11-23 at full depth. Six lenses on Opus read the
 product. The architect on Fable wrote the synthesis, and the refuter on Fable read it twice. A council of three
-answered the questions while the PO was away. Ready for: collecting evidence. The skill's output test passes.
+answered the questions while the PO was away. The PO confirmed the understanding on 2026-11-23 (D5). Ready for: design. The skill's output test passes.
 
 ## The picture
 
@@ -54,16 +54,16 @@ flowchart LR
 ## What is decided
 
 - D1, the PO: the frame, full depth.
+- D5, the PO: the understanding, with D2 and D3 as the council answered them.
 - D2 and D3, delegated to the council and the PO's to change: the ratings of the assumptions, A1 as the riskiest with
   a three-arm test, and an answer for each of Q2 to Q12 (mostly option a: seams only, no new epic, no rewrite now).
 
 ## What comes next, and what is open for the PO
 
-1. His yes to the understanding: the jobs, a direction and the remaining risk.
-2. Q10 and Q11, and the account questions Q13 to Q18 about his own use.
-3. His parts of Q2, Q3 and Q7: which run proves v0.10, what "software factory" means, which "Hermes", and a trial on his account.
-4. Whether this public folder can name the installed harness. It names none.
-5. His yes to file anything from [items.md](items.md). Nothing is filed.
+1. Q10 and Q11, and the account questions Q13 to Q18 about his own use.
+2. His parts of Q2, Q3 and Q7: which run proves v0.10, what "software factory" means, which "Hermes", and a trial on his account.
+3. Whether this public folder can name the installed harness. It names none.
+4. His yes to file anything from [items.md](items.md). Nothing is filed.
 
 ## The files
 
