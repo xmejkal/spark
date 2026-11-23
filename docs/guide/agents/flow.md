@@ -183,7 +183,7 @@ files too, `dist/board/schematic.svg` and `dist/board/pcb.svg`, which the build 
 `flow.py page` alone shows them. It never runs `tsci`. The full rules are in `commands/build.md`. Until a build kept them, the two pictures say why they are not drawn. In a project,
 the build writes the same page with all three pictures, after it kept the simulation project. A build that did not finish
 removes `page.html` in a project, and `flow.py page` writes it again. If the flow page cannot be written, the build keeps
-its own result and lists one `not written` entry.
+its own result and lists one `not written` entry. An ok `parts.py --pick` writes an existing `page.html` again, never published ([the next step](#the-next-step)).
 
 The breadboard stands in the page as inline SVG ([P949](https://github.com/xmejkal/spark/issues/1353)), so a player can
 find its parts. Each jumper's group carries `data-step`, the number of its step, and holds its wire, its end dots and
@@ -318,7 +318,7 @@ look is still next. The text's NOW line ends with `[<offer key>]`, `[next: <op>]
 After an ok run that writes to a project, `parts.py --pick` and `check_spine.py --keep` end `next` with the same steps
 ([P1035](https://github.com/xmejkal/spark/issues/1518)), after the command's own, and their text with one `next:` line each,
 with `, needs you` after the command for a step with `needs_person` or `needs_yes`, as on the NOW line. A run that is not `ok`, a dry run, a build without
-`--keep` and a step that runs the same again get none. Claude fills a `<name>` or an `<answers.json>` before the line runs. A follow-up that fails adds `follow-up: <class> raised, the result stands` on stderr.
+`--keep` and a step that runs the same again get none. Claude fills a `<name>` or an `<answers.json>` before the line runs. A follow-up that fails adds `follow-up: <class> raised, the result stands` on stderr. Then, when the project already has `page.html` as a regular file (no folder, FIFO or link), spark writes it again on disk, whole or not at all, and never publishes it (the PO's D16): the text ends with `wrote page.html again: /spark:page publishes it`, and `--json` holds that sentence as a note with `subject` `page.html`. The build with `--keep` writes its own page. A write that fails adds `refresh: <class> raised, page.html not written again, the result stands` on stderr; the old page and the run's status, items, `next`, `data` and text stand.
 
 ## A page request
 
