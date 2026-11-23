@@ -1,11 +1,12 @@
 """
 The board records: which board this project is built around — resolved in one place, and checked against a contract.
 
-Boards are drop-in: add `boards/<id>.json` and put that id in `boards/active.json`. Nothing else
-names a board. This module is the library the Python tools import, and the CLI `scripts/boards.py` is the command
-`/spark:init`, `/spark:build` and the review skill call (P718), because a second copy of "where is the board file" would
-be the exact duplication that boards/ exists to remove. The contract is `BOARD`, a `record_kind.RecordKind` whose rules
-live in `board_rules` (P724). `RecordFinder` (`areas/records.md`) comes with P342.
+Boards are drop-in: add `boards/<id>.json` and name its id in the project's requirements.json (`board`, D35). The
+selection in `boards/active.json` names the board only when the requirements name none (P988). This module is the
+library the Python tools import, and the CLI `scripts/boards.py` is the command `/spark:init`, `/spark:build` and the
+review skill call (P718), because a second copy of "where is the board file" would be the exact duplication that
+boards/ exists to remove. The contract is `BOARD`, a `record_kind.RecordKind` whose rules live in `board_rules` (P724).
+`RecordFinder` (`areas/records.md`) comes with P342.
 
 The contract is enforced rather than documented. A board definition that a person merely
 *described* correctly is how the C6 pin map nearly shipped with D3 read as GPIO3; a definition
@@ -139,7 +140,7 @@ def selection_file(project: Path) -> Path:
 
 def active_id(project: Path) -> str:
     """
-    The id of the board this project is currently built around.
+    The id of the board the selection, `boards/active.json`, names. The project's board is `project_board_id` (P988).
 
     ONE id, and the type is checked rather than assumed. `if not board_id` was the only guard, and
     a non-empty list is truthy — so a project with two boards, which is the first thing anyone with
@@ -165,6 +166,44 @@ def active_id(project: Path) -> str:
     return board_id
 
 
+#: The file whose `board` names the project's board (D35, P988), and the line said once when it cannot be read.
+REQUIREMENTS_NAME, NOT_MARKED = "requirements.json", "no board is marked: %s"
+
+
+def requirements_board(project: Path):
+    """requirements.json's `board` (D35, P988), or None for no requirements.json or no board named (`null`, `""`, `[]`). A
+    file that cannot be read, is no JSON object or names a board that is not one id is a BoardError (RECORD_FILE_BROKEN)."""
+    requirements = Path(project) / REQUIREMENTS_NAME
+    if not requirements.is_file():
+        return None
+    wanted = _read_json(requirements, "requirements file")
+    if not isinstance(wanted, dict):
+        raise BoardError("%s is not a JSON object", requirements, code=records_codes.RECORD_FILE_BROKEN)
+    named = wanted.get("board")
+    if named and not isinstance(named, str):
+        raise BoardError("%s holds %r where one board id belongs", requirements, named, code=records_codes.RECORD_FILE_BROKEN)
+    return named or None
+
+
+def project_board_id(project: Path) -> str:
+    """The id of the project's board (D35, P988): requirements.json's `board`, else the selection (`active_id`). A
+    requirements.json that cannot be read is a BoardError, never a quiet fall back to the selection."""
+    return requirements_board(project) or active_id(project)
+
+
+def marked_board(project: Path):
+    """(the project's board id, None) for `--list` and `--validate` (P988). A broken requirements.json gives (None, its
+    sentence). No file that names a board (the library, a folder with no selection, P989) gives (None, None)."""
+    try:
+        named = requirements_board(project)
+    except BoardError as broken:
+        return None, str(broken)
+    try:
+        return named or active_id(project), None
+    except BoardError:
+        return None, None
+
+
 def records(project=None):
     """{id: (layer, path)} for every board definition — the project's own winning over the store's shelf (P989), and the
     shelf over spark's library."""
@@ -172,8 +211,8 @@ def records(project=None):
 
 
 def definition_path(project: Path, board_id: str = None) -> Path:
-    """Where a board's definition lives. Defaults to the active board."""
-    board_id = board_id or active_id(project)
+    """Where a board's definition lives. Defaults to the project's board (`project_board_id`)."""
+    board_id = board_id or project_board_id(project)
     found = records(project).get(board_id) if isinstance(board_id, str) else None
     if found:
         return found[1]
@@ -186,7 +225,7 @@ def available(project: Path) -> list:
 
 
 def load(project: Path, board_id: str = None) -> dict:
-    """A board definition, validated. Defaults to the active board."""
+    """A board definition, validated. Defaults to the project's board (`project_board_id`)."""
     path = definition_path(project, board_id)
     board = _read_json(path, "board definition")
     problems = validate(board, path)
@@ -285,7 +324,6 @@ ONBOARD_ROLES = {
         "spark adds no battery to the diagram, so a passed run does not test what the board reads on this pin. "
         "Test it on the board."),
 }
-
 
 
 def onboard_entries(board):
@@ -517,7 +555,7 @@ def role_limits(board, roles, definitions=None, key=None, wired=None):
 
 def resolve(project: Path) -> Path:
     """
-    Write the active board, validated, to one known path.
+    Write the project's board (`project_board_id`), validated, to one known path.
 
     Every consumer then reads that instead of re-implementing the search and the schema check in
     its own language. The file is derived — regenerate it, never edit it.
@@ -528,10 +566,9 @@ def resolve(project: Path) -> Path:
     # A distinct key, not "//": board definitions carry their own "//" comment, and merging on
     # that silently dropped the generated-file warning. The test noticed.
     destination.write_text(json.dumps(
-        dict({"//generated": "GENERATED by spark's boards.py from boards/active.json. Do not "
-                             "edit — run the resolver again. This exists so Make, Python and "
-                             "TypeScript read one validated file instead of three copies of a "
-                             "search."}, **board),
+        dict({"//generated": "GENERATED by spark's boards.py from the project's board (requirements.json, else "
+                             "boards/active.json). Do not edit — run the resolver again. This exists so Make, Python "
+                             "and TypeScript read one validated file instead of three copies of a search."}, **board),
         indent=2) + "\n")
     return destination
 

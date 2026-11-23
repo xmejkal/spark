@@ -25,17 +25,18 @@ from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: 
 from spark.core import outcomes  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.records import board_rules  # noqa: E402
-from spark.records.board_records import (BoardError, _read_json, active_id, available, definition_path,  # noqa: E402
+from spark.records.board_records import (BoardError, _read_json, project_board_id, available, definition_path,  # noqa: E402
                                          get, project_or_library, project_root, resolve, validate)
 
 
 def _validate_all(project: Path, for_fab: bool) -> int:
-    """Check every board file, not just the active one, and say what is wrong with each."""
+    """Check every board file, not just the project's, and say what is wrong with each."""
     failed = False
-    try:
-        active = active_id(project)
-    except BoardError:
-        active = None  # P989 review: a folder with no boards/active.json has no active board, and every file is still checked
+    # P989 review: a folder where no file names a board marks none, and every file is still checked. P988: a broken
+    # requirements.json is said once.
+    active, note = board_records.marked_board(project)
+    if note:
+        print("  " + board_records.NOT_MARKED % note)
     for board_id, (where, path) in board_records.records(project).items():  # P989: the layer the records give
         try:
             board = _read_json(path, "board definition")
@@ -104,7 +105,7 @@ def main(argv=None, outside=None) -> int:
         elif args.resolve:
             print(resolve(project))
         elif args.id:
-            print(active_id(project))
+            print(project_board_id(project))
         elif args.paths:
             # Deliberately not `boards/*.json`: that glob also matches active.json, which is a
             # selection rather than a board. Everything that needs the list should ask here.

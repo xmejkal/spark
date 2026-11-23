@@ -35,10 +35,7 @@ class ListBoards(Operation):
 
     def run(self, project, *, outside, list=True):
         project = project.resolve() if project else board_records.project_or_library()
-        try:
-            current = board_records.active_id(project)
-        except board_records.BoardError:
-            current = None  # nothing chosen: the library, or a project before init
+        current, note = board_records.marked_board(project)  # None: nothing chosen, or requirements.json cannot be read
         rows, lines = [], []
         for board_id, (layer, path) in sorted(board_records.records(project).items()):
             try:
@@ -49,5 +46,6 @@ class ListBoards(Operation):
             rows.append({"id": board_id, "layer": layer, "active": board_id == current,
                          "stops_why": footprint_emitter.why_no_footprint(board) if stops else None})
             lines.append(ROW_LINE % ("*" if board_id == current else " ", board_id, layer, " " + stops if stops else ""))
-        return OperationResult({"boards": rows}, lines=lines)
+        said = [board_records.NOT_MARKED % note] if note else None  # P988: a note only when said, so the envelope stays
+        return OperationResult({"boards": rows}, lines=["  " + said[0]] + lines if said else lines, notes=said)
 # --- end MVP ---
