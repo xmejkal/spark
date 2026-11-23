@@ -1,0 +1,3 @@
+[
+  {"file": "tools/story_tests.py", "name": "P1023: a changed mutation table selects no test again, so a critical row past the cap reaches main (test_story_tests.TheChangedFilesChooseTheTestsTest.test_a_mutation_table_and_the_ledger_run_test_ledger)", "find": "    if name.startswith(MUTATION_FOLDER):\n        return {LEDGER_TEST}", "replace": "    if name.startswith(MUTATION_FOLDER):\n        return set()"}
+]

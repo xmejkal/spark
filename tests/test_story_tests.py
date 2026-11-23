@@ -84,8 +84,13 @@ class TheChangedFilesChooseTheTestsTest(unittest.TestCase):
     def test_the_converter_s_files_run_the_converter_s_test(self):
         self.assert_runs(chosen("tools/circuit-to-wokwi/lib/geometry.ts"), "test_converter")
 
-    def test_a_document_and_a_mutation_table_need_only_the_always_list(self):
-        for name in ("docs/guide/agents.md", "scrum/README.md", "README.md", "tests/mutations/p1-a.json"):
+    def test_a_mutation_table_and_the_ledger_run_test_ledger(self):
+        # P1023: main went red when two PRs added critical rows past the PO's cap, and no story run read the tables.
+        for name in ("tests/mutations/p1017-story-imports.json", "tests/mutations/ledger.jsonl"):
+            self.assert_runs(chosen(name, tests=dict(TESTS, test_ledger="")), "test_ledger")
+
+    def test_a_document_needs_only_the_always_list(self):
+        for name in ("docs/guide/agents.md", "scrum/README.md", "README.md"):
             self.assert_runs(chosen(name))
 
     def test_the_tests_of_several_files_add_up_sorted_without_repeats(self):

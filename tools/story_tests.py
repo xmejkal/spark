@@ -40,7 +40,7 @@ GOLDEN_NET_ELSEWHERE = {"build": "design", "flow": "design", "idea": "records", 
 CORE_FOLDER = "scripts/spark/core/"
 PACKAGE_FILE = "__init__.py"
 AREA_MODULE = re.compile(r"scripts/spark/([^/]+)/")
-NO_TEST_OF_THEIR_OWN = ("docs/", "scrum/", "tests/mutations/")
+NO_TEST_OF_THEIR_OWN = ("docs/", "scrum/")
 ROOT_DOCUMENT_SUFFIX = ".md"
 COMMAND_PAGE = re.compile(r"commands/([^/]+)\.md$")
 TEST_FILE = re.compile(r"tests/(test_[^/]+)\.py$")
@@ -50,6 +50,9 @@ AREA_NET_FOLDER = re.compile(r"tests/golden-([^/]+)/")
 GOLDEN_NET = "test_golden_%s"
 CONVERTER_FOLDER = "tools/circuit-to-wokwi/"
 CONVERTER_TEST = "test_converter"
+#: The mutation tables and the ledger: test_ledger reads them, and it holds the PO's cap on critical rows (P1023).
+MUTATION_FOLDER = "tests/mutations/"
+LEDGER_TEST = "test_ledger"
 #: The walk reads only the files of scripts/. To follow the helpers of tests/ costs about 46 s for each breadboard
 #: change (P1017, measured on #1374).
 SCRIPTS_FOLDER = "scripts/"
@@ -172,6 +175,8 @@ def _tests_for(name, test_texts, golden_texts, walk):
         return {BENCH_NET}
     if name.startswith(CONVERTER_FOLDER):
         return {CONVERTER_TEST}
+    if name.startswith(MUTATION_FOLDER):
+        return {LEDGER_TEST}
     area_net = AREA_NET_FOLDER.match(name)
     if area_net:
         return {GOLDEN_NET % area_net.group(1)}
