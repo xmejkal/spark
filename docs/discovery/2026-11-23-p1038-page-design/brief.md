@@ -7,9 +7,9 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 → the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
-**Ready for:** collecting evidence: the frame is the PO's (D1); a direction is delegated to the council (D3 to D12, the PO's to change); the jobs are not confirmed; Q11 to Q13 and QA1 to QA7 wait for the PO, and QA2 decides O2c; A1's test runs in the next walk <!-- REQUIRED:ready -->
-**Stands on:** 8 H, 5 of which would change the decision (A1, A2, A5, A7, A9 rated high by D3 and still open; A3 is retired) <!-- REQUIRED:debt -->
-**Decision needed:** The PO confirms or changes the delegated D3 to D12 and the jobs, decides Q11 to Q13, and answers QA1 to QA7. Then the design goes to the architect with the full council (spark-main runs it). <!-- REQUIRED:decision-needed -->
+**Ready for:** design: the PO confirmed the frame (D1), the jobs (D14), the direction (D3 to D12, D15 to D17, D19, D20) and accepted the remaining risk (D21). Next: the architect and the full council, run by spark-main; the frontend-design skill is read whole and installed at user level at the page cards (D8) <!-- REQUIRED:ready -->
+**Stands on:** 7 H, 4 of which would change the decision (A1, A5, A7, A9 rated high by D3 and still open; A2 missed, A3 met) <!-- REQUIRED:debt -->
+**Decision needed:** None in this discovery. The design's decisions come at the architect's design and its full council. <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked): "lets analyze it and really design it both ux and graphic style and also architecture and claude artifact howto" (the PO, epaper session, 2026-11-23, after: "get back to where the page is and try to show this project on the page and continue working on it more, so we can make it work and be really UX perfect in graphic and later interactive part and can show all the steps and guide etc"). Later, the PO added a question and a decision: architecture options for human and AI interfaces (on P1038 and P1039), and the design skill anthropics/skills@frontend-design, to install at the page cards (open: user level, /spark:setup, or both). <!-- REQUIRED:request -->
@@ -102,13 +102,13 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - Q11 · Does "decided" become a field of the brief record (`Brief`), with its origin? · decides: whether the decided lines are spark's (D4's 2 of 3) · options: yes, when Q2's section is built (the architect's recommendation); no · kind: decision · status: answered D15
 - Q12 · What writes page.html again: only /spark:page (today), or the core after each run that writes to a project? · decides: D5's trigger · options: /spark:page only; a core hook (the architect's recommendation; #1105's piece 3 adds a now step and writes no page today) · kind: decision · status: answered D16
 - Q13 · Does the page name the build it draws from, so a rewrite with new code over an old build shows it (R-7)? · decides: a guard on the stamp · options: yes (the architect's recommendation); no · kind: decision · status: answered D17
-- QA1 · The last time you came back to the e-paper clock, what did you open first to see where it stood? · decides: A1 · kind: account · status: queued for the PO (no council can answer it)
-- QA2 · Name the five things you want to see first on this project's page. · decides: A2 and the desk check · kind: account · status: queued for the PO
-- QA3 · The clock's goal line says "display clock and react on pressing the button", and its must lines say a quote every hour. Which describes the gadget today? · decides: the page's goal line · kind: account · status: queued for the PO
-- QA4 · Did you ever show this page, or another spark page, to anyone? · decides: Job 3 · kind: account · status: queued for the PO
-- QA6 · When you wired at 11:41 on 2026-11-22, did you wire from the page's steps, from breadboard.md or from the picture? · decides: whether the list or the picture leads · kind: account · status: queued for the PO
+- QA1 · The last time you came back to the e-paper clock, what did you open first to see where it stood? · decides: A1 · kind: account · status: answered 17:39 CET: a Claude session (see Results) (no council can answer it)
+- QA2 · Name the five things you want to see first on this project's page. · decides: A2 and the desk check · kind: account · status: answered 17:39 CET: what is on the board, the next step, the goal and must lines, the open problems (see Results)
+- QA3 · The clock's goal line says "display clock and react on pressing the button", and its must lines say a quote every hour. Which describes the gadget today? · decides: the page's goal line · kind: account · status: answered 17:41 CET: the quotes clock; the goal line in p934-display2/.spark/project.json is stale (the project's file, for the PO to change)
+- QA4 · Did you ever show this page, or another spark page, to anyone? · decides: Job 3 · kind: account · status: answered 17:41 CET: yes, he showed a spark page to someone (no detail given); D9 confirmed again (D20)
+- QA6 · When you wired at 11:41 on 2026-11-22, did you wire from the page's steps, from breadboard.md or from the picture? · decides: whether the list or the picture leads · kind: account · status: answered 17:42 CET: the picture and Claude in the chat (see Results)
 - QA7 · When you said the design skill is "for everybody, not just this session", did you mean all your own sessions, or every spark user? · decides: D8's install route · kind: account · status: answered by D8 (the PO, 17:32 CET)
-- QA5 · When the page said "Could not run" after the build, what did you take it to mean? · decides: how the top panel words a stale answer · kind: account · status: queued for the PO
+- QA5 · When the page said "Could not run" after the build, what did you take it to mean? · decides: how the top panel words a stale answer · kind: account · status: answered 17:42 CET: "The build failed" (see Results)
 
 ## Decisions
 <!-- D<n> · what · who · when · where recorded · options considered.
@@ -132,6 +132,9 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D16 · Q12: a core hook writes page.html again on disk after each run that writes to a project (P793 piece 3 grows to do it); Claude republishes the Artifact at the next /spark:page or when it next acts · the PO · 2026-11-23 17:35 CET · AskUserQuestion in the page-design session · options considered: the core hook; the hook and an immediate republish by the session; only /spark:page
 - D17 · Q13: yes, the page names the build it draws from, as part of the stamp in the first page slice, and shows a mismatch between the code and that build instead of hiding it · the PO · 2026-11-23 17:36 CET · AskUserQuestion in the page-design session · options considered: name the build; name it and offer a rebuild; no
 - D18 · items.md: file all four items (1 the deploy reader story under P793 #1105; 2 the Build-on-a-wired-board bug under P1038; 3 the step numbers and stamp bug under P1038; 4 the README Bench row chore); spark-main files them, because it owns the board · the PO · 2026-11-23 17:37 CET · AskUserQuestion in the page-design session · options considered: each item yes or no
+- D19 · D4 changed after A2 missed (QA2): the page shows spark's records and, through a new core reader, the project's open GitHub issues, marked as the project's, not spark's (O2b); the next step after the deploy and the open problems come from there · the PO · 2026-11-23 17:39 CET · AskUserQuestion in the page-design session · options considered: O2b; O2c (a link out only); neither · caveat: the reader needs gh and the network when the page is written, so the page is no longer the same bytes for the same flow (the architect's objection, council/answers-architect.md); the design settles how the issues are read and cached
+- D20 · D9 stands after QA4: Job 3 is real (he showed a spark page), and this epic makes the page good to show; the share route stays on P834 · the PO · 2026-11-23 17:41 CET · AskUserQuestion in the page-design session · options considered: D9 stands; move sharing in (O7b)
+- D21 · the remaining risk accepted, the direction (D3 to D12 as confirmed, D15 to D17, D19, D20) confirmed, and the understanding confirmed: the design starts with A1, A5, A7 and A9 untested, each tested in the build or the next walk; spark-main runs the architect and the full council · the PO · 2026-11-23 17:43 CET · AskUserQuestion in the page-design session · options considered: accept and go to design; test A1 first in an unscripted walk; not yet
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
@@ -145,14 +148,25 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 <!-- Each action on the board or the issue (stage, waiting flag, comment, filing): taken, with its D, or pending.
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - P1038 is already in Discovery (spark-main, 2026-11-23) · taken by spark-main
-- file items 1 to 4 of items.md · pending, by spark-main, D18
+- file items 1 to 4 of items.md · taken by spark-main, D18: P1043 #1533, P1044 #1534, P1045 #1535, P1046 #1536
+- D16 sent to the P1035 plan writer by spark-main (core piece 3 also writes page.html) · taken
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the PO has not confirmed the understanding. D3 to D12 are delegated and his to change, and the jobs, Q11 to Q13 and QA1 to QA7 wait for him <!-- REQUIRED:handoff -->
+Confirmed by the PO (D21, 2026-11-23). For the architect and the full council.
+
+- Outcome: a person who opens the project's page sees where the project really stands, what to do next and the project's own facts, without asking Claude (D1). Claude is the first reader in practice (QA1), so `flow.py show --json` and the how-to carry the same facts.
+- Who: the PO, the one user (n = 1, D1), and Claude, which fills the page and reads its clicks.
+- Jobs: the four in [jobs-and-journeys.md](jobs-and-journeys.md), confirmed (D14). Job 3 is real (QA4), and its share route is later (D20).
+- What the PO decided: spark's records first (D4), plus the project's open GitHub issues through a new core reader, marked as the project's (D19); a snapshot page with a stamp over every file it reads, on its own list apart from the click fingerprint (D5); a core hook writes page.html again after each run that writes to a project (D16); the page names the build it draws from (D17); system fonts and D7 kept, tokens planned once (D6); the deploy reader as P1043 #1533 under P793, in parallel with the first page slice (D7), with no tick on "ready unknown" and a run with no read-back shown as "written by the flasher, nothing read back, start not seen" (D10); "decided" becomes a field of the brief record (D15); the first page slice is readability, then the style (D11); the how-to is a doc kept current per slice (D12); the design skill at user level at the page cards (D8).
+- Constraints and no-gos: see Options' proposed no-gos; the click path of P829 and the page's privacy must not get worse (D1); no logic in the page's script; no web loads (D6).
+- What we assume (H), each with its test: A1, A5, A7, A9 in [risks-and-tests.md](risks-and-tests.md). A2 missed (D19), A3 met.
+- Evidence the design uses: QA5 (a partial result read as a failure) and QA6 (he wired from the picture and Claude) in the Results of risks-and-tests.md.
+- Map: [story-map.md](story-map.md), proposed; filed cards P1043 to P1046 (D18).
+- Options considered: Options above, with the set-aside routes (files capability, a public static host, a JS renderer). <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
