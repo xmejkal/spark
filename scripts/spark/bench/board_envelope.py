@@ -98,7 +98,7 @@ ASLEEP_FIX = (ASLEEP_KNOWS + "%(opening)s, and the project's firmware calls deep
 OWN_USB_SLEEP = "In deep sleep the chip's own USB is off, so the board leaves USB with the cable in, until it wakes."
 MAYBE_OWN_USB_SLEEP = ("If the board's USB is the chip's own (USB-Serial/JTAG), it is off in deep sleep, and the board "
                        "leaves USB with the cable in until it wakes.")
-UNPARSED = "spark could not parse %s, so it does not know whether that file calls deepsleep."
+UNPARSED = "These files of firmware/ did not parse, so spark does not know whether they call deepsleep: %s."
 
 
 def own_usb_of(project):

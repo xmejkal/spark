@@ -49,6 +49,12 @@ CAVEAT = ("  the passed run's scenario has no set-control step (the step that pr
 NO_BOARD = ("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only. "
             "If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.")
 
+#: The words of the asleep fix (P1022 slice 3), literals so that a change of the code's text fails here.
+OWN_USB_SLEEP = "In deep sleep the chip's own USB is off, so the board leaves USB with the cable in, until it wakes."
+MAYBE_OWN_USB_SLEEP = ("If the board's USB is the chip's own (USB-Serial/JTAG), it is off in deep sleep, and the board "
+                       "leaves USB with the cable in until it wakes.")
+UNPARSED_MAIN = "These files of firmware/ did not parse, so spark does not know whether they call deepsleep: firmware/main.py."
+
 
 class LookScriptCase(LookCase):
     def go(self, *argv, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", text=None, fail=False):
@@ -492,7 +498,7 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.assertEqual(problems[0], "look.py: no board found.")
         fix = problems[1]
         for words in ("What spark knows: no board is on USB, and the project's firmware calls deepsleep (firmware/main.py:3).",
-                      board_envelope.OWN_USB_SLEEP, "Hold the board's BOOT button (B, top right, beside the USB-C), press and "
+                      OWN_USB_SLEEP, "Hold the board's BOOT button (B, top right, beside the USB-C), press and "
                       "release RESET (R, top left, beside the USB-C), then release BOOT. Left and right as seen with the metal shield",
                       "press RESET (R, top left, beside the USB-C) once, with BOOT not held"):
             self.assertIn(words, fix)
@@ -506,8 +512,8 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.board("firebeetle2-esp32s3")
         self.sleeper("import machine\nmachine.deepsleep(1)\n")
         fix = self.stops(devs="mpremote-devs-none.txt").splitlines()[1]
-        self.assertIn(board_envelope.MAYBE_OWN_USB_SLEEP, fix)
-        self.assertNotIn(board_envelope.OWN_USB_SLEEP, fix)
+        self.assertIn(MAYBE_OWN_USB_SLEEP, fix)
+        self.assertNotIn(OWN_USB_SLEEP, fix)
         self.assertIn("Hold the board's BOOT button, press and release RESET, then release BOOT. The board", fix)
 
     def test_only_the_first_two_call_places_are_shown(self):
@@ -529,8 +535,8 @@ class WhatStopsTheLookTest(LookScriptCase):
     def test_a_firmware_file_that_does_not_parse_is_named_and_the_cable_sentence_stays(self):
         self.sleeper("import machine\nmachine.deepsleep(1\n")
         self.assertEqual(self.stops(devs="mpremote-devs-none.txt").splitlines(), [
-            "look.py: %s" % NO_BOARD, board_envelope.UNPARSED % "firmware/main.py"])
-        self.assertEqual(self.unchecked(devs="mpremote-devs-none.txt")["fix"], board_envelope.UNPARSED % "firmware/main.py")
+            "look.py: %s" % NO_BOARD, UNPARSED_MAIN])
+        self.assertEqual(self.unchecked(devs="mpremote-devs-none.txt")["fix"], UNPARSED_MAIN)
 
     def test_no_board_without_a_deepsleep_call_stays_as_it_was(self):
         self.sleeper("import machine\nmachine.lightsleep(1)\n")
