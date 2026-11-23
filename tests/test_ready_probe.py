@@ -229,7 +229,7 @@ class ReadyThenTheBoardWasLostTest(unittest.TestCase):
         result = self.check(HASHES, lost(), sleeps=())
         self.assertEqual((result.verdict, result.files_read, result.lost_board), ("ready unknown", True, True))
         self.assertEqual(result.sentence, "the firmware printed 'ready', then mpremote lost the board (OSError: [Errno 6] "
-                                          "Device not configured), and firmware/ calls no deepsleep")
+                                          "Device not configured), and spark found no deepsleep call in firmware/")
 
     def test_ready_then_lost_with_a_file_that_differs_is_not_seen_with_or_without_a_deepsleep_call(self):
         for sleeps in (SLEEPS, ()):

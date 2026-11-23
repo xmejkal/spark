@@ -40,7 +40,7 @@ SEEN, NOT_SEEN, UNKNOWN = "ready seen", "ready not seen", "ready unknown"
 #: saw and names no cause: with a deepsleep call in firmware/ it is ready seen, without one ready unknown (D1).
 LOST = "then mpremote lost the board (%s)"
 LOST_SLEEPS = ", %s. %s calls deepsleep"
-LOST_NO_SLEEP = "the firmware printed %r, %s, and firmware/ calls no deepsleep"
+LOST_NO_CALL = "the firmware printed %r, %s, and spark found no deepsleep call in firmware/"
 #: The verdict of a deploy that a registered project recorded (P920): spark read nothing from the board.
 NOT_READ = "ready not read"
 
@@ -98,6 +98,6 @@ class ReadyProbe:
         if not has_ready_line(said):
             return ReadyResult(NOT_SEEN, "the firmware printed no %r in %d s" % (READY, READY_WAIT_S), log)
         if lost and not sleeps:  # D1: without a deepsleep call a lost board is one spark could not look at
-            return ReadyResult(UNKNOWN, LOST_NO_SLEEP % (READY, lost), log, True, lost_board=True)
+            return ReadyResult(UNKNOWN, LOST_NO_CALL % (READY, lost), log, True, lost_board=True)
         return ReadyResult(SEEN, "the firmware printed %r and the board's %d files match the image%s" % (
             READY, len(expected), LOST_SLEEPS % (lost, sleeps[0].split(":")[0]) if lost else ""), log, lost_board=bool(lost))

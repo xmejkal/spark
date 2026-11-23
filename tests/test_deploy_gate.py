@@ -1023,9 +1023,12 @@ class TheSleepingFirmwareTest(GateCase):
         self.assertEqual(code, 2)
         self.assertIn("ready unknown: the firmware printed 'ready', then mpremote lost the board", said)
         fix = self.fix_line(said)
-        self.assertIn("The board's files were read, and the firmware printed `ready`, then mpremote lost the board. It counts "
-                      "as unknown, because the project's firmware calls no deepsleep.", fix)
+        self.assertIn("The board's files were read, and the firmware printed `ready`, then mpremote lost the board. The facts "
+                      "file spark.json was written and read back. No deepsleep call was found in firmware/, so it counts as "
+                      "unknown.", fix)
         self.assertNotIn("could not read the port", fix)
+        # the review of #1531 (the refuter): `ready` proves the firmware ran, so a C6 on 303a:1001 gets no BOOT entry here
+        self.assertNotIn("download mode with BOOT", fix)
 
     def test_a_firmware_that_sleeps_before_ready_gets_its_call_place_and_the_check_s_seconds(self):
         self.unread = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
@@ -1047,7 +1050,7 @@ class TheSleepingFirmwareTest(GateCase):
         fix = self.fix_line(said)
         words = ("If the board was put in download mode with BOOT for this deploy, it still waits there: on this chip over "
                  "USB-Serial/JTAG, esptool's restart after the write cannot leave that mode, and a press of RESET does. "
-                 "Press RESET first (step 2 below), with BOOT not held.")
+                 "Press RESET now (step 2 below), before you wait, with BOOT not held.")
         self.assertIn(words, fix)
         self.assertLess(fix.index(words), fix.index("What spark did not do"))
 

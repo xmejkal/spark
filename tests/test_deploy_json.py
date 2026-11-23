@@ -589,16 +589,34 @@ class ReadyUnknownFixTest(unittest.TestCase):
     def test_the_boot_entry_is_said_as_a_condition_only_when_the_result_says_so(self):
         fix = self.fix(self.unknown("", keeps_boot_entry=True))
         self.assertIn("If the board was put in download mode with BOOT for this deploy, it still waits there", fix)
-        self.assertLess(fix.index("Press RESET first (step 2 below), with BOOT not held."), fix.index("What spark did not do"))
+        self.assertLess(fix.index("Press RESET now (step 2 below), before you wait, with BOOT not held."), fix.index("What spark did not do"))
         self.assertNotIn("download mode with BOOT", self.fix(self.unknown("")))
 
     def test_a_ready_line_before_a_lost_board_is_never_said_unseen(self):
         # the refuter's round 2, A: the firmware printed ready, so "did not start" and "did not see ready" are false
         fix = self.fix(self.unknown(None, files_read=True, lost=True))
-        self.assertIn("The board's files were read, and the firmware printed `ready`, then mpremote lost the board. It counts "
-                      "as unknown, because the project's firmware calls no deepsleep.", fix)
+        self.assertIn("The board's files were read, and the firmware printed `ready`, then mpremote lost the board. The facts "
+                      "file spark.json was not written. No deepsleep call was found in firmware/, so it counts as unknown.", fix)
         self.assertNotIn("did not see `ready`", fix)
         self.assertNotIn("did not start the firmware", fix)
+
+    def test_a_lost_board_after_ready_gets_a_closing_for_a_firmware_that_ran_and_no_boot_entry(self):
+        # the review of #1531: the lens (the firmware ran, so no "change the firmware: it does not read its console") and
+        # the refuter (`ready` proves the firmware ran, so the C6's BOOT entry is not named)
+        fix = self.fix(self.unknown(None, files_read=True, lost=True, keeps_boot_entry=True))
+        self.assertNotIn("download mode with BOOT", fix)
+        for words in ("can be running or silent", "does not read its console", "sleep in short slices"):
+            self.assertNotIn(words, fix)
+        order = ["What spark did not do: it did not flash again and did not erase again.", "1. Run look.py: it shows whether "
+                 "the board is on USB again.", "2. Run live.py", "3. Open the REPL line, and read what the firmware prints after "
+                 "`ready`: an error there means that it crashed.", "If the firmware leaves USB on purpose in a way that spark "
+                 "does not read, this result is expected. Do not deploy again for this."]
+        places = [fix.find(words) for words in order]
+        self.assertNotIn(-1, places, fix)
+        self.assertEqual(places, sorted(places))
+        unparsed = self.fix_with(self.unknown(None, lost=True), sleep_calls.SleepCalls((), ("firmware/main.py",)))
+        self.assertIn("No deepsleep call was found in firmware/, so it counts as unknown. These files of firmware/ did not "
+                      "parse, so spark does not know whether they call deepsleep: firmware/main.py. What spark did not do", unparsed)
 
     def fix_with(self, result, sleeps):
         return board_envelope.ready_unknown_fix(result, board_records.ButtonPlaces.EMPTY, sleeps)

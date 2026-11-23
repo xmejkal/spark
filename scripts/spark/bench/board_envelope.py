@@ -79,14 +79,16 @@ def sleep_words(sleeps, own_usb):
 def ready_unknown_fix(result, places, sleeps=sleep_calls.SleepCalls((), ())):
     """The fix of a ready_unknown deploy, the one text the CLI says and the JSON item carries (P1022): READY_UNKNOWN's
     template filled from the DeployResult `result`, the RESET place of `places` (a ButtonPlaces) and the deepsleep calls
-    `sleeps` (a SleepCalls), or the fix of READY_UNKNOWN_NO_FILES when the passed run's log names no files."""
+    `sleeps` (a SleepCalls), READY_UNKNOWN_LOST's for a firmware that printed `ready` before mpremote lost the board, or
+    the fix of READY_UNKNOWN_NO_FILES when the passed run's log names no files."""
     if not result.facts["files"]:
         return board_codes.READY_UNKNOWN_NO_FILES.fix
-    lost = result.ready.lost_board  # the firmware printed ready: neither "did not start" nor "did not see ready" holds
+    facts = FACTS_WRITTEN if result.facts_line.written else FACTS_NOT_WRITTEN
+    if result.ready.lost_board:  # the firmware printed ready, so it ran: its own text, with no BOOT entry
+        return board_codes.READY_UNKNOWN_LOST.fix % {"facts": facts, "sleep": sleep_words(sleeps, result.own_usb)}
     return board_codes.READY_UNKNOWN.fix % {
-        "files": FILES_READ_LOST if lost else FILES_READ if result.ready.files_read else FILES_NOT_READ,
-        "console": LOST_NO_SLEEP if lost else console_words(result.console), "sleep": sleep_words(sleeps, result.own_usb),
-        "facts": FACTS_WRITTEN if result.facts_line.written else FACTS_NOT_WRITTEN,
+        "files": FILES_READ if result.ready.files_read else FILES_NOT_READ,
+        "console": console_words(result.console), "sleep": sleep_words(sleeps, result.own_usb), "facts": facts,
         "keeps_boot_entry": KEEPS_BOOT_ENTRY_WORDS if result.keeps_boot_entry else "",
         "reset": places.reset, "orientation": places.orientation}
 
@@ -116,10 +118,7 @@ SLEEP_WORDS = ("The project's firmware calls deepsleep (%s). %s The check counts
                "in the first %d s of its start. ")
 KEEPS_BOOT_ENTRY_WORDS = ("If the board was put in download mode with BOOT for this deploy, it still waits there: on this "
                           "chip over USB-Serial/JTAG, esptool's restart after the write cannot leave that mode, and a press "
-                          "of RESET does. Press RESET first (step 2 below), with BOOT not held. ")
-#: The files and console words of a start that printed `ready` before mpremote lost the board, with no deepsleep call.
-FILES_READ_LOST = "The board's files were read, and the firmware printed `ready`, then mpremote lost the board"
-LOST_NO_SLEEP = "It counts as unknown, because the project's firmware calls no deepsleep"
+                          "of RESET does. Press RESET now (step 2 below), before you wait, with BOOT not held. ")
 
 
 def asleep_fix(project, reason, places):

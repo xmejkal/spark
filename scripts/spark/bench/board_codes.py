@@ -62,6 +62,19 @@ READY_UNKNOWN = Code("ready_unknown", "the board could not be read after the fla
 READY_UNKNOWN_NO_FILES = Code(READY_UNKNOWN, READY_UNKNOWN.meaning,
                               "The image is on the flash: spark did not flash again and did not erase again. Run the scenario "
                               "again, so that its log names the files. Only a deploy after that checks ready.")
+#: A variant of READY_UNKNOWN (P1022 slice 3, the review of #1531): the firmware printed `ready`, then mpremote lost the
+#: board, and no deepsleep call was found in firmware/ (D1). The firmware ran, so nothing here says it did not start, and
+#: no BOOT entry is named. `sleep` is board_envelope.sleep_words' text, or "".
+READY_UNKNOWN_LOST = Code(READY_UNKNOWN, READY_UNKNOWN.meaning,
+                          "What spark knows: the write passed esptool's hash check, so the image is on the flash. The board's "
+                          "files were read, and the firmware printed `ready`, then mpremote lost the board. %(facts)s. No "
+                          "deepsleep call was found in firmware/, so it counts as unknown. %(sleep)sWhat spark did not do: it "
+                          "did not flash again and did not erase again. What to try, in order: 1. Run look.py: it shows "
+                          "whether the board is on USB again. 2. Run live.py: it says whether the board answers, and it needs "
+                          "a live grant. If it refuses, it prints the grant line to run in your own terminal. 3. Open the "
+                          "REPL line, and read what the firmware prints after `ready`: an error there means that it crashed. "
+                          "If the firmware leaves USB on purpose in a way that spark does not read, this result is expected. "
+                          "Do not deploy again for this.")
 #: Why the board did not start after the write (P462): it still waits in download mode, or its port is gone.
 DOWNLOAD_MODE_STAYED, PORT_GONE = "download_mode_stayed", "port_gone"
 #: A stage needs a fact the record lacks (P464): the item of `missing_facts`, in the build's `kept` pin-map entry.
