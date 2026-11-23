@@ -171,8 +171,8 @@ REQUIREMENTS_NAME, NOT_MARKED = "requirements.json", "no board is marked: %s"
 
 
 def requirements_board(project: Path):
-    """requirements.json's `board` (D35, P988), or None for no requirements.json or no board named (`null`, `""`, `[]`). A
-    file that cannot be read, is no JSON object or names a board that is not one id is a BoardError (RECORD_FILE_BROKEN)."""
+    """requirements.json's `board` (D35, P988), or None for no requirements.json, no key, `null` or `""`. A file that
+    cannot be read, is no JSON object or holds any other value that is no string is a BoardError (RECORD_FILE_BROKEN)."""
     requirements = Path(project) / REQUIREMENTS_NAME
     if not requirements.is_file():
         return None
@@ -180,7 +180,7 @@ def requirements_board(project: Path):
     if not isinstance(wanted, dict):
         raise BoardError("%s is not a JSON object", requirements, code=records_codes.RECORD_FILE_BROKEN)
     named = wanted.get("board")
-    if named and not isinstance(named, str):
+    if named is not None and not isinstance(named, str):
         raise BoardError("%s holds %r where one board id belongs", requirements, named, code=records_codes.RECORD_FILE_BROKEN)
     return named or None
 

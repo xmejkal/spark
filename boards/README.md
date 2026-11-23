@@ -33,6 +33,9 @@ selection:
 { "schema": 1, "board": "firebeetle2-esp32s3" }
 ```
 
+A folder with only `requirements.json` is not found as a project without `--project`: the scripts find a project by
+its `boards/active.json` or its `.spark/` folder.
+
 A definition you verified yourself always beats a shared one, so a project's own `boards/<id>.json`
 overrides the library. Nothing you have checked can be replaced by a plugin update.
 

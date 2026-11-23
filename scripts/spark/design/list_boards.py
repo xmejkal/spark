@@ -47,6 +47,8 @@ class ListBoards(Operation):
             rows.append({"id": board_id, "layer": layer, "active": board_id == current,
                          "stops_why": footprint_emitter.why_no_footprint(board) if stops else None})
             lines.append(ROW_LINE % ("*" if board_id == current else " ", board_id, layer, " " + stops if stops else ""))
-        said = [board_records.NOT_MARKED % note] if note else None  # P988: a note only when said, so the envelope stays
-        return OperationResult({"boards": rows}, lines=["  " + said[0]] + lines if said else lines, notes=said)
+        if not note:  # P988: a note only when said, so an intact project's envelope stays
+            return OperationResult({"boards": rows}, lines=lines)
+        said = board_records.NOT_MARKED % note
+        return OperationResult({"boards": rows}, lines=["  " + said] + lines, notes=[said])
 # --- end MVP ---
