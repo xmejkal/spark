@@ -450,14 +450,16 @@ class TheHelpTest(unittest.TestCase):
 class TheDeployEnvelopeYesRuleTest(unittest.TestCase):
     """P337 B: the NEXT_DEPLOY step names a deploy grant only where a grant may answer."""
 
-    def step_why(self, evidence):
+    def step_why(self, evidence, grant_may_answer=True):
         reached = {"project": Path("p"), "evidence": evidence, "stage": "gate", "next_op": "deploy",
-                   "token": "t", "port": "/dev/x", "refusal": "no yes"}
+                   "token": "t", "port": "/dev/x", "refusal": "no yes", "grant_may_answer": grant_may_answer}
         return board_envelope.deploy_result(reached, 2).next[0].why
 
     def test_no_simulation_drops_the_grant_clause_and_a_passed_run_keeps_it(self):
-        self.assertNotIn("grant", self.step_why(image_evidence.NoSimulationEvidence("p")))
-        self.assertNotIn("grant", self.step_why(image_evidence.PassedRunEvidence(True)))
+        # P1029: a grant given with --no-simulation can answer a deploy with no simulation, unless the store disallows it
+        self.assertIn("(or a deploy grant given with --no-simulation stands)", self.step_why(image_evidence.NoSimulationEvidence("p")))
+        self.assertNotIn("grant", self.step_why(image_evidence.NoSimulationEvidence("p"), grant_may_answer=False))
+        self.assertNotIn("grant", self.step_why(image_evidence.PassedRunEvidence(True), grant_may_answer=False))
         self.assertIn("or a deploy grant stands", self.step_why(image_evidence.PassedRunEvidence()))
 
 

@@ -191,22 +191,23 @@
 <text x="1214" y="2454" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">--no-simulation it flashes</text>
 <text x="1214" y="2488" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">firmware/ that no</text>
 <text x="1214" y="2522" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">simulation tested, on a</text>
-<text x="1214" y="2556" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">typed yes only. It flashed</text>
-<text x="1214" y="2590" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">a XIAO ESP32-C6 and read</text>
-<text x="1214" y="2624" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">ready. On 2026-11-01 it</text>
-<text x="1214" y="2658" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">flashed a FireBeetle 2</text>
-<text x="1214" y="2692" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">ESP32-S3, deploy needed no</text>
-<text x="1214" y="2726" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">reset press after the</text>
-<text x="1214" y="2760" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">flash, and its button lit</text>
-<text x="1214" y="2794" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">its LED. Walk 4 repeated</text>
-<text x="1214" y="2828" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">that, and deploy.py put a</text>
-<text x="1214" y="2862" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">display with Python games</text>
-<text x="1214" y="2896" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">on it. The faster C driver</text>
-<text x="1214" y="2930" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">image went on outside</text>
-<text x="1214" y="2964" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">spark. live.py runs</text>
-<text x="1214" y="2998" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Claude's code inside your</text>
-<text x="1214" y="3032" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">grant. No wired breadboard</text>
-<text x="1214" y="3066" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">yet.</text>
+<text x="1214" y="2556" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">typed yes or a deploy grant</text>
+<text x="1214" y="2590" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">given with --no-simulation.</text>
+<text x="1214" y="2624" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">It flashed a XIAO ESP32-C6</text>
+<text x="1214" y="2658" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">and read ready. On</text>
+<text x="1214" y="2692" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-11-01 it flashed a</text>
+<text x="1214" y="2726" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">FireBeetle 2 ESP32-S3,</text>
+<text x="1214" y="2760" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">deploy needed no reset</text>
+<text x="1214" y="2794" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">press after the flash, and</text>
+<text x="1214" y="2828" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">its button lit its LED.</text>
+<text x="1214" y="2862" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Walk 4 repeated that, and</text>
+<text x="1214" y="2896" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">deploy.py put a display</text>
+<text x="1214" y="2930" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">with Python games on it.</text>
+<text x="1214" y="2964" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The faster C driver image</text>
+<text x="1214" y="2998" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">went on outside spark.</text>
+<text x="1214" y="3032" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">live.py runs Claude's code</text>
+<text x="1214" y="3066" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">inside your grant. No wired</text>
+<text x="1214" y="3100" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">breadboard yet.</text>
 <rect x="48" y="3264" width="1504" height="92" rx="12" fill="#1a1a1a"/>
 <text x="72" y="3302" font-size="24" fill="#ffffff"><tspan font-weight="bold">Where we are:</tspan> the FireBeetle 2 button changed its LED in Wokwi and on the bench on 2026-11-01.</text>
 <text x="72" y="3336" font-size="24" fill="#ffffff"><tspan font-weight="bold">Next:</tspan> wire an SPI display to the FireBeetle 2 and run its firmware.</text>

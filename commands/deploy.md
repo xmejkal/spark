@@ -92,6 +92,8 @@ it happens. With `--json` these lines go to stderr. Relay them.
    Never run it yourself, and never write a grant file: it is the person's yes in their own terminal.
    A deploy grant covers only a look with no warning, no unknown field, no stop and a last deploy it could check, and never `--ignore-older-runs`;
    deploy.py asks in the terminal for those. Delete the file `grants/<MAC with dashes>-deploy.json` to end it.
+   For a `--no-simulation` deploy the line ends with `--no-simulation`. That grant also lets you flash firmware that no simulation tested, with no yes for each deploy (direct flashing, P1029).
+   While the file `grants/direct_flashing_disallowed` is in the store, no grant covers such a deploy and deploy.py offers no grant line. No Claude session writes, changes or deletes a file in the grants folder. Deleting that file allows direct flashing again, and only the person does it. `grant.py --disallow-direct-flashing` writes that file: Claude runs it only when the person asks for it. It only narrows.
 4. When deploy.py prints "press the board's RESET ... once", relay that line to the person at once: only a hand
    on the board can do it. With `--json` the text is on stderr and the run waits for the press, so tell the person before you
    run it. A step with `needs_person: true` waits for the person's hands (`data.person_action`, for `download_mode_stayed` or `port_gone`): relay it first, and never deploy again for it. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line, also for `relayed_yes_refused` (a yes another program collected never opens the erase).
@@ -117,7 +119,7 @@ another chip.
 
 1. Build the image from `firmware/`: `${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py --project . --files firmware -o <the image: sim/flash-with-firmware.bin until a scenario run writes the `firmware = ` line of sim/wokwi.toml>`. A board that Wokwi has no part for gets no sim/wokwi.toml, and the image is sim/flash-with-firmware.bin (P1001).
 2. `look.py --no-simulation --json`. It gives a token only when `firmware/main.py` exists, every `.py` file under `firmware/` compiles and the image holds `firmware/` as it is now. Else it says why, and names the build command.
-3. `deploy.py --no-simulation --json --token <the token>`. Its question starts with "no simulation tested this image". Only the person's typed yes answers it. A deploy grant never does, and deploy.py offers no grant line. The flag cannot be given with `--ignore-older-runs`.
+3. `deploy.py --no-simulation --json --token <the token>`. Its question starts with "no simulation tested this image". The person's typed yes answers it, or a deploy grant given with `--no-simulation` (step 3 of the grant above). A plain deploy grant never does. The flag cannot be given with `--ignore-older-runs`.
 
 Say to the person that nothing ran this firmware before the flash. A firmware that fails shows only on the board. `spark.json`, the board log, the store record and `data.simulation` say `none`.
 

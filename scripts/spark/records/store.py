@@ -100,7 +100,8 @@ def format_rerun_line(script, arguments):
 #: body, the cited facts: the PO, 2026-10-04) and no seller listings, which go stale before anyone reads them (W21).
 #: `boards`: one record per physical board the person deployed to, by its MAC (P215, D23, D44) — not a board file.
 #: `board-shelf`: the board files the person chose before, from any project (P989): the shelf's own `boards` folder.
-#: `grants`: one live grant per physical board, by its MAC: the yes the person typed for a time limit (P253, D12).
+#: `grants`: one live grant per physical board, by its MAC: the yes the person typed for a time limit (P253, D12), and the
+#: file `direct_flashing_disallowed`, which keeps every grant from answering a deploy with no simulation (P1029).
 #: `known-boards`: one record per project folder, the board its looks read after the person's yes (P865).
 #: `registered-projects`: the projects that are not spark's and record their deploys, by name (P920).
 #: `launcher`: the file a tool outside spark runs to reach `bench.py` (P920).
@@ -219,6 +220,21 @@ def write_place(name, text):
     target = _target(name, None)
     _make_ready(name, target)
     return write_file(target, text, name in PRIVATE)
+
+
+#: The name of a mark file: lower-case letters and '_', so it never meets a file `write_json` names by a plain key.
+MARK = re.compile(r"[a-z][a-z_]*")
+
+
+def write_mark(name, mark, text):
+    """Put the file `mark` into a place (P1029: grants/direct_flashing_disallowed), as `write_json` puts a JSON file: the
+    git refusal and the 0700 folders first, then a private file 0600. Returns the file's path."""
+    if not MARK.fullmatch(mark):
+        raise StoreError("%r is not a mark name — lower-case letters and '_'", mark, code=records_codes.KEY_NOT_PLAIN)
+    target = place(name) / mark
+    _make_ready(name, target)
+    write_file(target, text, name in PRIVATE)
+    return target
 
 
 #: The stores this process holds, as (thread, home) pairs: what makes `locked()` re-entrant for the thread that holds one.

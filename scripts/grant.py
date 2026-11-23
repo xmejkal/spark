@@ -2,8 +2,8 @@
 """
 Give Claude a grant on one board for a time limit, or check one (P253).
 
-Its `--help` sentence is the summary of the mode's Operation, IssueGrant's or CheckGrant's (P937), and EPILOG is the
-CLI's own text.
+Its `--help` sentence is the summary of the mode's Operation, IssueGrant's, CheckGrant's or DisallowDirectFlashing's
+(P937, P1029), and EPILOG is the CLI's own text.
 """
 
 import sys
@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.bench import build_project_outside_world
 from spark.bench.check_grant import CheckGrant
+from spark.bench.direct_flashing import DISALLOW_FLAG, DisallowDirectFlashing
 from spark.bench.issue_grant import IssueGrant
 from spark.core.cli import HelpText, run_cli
 
@@ -58,6 +59,13 @@ only a deploy whose look matched the board record (no warning, no unknown field,
 --ignore-older-runs; deploy.py asks you in your terminal for anything else. Delete the file to end it. It needs no
 built-in USB port: deploy.py finds it by the MAC its own look reads. --check looks for a live grant only.
 
+grant.py --scope deploy --minutes N --no-simulation gives a deploy grant that also covers deploy.py --no-simulation:
+Claude can then put firmware that no simulation tested on the board with no yes from you (direct flashing, P1029).
+Without the flag, a deploy with no simulation always asks you. grant.py --disallow-direct-flashing writes the file
+grants/direct_flashing_disallowed at once, with no question. While that file is there, no grant covers a deploy with
+no simulation, and grant.py --no-simulation refuses with direct_flashing_disallowed, exit 1. To allow it again, delete
+the file yourself. No Claude session writes, changes or deletes a file in the grants folder.
+
 When esptool's read of the board fails, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
 and one next step for your hands, as the last line. Its look at the console can restart the board.
@@ -70,8 +78,11 @@ question), and the last line says why. With --check --json, a run that could not
 
 def operation_for(argv):
     """The Operation `argv` asks for: CheckGrant when an item is `--check` or a prefix of it longer than `--` (argparse's
-    abbreviations take `--ch`), else IssueGrant. Each has its own arguments, so each mode's `--help` lists its own."""
-    return CheckGrant if any(len(item) > len("--") and CHECK_FLAG.startswith(item) for item in argv) else IssueGrant
+    abbreviations take `--ch`), DisallowDirectFlashing for `--disallow-direct-flashing` or such a prefix (P1029), else
+    IssueGrant. Each has its own arguments, so each mode's `--help` lists its own."""
+    if any(len(item) > len("--") and CHECK_FLAG.startswith(item) for item in argv):
+        return CheckGrant
+    return DisallowDirectFlashing if any(len(item) > len("--") and DISALLOW_FLAG.startswith(item) for item in argv) else IssueGrant
 
 
 def main(argv=None, outside=None, operation=None):

@@ -80,7 +80,7 @@
  {
   "file": "scripts/spark/bench/board_envelope.py",
   "name": "grant-clause-always",
-  "find": "(\"\" if evidence.grant_refusal else GRANT_CLAUSE)",
-  "replace": "GRANT_CLAUSE"
+  "find": "if grant_may_answer else \"\")",
+  "replace": ")"
  }
 ]

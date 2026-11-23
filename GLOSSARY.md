@@ -54,6 +54,15 @@ this board and this image. **The yes** is the person typing `yes` at the gate's 
 pipe, a script and Claude Code's `!` are no terminal, so deploy.py prints the line to run instead. "Go ahead" in a
 chat is not the yes (P219).
 
+### no-simulation grant and direct flashing — `board_grant.py`
+
+A **no-simulation grant** is a deploy grant with `no_simulation` true: the person typed `grant.py --scope deploy
+--minutes N --no-simulation` in their own terminal. **Direct flashing** is such a grant answering a deploy with no
+simulation, so Claude flashes firmware that nothing tested with no yes for that run. The failure behind them: a board
+that Wokwi has no part for needed the person's typed yes at every flash (P1029). While the file
+`grants/direct_flashing_disallowed` is in the store, no grant answers such a deploy. The person deletes it to allow
+direct flashing again.
+
 ### `skipped` — the fourth word, and only `check_all` has it
 
 "I was not asked" is not "I was asked and could not look". A check whose inputs were never

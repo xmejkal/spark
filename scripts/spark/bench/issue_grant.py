@@ -19,6 +19,7 @@ from spark.records import tool_finder
 from spark.bench.deploy_gate import GateClosedError, format_rerun_line
 from spark.bench.deploy_stages import DeployPhase
 from spark.bench.firmware_platform import MicroPythonPlatform
+from spark.bench.image_evidence import NO_SIMULATION_FLAG
 from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes
@@ -43,6 +44,11 @@ REPLIES_HELP = ("your own file with the yes to the board question (P892): its tr
                 "cannot tell from another board. One yes is for one grant, and the grant still asks its own yes in your terminal")
 DEPLOY_NOTICE = ("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
                  "flash each time, until that time. To end it sooner, run: rm %s")
+NO_SIMULATION_HELP = ("with --scope deploy: the grant also answers a deploy.py --no-simulation deploy, of firmware that no "
+                      "simulation tested (P1029)")
+#: What a grant given with --no-simulation adds to the deploy notice.
+NO_SIMULATION_NOTICE = ("  It also answers deploy.py --no-simulation: firmware that no simulation tested goes on the board "
+                        "with no yes from you.")
 
 
 class IssueGrant(Operation):
@@ -59,6 +65,7 @@ class IssueGrant(Operation):
     summary = "Let Claude run code on one board for a time limit: one yes typed in your own terminal (P253)."
     arguments = (Argument(("--minutes",), "minutes", int, "give a grant for this many minutes from your yes (1 to 1440)", required=True),
                  Argument(("--scope",), "scope", str, SCOPE_HELP, board_grant.SCOPE_LIVE, choices=board_grant.SCOPES),
+                 Argument((NO_SIMULATION_FLAG,), "no_simulation", bool, NO_SIMULATION_HELP),
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote and esptool (default: here)"),
                  COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP))
     effects = (READS, RUNS, BOARD, ASKS)
@@ -70,8 +77,8 @@ class IssueGrant(Operation):
         self.board_question = known_board.KnownBoardService(known or known_board.KnownBoardStore(), known_board.GRANT)  # P892
 
     def run(self, project, port, replies=None, *, outside, **grant):
-        """`grant` holds the grant's two values, `minutes` and `scope`."""
-        minutes, scope = grant["minutes"], grant["scope"]
+        """`grant` holds the grant's values: `minutes`, `scope` and `no_simulation` (False when not given)."""
+        minutes, scope, no_simulation = grant["minutes"], grant["scope"], grant.get("no_simulation", False)
         platform = self.platform_for(project, outside.find_tool)
         places = board_records.ButtonPlaces.of_project(project)
 
@@ -84,8 +91,8 @@ class IssueGrant(Operation):
             reader = known_board.ComparingBoardReader(platform.make_board_reader(outside.run, flasher.EsptoolFlasher.boot_hint_for(places)),
                                                       self.board_question.known_store, known_board.GRANT, project)  # P892, decision 10
             issued = board_grant.GrantService(finder, reader, now=outside.clock.now).issue(
-                port, minutes, outside.make_consent(self._rerun_line(minutes, scope, project, port)),
-                before_look=ask_then_tell, scope=scope)
+                port, minutes, outside.make_consent(self._rerun_line(minutes, scope, project, port, no_simulation)),
+                no_simulation=no_simulation, before_look=ask_then_tell, scope=scope)
         except known_board.BoardQuestionError as stopped:  # P892: before the read, or after a read of another board
             return stops.question_result(stopped, SCRIPT)
         except SparkError as unreadable:  # the kept record or the replies file
@@ -101,13 +108,16 @@ class IssueGrant(Operation):
         if issued.scope == board_grant.SCOPE_DEPLOY:
             grant_file = store.place("grants") / (board_grant.GrantStore.key(issued.mac, issued.scope) + ".json")
             lines.append(PastedLine(DEPLOY_NOTICE % shlex.quote(printable(str(grant_file)))))  # P430: one line; P677: its rm line runs
+            if issued.no_simulation:
+                lines.append(NO_SIMULATION_NOTICE)
         return OperationResult(issued._asdict(), lines=lines)
 
     @staticmethod
-    def _rerun_line(minutes, scope, project, port):
+    def _rerun_line(minutes, scope, project, port, no_simulation):
         """The line that runs this grant again, for the person's own terminal."""
         return format_rerun_line(GRANT_SCRIPT, (["--scope", scope] if scope != board_grant.SCOPE_LIVE else [])
-                                 + ["--minutes", minutes, "--project", project.resolve()] + (["--port", port] if port else []))
+                                 + ["--minutes", minutes, "--project", project.resolve()]
+                                 + ([NO_SIMULATION_FLAG] if no_simulation else []) + (["--port", port] if port else []))
 
     @staticmethod
     def _tell_restart(outside, places):

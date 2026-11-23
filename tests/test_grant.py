@@ -33,6 +33,7 @@ from spark.records import store  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from fakes import FakeClock, FakeConsent, FakeOutsideWorld, FakeProbePlatform, know_the_board, line_made_at_import, pin_time_zone  # noqa: E402
 from spark.bench.check_grant import CheckGrant  # noqa: E402
+from spark.bench.direct_flashing import DisallowDirectFlashing  # noqa: E402
 from spark.bench.issue_grant import IssueGrant  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import BEGIN, LINE, TerminalReporter  # noqa: E402
@@ -578,6 +579,101 @@ class GuardedPrintsTest(GrantCase):
         self.assertIn("--port '/dev/cu.usb?modem101'", err)
         self.assertEqual([line for line in err.splitlines() if line.startswith("GRANTED")], [])
         self.assertNotIn("\u202e", err)
+
+
+class NoSimulationGrantTest(GrantCase):
+    """P1029: `grant.py --scope deploy --no-simulation` gives a deploy grant that also answers a deploy with no simulation,
+    unless the store's file disallows direct flashing. `--disallow-direct-flashing` writes that file."""
+
+    def deploy_file(self):
+        return self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json"
+
+    def disallow_run(self):
+        """(exit code, stdout, stderr) of grant.py --disallow-direct-flashing on the fake clock, from no terminal."""
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = grant.main(["--disallow-direct-flashing"], outside=FakeOutsideWorld(clock=self.clock), operation=DisallowDirectFlashing())
+        return code, out.getvalue(), err.getvalue()
+
+    def disallow(self):
+        (self.home / "grants").mkdir(exist_ok=True)
+        (self.home / "grants" / "direct_flashing_disallowed").write_text("")
+
+    def test_no_simulation_needs_the_deploy_scope_and_touches_no_board(self):
+        for argv in (("--scope", "live", "--minutes", "30", "--no-simulation"), ("--minutes", "30", "--no-simulation")):
+            code, _, err = self.grant(*argv, consent=FakeConsent(True))
+            self.assertEqual((code, self.ran), (2, []), argv)
+            self.assertIn("--no-simulation needs --scope deploy", err)
+        self.assertFalse((self.home / "grants").exists())
+
+    def test_a_relayed_yes_still_makes_no_no_simulation_grant(self):
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
+        code, _, err = self.grant("--scope", "deploy", "--minutes", "30", "--no-simulation", consent=relayed)
+        self.assertEqual((code, self.ran), (1, []))
+        self.assertFalse((self.home / "grants").exists())
+
+    def test_disallowed_direct_flashing_refuses_the_grant_before_the_board_is_touched(self):
+        self.disallow()
+        consent = FakeConsent(True)
+        code, _, err = self.grant("--scope", "deploy", "--minutes", "30", "--no-simulation", consent=consent)
+        self.assertEqual((code, self.ran, consent.asked), (1, [], []))
+        self.assertFalse(self.deploy_file().exists())
+        self.assertIn("direct flashing is disallowed", err)
+        self.assertIn("rm %s" % shlex.quote(str(self.home / "grants" / "direct_flashing_disallowed")), err)
+        self.assertEqual(self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True))[0], 0, "a plain grant is given")
+
+    def test_the_grant_asks_its_own_question_and_keeps_the_fact(self):
+        consent = FakeConsent(True)
+        code, out, _ = self.grant("--scope", "deploy", "--minutes", "30", "--no-simulation", consent=consent)
+        self.assertEqual(code, 0)
+        self.assertIn("and also firmware that no simulation tested", consent.asked[0])
+        self.assertIs(json.loads(self.deploy_file().read_text())["no_simulation"], True)
+        self.assertIn("deploy.py --no-simulation", out)
+        self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True))
+        self.assertIs(json.loads(self.deploy_file().read_text())["no_simulation"], False)
+
+    def test_no_terminal_gives_the_line_with_the_flag(self):
+        _, _, err = self.grant("--scope", "deploy", "--minutes", "30", "--no-simulation")
+        line = store.prefix_home(shlex.join([GRANT_SCRIPT, "--scope", "deploy", "--minutes", "30", "--project",
+                                             str(Path(".").resolve()), "--no-simulation"]))
+        self.assertIn("\n  %s\n" % line, err + "\n")
+
+    def test_disallow_writes_the_file_at_once_from_a_pipe(self):
+        code, out, _ = self.disallow_run()
+        path = self.home / "grants" / "direct_flashing_disallowed"
+        self.assertEqual((code, self.ran, path.is_file()), (0, [], True))
+        self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+        self.assertIn("2026-10-17T11:00:00+02:00", path.read_text())
+        self.assertIn("rm %s" % shlex.quote(str(path)), out)
+        self.assertFalse(board_grant.GrantStore().direct_flashing_allowed())
+
+    def test_a_store_that_refuses_the_file_is_a_line_not_a_traceback(self):
+        inside = Path(tempfile.mkdtemp())
+        (inside / ".git").mkdir()
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(inside / "store")}):
+            code, out, err = self.disallow_run()
+        self.assertEqual(code, 2)
+        self.assertNotIn("Traceback", out + err)
+        self.assertFalse((inside / "store" / "grants" / "direct_flashing_disallowed").exists())
+
+    def test_a_folder_in_the_file_s_place_is_a_line_not_a_traceback(self):
+        # P1029 review: write_file raises IsADirectoryError, an OSError, which is no StoreError
+        (self.home / "grants" / "direct_flashing_disallowed").mkdir(parents=True)
+        code, out, err = self.disallow_run()
+        self.assertEqual(code, 2)
+        self.assertNotIn("Traceback", out + err)
+        self.assertIn("grant.py: ", err)
+        self.assertFalse(board_grant.GrantStore().direct_flashing_allowed())
+
+    def test_the_disallow_flag_or_a_prefix_of_it_picks_its_mode_with_its_own_help(self):
+        for argv in (["--disallow-direct-flashing"], ["--disallow"], ["--d"]):
+            self.assertIs(grant.operation_for(argv), DisallowDirectFlashing, argv)
+        out = io.StringIO()
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stdout(out):
+            grant.main(["--disallow-direct-flashing", "--help"], outside=FakeOutsideWorld())
+        self.assertEqual(raised.exception.code, 0)
+        self.assertIn("\n" + DisallowDirectFlashing.summary + "\n", out.getvalue())
+        self.assertNotIn("--minutes MINUTES", out.getvalue())
 
 
 class GrantModesTest(GrantCase):

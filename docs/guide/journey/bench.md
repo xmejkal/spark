@@ -2,7 +2,7 @@
 
 Step 8 of 8 in [the journey](../journey.md). Previous: [Simulate](simulate.md).
 
-**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). With `--no-simulation` it also flashes an image of `firmware/` that no simulation tested, but only on a typed yes that starts with "no simulation tested this image" ([P337](https://github.com/xmejkal/spark/issues/431)). When each stage starts, it prints one `why:` line that says why it happens ([P476](https://github.com/xmejkal/spark/issues/652)). Its dry run prints the plan's `why:` line, then the esptool commands, and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:deploy`'s page ([`commands/deploy.md`](../../../commands/deploy.md), P213).
+**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). With `--no-simulation` it also flashes an image of `firmware/` that no simulation tested, on a typed yes to a question that starts with "no simulation tested this image" ([P337](https://github.com/xmejkal/spark/issues/431)), or a deploy grant given with `--no-simulation` ([P1029](https://github.com/xmejkal/spark/issues/1509)). When each stage starts, it prints one `why:` line that says why it happens ([P476](https://github.com/xmejkal/spark/issues/652)). Its dry run prints the plan's `why:` line, then the esptool commands, and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:deploy`'s page ([`commands/deploy.md`](../../../commands/deploy.md), P213).
 
 ### Which projects use a board
 
@@ -144,10 +144,11 @@ for 60 minutes from your yes (one day at most). Type `yes`. The grant is a file 
 `grants/8c-bf-ea-xx-xx-xx-deploy.json`, beside the live grant's file, and the two never open each other. Delete it to end it.
 While it lasts, Claude runs `deploy.py --token T` and deploy.py prints `yes: standing yes typed by ...` instead of asking. It still
 looks at the board, checks the token and refuses an image that changed. It covers only a look that matched the board
-record (no warning, no unknown field, no stop) and never `--ignore-older-runs` or `--no-simulation`: for those deploy.py asks in your
-terminal. The store's record of the board says whose yes it was: `standing yes typed by <you> at <time>, until <time>`.
+record (no warning, no unknown field, no stop) and never `--ignore-older-runs`: for those deploy.py asks in your
+terminal. A deploy with `--no-simulation` asks you too, unless you gave the grant as `grant.py --scope deploy --minutes 60 --no-simulation`.
+That grant also lets Claude flash firmware that no simulation tested (direct flashing, P1029). To disallow direct flashing, run `grant.py --disallow-direct-flashing`: it writes the file `grants/direct_flashing_disallowed`. To allow it again, delete that file. The store's record of the board says whose yes it was: `standing yes typed by <you> at <time>, until <time>`.
 If the board then waits in its download mode, Claude tells you to press its RESET button once, and where it is.
-If the grant cannot be used (it ended, the look showed a warning, or `--ignore-older-runs` or `--no-simulation` is set), Claude stops, tells you why,
+If the grant cannot be used (it ended, the look showed a warning, `--ignore-older-runs` is set, or `--no-simulation` with a plain grant), Claude stops, tells you why,
 and gives you the line to run in your own terminal. grant.py prints the file's full path and the `rm` line that ends the grant.
 
 While the grant lasts, Claude runs a live try ([P247](https://github.com/xmejkal/spark/issues/267)):
