@@ -55,7 +55,8 @@ The fingerprint is the sha256 of the current offers and of .spark/needs.json, re
 changes when an offer or one of these files changes. No other file of the project changes it, except through an offer.
 
 The build phase reads .spark/build.json, which check_spine.py --keep writes when its folder is a project. It is stale when
-requirements.json changed after that build.
+requirements.json changed after that build. The needs phase is stale when the goal or the must lines of the brief changed
+after parts.py --needs-set wrote the needs (.spark/needs-basis.json). Spark changes neither.
 
 With --json it prints one envelope: data.phases, data.stands_at, data.fingerprint and data.guide
 (docs/guide/agents/flow.md).

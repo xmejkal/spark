@@ -55,7 +55,7 @@ The words of a phase:
 
 | key | holds |
 | --- | --- |
-| `status` | `ok`, `problems` or `could-not-run`, a phase word, or `null`. The phase words: `not-started` (nothing done yet), `partial` (some needs have no pick, or a build skipped a stage) and `stale` (done, but requirements.json changed after it). See `null` below |
+| `status` | `ok`, `problems` or `could-not-run`, a phase word, or `null`. The phase words: `not-started` (nothing done yet), `partial` (some needs have no pick, or a build skipped a stage) and `stale` (done, but what it was made from changed after it: see the build and the needs below). See `null` below |
 | `mark` | the glyph a page shows for the status |
 | `by` | who does the phase: `you`, `claude` or `your terminal` |
 | `says` | sentences for a person. A value nobody recorded reads `unknown` |
@@ -149,6 +149,16 @@ subject of each item is the phase. The exit is 0, 1 or 2 by those items. If both
 a broken `.spark/needs.json` makes the needs, parts and requirements phases `could-not-run`, and the others still answer.
 A `.spark/build.json` that is not JSON, or is no build record, makes the build phase `could-not-run` with one sentence, and
 the breadboard phase too when the sheet exists ([P886](https://github.com/xmejkal/spark/issues/1256)).
+
+The needs phase reads `.spark/needs-basis.json` ([P1027](https://github.com/xmejkal/spark/issues/1506)). `parts.py
+--needs-set` writes it when a write defines a need or is a review (`[]`). It holds the sha256 of the brief's goal and of
+its must lines, sorted, as they were then. If either is different now, the needs phase is `stale`. Its `says` then holds
+the needs line, what changed (`the goal changed after the needs were written`, `the must lines changed …` or `the goal
+and the must lines changed …`) and `Claude goes through the needs and the must lines with you, and when they still fit, runs parts.py --needs-set with []: spark changes none of them itself`. That `[]` run clears the mark.
+The guide's NOW is the needs phase, by Claude, with no offer. The drop offers stay. A project with no such record (one
+written before P1027), or a brief with no goal, says what it said before. A record or a brief that spark cannot read
+keeps the phase `ok` and adds one line: `spark cannot tell whether the needs fit the goal: <the reason>`. The reader writes
+nothing.
 
 ## The page
 
