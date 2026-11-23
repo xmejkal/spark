@@ -7,8 +7,8 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 ## The deploy reader reads the project's board logs (P793 piece 6)
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "get back to where the page is and try to show this project on the page ... so we can make it work" (the PO, 2026-11-23, brief.md Frame); the core gap is named in P793 #1105's comment of 2026-11-23 <!-- REQUIRED:needed-by -->
-- value proven by: `flow.py show --project .` in p934-display2 shows the last deploy's time and ready line, in the states Q8 sets <!-- REQUIRED:value-proven-by -->
-- depends on: A3, Q8, and P873 #1241 if Q5 picks O5c <!-- REQUIRED:depends-on -->
+- value proven by: `flow.py show --project .` in p934-display2 shows the last deploy's time, image and ready verdict with no tick on "ready unknown" (D10); its NOW sentences carry the PO's review (#1105 piece 6, size M) <!-- REQUIRED:value-proven-by -->
+- depends on: D10 (the deploy states); A3 is met for one board <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P793 #1105 <!-- REQUIRED:spark-process:parent -->

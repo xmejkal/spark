@@ -274,3 +274,187 @@ Caveats and findings the brief dropped:
 - https://docs.github.com/en/enterprise-cloud@latest/pages/getting-started-with-github-pages/changing-the-visibility-of-your-github-pages-site · served ★C16 and R-12 · used (private publishing needs an organisation on Enterprise Cloud).
 - `gh api repos/anthropics/skills` and its commits for skills/frontend-design (not a web search) · served C8 · used
   (R-15).
+
+## Second pass, 2026-11-23
+
+Run 16:46 to 16:52 CET, read-only; this file is the one file written. Read: brief.md, risks-and-tests.md, items.md,
+verification.md, story-map.md, the three answer files, and the code and cards cited below. Ran: `head`, `grep`, `wc`
+and `gh issue view` or `list` (reads only). Not run: `flow.py page`, any spark command. This run again had no Artifact
+tool, so ★C5, the files line of ★C16, C4, C6 and C17 stay "could not open". Tags as in the first pass.
+
+### 2. The changed sections against their detail
+
+The counts of D3 to D12, seat by seat (PO seat, architect, tech lead):
+
+- S-1 · D3, "the others kept" is wrong for three lines. A2: the tech lead says "Change the pass line" (the brief
+  record and the logs count as spark's), and the architect adds a marking rule that says the opposite of it for one
+  field ("a decided line counts as 'the project's file, not yet a record'"). A5: the tech lead says "Change" (a
+  screenshot, no 30 seconds, "He does not call it not readable"). A9: the architect says "change" (page.html and
+  `flow.py show --json` name the same stand; the stamp is the newest of every file read). Each is 1 of 3, and D3 names
+  none. risks-and-tests.md keeps the old A2, A5 and A9 lines as "proposed". · E answers-tech-lead.md:6, :9,
+  answers-architect.md:9, :16
+- S-2 · D3, A1's merged pass line contradicts its own row. The PO seat says "He does not then ask Claude where the
+  project stands"; the architect and the tech lead say "before he asks". D3 took "before". The row's "result that
+  would change the decision" still reads "or opens it and then asks Claude where the project stands". So "opens the
+  page, then asks Claude" meets the pass line and is also the failing result. Dropped too: the architect's "and the
+  session did not name the page first" and his reason "QA1 primes him"; the Test line still runs QA1 first. · E
+  answers-po.md:11, answers-architect.md:8, risks-and-tests.md:23, brief.md:84
+- S-3 · D3, A7: "changed (3 of 3)" holds, but the merged line is a union that no seat wrote. The password is the PO
+  seat's alone, the store's path and "zero names of other projects" the architect's alone, the board MAC the tech
+  lead's alone. The architect's "on every route" became "on the page text and its db rows".
+- S-4 · D3's other counts hold: A3 high 2 of 3 (the PO seat low), A6 low 2 of 3 (the PO seat high), A4 and A8 low
+  3 of 3, A1, A2, A5, A7, A9 high 3 of 3.
+- S-5 · D4 states "the brief record (goal, must lines, decided lines) ... count as spark's" with no count. It is 2
+  of 3. The architect: "`Brief` reads goal, must, prefer and sellers and has no `decided` field" and "'decided' enters
+  as a new property with its origin". Read today, brief.py:34-41: the fields are `must`, `prefer`, `goal`, `sellers`,
+  `problem`; `grep decided` over records/, flow/ and idea/ finds no reader. My first-pass wording for ★C13 put the
+  decided lines inside the brief record. That was too strong, and ★C13 and D4 carry it. "Not O2b now (3 of 3)": the
+  PO seat's is conditional ("O2b needs QA2 to give 2 or fewer of 5"). The O2c count (2 of 3, the tech lead adds the
+  link now) is right.
+- S-6 · D5, "(3 of 3)" covers two things that are not 3 of 3. (a) "written again after every step": the PO seat says
+  so; the architect lists the trigger under "Open choices it names for the PO" ("only /spark:page, or the core's hook
+  ... recommended: the hook"); the tech lead says only "One file, a snapshot, with a dated stamp". (b) "its stamp
+  covers every file it reads": the mechanism is split. The tech lead: "Add sim/runs/board/, firmware/ and
+  .spark/project.json to it [the fingerprint]". The architect: "That list is separate from the click fingerprint of
+  three files." Read today: `newest_change` (write_flow_page.py:132-136) and `fingerprint_of` (fingerprint.py:18) share
+  one `FILES`, and run_request.py:96 refuses a click when `request.seen != fingerprint[:SHORT]`. So the tech lead's
+  route makes every firmware edit and every deploy refuse an open page's click, against the frame's "must not get
+  worse: the click path of P829". D5 hides the split.
+- S-7 · D5, O3c: "two adapters" is the architect's alone, not 2 of 3. "Designed later" reverses both sources: the PO
+  seat, "The design names the live route as a consumer of the core's events, and builds none of it now"; the
+  architect, "O3a now, built so that O3c is an added adapter later". Both design it now and build it later. All three
+  of the architect's open choices for the PO (the trigger, `decided` as a field, a guard for new code over an old
+  build) are in no D and no Q.
+- S-8 · D5's trigger has no card behind it. The architect cites "P793 piece 3". #1105 reads: "3. One hook in
+  RunOptions that adds the flow's now step after any run that writes to a project. Size S." It adds a step to a run's
+  answer and writes no page. A9's belief still reads "A page rewritten only at /spark:page is fresh enough", which D5
+  no longer proposes, and no assumption covers "the core can write the page after a deploy run in his terminal".
+- S-9 · D7, "(3 of 3)" over "before the page's first slice": the architect says "in parallel" (Q9). D11 says "first or
+  in parallel". D7 and D11 disagree with each other. "Piece 6": #1105 reads "6. Sentences say the job, and each
+  interface adds its own how ... Size M" and "Piece 6 rewords the NOW sentences the PO reads on the page: yes, with
+  his review of the new sentences in the PR". The deploy reader is "a line from P1034's plan council for piece 6". So
+  item 1's "S" sits in a piece of size M that carries his review of sentences. Dropped: the architect's condition
+  ("on the condition that Q8 is answered first"), his "P873 gets a note of Q8's answer" and "'no phase is open' needs
+  its own sentence".
+- S-10 · D10 states more than the answers in three places. (a) It quotes the sentence as agreed. The PO seat's note
+  says: "Q8's wording 'start not seen' is a proposal. The exact words belong to the story's plan." (b) It drops the PO
+  seat's limit, "A run whose log holds no verified write shows nothing", the tech lead's "with the log's cause" and
+  his fifth verdict "ready not read" (ready_probe.py:40, P920). (c) It calls the split "the status word". Read today,
+  show_flow.py:121-123: a phase with status could-not-run adds a Finding, "so the exit says so"; partial adds none. The
+  split is the exit code and the Findings of `flow.py show`, not a word. The condition of D7 ("Q8 is answered here")
+  is met only in part. Both statuses keep the phase open (guide.py:78-81), so "the phase stays open" holds.
+- S-11 · D11, "3 of 3 in substance". By Q9's own options the answers are: stand first (the PO seat), stand first
+  (the tech lead), the stand in parallel and readability as the first slice (the architect). The list "(one NOW, picks
+  grouped, developer lines folded, the brief lines, the dated stamp)" is in no answer file; "structure first, then
+  the graphic style" is the architect's alone. "Several picks at once", the second thing the PO named (diary.md:82-83),
+  is not in the list.
+- S-12 · D12: 2 of 3 holds. "Points to the Artifact server's `guide` instead of copying it" is the dissenter's line
+  alone. His reason is dropped: "A how-to is proven by a fresh session that follows it". As a doc, the how-to has no
+  proof; the story map's proof sat on the slice.
+- S-13 · D8: O6a 3 of 3 holds. "Read whole before the install" is the PO seat's alone. #1521's own note is dropped:
+  "His global rule says a new plugin goes on for one project, so these words override that rule for this skill."
+  The architect decides the reading ("contrasts sessions, not users") that D8 says stays the PO's. No QA asks him.
+- S-14 · D6 and D9: the counts hold.
+
+Other changed sections:
+
+- S-15 · The PO seat's sources are stronger than their words in two places. "lets design it nice too" (for A6 high)
+  is his line on the CLI's design bar, P1032 (memory note spark-architecture-direction:33). "extra artefacts" (for
+  dropping O3b) is in a sentence about one code base, "so we don't have extra artefacts and code that's not
+  refactore[d]" (scrum/VISION.md:68), not about stored files. The other quotes I opened are verbatim
+  (spark-architecture-direction:30-31, team-way-of-working:19, P867 brief.md:138, #1521, #1196).
+- S-16 · A3 "retired" on one project. Reproduced: 27 logs, 27 with one `image sha256:` line and a `ready` line in
+  the first 8 lines, 18 seen, 9 unknown. The sample holds two of the four verdicts and no "ready not read" log, and
+  sim/runs/ is gitignored, so the result says nothing of a registered project or a clone. The Results row sets "27 of
+  27" in quotation marks; it is the facilitator's count, not a quote.
+- S-17 · verification.md, ★C5 "result: reproduced": the re-read is by the facilitator, who wrote the claim. The
+  refuter's cell stays "could not open". ★C12's "labels doing and next on 8 issues" reproduces (doing: #2, #3, #4,
+  #7, #8; next: #1, #5, #6); my first pass named only the three closed ones.
+- S-18 · items.md, item 1: "depends on: A3, Q8, and P873 #1241 if Q5 picks O5c" is stale beside D7, D10 and A3
+  retired. story-map.md was not changed and now disagrees with D10 (slice 0's proof, "a stand past the deploy"), D11
+  (the order), D12 (the how-to as a slice) and D5 (the live slice).
+- S-19 · brief.md's pointers into this file do not resolve: ":203 (R-14)" is :151, ":44" for ★C10 is :81, ":66" for
+  ★C12 is :90, ":77" for ★C13 is :102, ":110 (R-8, R-9)" is :131 and :137. "R-ten" is no name here. The Riskiest
+  line's "R-3 ... part 3" names another point; the rival is the third line of part 3. The architect's pointers
+  resolve.
+
+### 3. The strongest rival for each interpretation
+
+- "2 of 3 or 3 of 3 seats agree, so the direction holds" (D3 to D12): the three seats are not independent. Each read
+  brief.md and this file and cites its R-numbers for most answers. Two did not read the user lens whole (the PO seat:
+  "Not read: council/tech-lead.md and council/user.md beyond the lines that the brief and the refuter quote"; the
+  architect: "Council/user.md and council/po-assistant.md in full" under "Not checked"). The user lens is the one
+  voice for O2b. The agreement may be one source read three times.
+- "The walk's fault was a copy nobody wrote again, so the page is written after every step" (D5, A9): nobody opened
+  it after 11:46 (★C12), so the stale copy misled nobody. Then each rewrite costs a changed tracked file of 714,020
+  bytes (C18) and the new-code-over-old-build faults (R-7), and buys nothing until A1 passes. Not ruled out.
+- "A 'ready unknown' run is 'deployed, start not seen'" (D10): 8 of the 9 unknown logs hold no `file` hash line, so
+  nothing was read back from the board (1 holds 8). The log is written in `verify` (deploy_service.py:156, :187), after
+  the flash raised no FlashError (:130-133; the caller's order was not read). So "deployed" rests on the flasher's
+  exit, not on a witness, against "only a witness counts" (P867 D8). Also "start not seen" for the verdict UNKNOWN
+  sits beside the verdict NOT_SEEN, "ready not seen" (ready_probe.py:38), which the same answers map to problems: two
+  states with nearly one name.
+- "The logs give the deploy's stand per project" (A3 retired): they give the stand of this machine's runs for one
+  board. A clone or a second machine has no logs and reads "not started"; the store's board record holds the same 27
+  runs under the board's address. Not ruled out.
+- "His words are about readability, so the first page slice is structure" (D11): he said them on 2026-11-22 at the
+  picks (diary.md:82-90), so they may be about the pick list, which is P829's and P1011's ground, not the whole
+  page. The PO seat reads his sentence the other way: "make it work" first.
+- "'For everybody' means all his sessions" (D8): every spark user, which the frame keeps open ("user level,
+  /spark:setup, or both") and #1521 calls unsaid.
+- "System fonts can look good to him" (D6, A6 low): the one page look he praised was hand-made and loaded web fonts
+  (PO-8, not found). Then O4c is his taste. Not ruled out; nobody looked for that page.
+- "He opened the page on his own" (A1's instrument): he opened it because he read the pass line. He is the subject
+  and the decider, and he confirms D3 before the walk.
+
+### 4. Numbers without unit, population, period or provenance
+
+- "16:58 CET" on D3 to D12 and on the Results row ("read with `head` by the facilitator 16:58 CET"): commit 9b97fd65
+  holds them and is dated 16:45:15 CET; I read them at 16:47:42. The time was written before it happened. The
+  architect's "about 16:42 to 16:55 CET" is in the same commit.
+- "3 of 3", "2 of 3": the population is three agent seats, one of which "answers for the PO from his recorded
+  words. He did not write or read these lines." "The PO on Fable": answers-po.md and answers-architect.md name no model.
+- "8 H" (Stands on): eight open rows; A4 and A8 carry "—", and A5, A7 and A9 carry an E beside the H.
+- "4 of the last 5 deploys" (Q8): no period in the brief (since 13:19 CET on 2026-11-23, one board).
+- "about 27.5 hours" (★C1, A9): 11:44:33 or 11:46 on 2026-11-22 to 15:23:55 on 2026-11-23 is 27 h 38 or 39 min.
+- "S" for item 1 and O5a: no unit, no source; its parent piece is "Size M" on #1105.
+- "five states" (the tech lead, Q8): four verdict words in ready_probe.py:38-40 and "no log"; the 27 logs hold two.
+- "1,549 lines" (the tech lead, Q9): reproduced, `wc -l tests/test_flow_page.py`.
+- "within 30 seconds", "within 60 seconds", "3 of 5": still "proposed" with no source. The PO seat: "The 30
+  seconds is the discovery session's number". The tech lead: "The 30 seconds had no source."
+- "the page was used 11 minutes" (risks-and-tests.md, the value row): against ★C12's keep words, "clicks, not views".
+- "S", "M", "M to L" on every option but O3a: no unit.
+
+### Dropped first-pass verdicts
+
+Carried: R-1 (Q9), R-2, R-3 (Q8), R-4, R-6, R-8 to R-11, R-14, R-15, R-17 to R-21, R-27, the six ★ rewordings, and
+the O2a, O3 and O5c lines of the options part. Dropped, whole or in part:
+
+- R-22 · the three page writers and the hand-made Artifact "that the PO praised": not in the brief; D6 decided Q4
+  without it.
+- R-23 · the skill asks for a distinct identity against a renderer of same bytes, and its tells name a terracotta
+  accent beside spark's `--signal` #c8500f: C15 is unchanged.
+- R-25, in part · "which of the eight option families" is still in the Frame's open list and in no question; the
+  families are still unmarked as H; O3b still cites "option family 3".
+- R-26, in part · the Hand-off still reads "the frame is unconfirmed (Q0), and the jobs, the lenses and the refuter
+  are not run".
+- R-16 · O4c's pointers are unchanged (C15 and the test line). ★C5 now holds the stylesheet line, and O4c does not
+  cite it. Which host serves the font files is not said.
+- R-12, in part · the ethics row still says "a free static host is public".
+- R-5, in part · which command writes after a deploy. D5 now rests on it (S-8).
+- R-7, in part · no guard in any D (S-7), and C3's "12 breadboard steps" has no caveat.
+- R-3, in part · story-map.md slice 0's proof (S-18).
+- R-13, in part · the no-go "publishes to a public host" and O7b's "without the drawer facts" are unchanged.
+- Part 3 · the rival to Job 1 (he comes back through a Claude session, and Claude reads the stand) is in no row.
+- Part 4 · the sizes, the budget's own count, and "QA1 tells him what is tested" (S-2).
+- The options part · O4b's cost (a base64 font can hold "http" by chance) is in the tech lead's answer and not in
+  O4b's caveat.
+
+Not checked in this pass, for time or for lack of a tool: the Artifact server; the caller of
+`DeployService.verify`; the PO seat's quotes from the diary (:113, :330) and from P820 brief.md:180; the lane limits;
+jobs-and-journeys.md (not in the changed list).
+
+### Searches
+
+none (no web search or fetch; `gh issue view 1105`, `1521`, `1196` and `gh issue list` in the walk project are reads
+of the repositories' own cards)

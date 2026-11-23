@@ -13,14 +13,16 @@ jobs-and-journeys.md. tag: as in the brief. proof: something the decider can rea
 e.g. `| 0 | Notice | the assignee gets one daily digest | job 1 | H ★C2 | the digest log for one team |` -->
 | slice | activity | story | job | tag | proof |
 | --- | --- | --- | --- | --- | --- |
-| 0 walking skeleton <!-- REQUIRED:slices --> | See where it stands | the page's NOW and stand come from the project's deploy logs, and the page's stamp has a date and covers every file it reads | Job 1 | E ★C10, C11 · H that the logs give the stand without the board's MAC (A3) | `flow.py show --project .` in p934-display2 names a stand past the deploy; the stamp's date is the newest of the files read |
-| 1 | See what to do next | the page shows the goal, the must lines and the last deploy (image, time, verdict), and says what spark does not check | Job 1 | E ★C13, USER-2, USER-9 | the PO reads the page of p934-display2 and names the next step without asking Claude (A1) |
-| 1 | Act | no offer that changes the pins of a wired board without saying so | Job 2 | E C14 · H the pin move (not run) | the page of p934-display2 shows no Build or Pick without its warning |
-| 2 | Act | the picks grouped per need, several picks at once, developer lines folded away (P1011) | Job 2 | E P1011 #1470 | a walk picks four needs in one round trip |
-| 2 | See where it stands | the graphic style: tokens planned once, system fonts, D7 kept | Job 3 | E C15 · H the PO's eye (A6) | the PO's verdict on a screenshot, n = 1 |
-| 3 | See it change | an open page shows the new state after Claude's step without a reload | Job 4 | E C17 · H that db fits the state (A8) | a deploy in the chat changes the open page within a minute |
-| 3 | Show it | the how-to for building such an Artifact, for Claude and for a person | Job 4 | E C18 | a fresh session follows the how-to and republishes without a read error |
-| later | Show it | a share for a viewer without the drawer facts | Job 3 | H the CV memory | — |
+| 0 walking skeleton <!-- REQUIRED:slices --> | See where it stands | in the core, under P793: the deploy reader reads the project's logs and shows the witness's facts, with no tick on "ready unknown" (D7, D10) | Job 1 | E ★C10, A3 met for one board | `flow.py show --project .` in p934-display2 shows the last deploy's time, image and verdict |
+| 1 | See where it stands, Act | the page's first slice: one NOW, several picks at once and the picks per need, developer lines folded, the brief's goal and must lines, a dated stamp over every file the page reads (a list separate from the click fingerprint), the build it draws from (Q13), and the how-to's "read page.html whole" defect fixed (D11, D5, D12) | Job 1, Job 2 | E P1011 #1470, C11 · H A5 | the PO reads the page of p934-display2 and names the next step; a walk picks four needs in one round trip |
+| 1 | Act | no offer that changes the pins of a wired board without saying so | Job 2 | E C14 · H the pin move, not run | the page of p934-display2 shows no Build or Pick without its warning |
+| 2 | See where it stands | the graphic style: tokens planned once, system fonts, D7 kept (D6) | Job 3 | E C15 · H A6 | the PO's verdict on a screenshot, n = 1 |
+| 2 | See it change | the page is written again when a fact changes, by the trigger Q12 sets | Job 4 | E C11 · H A9 | at the walk's end page.html and `flow.py show --json` name the same stand |
+| later | See it change | a live page as a consumer of the core's events: designed now, built later (D5) | Job 4 | E C17 · H A8 | a deploy in the chat changes an open page |
+| later | Show it | a share for a viewer, on P834 (D9) | Job 3 | H the CV memory | — |
+
+The Artifact how-to is no slice: it is a doc in the design, and each slice's PR keeps it current (D12). The order
+follows D11: slice 0 runs in the core in parallel with, or before, slice 1.
 
 ## Delta to the product's map <!-- REQUIRED:spark-process:map-delta -->
 <!-- The rows to add or change in the repository's own story map file, in that file's table shape, with its journey
