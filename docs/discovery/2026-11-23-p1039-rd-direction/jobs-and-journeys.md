@@ -25,8 +25,6 @@
 - J5 · the CLI with --json, the Artifact page through /spark:page · E P829 #1187
 - J6 · the README, the vision, the docs/guide pages · H
 
-## Journeys" section. Part 2 lists the proposed changes to the Who, Jobs and Today lines. -->
-
 ## Journeys
 <!-- Filled at step 4, after the lenses. -->
 The tables come from the user's-journey lens (council/users-journey.md:134-219), with rows shortened. "display2", "display" and "epaper" are the three P934 walk diaries in the walks folder, outside the repository (2026-11-22 to 23, 2026-11-22 morning, 2026-11-19 to 21). A time is the diary's own CET heading. Each E row of J1, J3, J4 and J5 is an account, n = 1: the PO with Claude. Every row of J2 is H, because nobody ran it. Q-A numbers are the lens's account questions (council/users-journey.md:243-256), and Q numbers are the brief's.
