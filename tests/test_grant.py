@@ -149,6 +149,54 @@ class DoctorTest(GrantCase):
         self.assertFalse((self.home / "grants").exists())
 
 
+class ASleepingBoardTest(GrantCase):
+    """P1049: with no board on USB, or a named port that is not, and a firmware/ that calls deepsleep, grant.py says slice
+    3's asleep fix on stderr, as look.py does, and not the cable advice first. Its --json carries no fix yet (P1055)."""
+
+    def setUp(self):
+        super().setUp()
+        self.project = Path(tempfile.mkdtemp())
+        (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        (self.project / "firmware").mkdir()
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.deepsleep(1)\n")
+
+    def stderr(self, *argv):
+        code, _, err = self.grant(*argv, "--project", str(self.project), consent=FakeConsent(True))
+        self.assertEqual(code, 2)
+        return err.splitlines()
+
+    def test_no_board_with_a_deepsleep_call_gives_no_board_found_and_the_asleep_fix_in_both_modes(self):
+        self.devs = data("mpremote-devs-none.txt")
+        for argv in (("--minutes", "10"), ("--check",)):
+            with self.subTest(argv=argv):
+                lines = self.stderr(*argv)
+                self.assertEqual(lines[0], "grant.py: no board found.")
+                self.assertTrue(lines[1].startswith("What spark knows: no board is on USB, and the project's firmware calls "
+                                                    "deepsleep (firmware/main.py:2). In deep sleep the chip's own USB is off"), lines[1])
+                self.assertEqual(len(lines), 2)
+        self.assertFalse((self.home / "grants").exists())
+
+    def test_a_named_port_not_on_usb_opens_the_fix_with_that_port(self):
+        lines = self.stderr("--minutes", "10", "--port", "/dev/cu.usbmodem9")
+        self.assertEqual(lines[0], "grant.py: no board on /dev/cu.usbmodem9: mpremote devs does not list it.")
+        self.assertTrue(lines[1].startswith("What spark knows: the port you named is not on USB, and the project's firmware"), lines[1])
+
+    def test_without_a_deepsleep_call_the_stop_is_as_before(self):
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.lightsleep(1)\n")
+        self.devs = data("mpremote-devs-none.txt")
+        self.assertEqual(self.stderr("--minutes", "10"), ["grant.py: no board found. Plug it straight into the computer with a data "
+                                                          "cable, not a hub that gives power only. If the plug is USB-C, turn it "
+                                                          "around, or use a USB-A to USB-C cable."])
+
+    def test_a_file_that_does_not_parse_keeps_the_old_stop(self):
+        # the review of #1569, refuter 1: UNPARSED is a fact with no step, so grant.py keeps its old text
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.deepsleep(1\n")
+        self.devs = data("mpremote-devs-none.txt")
+        self.assertEqual(self.stderr("--minutes", "10"), ["grant.py: no board found. Plug it straight into the computer with a data "
+                                                          "cable, not a hub that gives power only. If the plug is USB-C, turn it "
+                                                          "around, or use a USB-A to USB-C cable."])
+
+
 class IssueTest(GrantCase):
     def test_the_yes_keeps_a_grant_for_this_board_until_the_limit(self):
         consent = FakeConsent(True)

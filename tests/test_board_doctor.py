@@ -176,6 +176,22 @@ class OutputTest(unittest.TestCase):
         self.assertEqual(board_doctor.step_sentence("replug"),
                          "unplug the board, plug it in again, and run it again")
 
+    def test_with_step_says_the_new_step_on_the_next_line_and_keeps_every_other_line(self):
+        # P1049: the asleep fix takes the place of the doctor's plug_in step, and the check lines stay above it
+        result, _ = examine(ConsoleReadResult("read", "", None), finder=FakeFinder())
+        lines = board_doctor.describe(result)
+        changed = board_doctor.with_step(lines, "wait until it wakes")
+        self.assertEqual(lines[-1], "next    plug the board straight into the computer with a data cable, not a hub that gives "
+                                    "power only, and run it again")
+        self.assertEqual(changed, lines[:-1] + ["next    wait until it wakes"])
+        indented = ["  " + line for line in lines]
+        self.assertEqual(board_doctor.with_step(indented, "wait until it wakes"), indented[:-1] + ["  next    wait until it wakes"])
+
+    def test_with_step_leaves_lines_with_no_next_line_and_a_fact_that_holds_the_label_mid_line(self):
+        lines = ["check   console: the console printed: next    plug it in", "said    next    x"]
+        self.assertEqual(board_doctor.with_step(lines, "wait"), lines)
+        self.assertEqual(board_doctor.with_step(["  " + line for line in lines], "wait"), ["  " + line for line in lines])
+
     def test_the_json_holds_codes_and_never_a_pass(self):
         result, _ = examine(ConsoleReadResult("read", "", None))
         line = json.loads(json.dumps(board_doctor.as_dict(result)))

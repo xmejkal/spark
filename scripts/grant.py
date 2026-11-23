@@ -70,6 +70,9 @@ When esptool's read of the board fails, the board doctor (P282) runs two checks:
 port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
 and one next step for your hands, as the last line. Its look at the console can restart the board.
 
+If no board is on USB, or the named port is not, look at firmware/. When it calls deepsleep, the stop's last line, the
+fix, says that the board can be in deep sleep. look.py's fix says the same (P1049). --json carries no fix yet (P1055).
+
 Exit codes: 0 the grant was given or is valid, 1 refused (no grant, it ended, the person answered no to the grant, the
 serial is not the MAC), 2 grant.py could not run (no board, two boards, the MAC not read, --minutes out of range, no
 terminal) or the board question stopped it (other_board, no_known_board, needs_reply, answered_no to the board

@@ -38,16 +38,29 @@ def stop_result(cannot, script, project, port, doctor_for=None):
     """The OperationResult of a stop before the board answered: no data (a caller `_replace`s it), one unchecked Finding with the stop's code, and
     its line on stderr as `<script>: <cannot>`, the port and the project put on one line first (P430). A SparkError's fix is
     the Finding's and a second line. `doctor_for(stop)`, when given, is asked for a LookStopError and answers (lines,
-    DoctorProbeResult or None) as `board_doctor.stop_answer` does: the doctor's lines then replace the sentence, as look.py's stop does."""
-    doctor, places = None, board_records.ButtonPlaces.of_project(project)
+    DoctorProbeResult or None) as `board_doctor.stop_answer` does: `board_envelope.stop_said` then says the stop as look.py
+    does, the doctor's lines or the asleep fix of a firmware that deep-sleeps, `port` being the port the person named (P1049).
+    UNPARSED, a fact with no step, never takes the stop's own words. grant.py and bench.py record give it; live.py and
+    reach.py not yet (P1057)."""
+    places, sentence = board_records.ButtonPlaces.of_project(project), str(cannot)
+    fix = cannot.fix if isinstance(cannot, SparkError) else ""
     if doctor_for is not None and isinstance(cannot, board_look.LookStopError):
-        lines, doctor = doctor_for(cannot)
+        answer = doctor_for(cannot)
+        lines, sentence, fix = board_envelope.stop_said(script, cannot, answer, port, project)
+        if not (answer[1] or fix.startswith(board_envelope.ASLEEP_KNOWS)):  # the review of #1569: UNPARSED keeps the old stop
+            lines, sentence, fix = answer[0], str(cannot), ""
+        # no `project` here: these lines hold it only in a tool problem, whose path is flat already (P444), as in look.py
         said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)
     else:
         said = guard_sentence("%s: %s" % (script, cannot), port, project)
-    fix = cannot.fix if isinstance(cannot, SparkError) else board_envelope.doctor_fix(doctor, places)
-    finding = Finding(outcomes.COULD_NOT_RUN, None, reason_of(cannot), str(cannot), fix)
+    finding = Finding(outcomes.COULD_NOT_RUN, None, reason_of(cannot), sentence, fix)
     return OperationResult(None, [finding], diagnostics=said.split("\n") + (["%s: %s" % (script, fix)] if isinstance(cannot, SparkError) else []))
+
+
+def undoctored(script):
+    """The `doctor_for` of a stop_result whose script runs no doctor (bench.py record): the answer that
+    board_doctor.stop_answer gives a stop with no port, so the stop is said as look.py says it (P1049)."""
+    return lambda stop: (["%s: %s" % (script, stop)], None)
 
 
 def question_result(stopped, script, data=None):

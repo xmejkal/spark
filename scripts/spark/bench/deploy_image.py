@@ -239,11 +239,10 @@ class DeployFlowService:
         lines = ["%s: %s" % (SCRIPT, cannot)]
         if isinstance(cannot, board_look.LookStopError):
             lines, reached["doctor"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)
-            project = self.service.project
-            sentence, asleep = board_envelope.asleep_stop(cannot, project, board_records.ButtonPlaces.of_project(project))
-            if asleep and not reached["doctor"]:  # P1022: a firmware that deep-sleeps, said as look.py says it
-                reached.update(refusal=sentence, fix=asleep)
-                lines = ["%s: %s" % (SCRIPT, sentence), asleep]
+            # P1022, P1049: a firmware that deep-sleeps, said as look.py says it; `fix` can also be the doctor's step
+            lines, sentence, fix = board_envelope.stop_said(SCRIPT, cannot, (lines, reached["doctor"]), self.asked.port, self.service.project)
+            if fix:
+                reached.update(refusal=sentence, fix=fix)
         self.outside.add_diagnostics(lines)
         return EXIT_COULD_NOT_RUN
 
@@ -391,10 +390,12 @@ the same text, and `next` holds the look, live and watch steps. The board log ke
 failed facts copy.
 
 A firmware that deep-sleeps (P1022 slice 3): when the deploy's look finds no board and firmware/ calls deepsleep, it
-says what look.py says. A `ready` line that the firmware printed before mpremote lost the board counts as ready seen
-when the board's files match and firmware/ calls deepsleep; --json says `data.ready.lost_board`. Without a call it is
-ready unknown, and a file that differs is not seen. The ready unknown fix names the deepsleep calls, and on an
-ESP32-C6 over USB-Serial/JTAG it says that a download mode entered with BOOT outlasts esptool's restart: press RESET.
+says what look.py says. With --port, the board doctor can find the named port not on USB. If firmware/ then calls
+deepsleep, the doctor's next line is the same fix, and it opens with the named port (P1049). A `ready` line that the
+firmware printed before mpremote lost the board counts as ready seen when the board's files match and firmware/ calls
+deepsleep; --json says `data.ready.lost_board`. Without a call it is ready unknown, and a file that differs is not
+seen. The ready unknown fix names the deepsleep calls, and on an ESP32-C6 over USB-Serial/JTAG it says that a
+download mode entered with BOOT outlasts esptool's restart: press RESET.
 
 Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)

@@ -113,7 +113,8 @@ and one next step for your hands, as the last line. Its look at the console can 
 When no board is on USB and the project's firmware calls deepsleep (read from firmware/, not from the board), the stop
 line is `no board found.` and the last line, the fix, says that the board can be in deep sleep (P1022). It names the
 calls, and says what to try in order: download mode with BOOT, a wait for the wake, then the cable. A firmware file
-that does not parse is named."""
+that does not parse is named. With --port, the board doctor can find the named port not on USB. If firmware/ then
+calls deepsleep, the doctor's next line is the same fix, and it opens with the named port (P1049)."""
 
 
 class LookAtBoard(Operation):
@@ -259,15 +260,14 @@ class LookAtBoard(Operation):
     @staticmethod
     def _stopped(stop, platform, port, outside):
         """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
-        lines, doctor = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
-        places = board_records.ButtonPlaces.of_project(platform.project)
-        sentence, asleep = (str(stop), "") if doctor else board_envelope.asleep_stop(stop, platform.project, places)
-        if asleep:  # P1022: a firmware that deep-sleeps; the fix is the last line, as --json's fix
-            lines = ["%s: %s" % (SCRIPT, sentence), asleep]
+        answer = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
+        # P1022, P1049: a firmware that deep-sleeps gets the asleep fix, also as the doctor's next step on the --port port
+        lines, sentence, fix = board_envelope.stop_said(SCRIPT, stop, answer, port, platform.project)
+        places, doctor = board_records.ButtonPlaces.of_project(platform.project), answer[1]
         # the port and the button words, each on one line (P430); a tool problem's path is flat already (P444)
         said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)
         return OperationResult({"doctor": board_doctor.as_dict(doctor)} if doctor else None,
-                               [Finding(outcomes.COULD_NOT_RUN, None, stop.reason, sentence, board_envelope.doctor_fix(doctor, places) or asleep)],
+                               [Finding(outcomes.COULD_NOT_RUN, None, stop.reason, sentence, fix)],
                                diagnostics=said.split("\n"))
 
 
