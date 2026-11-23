@@ -154,11 +154,11 @@ again to fix this, and never erase. The board log keeps what mpremote printed on
 of the board wrote the facts file or read the files, the fix says so.
 A firmware that deep-sleeps (P1022 slice 3): when the look finds no board, or the port named with `--port` is not on
 USB (P1049), and firmware/ calls deepsleep, the fix says the board can be in deep sleep. Relay it as printed, and do
-not run look.py again in a loop while the board sleeps: the person does step 1 (download mode with BOOT). Then run the look step of `next` once. A `ready`
-line printed before mpremote lost the board is `ready seen` only when the files match and firmware/ calls deepsleep
-(`data.ready.lost_board` is true). On an ESP32-C6 over USB-Serial/JTAG, the ready unknown fix says that a download
-mode entered with BOOT outlasts esptool's restart: after
-such a deploy the person presses RESET once, with BOOT not held. A crash of deploy.py exits 2 with an envelope (code `crash`), and after the flash `data.board_state` says `may_be_erased` or `flashed_not_verified`. A `DeployError` or a tool problem during the verify is such a crash, not a traceback with exit 1. The board's log goes to `sim/runs/board/`. After the facts line, deploy.py prints `image sha256: <hex>, yes: <whose yes>`, and `--json` has the same in `data.image_sha256` and `data.yes` (P213).
+not run look.py again in a loop while the board sleeps: the person does step 1 (download mode with BOOT). Once the
+person says they did step 1 or 2 of the fix (download mode with BOOT and RESET, or the board awake), run the look step
+of `next` once. A `ready` line printed before mpremote lost the board is `ready seen` only when the files match and
+firmware/ calls deepsleep (`data.ready.lost_board` is true). On an ESP32-C6 over USB-Serial/JTAG, the ready unknown
+fix says that a download mode entered with BOOT outlasts esptool's restart: after such a deploy the person presses RESET once, with BOOT not held. A crash of deploy.py exits 2 with an envelope (code `crash`), and after the flash `data.board_state` says `may_be_erased` or `flashed_not_verified`. A `DeployError` or a tool problem during the verify is such a crash, not a traceback with exit 1. The board's log goes to `sim/runs/board/`. After the facts line, deploy.py prints `image sha256: <hex>, yes: <whose yes>`, and `--json` has the same in `data.image_sha256` and `data.yes` (P213).
 If ready is unknown and the passed run's log names files, deploy.py reads the look's port with DTR and RTS off, unless that is 303a:4001 (MicroPython's own USB). If the port says `waiting for download`, the
 board waits in its download mode. deploy.py then asks you to press the board's RESET once, with its place when the board record has it, waits 60 s for
 the port to go and come back, and reads the board again ([P243](https://github.com/xmejkal/spark/issues/252)). A restart counts only when mpremote

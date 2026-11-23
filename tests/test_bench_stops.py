@@ -106,7 +106,7 @@ class AStopOfAFirmwareThatSleepsSaysTheAsleepFixTest(unittest.TestCase):
     def test_the_asleep_fix_comes_with_the_look_step_and_no_other_stop_does(self):
         # P1048: the fix's step 1 names look.py, so `next` names it, for the person to run after their hands
         (step,) = stop_result(self.no_port, "grant.py", self.project, None, stops.undoctored("grant.py")).next
-        self.assertEqual((step.op, step.argv, step.needs_person, step.needs_yes), ("look", ["--project", str(self.project)], True, False))
+        self.assertEqual((step.op, step.argv, step.needs_person, step.needs_yes), ("look", ["--project", str(self.project.resolve())], True, False))
         self.assertEqual(stop_result(self.no_port, "live.py", self.project, None).next, [])  # no doctor_for (P1057)
         for main in ("import machine\nmachine.lightsleep(1)\n", "import machine\nmachine.deepsleep(1\n"):
             with self.subTest(main=main):

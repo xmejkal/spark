@@ -373,7 +373,7 @@ class RecordTest(RecordCase):
             self.assertEqual(lines[1], item["fix"], code)
             self.assertTrue(lines[-1].startswith("bench.py: Nothing was written. fix what the line above says"), lines[-1])
             (step,) = said["next"]  # P1048: the look of the fix's step 1, which needs the person
-            self.assertEqual((step["op"], step["argv"], step["needs_person"]), ("look", ["--project", str(project)], True), code)
+            self.assertEqual((step["op"], step["argv"], step["needs_person"]), ("look", ["--project", str(project.resolve())], True), code)
         self.assertEqual(said["unchecked"][0]["sentence"], "no board on /dev/cu.usbmodem9: mpremote devs does not list it.")
         self.no_record()
 

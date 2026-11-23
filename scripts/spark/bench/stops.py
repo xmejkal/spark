@@ -49,7 +49,7 @@ def stop_result(cannot, script, project, port, doctor_for=None):
         lines, sentence, fix = board_envelope.stop_said(script, cannot, answer, port, project)
         if not (answer[1] or fix.startswith(board_envelope.ASLEEP_KNOWS)):  # the review of #1569: UNPARSED keeps the old stop
             lines, sentence, fix = answer[0], str(cannot), ""
-        steps = board_envelope.asleep_next(fix, project)
+        steps = board_envelope.asleep_next(fix, project.resolve())
         # no `project` here: these lines hold it only in a tool problem, whose path is flat already (P444), as in look.py
         said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)
     else:

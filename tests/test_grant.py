@@ -184,7 +184,7 @@ class ASleepingBoardTest(GrantCase):
         (step,) = said["next"]
         self.assertEqual((code, list(said)[-1]), (2, "next"))
         self.assertEqual((step["op"], step["argv"], step["needs_person"], step["needs_yes"]),
-                         ("look", ["--project", str(self.project)], True, False))
+                         ("look", ["--project", str(self.project.resolve())], True, False))
 
     def test_a_named_port_not_on_usb_opens_the_fix_with_that_port(self):
         lines = self.stderr("--minutes", "10", "--port", "/dev/cu.usbmodem9")
