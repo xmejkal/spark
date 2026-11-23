@@ -732,6 +732,21 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
         self.assertIn("cannot be read (Permission denied)", done.stderr)
         self.assertNotIn("Traceback", done.stdout + done.stderr)
 
+    def test_status_with_a_downloads_folder_spark_cannot_read_says_one_line_and_exits_2(self):
+        # P1041, the refuter of #1570: a readable store with downloads of mode 0 was a traceback at locate's is_file()
+        home = Path(tempfile.mkdtemp())
+        downloads = home / "downloads"
+        downloads.mkdir()
+        self.addCleanup(os.chmod, downloads, 0o700)
+        os.chmod(downloads, 0)
+        env = golden_bench.child_env(home, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
+        done = golden_bench.run_child("tools.py", ["--status"], tempfile.mkdtemp(), env)
+        self.assertEqual(done.returncode, tools.EXIT_COULD_NOT_RUN, done.stderr)
+        self.assertNotIn("Traceback", done.stdout + done.stderr)
+        self.assertEqual(len(done.stderr.splitlines()), 1, done.stderr)
+        self.assertTrue(done.stderr.startswith("tools.py: %s" % downloads), done.stderr)
+        self.assertIn("cannot be read (Permission denied) — fix it or its permissions", done.stderr)
+
     # I2 and the tracebacks the rule says never happen.
     def test_status_names_an_entry_it_cannot_use_instead_of_crashing(self):
         project = project_with({"roles": {"bench": "mystery"}, "mystery": {"for": "something"}})

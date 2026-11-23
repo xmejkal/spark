@@ -173,6 +173,18 @@ def fetch_of(entry):
     return fetch["file"], build["url"], build["sha256"], bool(fetch.get("executable"))
 
 
+def _downloaded(path):
+    """Whether spark's downloads hold the file `path`. A ToolError when the disk refuses to say (P1041): a tool in a
+    folder spark cannot read is neither here nor missing, and /spark:setup could not write it there either."""
+    try:
+        return stat.S_ISREG(path.stat().st_mode)
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    except OSError as cannot:
+        raise ToolError("%s cannot be read (%s) — fix it or its permissions", path, cannot.strerror or cannot,
+                        code=records_codes.FILE_REFUSED)
+
+
 def locate(entry, project):
     """The command that runs this tool, by its kind — or None when it is not here."""
     kind = entry.get("kind", "path")
@@ -182,7 +194,7 @@ def locate(entry, project):
         return [sys.executable] if importlib.util.find_spec(entry["module"]) else None
     if kind == "download":
         path = DOWNLOADS / entry["file"]
-        return [str(path)] if path.is_file() else None
+        return [str(path)] if _downloaded(path) else None
     if kind == "bundled":
         path = PLUGIN / entry["file"]
         return [str(path)] if path.is_file() else None
@@ -201,7 +213,7 @@ def locate(entry, project):
             return [str(path)]
     if entry.get("fetch"):
         path = DOWNLOADS / entry["fetch"]["file"]
-        if path.is_file() and os.access(str(path), os.X_OK):
+        if _downloaded(path) and os.access(str(path), os.X_OK):
             return [str(path)]
     return None
 
