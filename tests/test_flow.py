@@ -1827,8 +1827,10 @@ class ThePageRefreshTest(FlowTest):
     def test_a_project_with_no_page_gets_none(self):
         import parts
         project = self.open_needs("soil", "wet")
-        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many", "--json"])
-        self.assertEqual((code, json.loads(lines[0]).get("notes", [])), (0, []))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = parts.main(["--pick", str(project), "soil=x-many", "--json"])
+        self.assertEqual((code, json.loads(out.getvalue()).get("notes", [])), (0, []))
+        self.assertNotIn("refresh:", err.getvalue())  # no page is no failure
         self.assertFalse((project / "page.html").exists())
 
     def test_a_dry_run_or_a_refused_pick_leaves_the_page(self):
