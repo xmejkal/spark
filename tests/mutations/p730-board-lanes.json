@@ -2,8 +2,8 @@
  {"file": "tools/check_backlog.py", "name": "P730: a sound slice is not sound's", "find": "            if entry.get(\"slice\") in lane.slices:\n", "replace": "            if False:\n"},
  {"file": "tools/check_backlog.py", "name": "P730: every card is sound's", "find": "    return LANES[0]\n", "replace": "    return LANES[1]\n"},
  {"file": "tools/check_backlog.py", "name": "P730: a graphics library card is spark's", "find": "Lane(\"sound\", (\"pixel-games\", \"graphics library\"),", "replace": "Lane(\"sound\", (\"pixel-games\",),"},
- {"file": "tools/check_backlog.py", "name": "P730: Ready's old limit returns", "find": "((\"Ready\", 4), (\"Build\", 3))", "replace": "((\"Ready\", 5), (\"Build\", 3))"},
- {"file": "tools/check_backlog.py", "name": "P730: Build's old limit returns", "find": "((\"Ready\", 4), (\"Build\", 3))", "replace": "((\"Ready\", 4), (\"Build\", 2))"},
+ {"file": "tools/check_backlog.py", "name": "P730: Ready's old limit returns", "find": "((\"Ready\", 4), (\"Build\", 5))", "replace": "((\"Ready\", 5), (\"Build\", 5))"},
+ {"file": "tools/check_backlog.py", "name": "P730: Build's old limit returns", "find": "((\"Ready\", 4), (\"Build\", 5))", "replace": "((\"Ready\", 4), (\"Build\", 3))"},
  {"file": "tools/check_backlog.py", "name": "P730: sound's Ready limit rises", "find": "((\"Ready\", 1), (\"Build\", 1))", "replace": "((\"Ready\", 2), (\"Build\", 1))"},
  {"file": "tools/check_backlog.py", "name": "P730: sound's Build limit rises", "find": "((\"Ready\", 1), (\"Build\", 1))", "replace": "((\"Ready\", 1), (\"Build\", 2))"},
  {"file": "tools/check_backlog.py", "name": "P730: Ready and Build are counted across both sessions", "find": "            held = [e for e in by_stage.get(stage, []) if lane in (None, lane_of(e))]\n", "replace": "            held = by_stage.get(stage, [])\n"},
@@ -15,5 +15,5 @@
  {"file": "tools/check_backlog.py", "name": "P730: Ready is over one late", "find": "            if (over(held, lane_limit) if stage in IN_FLIGHT else len(held) > lane_limit):\n", "replace": "            if (over(held, lane_limit) if stage in IN_FLIGHT else len(held) > lane_limit + 1):\n"},
  {"file": "tools/check_backlog.py", "name": "P730: Ready reads as over at its limit", "find": "            if (over(held, lane_limit) if stage in IN_FLIGHT else len(held) > lane_limit):\n", "replace": "            if (over(held, lane_limit) if stage in IN_FLIGHT else len(held) >= lane_limit):\n"},
  {"file": "tools/check_backlog.py", "name": "P730: Ready is never over", "find": "            if (over(held, lane_limit) if stage in IN_FLIGHT else len(held) > lane_limit):\n", "replace": "            if (over(held, lane_limit) if stage in IN_FLIGHT else False):\n"},
- {"file": "tools/check_backlog.py", "name": "P730: spark's Ready limit falls", "find": "((\"Ready\", 4), (\"Build\", 3))", "replace": "((\"Ready\", 3), (\"Build\", 3))"}
+ {"file": "tools/check_backlog.py", "name": "P730: spark's Ready limit falls", "find": "((\"Ready\", 4), (\"Build\", 5))", "replace": "((\"Ready\", 3), (\"Build\", 5))"}
 ]

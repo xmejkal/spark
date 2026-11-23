@@ -55,11 +55,12 @@ SPARK = board.to_items(project(
     node(15, "R2.6 — A fourth cold test", "Idea", waiting="the PO", since="2026-10-05"),
     {"content": {}, "status": None}))
 BIN = board.to_items(project(node(1, "B1 — Identify the audio module", "Idea", waiting="the PO", since="2026-09-25")))
-# Spark's five cards in flight are the cap (P146, P978); a sixth, flying on the bin's board, breaks it.
+# Spark's seven cards in flight are the cap (P146, P978, P1037); an eighth, flying on the bin's board, breaks it.
 SPARK_AT_THE_CAP = board.to_items(project(node(1, "P1 — a", "Discovery"), node(2, "P2 — b", "Design"),
                                           node(3, "P3 — c", "Build"), node(4, "P4 — d", "Review"),
-                                          node(5, "P5 — f", "Build")))
-BIN_FIFTH = board.to_items(project(node(19, "B19 — e", "Build")))
+                                          node(5, "P5 — f", "Build"), node(6, "P6 — g", "Build"),
+                                          node(7, "P7 — h", "Review")))
+BIN_EIGHTH = board.to_items(project(node(19, "B19 — e", "Build")))
 
 
 class FixedToday(dt.date):
@@ -167,14 +168,14 @@ class TheCoreTest(unittest.TestCase):
         self.assertIn("  in flight: Build P1 (#1) 2 d (expedite), Design P2 (#2) 2 d", lines)
 
     def test_a_bench_session_is_listed_and_marked_though_the_flight_total_leaves_it_out(self):
-        # Four cards are the cap; the bin's bench card is a fifth in the list and not in the count, on purpose
+        # Seven cards are the cap; the bin's bench card is an eighth in the list and not in the count, on purpose
         # (check_backlog.BENCH: the PO's own hands sit outside the limits), so the line says why the two differ.
         bench = board.to_items(project(node(7, "B7 — c", "Build", labels=("bench",))))
         lines = board.status_lines([("spark", SPARK_AT_THE_CAP), ("bin", bench)], [], [], set(), TODAY)
         self.assertEqual(lines[:2], [
-            "spark — 5 open, the limits hold · trial check 2026-11-02",
+            "spark — 7 open, the limits hold · trial check 2026-11-02",
             "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, Build P5 (#5) 2 d, "
-            "bin Build B7 (#7) 2 d (bench)"])
+            "Build P6 (#6) 2 d, Review P7 (#7) 2 d, bin Build B7 (#7) 2 d (bench)"])
 
     def test_a_card_in_flight_that_waits_on_the_po_is_marked_and_one_that_waits_on_hardware_is_not(self):
         # P928's first slice: the gate counts such a card apart (check_backlog.waits_apart), so the line says which they are.
@@ -275,11 +276,12 @@ class TheCoreTest(unittest.TestCase):
             "  ! the day of 2026-10-06 has no close — write it first"])
 
     def test_the_status_counts_the_bin_s_cards_in_the_same_flight_total(self):
-        lines = board.status_lines([("spark", SPARK_AT_THE_CAP), ("bin", BIN_FIFTH)], [], [], set(), TODAY)
+        lines = board.status_lines([("spark", SPARK_AT_THE_CAP), ("bin", BIN_EIGHTH)], [], [], set(), TODAY)
         self.assertEqual(lines[:3], [
-            "spark — 5 open, 1 problem(s) · trial check 2026-11-02",
-            "  ! In flight (spark) holds 6 (#1, #2, #3, #4, #5, bin #19) — its limit is 5: the spark lane finishes one before starting another",
-            "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, Build P5 (#5) 2 d, bin Build B19 (#19) 2 d"])
+            "spark — 7 open, 1 problem(s) · trial check 2026-11-02",
+            "  ! In flight (spark) holds 8 (#1, #2, #3, #4, #5, #6, #7, bin #19) — its limit is 7: the spark lane finishes one before starting another",
+            "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, Build P5 (#5) 2 d, "
+            "Build P6 (#6) 2 d, Review P7 (#7) 2 d, bin Build B19 (#19) 2 d"])
 
     def test_the_status_says_when_the_bin_board_was_not_given(self):
         lines = board.status_lines([("spark", SPARK)], [], [], set(), TODAY)
@@ -315,20 +317,20 @@ class TheCoreTest(unittest.TestCase):
         self.assertEqual(state, "ON_TRACK")
 
     def test_a_close_is_at_risk_when_a_limit_breaks_even_with_no_one_waiting(self):
-        # Build's limit is 3 for spark's session (P730, the PO, 2026-11-09; P978, the PO, 2026-11-21): SPARK holds one card
-        # in Build, so a third is the limit and a fourth breaks it.
-        at_the_limit = SPARK + board.to_items(project(node(27, "P102d — Proofs", "Build"), node(29, "P102f — More proofs", "Build")))
-        state, _ = board.close_update("three in Build", [("spark", at_the_limit)], set(), TODAY, TODAY)
+        # Build's limit is 5 for spark's session (P730, the PO, 2026-11-09; P978, 2026-11-21; P1037, 2026-11-23): SPARK holds
+        # one card in Build, so a fifth is the limit and a sixth breaks it.
+        at_the_limit = SPARK + board.to_items(project(*(node(n, "P%d — Proofs" % n, "Build") for n in (27, 29, 30, 33))))
+        state, _ = board.close_update("five in Build", [("spark", at_the_limit)], set(), TODAY, TODAY)
         self.assertEqual(state, "ON_TRACK")
         crowded = at_the_limit + board.to_items(project(node(28, "P102e — A discovery skill", "Build")))
-        state, _ = board.close_update("four in Build", [("spark", crowded)], set(), TODAY, TODAY)
+        state, _ = board.close_update("six in Build", [("spark", crowded)], set(), TODAY, TODAY)
         self.assertEqual(state, "AT_RISK")
 
     def test_a_close_is_at_risk_when_the_bin_s_cards_break_the_flight_total(self):
         # The close reads the verdict the status prints (the session-status design: no second rule).
-        state, _ = board.close_update("six in flight", [("spark", SPARK_AT_THE_CAP), ("bin", BIN_FIFTH)], set(), TODAY, TODAY)
+        state, _ = board.close_update("eight in flight", [("spark", SPARK_AT_THE_CAP), ("bin", BIN_EIGHTH)], set(), TODAY, TODAY)
         self.assertEqual(state, "AT_RISK")
-        state, _ = board.close_update("five in flight", [("spark", SPARK_AT_THE_CAP), ("bin", [])], set(), TODAY, TODAY)
+        state, _ = board.close_update("seven in flight", [("spark", SPARK_AT_THE_CAP), ("bin", [])], set(), TODAY, TODAY)
         self.assertEqual(state, "ON_TRACK")
 
     def test_status_offline_says_why_and_exits_zero(self):
@@ -869,27 +871,27 @@ class TheMoveTest(unittest.TestCase):
     def refusals(self, boards, number, stage, waiting_on=None):
         return board.move_problems(boards, number, stage, waiting_on, MOVE_DAY)
 
-    def test_a_fourth_card_into_spark_s_build_is_refused_and_the_sentence_names_it(self):
-        boards = boards_of(card(1, "Build"), card(2, "Build"), card(3, "Build"), card(4, "Ready"))
-        said = self.refusals(boards, 4, "Build")
-        self.assertEqual(len(said), 1)
-        self.assertTrue(said[0].startswith("Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 3"), said)
-
-    def test_a_third_card_into_spark_s_build_is_not_refused(self):
-        self.assertEqual(self.refusals(boards_of(card(1, "Build"), card(2, "Build"), card(4, "Ready")), 4, "Build"), [])
-
-    def test_a_sixth_card_into_spark_s_flight_is_refused(self):
-        boards = boards_of(card(1, "Discovery"), card(2, "Design"), card(3, "Build"), card(4, "Review"),
-                           card(5, "Build"), card(6, "Ready"))
+    def test_a_sixth_card_into_spark_s_build_is_refused_and_the_sentence_names_it(self):
+        boards = boards_of(*(card(n, "Build") for n in range(1, 6)), card(6, "Ready"))
         said = self.refusals(boards, 6, "Build")
         self.assertEqual(len(said), 1)
-        self.assertTrue(said[0].startswith("In flight (spark) holds 6"), said)
+        self.assertTrue(said[0].startswith("Build (spark) holds 6 (#1, #2, #3, #4, #5, #6) — its limit is 5"), said)
 
-    def test_a_third_card_into_review_is_refused_across_both_lanes(self):
-        boards = boards_of(card(1, "Review"), card(2, "Review", slice_="pixel-games"), card(3, "Build"))
-        said = self.refusals(boards, 3, "Review")
+    def test_a_fifth_card_into_spark_s_build_is_not_refused(self):
+        self.assertEqual(self.refusals(boards_of(*(card(n, "Build") for n in range(1, 5)), card(6, "Ready")), 6, "Build"), [])
+
+    def test_an_eighth_card_into_spark_s_flight_is_refused(self):
+        boards = boards_of(card(1, "Discovery"), card(2, "Design"), card(3, "Build"), card(4, "Review"),
+                           card(5, "Build"), card(6, "Build"), card(7, "Review"), card(8, "Ready"))
+        said = self.refusals(boards, 8, "Build")
         self.assertEqual(len(said), 1)
-        self.assertTrue(said[0].startswith("Review holds 3 (#1, #2, #3) — its limit is 2"), said)
+        self.assertTrue(said[0].startswith("In flight (spark) holds 8"), said)
+
+    def test_a_fourth_card_into_review_is_refused_across_both_lanes(self):
+        boards = boards_of(card(1, "Review"), card(2, "Review", slice_="pixel-games"), card(3, "Review"), card(4, "Build"))
+        said = self.refusals(boards, 4, "Review")
+        self.assertEqual(len(said), 1)
+        self.assertTrue(said[0].startswith("Review holds 4 (#1, #2, #3, #4) — its limit is 3"), said)
 
     def test_a_card_into_ready_with_no_needed_by_is_refused(self):
         said = self.refusals(boards_of(card(7, "Idea", needed=False)), 7, "Ready")
@@ -924,10 +926,10 @@ class TheMoveTest(unittest.TestCase):
         self.assertEqual(self.refusals(boards_of(card(8, "Design", "hardware")), 8, "Build"), [])
 
     def test_the_card_is_named_as_a_whole_token_never_inside_a_longer_number_or_as_a_bin_card(self):
-        self.assertTrue(board.names_card(1488, "Build (spark) holds 4 (#1, #1488) — its limit is 3"))
+        self.assertTrue(board.names_card(1488, "Build (spark) holds 2 (#1, #1488) — its limit is 5"))
         self.assertTrue(board.names_card(1488, "#1488 P1021 — x: on no slice of the story map"))
-        self.assertFalse(board.names_card(1488, "Build (spark) holds 4 (#1, #14880) — its limit is 3"))
-        self.assertFalse(board.names_card(1488, "In flight (spark) holds 6 (#1, bin #1488) — its limit is 5"))
+        self.assertFalse(board.names_card(1488, "Build (spark) holds 2 (#1, #14880) — its limit is 5"))
+        self.assertFalse(board.names_card(1488, "In flight (spark) holds 8 (#1, bin #1488) — its limit is 7"))
         self.assertFalse(board.names_card(148, "#1488 P1021 — x: on no slice of the story map"))
 
     def test_a_card_of_another_repository_with_the_same_number_or_none_is_not_found(self):
@@ -958,11 +960,11 @@ class TheMoveTest(unittest.TestCase):
             self.assertIn(said, calls[0])
 
     def test_a_refused_move_writes_nothing_and_says_each_sentence(self):
-        boards = boards_of(card(1, "Build"), card(2, "Build"), card(3, "Build"), card(4, "Ready"))
-        code, lines, calls = self.move(boards, 4, "Build")
+        boards = boards_of(*(card(n, "Build") for n in range(1, 6)), card(6, "Ready"))
+        code, lines, calls = self.move(boards, 6, "Build")
         self.assertEqual((code, calls), (1, []))
         self.assertEqual(len(lines), 1)
-        self.assertTrue(lines[0].startswith("move: refused — Build (spark) holds 4"), lines)
+        self.assertTrue(lines[0].startswith("move: refused — Build (spark) holds 6"), lines)
 
     def test_a_wait_is_written_first_with_today_s_date_and_the_status_in_a_second_call(self):
         code, lines, calls = self.move(boards_of(card(4, "Ready")), 4, "Build", "the PO")
@@ -1066,13 +1068,15 @@ class TheMoveTest(unittest.TestCase):
         self.assertEqual(lines, ['move: could-not-run — #3 P3 — c3 is in a stage the gate does not know: "Shipped"'])
 
     def test_the_bin_s_cards_fill_spark_s_flight_for_the_move(self):
-        spark = (card(1, "Discovery"), card(2, "Design"), card(3, "Build"), card(4, "Review"), card(6, "Ready"))
+        spark = (card(1, "Discovery"), card(2, "Design"), card(3, "Build"), card(4, "Review"), card(5, "Build"),
+                 card(7, "Review"), card(6, "Ready"))
         said = self.refusals(boards_of(*spark, bin_cards=[card(19, "Build")]), 6, "Build")
         self.assertEqual(len(said), 1)
-        self.assertTrue(said[0].startswith("In flight (spark) holds 6 (#1, #2, #3, #4, #6, bin #19)"), said)
+        self.assertTrue(said[0].startswith("In flight (spark) holds 8 (#1, #2, #3, #4, #5, #7, #6, bin #19)"), said)
 
     def test_a_flight_over_its_limit_with_the_bin_s_cards_does_not_refuse_a_move_inside_it(self):
-        spark = (card(1, "Discovery"), card(2, "Design"), card(3, "Build"), card(4, "Review"), card(5, "Build"))
+        spark = (card(1, "Discovery"), card(2, "Design"), card(3, "Build"), card(4, "Review"), card(5, "Build"),
+                 card(6, "Build"), card(7, "Review"))
         self.assertEqual(self.refusals(boards_of(*spark, bin_cards=[card(19, "Build")]), 5, "Review"), [])
 
     # main(), with a fake gh for the reads and the writes.
@@ -1113,14 +1117,14 @@ class TheMoveTest(unittest.TestCase):
         return done, out.getvalue()
 
     def test_main_moves_a_card_that_fits_and_refuses_one_over_a_limit(self):
-        gh, writes = self.main_gh([card(1, "Build"), card(2, "Build"), card(3, "Build"), card(4, "Ready")])
-        self.assertEqual(self.run_main(gh, "4", "Review"), (0, "moved #4 to Review\n"))
+        gh, writes = self.main_gh([*(card(n, "Build") for n in range(1, 6)), card(6, "Ready")])
+        self.assertEqual(self.run_main(gh, "6", "Review"), (0, "moved #6 to Review\n"))
         self.assertEqual(len(writes), 1)
-        done, out = self.run_main(gh, "4", "Build")
+        done, out = self.run_main(gh, "6", "Build")
         self.assertEqual((done, len(writes)), (1, 1))
-        self.assertTrue(out.startswith("move: refused — Build (spark) holds 4"), out)
-        self.assertEqual(self.run_main(gh, "4", "Review", "--dry-run"),
-                         (0, "would move #4 to Review (dry run — nothing written)\n"))
+        self.assertTrue(out.startswith("move: refused — Build (spark) holds 6"), out)
+        self.assertEqual(self.run_main(gh, "6", "Review", "--dry-run"),
+                         (0, "would move #6 to Review (dry run — nothing written)\n"))
         self.assertEqual(len(writes), 1)
 
     def test_main_writes_nothing_when_the_bin_s_board_or_spark_s_was_not_read(self):
