@@ -35,6 +35,7 @@ from spark.records import records_codes  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.records.deploy_record_store import DeployRecordStore, LastDeploy, outside_deploy  # noqa: E402
 from spark.records.registered_project_store import RegisteredProject, RegisteredProjectStore  # noqa: E402
+from spark.records.storage import UNREADABLE, MemoryStorage  # noqa: E402
 from fakes import FakeClock, FakeOutsideWorld, pin_time_zone  # noqa: E402
 from test_bench_show import BRIDGE, C6, FIRMWARE_SERIAL, MAC_A, NO_SERIAL, S3, ShowCase, StoreCase, devs_of, entry  # noqa: E402
 from test_deploy import found  # noqa: E402
@@ -108,6 +109,34 @@ class RegisteredProjectStoreTest(StoreCase):
     def test_the_file_is_private(self):
         RegisteredProjectStore().register("pixel-games", ORIGIN, "box.py", REGISTERED_AT)
         self.assertEqual(store.place("registered-projects").stat().st_mode & 0o777, 0o600)
+
+
+class RegisteredProjectStoreOnMemoryTest(StoreCase):
+    """P1036 (test 25): the Store over MemoryStorage keeps its rules and writes no file. The scratch store is there because
+    `register` still reads the person's projects list from the file store: that list is outside the storage seam."""
+
+    def test_a_name_is_kept_in_memory_and_no_file_is_written(self):
+        memory = MemoryStorage()
+        written = RegisteredProjectStore(memory).register("pixel-games", ORIGIN, "box.py", REGISTERED_AT)
+        again = RegisteredProjectStore(memory).register("pixel-games", ORIGIN, "box.py", "2026-11-19T07:05:09+01:00")
+        self.assertEqual((written, again[1]), ((RegisteredProject("pixel-games", ORIGIN, "box.py", REGISTERED_AT), True), False))
+        self.assertEqual(RegisteredProjectStore(memory).read("pixel-games"), written[0])
+        self.assertFalse(store.place("registered-projects").exists())
+
+    def test_a_planted_entry_that_is_broken_or_unreadable_is_refused_with_its_code(self):
+        for data, code in (("[1]", "record_file_broken"), (b"\xff", "record_file_broken"), (UNREADABLE, "file_refused")):
+            memory = MemoryStorage()
+            memory.plant("registered-projects", None, data)
+            with self.subTest(data=data), self.assertRaises(store.StoreError) as refused:
+                RegisteredProjectStore(memory).read("pixel-games")
+            self.assertEqual(refused.exception.code, code)
+
+    def test_a_registrations_file_that_is_not_utf8_is_broken(self):
+        store.place("registered-projects").parent.mkdir(parents=True, exist_ok=True)
+        store.place("registered-projects").write_bytes(b"\xff")
+        with self.assertRaises(store.StoreError) as refused:
+            RegisteredProjectStore().read("pixel-games")
+        self.assertEqual(refused.exception.code, "record_file_broken")
 
 
 class TheDeployEntryTest(StoreCase):

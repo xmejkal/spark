@@ -71,6 +71,18 @@ class TheBytesStayTest(ScratchStoreCase):
         self.assertEqual((again[1], registered.stat().st_mtime_ns), (False, before))
 
 
+class TheMemoryBytesTest(ScratchStoreCase):
+    """The calls of `write_the_files` on MemoryStorage keep the objects of the files that TheBytesStayTest pins (test 23).
+    The scratch store is for `register`, which still reads the projects list from the file store."""
+
+    def test_memory_keeps_the_registrations_of_the_pinned_file(self):
+        write_the_files(RegisteredProjectStore(), DeployRecordStore())
+        memory = storage.MemoryStorage()
+        write_the_files(RegisteredProjectStore(memory), DeployRecordStore())
+        self.assertEqual(sha256_of(store.place("registered-projects")), REGISTERED_SHA256)
+        self.assertEqual(memory.get("registered-projects"), json.loads(store.place("registered-projects").read_bytes()))
+
+
 class StorageContract:
     """The contract that every Storage keeps (P1036, tests 1 to 11). A class that runs it gives `make()`, `plant(made,
     namespace, key, data)` (a text, bytes, or storage.UNREADABLE) and `kept(made)`: what the Storage holds, as a list."""
