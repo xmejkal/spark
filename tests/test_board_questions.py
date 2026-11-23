@@ -228,7 +228,7 @@ class TheThreeAskTest(BoardQuestionCase):
                 self.assertEqual((self.codes(result), self.touched()), (["needs_reply"], []))
                 self.yes_file.unlink()
 
-    def test_8_a_named_port_is_asked_and_a_port_the_list_does_not_hold_is_asked_by_reach_alone(self):
+    def test_8_a_named_port_is_asked_and_a_port_the_list_does_not_hold_stops_each_of_the_three(self):
         for script, row, port in ((GRANT, NO_SERIAL_ROW, NO_SERIAL_PORT), (REACH, NO_SERIAL_ROW, NO_SERIAL_PORT),
                                   (LIVE, FIRMWARE_ROW, C6_PORT)):  # a board with no serial has no live grant: live asks first for this one
             with self.subTest(script=script, port=port):
@@ -236,16 +236,30 @@ class TheThreeAskTest(BoardQuestionCase):
                 self.devs = row
                 self.assertEqual((self.codes(self.result(script, port)), self.touched()), (["needs_reply"], []))
         self.devs = KEPT_ROW
-        for script, code in ((GRANT, "port_not_listed"), (REACH, "needs_reply"), (LIVE, "port_not_listed")):
+        for script in SCRIPTS:  # P1056: reach stops before the question too, as grant and live do
             with self.subTest(script=script, port="/dev/cu.nowhere"):
                 result = self.result(script, "/dev/cu.nowhere")
-                self.assertEqual((self.codes(result), self.touched()), ([code], []))
-                self.assertEqual(len(self.replies.asked), 1 if script == REACH else 0)
+                self.assertEqual((self.codes(result), self.touched()), (["port_not_listed"], []))
+                self.assertEqual(len(self.replies.asked), 0)
         self.devs = None  # the list fails
         for script in SCRIPTS:
             with self.subTest(script=script, listed=False):
                 result = self.result(script)
                 self.assertEqual((self.codes(result), self.touched(), self.replies.asked), (["list_failed"], [], []))
+
+    def test_8_reach_stops_a_port_the_list_does_not_hold_with_port_not_listed_also_after_a_yes(self):
+        nowhere = "/dev/cu.nowhere"  # P1056: a yes once crashed reach with an AttributeError on the row that was None
+        self.answer(True, known_board.question_for(known_board.CANNOT_TELL, None, nowhere, None, known_board.REACH).key)
+        for argv in (("--port", nowhere), ("--json", "--port", nowhere)):
+            with self.subTest(argv=argv):
+                code, said, err = self.main(REACH, *argv)
+                self.assertEqual((code, said), (2, ""))
+                self.assertEqual(err.splitlines()[-1], "reach.py: no board on %s: mpremote devs does not list it." % nowhere)
+                self.assertNotIn("Traceback", err)
+                self.assertNotIn("crashed", err)
+                self.assertEqual((self.replies.asked, self.touched()), ([], []))
+        result = self.result(REACH, nowhere)
+        self.assertEqual((self.codes(result), result.data), (["port_not_listed"], None))
 
     def test_8_reach_refuses_cure_first_with_no_probe_before_the_question(self):
         self.cannot_tell(REACH)
@@ -380,7 +394,7 @@ class TheStopsTest(BoardQuestionCase):
         self.forget()
         self.devs = KEPT_ROW
         self.assertEqual(self.main(REACH, "--json")[1], "")
-        self.assertEqual(self.main(REACH, "--json", "--port", "/dev/cu.nowhere")[1].count('"open"'), 1)
+        self.assertEqual(self.main(REACH, "--json", "--port", "/dev/cu.nowhere")[1], "")  # P1056: a stop before the question
         self.keep(C6_MAC, known_board.comparable_key(C6_MAC))
         self.devs = OTHER_ROW
         self.give_live_grant(OTHER_MAC)
