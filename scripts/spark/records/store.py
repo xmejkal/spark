@@ -180,14 +180,23 @@ def inside_git(path):
     return None
 
 
+def _holds(path, text):
+    """Whether `path` is a file that holds `text` already; a file that is not UTF-8 does not."""
+    try:
+        return path.is_file() and path.read_text(encoding="utf-8") == text
+    except UnicodeDecodeError:
+        return False
+
+
 def write_file(path, text, private=False):
     """
     A whole file (§6.1): written to `.part` and renamed, so a write that fails halfway leaves the old file whole and no
-    `.part` behind — and only when the bytes differ, so a retried write changes nothing. A private file is 0600, and its
-    `.part` is made new at 0600 before it holds a byte. Returns whether it changed.
+    `.part` behind — and only when the bytes differ, so a retried write changes nothing. A file that is not UTF-8 differs
+    (P1035 PR 2). A private file is 0600, and its `.part` is made new at 0600 before it holds a byte. Returns whether it
+    changed.
     """
     path = Path(path)
-    if path.is_file() and path.read_text(encoding="utf-8") == text:
+    if _holds(path, text):
         if private:
             os.chmod(path, 0o600)
         return False

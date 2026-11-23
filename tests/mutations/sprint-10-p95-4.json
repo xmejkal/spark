@@ -1,6 +1,6 @@
 [
  {"file": "scripts/spark/records/store.py", "name": "a write is made even when nothing changed",
-  "find": "    if path.is_file() and path.read_text(encoding=\"utf-8\") == text:", "replace": "    if False:"},
+  "find": "    if _holds(path, text):", "replace": "    if False:"},
  {"file": "scripts/spark/records/store.py", "name": "the drawer may be written inside a git work tree",
   "find": "    if private and inside_git(target):", "replace": "    if False:", "tier": "critical"},
  {"file": "scripts/spark/records/store.py", "name": "a private file is left readable by others",
