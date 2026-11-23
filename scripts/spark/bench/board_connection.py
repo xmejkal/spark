@@ -35,8 +35,10 @@ SETTLE_S = 2.5
 PORT_BACK_S = 10
 #: Run with mpremote's Python, in place of `python -m mpremote` (P1007): mpremote itself with two changes. Its open
 #: leaves DTR and RTS off, as board_console's reads do. And it sends nothing for the settle before it enters the raw
-#: REPL, with one reopen of a port that vanished meanwhile: a failed reopen says mpremote's `failed to access`. argv:
-#: the settle, the wait for the port, then mpremote's own arguments.
+#: REPL, with one reopen of a port that vanished meanwhile: a failed reopen says mpremote's `failed to access`. When the
+#: raw REPL still fails, one line `spark: the 2.5 s settle heard ...` goes to stderr before mpremote's traceback (P1022):
+#: the last 400 bytes of each read of the settle, and a vanished port with its seconds. A success writes no line, so a
+#: board's traceback stays BoardCodeError. argv: the settle, the wait for the port, then mpremote's own arguments.
 QUIET_MPREMOTE = """import os, sys, time, serial
 from mpremote import main as mpremote_main
 from mpremote.transport_serial import SerialTransport
@@ -45,12 +47,13 @@ opened, entered = serial.Serial.open, SerialTransport.enter_raw_repl
 def quiet_open(port):
     port.dtr = port.rts = False
     opened(port)
-def drain(port):
+def drain(port, heard):
     time.sleep(settle)
-    port.read(port.in_waiting)
+    heard.append(repr(port.read(port.in_waiting)[-400:]))
 def settled_enter(transport, *args, **kwargs):
+    heard, began = [], time.monotonic()
     try:
-        drain(transport.serial)
+        drain(transport.serial, heard)
     except (OSError, serial.SerialException):
         end = time.monotonic() + port_back
         while not os.path.exists(transport.device_name) and time.monotonic() < end:
@@ -59,11 +62,16 @@ def settled_enter(transport, *args, **kwargs):
         try:
             transport.serial.close()
             transport.serial.open()
-            drain(transport.serial)
+            heard.append("(its port vanished and came back after %g s)" % round(time.monotonic() - began, 1))
+            drain(transport.serial, heard)
         except (OSError, serial.SerialException) as gone:
             sys.stderr.write("failed to access %s (it vanished and did not come back: %s)\\n" % (transport.device_name, gone))
             sys.exit(1)
-    return entered(transport, *args, **kwargs)
+    try:
+        return entered(transport, *args, **kwargs)
+    except Exception:
+        sys.stderr.write("spark: the %g s settle heard %s\\n" % (settle, " ".join(heard)))
+        raise
 serial.Serial.open, SerialTransport.enter_raw_repl = quiet_open, settled_enter
 sys.argv[0] = "mpremote"
 sys.exit(mpremote_main.main())
@@ -152,7 +160,8 @@ class QuietBoardConnection(BoardConnection):
     """
     Adapter: a BoardConnection for a board on Espressif's USB-Serial/JTAG (P1007). Each call runs mpremote in its own
     Python `python` through QUIET_MPREMOTE, so mpremote's words and exit codes stay as they are. Each call restarts the
-    board, waits SETTLE_S, and may wait PORT_BACK_S more, so its time limit holds both. `repl_command` stays mpremote's.
+    board, waits SETTLE_S, and may wait PORT_BACK_S more, so its time limit holds both. When the raw REPL fails after
+    the settle, mpremote's output also holds what the settle heard (P1022). `repl_command` stays mpremote's.
     """
 
     #: The seconds a call may spend before the board can answer: the settle, and a vanished port's wait and settle.
