@@ -15,7 +15,6 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.bench import board_codes  # noqa: E402
 from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 from spark.bench import board_look  # noqa: E402
@@ -444,7 +443,7 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual([s["op"] for s in said["next"]], ["watch"])
         self.assertNotIn("needs_person", said["next"][0])  # nobody must press anything first
-        self.assertEqual(said["unchecked"][0]["fix"], board_codes.READY_UNKNOWN_NO_FILES.fix)
+        self.assertEqual(said["unchecked"][0]["fix"], test_deploy_gate.NO_FILES_FIX)
 
     @needs_littlefs
     def test_a_board_that_stays_in_download_mode_names_the_code_and_the_person_action(self):
@@ -540,7 +539,7 @@ class ReadyUnknownFixTest(unittest.TestCase):
         self.assertEqual(places, sorted(places))
 
     def test_a_log_that_names_no_files_gives_its_own_fix(self):
-        self.assertEqual(self.fix(self.unknown(files={})), board_codes.READY_UNKNOWN_NO_FILES.fix)
+        self.assertEqual(self.fix(self.unknown(files={})), test_deploy_gate.NO_FILES_FIX)
 
 
 if __name__ == "__main__":

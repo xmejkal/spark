@@ -330,12 +330,10 @@ class TheBenchCodesTableTest(unittest.TestCase):
         # P1022 slice 2: only board_envelope.ready_unknown_fix fills it, so no raw slot reaches the JSON or the CLI
         from spark.bench import board_envelope, board_facts, deploy_service, ready_probe
         from spark.records import board_records
-        self.assertEqual((type(board_codes.READY_UNKNOWN), board_codes.CODES["ready_unknown"]),
-                         (Code, board_codes.READY_UNKNOWN.meaning))
-        self.assertEqual((board_codes.READY_UNKNOWN_NO_FILES, board_codes.READY_UNKNOWN_NO_FILES.meaning),
-                         (board_codes.READY_UNKNOWN, board_codes.READY_UNKNOWN.meaning))
+        ready_unknown, = [code for code in board_codes.CODES if code == "ready_unknown"]  # the table's key is the Code
+        self.assertEqual((type(ready_unknown), ready_unknown.meaning), (Code, board_codes.CODES["ready_unknown"]))
         with self.assertRaises(TypeError):
-            codes.fix_of(board_codes.READY_UNKNOWN)
+            codes.fix_of(ready_unknown)
         xiao = board_records.ButtonPlaces.from_record(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()))
         for places in (board_records.ButtonPlaces.EMPTY, xiao):
             for console in (None, "", "entry 0x4086b910\n", "ready, cpu 80 MHz\n"):

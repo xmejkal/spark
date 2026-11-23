@@ -22,7 +22,6 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.bench import board_codes  # noqa: E402
 from spark.bench import board_connection  # noqa: E402
 from spark.bench import board_console  # noqa: E402
 from spark.bench import board_doctor  # noqa: E402
@@ -842,6 +841,9 @@ class TheBoardInDownloadModeTest(GateCase):
                          [FOUND["board-shell"].command + [self.look().port, "2"]])
 
 
+#: The fix of a ready_unknown deploy whose passed run's log names no files (P1022): the image is on the flash, nothing more.
+NO_FILES_FIX = ("The image is on the flash: spark did not flash again and did not erase again. Run the scenario again, so "
+                "that its log names the files. Only a deploy after that checks ready")
 #: What mpremote printed on the FireBeetle 2 C6 (303a:1001) when the 13:19 deploy's facts copy and hash read failed,
 #: 2026-11-23 (P1022, the kept board log of p934-display2, the traceback's file lines left out).
 SETTLE_STDERR = ("spark: the 2.5 s settle heard b''\nTraceback (most recent call last):\n"
@@ -928,7 +930,7 @@ class TheReadyUnknownWordsTest(GateCase):
         log.write_text("".join(line for line in log.read_text().splitlines(True) if not line.startswith("file sha256: ")))
         code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True))
         self.assertEqual(code, 2)
-        self.assertIn("  " + board_codes.READY_UNKNOWN_NO_FILES.fix + "\n", said)
+        self.assertIn("  " + NO_FILES_FIX + "\n", said)
         self.assertNotIn("What spark knows:", said)
 
 
