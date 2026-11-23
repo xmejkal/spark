@@ -7,8 +7,8 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 ## The deploy reader reads the project's board logs (P793 piece 6)
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "get back to where the page is and try to show this project on the page ... so we can make it work" (the PO, 2026-11-23, brief.md Frame); the core gap is named in P793 #1105's comment of 2026-11-23 <!-- REQUIRED:needed-by -->
-- value proven by: `flow.py show --project .` in p934-display2 names a stand past the deploy, with the last deploy's time and ready line <!-- REQUIRED:value-proven-by -->
-- depends on: A3 <!-- REQUIRED:depends-on -->
+- value proven by: `flow.py show --project .` in p934-display2 shows the last deploy's time and ready line, in the states Q8 sets <!-- REQUIRED:value-proven-by -->
+- depends on: A3, Q8, and P873 #1241 if Q5 picks O5c <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P793 #1105 <!-- REQUIRED:spark-process:parent -->
@@ -16,7 +16,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 
 ## The page offers Build and Pick on a wired board, and a rebuild can move its pins
 - type: bug
-- needed by: the user lens, USER-3 (council/user.md), from the P1010 commit; not seen by the PO
+- needed by: the user lens, USER-3 (council/user.md), from the P1010 commit; not seen by the PO, and the diary says "the page offers no build now" (diary.md:203), so a look at the rendered page comes first (R-6)
 - value proven by: the page of p934-display2 shows no Build or Pick that moves a pin without saying so
 - depends on: —
 - status: proposed
@@ -26,7 +26,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 
 ## The page's step numbers disagree with its picture, and its stamp has no date
 - type: bug
-- needed by: the user lens, USER-4 and USER-7 (council/user.md); the PO: "not very readable or intuitive" (P1011 #1470)
+- needed by: the user lens, USER-4 and USER-7 (council/user.md); the PO: "not very readable or intuitive" (P1011 #1470); the cause is an old build drawn by new code (R-7)
 - value proven by: on a page written again after P1009, step N of the list is pill N of the picture, and the stamp shows a date
 - depends on: —
 - status: proposed
