@@ -135,11 +135,11 @@ def who_and_sentence(now, open_needs, fact, written=True):
     return [now.by], said or (flow_codes.PROBLEMS_NOW if now.status == PROBLEMS else flow_codes.COULD_NOT_RUN_NOW) % now.phase
 
 
-def with_deploy_now(project, said, now):
-    """`said` with who acts and the sentence of an open deploy after a deploy (P1043, `deploy_reading.deploy_now`), which
-    reads the board log once more, as `image_fact` reads the image: a fact on every Phase would change the phases' JSON.
-    Else `said` as it is."""
-    told = deploy_reading.deploy_now(project, now.status) if now and now.phase == flow_codes.DEPLOY else None
+def with_deploy_now(project, said, now, deploy=None):
+    """`said` with who acts and the sentence of an open deploy after a deploy (P1043, `deploy_reading.deploy_now`), from
+    `deploy`, the DeployState the run read its deploy phase from (None: read it here, as `image_fact` reads the image: a
+    fact on every Phase would change the phases' JSON). Else `said` as it is."""
+    told = deploy_reading.deploy_now(deploy or deploy_reading.read_deploy(project)) if now and now.phase == flow_codes.DEPLOY else None
     return dict(said, by=told[0], says=told[1]) if told else said
 
 
@@ -205,11 +205,12 @@ def stands_at_of(guide):
     return guide["now"]["phase"] if guide["now"] else None
 
 
-def guide_of(project, phases, steps=count_steps):
+def guide_of(project, phases, steps=count_steps, deploy=None):
     """
     What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
     `{"now": {phase, by, says, offer, needs, steps}, "done", "later", "set_aside", "no_simulation", "no_open_phase"}`. `steps` counts the wiring
-    sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`).
+    sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
+    run's DeployState (P1043), None to read it here.
     """
     by_name, listed = {phase.phase: phase for phase in phases}, readable(lambda: needs.read(project), [])
     no_model = no_model_phases(project, by_name)
@@ -224,7 +225,7 @@ def guide_of(project, phases, steps=count_steps):
     count = steps(project) if beside_sheet else None
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
     written = not (now and now.phase == flow_codes.SIMULATE) or bool(scenario_names(project))
-    said = with_deploy_now(project, now_of(now, open_needs, fact, count, written), now) if now else None
+    said = with_deploy_now(project, now_of(now, open_needs, fact, count, written), now, deploy) if now else None
     wired = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
     later = [label(phase, no_model) + (flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else "")
              for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]

@@ -39,6 +39,9 @@ CAUSES = {"mpremote could not read the board's files": board_codes.FILES_UNREAD,
           "the board still waits in download mode after %d s" % download_mode.RESET_WAIT_S: board_codes.DOWNLOAD_MODE_STAYED,
           "the firmware stopped with an error": board_codes.FIRMWARE_ERROR,
           "the firmware printed no %r in %d s" % (ready_probe.READY, ready_probe.READY_WAIT_S): board_codes.NO_READY_LINE}
+#: The start of an older log's sentence after a board lost when ready was printed (ready_probe.LOST_NO_CALL): mpremote's
+#: own text comes before its first colon, so CAUSES cannot hold it (the review of #1579).
+LOST_START = "the firmware printed %r, %s" % (ready_probe.READY, ready_probe.LOST.split(" (", 1)[0])
 #: Value: what the reader takes from one board log: the moment as written (with its zone), the image's sha256, the
 #: verdict and the cause's code, or None (ready seen, or not recorded).
 LoggedDeploy = collections.namedtuple("LoggedDeploy", "at image verdict cause")
@@ -75,8 +78,18 @@ def write_board_log(project, log):
 
 
 def cause_of(sentence):
-    """The code of `sentence`'s start before its first colon, by CAUSES, or None. Never the start itself."""
+    """The code of `sentence`'s start before its first colon, by CAUSES, or BOARD_LOST for LOST_START, or None. Never the
+    start itself."""
+    if sentence.startswith(LOST_START):
+        return board_codes.BOARD_LOST
     return CAUSES.get(sentence.split(":", 1)[0])
+
+
+def old_cause_of(sentence, lines):
+    """The cause of an older log with no reason line, by its sentence. A read again (download_mode.READ_AGAIN) after a
+    first read that may have read the files gives no FILES_UNREAD: the log cannot tell whether they were read."""
+    cause = cause_of(sentence)
+    return None if cause == board_codes.FILES_UNREAD and download_mode.READ_AGAIN in lines else cause
 
 
 def logged_deploy(name, text):
@@ -92,7 +105,7 @@ def logged_deploy(name, text):
     if said[0] not in VERDICTS:
         raise unreadable(name, "its verdict is not one of %s" % ", ".join(VERDICTS))
     reason = lines[REASON_AT][len(REASON_LINE):] if lines[REASON_AT].startswith(REASON_LINE) else None
-    return LoggedDeploy(at, image, said[0], reason if reason in REASONS else cause_of(said[1]) if said[0] != ready_probe.SEEN else None)
+    return LoggedDeploy(at, image, said[0], reason if reason in REASONS else old_cause_of(said[1], lines) if said[0] != ready_probe.SEEN else None)
 
 
 def newest_logged_deploy(project):

@@ -54,7 +54,9 @@ UNKNOWN_CODE = "a-new-code"
 #: The nine phases of a real flow, the words of the page and its codes, as the card says them: literals, not the code's own.
 NINE = ["idea", "needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"]
 NOT_CHECKED = "not checked by spark"
-BENCH = "This page reads the project's files. It does not know whether the board is wired or flashed."
+#: The bench note (P1043-D10, the review of #1579); before it: "This page reads the project's files. It does not know whether the
+#: board is wired or flashed."
+BENCH = "This page reads the project's files and its board logs. It cannot see your wiring or what the board shows now."
 NOT_WRITTEN = "page_not_written"
 NOT_DRAWN_HERE = "Not drawn here. The build draws it: run /spark:build --keep."
 NO_BREADBOARD_FILE = "Not drawn: breadboard.svg is not in the project yet. The build with --keep writes it."

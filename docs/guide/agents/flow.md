@@ -26,7 +26,7 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   firmware), else `null`. `offer` is the key of the now offer: the now phase's one offer of a kind the page sends (a
   pick, the parts list or the build), else `null`. With one pick offer for the parts, `offer` is that pick. A
   breadboard now names no offer, because the build's offer is in the build phase.
-- `deploy` ([P1043](https://github.com/xmejkal/spark/issues/1533)): the newest board log in `sim/runs/board/`, or `null` with none or with one that cannot be read (the deploy phase says why). `at` is its time as written, with its zone; `image` the whole sha256 of the image it wrote; `verdict` `ready seen`, `ready not seen` or `ready unknown`; `cause` the code of the cause, from the log's reason line or its sentence's fixed start; `fact` `current`, `image-differs`, `firmware-newer` or `no-image` (what the image the project holds now says of it); `read_back` whether spark read the board's files back after the write (`null`: the log cannot tell). A `null` `cause` means ready seen, or a cause not recorded: never fill it in.
+- `deploy` ([P1043](https://github.com/xmejkal/spark/issues/1533)): the newest board log in `sim/runs/board/`, or `null` with none or with one that cannot be read (the deploy phase says why). `at` is its time as written, with its zone; `image` the whole sha256 of the image it wrote; `verdict` `ready seen`, `ready not seen` or `ready unknown`; `cause` the code of the cause, from the log's reason line or its sentence's fixed start; `fact` `current`, `image-differs`, `firmware-newer` or `no-image` (what the image the project holds now says of it); `read_back` whether spark read the board's files back after the write (`null`: the log cannot tell). A `null` `cause` means ready seen, or a cause not recorded: never fill it in. To answer "is the new firmware on the board", read `fact`, `read_back` and `verdict` together: `fact` `current` says only that the log's image is the image the project holds now.
 
   While no need is written, `now` is the idea. `now` is `null` when the deploy is `ok`, and then `no_open_phase` holds one sentence that says nothing waits (else it is `null`), or with a phase list a
   test swaps in. `done` names the phases before `now` that were done. With no picks behind the parts list (a
@@ -247,8 +247,8 @@ The words on the page:
 | `null` | not checked by spark |
 
 The page adds no tick. A phase that is not `ok` never shows the tick, whatever mark it carries. It shows the could-not-run
-mark. A code that the flow does not know shows as itself. No color says a status. The page does not know whether the board is
-wired or flashed, and says so in one line. Every text on it is masked, so no path of the home folder reaches the file.
+mark. A code that the flow does not know shows as itself. No color says a status. The page reads the project's files and its
+board logs, and cannot see the wiring or what the board shows now: one line says so. Every text on it is masked, so no path of the home folder reaches the file.
 
 ### The page script
 

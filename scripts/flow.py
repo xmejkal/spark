@@ -43,8 +43,8 @@ guide.no_open_phase says why. data.deploy holds the logged deploy: at, image, ve
 flow.py page writes page.html in the project: the same phases, each with its status word and a mark, the wiring of a built
 project (the lines before power, then the steps, one at a time or all at once) and the pictures the project holds: the
 breadboard, and the schematic and the PCB that the build with --keep kept as files. The page adds no tick of its own: a
-phase that is not ok never shows one. Only the build with --keep draws the schematic and the PCB. The page does not know
-whether the board is wired or flashed. Each offer shows its label and its effect. The page's <body> carries
+phase that is not ok never shows one. Only the build with --keep draws the schematic and the PCB. The page reads the
+project's files and its board logs, and cannot see your wiring or what the board shows now. Each offer shows its label and its effect. The page's <body> carries
 data-fingerprint (the first 12 hex digits of the fingerprint) and data-written (the newest change time of the three files
 below). With --json it prints data.file, data.did, data.stands_at, data.phases (each phase and its status),
 data.fingerprint, data.guide and data.artifact. --artifact ID keeps the id of the Artifact the page is published as

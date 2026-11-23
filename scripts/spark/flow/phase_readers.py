@@ -568,11 +568,16 @@ class DeployReader(PhaseReader):
 
     PHASE, BY = flow_codes.DEPLOY, flow_codes.BY_TERMINAL
 
+    def __init__(self, state=None):
+        self.state = state  # the DeployState of one run (the review of #1579), or None to read it here
+
     def read(self, project):
-        count, logged, fact, status = deploy_reading.deploy_state(project)
-        if logged is None:
+        state = self.state or deploy_reading.read_deploy(project)
+        if state.error:
+            raise state.error
+        if state.logged is None:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.LOOK_FIRST_MESSAGE, flow_codes.DEPLOY_HINT])
-        return self.phase(status, deploy_reading.deployed_says(count, logged, fact))
+        return self.phase(state.status, deploy_reading.deployed_says(state.count, state.logged, state.fact))
 
 
 #: The readers of the nine phases, in the order of `flow_codes.PHASES`.

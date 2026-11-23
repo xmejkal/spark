@@ -73,14 +73,23 @@ class TheCauseOfASentenceTest(unittest.TestCase):
         # P1043-D1: the codes and their starts are the bench's, the words the flow's; a lost board and files that differ have no start
         self.assertEqual(sorted(flow_codes.CAUSE_WORDS), sorted(set(board_log.CAUSES.values()) | {"board_lost", "files_differ"}))
 
-    def test_a_lost_board_and_files_that_differ_have_no_start(self):
+    def test_a_lost_board_has_its_own_start_and_files_that_differ_have_none(self):
+        # the review of #1579: the lost board's sentence holds mpremote's text before its first colon, so its start is its own
         lost = board_connection.BoardUnreachableError("OSError: [Errno 6] Device not configured", "ready\n")
-        for sentence in (probe(HASHES, lost).sentence, probe("file %s /main.py\n" % ("0" * 64), "ready\n").sentence):
-            with self.subTest(sentence=sentence):
-                self.assertIsNone(board_log.cause_of(sentence))
+        self.assertEqual(board_log.cause_of(probe(HASHES, lost).sentence), "board_lost")
+        self.assertIsNone(board_log.cause_of(probe("file %s /main.py\n" % ("0" * 64), "ready\n").sentence))
+
+    def test_an_old_log_with_a_read_again_gives_no_files_unread_and_a_reason_line_still_wins(self):
+        heard = "the first read: ready unknown: mpremote could not start the firmware: x\nread again\n"
+        for reason, cause in ((None, None), ("firmware_not_started", "firmware_not_started")):
+            with self.subTest(reason=reason):
+                log = a_log(sentence="mpremote could not read the board's files: x", heard=heard, reason=reason)
+                self.assertEqual(board_log.newest_logged_deploy(a_project_with(log.text()))[1].cause, cause)
+        log = a_log(sentence="mpremote could not read the board's files: x")
+        self.assertEqual(board_log.newest_logged_deploy(a_project_with(log.text()))[1].cause, "files_unread")
 
     def test_an_unknown_start_gives_no_cause_never_the_start(self):
-        for sentence in ("the firmware printed 'ready', then mpremote lost the board (x: y)", "", "mpremote: anything"):
+        for sentence in ("the board said something new (x: y)", "", "mpremote: anything", "the firmware printed 'ready'"):
             with self.subTest(sentence=sentence):
                 self.assertIsNone(board_log.cause_of(sentence))
 

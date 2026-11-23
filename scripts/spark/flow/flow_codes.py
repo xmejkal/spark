@@ -83,7 +83,7 @@ NOT_SEEN_WORDS = "written by the flasher, files read back, ready not seen"
 NO_READ_BACK_WORDS = "written by the flasher, nothing read back, start not seen"
 READ_BACK_WORDS = "written by the flasher, files read back, start not seen"
 LOST_WORDS = "written by the flasher, files read back, ready printed, then the board was lost"
-UNSURE_WORDS = "written by the flasher, start not seen"
+UNSURE_WORDS = "written by the flasher, start not confirmed"
 CAUSE_MESSAGE, NO_CAUSE_MESSAGE = "Cause in the log: %s.", "Cause not recorded."
 #: The cause of a deploy that did not see ready, by its code in the board log's reason line (the bench's board_codes,
 #: as equal literals: this module imports nothing of spark): spark's words for it, and whether spark read the board's
@@ -91,7 +91,7 @@ CAUSE_MESSAGE, NO_CAUSE_MESSAGE = "Cause in the log: %s.", "Cause not recorded."
 CAUSE_WORDS = {"files_unread": ("spark did not reach the board to read its files", False),
                "firmware_not_started": ("the command that starts the firmware failed", True),
                "no_files_named": ("the passed run's log names no files, so spark had none to read back", False),
-               "board_lost": ("firmware/ calls no deepsleep, so spark does not count the ready", True),
+               "board_lost": ("spark found no deepsleep call in firmware/, so it does not count the ready", True),
                "port_gone": ("the board's port was gone", None),
                "download_mode_stayed": ("the board stayed in download mode", None),
                "files_differ": ("the board's files are not the image's", True),
@@ -225,7 +225,8 @@ PAGE_NOT_WRITTEN = "page_not_written"
 OK_WORD = "ok"
 NOT_CHECKED_WORD = "not checked by spark"
 NOT_CHECKED_LEGEND = "spark does not judge this phase, so no mark says it is done"
-BENCH_NOTE = "This page reads the project's files. It does not know whether the board is wired or flashed."
+#: The design's meaning (P1043-D10) in words that name no phase (the review of #1579).
+BENCH_NOTE = "This page reads the project's files and its board logs. It cannot see your wiring or what the board shows now."
 STANDS_AT_LINE = "The project stands at: %s."
 #: The line under the page's title (P828 step 2, the PO, 2026-11-21: "it just doesn't guide a person"): what the page
 #: is and how to act on it. From disk every action is a message to Claude.
@@ -292,8 +293,8 @@ DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude
               "in your terminal.")
 #: The NOW of an open deploy after a deploy (P1043): the job in words, by the status and the cause of the newest board
 #: log (`deploy_reading.deploy_now`). No sentence claims what the board does now, and none names a path or a command.
-DEPLOY_NO_START_NOW = ("Spark did not see the firmware start after the last deploy. Ask Claude to look at the board with "
-                       "you. If the look asks for it, run the deploy again in your terminal.")
+DEPLOY_NO_START_NOW = ("Spark could not confirm that the firmware started after the last deploy. Ask Claude to look at "
+                       "the board with you. If the look asks for it, run the deploy again in your terminal.")
 DEPLOY_LOST_NOW = ("Spark saw ready after the last deploy, then lost the board, and cannot tell from here whether the "
                    "firmware still runs. If your gadget works, nothing is wrong. Else ask Claude to look at the board with you.")
 DEPLOY_AWAY_NOW = "After the last deploy, %s. Ask Claude to look at the board with you."

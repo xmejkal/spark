@@ -169,7 +169,7 @@ again after a build. The build also keeps tscircuit's schematic and PCB as `dist
 schematic and PCB of the kept `dist/board/circuit.json` ([P271](https://github.com/xmejkal/spark/issues/307)). Since
 2026-11-17, in a project folder, it is the project's flow page instead ([P827](https://github.com/xmejkal/spark/issues/1185)):
 each phase of [`flow.py`](../docs/guide/agents/flow.md) with its status word and a mark, then the wiring (the lines before power, then the steps, one at a time or all at once), then the same three pictures. It adds no
-tick: a phase that is not ok never shows one. It does not know whether the board is wired or flashed. A folder that is no
+tick: a phase that is not ok never shows one. It reads the project's files and its board logs, and cannot see your wiring or what the board shows now. A folder that is no
 project keeps the three tabs. Open it in a browser. It loads nothing from the web. Its one script does nothing from disk; in a published page with the Artifact database it adds the buttons of a pick, the parts list and the build ([P829](https://github.com/xmejkal/spark/issues/1187), docs/guide/agents/flow.md). Its colors are tokens with a dark mode, and its title has two to
 four words (P272), so it also follows the Artifact page rules. Only `/spark:page` publishes it and republishes it, on the person's yes (P829). A tab that could not be drawn, for example when `tsci export`
 fails, says why. `dist/` is still replaced with a build of the freshly generated board, not of
