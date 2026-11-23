@@ -257,8 +257,7 @@ def changes_between(record, seated, colors=None):
         if old.anchor != one.anchor:
             for change in _moved(old, one):
                 {REMOVED: removed, ADDED: added}.get(change.code, rerouted).append(change)
-    # a moved rail leg's jumper is new: it gives up a bench color, as an added one does, and lends none
-    bench = {change.color for change in removed + rerouted if change.color and change.kind != RAIL_LEG}
+    bench = {change.color for change in removed + rerouted if change.color and change.kind != RAIL_LEG}  # a moved rail leg's jumper is new
     added = [change._replace(color=None) if change.color in bench else change for change in added]
     rerouted = [change._replace(color=None) if change.kind == RAIL_LEG and change.color in bench else change
                 for change in rerouted]
