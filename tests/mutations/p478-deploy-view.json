@@ -1,0 +1,146 @@
+[
+ {
+  "file": "scripts/spark/core/view_reporter.py",
+  "name": "P478: a stage's heading is never printed (test_view_reporter.TheHeadingsTest, the deploy text goldens)",
+  "find": "            self._heading(self.names.index(event.code) + 1, event.code)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/core/view_reporter.py",
+  "name": "P478: the heading counts from 0 (test_view_reporter.TheHeadingsTest)",
+  "find": "self.names.index(event.code) + 1",
+  "replace": "self.names.index(event.code)"
+ },
+ {
+  "file": "scripts/spark/core/view_reporter.py",
+  "name": "P478: the first heading gets a blank line too (test_view_reporter.TheHeadingsTest, the deploy text goldens)",
+  "find": "(\"\\n\" if self.headed else \"\")",
+  "replace": "\"\\n\""
+ },
+ {
+  "file": "scripts/spark/core/view_reporter.py",
+  "name": "P478: a BEGIN in no stage prints (test_view_reporter.TheHeadingsTest)",
+  "find": "if event.kind == BEGIN and event.code in self.names:",
+  "replace": "if event.kind == BEGIN and True:"
+ },
+ {
+  "file": "scripts/spark/core/view_reporter.py",
+  "name": "P478: a heading skips printable (test_view_reporter.TheHeadingsTest.test_a_stage_name_with_an_escape_code_shows_it_as_a_question_mark)",
+  "find": "[[(printable(HEADING % (number, len(self.names), name)), \"heading\")]]",
+  "replace": "[[(HEADING % (number, len(self.names), name), \"heading\")]]"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P478: --json prints headings (test_view_reporter.TheViewTest, test_golden_bench's FORCE_COLOR test)",
+  "find": "    if as_json:\n        return View(",
+  "replace": "    if False:\n        return View("
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P478: painter_for runs for the status line again (test_view_reporter.TheViewTest)",
+  "find": "operation.text_renderer.render(result, style, tool, painter))",
+  "replace": "operation.text_renderer.render(result, style, tool, painter_for(style, importer)))"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P478: view_for reads the process's environment, not the one given (test_view_reporter.TheViewTest)",
+  "find": "Terminal(stdout=stdout).text_style(environ)",
+  "replace": "Terminal(stdout=stdout).text_style()"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P478: finish is never called (test_view_reporter.TheFinishTest)",
+  "find": "    finally:\n        reporter.finish()",
+  "replace": "    finally:\n        pass"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P478: the status line comes after the diagnostics on one pipe (test_view_reporter.TheOrderTest)",
+  "find": "print(said, flush=True)",
+  "replace": "print(said)"
+ },
+ {
+  "file": "scripts/spark/core/events.py",
+  "name": "P478: a decorated Reporter is never finished (test_view_reporter.TheFinishTest)",
+  "find": "    def finish(self):\n        self.inner.finish()",
+  "replace": "    def finish(self):\n        pass"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "P478: the terminal's style ignores the environment it is given (test_view_reporter.TheViewTest)",
+  "find": "os.environ if environ is None else environ",
+  "replace": "os.environ"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P478: the heading is plain on a terminal (test_view_reporter.TheRichHeadingTest)",
+  "find": "\"status\": \"bold\", \"heading\": \"bold\"",
+  "replace": "\"status\": \"bold\", \"heading\": None"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P478: the status line prints the whole layout (test_view_reporter.TheStatusLineTest, the deploy text goldens)",
+  "find": "        return [[], cls.status_line(result, style, tool)]",
+  "replace": "        return TextReport.layout(result, style, tool)"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P478: deploy has no stages (test_deploy_service.TheDeployViewTest, the deploy text goldens)",
+  "find": "    stages = DEPLOY_STAGES\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P478: deploy prints its whole layout (test_deploy_service.TheDeployViewTest, the deploy text goldens)",
+  "find": "    text_renderer = StatusLine\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P478: a crash after the gate has no status line (test_deploy_service.TheVerifyTest.test_a_crash_in_the_flash_loop_ends_the_text_view_with_the_board_s_state)",
+  "find": "traceback_lines(crashed),\n                               headline=Headline(CRASH_HEADLINE % state.words, Headline.of_status(outcomes.COULD_NOT_RUN)))",
+  "replace": "traceback_lines(crashed))"
+ },
+ {
+  "file": "scripts/spark/bench/board_envelope.py",
+  "name": "P478: a stop's headline names the stage (test_deploy_service.TheDeployViewTest)",
+  "find": "first_sentence(findings[0].sentence if findings else None)",
+  "replace": "reached[\"stage\"]"
+ },
+ {
+  "file": "scripts/spark/bench/board_envelope.py",
+  "name": "P478: ready unknown loses its pointer (test_deploy_service.TheDeployViewTest)",
+  "find": "HEADLINE_UNKNOWN = \"Flashed, ready unknown: %s. What to try is above.\"",
+  "replace": "HEADLINE_UNKNOWN = \"Flashed, ready unknown: %s.\""
+ },
+ {
+  "file": "scripts/spark/bench/board_envelope.py",
+  "name": "P478: a dry run says flashed (test_deploy_service.TheDeployViewTest, deploy-ok-dry-run.txt)",
+  "find": "sentence = HEADLINE_DRY_RUN if reached.get(\"dry_run\") else HEADLINE_READY",
+  "replace": "sentence = HEADLINE_READY"
+ },
+ {
+  "file": "scripts/spark/bench/board_envelope.py",
+  "name": "P478: a flash that stopped says not flashed (test_deploy_service.TheDeployViewTest, deploy-could-not-run-flash-failed-grant.txt)",
+  "find": "    elif reached[\"stage\"] == DeployPhase.FLASH:",
+  "replace": "    elif False:"
+ },
+ {
+  "file": "scripts/spark/bench/board_envelope.py",
+  "name": "P478: a stop says not flashed twice (test_deploy_service.TheDeployViewTest)",
+  "find": "first = first[len(NOT_FLASHED_START):] if first.lower().startswith(NOT_FLASHED_START) else first",
+  "replace": "first = first"
+ },
+ {
+  "file": "scripts/spark/bench/board_envelope.py",
+  "name": "P478: a stop's sentence ends in two dots (test_deploy_service.TheDeployViewTest)",
+  "find": "return first.rstrip(\".\").strip()",
+  "replace": "return first.strip()"
+ },
+ {
+  "file": "scripts/spark/bench/board_envelope.py",
+  "name": "P478: deploy's result has no headline (test_deploy_service.TheDeployViewTest, the deploy text goldens)",
+  "find": ",\n                           headline=deploy_headline(reached, code, found))",
+  "replace": ")"
+ }
+]

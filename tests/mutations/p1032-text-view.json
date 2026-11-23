@@ -92,8 +92,8 @@
  {
   "file": "scripts/spark/core/renderers.py",
   "name": "P1032: the headline's sentence skips printable (test_text_report.TheLayoutTest.test_an_escape_code_in_a_sentence_shows_as_a_question_mark_in_both_styles)",
-  "find": "        status = \" %s: %s. %s\" % (tool, result.status(), printable(headline.sentence))",
-  "replace": "        status = \" %s: %s. %s\" % (tool, result.status(), headline.sentence)"
+  "find": "(\" %s: %s. %s\" % (tool, result.status(), printable(headline.sentence)), \"status\")",
+  "replace": "(\" %s: %s. %s\" % (tool, result.status(), headline.sentence), \"status\")"
  },
  {
   "file": "scripts/spark/core/renderers.py",
@@ -103,9 +103,9 @@
  },
  {
   "file": "scripts/spark/core/renderers.py",
-  "name": "P1032: a rich paint that raises is not caught (test_text_report.ThePaintersTest.test_a_rich_that_raises_gives_the_plain_text)",
-  "find": "        except Exception:  # noqa: BLE001  rich of another version may refuse a setting: the plain text stands",
-  "replace": "        except ImportError:"
+  "name": "P1032: a rich paint that raises is not caught (test_text_report.ThePaintersTest.test_a_rich_that_raises_gives_the_plain_text; P478: test_view_reporter's rich that raises, paint_or_plain)",
+  "find": "    except Exception:  # noqa: BLE001  a paint that raises never stops the text view",
+  "replace": "    except ImportError:"
  },
  {
   "file": "scripts/spark/core/result.py",

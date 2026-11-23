@@ -180,9 +180,14 @@ class TheViewTest(unittest.TestCase):
                          (PLAIN, PlainPainter, TextViewReporter, out, ["plan", "look"], []))
         self.assertEqual(view.render(Staged().run(outside=None), "staged"), "\n✓ staged: ok. All done.")
 
-    def test_a_terminal_has_colour_and_imports_rich_once(self):
+    def test_a_terminal_has_colour_and_imports_rich_once_for_the_events_and_the_status_line(self):
         view = view_for(Staged(), False, (Stream(tty=True), io.StringIO()), {"TERM": "xterm"}, self.importer)
+        view.render(Staged().run(outside=None), "staged")
         self.assertEqual((view.style.colour, type(view.painter), view.reporter.painter, self.imported), (True, RichPainter, view.painter, [1]))
+
+    def test_a_terminal_with_no_term_in_the_given_environment_is_plain(self):
+        view = view_for(Staged(), False, (Stream(tty=True), io.StringIO()), {}, self.importer)
+        self.assertEqual((view.style[:2], view.painter, self.imported), ((False, False), PlainPainter, []))
 
     def test_the_environment_defaults_to_the_terminal_s_own(self):
         out = io.StringIO()

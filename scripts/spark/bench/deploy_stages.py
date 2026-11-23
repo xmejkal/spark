@@ -23,8 +23,7 @@ DEPLOY_STAGES = (
     DeployStage(DeployPhase.PLAN, "spark checks the image and finds its tools first, so a wrong image stops before the board is touched"),
     DeployStage(DeployPhase.LOOK, "spark reads the chip and flash size, so another chip or too little flash for the image is stopped"),
     DeployStage(DeployPhase.GATE, "the erase cannot be undone, so the write needs a yes for this board"),
-    DeployStage(DeployPhase.FLASH, "the erase and the write replace what the board runs, and esptool then restarts the chip with its "
-                                   "watchdog where it has one, because a plain reset can leave an ESP32-S3 in download mode"),
+    DeployStage(DeployPhase.FLASH, "the erase and the write replace what the board runs, and esptool then restarts the chip with its watchdog where it has one, because a plain reset can leave an ESP32-S3 in download mode"),
     DeployStage(DeployPhase.VERIFY, "a written image is not yet a running one, so spark checks its files on the board and waits for ready"),
 )
 #: The sentence a person reads when a stage starts: why spark does it (P476), made from the rows.

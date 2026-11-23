@@ -56,10 +56,10 @@ Once a scenario passed, one command puts that same flash image on the board
 ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run
 ```
 
-The dry run prints the plan's `why:` line first, then the two esptool commands, and runs nothing. It does not look at the board. The first command erases
+The dry run prints the plan's heading `[1/5] plan` and its `why:` line first, then the two esptool commands, and a status line last. It runs nothing and does not look at the board. The first command erases
 the board's flash. The second writes the image at `0x0`, where the simulator loaded it. The real run goes in this
-order: the look, its token, then the person's yes. When each stage starts, deploy.py prints a `why:` line that says why
-it happens. With `--json` these lines go to stderr. Relay them.
+order: the look, its token, then the person's yes. When each stage starts, deploy.py prints a heading `[n/5] <stage>` and a `why:` line that says why
+it happens, and the run ends with one status line for the person. With `--json` there is no heading and no status line, and the `why:` lines go to stderr. Relay them. Key on the envelope's `status` and the exit code, never the status line.
 
 1. Run `look.py --json` and relay the envelope in words, as above. A `needs_reply` is the look's question: ask the person as above. A stop means do not propose the flash.
 2. Run `deploy.py --json --token <the token>`, with `--port` only when two boards are on USB. The look's next step and the

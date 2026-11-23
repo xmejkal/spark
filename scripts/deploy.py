@@ -23,8 +23,10 @@ look.py for a board that spark cannot tell, and stops for another board or a pro
 refuses a stop, a token that is not this board's and this image's, and a deploy with no yes: one typed in the person's own terminal, or the standing yes of a
 deploy grant (deploy_gate.py, board_grant.py). The chip comes from
 the project's board (requirements.json's `board`), and esptool refuses a board with another chip too.
-When each of the five stages starts (plan, look, gate, flash, verify), deploy.py prints one `why:` line that says why
-the stage happens (P476). With --json these lines go to stderr, like every line a person reads.
+When each of the five stages starts (plan, look, gate, flash, verify), deploy.py prints a heading, `[n/5] <stage>`, and
+one `why:` line that says why the stage happens (P476, P478). The run ends with one status line, the last line of
+stdout. With --json there is no heading and no status line: stdout holds the envelope, and stderr every other line a
+person reads.
 esptool and mpremote are the tools list's `flasher` and `board-shell`, which /spark:setup installs.
 """
 

@@ -8,7 +8,7 @@
  {"file": "scripts/spark/core/privacy.py", "name": "notes are not walked", "find": "notes=self.masked(result.notes, kept))", "replace": "notes=result.notes)"},
  {"file": "scripts/spark/core/privacy.py", "name": "an empty pasted sentence keeps every line raw", "find": "for text in (found.sentence, found.fix) if text]", "replace": "for text in (found.sentence, found.fix)]"},
  {"file": "scripts/spark/core/cli.py", "name": "run_cli never masks the Events", "find": "        reporter = MaskingReporter(reporter, privacy)\n", "replace": "\n"},
- {"file": "scripts/spark/core/cli.py", "name": "run_cli never masks the result", "find": "                           DEFAULT_RUN._replace(privacy=privacy, follow_up=text.follow_up))", "replace": "                           DEFAULT_RUN._replace(follow_up=text.follow_up))"},
+ {"file": "scripts/spark/core/cli.py", "name": "run_cli never masks the result", "find": "DEFAULT_RUN._replace(privacy=privacy, follow_up=text.follow_up)),", "replace": "DEFAULT_RUN._replace(follow_up=text.follow_up)),"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "the standing-yes line with the grant line is masked", "find": "board_grant.MESSAGE_FOR[chosen.why]), raw=True)", "replace": "board_grant.MESSAGE_FOR[chosen.why]))"},
  {"file": "scripts/spark/bench/board_codes.py", "name": "the no-terminal line is masked", "find": "PASTED_CODES = frozenset((NO_TERMINAL, NO_GRANT,", "replace": "PASTED_CODES = frozenset((NO_GRANT,"},
  {"file": "scripts/spark/bench/board_codes.py", "name": "the no-image build line is masked", "find": "REFUSED_NO_GRANT, NO_IMAGE, EVIDENCE_REFUSES,", "replace": "REFUSED_NO_GRANT, EVIDENCE_REFUSES,"},
