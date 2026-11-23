@@ -7,7 +7,8 @@
 - The limits are in [the stage table](#the-flow--an-items-stages).
 - The PO orders Ready. Claude builds and merges when the gates pass; the PO merges the rules, the working agreements, a release, a tag and anything that needs his bench.
 - Where things stand: `python3 tools/board.py status`; the push gate by hand: `python3 tools/check_backlog.py`; the
-  day-close, printed and not posted: `python3 tools/board.py close --dry-run "<line>"`.
+  day-close, printed and not posted: `python3 tools/board.py close --dry-run "<line>"`. A card moves only with
+  `python3 tools/board.py move <card> <stage>` (P1021), which checks the limits first. `--dry-run` writes nothing.
 - An agent's launch names its card, which stands in its working stage first
   ([W19](WORKING_AGREEMENTS.md#w19--the-item-exists-before-the-work-starts)), and its model:
   `Agent(description="#126 P180: the documentation expert for humans", model="sonnet", …)`.
@@ -91,8 +92,8 @@ choice after a three-lens council).
   when the last retro is more than 7 days old, and it carries those two lines (P1020). If either one was not read,
   it posts nothing. A day has one close; a second for the same day is refused. A session
   that opens with *"! the day of … has no close"* writes that day's close first, with `--date`.
-- **The weekly look** has no command: `tools/board.py` posts only the day-close, and reads every status update that
-  carries a start date as a day's close. So the weekly look's update is posted by hand with no start date.
+- **The weekly look** has no command: `tools/board.py` posts no status update but the day-close, and reads every
+  status update that carries a start date as a day's close. So the weekly look's update is posted by hand with no start date.
 - **The service level**, one best guess (the design's measures, accepted with it on 2026-10-06): *"a card leaves Build
   and Review within 2 working days, 8 times in 10."* The status prints each card's days in its stage, but nothing flags
   one past the service level yet (card C3 of the design, not built); the trial on 2026-11-02 corrects the guess.
@@ -104,7 +105,10 @@ choice after a three-lens council).
 ## The flow — an item's stages
 
 Every item is an issue on the board, and its card moves through the stages as the work does (the process design's §1;
-`tools/check_backlog.py` checks the limits at every push). Idea, Discovery and Design decide **whether** to build; the
+`tools/check_backlog.py` checks the limits at every push). A session moves a card only with
+`tools/board.py move <card> <stage>` (P1021). It checks the limits on a copy of the board first and refuses a move
+that makes a new problem that names the card, such as a limit that the move itself breaks. With `--waiting-on WHO` it also writes *Waiting on* and
+*Waiting since*. A move to Done clears both. Idea, Discovery and Design decide **whether** to build. The
 PO's order into Ready commits.
 
 | stage | limit | enters when | leaves when | how |

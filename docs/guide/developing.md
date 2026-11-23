@@ -187,6 +187,7 @@ Run the board part yourself — `--help` lists its rules and exit codes — and 
 python3 tools/check_backlog.py
 python3 tools/board.py status
 python3 tools/board.py close --dry-run "the day's one line"
+python3 tools/board.py move 1488 Build --dry-run
 ```
 
 The gate on the live boards, then the status (the last close's line cut short here):
@@ -365,14 +366,13 @@ limits, and the cadences are in [`scrum/README.md`](../../scrum/README.md). The 
 in the [glossary](../../GLOSSARY.md).
 
 One more team tool sits beside the gate: [`tools/board.py`](../../tools/board.py). `python3 tools/board.py status`
-prints the state of both boards at every session start (the PO's session-start hook runs it; it always exits 0). It
-reads each board whole, 100 cards a page, and judges where a card stands by the gate's one rule: spark's board read in
-part, or a card in a stage the gate does not know, makes the status one could-not-run line naming it; a card with no
-*Status* is said; and the bin's board read in part, or with no *Status* on any card, is set aside and said as the gate
-says it, spark's cards counted alone. Then `filed in 7 days: N, closed: M` counts spark's issues in the last 7 UTC
-days, and `last retro: R11, D days ago` reads `scrum/RETROSPECTIVES.md` ([P1020](https://github.com/xmejkal/spark/issues/1487)). `!` marks N over M, D over 7, or a line not read.
-`python3 tools/board.py close "the day's one line"` posts the day-close as a status update on spark's board, one a
-day, a second refused with exit 1. `--dry-run` prints it and posts nothing. The close carries the two lines, is at risk when one slips, and posts nothing and exits 1 when one was not read.
+prints the state of both boards at every session start. The PO's session-start hook runs it, and it always exits 0. It
+reads each board whole, 100 cards a page, and judges where a card stands by the gate's one rule. Spark's board read in
+part, or a card in a stage the gate does not know, makes the status one could-not-run line that names it. A card with
+no *Status* is said. The bin's board read in part, or with no *Status* on any card, is set aside and said as the gate
+says it, and spark's cards are counted alone. Then `filed in 7 days: N, closed: M` counts spark's issues in the last 7 UTC days, and `last retro: R11, D days ago` reads `scrum/RETROSPECTIVES.md` ([P1020](https://github.com/xmejkal/spark/issues/1487)). `!` marks N over M, D over 7, or a line not read.
+`python3 tools/board.py close "the day's one line"` posts the day-close as a status update on spark's board, one a day, a second refused with exit 1. `--dry-run` prints it and posts nothing. The close carries the two lines, is at risk when one slips, and posts nothing and exits 1 when one was not read.
+`python3 tools/board.py move <card> <stage>` ([P1021](https://github.com/xmejkal/spark/issues/1488)) runs the gate's `problems` on a copy of the board with the card moved. A sentence that is new after the move and names the card refuses the move (exit 1, nothing written). A limit that other cards broke before refuses nothing. `--waiting-on WHO` writes *Waiting on* and *Waiting since* (today, or the card's own date for the same wait) in a first call, and the Status in a second call only when the first held no error. A move to Done writes its Status first, then clears both waits. `--dry-run` writes nothing.
 
 [`scripts/cost.py`](../../scripts/cost.py) is not a team tool. It ships with the plugin: `parts.py --step` and `--tally`
 import it to count what a project's run cost, and on one transcript it says what that run cost

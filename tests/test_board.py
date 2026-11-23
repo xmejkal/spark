@@ -982,6 +982,11 @@ class TheMoveTest(unittest.TestCase):
         self.assertEqual(lines, ["moved #4 to Review, waiting on hardware since 2026-11-23"])
         self.assertIn('"2026-11-23"', calls[0])
 
+    def test_a_wait_on_the_same_one_with_no_date_gets_today_s(self):
+        code, lines, calls = self.move(boards_of(card(4, "Build", "the PO")), 4, "Review", "the PO")
+        self.assertEqual((code, lines), (0, ["moved #4 to Review, waiting on the PO since 2026-11-23"]))
+        self.assertIn('"2026-11-23"', calls[0])
+
     def test_a_wait_that_fails_to_write_writes_no_status(self):
         gh = FakeWrites({"errors": [{"message": "Could not resolve to a node"}]})
         code, lines, calls = self.move(boards_of(card(4, "Ready")), 4, "Build", "the PO", gh=gh)
