@@ -57,7 +57,7 @@ The words of a phase:
 
 | key | holds |
 | --- | --- |
-| `status` | `ok`, `problems` or `could-not-run`, a phase word, or `null`. The phase words: `not-started` (nothing done yet), `partial` (some needs have no pick, or a build skipped a stage) and `stale` (done, but what it was made from changed after it: see the build and the needs below). See `null` below |
+| `status` | `ok`, `problems` or `could-not-run`, a phase word, or `null`. The phase words: `not-started` (nothing done yet), `partial` (some needs have no pick, or a build skipped a stage) and `stale` (done, but what it was made from changed after it: see the build, needs and idea below). See `null` below |
 | `mark` | the glyph a page shows for the status |
 | `by` | who does the phase: `you`, `claude` or `your terminal` |
 | `says` | sentences for a person. A value nobody recorded reads `unknown` |
@@ -152,15 +152,9 @@ a broken `.spark/needs.json` makes the needs, parts and requirements phases `cou
 A `.spark/build.json` that is not JSON, or is no build record, makes the build phase `could-not-run` with one sentence, and
 the breadboard phase too when the sheet exists ([P886](https://github.com/xmejkal/spark/issues/1256)).
 
-The needs phase reads `.spark/needs-basis.json` ([P1027](https://github.com/xmejkal/spark/issues/1506)). `parts.py
---needs-set` writes it when a write defines a need or is a review (`[]`). It holds the sha256 of the brief's goal and of
-its must lines, sorted, as they were then. If either is different now, the needs phase is `stale`. Its `says` then holds
-the needs line, what changed (`the goal changed after the needs were written`, `the must lines changed …` or `the goal
-and the must lines changed …`) and `Claude goes through the needs and the must lines with you, and when they still fit, runs parts.py --needs-set with []: spark changes none of them itself`. That `[]` run clears the mark.
-The guide's NOW is the needs phase, by Claude, with no offer. The drop offers stay. A project with no such record (one
-written before P1027), or a brief with no goal, says what it said before. A record or a brief that spark cannot read
-keeps the phase `ok` and adds one line: `spark cannot tell whether the needs fit the goal: <the reason>`. The reader writes
-nothing.
+The needs phase and the idea phase read `.spark/needs-basis.json` ([P1027](https://github.com/xmejkal/spark/issues/1506)):
+the needs are `stale` when the goal or the must lines changed after them, and the idea is `stale` when a need was
+dropped after the must lines were last gone through. [What the needs were written from](needs-basis.md) says how.
 
 ## The page
 
@@ -313,6 +307,7 @@ first. The offers in `data.phases` keep their four keys and no step. A phase's o
 | simulate | no `sim/wokwi.toml` | `build-board` (`check_spine.py`), the build's offer step | no key |
 | simulate | no image, an image no run tested, or one older than `firmware/` | `run_scenario` (`run_scenario.py`), one per `sim/scenarios/*.scenario.yaml`. While none is written, it names `sim/scenarios/<name>.scenario.yaml`, and Claude writes that scenario first | true |
 | deploy | `not-started` | `look` (`look.py`), with `--no-simulation` when `data.guide.no_simulation` is set | true |
+| idea | `stale` (a need was dropped) | `init_project` (`init_project.py`), the brief step, with `needs_yes: true` and `--answers <answers.json>` | no key |
 
 `run-request` runs the build step from the page's button, and refuses `run_scenario` and `look`. An op named like a
 script is `scripts/<op>.py`, not on the core yet (piece 5 of [P793](https://github.com/xmejkal/spark/issues/1105)). With
