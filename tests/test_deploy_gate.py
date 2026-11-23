@@ -520,6 +520,19 @@ class TheBusyPortTest(GateCase):
         (item,) = json.loads(said)["unchecked"]
         self.assertEqual((item["code"], item["sentence"], item["fix"]), ("no_port", "no board found.", lines[1]))
 
+    def test_a_stop_with_no_port_and_a_deepsleep_call_names_the_look_with_the_deploy_s_evidence(self):
+        # P1048: `next` names the look of the fix's step 1, with the deploy's evidence flags, no --port and no token
+        self.run_the_scenario()
+        (self.project / "firmware" / "main.py").write_text("import machine\nprint('ready')\nmachine.deepsleep(60000)\n")
+        argv = ("--token", "aaaa-bbbb", "--ignore-older-runs")
+        code, _, problems = self.deploy(*argv, consent=FakeConsent(True), devs="mpremote-devs-none.txt")
+        self.assertEqual(code, 2)
+        self.assertNotIn("next ", problems)  # the step is JSON only
+        code, said, _ = self.deploy("--json", *argv, consent=FakeConsent(True), devs="mpremote-devs-none.txt")
+        (step,) = json.loads(said)["next"]
+        self.assertEqual((code, step["op"], step["argv"], step["needs_person"], step["needs_yes"]),
+                         (2, "look", ["--project", str(self.project.resolve()), "--ignore-older-runs"], True, False))
+
 
 @needs_littlefs
 class TheBoardAfterTheFlashTest(GateCase):

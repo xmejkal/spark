@@ -114,7 +114,8 @@ When no board is on USB and the project's firmware calls deepsleep (read from fi
 line is `no board found.` and the last line, the fix, says that the board can be in deep sleep (P1022). It names the
 calls, and says what to try in order: download mode with BOOT, a wait for the wake, then the cable. A firmware file
 that does not parse is named. With --port, the board doctor can find the named port not on USB. If firmware/ then
-calls deepsleep, the doctor's next line is the same fix, and it opens with the named port (P1049)."""
+calls deepsleep, the doctor's next line is the same fix, and it opens with the named port (P1049). With --json, `next`
+then holds the look step, which needs the person: the same look, run once after the person did step 1 or 2 (P1048)."""
 
 
 class LookAtBoard(Operation):
@@ -167,7 +168,7 @@ class LookAtBoard(Operation):
                 return passed
             report = service.run(project, port, picked, listed=row)
         except board_look.LookStopError as stop:
-            return self._stopped(stop, platform, port, outside)
+            return self._stopped(stop, platform, port, outside, picked)
         grant_may_answer = board_grant.GrantService().refusal_of(picked) is None  # P1029: the store's file, for no simulation
         return self._after_read(self._found(report, project.resolve(), picked, grant_may_answer), report, passed, project, outside)
 
@@ -258,8 +259,9 @@ class LookAtBoard(Operation):
         return result._replace(headline=headline_of(report, result.status()))
 
     @staticmethod
-    def _stopped(stop, platform, port, outside):
-        """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
+    def _stopped(stop, platform, port, outside, picked):
+        """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics, and
+        after the asleep fix the look step with `picked`'s flags (P1048)."""
         answer = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
         # P1022, P1049: a firmware that deep-sleeps gets the asleep fix, also as the doctor's next step on the --port port
         lines, sentence, fix = board_envelope.stop_said(SCRIPT, stop, answer, port, platform.project)
@@ -268,7 +270,7 @@ class LookAtBoard(Operation):
         said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)
         return OperationResult({"doctor": board_doctor.as_dict(doctor)} if doctor else None,
                                [Finding(outcomes.COULD_NOT_RUN, None, stop.reason, sentence, fix)],
-                               diagnostics=said.split("\n"))
+                               next=board_envelope.asleep_next(fix, platform.project.resolve(), picked), diagnostics=said.split("\n"))
 
 
 def headline_of(report, status, other_board=False):

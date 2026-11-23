@@ -167,6 +167,21 @@ def stop_said(script, stop, answer, named, project):
     return lines, str(stop), ""
 
 
+#: Why the look follows a stop whose fix is the asleep fix (P1048): the person's hands come first, as the fix says.
+ASLEEP_LOOK_WHY = ("first the person does step 1 or 2 of the fix: the board in download mode with BOOT and RESET, or "
+                   "awake. Run it once after the person says so: the look then finds the board and names its port. The "
+                   "board restarts while it is read")
+
+
+def asleep_next(fix, project, evidence=None):
+    """The `next` of a stop whose `fix`, as stop_said gave it, is the asleep fix (P1048): the look with no --port (the fix
+    says: use the port it names), with `evidence`'s flags, which needs the person; [] for any other fix. Ask it only of
+    stop_said's fix: a ready_unknown fix opens with the same words."""
+    if not fix.startswith(ASLEEP_KNOWS):
+        return []
+    return [NextStep(**look_step(project, None, evidence, ASLEEP_LOOK_WHY, needs_person=True))]
+
+
 def yes_rule(evidence, grant_may_answer):
     """YES_RULE for this evidence: a grant clause only where a deploy grant can answer (`grant_may_answer`: the caller's
     GrantService.refusal_of is None, P1029), the --no-simulation one for an image that no simulation tested."""
@@ -249,6 +264,8 @@ def _steps(reached):
     result, evidence, next_op = reached.get("result"), reached["evidence"], reached.get("next_op")
     project, port = reached["project"], reached.get("port") or (reached["report"].port if reached.get("report") else None)
     following = []
+    if reached.get("asleep_next"):  # P1048: the look step of the asleep fix, built at the stop
+        return list(reached["asleep_next"])
     if reached.get("dry_run"):
         following = [look_step(project, port, evidence, "deploy.py --dry-run did not look at the board")]
     elif reached.get("reason") == codes.NEEDS_REPLY:  # P892: the board question is open

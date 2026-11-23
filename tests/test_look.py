@@ -646,6 +646,45 @@ class WhatStopsTheLookTest(LookScriptCase):
         unchecked = self.unchecked(devs="mpremote-devs-none.txt")
         self.assertEqual((unchecked["code"], unchecked["sentence"], unchecked["fix"]), ("no_port", "no board found.", fix))
 
+    #: ASLEEP_LOOK_WHY, copied: the order of the person's hands and the one look after them (P1048).
+    ASLEEP_LOOK_WHY = ("first the person does step 1 or 2 of the fix: the board in download mode with BOOT and RESET, or "
+                       "awake. Run it once after the person says so: the look then finds the board and names its port. The "
+                       "board restarts while it is read")
+
+    def next_of(self, *argv, **kw):
+        """The `next` of look.py --json, after a stop (exit 2)."""
+        code, said, _ = self.go("--json", *argv, **kw)
+        self.assertEqual(code, 2)
+        return json.loads(said[-1])["next"]
+
+    def test_no_board_with_a_deepsleep_call_names_the_look_that_needs_the_person(self):
+        # P1048: the fix's step 1 says "run look.py again"; `next` names that look, which the person's hands come before
+        self.sleeper("import machine\nmachine.deepsleep(1)\n")
+        problems = self.stops(devs="mpremote-devs-none.txt").splitlines()
+        (step,) = self.next_of(devs="mpremote-devs-none.txt")
+        self.assertEqual((step["op"], step["argv"], step["needs_person"], step["needs_yes"], step["why"]),
+                         ("look", ["--project", str(self.project.resolve())], True, False, self.ASLEEP_LOOK_WHY))
+        self.assertEqual((len(problems), problems[0]), (2, "look.py: no board found."))  # the text gains no line
+
+    def test_a_named_port_off_usb_names_the_look_with_no_port_and_the_same_flags(self):
+        # P1048 D5: the named port was not on USB, so the look picks the port; the run's evidence flags stay
+        self.sleeper("import machine\nmachine.deepsleep(1)\n")
+        (step,) = self.next_of("--port", "/dev/cu.usbmodem101", "--ignore-older-runs", devs="mpremote-devs-none.txt", fail=True)
+        self.assertEqual((step["argv"], step["needs_person"]), (["--project", str(self.project.resolve()), "--ignore-older-runs"], True))
+
+    def test_a_stop_with_no_asleep_fix_names_no_step(self):
+        # P1048 D6: the cable sentence, UNPARSED and the doctor's own step give no look step
+        for main, argv, kw in (("import machine\nmachine.lightsleep(1)\n", (), {}),
+                               ("import machine\nmachine.deepsleep(1\n", (), {}),
+                               ("import machine\nmachine.lightsleep(1)\n", ("--port", "/dev/cu.usbmodem101"), {"fail": True})):
+            with self.subTest(main=main, argv=argv):
+                self.sleeper(main)
+                self.assertEqual(self.next_of(*argv, devs="mpremote-devs-none.txt", **kw), [])
+        self.sleeper("import machine\nmachine.deepsleep(1)\n")
+        stop = board_look.LookStopError("no board on %s: mpremote devs does not list it.", "/dev/x", reason="port_not_listed")
+        _, _, fix = board_envelope.stop_said("look.py", stop, (["look.py: " + str(stop)], None), None, self.project)
+        self.assertEqual(board_envelope.asleep_next(fix, self.project), [])  # a port_not_listed the person did not name
+
     def test_a_board_whose_usb_may_be_a_bridge_gets_the_words_with_a_condition(self):
         self.board("firebeetle2-esp32s3")
         self.sleeper("import machine\nmachine.deepsleep(1)\n")

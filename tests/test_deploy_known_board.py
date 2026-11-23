@@ -247,16 +247,21 @@ class TheNamedPortOffUsbTest(DeployKnownBoardCase):
         self.assertTrue(last.startswith("  next    What spark knows: the port you named is not on USB, and the project's firmware "
                                         "calls deepsleep (firmware/main.py:2)."), last)
         self.assertNotIn("plug the board straight", problems)
-        (item,) = json.loads(self.off_usb("--json")[1].splitlines()[-1])["unchecked"]
+        envelope = json.loads(self.off_usb("--json")[1].splitlines()[-1])
+        (item,) = envelope["unchecked"]
         self.assertEqual((item["code"], item["fix"]), ("board_not_read", last[len("  next    "):]))
+        (step,) = envelope["next"]  # P1048: the look of the fix's step 1, with no --port
+        self.assertEqual((step["op"], step["argv"], step["needs_person"]), ("look", ["--project", str(self.project.resolve())], True))
 
     def test_without_a_deepsleep_call_the_doctor_s_plug_in_step_stays(self):
         self.run_the_scenario()
         code, _, problems = self.off_usb()
         self.assertEqual(code, 2)
         self.assertEqual(problems.strip().splitlines()[-1], "  next    " + board_doctor.step_sentence("plug_in"))
-        (item,) = json.loads(self.off_usb("--json")[1].splitlines()[-1])["unchecked"]
+        envelope = json.loads(self.off_usb("--json")[1].splitlines()[-1])
+        (item,) = envelope["unchecked"]
         self.assertEqual((item["code"], item["fix"]), ("board_not_read", board_doctor.step_sentence("plug_in")))
+        self.assertEqual(envelope["next"], [])  # P1048 D6: the doctor's own step gives no look step
 
 
 if __name__ == "__main__":
