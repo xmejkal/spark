@@ -102,6 +102,11 @@ class Operation:
         deploy's `--dry-run` does (P655). `run_operation` builds the outside from this, so every frontend declares the same."""
         return self.effects
 
+    def written_project(self, values):
+        """The project folder, a Path, that a run with these `values` writes to, or None (P1035). A frontend's follow-up
+        names the flow's now step after an ok run that writes. None in the base."""
+        return None
+
     def input_schema(self):
         """The JSON Schema of `run`'s values, an MCP tool's `inputSchema` (P605): a property per Argument but `json`,
         which is the frontend's, and `required` lists the dests the person must give (left out when none, as draft 4 asks). A

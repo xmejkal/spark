@@ -23,7 +23,7 @@ from spark.core.text_guards import printable
 GUIDE_LINE = "  %s: %s"
 #: The NOW line's end: the key of the now offer, whose step `next` holds.
 NOW_KEY = " [%s]"
-#: The NOW line's end for a next-only step (P1034): its op, and NEEDS_YOU for a step that needs the person.
+#: The NOW line's end for a next-only step (P1034): its op, and NEEDS_YOU for a step that needs the person or their yes.
 NOW_STEP, NEEDS_YOU = " [next: %s%s]", ", needs you"
 #: How many offer keys a person's line shows; the rest are counted. The JSON holds them all.
 OFFERS_SHOWN = 5
@@ -48,11 +48,16 @@ def phase_line(phase):
     return [printable(line) for line in lines]
 
 
+def needs_you(step):
+    """Whether a person reads `step` with NEEDS_YOU: it needs the person's hands or their yes (P1035 review, one rule)."""
+    return bool(step.needs_person or step.needs_yes)
+
+
 def now_tag(now, steps):
     """The end of the NOW line: the key of its offer, else the op of its first step (P1034), else nothing."""
     if now["offer"]:
         return NOW_KEY % now["offer"]
-    return NOW_STEP % (steps[0].op, NEEDS_YOU if steps[0].needs_person else "") if steps else ""
+    return NOW_STEP % (steps[0].op, NEEDS_YOU if needs_you(steps[0]) else "") if steps else ""
 
 
 def guide_lines(guide, steps=()):

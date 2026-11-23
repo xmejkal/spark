@@ -15,14 +15,14 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.records import deploy_record_store, tool_finder  # noqa: E402
-from fakes import FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
+from fakes import FakeDeployRecordStore, FakeFollowUp, FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
 from spark.core.codes import Code  # noqa: E402
-from spark.core.cli import DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
+from spark.core.cli import DEFAULT_RUN, FOLLOW_FAILED_MESSAGE, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
 from spark.core.renderers import FlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
-from spark.core.operation import ASKS, COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, Argument, Operation  # noqa: E402
+from spark.core.operation import ASKS, COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, WRITES, Argument, Operation  # noqa: E402
 from spark.core.privacy import Privacy  # noqa: E402
 from spark.core.outside import OutsideWorld, ProgramRunner, build_bare_outside_world, build_outside_world, refuse_replies  # noqa: E402
 from spark.core.replies import AGENT, VALUE, GivenReplyStrategy, Question, Reply  # noqa: E402
@@ -1042,6 +1042,128 @@ class AMultiOperationCliTest(unittest.TestCase):
             outside.run(["true"])
         self.assertEqual(refused.exception.code, "undeclared_effect")
         self.assertEqual(build_bare_outside_world(None, (RUNS,), FakeReporter()).run.__name__, "run")
+
+
+class Writing(Operation):
+    """Operation: a run that writes to a project (P1035): its written project is `project`, it gives one own step `own`
+    and the line `  done`, and `--found` adds one Finding of that kind (problems, unchecked)."""
+
+    name = "writing"
+    arguments = (COMMON_ARGUMENTS["project"], Argument(("--found",), "found", str, "the Finding it adds"), COMMON_ARGUMENTS["json"])
+    effects = (READS, WRITES)
+
+    def written_project(self, values):
+        return Path(values["project"])
+
+    def run(self, project, found=None, *, outside):
+        return OperationResult({"project": str(project)}, {None: [], "problems": [PROBLEM], "unchecked": [UNCHECKED]}[found],
+                               [NextStep("own", ["--own"], "its own step")], ["  done"])
+
+
+class NoProject(Writing):
+    """Operation: a run that writes and names no written project (the base's None)."""
+
+    written_project = Operation.written_project
+
+
+class ReadsOnly(Writing):
+    """Operation: a run whose values narrow its effects to READS, as a dry run does."""
+
+    def effects_of(self, values):
+        return (READS,)
+
+
+#: The step a FakeFollowUp adds, with a project path in its argv and its why.
+THEN = NextStep("then", ["--project", "/opt/someone/p"], "then this, for /opt/someone/p")
+
+
+class TheFollowUpTest(unittest.TestCase):
+    """P1035: after an ok run that writes to a project, `run_operation` adds the follow-up's steps after the Operation's own,
+    with one line each. A run that is not ok, that does not write or that names no written project gets none, and a
+    follow-up that raises adds one diagnostics line and leaves the result standing."""
+
+    def followed(self, operation, follow_up, found=None, privacy=Privacy()):
+        values = {"project": Path("p"), "found": found}
+        return run_operation(operation, values, FakeOutsideWorld(), options=DEFAULT_RUN._replace(privacy=privacy, follow_up=follow_up))
+
+    def test_an_ok_run_that_writes_ends_with_the_follow_up_after_its_own(self):
+        follow_up = FakeFollowUp([THEN])
+        result = self.followed(Writing(), follow_up)
+        self.assertEqual([step.op for step in result.next], ["own", "then"])
+        self.assertEqual(list(result.lines), ["  done", "line of then"])
+        self.assertEqual((follow_up.asked, result.status(), list(result.diagnostics)), ([Path("p")], outcomes.OK, []))
+
+    def test_a_run_that_names_no_written_project_gets_no_follow_up(self):
+        follow_up = FakeFollowUp([THEN])
+        result = self.followed(NoProject(), follow_up)
+        self.assertEqual(([step.op for step in result.next], list(result.lines), follow_up.asked), (["own"], ["  done"], []))
+
+    def test_a_run_that_does_not_write_gets_no_follow_up(self):
+        follow_up = FakeFollowUp([THEN])
+        result = self.followed(ReadsOnly(), follow_up)
+        self.assertEqual(([step.op for step in result.next], list(result.lines), follow_up.asked), (["own"], ["  done"], []))
+
+    def test_a_run_that_is_not_ok_gets_no_follow_up(self):
+        for found in ("problems", "unchecked"):
+            with self.subTest(found=found):
+                follow_up = FakeFollowUp([THEN])
+                result = self.followed(Writing(), follow_up, found)
+                self.assertEqual(([step.op for step in result.next], list(result.lines), follow_up.asked), (["own"], ["  done"], []))
+
+    def test_a_follow_up_that_raises_adds_one_diagnostics_line_and_the_result_stands(self):
+        alone = self.followed(Writing(), None)
+        result = self.followed(Writing(), FakeFollowUp([THEN], raises=OSError))
+        self.assertEqual((result.next, result.lines, result.status()), (alone.next, alone.lines, outcomes.OK))
+        self.assertEqual(list(result.diagnostics), [FOLLOW_FAILED_MESSAGE % "OSError"])
+        self.assertEqual(FOLLOW_FAILED_MESSAGE % "OSError", "follow-up: OSError raised, the result stands")
+
+    def test_a_line_that_raises_keeps_the_step(self):
+        result = self.followed(Writing(), FakeFollowUp([THEN], line_raises=ValueError))
+        self.assertEqual(([step.op for step in result.next], list(result.lines)), (["own", "then"], ["  done"]))
+        self.assertEqual(list(result.diagnostics), [FOLLOW_FAILED_MESSAGE % "ValueError"])
+
+    def test_a_line_that_raises_drops_only_its_own_line(self):
+        # the review, refuter 4: each line is made on its own
+        result = self.followed(Writing(), FakeFollowUp([THEN, THEN._replace(op="last")], line_raises=ValueError, raising_op="then"))
+        self.assertEqual(([step.op for step in result.next], list(result.lines)), (["own", "then", "last"], ["  done", "line of last"]))
+        self.assertEqual(list(result.diagnostics), [FOLLOW_FAILED_MESSAGE % "ValueError"])
+
+    def test_a_step_that_runs_the_same_again_is_dropped(self):
+        # the review, refuter 1: a follow-up that names the run itself would loop; the same Operation on another project stays
+        again, other = NextStep("writing", ["--project", "p"], "the same run"), NextStep("writing", ["--project", "q"], "another project")
+        follow_up = FakeFollowUp([again, other, NextStep("writing", ["--no-such-flag"], "refused by the parser")])
+        result = self.followed(Writing(), follow_up)
+        self.assertEqual([(step.op, step.argv) for step in result.next], [("own", ["--own"]), ("writing", ["--project", "q"]),
+                                                                          ("writing", ["--no-such-flag"])])
+        self.assertEqual(list(result.lines), ["  done", "line of writing", "line of writing"])
+
+    def test_the_follow_up_s_why_is_masked_and_its_argv_stays_raw(self):
+        privacy = Privacy.of(Path("/opt/someone/p"), Path("/opt/store"), Path("/opt/home"), ())
+        result = self.followed(Writing(), FakeFollowUp([THEN]), privacy=privacy)
+        self.assertEqual(result.next[-1].argv, THEN.argv)
+        self.assertNotIn("/opt/someone/p", result.next[-1].why)
+        self.assertEqual(result.next[-1].why, privacy.mask_text(THEN.why))
+
+    def test_the_flat_line_holds_next_last(self):
+        said = OperationResult(None, next=[THEN]).to_envelope("t", "o")["next"]
+        self.assertEqual(FlatJsonLine.render(OperationResult({"a": 1}), "t", "o"), '{"a": 1}')
+        line = json.loads(FlatJsonLine.render(OperationResult({"a": 1, "z": 2}, next=[THEN]), "t", "o"))
+        self.assertEqual((line, list(line)[-1]), ({"a": 1, "z": 2, "next": said}, "next"))
+        self.assertEqual(FlatJsonLine.render(OperationResult(None, next=[THEN]), "t", "o"), "")
+        own = {"op": "own", "argv": [], "why": "its own"}
+        line = json.loads(FlatJsonLine.render(OperationResult({"next": [own], "kept": []}, next=[THEN]), "t", "o"))
+        self.assertEqual((line["next"], list(line)[-1]), ([own] + said, "next"))
+        self.assertEqual(FlatJsonLine.render(OperationResult([1, 2], next=[THEN]), "t", "o"), "[1, 2]")
+
+    def test_run_cli_hands_the_cli_s_follow_up_to_the_run(self):
+        import contextlib
+        import io
+        follow_up = FakeFollowUp([THEN])
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            code = run_cli(HelpText("writing.py", follow_up=follow_up), Writing(), ["--project", "p", "--json"],
+                           outside_builder=None, outside=FakeOutsideWorld())
+        self.assertEqual((code, [step["op"] for step in json.loads(out.getvalue())["next"]], follow_up.asked), (0, ["own", "then"], [Path("p")]))
+        self.assertIsNone(HelpText("writing.py").follow_up)
 
 
 if __name__ == "__main__":

@@ -711,12 +711,24 @@ class TheIdeaAreaTest(unittest.TestCase):
         each_module_imports_alone(self, "idea")
 
 
+class TheCoreImportsNoAreaTest(unittest.TestCase):
+    """P1035 review (the lens, S1): the core is what every area shares, so no module of `scripts/spark/core/` imports an
+    area. The follow-up is a Strategy of the core that the flow fills in, never the flow imported by the core."""
+
+    def test_no_core_module_imports_an_area(self):
+        spark = ROOT / "scripts" / "spark"
+        areas = {folder.name for folder in spark.iterdir() if (folder / "__init__.py").is_file()} - {"core"}
+        self.assertTrue({"flow", "bench", "records"} <= areas, areas)
+        found = {path.name: sorted(measure.imports_of(ast.parse(path.read_text())) & areas) for path in sorted((spark / "core").glob("*.py"))}
+        self.assertEqual({name: names for name, names in found.items() if names}, {})
+
+
 class TheFlowAreaTest(unittest.TestCase):
     """P825: the flow area's modules live in `scripts/spark/flow/`, its `__init__.py` imports nothing, each module imports
     alone, and `flow_operations.OPERATIONS` maps each op to its Operation. `scripts/` keeps the CLI `flow.py`."""
     FLOW = ROOT / "scripts" / "spark" / "flow"
     #: The modules of the area, by the names of its page (`areas/flow.md`).
-    MODULES = ["fingerprint", "flow_codes", "flow_operations", "flow_page", "guide", "offer_steps", "phase_readers", "phase_steps", "request_codes", "run_request", "show_flow",
+    MODULES = ["fingerprint", "flow_codes", "flow_operations", "flow_page", "guide", "now_follow_up", "offer_steps", "phase_readers", "phase_steps", "request_codes", "run_request", "show_flow",
                "write_flow_page"]
 
     def test_the_area_holds_its_modules_and_scripts_holds_no_copy(self):

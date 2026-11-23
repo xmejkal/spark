@@ -17,7 +17,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.core import outcomes
-from spark.core.result import Finding, NextStep, OperationResult
+from spark.core.result import Finding, NextStep, OperationResult, step_dicts
 from spark.core.text_guards import guard_lines
 from spark.records import store
 
@@ -142,7 +142,7 @@ class Answer(namedtuple("Answer", "data lines problems unchecked next truncated 
         return cls(result.data, result.lines,
                    problems=[_problem(found.subject, found.sentence, found.fix, found.code) for found in result.findings if found.severity == outcomes.PROBLEMS],
                    unchecked=[_cannot(found.sentence, found.fix, found.code) for found in result.findings if found.severity == outcomes.COULD_NOT_RUN],
-                   next=[outcomes.add_env(outcomes.step(s.op, s.argv, s.why, s.effects, s.needs_yes, s.needs_person), s.env) for s in result.next],
+                   next=step_dicts(result.next),
                    truncated=result.truncated, notes=result.notes or (), assumptions=result.assumptions or (), diagnostics=result.diagnostics)
 
 
