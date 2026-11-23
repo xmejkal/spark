@@ -1,0 +1,93 @@
+<!-- Resume: invoke product-discovery again; `discovery.py check <this folder>` names the next step. -->
+# P1038: the project page, designed (UX, graphic style, architecture, Artifact how-to): discovery brief
+
+<!-- Readiness, its one home. collecting evidence: anything short of the two below. an experiment: the decider chose
+a test (a D) before choosing an option. design: the decider confirmed the frame, the jobs and a direction, and accepted
+the remaining risk (D rows). An extension may tighten these. Next: design, or a chosen test of kind spike or prototype
+→ the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
+Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
+is unrated. check computes both. -->
+**Ready for:** collecting evidence (the frame is proposed; Q0 is not yet asked; the lenses, options and the refuter are not run) <!-- REQUIRED:ready -->
+**Stands on:** — H, — of which would change the decision (not yet counted: no assumption is written) <!-- REQUIRED:debt -->
+**Decision needed:** Q0: is this frame right. Then, after the lenses and the refuter: which direction the page design takes (a design for the architect, with the full council). <!-- REQUIRED:decision-needed -->
+
+## Frame
+- Request, verbatim (corrections marked): "lets analyze it and really design it both ux and graphic style and also architecture and claude artifact howto" (the PO, epaper session, 2026-11-23, after: "get back to where the page is and try to show this project on the page and continue working on it more, so we can make it work and be really UX perfect in graphic and later interactive part and can show all the steps and guide etc"). Later, the PO added a question and a decision: architecture options for human and AI interfaces (on P1038 and P1039), and the design skill anthropics/skills@frontend-design, to install at the page cards (open: user level, /spark:setup, or both). <!-- REQUIRED:request -->
+- Decision · decider: the PO (xmejkal): what the project page shows and how it looks, how it is built, and how it is published, for the design step. <!-- REQUIRED:decision -->
+- Outcome and how it is observed (a metric with unit and source, a proof command, or a log): A person who opens the page of a project sees where the project really stands, what to do next and the project's own facts, without asking Claude. Observed by: the page's state against the project's own records (flow.py page --json against the store's deploy record and the project's branches) on a walk, and the PO's reading of the page, n = 1. A metric and a pass line are not set (Q1). <!-- REQUIRED:outcome -->
+- Already decided (D · who · when · where; include the product's stated non-goals and earlier decisions the request names): D · the PO · 2026-11-22 · P1011 #1470 body: the page 'is not very readable or intuitive or readable or good looking'; picks one at a time grey out the others. D · the PO · 2026-11-23 · P1038 comments: 'Now, in parallel' to this epic, and the design skill decision above. D · the PO · 2026-11-22/23 · P1031 finding: rich as an optional extra for the CLI text (a different interface of the same core). Earlier: the Artifact's click path is P829 #1187, in Build. <!-- REQUIRED:decided -->
+- Open questions: What must the page show first, and for whom (the PO as the one user, n = 1, a future spark user)? Which graphic style? Does the page stay one Artifact file, or become a view of a state document that other hosts can show (P834)? Which Artifact capabilities does it need (files, sample, db, assets)? Which of the eight option families for human and AI interfaces (P1039 comment) does the page follow? Install of the design skill: where, and for whom. <!-- REQUIRED:open -->
+- Scope · out of scope (proposed): In: the page of a project (page.html, flow.py page), its content, layout, style, publish route and how Claude fills it, the how-to for building such an Artifact. Out (proposed): spark's CLI text (P1031), the click path (P829), the storage seams (P1033, P1036), the R&D epic's questions on other harnesses (P1039). <!-- REQUIRED:scope -->
+- Start and reach (proposed until Q0): start existing product (spark's page, built and published in the P934 walk) · decider reachable yes · users the PO only (n = 1), no other person reached · data and connectors: the Artifact server of claude.ai (read today: runtime contract 0.2.98, capabilities listed), the project's files and the store, GitHub through gh; Figma and design connectors: not connected, not asked · decider as a user n = 1 · must not get worse: the click path of P829, the privacy of the page (private Artifact, no secrets, no location data in its images) <!-- REQUIRED:start-reach -->
+- Flags (yes · no · —; asked only when it changes a decision; never legal advice; any date or threshold is read at its source at run time and cited):
+  - sold or given away, or personal use: personal use now; spark is public, so a page made for another person may leave this machine: not asked <!-- REQUIRED:flag-sold -->
+  - connects to a network or runs software (for example the EU's Cyber Resilience Act): yes: the page is published to a server and its buttons write rows to a database; this is read-only discovery, nothing is published for it; no legal advice <!-- REQUIRED:flag-network -->
+  - children or food contact: — <!-- REQUIRED:flag-children -->
+  - market: — <!-- REQUIRED:flag-market -->
+  <!-- EXTEND:flags -->
+- Extensions (each active id · the fact that activated it; when none matched, only "none matched: core only · the fact that decided it", naming no extension; list any directive skipped under rule 9): spark-process · repo-has scrum/WORKING_AGREEMENTS.md <!-- REQUIRED:extensions -->
+- The item (its issue, or the proposal in the decider's words) · what is still open elsewhere · the repository's push check, or "no push check here": P1038 #1521 (the page design epic, in Discovery) · open elsewhere: P829 in Build (the click path), P1022 in Ready, P1039 the R&D epic in Discovery; one discovery at a time (epics are exempt from the push gate) · the push check: spark's pre-push hook, run on the push <!-- REQUIRED:spark-process:item -->
+<!-- EXTEND:frame -->
+- Depth: TRIO (default: PO assistant, user, tech lead) | FULL or LIGHT (who asked, when); add "no independent review" if subagents could not start: TRIO (the default); no one asked for FULL or LIGHT <!-- REQUIRED:depth -->
+  <!-- Cost, measured once: the P900 rehearsal's council took 6 agents, 499 calls and about 90M input tokens (2026-10-06). -->
+- Search budget: about 15 searches or fetches and the files named here; the Artifact server read only; no create_from_type and no publishing for this discovery <!-- REQUIRED:budget -->
+- Appetite (the decider's, asked only when heading for design) | —: — <!-- REQUIRED:appetite -->
+
+## What we found <!-- CLAIMS -->
+<!-- One claim per line: `- [★C<n>] claim · E pointer | H source | D who date · caveat: qualifier | none`.
+★ marks a claim that a decision, an option or the riskiest assumption rests on. A quote is verbatim, with its pointer.
+Say what the evidence can support: an account (what happened to one person), data (how often, in its population and
+period), a document (what was specified), the product (what exists, not whether anyone needs it), a benchmark (a
+comparison). Model knowledge is H until a source is read. Elsewhere cite a ★ claim as ★C<n>, with its keep: words.
+e.g. `- [★C2] 13 of 526 tickets ask for recurring tasks · E tickets.csv:2-14 · caveat: picked by Lena; shows that, not how often` -->
+- [★C1] The page shows a state that does not match the project: stands_at 'deploy', phases build 'could-not-run' and deploy 'not-started', and a NOW box that says to plug the board in and run the deploy · E `flow.py page --project . --json` in p934-display2, 2026-11-23 15:23 CET · caveat: the project's deploys (27 logs in sim/runs/board/, 18 'ready seen', 9 'ready unknown', counted from the files, 2026-11-23) were made by deploy.py outside the page's phases, so the page follows spark's chain, not the project's real work
+- [C2] The page file is 714,020 bytes: 607,060 are two SVG data URIs, about 43.6 KB is the rest (text, style, two scripts of 22,130 bytes together) · E a python count over page.html, 2026-11-23 · caveat: none
+- [C3] The page text holds the wiring, 12 breadboard steps, the parts' notes and the phase list; it holds nothing on the firmware, the deploys, the bench facts, the decisions or the battery · E page text read from page.html with markup removed, 2026-11-23 · caveat: read without the scripts' output
+- [C4] No request waits on the page: its 5 requests (3 picks, requirements, build) all have an answer; the build answer says 'the board record names no wokwi_part_type', status could-not-run · E db_query requests and answers on the artifact, 2026-11-23 · caveat: the page's own database only
+- [★C5] The Artifact runtime is contract 0.2.98. Scripts load only from a short list of CDNs, remote images are blocked, fetch goes only to the artifact itself, alert and downloads are limited. A page may declare: artifact, assets, comments, db, dictation, downloads, files (a Claude Code project's files, only with a known project id), mcp, room, sample, tts, user · E the Artifact server's guide topic pages and describe_capabilities, read 2026-11-23 · caveat: what each capability costs or allows in detail is not read (describe_capabilities with a name is not called)
+- [C6] The server has a Design artifact type for visual designs (create_from_type) · E the guide with intent design, 2026-11-23 · caveat: not called, and its definition is not read
+- [C7] Open spark cards on the page: P1011 #1470, P834 #1196, P887 #1257, P889 #1259, P992 #1445, P307 #373, P494 #674, with P829 #1187 in Build · E `gh issue list` and `gh issue view 1470`, 2026-11-23 · caveat: their bodies, except P1011's, are not read
+- [H1] A single HTML file can be shown by a static host such as GitHub Pages, as a read-only view without the page's database buttons · H model knowledge, not read from a source · caveat: not tested
+- [C8] The design skill anthropics/skills@frontend-design has 1.2M installs and its repository about 199k stars, pushed 2026-11-16 · E `npx skills find` and `gh api repos/anthropics/skills`, 2026-11-23 · caveat: the skill's own text is not read; installs and stars show use, not fit <!-- REQUIRED:findings -->
+
+## Options <!-- CLAIMS -->
+<!-- Two or three per open decision: decision · option · cost · what it would prove · opinion (whose), then the tag
+and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether seen tasks get done · opinion (the facilitator's) · H ★C2 · caveat: none` -->
+- not yet: the options (for example: keep one Artifact file and restyle it; a state document that several views render; a view that reads the project live with the files capability; the same page on a static host) are written after the three lenses and the user journeys, which are not run <!-- REQUIRED:options -->
+- Proposed no-gos and rabbit holes (proposals until the decider confirms): not yet; proposed from this frame: no new interface for the click path (P829), no change to spark's CLI text (P1031), no install of the design skill before its text is read <!-- REQUIRED:nogos -->
+
+## Riskiest assumption and its test
+- Riskiest: not yet written: one candidate is that a page which reads the project's state live (files capability) is allowed and works for a project outside the session's folders · proposed — the facilitator's opinion, pending Q1 <!-- REQUIRED:riskiest -->
+- Test · kind · pass line, dated before any result · proposed | D<n>: not yet written: a candidate is a one-page prototype of the files capability on this project, kind prototype, pass line dated before any result · proposed <!-- REQUIRED:test -->
+
+## Questions
+<!-- A queue; the first open question is asked alone. Each: Q<n> · question · decides: … · options · unblocks ·
+opinion (whose) · kind: decision | account (a past-tense question about the decider's own use; the answer is E,
+account, n = 1) · status: queued | asked <date> | answered D<n>.
+If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
+- Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: queued (to be asked through AskUserQuestion at the start of the next session) <!-- REQUIRED:q0 -->
+- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: status: queued (after the options and the refuter) <!-- REQUIRED:q1 -->
+
+## Decisions
+<!-- D<n> · what · who · when · where recorded · options considered.
+A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
+Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
+
+## Found on the way <!-- CLAIMS -->
+<!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
+- The deep-sleep case of look.py's no_port sentence was sent to P1022 slice 3, not folded in here | none new <!-- REQUIRED:found -->
+
+## Board actions <!-- REQUIRED:spark-process:board-actions -->
+<!-- Each action on the board or the issue (stage, waiting flag, comment, filing): taken, with its D, or pending.
+None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
+- P1038 is already in Discovery (spark-main, 2026-11-23) · taken by spark-main; nothing else is taken or pending from this folder
+<!-- EXTEND:brief-sections -->
+
+## Hand-off
+<!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
+who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
+we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
+not yet: the frame is unconfirmed (Q0), and the jobs, the lenses and the refuter are not run <!-- REQUIRED:handoff -->
+
+## Files
+[Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
