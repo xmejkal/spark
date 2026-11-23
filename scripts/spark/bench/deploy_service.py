@@ -18,6 +18,7 @@ from spark.bench.deploy_stages import DeployPhase
 from spark.bench import board_facts
 from spark.records import board_records
 from spark.bench import board_look
+from spark.bench.board_log import BoardLog, write_board_log
 from spark.bench import board_start
 from spark.bench import deploy_gate
 from spark.records import deploy_record_store
@@ -52,16 +53,6 @@ class FlashError(DeployError):
     gate's grant_ended when the yes ended before the retry."""
 
 
-class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard simulation")):
-    """Value: the facts of the board's log after a flash. `heard` is the console text, then what the board printed."""
-
-    def text(self):
-        """The log file's text."""
-        return "# deploy %s on %s\nimage sha256: %s\nsimulation: %s\n%s\n%s: %s\n\n%s\n" % (
-            self.moment.isoformat(timespec="seconds"), self.port, self.image_sha256, self.simulation, self.facts_line,
-            self.verdict, self.sentence, self.heard)
-
-
 def every_read(reads):
     """The last of `reads`, each (the facts, a board_facts.FactsLine, a ReadyResult), with the facts file written and the board's
     files read when any read did (P1022): a read again after P245 can fail where the first read worked. `lost_board` is the
@@ -69,15 +60,6 @@ def every_read(reads):
     facts, line, ready = reads[-1]
     return (facts, board_facts.FactsLine(line, any(read[1].written for read in reads), line.heard),
             ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads), lost_board=ready.lost_board))
-
-
-def write_board_log(project, log):
-    """The board's log (a BoardLog) in sim/runs/board/ beside the run logs, whose *.log glob does not reach it. Returns
-    its path."""
-    path = project / "sim" / "runs" / "board" / ("%s.log" % log.moment.strftime("%Y-%m-%dT%H-%M-%S"))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(log.text())
-    return path
 
 
 class DeployService:
