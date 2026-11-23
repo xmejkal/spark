@@ -1751,5 +1751,165 @@ class TheFollowUpTest(FlowTest):
                 self.assertTrue((ROOT / "scripts" / STEP_SCRIPTS.get(op, op + ".py")).is_file())
 
 
+def wrote_nothing():
+    """Operation: a run that writes to `project` and changes nothing there, so two runs read the same flow (P1035 PR 2)."""
+    from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Operation
+    from spark.core.result import OperationResult
+
+    class WroteNothing(Operation):
+        """Operation: a run that wrote to its project and changed nothing there."""
+
+        name, arguments, effects = "wrote-nothing", (COMMON_ARGUMENTS["project"],), (READS, WRITES)
+
+        def written_project(self, values):
+            return Path(values["project"])
+
+        def run(self, project, *, outside):
+            return OperationResult({"wrote": "nothing"}, lines=["  wrote nothing"])
+    return WroteNothing()
+
+
+def refreshed_and_alone(project, follow_up):
+    """(the result of a run in `project` with `follow_up`, and the same run first with a follow-up that refreshes nothing)."""
+    from spark.core.cli import DEFAULT_RUN
+    from spark.flow.now_follow_up import FlowFollowUp
+
+    class NoRefresh(FlowFollowUp):
+        """Strategy: the flow's follow-up without its refresh."""
+
+        def refresh(self, project, result):
+            return None
+
+    def run(chosen):
+        return run_operation(wrote_nothing(), {"project": project}, FakeOutsideWorld(), options=DEFAULT_RUN._replace(follow_up=chosen))
+    alone = run(NoRefresh())
+    return run(follow_up), alone
+
+
+class ThePageRefreshTest(FlowTest):
+    """P1035 PR 2 (the PO's D16): after an ok run that writes to a project that has a page.html, the flow's follow-up
+    writes the page again on disk and never publishes it. Every failure of that write adds one diagnostics line, and the
+    run's status, findings, next, data and lines stand. The store is TheFollowUpTest's two-probe store."""
+
+    def setUp(self):
+        super().setUp()
+        (self.home / "catalog" / "x-unknown.json").unlink()
+        (self.home / "drawer" / "unknown.json").unlink()
+
+    def open_needs(self, *ids):
+        return with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": one, "does": "sense", "what": "soil-moisture"} for one in ids])
+
+    def with_page(self, text="an old page"):
+        project = self.open_needs("soil", "wet")
+        (project / "page.html").write_text(text, encoding="utf-8")
+        return project
+
+    def test_a_pick_writes_the_page_again_and_says_so_in_its_text_and_its_note(self):
+        import parts
+        from spark.flow.now_follow_up import REFRESHED
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        project = self.with_page()
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many", "--json"])
+        said = json.loads(lines[0])
+        page = (project / "page.html").read_text(encoding="utf-8")
+        self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertIn({"subject": "page.html", "sentence": REFRESHED}, said["notes"])
+        self.assertNotEqual(page, "an old page")
+        write_page(project, store=FlowPageStore())  # the flow's page of the project as it stands now
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), page)
+        self.assertFalse((project / ".spark" / "page.json").exists())  # never published (D16)
+        self.assertFalse((project / "page.html.part").exists())
+        other = self.with_page()
+        lines, code = run_main(parts.main, ["--pick", str(other), "soil=x-many"])
+        self.assertEqual((code, lines[-1]), (0, "  " + REFRESHED))
+        self.assertEqual(REFRESHED, "wrote page.html again: /spark:page publishes it")
+
+    def test_a_project_with_no_page_gets_none(self):
+        import parts
+        project = self.open_needs("soil", "wet")
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many", "--json"])
+        self.assertEqual((code, json.loads(lines[0]).get("notes", [])), (0, []))
+        self.assertFalse((project / "page.html").exists())
+
+    def test_a_dry_run_or_a_refused_pick_leaves_the_page(self):
+        import parts
+        for pick in (["soil=x-many", "--dry-run"], ["soil=x-held"]):
+            with self.subTest(pick=pick):
+                project = self.with_page()
+                lines, code = run_main(parts.main, ["--pick", str(project)] + pick + ["--json"])
+                self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
+                self.assertNotIn("page.html", json.dumps(json.loads(lines[0]).get("notes", [])))
+
+    def test_a_kept_build_keeps_its_own_page_and_is_not_written_again(self):
+        # round 2, amendment A (decision H, measured): write_page after the kept build would call the drawn pictures
+        # "Not drawn here", so the page the build wrote with its pictures stands
+        from spark.build.stages import Stage
+        from spark.flow import flow_codes
+        from spark.flow.now_follow_up import REFRESHED
+        project = an_image(a_firmware(a_built_project()))
+        a_kept_build(project, [Stage("build", OK, "fine")])
+        kept = (project / "page.html").read_text(encoding="utf-8")
+        self.assertNotIn(flow_codes.NOT_DRAWN_HERE, kept)
+        lines, code = a_kept_build(project, [Stage("build", OK, "fine")], as_json=False)
+        self.assertEqual(code, 0)
+        self.assertNotIn("  " + REFRESHED, lines)
+        self.assertNotIn(flow_codes.NOT_DRAWN_HERE, (project / "page.html").read_text(encoding="utf-8"))
+
+    def test_the_run_that_kept_its_page_is_read_from_its_kept_entries(self):
+        from spark.core.result import OperationResult
+        from spark.flow.now_follow_up import kept_its_page
+        entry = {"file": "/opt/someone/p/page.html", "did": "wrote"}
+        self.assertEqual([kept_its_page(OperationResult(data)) for data in (None, [1], {}, {"kept": [{"file": "/p/board.tsx"}]},
+                                                                            {"kept": [entry]}, {"kept": [dict(entry, did="removed")]})],
+                         [False, False, False, False, True, True])
+
+    def assert_one_line_and_the_result_stands(self, project, follow_up, raised):
+        from spark.core.cli import REFRESH_FAILED_MESSAGE
+        result, alone = refreshed_and_alone(project, follow_up)
+        self.assertEqual(result._replace(diagnostics=()), alone._replace(diagnostics=()))
+        self.assertEqual(list(result.diagnostics), list(alone.diagnostics) + [REFRESH_FAILED_MESSAGE % (raised, "page.html")])
+        self.assertTrue(result.next)  # the flow's step is there, so the comparison holds something
+        self.assertFalse((project / "page.html.part").exists())
+
+    def test_a_page_html_that_is_a_folder_a_fifo_or_a_link_is_not_written(self):
+        import stat
+        from spark.flow.now_follow_up import FlowFollowUp
+        person = Path(tempfile.mkdtemp()) / "a-file-of-the-person.html"
+        person.write_text("the person's own", encoding="utf-8")
+        for name, make, kind in (("folder", Path.mkdir, stat.S_ISDIR), ("fifo", os.mkfifo, stat.S_ISFIFO),
+                                 ("link", lambda page: page.symlink_to(person), stat.S_ISLNK)):
+            with self.subTest(name):
+                project = self.open_needs("soil", "wet")
+                make(project / "page.html")
+                self.assert_one_line_and_the_result_stands(project, FlowFollowUp(), "PageNotRegularError")
+                self.assertTrue(kind((project / "page.html").lstat().st_mode))
+        self.assertEqual(person.read_text(encoding="utf-8"), "the person's own")
+
+    def test_a_read_only_folder_a_full_disk_or_a_renderer_that_raises_leaves_the_old_page(self):
+        from fakes import FakeFullDiskPageStore, FakePageRenderer
+        from spark.flow.now_follow_up import FlowFollowUp
+        for name, follow_up, raised in (("full disk", FlowFollowUp(store=FakeFullDiskPageStore()), "OSError"),
+                                        ("renderer", FlowFollowUp(renderer=FakePageRenderer(raises=RuntimeError)), "RuntimeError"),
+                                        ("half written", FlowFollowUp(renderer=FakePageRenderer("a page \ud800")), "UnicodeEncodeError"),
+                                        ("read-only", FlowFollowUp(), "PermissionError")):
+            with self.subTest(name):
+                project = self.with_page()
+                if name == "read-only":
+                    project.chmod(0o555)
+                    self.addCleanup(project.chmod, 0o755)
+                self.assert_one_line_and_the_result_stands(project, follow_up, raised)
+                self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
+
+    def test_the_page_store_writes_a_whole_page_or_none(self):
+        # round 2, amendment B: a write that fails halfway leaves the old page whole, as store.write_file does
+        from spark.flow.write_flow_page import FlowPageStore
+        project = self.with_page()
+        with self.assertRaises(UnicodeEncodeError):
+            FlowPageStore().write(project, "page.html", "a page \ud800")
+        self.assertEqual(((project / "page.html").read_text(encoding="utf-8"), (project / "page.html.part").exists()), ("an old page", False))
+        self.assertEqual(FlowPageStore().write(project, "page.html", "a new page"), project / "page.html")
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "a new page")
+
+
 if __name__ == "__main__":
     unittest.main()
