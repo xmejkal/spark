@@ -3,7 +3,8 @@
 The discovery of epic P1038 #1521 ended on 2026-11-23 and is ready for design. The PO confirmed the frame, the jobs,
 the direction and the remaining risk. A delegated council answered the rest, and he can change its answers. The full
 record is [brief.md](brief.md). The pictures are in [diagrams.md](diagrams.md), and a mock of the first page slice is
-below (D30).
+below (D30). The mock is a starting picture, not a decision: the style slice comes after the walk (D25), and the
+story's plan sets the deploy words (D10). Its goal line shortens the sketch's.
 
 ![The first page slice on the clock project, light and dark](mock-first-slice.png)
 
@@ -39,7 +40,7 @@ flowchart LR
 - The deploy reader is its own story under P793, in parallel with the page (D7).
 - Sharing comes later, on P834 (D9, D20). A live page is designed now and built later (D5).
 - The frontend-design plugin is installed at user level, and Anthropic's design plugin is on for the spark checkout only (D8, D28).
-- The page's script moves to TypeScript, and the TypeScript language server is installed for spark (D29).
+- The page's script moves to TypeScript (D29). The TypeScript language server is installed for spark, but it does not run with TypeScript 7, and its fix waits for the PO.
 
 ## What comes next
 
