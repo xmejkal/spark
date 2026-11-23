@@ -526,6 +526,52 @@ class TheHelpersEachHaveANameTest(unittest.TestCase):
         shared = {"can": set(), "roles": ["onboard_led"]}
         self.assertIn("already wired here", pin_assigner._why(set(), shared))
 
+    def test_the_pad_order_puts_plain_then_spi_then_i2c_then_the_kept_pads_by_cost(self):
+        # P1010: a pad is kept when it wastes adc or has another job; the rest come plain, SPI, I2C.
+        order = pin_assigner.PAD_ORDER
+        pads = {"plain": {"gpio": 9, "can": {"pwm", "wake"}, "roles": []},
+                "spi": {"gpio": 8, "can": {"pwm"}, "roles": ["spi"]},
+                "i2c": {"gpio": 7, "can": {"pwm"}, "roles": ["i2c"]},
+                "adc": {"gpio": 6, "can": {"adc"}, "roles": []},
+                "console": {"gpio": 5, "can": set(), "roles": ["console_uart"]}}
+        self.assertEqual(sorted(pads, key=lambda name: order.rank(pads[name], set())),
+                         ["plain", "spi", "i2c", "adc", "console"])
+        # A signal that needs adc does not keep the adc pad from itself.
+        self.assertLess(order.rank(pads["adc"], {"adc"}), order.rank(pads["console"], {"adc"}))
+        self.assertFalse(order.rank(pads["adc"], {"adc"})[0])
+
+    def test_a_kept_bus_pad_is_ordered_by_its_cost_among_the_kept_pads(self):
+        # The S3's SDA is an ADC1 pin: kept, so its I2C role only adds the penalty. It comes after A0 and before the
+        # console's TX, which costs more.
+        pads = pin_assigner.candidates(self.board)
+        rank = [pin_assigner.PAD_ORDER.rank(pads[label], set()) for label in ("A0", "SDA", "TX")]
+        self.assertEqual(rank, sorted(rank))
+
+    def test_why_names_the_bus_and_the_kept_pads_on_a_bus_pad(self):
+        free = {"D6": {"gpio": 1, "can": {"adc", "pwm", "wake"}, "roles": []},
+                "TX": {"gpio": 16, "can": {"pwm"}, "roles": ["console_uart"]},
+                "SDA": {"gpio": 19, "can": {"pwm"}, "roles": ["i2c"]}}
+        miso = {"gpio": 21, "can": {"pwm"}, "roles": ["not_wake_capable", "spi"]}
+        self.assertEqual(pin_assigner._why(set(), dict(miso, free=dict(free, MISO=miso))),
+                         "needs nothing special; the free pins with no bus role are kept for another job (adc: D6; "
+                         "console_uart: TX), so this SPI pad is spent here, though it could still pwm")
+        self.assertEqual(pin_assigner._why(set(), dict(miso, free={"MISO": miso})),
+                         "needs nothing special; every pin with no bus role that could serve is taken, so this SPI "
+                         "pad is spent here, though it could still pwm")
+        sda = {"gpio": 1, "can": {"adc", "pwm", "wake"}, "roles": ["i2c"]}
+        self.assertEqual(pin_assigner._why({"adc"}, dict(sda, free={})),
+                         "needs adc; every pin with no bus role that could serve is taken, so this I2C pad is spent "
+                         "here, though it could still pwm and wake")
+
+    def test_why_says_no_bus_role_only_when_a_free_bus_pad_costs_less(self):
+        d11 = {"gpio": 7, "can": {"pwm", "wake"}, "roles": []}
+        sda = {"gpio": 19, "can": {"pwm"}, "roles": ["i2c"]}
+        self.assertEqual(pin_assigner._why(set(), dict(d11, free={"D11": d11, "SDA": sda})),
+                         "needs nothing special; the cheapest pin left with no bus role could still pwm and wake, "
+                         "which is spent here")
+        self.assertEqual(pin_assigner._why(set(), dict(d11, free={"D11": d11})),
+                         "needs nothing special; the cheapest pin left could still pwm and wake, which is spent here")
+
     def test_why_not_names_who_has_the_pins_or_says_no_pin_could(self):
         available = pin_assigner.candidates(self.board)
         adc = {label for label, pin in available.items() if "adc" in pin["can"]}
@@ -536,6 +582,52 @@ class TheHelpersEachHaveANameTest(unittest.TestCase):
         no_adc = {label: pin for label, pin in available.items() if "adc" not in pin["can"]}
         said = pin_assigner._why_not(self.board, {"name": "SENSE"}, {"adc"}, no_adc, set())
         self.assertIn("no pin on this board can do that at all", said)
+
+
+class PlainPadsFirstTest(unittest.TestCase):
+    """
+    P1010 (#1469), the walk P934 on 2026-11-22: the e-paper's EPD_RST and EPD_BUSY took the C6's SDA and SCL while D11
+    and MISO were free, so the pin map read as an I2C bus. The PO's order of 2026-11-22: plain pads, then the SPI pads,
+    then the I2C pads, then the pads kept for an ADC1 reading or another job. The map says why a signal takes a bus pad.
+    """
+
+    def setUp(self):
+        import json
+        from spark.sourcing import part_facts
+        self.board = json.loads((ROOT / "tests" / "data" / "breadboard" / "epaper-c6" / "boards" / "firebeetle2-esp32c6.json").read_text())
+        # The store's record joins these pads (P971); the fixture has no joins.
+        self.board["physical"]["header"]["joined_pads"] = {"value": [["3V3", "3V3_2"], ["GND1", "GND2"], ["SDA", "IO19"], ["SCL", "IO20"]]}
+        self.signals = part_facts.signals_for(["epaper-2in9-bwr-mh-et-live"], ROOT / "tests" / "data" / "breadboard" / "epaper")
+
+    def test_the_walks_control_lines_leave_the_i2c_pads_free(self):
+        assignments, free = pin_assigner.assign(self.board, self.signals)
+        self.assertEqual(placed(assignments), {"SCLK": "SCK", "MOSI": "MOSI", "EPD_CS": "D3", "EPD_DC": "D7",
+                                               "EPD_RST": "D11", "EPD_BUSY": "MISO"})
+        self.assertTrue({"SDA", "SCL", "D6", "D12", "A1", "A2"} <= set(free), sorted(free))
+
+    def test_a_plain_signal_on_a_bus_pad_says_why(self):
+        assignments, _ = pin_assigner.assign(self.board, self.signals)
+        why = {entry["signal"]: entry["why"] for entry in assignments}
+        self.assertEqual(why["EPD_BUSY"], "needs nothing special; the free pins with no bus role are kept for another "
+                                          "job (adc: D6, A1, A2 and D12; console_uart: TX and RX), so this SPI pad is "
+                                          "spent here, though it could still pwm")
+        self.assertEqual(why["EPD_RST"], "needs nothing special; the cheapest pin left with no bus role could still "
+                                         "pwm and wake, which is spent here")
+
+    def test_spi_comes_before_i2c(self):
+        named = [{"name": "N%d" % number, "pin": label} for number, label in enumerate(("D3", "D7", "D11"))]
+        plain = [{"name": "P%d" % number, "needs": []} for number in range(3)]
+        assignments, free = pin_assigner.assign(self.board, named + plain)
+        self.assertEqual([placed(assignments)["P%d" % number] for number in range(3)], ["MISO", "MOSI", "SCK"])
+        self.assertTrue({"SDA", "SCL"} <= set(free), sorted(free))
+
+    def test_a_signal_that_needs_adc_takes_a_pad_with_no_bus_role_before_an_i2c_pad(self):
+        # On the S3 the I2C pads are ADC1 pins: an adc signal takes A0 to A3 and the others first.
+        import json
+        s3 = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        adc = [label for label, gpio in s3["pins"].items() if gpio in s3["adc_gpio"] and label not in ("SDA", "SCL")]
+        assignments, _ = pin_assigner.assign(s3, [{"name": "S%d" % number, "needs": ["adc"]} for number in range(3)])
+        self.assertTrue(set(placed(assignments).values()) <= set(adc), placed(assignments))
 
 
 class ABusWithNoDedicatedPinsGoesAnywhereTest(unittest.TestCase):
