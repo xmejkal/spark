@@ -22,7 +22,7 @@ from spark.records import board_records
 from spark.records import store
 from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
-from spark.bench.deploy_stages import PHASE_WHY, DeployPhase
+from spark.bench.deploy_stages import DEPLOY_STAGES, PHASE_WHY, DeployPhase
 from spark.bench.deploy_service import DeployService, FlashError
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, SIMULATION_NONE, evidence_for
@@ -36,7 +36,8 @@ from spark.core.events import BEGIN, Event, Reporter
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, DELETES, READS, RUNS, WRITES, Argument, Operation
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 from spark.core.replies import RepliesStore
-from spark.core.result import Finding, NextStep, OperationResult
+from spark.core.renderers import StatusLine
+from spark.core.result import Finding, Headline, NextStep, OperationResult
 
 # --- MVP ---
 #: The lines of a refusal name the script that printed them before the core, so they read the same from every frontend.
@@ -131,13 +132,15 @@ CRASH_STATES = {
     DeployPhase.VERIFY: CrashState(board_envelope.FLASHED_NOT_VERIFIED, "is flashed, not verified", "read the board with look.py; do not deploy again"),
 }
 CRASH_WHY_LOOK = "the deploy crashed: the board %s"
+#: The headline of a crash after the gate (P478, D7): the board's state in CRASH_STATES' words.
+CRASH_HEADLINE = "The board %s: deploy crashed."
 
 
 class DeployFlowService:
     """
     Service: one deploy from the plan to the record, phase by phase, over a DeployService built by `service_for`. Each phase
     returns the exit code when the run ends there, or None to go on. `reached()` is what the result reports, filled as the
-    run goes; its `stage` is the StageTrackingReporter's. Its stderr lines go to `outside.add_diagnostics` as they are
+    run goes; its `stage` is its `tracker`'s, the StageTrackingReporter. Its stderr lines go to `outside.add_diagnostics` as they are
     said (P938).
     """
 
@@ -145,18 +148,18 @@ class DeployFlowService:
         """`service_for(world)` builds the DeployService over `world`, the outside whose `report` tracks the stage. `asked`
         is the Asked of this run, `board_question` the known_board.KnownBoardService that judges the board before the read."""
         self.outside, self.grants, self.asked, self.board_question = outside, grants, asked, board_question
-        self.stages = StageTrackingReporter(WhyLineReporter(outside.report).report)
-        self.service = service_for(outside._replace(report=self.stages.report))
+        self.tracker = StageTrackingReporter(WhyLineReporter(outside.report).report)
+        self.service = service_for(outside._replace(report=self.tracker.report))
         self._reached = {"project": self.service.project.resolve(), "evidence": self.service.evidence,
                          "token": asked.token, "port": asked.port, "dry_run": asked.dry_run}
         self.look, self.consent, self.planned, self.judged = None, None, None, None
 
     def reached(self):
         """What the run reached so far, with the stage, for `board_envelope.deploy_result`."""
-        return dict(self._reached, stage=self.stages.stage)
+        return dict(self._reached, stage=self.tracker.stage)
 
     def report(self, event):
-        self.stages.report(event)
+        self.tracker.report(event)
 
     def say(self, stage, text, raw=False):
         self.report(Event.line(stage, text, raw))
@@ -235,7 +238,7 @@ class DeployFlowService:
             self.keep_yes()
         reached.update(refusal=str(cannot), reason=cannot.code if isinstance(cannot, SparkError) else reason_of(cannot))
         if isinstance(cannot, SparkError):
-            reached["findings"] = [Finding(cannot.status, self.stages.stage, cannot.code, str(cannot), cannot.fix)]
+            reached["findings"] = [Finding(cannot.status, self.tracker.stage, cannot.code, str(cannot), cannot.fix)]
         lines = ["%s: %s" % (SCRIPT, cannot)]
         if isinstance(cannot, board_look.LookStopError):
             lines, reached["doctor"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)
@@ -433,6 +436,9 @@ class DeployImage(Operation):
                  COMMON_ARGUMENTS["json"]._replace(help="print one envelope on stdout, the lines a person reads on stderr (docs/guide/agents/json.md)"))
     effects = (READS, RUNS, BOARD, DELETES, WRITES, ASKS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
+    #: The text view numbers its headings from these rows, and ends with the status line alone: the events said the rest (P478).
+    stages = DEPLOY_STAGES
+    text_renderer = StatusLine
 
     def __init__(self, platform_for=None, grant_service=None, records=None, known=None):
         self.platform_for = platform_for or MicroPythonPlatform
@@ -459,20 +465,21 @@ class DeployImage(Operation):
             if code is None:
                 code = flow.verify()
         except Exception as crashed:  # noqa: BLE001  after the gate the board may be erased: the result must say so
-            if flow.stages.stage not in CRASH_STATES:
+            if flow.tracker.stage not in CRASH_STATES:
                 raise
             return self._crashed(flow, crashed)
         return board_envelope.deploy_result(flow.reached(), code)
 
     def _crashed(self, flow, crashed):
         """The result of a crash after the gate passed: one unchecked Finding with code `crash` that names the board's state,
-        the data reached with the yes and `board_state`, the look as the next step, and the traceback in the diagnostics."""
+        the data reached with the yes and `board_state`, the look as the next step, the traceback in the diagnostics, and
+        the headline that names the board's state (P478)."""
         flow.keep_yes()  # a crash in the flash loop still says whose yes it was
         reached, name = flow.reached(), type(crashed).__name__
         state = CRASH_STATES[reached["stage"]]
         data = dict(board_envelope.deploy_data(reached), board_state=state.board_state)
         finding = Finding(outcomes.COULD_NOT_RUN, reached["stage"], codes.CRASH, "%s; the board %s" % (CRASH_MESSAGE % name, state.words), state.fix)
         look = NextStep(**board_envelope.look_step(reached["project"], reached.get("port"), reached["evidence"], CRASH_WHY_LOOK % state.words))
-        return OperationResult(data, [finding], [look],
-                               diagnostics=[CRASHED_MESSAGE % (self.name, name), state.fix] + traceback_lines(crashed))
+        return OperationResult(data, [finding], [look], diagnostics=[CRASHED_MESSAGE % (self.name, name), state.fix] + traceback_lines(crashed),
+                               headline=Headline(CRASH_HEADLINE % state.words, Headline.of_status(outcomes.COULD_NOT_RUN)))
 # --- end MVP ---

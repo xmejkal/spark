@@ -19,7 +19,8 @@ from spark.records import board_records
 from spark.bench.deploy_stages import DeployPhase
 from spark.design import loader
 from spark.core import codes, outcomes
-from spark.core.result import Finding, NextStep, OperationResult
+from spark.core.result import Finding, Headline, NextStep, OperationResult
+from spark.core.text_guards import printable
 from spark.bench import ready_probe
 from spark.records import store
 from spark.bench.deploy_gate import NEXT_LOOK, NEXT_DEPLOY
@@ -33,6 +34,17 @@ NO_SIMULATION_GRANT_CLAUSE = " (or a deploy grant given with --no-simulation sta
 #: Why the person runs the grant line, and what it adds for an image that no simulation tested (P1029).
 GRANT_STEP_WHY = "the person runs it once in their own terminal; it lets Claude erase ALL of the flash for N minutes (1 to 1440, 60 here)"
 GRANT_STEP_NO_SIMULATION = ", and with --no-simulation, write firmware that no simulation tested"
+
+#: The headline of a deploy, the text view's status line (P478, D7), by how the run ended. The reword card P1052 may
+#: change the words. A stop's sentence is its first finding's first sentence, never the stage's code.
+HEADLINE_READY = "Flashed, and the board printed ready."
+HEADLINE_DRY_RUN = "Dry run: nothing was flashed, and the board was not looked at."
+HEADLINE_NOT_SEEN = "Flashed, ready not seen: %s."
+HEADLINE_UNKNOWN = "Flashed, ready unknown: %s. What to try is above."
+HEADLINE_FLASH_STOPPED = "The board may be erased: the flash stopped."
+HEADLINE_NOT_FLASHED = "Not flashed: %s."
+#: The stop's words when its finding gives none, and the words a stop's sentence may start with, which the headline says.
+NO_STOP_WORDS, NOT_FLASHED_START = "deploy stopped before the flash", "not flashed: "
 
 #: A `fix` for each thing a deploy can wait for.
 FIX_FOR_NEXT = {NEXT_DEPLOY: "the person runs data.run_in_terminal in their own terminal", NEXT_LOOK: "run look.py again"}
@@ -348,14 +360,40 @@ def deploy_data(reached):
     return data
 
 
+def first_sentence(text):
+    """The first sentence of `text` for a headline (P478): through `printable`, cut at its first `. `, with a leading
+    `not flashed: ` and its last dots dropped, or '' when nothing is left."""
+    first = printable(text or "").split(". ", 1)[0].strip()
+    first = first[len(NOT_FLASHED_START):] if first.lower().startswith(NOT_FLASHED_START) else first
+    return first.rstrip(".").strip()
+
+
+def deploy_headline(reached, code, findings):
+    """The Headline of a deploy run that ended with the exit `code` and `findings` (P478, D7): ready seen or a dry run,
+    the board's verdict once it was read, a flash that stopped, else the first finding's first sentence. Its mark is the
+    status's."""
+    result = reached.get("result")
+    if code == outcomes.EXIT_OK:
+        sentence = HEADLINE_DRY_RUN if reached.get("dry_run") else HEADLINE_READY
+    elif result:
+        said = printable(result.ready.sentence).rstrip(".")
+        sentence = (HEADLINE_UNKNOWN if result.ready.verdict == ready_probe.UNKNOWN else HEADLINE_NOT_SEEN) % said
+    elif reached["stage"] == DeployPhase.FLASH:
+        sentence = HEADLINE_FLASH_STOPPED
+    else:
+        sentence = HEADLINE_NOT_FLASHED % (first_sentence(findings[0].sentence if findings else None) or NO_STOP_WORDS)
+    return Headline(sentence, Headline.of_status(outcomes.STATUS_FOR[code]))
+
+
 def deploy_result(reached, code):
     """
     The OperationResult of one deploy run. `reached` is the dict the run filled as it went (the keys read above: `project`,
     `evidence` and `stage` always, the rest optional), `code` the exit code it decided: 0 no Finding, 1 a problem, 2
     unchecked, so the status is the code's. The person's lines were Events, so `lines` is empty, and the stderr lines went to
-    `add_diagnostics` (P938).
+    `add_diagnostics` (P938). Its headline is the text view's status line (P478).
     """
     plan = reached.get("plan")
     found = [] if code == outcomes.EXIT_OK else reached.get("findings") or [_finding(reached, code)]  # P892: a stop at the board gives its own
     return OperationResult(deploy_data(reached), found, _steps(reached),
-                           notes=((list(plan.notes) if plan else []) + reached.get("notes", [])) or None)
+                           notes=((list(plan.notes) if plan else []) + reached.get("notes", [])) or None,
+                           headline=deploy_headline(reached, code, found))

@@ -35,7 +35,7 @@ from fakes import FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun  
 from spark.bench import build_project_outside_world  # noqa: E402
 from spark.core.operation import READS  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
-from spark.core.events import TerminalReporter  # noqa: E402
+from spark.core.cli import view_for  # noqa: E402
 
 FAKE_CLI = [sys.executable, str(ROOT / "tests" / "fake_wokwi_cli.py")]
 READY_MATCHED = '[s] Expected text matched: "ready"\n'
@@ -108,7 +108,7 @@ class ProjectCase(unittest.TestCase):
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             outside = FakeOutsideWorld(run or RealChildRun(lambda argv, **kw: ran.append(argv)), find_tool=find,
-                                       reporter=TerminalReporter.for_json("--json" in argv))  # P458: the compile child is real, and not in `ran`
+                                       reporter=view_for(DeployImage(), "--json" in argv, (sys.stdout, sys.stderr), {}).reporter)  # P458: the compile child is real, and not in `ran`; P478: the reporter as run_cli shows it
             code = deploy.main(["--project", str(self.project), *argv], outside=outside, operation=DeployImage())
         return code, out.getvalue(), err.getvalue(), ran
 
@@ -120,13 +120,16 @@ class TheDryRunTest(ProjectCase):
         code, said, problems, ran = self.deploy("--port", PORT, "--dry-run")
         self.assertEqual((code, problems, ran), (deploy.EXIT_OK, "", []))
         self.assertEqual(said.splitlines(), [
+            "[1/5] plan",  # P478: the stage's heading, and the status line last
             "  " + PHASE_WHY[DeployPhase.PLAN],
             "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s erase-flash" % PORT,
             "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s --after watchdog-reset write-flash 0x0 %s" % (PORT, shlex.quote(str(self.image))),
             "  board: not looked at: run look.py",
             "  then, to see it start: /opt/python3 -m mpremote connect %s repl, press Ctrl-C, then Ctrl-D: "
             "the firmware prints `ready`. Then leave mpremote's console with Ctrl-X: an open console holds the port, "
-            "and the next deploy cannot open it" % PORT])
+            "and the next deploy cannot open it" % PORT,
+            "",
+            "✓ deploy: ok. Dry run: nothing was flashed, and the board was not looked at."])
 
     def test_without_a_port_esptool_and_mpremote_find_the_board(self):
         self.run_the_scenario()
@@ -303,7 +306,8 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
     def test_a_scenario_that_failed_on_an_older_image_refuses_the_flash(self):
         self.run_two_scenarios()
         code, said, problems, ran = self.deploy("--dry-run")
-        self.assertEqual((code, said, ran), (deploy.EXIT_COULD_NOT_RUN, "  %s\n" % PHASE_WHY[DeployPhase.PLAN], []))
+        self.assertEqual((code, said, ran), (deploy.EXIT_COULD_NOT_RUN, "[1/5] plan\n  %s\n\n? deploy: could-not-run. Not flashed: s.log tested "
+                                             "another image, not this one: run that scenario again to test this one.\n" % PHASE_WHY[DeployPhase.PLAN], []))
         self.assertIn("s.log tested another image, not this one: run that scenario again to test this one", problems)
         self.assertIn("pass --ignore-older-runs", problems)
 
