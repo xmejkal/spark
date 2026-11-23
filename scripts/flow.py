@@ -34,6 +34,12 @@ the step of the simulate or the deploy (P1034), and an empty next means: read da
 only because Wokwi has no model of its board (board_not_in_wokwi) is counted as done there, and the guide says there
 is no simulation.
 
+The deploy phase reads the newest board log in sim/runs/board/: its time, image, verdict and cause, never its port or
+console text (P1043). Only ready seen on the image the project holds now is ok. Ready unknown is partial, and ready not
+seen is problems. Firmware newer than that image, an image that differs from the last deploy's, or no image makes it
+stale, and stale wins over problems. The says line keeps the verdict. With the deploy ok, guide.now is null and
+guide.no_open_phase says why. data.deploy holds the logged deploy: at, image, verdict, cause, fact and read_back.
+
 flow.py page writes page.html in the project: the same phases, each with its status word and a mark, the wiring of a built
 project (the lines before power, then the steps, one at a time or all at once) and the pictures the project holds: the
 breadboard, and the schematic and the PCB that the build with --keep kept as files. The page adds no tick of its own: a
@@ -66,7 +72,7 @@ person's yes. After an ok run that writes to a project, the command ends its nex
 parts.py --pick and check_spine.py --keep so far. It also writes page.html again when the project has one (the build with
 --keep writes its own), and never publishes it.
 
-With --json it prints one envelope: data.phases, data.stands_at, data.fingerprint and data.guide
+With --json it prints one envelope: data.phases, data.stands_at, data.fingerprint, data.guide and data.deploy
 (docs/guide/agents/flow.md).
 
 Exit codes: 0 no phase holds problems or could not run, 1 a phase holds problems (a need that cannot be matched,

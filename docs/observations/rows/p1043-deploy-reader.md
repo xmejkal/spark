@@ -1,0 +1,20 @@
+# P1043: the deploy reader reads the newest board log: rows
+
+Card: [P1043 #1533](https://github.com/xmejkal/spark/issues/1533), slice 0 of the P1038 design. The plan passed two
+rounds (round 1: one lens on Sonnet and the refuter on Opus; round 2: the refuter on Opus). These rows are the build's:
+where the plan's claims did not hold in the code, and what the build did. The PR's review adds its own rows below.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | A `code` on `ReadyResult` refuses five mutation rows, so five need a re-anchor | the plan, Mutation rows and Round 2 A | acted | only two were refused (`log-says-passed` in p337b, `every_read drops lost_board` in p1022-asleep): the other three finds still match, because `.coded(...)` follows them, and their mutants mean the same. Both re-anchored; `--anchors` gives 4849 in 405 tables, 33 refused, the same 33 as main |
+| 2 | `ReadyResult.__new__` takes `code=None` | the plan, module 3 | acted | a sixth parameter breaks rule R3 (at most 5). `ReadyResult.coded(code)` gives a copy with the code, and `_replace` keeps it |
+| 3 | `BoardLogError` is made with the file's name and what is missing | the plan, module 1 | acted | its own `__init__` breaks rule V1 (a constant template at the call). `board_log.unreadable(name, missing)` makes it with one |
+| 4 | The pure move of commit 1 changes no test and only re-aims one mutation row | the plan, Steps and Round 2 A | acted | the T1 baseline (`tests/architecture_baseline.json`) names the file write by module, so its entry moves from deploy_service.py to board_log.py in the same commit |
+| 5 | The verdict line's parts may be written inline in board_log | the build | acted | the hook of 272de01a failed on `test_no_magic_strings` (`'ready '`, `': '`). Named `VERDICT_START` and `VERDICT_SEP`, and the commit was amended before it reached origin |
+| 6 | The new bench note (P1043-D10) goes in with step 4 | the plan, module 9 and Round 2 G | raised | the design's words name `deploy`, and `test_flow_page.FlowOfNPhasesTest.test_the_page_holds_no_phase_name_the_flow_did_not_give`, which the plan does not name, goes red. The builder did not change that test and withheld the note, with its three places (the golden, `BENCH`, commands/build.md) and Round 2 G's two (scripts/flow.py, flow.md). Destination: the PO's choice in the PR's review, other words or a change to that test |
+| 7 | Rows 1, 2, 3, 6 and 14 of the table are critical | the plan, Mutation rows | raised | `tests/test_ledger.py` caps the critical rows at the PO's 50, and main holds 50: its message says to drop one before adding one. The rows carry no tier. Destination: the PO, who picks the rows to drop at the next sweep |
+| 8 | Test 3 exits 0 on `an_image(a_firmware(a_project_built_with_no_simulation()))` | the plan, tests | acted | that project's build phase is could-not-run, so every run exits 2. The reader's tests use a built project with a passed run (`a_deploy_project`). The project with no Wokwi model serves test 8 and the no-image NOW, where the simulate counts as done |
+| 9 | Test 9b's `firmware = 42` gives exit 2 | the build | acted | the simulate phase has problems for the same line, and problems win: exit 1. The test asserts the two phases' statuses |
+| 10 | Test 17's half on `CAUSE_WORDS` is in commit 2 | the plan, Steps | acted | `CAUSE_WORDS` comes with flow_codes in commit 3, so that half came with it |
+| 11 | The count reads "%d deploys logged." | the plan, sentence 1 | acted | one log reads "1 deploy logged." (`DEPLOYS_LOGGED`), listed in the PR for the PO |
+| 12 | `every_read` never gives `files_unread` after a read that read the files | Round 2 C | acted | `test_deploy_service.TheBoardLogReasonTest.test_a_read_again_that_cannot_read_the_files_keeps_the_first_read_s_code` and row 17 of `tests/mutations/p1043-deploy-reader.json` |
