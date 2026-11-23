@@ -1,7 +1,7 @@
 """
 The style of the text view (P1032): whether this run's stdout may show colour, a line that redraws itself, and the
 marks' symbols. It is decided once per run from the stream and the environment, never from CLAUDECODE, which an IDE's
-terminal sets too. A leaf: it imports nothing of spark. `replies.Terminal`, the one class that reads a tty, asks it.
+terminal sets too. It imports nothing of spark. `replies.Terminal`, the one class that reads a tty, asks it.
 """
 
 from collections import namedtuple

@@ -69,7 +69,8 @@ class LookJsonTest(JsonCase, LookScriptCase):
     def test_the_text_run_is_the_same_with_or_without_the_flag(self):
         self.run_the_scenario()
         _, text, _ = self.go()
-        self.assertTrue(text[-1].startswith("  token  "))
+        self.assertIn("deploy.py --project ", text[-1])  # P1032: the deploy command, the last line, holds the token
+        self.assertIn(" --token %s " % self.token(), text[-1])
 
     def test_a_stop_is_a_problem_with_no_token_and_no_deploy_step(self):
         self.run_the_scenario()

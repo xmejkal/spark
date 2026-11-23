@@ -442,6 +442,14 @@ class TheTextViewOfTheKeptBoardTest(KnownBoardCase):
         self.assertEqual(said[0], "✗ look: problems. Stop: this board is an esp32c6, the project is for an esp32s3. deploy.py will refuse.")
         self.assertEqual("\n".join(said).count(sentence), 1, said)
 
+    def test_the_question_prints_its_sentence_its_fix_and_why_as_before(self):
+        # D1: the board question keeps its lines, with no status line
+        said = self.look_at(NATIVE_A, as_json=False)[1]
+        envelope = self.envelope(NATIVE_A)[1]
+        (item,) = envelope["unchecked"]
+        self.assertEqual(item["code"], "needs_reply")
+        self.assertEqual(said, ["  " + item["sentence"], "  " + item["fix"], "  " + envelope["data"]["open"][0]["why"]])
+
     def store_forgets(self):
         known_board.KnownBoardStore.find_path(self.project).unlink()
 
