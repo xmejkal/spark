@@ -65,8 +65,25 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    notes the brief as it is now. When the goal or the must lines change later, `flow.py show` marks the needs phase
    out of date and names what changed. Then go through the needs and the must lines with the person. Change the brief
    (`init_project.py --answers`) and then the needs (`--needs-set`) only on their words. When they say that the needs
-   still fit, run `--needs-set` with `[]`. After a `--needs-drop`, run `--needs-set` with `[]` too, to note the goal
-   that the needs answer now. Never drop or change a need, a must line or a record without their words.
+   still fit, run `--needs-set` with `[]`. Never drop or change a need, a must line or a record without their words.
+5. The record also notes the ids of the needs. After a `--needs-drop`, `flow.py show` marks the idea phase out of date
+   and names the dropped needs ([P1027](https://github.com/xmejkal/spark/issues/1506), slice 2). No record links a need
+   to a must line, so you name each must line that a dropped need served (the brief, item 0). Ask the person: keep it,
+   change it, or drop it.
+   - If they keep it, run the review (`--needs-set` with `[]`).
+   - If they change it, show the old must list and the new one, then ask for their yes. Before the write, say the old
+     must list in the chat, so that it is in the conversation even without git. On the yes, write the whole `must` list
+     to the answers file and run `init_project.py --answers <file>`, the brief step. Tell the person the commit and the
+     way back that it prints. Then run the review.
+   - When the person says "undo that", offer to run `git revert --no-edit <sha>` in the project folder, and run it only
+     after their yes. Spark's own code never runs it. Go back newest first: a revert of an older brief commit after a
+     later one conflicts. A revert changes the must lines, so the needs phase then says that the must lines changed: go
+     through them with the person and run the review.
+   - When git refuses the revert because of other changes, `git restore --source=<sha>~1 -- .spark/project.json` brings
+     back the brief alone, for the latest brief commit only.
+   - Without git, the brief step says that git cannot take the change back. Put the old lines back on the person's word
+     with `init_project.py --answers`.
+   - If the person says nothing, write nothing.
 
 ## M — what the store offers for each need
 
