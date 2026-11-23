@@ -1493,18 +1493,35 @@ class TheNoSimulationDeployTest(GateCase):
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
             self.deploy("--no-simulation", "--ignore-older-runs")
 
-    def test_a_deploy_grant_is_not_used_and_no_grant_is_offered(self):
+    def test_only_a_grant_given_with_no_simulation_flashes_and_the_store_s_file_stops_both(self):
+        # P1029, the card's value proof: a no-simulation grant answers, a plain grant does not, the file refuses both
         clock = FakeClock(datetime.datetime(2026, 10, 17, 9, 0, tzinfo=datetime.timezone.utc))
         pin_time_zone(self)
         mac = "8c:bf:ea:xx:xx:xx"
-        board_grant.GrantStore().save(board_grant.Grant(
-            mac, board_grant.board_look.board_token(mac), "ada", clock.now().isoformat(),
-            (clock.now() + datetime.timedelta(minutes=30)).isoformat(), "deploy"))
-        code, said, problems = self.flash(grant_service=board_grant.GrantService(now=clock.now))
+
+        def granted(no_simulation):
+            board_grant.GrantStore().save(board_grant.Grant(
+                mac, board_grant.board_look.board_token(mac), "ada", clock.now().isoformat(),
+                (clock.now() + datetime.timedelta(minutes=30)).isoformat(), "deploy", no_simulation))
+            del self.ran[:]
+            return self.flash(grant_service=board_grant.GrantService(now=clock.now))
+        code, said, problems = granted(False)
         self.assertEqual((code, self.flashed()), (2, []))
-        self.assertIn("--no-simulation is never covered by a deploy grant", said)
+        self.assertIn("--no-simulation is covered only by a deploy grant given with --no-simulation", said)
         self.assertIn("no terminal to ask you in", problems)
-        self.assertNotIn("--scope deploy", problems)
+        self.assertIn(shlex.join(["--scope", "deploy", "--minutes", "N", "--project", str(self.project.resolve()), "--port",
+                                  "/dev/cu.usbmodem101", "--no-simulation"]), problems)
+        self.assertIn("and firmware that no simulation tested", problems)
+        code, said, _ = granted(True)
+        self.assertEqual((code, self.flashed()), (0, ["erase-flash", str(self.image)]))
+        self.assertIn("yes: standing yes typed by ada", said)
+        self.assertIn(", also for images that no simulation tested", said)
+        (Path(os.environ["SPARK_HOME"]) / "grants" / "direct_flashing_disallowed").write_text("")
+        for no_simulation in (True, False):
+            code, said, problems = granted(no_simulation)
+            self.assertEqual((code, self.flashed()), (2, []), no_simulation)
+            self.assertIn("direct flashing is disallowed in the store", said)
+            self.assertNotIn("--scope deploy", problems)
 
 
 class TheRerunLineTest(unittest.TestCase):

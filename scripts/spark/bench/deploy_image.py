@@ -24,7 +24,7 @@ from spark.bench.board_console import LEAVE_CONSOLE
 from spark.bench.deploy_stages import PHASE_WHY, DeployPhase
 from spark.bench.deploy_service import DeployService, FlashError
 from spark.bench.firmware_platform import MicroPythonPlatform
-from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, evidence_for
+from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, SIMULATION_NONE, evidence_for
 from spark.firmware.project_image import DeployError
 from spark.bench import bench_privacy
 from spark.bench.stops import reason_of
@@ -68,17 +68,21 @@ def rerun_line(project, token, port, evidence):
     return deploy_gate.format_rerun_line(DEPLOY_SCRIPT, board_envelope.deploy_argv(project.resolve(), token, port, evidence))
 
 
-def grant_argv(project, port, minutes="N"):
-    """The arguments of grant.py that give a deploy grant for this board."""
-    return ["--scope", board_grant.SCOPE_DEPLOY, "--minutes", minutes, "--project", str(project.resolve()), "--port", port]
+def grant_argv(project, port, evidence, minutes="N"):
+    """The arguments of grant.py that give a deploy grant for this board, with --no-simulation for an image that no
+    simulation tested (P1029)."""
+    return ["--scope", board_grant.SCOPE_DEPLOY, "--minutes", minutes, "--project", str(project.resolve()), "--port", port] + (
+        [NO_SIMULATION_FLAG] if evidence.simulation == SIMULATION_NONE else [])
 
 
-def grant_hint(project, port):
+def grant_hint(project, port, evidence):
     """The text added to the no-terminal line when a deploy grant could make the yes unnecessary: the line the person
     runs once in their own terminal to give it."""
-    line = deploy_gate.format_rerun_line(GRANT_SCRIPT, grant_argv(project, port))
+    line = deploy_gate.format_rerun_line(GRANT_SCRIPT, grant_argv(project, port, evidence))
+    allows = (" and any passed image of any project" if evidence.simulation != SIMULATION_NONE else
+              ", any passed image of any project, and firmware that no simulation tested")
     return ("\nOr, to let Claude deploy this board for N minutes (1 to 1440) with no yes each time, run this once. It "
-            "allows an erase of ALL of the flash and any passed image of any project:\n  %s" % line)
+            "allows an erase of ALL of the flash%s:\n  %s" % (allows, line))
 
 
 def who_said_yes(consent):
@@ -258,8 +262,9 @@ class DeployFlowService:
             reached.update(refusal=str(shut), reason=shut.reason, next_op=shut.next_op)
             if shut.next_op == deploy_gate.NEXT_DEPLOY:
                 reached["run_in_terminal"] = rerun_line(reached["project"], token, look.port, reached["evidence"])
+                reached["grant_may_answer"] = self.grants.refusal_of(reached["evidence"]) is None  # P1029: board_envelope.yes_rule
                 if self.grants.may_cover(look, reached["evidence"]):
-                    reached["grant_argv"] = grant_argv(reached["project"], look.port, "60")
+                    reached["grant_argv"] = grant_argv(reached["project"], look.port, reached["evidence"], "60")
             self.outside.add_diagnostics(["%s: %s" % (SCRIPT, shut)])
             return shut.code
         return None
@@ -271,7 +276,7 @@ class DeployFlowService:
         project, evidence = self._reached["project"], self._reached["evidence"]
         line = rerun_line(project, token, look.port, evidence)
         if self.grants.may_cover(look, evidence):
-            line += grant_hint(project, look.port)
+            line += grant_hint(project, look.port, evidence)
         chosen = self.grants.consent_for_deploy(look, evidence, self.outside.make_consent(line))
         if chosen.why not in WHY_NOT_SAID:
             # raw: the sentence may hold the grant line the person pastes (P677)

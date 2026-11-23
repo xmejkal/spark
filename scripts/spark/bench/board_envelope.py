@@ -23,8 +23,12 @@ from spark.bench.deploy_gate import NEXT_LOOK, NEXT_DEPLOY
 
 #: What the person must do first, said in a step's `why`.
 YES_RULE = "the person types yes in their own terminal%s; the token and \"go ahead\" in a chat are not the yes"
-#: What YES_RULE adds when a deploy grant may answer.
+#: What YES_RULE adds when a deploy grant may answer, and when only one given with --no-simulation may (P1029).
 GRANT_CLAUSE = " (or a deploy grant stands)"
+NO_SIMULATION_GRANT_CLAUSE = " (or a deploy grant given with --no-simulation stands)"
+#: Why the person runs the grant line, and what it adds for an image that no simulation tested (P1029).
+GRANT_STEP_WHY = "the person runs it once in their own terminal; it lets Claude erase ALL of the flash for N minutes (1 to 1440, 60 here)"
+GRANT_STEP_NO_SIMULATION = ", and with --no-simulation, write firmware that no simulation tested"
 
 #: A `fix` for each thing a deploy can wait for.
 FIX_FOR_NEXT = {NEXT_DEPLOY: "the person runs data.run_in_terminal in their own terminal", NEXT_LOOK: "run look.py again"}
@@ -32,9 +36,10 @@ FIX_FOR_NEXT = {NEXT_DEPLOY: "the person runs data.run_in_terminal in their own 
 MAY_BE_ERASED, FLASHED_NOT_VERIFIED = "may_be_erased", "flashed_not_verified"
 
 
-def yes_rule(evidence):
-    """YES_RULE for this evidence: the grant clause only where a grant may answer."""
-    return YES_RULE % ("" if evidence.grant_refusal else GRANT_CLAUSE)
+def yes_rule(evidence, grant_may_answer):
+    """YES_RULE for this evidence: a grant clause only where a deploy grant may answer (`grant_may_answer`: the caller's
+    GrantService.refusal_of is None, P1029), the --no-simulation one for an image that no simulation tested."""
+    return YES_RULE % ((NO_SIMULATION_GRANT_CLAUSE if evidence.grant_refusal else GRANT_CLAUSE) if grant_may_answer else "")
 
 
 def deploy_argv(project, token, port, evidence):
@@ -120,10 +125,10 @@ def _steps(reached):
         following = [look_step(project, port, evidence, why or "the look is missing or stale", bool(why) or None)]
     elif next_op == NEXT_DEPLOY:
         following = [deploy_step(project, reached.get("token"), port, evidence,
-                                 "the person runs data.run_in_terminal in their own terminal: " + yes_rule(evidence))]
+                                 "the person runs data.run_in_terminal in their own terminal: " + yes_rule(evidence, reached.get("grant_may_answer")))]
         if reached.get("grant_argv"):
             following.append(outcomes.add_env(outcomes.step("grant", reached["grant_argv"],
-                                           "the person runs it once in their own terminal; it lets Claude erase ALL of the flash for N minutes (1 to 1440, 60 here)",
+                                           GRANT_STEP_WHY + (GRANT_STEP_NO_SIMULATION if evidence.grant_refusal else ""),
                                            effects=["writes"], needs_yes=True), store.read_given_env()))
     elif result and result.ready.verdict == ready_probe.UNKNOWN:
         stopped = bool(result.start and result.start.code)  # P462: the person has a step first

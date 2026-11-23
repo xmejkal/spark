@@ -80,6 +80,12 @@ class LookScriptCase(LookCase):
     def token(self):
         return "%s-%s" % (hashlib.sha256(MAC.encode()).hexdigest()[:4], hashlib.sha256(self.image.read_bytes()).hexdigest()[:4])
 
+    @staticmethod
+    def store_disallows_direct_flashing():
+        """P1029: the person's file that disallows direct flashing, in this test's store."""
+        store.place("grants").mkdir(exist_ok=True)
+        (store.place("grants") / "direct_flashing_disallowed").write_text("")
+
 
 class WhatThePersonSeesTest(LookScriptCase):
     @needs_littlefs
@@ -398,6 +404,9 @@ class WhatThePersonSeesTest(LookScriptCase):
     @needs_littlefs
     def test_the_next_step_names_a_deploy_grant_only_where_a_grant_may_answer(self):
         self.build_from_firmware()
+        none = json.loads(self.go("--no-simulation", "--json")[1][-1])["next"][0]["why"]
+        self.assertIn("types yes in their own terminal (or a deploy grant given with --no-simulation stands);", none)
+        self.store_disallows_direct_flashing()  # P1029
         none = json.loads(self.go("--no-simulation", "--json")[1][-1])["next"][0]["why"]
         self.assertIn("types yes in their own terminal;", none)
         self.assertNotIn("grant", none)

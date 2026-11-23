@@ -10,6 +10,7 @@ from collections import namedtuple
 from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_envelope
+from spark.bench import board_grant
 from spark.bench import board_look
 from spark.bench import known_board
 from spark.bench.known_board import CANNOT_TELL, NONE, OTHER
@@ -133,7 +134,8 @@ class LookAtBoard(Operation):
             report = service.run(project, port, picked, listed=row)
         except board_look.LookStopError as stop:
             return self._stopped(stop, platform, port, outside)
-        return self._after_read(self._found(report, project.resolve(), picked), report, passed, project, outside)
+        grant_may_answer = board_grant.GrantService().refusal_of(picked) is None  # P1029: the store's file, for no simulation
+        return self._after_read(self._found(report, project.resolve(), picked, grant_may_answer), report, passed, project, outside)
 
     def _gate(self, look, row, outside):
         """The board question before a read (P865, P892): a known_board.KnownBoardResult that lets the read go on, or the
@@ -200,8 +202,9 @@ class LookAtBoard(Operation):
         return known_board.KEPT_MESSAGE % (report.port, known_board.mac_ends(mac))
 
     @staticmethod
-    def _found(report, project, evidence):
-        """The result of a LookReport: the lists LookReport.status counts, as Findings, and the deploy step with a token."""
+    def _found(report, project, evidence, grant_may_answer):
+        """The result of a LookReport: the lists LookReport.status counts, as Findings, and the deploy step with a token.
+        `grant_may_answer` says whether a deploy grant may answer the evidence (board_envelope.yes_rule)."""
         findings = [Finding(outcomes.PROBLEMS, "stop", stop.code, stop.sentence, "deploy.py will refuse") for stop in report.stops]
         findings += [Finding(outcomes.PROBLEMS, "flash", board_codes.FLASH_DIFFERS, warning, "deploy.py asks the person to accept it")
                      for warning in report.warnings]
@@ -216,7 +219,7 @@ class LookAtBoard(Operation):
         token = report.token()
         following = [NextStep(**board_envelope.deploy_step(
             project, token, report.port, evidence,
-            "erases ALL of the flash, then writes the image. Relay the warnings first. " + board_envelope.yes_rule(evidence)))] if token else []
+            "erases ALL of the flash, then writes the image. Relay the warnings first. " + board_envelope.yes_rule(evidence, grant_may_answer)))] if token else []
         return OperationResult(report.to_dict(), findings, following, board_look.report_lines(report))
 
     @staticmethod
