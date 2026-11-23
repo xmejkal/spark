@@ -234,6 +234,20 @@ class SignedRailTest(unittest.TestCase):
         again = changes.WiringLog.from_build(now, colors_of(now), earlier, ())
         self.assertEqual(changes.changes_between(again, now, colors_of(now)), [])
 
+    def test_a_pull_down_leg_put_in_the_rail_before_is_no_change(self):
+        # P960: the leg's step is a jumper from its row to the rail now. A record whose step put the leg in the rail
+        # itself joins the same point, so a rebuild lists no change.
+        now = seated(["board", "Btn"], [
+            StepPoint([board("GND"), pin("Btn", "B"), resistor("R1", 2, "pull-down on Btn A", "10kΩ")], None, True),
+            StepPoint([pin("Btn", "A"), resistor("R1", 1, "pull-down on Btn A", "10kΩ")], None, False)])
+        leg = next(one for one in changes.describe(now) if one.key == ("resistor", "pull-down on Btn A", "2"))
+        self.assertEqual((leg.kind, leg.source), ("jumper", "the row of R1 end 2 (pull-down on Btn A)"))
+        before = [one._replace(jumper=False) if one.act == "join" and one.subject.name == "R1 end 2" else one for one in now]
+        earlier = record_of(before)
+        self.assertEqual([(one.kind, one.source) for one in earlier.steps if one.key == leg.key],
+                         [("leg", "R1 end 2 (pull-down on Btn A)")])
+        self.assertEqual(changes.changes_between(earlier, now, colors_of(now)), [])
+
     def test_an_old_record_with_no_sign_keeps_the_free_rail_words(self):
         path = Path(tempfile.mkdtemp()) / "wiring-record.json"
         step = {"key": ["board", "board GND"], "anchor": ["rail", "GND"], "kind": "jumper", "source": "board GND",

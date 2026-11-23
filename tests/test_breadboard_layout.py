@@ -28,6 +28,7 @@ from spark.breadboard import wiring_steps  # noqa: E402
 from spark.breadboard import part_shape  # noqa: E402
 from spark.breadboard import rails  # noqa: E402
 from spark.breadboard import spacing  # noqa: E402
+from spark.breadboard import drawing_match  # noqa: E402
 from spark.breadboard.drawing import HoleLedger, NotDrawnError, WokwiGeometry, rotate  # noqa: E402
 from spark.breadboard.breadboard_scene import BreadboardSceneMaker  # noqa: E402
 
@@ -455,6 +456,49 @@ class AModuleDrawnFromItsRecordTest(unittest.TestCase):
 
 
 WALK = ROOT / "tests" / "data" / "breadboard" / "walk-c6"
+#: P960: a wake button on the FireBeetle 2 ESP32-S3, its 10 k pull-up from A to the 3V3 rail.
+WAKE = ROOT / "tests" / "data" / "breadboard" / "wake-button"
+
+
+def resistor_end(tag, number):
+    name = "%s end %d" % (tag, number)
+    return wiring_steps.End(wiring_steps.RESISTOR, tag, name, "%s, end %d" % (tag, number), str(number), label=name)
+
+
+def pulled_down(read, also=None, bleeder=False):
+    """The XIAO fixture's steps with R1 end 2 on the ground point (P960). `also`, an end's name, adds a second
+    pull-down: R2 end 1 joins that end's point and R2 end 2 the ground. `bleeder` takes R1 end 1 off D8 to a 3V3 point
+    on the + rail, so both legs go to rails."""
+    ground = next(point for point in read.steps.points if point.rail)
+    legs = [resistor_end("R1", 2)] + ([resistor_end("R2", 2)] if also else [])
+    points = [point._replace(ends=[end for end in point.ends if end.component != "R1"]) for point in read.steps.points
+              if point is not ground]
+    joined = {"board D8": "R1"} if not bleeder else {}
+    joined.update({also: "R2"} if also else {})
+    points = [point._replace(ends=point.ends + [resistor_end(joined[end.name], 1) for end in point.ends
+                                                if end.name in joined]) for point in points]
+    points = [point for point in points if len(point.ends) > 1]
+    if bleeder:
+        board_3v3 = wiring_steps.End(wiring_steps.BOARD, "board", "board 3V3", "board 3V3", "3V3", power_rail="logic",
+                                     label="3V3")
+        points.append(wiring_steps.StepPoint([board_3v3, resistor_end("R1", 1)], None, True))
+    return wiring_steps.BreadboardSteps(read.steps.placed, points + [ground._replace(ends=ground.ends + legs)])
+
+
+def under_a_resistor(layout):
+    """[(resistor, hole, what took it)]: each hole on the line between a resistor's two legs that another part's pin or
+    a jumper's end takes. A drawing a person wires from has none (P960)."""
+    used = [(hole, part.id) for part in layout.parts for hole in part.holes.values()]
+    used += [(hole, "step %d" % jumper.step) for jumper in layout.jumpers for hole in (jumper.one, jumper.other)]
+    found = []
+    for part in [part for part in layout.parts if part.type == "wokwi-resistor"]:
+        one, other = part.holes.values()
+        for hole, by in used:
+            along_x = abs(one.y - other.y) < 1 and abs(hole.y - one.y) < 1 and min(one.x, other.x) < hole.x < max(one.x, other.x)
+            along_y = abs(one.x - other.x) < 1 and abs(hole.x - one.x) < 1 and min(one.y, other.y) < hole.y < max(one.y, other.y)
+            if by != part.id and (along_x or along_y):
+                found.append((part.id, hole.name, by))
+    return found
 
 
 def planned(fixture):
@@ -560,9 +604,10 @@ class TheSpaceBetweenPartsTest(unittest.TestCase):
         with in_store():
             read = sheet._read_build(RECORD_BOARD / "requirements.json")
         # on 40 columns the button still keeps its 4 columns from the board, and the LED does not: it goes in by the old
-        # rule, 2 columns after the button's last pin
+        # rule, 2 columns after the button's last pin. P960: a resistor covers the holes between its legs, so R1 no
+        # longer stands over the LED's A leg. It lies flat, closer than 4 columns, and is named crowded too.
         layout = drawing.BreadboardPlanner(*record_inputs(read, drawing.Surface(dict(full, columns=40)))).plan(read.steps)
-        self.assertEqual(layout.crowded, ("LedRed5mm",))
+        self.assertEqual(layout.crowded, ("LedRed5mm", "R1"))
         with in_store():
             crowded = sheet.sheet(RECORD_BOARD / "requirements.json", read=read,
                                   planned=sheet.PlannedLayout(layout, None, [], layout, (), sheet.SCENE_MAKER.make(layout)))
@@ -611,7 +656,7 @@ class TheRailSeatingTest(unittest.TestCase):
     of its ends, and each of its ends runs a jumper to a free hole of that rail that no part's body lies over."""
 
     #: Every fixture the planner draws.
-    DRAWN = (WALK, XIAO, RECORD_BOARD, EPAPER)
+    DRAWN = (WALK, XIAO, RECORD_BOARD, EPAPER, WAKE)
 
     @classmethod
     def setUpClass(cls):
@@ -680,17 +725,66 @@ class TheRailSeatingTest(unittest.TestCase):
         holes = drawing.StepHoles.of(self.layouts["walk-c6"], read.steps)
         self.assertEqual(holes.get(3), "from j7 to bottom + rail, hole 5")
 
-    def test_a_resistor_leg_on_a_rail_is_not_drawn_yet(self):
-        # FirstFitPartPlacement pins a resistor's leg in a row of holes only, so a leg on a rail is refused by name
+    def test_a_pull_up_leg_goes_in_a_free_row_and_a_jumper_joins_it_to_the_plus_rail(self):
+        # P960: the wake button's R1 end 1 sits in the row of WakeButton A, and its end 2 in a free row whose jumper
+        # (step 4) runs to the + rail
+        layout = self.layouts["wake-button"]
+        parts = {part.id: part for part in layout.parts}
+        r1, button = parts["R1"], parts["WakeButton"]
+        self.assertEqual(r1.holes["1"].group, button.holes["1.l"].group)
+        jumper = next(jumper for jumper in layout.jumpers if jumper.step == 4)
+        self.assertEqual({jumper.one.group, jumper.other.group} - {r1.holes["2"].group}, {"tp"})
+        self.assertEqual((jumper.role, jumper.pill_words), ("power", "R1 end 2 to + rail"))
+        with in_store():
+            read = sheet._read_build(WAKE / "requirements.json")
+        self.assertEqual(read.steps.numbered()[3].words, "Put R1 (10kΩ pull-up on WakeButton A), end 2, in a free row "
+                         "close to its other end, and run a jumper from that row to the 3V3 rail.")
+        holes = drawing.StepHoles.of(layout, read.steps)
+        self.assertEqual((holes.get(4), holes.get(6)), ("d39, then from a39 to top + rail, hole 32", "d33"))
+        self.assertEqual(under_a_resistor(layout), [])
+
+    def test_a_pull_down_leg_on_ground_is_drawn(self):
+        # P960, the card's case: the XIAO fixture with R1 end 2 on the ground point. Before, the leg was refused by name.
         read = xiao_read()
-        ground = next(point for point in read.steps.points if point.rail)
-        leg = next(end for point in read.steps.points for end in point.ends if end.name == "R1 end 2")
-        points = [point for point in read.steps.points if point is not ground and leg not in point.ends]
-        steps = wiring_steps.BreadboardSteps(read.steps.placed, points + [ground._replace(ends=ground.ends + [leg])])
-        planner = drawing.BreadboardPlanner(GEOMETRY, drawing_catalog.describe_parts(read, GEOMETRY))
-        with self.assertRaisesRegex(NotDrawnError, "R1 has a leg on the GND rail") as refused:
-            planner.plan(steps)
-        self.assertEqual((refused.exception.code, refused.exception.subject), ("not_drawn_yet", "R1"))
+        steps = pulled_down(read)
+        catalog = drawing_catalog.describe_parts(read, GEOMETRY)
+        layout = drawing.BreadboardPlanner(GEOMETRY, catalog).plan(steps)
+        r1 = next(part for part in layout.parts if part.id == "R1")
+        jumper = next(jumper for jumper in layout.jumpers if jumper.step == 10)
+        self.assertEqual((r1.holes["2"].group, jumper.one.group, jumper.other.group), ("27b", "27b", "bn"))
+        self.assertEqual((jumper.role, jumper.pill_words), ("ground", "R1 end 2 to - rail"))
+        self.assertEqual(drawing_match.DrawnNets(layout, layout.geometry).differences(steps.points, catalog), [])
+        self.assertEqual(drawing.StepHoles.of(layout, steps).get(10), "f27, then from g27 to bottom - rail, hole 22")
+        # the Wokwi diagram has one wire per jumper
+        wokwi = json.loads(drawing.WokwiBreadboardDiagram().text(sheet.SCENE_MAKER.make(layout)))
+        self.assertEqual((len(wokwi["connections"]), len(layout.jumpers)), (6, 6))
+        self.assertEqual(under_a_resistor(layout), [])
+
+    def test_two_pull_downs_are_drawn_right_or_refused_by_name(self):
+        # the refuter of the plan: with two rail-leg resistors, a jumper landed under the other resistor's body, with
+        # no error. Each resistor covers the holes between its legs now (data/wokwi-geometry.json). Without that, both
+        # cases below draw a jumper's end under R1 or R2.
+        read = xiao_read()
+        catalog = drawing_catalog.describe_parts(read, GEOMETRY)
+        catalog["R2"] = catalog["R1"]
+        steps = pulled_down(read, also="TactileButton A")
+        narrow = GEOMETRY.with_surface(drawing.Surface(dict(GEOMETRY.data["breadboard"], columns=26)))
+        layout = drawing.BreadboardPlanner(narrow, catalog).plan(steps)
+        self.assertLessEqual({"R1", "R2"}, {part.id for part in layout.parts})
+        self.assertEqual(drawing_match.DrawnNets(layout, layout.geometry).differences(steps.points, catalog), [])
+        self.assertEqual(under_a_resistor(layout), [])
+        # a pull-down on the LED's A: R2 finds no place beside R1, so the plan stops by name
+        with self.assertRaises(NotDrawnError) as refused:
+            drawing.BreadboardPlanner(GEOMETRY, catalog).plan(pulled_down(read, also="LedRed5mm A"))
+        self.assertEqual((refused.exception.code, refused.exception.subject), ("no_hole_left", "R2"))
+
+    def test_a_resistor_with_both_legs_on_rails_is_drawn(self):
+        # a bleeder from 3V3 to GND: no leg joins a row, so it goes in free rows, and each leg's jumper runs to its rail
+        read = xiao_read()
+        steps = pulled_down(read, bleeder=True)
+        catalog = drawing_catalog.describe_parts(read, GEOMETRY)
+        layout = drawing.BreadboardPlanner(GEOMETRY, catalog).plan(steps)
+        self.assertEqual(drawing_match.DrawnNets(layout, layout.geometry).differences(steps.points, catalog), [])
 
     def test_drawn_nets_are_empty_on_every_fixture(self):
         for fixture in self.DRAWN:
