@@ -13,6 +13,7 @@ from pathlib import Path
 
 from spark.bench import board_codes
 from spark.bench import board_doctor
+from spark.bench import board_look
 from spark.bench import download_mode
 from spark.records import board_records
 from spark.bench.deploy_stages import DeployPhase
@@ -22,6 +23,7 @@ from spark.core.result import Finding, NextStep, OperationResult
 from spark.bench import ready_probe
 from spark.records import store
 from spark.bench.deploy_gate import NEXT_LOOK, NEXT_DEPLOY
+from spark.firmware import sleep_calls
 
 #: What the person must do first, said in a step's `why`.
 YES_RULE = "the person types yes in their own terminal%s; the token and \"go ahead\" in a chat are not the yes"
@@ -67,16 +69,77 @@ def console_words(console):
     return CONSOLE_READY % quoted(ready[0]) if ready else CONSOLE_PRINTED % quoted(lines[0]) if lines else CONSOLE_SILENT
 
 
-def ready_unknown_fix(result, places):
+def sleep_words(sleeps, own_usb):
+    """The `sleep` slot of READY_UNKNOWN's fix for the SleepCalls `sleeps`: SLEEP_WORDS, UNPARSED, or ''."""
+    if sleeps.places:
+        return SLEEP_WORDS % (", ".join(sleeps.places[:2]), OWN_USB_SLEEP if own_usb else MAYBE_OWN_USB_SLEEP, ready_probe.READY_WAIT_S)
+    return UNPARSED % ", ".join(sleeps.unparsed) + " " if sleeps.unparsed else ""
+
+
+def ready_unknown_fix(result, places, sleeps=sleep_calls.SleepCalls((), ())):
     """The fix of a ready_unknown deploy, the one text the CLI says and the JSON item carries (P1022): READY_UNKNOWN's
-    template filled from the DeployResult `result` and the RESET place of `places` (a ButtonPlaces), or the fix of
-    READY_UNKNOWN_NO_FILES when the passed run's log names no files."""
+    template filled from the DeployResult `result`, the RESET place of `places` (a ButtonPlaces) and the deepsleep calls
+    `sleeps` (a SleepCalls), READY_UNKNOWN_LOST's for a firmware that printed `ready` before mpremote lost the board, or
+    the fix of READY_UNKNOWN_NO_FILES when the passed run's log names no files."""
     if not result.facts["files"]:
         return board_codes.READY_UNKNOWN_NO_FILES.fix
+    facts = FACTS_WRITTEN if result.facts_line.written else FACTS_NOT_WRITTEN
+    if result.ready.lost_board:  # the firmware printed ready, so it ran: its own text, with no BOOT entry
+        return board_codes.READY_UNKNOWN_LOST.fix % {"facts": facts, "sleep": sleep_words(sleeps, result.own_usb)}
     return board_codes.READY_UNKNOWN.fix % {
-        "files": FILES_READ if result.ready.files_read else FILES_NOT_READ, "console": console_words(result.console),
-        "facts": FACTS_WRITTEN if result.facts_line.written else FACTS_NOT_WRITTEN,
+        "files": FILES_READ if result.ready.files_read else FILES_NOT_READ,
+        "console": console_words(result.console), "sleep": sleep_words(sleeps, result.own_usb), "facts": facts,
+        "keeps_boot_entry": KEEPS_BOOT_ENTRY_WORDS if result.keeps_boot_entry else "",
         "reset": places.reset, "orientation": places.orientation}
+
+
+#: The fix of a look that finds no board while the project's firmware calls deepsleep (P1022 slice 3): an opening for each
+#: code, then the deepsleep calls (at most two), the own-USB words, and the steps with the cable check last. In deep sleep
+#: the chip's own USB-Serial/JTAG is off (ESP-IDF v5.5 docs/en/api-guides/usb-serial-jtag-console.rst lines 83 and
+#: 101-107); a board behind a USB bridge chip stays on USB, so without the record's `usb` pin role the words are a
+#: condition. In download mode the chip runs no program from flash (esptool v5.5.0 boot-mode-selection.rst line 64).
+ASLEEP_OPENING = {board_codes.NO_PORT: "no board is on USB", board_codes.PORT_NOT_LISTED: "the port you named is not on USB"}
+ASLEEP_KNOWS = "What spark knows: "
+ASLEEP_FIX = (ASLEEP_KNOWS + "%(opening)s, and the project's firmware calls deepsleep (%(calls)s). %(usb)s What spark did "
+              "not do: it read no board and wrote nothing. What to try, in order: 1. Hold the board's %(boot)s, press and "
+              "release %(reset)s, then release BOOT%(orientation)s. The board should then wait in download mode: it runs no "
+              "firmware, so it stays on USB. Run look.py again, and use the port it names. After a deploy from download "
+              "mode, press %(reset)s once, with BOOT not held, so the firmware starts. 2. Or wait until the firmware wakes, "
+              "and run look.py while it is awake. 3. If the board still does not show, check the cable: a data cable "
+              "straight into the computer, not a hub that gives power only.")
+OWN_USB_SLEEP = "In deep sleep the chip's own USB is off, so the board leaves USB with the cable in, until it wakes."
+MAYBE_OWN_USB_SLEEP = ("If the board's USB is the chip's own (USB-Serial/JTAG), it is off in deep sleep, and the board "
+                       "leaves USB with the cable in until it wakes.")
+UNPARSED = "These files of firmware/ did not parse, so spark does not know whether they call deepsleep: %s."
+#: The `sleep` and `keeps_boot_entry` slots of READY_UNKNOWN's fix (P1022 slice 3): facts, never advice. The deepsleep
+#: calls are read from firmware/, and the BOOT entry is a condition, as spark does not read the strap state. %d is
+#: ready_probe.READY_WAIT_S.
+SLEEP_WORDS = ("The project's firmware calls deepsleep (%s). %s The check counts a `ready` line that the firmware prints "
+               "in the first %d s of its start. ")
+KEEPS_BOOT_ENTRY_WORDS = ("If the board was put in download mode with BOOT for this deploy, it still waits there: on this "
+                          "chip over USB-Serial/JTAG, esptool's restart after the write cannot leave that mode, and a press "
+                          "of RESET does. Press RESET now (step 2 below), before you wait, with BOOT not held. ")
+
+
+def asleep_fix(project, reason, places):
+    """The fix of a no_port or port_not_listed stop when the project's firmware calls deepsleep: ASLEEP_FIX, its buttons
+    named as `places` (a ButtonPlaces) does; UNPARSED when no call was found and a file did not parse; else ''."""
+    if reason not in ASLEEP_OPENING:
+        return ""
+    found = sleep_calls.deep_sleep_calls(project)
+    if not found.places:
+        return UNPARSED % ", ".join(found.unparsed) if found.unparsed else ""
+    return ASLEEP_FIX % {"opening": ASLEEP_OPENING[reason], "calls": ", ".join(found.places[:2]), "boot": places.boot,
+                         "usb": OWN_USB_SLEEP if download_mode.own_usb_of(project) else MAYBE_OWN_USB_SLEEP,
+                         "reset": places.reset, "orientation": places.orientation}
+
+
+def asleep_stop(stop, project, places):
+    """(the sentence, the fix) of a LookStopError that no doctor answered: the asleep fix, and beside it on a no_port stop
+    only NO_BOARD, because the fix holds the cable check as its last step. Else the stop's own sentence."""
+    fix = asleep_fix(project, stop.reason, places)
+    no_board = stop.reason == board_codes.NO_PORT and fix.startswith(ASLEEP_KNOWS)
+    return (board_look.NO_BOARD if no_board else str(stop)), fix
 
 
 def yes_rule(evidence, grant_may_answer):
@@ -226,7 +289,7 @@ def deploy_data(reached):
         "commands": [list(command) for command in plan.commands] if plan else None,
         "look": report.to_dict() if report else None,
         "yes": {"kind": reached["yes_kind"], "who": reached["who"]} if consent else None,
-        "ready": {"verdict": ready.verdict, "sentence": ready.sentence} if ready else None,
+        "ready": {"verdict": ready.verdict, "sentence": ready.sentence, "lost_board": ready.lost_board} if ready else None,
         "facts_line": result.facts_line if result else None,
         "image_sha256": result.image_sha256 if result else None,
         "board_log": str(result.log_path) if result else None,

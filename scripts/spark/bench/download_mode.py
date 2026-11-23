@@ -7,6 +7,7 @@ docs/observations/2026-10-14-p238-spike/finding.md). This module holds the ROM's
 them. board_console.py's `ConsoleProbe` reads the console and waits for the press of R (P251 moved it there).
 """
 
+from spark.bench.board_connection import USB_SERIAL_JTAG
 from spark.records import board_records
 from spark.firmware.scenario_steps import has_ready_line
 
@@ -62,3 +63,16 @@ def booted(console):
     """True when a line of `console` has the firmware's `ready` as its first word (scenario_steps.has_ready_line, P1025):
     the board finished its restart after mpremote asked (P245, the 2026-10-15 bench)."""
     return has_ready_line(console)
+
+
+def own_usb_of(project, usb=None):
+    """True when the board's USB plug is the chip's own, no USB bridge chip's (P1022 slice 3): the port's USB id `usb` is
+    Espressif's USB-Serial/JTAG, or the project's board record has the pin role `usb` (board_rules: the chip's own USB D-
+    and D+). False when neither holds or the record cannot be read."""
+    if usb == USB_SERIAL_JTAG:
+        return True
+    try:
+        roles = board_records.load(project).get("pin_roles")
+    except (OSError, ValueError, AttributeError, board_records.BoardError):
+        return False
+    return isinstance(roles, dict) and isinstance(roles.get("usb"), dict)

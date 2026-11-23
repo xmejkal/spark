@@ -505,6 +505,21 @@ class TheBusyPortTest(GateCase):
         self.assertIn("deploy.py: no board found", problems)
         self.assertNotIn("next ", problems)
 
+    def test_a_stop_with_no_port_and_a_deepsleep_call_names_deep_sleep(self):
+        # P1022 slice 3: the deploy's look says what look.py says, and --json's fix is the same text
+        self.run_the_scenario()
+        (self.project / "firmware" / "main.py").write_text("import machine\nprint('ready')\nmachine.deepsleep(60000)\n")
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), devs="mpremote-devs-none.txt")
+        self.assertEqual(code, 2)
+        lines = problems.strip().splitlines()
+        self.assertEqual(lines[0], "deploy.py: no board found.")
+        self.assertTrue(lines[1].startswith("What spark knows: no board is on USB, and the project's firmware calls deepsleep "
+                                            "(firmware/main.py:3)."), lines[1])
+        self.assertNotIn("next ", problems)
+        code, said, _ = self.deploy("--json", "--token", "aaaa-bbbb", consent=FakeConsent(True), devs="mpremote-devs-none.txt")
+        (item,) = json.loads(said)["unchecked"]
+        self.assertEqual((item["code"], item["sentence"], item["fix"]), ("no_port", "no board found.", lines[1]))
+
 
 @needs_littlefs
 class TheBoardAfterTheFlashTest(GateCase):
@@ -911,6 +926,16 @@ class TheReadyUnknownWordsTest(GateCase):
         self.assertEqual(code, 2)
         self.assertIn("The board's console was not read, and spark did not see `ready`.", self.fix_line(said))
 
+    def test_a_console_the_probe_could_not_read_is_not_read_never_printed(self):
+        # P1022 slice 3: the fix said the console printed `could not read the port: ...`, a text the board never printed
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        code, said, _ = self.flash(FakeConsoleProbe(unread="[Errno 2] could not open port /dev/cu.usbmodem101"))
+        self.assertEqual(code, 2)
+        fix = self.fix_line(said)
+        self.assertIn("The board's console was not read, and spark did not see `ready`.", fix)
+        self.assertNotIn("could not read the port", fix)
+        self.assertIn("console with DTR and RTS off: could not read the port: [Errno 2]", self.board_log())
+
     def test_a_facts_copy_written_on_a_retry_keeps_the_first_try_s_output_in_the_board_log(self):
         self.uncopied = [subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)]
         code, _, _ = self.flash(None)
@@ -956,6 +981,91 @@ class TheReadyUnknownWordsTest(GateCase):
         self.assertEqual(code, 2)
         self.assertIn("  " + NO_FILES_FIX + "\n", said)
         self.assertNotIn("What spark knows:", said)
+
+
+#: What mpremote printed when `import main` lost the FireBeetle 2 C6 at the 13:58 deploy (p934-display2, 2026-11-23).
+SLEEPER_STDOUT = "ready, cpu 80 MHz, deep sleep, power-up\nredraw quote 13:58\ndeep sleep for 67 s\n"
+SLEEPER_STDERR = "Traceback (most recent call last):\nOSError: [Errno 6] Device not configured\n"
+SLEEPER_MAIN = "import machine\nprint('ready, cpu 80 MHz, deep sleep, power-up')\nmachine.deepsleep(67000)\n"
+
+
+@needs_littlefs
+class TheSleepingFirmwareTest(GateCase):
+    """P1022 slice 3: a firmware that deep-sleeps after `ready` (D1), and the words of ready unknown for it."""
+
+    board_log, fix_line = TheReadyUnknownWordsTest.board_log, TheReadyUnknownWordsTest.fix_line
+
+    def flash_sleeper(self, main=SLEEPER_MAIN, probe=None, *argv):
+        (self.project / "firmware" / "main.py").write_text(main)
+        self.prints = subprocess.CalledProcessError(1, ["mpremote"], SLEEPER_STDOUT, SLEEPER_STDERR)
+        self.run_the_scenario()
+        return self.deploy("--token", self.token(), *argv, consent=FakeConsent(True), probe=probe)
+
+    def test_the_13_58_sighting_is_ready_seen_and_reads_no_console(self):
+        probe = FakeConsoleProbe("")
+        code, said, _ = self.flash_sleeper(SLEEPER_MAIN, probe)
+        self.assertEqual(code, 0, said)
+        self.assertIn("ready seen: the firmware printed 'ready' and the board's 1 files match the image, then mpremote lost "
+                      "the board (OSError: [Errno 6] Device not configured). firmware/main.py calls deepsleep", said)
+        self.assertEqual(probe.asked, [])
+        self.assertIn("OSError: [Errno 6] Device not configured", self.board_log())
+
+    def test_the_13_58_sighting_says_lost_board_in_json(self):
+        code, said, _ = self.flash_sleeper(SLEEPER_MAIN, FakeConsoleProbe(""), "--json")
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(said)["data"]["ready"],
+                         {"verdict": "ready seen", "sentence": "the firmware printed 'ready' and the board's 1 files match the "
+                          "image, then mpremote lost the board (OSError: [Errno 6] Device not configured). firmware/main.py "
+                          "calls deepsleep", "lost_board": True})
+
+    def test_the_same_without_a_deepsleep_call_is_ready_unknown(self):
+        code, said, _ = self.flash_sleeper("print('ready')\n", FakeConsoleProbe(unread="[Errno 2] No such file"))
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: the firmware printed 'ready', then mpremote lost the board", said)
+        fix = self.fix_line(said)
+        self.assertIn("The board's files were read, and the firmware printed `ready`, then mpremote lost the board. The facts "
+                      "file spark.json was written and read back. No deepsleep call was found in firmware/, so it counts as "
+                      "unknown.", fix)
+        self.assertNotIn("could not read the port", fix)
+        # the review of #1531 (the refuter): `ready` proves the firmware ran, so a C6 on 303a:1001 gets no BOOT entry here
+        self.assertNotIn("download mode with BOOT", fix)
+
+    def test_a_firmware_that_sleeps_before_ready_gets_its_call_place_and_the_check_s_seconds(self):
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        code, said, _ = self.flash_sleeper("import machine\nmachine.deepsleep(60000)\nprint('ready')\n", FakeConsoleProbe(""))
+        self.assertEqual(code, 2)
+        fix = self.fix_line(said)
+        self.assertIn("The project's firmware calls deepsleep (firmware/main.py:2). In deep sleep the chip's own USB is off, so "
+                      "the board leaves USB with the cable in, until it wakes. The check counts a `ready` line that the "
+                      "firmware prints in the first 20 s of its start.", fix)
+        self.assertLess(fix.index("calls deepsleep"), fix.index("What spark did not do"))
+
+    def test_the_14_09_sighting_on_the_c6_names_the_boot_entry_and_reset_first(self):
+        # 2026-11-23 14:09 CET: written from download mode entered with BOOT, both facts copies and the hash read refused,
+        # the console silent; one RESET press started the firmware 55 minutes later (n = 1, the strap state not read)
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        self.run_the_scenario()
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), probe=FakeConsoleProbe(""))
+        self.assertEqual(code, 2)
+        fix = self.fix_line(said)
+        words = ("If the board was put in download mode with BOOT for this deploy, it still waits there: on this chip over "
+                 "USB-Serial/JTAG, esptool's restart after the write cannot leave that mode, and a press of RESET does. "
+                 "Press RESET now (step 2 below), before you wait, with BOOT not held.")
+        self.assertIn(words, fix)
+        self.assertLess(fix.index(words), fix.index("What spark did not do"))
+
+    def test_the_boot_entry_is_not_named_off_the_c6_or_off_usb_serial_jtag(self):
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        self.run_the_scenario()
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), devs_text=[self.LISTED, self.MOVED],
+                                    probe=FakeConsoleProbe(""))
+        self.assertEqual(code, 2, said)
+        self.assertNotIn("download mode with BOOT", self.fix_line(said))
+        tool = tool_finder.Tool("esptool", "flasher", {"kind": "command"}, ["esptool"])
+        for chip, usb, keeps in (("esp32c6", "303a:1001", True), ("esp32s3", "303a:1001", False), ("esp32c6", "303a:4001", False)):
+            planned = deploy_service.DeployPlan(flasher.EsptoolFlasher(tool, chip), [], [], [])
+            with self.subTest(chip=chip, usb=usb):
+                self.assertIs(deploy_service._keeps_boot_entry(planned, board_look.Port("/dev/x", None, usb, None)), keeps)
 
 
 class TheFactsAfterTheFlashTest(GateCase):
