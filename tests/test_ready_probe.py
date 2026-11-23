@@ -1,6 +1,8 @@
 """P215 step 2 (#196): ReadyProbe reads the board on its own port, and a board it cannot reach is unknown, never judged."""
 
+import copy
 import hashlib
+import pickle
 import subprocess
 import sys
 import unittest
@@ -23,6 +25,9 @@ MAIN = {"/main.py": hashlib.sha256(b"print('ready')\n").hexdigest()}
 C6_CONSOLE = (ROOT / "tests" / "data" / "ready_line" / "c6-console-2026-11-22.txt").read_text()
 #: The board's answer to the hash code: the one file of MAIN, as the image holds it.
 HASHES = "file %s /main.py\n" % MAIN["/main.py"]
+#: What mpremote printed when the 13:19 deploy's facts copy failed on the FireBeetle 2 C6 (303a:1001), 2026-11-23 (P1022).
+SETTLE_OUTPUT = ("b''\nspark: the 2.5 s settle heard b''\nTraceback (most recent call last):\n"
+                 "mpremote.transport.TransportError: could not enter raw repl\n")
 
 
 
@@ -146,6 +151,54 @@ class WhatTheBoardSaysTest(unittest.TestCase):
         facts = board_facts.ReadingFile(connection, sleep=waited.append)
         self.assertIsNone(facts.write({"a": 1}))
         self.assertEqual((waited, len(connection.copied)), ([2], 2))
+
+    def test_a_refused_copy_keeps_what_mpremote_printed_on_each_try_settle_note_and_all(self):
+        # P1022: the 13:19 deploy dropped this output and kept one line of it
+        refused = board_connection.BoardUnreachableError("could not enter raw repl", SETTLE_OUTPUT)
+        facts = board_facts.ReadingFile(FakeBoardConnection(copy_raises=[refused, refused]), sleep=lambda seconds: None)
+        self.assertTrue(facts.write({"a": 1}))
+        self.assertEqual(facts.heard, "the facts copy, the first try: mpremote printed:\n" + SETTLE_OUTPUT
+                                      + "the facts copy, the retry: mpremote printed:\n" + SETTLE_OUTPUT)
+
+    def test_a_retry_that_writes_keeps_the_first_try_s_output(self):
+        refused = board_connection.BoardUnreachableError("could not enter raw repl", "spark: the 2.5 s settle heard b''")
+        facts = board_facts.ReadingFile(FakeBoardConnection(board_facts.facts_text({"a": 1}), copy_raises=[refused, None]),
+                                        sleep=lambda seconds: None)
+        self.assertIsNone(facts.write({"a": 1}))
+        self.assertEqual(facts.heard, "the facts copy, the first try: mpremote printed:\nspark: the 2.5 s settle heard b''\n")
+
+    def test_a_copy_that_works_heard_nothing_and_an_empty_output_is_said(self):
+        facts = board_facts.ReadingFile(FakeBoardConnection(board_facts.facts_text({"a": 1})), sleep=lambda seconds: None)
+        self.assertIsNone(facts.write({"a": 1}))
+        self.assertEqual(facts.heard, "")
+        silent = board_facts.ReadingFile(FakeBoardConnection(copy_raises=board_connection.BoardUnreachableError("no answer in 20 s")),
+                                         sleep=lambda seconds: None)
+        silent.write({"a": 1})
+        self.assertEqual(silent.heard, "the facts copy, the first try: mpremote printed:\nnothing\n")
+
+    def test_a_facts_line_is_the_board_log_s_line_and_keeps_its_fields_through_a_copy(self):
+        line = board_facts.FactsLine("facts file: not written: x", False, "the facts copy, the first try: mpremote printed:\nnothing\n")
+        self.assertEqual((line, line.written), ("facts file: not written: x", False))
+        for make in (copy.copy, copy.deepcopy, lambda one: pickle.loads(pickle.dumps(one))):
+            try:
+                made = make(line)
+            except TypeError as cannot:  # str's own __getnewargs__ gives __new__ one argument of three
+                self.fail("a FactsLine cannot be made again: %s" % cannot)
+            self.assertEqual((made, made.written, made.heard), (line, False, line.heard))
+        self.assertEqual(board_facts.FactsLine("facts file spark.json sha256: f", True).heard, "")
+
+    def test_a_ready_result_says_whether_the_board_printed_its_files_hashes(self):
+        # P1022: the fix says what spark read, from this fact and never from the sentence's words
+        refused = board_connection.BoardUnreachableError("could not enter raw repl", "")
+        unread, not_started = board_ready_probe(FakeBoardConnection(refused)), board_ready_probe(FakeBoardConnection(HASHES, refused))
+        self.assertEqual((unread.verdict, unread.files_read), ("ready unknown", False))
+        self.assertEqual((not_started.verdict, not_started.files_read), ("ready unknown", True))
+        self.assertTrue(board_ready_probe(FakeBoardConnection(HASHES, "ready\n")).files_read)
+        self.assertFalse(ready_probe.ReadyProbe(FakeBoardConnection()).check({}).files_read)
+        for made in (not_started._replace(sentence="x"), copy.copy(not_started), pickle.loads(pickle.dumps(not_started))):
+            self.assertIs(getattr(made, "files_read", None), True)
+        verdict, _, _ = not_started  # it still unpacks to three
+        self.assertEqual(verdict, "ready unknown")
 
 
 def board_ready_probe(connection):

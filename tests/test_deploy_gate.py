@@ -841,6 +841,123 @@ class TheBoardInDownloadModeTest(GateCase):
                          [FOUND["board-shell"].command + [self.look().port, "2"]])
 
 
+#: The fix of a ready_unknown deploy whose passed run's log names no files (P1022): the image is on the flash, nothing more.
+NO_FILES_FIX = ("The image is on the flash: spark did not flash again and did not erase again. Run the scenario again, so "
+                "that its log names the files. Only a deploy after that checks ready.")
+#: What mpremote printed on the FireBeetle 2 C6 (303a:1001) when the 13:19 deploy's facts copy and hash read failed,
+#: 2026-11-23 (P1022, the kept board log of p934-display2, the traceback's file lines left out).
+SETTLE_STDERR = ("spark: the 2.5 s settle heard b''\nTraceback (most recent call last):\n"
+                 "mpremote.transport.TransportError: could not enter raw repl\n")
+
+
+@needs_littlefs
+class TheReadyUnknownWordsTest(GateCase):
+    """P1022 slice 2: after a verified write that ready cannot confirm, deploy.py says what spark knows, what it did not
+    do and what to try in order, and the board log keeps what mpremote printed on each failed facts copy."""
+
+    def flash(self, probe, platform=None):
+        self.run_the_scenario()
+        return self.deploy("--token", self.token(), consent=FakeConsent(True), probe=probe, platform=platform)
+
+    def board_log(self):
+        return next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
+
+    def fix_line(self, said):
+        """The one line deploy.py printed that starts with what spark knows."""
+        lines = [line.strip() for line in said.splitlines() if line.strip().startswith("What spark knows:")]
+        self.assertEqual(len(lines), 1, said)
+        return lines[0]
+
+    def test_the_second_sighting_keeps_both_facts_tries_in_the_board_log_and_says_the_file_was_not_written(self):
+        # 2026-11-23 13:19 CET: both facts copies and the hash read refused the raw REPL, and the console heard nothing
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        code, said, _ = self.flash(FakeConsoleProbe(""))
+        self.assertEqual(code, 2)
+        tries = ("the facts copy, the first try: mpremote printed:\nb''\n" + SETTLE_STDERR
+                 + "the facts copy, the retry: mpremote printed:\nb''\n" + SETTLE_STDERR)
+        log = self.board_log()
+        self.assertIn(tries, log)
+        self.assertLess(log.index("console with DTR and RTS off: nothing"), log.index(tries))  # its own block, after the read's
+        fix = self.fix_line(said)
+        for words in ("The board's files were not read.", "The board's console printed nothing, so spark did not see `ready`.",
+                      "The facts file spark.json was not written.", "it did not flash again and did not erase again",
+                      "2. Press the board's RESET (R, top left, beside the USB-C) once. Left and right as seen with the metal shield"):
+            self.assertIn(words, fix)
+        self.assertLess(said.index("store record: "), said.index(fix))
+        self.assertLess(said.index(fix), said.index("then, to see it start"))
+
+    def test_the_first_sighting_says_the_facts_file_was_written_and_the_console_heard_ready(self):
+        # 2026-11-22 23:22 CET: the facts file was written, the hash read refused the raw REPL, the console heard the boot
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        code, said, _ = self.flash(FakeConsoleProbe(C6_CONSOLE))
+        self.assertEqual(code, 2)
+        fix = self.fix_line(said)
+        self.assertIn("The facts file spark.json was written and read back.", fix)
+        self.assertIn("The board's console printed `ready, cpu 80 MHz`, so the firmware started.", fix)
+        self.assertNotIn("did not see `ready`", fix)
+        self.assertNotIn("the facts copy, ", self.board_log())  # no failed copy, nothing to keep
+
+    def test_a_board_whose_files_were_read_and_whose_start_failed_says_so(self):
+        self.prints = subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        code, said, _ = self.flash(FakeConsoleProbe("rst:0x15 (USB_UART_HPSYS),boot:0x1e\nentry 0x4086b910\n"))
+        self.assertEqual(code, 2)
+        fix = self.fix_line(said)
+        self.assertIn("The board's files were read, but mpremote did not start the firmware.", fix)
+        self.assertIn("The board's console printed `rst:0x15 (USB_UART_HPSYS),boot:0x1e`, and no `ready`.", fix)
+
+    def test_a_console_that_was_not_read_is_said(self):
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"])
+        code, said, _ = self.flash(None, platform=FakeProbePlatform(self.project, None, find_fake_tool))
+        self.assertEqual(code, 2)
+        self.assertIn("The board's console was not read, and spark did not see `ready`.", self.fix_line(said))
+
+    def test_a_facts_copy_written_on_a_retry_keeps_the_first_try_s_output_in_the_board_log(self):
+        self.uncopied = [subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)]
+        code, _, _ = self.flash(None)
+        self.assertEqual(code, 0)
+        self.assertIn("the facts copy, the first try: mpremote printed:\nb''\n" + SETTLE_STDERR, self.board_log())
+
+    def test_a_facts_file_the_first_read_wrote_is_said_written_when_the_read_again_could_not_copy_it(self):
+        # the review of #1516 (the refuter, path A): the read again after a console that printed ready (P245)
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        refused = self.unread
+
+        def refuse_the_copies():
+            self.uncopied = refused
+        code, said, _ = self.flash(FakeConsoleProbe(C6_CONSOLE, on_console=refuse_the_copies))
+        self.assertEqual(code, 2)
+        self.assertIn("facts file: not written", said)  # the last read's line, as the board log keeps it
+        self.assertIn("The facts file spark.json was written and read back.", self.fix_line(said))
+
+    def test_files_the_first_read_hashed_are_said_read_when_the_read_again_could_not_hash_them(self):
+        # the review of #1516 (the refuter, path B): the first read hashed the files and could not start the firmware
+        self.prints = subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        refused = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+
+        def refuse_the_hashes():
+            self.unread = refused
+        code, said, _ = self.flash(FakeConsoleProbe(C6_CONSOLE, on_console=refuse_the_hashes))
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: mpremote could not read the board's files", said)  # the last read's sentence
+        self.assertIn("The board's files were read, but mpremote did not start the firmware.", self.fix_line(said))
+
+    def test_a_board_left_in_download_mode_gets_the_person_action_and_no_fix_line(self):
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, ["mpremote"])
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"))
+        self.assertEqual(code, 2)
+        self.assertIn("the board still waits in download mode after 60 s", said)
+        self.assertNotIn("What spark knows:", said)
+
+    def test_a_log_that_names_no_files_says_only_to_run_the_scenario_again(self):
+        self.run_the_scenario()
+        log = next((self.project / "sim" / "runs").glob("*.log"))
+        log.write_text("".join(line for line in log.read_text().splitlines(True) if not line.startswith("file sha256: ")))
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True))
+        self.assertEqual(code, 2)
+        self.assertIn("  " + NO_FILES_FIX + "\n", said)
+        self.assertNotIn("What spark knows:", said)
+
+
 class TheFactsAfterTheFlashTest(GateCase):
     """P215 step 3 (D22, D23, D44): the board holds what spark put there, and the store remembers the board by its MAC."""
 

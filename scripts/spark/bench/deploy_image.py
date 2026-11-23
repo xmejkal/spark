@@ -18,6 +18,7 @@ from spark.bench import deploy_gate
 from spark.bench import download_mode
 from spark.bench import known_board
 from spark.bench import ready_probe
+from spark.records import board_records
 from spark.records import store
 from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
@@ -303,6 +304,9 @@ class DeployFlowService:
             reached["notes"] = ["the store record was not written: %s" % cannot]
             self.say(DeployPhase.VERIFY, "store record: not written: %s" % cannot)
         if ready.verdict == ready_probe.UNKNOWN:
+            if reached["reason"] == board_codes.READY_UNKNOWN:  # P1022: what spark knows, what it did not do, what to try
+                reached["fix"] = board_envelope.ready_unknown_fix(result, board_records.ButtonPlaces.of_project(self.service.project))
+                self.say(DeployPhase.VERIFY, reached["fix"])
             if result.start is None or result.start.port:  # P462: with the port gone there is nothing to watch
                 self.say(DeployPhase.VERIFY, WATCH % shlex.join(result.repl_command), raw=True)
             return EXIT_COULD_NOT_RUN
@@ -372,6 +376,13 @@ mpremote answers after it: a restart that left the board in download mode is sai
 ready is unknown with the code `download_mode_stayed`, or `port_gone` when the port was not listed or did not come back
 (then there is no REPL line). If it reads a line whose first word is the firmware's `ready`, the board finished its
 restart late, and deploy.py reads it again at once. The board log keeps the first read's words too. What the port printed, `nothing`, or why it could not be read goes in the board log.
+
+When ready is unknown and the passed log names files, deploy.py prints one more line (P1022). It says what spark knows:
+the write passed esptool's hash check, whether the board's files were read, what the console printed, and whether
+spark.json was written. It says what spark did not do: no second flash and no second erase. Then it says what to try, in
+order: look.py after a minute, then RESET once and live.py, then the REPL line. With --json the unchecked item's fix is
+the same text, and `next` holds the look, live and watch steps. The board log keeps what mpremote printed on each
+failed facts copy.
 
 Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)

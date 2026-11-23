@@ -33,8 +33,10 @@ DeployPlan = collections.namedtuple("DeployPlan", "flasher commands mpremote not
 #: `repl_command` is the argv that opens the board's REPL.
 #: `start` is None when no wait for a start came (the board answered), else a board_start.BoardStartResult: its `code` is
 #: None when mpremote answered after a restart, else download_mode_stayed or port_gone (P462).
-DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command start image_sha256",
-                                      defaults=(None, None))
+#: `console` is what the board's console printed after the flash, "" for nothing, or None when it was not read (P1022).
+#: `facts_line` is a board_facts.FactsLine.
+DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command start image_sha256 console",
+                                      defaults=(None, None, None))
 
 
 class FlashError(DeployError):
@@ -50,6 +52,14 @@ class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 fact
         return "# deploy %s on %s\nimage sha256: %s\nsimulation: %s\n%s\n%s: %s\n\n%s\n" % (
             self.moment.isoformat(timespec="seconds"), self.port, self.image_sha256, self.simulation, self.facts_line,
             self.verdict, self.sentence, self.heard)
+
+
+def every_read(reads):
+    """The last of `reads`, each (the facts, a board_facts.FactsLine, a ReadyResult), with the facts file written and the board's
+    files read when any read did (P1022): a read again after P245 can fail where the first read worked."""
+    facts, line, ready = reads[-1]
+    return (facts, board_facts.FactsLine(line, any(read[1].written for read in reads), line.heard),
+            ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads)))
 
 
 def write_board_log(project, log):
@@ -156,11 +166,13 @@ class DeployService:
         starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), look.reading.mac, self.clock,
                                                 board_records.ButtonPlaces.of_project(self.project))
         row = starter.find_port(look.port)
-        port = row and row.device
+        port, reads = row and row.device, []  # P1022: every read of the board, for the facts copies' block and the fix
 
         def read(on):  # P1007: the USB id the port has at this read picks the connection
             connection = on and self.platform.make_connection(planned.mpremote, on, self.run, starter.usb_of(on) or (row and row.usb))
-            return self._read_board(image, look, connection, expected, moment)
+            board = self._read_board(image, look, connection, expected, moment)
+            reads.append(board)
+            return board
 
         board, start = read(port), None
         if port is None:
@@ -168,16 +180,16 @@ class DeployService:
         elif (board[2].verdict == ready_probe.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
               and board_start.console_may_be_read(row, look.port)):
             board, start = self._after_silence(starter, row, board, read)
-        facts, facts_line, ready = board
+        facts, facts_line, ready = every_read(reads)  # board is the last of them
         if start and start.code:
             ready = ready._replace(sentence=start.sentence)
         image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
         log_path = write_board_log(self.project, BoardLog(moment, look.port, image_sha256,
                                                           facts_line, ready.verdict, ready.sentence,
-                                                          "".join(starter.heard) + ready.log, self.evidence.simulation))
+                                                          "".join(starter.heard) + ready.log + "".join(read[1].heard for read in reads), self.evidence.simulation))
         shown_on = start.port if start else port  # the REPL names the port the board answered on, or none when it is gone
         repl = self.platform.make_connection(planned.mpremote, shown_on, self.run).repl_command()
-        return DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)
+        return DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)._replace(console=starter.console)
 
     def _after_silence(self, starter, row, board, read):
         """(the board read last, a BoardStartResult or None) for a board that stayed silent on the Port `row` after the flash: the
@@ -188,6 +200,7 @@ class DeployService:
         if not probe:
             return board, None
         waits, console = probe.waits_in_download_mode()
+        starter.console = console
         starter.note("console with DTR and RTS off: %s\n" % (console.strip() or "nothing"))
         if waits:
             self.report(Event.line(DeployPhase.VERIFY, download_mode.press_reset(starter.places)))
@@ -210,7 +223,7 @@ class DeployService:
         """(the facts, the facts line, a ReadyResult) of the board on `connection` after a flash: the facts, then ready. With
         none (the port is gone) nothing is read, because mpremote would choose a board of its own: the facts are made and not written."""
         if connection is None:
-            return (self._facts_of(image, report, expected, moment), "facts file: not written: the board's port is gone",
+            return (self._facts_of(image, report, expected, moment), board_facts.FactsLine("facts file: not written: the board's port is gone", False),
                     ready_probe.ReadyResult(ready_probe.UNKNOWN, "", ""))
         facts, facts_line = self._put_facts(image, report, connection, expected, moment)
         return facts, facts_line, self.platform.make_ready_probe(connection).check(expected)
@@ -221,12 +234,13 @@ class DeployService:
                                  self.evidence.simulation)
 
     def _put_facts(self, image, report, connection, expected, moment):
-        """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
+        """(the facts, the board log's line about the facts file, a board_facts.FactsLine): copied to the board and read back (D22)."""
         said = self._facts_of(image, report, expected, moment)
         facts_file = board_facts.ReadingFile(connection, self.clock.sleep)
         why = facts_file.write(said)
         if why:
-            return said, "facts file: not written: %s" % why
+            return said, board_facts.FactsLine("facts file: not written: %s" % why, False, facts_file.heard)
         retried = " (written on a retry after: %s)" % facts_file.first_failure if facts_file.first_failure else ""
-        return said, "facts file %s sha256: %s%s" % (board_facts.FACTS_FILE,
-                                                    hashlib.sha256(board_facts.facts_text(said).encode()).hexdigest(), retried)
+        return said, board_facts.FactsLine("facts file %s sha256: %s%s" % (board_facts.FACTS_FILE,
+                                           hashlib.sha256(board_facts.facts_text(said).encode()).hexdigest(), retried),
+                                           True, facts_file.heard)

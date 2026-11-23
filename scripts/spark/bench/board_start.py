@@ -52,6 +52,7 @@ class BoardStartService:
     def __init__(self, finder, mac, clock, places):
         self.finder, self.mac, self.clock, self.places = finder, _key(mac), clock, places
         self.heard = []
+        self.console = None  # P1022: what the console printed after the flash, or None when it was not read
 
     def _listed(self, hint):
         """The Port row the board is listed on now: the row whose serial starts with the MAC (MicroPython's serial is the MAC

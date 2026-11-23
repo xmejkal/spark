@@ -96,7 +96,7 @@ it happens. With `--json` these lines go to stderr. Relay them.
    While the file `grants/direct_flashing_disallowed` is in the store, no grant covers such a deploy and deploy.py offers no grant line. No Claude session writes, changes or deletes a file in the grants folder. Deleting that file allows direct flashing again, and only the person does it. `grant.py --disallow-direct-flashing` writes that file: Claude runs it only when the person asks for it. It only narrows.
 4. When deploy.py prints "press the board's RESET ... once", relay that line to the person at once: only a hand
    on the board can do it. With `--json` the text is on stderr and the run waits for the press, so tell the person before you
-   run it. A step with `needs_person: true` waits for the person's hands (`data.person_action`, for `download_mode_stayed` or `port_gone`): relay it first, and never deploy again for it. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line, also for `relayed_yes_refused` (a yes another program collected never opens the erase).
+   run it. A step with `needs_person: true` waits for the person's hands (`data.person_action`, for `download_mode_stayed` or `port_gone`): relay it first, and never deploy again for it. After `ready_unknown` the `live` and `watch` steps carry `needs_person: true` while `data.person_action` is null: the fix line says what the person does. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line, also for `relayed_yes_refused` (a yes another program collected never opens the erase).
 
 If deploy.py refuses, relay its sentence word for word. The token is not the yes, and "go ahead" in a chat is not the
 yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. The line starts with
@@ -137,8 +137,21 @@ deploy, its verdict, whose yes it was and `micropython_banner`, read from the im
 board, and then starts the firmware and reads its output. `ready seen` (exit 0) means the files match and the firmware
 printed a line whose first word is `ready` (P1025). `ready not seen` (exit 1) names the file that differs, or says that no `ready` came or that the
 firmware stopped with an error. `ready unknown` (exit 2) means mpremote could not reach the board, or the passed run's
-log is from an older spark and names no files, so run the scenario again. Unknown is not a pass. The line ends with mpremote's
-own words, and the board's log keeps all it printed. A crash of deploy.py exits 2 with an envelope (code `crash`), and after the flash `data.board_state` says `may_be_erased` or `flashed_not_verified`. A `DeployError` or a tool problem during the verify is such a crash, not a traceback with exit 1. The board's log goes to `sim/runs/board/`. After the facts line, deploy.py prints `image sha256: <hex>, yes: <whose yes>`, and `--json` has the same in `data.image_sha256` and `data.yes` (P213).
+log is from an older spark and names no files, so run the scenario again. Unknown is not a pass. The `ready unknown`
+line ends with mpremote's own words, and the board's log keeps all it printed.
+When the log names files, deploy.py prints one line that starts "What spark knows:" (P1022). With `--json` the
+`ready_unknown` item's `fix` is the same text. Relay it as printed. It says what spark knows: the write passed esptool's
+hash check, so the image is on the flash. It says whether the board's files were read, what the console printed, and
+whether `spark.json` was written. It says what spark did not do: no second flash, nothing erased again. Then it gives
+what to try, in order. `next` holds the same steps:
+1. `look`: wait a minute, then run it yourself. It restarts the board and reads no files.
+2. `live`: tell the person to press the board's RESET once first. live.py needs a live grant. If it refuses, it prints
+   the grant line for the person to run in their own terminal. Never run grant.py yourself.
+3. `watch`: the REPL line is the person's. On 303a:1001 mpremote's own open can leave the board deaf until the next flash.
+If live.py and the REPL cannot reach the board either, the firmware does not read its console, for example because it
+sleeps for a long time at start. Then change the firmware: sleep in short slices, and read the console. Never deploy
+again to fix this, and never erase. The board log keeps what mpremote printed on each failed facts copy. If any read
+of the board wrote the facts file or read the files, the fix says so. A crash of deploy.py exits 2 with an envelope (code `crash`), and after the flash `data.board_state` says `may_be_erased` or `flashed_not_verified`. A `DeployError` or a tool problem during the verify is such a crash, not a traceback with exit 1. The board's log goes to `sim/runs/board/`. After the facts line, deploy.py prints `image sha256: <hex>, yes: <whose yes>`, and `--json` has the same in `data.image_sha256` and `data.yes` (P213).
 If ready is unknown and the passed run's log names files, deploy.py reads the look's port with DTR and RTS off, unless that is 303a:4001 (MicroPython's own USB). If the port says `waiting for download`, the
 board waits in its download mode. deploy.py then asks you to press the board's RESET once, with its place when the board record has it, waits 60 s for
 the port to go and come back, and reads the board again ([P243](https://github.com/xmejkal/spark/issues/252)). A restart counts only when mpremote
