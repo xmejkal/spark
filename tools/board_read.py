@@ -30,11 +30,11 @@ RATE = "rateLimit{cost remaining limit}"
 #: The projects of OWNER by title: the gate finds its boards by their titles, not their numbers.
 PROJECTS = "query($login:String!){%s user(login:$login){projectsV2(first:100){nodes{number title}}}}" % RATE
 #: One page of a board (P168, P811): the project's id and status updates (board.py's close posts to the id and reads its
-#: day-closes from the updates), and 100 items, each an issue's number, title, body, repository, labels and parent story,
-#: and the four fields the limits and the status read, each asked by its name — a renamed field answers null, which is
+#: day-closes from the updates), and 100 items, each with its board item's id (board.py's move writes through it, P1021)
+#: and an issue's number, title, body, repository, labels and parent story, and the four fields the limits and the status read, each asked by its name — a renamed field answers null, which is
 #: a card with no Status (check_backlog.no_status_on). A draft or a pull request answers an empty content.
 QUERY = """query($login:String!,$number:Int!,$after:String){%s user(login:$login){projectV2(number:$number){id
- items(first:100,after:$after){totalCount pageInfo{hasNextPage endCursor} nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}} parent{number closed}}}
+ items(first:100,after:$after){totalCount pageInfo{hasNextPage endCursor} nodes{id content{... on Issue{number title body repository{name} labels(first:10){nodes{name}} parent{number closed}}}
   status:fieldValueByName(name:"Status"){... on ProjectV2ItemFieldSingleSelectValue{name updatedAt}}
   slice:fieldValueByName(name:"Slice"){... on ProjectV2ItemFieldSingleSelectValue{name}}
   waitingOn:fieldValueByName(name:"Waiting on"){... on ProjectV2ItemFieldSingleSelectValue{name}}
@@ -134,7 +134,8 @@ def to_items(project):
     """
     The board's issues in the shape check_backlog reads — status, slice, waiting on, waiting since, labels, the open
     parent story's number (open_parent) and content {number, title, body, repo} — with when each card's Status last
-    changed. A draft or a pull request on the board is no backlog item and is skipped (P811). Unreadable for a node that
+    changed, and the board item's id as `item_id` (None when the node has none), which board.py's move writes through
+    (P1021). A draft or a pull request on the board is no backlog item and is skipped (P811). Unreadable for a node that
     is not the board's shape.
     """
     items = []
@@ -150,6 +151,7 @@ def to_items(project):
             for field, key, value in FIELDS:
                 item[key] = (node.get(field) or {}).get(value)
             item["status_changed"] = (node.get("status") or {}).get("updatedAt")
+            item["item_id"] = node.get("id")
             items.append(item)
     except FAILURES as error:
         raise Unreadable(cause(error)) from None

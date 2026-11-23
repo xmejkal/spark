@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """
-The state of the work at every session start, and the day-close (P102c; docs/2026-10-05-session-status-design.md).
+The state of the work at every session start, the day-close (P102c; docs/2026-10-05-session-status-design.md) and a
+card's move (P1021).
 
     board.py status [--when-in DIR ...]          # both boards in a dozen lines; nothing outside the named folders
     board.py close [--date D] [--dry-run] LINE|- # the day-close, as a status update on the spark board
+    board.py move CARD STAGE [--waiting-on WHO] [--dry-run]  # a card's move, the gate's limits checked first (P1021)
 
-It reads the boards through the PO's own gh login and stores nothing: board_read.py's one GraphQL query per 100 items
+It reads the boards through the PO's own gh login: board_read.py's one GraphQL query per 100 items
 of a board, page after page until the whole board is read, 1 point a page (GitHub allows 5,000 GraphQL points an hour,
 shared with everything else), REST for pull requests. The working days come from local git, so
-being offline costs the status, never the session: every call gives up after STATUS_TIMEOUT seconds.
+being offline costs the status, never the session: every call gives up after STATUS_TIMEOUT seconds. It writes only
+the day-close and a card's move. A move checks the gate's limits on a copy of the board first (move_problems()), and
+writes the Status, and Waiting on and Waiting since with --waiting-on, only when no new sentence of the gate names the
+card.
 
-Both verbs also print two lines (P1020): the inflow, "filed in 7 days: N, closed: M", from one more GraphQL query of two
-searches, and the retro's age, "last retro: R11, D days ago", from scrum/RETROSPECTIVES.md. Either one slipping puts
-the close at risk.
+The status and the close also print two lines (P1020): the inflow, "filed in 7 days: N, closed: M", from one more
+GraphQL query of two searches, and the retro's age, "last retro: R11, D days ago", from scrum/RETROSPECTIVES.md. Either
+one slipping puts the close at risk.
 """
 
 import argparse
@@ -237,6 +242,146 @@ def _gh(*args, timeout=CLOSE_TIMEOUT):
     return json.loads(done.stdout) if done.stdout.strip() else None
 
 
+#: The project's fields by name, each with its id and a single select's options (P1021). move() writes through these ids,
+#: so no id is written in the code.
+FIELDS_QUERY = ("query($p:ID!){node(id:$p){... on ProjectV2{fields(first:50){nodes{... on ProjectV2FieldCommon{id name} "
+                "... on ProjectV2SingleSelectField{options{id name}}}}}}}")
+#: The three fields a move writes, by their names on the board.
+STATUS, WAITING_ON, WAITING_SINCE = "Status", "Waiting on", "Waiting since"
+#: One field set and one field cleared, each an aliased mutation in a document of move(): alias, project, item, field.
+SET = "%s:updateProjectV2ItemFieldValue(input:{projectId:%s,itemId:%s,fieldId:%s,value:{%s:%s}}){projectV2Item{id}}"
+CLEAR = "%s:clearProjectV2ItemFieldValue(input:{projectId:%s,itemId:%s,fieldId:%s}){projectV2Item{id}}"
+
+
+def read_fields(project_id, ask):
+    """{name: {"id": id, "options": {name: id}}} of the project's fields, from one FIELDS_QUERY; Unreadable if not read."""
+    try:
+        data = ask("api", "graphql", "-f", "query=" + FIELDS_QUERY, "-f", "p=" + project_id)["data"]
+        return {field["name"]: {"id": field["id"], "options": {o["name"]: o["id"] for o in field.get("options") or ()}}
+                for field in data["node"]["fields"]["nodes"] if field.get("name")}
+    except FAILURES as error:
+        raise Unreadable(cause(error)) from None
+
+
+def names_card(number, sentence):
+    """Whether a gate sentence names spark's card `number` as a whole token: `#1488`, never `#14880` or `bin #1488`."""
+    return re.search(r"(?<!bin )(?<![\w#])#%d(?!\d)" % number, sentence) is not None
+
+
+def _card(spark, number):
+    """Spark's card `number` of spark's repository (the board holds issues of other repositories too); ValueError."""
+    for item in spark:
+        if item["content"].get("repo") == "spark" and item["content"].get("number") == number:
+            return item
+    raise ValueError("#%d is not a card of spark's board" % number)
+
+
+def moved(item, stage, waiting_on, today):
+    """
+    A copy of the card as the move leaves it: in `stage`, and with `waiting_on` waiting on WHO since the card's own date
+    when it already waits on the same one with a date, else since today. A move to Done clears the wait. A card that
+    waits with no date and gets no `waiting_on` keeps no date: the check never passes on a value the board does not get.
+    """
+    after = dict(item, status=stage)
+    if waiting_on:
+        same = item.get("waiting on") == waiting_on and item.get("waiting since")
+        after.update({"waiting on": waiting_on, "waiting since": item["waiting since"] if same else today.isoformat()})
+    if stage == "Done":
+        after.update({"waiting on": None, "waiting since": None})
+    return after
+
+
+def move_problems(boards, number, stage, waiting_on=None, today=None):
+    """
+    The gate's sentences that refuse moving spark's card `number` to `stage` (P1021): check_backlog.problems() on a copy
+    of spark's cards with the card moved (moved()), and the bin's, each sentence that was not there before the move and
+    names the card (names_card()). An old broken limit, or a stage that stays over its limit after a card leaves it,
+    refuses nothing. ValueError for a stage the gate does not know or a card not on spark's board; UnknownStage as
+    problems() raises it.
+    """
+    if stage not in check_backlog.STAGES:
+        raise ValueError('"%s" is no stage of the board: %s' % (stage, ", ".join(check_backlog.STAGES)))
+    spark, bin_items = dict(boards)["spark"], dict(boards).get("bin")
+    item = _card(spark, number)
+    after = [moved(i, stage, waiting_on, today or dt.date.today()) if i is item else i for i in spark]
+    before = check_backlog.problems(spark, bin_items=bin_items)
+    return [said for said in check_backlog.problems(after, bin_items=bin_items)
+            if said not in before and names_card(number, said)]
+
+
+def _write(document, ask):
+    """Send one GraphQL document through `ask`: None when it was written, else the cause (gh's error or GraphQL's)."""
+    try:
+        answer = ask("api", "graphql", "-f", "query=" + document)
+    except FAILURES as error:
+        return cause(error)
+    errors = answer.get("errors") if isinstance(answer, dict) else None
+    return (errors[0].get("message") or "GraphQL error") if errors else None
+
+
+def move(boards, project_id, fields, number, stage, waiting_on, today, ask, dry_run=False):
+    """
+    (exit code, lines) of moving spark's card `number` to `stage` (P1021). `fields` is read_fields()'s answer. It checks
+    first (move_problems()) and writes nothing over a refusing sentence, a field or option the board lacks, or a card it
+    cannot find. Then it writes in two calls through `ask`, each only after the one before held no error, because GitHub
+    runs a document's mutations one by one with no rollback: with `waiting_on`, Waiting on and Waiting since, then the
+    Status; to Done with a wait, the Status, then both waits cleared; else the Status alone. A failed call says what was
+    written and what was not. `dry_run` checks and writes nothing.
+    """
+    missing = [name for name in (STATUS, WAITING_ON, WAITING_SINCE) if name not in fields]
+    if missing:
+        return 1, ["move: could-not-run — the board has no field '%s'" % missing[0]]
+    if stage not in fields[STATUS]["options"]:
+        return 1, ["move: could-not-run — the board's Status has no option '%s'" % stage]
+    options = fields[WAITING_ON]["options"]
+    if waiting_on and waiting_on not in options:
+        return 1, ["move: refused — '%s' is no option of Waiting on: %s" % (waiting_on, ", ".join(options))]
+    try:
+        refusals = move_problems(boards, number, stage, waiting_on, today)
+    except ValueError as refused:
+        return 1, ["move: refused — %s" % refused]
+    except check_backlog.UnknownStage as unplaced:
+        return 1, ["move: could-not-run — %s" % unplaced]
+    if refusals:
+        return 1, ["move: refused — " + said for said in refusals]
+    item = _card(dict(boards)["spark"], number)
+    if not item.get("item_id"):
+        return 1, ["move: could-not-run — the board gave no item id for #%d" % number]
+    after = moved(item, stage, waiting_on, today)
+    clears = stage == "Done" and bool(item.get("waiting on") or item.get("waiting since"))
+    said = "%s #%d to %s" % ("would move" if dry_run else "moved", number, stage)
+    said += (", waiting on %s since %s" % (waiting_on, after["waiting since"]) if waiting_on else "")
+    said += ", its wait cleared" if clears else ""
+    if dry_run:
+        return 0, [said + " (dry run — nothing written)"]
+    target = tuple(json.dumps(each) for each in (project_id, item["item_id"]))
+
+    def field(name):
+        return json.dumps(fields[name]["id"])
+    status = "mutation{%s}" % (SET % ("status", *target, field(STATUS), "singleSelectOptionId",
+                                      json.dumps(fields[STATUS]["options"][stage])))
+    # A call that failed may have written in part or timed out after GitHub took it: its own fields "may not have been".
+    if waiting_on:
+        wait = "mutation{%s %s}" % (SET % ("waitOn", *target, field(WAITING_ON), "singleSelectOptionId",
+                                           json.dumps(options[waiting_on])),
+                                    SET % ("waitSince", *target, field(WAITING_SINCE), "date",
+                                           json.dumps(after["waiting since"])))
+        calls = [(wait, "Waiting on and Waiting since may not have been written, the Status was not"),
+                 (status, "Waiting on and Waiting since were written, the Status may not have been")]
+    elif clears:
+        clear = "mutation{%s %s}" % (CLEAR % ("waitOn", *target, field(WAITING_ON)),
+                                     CLEAR % ("waitSince", *target, field(WAITING_SINCE)))
+        calls = [(status, "the Status may not have been written, its wait was not cleared"),
+                 (clear, "the Status was written (Done), its wait may not have been cleared")]
+    else:
+        calls = [(status, "the Status may not have been written")]
+    for document, unwritten in calls:
+        failed = _write(document, ask)
+        if failed:
+            return 1, ["move: could-not-run — %s: %s" % (failed, unwritten)]
+    return 0, [said]
+
+
 def gather(timeout=CLOSE_TIMEOUT, ask=None, now=None):
     """
     (both boards, their open PRs, the spark board's closes, its id, why the bin's board was set aside or None, the
@@ -405,12 +550,45 @@ CLOSE_HELP = ("post the day's one status update to spark's board: the line, then
               "those two lines (see status). It "
               "refuses a day already closed (exit 1), and exits 1 with could-not-run when the boards could not be read "
               "or a card is in a stage the gate does not know, or the inflow or the last retro could not be read")
+MOVE_HELP = ("move a card of spark's board to a stage (P1021). It checks the gate's limits on a copy of the board first: "
+             "a gate sentence that is new after the move and names the card refuses the move (exit 1), with each "
+             "sentence, and nothing is written. A limit that other cards broke before the move refuses nothing. Else it "
+             "writes the card's Status. With --waiting-on it first writes Waiting on and Waiting since. Waiting since is "
+             "today's date. It keeps the card's own date only when it already waits on the same one and has a date. A "
+             "move to Done clears both after its Status. A card that is not on spark's board, or a WHO that is no "
+             "option of Waiting on, is refused (exit 1). A board it could not read, the bin's board read in part, a "
+             "field or a Status option the board lacks, or a write that failed is could-not-run (exit 1), and a failed "
+             "write says what was written. A stage that is not one of the seven, or --waiting-on with Done, exits 2")
 
 
-def main(argv=None):
+def _move_main(args, ask):
+    """`board.py move`: gather() both boards, read the fields, and move() the card; the exit code."""
+    try:
+        boards, _, _, project_id, bin_why, _ = gather(ask=ask)
+    except FAILURES as unreachable:  # AttributeError too: a node of the wrong shape is could-not-run, not a traceback
+        print("board: %s — %s" % (COULD_NOT_RUN, unreachable))
+        return 1
+    if bin_why is not None:  # the lane's flight would be counted without the bin's cards
+        print("move: could-not-run — " + check_backlog.BIN_UNREAD % bin_why)
+        return 1
+    try:
+        fields = read_fields(project_id, ask)
+    except Unreadable as unread_fields:
+        print("move: could-not-run — the board's fields: %s" % unread_fields)
+        return 1
+    code, lines = move(boards, project_id, fields, args.card, args.stage, args.waiting_on, dt.date.today(), ask,
+                       dry_run=args.dry_run)
+    print("\n".join(lines))
+    return code
+
+
+def main(argv=None, ask=None):
+    """The CLI. `ask` is the gh that `move` reads and writes through (default: gh), so a test passes a fake one."""
     parser = argparse.ArgumentParser(description="The state of both boards, spark's and the bin's, at a session start, "
-                                                 "and the day-close as a status update on spark's board (P102c). It "
-                                                 "reads through the PO's own gh login and stores nothing.")
+                                                 "the day-close as a status update on spark's board (P102c), and a "
+                                                 "card's move after the gate's limits are checked (P1021). It reads "
+                                                 "and writes through the PO's own gh login, and writes only the "
+                                                 "day-close and a card's move.")
     verbs = parser.add_subparsers(dest="verb", required=True)
     verbs.add_parser("status", help=STATUS_HELP, description=STATUS_HELP).add_argument(
         "--when-in", nargs="+", metavar="DIR", help="the PO's project folders: nothing shows outside them, and their git "
@@ -422,7 +600,17 @@ def main(argv=None):
                                       "and the retro's age still count from today")
     close.add_argument("--dry-run", action="store_true",
                        help="print the update and post nothing (a day already closed is still refused)")
+    moving = verbs.add_parser("move", help=MOVE_HELP, description=MOVE_HELP)
+    moving.add_argument("card", type=int, help="the card's issue number in spark's repository")
+    moving.add_argument("stage", choices=check_backlog.STAGES, help="the stage it moves to")
+    moving.add_argument("--waiting-on", metavar="WHO", help="who the card waits on, an option of the board's Waiting on "
+                                                            "field, such as 'the PO'. Not with Done")
+    moving.add_argument("--dry-run", action="store_true", help="check the move and say it. It writes nothing")
     args = parser.parse_args(argv)
+    if args.verb == "move":
+        if args.waiting_on and args.stage == "Done":
+            parser.error("--waiting-on is not taken with Done: a move to Done clears the wait")
+        return _move_main(args, ask or (lambda *gh_args: _gh(*gh_args)))
     if args.verb == "status" and args.when_in and not inside(os.getcwd(), args.when_in):
         return 0
     today = dt.date.today()

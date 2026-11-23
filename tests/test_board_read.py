@@ -40,8 +40,13 @@ class TheReaderTest(unittest.TestCase):
     def test_a_full_node_is_a_card_with_every_key(self):
         self.assertEqual(board_read.to_items(project(NODE)), [
             {"labels": ["task"], "parent": 3, "status": "Build", "slice": "10 The store", "waiting on": "the PO",
-             "waiting since": "2026-11-12", "status_changed": "2026-11-13T10:00:00Z",
+             "waiting since": "2026-11-12", "status_changed": "2026-11-13T10:00:00Z", "item_id": None,
              "content": {"number": 7, "title": "P7 — x", "body": "b", "repo": "spark"}}])
+
+    def test_each_card_keeps_its_board_item_s_id_and_the_query_asks_it_at_the_item_s_level(self):
+        # P1021: board.py move writes a card's fields through the board item's id, never the issue's.
+        self.assertIn("nodes{id content{", board_read.QUERY)
+        self.assertEqual(board_read.to_items(project(dict(NODE, id="PVTI_7")))[0]["item_id"], "PVTI_7")
 
     def test_a_draft_is_no_card_and_a_board_of_drafts_alone_is_short(self):
         draft = {"content": {}, "status": {"name": "Build"}}
