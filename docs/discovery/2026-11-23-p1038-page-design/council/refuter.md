@@ -507,10 +507,10 @@ QA2's mark, "2 of 4 clearly from spark's records":
 - T-9 · The mark does not reproduce from the files as one count. (a) The question asked for five; the row holds four
   because "the goal and must lines" is one item. `goal` and `must` are two fields of the record (.spark/project.json;
   brief.py:34-41). Counted as two, the same marks give board, goal, must = 3 of 5, which meets "at least 3 of 5".
-  (b) "the open problems (mostly the project's issues and docs)": the two newest open issues, #13 (wake wire) and
-  #14 (measure the current, the 2000 mAh battery), repeat the two `decided` lines of project.json, which D15 makes a
-  field of the brief record. The e-paper part record holds `partial_refresh: false` (issue #6 asks it),
-  `refresh_current_ma: null` and `module_sleep_current_ua: null` (issue #14's ground) and `busy_active_level: null`.
+  (b) "the open problems (mostly the project's issues and docs)": the two newest open issues, #13 and #14 (title withheld: a private repository),
+  repeat the two `decided` lines of project.json, which D15 makes a
+  field of the brief record. The e-paper part record holds `partial_refresh: false` (an open issue asks about it),
+  `refresh_current_ma: null` and `module_sleep_current_ua: null` (the ground of an open issue) and `busy_active_level: null`.
   So three of the six open issues have their fact, or its `null`, in a spark record. (c) "the goal ... (spark: brief
   record)" counts a line that QA3, two minutes later, calls stale. (d) No rule says how "partly" counts, or what four
   answers mean against a line of five. The count is the facilitator's, made in the minute of the answer (QA2 17:39,
@@ -565,9 +565,8 @@ Other changed lines:
 - "A2 missed, so the page needs the project's issues" (D19): A2 is met on another grouping (T-9), and the open
   problems he wants are already in spark's records as `decided` lines and `null` facts. Then O2a with D15 carries
   them, with no gh. Not ruled out.
-- "The issues give the next step and the open problems" (D19): the tracker is as stale as the page was. #4 "step 1:
-  a quote every hour from a local file" is open with `doing`; commit dced993 (2026-11-23 00:54) reads "back to one
-  quote an hour", and QA3 says the gadget is the quotes clock. Who sets the labels is — (★C12). Not ruled out.
+- "The issues give the next step and the open problems" (D19): the tracker is as stale as the page was. #4 (title withheld: a private repository) is open with `doing`, and
+  a later commit in the project changes the step that its title names. QA3 says the gadget is the quotes clock. Who sets the labels is — (★C12). Not ruled out.
 - "Claude is the first reader" (QA1): he opened Claude because the page was a day old and, in his words, not
   readable, which is A1's own premise. Or every working session starts in Claude whatever the page shows, and then
   A1 cannot pass. The account does not separate the two.

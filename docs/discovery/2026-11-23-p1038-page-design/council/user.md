@@ -29,9 +29,9 @@ Short names used below: **the diary** is `~/Development/spark-walks/p934-display
   records describe a quotes clock: the must lines are "A philosophical quote shows on the panel, with its author and
   its work, and it changes every hour." and "The time comes from the internet over Wi-Fi". The goal line in the same
   file still says "It should just display clock and react on pressing the button…". The project has 36 commits since
-  2026-11-22 19:05 (quotes, Czech font, battery steps 1 to 6a, deep sleep) and its own repo, xmejkal/p934-epaper-clock,
+  2026-11-22 19:05 (quotes, Czech font, battery steps 1 to 6a, deep sleep) and its own private repository,
   with 14 issues (6 open: #4, #5, #6, #8, #13, #14) and 2 merged PRs. · E `.spark/project.json` (goal, must),
-  `git log` in the project, `gh issue list --repo xmejkal/p934-epaper-clock`, read 2026-11-23 16:1x CET, page.html:11,
+  `git log` in the project, `gh issue list` in the project, read 2026-11-23 16:1x CET, page.html:11,
   :403-406 · supports only: what the records hold. Which of the goal and the must lines is current is — (they
   disagree. The PO confirmed the must lines on 2026-11-22, commit 83d3e87).
 - **USER-3** · Harm. The page offers "Build the board" to its owner today. A rebuild now moves two pins of a board
@@ -83,7 +83,7 @@ Short names used below: **the diary** is `~/Development/spark-walks/p934-display
   (sha256 2811f223…) equals sim/flash-with-firmware.bin, built 14:05:33. firmware/main.py and schedule.py changed at
   14:18:49, with the merge of PR #12. So firmware/ is perhaps newer than the board. The page says neither. It has nothing
   on the bench facts. It has nothing on the battery: the diary's 30-minute stall came from a battery the page never
-  names. It has nothing on the project's open issues (#13 adds a wire: "a jumper from the BOOT pad to a wake-capable pad"). · E page.html:466,
+  names. It has nothing on the project's open issues (#13 adds a wire, (title withheld: a private repository)). · E page.html:466,
   the store record's last deploy, `shasum` of the image, `ls -lT firmware`, diary.md:401-410, issue #13 title · H
   whether the image's files differ from firmware/ now: not unpacked · supports only: the files.
 - **USER-10** · The published page stayed unchanged for about 27.5 hours of real work. It was republished at 11:46 on
@@ -131,7 +131,7 @@ Short names used below: **the diary** is `~/Development/spark-walks/p934-display
 | 4 | looks for the goal and the must lines, and whether each is met | E page.html:403-406, .spark/project.json | not on the page. The goal and the must lines disagree in the record (USER-2). Must line 3 was met on the bench, diary.md:559 | not yet |
 | 5 | looks for what is on the board now | E store record, page.html:466 | there is no deploy, no image, no verdict, only "main.py written 14:18:49" (USER-9) | not yet |
 | 6 | looks for what to do next (his open issues #13 and #14) | E gh issue list | the page has nothing from the project's own to-do list | not yet |
-| 7 | opens the wiring to add the wake wire of #13 | E page.html:30, :39, :396 | the step numbers and the pill numbers are off by one (USER-4). The new wire is not on the page | partly |
+| 7 | opens the wiring to add the wire of #13 | E page.html:30, :39, :396 | the step numbers and the pill numbers are off by one (USER-4). The new wire is not on the page | partly |
 | 8 | wants the page brought up to date | E commands/page.md:70 | only by typing /spark:page. Nothing tells him the page is old | partly |
 
 Today he asked Claude, the diary and GitHub instead: H. The diary's later entries were written by sessions. Whether he
@@ -211,7 +211,7 @@ must lines and the diary's bench facts. All of these are readable without new ha
 What it cannot supply: whether the board is wired as the page says (page.html:487), what the panel shows now, and
 which of the goal and the must lines is the current intent (USER-2). Only the PO knows these.
 
-What the PO can supply: the current goal, what he sees on the panel, whether he wired the wake wire (#13), and the
+What the PO can supply: the current goal, what he sees on the panel, whether he wired the wire of #13, and the
 battery. He cannot supply: a pick of the board's Wi-Fi from the page (not offered, diary.md:56-57), a pin change
 without a rebuild (pins.py:2, "Regenerate it; do not edit it.").
 
