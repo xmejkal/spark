@@ -68,7 +68,7 @@ CODES = {
     NO_WOKWI_PIN: "the end in the subject has no Wokwi pin: its part's record does not map it, or it is a doubtful pad",
     ROW_FULL: "a pin's row has no free hole for one more jumper, as too many steps join it; the subject is the row",
     NOT_DRAWN_YET: ("the subject is not drawn yet: a rail with no sign or on a breadboard with no rails, a third rail of "
-                    "one sign, a resistor leg on a rail, an off-board supply, or a resistor with both legs joined"),
+                    "one sign, an off-board supply, or a resistor with both legs joined to rows"),
     PLANNER_FAULT: "a fault in spark's planner: a hole claimed twice or an unplaced part joined; the subject names it",
 }
 
@@ -373,16 +373,12 @@ class BreadboardPlanner:
 
     def _refuse_what_is_not_drawn(self, seated):
         """NotDrawnError for the first step the planner does not draw: a rail with no sign or on a breadboard with no
-        rails, a resistor leg on a rail (its pinned leg seats only in a row of holes), or a supply from off the board."""
+        rails, or a supply from off the board. A resistor leg on a rail goes in a free row with a jumper (P960)."""
         for step in seated:
             seat = step.anchor.seat() if step.act != wiring_steps.PLACE else None
             if seat and seat.kind == wiring_steps.RAIL and not (seat.sign and self.geometry.surface.rails):
                 why = "this breadboard has no rails" if seat.sign else "a rail with no sign is not drawn yet"
                 raise NotDrawnError("%s goes on a rail, and %s" % (seat.mark, why), NOT_DRAWN_YET, seat.mark)
-            if seat and seat.kind == wiring_steps.RAIL and step.act != wiring_steps.SUPPLY \
-                    and step.subject.kind == wiring_steps.RESISTOR:
-                raise NotDrawnError("%s has a leg on the %s rail, and a drawn resistor's leg goes only in a row"
-                                    % (step.subject.component, seat.mark), NOT_DRAWN_YET, step.subject.component)
             if step.act == wiring_steps.SUPPLY:
                 raise NotDrawnError("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject,
                                NOT_DRAWN_YET, step.subject)
@@ -423,13 +419,14 @@ class BreadboardPlanner:
 
     def _place_resistors(self, seated, placed, ledger, spacing):
         """A resistor has a fixed length, so it goes in with the leg that joins a row already in that row, its body in
-        the space of the part it joins (BodySpacing); one that joins no row keeps the space after the last part."""
+        the space of the part it joins (BodySpacing); one that joins no row keeps the space after the last part. A leg
+        on a rail is pinned to no row: it goes in a free row, and its step's jumper joins that row to the rail (P960)."""
         resistors = collections.OrderedDict()
         for step in seated:
             if (step.act in (wiring_steps.SETUP, wiring_steps.JOIN)
                     and step.subject.kind == wiring_steps.RESISTOR):
                 pinned = resistors.setdefault(step.subject.component, [])
-                if step.act == wiring_steps.JOIN:
+                if step.act == wiring_steps.JOIN and step.anchor.seat().kind == wiring_steps.ROW:
                     pinned.append((step.subject, step.anchor.seat().end))
         waiting = list(resistors.items())
         while waiting:
@@ -499,7 +496,8 @@ class StepHoles:
     """
     Value: the holes each numbered step uses in one planned layout (P945), {step number: words}, which the step list
     appends: a placing step names its part's holes, a jumper its two holes in the order the step runs it, and a
-    resistor leg its own hole, at the step that puts it in. A step the layout does not draw has none. Built by `of`; it decides nothing again.
+    resistor leg its own hole, at the step that puts it in, then its jumper's when it goes to a rail (P960). A step the
+    layout does not draw has none. Built by `of`; it decides nothing again.
     """
 
     def __init__(self, words):
@@ -530,14 +528,15 @@ class StepHoles:
         jumpers = {jumper.step: jumper for jumper in layout.jumpers}
         words = {}
         for number, seated in enumerate(steps.anchored(), 1):
-            if number in jumpers:
-                words[number] = "from %s to %s" % (hole_label(jumpers[number].one), hole_label(jumpers[number].other))
-            elif seated.act == wiring_steps.PLACE and seated.subject in placed:
-                words[number] = cls._span(placed[seated.subject].holes.values())
-            elif seated.act in (wiring_steps.SETUP, wiring_steps.JOIN) and seated.subject.kind == wiring_steps.RESISTOR \
+            if seated.act in (wiring_steps.SETUP, wiring_steps.JOIN) and seated.subject.kind == wiring_steps.RESISTOR \
                     and seated.subject.component in placed:
                 hole = placed[seated.subject.component].holes.get(seated.subject.pin)
                 words[number] = hole_label(hole) if hole else None
+            elif seated.act == wiring_steps.PLACE and seated.subject in placed:
+                words[number] = cls._span(placed[seated.subject].holes.values())
+            if number in jumpers:
+                words[number] = ", then ".join(filter(None, [words.get(number),
+                    "from %s to %s" % (hole_label(jumpers[number].one), hole_label(jumpers[number].other))]))
         return cls({number: said for number, said in words.items() if said})
 
 

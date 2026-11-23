@@ -31,8 +31,10 @@ from spark.core.clock import SystemClock
 ADDED, REMOVED, REROUTED, SWAPPED = "added", "removed", "rerouted", "swapped"
 CODES = (ADDED, REMOVED, REROUTED, SWAPPED)
 #: What a person does for a step: put a part in, put a resistor leg in, run a jumper, connect a supply. A swap and a
-#: removed resistor say the resistor.
+#: removed resistor say the resistor. A rail leg is a resistor leg bound for a rail: it goes in a free row, and a jumper
+#: joins that row to the rail (P960).
 PLACE, LEG, JUMPER, SUPPLY, RESISTOR = wiring_steps.PLACE, "leg", "jumper", wiring_steps.SUPPLY, "resistor"
+RAIL_LEG = "rail leg"
 #: Where a setup step puts an end: nothing holds it yet.
 FREE_ROW = "a free row"
 
@@ -100,8 +102,9 @@ def describe(seated, colors=None):
         reached.add(anchor)
         to = FREE_ROW if one.act == wiring_steps.SETUP else _destination(one.anchor)
         resistor = end.kind == wiring_steps.RESISTOR
-        source = _name(end) if end.kind == wiring_steps.BOARD or not one.jumper else "the row of " + _name(end)
-        found.append(RecordedStep(_end_key(end), anchor, JUMPER if one.jumper else LEG, source, to,
+        source = _name(end) if end.kind == wiring_steps.BOARD or not one.jumper or resistor else "the row of " + _name(end)
+        kind = (RAIL_LEG if resistor else JUMPER) if one.jumper else LEG
+        found.append(RecordedStep(_end_key(end), anchor, kind, source, to,
                                   end.component if resistor else "", end.value if resistor else "",
                                   end.job if resistor else "", colors.get(number) if one.jumper else None, marks,
                                   seat.sign if marks else ""))
@@ -235,11 +238,12 @@ def changes_between(record, seated, colors=None):
     for one in record.steps:
         if one.key in kept:
             continue
-        if one.kind == LEG and one.tag:
-            if one.key[:2] not in taken_out:
-                taken_out.add(one.key[:2])
-                removed.append(WiringChange(REMOVED, RESISTOR, one.tag, None, one.value, one.job, ""))
-        else:
+        if one.kind in (LEG, RAIL_LEG) and one.tag and one.key[:2] not in taken_out:
+            taken_out.add(one.key[:2])
+            removed.append(WiringChange(REMOVED, RESISTOR, one.tag, None, one.value, one.job, ""))
+        if one.kind == RAIL_LEG:  # the leg goes with its resistor, and its jumper to the rail comes out too
+            removed.append(WiringChange(REMOVED, JUMPER, "the row of " + one.source, one.color, one.to, "", ""))
+        elif one.kind != LEG or not one.tag:
             removed.append(WiringChange(REMOVED, one.kind, one.source, one.color, one.to, "", ""))
     swapped, added, rerouted, jobs = [], [], [], set()
     for one in now:
@@ -251,11 +255,31 @@ def changes_between(record, seated, colors=None):
             jobs.add(one.key[:2])
             swapped.append(WiringChange(SWAPPED, RESISTOR, one.tag, None, old.value, one.value, ""))
         if old.anchor != one.anchor:
-            rerouted.append(WiringChange(REROUTED, one.kind, one.source, old.color, old.to, one.to, one.marks, one.sign))
-    bench = {change.color for change in removed + rerouted if change.color}
+            for change in _moved(old, one):
+                {REMOVED: removed, ADDED: added}.get(change.code, rerouted).append(change)
+    bench = {change.color for change in removed + rerouted if change.color and change.kind != RAIL_LEG}  # a moved rail leg's jumper is new
     added = [change._replace(color=None) if change.color in bench else change for change in added]
+    rerouted = [change._replace(color=None) if change.kind == RAIL_LEG and change.color in bench else change
+                for change in rerouted]
     further = sorted(added + rerouted, key=lambda change: not change.marks)
     return removed + swapped + further
+
+
+def _moved(old, new):
+    """[WiringChange] of one step whose anchor moved (P960). A leg that sat in a free row before P953 stays there, and
+    only the jumper from its row to the rail is new; a leg in another row moves to a free row, with that jumper. A rail
+    leg bound for another rail keeps its row, and its jumper moves; one bound for a row first loses its jumper, so no
+    row is left tied to the old rail."""
+    jumper = "the row of " + new.source
+    if new.kind == RAIL_LEG and old.kind == LEG and old.to == FREE_ROW:
+        return [WiringChange(ADDED, JUMPER, jumper, new.color, "", new.to, new.marks, new.sign)]
+    if old.kind == RAIL_LEG and new.kind == RAIL_LEG:
+        return [WiringChange(REROUTED, JUMPER, jumper, old.color, old.to, new.to, new.marks, new.sign)]
+    if old.kind == RAIL_LEG:
+        return [WiringChange(REMOVED, JUMPER, jumper, old.color, old.to, "", ""),
+                WiringChange(REROUTED, new.kind, new.source, None, FREE_ROW, new.to, new.marks, new.sign)]
+    color = new.color if new.kind == RAIL_LEG else old.color  # a rail leg's jumper is new; another keeps its bench color
+    return [WiringChange(REROUTED, new.kind, new.source, color, old.to, new.to, new.marks, new.sign)]
 
 
 def _article(word):
@@ -299,14 +323,24 @@ class ChangeList:
             if change.kind == JUMPER:
                 return "Move the %s from %s: it now goes to %s (it went to %s)." % (
                     jumper, change.name, after, change.before)
+            if change.kind == RAIL_LEG:
+                return "Move %s: %s (it went to %s)." % (change.name, self._rail_leg(jumper, after), change.before)
             return "Move %s: it now goes to %s (it went to %s)." % (change.name, after, change.before)
         if change.kind == PLACE:
             return "Put %s in the breadboard." % change.name
         if change.kind == LEG:
             return "Put %s in %s." % (change.name, after)
+        if change.kind == RAIL_LEG:
+            return "Put %s %s." % (change.name, self._rail_leg(jumper, after)[len("put it "):])
         if change.kind == SUPPLY:
             return "Connect %s to %s." % (change.name, after)
         return "Run %s %s from %s to %s." % (_article(jumper), jumper, change.name, after)
+
+    @staticmethod
+    def _rail_leg(jumper, rail):
+        """The words that bring a rail leg in (P960): a free row close to the row of its other end, and a jumper to the rail."""
+        return "put it in a free row close to the row of its other end, and run %s %s from that row to %s" % (
+            _article(jumper), jumper, rail)
 
     def render(self, changes):
         return [self.line(change) for change in changes]

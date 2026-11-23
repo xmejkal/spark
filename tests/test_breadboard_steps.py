@@ -77,11 +77,19 @@ class TheStepsTest(unittest.TestCase):
             "8. Run a jumper from the row of Btn B to the row of Led K.",
             "9. Put R1 (330Ω in series with Led A), end 2, in the row of Led A."])
 
-    def test_on_a_rail_every_part_pin_runs_a_jumper_and_a_resistor_end_goes_in(self):
-        steps = numbered([], [StepPoint([board("GND"), pin("Btn", "B"), resistor("R1", 2)], None, True)])
-        self.assertEqual(steps, ["1. Run a jumper from board GND to a free rail. Mark it GND.",
-                                 "2. Run a jumper from the row of Btn B to the GND rail.",
-                                 "3. Put R1 (330Ω in series with Led A), end 2, in the GND rail."])
+    def test_on_a_rail_every_part_pin_runs_a_jumper_and_a_resistor_end_goes_in_a_free_row_with_a_jumper(self):
+        # P960: a resistor leg seats in no rail hole, so it goes in a free row close to the row of its other end, and a jumper
+        # joins that row to the rail; a leg bound for a row goes in with no jumper, as before
+        points = [StepPoint([board("GND"), pin("Btn", "B"), resistor("R1", 2)], None, True),
+                  StepPoint([pin("Led", "A"), resistor("R1", 1)], None, False)]
+        steps = numbered([], points)
+        self.assertEqual(steps[:3], ["1. Run a jumper from board GND to a free rail. Mark it GND.",
+                                     "2. Run a jumper from the row of Btn B to the GND rail.",
+                                     "3. Put R1 (330Ω in series with Led A), end 2, in a free row close to the row of its other end, "
+                                     "and run a jumper from that row to the GND rail."])
+        self.assertEqual(steps[3], "4. Put R1 (330Ω in series with Led A), end 1, in the row of Led A.")
+        jumpers = [seated.jumper for seated in BreadboardSteps([], points).anchored()]
+        self.assertEqual(jumpers[2:], [True, False])
 
     def test_a_rail_with_no_board_pad_and_no_supply_is_marked_by_its_first_end(self):
         steps = numbered([], [StepPoint([pin("Btn", "B"), pin("Led", "K")], None, True)])

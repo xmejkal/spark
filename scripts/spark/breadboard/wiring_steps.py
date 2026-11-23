@@ -8,7 +8,8 @@ The board and each part go into the breadboard first, each pin in its own row, b
 rows. Then each point gets an anchor (its first part pin, else its first resistor end, else a free row for its board
 pin's jumper, or a rail when it carries power or ground or its ends do not fit one row), and every other end joins the
 anchor in one step: a jumper, or a resistor leg. A rail for power is a + rail and one for ground a - rail (P953), and
-the step says so. Spark claims no row numbers and no side of the gap, because it does not know them.
+the step says so. A resistor leg bound for a rail goes in a free row, and a jumper joins that row to the rail (P960).
+Spark claims no row numbers and no side of the gap, because it does not know them.
 
 `BreadboardSteps.numbered()` numbers the steps for the step list and the diagram, and gives the data a page reads
 (P826); the drawing (`drawing.py`) and the bench changes (`bench_changes.py`) number `anchored()` themselves. A
@@ -174,9 +175,14 @@ def pill_words(seated):
     return "%s to %s" % (pair[0].label, pair[1].label)
 
 
-def move(end, destination):
-    """The words that bring one end to its destination: a resistor leg goes in, everything else gets a jumper."""
+def move(end, destination, on_rail=False):
+    """The words that bring one end to its destination: a resistor leg goes in, everything else gets a jumper. A
+    resistor leg bound for a rail goes in a free row close to the row of its other end, and a jumper joins that row to
+    the rail (P960)."""
     if not needs_jumper(end):
+        if on_rail:
+            return ("Put %s, in a free row close to the row of its other end, and run a jumper from that row to %s."
+                    % (end.words, destination))
         return "Put %s, in %s." % (end.words, destination)
     if end.kind == BOARD:
         return "Run a jumper from %s to %s." % (end.words, destination)
@@ -215,8 +221,10 @@ class BreadboardSteps:
             set_up = anchor.seat().end
             role = role_of(point.ends)
             walked += [Seated(step, SETUP, set_up, anchor, set_up.kind == BOARD, role) for step in anchor.setup()]
-            walked += [Seated(WiringStep(move(end, anchor.destination(number == 0)), (end.name, anchor.name)), JOIN, end,
-                              anchor, needs_jumper(end), role) for number, end in enumerate(anchor.others(point.ends))]
+            on_rail = anchor.seat().kind == RAIL
+            walked += [Seated(WiringStep(move(end, anchor.destination(number == 0), on_rail), (end.name, anchor.name)),
+                              JOIN, end, anchor, needs_jumper(end) or on_rail, role)
+                       for number, end in enumerate(anchor.others(point.ends))]
             if point.supply:
                 walked.append(Seated(WiringStep("Connect the %s supply, from off the board, to %s. Check its voltage first "
                                           "(Before you power it)." % (point.supply, anchor.destination(False)),

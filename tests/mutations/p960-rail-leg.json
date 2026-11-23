@@ -1,0 +1,17 @@
+[
+ {"file": "scripts/spark/breadboard/drawing.py", "name": "a resistor leg on a rail is pinned like a leg in a row", "find": "if step.act == wiring_steps.JOIN and step.anchor.seat().kind == wiring_steps.ROW:", "replace": "if step.act == wiring_steps.JOIN:"},
+ {"file": "scripts/spark/breadboard/wiring_steps.py", "name": "a resistor leg on a rail runs no jumper", "find": "JOIN, end, anchor, needs_jumper(end) or on_rail, role)", "replace": "JOIN, end, anchor, needs_jumper(end), role)"},
+ {"file": "scripts/spark/breadboard/wiring_steps.py", "name": "a resistor leg on a rail is said to go in the rail", "find": "        if on_rail:", "replace": "        if False:"},
+ {"file": "scripts/spark/breadboard/drawing.py", "name": "a rail leg's own hole drops out of its step's holes", "find": "\", then \".join(filter(None, [words.get(number),", "replace": "\", then \".join(filter(None, [None,"},
+ {"file": "data/wokwi-geometry.json", "name": "a resistor covers no hole between its legs", "find": "\"center\": [29.5, 5.5], \"covers_holes\": true,", "replace": "\"center\": [29.5, 5.5], \"covers_holes\": false,"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "a rail leg is recorded as a jumper, so an added one never says to put the leg in", "find": "kind = (RAIL_LEG if resistor else JUMPER) if one.jumper else LEG", "replace": "kind = JUMPER if one.jumper else LEG"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "a leg in a free row before P953 is said to move its jumper", "find": "if new.kind == RAIL_LEG and old.kind == LEG and old.to == FREE_ROW:", "replace": "if False:"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "a rail leg taken out leaves its jumper to the rail", "find": "if one.kind == RAIL_LEG:  # the leg goes", "replace": "if False:  # the leg goes"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "a moved rail leg's new jumper keeps the old step's color", "find": "color = new.color if new.kind == RAIL_LEG else old.color", "replace": "color = old.color"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "a rail leg moved from a row is said to go in the rail", "find": "return \"Move %s: %s (it went to %s).\" % (change.name, self._rail_leg(jumper, after), change.before)", "replace": "return \"Move %s: it now goes to %s (it went to %s).\" % (change.name, after, change.before)"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "a rail leg bound for another rail is put in a new row, and its old jumper stays: a short", "find": "if old.kind == RAIL_LEG and new.kind == RAIL_LEG:", "replace": "if False:"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "a rail leg bound for a row keeps its jumper to the old rail", "find": "    if old.kind == RAIL_LEG:", "replace": "    if False:"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "a moved step's added or removed jumper is listed as a move", "find": "{REMOVED: removed, ADDED: added}.get(change.code, rerouted).append(change)", "replace": "rerouted.append(change)"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "a moved rail leg's new color counts as a bench color", "find": "if change.color and change.kind != RAIL_LEG}", "replace": "if change.color}"},
+ {"file": "scripts/spark/breadboard/bench_changes.py", "name": "a moved rail leg's new jumper keeps a color the bench shows", "find": "if change.kind == RAIL_LEG and change.color in bench else change", "replace": "if False else change"}
+]
