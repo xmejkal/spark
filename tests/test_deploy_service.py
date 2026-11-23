@@ -37,6 +37,7 @@ from spark.bench.deploy_image import DeployImage  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.result import MARK_OK, MARK_STOP, MARK_UNCHECKED, Finding  # noqa: E402
 from spark.core.renderers import StatusLine  # noqa: E402
+from spark.build.stage_help_table import StageMarkdownTable  # noqa: E402
 from test_board_look import FOUND  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
 
@@ -400,6 +401,11 @@ class TheDeployViewTest(unittest.TestCase):
         self.assertIs(DeployImage.stages, DEPLOY_STAGES)
         self.assertIs(DeployImage.text_renderer, StatusLine)
 
+    def test_a_stages_block_renders_deploy_s_stages(self):
+        # P478 review: a page's stages block reads DEPLOY_STAGES as it reads build's rows
+        table = StageMarkdownTable.render(DeployImage.stages).split("\n")
+        self.assertEqual([line.split(" | ")[0] for line in table[-5:]], ["| plan", "| look", "| gate", "| flash", "| verify"])
+
     def test_each_end_has_its_sentence_and_its_mark(self):
         unknown = ("ready unknown", "mpremote could not read the board's files: no port.")
         cases = [
@@ -408,8 +414,10 @@ class TheDeployViewTest(unittest.TestCase):
             (reached_with(DeployPhase.PLAN, dry_run=True), 0, [], "Dry run: nothing was flashed, and the board was not looked at.", MARK_OK),
             (reached_with(DeployPhase.VERIFY, ("ready not seen", "the firmware printed no 'ready' in 20 s")), 1, stop("x"),
              "Flashed, ready not seen: the firmware printed no 'ready' in 20 s.", MARK_STOP),
-            (reached_with(DeployPhase.VERIFY, unknown), 2, stop("x"),
+            (reached_with(DeployPhase.VERIFY, unknown, reason="ready_unknown"), 2, stop("x"),
              "Flashed, ready unknown: mpremote could not read the board's files: no port. What to try is above.", MARK_UNCHECKED),
+            (reached_with(DeployPhase.VERIFY, unknown, reason="port_gone"), 2, stop("x"),  # no fix line was said, so no pointer
+             "Flashed, ready unknown: mpremote could not read the board's files: no port.", MARK_UNCHECKED),
             (reached_with(DeployPhase.FLASH), 2, stop("`esptool erase-flash` failed (exit 2)"), "The board may be erased: the flash stopped.", MARK_UNCHECKED),
             (reached_with(DeployPhase.GATE), 1, [Finding(outcomes.PROBLEMS, "gate", "chip_differs", "this board is an esp32c6, the project is "
                                                          "for an esp32s3. not flashed.", "")],

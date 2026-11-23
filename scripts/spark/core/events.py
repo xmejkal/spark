@@ -91,11 +91,6 @@ class TerminalReporter(Reporter):
     def __init__(self, stream):
         self.stream = stream
 
-    @classmethod
-    def for_json(cls, as_json):
-        """The Reporter on stderr with --json and on stdout without, read at the call, so a redirected stream is the one used."""
-        return cls(sys.stderr if as_json else sys.stdout)
-
     def report(self, event):
         if event.kind == LINE:
             print(event_lines(event), file=self.stream, flush=True)

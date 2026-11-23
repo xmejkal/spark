@@ -110,8 +110,20 @@
  {
   "file": "scripts/spark/bench/board_envelope.py",
   "name": "P478: ready unknown loses its pointer (test_deploy_service.TheDeployViewTest)",
-  "find": "HEADLINE_UNKNOWN = \"Flashed, ready unknown: %s. What to try is above.\"",
-  "replace": "HEADLINE_UNKNOWN = \"Flashed, ready unknown: %s.\""
+  "find": "TRY_ABOVE = \" What to try is above.\"",
+  "replace": "TRY_ABOVE = \"\""
+ },
+ {
+  "file": "scripts/spark/bench/board_envelope.py",
+  "name": "P478 review: ready unknown points up with no fix line said (test_deploy_service.TheDeployViewTest)",
+  "find": "TRY_ABOVE if reached.get(\"reason\") == board_codes.READY_UNKNOWN else \"\"",
+  "replace": "TRY_ABOVE"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_stages.py",
+  "name": "P478 review: a deploy stage has no endings, so a stages block raises (test_deploy_service.TheDeployViewTest)",
+  "find": "DeployStage = namedtuple(\"DeployStage\", \"name summary endings\", defaults=((),))",
+  "replace": "DeployStage = namedtuple(\"DeployStage\", \"name summary\")"
  },
  {
   "file": "scripts/spark/bench/board_envelope.py",

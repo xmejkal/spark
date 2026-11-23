@@ -40,7 +40,9 @@ GRANT_STEP_NO_SIMULATION = ", and with --no-simulation, write firmware that no s
 HEADLINE_READY = "Flashed, and the board printed ready."
 HEADLINE_DRY_RUN = "Dry run: nothing was flashed, and the board was not looked at."
 HEADLINE_NOT_SEEN = "Flashed, ready not seen: %s."
-HEADLINE_UNKNOWN = "Flashed, ready unknown: %s. What to try is above."
+HEADLINE_UNKNOWN = "Flashed, ready unknown: %s."
+#: What the ready unknown headline adds when the run said READY_UNKNOWN's fix, the line of what to try (P1022).
+TRY_ABOVE = " What to try is above."
 HEADLINE_FLASH_STOPPED = "The board may be erased: the flash stopped."
 HEADLINE_NOT_FLASHED = "Not flashed: %s."
 #: The stop's words when its finding gives none, and the words a stop's sentence may start with, which the headline says.
@@ -370,14 +372,15 @@ def first_sentence(text):
 
 def deploy_headline(reached, code, findings):
     """The Headline of a deploy run that ended with the exit `code` and `findings` (P478, D7): ready seen or a dry run,
-    the board's verdict once it was read, a flash that stopped, else the first finding's first sentence. Its mark is the
-    status's."""
+    the board's verdict once it was read (pointing up to what to try only when the run said READY_UNKNOWN's fix), a
+    flash that stopped, else the first finding's first sentence. Its mark is the status's."""
     result = reached.get("result")
     if code == outcomes.EXIT_OK:
         sentence = HEADLINE_DRY_RUN if reached.get("dry_run") else HEADLINE_READY
     elif result:
         said = printable(result.ready.sentence).rstrip(".")
         sentence = (HEADLINE_UNKNOWN if result.ready.verdict == ready_probe.UNKNOWN else HEADLINE_NOT_SEEN) % said
+        sentence += TRY_ABOVE if reached.get("reason") == board_codes.READY_UNKNOWN else ""
     elif reached["stage"] == DeployPhase.FLASH:
         sentence = HEADLINE_FLASH_STOPPED
     else:

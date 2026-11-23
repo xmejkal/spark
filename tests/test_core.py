@@ -980,13 +980,6 @@ class TerminalReporterTest(ReporterContract, unittest.TestCase):
         TerminalReporter(stream).report(Event.line("toy", "one\ntwo"))
         self.assertEqual(stream.getvalue(), "  one\n  two\n")
 
-    def test_for_json_picks_stderr_and_stdout_without(self):
-        import contextlib
-        import io
-        out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            self.assertEqual((TerminalReporter.for_json(True).stream, TerminalReporter.for_json(False).stream), (err, out))
-
 
 class FakeReporterTest(ReporterContract, unittest.TestCase):
     def reporter(self):

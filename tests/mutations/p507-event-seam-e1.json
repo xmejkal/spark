@@ -1,6 +1,6 @@
 [
  {"file": "scripts/spark/core/events.py", "name": "a BEGIN that prints", "find": "if event.kind == LINE:\n            print(event_lines(event)", "replace": "if True:\n            print(event_lines(event._replace(text=str(event.text)))"},
- {"file": "scripts/spark/core/events.py", "name": "a LINE on stdout under --json", "find": "return cls(sys.stderr if as_json else sys.stdout)", "replace": "return cls(sys.stdout)"},
+ {"file": "scripts/spark/core/cli.py", "name": "a LINE on stdout under --json (P478: view_for picks the stream; test_view_reporter.TheViewTest)", "find": "View(PLAIN, PlainPainter, TerminalReporter(stderr)", "replace": "View(PLAIN, PlainPainter, TerminalReporter(stdout)"},
  {"file": "scripts/spark/core/events.py", "name": "a LINE without its indent", "find": "INDENT + line for line", "replace": "line for line"},
  {"file": "scripts/spark/core/events.py", "name": "a LINE's second line without its indent", "find": "\"\\n\".join(INDENT + line for line in guard_lines(event.text).split(\"\\n\"))", "replace": "INDENT + guard_lines(event.text)"},
  {"file": "scripts/spark/core/events.py", "name": "a LINE without a string is let through", "find": "if not isinstance(text, str):", "replace": "if False:"},

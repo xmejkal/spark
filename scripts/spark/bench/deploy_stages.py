@@ -15,9 +15,10 @@ class DeployPhase:
 
 
 # --- MVP ---
-#: Value: one stage of a deploy as data (P478): its `name`, a DeployPhase word, and its `summary`, the sentence that says
-#: why the stage happens. `DeployImage.stages` holds the rows, so the text view numbers its headings from them.
-DeployStage = namedtuple("DeployStage", "name summary")
+#: Value: one stage of a deploy as data (P478): its `name`, a DeployPhase word, its `summary`, the sentence that says
+#: why the stage happens, and its `endings`, none yet, so a page's stages block reads the rows as it reads build's
+#: StageDefinitions. `DeployImage.stages` holds the rows, so the text view numbers its headings from them.
+DeployStage = namedtuple("DeployStage", "name summary endings", defaults=((),))
 #: The five stages, in their order, each with its why (P476). One table, so no stage says it twice.
 DEPLOY_STAGES = (
     DeployStage(DeployPhase.PLAN, "spark checks the image and finds its tools first, so a wrong image stops before the board is touched"),
