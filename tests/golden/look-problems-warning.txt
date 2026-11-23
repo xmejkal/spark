@@ -15,7 +15,6 @@
 
   Problems
     - the flash differs: 8 MB, the record says 16 or 4
-      fix: deploy.py asks the person to accept it
 
   Note
     the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.

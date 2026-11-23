@@ -6,6 +6,7 @@ view: a headline (`headline_of`) and the facts alone as its lines (`look_facts`)
 keeps board_look.report_lines.
 """
 
+import functools
 from collections import namedtuple
 
 from spark.bench import board_codes
@@ -48,9 +49,18 @@ ASK_AGAIN_WHY = "the same look, after the person's yes in the conversation"
 #: The text view's headline of a look with a stop, filled with the first stop's sentence; a second stop is in Problems.
 STOP_HEADLINE = "Stop: %s. deploy.py will refuse."
 #: The headline of a look whose fields differ with no stop, filled with the fields and the board record's id.
-WARNING_HEADLINE = "Warning: the %s differs from the board record %s. deploy.py will ask you to accept it."
+WARNING_HEADLINE = "Warning: the %s differs from the board record %s."
 #: The headline of a look whose only gap is a field it could not compare, filled with the record's id and each field's reason.
-UNKNOWN_HEADLINE = "Unknown against the board record %s: %s. deploy.py will ask you to accept it."
+UNKNOWN_HEADLINE = "Unknown against the board record %s: %s."
+#: What a warning or an unknown headline adds when the look has a token, so a deploy can follow.
+ASK_MESSAGE = " deploy.py will ask you to accept it."
+#: An unknown field's reason as the headline says it, where its words differ from the JSON's (the review of #1549, N2).
+UNKNOWN_SAID = {"the board did not say": "the board did not say it"}
+#: The fixes of the look's findings that only restate the verdict: the text view prints them with no `fix:` line, and the
+#: JSON keeps them (the review of #1549, SF1; person-worded fixes are P1052 #1544).
+STOP_FIX, WARNING_FIX = "deploy.py will refuse", "deploy.py asks the person to accept it"
+UNKNOWN_FIX = "unknown is not a pass: deploy.py names it and asks the person"
+VERDICT_FIXES = (STOP_FIX, WARNING_FIX, UNKNOWN_FIX)
 #: The headline of a look whose fields all match, filled with the board record's id; its mark is the status's.
 MATCH_HEADLINE = "The chip and the flash match the board record %s."
 #: The headline of a look that read another board than the kept one, when it found no problem (round 1, item 6).
@@ -203,9 +213,7 @@ class LookAtBoard(Operation):
             findings = list(result.findings) + [Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, other, fix)]
             status = outcomes.status_of(*([found for found in findings if found.severity == severity]
                                           for severity in (outcomes.PROBLEMS, outcomes.COULD_NOT_RUN)))
-            headline = headline_of(report, status) if status == outcomes.PROBLEMS else Headline(OTHER_BOARD_HEADLINE, MARK_UNCHECKED,
-                                                                                                (board_look.RESTART_NOTICE,))
-            return result._replace(data=dict(result.data, token=None), findings=findings, next=[], headline=headline)
+            return result._replace(data=dict(result.data, token=None), findings=findings, next=[], headline=headline_of(report, status, True))
         if passed.reply is None or not (passed.state in (NONE, OTHER) or differs):
             return result
         return result._replace(notes=[self._keep(report, passed, project, outside)])
@@ -230,11 +238,11 @@ class LookAtBoard(Operation):
     def _found(report, project, evidence, grant_may_answer):
         """The result of a LookReport: the lists LookReport.status counts, as Findings, and the deploy step with a token.
         `grant_may_answer` says whether a deploy grant can answer the evidence (board_envelope.yes_rule)."""
-        findings = [Finding(outcomes.PROBLEMS, "stop", stop.code, stop.sentence, "deploy.py will refuse") for stop in report.stops]
-        findings += [Finding(outcomes.PROBLEMS, "flash", board_codes.FLASH_DIFFERS, warning, "deploy.py asks the person to accept it")
+        findings = [Finding(outcomes.PROBLEMS, "stop", stop.code, stop.sentence, STOP_FIX) for stop in report.stops]
+        findings += [Finding(outcomes.PROBLEMS, "flash", board_codes.FLASH_DIFFERS, warning, WARNING_FIX)
                      for warning in report.warnings]
         findings += [Finding(outcomes.COULD_NOT_RUN, None, board_codes.FIELD_UNKNOWN, "%s unknown: %s" % each,
-                             "unknown is not a pass: deploy.py names it and asks the person") for each in report.unknown.items()]
+                             UNKNOWN_FIX) for each in report.unknown.items()]
         no_token = report.no_token_reason()
         if no_token:
             findings.append(Finding(outcomes.COULD_NOT_RUN, None, no_token.code, "no token: %s" % no_token.sentence, "fix that, then run look.py again"))
@@ -263,19 +271,27 @@ class LookAtBoard(Operation):
                                diagnostics=said.split("\n"))
 
 
-def headline_of(report, status):
+def headline_of(report, status, other_board=False):
     """The text view's Headline of a LookReport whose result has `status`: the first stop, else the fields that differ,
-    else the fields it could not compare, else the match, with the status's mark. Its note is the restart notice."""
-    name, notes = report.record["id"], (board_look.RESTART_NOTICE,)
-    differs = [field for field, said in report.fields.items() if said == "differs"]
+    else another board than the kept one (`other_board`), else the fields it could not compare, else the match, with the
+    status's mark. A warning or an unknown field says that deploy.py will ask only when there is a token. Its blocker is
+    the finding that says why there is no deploy step: the stop, the other board or the missing token. Its note is the
+    restart notice, and its verdict fixes are VERDICT_FIXES."""
+    name, no_token = report.record["id"], report.no_token_reason()
+    blocker = report.stops[0].code if report.stops else board_codes.OTHER_BOARD if other_board else no_token and no_token.code
+    ask = "" if other_board or no_token else ASK_MESSAGE
+    said = functools.partial(Headline, text_notes=(board_look.RESTART_NOTICE,), blocker=blocker, verdict_fixes=VERDICT_FIXES)
+    differs = [field for field, state in report.fields.items() if state == "differs"]
     if report.stops:
-        return Headline(STOP_HEADLINE % report.stops[0].sentence, MARK_STOP, notes)
+        return said(STOP_HEADLINE % report.stops[0].sentence, MARK_STOP)
     if differs:
-        return Headline(WARNING_HEADLINE % (" and ".join(differs), name), MARK_WARNING, notes)
+        return said(WARNING_HEADLINE % (" and ".join(differs), name) + ask, MARK_WARNING)
+    if other_board:
+        return said(OTHER_BOARD_HEADLINE, MARK_UNCHECKED)
     if report.unknown:
-        why = "; ".join("the %s, as %s" % each for each in report.unknown.items())
-        return Headline(UNKNOWN_HEADLINE % (name, why), MARK_UNCHECKED, notes)
-    return Headline(MATCH_HEADLINE % name, Headline.of_status(status), notes)
+        why = "; ".join("the %s: %s" % (field, UNKNOWN_SAID.get(reason, reason)) for field, reason in report.unknown.items())
+        return said(UNKNOWN_HEADLINE % (name, why) + ask, MARK_UNCHECKED)
+    return said(MATCH_HEADLINE % name, Headline.of_status(status))
 
 
 def look_facts(report):

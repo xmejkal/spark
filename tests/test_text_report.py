@@ -133,6 +133,26 @@ class TheLayoutTest(unittest.TestCase):
         person = TextReport.render(a_result(steps=[STEP._replace(needs_yes=False, needs_person="the person")]), PLAIN, "look")
         self.assertIn("\n  Next: you, in your own terminal.\n", person)
 
+    def test_the_blocker_comes_first_and_next_points_at_its_section(self):
+        # the review of #1549: refuter 1 (an unknown field with no token) and SF2 (a stop points at Problems)
+        other = Finding(outcomes.COULD_NOT_RUN, None, "field_unknown", "flash unknown", None)
+        result = a_result(findings=[PROBLEM, other, UNCHECKED], steps=())
+        said = TextReport.render(result._replace(headline=result.headline._replace(blocker="no_mac")), PLAIN, "look").split("\n")
+        unchecked = said.index("  Not checked")
+        self.assertEqual(said[unchecked + 1:unchecked + 3], ["    - no token: why", "    - flash unknown"])
+        self.assertEqual(said[-1], "    No command: the first item under Not checked above says why.")
+        said = TextReport.render(result._replace(headline=result.headline._replace(blocker="flash_differs")), PLAIN, "look").split("\n")
+        self.assertEqual(said[-1], "    No command: the first item under Problems above says why.")
+        self.assertEqual([item["code"] for item in result.to_envelope("t", "o")["unchecked"]], ["field_unknown", "no_mac"])
+
+    def test_a_fix_that_restates_the_verdict_has_no_fix_line_and_the_json_keeps_it(self):
+        # the review of #1549, SF1: the text view's `fix:` label is true only for a fix that is no verdict
+        result = a_result()
+        said = TextReport.render(result._replace(headline=result.headline._replace(verdict_fixes=("deploy.py asks",))), PLAIN, "look")
+        self.assertNotIn("fix: deploy.py asks", said)
+        self.assertIn("    - the flash differs\n  Not checked", said)
+        self.assertEqual(result.to_envelope("t", "o")["problems"][0]["fix"], "deploy.py asks")
+
     def test_the_command_is_one_line_even_with_a_space_a_newline_and_300_characters(self):
         long = "x" * 300
         said = TextReport.render(a_result(steps=[STEP._replace(argv=["--project", "a b\nc", long])]), PLAIN, "look").split("\n")

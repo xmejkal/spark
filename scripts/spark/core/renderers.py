@@ -175,7 +175,7 @@ class TextReport:
         lines = [[(mark, "mark-" + headline.mark), (status, "status")], []]
         lines += [[(line, "fact")] for line in result.lines]
         notes = list(result.notes or ()) + list(headline.text_notes)
-        blocks = [TextReport.findings_block(result.findings),
+        blocks = [TextReport.findings_block(result.findings, headline),
                   TextReport.section("Note", [[("    " + printable(note), "quiet")] for note in notes]), TextReport.next_block(result)]
         for block in blocks:
             lines += [[]] + block if block else []
@@ -187,21 +187,22 @@ class TextReport:
         return [[("  " + heading, "heading")]] + items if items else []
 
     @staticmethod
-    def findings_block(findings):
-        """The Problems and the Not checked sections: each finding's sentence, then its fix on a `fix:` line."""
+    def findings_block(findings, headline):
+        """The Problems and the Not checked sections: each finding's sentence, then its fix on a `fix:` line, unless the
+        fix only restates the verdict (`headline.verdict_fixes`). The headline's blocker comes first in its section."""
         block = []
         for severity, heading in SECTIONS:
             items = []
-            for found in [each for each in findings if each.severity == severity]:
+            for found in sorted([each for each in findings if each.severity == severity], key=lambda each: each.code != headline.blocker):
                 items.append([("    - " + printable(found.sentence), "fact")])
-                items += [[("      fix: " + printable(found.fix), "quiet")]] if found.fix else []
+                items += [[("      fix: " + printable(found.fix), "quiet")]] if found.fix and found.fix not in headline.verdict_fixes else []
             block += TextReport.section(heading, items)
         return block
 
     @staticmethod
     def next_block(result):
         """Next: per step a heading, its why and its command, the command last; with no step, the line that points to the
-        first finding, and nothing when there is no finding either."""
+        section of the headline's blocker (else Not checked, else Problems), and nothing when there is no finding either."""
         block = []
         for step in result.next:
             said = (YOU_MESSAGE if step.needs_yes or step.needs_person else "") + (YES_MESSAGE % step.op if step.needs_yes else "")
@@ -209,7 +210,8 @@ class TextReport:
                       [("    " + step_command(step), "command")]]
         if block:
             return block
-        severities = {each.severity for each in result.findings}
+        severities = [each.severity for each in result.findings if each.code == result.headline.blocker][:1] or \
+            {each.severity for each in result.findings}
         first = next((heading for severity, heading in reversed(SECTIONS) if severity in severities), None)
         return [[("  Next:", "heading")], [("    " + NO_COMMAND_MESSAGE % first, "fact")]] if first else []
 # --- end MVP ---

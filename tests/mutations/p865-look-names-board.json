@@ -158,8 +158,8 @@
  {
   "file": "scripts/spark/bench/look_at_board.py",
   "name": "T7: another board after the read keeps the deploy step",
-  "find": "findings=findings, next=[], headline=headline)",
-  "replace": "findings=findings, headline=headline)"
+  "find": "findings=findings, next=[], headline=headline_of(report, status, True))",
+  "replace": "findings=findings, headline=headline_of(report, status, True))"
  },
  {
   "file": "scripts/spark/bench/look_at_board.py",

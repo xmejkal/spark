@@ -72,10 +72,12 @@ MARK_OK, MARK_STOP, MARK_WARNING, MARK_UNCHECKED = "ok", "stop", "warning", "unc
 MARK_OF_STATUS = {outcomes.OK: MARK_OK, outcomes.PROBLEMS: MARK_STOP, outcomes.COULD_NOT_RUN: MARK_UNCHECKED}
 
 
-class Headline(namedtuple("Headline", "sentence mark text_notes", defaults=((),))):
+class Headline(namedtuple("Headline", "sentence mark text_notes blocker verdict_fixes", defaults=((), None, ()))):
     """
     Value: the text view's status line of a result (P1032): its `sentence`, its `mark` (one of the four MARK_ words) and
-    `text_notes`, the text view's own notes, which the JSON never holds.
+    `text_notes`, the text view's own notes, which the JSON never holds. `blocker` is the code of the finding that says
+    why there is no next step, or None: the text lists it first in its section, and Next points at it. `verdict_fixes`
+    are the fixes that only restate the verdict, which the text view prints with no `fix:` line (the JSON keeps them).
     """
 
     __slots__ = ()

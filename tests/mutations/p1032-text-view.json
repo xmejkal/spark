@@ -62,7 +62,7 @@
  {
   "file": "scripts/spark/core/renderers.py",
   "name": "P1032: a finding's fix is dropped (test_text_report.TheLayoutTest.test_the_layout_holds_the_status_line_the_facts_each_section_and_the_step)",
-  "find": "                items += [[(\"      fix: \" + printable(found.fix), \"quiet\")]] if found.fix else []",
+  "find": "                items += [[(\"      fix: \" + printable(found.fix), \"quiet\")]] if found.fix and found.fix not in headline.verdict_fixes else []",
   "replace": "                items += []"
  },
  {
@@ -80,8 +80,8 @@
  {
   "file": "scripts/spark/core/renderers.py",
   "name": "P1032: the Note comes after Next (test_text_report.TheLayoutTest.test_the_layout_holds_the_status_line_the_facts_each_section_and_the_step)",
-  "find": "        blocks = [TextReport.findings_block(result.findings),\n                  TextReport.section(\"Note\", [[(\"    \" + printable(note), \"quiet\")] for note in notes]), TextReport.next_block(result)]",
-  "replace": "        blocks = [TextReport.findings_block(result.findings),\n                  TextReport.next_block(result), TextReport.section(\"Note\", [[(\"    \" + printable(note), \"quiet\")] for note in notes])]"
+  "find": "        blocks = [TextReport.findings_block(result.findings, headline),\n                  TextReport.section(\"Note\", [[(\"    \" + printable(note), \"quiet\")] for note in notes]), TextReport.next_block(result)]",
+  "replace": "        blocks = [TextReport.findings_block(result.findings, headline),\n                  TextReport.next_block(result), TextReport.section(\"Note\", [[(\"    \" + printable(note), \"quiet\")] for note in notes])]"
  },
  {
   "file": "scripts/spark/core/renderers.py",
@@ -122,8 +122,8 @@
  {
   "file": "scripts/spark/bench/look_at_board.py",
   "name": "P1032: a warning gets the match headline (test_look.TheTextViewTest.test_a_warning_has_its_mark_its_field_and_a_problem_with_its_fix)",
-  "find": "    if differs:\n        return Headline(WARNING_HEADLINE",
-  "replace": "    if False:\n        return Headline(WARNING_HEADLINE"
+  "find": "    if differs:\n        return said(WARNING_HEADLINE",
+  "replace": "    if False:\n        return said(WARNING_HEADLINE"
  },
  {
   "file": "scripts/spark/bench/look_at_board.py",
@@ -134,7 +134,43 @@
  {
   "file": "scripts/spark/bench/look_at_board.py",
   "name": "P1032: the other-board sentence is appended to the lines again (test_known_board.TheTextViewOfTheKeptBoardTest.test_the_other_board_and_the_kept_note_are_said_once)",
-  "find": "findings=findings, next=[], headline=headline)",
-  "replace": "findings=findings, next=[], headline=headline, lines=list(result.lines) + [INDENT + printable(other)])"
+  "find": "findings=findings, next=[], headline=headline_of(report, status, True))",
+  "replace": "findings=findings, next=[], headline=headline_of(report, status, True), lines=list(result.lines) + [INDENT + printable(other)])"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: the headline's blocker is not listed first (test_text_report.TheLayoutTest.test_the_blocker_comes_first_and_next_points_at_its_section)",
+  "find": "key=lambda each: each.code != headline.blocker)",
+  "replace": "key=lambda each: 0)"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: Next ignores the blocker's section (test_text_report.TheLayoutTest.test_the_blocker_comes_first_and_next_points_at_its_section)",
+  "find": "        severities = [each.severity for each in result.findings if each.code == result.headline.blocker][:1] or \\",
+  "replace": "        severities = [][:1] or \\"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: a fix that restates the verdict gets a fix line (test_text_report.TheLayoutTest.test_a_fix_that_restates_the_verdict_has_no_fix_line_and_the_json_keeps_it)",
+  "find": "if found.fix and found.fix not in headline.verdict_fixes else []",
+  "replace": "if found.fix else []"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "P1032: a look with no token promises deploy.py's question (test_look.TheTextViewTest.test_an_unknown_field_with_no_token_points_next_at_the_missing_token)",
+  "find": "    ask = \"\" if other_board or no_token else ASK_MESSAGE",
+  "replace": "    ask = ASK_MESSAGE"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "P1032: a stop is not the look's blocker (test_look.TheTextViewTest.test_every_stop_headline_has_a_problem_after_it)",
+  "find": "    blocker = report.stops[0].code if report.stops else",
+  "replace": "    blocker = None if report.stops else"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "P1032: the look names no verdict fixes (test_look.TheTextViewTest.test_a_warning_has_its_mark_its_field_and_a_problem_with_its_fix)",
+  "find": "verdict_fixes=VERDICT_FIXES)",
+  "replace": "verdict_fixes=())"
  }
 ]

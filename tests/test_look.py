@@ -80,10 +80,10 @@ class LookScriptCase(LookCase):
             self.know_the_board(board_look.EsptoolReader.parse(text or data(esptool)).mac or MAC, known_board.comparable_key(rows[1]) if rows else None)
         return self.go_with(FakeOutsideWorld(run=RealChildRun(run), find_tool=found), *argv, **shown)  # P458: the compile child is real
 
-    def no_token(self, said):
-        """P1032: the one Not checked item of a text look that says why there is no token."""
+    def no_token(self, said, under="Not checked"):
+        """P1032: the one Not checked item of a text look that says why there is no token; Next points `under` a section."""
         (item,) = [line for line in said if line.startswith("    - no token: ")]
-        self.assertEqual(said[-2:], ["  Next:", "    No command: the first item under Not checked above says why."])
+        self.assertEqual(said[-2:], ["  Next:", "    No command: the first item under %s above says why." % under])
         return item
 
     def command(self, said):
@@ -187,8 +187,8 @@ class WhatThePersonSeesTest(LookScriptCase):
         code, said, _ = self.go(esptool="c6-flash-id-garbled.txt")
         self.assertEqual(code, 2)
         self.assertIn("    flash        not read   unknown", said)
-        self.assertEqual(said[0], "? look: could-not-run. Unknown against the board record xiao-esp32-c6: the flash, as the board did "
-                                  "not say. deploy.py will ask you to accept it.")
+        self.assertEqual(said[0], "? look: could-not-run. Unknown against the board record xiao-esp32-c6: the flash: the board did "
+                                  "not say it. deploy.py will ask you to accept it.")
         self.assertIn("    - flash unknown: the board did not say", said)
         self.assertIn(" --token %s " % self.token(), self.command(said))
 
@@ -257,7 +257,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(said[0], "✗ look: problems. Stop: this board is an esp32c6, the project is for an esp32s3. deploy.py will refuse.")
         self.assertIn("    - this board is an esp32c6, the project is for an esp32s3", said)
         self.assertEqual(said[said.index(SIMULATION) + 1], CAVEAT)
-        self.assertEqual(self.no_token(said), "    - no token: the look found a stop")
+        self.assertEqual(self.no_token(said, under="Problems"), "    - no token: the look found a stop")
 
     @needs_littlefs
     def test_a_flash_too_small_for_the_image_is_a_stop_even_when_the_record_lists_it(self):
@@ -266,7 +266,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         code, said, _ = self.go(esptool="s3-flash-id-2mb.txt")
         self.assertEqual(code, 1)
         self.assertIn("    - the flash is 2 MB, the image needs 4 MB", said)
-        self.assertEqual(self.no_token(said), "    - no token: the look found a stop")
+        self.assertEqual(self.no_token(said, under="Problems"), "    - no token: the look found a stop")
 
     @needs_littlefs
     def test_a_flash_in_the_records_list_that_is_too_small_exits_1_not_0(self):
@@ -518,8 +518,10 @@ class TheTextViewTest(LookScriptCase):
         self.assertEqual(said[0], "! look: problems. Warning: the flash differs from the board record firebeetle2-esp32s3. "
                                   "deploy.py will ask you to accept it.")
         item = said.index("    - the flash differs: 8 MB, the record says 16 or 4")
-        self.assertEqual(said[item + 1], "      fix: deploy.py asks the person to accept it")
+        self.assertFalse(said[item + 1].startswith("      fix: "), "the review of #1549, SF1: a fix that restates the verdict")
         self.assertEqual([line for line in said[1:] if "deploy.py will ask you" in line], [])
+        problem = json.loads(self.go("--json", esptool="s3-flash-id-8mb.txt")[1][-1])["problems"][0]
+        self.assertEqual(problem["fix"], "deploy.py asks the person to accept it", "the JSON keeps the fix")
 
     @needs_littlefs
     def test_every_stop_headline_has_a_problem_after_it(self):
@@ -532,7 +534,21 @@ class TheTextViewTest(LookScriptCase):
                 self.assertEqual(code, 1)
                 self.assertEqual(said[0], "✗ look: problems. Stop: %s. deploy.py will refuse." % stop)
                 problems = said.index("  Problems")
-                self.assertIn("    - " + stop, said[problems:])
+                self.assertEqual(said[problems + 1], "    - " + stop)
+                self.assertFalse(said[problems + 2].startswith("      fix: "), "deploy.py will refuse restates the verdict")
+                self.assertEqual(said[-1], "    No command: the first item under Problems above says why.")
+
+    def test_an_unknown_field_with_no_token_points_next_at_the_missing_token(self):
+        # the review of #1549, refuter 1: no image, so no token; the status line does not promise deploy.py's question
+        code, said, _ = self.go(esptool="c6-flash-id-garbled.txt")
+        self.assertEqual(code, 2)
+        self.assertEqual(said[0], "? look: could-not-run. Unknown against the board record xiao-esp32-c6: the flash: the board did not say it.")
+        unchecked = said.index("  Not checked")
+        self.assertTrue(said[unchecked + 1].startswith("    - no token: "), said[unchecked + 1])
+        self.assertIn("    - flash unknown: the board did not say", said[unchecked:])
+        self.no_token(said)
+        envelope = json.loads(self.go("--json", esptool="c6-flash-id-garbled.txt")[1][-1])
+        self.assertEqual(envelope["unchecked"][0]["code"], "field_unknown", "the JSON keeps its order")
 
     def test_a_stop_and_the_question_print_as_before(self):
         # D1: a stop before the read prints on stderr only, and the board question keeps its lines

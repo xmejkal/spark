@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
@@ -171,6 +172,16 @@ class ThePrintedDeployLineTest(unittest.TestCase):
 for _case in golden_bench.CASES:
     setattr(BenchGoldenTest, "test_" + _case.golden.replace("-", "_").replace(".", "_"),
             lambda self, case=_case: self.run_case(case))
+
+
+class TheChildEnvironmentTest(unittest.TestCase):
+    """P1032 (the review of #1549, refuter 3): a shell that sets FORCE_COLOR or NO_COLOR changes no golden."""
+
+    def test_the_child_carries_no_colour_variable(self):
+        with mock.patch.dict(os.environ, {"FORCE_COLOR": "1", "NO_COLOR": "1", "TERM": "xterm"}):
+            env = golden_bench.child_env(Path("/nowhere/store"), "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
+        self.assertEqual([name for name in ("FORCE_COLOR", "NO_COLOR") if name in env], [])
+        self.assertEqual(env["TERM"], "xterm", "only the colour variables go")
 
 
 if __name__ == "__main__":

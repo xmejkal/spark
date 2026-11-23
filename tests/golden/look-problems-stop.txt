@@ -15,7 +15,6 @@
 
   Problems
     - this board is an esp32c6, the project is for an esp32s3
-      fix: deploy.py will refuse
   Not checked
     - no token: the look found a stop
       fix: fix that, then run look.py again
@@ -26,4 +25,4 @@
     the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
 
   Next:
-    No command: the first item under Not checked above says why.
+    No command: the first item under Problems above says why.
