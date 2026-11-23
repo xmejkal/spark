@@ -49,6 +49,7 @@ from spark.records.record_kind import Answer  # noqa: E402
 from spark.sourcing import sourcing_operations  # noqa: E402
 from spark.design import design_operations  # noqa: E402
 from spark.idea.drop_need import DropNeed  # noqa: E402
+from spark.flow.now_follow_up import FlowFollowUp  # noqa: E402
 
 
 # --- MVP ---
@@ -88,9 +89,10 @@ OPERATIONS = {name: {**design_operations.OPERATIONS, **sourcing_operations.OPERA
                      DescribeOperations.name: DescribeOperations}[name] for name in ORDER}
 #: The flags, for the prefix rule.
 FLAGS = ["--" + name for name in OPERATIONS]
-#: What parts.py says of itself, and the fix of an argv that names no operation.
+#: What parts.py says of itself, the fix of an argv that names no operation, and the follow-up: after a pick that wrote,
+#: the step flow.py show names now (P1035).
 HELP = HelpText("parts.py", "What a part needs, and what is known about it.", "", tool="parts",
-                bad_argument_fix=BAD_ARGUMENT_FIX)
+                bad_argument_fix=BAD_ARGUMENT_FIX, follow_up=FlowFollowUp())
 
 
 def asked_on_the_core(argv):

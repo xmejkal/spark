@@ -443,14 +443,15 @@ def run_build_board(stages, args, workdir=None):
     """`check_spine.py` run through the core with a FakeRequirementsBuild of `stages` in `workdir` (P804): `args` holds
     `json`, `keep`, `sim_dir` and `requirements`, each as the CLI's flag would. It prints what check_spine prints and returns the
     exit code, so a test of the old `report(stages, args, workdir)` keeps its assertions."""
+    import check_spine
     from spark.build.build_board import BuildBoard
-    from spark.core.cli import HelpText, run_cli
+    from spark.core.cli import run_cli
     from spark.core.outside import build_bare_outside_world
     argv = [str(args.requirements)] if getattr(args, "requirements", None) else []
     argv += ["--keep", str(args.keep)] if getattr(args, "keep", None) else []
     argv += ["--sim-dir", str(args.sim_dir)] if getattr(args, "sim_dir", None) else []
     argv += ["--json"] if args.json else []
-    return run_cli(HelpText("check_spine.py", "the build", None), BuildBoard(FakeRequirementsBuild(stages, workdir)), argv,
+    return run_cli(check_spine.HELP, BuildBoard(FakeRequirementsBuild(stages, workdir)), argv,
                    outside_builder=build_bare_outside_world)
 
 

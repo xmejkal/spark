@@ -5,6 +5,8 @@ a need that its own part serves says what a run does not test of the part (`note
 reads and hands in (`Argument.payload`).
 """
 
+from pathlib import Path
+
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument
 from spark.records import store
 from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
@@ -49,6 +51,7 @@ class PickParts(AnswerOperation):
     beyond the drawer, the notes; a refusal writes nothing."""
 
     name = "pick"
+    details = "After a pick that wrote, next ends with the step flow.py show names now for the project (P1035)."
     data_keys = ('project', 'picks', 'reserved', 'released', 'written')
     arguments = (Argument(("--pick",), "project_and_picks", str,
                           "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "
@@ -60,6 +63,9 @@ class PickParts(AnswerOperation):
 
     def effects_of(self, values):
         return (READS,) if values["dry_run"] else self.effects
+
+    def written_project(self, values):
+        return Path(values["project_and_picks"][0])
 
     def build_answer(self, project_and_picks, passed_over, dry_run):
         target, given = project_and_picks[0], project_and_picks[1:]

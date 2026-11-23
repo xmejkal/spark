@@ -14,6 +14,7 @@ import hashlib
 import io
 import json
 import os
+import shlex
 import shutil
 import sys
 import tempfile
@@ -1708,14 +1709,27 @@ class TheFollowUpTest(FlowTest):
         self.assertEqual((code, [step["op"] for step in json.loads(lines[0])["next"]]), (0, ["look"]))
         self.assertEqual([step["op"] for step in show(project)[0]["next"]], ["run_scenario"])
 
+    def test_the_line_marks_a_step_that_needs_the_person_s_yes_and_names_its_script(self):
+        # round 2, amendment D: the brief step has needs_yes and no needs_person, and its op is its script's name
+        from spark.flow.now_follow_up import FlowFollowUp
+        from spark.flow.phase_steps import ANSWERS_PLACEHOLDER, brief_step
+        from spark.flow.show_flow import NEEDS_YOU
+        project = Path(tempfile.mkdtemp()) / "plant-alarm"
+        step = brief_step(project)
+        self.assertEqual((step.needs_yes, step.needs_person), (True, None))
+        line = FlowFollowUp().line(step)
+        self.assertTrue(line.endswith(NEEDS_YOU), line)
+        self.assertIn("/init_project.py --project %s --answers %s — " % (project.absolute(), shlex.quote(ANSWERS_PLACEHOLDER)), line)
+        self.assertFalse(FlowFollowUp().line(step._replace(needs_yes=False)).endswith(NEEDS_YOU))
+
     def test_every_op_a_flow_step_names_has_its_script(self):
         import inspect
         import types
-        from spark.flow import flow_codes, offer_steps, phase_steps
+        from spark.flow import offer_steps, phase_steps
         from spark.flow.now_follow_up import STEP_SCRIPTS
         project = a_firmware(a_built_project())
         given = {"project": project, "need": "soil", "pick_id": "x-many", "name": "A soil probe", "no_simulation": False,
-                 "phase": types.SimpleNamespace(status=flow_codes.NOT_STARTED)}
+                 "phase": types.SimpleNamespace(status=NS)}
         ops = set()
         for module in (offer_steps, phase_steps):
             for name, builder in inspect.getmembers(module, inspect.isfunction):
