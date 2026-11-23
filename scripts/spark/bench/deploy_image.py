@@ -243,6 +243,7 @@ class DeployFlowService:
             lines, sentence, fix = board_envelope.stop_said(SCRIPT, cannot, (lines, reached["doctor"]), self.asked.port, self.service.project)
             if fix:
                 reached.update(refusal=sentence, fix=fix)
+                reached["asleep_next"] = board_envelope.asleep_next(fix, reached["project"], reached["evidence"])  # P1048
         self.outside.add_diagnostics(lines)
         return EXIT_COULD_NOT_RUN
 

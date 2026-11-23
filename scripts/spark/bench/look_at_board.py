@@ -167,7 +167,7 @@ class LookAtBoard(Operation):
                 return passed
             report = service.run(project, port, picked, listed=row)
         except board_look.LookStopError as stop:
-            return self._stopped(stop, platform, port, outside)
+            return self._stopped(stop, platform, port, outside, picked)
         grant_may_answer = board_grant.GrantService().refusal_of(picked) is None  # P1029: the store's file, for no simulation
         return self._after_read(self._found(report, project.resolve(), picked, grant_may_answer), report, passed, project, outside)
 
@@ -258,8 +258,9 @@ class LookAtBoard(Operation):
         return result._replace(headline=headline_of(report, result.status()))
 
     @staticmethod
-    def _stopped(stop, platform, port, outside):
-        """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
+    def _stopped(stop, platform, port, outside, picked):
+        """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics, and
+        after the asleep fix the look step with `picked`'s flags (P1048)."""
         answer = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
         # P1022, P1049: a firmware that deep-sleeps gets the asleep fix, also as the doctor's next step on the --port port
         lines, sentence, fix = board_envelope.stop_said(SCRIPT, stop, answer, port, platform.project)
@@ -268,7 +269,7 @@ class LookAtBoard(Operation):
         said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)
         return OperationResult({"doctor": board_doctor.as_dict(doctor)} if doctor else None,
                                [Finding(outcomes.COULD_NOT_RUN, None, stop.reason, sentence, fix)],
-                               diagnostics=said.split("\n"))
+                               next=board_envelope.asleep_next(fix, platform.project.resolve(), picked), diagnostics=said.split("\n"))
 
 
 def headline_of(report, status, other_board=False):
