@@ -95,6 +95,10 @@ CASES = [
     Case("look-ok.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("look-ok.txt", "look.py", [], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("look-problems.json", "look.py", ["--json"], "s3-flash-id-8mb.txt", "mpremote-devs-one.txt", 1),
+    # P1032: the text view of a warning, of a stop (a C6 with another MAC on the kept S3's port) and of another board
+    Case("look-problems-warning.txt", "look.py", [], "s3-flash-id-8mb.txt", "mpremote-devs-one.txt", 1),
+    Case("look-problems-stop.txt", "look.py", [], "c6-flash-id.txt", "mpremote-devs-one.txt", 1),
+    Case("look-could-not-run-other-board.txt", "look.py", [], "s3-flash-id-16mb-other-mac.txt", "mpremote-devs-one.txt", 2),
     Case("look-could-not-run-two-boards.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-two.txt", 2),
     Case("look-ok-one-board-two-ports.json", "look.py", ["--json"], "s3-flash-id-16mb.txt",
          "mpremote-devs-one-board-two-ports.txt", 0),
@@ -177,14 +181,17 @@ def build_project(folder):
 #: The name of a variable that holds a secret of the parent's (WOKWI_CLI_TOKEN, GH_TOKEN, AWS_SECRET_ACCESS_KEY, an API
 #: key, a password), which no child carries: a net that needs a token gives its child a fake one (P699, P715).
 SECRET_NAME = re.compile(r"TOKEN|SECRET|PASSWORD|API_?KEY|(?:^|_)KEY(?:_|$)")
+#: The variables that turn the text view's colour on or off (P1032), which no child carries.
+COLOUR_VARIABLES = ("FORCE_COLOR", "NO_COLOR")
 
 
 def child_env(store, flash_id_file, devs_file):
-    """The environment of a child: the parent's without SPARK_* (ACCEPT_VARIABLE too) and without a secret, then the fakes
+    """The environment of a child: the parent's without SPARK_* (ACCEPT_VARIABLE too), without a secret and without
+    FORCE_COLOR and NO_COLOR (P1032: a shell that sets them changes no golden), then the fakes
     first on PYTHONPATH, `store` as SPARK_HOME, and the canned flash id and device list. HOME stays the parent's: the
     bench reads esptool's version from the person's own site-packages, under it."""
     env = {name: value for name, value in os.environ.items()
-           if not name.startswith("SPARK_") and not SECRET_NAME.search(name.upper())}
+           if not name.startswith("SPARK_") and not SECRET_NAME.search(name.upper()) and name not in COLOUR_VARIABLES}
     env.update(PYTHONPATH=str(FAKE_MODULES), SPARK_HOME=str(store), TZ="UTC", PYTHONDONTWRITEBYTECODE="1",
                FAKE_ESPTOOL_FLASH_ID_FILE=str(CANNED / flash_id_file), FAKE_MPREMOTE_DEVS_FILE=str(CANNED / devs_file))
     return env

@@ -43,7 +43,7 @@ after a read: the board did restart, and there is no token. Never add `--port` t
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
 changes no flash. It compares the board's chip and flash size with the board in `requirements.json` and prints each as
 `same`, `differs` or `unknown`, with the board's MAC, the last deploy that spark's store record names for it, and a token.
-With two boards on USB, the look lists them. One board that shows on two nodes with one USB serial (a CP2104 does) is one board: the look names the other nodes in `also_on`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Read the envelope (`status`, `problems`, `unchecked`, `data`, `next`: `docs/guide/agents/json.md`, "look.py and deploy.py's envelope") and relay it in words. Each item of `problems` and `unchecked` has a `code` (the table is in the same section): decide on the code, and relay the sentence. Without `--json` the same facts are lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
+With two boards on USB, the look lists them. One board that shows on two nodes with one USB serial (a CP2104 does) is one board: the look names the other nodes in `also_on`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Read the envelope (`status`, `problems`, `unchecked`, `data`, `next`: `docs/guide/agents/json.md`, "look.py and deploy.py's envelope") and relay it in words. Each item of `problems` and `unchecked` has a `code` (the table is in the same section): decide on the code, and relay the sentence. Without `--json` the text view is for the person: a status line, the facts, the findings with a fix and the next step. Claude reads `--json`. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
 not propose the flash. `unknown` is not a pass. The token is not the person's yes. `look.py` is in this command's
 `allowed-tools`, and so is `deploy.py` (P242): Claude Code does not ask before it runs deploy.py. The gate is inside
 deploy.py. With no deploy grant, it asks for a yes in a real terminal, Claude's shell has none, and deploy.py exits 2
@@ -61,7 +61,7 @@ the board's flash. The second writes the image at `0x0`, where the simulator loa
 order: the look, its token, then the person's yes. When each stage starts, deploy.py prints a `why:` line that says why
 it happens. With `--json` these lines go to stderr. Relay them.
 
-1. Run `look.py` and relay its lines. A `needs_reply` is the look's question: ask the person as above. A stop means do not propose the flash.
+1. Run `look.py --json` and relay the envelope in words, as above. A `needs_reply` is the look's question: ask the person as above. A stop means do not propose the flash.
 2. Run `deploy.py --json --token <the token>`, with `--port` only when two boards are on USB. The look's next step and the
    terminal line name `--port` even with one board on USB. Run or give that line as printed. If deploy.py prints
    `yes: standing yes typed by ...`, the person's deploy grant is the yes and it erases at once. Relay that line.
