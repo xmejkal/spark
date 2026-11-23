@@ -3,7 +3,8 @@ The flow reader (P825, #1183): `flow.py show` says where a project stands, phase
 stages wrote, and offers the next steps as keys. On five projects (no needs, picked, built by hand with no needs, a build
 that ended in could-not-run, requirements changed after the build) each test pins all nine phases' status and offer keys
 from `flow.py show --json`, and `stands_at`. More tests pin one phase each.
-It covers the area's modules `show_flow`, `phase_readers` and `flow_codes`, and the build record `build_record`.
+It covers the area's modules `show_flow`, `phase_readers`, `deploy_reading` (P1043, the deploy phase) and `flow_codes`, and the
+build record `build_record`.
 
     python3 -m unittest tests.test_flow
 """
@@ -2099,13 +2100,12 @@ class TheDeployReaderTest(FlowTest):
         shutil.copy(ROOT / "tests" / "data" / "board_log" / ("%s.log" % LOG_NAME), project / "sim" / "runs" / "board")
         a_board_log(project, "ready unknown", "mpremote could not start the firmware: MARK-TOOL TransportError /dev/cu.x",
                     name="2026-11-23T15-00-00", port="MARK-PORT", facts_line="facts file: not written: MARK-FACTS",
-                    heard="MARK-HEARD /Users/someone/x\n")
-        for project_now in (project, ):
-            said, _ = show(project_now)
-            shown = json.dumps([said["data"]["phases"], said["data"]["guide"], said["data"]["deploy"]]) + "\n".join(lines_of(project_now))
-            for mark in ("MARK-PORT", "MARK-FACTS", "MARK-HEARD", "MARK-TOOL", "TransportError", "/dev/", "/Users/", str(project)):
-                with self.subTest(mark=mark):
-                    self.assertNotIn(mark, shown)
+                    heard="MARK-HEARD what the console printed\n")
+        said, _ = show(project)
+        shown = json.dumps([said["data"]["phases"], said["data"]["guide"], said["data"]["deploy"]]) + "\n".join(lines_of(project))
+        for mark in ("MARK-PORT", "MARK-FACTS", "MARK-HEARD", "MARK-TOOL", "TransportError", "/dev/", str(project)):
+            with self.subTest(mark=mark):
+                self.assertNotIn(mark, shown)
 
     def test_the_deploy_data_holds_the_six_fields_of_the_newest_log(self):
         said, _ = show(a_board_log(a_deploy_project(), "ready unknown", NOT_STARTED_SENTENCE))
