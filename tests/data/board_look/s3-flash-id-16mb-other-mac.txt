@@ -4,7 +4,7 @@ Connecting...
 Detecting chip type... ESP32-S3
 Connected to ESP32-S3 on /dev/cu.usbmodem101:
 Chip type:          ESP32-S3 (QFN56) (revision v0.2)
-MAC:                02:00:00:00:12:34
+MAC:                de:ad:be:ef:12:34
 
 Flash Memory Information:
 =========================

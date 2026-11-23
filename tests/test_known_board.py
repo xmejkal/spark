@@ -426,12 +426,12 @@ class TheTextViewOfTheKeptBoardTest(KnownBoardCase):
 
     def test_the_other_board_and_the_kept_note_are_said_once(self):
         said, sentence = self.other_board_text()
-        self.assertEqual(said[0], "? look: could-not-run. " + look_at_board.OTHER_BOARD_HEADLINE)
+        self.assertEqual(said[0], "? look: could-not-run. Another board than the one this project keeps: no token, and the kept board stays.")
         self.assertEqual("\n".join(said).count(sentence), 1, said)
         self.assertIn("    - " + sentence, said)
         self.store_forgets()
         said = self.look_at(BRIDGE, replies_file=self.say_yes(self.envelope(BRIDGE)[1]), as_json=False)[1]
-        note = known_board.KEPT_MESSAGE % ("/dev/cu.usbserial-01A2B3C4", known_board.mac_ends(MAC_A))
+        note = "kept: spark remembers the board on /dev/cu.usbserial-01A2B3C4 (MAC ends ee:ff) as this project's board"
         self.assertEqual("\n".join(said).count(note), 1, said)
         self.assertIn("    " + note, said[said.index("  Note"):])
 

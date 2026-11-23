@@ -2,7 +2,7 @@
 
   Board
     port         /dev/cu.usbmodem101
-    mac          02:00:00:00:12:34
+    mac          de:ad:be:ef:12:34
     chip         esp32s3    same
     flash        16 MB      same
     spark's last deploy here: none in its store record (it keeps its own deploys and those that a registered project recorded)
