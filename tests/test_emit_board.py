@@ -822,7 +822,7 @@ class APartWithNoGroundPinTest(unittest.TestCase):
         return button
 
     def test_a_two_pin_part_between_a_pin_and_a_rail_is_named_so_the_island_check_asks_it_no_ground(self):
-        # P1026: the active-high wake button (B to 3V3, a pull-down on A) has no ground pin of its own; its return is A
+        # P1026: the active-high wake button (B to 3V3, a pull-down on A) has no ground pin of its own. Its return is A
         self.assertEqual(power_rails.parts_without_a_ground_pin([self.button_on("logic")]), ["TactileButton"])
         self.assertEqual(power_rails.parts_without_a_ground_pin([part_records.load("tactile-button")]), [])
         self.assertEqual(power_rails.parts_without_a_ground_pin([self.button_on("agnd")]), [])
