@@ -61,8 +61,10 @@ PIN_ROLES = {
     # a bus pin after every pin that is not kept for an ADC1 reading or another job, and I2C after SPI. Added
     # 2026-09-29 (backlog P3) after the assigner spent SCK, MI and MO on two LEDs and a button because nothing
     # said they were a bus.
-    "spi": "the hardware SPI bus; a plain signal takes it after every pin that is not kept, and I2C after SPI",
-    "i2c": "the hardware I2C bus; a plain signal takes it after every pin that is not kept, and I2C after SPI",
+    "spi": ("the hardware SPI bus; a plain signal takes it after every pin that is not kept for an ADC1 reading or "
+            "another job, and I2C after SPI"),
+    "i2c": ("the hardware I2C bus; a plain signal takes it after every pin that is not kept for an ADC1 reading or "
+            "another job, and I2C after SPI"),
     # Read by `restricted_pins` (P254, D14): code for a live try that writes one of these numbers is refused.
     "usb": "the chip's own USB D- and D+: driving one drops the USB port the session talks through",
     "flash": "wired to the flash that holds the firmware: driving one can stop the chip",

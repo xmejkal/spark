@@ -7,11 +7,15 @@ is kept when it would waste an ADC1 reading or when something else is wired to i
 display, the battery sense). An I2C sensor needs both I2C pads, and a write-only SPI part leaves MISO unused, so I2C
 goes last.
 
+The PO said "a pad with no bus role". This module reads it as a pad with no bus role that is not kept, so ADC1 pads and
+pads with another job stay last. That reading is the session's, by the PO's delegation (P1010's plan, 2026-11-22), and
+it is his to change: the other reading sends the walk's EPD_BUSY to D6, an ADC1 pad.
+
 No single bus penalty gave this order. Measured on the FireBeetle 2 ESP32-C6, 2026-11-22: for a plain signal, SDA, SCL
 and MISO cost 13 (pwm and the bus penalty 5), and D11 costs 16 (pwm and wake), so the walk P934's EPD_RST and EPD_BUSY
 took SDA and SCL while D11 was free. A penalty above 8 fixes the C6, but on the FireBeetle 2 ESP32-S3 an SPI penalty
 above 6 sends a plain signal onto an ADC1 pin (MOSI costs 22, an ADC1 pin 24): the regression of 2026-09-29. So the
-bus is a tier of the sort key, after the kept tier, and the penalty still orders the kept pads.
+bus is a tier of the sort key among the pads that are not kept, and the penalty still orders the kept pads.
 """
 
 #: The bus roles, in the order a signal that is no bus line takes their pads: an I2C sensor needs both I2C pads, and a
@@ -77,10 +81,14 @@ class PadOrder:
         return None
 
     def kept_words(self, needs, pin, free):
-        """The kept free pads with no bus role, grouped by their reason in the pads' order, or NO_PAD_LEFT."""
-        groups = {}
+        """
+        The kept free pads with no bus role, grouped by their reason in the pads' order, or NO_PAD_LEFT. A GPIO with two
+        labels (the XIAO C6's A0 and D0) is named once, by its first label.
+        """
+        groups, named = {}, {pin["gpio"]}
         for label, other in free.items():
-            if other["gpio"] != pin["gpio"] and not self.bus(other):
+            if other["gpio"] not in named and not self.bus(other):
+                named.add(other["gpio"])
                 groups.setdefault(" and ".join(self.reasons(other, needs)), []).append(label)
         if not groups:
             return NO_PAD_LEFT

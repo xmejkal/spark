@@ -412,7 +412,7 @@ PAD_ORDER = pad_order.PadOrder(_cost, CONFLICTING_ROLES)
 
 def _why(needs, pin):
     """One sentence a person can disagree with. `pin` may carry `free`, the free pads that could serve it (P1010)."""
-    said = PAD_ORDER.why(needs, pin, pin.get("free", {}))
+    said = PAD_ORDER.why(needs, pin, pin["free"]) if "free" in pin else None
     if said:
         return said
     if needs:
