@@ -1,6 +1,6 @@
 # Delegated answers: the council that stood in for the PO
 
-The PO was away from about 16:10 to 18:20 CET on 2026-11-23. His order, relayed by the spark-main session: a council
+The PO was away from about 16:10 CET on 2026-11-23, when the relay came, and was expected back at about 18:20 CET. Times in the three answer files are the agents' own estimates, except the architect's 16:41 CET, which came from the clock. All three files were committed at 16:42 CET. His order, relayed by the spark-main session: a council
 of three answers every question of this discovery for him. The answers are delegated, and each one is the PO's to
 change. His confirmation of the understanding and his yes to file any card stay with him.
 

@@ -45,7 +45,7 @@ flowchart TB
   end
   subgraph claude["Claude-specific"]
     bind["binding: plugin.json, .mcp.json, CLAUDE_PLUGIN_ROOT, allowed-tools, model fields, Artifacts, transcripts for cost, the prompt that asks before a network step"]
-    know["agent knowledge: 9 commands and 4 agent files in Claude Code formats"]
+    know["agent knowledge: 9 commands and 4 agent files, Claude Code frontmatter and variables around plain Markdown"]
   end
   open["agent knowledge in open formats: 3 skills, the agents' guide, AGENTS.md"]
   subgraph neutral["Plain Python, calls no model"]

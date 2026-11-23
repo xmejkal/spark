@@ -35,8 +35,8 @@ e.g. `- ★C3 · STATUS.md:84 · refuter: partly — "Shown on the C6, assumed f
 ## Agree / split
 <!-- Where the lenses and the refuter agree, and where they split; each split becomes a question.
 e.g. `- Split: Feasibility says a day, Risks says a week · Q4` -->
-- Agree: all six lenses on ★C2, that the commands and agent files are in Claude Code's formats. Existing-first and architecture on ★C1, that the scripts call no model <!-- REQUIRED:agree-split -->
-- Agree: feasibility, architecture, UX and existing-first on ★C3, that the core's own sentences name Claude and `/spark:` commands, with counts that match (79 lines, 42 files)
+- Agree: all six lenses on ★C2, that the commands and agent files carry Claude Code frontmatter and variables around plain Markdown bodies. Nobody checked that the 3 skills carry none of it. Existing-first and architecture on ★C1, that the scripts call no model <!-- REQUIRED:agree-split -->
+- Agree: feasibility, architecture, UX and existing-first on ★C3, that the code under scripts/ (the CLIs and every area) names Claude and `/spark:` commands, with counts that match (79 lines, 42 files)
 - Agree: feasibility, UX, existing-first, risks and the user's journey on ★C13, that nothing fails when a flag, key or code is taught nowhere
 - Agree: the user's journey, UX and architecture on ★C19, that the deploy phase never shows as done
 - Agree: feasibility and architecture on ★C8 (two event kinds, no async) and on ★C7 (12 of 27 CLIs on the core)
@@ -56,7 +56,7 @@ e.g. `- Split: Feasibility says a day, Risks says a week · Q4` -->
 - Split: existing-first (EX-18: an eval tool is already on the PO's Mac) and UX (UX-14: one row per release) against risks (W14 names an eval harness as its own example, and two evals were pruned, one of which scored the plugin against a baseline once (2aad7674, 2026-09-24)) · Q10, A5
 - Split: on Hermes Agent, existing-first, architecture and UX read its pages (E) while feasibility holds the same facts as H from snippets, and risks notes that its sources conflict on install paths · kept as E with the caveat "read through a summariser" in ★C5. Which Hermes the PO means is Q7
 - Split: inside existing-first (EX-2), spark's research of 2026-10-13 says one harness has an agent format and a third-party page says that harness's plugin holds no agents · not settled, on the collection plan
-- Split: three word counts for the agent text: 64,430 (UX-3), about 63,500 (UJ-20) and 28,511 for the 16 prompt files (FE-13) · three sets of files, named in ★C16's caveat. No question
+- Split: three word counts for the agent text: 64,429 by the refuter's `wc` (UX-3 wrote 64,430), about 63,500 (UJ-20) and 28,511 for the 16 prompt files (FE-13) · three sets of files, named in ★C16's caveat. No question
 - Split: feasibility (FE-10: there is one Reporter, the terminal's) against the architecture lens's layer diagram ("Reporters: Terminal, Masking") · settled by the refuter's grep: five Reporter classes, so FE-10 is wrong. It changes no option
 - Split: UX asks whether a recorded deploy counts as the deploy phase done, while P867's D8 already chose "recorded" and "none recorded", never as a pass · the brief's Found on the way proposes D8's words
 - Split: risks names A1 (outside Claude Code) and A7 as the riskiest. The architect widened A1 to all five directions and tested it on walk rows. The refuter: no walk row can show a harness or a model as its cause, so that test confirmed the architect's own option, and the pull can be the showcase · the test now rests on the PO's answers per direction, with no rows. Q1, Q18
