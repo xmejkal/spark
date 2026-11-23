@@ -12,6 +12,10 @@ The council, three agents in parallel, each with the same brief and the refuter'
 
 The main session acts on the majority. A split is named, and it goes to the PO.
 
+The order exists in this folder only as spark-main's relay. Its words, received at about 16:10 CET by the Mac clock: "spark-main, on the PO's order (2026-11-23, 17:08 CET): the PO sleeps for two hours. Run fully automatic until 19:10 CET. Do not wait for him: every question of the P1039 discovery is answered by a council that simulates him". spark-main then corrected the end to "about 18:20 CET by the Mac clock", because its times were estimates.
+
+The council read the brief at commit 67071ff3. The revision after the refuter changed some option letters, so brief.md's D3 names each answer by its content. Where a letter below and the brief disagree, D3 holds.
+
 ## Q1, part 1: the importance of each assumption
 
 | id | PO stand-in | architect | tech lead | majority |
@@ -42,16 +46,16 @@ The main session acts on the majority. A split is named, and it goes to the PO.
 | Q | majority | the three views, short |
 | --- | --- | --- |
 | Q2 the order against the MVP | (a), with (b) only for a free read-only test | all three |
-| Q3 what "factory" means | (a), the product's line, its end first. (c) is a no-go | all three. Two of three say that only the PO can say what he meant |
+| Q3 what "factory" means | (a), the product's line, its end first. The unattended line (the old c) is a no-go. The new c, a line for software that is not a gadget, was not before the council | all three. Two of three say that only the PO can say what he meant |
 | Q4 how directions enter the backlog | (a) seams only now. (b) only when a direction meets an arm of A1's test. P217 #199 stays open | all three pick (a). The PO stand-in and the tech lead keep #199 open. The architect names P417 #545 as the first spike that exists already |
 | Q5 the seams on P793 #1105 | (a) with conditions: S2 counts the network operations from the code, and a piece in Build or Ready takes no new line | all three. The architect narrows it: S1, S3, S4 and S5 are on #1105 already, S6 goes to P417, S8 waits |
 | Q6 the split of core and interfaces | (a) | all three. The claimed conflict between "no server" and the PO's named consumers is withdrawn (the refuter) |
 | Q7 harness generality | (a), and the no-install trial is offered to the PO, to run only on his yes | all three pick (a). The PO stand-in and the tech lead offer the trial |
-| Q8 the form of the agents' knowledge | (c) now, (a) as the direction after P793's pieces 1 to 3 | the PO stand-in and the tech lead. The architect says (c) now, with the core's answers as the home of the knowledge |
+| Q8 the form of the agents' knowledge | no rewrite now (the old c, now b), the Agent Skills format (a) as the direction after P793's pieces 1 to 3 | the PO stand-in and the tech lead. The architect says (c) now, with the core's answers as the home of the knowledge |
 | Q9 the guard | hand fixes now, then (b) when the catalogue (S3) lands, not gated on the row sort | all three in substance |
 | Q10 evaluation and model choice | (a) | all three |
 | Q11 a local AI | (a) | all three |
-| Q12 where the person's yes lives | (a), by effect from the code. The flash yes stays a word in his own terminal or a grant. (c) is a no | all three. The architect adds: `build-board` declares `fetches` and is pre-approved today (scripts/spark/build/build_board.py:56), so S2 needs a small design first |
+| Q12 where the person's yes lives | (a), by effect from the code. The flash yes stays a word in his own terminal or a grant. (c) is a no | all three. The architect's note that `build-board` declares `fetches` is wrong: scripts/spark/build/build_board.py:56 is the effect list of the research step it offers, and :122 holds its own (reads, runs, writes), as the refuter's second pass found |
 | Q13 to Q17 | not answered | account questions about the PO's own use: his only |
 
 ## What only the PO can answer

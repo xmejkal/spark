@@ -126,4 +126,4 @@ flowchart LR
 - Today, J2: replace "nothing: spark is a Claude Code plugin" with: the scripts run anywhere once `CLAUDE_PLUGIN_ROOT` is exported, 19 of 27 take `--json`, and nobody tried a command page outside Claude Code (E ★C7, ★C2).
 - Today, J4: replace the line with FE-1's reading: pages are checked against the code in one direction, one test fails on a script that no routing page names and counts human pages too, and nothing fails on an untaught flag, key or code (E ★C13).
 - Today, J5: add the person's own terminal for the deploy's yes, and that the page runs three kinds of click (E council/ux-and-ai-ux.md:94, UX-9).
-- Today, J3: add that two earlier evals were pruned, neither of which scored an agent, and that two model tests were offered and not run (E ★C17).
+- Today, J3: add that two earlier evals were pruned, one of which scored the plugin against a baseline once (2aad7674, 2026-09-24), and that two model tests were offered and not run (E ★C17).
