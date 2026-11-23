@@ -1902,6 +1902,21 @@ class ThePageRefreshTest(FlowTest):
                 self.assert_one_line_and_the_result_stands(project, follow_up, raised)
                 self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
 
+    def test_a_page_that_is_not_utf_8_is_written_over_by_flow_page_and_by_the_refresh(self):
+        # the review, refuter must-fix: main wrote over such a page, so the whole-file write must not compare it first
+        import parts
+        from spark.flow.now_follow_up import REFRESHED
+        project = self.open_needs("soil", "wet")
+        (project / "page.html").write_bytes(b"\xff\xfeOLD")
+        said, code = run_main(flow.main, ["page", "--project", str(project), "--json"])
+        self.assertEqual((code, json.loads(said[0])["status"]), (0, "ok"))
+        self.assertIn("<html", (project / "page.html").read_text(encoding="utf-8").lower())
+        (project / "page.html").write_bytes(b"\xff\xfeOLD")
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many", "--json"])
+        self.assertEqual(code, 0)
+        self.assertIn({"subject": "page.html", "sentence": REFRESHED}, json.loads(lines[0])["notes"])
+        self.assertIn("<html", (project / "page.html").read_text(encoding="utf-8").lower())
+
     def test_the_page_store_writes_a_whole_page_or_none(self):
         # round 2, amendment B: a write that fails halfway leaves the old page whole, as store.write_file does
         from spark.flow.write_flow_page import FlowPageStore

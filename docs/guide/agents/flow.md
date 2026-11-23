@@ -183,7 +183,7 @@ files too, `dist/board/schematic.svg` and `dist/board/pcb.svg`, which the build 
 `flow.py page` alone shows them. It never runs `tsci`. The full rules are in `commands/build.md`. Until a build kept them, the two pictures say why they are not drawn. In a project,
 the build writes the same page with all three pictures, after it kept the simulation project. A build that did not finish
 removes `page.html` in a project, and `flow.py page` writes it again. If the flow page cannot be written, the build keeps
-its own result and lists one `not written` entry. An ok `parts.py --pick` writes an existing `page.html` again, never published ([the next step](#the-next-step)).
+its own result and lists one `not written` entry. An ok `parts.py --pick` writes an existing `page.html` again, never published ([the next step](#the-next-step)). `flow.py page` replaces a `page.html` that is a link or a FIFO with a file: it never writes through the link and never waits on the FIFO.
 
 The breadboard stands in the page as inline SVG ([P949](https://github.com/xmejkal/spark/issues/1353)), so a player can
 find its parts. Each jumper's group carries `data-step`, the number of its step, and holds its wire, its end dots and

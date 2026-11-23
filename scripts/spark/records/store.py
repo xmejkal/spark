@@ -191,6 +191,18 @@ def write_file(path, text, private=False):
         if private:
             os.chmod(path, 0o600)
         return False
+    replace_file(path, text, private)
+    return True
+
+
+def replace_file(path, text, private=False):
+    """
+    Write `path` whole, whatever it holds now (P1035 PR 2): `text` goes to `.part`, which is renamed over it, so a write
+    that fails halfway leaves the old file whole and no `.part` behind. A link or a FIFO at `path` is replaced by the file,
+    never written through. A private file's `.part` is made new at 0600 before it holds a byte. `write_file` calls it
+    once the bytes differ; the page calls it directly, so an old page that is not UTF-8 never stops its write.
+    """
+    path = Path(path)
     part = path.with_name(path.name + ".part")
     try:
         if private:
@@ -202,7 +214,6 @@ def write_file(path, text, private=False):
     except BaseException:
         part.unlink(missing_ok=True)
         raise
-    return True
 
 
 def write_json(name, key, data):
