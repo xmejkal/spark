@@ -1,12 +1,13 @@
 """
 Where a project stands as an Operation on the core (P825, #1183): each phase's reader in order, one line per phase, the
-offers each phase holds, the guide (P977) and its now offer's step (P1030). It reads and never writes. `flow.py show` is
+offers each phase holds, the guide (P977) and the step of its now: the now offer's (P1030), else the now phase's
+(P1034, `phase_steps`). It reads and never writes. `flow.py show` is
 its CLI; the page (P827) and the requests (P829) read the same phases.
 """
 
 from pathlib import Path
 
-from spark.flow import flow_codes
+from spark.flow import flow_codes, phase_steps
 from spark.flow.fingerprint import fingerprint_of
 from spark.flow.guide import guide_of, stands_at_of
 from spark.flow.phase_readers import MARKS, READERS
@@ -22,6 +23,8 @@ from spark.core.text_guards import printable
 GUIDE_LINE = "  %s: %s"
 #: The NOW line's end: the key of the now offer, whose step `next` holds.
 NOW_KEY = " [%s]"
+#: The NOW line's end for a next-only step (P1034): its op, and NEEDS_YOU for a step that needs the person.
+NOW_STEP, NEEDS_YOU = " [next: %s%s]", ", needs you"
 #: How many offer keys a person's line shows; the rest are counted. The JSON holds them all.
 OFFERS_SHOWN = 5
 #: The Finding of a phase that holds problems or could not run: its first sentence, and where to look.
@@ -45,11 +48,19 @@ def phase_line(phase):
     return [printable(line) for line in lines]
 
 
-def guide_lines(guide):
-    """The guide as a person reads it, in the page's words and order (P1030): NOW with the key of its offer, DONE, LATER,
-    why there is no simulation, SET ASIDE. A list with no item draws no line, as on the page."""
+def now_tag(now, steps):
+    """The end of the NOW line: the key of its offer, else the op of its first step (P1034), else nothing."""
+    if now["offer"]:
+        return NOW_KEY % now["offer"]
+    return NOW_STEP % (steps[0].op, NEEDS_YOU if steps[0].needs_person else "") if steps else ""
+
+
+def guide_lines(guide, steps=()):
+    """The guide as a person reads it, in the page's words and order (P1030): NOW with the key of its offer or the op of
+    its next-only step (`now_tag`), DONE, LATER, why there is no simulation, SET ASIDE. A list with no item draws no line,
+    as on the page."""
     now = guide["now"]
-    lines = [GUIDE_LINE % (flow_codes.GUIDE_NOW % now["phase"], now["says"] + (NOW_KEY % now["offer"] if now["offer"] else ""))] if now else []
+    lines = [GUIDE_LINE % (flow_codes.GUIDE_NOW % now["phase"], now["says"] + now_tag(now, steps))] if now else []
     lines += [GUIDE_LINE % (flow_codes.GUIDE_DONE, ", ".join(guide["done"]))] if guide["done"] else []
     lines += [GUIDE_LINE % (flow_codes.GUIDE_LATER, ", ".join(guide["later"]))] if guide["later"] else []
     lines += ["  " + guide["no_simulation"]] if guide["no_simulation"] else []
@@ -57,11 +68,13 @@ def guide_lines(guide):
     return [printable(line) for line in lines]
 
 
-def now_steps(phases, guide):
-    """The `next` of `show`: the step of the offer the guide's now names, else none (P1030). A phase with no offer has no
-    step yet (piece 2), so an empty `next` means: read data.guide.now."""
+def now_steps(project, phases, guide):
+    """The `next` of `show`: the step of the offer the guide's now names (P1030), else the next-only step of the now
+    phase (`phase_steps.steps_of`, P1034). An empty `next` means: read data.guide.now."""
     key = guide["now"]["offer"] if guide["now"] else None
-    return [offer.step for phase in phases for offer in phase.offers if offer.key == key]
+    if key:
+        return [offer.step for phase in phases for offer in phase.offers if offer.key == key]
+    return phase_steps.steps_of(project, phases, guide)
 
 
 def phases_of(project, readers=None):
@@ -86,7 +99,8 @@ class ShowFlow(Operation):
     """
     Operation: where a project stands. It asks each PhaseReader in order and answers `data.phases` (each Phase as a dict),
     `data.stands_at`, the guide's now phase (`stands_at_of`, P1030), `data.fingerprint` (`fingerprint_of`, P829) and
-    `data.guide` (`guide_of`, P977). Its lines end with the guide's, and `next` holds the now offer's step (P1030). A phase
+    `data.guide` (`guide_of`, P977). Its lines end with the guide's, and `next` holds the now offer's step (P1030), else
+    the now phase's next-only step (P1034). A phase
     that holds problems or could not run adds one Finding of that status, so the exit says so; every phase still answers.
     `readers` are the PhaseReaders a test swaps (None: `READERS`).
     """
@@ -107,9 +121,10 @@ class ShowFlow(Operation):
         findings = [Finding(phase.status, phase.phase, flow_codes.PHASE_PROBLEMS if phase.status == PROBLEMS else flow_codes.PHASE_COULD_NOT_RUN,
                             PHASE_SENTENCE % (phase.phase, phase.says[0]), PHASE_FIX)
                     for phase in phases if phase.status in (PROBLEMS, COULD_NOT_RUN)]
+        steps = now_steps(project, phases, guide)
         lines = [line for phase in phases for line in phase_line(phase)]
-        lines += guide_lines(guide)
+        lines += guide_lines(guide, steps)
         data = {"phases": [phase.to_dict() for phase in phases], "stands_at": stands_at, "fingerprint": fingerprint_of(project, phases),
                 "guide": guide}
-        return OperationResult(data, findings, now_steps(phases, guide), lines=lines)
+        return OperationResult(data, findings, steps, lines=lines)
 # --- end MVP ---
