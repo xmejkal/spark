@@ -40,7 +40,8 @@ from spark.core.outcomes import OK  # noqa: E402
 from spark.design import needs  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
-from spark.flow.flow_codes import STALE  # noqa: E402
+from spark.flow.flow_codes import LOOK_WHY, SCENARIO_FIRST_WHY, SCENARIO_WHY, SIM_FILES_NOW, STALE  # noqa: E402
+from spark.flow.phase_steps import SCENARIO_PLACEHOLDER  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.core.result import NextStep  # noqa: E402
 
@@ -100,10 +101,11 @@ def with_needs(project, needs):
     return project
 
 
-def a_built_project(status="ok", stages=None):
+def a_built_project(status="ok", stages=None, where=None):
     """A copy of the built fixture with its breadboard sheet and the record of a build that ended in `status`. `stages` are
-    the record's {name: status}, in order (None: a board and a build that ended in `status`)."""
-    project = Path(tempfile.mkdtemp()) / "xiao"
+    the record's {name: status}, in order (None: a board and a build that ended in `status`). `where` is the folder it is
+    made in (None: the temp folder)."""
+    project = Path(tempfile.mkdtemp(dir=where)) / "xiao"
     shutil.copytree(BUILT, project)
     (project / "breadboard.md").write_text("# the sheet\n")
     stages = [{"name": name, "status": ended} for name, ended in (stages or {"board": "ok", "build": status}).items()]
@@ -148,8 +150,9 @@ BUILT_TABLE = {"idea": (None, []), "needs": (None, []), "parts": (None, []), "re
 
 class FlowTest(unittest.TestCase):
     def setUp(self):
-        self.home = a_store()
-        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        # P1034: HOME is a folder of the test's own, so a test can put a project under the home folder (Path.home reads it)
+        self.home, self.user_home = a_store(), Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home), "HOME": str(self.user_home)})
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -1419,7 +1422,7 @@ class TheOfferStepTest(FlowTest):
                                          "env": {"SPARK_HOME": str(self.home.resolve())}}])
         self.assertNotIn(str(project), json.dumps(said["data"]))
 
-    def test_show_s_next_is_empty_when_the_now_phase_has_no_offer(self):
+    def test_show_s_next_is_empty_at_the_idea_which_names_no_step(self):
         empty = Path(tempfile.mkdtemp()) / "plant-alarm"
         empty.mkdir()
         said, _ = show(empty)
@@ -1442,6 +1445,140 @@ class TheOfferStepTest(FlowTest):
         said, _ = show(with_needs(a_built_project(), SOIL))
         self.assertEqual({tuple(offer) for phase in said["data"]["phases"] for offer in phase["offers"]},
                          {("key", "label", "effect", "makes_stale")})
+
+
+def a_simulate_now(project, *scenarios):
+    """`project` with firmware/, sim/wokwi.toml and an image no run tested, and the scenario files `scenarios` by name."""
+    project = an_image(a_firmware(project))
+    for name in scenarios:
+        (project / "sim" / "scenarios").mkdir(exist_ok=True)
+        (project / "sim" / "scenarios" / name).write_text("name: %s\n" % name)
+    return project
+
+
+def now_line(project):
+    """The NOW line of `flow.py show`'s text."""
+    return next(line for line in lines_of(project) if line.startswith("  NOW ("))
+
+
+class TheNextOnlyStepTest(FlowTest):
+    """P1034: a now phase with no offer names its step in `next`: the simulate its scenario runs (or the build while
+    sim/wokwi.toml is missing), the deploy its look. The firmware names none. Each step is next-only: no page button
+    runs it, and the NOW line ends with `[next: <op>]`, with `, needs you` for a step that needs the person."""
+
+    def env(self):
+        return {"SPARK_HOME": str(self.home.resolve())}
+
+    def scenario_step(self, project, scenario, why=SCENARIO_WHY):
+        return {"op": "run_scenario", "argv": [scenario, "--project", str(project.absolute())], "why": why,
+                "effects": ["reads", "runs", "writes"], "needs_yes": False, "needs_person": True, "env": self.env()}
+
+    def test_a_firmware_now_names_no_step_because_main_py_is_not_written_yet(self):
+        for project in (a_project_built_with_no_simulation(), a_built_project()):
+            with self.subTest(project=project):
+                said, _ = show(project)
+                self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"]), ("firmware", []))
+                self.assertNotIn("[next:", now_line(project))
+
+    def test_a_simulate_now_names_each_scenario_run_and_needs_the_person(self):
+        import argparse
+        import run_scenario
+        project = a_simulate_now(a_built_project(), "b.scenario.yaml", "a.scenario.yaml")
+        said, _ = show(project)
+        self.assertEqual(said["data"]["guide"]["now"]["phase"], "simulate")
+        self.assertEqual(said["next"], [self.scenario_step(project, "sim/scenarios/%s.scenario.yaml" % name) for name in "ab"])
+        parser = argparse.ArgumentParser()
+        for flags, options in run_scenario.ARGUMENTS:
+            parser.add_argument(*flags, **options)
+        self.assertEqual([(values.scenario, values.project) for values in (parser.parse_args(step["argv"]) for step in said["next"])],
+                         [(Path("sim/scenarios/%s.scenario.yaml" % name), project.absolute()) for name in "ab"])
+        self.assertTrue(now_line(project).endswith(" [next: run_scenario, needs you]"), now_line(project))
+
+    def test_with_no_scenario_the_step_names_the_placeholder_and_claude_writes_it_first(self):
+        project = a_simulate_now(a_built_project())
+        self.assertEqual(show(project)[0]["next"], [self.scenario_step(project, SCENARIO_PLACEHOLDER, SCENARIO_FIRST_WHY)])
+
+    def test_a_simulate_with_its_toml_and_no_image_names_the_scenario_run_which_makes_the_image(self):
+        project = a_firmware(a_built_project())
+        (project / "sim").mkdir()
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+        said, _ = show(project)
+        self.assertEqual((statuses(said)["simulate"], said["data"]["guide"]["now"]["phase"]), ("not-started", "simulate"))
+        self.assertEqual(said["next"], [self.scenario_step(project, SCENARIO_PLACEHOLDER, SCENARIO_FIRST_WHY)])
+
+    def test_firmware_changed_after_a_passed_run_names_the_scenario_run_again(self):
+        project = a_run(an_image(a_firmware(a_built_project())), "passed")
+        os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        said, _ = show(project)
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"][0]["op"]), ("simulate", "run_scenario"))
+
+    def test_a_failed_run_and_a_simulate_with_problems_name_no_step(self):
+        failed = a_run(an_image(a_firmware(a_built_project())), "failed")
+        problems = a_firmware(a_project_built_with_no_simulation())
+        (problems / "sim").mkdir()
+        (problems / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = 42\n')
+        for project in (failed, problems):
+            with self.subTest(project=project):
+                said, _ = show(project)
+                self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"]), ("simulate", []))
+                self.assertNotIn("[next:", now_line(project))
+
+    def test_a_simulate_with_no_sim_files_names_the_build_in_its_sentence_and_its_step(self):
+        project = a_firmware(a_built_project())
+        said, _ = show(project)
+        whole = str(project.absolute())
+        self.assertEqual(said["data"]["guide"]["now"], {"phase": "simulate", "by": ["claude"], "says": SIM_FILES_NOW, "offer": None,
+                                                        "needs": [], "steps": None})
+        self.assertEqual(said["next"], [{"op": "build-board", "argv": [str(project.absolute() / "requirements.json"), "--keep", whole],
+                                         "why": "Build the board", "effects": ["reads", "runs", "writes"], "needs_yes": False,
+                                         "env": self.env()}])
+        self.assertTrue(now_line(project).endswith(" [next: build-board]"), now_line(project))
+
+    def test_a_deploy_now_names_the_look_for_the_person(self):
+        from spark.bench.look_at_board import LookAtBoard
+        from spark.core.cli import values_of
+        project = a_run(an_image(a_firmware(a_built_project())), "passed")
+        said, _ = show(project)
+        self.assertEqual(said["data"]["guide"]["now"]["phase"], "deploy")
+        self.assertEqual(said["next"], [{"op": "look", "argv": ["--project", str(project.absolute())], "why": LOOK_WHY, "effects": [],
+                                         "needs_yes": False, "needs_person": True, "env": self.env()}])
+        values = values_of(LookAtBoard(), said["next"][0]["argv"])[0]
+        self.assertEqual((str(values["project"]), values["no_simulation"]), (str(project.absolute()), False))
+        self.assertTrue(now_line(project).endswith(" [next: look, needs you]"), now_line(project))
+
+    def test_a_deploy_with_no_simulation_names_the_look_with_no_simulation(self):
+        for project in (a_firmware(a_project_built_with_no_simulation()), an_image(a_firmware(a_project_built_with_no_simulation()))):
+            with self.subTest(project=project):
+                said, _ = show(project)
+                self.assertEqual((said["data"]["guide"]["now"]["phase"], [step["argv"] for step in said["next"]]),
+                                 ("deploy", [["--project", str(project.absolute()), "--no-simulation"]]))
+
+    def test_no_next_only_op_is_one_the_page_runs(self):
+        from spark.flow.run_request import STEP_OPERATIONS
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        simulate, deploy = a_simulate_now(a_built_project(), "a.scenario.yaml"), a_run(an_image(a_firmware(a_built_project())), "passed")
+        ops = {step["op"] for project in (simulate, deploy) for step in show(project)[0]["next"]}
+        self.assertEqual(ops, {"run_scenario", "look"})
+        self.assertFalse(ops & set(STEP_OPERATIONS))
+        said = show(deploy)[0]
+        self.assertIsNone(said["data"]["guide"]["now"]["offer"])
+        self.assertFalse([offer for phase in said["data"]["phases"] for offer in phase["offers"] if offer["key"].startswith("look")])
+        write_page(deploy, store=FlowPageStore())
+        self.assertIn("<p><strong>NOW (deploy)</strong> ", (deploy / "page.html").read_text(encoding="utf-8"))
+
+    def test_no_step_names_a_home_path_and_only_argv_and_env_name_the_project(self):
+        # the projects are under HOME (FlowTest), so a raw argv names the home folder: only argv and env may
+        for project in (a_simulate_now(a_built_project(where=self.user_home), "a.scenario.yaml"),
+                        a_firmware(a_built_project(where=self.user_home)),
+                        a_run(an_image(a_firmware(a_built_project(where=self.user_home))), "passed")):
+            with self.subTest(project=project):
+                said, _ = show(project)
+                self.assertTrue(said["next"])
+                self.assertTrue(str(project).startswith(str(Path.home())))
+                self.assertTrue(all(str(project.absolute()) in step["argv"] for step in said["next"]))  # raw, as P1030's build step
+                outside = dict(said, next=[{key: value for key, value in step.items() if key not in ("argv", "env")} for step in said["next"]])
+                self.assertNotIn(str(Path.home()), json.dumps(outside))
+                self.assertNotIn(str(project), json.dumps(outside))
 
 
 if __name__ == "__main__":
