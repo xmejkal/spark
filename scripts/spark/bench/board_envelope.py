@@ -69,15 +69,25 @@ def console_words(console):
     return CONSOLE_READY % quoted(ready[0]) if ready else CONSOLE_PRINTED % quoted(lines[0]) if lines else CONSOLE_SILENT
 
 
-def ready_unknown_fix(result, places):
+def sleep_words(sleeps, own_usb):
+    """The `sleep` slot of READY_UNKNOWN's fix for the SleepCalls `sleeps`: SLEEP_WORDS, UNPARSED, or ''."""
+    if sleeps.places:
+        return SLEEP_WORDS % (", ".join(sleeps.places[:2]), OWN_USB_SLEEP if own_usb else MAYBE_OWN_USB_SLEEP, ready_probe.READY_WAIT_S)
+    return UNPARSED % ", ".join(sleeps.unparsed) + " " if sleeps.unparsed else ""
+
+
+def ready_unknown_fix(result, places, sleeps=sleep_calls.SleepCalls((), ())):
     """The fix of a ready_unknown deploy, the one text the CLI says and the JSON item carries (P1022): READY_UNKNOWN's
-    template filled from the DeployResult `result` and the RESET place of `places` (a ButtonPlaces), or the fix of
-    READY_UNKNOWN_NO_FILES when the passed run's log names no files."""
+    template filled from the DeployResult `result`, the RESET place of `places` (a ButtonPlaces) and the deepsleep calls
+    `sleeps` (a SleepCalls), or the fix of READY_UNKNOWN_NO_FILES when the passed run's log names no files."""
     if not result.facts["files"]:
         return board_codes.READY_UNKNOWN_NO_FILES.fix
+    lost = result.ready.lost_board  # the firmware printed ready: neither "did not start" nor "did not see ready" holds
     return board_codes.READY_UNKNOWN.fix % {
-        "files": FILES_READ if result.ready.files_read else FILES_NOT_READ, "console": console_words(result.console),
+        "files": FILES_READ_LOST if lost else FILES_READ if result.ready.files_read else FILES_NOT_READ,
+        "console": LOST_NO_SLEEP if lost else console_words(result.console), "sleep": sleep_words(sleeps, result.own_usb),
         "facts": FACTS_WRITTEN if result.facts_line.written else FACTS_NOT_WRITTEN,
+        "keeps_boot_entry": KEEPS_BOOT_ENTRY_WORDS if result.keeps_boot_entry else "",
         "reset": places.reset, "orientation": places.orientation}
 
 
@@ -99,16 +109,17 @@ OWN_USB_SLEEP = "In deep sleep the chip's own USB is off, so the board leaves US
 MAYBE_OWN_USB_SLEEP = ("If the board's USB is the chip's own (USB-Serial/JTAG), it is off in deep sleep, and the board "
                        "leaves USB with the cable in until it wakes.")
 UNPARSED = "These files of firmware/ did not parse, so spark does not know whether they call deepsleep: %s."
-
-
-def own_usb_of(project):
-    """True when the project's board record has the pin role `usb` (board_rules: the chip's own USB D- and D+), so its USB
-    plug is the chip's own and no USB bridge chip's. False when it has none or cannot be read."""
-    try:
-        roles = board_records.load(project).get("pin_roles")
-    except (OSError, ValueError, AttributeError, board_records.BoardError):
-        return False
-    return isinstance(roles, dict) and isinstance(roles.get("usb"), dict)
+#: The `sleep` and `keeps_boot_entry` slots of READY_UNKNOWN's fix (P1022 slice 3): facts, never advice. The deepsleep
+#: calls are read from firmware/, and the BOOT entry is a condition, as spark does not read the strap state. %d is
+#: ready_probe.READY_WAIT_S.
+SLEEP_WORDS = ("The project's firmware calls deepsleep (%s). %s The check counts a `ready` line that the firmware prints "
+               "in the first %d s of its start. ")
+KEEPS_BOOT_ENTRY_WORDS = ("If the board was put in download mode with BOOT for this deploy, it still waits there: on this "
+                          "chip over USB-Serial/JTAG, esptool's restart after the write cannot leave that mode, and a press "
+                          "of RESET does. Press RESET first (step 2 below), with BOOT not held. ")
+#: The files and console words of a start that printed `ready` before mpremote lost the board, with no deepsleep call.
+FILES_READ_LOST = "The board's files were read, and the firmware printed `ready`, then mpremote lost the board"
+LOST_NO_SLEEP = "It counts as unknown, because the project's firmware calls no deepsleep"
 
 
 def asleep_fix(project, reason, places):
@@ -120,7 +131,7 @@ def asleep_fix(project, reason, places):
     if not found.places:
         return UNPARSED % ", ".join(found.unparsed) if found.unparsed else ""
     return ASLEEP_FIX % {"opening": ASLEEP_OPENING[reason], "calls": ", ".join(found.places[:2]), "boot": places.boot,
-                         "usb": OWN_USB_SLEEP if own_usb_of(project) else MAYBE_OWN_USB_SLEEP,
+                         "usb": OWN_USB_SLEEP if download_mode.own_usb_of(project) else MAYBE_OWN_USB_SLEEP,
                          "reset": places.reset, "orientation": places.orientation}
 
 

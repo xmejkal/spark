@@ -26,6 +26,8 @@ class Flasher:
     RETRY_WAIT_S = 0
     #: The line that names the retry, formatted with `wait`, `command` and `code`.
     RETRY_LINE = ""
+    #: True when the restart after the write cannot leave a download mode entered with BOOT over USB-Serial/JTAG (P1022).
+    keeps_boot_entry = False
 
     def build_commands(self, image, port=None):
         """The commands that put `image` on the board, in order, each an argv list. `port` is None when the tool finds the board."""
@@ -49,6 +51,11 @@ class EsptoolFlasher(Flasher):
     #: back to a hard reset (loader.py:2218-2223), as before. Run on the S3 only after a software entry, not after a BOOT
     #: entry: the bench started MicroPython after a watchdog reset at 23:29:16 (P472 bench.log).
     AFTER = ["--after", "watchdog-reset"]
+    #: The chips whose restart after the write is esptool 5.5.0's classic hard reset (loader.py 2218-2223, targets/esp32c6.py
+    #: 206-209: the watchdog reset is disabled there). Over USB-Serial/JTAG that reset cannot leave a download mode entered
+    #: with BOOT, and a press of RESET does (esptool v5.5.0 docs/en/troubleshooting.rst lines 379-394, sha256 c87bae5c...).
+    #: Bench: 2026-11-23 14:09 CET, n = 1, the strap state not read. The H2, H4 and E22 enter with a record that names one.
+    CLASSIC_RESET_ONLY = frozenset(("esp32c6",))
     #: What to try when esptool cannot reach the board, with `%(boot)s`, `%(reset)s` and `%(orientation)s` from the
     #: ButtonPlaces. The sentence has no period: `orientation` brings its own, or nothing.
     BOOT_HINT_TEMPLATE = ("if esptool could not connect, hold the board's %(boot)s, press and release %(reset)s, "
@@ -62,6 +69,7 @@ class EsptoolFlasher(Flasher):
 
     def __init__(self, tool, chip, places=board_records.ButtonPlaces.EMPTY):
         self.tool, self.chip = tool, chip
+        self.keeps_boot_entry = chip in self.CLASSIC_RESET_ONLY
         self.boot_hint = self.boot_hint_for(places)  # read by deploy.py through its plan's flasher
 
     @classmethod

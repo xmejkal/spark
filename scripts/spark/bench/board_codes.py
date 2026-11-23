@@ -48,11 +48,12 @@ READY_NOT_SEEN = "ready_not_seen"
 #: P1022: after a write that passed esptool's hash check, ready was not confirmed. Its fix is a template that only
 #: board_envelope.ready_unknown_fix fills (never codes.fix_of): what spark knows, what it did not do and what to try, in
 #: order. The hash claim holds because only flasher.EsptoolFlasher writes, and esptool compares the flash's MD5 after it.
+#: `sleep` and `keeps_boot_entry` are each a whole sentence that ends with ". ", or "" (P1022 slice 3).
 READY_UNKNOWN = Code("ready_unknown", "the board could not be read after the flash, or the passed run's log names no files",
                      "What spark knows: the write passed esptool's hash check, so the image is on the flash. %(files)s. "
-                     "%(console)s. %(facts)s. The firmware can be running or asleep, and not answering. What spark did not "
-                     "do: it did not flash again and did not erase again. What to try, in order: 1. Wait a minute, then run "
-                     "look.py. 2. Press the board's %(reset)s once%(orientation)s. Then run live.py: it says whether the board "
+                     "%(console)s. %(facts)s. The firmware can be running or silent, and not answering. %(sleep)s"
+                     "%(keeps_boot_entry)sWhat spark did not do: it did not flash again and did not erase again. What to try, "
+                     "in order: 1. Wait a minute, then run look.py. 2. Press the board's %(reset)s once%(orientation)s. Then run live.py: it says whether the board "
                      "answers, and it needs a live grant. If it refuses, it prints the grant line to run in your own terminal. "
                      "3. Open the REPL line. If live.py and the REPL also do not reach the board, the firmware does not read its "
                      "console, for example because it sleeps for a long time at start. Then change the firmware: sleep in short "

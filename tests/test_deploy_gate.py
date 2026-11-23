@@ -1022,6 +1022,47 @@ class TheSleepingFirmwareTest(GateCase):
         code, said, _ = self.flash_sleeper("print('ready')\n", FakeConsoleProbe(unread="[Errno 2] No such file"))
         self.assertEqual(code, 2)
         self.assertIn("ready unknown: the firmware printed 'ready', then mpremote lost the board", said)
+        fix = self.fix_line(said)
+        self.assertIn("The board's files were read, and the firmware printed `ready`, then mpremote lost the board. It counts "
+                      "as unknown, because the project's firmware calls no deepsleep.", fix)
+        self.assertNotIn("could not read the port", fix)
+
+    def test_a_firmware_that_sleeps_before_ready_gets_its_call_place_and_the_check_s_seconds(self):
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        code, said, _ = self.flash_sleeper("import machine\nmachine.deepsleep(60000)\nprint('ready')\n", FakeConsoleProbe(""))
+        self.assertEqual(code, 2)
+        fix = self.fix_line(said)
+        self.assertIn("The project's firmware calls deepsleep (firmware/main.py:2). In deep sleep the chip's own USB is off, so "
+                      "the board leaves USB with the cable in, until it wakes. The check counts a `ready` line that the "
+                      "firmware prints in the first 20 s of its start.", fix)
+        self.assertLess(fix.index("calls deepsleep"), fix.index("What spark did not do"))
+
+    def test_the_14_09_sighting_on_the_c6_names_the_boot_entry_and_reset_first(self):
+        # 2026-11-23 14:09 CET: written from download mode entered with BOOT, both facts copies and the hash read refused,
+        # the console silent; one RESET press started the firmware 55 minutes later (n = 1, the strap state not read)
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        self.run_the_scenario()
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), probe=FakeConsoleProbe(""))
+        self.assertEqual(code, 2)
+        fix = self.fix_line(said)
+        words = ("If the board was put in download mode with BOOT for this deploy, it still waits there: on this chip over "
+                 "USB-Serial/JTAG, esptool's restart after the write cannot leave that mode, and a press of RESET does. "
+                 "Press RESET first (step 2 below), with BOOT not held.")
+        self.assertIn(words, fix)
+        self.assertLess(fix.index(words), fix.index("What spark did not do"))
+
+    def test_the_boot_entry_is_not_named_off_the_c6_or_off_usb_serial_jtag(self):
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        self.run_the_scenario()
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), devs_text=[self.LISTED, self.MOVED],
+                                    probe=FakeConsoleProbe(""))
+        self.assertEqual(code, 2, said)
+        self.assertNotIn("download mode with BOOT", self.fix_line(said))
+        tool = tool_finder.Tool("esptool", "flasher", {"kind": "command"}, ["esptool"])
+        for chip, usb, keeps in (("esp32c6", "303a:1001", True), ("esp32s3", "303a:1001", False), ("esp32c6", "303a:4001", False)):
+            planned = deploy_service.DeployPlan(flasher.EsptoolFlasher(tool, chip), [], [], [])
+            with self.subTest(chip=chip, usb=usb):
+                self.assertIs(deploy_service._keeps_boot_entry(planned, board_look.Port("/dev/x", None, usb, None)), keeps)
 
 
 class TheFactsAfterTheFlashTest(GateCase):

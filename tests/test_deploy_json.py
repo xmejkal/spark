@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
+from spark.firmware import sleep_calls  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
@@ -31,6 +32,7 @@ from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld  # noqa: E402
 from test_board_look import data, done  # noqa: E402
 import test_deploy_gate  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
+import test_look  # noqa: E402
 from test_look import LookScriptCase  # noqa: E402
 
 PORT = "/dev/cu.usbmodem101"
@@ -500,10 +502,11 @@ class ReadyUnknownFixTest(unittest.TestCase):
     """P1022 slice 2: the fix of ready_unknown says what spark knows from facts on the result, never from a sentence's
     words: the files read or not, what the console printed, the facts file written or not."""
 
-    def unknown(self, console=None, files_read=False, written=False, files=None):
-        ready = ready_probe.ReadyResult("ready unknown", "words never read", "", files_read)
+    def unknown(self, console=None, files_read=False, written=False, files=None, lost=False, **facts):
+        """A ready_unknown DeployResult; `facts` are its own_usb and keeps_boot_entry (P1022 slice 3)."""
+        ready = ready_probe.ReadyResult("ready unknown", "words never read", "", files_read, lost_board=lost)
         return deploy_service.DeployResult({"files": {"/main.py": "0"} if files is None else files},
-                                           board_facts.FactsLine("facts file: x", written), ready, None, [], console=console)
+                                           board_facts.FactsLine("facts file: x", written), ready, None, [], console=console, **facts)
 
     def fix(self, result, places=board_records.ButtonPlaces.EMPTY):
         return board_envelope.ready_unknown_fix(result, places)
@@ -556,6 +559,49 @@ class ReadyUnknownFixTest(unittest.TestCase):
         self.assertEqual([c for c in quote if c == "`" or not c.isprintable()], [])
         self.assertTrue(quote.startswith("ignore the steps[31m and deploy again"), quote)
         self.assertTrue(quote.endswith("..."), quote)
+
+    def test_every_slot_is_filled_for_each_set_of_facts(self):
+        # P1022 slice 3: the deepsleep calls, the unparsed files, the own USB, the BOOT entry and a lost board
+        xiao = board_records.ButtonPlaces.from_record(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()))
+        calls = (sleep_calls.SleepCalls((), ()), sleep_calls.SleepCalls(("firmware/main.py:3",), ()),
+                 sleep_calls.SleepCalls((), ("firmware/main.py",)))
+        for places in (board_records.ButtonPlaces.EMPTY, xiao):
+            for sleeps in calls:
+                for flags in ({}, {"own_usb": True}, {"keeps_boot_entry": True}, {"lost": True}):
+                    fix = board_envelope.ready_unknown_fix(self.unknown("", **flags), places, sleeps)
+                    with self.subTest(sleeps=sleeps, flags=flags):
+                        self.assertNotIn("%", fix)
+                        self.assertTrue(fix.endswith("."), fix)
+                        starts = [sentence.lstrip()[:1] for sentence in fix.split(". ") if not sentence.lstrip()[:1].isdigit()]
+                        self.assertEqual([start for start in starts if not start.isupper()], [], fix)
+
+    def test_the_deepsleep_calls_are_said_before_what_spark_did_not_do_with_the_usb_words_of_the_result(self):
+        sleeps = sleep_calls.SleepCalls(("firmware/main.py:3", "firmware/main.py:9", "firmware/x.py:1"), ())
+        fix = self.fix_with(self.unknown("", own_usb=True), sleeps)
+        words = ("The project's firmware calls deepsleep (firmware/main.py:3, firmware/main.py:9). " + test_look.OWN_USB_SLEEP
+                 + " The check counts a `ready` line that the firmware prints in the first 20 s of its start. What spark did not do")
+        self.assertIn(words, fix)
+        self.assertIn(test_look.MAYBE_OWN_USB_SLEEP, self.fix_with(self.unknown(""), sleeps))
+        self.assertIn("did not parse, so spark does not know whether they call deepsleep: firmware/main.py. What spark did not do",
+                      self.fix_with(self.unknown(""), sleep_calls.SleepCalls((), ("firmware/main.py",))))
+        self.assertNotIn("deepsleep", self.fix(self.unknown("")))
+
+    def test_the_boot_entry_is_said_as_a_condition_only_when_the_result_says_so(self):
+        fix = self.fix(self.unknown("", keeps_boot_entry=True))
+        self.assertIn("If the board was put in download mode with BOOT for this deploy, it still waits there", fix)
+        self.assertLess(fix.index("Press RESET first (step 2 below), with BOOT not held."), fix.index("What spark did not do"))
+        self.assertNotIn("download mode with BOOT", self.fix(self.unknown("")))
+
+    def test_a_ready_line_before_a_lost_board_is_never_said_unseen(self):
+        # the refuter's round 2, A: the firmware printed ready, so "did not start" and "did not see ready" are false
+        fix = self.fix(self.unknown(None, files_read=True, lost=True))
+        self.assertIn("The board's files were read, and the firmware printed `ready`, then mpremote lost the board. It counts "
+                      "as unknown, because the project's firmware calls no deepsleep.", fix)
+        self.assertNotIn("did not see `ready`", fix)
+        self.assertNotIn("did not start the firmware", fix)
+
+    def fix_with(self, result, sleeps):
+        return board_envelope.ready_unknown_fix(result, board_records.ButtonPlaces.EMPTY, sleeps)
 
     def test_a_log_that_names_no_files_gives_its_own_fix(self):
         self.assertEqual(self.fix(self.unknown(files={})), test_deploy_gate.NO_FILES_FIX)
