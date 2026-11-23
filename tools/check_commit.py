@@ -139,11 +139,21 @@ def changed_files(root, commit, base="origin/main"):
     return listed.stdout.splitlines() if listed.returncode == 0 else None
 
 
+def story_texts(tree):
+    """
+    What `story_tests.select` reads of the archived `tree`: the texts of tests/test_*.py and tests/golden_*.py by stem,
+    of scripts/ by the path from the tree's root, and of the other helpers of tests/ by stem (P1017).
+    """
+    def texts(folder, pattern, key=lambda found: found.stem):
+        return {key(found): found.read_text(errors="replace") for found in (tree / folder).glob(pattern)}
+    helpers = {stem: text for stem, text in texts("tests", "*.py").items() if not stem.startswith("test_")}
+    return (texts("tests", "test_*.py"), texts("tests", "golden_*.py"),
+            texts("scripts", "**/*.py", key=lambda found: found.relative_to(tree).as_posix()), helpers)
+
+
 def story_tests_in(tree, changed):
-    """The StoryTests for the files `changed`, from the test files of the archived `tree`."""
-    def texts(pattern):
-        return {found.stem: found.read_text(errors="replace") for found in (tree / "tests").glob(pattern)}
-    return story_tests.select(changed, texts("test_*.py"), texts("golden_*.py"))
+    """The StoryTests for the files `changed`, from the tests and scripts of the archived `tree`."""
+    return story_tests.select(changed, *story_texts(tree))
 
 
 def size_line(root, commit, base="origin/main"):

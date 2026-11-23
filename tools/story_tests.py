@@ -5,11 +5,15 @@ The PO, 2026-11-08: "you test the story. Maybe a few integration or some end-to-
 worked on." `check_commit.py` calls `select` with what it read from git and from the committed tree, so this module
 holds no git and reads no file.
 
-Each changed file adds the tests that name it and the golden net of its area, and ALWAYS_RUN_TESTS always run. A doubt
-runs more: a file that only ALWAYS_RUN_TESTS name, the core, a package file or unread changes make it the whole quick
-run, with a sentence that says why. The sweeps run what a story leaves out (`check_commit.py --full`).
+Each changed file adds the tests that name it and the golden net of its area, and ALWAYS_RUN_TESTS always run. A
+changed file of scripts/ also adds each test whose imports reach it through the files of scripts/, and the golden net of
+each area on the way (P1017). The walk never reads a helper of tests/. A doubt runs more: a file that only
+ALWAYS_RUN_TESTS name or reach, a file that no test names and a helper of tests/ reaches, the core, a package file or
+unread changes make it the whole quick run, with a sentence that says why. The sweeps run what a story leaves out
+(`check_commit.py --full`).
 """
 
+import ast
 import re
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -46,6 +50,13 @@ AREA_NET_FOLDER = re.compile(r"tests/golden-([^/]+)/")
 GOLDEN_NET = "test_golden_%s"
 CONVERTER_FOLDER = "tools/circuit-to-wokwi/"
 CONVERTER_TEST = "test_converter"
+SCRIPTS_FOLDER = "scripts/"
+HELPER_FOLDER = "tests/"
+HELPER_FILE = HELPER_FOLDER + "%s.py"
+MODULE_SUFFIX = ".py"
+#: Where the walk looks for an imported module. Never in tests/: following the helpers there costs about 46 s per
+#: breadboard change (P1017, measured on #1374).
+IMPORT_ROOTS = (SCRIPTS_FOLDER,)
 
 WHY_CHANGES_UNREAD = "the changes since origin/main could not be read"
 WHY_NO_CHANGE = "nothing differs from origin/main, and the gate measures HEAD, not the ref pushed (P106)"
@@ -90,7 +101,69 @@ def _pattern_for(name):
     return re.compile(r"\b%s\b" % re.escape(PurePosixPath(name).stem))
 
 
-def _tests_for(name, test_texts, golden_texts):
+def _files_of(dotted, files):
+    """The files of `files` that Python runs to import the module `dotted`: each package file on its way, and the module."""
+    parts = dotted.split(".")
+    ways = ["/".join(parts[:end]) for end in range(1, len(parts) + 1)]
+    return {found for root in IMPORT_ROOTS for found in [root + way + "/" + PACKAGE_FILE for way in ways]
+            + [root + ways[-1] + MODULE_SUFFIX] if found in files}
+
+
+def _imported(text, files):
+    """The files of `files` that one text imports, an import inside a function too. A text that does not parse imports nothing."""
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return set()
+    found = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            found.update(*(_files_of(alias.name, files) for alias in node.names))
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            found |= _files_of(node.module, files)
+            found.update(*(_files_of(node.module + "." + alias.name, files) for alias in node.names))
+    return found
+
+
+def _reaching(path, graph):
+    """`path` and each file that imports it, directly or through other files. `graph` maps a file to its importers."""
+    found, todo = {path}, [path]
+    while todo:
+        for importer in graph.get(todo.pop(), ()):
+            if importer not in found:
+                found.add(importer)
+                todo.append(importer)
+    return found
+
+
+class ImportWalk:
+    """Which tests and helpers import a changed file of scripts/, through the files of scripts/ (P1017). Each text is parsed once."""
+
+    def __init__(self, test_texts, script_texts, helper_texts):
+        self._tests = test_texts
+        self._files = {**script_texts, **{HELPER_FILE % stem: text for stem, text in helper_texts.items()}}
+        self._graph = None
+        self._test_imports = None
+
+    def reach(self, name):
+        """`name` and the files that import it, or nothing for a file outside scripts/."""
+        if not name.startswith(SCRIPTS_FOLDER):
+            return set()
+        if self._graph is None:
+            self._graph = {}
+            for importer, text in self._files.items():
+                for imported in _imported(text, self._files):
+                    self._graph.setdefault(imported, set()).add(importer)
+        return _reaching(name, self._graph)
+
+    def tests_in(self, reach):
+        """The test modules whose own imports meet `reach`."""
+        if self._test_imports is None:
+            self._test_imports = {test: _imported(text, self._files) for test, text in self._tests.items()}
+        return {test for test, imported in self._test_imports.items() if imported & reach}
+
+
+def _tests_for(name, test_texts, golden_texts, walk):
     """The test modules that the changed file `name` adds, or None when no test of its own names it."""
     if name.startswith(NO_TEST_OF_THEIR_OWN) or ("/" not in name and name.endswith(ROOT_DOCUMENT_SUFFIX)):
         return set()
@@ -105,28 +178,33 @@ def _tests_for(name, test_texts, golden_texts):
     test_file = TEST_FILE.match(name)
     if test_file and test_file.group(1) in test_texts:
         return named | {test_file.group(1)}
-    if not named - set(ALWAYS_RUN_TESTS):  # a mention in a test that reads the whole tree does not test this file
+    reach = walk.reach(name)
+    reached = walk.tests_in(reach)
+    if not (named | reached) - set(ALWAYS_RUN_TESTS):  # a test that reads the whole tree does not test this file
         return None
-    area = AREA_MODULE.match(name)
-    if area:
-        named.add(GOLDEN_NET % GOLDEN_NET_ELSEWHERE.get(area.group(1), area.group(1)))
-    return named
+    if not named - set(ALWAYS_RUN_TESTS) and any(found.startswith(HELPER_FOLDER) for found in reach):
+        return None  # the walk skips the helpers of tests/, so it cannot vouch for a file that one of them reaches
+    areas = {area.group(1) for area in map(AREA_MODULE.match, reach) if area}
+    return named | reached | {GOLDEN_NET % GOLDEN_NET_ELSEWHERE.get(area, area) for area in areas}
 
 
-def select(changed, test_texts, golden_texts):
+def select(changed, test_texts, golden_texts, script_texts=None, helper_texts=None):
     """
     StoryTests for the file names `changed`. A `changed` of None (git could not tell) gives the quick run. `test_texts`
     maps each module tests/test_*.py to its text, and `golden_texts` each helper tests/golden_*.py to its text.
+    `script_texts` maps each file of scripts/ by its path from the root (scripts/flow.py) to its text, and `helper_texts`
+    each other .py file of tests/ (fakes, golden_design) by its stem. With neither, no import is followed.
     """
     if changed is None:
         return _quick_run(WHY_CHANGES_UNREAD)
     if not changed:
         return _quick_run(WHY_NO_CHANGE)
     chosen = set(ALWAYS_RUN_TESTS)
+    walk = ImportWalk(test_texts, script_texts or {}, helper_texts or {})
     for name in changed:
         if name.startswith(CORE_FOLDER) or PurePosixPath(name).name == PACKAGE_FILE:
             return _quick_run(WHY_EVERY_AREA % name)
-        tests = _tests_for(name, test_texts, golden_texts)
+        tests = _tests_for(name, test_texts, golden_texts, walk)
         if tests is None:
             return _quick_run(WHY_UNNAMED % name)
         chosen |= tests
