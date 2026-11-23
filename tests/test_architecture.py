@@ -481,7 +481,7 @@ class TheDesignAreaTest(unittest.TestCase):
     #: The modules of the area so far, by the names of its page (`areas/design.md`).
     MODULES = ["audit_records", "board_components", "board_emitter", "board_sections", "copper", "design_codes", "design_operations", "entry_origin", "fab",
                "find_offers", "footprint_emitter", "list_boards", "list_needs", "loader", "match_needs", "need_requirements",
-               "needs", "netlist", "pad_order", "pick_parts", "pin_assigner", "power_rails", "restricted_pins", "set_needs", "show_offer", "tally_cost",
+               "needs", "needs_basis", "netlist", "pad_order", "pick_parts", "pin_assigner", "power_rails", "restricted_pins", "set_needs", "show_offer", "tally_cost",
                "write_requirements"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print. A library function back in a CLI, under
     #: any name, fails the check.
