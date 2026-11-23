@@ -260,6 +260,34 @@ class ReadyThenTheBoardWasLostTest(unittest.TestCase):
         self.assertFalse(ready_probe.ReadyResult("ready seen", "", "").lost_board)
 
 
+class TheCodeOfEachReturnTest(unittest.TestCase):
+    """P1043 (P1043-D2 (b)): each return of `ReadyProbe.check` carries the code of its cause, which the board log's reason
+    line holds. Ready seen carries none."""
+
+    def test_each_return_carries_its_code_and_ready_seen_none(self):
+        differ = "file %s /main.py\n" % ("0" * 64)
+        for name, expected, answers, sleeps, code in (
+                ("no files named", {}, (), (), "no_files_named"),
+                ("files unread", MAIN, (board_connection.BoardCodeError("Traceback\n", 1),), (), "files_unread"),
+                ("not started", MAIN, (HASHES, board_connection.BoardUnreachableError("could not enter raw repl", "")), (),
+                 "firmware_not_started"),
+                ("files differ", MAIN, (differ, "ready\n"), (), "files_differ"),
+                ("firmware error", MAIN, (HASHES, board_connection.BoardCodeError("Traceback\nValueError: x\n", 1)), (),
+                 "firmware_error"),
+                ("no ready line", MAIN, (HASHES, "nothing\n"), (), "no_ready_line"),
+                ("board lost", MAIN, (HASHES, lost()), (), "board_lost"),
+                ("ready seen", MAIN, (HASHES, "ready\n"), (), None),
+                ("ready seen, then lost while asleep", MAIN, (HASHES, lost()), SLEEPS, None)):
+            with self.subTest(name=name):
+                self.assertEqual(ready_probe.ReadyProbe(FakeBoardConnection(*answers)).check(expected, sleeps=sleeps).code, code)
+
+    def test_a_copy_and_replace_keep_the_code(self):
+        result = ready_probe.ReadyProbe(FakeBoardConnection(HASHES, lost())).check(MAIN)
+        for made in (result._replace(sentence="x"), copy.copy(result), pickle.loads(pickle.dumps(result))):
+            self.assertEqual(made.code, "board_lost")
+        self.assertIsNone(ready_probe.ReadyResult("ready seen", "", "").code)
+
+
 def board_ready_probe(connection):
     return ready_probe.ReadyProbe(connection).check(MAIN)
 

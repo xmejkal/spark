@@ -154,6 +154,8 @@ MAY_READ = {
     "records_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the two it shares with other tables (P716)",
     "sourcing_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and no code it shares (P717)",
     "idea_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and no code it shares (P853)",
+    "board_log.CAUSES": AGREEMENT + ": its codes against the codes whose sentences the bench's own probe and download mode "
+                        "make, each start checked by running them (P1043)",
     "part_pictures.PICTOGRAMS": STRUCTURE,
     "wiring_steps.THE_BOARD": "the name a component has, used to find the board among the parts: vocabulary, not a value",
     "part_pictures.FALLBACK": "the name of the fallback pictogram, compared with itself: sameness, not a value",

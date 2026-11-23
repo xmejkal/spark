@@ -56,10 +56,12 @@ class FlashError(DeployError):
 def every_read(reads):
     """The last of `reads`, each (the facts, a board_facts.FactsLine, a ReadyResult), with the facts file written and the board's
     files read when any read did (P1022): a read again after P245 can fail where the first read worked. `lost_board` is the
-    last read's."""
+    last read's. So is `code` (P1043), but never FILES_UNREAD after a read that read the files: that read's code stays."""
     facts, line, ready = reads[-1]
+    read_before = [read[2] for read in reads if read[2].files_read]
+    code = read_before[-1].code if read_before and ready.code == board_codes.FILES_UNREAD else ready.code
     return (facts, board_facts.FactsLine(line, any(read[1].written for read in reads), line.heard),
-            ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads), lost_board=ready.lost_board))
+            ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads), lost_board=ready.lost_board).coded(code))
 
 
 class DeployService:
@@ -178,7 +180,8 @@ class DeployService:
         image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
         log_path = write_board_log(self.project, BoardLog(moment, look.port, image_sha256,
                                                           facts_line, ready.verdict, ready.sentence,
-                                                          "".join(starter.heard) + ready.log + "".join(read[1].heard for read in reads), self.evidence.simulation))
+                                                          "".join(starter.heard) + ready.log + "".join(read[1].heard for read in reads), self.evidence.simulation,
+                                                          (start and start.code) or ready.code))
         shown_on = start.port if start else port  # the REPL names the port the board answered on, or none when it is gone
         repl = self.platform.make_connection(planned.mpremote, shown_on, self.run).repl_command()
         result = DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)._replace(console=starter.console)
