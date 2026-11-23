@@ -72,6 +72,8 @@ and one next step for your hands, as the last line. Its look at the console can 
 
 If no board is on USB, or the named port is not, look at firmware/. When it calls deepsleep, the stop's last line, the
 fix, says that the board can be in deep sleep. look.py's fix says the same (P1049). --json carries no fix yet (P1055).
+With --check --json, `next` holds the look step, which needs the person (P1048). --minutes has no --json, so its
+step reaches no agent.
 
 Exit codes: 0 the grant was given or is valid, 1 refused (no grant, it ended, the person answered no to the grant, the
 serial is not the MAC), 2 grant.py could not run (no board, two boards, the MAC not read, --minutes out of range, no

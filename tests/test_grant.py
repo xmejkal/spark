@@ -176,6 +176,16 @@ class ASleepingBoardTest(GrantCase):
                 self.assertEqual(len(lines), 2)
         self.assertFalse((self.home / "grants").exists())
 
+    def test_the_check_s_json_ends_with_the_look_that_needs_the_person(self):
+        # P1048: the fix's step 1 names look.py; --minutes has no --json, so only --check carries the step
+        self.devs = data("mpremote-devs-none.txt")
+        code, out, _ = self.grant("--check", "--json", "--project", str(self.project), consent=FakeConsent(True))
+        said = json.loads(out)
+        (step,) = said["next"]
+        self.assertEqual((code, list(said)[-1]), (2, "next"))
+        self.assertEqual((step["op"], step["argv"], step["needs_person"], step["needs_yes"]),
+                         ("look", ["--project", str(self.project.resolve())], True, False))
+
     def test_a_named_port_not_on_usb_opens_the_fix_with_that_port(self):
         lines = self.stderr("--minutes", "10", "--port", "/dev/cu.usbmodem9")
         self.assertEqual(lines[0], "grant.py: no board on /dev/cu.usbmodem9: mpremote devs does not list it.")

@@ -372,6 +372,8 @@ class RecordTest(RecordCase):
             lines = err.splitlines()
             self.assertEqual(lines[1], item["fix"], code)
             self.assertTrue(lines[-1].startswith("bench.py: Nothing was written. fix what the line above says"), lines[-1])
+            (step,) = said["next"]  # P1048: the look of the fix's step 1, which needs the person
+            self.assertEqual((step["op"], step["argv"], step["needs_person"]), ("look", ["--project", str(project.resolve())], True), code)
         self.assertEqual(said["unchecked"][0]["sentence"], "no board on /dev/cu.usbmodem9: mpremote devs does not list it.")
         self.no_record()
 
@@ -386,6 +388,7 @@ class RecordTest(RecordCase):
         (item,) = said["unchecked"]
         self.assertEqual((exit_code, item["code"]), (2, "no_port"))
         self.assertTrue(item["fix"].startswith("fix what the line above says, then run bench.py record pixel-games again"), item["fix"])
+        self.assertEqual(said["next"], [])  # P1048 D6: UNPARSED gives no look step
         _, _, err = self.bench("record", "pixel-games", "--project", str(project))
         self.assertEqual(len(err.splitlines()), 2, err)
         self.assertNotIn("did not parse", err)
