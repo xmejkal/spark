@@ -47,6 +47,11 @@ class Refusal(str):
         return refusal
 
 
+def step_dicts(steps):
+    """The NextSteps as the envelope's `next` holds them, each through `outcomes.step` with its env (P1035: the flat line too)."""
+    return [outcomes.add_env(outcomes.step(s.op, s.argv, s.why, s.effects, s.needs_yes, s.needs_person), s.env) for s in steps]
+
+
 def envelope_item(finding):
     """One Finding as the envelope's item, the one renderer of every interface: `subject, code, sentence, fix` for a
     problem, and the same for an unchecked item that has a subject, else `code, sentence, fix`, because the goldens compare bytes."""
@@ -80,7 +85,7 @@ class OperationResult(namedtuple("OperationResult", "data findings next lines di
         """The `outcomes.envelope` of this result, each item made by `envelope_item`."""
         problems = [envelope_item(found) for found in self._of(outcomes.PROBLEMS)]
         unchecked = [envelope_item(found) for found in self._of(outcomes.COULD_NOT_RUN)]
-        return outcomes.envelope(tool, op, self.data, problems, unchecked, [outcomes.add_env(outcomes.step(s.op, s.argv, s.why, s.effects, s.needs_yes, s.needs_person), s.env) for s in self.next],
+        return outcomes.envelope(tool, op, self.data, problems, unchecked, step_dicts(self.next),
                                  self.truncated, notes=self.notes, assumptions=self.assumptions)
 
     def _of(self, severity):
