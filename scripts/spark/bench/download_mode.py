@@ -8,7 +8,7 @@ them. board_console.py's `ConsoleProbe` reads the console and waits for the pres
 """
 
 from spark.records import board_records
-from spark.firmware.scenario_steps import READY
+from spark.firmware.scenario_steps import has_ready_line
 
 #: What the ESP32 ROM prints when it boots into download mode, as the XIAO C6 printed it on 2026-10-14 (AT157).
 DOWNLOAD_MODE = "waiting for download"
@@ -49,6 +49,6 @@ def port_gone(places=board_records.ButtonPlaces.EMPTY):
 
 
 def booted(console):
-    """True when a line of `console` is the firmware's `ready`: the board finished its restart after mpremote asked
-    (P245, the 2026-10-15 bench)."""
-    return READY in [line.strip() for line in console.splitlines()]
+    """True when a line of `console` has the firmware's `ready` as its first word (scenario_steps.has_ready_line, P1025):
+    the board finished its restart after mpremote asked (P245, the 2026-10-15 bench)."""
+    return has_ready_line(console)

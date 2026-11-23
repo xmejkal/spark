@@ -3,14 +3,16 @@ After a flash: do the board's files match the expected hashes, and does the firm
 
 A library. `ReadyProbe` runs code on the board twice, through its BoardConnection. First it hashes each file that
 the evidence names (a passed run's log, or firmware/), on the board itself. Then it imports `main`, as the board does
-at boot, and reads its output for READY_WAIT_S seconds. Ready is seen only when both agree. When mpremote cannot reach
-the board, it is unknown, never seen. So is a passed run's log from before P215, which names no files.
+at boot, and reads its output for READY_WAIT_S seconds. Ready is seen only when both agree. The output counts as
+`ready` only when a line has `ready` as its first word (scenario_steps.has_ready_line, P1025). So `ready, cpu 80 MHz`
+counts, and `not ready` and `already` do not. When mpremote cannot reach the board, it is unknown, never seen. So is a
+passed run's log from before P215, which names no files.
 """
 
 import collections
 
 from spark.bench.board_connection import BoardUnreachableError, BoardCodeError
-from spark.firmware.scenario_steps import READY
+from spark.firmware.scenario_steps import READY, has_ready_line
 
 #: How long the board's output is read for `ready`, in seconds. The firmware keeps running after it, so mpremote is
 #: stopped at the end, and what it printed until then is the board's log.
@@ -71,7 +73,7 @@ class ReadyProbe:
                 ", ".join(differ), "is" if len(differ) == 1 else "are"), log)
         if stopped is not None:
             return ReadyResult(NOT_SEEN, "the firmware stopped with an error: %s" % stopped, log)
-        if READY not in said:
+        if not has_ready_line(said):
             return ReadyResult(NOT_SEEN, "the firmware printed no %r in %d s" % (READY, READY_WAIT_S), log)
         return ReadyResult(SEEN, "the firmware printed %r and the board's %d files match the image" % (
             READY, len(expected)), log)
