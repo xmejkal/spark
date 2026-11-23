@@ -422,13 +422,13 @@ class DeployJsonTest(JsonCase, GateCase):
         code, said, err = self.ready(probe=FakeConsoleProbe(""))
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], said["data"]["person_action"]), (2, "could-not-run", None))
+        self.assertEqual([s["op"] for s in said["next"]], ["look", "live", "watch"])
         look, live, watch = said["next"]
-        self.assertEqual([look["op"], live["op"], watch["op"]], ["look", "live", "watch"])
         self.assertEqual(said["unchecked"][0]["code"], "ready_unknown")
         self.assertNotIn("needs_person", look)  # Claude runs the look itself, after a minute
         self.assertEqual(look["argv"][:4], ["--project", str(self.project.resolve()), "--port", PORT])
-        self.assertEqual((live["needs_person"], live["argv"][-2:]), (True, ["--code", "print('answer')"]))
-        self.assertIs(watch["needs_person"], True)  # P1007: mpremote's own open can leave the board deaf, so the person opens it
+        self.assertEqual((live.get("needs_person"), live["argv"][-2:]), (True, ["--code", "print('answer')"]))
+        self.assertIs(watch.get("needs_person"), True)  # P1007: mpremote's own open can leave the board deaf, so the person opens it
         self.assertTrue(said["data"]["repl_command"])
         self.assertEqual(watch["argv"], said["data"]["repl_command"])
         fix = said["unchecked"][0]["fix"]
@@ -535,7 +535,9 @@ class ReadyUnknownFixTest(unittest.TestCase):
                  "if it refuses, it prints the grant line to run in your own terminal.", "3. Open the REPL line.",
                  "If live.py and the REPL also do not reach the board, the firmware does not read its console",
                  "Do not deploy again for this"]
-        self.assertEqual([fix.index(words) for words in order], sorted(fix.index(words) for words in order))
+        places = [fix.find(words) for words in order]
+        self.assertNotIn(-1, places)
+        self.assertEqual(places, sorted(places))
 
     def test_a_log_that_names_no_files_gives_its_own_fix(self):
         self.assertEqual(self.fix(self.unknown(files={})), board_codes.READY_UNKNOWN_NO_FILES.fix)

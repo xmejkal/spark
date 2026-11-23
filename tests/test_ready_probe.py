@@ -179,7 +179,11 @@ class WhatTheBoardSaysTest(unittest.TestCase):
     def test_a_facts_line_is_the_board_log_s_line_and_keeps_its_fields_through_a_copy(self):
         line = board_facts.FactsLine("facts file: not written: x", False, "the facts copy, the first try: mpremote printed:\nnothing\n")
         self.assertEqual((line, line.written), ("facts file: not written: x", False))
-        for made in (copy.copy(line), copy.deepcopy(line), pickle.loads(pickle.dumps(line))):
+        for make in (copy.copy, copy.deepcopy, lambda one: pickle.loads(pickle.dumps(one))):
+            try:
+                made = make(line)
+            except TypeError as cannot:  # str's own __getnewargs__ gives __new__ one argument of three
+                self.fail("a FactsLine cannot be made again: %s" % cannot)
             self.assertEqual((made, made.written, made.heard), (line, False, line.heard))
         self.assertEqual(board_facts.FactsLine("facts file spark.json sha256: f", True).heard, "")
 
@@ -192,7 +196,7 @@ class WhatTheBoardSaysTest(unittest.TestCase):
         self.assertTrue(board_ready_probe(FakeBoardConnection(HASHES, "ready\n")).files_read)
         self.assertFalse(ready_probe.ReadyProbe(FakeBoardConnection()).check({}).files_read)
         for made in (not_started._replace(sentence="x"), copy.copy(not_started), pickle.loads(pickle.dumps(not_started))):
-            self.assertTrue(made.files_read)
+            self.assertIs(getattr(made, "files_read", None), True)
         verdict, _, _ = not_started  # it still unpacks to three
         self.assertEqual(verdict, "ready unknown")
 

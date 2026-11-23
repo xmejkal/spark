@@ -44,16 +44,12 @@ class ReadyResult(collections.namedtuple("ReadyResult", "verdict sentence log"))
     """Result: what `ReadyProbe.check` returns. `verdict` is SEEN, NOT_SEEN or UNKNOWN, `sentence` says why, and `log` is
     what the board printed (the board's log). `files_read` is True when the board printed its files' hashes (P1022), as
     every verdict but UNKNOWN says: an UNKNOWN after the hashes gives it. It is an attribute, so a ReadyResult still
-    unpacks to three, and `_replace`, copy and pickle keep it."""
+    unpacks to three. `_replace` keeps it, and copy and pickle keep it with the instance's other attributes."""
 
     def __new__(cls, verdict, sentence, log, files_read=None):
         ready = super().__new__(cls, verdict, sentence, log)
         ready.files_read = verdict != UNKNOWN if files_read is None else files_read
         return ready
-
-    def __getnewargs__(self):
-        """The arguments copy, deepcopy and pickle make the ReadyResult again with."""
-        return tuple(self) + (self.files_read,)
 
     def _replace(self, **changes):
         """A ReadyResult with `changes`, and the same `files_read`."""

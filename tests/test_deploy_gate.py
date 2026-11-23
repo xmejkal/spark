@@ -862,8 +862,9 @@ class TheReadyUnknownWordsTest(GateCase):
 
     def fix_line(self, said):
         """The one line deploy.py printed that starts with what spark knows."""
-        line, = [line.strip() for line in said.splitlines() if line.strip().startswith("What spark knows:")]
-        return line
+        lines = [line.strip() for line in said.splitlines() if line.strip().startswith("What spark knows:")]
+        self.assertEqual(len(lines), 1, said)
+        return lines[0]
 
     def test_the_second_sighting_keeps_both_facts_tries_in_the_board_log_and_says_the_file_was_not_written(self):
         # 2026-11-23 13:19 CET: both facts copies and the hash read refused the raw REPL, and the console heard nothing
@@ -913,6 +914,13 @@ class TheReadyUnknownWordsTest(GateCase):
         code, _, _ = self.flash(None)
         self.assertEqual(code, 0)
         self.assertIn("the facts copy, the first try: mpremote printed:\nb''\n" + SETTLE_STDERR, self.board_log())
+
+    def test_a_board_left_in_download_mode_gets_the_person_action_and_no_fix_line(self):
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, ["mpremote"])
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"))
+        self.assertEqual(code, 2)
+        self.assertIn("the board still waits in download mode after 60 s", said)
+        self.assertNotIn("What spark knows:", said)
 
     def test_a_log_that_names_no_files_says_only_to_run_the_scenario_again(self):
         self.run_the_scenario()
