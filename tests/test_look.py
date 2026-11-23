@@ -17,6 +17,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from spark.bench import board_envelope  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 from spark.bench import known_board  # noqa: E402
@@ -47,6 +48,12 @@ CAVEAT = ("  the passed run's scenario has no set-control step (the step that pr
           "expect-pin step (the step that reads a pin)")
 NO_BOARD = ("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only. "
             "If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.")
+
+#: The words of the asleep fix (P1022 slice 3), literals so that a change of the code's text fails here.
+OWN_USB_SLEEP = "In deep sleep the chip's own USB is off, so the board leaves USB with the cable in, until it wakes."
+MAYBE_OWN_USB_SLEEP = ("If the board's USB is the chip's own (USB-Serial/JTAG), it is off in deep sleep, and the board "
+                       "leaves USB with the cable in until it wakes.")
+UNPARSED_MAIN = "These files of firmware/ did not parse, so spark does not know whether they call deepsleep: firmware/main.py."
 
 
 class LookScriptCase(LookCase):
@@ -483,6 +490,69 @@ class WhatStopsTheLookTest(LookScriptCase):
         code, said, _ = self.go("--port", "/dev/cu.usbserial-1410", devs="mpremote-devs-two.txt")
         self.assertEqual(code, 0)
         self.assertEqual(said[1], "  port   /dev/cu.usbserial-1410")
+
+    def test_no_board_with_a_deepsleep_call_names_deep_sleep_and_keeps_the_cable_check_last(self):
+        # P1022 slice 3, 2026-11-23 14:05 CET: the FireBeetle 2 C6 in deep sleep was off USB, and the look blamed the cable
+        self.sleeper("import machine\nprint('ready')\nmachine.deepsleep(60000)\n")
+        problems = self.stops(devs="mpremote-devs-none.txt").splitlines()
+        self.assertEqual(problems[0], "look.py: no board found.")
+        fix = problems[1]
+        for words in ("What spark knows: no board is on USB, and the project's firmware calls deepsleep (firmware/main.py:3).",
+                      OWN_USB_SLEEP, "Hold the board's BOOT button (B, top right, beside the USB-C), press and "
+                      "release RESET (R, top left, beside the USB-C), then release BOOT. Left and right as seen with the metal shield",
+                      "press RESET (R, top left, beside the USB-C) once, with BOOT not held"):
+            self.assertIn(words, fix)
+        self.assertLess(fix.index("1. Hold"), fix.index("2. Or wait"))
+        self.assertLess(fix.index("2. Or wait"), fix.index("3. If the board still does not show, check the cable"))
+        self.assertEqual(len(problems), 2)
+        unchecked = self.unchecked(devs="mpremote-devs-none.txt")
+        self.assertEqual((unchecked["code"], unchecked["sentence"], unchecked["fix"]), ("no_port", "no board found.", fix))
+
+    def test_a_board_whose_usb_may_be_a_bridge_gets_the_words_with_a_condition(self):
+        self.board("firebeetle2-esp32s3")
+        self.sleeper("import machine\nmachine.deepsleep(1)\n")
+        fix = self.stops(devs="mpremote-devs-none.txt").splitlines()[1]
+        self.assertIn(MAYBE_OWN_USB_SLEEP, fix)
+        self.assertNotIn(OWN_USB_SLEEP, fix)
+        self.assertIn("Hold the board's BOOT button, press and release RESET, then release BOOT. The board", fix)
+
+    def test_only_the_first_two_call_places_are_shown(self):
+        self.sleeper("import machine\nmachine.deepsleep(1)\nmachine.deepsleep(2)\nmachine.deepsleep(3)\n")
+        self.assertIn("(firmware/main.py:2, firmware/main.py:3).", self.unchecked(devs="mpremote-devs-none.txt")["fix"])
+
+    def test_a_named_port_that_is_not_on_usb_opens_with_that_port_never_with_no_board(self):
+        # look.py and deploy.py read a --port the list does not hold, so only grant.py, live.py and reach.py stop with
+        # port_not_listed today: the fix is asked for that code directly
+        self.sleeper("import machine\nmachine.deepsleep(1)\n")
+        places = board_records.ButtonPlaces.of_project(self.project)
+        fix = board_envelope.asleep_fix(self.project, "port_not_listed", places)
+        self.assertTrue(fix.startswith("What spark knows: the port you named is not on USB, and"), fix)
+        self.assertNotIn("no board is on USB", fix)
+        stop = board_look.LookStopError("no board on %s: mpremote devs does not list it.", "/dev/x", reason="port_not_listed")
+        self.assertEqual(board_envelope.asleep_stop(stop, self.project, places), ("no board on /dev/x: mpremote devs does not list it.", fix))
+        self.assertEqual(board_envelope.asleep_fix(self.project, "two_boards", places), "")
+
+    def test_a_firmware_file_that_does_not_parse_is_named_and_the_cable_sentence_stays(self):
+        self.sleeper("import machine\nmachine.deepsleep(1\n")
+        self.assertEqual(self.stops(devs="mpremote-devs-none.txt").splitlines(), [
+            "look.py: %s" % NO_BOARD, UNPARSED_MAIN])
+        self.assertEqual(self.unchecked(devs="mpremote-devs-none.txt")["fix"], UNPARSED_MAIN)
+
+    def test_no_board_without_a_deepsleep_call_stays_as_it_was(self):
+        self.sleeper("import machine\nmachine.lightsleep(1)\n")
+        self.assertEqual(self.stops(devs="mpremote-devs-none.txt"), "look.py: %s\n" % NO_BOARD)
+        self.assertEqual(self.unchecked(devs="mpremote-devs-none.txt")["fix"], "")
+
+    def sleeper(self, main):
+        (self.project / "firmware").mkdir(exist_ok=True)
+        (self.project / "firmware" / "main.py").write_text(main)
+
+    def unchecked(self, *argv, **kw):
+        """The one unchecked item of look.py --json."""
+        code, said, _ = self.go("--json", *argv, **kw)
+        self.assertEqual(code, 2)
+        (item,) = json.loads(said[-1])["unchecked"]
+        return item
 
     def test_no_record_for_the_board(self):
         self.board("no-such-board")

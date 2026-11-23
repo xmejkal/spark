@@ -98,8 +98,8 @@
  {
   "file": "scripts/spark/bench/look_at_board.py",
   "name": "a look that could not run drops its stop's reason",
-  "find": "None, stop.reason, str(stop)",
-  "replace": "None, board_codes.TOOL_MISSING, str(stop)"
+  "find": "None, stop.reason, sentence",
+  "replace": "None, board_codes.TOOL_MISSING, sentence"
  },
  {
   "file": "scripts/spark/bench/board_envelope.py",

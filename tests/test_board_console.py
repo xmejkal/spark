@@ -2,7 +2,9 @@
 found, a press of R seen."""
 
 import contextlib
+import copy
 import io
+import pickle
 import subprocess
 import sys
 import types
@@ -119,6 +121,19 @@ class TheConsoleTest(unittest.TestCase):
             raise subprocess.CalledProcessError(1, command, "", "could not open port")
         self.assertEqual(board_console.ConsoleProbe(["/opt/python3"], PORT, fails).waits_in_download_mode(),
                          (False, "could not read the port: could not open port"))
+
+    def test_an_unread_port_gives_a_console_text_that_says_it_was_not_read(self):
+        # P1022 slice 3: the fix said "The board's console printed `could not read the port: ...`", which it never printed
+        def fails(command, **kw):
+            raise subprocess.CalledProcessError(1, command, "", "could not open port")
+        _, said = board_console.ConsoleProbe(["/opt/python3"], PORT, fails).waits_in_download_mode()
+        self.assertIsInstance(said, board_console.ConsoleText)
+        self.assertEqual((said, said.read), ("could not read the port: could not open port", False))
+        _, heard = board_console.ConsoleProbe(["/opt/python3"], PORT, printing(ROM, [])).waits_in_download_mode()
+        self.assertEqual((heard, heard.read), (ROM, True))
+        for make in (copy.copy, copy.deepcopy, lambda one: pickle.loads(pickle.dumps(one))):
+            made = make(said)
+            self.assertEqual((made, made.read), (said, False))
 
     def test_a_probe_needs_mpremote_as_a_python_package_and_a_port(self):
         python = tool_finder.Tool("mpremote", "board-shell", {"kind": "python", "module": "mpremote"}, ["/opt/python3"])
