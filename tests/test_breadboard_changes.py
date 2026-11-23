@@ -288,6 +288,61 @@ class SignedRailTest(unittest.TestCase):
         self.assertIn("Move R1 end 2 (pull-down on Btn A): put it in a free row close to the row of its other end, and "
                       "run a cyan jumper from that row to the GND rail (it went to the row of Btn B).", lines)
 
+    def test_a_rail_leg_that_goes_to_another_rail_moves_its_jumper_and_keeps_its_row(self):
+        # the refuter of the fix round: the list said to put the leg in a new free row with a jumper to 3V3 and never
+        # named the old jumper to GND. A person who kept the leg and added the jumper tied GND to 3V3: a short.
+        pulled_up = seated(["board", "Btn"], [
+            StepPoint([board("GND"), pin("Btn", "B")], None, True),
+            StepPoint([board("3V3"), resistor("R1", 2, self.PULL_DOWN, "10kΩ")], None, True),
+            StepPoint([board("D3"), pin("Btn", "A"), resistor("R1", 1, self.PULL_DOWN, "10kΩ")], None, False)])
+        lines = lines_between(self.WITH, pulled_up)
+        self.assertIn("Move the cyan jumper from the row of R1 end 2 (pull-down on Btn A): it now goes to the 3V3 rail "
+                      "(it went to the GND rail).", lines)
+        self.assertFalse([line for line in lines if "put it in a free row" in line], lines)
+
+    def test_a_rail_leg_that_goes_to_a_part_s_row_takes_its_jumper_out_first(self):
+        in_a_row = seated(["board", "Btn", "Led"], [
+            StepPoint([board("GND"), pin("Btn", "B")], None, True),
+            StepPoint([pin("Led", "K"), resistor("R1", 2, self.PULL_DOWN, "10kΩ")], None, False),
+            StepPoint([board("D3"), pin("Btn", "A"), resistor("R1", 1, self.PULL_DOWN, "10kΩ")], None, False)])
+        lines = lines_between(self.WITH, in_a_row)
+        out = "Take out the cyan jumper from the row of R1 end 2 (pull-down on Btn A) to the GND rail."
+        moved = "Move R1 end 2 (pull-down on Btn A): it now goes to the row of Led K (it went to a free row)."
+        self.assertIn(out, lines)
+        self.assertIn(moved, lines)
+        self.assertLess(lines.index(out), lines.index(moved))
+
+    def test_a_new_rail_jumper_gives_up_a_color_the_bench_shows(self):
+        # the refuter's nit: the jumper a moved step adds is an added jumper. When the bench already shows its color on
+        # a jumper to take out, the line names no color, as for any added jumper.
+        before = seated(["board", "Btn"], [
+            StepPoint([board("GND"), resistor("R1", 2, self.PULL_DOWN, "10kΩ")], None, False),
+            StepPoint([board("D3"), pin("Btn", "A"), resistor("R1", 1, self.PULL_DOWN, "10kΩ")], None, False),
+            StepPoint([board("D9"), pin("Btn", "B")], None, False)])
+        earlier = changes.WiringLog.from_build(before, {number: "cyan" for number in colors_of(before)}, None, ())
+        colors = {number: "cyan" if one.subject.name == "R1 end 2" else "red" for number, one in enumerate(self.WITH, 1)
+                  if one.jumper}
+        lines = changes.ChangeList().render(changes.changes_between(earlier, self.WITH, colors))
+        self.assertIn("Run a jumper from the row of R1 end 2 (pull-down on Btn A) to the GND rail.", lines)
+
+    def test_a_moved_leg_s_new_jumper_gives_up_a_bench_color_and_lends_none(self):
+        # a leg in a part's row moves to a free row with a new jumper: on the bench the old jumper from board D9 shows
+        # cyan, so the new one names no color; and its own black, the color of every ground jumper, is no bench color,
+        # so the added jumper from the row of Btn B keeps black
+        before = seated(["board", "Btn"], [
+            StepPoint([pin("Btn", "A"), resistor("R1", 2, self.PULL_DOWN, "10kΩ")], None, False),
+            StepPoint([board("D3"), resistor("R1", 1, self.PULL_DOWN, "10kΩ")], None, False),
+            StepPoint([board("D9"), pin("Btn", "B")], None, False)])
+        earlier = changes.WiringLog.from_build(before, {number: "cyan" for number in colors_of(before)}, None, ())
+        for leg_color, said in (("cyan", "run a jumper"), ("black", "run a black jumper")):
+            colors = {number: leg_color if one.subject.name == "R1 end 2" else "black"
+                      for number, one in enumerate(self.WITH, 1) if one.jumper}
+            lines = changes.ChangeList().render(changes.changes_between(earlier, self.WITH, colors))
+            with self.subTest(leg_color):
+                self.assertIn("Move R1 end 2 (pull-down on Btn A): put it in a free row close to the row of its other "
+                              "end, and %s from that row to the GND rail (it went to the row of Btn A)." % said, lines)
+                self.assertIn("Run a black jumper from the row of Btn B to the GND rail.", lines)
+
     def test_an_old_record_with_no_sign_keeps_the_free_rail_words(self):
         path = Path(tempfile.mkdtemp()) / "wiring-record.json"
         step = {"key": ["board", "board GND"], "anchor": ["rail", "GND"], "kind": "jumper", "source": "board GND",

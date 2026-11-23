@@ -255,20 +255,32 @@ def changes_between(record, seated, colors=None):
             jobs.add(one.key[:2])
             swapped.append(WiringChange(SWAPPED, RESISTOR, one.tag, None, old.value, one.value, ""))
         if old.anchor != one.anchor:
-            rerouted.append(_moved(old, one))
-    bench = {change.color for change in removed + rerouted if change.color}
+            for change in _moved(old, one):
+                {REMOVED: removed, ADDED: added}.get(change.code, rerouted).append(change)
+    # a moved rail leg's jumper is new: it gives up a bench color, as an added one does, and lends none
+    bench = {change.color for change in removed + rerouted if change.color and change.kind != RAIL_LEG}
     added = [change._replace(color=None) if change.color in bench else change for change in added]
+    rerouted = [change._replace(color=None) if change.kind == RAIL_LEG and change.color in bench else change
+                for change in rerouted]
     further = sorted(added + rerouted, key=lambda change: not change.marks)
     return removed + swapped + further
 
 
 def _moved(old, new):
-    """The change of one step whose anchor moved. A leg that sat in a free row before P953 stays there, and only the
-    jumper from its row to the rail is new; a leg in another row moves to a free row, with that jumper (P960)."""
+    """[WiringChange] of one step whose anchor moved (P960). A leg that sat in a free row before P953 stays there, and
+    only the jumper from its row to the rail is new; a leg in another row moves to a free row, with that jumper. A rail
+    leg bound for another rail keeps its row, and its jumper moves; one bound for a row first loses its jumper, so no
+    row is left tied to the old rail."""
+    jumper = "the row of " + new.source
     if new.kind == RAIL_LEG and old.kind == LEG and old.to == FREE_ROW:
-        return WiringChange(ADDED, JUMPER, "the row of " + new.source, new.color, "", new.to, new.marks, new.sign)
+        return [WiringChange(ADDED, JUMPER, jumper, new.color, "", new.to, new.marks, new.sign)]
+    if old.kind == RAIL_LEG and new.kind == RAIL_LEG:
+        return [WiringChange(REROUTED, JUMPER, jumper, old.color, old.to, new.to, new.marks, new.sign)]
+    if old.kind == RAIL_LEG:
+        return [WiringChange(REMOVED, JUMPER, jumper, old.color, old.to, "", ""),
+                WiringChange(REROUTED, new.kind, new.source, None, FREE_ROW, new.to, new.marks, new.sign)]
     color = new.color if new.kind == RAIL_LEG else old.color  # a rail leg's jumper is new; another keeps its bench color
-    return WiringChange(REROUTED, new.kind, new.source, color, old.to, new.to, new.marks, new.sign)
+    return [WiringChange(REROUTED, new.kind, new.source, color, old.to, new.to, new.marks, new.sign)]
 
 
 def _article(word):
