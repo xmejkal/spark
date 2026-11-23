@@ -18,6 +18,7 @@ from spark.bench import deploy_gate
 from spark.bench import download_mode
 from spark.bench import known_board
 from spark.bench import ready_probe
+from spark.records import board_records
 from spark.records import store
 from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
@@ -303,6 +304,9 @@ class DeployFlowService:
             reached["notes"] = ["the store record was not written: %s" % cannot]
             self.say(DeployPhase.VERIFY, "store record: not written: %s" % cannot)
         if ready.verdict == ready_probe.UNKNOWN:
+            if reached["reason"] == board_codes.READY_UNKNOWN:  # P1022: what spark knows, what it did not do, what to try
+                reached["fix"] = board_envelope.ready_unknown_fix(result, board_records.ButtonPlaces.of_project(self.service.project))
+                self.say(DeployPhase.VERIFY, reached["fix"])
             if result.start is None or result.start.port:  # P462: with the port gone there is nothing to watch
                 self.say(DeployPhase.VERIFY, WATCH % shlex.join(result.repl_command), raw=True)
             return EXIT_COULD_NOT_RUN

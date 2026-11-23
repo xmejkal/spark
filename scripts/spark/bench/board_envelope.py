@@ -11,7 +11,9 @@ not the yes, and neither is "go ahead" in a chat.
 
 from pathlib import Path
 
+from spark.bench import board_codes
 from spark.bench import board_doctor
+from spark.bench import download_mode
 from spark.records import board_records
 from spark.bench.deploy_stages import DeployPhase
 from spark.design import loader
@@ -34,6 +36,39 @@ GRANT_STEP_NO_SIMULATION = ", and with --no-simulation, write firmware that no s
 FIX_FOR_NEXT = {NEXT_DEPLOY: "the person runs data.run_in_terminal in their own terminal", NEXT_LOOK: "run look.py again"}
 #: The board's state after a flash command failed, and after a crash once the flash finished (P655).
 MAY_BE_ERASED, FLASHED_NOT_VERIFIED = "may_be_erased", "flashed_not_verified"
+
+#: The words that fill board_codes.READY_UNKNOWN's fix (P1022), each from a fact of the DeployResult: the board's files
+#: read or not (ReadyResult.files_read), what the console printed (DeployResult.console) and the facts file written or not.
+FILES_READ = "spark read the board's files, but mpremote did not start the firmware"
+FILES_NOT_READ = "spark did not read the board's files"
+CONSOLE_NOT_READ = "spark did not read the board's console, and did not see `ready`"
+CONSOLE_SILENT = "The board's console printed nothing, so spark did not see `ready`"
+CONSOLE_PRINTED = "The board's console printed `%s`, and no `ready`"
+CONSOLE_READY = "The board's console printed `%s`, so the firmware started"
+FACTS_WRITTEN = "The facts file spark.json was written and read back"
+FACTS_NOT_WRITTEN = "The facts file spark.json was not written"
+
+
+def console_words(console):
+    """What the fix says of the board's console after the flash: its ready line, else its first line, else that it printed
+    nothing, or that it was not read (`console` None)."""
+    if console is None:
+        return CONSOLE_NOT_READ
+    lines = [line.strip() for line in console.splitlines() if line.strip()]
+    ready = [line for line in lines if download_mode.booted(line)]
+    return CONSOLE_READY % ready[0] if ready else CONSOLE_PRINTED % lines[0] if lines else CONSOLE_SILENT
+
+
+def ready_unknown_fix(result, places):
+    """The fix of a ready_unknown deploy, the one text the CLI says and the JSON item carries (P1022): READY_UNKNOWN's
+    template filled from the DeployResult `result` and the RESET place of `places` (a ButtonPlaces), or the fix of
+    READY_UNKNOWN_NO_FILES when the passed run's log names no files."""
+    if not result.facts["files"]:
+        return board_codes.READY_UNKNOWN_NO_FILES.fix
+    return board_codes.READY_UNKNOWN.fix % {
+        "files": FILES_READ if result.ready.files_read else FILES_NOT_READ, "console": console_words(result.console),
+        "facts": FACTS_WRITTEN if result.facts_line.written else FACTS_NOT_WRITTEN,
+        "reset": places.reset, "orientation": places.orientation}
 
 
 def yes_rule(evidence, grant_may_answer):
@@ -103,10 +138,11 @@ def doctor_fix(doctor, places):
 
 def _finding(reached, code):
     """The one Finding of a deploy run that did not reach ready, of the exit `code`'s severity: its subject is the stage, or
-    `ready` once the board was read, its code the reason, its fix the doctor's step or the step of what it waits for."""
+    `ready` once the board was read, its code the reason, its fix the doctor's step, the fix the run said (P1022) or the
+    step of what it waits for."""
     result, doctor = reached.get("result"), reached.get("doctor")
     fix = (doctor_fix(doctor, board_records.ButtonPlaces.of_project(reached["project"])) if doctor
-           else FIX_FOR_NEXT.get(reached.get("next_op"), ""))
+           else reached.get("fix") or FIX_FOR_NEXT.get(reached.get("next_op"), ""))
     return Finding(outcomes.STATUS_FOR[code], "ready" if result else reached["stage"], reached.get("reason"), reached.get("refusal"), fix)
 
 
@@ -131,13 +167,39 @@ def _steps(reached):
                                            GRANT_STEP_WHY + (GRANT_STEP_NO_SIMULATION if evidence.grant_refusal else ""),
                                            effects=["writes"], needs_yes=True), store.read_given_env()))
     elif result and result.ready.verdict == ready_probe.UNKNOWN:
-        stopped = bool(result.start and result.start.code)  # P462: the person has a step first
-        gone = stopped and result.start.port is None  # no port to open: mpremote would choose a board of its own
+        following = _unknown_steps(result, project, port, evidence)
+    return [NextStep(**step) for step in following]
+
+
+#: Why each step of a ready_unknown deploy whose board did not answer comes, in the fix's order (P1022).
+UNKNOWN_LOOK_WHY = ("first: wait a minute, because a firmware that sleeps at start answers nothing. The look shows whether the "
+                    "board is on USB and answers esptool. It restarts the board, and it reads no files and no ready")
+UNKNOWN_LIVE_WHY = ("second: the person presses RESET once first. Then live.py asks the board to run one line and says whether "
+                    "the board answers. On Espressif's USB-Serial/JTAG it opens the port as quietly as deploy.py's check does. "
+                    "It needs a live grant: if it refuses, it prints the grant line the person runs in their own terminal. It "
+                    "stops the firmware and resets the board after")
+UNKNOWN_WATCH_WHY = ("last: the person opens the REPL (data.repl_command), presses Ctrl-C, then Ctrl-D, and the firmware prints "
+                     "`ready`. On Espressif's USB-Serial/JTAG (303a:1001) mpremote's own open can leave the board deaf to spark "
+                     "until the next flash. Never deploy again for this")
+#: The line live.py runs: it holds no digit, so live.py lists no GPIO.
+UNKNOWN_LIVE_CODE = "print('answer')"
+
+
+def _unknown_steps(result, project, port, evidence):
+    """The steps of a ready_unknown deploy (P462, P1022): the REPL to watch after the person's step or for a log that names
+    no files, none when the port is gone, and the look, live.py and the REPL, in that order, when the board did not answer."""
+    stopped = bool(result.start and result.start.code)  # P462: the person has a step first
+    gone = stopped and result.start.port is None  # no port to open: mpremote would choose a board of its own
+    if stopped or not result.facts["files"]:
         again = "read the board again with the REPL (data.repl_command): the firmware prints `ready`. Never deploy again for this"
         following = [] if gone else [outcomes.step("watch", list(result.repl_command),
                                    again + (". First the person does what data.person_action says" if stopped else ""),
                                    needs_person=True if stopped else None)]
-    return [NextStep(**step) for step in following]
+        return following
+    live = ["--project", str(project), "--port", port, "--code", UNKNOWN_LIVE_CODE]
+    return [look_step(project, port, evidence, UNKNOWN_LOOK_WHY),
+            outcomes.add_env(outcomes.step("live", live, UNKNOWN_LIVE_WHY, needs_person=True), store.read_given_env()),
+            outcomes.step("watch", list(result.repl_command), UNKNOWN_WATCH_WHY, needs_person=True)]
 
 
 #: The data keys whose paths Privacy leaves as they are (P677): the line a person pastes, the board log an agent opens,

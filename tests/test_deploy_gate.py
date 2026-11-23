@@ -22,6 +22,7 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from spark.bench import board_codes  # noqa: E402
 from spark.bench import board_connection  # noqa: E402
 from spark.bench import board_console  # noqa: E402
 from spark.bench import board_doctor  # noqa: E402
@@ -839,6 +840,88 @@ class TheBoardInDownloadModeTest(GateCase):
         probes = [command for command in self.ran if command[1:2] == ["-c"] and command[2] == board_console.READ_CONSOLE]
         self.assertEqual([command[:1] + command[3:] for command in probes],
                          [FOUND["board-shell"].command + [self.look().port, "2"]])
+
+
+#: What mpremote printed on the FireBeetle 2 C6 (303a:1001) when the 13:19 deploy's facts copy and hash read failed,
+#: 2026-11-23 (P1022, the kept board log of p934-display2, the traceback's file lines left out).
+SETTLE_STDERR = ("spark: the 2.5 s settle heard b''\nTraceback (most recent call last):\n"
+                 "mpremote.transport.TransportError: could not enter raw repl\n")
+
+
+@needs_littlefs
+class TheReadyUnknownWordsTest(GateCase):
+    """P1022 slice 2: after a verified write that ready cannot confirm, deploy.py says what spark knows, what it did not
+    do and what to try in order, and the board log keeps what mpremote printed on each failed facts copy."""
+
+    def flash(self, probe, platform=None):
+        self.run_the_scenario()
+        return self.deploy("--token", self.token(), consent=FakeConsent(True), probe=probe, platform=platform)
+
+    def board_log(self):
+        return next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
+
+    def fix_line(self, said):
+        """The one line deploy.py printed that starts with what spark knows."""
+        line, = [line.strip() for line in said.splitlines() if line.strip().startswith("What spark knows:")]
+        return line
+
+    def test_the_second_sighting_keeps_both_facts_tries_in_the_board_log_and_says_the_file_was_not_written(self):
+        # 2026-11-23 13:19 CET: both facts copies and the hash read refused the raw REPL, and the console heard nothing
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        code, said, _ = self.flash(FakeConsoleProbe(""))
+        self.assertEqual(code, 2)
+        tries = ("the facts copy, the first try: mpremote printed:\nb''\n" + SETTLE_STDERR
+                 + "the facts copy, the retry: mpremote printed:\nb''\n" + SETTLE_STDERR)
+        log = self.board_log()
+        self.assertIn(tries, log)
+        self.assertLess(log.index("console with DTR and RTS off: nothing"), log.index(tries))  # its own block, after the read's
+        fix = self.fix_line(said)
+        for words in ("spark did not read the board's files.", "The board's console printed nothing, so spark did not see `ready`.",
+                      "The facts file spark.json was not written.", "it did not flash again and did not erase again",
+                      "2. Press the board's RESET (R, top left, beside the USB-C) once. Left and right as seen with the metal shield"):
+            self.assertIn(words, fix)
+        self.assertLess(said.index("store record: "), said.index(fix))
+        self.assertLess(said.index(fix), said.index("then, to see it start"))
+
+    def test_the_first_sighting_says_the_facts_file_was_written_and_the_console_heard_ready(self):
+        # 2026-11-22 23:22 CET: the facts file was written, the hash read refused the raw REPL, the console heard the boot
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        code, said, _ = self.flash(FakeConsoleProbe(C6_CONSOLE))
+        self.assertEqual(code, 2)
+        fix = self.fix_line(said)
+        self.assertIn("The facts file spark.json was written and read back.", fix)
+        self.assertIn("The board's console printed `ready, cpu 80 MHz`, so the firmware started.", fix)
+        self.assertNotIn("did not see `ready`", fix)
+        self.assertNotIn("the facts copy, ", self.board_log())  # no failed copy, nothing to keep
+
+    def test_a_board_whose_files_were_read_and_whose_start_failed_says_so(self):
+        self.prints = subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        code, said, _ = self.flash(FakeConsoleProbe("rst:0x15 (USB_UART_HPSYS),boot:0x1e\nentry 0x4086b910\n"))
+        self.assertEqual(code, 2)
+        fix = self.fix_line(said)
+        self.assertIn("spark read the board's files, but mpremote did not start the firmware.", fix)
+        self.assertIn("The board's console printed `rst:0x15 (USB_UART_HPSYS),boot:0x1e`, and no `ready`.", fix)
+
+    def test_a_console_that_was_not_read_is_said(self):
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"])
+        code, said, _ = self.flash(None, platform=FakeProbePlatform(self.project, None, find_fake_tool))
+        self.assertEqual(code, 2)
+        self.assertIn("spark did not read the board's console, and did not see `ready`.", self.fix_line(said))
+
+    def test_a_facts_copy_written_on_a_retry_keeps_the_first_try_s_output_in_the_board_log(self):
+        self.uncopied = [subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)]
+        code, _, _ = self.flash(None)
+        self.assertEqual(code, 0)
+        self.assertIn("the facts copy, the first try: mpremote printed:\nb''\n" + SETTLE_STDERR, self.board_log())
+
+    def test_a_log_that_names_no_files_says_only_to_run_the_scenario_again(self):
+        self.run_the_scenario()
+        log = next((self.project / "sim" / "runs").glob("*.log"))
+        log.write_text("".join(line for line in log.read_text().splitlines(True) if not line.startswith("file sha256: ")))
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True))
+        self.assertEqual(code, 2)
+        self.assertIn("  " + board_codes.READY_UNKNOWN_NO_FILES.fix + "\n", said)
+        self.assertNotIn("What spark knows:", said)
 
 
 class TheFactsAfterTheFlashTest(GateCase):

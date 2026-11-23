@@ -1,7 +1,7 @@
 """
 The reasons a look or a deploy stops, or cannot check something, each a code with one sentence (P433, S2).
 
-A leaf: it imports nothing of spark. `look.py --json` and `deploy.py --json` write a code in every `problems` and
+A leaf: it imports only `Code` from `spark.core.codes`, a leaf of the core (U1). `look.py --json` and `deploy.py --json` write a code in every `problems` and
 `unchecked` item, so an agent decides on the code and never on the English sentence (no magic strings, P260). A raise
 site names its code in `reason`, and `CODES` says in one sentence what each code means.
 
@@ -14,7 +14,10 @@ site names its code in `reason`, and `CODES` says in one sentence what each code
 The codes every Operation can write (`bad_argument`, `crash`) are the core's, in `spark.core.codes` (P442).
 NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE, LOG_UNREADABLE and TOOL_MISSING are also firmware_codes', as equal literals in two
 leaves (P684). Deploy reports a DeployError's reason with these words, and the bench raises TOOL_MISSING itself (P685).
+READY_UNKNOWN is a Code with its fix (P1022), as the core's are (P853, P935). The other codes are plain words.
 """
+
+from spark.core.codes import Code
 
 # --- MVP ---
 #: A LookStopError's reason: the look could not go on.
@@ -41,7 +44,23 @@ LOG_UNREADABLE, CHIP_UNKNOWN = "log_unreadable", "chip_unknown"
 EVIDENCE_REFUSES, IMAGE_CHANGED = "evidence_refuses", "image_changed"
 #: What deploy.py reports on its own: the flash and the board's start.
 FLASH_FAILED = "flash_failed"
-READY_NOT_SEEN, READY_UNKNOWN = "ready_not_seen", "ready_unknown"
+READY_NOT_SEEN = "ready_not_seen"
+#: P1022: after a write that passed esptool's hash check, ready was not confirmed. Its fix is a template that only
+#: board_envelope.ready_unknown_fix fills (never codes.fix_of): what spark knows, what it did not do and what to try, in
+#: order. The hash claim holds because only flasher.EsptoolFlasher writes, and esptool compares the flash's MD5 after it.
+READY_UNKNOWN = Code("ready_unknown", "the board could not be read after the flash, or the passed run's log names no files",
+                     "What spark knows: the write passed esptool's hash check, so the image is on the flash. %(files)s. "
+                     "%(console)s. %(facts)s. The firmware can be running or asleep, and not answering. What spark did not "
+                     "do: it did not flash again and did not erase again. What to try, in order: 1. Wait a minute, then run "
+                     "look.py. 2. Press the board's %(reset)s once%(orientation)s. Then run live.py: it says whether the board "
+                     "answers. live.py needs a live grant: if it refuses, it prints the grant line to run in your own terminal. "
+                     "3. Open the REPL line. If live.py and the REPL also do not reach the board, the firmware does not read its "
+                     "console, for example because it sleeps for a long time at start. Then change the firmware: sleep in short "
+                     "slices, and read the console. Do not deploy again for this")
+#: A variant of READY_UNKNOWN: the passed run's log names no files, so nothing on the board was read.
+READY_UNKNOWN_NO_FILES = Code(READY_UNKNOWN, READY_UNKNOWN.meaning,
+                              "The image is on the flash: spark did not flash again and did not erase again. Run the scenario "
+                              "again, so that its log names the files. Only a deploy after that checks ready")
 #: Why the board did not start after the write (P462): it still waits in download mode, or its port is gone.
 DOWNLOAD_MODE_STAYED, PORT_GONE = "download_mode_stayed", "port_gone"
 #: A stage needs a fact the record lacks (P464): the item of `missing_facts`, in the build's `kept` pin-map entry.
@@ -98,7 +117,7 @@ CODES = {
     IMAGE_CHANGED: "the image changed after the person's yes",
     FLASH_FAILED: "a flash command failed, so the board may be erased and not written",
     READY_NOT_SEEN: "the board's files differ from the image, the firmware stopped with an error, or it printed no ready",
-    READY_UNKNOWN: "the board could not be read after the flash, or the passed run's log names no files",
+    READY_UNKNOWN: READY_UNKNOWN.meaning,
     DOWNLOAD_MODE_STAYED: "the board still waits in download mode after the flash, and the person's RESET press did not start it",
     PORT_GONE: "the board's port was not listed after the flash, or went and did not come back",
     MISSING_FACT: "a stage needs a fact the record lacks, so it stopped short of guessing it",

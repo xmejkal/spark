@@ -326,6 +326,28 @@ class TheBenchCodesTableTest(unittest.TestCase):
         self.assertEqual(sorted(set(firmware_codes.CODES) & set(board_codes.CODES)),
                          sorted(getattr(firmware_codes, name) for name in SHARED_CODES))
 
+    def test_ready_unknown_is_a_code_whose_template_the_deploy_fills_with_every_slot(self):
+        # P1022 slice 2: only board_envelope.ready_unknown_fix fills it, so no raw slot reaches the JSON or the CLI
+        from spark.bench import board_envelope, board_facts, deploy_service, ready_probe
+        from spark.records import board_records
+        self.assertEqual((type(board_codes.READY_UNKNOWN), board_codes.CODES["ready_unknown"]),
+                         (Code, board_codes.READY_UNKNOWN.meaning))
+        self.assertEqual((board_codes.READY_UNKNOWN_NO_FILES, board_codes.READY_UNKNOWN_NO_FILES.meaning),
+                         (board_codes.READY_UNKNOWN, board_codes.READY_UNKNOWN.meaning))
+        with self.assertRaises(TypeError):
+            codes.fix_of(board_codes.READY_UNKNOWN)
+        xiao = board_records.ButtonPlaces.from_record(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()))
+        for places in (board_records.ButtonPlaces.EMPTY, xiao):
+            for console in (None, "", "entry 0x4086b910\n", "ready, cpu 80 MHz\n"):
+                for files_read in (False, True):
+                    result = deploy_service.DeployResult({"files": {"/main.py": "0"}}, board_facts.FactsLine("f", files_read),
+                                                         ready_probe.ReadyResult("ready unknown", "", "", files_read), None, [],
+                                                         console=console)
+                    with self.subTest(places=places.reset, console=console, files_read=files_read):
+                        self.assertNotIn("%", board_envelope.ready_unknown_fix(result, places))
+        self.assertIn("RESET (R, top left, beside the USB-C) once. Left and right as seen with the metal shield facing you",
+                      board_envelope.ready_unknown_fix(result, xiao))
+
     def test_the_shared_codes_are_equal_in_both_leaves(self):
         self.assertEqual([getattr(board_codes, name) for name in SHARED_CODES],
                          ["no_sim_toml", "firmware_line_bad", "no_image", "log_unreadable", "tool_missing"])

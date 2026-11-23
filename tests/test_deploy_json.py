@@ -15,13 +15,16 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from spark.bench import board_codes  # noqa: E402
 from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
+from spark.bench import board_facts  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
+from spark.bench import ready_probe  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
@@ -413,16 +416,35 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual(said["problems"][0]["code"], "ready_not_seen")
 
     @needs_littlefs
-    def test_ready_unknown_gives_a_watch_step_and_never_a_second_erase(self):
+    def test_ready_unknown_gives_look_live_and_watch_in_order_and_never_a_second_erase(self):
+        # P1022 slice 2: the steps of the fix, in its order; the CLI line and the item's fix are one text
         self.unread = subprocess.CalledProcessError(1, "mpremote")
-        code, said, _ = self.ready(probe=FakeConsoleProbe(""))
+        code, said, err = self.ready(probe=FakeConsoleProbe(""))
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], said["data"]["person_action"]), (2, "could-not-run", None))
-        self.assertEqual([s["op"] for s in said["next"]], ["watch"])
+        look, live, watch = said["next"]
+        self.assertEqual([look["op"], live["op"], watch["op"]], ["look", "live", "watch"])
         self.assertEqual(said["unchecked"][0]["code"], "ready_unknown")
-        self.assertNotIn("needs_person", said["next"][0])  # nobody must press anything first
+        self.assertNotIn("needs_person", look)  # Claude runs the look itself, after a minute
+        self.assertEqual(look["argv"][:4], ["--project", str(self.project.resolve()), "--port", PORT])
+        self.assertEqual((live["needs_person"], live["argv"][-2:]), (True, ["--code", "print('answer')"]))
+        self.assertIs(watch["needs_person"], True)  # P1007: mpremote's own open can leave the board deaf, so the person opens it
         self.assertTrue(said["data"]["repl_command"])
-        self.assertEqual(said["next"][0]["argv"], said["data"]["repl_command"])
+        self.assertEqual(watch["argv"], said["data"]["repl_command"])
+        fix = said["unchecked"][0]["fix"]
+        self.assertTrue(fix.startswith("What spark knows: the write passed esptool's hash check"), fix)
+        self.assertIn("  %s\n" % fix, err)  # the line a person read is the item's fix
+
+    @needs_littlefs
+    def test_a_log_that_names_no_files_gives_the_watch_step_alone_and_its_own_fix(self):
+        self.run_the_scenario()
+        log = next((self.project / "sim" / "runs").glob("*.log"))
+        log.write_text("".join(line for line in log.read_text().splitlines(True) if not line.startswith("file sha256: ")))
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True))
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual([s["op"] for s in said["next"]], ["watch"])
+        self.assertNotIn("needs_person", said["next"][0])  # nobody must press anything first
+        self.assertEqual(said["unchecked"][0]["fix"], board_codes.READY_UNKNOWN_NO_FILES.fix)
 
     @needs_littlefs
     def test_a_board_that_stays_in_download_mode_names_the_code_and_the_person_action(self):
@@ -431,7 +453,7 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["unchecked"][0]["code"]), (2, "download_mode_stayed"))
         self.assertIn("press its RESET (R, top left, beside the USB-C)", said["data"]["person_action"])
-        self.assertEqual(said["next"][0]["op"], "watch")
+        self.assertEqual([s["op"] for s in said["next"]], ["watch"])
         self.assertIs(said["next"][0]["needs_person"], True)
         self.assertIn("First the person does what data.person_action says", said["next"][0]["why"])
 
@@ -473,6 +495,50 @@ class DeployJsonTest(JsonCase, GateCase):
                                                FakeOutsideWorld(lambda command, **kw: seen.append(kw) or done("")))
         service.deploy(self.look(), self.token(), FakeConsent(True))
         self.assertEqual(seen, [dict(check=True)] * 2)
+
+
+class ReadyUnknownFixTest(unittest.TestCase):
+    """P1022 slice 2: the fix of ready_unknown says what spark knows from facts on the result, never from a sentence's
+    words: the files read or not, what the console printed, the facts file written or not."""
+
+    def unknown(self, console=None, files_read=False, written=False, files=None):
+        ready = ready_probe.ReadyResult("ready unknown", "words never read", "", files_read)
+        return deploy_service.DeployResult({"files": {"/main.py": "0"} if files is None else files},
+                                           board_facts.FactsLine("facts file: x", written), ready, None, [], console=console)
+
+    def fix(self, result, places=board_records.ButtonPlaces.EMPTY):
+        return board_envelope.ready_unknown_fix(result, places)
+
+    def test_what_the_console_printed_is_said_as_it_was(self):
+        cases = {None: "spark did not read the board's console, and did not see `ready`.",
+                 "": "The board's console printed nothing, so spark did not see `ready`.",
+                 " \r\n": "The board's console printed nothing, so spark did not see `ready`.",
+                 "rst:0x15 (USB_UART_HPSYS),boot:0x1e\nentry 0x4086b910\n":
+                     "The board's console printed `rst:0x15 (USB_UART_HPSYS),boot:0x1e`, and no `ready`.",
+                 "entry 0x4086b910\nready, cpu 80 MHz\r\n": "The board's console printed `ready, cpu 80 MHz`, so the firmware started.",
+                 "not ready yet\n": "The board's console printed `not ready yet`, and no `ready`."}
+        for console, words in cases.items():
+            with self.subTest(console=console):
+                self.assertIn(words, self.fix(self.unknown(console)))
+
+    def test_the_files_and_the_facts_file_are_said_from_their_facts(self):
+        self.assertIn("spark did not read the board's files.", self.fix(self.unknown()))
+        self.assertIn("spark read the board's files, but mpremote did not start the firmware.", self.fix(self.unknown(files_read=True)))
+        self.assertIn("The facts file spark.json was not written.", self.fix(self.unknown()))
+        self.assertIn("The facts file spark.json was written and read back.", self.fix(self.unknown(written=True)))
+
+    def test_it_says_what_spark_knows_then_what_it_did_not_do_then_what_to_try_in_order(self):
+        fix = self.fix(self.unknown(""))
+        order = ["What spark knows: the write passed esptool's hash check, so the image is on the flash.",
+                 "What spark did not do: it did not flash again and did not erase again.", "What to try, in order:",
+                 "1. Wait a minute, then run look.py.", "2. Press the board's RESET once. Then run live.py",
+                 "if it refuses, it prints the grant line to run in your own terminal.", "3. Open the REPL line.",
+                 "If live.py and the REPL also do not reach the board, the firmware does not read its console",
+                 "Do not deploy again for this"]
+        self.assertEqual([fix.index(words) for words in order], sorted(fix.index(words) for words in order))
+
+    def test_a_log_that_names_no_files_gives_its_own_fix(self):
+        self.assertEqual(self.fix(self.unknown(files={})), board_codes.READY_UNKNOWN_NO_FILES.fix)
 
 
 if __name__ == "__main__":
