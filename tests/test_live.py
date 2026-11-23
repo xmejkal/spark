@@ -129,6 +129,19 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("no board definition for 'no-such-board'", problems)
 
+    def test_the_board_requirements_json_names_is_the_one_checked_not_the_selection(self):
+        # P988 (D35): the walk's selection named one board and its requirements another; live.py checks the requirements'
+        (self.project / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "no-such-board"}))
+        (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        code, _, problems, _ = self.go("--code", "print(1)")
+        self.assertEqual(code, 0, problems)
+
+    def test_a_board_requirements_json_names_that_no_record_holds_exits_2_over_a_good_selection(self):
+        (self.project / "requirements.json").write_text(json.dumps({"board": "no-such-board"}))
+        code, _, problems, _ = self.go("--code", "print(1)")
+        self.assertEqual(code, 2)
+        self.assertIn("no board definition for 'no-such-board'", problems)
+
     def test_a_silent_board_exits_2_and_is_not_reset(self):
         refused = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
         code, said, _, ran = self.go("--code", "print(1)", answers=(refused, refused))

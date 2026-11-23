@@ -354,6 +354,15 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         self.assertIn("the project up from here", project_notes[0])
         self.assertEqual([note for note in resolved if note.startswith("boards ")], ["boards       b1.json, b2.json (given)"])
 
+    def test_the_boards_note_resolves_the_board_requirements_json_names_over_the_selection(self):
+        # P988 (D35): the selection names no record, the requirements name the XIAO C6, and the note resolves
+        root = Path(tempfile.mkdtemp())
+        (root / "boards").mkdir()
+        (root / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "no-such-board"}))
+        (root / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        boards = [note for note in self._resolved(root, boards=None) if note.startswith("boards ")]
+        self.assertEqual(boards, ["boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6"])
+
     def test_a_second_note_of_a_given_input_is_dropped(self):
         notes = ["project      /p (the project up from here, the one the build reads)",
                  "boards       1 definition(s): x", "boards       not resolved (no board chosen)", "rules        r.json"]
