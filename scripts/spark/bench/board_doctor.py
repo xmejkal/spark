@@ -51,6 +51,8 @@ MESSAGE_FOR = {
 }
 #: The step to take when a step did not help. Only where a source backs it; every other step has none.
 IF_NOT_HELPED = {NEXT_PRESS_RESET: NEXT_REPLUG}
+#: The label of the line of `describe` that says the next step (P1049: `with_step` finds the line by it).
+NEXT_LABEL = "next    "
 
 #: Result: one check's `name`, whether it `passed`, the `fact` it found, and the `next_step` it names, or None.
 CheckResult = namedtuple("CheckResult", "name passed fact next_step")
@@ -195,10 +197,17 @@ def describe(result, places=board_records.ButtonPlaces.EMPTY):
     """The lines a person reads for a DoctorProbeResult, without indent. `places` names the buttons the steps mention."""
     out = ["said    %s" % result.tool_said] if result.tool_said else []
     out += ["check   %s: %s" % (check.name, check.fact) for check in result.checks]
-    out.append("next    %s" % (step_sentence(result.next_step, places) if result.next_step else "no step: the doctor could not look"))
+    out.append(NEXT_LABEL + (step_sentence(result.next_step, places) if result.next_step else "no step: the doctor could not look"))
     if result.if_not_helped:
         out.append("if not  %s" % step_sentence(result.if_not_helped, places))
     return out
+
+
+def with_step(lines, said):
+    """The lines of `describe` (indented or not) with `said` as the step of their next line, every other line as it was
+    (P1049). A plug_in result has no `if not` line (IF_NOT_HELPED holds press_reset only), so the step stays the last line."""
+    return [line[:len(line) - len(line.lstrip(" "))] + NEXT_LABEL + said if line.lstrip(" ").startswith(NEXT_LABEL) else line
+            for line in lines]
 
 
 def as_dict(result):

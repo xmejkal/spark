@@ -19,6 +19,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
@@ -668,6 +669,21 @@ class WhatStopsTheLookTest(LookScriptCase):
         stop = board_look.LookStopError("no board on %s: mpremote devs does not list it.", "/dev/x", reason="port_not_listed")
         self.assertEqual(board_envelope.asleep_stop(stop, self.project, places), ("no board on /dev/x: mpremote devs does not list it.", fix))
         self.assertEqual(board_envelope.asleep_fix(self.project, "two_boards", places), "")
+
+    def test_after_the_doctor_only_a_plug_in_step_on_a_named_port_with_a_deepsleep_call_gets_the_asleep_fix(self):
+        # P1049, D2 and D3: a port spark picked, another step, no doctor, no call and a file that does not parse give ""
+        places = board_records.ButtonPlaces.of_project(self.project)
+        plug_in, close_other = (board_doctor.DoctorProbeResult((), None, step, None) for step in ("plug_in", "close_other"))
+        self.assertEqual(board_envelope.asleep_after_doctor(plug_in, "/dev/cu.usbmodem101", self.project, places), "")
+        self.sleeper("import machine\nmachine.deepsleep(1\n")
+        self.assertEqual(board_envelope.asleep_after_doctor(plug_in, "/dev/cu.usbmodem101", self.project, places), "")
+        self.sleeper("import machine\nmachine.deepsleep(1)\n")
+        fix = board_envelope.asleep_after_doctor(plug_in, "/dev/cu.usbmodem101", self.project, places)
+        self.assertTrue(fix.startswith("What spark knows: the port you named is not on USB, and the project's firmware calls "
+                                       "deepsleep (firmware/main.py:2)."), fix)
+        self.assertEqual(board_envelope.asleep_after_doctor(plug_in, None, self.project, places), "")
+        self.assertEqual(board_envelope.asleep_after_doctor(close_other, "/dev/cu.usbmodem101", self.project, places), "")
+        self.assertEqual(board_envelope.asleep_after_doctor(None, "/dev/cu.usbmodem101", self.project, places), "")
 
     def test_a_firmware_file_that_does_not_parse_is_named_and_the_cable_sentence_stays(self):
         self.sleeper("import machine\nmachine.deepsleep(1\n")

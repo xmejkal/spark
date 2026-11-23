@@ -142,6 +142,31 @@ def asleep_stop(stop, project, places):
     return (board_look.NO_BOARD if no_board else str(stop)), fix
 
 
+def asleep_after_doctor(doctor, named, project, places):
+    """The asleep fix that takes the place of the doctor's plug_in step on the port the person `named` (P1049): '' for a
+    port spark picked (D2), for another step or no doctor, and for UNPARSED (D3), so only a deepsleep call replaces the
+    cable step."""
+    if not (named and doctor and doctor.next_step == board_doctor.NEXT_PLUG_IN):
+        return ""
+    fix = asleep_fix(project, board_codes.PORT_NOT_LISTED, places)
+    return fix if fix.startswith(ASLEEP_KNOWS) else ""
+
+
+def stop_said(script, stop, answer, named, project):
+    """(the lines on stderr, the sentence, the fix) of a LookStopError `stop`, `answer` being board_doctor.stop_answer's
+    (lines, DoctorProbeResult or None) and `named` the port the person named or None (P1049). With no doctor, slice 3's
+    asleep fix with its sentence (a port_not_listed stop only when `named`); after the doctor, its lines with the asleep fix
+    as their next step, else the doctor's step as the fix."""
+    (lines, doctor), places = answer, board_records.ButtonPlaces.of_project(project)
+    if doctor:
+        asleep = asleep_after_doctor(doctor, named, project, places)
+        return (board_doctor.with_step(lines, asleep), str(stop), asleep) if asleep else (lines, str(stop), doctor_fix(doctor, places))
+    sentence, fix = asleep_stop(stop, project, places)
+    if fix and (named or stop.reason != board_codes.PORT_NOT_LISTED):
+        return ["%s: %s" % (script, sentence), fix], sentence, fix
+    return lines, str(stop), ""
+
+
 def yes_rule(evidence, grant_may_answer):
     """YES_RULE for this evidence: a grant clause only where a deploy grant can answer (`grant_may_answer`: the caller's
     GrantService.refusal_of is None, P1029), the --no-simulation one for an image that no simulation tested."""
