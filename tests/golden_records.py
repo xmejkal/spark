@@ -229,7 +229,8 @@ CASES = [
     # --- boards.py: one Case per flag, and a refusal ---
     Case("boards-path-ok.txt", "boards.py", ["--path"] + WITH, 0),
     Case("boards-id-ok.txt", "boards.py", ["--id"] + WITH, 0),
-    Case("boards-id-could-not-run-no-selection.txt", "boards.py", ["--id"] + WITH, 1, (("boards/active.json", None),)),
+    Case("boards-id-could-not-run-no-selection.txt", "boards.py", ["--id"] + WITH, 1,
+         (("boards/active.json", None), ("requirements.json", None))),  # P988: neither file names a board
     Case("boards-list-ok.txt", "boards.py", ["--list"] + WITH, 0),
     Case("boards-paths-ok.txt", "boards.py", ["--paths"] + WITH, 0),
     Case("boards-validate-ok.txt", "boards.py", ["--validate"] + WITH, 0),

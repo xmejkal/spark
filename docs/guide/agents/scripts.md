@@ -182,7 +182,7 @@ Run a short piece of code on the running board inside a grant, say whether the b
 | flag | value | what it does |
 |---|---|---|
 | `--code` | `CODE` | the code to run on the board, e.g. 'print(1)' |
-| `--project` | `PROJECT` | the project folder whose boards/active.json names the board and whose tools list names mpremote (default: here) |
+| `--project` | `PROJECT` | the project folder whose board (the board requirements.json names, else boards/active.json's) is checked and whose tools list names mpremote (default: here) |
 | `--port` | `PORT` | the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB (one board on two nodes named by its serial counts once) |
 | `--replies` | `REPLIES` | your own file with the yes to the board question (P892): its true value lets live.py run the code on a board that spark cannot tell from another board. One yes is for one run |
 

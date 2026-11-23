@@ -20,7 +20,8 @@ NO_PROJECT_HERE = Code("no_project_here", "no folder up from here holds boards/a
 BOARD_FILE_MISSING = Code("board_file_missing", "the board selection file, or a board definition file, is not there",
                           "pick a board with boards.py, or write the board definition the sentence names")
 NO_BOARD_SELECTED = Code("no_board_selected", "the board selection names no board, or holds something that is not one board id",
-                         "write one board id in boards/active.json, as {\"board\": \"<id>\"}")
+                         "name one board id in requirements.json, as {\"board\": \"<id>\"} (parts.py --requirements "
+                         "writes it), or in boards/active.json for a project with no requirements")
 NO_BOARD_DEFINITION = Code("no_board_definition", "neither the project nor spark's library has a board definition of the id asked for",
                            "pick one of the board ids the sentence lists")
 BOARD_CONTRACT_BROKEN = Code("board_contract_broken", "a board definition does not meet the board contract",

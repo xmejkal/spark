@@ -27,13 +27,17 @@ from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, answers_
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
 from spark.core.result import Refusal  # noqa: E402
 
+#: The --board help (P988 review): init writes the selection, and requirements.json's board wins when it names one (D35).
+BOARD_HELP = ("board id to write in boards/active.json, the selection. When requirements.json names a board, that board "
+              "wins (D35). Omit it to see what is available")
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="init_project.py",
         description="Create the files every check and reviewer needs, with nothing guessed.")
     parser.add_argument("--project", default=".", help="the project to set up (default: here)")
-    parser.add_argument("--board", help="board id to make active; omit to see what is available")
+    parser.add_argument("--board", help=BOARD_HELP)
     parser.add_argument("--circuit", help="a built netlist to name the rails from")
     parser.add_argument("--force", action="store_true",
                         help="work on files that exist too: merge what is derived into rules.json (answers stay), "

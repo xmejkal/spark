@@ -18,16 +18,23 @@ spark/boards/                  the shipped LIBRARY — verified definitions, ado
   xiao-esp32-c6.json
 
 your-project/
-  boards/active.json           <- which board. THE one place it is chosen.
+  requirements.json            <- its "board" names the project's board (D35).
+  boards/active.json           the selection. Read only when the requirements name no board.
   boards/<id>.json             optional: your own definition. Yours always wins.
   .spark/board.json            GENERATED. The resolved, validated board every consumer reads.
 ```
 
-A project needs **one file** to adopt a library board:
+The project's board is the board that `requirements.json` names. `parts.py --requirements` writes that file from the
+parts you picked. The selection in `boards/active.json` names the board only when the requirements name none, or when
+the project has no requirements yet ([P988](https://github.com/xmejkal/spark/issues/1441)). `/spark:init` writes the
+selection:
 
 ```json
 { "schema": 1, "board": "firebeetle2-esp32s3" }
 ```
+
+A folder with only `requirements.json` is not found as a project without `--project`: the scripts find a project by
+its `boards/active.json` or its `.spark/` folder.
 
 A definition you verified yourself always beats a shared one, so a project's own `boards/<id>.json`
 overrides the library. Nothing you have checked can be replaced by a plugin update.
@@ -36,12 +43,13 @@ overrides the library. Nothing you have checked can be replaced by a plugin upda
 
 ```sh
 boards.py --list          # what is available, and whether it is yours or the library's
-$EDITOR boards/active.json # change the one line
+parts.py --pick . board=<id> # pick the other board for the project's needs
+parts.py --requirements . # requirements.json now names it
 boards.py --resolve       # -> .spark/board.json, validated
 make check                # what still disagrees
 ```
 
-Nothing else names a board. The resolver validates the active one and writes it to
+Nothing else names a board. The resolver validates the project's board and writes it to
 `.spark/board.json`; Make, the firmware's spec generator and the simulator's diagram generator
 all read that single file.
 

@@ -1034,6 +1034,83 @@ class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
                 self.assertIn(code, (0, 1), err)
                 self.assertTrue(said or err, "it must say something either way")
 
+    def test_each_flag_names_the_board_requirements_json_names_over_the_selection(self):
+        # P988 (D35): the selection is the S3, the requirements name the XIAO C6, and every flag gives the C6
+        (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        self.assertEqual(self._run("--id")[:2], (0, "xiao-esp32-c6"))
+        self.assertEqual(Path(self._run("--path")[1]).name, "xiao-esp32-c6.json")
+        self.assertEqual(self._run("--get", "chip")[:2], (0, "esp32c6"))
+        self.assertEqual(self._run("--resolve")[0], 0)
+        self.assertEqual(json.loads((self.project / ".spark" / "board.json").read_text())["id"], "xiao-esp32-c6")
+        _, valid, _ = self._run("--validate")
+        self.assertEqual([line.split()[1] for line in valid.splitlines() if line.split()[0] == "active"], ["xiao-esp32-c6"])
+        _, listed, _ = self._run("--list", "--json")
+        rows = {row["id"]: row["active"] for row in json.loads(listed)["data"]["boards"]}
+        self.assertEqual((rows["xiao-esp32-c6"], rows["firebeetle2-esp32s3"]), (True, False))
+        self.assertNotIn("notes", json.loads(listed), "an intact requirements.json gives no note")
+
+    def test_a_broken_requirements_json_is_said_once_by_list_and_validate(self):
+        # P988 round 1 (4) and round 2 (C): --list and --validate print the reason once, never an unmarked list in silence
+        (self.project / "requirements.json").write_text("{not json")
+        code, listed, err = self._run("--list")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(listed.count("is not valid JSON"), 1, listed)
+        self.assertNotIn("*", listed)
+        code, listed, _ = self._run("--list", "--json")
+        notes = json.loads(listed)["notes"]
+        self.assertEqual((code, len(notes)), (0, 1))
+        self.assertIn("requirements.json is not valid JSON", notes[0])
+        _, valid, _ = self._run("--validate")
+        self.assertEqual(valid.count("is not valid JSON"), 1, valid)
+        self.assertEqual(self._run("--id")[0], 1, "--id refuses: it never prints the selection in place of the requirements' board")
+
+
+class TheProjectsBoardIsTheRequirementsBoardTest(unittest.TestCase):
+    """P988 (D35): requirements.json's `board` names the project's board. The selection, boards/active.json, is read as the
+    board only when the requirements name none or the project has no requirements.json. A requirements.json that cannot
+    be read is refused, never a quiet fall back to the selection."""
+
+    def apart(self, requirements):
+        """A project whose selection is the S3, with `requirements` as requirements.json's text (None: no file)."""
+        root = project()
+        if requirements is not None:
+            (root / "requirements.json").write_text(requirements)
+        return root
+
+    def board_of_each_reader(self, root):
+        resolved = json.loads(board_records.resolve(root).read_text())["id"]
+        return {board_records.project_board_id(root), board_records.definition_path(root).stem,
+                board_records.load(root)["id"], board_records.get(root, "id"), resolved}
+
+    def test_the_requirements_board_wins_over_the_selection(self):
+        root = self.apart(json.dumps({"board": "xiao-esp32-c6"}))
+        self.assertEqual(self.board_of_each_reader(root), {"xiao-esp32-c6"})
+        self.assertEqual(board_records.get(root, "chip"), "esp32c6")
+
+    def test_requirements_that_name_no_board_give_the_selection(self):
+        for text in (None, "{}", json.dumps({"board": None}), json.dumps({"board": ""})):
+            with self.subTest(requirements=text):
+                self.assertEqual(self.board_of_each_reader(self.apart(text)), {"firebeetle2-esp32s3"})
+
+    def test_a_requirements_json_that_cannot_be_read_is_refused_and_never_gives_the_selection(self):
+        # P988 review: only null, "" or no key names no board; any other value that is no string is refused, never the selection
+        for text in ("{not json", "[]", json.dumps({"board": ["xiao-esp32-c6"]}), json.dumps({"board": 3}),
+                     json.dumps({"board": False}), json.dumps({"board": 0}), json.dumps({"board": {}}), json.dumps({"board": []})):
+            with self.subTest(requirements=text):
+                root = self.apart(text)
+                with self.assertRaises(board_records.BoardError) as refused:
+                    board_records.project_board_id(root)
+                self.assertEqual(refused.exception.code, "record_file_broken")
+                with self.assertRaises(board_records.BoardError):
+                    board_records.load(root)
+
+    def test_a_board_the_requirements_name_that_no_record_holds_is_no_board_definition(self):
+        root = self.apart(json.dumps({"board": "no-such-board"}))
+        with self.assertRaises(board_records.BoardError) as refused:
+            board_records.load(root)
+        self.assertEqual(refused.exception.code, "no_board_definition")
+
+
 class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
     """
     F12 (C-7): /spark:init shows this list and asks the person to choose, and the XIAO — whose file records no header
