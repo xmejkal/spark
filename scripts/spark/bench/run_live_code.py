@@ -71,9 +71,9 @@ stops the firmware that ran. So unless mpremote said it could not open the port 
 can keep its value through that reset (P252's bench), so live.py lists the GPIO numbers written in the code. That list
 over-claims: print(1) lists GPIO1.
 
-The board record is the project's active board (boards/active.json). live.py does not match that record against the
-board on USB. The board question below compares the board on USB with another record: the board that spark keeps for
-the project in your store, which look.py writes.
+The board record is the project's board: the board requirements.json names, else boards/active.json's (P988). live.py
+does not match that record against the board on USB. The board question below compares the board on USB with another
+record: the board that spark keeps for the project in your store, which look.py writes.
 
 After the two checks and just before the code runs, live.py asks the board question (P892). A board with no grant is
 refused first, with no question. On the board that spark keeps for the project, known by its USB serial, it asks
@@ -108,7 +108,8 @@ class RunLiveCode(Operation):
     summary = "Run a short piece of code on the running board inside a grant, say whether the board ran it, and reset it (P247)."
     details = DETAILS
     arguments = (Argument(("--code",), "code", str, "the code to run on the board, e.g. 'print(1)'", required=True),
-                 COMMON_ARGUMENTS["project"]._replace(help="the project folder whose boards/active.json names the board and whose tools list "
+                 COMMON_ARGUMENTS["project"]._replace(help="the project folder whose board (the board requirements.json names, else "
+                                                      "boards/active.json's) is checked and whose tools list "
                                                       "names mpremote (default: here)"),
                  COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON"),
                  COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP))

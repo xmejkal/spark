@@ -156,7 +156,7 @@ skill: its design-reviewer agents, then its last step, the fabrication gate.
 
 - **The fabrication gate's scripts run anywhere.**
   - `boards.py --validate --for-fab` checks every dev-board definition available, the library's included and not only
-    the active one. With `--for-fab` it also requires each to name a footprint (`physical.footprint_module` and
+    the project's board. With `--for-fab` it also requires each to name a footprint (`physical.footprint_module` and
     `footprint_export`). It reads nothing of `board.tsx` or the build, and a problem in an unused library board fails
     it too.
   - `parts.py --unverified` runs for every part. It exits 0 even when items are open, so read its list (with `--json`,

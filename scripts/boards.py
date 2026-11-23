@@ -2,8 +2,8 @@
 """
 Which board this project is built around — resolved in one place, and checked against a contract.
 
-    python3 scripts/boards.py --path        the active board's definition file
-    python3 scripts/boards.py --id          the active board's id
+    python3 scripts/boards.py --path        the project's board's definition file
+    python3 scripts/boards.py --id          the project's board's id
     python3 scripts/boards.py --list        every board available to switch to (--json: one envelope, op list-boards)
     python3 scripts/boards.py --paths       their file paths, for tools that take a list
     python3 scripts/boards.py --get chip    one field, by dotted path
@@ -14,6 +14,8 @@ Which board this project is built around — resolved in one place, and checked 
 The command `/spark:init`, `/spark:build` and the review skill call. The library is `spark/records/board_records.py`
 (P718). `--list` is design's `list-boards` Operation on `run_cli` (P707), imported only when asked, because it loads the
 parts library and the fabrication data, which `--id`, `--path` and `--get` do not need.
+
+The project's board is the board requirements.json names, else the board boards/active.json names (D35, P988).
 """
 
 import sys
@@ -59,6 +61,8 @@ def _validate_all(project: Path, for_fab: bool) -> int:
     return EXIT_INVALID if failed else EXIT_OK
 
 
+#: The words for the project's board in the help (D35, P988).
+PROJECT_BOARD = "requirements.json's board, else boards/active.json's"
 #: The flag that picks the Operation on the core. argparse takes a prefix of it too (`--li`), so the pick does (P707).
 LIST_FLAG = "--list"
 #: The CLI's own text in `boards.py --list --help`, after ListBoards' details (P855, P937): its --json.
@@ -80,17 +84,17 @@ def main(argv=None, outside=None) -> int:
     parser = argparse.ArgumentParser(
         prog="boards.py", description="Resolve and check the project's board definitions.")
     what = parser.add_mutually_exclusive_group(required=True)
-    what.add_argument("--path", action="store_true", help="the active board's definition file")
-    what.add_argument("--id", action="store_true", help="the active board's id")
+    what.add_argument("--path", action="store_true", help="the project's board's definition file (%s)" % PROJECT_BOARD)
+    what.add_argument("--id", action="store_true", help="the project's board's id (%s)" % PROJECT_BOARD)
     what.add_argument(LIST_FLAG, action="store_true", help="every board available to switch to (--json: one envelope)")
     what.add_argument("--paths", action="store_true",
                       help="every board definition file, for tools that take a list")
     what.add_argument("--validate", action="store_true",
                       help="check every board file; a check it could not make is said under the board")
     what.add_argument("--get", metavar="KEY.PATH",
-                      help="one field from the active board, e.g. chip or physical.width_mm")
+                      help="one field from the project's board, e.g. chip or physical.width_mm")
     what.add_argument("--resolve", action="store_true",
-                      help="write the validated active board to .spark/board.json")
+                      help="write the project's board, validated, to .spark/board.json")
     parser.add_argument("--for-fab", action="store_true",
                         help="with --validate, also require what the PCB needs")
     parser.add_argument("--project", help="the project to act on (default: found upwards)")

@@ -1,14 +1,15 @@
 /**
  * Which board this project is built around.
  *
- * Read from `.spark/board.json` — the active board, already found and validated by spark's
+ * Read from `.spark/board.json` — the project's board, already found and validated by spark's
  * `boards.py`. This file used to do that work itself: read `boards/active.json`, look up the
  * definition, check the schema version, check the id. All of that was a second implementation
  * of a resolver that already existed in Python, and it would have needed a third change the
  * moment board definitions could also come from the plugin's shared library.
  *
- * So the search lives in one place and the answer lands in one file. Switching board is still
- * one line in `boards/active.json`; `make` regenerates this.
+ * So the search lives in one place and the answer lands in one file. The project's board is the
+ * board requirements.json names, else the one boards/active.json names (D35, P988). `make`
+ * regenerates this.
  */
 
 import { readFileSync } from "node:fs";

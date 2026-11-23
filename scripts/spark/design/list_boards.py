@@ -14,13 +14,14 @@ from spark.design import footprint_emitter
 ROW_LINE = "  %s %s (%s)%s"
 
 #: What --list prints, the paragraph of `boards.py --list --help` after its arguments, before the CLI's --json (P855).
-DETAILS = """--list marks the active board with * and says which board stops the chain at the footprint stage (P121): its
-file lacks what the footprint is drawn from, and it is still a choice for pin-map work."""
+DETAILS = """--list marks the project's board with * (requirements.json's board, else boards/active.json's) and says which board
+stops the chain at the footprint stage (P121): its file lacks what the footprint is drawn from, and it is still a choice
+for pin-map work. A requirements.json that cannot be read marks no board, and the list says why."""
 
 
 class ListBoards(Operation):
     """
-    Operation: every board available to a project, the project's own and spark's library, with the active one marked and
+    Operation: every board available to a project, the project's own and spark's library, with the project's one marked and
     the one that stops the chain at the footprint stage said so, never hidden (F12: it is still a choice for pin-map work).
     A board file that cannot be read, or is not a JSON object, is listed and not said to stop: `boards.py --validate` names it.
     """

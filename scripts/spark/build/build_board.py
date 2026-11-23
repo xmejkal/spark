@@ -96,7 +96,8 @@ class BuildBoard(Operation):
     stages = BUILD_STAGES
     details = StageHelpTable.render(stages)
     arguments = (Argument(("requirements",), "requirements", str, "a requirements.json; omit for the reference design. "
-                          "\"board_only\": true with no parts builds the board alone", nargs="?"),
+                          "\"board_only\": true with no parts builds the board alone. A file that names no board takes the "
+                          "project's board: its requirements.json's, else boards/active.json's", nargs="?"),
                  COMMON_ARGUMENTS["json"]._replace(help="the verdict as one JSON object: check, status, stages, next (the firmware step, "
                                                    "when ok in a project), and kept with --keep or --sim-dir"),
                  Argument(("--keep",), "keep", Path,
