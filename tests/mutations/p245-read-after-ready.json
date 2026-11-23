@@ -1,20 +1,20 @@
 [
  {
   "file": "scripts/spark/bench/download_mode.py",
-  "name": "substring",
-  "find": "return READY in [line.strip() for line in console.splitlines()]",
-  "replace": "return READY in console"
+  "name": "substring (P1025: the rule is the first word, scenario_steps.has_ready_line)",
+  "find": "return has_ready_line(console)",
+  "replace": "return \"ready\" in console"
  },
  {
   "file": "scripts/spark/bench/download_mode.py",
   "name": "no-strip",
-  "find": "return READY in [line.strip() for line in console.splitlines()]",
-  "replace": "return READY in console.splitlines()"
+  "find": "return has_ready_line(console)",
+  "replace": "return \"ready\" in console.splitlines()"
  },
  {
   "file": "scripts/spark/bench/download_mode.py",
   "name": "never-booted",
-  "find": "return READY in [line.strip() for line in console.splitlines()]",
+  "find": "return has_ready_line(console)",
   "replace": "return False"
  },
  {
