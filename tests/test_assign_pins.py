@@ -563,6 +563,9 @@ class TheHelpersEachHaveANameTest(unittest.TestCase):
         self.assertEqual(pin_assigner._why({"adc"}, dict(sda, free={})),
                          "needs adc; every pin with no bus role that could serve is taken, so this I2C pad is spent "
                          "here, though it could still pwm and wake")
+        # A bus pad with something else wired to it says that first: the assigner's own words.
+        wired = {"gpio": 21, "can": {"pwm"}, "roles": ["onboard_led", "spi"]}
+        self.assertIn("already wired here (onboard_led)", pin_assigner._why(set(), dict(wired, free={})))
 
     def test_why_says_no_bus_role_only_when_a_free_bus_pad_costs_less(self):
         d11 = {"gpio": 7, "can": {"pwm", "wake"}, "roles": []}
