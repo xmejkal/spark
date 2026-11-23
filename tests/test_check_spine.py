@@ -3586,7 +3586,7 @@ class TheBuildIsAnOperationTest(unittest.TestCase):
         # P936, the PO 2026-11-20: "Every stage with a code"; an ok entry stays {name, status, detail}
         stages = [Stage("build", check_spine.OK, "x"), Stage("simulation", check_spine.SKIPPED, "y", "every_part_skipped")]
         self.assertEqual(build_service.findings_of(stages), [])
-        entries = build_board.said_of(stages, outcomes.EXIT_OK, None, [], None)["stages"]
+        entries = build_board.said_of(stages, outcomes.EXIT_OK, None, None)["stages"]
         self.assertEqual([list(entry.items()) for entry in entries],
                          [[("name", "build"), ("status", "ok"), ("detail", "x")],
                           [("name", "simulation"), ("status", "skipped"), ("detail", "y"), ("code", "every_part_skipped")]])

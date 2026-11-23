@@ -42,7 +42,7 @@ The least that answers the epic: three spikes at most, and none is filed under Q
 ## Board actions
 <!-- Each action, taken or pending, with its D. e.g. `- move the item to Discovery · pending` -->
 - none taken. This session moves no card (D0), and spark-main moves cards <!-- REQUIRED:board-actions -->
-- comment on P793 #1105 with the seams S1 to S7 as acceptance lines · pending, on the PO's answer to Q5, and after the core-gaps finding is read
+- comment on P793 #1105 with the seams S1 to S7 as acceptance lines · taken by spark-main on 2026-11-23 after D5, with lines on P1043 #1533, P937 #1333 and P417 #545 and none on P1035 (in Build). The core-gaps finding was still not read by this discovery
 - file the spikes above as sub-issues of #1522 · pending, on a D that names items.md, and only under Q4's option (b)
 - comment on P217 #199 with the first spike's result · pending, on that result
 - one line per direction in scrum/VISION.md's "later" row, with the story map's delta, in one PR · pending, on the PO's answer to Q4

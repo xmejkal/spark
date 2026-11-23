@@ -172,7 +172,7 @@ class ADroppedNeedTest(WithNeedsInGit):
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "idea", "by": ["you"], "says": IDEA_STALE_NOW, "offer": None,
                                                         "needs": [], "steps": None})
         self.assertEqual(said["next"], [self.brief_step(project)])
-        self.assertTrue(now_line(project).endswith(" [next: init_project]"), now_line(project))
+        self.assertTrue(now_line(project).endswith(" [next: init_project, needs you]"), now_line(project))  # P1035 review: needs_yes too
 
     def test_an_out_of_date_idea_does_not_ask_for_the_goal_that_is_set(self):
         project = self.reviewed_project()

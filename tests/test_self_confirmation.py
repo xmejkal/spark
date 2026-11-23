@@ -44,6 +44,7 @@ MAY_READ = {
     "outcomes.RECORDED": PINNED, "outcomes.NONE_RECORDED": PINNED, "outcomes.NOT_CHECKED": PINNED,
     "outcomes.NOT_CHECKED_MESSAGE": PINNED,
     "drawing.CODES": PINNED,
+    "check_spine.HELP": STRUCTURE + ": the CLI's HelpText a test runs the build through, so the wiring it tests is main's (P1035)",
     "storage.NAMESPACES": PINNED + ": the two served namespaces as a literal tuple; and " + AGREEMENT
                           + ": with storage.OUTSIDE, against store.PLACES, so a new place fails until it is classified (P1036)",
     "storage.OUTSIDE": AGREEMENT + ": with storage.NAMESPACES, against store.PLACES, the store's own places (P1036)",

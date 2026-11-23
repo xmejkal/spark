@@ -14,6 +14,7 @@ import hashlib
 import io
 import json
 import os
+import shlex
 import shutil
 import sys
 import tempfile
@@ -36,7 +37,7 @@ from spark.flow.guide import guide_of  # noqa: E402
 from spark.flow.show_flow import ShowFlow, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
-from spark.core.outcomes import OK  # noqa: E402
+from spark.core.outcomes import OK, PROBLEMS  # noqa: E402
 from spark.design import needs  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
@@ -1589,6 +1590,165 @@ class TheNextOnlyStepTest(FlowTest):
                 outside = dict(said, next=[{key: value for key, value in step.items() if key not in ("argv", "env")} for step in said["next"]])
                 self.assertNotIn(str(Path.home()), json.dumps(outside))
                 self.assertNotIn(str(project), json.dumps(outside))
+
+
+def run_main(main, argv):
+    """(the stdout lines, the exit code) of a CLI's `main(argv)`, stderr kept away."""
+    with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+        code = main(argv)
+    return out.getvalue().splitlines(), code
+
+
+def a_kept_build(project, stages, keep=True, as_json=True):
+    """(the stdout lines, the exit code) of check_spine.py's HELP run through the core on `project`'s requirements.json with a
+    FakeRequirementsBuild of `stages`, whose work folder holds the project's own circuit, kept into `project` with `keep`."""
+    import check_spine
+    from fakes import FakeRequirementsBuild
+    from spark.build.build_board import BuildBoard
+    from spark.core.cli import run_cli
+    from spark.core.outside import build_bare_outside_world
+    work = Path(tempfile.mkdtemp())
+    (work / "board.tsx").write_text("// the board")
+    (work / "dist" / "board").mkdir(parents=True)
+    shutil.copy(project / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
+    argv = [str(project / "requirements.json")] + (["--keep", str(project)] if keep else []) + (["--json"] if as_json else [])
+    return run_main(lambda given: run_cli(check_spine.HELP, BuildBoard(FakeRequirementsBuild(stages, work)), given,
+                                          outside_builder=build_bare_outside_world), argv)
+
+
+class TheFollowUpTest(FlowTest):
+    """P1035: after an ok run that writes to a project, `parts.py --pick` and `check_spine.py --keep` end `next` with the
+    step `flow.py show` names now, after their own steps, and their text with its line. The store holds two probes: x-held,
+    which another project holds, and x-many (test_run_request's two-probe store)."""
+
+    def setUp(self):
+        super().setUp()
+        (self.home / "catalog" / "x-unknown.json").unlink()
+        (self.home / "drawer" / "unknown.json").unlink()
+
+    def open_needs(self, *ids):
+        return with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": one, "does": "sense", "what": "soil-moisture"} for one in ids])
+
+    def test_a_pick_ends_with_the_flow_s_next_pick_in_its_json_and_its_text(self):
+        import parts
+        from spark.flow.now_follow_up import FlowFollowUp
+        from spark.flow.show_flow import NEEDS_YOU, flow_and_guide, now_steps
+        project = self.open_needs("soil", "wet")
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many", "--json"])
+        said = json.loads(lines[0])
+        self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertEqual(said["next"], show(project)[0]["next"])
+        self.assertEqual([(step["op"], step["argv"]) for step in said["next"]], [("pick", ["--pick", str(project.absolute()), "wet=x-many"])])
+        other = self.open_needs("soil", "wet")
+        lines, code = run_main(parts.main, ["--pick", str(other), "soil=x-many"])
+        step = now_steps(other, *flow_and_guide(other))[0]
+        self.assertEqual((code, lines[-1]), (0, FlowFollowUp().line(step)))
+        self.assertTrue(lines[-1].startswith("  next: "), lines[-1])
+        self.assertIn("/parts.py --pick %s wet=x-many%s — " % (other.absolute(), NEEDS_YOU), lines[-1])  # the review: the mark before the why
+
+    def test_a_dry_run_pick_names_no_flow_step(self):
+        import parts
+        project = self.open_needs("soil")
+        self.assertEqual([(step["op"], step["argv"][-1]) for step in show(project)[0]["next"]], [("pick", "soil=x-many")])
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many", "--dry-run", "--json"])
+        self.assertEqual((code, json.loads(lines[0])["next"]), (0, []))
+
+    def test_a_refused_pick_names_no_flow_step(self):
+        import parts
+        project = self.open_needs("soil")  # one open need: the flow names its pick, so the test sees the difference
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-held", "--json"])
+        said = json.loads(lines[0])
+        self.assertEqual((code, said["status"], said["next"]), (1, "problems", []))
+        self.assertTrue(show(project)[0]["next"])
+
+    def test_a_kept_build_ends_with_its_own_steps_then_the_flow_s(self):
+        from spark.build.stages import Stage
+        project = an_image(a_firmware(a_built_project()))
+        lines, code = a_kept_build(project, [Stage("build", OK, "fine")])
+        steps = json.loads(lines[0])["next"]
+        flow_steps = show(project)[0]["next"]
+        self.assertEqual(code, 0)
+        self.assertTrue(flow_steps)
+        self.assertEqual(steps[-len(flow_steps):], flow_steps)
+        self.assertEqual(steps[0]["op"], "look")  # the build's own step comes first
+        self.assertEqual(list(json.loads(lines[0]))[-1], "next")
+        text, _ = a_kept_build(project, [Stage("build", OK, "fine")], as_json=False)
+        self.assertEqual(len([line for line in text if line.startswith("  next: ")]), len(steps))
+        self.assertTrue(text[-1].startswith("  next: ") and "/run_scenario.py " in text[-1], text[-1])
+
+    def test_a_kept_rebuild_at_the_deploy_names_the_flow_s_step_after_it(self):
+        from spark.build.stages import Stage
+        project = a_run(an_image(a_firmware(a_built_project())), "passed")
+        self.assertEqual(show(project)[0]["data"]["guide"]["now"]["phase"], "deploy")
+        lines, code = a_kept_build(project, [Stage("build", OK, "fine")])
+        steps, flow_steps = json.loads(lines[0])["next"], show(project)[0]["next"]
+        self.assertEqual((code, [step["op"] for step in flow_steps]), (0, ["run_scenario"]))
+        self.assertEqual(steps[-len(flow_steps):], flow_steps)
+
+    def test_a_build_that_could_not_run_names_no_flow_step(self):
+        import check_spine
+        project = a_firmware(a_built_project())
+        lines, code = run_main(check_spine.main, [str(project / "none.json"), "--keep", str(project), "--json"])
+        said = json.loads(lines[0])
+        self.assertEqual((code, said["status"], said.get("next", [])), (2, "could-not-run", []))
+        self.assertTrue(show(project)[0]["next"])
+
+    def test_a_build_with_problems_names_no_flow_step(self):
+        from spark.build import build_codes
+        from spark.build.stages import Stage
+        project = an_image(a_firmware(a_built_project()))
+        lines, code = a_kept_build(project, [Stage("build", PROBLEMS, "broken", build_codes.DESIGN_NOT_BUILT)])
+        said = json.loads(lines[0])
+        self.assertEqual((code, said["status"], said.get("next", [])), (1, "problems", []))
+        self.assertEqual([step["op"] for step in show(project)[0]["next"]], ["build-board"])
+
+    def test_a_kept_build_that_kept_no_simulation_never_names_itself_again(self):
+        # the review, refuter 1: with no sim/wokwi.toml kept, the flow names the build again with the run's own argv
+        from spark.build.stages import Stage
+        project = a_firmware(a_built_project())
+        lines, code = a_kept_build(project, [Stage("build", OK, "fine")])
+        flow_steps = show(project)[0]["next"]
+        self.assertEqual([(step["op"], step["argv"]) for step in flow_steps],
+                         [("build-board", [str(project / "requirements.json"), "--keep", str(project)])])
+        self.assertEqual((code, [step["op"] for step in json.loads(lines[0])["next"]]), (0, ["look"]))
+
+    def test_a_build_without_keep_names_no_flow_step(self):
+        from spark.build.stages import Stage
+        project = an_image(a_firmware(a_built_project()))
+        lines, code = a_kept_build(project, [Stage("build", OK, "fine")], keep=False)
+        self.assertEqual((code, [step["op"] for step in json.loads(lines[0])["next"]]), (0, ["look"]))
+        self.assertEqual([step["op"] for step in show(project)[0]["next"]], ["run_scenario"])
+
+    def test_the_line_marks_a_step_that_needs_the_person_s_yes_and_names_its_script(self):
+        # round 2, amendment D: the brief step has needs_yes and no needs_person, and its op is its script's name
+        from spark.flow.now_follow_up import FlowFollowUp
+        from spark.flow.phase_steps import ANSWERS_PLACEHOLDER, brief_step
+        from spark.flow.show_flow import NEEDS_YOU
+        project = Path(tempfile.mkdtemp()) / "plant-alarm"
+        step = brief_step(project)
+        self.assertEqual((step.needs_yes, step.needs_person), (True, None))
+        line = FlowFollowUp().line(step)
+        self.assertIn("/init_project.py --project %s --answers %s%s — " % (project.absolute(), shlex.quote(ANSWERS_PLACEHOLDER), NEEDS_YOU), line)
+        self.assertNotIn(NEEDS_YOU, FlowFollowUp().line(step._replace(needs_yes=False)))
+
+    def test_every_op_a_flow_step_names_has_its_script(self):
+        import inspect
+        import types
+        from spark.flow import offer_steps, phase_steps
+        from spark.flow.now_follow_up import STEP_SCRIPTS
+        project = a_firmware(a_built_project())
+        given = {"project": project, "need": "soil", "pick_id": "x-many", "name": "A soil probe", "no_simulation": False,
+                 "phase": types.SimpleNamespace(status=NS)}
+        ops = set()
+        for module in (offer_steps, phase_steps):
+            for name, builder in inspect.getmembers(module, inspect.isfunction):
+                if builder.__module__ == module.__name__ and name.endswith(("_step", "_steps")):
+                    made = builder(*[given[parameter] for parameter in inspect.signature(builder).parameters])
+                    ops |= {step.op for step in (made if isinstance(made, list) else [made])}
+        self.assertTrue({"pick", "requirements", "build-board", "needs-drop", "init_project", "run_scenario", "look"} <= ops, ops)
+        for op in sorted(ops):
+            with self.subTest(op=op):
+                self.assertTrue((ROOT / "scripts" / STEP_SCRIPTS.get(op, op + ".py")).is_file())
 
 
 if __name__ == "__main__":

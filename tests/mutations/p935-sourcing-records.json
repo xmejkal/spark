@@ -32,8 +32,8 @@
  {
   "file": "scripts/parts.py",
   "name": "parts.py's parser refusal loses its own fix",
-  "find": "bad_argument_fix=BAD_ARGUMENT_FIX)",
-  "replace": "bad_argument_fix=None)"
+  "find": "bad_argument_fix=BAD_ARGUMENT_FIX, follow_up=FlowFollowUp())",
+  "replace": "bad_argument_fix=None, follow_up=FlowFollowUp())"
  },
  {
   "file": "scripts/spark/records/registered_project_store.py",

@@ -64,12 +64,16 @@ from spark.core.cli import HelpText, run_cli  # noqa: E402
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN  # noqa: E402
 from spark.core.outcomes import OK as OK, PROBLEMS as PROBLEMS, COULD_NOT_RUN as COULD_NOT_RUN, SKIPPED as SKIPPED  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
+from spark.flow.now_follow_up import FlowFollowUp  # noqa: E402
+
+#: What check_spine.py says, and its follow-up: after an ok build with --keep, the step flow.py show names now (P1035).
+HELP = HelpText("check_spine.py", follow_up=FlowFollowUp())
 
 
 def main(argv=None, outside=None):
     """Build the requirements file and print the verdict, or with --json its one line. `outside` is the OutsideWorld a
     test gives. Returns the exit code."""
-    return run_cli(HelpText("check_spine.py"), BuildBoard(), argv,
+    return run_cli(HELP, BuildBoard(), argv,
                    outside_builder=build_bare_outside_world, outside=outside)
 
 

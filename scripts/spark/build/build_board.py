@@ -18,7 +18,7 @@ from spark.core import outcomes
 from spark.core.operation import ASKS, COMMON_ARGUMENTS, FETCHES, READS, RUNS, WRITES, Argument, Operation
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, STATUS_FOR
 from spark.core.renderers import FlatJsonLine
-from spark.core.result import OperationResult
+from spark.core.result import NextStep, OperationResult
 from spark.core.text_guards import guard_lines
 from spark.design import loader
 from spark.records import store
@@ -64,17 +64,18 @@ def project_of(requirements):
 
 
 # --- MVP ---
-def said_of(stages, code, requirements, following, kept):
+def said_of(stages, code, requirements, kept):
     """
     The dict `check_spine.py --json` prints: check, status and stages, with the needs the requirements file leaves off the
-    board (`unserved`, `left_off`), the next steps (`next`, P517) and the facts the board record lacks (`missing_facts`,
-    P464) when there are any, and with --keep or --sim-dir what was kept (`kept`, P124), each entry without its `line`,
+    board (`unserved`, `left_off`) and the facts the board record lacks (`missing_facts`, P464) when there are any, and
+    with --keep or --sim-dir what was kept (`kept`, P124), each entry without its `line`,
     which the person reads on stderr. A stage that has a code has its `code` too, after its detail; an ok stage has none
-    (P936, the PO 2026-11-20: "Every stage with a code").
+    (P936, the PO 2026-11-20: "Every stage with a code"). The next steps (P517) are the result's `next`, which
+    `FlatJsonLine` writes as the last key (P1035).
     """
     said = {"check": "spine", "status": STATUS_FOR[code],
             "stages": [{"name": s.name, "status": s.status, "detail": s.detail, **({"code": s.code} if s.code else {})} for s in stages],
-            **({"unserved": requirements["unserved"]} if left_off(requirements) else {}), **({"next": following} if following else {}),
+            **({"unserved": requirements["unserved"]} if left_off(requirements) else {}),
             **({"missing_facts": held} if (held := [item for entry in kept or [] for item in entry.get("missing_facts", [])]) else {})}
     if kept is not None:
         said["kept"] = [{key: value for key, value in entry.items() if key != "line"} for entry in kept]
@@ -86,7 +87,8 @@ class BuildBoard(Operation):
     Operation: the build. It runs the chain on a requirements file (None: the reference design) with the
     RequirementsBuildService it was given, keeps what --keep and --sim-dir ask for (`kept_files.keep_all`) and removes
     the work folder, after a crash in its own steps too; the service removes one it raised past (P939). Its data is the
-    dict check_spine printed with --json (`said_of`), its lines the verdict's text, its diagnostics each kept entry's
+    dict check_spine printed with --json (`said_of`), its `next` its own steps (the drawing's research, the firmware's
+    look), and with --keep the project it kept into is its written project (P1035), its lines the verdict's text, its diagnostics each kept entry's
     line, after the service's own lines (the service gives them to `outside.add_diagnostics`, so a crash later keeps
     them, P840, P938), and its Findings `build_service.findings_of` the stages.
     """
@@ -98,8 +100,9 @@ class BuildBoard(Operation):
     arguments = (Argument(("requirements",), "requirements", str, "a requirements.json; omit for the reference design. "
                           "\"board_only\": true with no parts builds the board alone. A file that names no board takes the "
                           "project's board: its requirements.json's, else boards/active.json's", nargs="?"),
-                 COMMON_ARGUMENTS["json"]._replace(help="the verdict as one JSON object: check, status, stages, next (the firmware step, "
-                                                   "when ok in a project), and kept with --keep or --sim-dir"),
+                 COMMON_ARGUMENTS["json"]._replace(help="the verdict as one JSON object: check, status, stages, kept with --keep or --sim-dir, "
+                                                   "and next last (the firmware step after an ok build in a project; with --keep and an ok "
+                                                   "build, then the step that flow.py show names now, P1035)"),
                  Argument(("--keep",), "keep", Path,
                           "write the built board into DIR: board.tsx, its footprint and "
                           "dist/, where every check already looks. After a build whose build stage ended ok, a board.tsx that spark wrote and nobody changed is `replaced` "
@@ -125,6 +128,9 @@ class BuildBoard(Operation):
     def __init__(self, service=None):
         self.service = service or RequirementsBuildService()
 
+    def written_project(self, values):
+        return Path(values["keep"]) if values.get("keep") else None
+
     def run(self, requirements=None, keep=None, sim_dir=None, firmware=None, *, outside):
         """The build of `requirements` (a path as given, or None), `keep` and `sim_dir` each a str, a Path or None."""
         keep, sim_dir = (Path(keep) if keep else None), (Path(sim_dir) if sim_dir else None)
@@ -133,10 +139,11 @@ class BuildBoard(Operation):
             code = verdict(built.stages)
             kept = keep_all(built.stages, built.workdir, KeepAsked(requirements, keep, sim_dir), tabbed_page.TscircuitExport(built.toolchain), write_kept_page)
             # P945: find the facts that draw a part before the wiring, then P517: write the firmware next
-            following = (drawing_next_steps(kept, project_of(requirements))
+            own_steps = (drawing_next_steps(kept, project_of(requirements))
                          + board_envelope.firmware_next_steps(code == EXIT_OK, requirements))
-            text = guard_lines(render(built.stages, code, left_off(built.requirements)) + board_envelope.next_text(following))
-            return OperationResult(said_of(built.stages, code, built.requirements, following, kept), findings_of(built.stages),
+            text = guard_lines(render(built.stages, code, left_off(built.requirements)) + board_envelope.next_text(own_steps))
+            return OperationResult(said_of(built.stages, code, built.requirements, kept), findings_of(built.stages),
+                                   [NextStep(**step) for step in own_steps],
                                    lines=text[:-1].split("\n"),  # the one final newline is `print`'s
                                    diagnostics=["  %s" % entry["line"] for entry in kept or []])
         finally:

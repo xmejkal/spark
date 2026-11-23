@@ -15,7 +15,7 @@ from spark.core import codes, outcomes
 from spark.core.clock import SystemClock
 from spark.core.errors import CodedMessageError, SparkError
 from spark.core.events import TerminalReporter
-from spark.core.operation import JSON_DEST, JSON_FLAG
+from spark.core.operation import JSON_DEST, JSON_FLAG, WRITES
 from spark.core.privacy import MaskingReporter, Privacy
 from spark.core.renderers import TextReport
 from spark.core.replies import Terminal
@@ -24,13 +24,14 @@ from spark.core.text_guards import guard_lines, printable
 from spark.core.text_style import PLAIN
 
 # --- MVP ---
-#: Value: what a CLI says of itself in `--help`: its file name, one sentence, and the CLI's own text after the arguments.
-#: A None `description` takes the Operation's `summary`, and the Operation's `details` stand before the `epilog` (P481).
+#: Value: what a CLI says and adds to its answer: in `--help` its file name, one sentence, and the CLI's own text after the
+#: arguments. A None `description` takes the Operation's `summary`, and the Operation's `details` stand before the `epilog` (P481).
 #: `tool` is the envelope's `tool`, the script that answered (P707): a CLI with several Operations gives its own name
 #: (`parts`), and None means the Operation's name, as the one-Operation CLIs print it. `bad_argument_fix` is the fix
 #: sentence of a bad argument when the CLI has a better one than `codes.BAD_ARGUMENT`'s (parts.py's describe route, P726
-#: PR 3); None takes the default, filled with `prog`.
-HelpText = namedtuple("HelpText", "prog description epilog tool bad_argument_fix", defaults=(None, None, None, None))
+#: PR 3); None takes the default, filled with `prog`. `follow_up` is the `follow_up.FollowUp` the CLI hands to each run
+#: (P1035), or None.
+HelpText = namedtuple("HelpText", "prog description epilog tool bad_argument_fix follow_up", defaults=(None, None, None, None, None))
 #: The sentence of a crash's Finding holds the class only, because the message can carry a home path.
 CRASH_MESSAGE = "%s: the traceback is on stderr"
 #: The first diagnostics line of a crash: the op and the class, then the fix, then the traceback under Python's heading.
@@ -39,20 +40,25 @@ CRASHED_MESSAGE = "%s: crashed, %s"
 FRAME_START = '  File "'
 #: The diagnostics line of a trace that raised: the class only, as a crash's sentence.
 TRACE_FAILED_MESSAGE = "trace: %s raised, the result stands"
+#: The diagnostics line of a follow-up that raised (P1035): the class only, as a crash's sentence.
+FOLLOW_FAILED_MESSAGE = "follow-up: %s raised, the result stands"
 #: Value: how one run is done (P605, a parameter object). `privacy` masks the result and the values, `trace` is called
-#: once per run with the name, the masked values, the masked result and the seconds, or None, and `clock` times the run.
-RunOptions = namedtuple("RunOptions", "privacy trace clock")
+#: once per run with the name, the masked values, the masked result and the seconds, or None, `clock` times the run,
+#: and `follow_up` (a `follow_up.FollowUp`, or None) adds its steps after an ok run that writes to a project (P1035).
+RunOptions = namedtuple("RunOptions", "privacy trace clock follow_up", defaults=(None,))
 #: The run of a CLI: the Privacy step (pass-through unless the Operation has a `privacy_for`) and no trace.
 DEFAULT_RUN = RunOptions(Privacy(), None, SystemClock())
 
 
 def run_operation(operation, values, outside=None, build_outside=None, options=DEFAULT_RUN):
-    """The OperationResult of `operation.run(**values, outside=outside)` (see `_guarded_result`), masked by `options.privacy`
-    (P605). Then `options.trace`, when given, sees the run once: the name, the masked values, the masked result and the
-    seconds of `options.clock`. A trace that raises adds one diagnostics line, and the result stands."""
+    """The OperationResult of `operation.run(**values, outside=outside)` (see `_guarded_result`), with the steps of
+    `options.follow_up` after its own (`_followed`, P1035), masked by `options.privacy` (P605). Then `options.trace`, when
+    given, sees the run once: the name, the masked values, the masked result and the seconds of `options.clock`, the
+    run's alone. A trace that raises adds one diagnostics line, and the result stands."""
     started = options.clock.monotonic()
     result = _guarded_result(operation, values, outside, build_outside)
     seconds = options.clock.monotonic() - started
+    result = _followed(operation, values, result, options.follow_up)
     masked = options.privacy.mask_result(result)
     if options.trace is None:
         return masked
@@ -61,6 +67,52 @@ def run_operation(operation, values, outside=None, build_outside=None, options=D
     except Exception as failed:  # noqa: BLE001  a tracer never changes the answer
         return masked._replace(diagnostics=list(masked.diagnostics) + [TRACE_FAILED_MESSAGE % printable(type(failed).__name__)])
     return masked
+
+
+def runs_again(operation, values, step):
+    """Whether `step` runs `operation` again with the same `values` (P1035 review): a follow-up never names the run itself,
+    which would loop. A step whose argv the Operation's parser refuses is another run."""
+    if step.op != operation.name:
+        return False
+    try:
+        return values_of(operation, step.argv)[0] == values
+    except outcomes.BadArgumentError:
+        return False
+
+
+def _added_steps(operation, values, follow_up):
+    """(the follow-up's steps for the run's written project but one that runs the same again, or [], and the class of what
+    raised, or None)."""
+    try:
+        project = operation.written_project(values)
+        steps = list(follow_up.steps(project)) if project is not None else []
+        return [step for step in steps if not runs_again(operation, values, step)], None
+    except Exception as failed:  # noqa: BLE001  a follow-up never changes the answer
+        return [], printable(type(failed).__name__)
+
+
+def _step_lines(follow_up, added):
+    """(the line of each added step, and the class of each line that raised): a line that fails drops only itself."""
+    lines, broken = [], []
+    for step in added:
+        try:
+            lines.append(follow_up.line(step))
+        except Exception as failed:  # noqa: BLE001  a line that fails keeps its step and the other lines
+            broken.append(printable(type(failed).__name__))
+    return lines, broken
+
+
+def _followed(operation, values, result, follow_up):
+    """`result` with the follow-up's steps after its own, then one line per step (P1035), after an ok run that writes to a
+    project. The steps are added first, so a line that fails never drops a step. Each failure adds one diagnostics line,
+    and the result stands."""
+    if follow_up is None or result.status() != outcomes.OK or WRITES not in operation.effects_of(values):
+        return result
+    added, failed = _added_steps(operation, values, follow_up)
+    lines, broken = _step_lines(follow_up, added)
+    said = [FOLLOW_FAILED_MESSAGE % name for name in ([failed] if failed else []) + broken]
+    return result._replace(next=list(result.next) + added, lines=list(result.lines) + lines,
+                           diagnostics=list(result.diagnostics) + said)
 
 
 def _guarded_result(operation, values, outside, build_outside):
@@ -200,7 +252,7 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     try:
         values = load_payloads(operation, values, sys.stdin)
         result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter, dict(values, **{JSON_DEST: as_json})),
-                               DEFAULT_RUN._replace(privacy=privacy))
+                               DEFAULT_RUN._replace(privacy=privacy, follow_up=text.follow_up))
     except CodedMessageError as unreadable:
         result = _unreadable_payload(text.prog, unreadable)
     said = renderer.render(result, tool, operation.name) if as_json else \

@@ -13,7 +13,7 @@ import types
 from pathlib import Path
 
 from spark.core import outcomes
-from spark.core.result import MARK_OK, MARK_STOP, MARK_UNCHECKED, MARK_WARNING
+from spark.core.result import MARK_OK, MARK_STOP, MARK_UNCHECKED, MARK_WARNING, step_dicts
 from spark.core.text_guards import printable
 from spark.core.text_style import PLAIN
 
@@ -49,11 +49,20 @@ class FullEnvelope:
 class FlatJsonLine:
     """Renderer: an OperationResult as the one flat line of JSON the bench scripts print with --json (P657): its `data` as
     `json.dumps` writes it, with no envelope, and an empty text when `data` is None, so nothing is printed. A bad argument
-    gets no line of its own: the usage on stderr, as argparse prints it."""
+    gets no line of its own: the usage on stderr, as argparse prints it. When the result names a step, `next` comes last
+    (P1035), after a `next` that `data` holds already; a `data` that is no dict is printed as it is."""
 
     @staticmethod
     def render(result, tool, op):
-        return "" if result.data is None else json.dumps(result.data)
+        return "" if result.data is None else json.dumps(FlatJsonLine.with_next(result))
+
+    @staticmethod
+    def with_next(result):
+        """`result.data` with the result's steps as its last key, `next`, after the steps `data` holds there already."""
+        if not result.next or not isinstance(result.data, dict):
+            return result.data
+        data = dict(result.data)
+        return dict(data, next=list(data.pop("next", [])) + step_dicts(result.next))
 
     @staticmethod
     def render_bad_argument(result, tool, op):

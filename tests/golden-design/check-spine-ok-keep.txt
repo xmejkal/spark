@@ -15,6 +15,7 @@
 
   the chain runs end to end
   next: SPARK_HOME=<spark-home> <repo>/scripts/look.py --project <project-dir> — first write firmware/main.py from pins.py
+  next: SPARK_HOME=<spark-home> <repo>/scripts/run_scenario.py 'sim/scenarios/<name>.scenario.yaml' --project <project-dir>, needs you — Claude first writes the scenario from the person's words, in place of <name>. The person runs it in their own terminal, with a Wokwi CI token in WOKWI_CLI_TOKEN. It spends Wokwi CI minutes, so ask before each run.
 --- stderr ---
   wrote FireBeetle2Esp32S3.tsx
   wrote board.tsx
