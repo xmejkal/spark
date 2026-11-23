@@ -60,7 +60,7 @@ SPARK_AT_THE_CAP = board.to_items(project(node(1, "P1 — a", "Discovery"), node
                                           node(3, "P3 — c", "Build"), node(4, "P4 — d", "Review"),
                                           node(5, "P5 — f", "Build"), node(6, "P6 — g", "Build"),
                                           node(7, "P7 — h", "Review")))
-BIN_FIFTH = board.to_items(project(node(19, "B19 — e", "Build")))
+BIN_EIGHTH = board.to_items(project(node(19, "B19 — e", "Build")))
 
 
 class FixedToday(dt.date):
@@ -276,7 +276,7 @@ class TheCoreTest(unittest.TestCase):
             "  ! the day of 2026-10-06 has no close — write it first"])
 
     def test_the_status_counts_the_bin_s_cards_in_the_same_flight_total(self):
-        lines = board.status_lines([("spark", SPARK_AT_THE_CAP), ("bin", BIN_FIFTH)], [], [], set(), TODAY)
+        lines = board.status_lines([("spark", SPARK_AT_THE_CAP), ("bin", BIN_EIGHTH)], [], [], set(), TODAY)
         self.assertEqual(lines[:3], [
             "spark — 7 open, 1 problem(s) · trial check 2026-11-02",
             "  ! In flight (spark) holds 8 (#1, #2, #3, #4, #5, #6, #7, bin #19) — its limit is 7: the spark lane finishes one before starting another",
@@ -328,7 +328,7 @@ class TheCoreTest(unittest.TestCase):
 
     def test_a_close_is_at_risk_when_the_bin_s_cards_break_the_flight_total(self):
         # The close reads the verdict the status prints (the session-status design: no second rule).
-        state, _ = board.close_update("eight in flight", [("spark", SPARK_AT_THE_CAP), ("bin", BIN_FIFTH)], set(), TODAY, TODAY)
+        state, _ = board.close_update("eight in flight", [("spark", SPARK_AT_THE_CAP), ("bin", BIN_EIGHTH)], set(), TODAY, TODAY)
         self.assertEqual(state, "AT_RISK")
         state, _ = board.close_update("seven in flight", [("spark", SPARK_AT_THE_CAP), ("bin", [])], set(), TODAY, TODAY)
         self.assertEqual(state, "ON_TRACK")

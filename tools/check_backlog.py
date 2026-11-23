@@ -72,7 +72,7 @@ class Lane:
 #: and flight 5 for spark. P1037, the PO, 2026-11-23: Build 5, flight 7, Review 3.
 LANES = (Lane("spark", (), (("Ready", 4), ("Build", 5)), 7, 2),
          Lane("sound", ("pixel-games", "graphics library"), (("Ready", 1), ("Build", 1)), 2, 2))
-#: The stages held across the whole board (§3); Idea and Done carry no limit. Every working stage takes 2, the PO's call of
+#: The stages held across the whole board (§3); Idea and Done carry no limit. Discovery and Design take 2, the PO's call of
 #: 2026-10-06 evening (P146). Ready and Build are not here: LANES holds them (P730).
 #: Review takes 3 since P1037 (the PO, 2026-11-23: Build 5, flight 7, Review 3).
 LIMITS = {"Discovery": 2, "Design": 2, "Review": 3}
