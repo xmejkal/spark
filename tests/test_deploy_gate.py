@@ -926,6 +926,16 @@ class TheReadyUnknownWordsTest(GateCase):
         self.assertEqual(code, 2)
         self.assertIn("The board's console was not read, and spark did not see `ready`.", self.fix_line(said))
 
+    def test_a_console_the_probe_could_not_read_is_not_read_never_printed(self):
+        # P1022 slice 3: the fix said the console printed `could not read the port: ...`, a text the board never printed
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+        code, said, _ = self.flash(FakeConsoleProbe(unread="[Errno 2] could not open port /dev/cu.usbmodem101"))
+        self.assertEqual(code, 2)
+        fix = self.fix_line(said)
+        self.assertIn("The board's console was not read, and spark did not see `ready`.", fix)
+        self.assertNotIn("could not read the port", fix)
+        self.assertIn("console with DTR and RTS off: could not read the port: [Errno 2]", self.board_log())
+
     def test_a_facts_copy_written_on_a_retry_keeps_the_first_try_s_output_in_the_board_log(self):
         self.uncopied = [subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)]
         code, _, _ = self.flash(None)

@@ -201,6 +201,8 @@ class DeployService:
             return board, None
         waits, console = probe.waits_in_download_mode()
         starter.console = console
+        if not console.read:  # P1022: an unread port's sentence is no console text; the board log keeps it below
+            starter.console = None
         starter.note("console with DTR and RTS off: %s\n" % (console.strip() or "nothing"))
         if waits:
             self.report(Event.line(DeployPhase.VERIFY, download_mode.press_reset(starter.places)))
