@@ -46,8 +46,8 @@ a row holds) are `not_drawn_yet`. A resistor leg on a rail goes in a free row cl
 jumper from that row to the rail. Its holes give the leg's hole, then the jumper's two holes, `d39, then from a39 to
 top + rail, hole 32` (P960). A resistor covers the holes between its legs, so no other leg or jumper lands under its
 body. Each rail jumper takes the free rail hole nearest its end that no part's body covers, and the step names it
-`bottom + rail, hole 5`. No jumper joins the top and bottom rails. A rebuild's line that marks a rail says its sign, `a free - rail, which you mark GND`; a record from before P953 has no
-sign, and its line keeps `a free rail`.
+`bottom + rail, hole 5`. No jumper joins the top and bottom rails. A rebuild's line that marks a rail says its sign,
+`a free - rail, which you mark GND`. A record from before P953 has no sign, and its line keeps `a free rail`.
 
 ## The pills and the wire colours
 
