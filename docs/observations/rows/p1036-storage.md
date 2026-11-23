@@ -1,0 +1,25 @@
+# P1036: one Storage under the Stores (storage stage 1 of P1033): rows
+
+Card: [P1036 #1519](https://github.com/xmejkal/spark/issues/1519), under the storage epic
+[P1033 #1515](https://github.com/xmejkal/spark/issues/1515). The plan was written on main e521db8f after the epic's
+design council. It passed two rounds: round 1 was one lens (Sonnet) and the refuter (Opus), round 2 the refuter (Opus),
+each with a build of the plan on main. spark-main decided each finding in auto mode (delegated, the PO's to change). A
+"row" in the last column is a row of `tests/mutations/p1036-storage.json`, counted from 1.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | A record that is not UTF-8 crashed with a raw UnicodeDecodeError in the readers of both Stores | plan round 1, both, must-fix | acted | both Storages raise `record_file_broken` ("<where> is not UTF-8 text (<why>): fix it by hand"). Contract test 5 plants `b"\xff"`; `TheStoreOverAStorageTest`, `RegisteredProjectStoreOnMemoryTest`. Rows 16, 17 |
+| 2 | With `boards/` at mode 0, both readers raised PermissionError on Python 3.10: `path.exists()` sat outside the `try` | plan round 1, the refuter, must-fix | acted | the exists check is inside `FileStorage._read_text`'s `try`. `test_a_boards_folder_spark_may_not_search_is_not_checked`. Row 19 |
+| 3 | A broken link and a mode-0 file had no test at storage level | plan round 1, the lens | acted | `FileStorageTest`'s broken link and mode-0 tests. Row 18 |
+| 4 | `store.find_path(name, key)` clashed with `DeployRecordStore.find_path(mac)` | plan round 1, the lens | acted | the store's function is `store.find_file`; its docstring says it builds a path and does not check that the file is there |
+| 5 | `DeployRecordStore.find_path` returns a Path that a MemoryStorage never backs | plan round 1, the lens | acted | it keeps returning a Path; its docstring says "for words and for tests on FileStorage. Scripts never open it". `TheRecordPathIsNeverOpenedTest` |
+| 6 | `NAMESPACES` held the class beside `store.PRIVATE`: two sources | plan round 1, the lens | acted | `NAMESPACES` is a tuple; `privacy_of` derives the class from `store.PRIVATE`. `TheNamespacesTest` |
+| 7 | The map was written again only at the last step, so pushes failed `test_map` | plan round 1, the lens | acted | `tools/map.py --write` is in step 3 |
+| 8 | Six behaviour differences, none in a golden | plan round 1, spark-main | acted | named in the PR text: three crashes become existing refusals, two sentences change, and the board records are read as UTF-8 |
+| 9 | "No CLI, JSON key, code or exit changes" is not quite true: three crashes of `bench.py record`, `bench.py register` and `deploy.py` become refusals | plan round 2, the refuter, should-fix | acted | the PR text says "no new code, key or exit; three crashes become existing refusals". No `--help` or agents page names the traceback (searched `docs/guide`, `commands`, `skills`, `README.md`) |
+| 10 | The Stores' docstrings "It keeps nothing in memory", "under the store's lock" and "one private file ... 0600" become untrue on `MemoryStorage` | plan round 2, the refuter, should-fix | acted | reworded to hold for any Storage, naming `FileStorage` where a sentence holds only for it |
+| 11 | Test 24 matched `find_path(` as text, so it also caught `KnownBoardStore.find_path` | plan round 2, the refuter, nit | acted | the test walks the code's tree and leaves out known_board.py and `self.known` |
+| 12 | Test 23 needs both Stores on `storage=`, so it cannot be green at step 4 | the build | acted | its registrations half came with step 4, its board half with step 5 |
+| 13 | `TheBytesStayTest` imports no storage | plan round 1, the lens | acted | the class uses only `store`, the two Stores and `outside_deploy`, and it passed on main at step 1. The module imports `storage` from step 3 on, for the contract tests beside it |
+| 14 | The hook's first story run on step 5 was red on three tests the plan does not name: `test_map` (the map's test lists), `test_no_board_address` (the MAC of the plan, a0:b1:c2 and three more bytes, is no made-up address) and `test_self_confirmation` (the new tests read `storage.UNREADABLE`, `NAMESPACES`, `OUTSIDE`, `PRIVATE`, `store.PLACES` and `PLAIN` as `module.NAME`) | the build, the hook | acted | none of the three tests changed. The map is written again. The bytes test uses `aa:bb:cc:dd:ee:f5`; the board digest, measured again on main e521db8f's three modules, is `6b353a51…04d2bb` (the registrations digest stays `a1701105…1174e8`, and the plan's MAC still gives the plan's `b90fca2f…c029` there). The new tests read those names as inputs or second sources by name, and expect `"private"` and the two namespaces as literals |
+| 15 | Every new and re-aimed row is caught | the build | acted | all 27 planted by hand in a copy of the tree: each turns `test_storage`, `test_bench_record`, `test_deploy_record_store` and `test_bench_show` red, and the copy passes them unmutated |
