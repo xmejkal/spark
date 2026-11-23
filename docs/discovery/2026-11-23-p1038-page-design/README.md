@@ -28,22 +28,22 @@ flowchart LR
 ```
 
 - The page shows spark's records first, and the project's open GitHub issues beside them, marked as the project's
-  (D4, D19, D23).
+  (D4, D19, D23 delegated).
 - The page is a snapshot with a dated stamp. It names the build it draws from (D5, D17).
-- A core hook writes the page again after each run that writes to a project, with no GitHub call (D16, D23).
+- A core hook writes the page again after each run that writes to a project, with no GitHub call (D16, D23 delegated).
 - A deploy that nobody saw start gets no tick. The page says what its log knows (D10).
-- The first page slice is readability. The graphic style comes after a walk, with system fonts (D6, D11, D25).
+- The first page slice is readability. The graphic style comes after a walk, with system fonts (D6, D11, D25 delegated).
 - The deploy reader is its own story under P793, in parallel with the page (D7).
 - Sharing comes later, on P834 (D9, D20). A live page is designed now and built later (D5).
-- The frontend-design skill goes in at user level at the page cards, and its install waits for the PO (D8).
+- The frontend-design plugin is installed at user level, and Anthropic's design plugin is on for the spark checkout only (D8, D28).
 
 ## What comes next
 
-- Spark-main merges this folder's PR, #1526, and starts the design in a new session, page-architecture. The architect
+- The discovery PR, #1526, is merged (a01ea8ce). The design runs in a new session, page-architecture. The architect
   and the full council use the Hand-off in [brief.md](brief.md).
 - Filed cards: P1043 #1533 (the deploy reader), P1044 #1534 (Build on a wired board), P1045 #1535 (step numbers and
   the stamp) and P1046 #1536 (the README Bench row).
-- The appetite: slice 0 and slice 1, then one walk with A1's and A9's tests, then the PO decides again (D25).
+- The appetite: slice 0 and slice 1, then one walk with A1's and A9's tests, then the PO decides again (D25, delegated).
 
 ## Open for the PO
 

@@ -38,7 +38,7 @@ flowchart LR
 
 The deploy reader reads the logs (D7, D10). A core hook writes page.html after each run that writes to a project
 (D16). The issues come from a dated file that a fetch writes at the republish (D19, D23). The stamp has its own file
-list, and the click fingerprint stays at three files (D5, D23). The page and `flow.py show --json` carry the same
+list (the architect's route, decided by no D: council/refuter.md T-2), and the click fingerprint stays at three files (D23). The page and `flow.py show --json` carry the same
 facts (D22).
 
 ```mermaid
@@ -46,7 +46,7 @@ flowchart LR
   subgraph project["project folder"]
     spark_records["needs, requirements, build, brief (goal, must, decided: D15)"]
     logs["sim/runs/board/*.log"]
-    issues[".spark/issues.json (dated)"]
+    issues["dated issues file (.spark/issues.json is the architect's example)"]
   end
   logs --> deploy["deploy reader (P1043): time, image, verdict; no tick on 'ready unknown'"]
   spark_records --> readers["phase readers"]
@@ -58,7 +58,7 @@ flowchart LR
   hook["core hook after a writing run (P1035, D16): no GitHub call"] --> page
   fetch["issues fetch, run by /spark:page (gh, dated, titles and labels only)"] --> issues
   page -- "/spark:page republishes" --> artifact["private Artifact"]
-  fp["click fingerprint: 3 files, issues never in it"] -.- page
+  fp["click fingerprint: 3 files, issues never in it (D23)"] -.- page
 ```
 
 ## 3. The page's loop as decided
@@ -110,11 +110,12 @@ flowchart TB
   subgraph s2["slice 2"]
     s2a["graphic style: tokens, system fonts"]
   end
-  later["later: live page (designed now), share on P834"]
+  later["after the walk (D25): live page (designed now), share on P834"]
   backbone --> s0
   backbone --> s1
   s0 --> walk
-  s1 --> walk --> s2 --> later
+  s1 --> walk --> s2
+  walk --> later
 ```
 
 ## 5. A crude sketch of the first page slice
@@ -124,12 +125,12 @@ placeholders: the exact sentences belong to the stories' plans and the PO's revi
 
 ```text
 +----------------------------------------------------------------------+
-| E-paper quotes clock                       Page from 23 Nov, 14:18    |
+| E-paper quotes clock                       Page from 23 Nov, 17:40    |
 | Drawn from the build of 22 Nov 11:44  (! wiring list 12 steps,        |
-|   picture 13 wires: build again to match)                  (D17)     |
+|   picture 13 wires: they do not match)                     (D17)     |
 +----------------------------------------------------------------------+
-| NOW  Spark has no next step after the deploy.                         |
-|      The project's own issues are below.                     (D10,L6) |
+| NOW  Look at the board: the last deploy's start was not seen, and     |
+|      firmware/ is newer than the board's image.               (D10)  |
 +----------------------------------------------------------------------+
 | ON THE BOARD                                                          |
 |   Last deploy 23 Nov 14:09, image 2811f223...                         |
@@ -142,10 +143,10 @@ placeholders: the exact sentences belong to the stories' plans and the PO's revi
 |   Decided: battery probably 2000 mAh (the PO, 23 Nov)        (D15)    |
 +----------------------------------------------------------------------+
 | THE PROJECT'S ISSUES   read 23 Nov 17:40          (not spark's, D19)  |
-|   #13 wake wire from BOOT pad          (no label)                     |
-|   #14 measure the current              (no label)                     |
-|   #4  quote every hour                 doing                          |
-|   #8  Czech quotes                     doing                          |
+|   #13 <issue title>                    (no label)                     |
+|   #14 <issue title>                    (no label)                     |
+|   #4  <issue title>                    doing                          |
+|   #8  <issue title>                    doing                          |
 |   #5, #6                               next                           |
 +----------------------------------------------------------------------+
 | NOT CHECKED BY SPARK: what the panel shows, the battery's life        |
@@ -156,6 +157,7 @@ placeholders: the exact sentences belong to the stories' plans and the PO's revi
 +----------------------------------------------------------------------+
 ```
 
-The sketch follows the no-gos: no Flash or Deploy button, no tick on an unknown, no link to GitHub, and the
-issues stay unranked. The all-caps labels are placeholders. The design skill's list of tells names them (C15), so the
+The issue titles are placeholders, because the project's repository is private and spark's is public. The page's
+stamp (17:40) is the newest file it reads, here the issues file of the fetch in diagram 3. The sketch follows the
+no-gos: no Flash or Deploy button, no tick on an unknown, no link to GitHub, and the issues stay unranked. The all-caps labels are placeholders. The design skill's list of tells names them (C15), so the
 style slice replaces them.
