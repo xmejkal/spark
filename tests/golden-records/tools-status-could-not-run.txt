@@ -13,6 +13,7 @@
   [ok  ] pdf-text          pdftotext — <fakes>/bin/pdftotext
   [????] simulator         simulator (wokwi-cli) is not installed — install: /spark:setup — wokwi-cli 0.28.0 from github.com/wokwi/wokwi-cli/releases, its checksum checked
   [!   ] simulator         needs a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci
+  [off ] text-colour       rich is off unless you turn it on — /spark:setup add rich
   [????] ts-runtime        ts-runtime (bun) is not installed — install: npm install -g bun — needs Node (nodejs.org) first
   [off ] wokwi-mcp         wokwi-mcp is off unless you turn it on — /spark:setup add wokwi-mcp
 
