@@ -78,10 +78,10 @@
   "replace": "for key, grant in zip((mac, row.serial), grants) if False]"
  },
  {
-  "file": "scripts/spark/records/deploy_record_store.py",
+  "file": "scripts/spark/records/storage.py",
   "name": "read_deploys crashes on a deeply nested record",
-  "find": "        except (OSError, ValueError, RecursionError):\n            return Deploys(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)",
-  "replace": "        except (OSError, ValueError):\n            return Deploys(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)"
+  "find": "    except (ValueError, RecursionError) as broken:",
+  "replace": "    except ValueError as broken:"
  },
  {
   "file": "scripts/spark/records/deploy_record_store.py",

@@ -14,8 +14,8 @@
  {
   "file": "scripts/spark/records/deploy_record_store.py",
   "name": "read_last_deploy: a record that cannot be read is NONE_RECORDED",
-  "find": "except (OSError, ValueError, RecursionError):\n            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE, record_path=path)",
-  "replace": "except (OSError, ValueError, RecursionError):\n            return LastDeploy(outcomes.NONE_RECORDED, record_path=path)"
+  "find": "except store.StoreError:\n            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE, record_path=path)",
+  "replace": "except store.StoreError:\n            return LastDeploy(outcomes.NONE_RECORDED, record_path=path)"
  },
  {
   "file": "scripts/spark/firmware/scenario_steps.py",
@@ -30,10 +30,10 @@
   "replace": "outcomes.NOT_CHECKED_MESSAGE % \"the log cannot be read\", UNCOUNTED_ADVICE"
  },
  {
-  "file": "scripts/spark/records/deploy_record_store.py",
+  "file": "scripts/spark/records/storage.py",
   "name": "read_last_deploy raises on a record that is not JSON (READERS never-raises)",
-  "find": "        except (OSError, ValueError, RecursionError):\n            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE, record_path=path)\n        deploys",
-  "replace": "        except (OSError, RecursionError):\n            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE, record_path=path)\n        deploys"
+  "find": "    except (ValueError, RecursionError) as broken:",
+  "replace": "    except RecursionError as broken:"
  },
  {
   "file": "scripts/spark/bench/image_evidence.py",

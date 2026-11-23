@@ -32,8 +32,8 @@
  {
   "file": "scripts/spark/records/registered_project_store.py",
   "name": "a file of registrations that is no object is read as one",
-  "find": "        if not isinstance(listed, dict) or not all(isinstance(entry, dict) and all(isinstance(entry.get(field), str) for field in FIELDS)",
-  "replace": "        if not isinstance(listed, dict) or not all(isinstance(entry, dict) for entry in listed.values()) or not all(True"
+  "find": "        if not all(isinstance(entry, dict) and all(isinstance(entry.get(field), str) for field in FIELDS) for entry in listed.values()):",
+  "replace": "        if not all(isinstance(entry, dict) for entry in listed.values()):"
  },
  {
   "file": "scripts/spark/bench/register_project.py",
@@ -158,7 +158,7 @@
  {
   "file": "scripts/spark/records/registered_project_store.py",
   "name": "a registration takes no lock, so two writers can each lose the other's name",
-  "find": "        with store.locked():",
+  "find": "        with self.storage.locked():",
   "replace": "        if True:"
  },
  {
@@ -168,16 +168,16 @@
   "replace": "            listed = {name: dict(zip(FIELDS, (origin, tool, at)))}"
  },
  {
-  "file": "scripts/spark/records/registered_project_store.py",
+  "file": "scripts/spark/records/storage.py",
   "name": "a registrations file that cannot be read is a crash",
   "find": "        except OSError as cannot:  # a folder in its place, or a file spark may not read",
   "replace": "        except KeyError as cannot:  # a folder in its place, or a file spark may not read"
  },
  {
-  "file": "scripts/spark/records/registered_project_store.py",
+  "file": "scripts/spark/records/storage.py",
   "name": "a folder in the place of the registrations file reads as no registration",
-  "find": "        if not path.exists() and not path.is_symlink():\n            return {}",
-  "replace": "        if not path.is_file():\n            return {}"
+  "find": "            if not path.exists() and not path.is_symlink():\n                return None",
+  "replace": "            if not path.is_file():\n                return None"
  },
  {
   "file": "scripts/spark/bench/register_project.py",
@@ -206,8 +206,8 @@
  {
   "file": "scripts/spark/records/deploy_record_store.py",
   "name": "a folder in the place of a board record is a crash at the rename",
-  "find": "                    None if path.exists() or path.is_symlink() else {\"mac\": mac, \"deploys\": []})",
-  "replace": "                    {\"mac\": mac, \"deploys\": []})"
+  "find": "            except store.StoreError:\n                record = None",
+  "replace": "            except KeyError:\n                record = None"
  },
  {
   "file": "scripts/spark/records/deploy_record_store.py",

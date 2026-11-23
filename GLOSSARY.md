@@ -434,6 +434,11 @@ so the tests kept away from the real store only by patching sixteen constants by
 forgot one would have written into the person's store (P88). Now it is read on every call, and a
 process running the tests gets a scratch one.
 
+**Store, Storage and the store.** The store is the person's folder. A Store keeps one entity: `GrantStore` keeps the
+grants. A Storage holds JSON objects by namespace and key and knows no entity: `FileStorage` keeps them in the store,
+`MemoryStorage` in memory. A namespace is one place of the store behind a Storage, such as `boards`
+([P1036](https://github.com/xmejkal/spark/issues/1519)).
+
 ### Registered project and launcher
 
 A **registered project** is a project that is not spark's and deploys with its own tool, such as pixel-games with
