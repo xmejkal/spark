@@ -27,6 +27,15 @@ UNKNOWN = "unknown"
 IDEA_MESSAGE = "Tell Claude your goal in the chat"
 NEEDS_MESSAGE = "%d need(s): %s"
 NO_NEEDS_MESSAGE = "no needs yet: Claude writes them from your goal"
+#: The needs phase when the goal or the must lines changed after the needs were written (P1027): what changed, by
+#: CHANGED_WORDS joined with " and ", then the review line. Spark edits none of them.
+NEEDS_STALE_MESSAGE = "%s changed after the needs were written"
+CHANGED_WORDS = {"goal": "the goal", "must": "the must lines"}
+NEEDS_REVIEW_MESSAGE = "review the needs and the must lines with Claude: spark changes none of them itself"
+#: Said when the record or the brief cannot be read: the needs phase stays ok, with the reason.
+BASIS_UNKNOWN_MESSAGE = "spark cannot tell whether the needs fit the goal: %s"
+BASIS_BROKEN = ".spark/needs-basis.json cannot be read"
+BRIEF_UNREADABLE = "the brief cannot be read (%s)"
 #: The needs and parts of a project with requirements.json and no needs: nobody wrote needs, so nothing is open there.
 HAND_WRITTEN_MESSAGE = "a hand-written project: requirements.json and no needs"
 #: The needs and parts of a project whose needs.json holds no need and whose requirements.json stays: the last need was dropped (P984).
@@ -244,9 +253,11 @@ SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal
 SCENARIO_HINT = SIMULATE_NOW
 DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then run the deploy "
               "in your terminal.")
+NEEDS_STALE_NOW = ("Your goal or must lines changed after the needs were written. "
+                   "Ask Claude to go through the needs and the must lines with you.")
 PROBLEMS_NOW = "The %s phase has problems. Ask Claude to go through them with you."
 COULD_NOT_RUN_NOW = "The %s phase could not run. Ask Claude to read you why."
-NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW, (PARTS, OK_WORD): ALL_ASIDE_NOW,
+NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (NEEDS, STALE): NEEDS_STALE_NOW, (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW, (PARTS, OK_WORD): ALL_ASIDE_NOW,
                  (REQUIREMENTS, NOT_STARTED): REQUIREMENTS_NOW, (REQUIREMENTS, STALE): REQUIREMENTS_STALE_NOW,
                  (BUILD, NOT_STARTED): BUILD_NOW, (BUILD, STALE): BUILD_STALE_NOW, (BUILD, PARTIAL): BUILD_PARTIAL_NOW,
                  (BREADBOARD, NOT_STARTED): SHEET_NOW, (BREADBOARD, STALE): SHEET_STALE_NOW, (FIRMWARE, NOT_STARTED): FIRMWARE_NOW,

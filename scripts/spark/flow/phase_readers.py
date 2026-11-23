@@ -12,11 +12,12 @@ from pathlib import Path
 from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256_of
 from spark.build.stages import BUILD, SIMULATION
 from spark.breadboard import sheet
-from spark.design import need_requirements, needs
+from spark.design import need_requirements, needs, needs_basis
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import flow_codes
 from spark.records import record_kind, records_codes, store
+from spark.records.brief import Brief
 from spark.core.errors import CodedMessageError
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS, SKIPPED
 from spark.core.zone_time import stamp
@@ -144,7 +145,31 @@ class NeedsReader(PhaseReader):
         # a drop is asked in the chat (P829), so its offer names no phase that goes out of date
         drops = [Offer("%s:%s" % (flow_codes.NEEDS_DROP, need), flow_codes.DROP_LABEL % need, flow_codes.DROP_MESSAGE % need, ())
                  for need in ids]
-        return self.phase(OK, [flow_codes.NEEDS_MESSAGE % (len(ids), ", ".join(ids))], drops)
+        stale, said = basis_says(project)
+        return self.phase(flow_codes.STALE if stale else OK, [flow_codes.NEEDS_MESSAGE % (len(ids), ", ".join(ids))] + said, drops)
+
+
+def basis_says(project):
+    """(stale, the lines after the needs line) of the goal and the must lines the needs were written from (P1027). No record
+    (a project written before P1027) or a brief with no goal gives (False, []). A record or a brief that cannot be read gives
+    one line that spark cannot tell, with the reason. Another stamp gives what changed and the review line. It reads only."""
+    held = needs_basis.NeedsBasisStore(project).held()
+    if held is None:
+        return False, []
+    if held == needs_basis.BROKEN:
+        return False, [flow_codes.BASIS_UNKNOWN_MESSAGE % flow_codes.BASIS_BROKEN]
+    try:
+        brief = Brief.from_project(project)
+    except (OSError, RecursionError) as unread:
+        return False, [flow_codes.BASIS_UNKNOWN_MESSAGE % (flow_codes.BRIEF_UNREADABLE % unread)]
+    if brief.problem:
+        return False, [flow_codes.BASIS_UNKNOWN_MESSAGE % (flow_codes.BRIEF_UNREADABLE % brief.problem)]
+    now = needs_basis.stamp_of(brief)
+    parts = needs_basis.changed(held, now) if now else []
+    if not parts:
+        return False, []
+    return True, [flow_codes.NEEDS_STALE_MESSAGE % " and ".join(flow_codes.CHANGED_WORDS[part] for part in parts),
+                  flow_codes.NEEDS_REVIEW_MESSAGE]
 
 
 def reserve_sentence(need, candidate):
