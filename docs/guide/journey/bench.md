@@ -27,7 +27,7 @@ $ look.py --project <project>
   no token: no sim/wokwi.toml in <project>: build with /spark:build --keep . first
 ```
 
-The exit code was 2: the fields matched, but the look could not give a token. With a build and a passed scenario, the last line is the token.
+The exit code was 2: the fields matched, but the look could not give a token. With a build and a passed scenario, the last line is the deploy command, which holds the token. The text above is from 2026-10-13: since P1032 the look prints a status line first, then its facts under Board and Image, each finding with its fix, a Note and Next (tests/golden/look-ok.txt holds today's).
 
 With a passed scenario, the look also prints what the run did not test: its caveats, the limits of the simulation, and
 under "no scenario named these must lines, so test them on the board:" each must line of the brief that no passed

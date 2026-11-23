@@ -415,6 +415,45 @@ class TheLastReviewRoundTest(KnownBoardCase):
         self.assertEqual(self.envelope(NATIVE_B, mac=MAC_B)[1]["data"]["known_board"], {"state": "other", "mac_ends": "ee:ff"})
 
 
+class TheTextViewOfTheKeptBoardTest(KnownBoardCase):
+    """P1032: the other-board sentence and the kept-board note are said once in the text view."""
+
+    def other_board_text(self):
+        """(stdout lines, the other_board item's sentence) of a look that reads MAC_B where MAC_A is kept."""
+        self.keep(BRIDGE)
+        sentence = [item for item in self.envelope(BRIDGE, mac=MAC_B, ask=False)[1]["unchecked"] if item["code"] == "other_board"][0]["sentence"]
+        return self.look_at(BRIDGE, mac=MAC_B, ask=False, as_json=False)[1], sentence
+
+    def test_the_other_board_and_the_kept_note_are_said_once(self):
+        said, sentence = self.other_board_text()
+        self.assertEqual(said[0], "? look: could-not-run. Another board than the one this project keeps: no token, and the kept board stays.")
+        self.assertEqual("\n".join(said).count(sentence), 1, said)
+        self.assertIn("    - " + sentence, said)
+        self.store_forgets()
+        said = self.look_at(BRIDGE, replies_file=self.say_yes(self.envelope(BRIDGE)[1]), as_json=False)[1]
+        note = "kept: spark remembers the board on /dev/cu.usbserial-01A2B3C4 (MAC ends ee:ff) as this project's board"
+        self.assertEqual("\n".join(said).count(note), 1, said)
+        self.assertIn("    " + note, said[said.index("  Note"):])
+
+    def test_another_board_with_a_stop_gets_the_stop_headline(self):
+        # round 2, A: a C6 read in place of the kept S3 is a stop first, and the other board is one more unchecked item
+        self.board("firebeetle2-esp32s3")
+        said, sentence = self.other_board_text()
+        self.assertEqual(said[0], "✗ look: problems. Stop: this board is an esp32c6, the project is for an esp32s3. deploy.py will refuse.")
+        self.assertEqual("\n".join(said).count(sentence), 1, said)
+
+    def test_the_question_prints_its_sentence_its_fix_and_why_as_before(self):
+        # D1: the board question keeps its lines, with no status line
+        said = self.look_at(NATIVE_A, as_json=False)[1]
+        envelope = self.envelope(NATIVE_A)[1]
+        (item,) = envelope["unchecked"]
+        self.assertEqual(item["code"], "needs_reply")
+        self.assertEqual(said, ["  " + item["sentence"], "  " + item["fix"], "  " + envelope["data"]["open"][0]["why"]])
+
+    def store_forgets(self):
+        known_board.KnownBoardStore.find_path(self.project).unlink()
+
+
 class FakeKnownStore:
     """Fake KnownBoardStore: `read` gives the KnownBoard it was given, for every project."""
 

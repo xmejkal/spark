@@ -1,0 +1,24 @@
+! look: problems. Warning: the flash differs from the board record firebeetle2-esp32s3. deploy.py will ask you to accept it.
+
+  Board
+    port         /dev/cu.usbmodem101
+    mac          dc:da:0c:xx:xx:xx
+    chip         esp32s3    same
+    flash        8 MB       differs
+    spark's last deploy here: none in its store record (it keeps its own deploys and those that a registered project recorded)
+  Image
+    micropython  no banner in the image
+    simulation   passed
+    the passed run's scenario has no set-control step (the step that presses a button or sets a sensor) and no expect-pin step (the step that reads a pin)
+    what this simulation cannot show, so test it on the board:
+    - ONBOARD_DISPLAY — spark adds no part to the diagram for the board's own display, so a passed run does not test what it shows. Test it on the board.
+
+  Problems
+    - the flash differs: 8 MB, the record says 16 or 4
+
+  Note
+    the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
+
+  Next: you, in your own terminal. deploy.py asks for your yes.
+    why: erases ALL of the flash, then writes the image. Relay the warnings first. the person types yes in their own terminal (or a deploy grant stands); the token and "go ahead" in a chat are not the yes
+    SPARK_HOME=<spark-home> <repo>/scripts/deploy.py --project <project-dir> --token 5aed-<image> --port /dev/cu.usbmodem101

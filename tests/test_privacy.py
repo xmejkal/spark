@@ -24,7 +24,7 @@ from spark.core.events import Event, TerminalReporter  # noqa: E402
 from spark.core.cli import HelpText, run_cli  # noqa: E402
 from spark.core.operation import COMMON_ARGUMENTS, Operation  # noqa: E402
 from spark.core.privacy import MaskingReporter, Pasted, PastedLine, Privacy  # noqa: E402
-from spark.core.result import Finding, NextStep, OperationResult, Refusal  # noqa: E402
+from spark.core.result import MARK_OK, MARK_STOP, Finding, Headline, NextStep, OperationResult, Refusal  # noqa: E402
 
 HOME = "/srv/person"
 PROJECT = HOME + "/gadgets/lamp"
@@ -88,6 +88,16 @@ class MaskResultTest(unittest.TestCase):
         for text in (masked.data["deep"][0]["why"], masked.findings[0].sentence, masked.findings[0].fix, masked.lines[0],
                      masked.diagnostics[0], masked.notes[0]):
             self.assertEqual(text, "token *** in x")
+
+    def test_privacy_masks_the_headline(self):
+        # P1032: the text view's status line and its own notes are masked as the lines are
+        said = "token %s in %s/x" % (TOKEN, PROJECT)
+        masked = privacy().mask_result(OperationResult(None, lines=[said], headline=Headline(said, MARK_OK, (said,))))
+        self.assertEqual(masked.headline, Headline("token *** in x", MARK_OK, ("token *** in x",)))
+        self.assertIsNone(privacy().mask_result(OperationResult(None, lines=[said])).headline)
+        pasted = "run %s/deploy.py" % PROJECT
+        kept = privacy().mask_result(OperationResult(None, [finding(pasted, "no_terminal")], headline=Headline("Stop: %s." % pasted, MARK_STOP)))
+        self.assertEqual((kept.headline.sentence, kept.findings[0].sentence), ("Stop: %s." % pasted, pasted))
 
     def test_mask_values_masks_the_values_of_a_trace(self):
         values = privacy().mask_values({"project": Path(PROJECT), "code": "print('%s')" % TOKEN, "json": True})

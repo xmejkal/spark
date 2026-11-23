@@ -5,6 +5,8 @@ import contextlib
 import hashlib
 import io
 import json
+import os
+import re
 import sys
 import tempfile
 import unittest
@@ -31,20 +33,20 @@ from spark.records import deploy_record_store  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
-from fakes import FakeConsent, FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun  # noqa: E402
+from fakes import FakeConsent, FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun, Stream  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.events import Event  # noqa: E402
 from spark.core.operation import Argument  # noqa: E402
 from spark.core.operation_help_table import OperationHelpTable  # noqa: E402
-from suite_runs import needs_littlefs  # noqa: E402
+from suite_runs import needs_littlefs, needs_rich  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 from test_deploy import real_littlefs  # noqa: E402
 
-RESTART = "  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
+RESTART = "    the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
 MAC = "8c:bf:ea:xx:xx:xx"
 #: LookCase's scenario only waits for text, so its passed run presses nothing and reads no pin (P345): the look says so.
-SIMULATION = "  simulation: passed"
-CAVEAT = ("  the passed run's scenario has no set-control step (the step that presses a button or sets a sensor) and no "
+SIMULATION = "    simulation   passed"
+CAVEAT = ("    the passed run's scenario has no set-control step (the step that presses a button or sets a sensor) and no "
           "expect-pin step (the step that reads a pin)")
 NO_BOARD = ("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only. "
             "If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.")
@@ -56,8 +58,18 @@ MAYBE_OWN_USB_SLEEP = ("If the board's USB is the chip's own (USB-Serial/JTAG), 
 UNPARSED_MAIN = "These files of firmware/ did not parse, so spark does not know whether they call deepsleep: firmware/main.py."
 
 
+@contextlib.contextmanager
+def plain_environ(**set_):
+    """P1032: os.environ without FORCE_COLOR and NO_COLOR, so a shell that sets them changes no text, with `set_` added."""
+    with mock.patch.dict(os.environ, set_):
+        for name in ("FORCE_COLOR", "NO_COLOR"):
+            if name not in set_:
+                os.environ.pop(name, None)
+        yield
+
+
 class LookScriptCase(LookCase):
-    def go(self, *argv, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", text=None, fail=False):
+    def go(self, *argv, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", text=None, fail=False, **shown):
         """(exit code, stdout lines, stderr) of look.py with fake tools. The fakes answer from the fixtures."""
         def run(command, **kw):
             self.ran.append(command)
@@ -66,13 +78,26 @@ class LookScriptCase(LookCase):
         if self.KNOWS_THE_BOARD:  # P865: the store keeps the board this call reads, by the serial of the first row listed
             rows = data(devs).split()
             self.know_the_board(board_look.EsptoolReader.parse(text or data(esptool)).mac or MAC, known_board.comparable_key(rows[1]) if rows else None)
-        return self.go_with(FakeOutsideWorld(run=RealChildRun(run), find_tool=found), *argv)  # P458: the compile child is real
+        return self.go_with(FakeOutsideWorld(run=RealChildRun(run), find_tool=found), *argv, **shown)  # P458: the compile child is real
 
-    def go_with(self, outside, *argv):
+    def no_token(self, said, under="Not checked"):
+        """P1032: the one Not checked item of a text look that says why there is no token; Next points `under` a section."""
+        (item,) = [line for line in said if line.startswith("    - no token: ")]
+        self.assertEqual(said[-2:], ["  Next:", "    No command: the first item under %s above says why." % under])
+        return item
+
+    def command(self, said):
+        """P1032: the deploy command, the text look's last line, after its why."""
+        self.assertTrue(said[-2].startswith("    why: erases ALL of the flash"), said[-2])
+        self.assertIn("deploy.py --project ", said[-1])
+        return said[-1]
+
+    def go_with(self, outside, *argv, stdout=None, environ=None):
         """(exit code, stdout lines, stderr) of look.py on `outside`, a FakeOutsideWorld, so no test patches
-        tool_finder.find (P442)."""
-        out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        tool_finder.find (P442). `stdout` is the stream it prints on (None: a pipe) and `environ` the variables set for
+        the run (P1032)."""
+        out, err = stdout or io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), plain_environ(**(environ or {})):
             code = look.main(["--project", str(self.project), *argv], outside=outside)
         return code, out.getvalue().splitlines(), err.getvalue()
 
@@ -100,17 +125,24 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.run_the_scenario()
         code, said, problems = self.go()
         self.assertEqual((code, problems), (0, ""))
-        self.assertEqual(said, [
-            RESTART,
-            "  port   /dev/cu.usbmodem101",
-            "  mac    " + MAC,
-            "  spark's last deploy here: none in its store record (it keeps its own deploys and those that a registered project recorded)",
-            "  micropython  no banner in the image",
-            "  chip   same      esp32c6",
-            "  flash  same      4 MB",
+        self.assertEqual(said[:-2], [
+            "✓ look: ok. The chip and the flash match the board record xiao-esp32-c6.",
+            "",
+            "  Board",
+            "    port         /dev/cu.usbmodem101",
+            "    mac          " + MAC,
+            "    chip         esp32c6    same",
+            "    flash        4 MB       same",
+            "    spark's last deploy here: none in its store record (it keeps its own deploys and those that a registered project recorded)",
+            "  Image",
+            "    micropython  no banner in the image",
             SIMULATION, CAVEAT,
-            "  all fields match the board record xiao-esp32-c6.",
-            "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token()])
+            "",
+            "  Note",
+            RESTART,
+            "",
+            "  Next: you, in your own terminal. deploy.py asks for your yes."])
+        self.assertTrue(self.command(said).endswith(" --token %s --port /dev/cu.usbmodem101" % self.token()))
 
     def run_the_scenario_with_a_note(self):
         (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(
@@ -122,9 +154,9 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.run_the_scenario_with_a_note()
         code, said, _ = self.go()
         self.assertEqual(code, 0)
-        self.assertEqual(said[7:11], [
-            SIMULATION, CAVEAT, "  what this simulation cannot show, so test it on the board:",
-            "  - ONBOARD_DISPLAY — no part for the display. Test it on the board."])
+        self.assertEqual(said[10:14], [
+            SIMULATION, CAVEAT, "    what this simulation cannot show, so test it on the board:",
+            "    - ONBOARD_DISPLAY — no part for the display. Test it on the board."])
 
     @needs_littlefs
     def test_the_json_look_carries_the_limits_of_the_passed_run(self):
@@ -144,19 +176,21 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.board("firebeetle2-esp32s3")
         code, said, _ = self.go(esptool="s3-flash-id-8mb.txt")
         self.assertEqual(code, 1)
-        self.assertEqual(said[5:8], ["  chip   same      esp32s3", "  flash  differs   8 MB",
-                                     "  the flash differs: 8 MB, the record says 16 or 4. deploy.py will ask you to accept it."])
-        self.assertEqual(said[8:10], [SIMULATION, CAVEAT])
-        self.assertTrue(said[10].startswith("  token  "))
+        self.assertEqual(said[5:7], ["    chip         esp32s3    same", "    flash        8 MB       differs"])
+        self.assertIn("    - the flash differs: 8 MB, the record says 16 or 4", said)
+        self.assertEqual(said[10:12], [SIMULATION, CAVEAT])
+        self.assertRegex(self.command(said), r" --token [0-9a-f]{4}-[0-9a-f]{4} ")
 
     @needs_littlefs
     def test_a_field_the_board_did_not_say_is_unknown_and_the_look_could_not_check_it(self):
         self.run_the_scenario()
         code, said, _ = self.go(esptool="c6-flash-id-garbled.txt")
         self.assertEqual(code, 2)
-        self.assertIn("  flash  unknown   not read", said)
-        self.assertIn("  1 field unknown (flash: the board did not say): deploy.py will ask you to accept it.", said)
-        self.assertTrue(said[-1].startswith("  token  "))
+        self.assertIn("    flash        not read   unknown", said)
+        self.assertEqual(said[0], "? look: could-not-run. Unknown against the board record xiao-esp32-c6: the flash: the board did "
+                                  "not say it. deploy.py will ask you to accept it.")
+        self.assertIn("    - flash unknown: the board did not say", said)
+        self.assertIn(" --token %s " % self.token(), self.command(said))
 
     @needs_littlefs
     def test_a_port_with_a_newline_and_a_right_to_left_override_shows_as_one_line_with_question_marks(self):
@@ -164,8 +198,9 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.run_the_scenario()
         port = "/dev/cu.usb\u202emodem\n  token  FAKE"
         code, said, _ = self.go("--port", port)
-        self.assertEqual(said[1], "  port   /dev/cu.usb?modem?  token  FAKE")
-        self.assertEqual(len([line for line in said if line.startswith("  token  ")]), 1)
+        self.assertEqual(said[3], "    port         /dev/cu.usb?modem?  token  FAKE")
+        self.assertEqual([line for line in said if line.lstrip().startswith("token")], [])
+        self.assertIn(" --token %s " % self.token(), self.command(said))
         self.assertEqual(json.loads(self.go("--port", port, "--json")[1][-1])["data"]["port"], port)  # --json keeps it raw
 
     def test_a_port_with_an_override_shows_as_a_question_mark_in_the_stop_on_stderr(self):
@@ -218,9 +253,11 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.board("firebeetle2-esp32s3")
         code, said, _ = self.go()
         self.assertEqual(code, 1)
-        self.assertEqual(said[5], "  chip   differs   esp32c6")
-        self.assertEqual(said[-4:], ["  this board is an esp32c6, the project is for an esp32s3: deploy.py will refuse.",
-                                     SIMULATION, CAVEAT, "  no token: the look found a stop"])
+        self.assertEqual(said[5], "    chip         esp32c6    differs")
+        self.assertEqual(said[0], "✗ look: problems. Stop: this board is an esp32c6, the project is for an esp32s3. deploy.py will refuse.")
+        self.assertIn("    - this board is an esp32c6, the project is for an esp32s3", said)
+        self.assertEqual(said[said.index(SIMULATION) + 1], CAVEAT)
+        self.assertEqual(self.no_token(said, under="Problems"), "    - no token: the look found a stop")
 
     @needs_littlefs
     def test_a_flash_too_small_for_the_image_is_a_stop_even_when_the_record_lists_it(self):
@@ -228,8 +265,8 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.board("firebeetle2-esp32s3")
         code, said, _ = self.go(esptool="s3-flash-id-2mb.txt")
         self.assertEqual(code, 1)
-        self.assertIn("  the flash is 2 MB, the image needs 4 MB: deploy.py will refuse.", said)
-        self.assertEqual(said[-1], "  no token: the look found a stop")
+        self.assertIn("    - the flash is 2 MB, the image needs 4 MB", said)
+        self.assertEqual(self.no_token(said, under="Problems"), "    - no token: the look found a stop")
 
     @needs_littlefs
     def test_a_flash_in_the_records_list_that_is_too_small_exits_1_not_0(self):
@@ -238,21 +275,21 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.image.write_bytes(self.image.read_bytes() + b"x")
         code, said, _ = self.go(text=data("s3-flash-id-16mb.txt").replace("16MB", "4MB"))
         self.assertEqual(code, 1)
-        self.assertIn("  flash  same      4 MB", said)
+        self.assertIn("    flash        4 MB       same", said)
 
     def test_no_image_prints_the_fields_and_says_why_there_is_no_token(self):
         code, said, _ = self.go()
         self.assertEqual(code, 2)
-        self.assertEqual(said[5:7], ["  chip   same      esp32c6", "  flash  same      4 MB"])
-        self.assertEqual(said[-2], "  all fields match the board record xiao-esp32-c6.")
-        self.assertRegex(said[-1], r"^  no token: .*run a scenario first")
+        self.assertEqual(said[5:7], ["    chip         esp32c6    same", "    flash        4 MB       same"])
+        self.assertEqual(said[0], "? look: could-not-run. The chip and the flash match the board record xiao-esp32-c6.")
+        self.assertRegex(self.no_token(said), r"^    - no token: .*run a scenario first")
 
     def test_a_firmware_line_that_is_no_string_stops_the_token_with_one_sentence_and_no_traceback(self):
         # P429: `firmware = 3` raised a TypeError out of the look
         (self.project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 3\n")
         code, said, problems = self.go()
         self.assertEqual((code, problems), (2, ""))
-        self.assertEqual(said[-1], "  no token: sim/wokwi.toml line 3 names the firmware in a form spark cannot read. "
+        self.assertEqual(self.no_token(said), "    - no token: sim/wokwi.toml line 3 names the firmware in a form spark cannot read. "
                          'To fix it, write it as firmware = "name.bin".')
 
     @needs_littlefs
@@ -264,22 +301,22 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.run_the_scenario(scenario=other)
         code, said, _ = self.go()
         self.assertEqual(code, 2)
-        self.assertRegex(said[-1], r"^  no token: .*tested another image")
+        self.assertRegex(self.no_token(said), r"^    - no token: .*tested another image")
         code, said, _ = self.go("--ignore-older-runs")
         self.assertEqual(code, 0)
-        self.assertEqual(said[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
+        self.assertIn(" --token %s " % self.token(), self.command(said))
 
     @needs_littlefs
     def test_no_simulation_gives_a_token_for_firmware_as_it_is_with_no_run_log(self):
         self.build_from_firmware()
         code, said, _ = self.go()
         self.assertEqual(code, 2)
-        self.assertRegex(said[-1], r"^  no token: .*no run in sim/runs/ tested")
-        flag = said[-1].rsplit("run look.py ", 1)[1]  # P463: the sentence names the way, and the way works
+        self.assertRegex(self.no_token(said), r"^    - no token: .*no run in sim/runs/ tested")
+        flag = self.no_token(said).rsplit("run look.py ", 1)[1]  # P463: the sentence names the way, and the way works
         self.assertEqual(flag, "--no-simulation")
         code, said, _ = self.go(flag)
         self.assertEqual(code, 0)
-        self.assertEqual(said[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
+        self.assertIn(" --token %s " % self.token(), self.command(said))
 
     @needs_littlefs
     def test_no_simulation_with_firmware_changed_after_the_image_gives_no_token_and_the_build_command(self):
@@ -287,7 +324,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(3)\n")
         code, said, _ = self.go("--no-simulation")
         self.assertEqual(code, 2)
-        self.assertRegex(said[-1], r"^  no token: .*flash_image\.py --project .* --files .*/firmware'? -o ")
+        self.assertRegex(self.no_token(said), r"^    - no token: .*flash_image\.py --project .* --files .*/firmware'? -o ")
 
     def test_littlefs_turned_off_in_the_project_is_named_by_the_look(self):
         # P457: the image check asks the finder with the project, so the sentence names the file that turned it off
@@ -297,7 +334,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         code, said, _ = self.go_with(FakeOutsideWorld(run=RealChildRun(lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
                                                                        else done(data("c6-flash-id.txt"))), find_tool=real_littlefs(self.project)), "--no-simulation")
         self.assertEqual(code, 2)
-        self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", said[-1])
+        self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", self.no_token(said))
 
     def test_no_simulation_with_a_finder_that_lacks_littlefs_gives_no_token_and_the_install_line(self):
         # P442: the image check asks the finder the look was given, not tool_finder.find, so the fake decides what is
@@ -350,7 +387,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.run_the_scenario()
         code, said, _ = self.go()
         self.assertEqual(code, 0)
-        self.assertEqual(said[said.index("  no scenario named these must lines, so test them on the board:") + 1:][:2], ["  - the LED lights", "  - the LED goes off"])
+        self.assertEqual(said[said.index("    no scenario named these must lines, so test them on the board:") + 1:][:2], ["    - the LED lights", "    - the LED goes off"])
         code, lines, _ = self.go("--json")
         data_ = json.loads(lines[-1])["data"]
         self.assertEqual((code, data_["unnamed_must"], self.not_checked(data_)), (0, ["the LED lights", "the LED goes off"], []))
@@ -406,7 +443,7 @@ class WhatThePersonSeesTest(LookScriptCase):
     def test_the_text_look_says_none_and_its_caveat_with_the_flag(self):
         self.build_from_firmware()
         said = self.go("--no-simulation")[1]
-        self.assertEqual(said[said.index("  simulation: none"):][:2], ["  simulation: none", "  no simulation tested this image"])
+        self.assertEqual(said[said.index("    simulation   none"):][:2], ["    simulation   none", "    no simulation tested this image"])
 
     @needs_littlefs
     def test_the_next_step_names_a_deploy_grant_only_where_a_grant_may_answer(self):
@@ -450,8 +487,108 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.run_the_scenario()
         code, said, _ = self.go(esptool="c6-flash-id-no-mac.txt")
         self.assertEqual(code, 2)
-        self.assertIn("  mac    not read", said)
-        self.assertEqual(said[-1], "  no token: the board's MAC could not be read")
+        self.assertIn("    mac          not read", said)
+        self.assertEqual(self.no_token(said), "    - no token: the board's MAC could not be read")
+
+
+#: An SGR code, the only escape code the coloured text view adds (P1032).
+SGR = re.compile(r"\x1b\[[0-9;]*m")
+
+
+class TheTextViewTest(LookScriptCase):
+    """P1032: without --json the look prints a status line, its facts, the findings with their fix, a Note and Next."""
+
+    @needs_littlefs
+    def test_the_text_view_starts_with_the_status_line_and_ends_with_the_command(self):
+        self.run_the_scenario()
+        code, said, _ = self.go()
+        self.assertEqual(code, 0)
+        self.assertEqual(said[0], "✓ look: ok. The chip and the flash match the board record xiao-esp32-c6.")
+        self.assertTrue(said[-1].startswith("    SPARK_HOME="), said[-1])
+        self.assertIn("deploy.py --project ", said[-1])
+        self.assertTrue(said[-1].endswith(" --token %s --port /dev/cu.usbmodem101" % self.token()), said[-1])
+        self.assertEqual([line for line in said if line.lstrip().startswith("token")], [])
+
+    @needs_littlefs
+    def test_a_warning_has_its_mark_its_field_and_a_problem_with_its_fix(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        code, said, _ = self.go(esptool="s3-flash-id-8mb.txt")
+        self.assertEqual(code, 1)
+        self.assertEqual(said[0], "! look: problems. Warning: the flash differs from the board record firebeetle2-esp32s3. "
+                                  "deploy.py will ask you to accept it.")
+        item = said.index("    - the flash differs: 8 MB, the record says 16 or 4")
+        self.assertFalse(said[item + 1].startswith("      fix: "), "the review of #1549, SF1: a fix that restates the verdict")
+        self.assertEqual([line for line in said[1:] if "deploy.py will ask you" in line], [])
+        problem = json.loads(self.go("--json", esptool="s3-flash-id-8mb.txt")[1][-1])["problems"][0]
+        self.assertEqual(problem["fix"], "deploy.py asks the person to accept it", "the JSON keeps the fix")
+
+    @needs_littlefs
+    def test_every_stop_headline_has_a_problem_after_it(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        for esptool, stop in (("c6-flash-id.txt", "this board is an esp32c6, the project is for an esp32s3"),
+                              ("s3-flash-id-2mb.txt", "the flash is 2 MB, the image needs 4 MB")):
+            with self.subTest(esptool=esptool):
+                code, said, _ = self.go(esptool=esptool)
+                self.assertEqual(code, 1)
+                self.assertEqual(said[0], "✗ look: problems. Stop: %s. deploy.py will refuse." % stop)
+                problems = said.index("  Problems")
+                self.assertEqual(said[problems + 1], "    - " + stop)
+                self.assertFalse(said[problems + 2].startswith("      fix: "), "deploy.py will refuse restates the verdict")
+                self.assertEqual(said[-1], "    No command: the first item under Problems above says why.")
+
+    def test_an_unknown_field_with_no_token_points_next_at_the_missing_token(self):
+        # the review of #1549, refuter 1: no image, so no token; the status line does not promise deploy.py's question
+        code, said, _ = self.go(esptool="c6-flash-id-garbled.txt")
+        self.assertEqual(code, 2)
+        self.assertEqual(said[0], "? look: could-not-run. Unknown against the board record xiao-esp32-c6: the flash: the board did not say it.")
+        unchecked = said.index("  Not checked")
+        self.assertTrue(said[unchecked + 1].startswith("    - no token: "), said[unchecked + 1])
+        self.assertIn("    - flash unknown: the board did not say", said[unchecked:])
+        self.no_token(said)
+        envelope = json.loads(self.go("--json", esptool="c6-flash-id-garbled.txt")[1][-1])
+        self.assertEqual(envelope["unchecked"][0]["code"], "field_unknown", "the JSON keeps its order")
+
+    def test_a_stop_and_the_question_print_as_before(self):
+        # D1: a stop before the read prints on stderr only, and the board question keeps its lines
+        code, said, problems = self.go(devs="mpremote-devs-none.txt")
+        self.assertEqual((code, said, problems), (2, [], "look.py: %s\n" % NO_BOARD))
+
+    @needs_rich
+    @needs_littlefs
+    def test_on_a_terminal_the_look_is_coloured_and_in_a_pipe_it_is_plain(self):
+        self.run_the_scenario()
+        terminal = Stream(tty=True)
+        code, said, _ = self.go(stdout=terminal, environ={"TERM": "xterm"})
+        self.assertEqual(code, 0)
+        self.assertTrue(SGR.search("\n".join(said)), said)
+        self.assertEqual([SGR.sub("", line) for line in said], self.go()[1])
+        self.assertFalse(SGR.search("\n".join(self.go(environ={"TERM": "xterm"})[1])), "a pipe gets no code")
+
+    @needs_rich
+    @needs_littlefs
+    def test_force_color_on_a_pipe_gives_codes(self):
+        self.run_the_scenario()
+        self.assertTrue(SGR.search("\n".join(self.go(environ={"FORCE_COLOR": "1"})[1])))
+        self.assertFalse(SGR.search("\n".join(self.go(environ={"FORCE_COLOR": "1", "NO_COLOR": "1"})[1])))
+        self.assertFalse(SGR.search(self.go("--json", environ={"FORCE_COLOR": "1"})[1][-1]), "--json never gets a code")
+
+    @needs_littlefs
+    def test_the_look_s_view_and_deploy_s_lines_show_the_same_facts(self):
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(
+            sim_project.limits_note([("ONBOARD_DISPLAY", "no part for the display. Test it on the board.")]))
+        self.run_the_scenario()
+        report = self.look()
+        facts, deploy_s = "\n".join(look_at_board.look_facts(report)), "\n".join(board_look.report_lines(report, token=False))
+        values = [report.port, report.reading.mac, report.reading.chip, "%s MB" % report.reading.flash_mb,
+                  board_look.say_last_deploy(report.last_deploy), board_look.say_image_banner(report), report.simulation]
+        values += report.caveats + [board_look.say_limit(limit) for limit in report.limits]
+        self.assertEqual(len(report.limits), 1)
+        for value in values:
+            with self.subTest(value=value):
+                self.assertIn(value, facts)
+                self.assertIn(value, deploy_s)
 
 
 class TheMaskedTextTest(LookScriptCase):
@@ -464,7 +601,7 @@ class TheMaskedTextTest(LookScriptCase):
         record.parent.mkdir(parents=True, exist_ok=True)
         record.write_text("{not json")
         _, said, _ = self.go()
-        self.assertIn("repair or remove %s, then run look.py again." % record, "\n".join(said))
+        self.assertIn("fix: repair or remove %s, then run look.py again" % record, "\n".join(said))
 
 
 class WhatStopsTheLookTest(LookScriptCase):
@@ -489,7 +626,7 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.run_the_scenario()
         code, said, _ = self.go("--port", "/dev/cu.usbserial-1410", devs="mpremote-devs-two.txt")
         self.assertEqual(code, 0)
-        self.assertEqual(said[1], "  port   /dev/cu.usbserial-1410")
+        self.assertEqual(said[3], "    port         /dev/cu.usbserial-1410")
 
     def test_no_board_with_a_deepsleep_call_names_deep_sleep_and_keeps_the_cable_check_last(self):
         # P1022 slice 3, 2026-11-23 14:05 CET: the FireBeetle 2 C6 in deep sleep was off USB, and the look blamed the cable
@@ -630,8 +767,9 @@ class TheOperationTest(LookScriptCase):
                 run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command else done(data("c6-flash-id.txt")),
                 find_tool=found))
         self.assertEqual((out.getvalue(), err.getvalue(), result.status(), result.findings, result.diagnostics), ("", "", "ok", [], ()))
-        self.assertEqual(result.lines[1:3], ["  port   /dev/cu.usbmodem101", "  mac    " + MAC])
-        self.assertEqual(result.lines[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
+        self.assertEqual(result.lines[1:3], ["    port         /dev/cu.usbmodem101", "    mac          " + MAC])
+        self.assertEqual(result.headline.sentence, "The chip and the flash match the board record xiao-esp32-c6.")
+        self.assertEqual([line for line in result.lines if self.token() in line], [])
         self.assertEqual([(step.op, step.needs_yes, step.argv[3]) for step in result.next], [("deploy", True, self.token())])
         self.assertEqual(result.data["token"], self.token())
 
@@ -688,7 +826,7 @@ class TheOperationTest(LookScriptCase):
                                FakeOutsideWorld(run=self.fake_tools(broken), find_tool=found))
         self.assertEqual([(finding.code, finding.sentence) for finding in result.findings],
                          [("evidence_refuses", "no token: firmware/main.py, line 3 does not compile: invalid syntax")])
-        self.assertIn("  no token: firmware/main.py, line 3 does not compile: invalid syntax", result.lines)
+        self.assertEqual([line for line in result.lines if "no token" in line], [])
 
     def test_the_last_deploy_line_and_its_fix_come_from_the_store_the_look_was_given(self):
         # P458: the look reads `records`, never a store of its own, and the fix line names the path the LastDeploy carries
@@ -696,16 +834,16 @@ class TheOperationTest(LookScriptCase):
         recorded = deploy_record_store.LastDeploy(outcomes.RECORDED, "p", "ready", "2026-10-17T09:00:00+02:00")
         unreadable = deploy_record_store.LastDeploy(outcomes.NOT_CHECKED, why="spark's record of it cannot be read",
                                                     record_path=Path("/the/store/boards/record.json"))
-        lines = []
+        results = []
         for last in (recorded, unreadable):
             records = FakeDeployRecordStore(last=last)
             result = run_operation(look_at_board.LookAtBoard(records=records), self.values(),
                                    FakeOutsideWorld(run=self.fake_tools(), find_tool=found))
             self.assertEqual(records.asked, [MAC])
-            lines.append(result.lines)
-        self.assertIn("  spark's last deploy here: p, ready, 2026-10-17T09:00:00+02:00 (its store record, not read from the board)", lines[0])
-        self.assertIn("  last deploy not checked: spark's record of it cannot be read: repair or remove /the/store/boards/record.json, "
-                      "then run look.py again.", lines[1])
+            results.append(result)
+        self.assertIn("    spark's last deploy here: p, ready, 2026-10-17T09:00:00+02:00 (its store record, not read from the board)", results[0].lines)
+        self.assertIn(("last deploy not checked: spark's record of it cannot be read", "repair or remove /the/store/boards/record.json, "
+                      "then run look.py again"), [(found.sentence, found.fix) for found in results[1].findings])
 
 
 class ACrashTest(LookScriptCase):

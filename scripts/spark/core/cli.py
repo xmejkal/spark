@@ -17,8 +17,11 @@ from spark.core.errors import CodedMessageError, SparkError
 from spark.core.events import TerminalReporter
 from spark.core.operation import JSON_DEST, JSON_FLAG, WRITES
 from spark.core.privacy import MaskingReporter, Privacy
+from spark.core.renderers import TextReport
+from spark.core.replies import Terminal
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines, printable
+from spark.core.text_style import PLAIN
 
 # --- MVP ---
 #: Value: what a CLI says and adds to its answer: in `--help` its file name, one sentence, and the CLI's own text after the
@@ -49,14 +52,6 @@ REFRESHED_LINE = "  %s"
 RunOptions = namedtuple("RunOptions", "privacy trace clock follow_up", defaults=(None,))
 #: The run of a CLI: the Privacy step (pass-through unless the Operation has a `privacy_for`) and no trace.
 DEFAULT_RUN = RunOptions(Privacy(), None, SystemClock())
-
-
-class TextReport:
-    """Renderer: an OperationResult's lines as a person reads them, as one text. It decides nothing again."""
-
-    @staticmethod
-    def render(result):
-        return "\n".join(result.lines)
 
 
 def run_operation(operation, values, outside=None, build_outside=None, options=DEFAULT_RUN):
@@ -295,7 +290,8 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
                                DEFAULT_RUN._replace(privacy=privacy, follow_up=text.follow_up))
     except CodedMessageError as unreadable:
         result = _unreadable_payload(text.prog, unreadable)
-    said = renderer.render(result, tool, operation.name) if as_json else TextReport.render(result)
+    said = renderer.render(result, tool, operation.name) if as_json else \
+        TextReport.render(result, Terminal().text_style() if result.headline else PLAIN, operation.name)  # P1032
     if said:
         print(said)
     if result.diagnostics:

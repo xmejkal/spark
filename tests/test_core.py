@@ -27,7 +27,7 @@ from spark.core.operation import ASKS, COMMON_ARGUMENTS, JSON_DEST, READS, RUNS,
 from spark.core.privacy import Privacy  # noqa: E402
 from spark.core.outside import OutsideWorld, ProgramRunner, build_bare_outside_world, build_outside_world, refuse_replies  # noqa: E402
 from spark.core.replies import AGENT, VALUE, GivenReplyStrategy, Question, Reply  # noqa: E402
-from spark.core.result import Finding, NextStep, OperationResult, envelope_item, output_schema  # noqa: E402
+from spark.core.result import MARK_STOP, Finding, Headline, NextStep, OperationResult, envelope_item, output_schema  # noqa: E402
 
 PROBLEM = Finding(outcomes.PROBLEMS, "flash", "flash_differs", "the flash differs", "accept it")
 UNCHECKED = Finding(outcomes.COULD_NOT_RUN, None, "field_unknown", "flash unknown", "unknown is not a pass")
@@ -613,6 +613,15 @@ class RunOperationTest(unittest.TestCase):
         self.assertEqual(FlatJsonLine.render(OperationResult(None, [PROBLEM]), "t", "o"), "")
         self.assertIsNone(FlatJsonLine.render_bad_argument(result, "t", "o"))
         self.assertEqual(JsonEnvelope.render_bad_argument(result, "t", "o"), JsonEnvelope.render(result, "t", "o"))
+
+
+    def test_the_envelope_is_the_same_with_and_without_a_headline(self):
+        # P1032: the headline is the text view's own, so no envelope holds it, with no notes too
+        result = OperationResult({"a": 1}, [PROBLEM], [NextStep("deploy", ["--x"], "why")], ["one"], notes=None)
+        headed = result._replace(headline=Headline("Stop: the flash differs.", MARK_STOP, ("a text note",)))
+        self.assertEqual(headed.to_envelope("t", "o"), result.to_envelope("t", "o"))
+        self.assertEqual(JsonEnvelope.render(headed, "t", "o"), JsonEnvelope.render(result, "t", "o"))
+        self.assertIsNone(OperationResult(None).headline)
 
 
 class TickingClock:

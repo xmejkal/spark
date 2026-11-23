@@ -66,6 +66,7 @@ above.
 | --- | --- | --- |
 | `add sigrok` | `tools.py --on sigrok` | `{"sigrok": {"on": true}}`; installs it, and registers an MCP server with Claude Code |
 | `remove sigrok` | `tools.py --off sigrok` | `{"sigrok": {"on": false}}`; unregisters the server |
+| `add rich` | `tools.py --on rich` | `{"rich": {"on": true}}`; installs rich, which colours the text view on a terminal (look.py first, P1032). Spark never installs it unasked |
 | `use simulator=my-sim` | `tools.py --use simulator=my-sim` | `{"roles": {"simulator": "my-sim"}}` — refused unless my-sim meets the job's contract |
 | `pin esptool=4.12.0` | `tools.py --pin esptool=4.12.0` | refused, with nothing written, when the version (also as `esptool.version=`) is below the entry's `oldest_version` or has no digits |
 | `pin tscircuit core=0.0.2700` | `tools.py --pin tscircuit.core=0.0.2700 --project .` | `{"tscircuit": {"core": "0.0.2700"}}` — the core decides the build; `tscircuit=<v>` pins the CLI (`@tscircuit/cli`, versions like 0.1.2113). Then `--install tscircuit --project .` puts the pinned one in |

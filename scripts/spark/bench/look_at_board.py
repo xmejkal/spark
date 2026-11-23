@@ -1,10 +1,12 @@
 """
 The look as an Operation on the core (P442, W3-3): read the board on USB without changing it, compare it with the
-project's board record, and give a token. look.py is its CLI. The lines, the findings and the next step are the ones
-look.py printed before it (board_look.report_lines and board_envelope's look items), so no golden changed; a crash, now a
-`crash` envelope and exit 2, is the one new output.
+project's board record, and give a token. look.py is its CLI. The findings and the next step are the ones look.py
+printed before it (board_envelope's look items); a crash is a `crash` envelope and exit 2. P1032 gave the look its text
+view: a headline (`headline_of`) and the facts alone as its lines (`look_facts`), in two groups, Board and Image. Deploy
+keeps board_look.report_lines.
 """
 
+import functools
 from collections import namedtuple
 
 from spark.bench import board_codes
@@ -25,8 +27,9 @@ from spark.core.errors import SparkError
 from spark.core.events import INDENT, Event
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.replies import RepliesStore
-from spark.core.result import Finding, NextStep, OperationResult
+from spark.core.result import MARK_STOP, MARK_UNCHECKED, MARK_WARNING, Finding, Headline, NextStep, OperationResult
 from spark.core.text_guards import guard_sentence, printable
+from spark.firmware import sim_project
 from spark.records import store
 
 # --- MVP ---
@@ -43,6 +46,31 @@ REPLIES_HELP = ('a file of your own with the person\'s yes to the look\'s open q
 LookRun = namedtuple("LookRun", "project port evidence")
 #: What the open question's next step is.
 ASK_AGAIN_WHY = "the same look, after the person's yes in the conversation"
+#: The text view's headline of a look with a stop, filled with the first stop's sentence; a second stop is in Problems.
+STOP_HEADLINE = "Stop: %s. deploy.py will refuse."
+#: The headline of a look whose fields differ with no stop, filled with the fields and the board record's id.
+WARNING_HEADLINE = "Warning: the %s differs from the board record %s."
+#: The headline of a look whose only gap is a field it could not compare, filled with the record's id and each field's reason.
+UNKNOWN_HEADLINE = "Unknown against the board record %s: %s."
+#: What a warning or an unknown headline adds when the look has a token, so a deploy can follow.
+ASK_MESSAGE = " deploy.py will ask you to accept it."
+#: An unknown field's reason as the headline says it, where its words differ from the JSON's (the review of #1549, N2).
+UNKNOWN_SAID = {"the board did not say": "the board did not say it"}
+#: The fixes of the look's findings that only restate the verdict: the text view prints them with no `fix:` line, and the
+#: JSON keeps them (the review of #1549, SF1; person-worded fixes are P1052 #1544).
+STOP_FIX, WARNING_FIX = "deploy.py will refuse", "deploy.py asks the person to accept it"
+UNKNOWN_FIX = "unknown is not a pass: deploy.py names it and asks the person"
+VERDICT_FIXES = (STOP_FIX, WARNING_FIX, UNKNOWN_FIX)
+#: The headline of a look whose fields all match, filled with the board record's id; its mark is the status's.
+MATCH_HEADLINE = "The chip and the flash match the board record %s."
+#: The headline of a look that read another board than the kept one, when it found no problem (round 1, item 6).
+OTHER_BOARD_HEADLINE = "Another board than the one this project keeps: no token, and the kept board stays."
+#: The label column of a fact line, so `micropython  ` (board_look.say_image_banner) lines up.
+FACT = "%-12s %s"
+#: A compared field's fact line: the field, the value read, and same, differs or unknown.
+FIELD_FACT = "%-12s %-10s %s"
+#: The indent of a fact under its group's heading.
+ITEM = INDENT * 2
 #: What the look does, the paragraphs of look.py's `--help` before its `--json` and exit codes, line breaks and all
 #: (P481). Its two `--json` mentions stay in it, so that `--help` stays as it was (P855).
 DETAILS = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash-id`. It writes nothing,
@@ -182,13 +210,13 @@ class LookAtBoard(Operation):
             other = known_board.OTHER_AFTER_MESSAGE % (report.port, known_board.mac_ends(mac), known_board.mac_ends(known.mac), known.since_said())
             fix = known_board.OTHER_AFTER_FIX if passed.state != CANNOT_TELL else known_board.OTHER_AFTER_PORT_FIX if passed.row \
                 else known_board.OTHER_AFTER_UNLISTED_FIX % self.known.find_path(project)
-            found = Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, other, fix)
-            return result._replace(data=dict(result.data, token=None), findings=list(result.findings) + [found], next=[],
-                                   lines=board_look.report_lines(report, token=False) + [INDENT + printable(other)])
+            findings = list(result.findings) + [Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, other, fix)]
+            status = outcomes.status_of(*([found for found in findings if found.severity == severity]
+                                          for severity in (outcomes.PROBLEMS, outcomes.COULD_NOT_RUN)))
+            return result._replace(data=dict(result.data, token=None), findings=findings, next=[], headline=headline_of(report, status, True))
         if passed.reply is None or not (passed.state in (NONE, OTHER) or differs):
             return result
-        note = self._keep(report, passed, project, outside)
-        return result._replace(notes=[note], lines=list(result.lines) + [INDENT + printable(note)])
+        return result._replace(notes=[self._keep(report, passed, project, outside)])
 
     def _keep(self, report, passed, project, outside):
         """Keep the board just read as the project's board, and return the note that says so, or why it was not kept."""
@@ -210,11 +238,11 @@ class LookAtBoard(Operation):
     def _found(report, project, evidence, grant_may_answer):
         """The result of a LookReport: the lists LookReport.status counts, as Findings, and the deploy step with a token.
         `grant_may_answer` says whether a deploy grant can answer the evidence (board_envelope.yes_rule)."""
-        findings = [Finding(outcomes.PROBLEMS, "stop", stop.code, stop.sentence, "deploy.py will refuse") for stop in report.stops]
-        findings += [Finding(outcomes.PROBLEMS, "flash", board_codes.FLASH_DIFFERS, warning, "deploy.py asks the person to accept it")
+        findings = [Finding(outcomes.PROBLEMS, "stop", stop.code, stop.sentence, STOP_FIX) for stop in report.stops]
+        findings += [Finding(outcomes.PROBLEMS, "flash", board_codes.FLASH_DIFFERS, warning, WARNING_FIX)
                      for warning in report.warnings]
         findings += [Finding(outcomes.COULD_NOT_RUN, None, board_codes.FIELD_UNKNOWN, "%s unknown: %s" % each,
-                             "unknown is not a pass: deploy.py names it and asks the person") for each in report.unknown.items()]
+                             UNKNOWN_FIX) for each in report.unknown.items()]
         no_token = report.no_token_reason()
         if no_token:
             findings.append(Finding(outcomes.COULD_NOT_RUN, None, no_token.code, "no token: %s" % no_token.sentence, "fix that, then run look.py again"))
@@ -225,7 +253,8 @@ class LookAtBoard(Operation):
         following = [NextStep(**board_envelope.deploy_step(
             project, token, report.port, evidence,
             "erases ALL of the flash, then writes the image. Relay the warnings first. " + board_envelope.yes_rule(evidence, grant_may_answer)))] if token else []
-        return OperationResult(report.to_dict(), findings, following, board_look.report_lines(report))
+        result = OperationResult(report.to_dict(), findings, following, look_facts(report))
+        return result._replace(headline=headline_of(report, result.status()))
 
     @staticmethod
     def _stopped(stop, platform, port, outside):
@@ -240,4 +269,45 @@ class LookAtBoard(Operation):
         return OperationResult({"doctor": board_doctor.as_dict(doctor)} if doctor else None,
                                [Finding(outcomes.COULD_NOT_RUN, None, stop.reason, sentence, board_envelope.doctor_fix(doctor, places) or asleep)],
                                diagnostics=said.split("\n"))
+
+
+def headline_of(report, status, other_board=False):
+    """The text view's Headline of a LookReport whose result has `status`: the first stop, else the fields that differ,
+    else another board than the kept one (`other_board`), else the fields it could not compare, else the match, with the
+    status's mark. A warning or an unknown field says that deploy.py will ask only when there is a token. Its blocker is
+    the finding that says why there is no deploy step: the stop, the other board or the missing token. Its note is the
+    restart notice, and its verdict fixes are VERDICT_FIXES."""
+    name, no_token = report.record["id"], report.no_token_reason()
+    blocker = report.stops[0].code if report.stops else board_codes.OTHER_BOARD if other_board else no_token and no_token.code
+    ask = "" if other_board or no_token else ASK_MESSAGE
+    said = functools.partial(Headline, text_notes=(board_look.RESTART_NOTICE,), blocker=blocker, verdict_fixes=VERDICT_FIXES)
+    differs = [field for field, state in report.fields.items() if state == "differs"]
+    if report.stops:
+        return said(STOP_HEADLINE % report.stops[0].sentence, MARK_STOP)
+    if differs:
+        return said(WARNING_HEADLINE % (" and ".join(differs), name) + ask, MARK_WARNING)
+    if other_board:
+        return said(OTHER_BOARD_HEADLINE, MARK_UNCHECKED)
+    if report.unknown:
+        why = "; ".join("the %s: %s" % (field, UNKNOWN_SAID.get(reason, reason)) for field, reason in report.unknown.items())
+        return said(UNKNOWN_HEADLINE % (name, why) + ask, MARK_UNCHECKED)
+    return said(MATCH_HEADLINE % name, Headline.of_status(status))
+
+
+def look_facts(report):
+    """The facts of a LookReport, what was read and never a verdict, in two groups: Board (the port, the MAC, the
+    compared fields, the last deploy) and Image (the banner, the simulation, its caveats and limits, the must lines no
+    scenario named). Each line passes `printable`. deploy.py's board_look.report_lines says the same facts."""
+    reading, also = report.reading, board_look.ALSO_ON % ", ".join(report.also_on) if report.also_on else ""
+    shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
+    board = [FACT % ("port", report.port + also), FACT % ("mac", reading.mac or "not read")]
+    board += [FIELD_FACT % (field, shown[field] or "not read", report.fields[field]) for field in shown]
+    board.append(board_look.say_last_deploy(report.last_deploy))
+    image = [board_look.say_image_banner(report)] + ([FACT % ("simulation", report.simulation)] if report.simulation else [])
+    image += report.caveats
+    if report.limits:
+        image += [board_look.LIMITS_HEADING_MESSAGE] + [board_look.say_limit(limit) for limit in report.limits]
+    if report.unnamed_must:
+        image += [board_look.MUST_UNNAMED_HEADING_MESSAGE] + [sim_project.LIMIT_PREFIX + line for line in report.unnamed_must]
+    return [INDENT + "Board"] + [ITEM + printable(line) for line in board] + [INDENT + "Image"] + [ITEM + printable(line) for line in image]
 # --- end MVP ---
