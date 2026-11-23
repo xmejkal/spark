@@ -80,7 +80,12 @@ firmware/ as it is now. Else it prints why not, and the command that builds the 
 
 When esptool's read of the board fails, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
-and one next step for your hands, as the last line. Its look at the console can restart the board."""
+and one next step for your hands, as the last line. Its look at the console can restart the board.
+
+When no board is on USB and the project's firmware calls deepsleep (read from firmware/, not from the board), the stop
+line is `no board found.` and the last line, the fix, says that the board can be in deep sleep (P1022). It names the
+calls, and says what to try in order: download mode with BOOT, a wait for the wake, then the cable. A firmware file
+that does not parse is named."""
 
 
 class LookAtBoard(Operation):
@@ -227,9 +232,12 @@ class LookAtBoard(Operation):
         """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
         lines, doctor = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
         places = board_records.ButtonPlaces.of_project(platform.project)
+        sentence, asleep = (str(stop), "") if doctor else board_envelope.asleep_stop(stop, platform.project, places)
+        if asleep:  # P1022: a firmware that deep-sleeps; the fix is the last line, as --json's fix
+            lines = ["%s: %s" % (SCRIPT, sentence), asleep]
         # the port and the button words, each on one line (P430); a tool problem's path is flat already (P444)
         said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)
         return OperationResult({"doctor": board_doctor.as_dict(doctor)} if doctor else None,
-                               [Finding(outcomes.COULD_NOT_RUN, None, stop.reason, str(stop), board_envelope.doctor_fix(doctor, places))],
+                               [Finding(outcomes.COULD_NOT_RUN, None, stop.reason, sentence, board_envelope.doctor_fix(doctor, places) or asleep)],
                                diagnostics=said.split("\n"))
 # --- end MVP ---

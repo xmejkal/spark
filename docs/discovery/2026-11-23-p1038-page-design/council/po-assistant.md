@@ -44,8 +44,8 @@ Format: PO-<n> · claim · tag · pointer · supports only.
   grep -i page` (2 hits, both in the 11:46 section or the rows table) · supports only: in this one walk (n = 1), nobody
   was blocked for lack of a page after the build. It does not say whether the PO opens a better page.
 - PO-6 · The project already has its own "where it stands" tool, outside spark. The project's GitHub repository
-  (xmejkal/p934-epaper-clock, private) holds 13 issues with labels `doing` and `next`: #4 quotes (doing), #7 battery
-  (doing), #8 Czech quotes (doing), #5 and #6 spikes (next), #13 wake wire (open). It also holds PRs #9 and #12 (the
+  (the project's own repository, private) holds 13 issues with labels `doing` and `next`: #4, #7 and #8 (doing),
+  #5 and #6 (next), #13 (open), titles withheld. It also holds PRs #9 and #12 (the
   battery steps, merged). There is also the walk's `diary.md` and `docs/*.md` (battery-finding, refresh-finding,
   candidates). spark holds none of these facts in a record · E `gh issue list --state all` and `gh pr list --state all`
   in p934-display2, 2026-11-23, `gh repo view` → `"isPrivate":true`, `ls docs/` · supports only: Job 1 is done today by
@@ -88,7 +88,7 @@ Format: PO-<n> · claim · tag · pointer · supports only.
   than per-page generation. That reading is H, mine, and the PO decides.
 - PO-12 · A static host is costly or public for this project. GitHub's plans page says GitHub Pages in a private
   repository needs a paid plan, and the free plan covers public repositories only. A privately published Pages site
-  needs GitHub Enterprise Cloud. p934-epaper-clock is private · E web search, 2026-11-23:
+  needs GitHub Enterprise Cloud. The project's repository is private · E web search, 2026-11-23:
   https://docs.github.com/en/get-started/learning-about-github/githubs-plans and
   https://docs.github.com/en/enterprise-cloud@latest/pages/getting-started-with-github-pages/about-privately-published-github-pages-sites
   (search summary, the pages themselves were not fetched), `gh repo view` → private · supports only: the brief's H1 (a
@@ -171,8 +171,7 @@ Each cause is H unless it is tagged. The E causes are already visible today.
   looked empty after the build.
 - PO-23 · The showcase job (Job 3) needed a share, and a share leaked or cost. The private Artifact holds drawer counts
   (D10). A public static host needs a paid plan for a private repository, or a public page (E PO-12). A richer page
-  carried the Wi-Fi name or more (E PO-14, diary rows 18 and 3, "the connected Wi-Fi name in red under the clock" is
-  issue #3 of the project).
+  carried the Wi-Fi name or more (E PO-14, diary rows 18 and 3, and issue #3 of the project, (title withheld: a private repository)).
 - PO-24 · The style drifted or broke a rule. The design skill pushed web fonts or a "distinct identity" each time (E
   PO-11), against D7. Or the hand design was not tokenised in `FlowHtmlPage`, so the next build overwrote it.
 - PO-25 · Overlap churn. Ten cards in Idea each changed the same renderer and the one script. P829's guards (the

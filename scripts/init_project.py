@@ -30,6 +30,12 @@ from spark.core.result import Refusal  # noqa: E402
 #: The --board help (P988 review): init writes the selection, and requirements.json's board wins when it names one (D35).
 BOARD_HELP = ("board id to write in boards/active.json, the selection. When requirements.json names a board, that board "
               "wins (D35). Omit it to see what is available")
+#: The --answers help. The commit and its way back are P1027's, slice 2.
+ANSWERS_HELP = ("a JSON object with the brief's answers in the person's words — goal, must, prefer, sellers, decided — merged "
+                "into project.json: what it states wins (a list replaces the list, so give the whole list; an empty list is a "
+                "statement), what it leaves out or states as null is kept; when project.json already says it, exit 0. When git "
+                "holds project.json with no other change, on a branch, the write is one commit, and git revert --no-edit <sha> "
+                "takes it back (newest first)")
 
 
 def main(argv=None):
@@ -43,10 +49,7 @@ def main(argv=None):
                         help="work on files that exist too: merge what is derived into rules.json (answers stay), "
                              "rewrite project.json only if it has no answers, set boards/active.json when --board "
                              "names one; package.json is never rewritten")
-    parser.add_argument("--answers", metavar="FILE", help="a JSON object with the brief's answers in the person's words — "
-                        "goal, must, prefer, sellers, decided — merged into project.json: what it states wins (a list replaces "
-                        "the list, so give the whole list; an empty list is a statement), what it leaves out or states as null "
-                        "is kept; when project.json already says it, exit 0")
+    parser.add_argument("--answers", metavar="FILE", help=ANSWERS_HELP)
     args = parser.parse_args(argv)
 
     project = Path(args.project).resolve()
@@ -75,7 +78,7 @@ def main(argv=None):
                                  (project / ".spark" / "project.json", PROJECT_TEMPLATE, True, False)):
         did, note = (write_brief(path, answers, Path(args.answers).name) if brief and answers is not None
                      else write(path, payload, args.force, brief=brief, merge=merge, unstated=unstated))
-        notes.append(note)
+        notes += [note] if isinstance(note, str) else note
         written += [path] if did else []
     notes.append(write(project / "package.json", package_file(project), force=False)[1])
     notes.extend(unstated)

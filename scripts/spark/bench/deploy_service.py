@@ -13,6 +13,7 @@ import shlex
 import subprocess
 
 from spark.bench import board_codes
+from spark.bench import board_connection
 from spark.bench.deploy_stages import DeployPhase
 from spark.bench import board_facts
 from spark.records import board_records
@@ -23,6 +24,7 @@ from spark.records import deploy_record_store
 from spark.bench import download_mode
 from spark.bench import image_evidence
 from spark.bench import ready_probe
+from spark.firmware import sleep_calls
 from spark.firmware.project_image import DeployError
 from spark.core.events import Event
 
@@ -34,9 +36,15 @@ DeployPlan = collections.namedtuple("DeployPlan", "flasher commands mpremote not
 #: `start` is None when no wait for a start came (the board answered), else a board_start.BoardStartResult: its `code` is
 #: None when mpremote answered after a restart, else download_mode_stayed or port_gone (P462).
 #: `console` is what the board's console printed after the flash, "" for nothing, or None when it was not read (P1022).
-#: `facts_line` is a board_facts.FactsLine.
-DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command start image_sha256 console",
-                                      defaults=(None, None, None))
+#: `facts_line` is a board_facts.FactsLine. `own_usb` is True when the board's USB is the chip's own, and
+#: `keeps_boot_entry` when the restart after the write cannot leave a download mode entered with BOOT (P1022 slice 3).
+DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command start image_sha256 console "
+                                      "own_usb keeps_boot_entry", defaults=(None, None, None, False, False))
+
+
+def _keeps_boot_entry(planned, row):
+    """True when the plan's flasher cannot leave a BOOT entry and the board's port is Espressif's USB-Serial/JTAG."""
+    return bool(planned.flasher.keeps_boot_entry and row and row.usb == board_connection.USB_SERIAL_JTAG)
 
 
 class FlashError(DeployError):
@@ -56,10 +64,11 @@ class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 fact
 
 def every_read(reads):
     """The last of `reads`, each (the facts, a board_facts.FactsLine, a ReadyResult), with the facts file written and the board's
-    files read when any read did (P1022): a read again after P245 can fail where the first read worked."""
+    files read when any read did (P1022): a read again after P245 can fail where the first read worked. `lost_board` is the
+    last read's."""
     facts, line, ready = reads[-1]
     return (facts, board_facts.FactsLine(line, any(read[1].written for read in reads), line.heard),
-            ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads)))
+            ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads), lost_board=ready.lost_board))
 
 
 def write_board_log(project, log):
@@ -82,6 +91,7 @@ class DeployService:
         self.project, self.platform, self.evidence = project, platform, evidence
         self.run, self.clock, self.report = outside.run, outside.clock, outside.report
         self.records = records or deploy_record_store.DeployRecordStore()
+        self.sleeps = sleep_calls.deep_sleep_calls(project)  # P1022 slice 3: read once, from firmware/
 
     def plan(self, port=None):
         """
@@ -189,7 +199,8 @@ class DeployService:
                                                           "".join(starter.heard) + ready.log + "".join(read[1].heard for read in reads), self.evidence.simulation))
         shown_on = start.port if start else port  # the REPL names the port the board answered on, or none when it is gone
         repl = self.platform.make_connection(planned.mpremote, shown_on, self.run).repl_command()
-        return DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)._replace(console=starter.console)
+        result = DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)._replace(console=starter.console)
+        return result._replace(own_usb=download_mode.own_usb_of(self.project, row and row.usb), keeps_boot_entry=_keeps_boot_entry(planned, row))
 
     def _after_silence(self, starter, row, board, read):
         """(the board read last, a BoardStartResult or None) for a board that stayed silent on the Port `row` after the flash: the
@@ -201,6 +212,8 @@ class DeployService:
             return board, None
         waits, console = probe.waits_in_download_mode()
         starter.console = console
+        if not console.read:  # P1022: an unread port's sentence is no console text; the board log keeps it below
+            starter.console = None
         starter.note("console with DTR and RTS off: %s\n" % (console.strip() or "nothing"))
         if waits:
             self.report(Event.line(DeployPhase.VERIFY, download_mode.press_reset(starter.places)))
@@ -226,7 +239,7 @@ class DeployService:
             return (self._facts_of(image, report, expected, moment), board_facts.FactsLine("facts file: not written: the board's port is gone", False),
                     ready_probe.ReadyResult(ready_probe.UNKNOWN, "", ""))
         facts, facts_line = self._put_facts(image, report, connection, expected, moment)
-        return facts, facts_line, self.platform.make_ready_probe(connection).check(expected)
+        return facts, facts_line, self.platform.make_ready_probe(connection).check(expected, sleeps=self.sleeps.places)
 
     def _facts_of(self, image, report, expected, moment):
         """The facts that spark puts on the board (D22)."""

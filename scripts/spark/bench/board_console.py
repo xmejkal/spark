@@ -70,6 +70,20 @@ ConsoleReadResult = namedtuple("ConsoleReadResult", "kind printed why")
 Cure = namedtuple("Cure", "heard why restart_heard port_back boot_heard", defaults=(False,))
 
 
+class ConsoleText(str):
+    """Value: what a console read gave (P1022). `read` is False for a port it could not read: the text is then UNREAD's
+    sentence, which the board never printed. It is a str, so the board log's note and the tests' tuples stay."""
+
+    def __new__(cls, text, read=True):
+        said = super().__new__(cls, text)
+        said.read = read
+        return said
+
+    def __getnewargs__(self):
+        """The arguments copy, deepcopy and pickle make the ConsoleText again with."""
+        return str(self), self.read
+
+
 def shows_restart(console):
     """True when `console` holds the ROM's line of a restart."""
     return RESTART.search(console) is not None
@@ -127,5 +141,5 @@ class ConsoleProbe:
         mode, and what it says is UNREAD with the reason, never an empty console (P244)."""
         read = self.console()
         if read.kind != KIND_READ:
-            return False, UNREAD % read.why
-        return DOWNLOAD_MODE in read.printed, read.printed
+            return False, ConsoleText(UNREAD % read.why, read=False)
+        return DOWNLOAD_MODE in read.printed, ConsoleText(read.printed)

@@ -27,6 +27,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 from board_library import board_missing  # noqa: E402
+from test_project_commit import a_repository, git, isolated_env  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -816,6 +817,111 @@ class TheBriefAnswersTest(unittest.TestCase):
         self.assertIn("  wrote goal into project.json from answers.json\n", text)
         self.assertNotIn("project.json  prefer", text)
         self.assertIn("  project.json  sellers\n", text)
+
+
+#: The lines of a brief write in git (P1027, slice 2), as the card names them: literals, not the code's own.
+COMMITTED = "  committed as %s. To go back, run in this project: git revert --no-edit %s (the newest change first)\n"
+UNHELD_LINE = ("  not committed: git does not hold .spark/project.json here, so git cannot take this change back. Ask Claude, "
+               "and Claude puts the old lines back\n")
+UNCOMMITTED_LINE = ("  not committed: .spark/project.json has changes of yours that are not in git yet. Commit them first, and "
+                    "spark's next change will be committed on its own\n")
+NOT_ON_BRANCH_LINE = ("  not committed: git is not on a branch now (a detached HEAD or a rebase that stopped), and a commit made "
+                      "now can be lost. Your change is written\n")
+WIFI, BATTERY, DATE = "The time comes from the internet over Wi-Fi.", "It runs a week on a battery.", "It shows the date."
+
+
+class TheBriefWriteIsOneCommitTest(unittest.TestCase):
+    """
+    P1027 (#1506), slice 2: when git holds `.spark/project.json` as it is, on a branch, `--answers` makes its change one
+    commit, and `git revert --no-edit <sha>` takes it back. Else the brief is written as before, and one line says why
+    there is no commit. Each repository is a scratch one, with an empty HOME and global config.
+    """
+
+    _init, _brief = TheBriefAnswersTest._init, TheBriefAnswersTest._brief
+
+    def setUp(self):
+        patcher = mock.patch.dict(os.environ, isolated_env())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _answers(self, root, payload):
+        path = Path(tempfile.mkdtemp()) / "answers.json"  # outside the repository, as Claude writes it
+        path.write_text(json.dumps(payload))
+        return str(path)
+
+    def _committed_project(self, must=(WIFI, BATTERY)):
+        root, _ = a_repository()
+        self._init(root, "--answers", self._answers(root, {"goal": "a clock", "must": list(must)}))
+        git(root, "add", ".spark/project.json")
+        git(root, "commit", "-q", "-m", "the brief")
+        return root
+
+    def _sha_in(self, text):
+        found = re.search(r"  committed as ([0-9a-f]+)\. ", text)
+        self.assertIsNotNone(found, text)
+        return found.group(1)
+
+    def test_a_dropped_must_line_is_one_commit_and_its_printed_way_back_gives_the_old_list(self):
+        root = self._committed_project()
+        code, text, _ = self._init(root, "--answers", self._answers(root, {"must": [BATTERY]}))
+        self.assertEqual(code, init_project.EXIT_OK)
+        sha = self._sha_in(text)
+        self.assertIn(COMMITTED % (sha, sha), text)
+        self.assertEqual(git(root, "log", "-1", "--format=%s"), "spark: must in .spark/project.json")
+        self.assertEqual(git(root, "show", "--name-only", "--format=", sha), ".spark/project.json")
+        self.assertEqual(self._brief(root)["must"], [BATTERY])
+        git(root, "revert", "--no-edit", sha)
+        self.assertEqual(self._brief(root)["must"], [WIFI, BATTERY])
+
+    def test_two_brief_commits_go_back_newest_first(self):
+        root = self._committed_project()
+        first = self._sha_in(self._init(root, "--answers", self._answers(root, {"must": [BATTERY]}))[1])
+        second = self._sha_in(self._init(root, "--answers", self._answers(root, {"must": [BATTERY, DATE]}))[1])
+        git(root, "revert", "--no-edit", second)
+        self.assertEqual(self._brief(root)["must"], [BATTERY])
+        git(root, "revert", "--no-edit", first)
+        self.assertEqual(self._brief(root)["must"], [WIFI, BATTERY])
+
+    def test_not_in_git_the_brief_is_written_and_the_line_says_git_cannot_take_it_back(self):
+        root = Path(tempfile.mkdtemp())
+        code, text, _ = self._init(root, "--answers", self._answers(root, {"goal": "a clock", "must": [WIFI]}))
+        self.assertEqual((code, self._brief(root)["must"]), (init_project.EXIT_OK, [WIFI]))
+        self.assertIn(UNHELD_LINE, text)
+
+    def test_the_same_answers_again_make_no_commit_and_no_line(self):
+        root = self._committed_project()
+        head = git(root, "rev-parse", "HEAD")
+        code, text, _ = self._init(root, "--answers", self._answers(root, {"must": [WIFI, BATTERY]}))
+        self.assertEqual((code, git(root, "rev-parse", "HEAD")), (init_project.EXIT_OK, head))
+        self.assertIn("  project.json already says what answers.json says\n", text)
+        self.assertNotIn("committed", text)
+
+    def test_a_brief_with_edits_of_the_person_s_is_written_and_not_committed(self):
+        root = self._committed_project()
+        brief = json.loads((root / ".spark" / "project.json").read_text())
+        (root / ".spark" / "project.json").write_text(json.dumps(dict(brief, goal="a clock, said by hand"), indent=2) + "\n")
+        head = git(root, "rev-parse", "HEAD")
+        code, text, _ = self._init(root, "--answers", self._answers(root, {"must": [BATTERY]}))
+        self.assertEqual((code, git(root, "rev-parse", "HEAD")), (init_project.EXIT_OK, head))
+        self.assertEqual((self._brief(root)["goal"], self._brief(root)["must"]), ("a clock, said by hand", [BATTERY]))
+        self.assertIn(UNCOMMITTED_LINE, text)
+
+    def test_a_detached_head_is_written_and_not_committed(self):
+        root = self._committed_project()
+        git(root, "checkout", "-q", "--detach")
+        head = git(root, "rev-parse", "HEAD")
+        code, text, _ = self._init(root, "--answers", self._answers(root, {"must": [BATTERY]}))
+        self.assertEqual((code, git(root, "rev-parse", "HEAD"), self._brief(root)["must"]), (init_project.EXIT_OK, head, [BATTERY]))
+        self.assertIn(NOT_ON_BRANCH_LINE, text)
+
+    def test_a_refusing_hook_says_the_change_is_written_and_what_git_said(self):
+        root = self._committed_project()
+        hook = root.parent / "hooks" / "pre-commit"
+        hook.write_text("#!/bin/sh\necho 'the hook says no' >&2\nexit 1\n")
+        hook.chmod(0o755)
+        code, text, _ = self._init(root, "--answers", self._answers(root, {"must": [BATTERY]}))
+        self.assertEqual((code, self._brief(root)["must"]), (init_project.EXIT_OK, [BATTERY]))
+        self.assertIn("  not committed: your change is written, only the commit failed. Git said: the hook says no\n", text)
 # --- end MVP ---
 
 
