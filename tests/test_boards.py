@@ -1088,12 +1088,14 @@ class TheProjectsBoardIsTheRequirementsBoardTest(unittest.TestCase):
         self.assertEqual(board_records.get(root, "chip"), "esp32c6")
 
     def test_requirements_that_name_no_board_give_the_selection(self):
-        for text in (None, "{}", json.dumps({"board": None}), json.dumps({"board": ""}), json.dumps({"board": []})):
+        for text in (None, "{}", json.dumps({"board": None}), json.dumps({"board": ""})):
             with self.subTest(requirements=text):
                 self.assertEqual(self.board_of_each_reader(self.apart(text)), {"firebeetle2-esp32s3"})
 
     def test_a_requirements_json_that_cannot_be_read_is_refused_and_never_gives_the_selection(self):
-        for text in ("{not json", "[]", json.dumps({"board": ["xiao-esp32-c6"]}), json.dumps({"board": 3})):
+        # P988 review: only null, "" or no key names no board; any other value that is no string is refused, never the selection
+        for text in ("{not json", "[]", json.dumps({"board": ["xiao-esp32-c6"]}), json.dumps({"board": 3}),
+                     json.dumps({"board": False}), json.dumps({"board": 0}), json.dumps({"board": {}}), json.dumps({"board": []})):
             with self.subTest(requirements=text):
                 root = self.apart(text)
                 with self.assertRaises(board_records.BoardError) as refused:
@@ -1107,6 +1109,7 @@ class TheProjectsBoardIsTheRequirementsBoardTest(unittest.TestCase):
         with self.assertRaises(board_records.BoardError) as refused:
             board_records.load(root)
         self.assertEqual(refused.exception.code, "no_board_definition")
+
 
 class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
     """
