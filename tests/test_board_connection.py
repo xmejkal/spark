@@ -233,6 +233,12 @@ class QuietScriptTest(unittest.TestCase):
         self.assertEqual(done.stderr.splitlines()[-1], REFUSED)
         self.assertNotIn("spark: ", done.stdout)
 
+    def test_the_note_keeps_only_the_last_400_bytes_of_a_read(self):
+        done = self.run_script(KEEP="1", HEARD="boot head " + "x" * 400 + " ready tail", REFUSE="1")
+        note = next((line for line in done.stderr.splitlines() if line.startswith("spark: ")), "")
+        self.assertIn("ready tail", note)
+        self.assertNotIn("boot head", note)
+
     def test_a_port_that_vanished_and_then_refused_says_it_came_back(self):
         done = self.run_script(REFUSE="1")
         self.assertEqual(done.returncode, 1, done.stderr)
