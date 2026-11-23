@@ -23,6 +23,7 @@ from spark.core.cli import (DEFAULT_RUN, FOLLOW_FAILED_MESSAGE, REFRESH_FAILED_M
 from spark.core.renderers import FlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
+from spark.core.view_reporter import TextViewReporter  # noqa: E402
 from spark.core.operation import ASKS, COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, WRITES, Argument, Operation  # noqa: E402
 from spark.core.privacy import Privacy  # noqa: E402
 from spark.core.outside import OutsideWorld, ProgramRunner, build_bare_outside_world, build_outside_world, refuse_replies  # noqa: E402
@@ -354,7 +355,8 @@ class RunCliTest(unittest.TestCase):
             code = run_cli(TEXT, Toy(), ["--project", "here", "--what", "ok"], outside_builder=builder)
             again = run_cli(TEXT, Toy(), ["--project", "here", "--what", "ok", "--json"], outside_builder=builder)
         # P737: the parsed values reach the builder, with the json flag the Operation never sees, so a frontend keeps a terminal out of an envelope run
-        self.assertEqual((code, again, asked), (0, 0, [(Path("here"), (READS,), TerminalReporter, "ok", False), (Path("here"), (READS,), TerminalReporter, "ok", True)]))
+        # P478: the text run's Reporter is the text view's, the --json run's prints on stderr
+        self.assertEqual((code, again, asked), (0, 0, [(Path("here"), (READS,), TextViewReporter, "ok", False), (Path("here"), (READS,), TerminalReporter, "ok", True)]))
 
     def test_the_builder_gets_the_effects_the_operation_narrows_to_for_these_values(self):
         asked = []

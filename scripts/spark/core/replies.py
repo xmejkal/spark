@@ -157,9 +157,9 @@ class Terminal:
     def live(self):
         return self.stdin.isatty() and self.stdout.isatty()
 
-    def text_style(self):
-        """The TextStyle of this terminal's stdout in this process's environment (P1032)."""
-        return text_style_of(self.stdout, os.environ)
+    def text_style(self, environ=None):
+        """The TextStyle of this terminal's stdout in `environ`, or in this process's environment when None (P1032, P478)."""
+        return text_style_of(self.stdout, os.environ if environ is None else environ)
 
     def say(self, text):
         self.stdout.write(guard_lines(self.mask(text)) + "\n")

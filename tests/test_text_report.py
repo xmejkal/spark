@@ -190,7 +190,7 @@ class ThePaintersTest(unittest.TestCase):
             raise TypeError("__init__() got an unexpected keyword argument 'soft_wrap'")  # rich 6.0.0
         old_rich = types.SimpleNamespace(Console=console, Text=object)
         result = a_result()
-        self.assertEqual(TextReport.render(result, COLOUR, "look", importer=lambda: old_rich), TextReport.render(result, PLAIN, "look"))
+        self.assertEqual(TextReport.render(result, COLOUR, "look", painter_for(COLOUR, lambda: old_rich)), TextReport.render(result, PLAIN, "look"))
 
     @needs_rich
     def test_the_coloured_form_is_the_plain_form_plus_sgr_codes(self):

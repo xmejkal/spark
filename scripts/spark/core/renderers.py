@@ -3,7 +3,7 @@ The Renderers of an OperationResult (P657): `JsonEnvelope`, the default of `Oper
 which the bench scripts keep, `JsonDocument`, its indented sibling, which check_all keeps (P804), and `FullEnvelope`,
 parts.py's envelope with every key (P707), each a `--json` line; and `TextReport`, the text view a person reads (P1032):
 a result with a headline as a status line, the facts, the findings with their fix, a Note and the next step, painted
-plain or, through rich when it imports, in colour.
+plain or, through rich when it imports, in colour, and `StatusLine`, the status line alone (P478).
 """
 
 import io
@@ -162,22 +162,28 @@ class TextReport:
     """Renderer: an OperationResult as a person reads it, as one text. It decides nothing again. A result with no
     headline gives its lines as they are; one with a headline gives the layout (P1032)."""
 
-    @staticmethod
-    def render(result, style=PLAIN, tool=None, importer=import_rich):
-        """The text of `result` in `style`. `tool` is the op's name on the status line. A rich paint that raises gives
-        the plain text."""
+    @classmethod
+    def render(cls, result, style=PLAIN, tool=None, painter=None):
+        """The text of `result` in `style`. `tool` is the op's name on the status line, and `painter` paints it (None:
+        `painter_for(style, import_rich)`; the CLI gives the one its View chose, P478). A paint that raises gives the plain
+        text."""
         if result.headline is None:
             return "\n".join(result.lines)
-        return paint_or_plain(painter_for(style, importer), TextReport.layout(result, style, tool))
+        return paint_or_plain(painter or painter_for(style, import_rich), cls.layout(result, style, tool))
 
     @staticmethod
-    def layout(result, style, tool):
+    def status_line(result, style, tool):
+        """The status line's spans: the headline's mark, then the op, the status word and the headline's sentence."""
+        headline = result.headline
+        mark = (MARK_SYMBOLS if style.symbols else MARK_WORDS)[headline.mark]
+        return [(mark, "mark-" + headline.mark), (" %s: %s. %s" % (tool, result.status(), printable(headline.sentence)), "status")]
+
+    @classmethod
+    def layout(cls, result, style, tool):
         """The lines of the text view, each a list of (text, role) spans: the status line, the facts, then the findings,
         the Note and Next, each block after a blank line. A command is always the last line, alone."""
         headline = result.headline
-        mark = (MARK_SYMBOLS if style.symbols else MARK_WORDS)[headline.mark]
-        status = " %s: %s. %s" % (tool, result.status(), printable(headline.sentence))
-        lines = [[(mark, "mark-" + headline.mark), (status, "status")], []]
+        lines = [cls.status_line(result, style, tool), []]
         lines += [[(line, "fact")] for line in result.lines]
         notes = list(result.notes or ()) + list(headline.text_notes)
         blocks = [TextReport.findings_block(result.findings, headline),
@@ -219,4 +225,14 @@ class TextReport:
             {each.severity for each in result.findings}
         first = next((heading for severity, heading in reversed(SECTIONS) if severity in severities), None)
         return [[("  Next:", "heading")], [("    " + NO_COMMAND_MESSAGE % first, "fact")]] if first else []
+
+
+class StatusLine(TextReport):
+    """Renderer: a result with a headline as a blank line and its status line, nothing more (P478): the run's events said
+    the facts, the findings and the commands as they came, so the verdict is the last line, where the eye rests. A
+    result with no headline gives its lines as `TextReport` does."""
+
+    @classmethod
+    def layout(cls, result, style, tool):
+        return [[], cls.status_line(result, style, tool)]
 # --- end MVP ---

@@ -4,7 +4,9 @@
 
 import contextlib
 import io
+import os
 import re
+import subprocess
 import sys
 import types
 import unittest
@@ -17,14 +19,14 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from fakes import FakeOutsideWorld  # noqa: E402
-from spark.core.cli import HelpText, run_cli  # noqa: E402
+from fakes import FakeOutsideWorld, Stream  # noqa: E402
+from spark.core.cli import HelpText, run_cli, view_for  # noqa: E402
 from spark.core.events import Event, Reporter, TerminalReporter  # noqa: E402
 from spark.core.operation import COMMON_ARGUMENTS, READS, Argument, Operation  # noqa: E402
 from spark.core.privacy import MaskingReporter, Privacy  # noqa: E402
-from spark.core.renderers import PlainPainter, RichPainter, import_rich, painter_for  # noqa: E402
-from spark.core.result import OperationResult  # noqa: E402
-from spark.core.text_style import TextStyle  # noqa: E402
+from spark.core.renderers import JsonEnvelope, PlainPainter, RichPainter, StatusLine, TextReport, import_rich, painter_for  # noqa: E402
+from spark.core.result import MARK_OK, Headline, OperationResult  # noqa: E402
+from spark.core.text_style import PLAIN, TextStyle, text_style_of  # noqa: E402
 from spark.core.view_reporter import TextViewReporter  # noqa: E402
 from suite_runs import needs_rich  # noqa: E402
 
@@ -139,6 +141,97 @@ class TheRichHeadingTest(unittest.TestCase):
             raise TypeError("__init__() got an unexpected keyword argument 'soft_wrap'")
         painter = RichPainter(types.SimpleNamespace(Console=console, Text=object))
         self.assertEqual(shown(TextViewReporter(io.StringIO(), painter, PLAN_LOOK), [Event.begin("look")]), "[2/2] look\n")
+
+
+class Staged(Operation):
+    """Operation: one with two stages and a headline, rendered by StatusLine."""
+
+    name = "staged"
+    arguments = (COMMON_ARGUMENTS["json"],)
+    stages = PLAN_LOOK
+    text_renderer = StatusLine
+
+    def run(self, *, outside):
+        return OperationResult({"a": 1}, headline=Headline("All done.", MARK_OK))
+
+
+class TheViewTest(unittest.TestCase):
+    """`view_for` is the one place that decides --json, pipe or terminal, from the inputs it is given (test 6)."""
+
+    def setUp(self):
+        self.imported = []
+
+    def importer(self):
+        self.imported.append(1)
+        return types.SimpleNamespace(Console=None, Text=None)
+
+    def test_json_is_plain_on_stderr_with_the_json_renderer_and_never_imports_rich(self):
+        out, err = Stream(tty=True), io.StringIO()
+        view = view_for(Staged(), True, (out, err), {"TERM": "xterm", "FORCE_COLOR": "1"}, self.importer)
+        result = OperationResult({"a": 1}, headline=Headline("All done.", MARK_OK))
+        self.assertEqual((view.style, view.painter, type(view.reporter), view.reporter.stream, self.imported),
+                         (PLAIN, PlainPainter, TerminalReporter, err, []))
+        self.assertEqual(view.render(result, "staged"), JsonEnvelope.render(result, "staged", "staged"))
+
+    def test_a_pipe_is_plain_with_the_text_view_reporter_and_never_imports_rich(self):
+        out = Stream(tty=False)
+        view = view_for(Staged(), False, (out, io.StringIO()), {"TERM": "xterm"}, self.importer)
+        self.assertEqual((view.style, view.painter, type(view.reporter), view.reporter.stream, view.reporter.names, self.imported),
+                         (PLAIN, PlainPainter, TextViewReporter, out, ["plan", "look"], []))
+        self.assertEqual(view.render(Staged().run(outside=None), "staged"), "\n✓ staged: ok. All done.")
+
+    def test_a_terminal_has_colour_and_imports_rich_once(self):
+        view = view_for(Staged(), False, (Stream(tty=True), io.StringIO()), {"TERM": "xterm"}, self.importer)
+        self.assertEqual((view.style.colour, type(view.painter), view.reporter.painter, self.imported), (True, RichPainter, view.painter, [1]))
+
+    def test_the_environment_defaults_to_the_terminal_s_own(self):
+        out = io.StringIO()
+        self.assertEqual(view_for(Staged(), False, (out, io.StringIO())).style, text_style_of(out, os.environ))
+
+
+class TheStatusLineTest(unittest.TestCase):
+    """StatusLine is a blank line and the status line, nothing more; with no headline the lines as they are (test 7)."""
+
+    def test_a_headline_gives_a_blank_line_and_the_status_line(self):
+        result = OperationResult({}, lines=["a fact"], headline=Headline("Stop: x.", "stop"))
+        self.assertEqual(StatusLine.render(result, PLAIN, "deploy"), "\n✗ deploy: ok. Stop: x.")
+        self.assertEqual(StatusLine.render(result, PLAIN, "deploy").split("\n")[1], TextReport.render(result, PLAIN, "deploy").split("\n")[0])
+
+    def test_no_headline_and_no_lines_is_empty_and_no_headline_gives_the_lines(self):
+        self.assertEqual(StatusLine.render(OperationResult(None), PLAIN, "deploy"), "")
+        self.assertEqual(StatusLine.render(OperationResult(None, lines=["one", "two"]), PLAIN, "deploy"), "one\ntwo")
+
+    def test_a_rich_that_raises_gives_the_plain_status_line(self):
+        def console(**settings):
+            raise TypeError("__init__() got an unexpected keyword argument 'soft_wrap'")
+        result = OperationResult({}, headline=Headline("All done.", MARK_OK))
+        painter = RichPainter(types.SimpleNamespace(Console=console, Text=object))
+        self.assertEqual(StatusLine.render(result, COLOUR, "deploy", painter), StatusLine.render(result, PLAIN, "deploy"))
+
+
+#: A CLI whose result has a headline and a diagnostics line, run as a child with stdout and stderr on one pipe.
+CHILD = """
+import sys
+sys.path.insert(0, %r)
+from spark.core.cli import HelpText, run_cli
+from spark.core.operation import COMMON_ARGUMENTS, Operation
+from spark.core.renderers import StatusLine
+from spark.core.result import Headline, OperationResult
+class Said(Operation):
+    name, arguments, text_renderer = "said", (COMMON_ARGUMENTS["json"],), StatusLine
+    def run(self, *, outside):
+        return OperationResult({}, diagnostics=["said.py: the reason"], headline=Headline("Not done.", "unchecked"))
+sys.exit(run_cli(HelpText("said.py"), Said(), [], outside_builder=lambda *given: None))
+""" % str(ROOT / "scripts")
+
+
+class TheOrderTest(unittest.TestCase):
+    """stdout is flushed before the diagnostics, so the status line comes before them on one pipe (test 15)."""
+
+    def test_the_status_line_comes_before_the_diagnostics(self):
+        done = subprocess.run([sys.executable, "-c", CHILD], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                              stdin=subprocess.DEVNULL, timeout=60, env={"PYTHONIOENCODING": "utf-8"})
+        self.assertEqual(done.stdout, "\n? said: ok. Not done.\nsaid.py: the reason\n")
 
 
 if __name__ == "__main__":
