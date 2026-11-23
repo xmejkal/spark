@@ -196,6 +196,7 @@ class DeployService:
                                            self.report, usb=row.usb)
             return latest[-1], start
         if download_mode.booted(console):  # P245: mpremote asked while the board still restarted
+            starter.note(download_mode.first_read(board[2]))  # P1025: the first read's words stay in the board log
             starter.note(download_mode.READ_AGAIN + "\n")
             return read(port), None
         return board, None

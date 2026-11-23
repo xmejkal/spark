@@ -26,6 +26,9 @@ PORT_GONE = ("the board's port is gone: press its %(reset)s once%(orientation)s.
              "plug it in, then run `python3 -m mpremote devs` to see its port")
 #: What the board log adds when the console heard the firmware's `ready`, and deploy.py read the board again (P245).
 READ_AGAIN = "read again"
+#: What the board log keeps of the first read when deploy.py reads the board again (P1025): its verdict and sentence,
+#: then all that mpremote printed, with P1022's settle note, formatted by first_read.
+FIRST_READ = "the first read: %s: %s\n"
 
 
 def press_reset(places=board_records.ButtonPlaces.EMPTY):
@@ -46,6 +49,13 @@ def not_counted(places=board_records.ButtonPlaces.EMPTY):
 def port_gone(places=board_records.ButtonPlaces.EMPTY):
     """PORT_GONE with the RESET button's place from `places`."""
     return PORT_GONE % {"reset": places.reset, "orientation": places.orientation}
+
+
+def first_read(ready):
+    """FIRST_READ for the first read's ReadyResult `ready`, then its log. The log ends its last line, so the board log's
+    next line starts a line of its own (P1025)."""
+    log = ready.log.rstrip("\n") + "\n" if ready.log else ""
+    return FIRST_READ % (ready.verdict, ready.sentence) + log
 
 
 def booted(console):
