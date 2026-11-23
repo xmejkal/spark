@@ -154,7 +154,7 @@ The needs phase reads `.spark/needs-basis.json` ([P1027](https://github.com/xmej
 --needs-set` writes it when a write defines a need or is a review (`[]`). It holds the sha256 of the brief's goal and of
 its must lines, sorted, as they were then. If either is different now, the needs phase is `stale`. Its `says` then holds
 the needs line, what changed (`the goal changed after the needs were written`, `the must lines changed …` or `the goal
-and the must lines changed …`) and `review the needs and the must lines with Claude: spark changes none of them itself`.
+and the must lines changed …`) and `Claude goes through the needs and the must lines with you, and when they still fit, runs parts.py --needs-set with []: spark changes none of them itself`. That `[]` run clears the mark.
 The guide's NOW is the needs phase, by Claude, with no offer. The drop offers stay. A project with no such record (one
 written before P1027), or a brief with no goal, says what it said before. A record or a brief that spark cannot read
 keeps the phase `ok` and adds one line: `spark cannot tell whether the needs fit the goal: <the reason>`. The reader writes

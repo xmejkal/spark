@@ -17,8 +17,8 @@ class SetNeeds(AnswerOperation):
     name = "needs-set"
     data_keys = ('changes', 'written', 'basis_noted')
     arguments = (Argument(("--needs-set",), "project_and_items", str,
-                          "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds, "
-                          "and notes the goal and the must lines they were written from",
+                          "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds. "
+                          "A write that defines a need, or [], also notes the goal and the must lines",
                           nargs=2, metavar=("PROJECT", "FILE"), payload=1),
                  ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, WRITES)

@@ -31,7 +31,9 @@ NO_NEEDS_MESSAGE = "no needs yet: Claude writes them from your goal"
 #: CHANGED_WORDS joined with " and ", then the review line. Spark edits none of them.
 NEEDS_STALE_MESSAGE = "%s changed after the needs were written"
 CHANGED_WORDS = {"goal": "the goal", "must": "the must lines"}
-NEEDS_REVIEW_MESSAGE = "review the needs and the must lines with Claude: spark changes none of them itself"
+#: Read by the person and by Claude: who reviews, and how the mark clears.
+NEEDS_REVIEW_MESSAGE = ("Claude goes through the needs and the must lines with you, and when they still fit, runs "
+                        "parts.py --needs-set with []: spark changes none of them itself")
 #: Said when the record or the brief cannot be read: the needs phase stays ok, with the reason.
 BASIS_UNKNOWN_MESSAGE = "spark cannot tell whether the needs fit the goal: %s"
 BASIS_BROKEN = ".spark/needs-basis.json cannot be read"
@@ -257,7 +259,9 @@ NEEDS_STALE_NOW = ("Your goal or must lines changed after the needs were written
                    "Ask Claude to go through the needs and the must lines with you.")
 PROBLEMS_NOW = "The %s phase has problems. Ask Claude to go through them with you."
 COULD_NOT_RUN_NOW = "The %s phase could not run. Ask Claude to read you why."
-NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (NEEDS, STALE): NEEDS_STALE_NOW, (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW, (PARTS, OK_WORD): ALL_ASIDE_NOW,
+NOW_SENTENCES = {(IDEA, None): IDEA_NOW,
+                 (NEEDS, STALE): NEEDS_STALE_NOW,
+                 (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW, (PARTS, OK_WORD): ALL_ASIDE_NOW,
                  (REQUIREMENTS, NOT_STARTED): REQUIREMENTS_NOW, (REQUIREMENTS, STALE): REQUIREMENTS_STALE_NOW,
                  (BUILD, NOT_STARTED): BUILD_NOW, (BUILD, STALE): BUILD_STALE_NOW, (BUILD, PARTIAL): BUILD_PARTIAL_NOW,
                  (BREADBOARD, NOT_STARTED): SHEET_NOW, (BREADBOARD, STALE): SHEET_STALE_NOW, (FIRMWARE, NOT_STARTED): FIRMWARE_NOW,

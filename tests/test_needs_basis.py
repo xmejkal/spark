@@ -279,7 +279,8 @@ def digest(*folders):
 
 
 NEEDS_LINE = "2 need(s): board, screen"
-REVIEW = "review the needs and the must lines with Claude: spark changes none of them itself"
+REVIEW = ("Claude goes through the needs and the must lines with you, and when they still fit, runs parts.py --needs-set with []: "
+          "spark changes none of them itself")
 STALE_NOW = "Your goal or must lines changed after the needs were written. Ask Claude to go through the needs and the must lines with you."
 CANNOT_TELL = "spark cannot tell whether the needs fit the goal: %s"
 
