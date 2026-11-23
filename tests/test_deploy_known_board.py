@@ -16,11 +16,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import bench_privacy  # noqa: E402
+from spark.bench import board_doctor  # noqa: E402
 from spark.bench import known_board  # noqa: E402
 from spark.core.events import TerminalReporter  # noqa: E402
 from spark.core.privacy import MaskingReporter  # noqa: E402
 from spark.core.replies import ReplyStrategy, reply_strategy_for  # noqa: E402
-from fakes import FakeConsent, FakeOutsideWorld  # noqa: E402
+from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld  # noqa: E402
 from test_board_look import C6_MAC, C6_PORT, data  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
 
@@ -221,6 +222,41 @@ class TheDeployAsksTheBoardQuestionTest(DeployKnownBoardCase):
         path.write_text("{not json")
         code, _, err = self.deploy("--json", "--token", self.token(), consent=FakeConsent(True), reporter=reporter)
         self.assertIn(str(path), err)
+
+
+class TheNamedPortOffUsbTest(DeployKnownBoardCase):
+    """P1049: deploy.py --port on a port the list does not hold, the board question answered yes and esptool failing: the
+    doctor's plug_in step becomes the asleep fix when firmware/ calls deepsleep, as look.py --port says it."""
+
+    def off_usb(self, *argv):
+        """(exit code, stdout, stderr) of the deploy after the person's yes to the board question."""
+        go = dict(consent=FakeConsent(True), devs="mpremote-devs-none.txt", look_fails=True, probe=FakeConsoleProbe(""))
+        named = ("--token", "aaaa-bbbb", "--port", "/dev/cu.usbmodem101")
+        if not self.yes_file.exists():
+            self.deploy(*named, **go)
+            self.answer(True)
+        return self.deploy(*argv, *named, "--replies", str(self.yes_file), **go)
+
+    def test_a_deepsleep_call_gives_the_asleep_fix_as_the_doctor_s_next_step(self):
+        self.run_the_scenario()
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.deepsleep(1)\n")
+        code, _, problems = self.off_usb()
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("deploy.py: could not read the board on /dev/cu.usbmodem101", problems)
+        last = problems.strip().splitlines()[-1]
+        self.assertTrue(last.startswith("  next    What spark knows: the port you named is not on USB, and the project's firmware "
+                                        "calls deepsleep (firmware/main.py:2)."), last)
+        self.assertNotIn("plug the board straight", problems)
+        (item,) = json.loads(self.off_usb("--json")[1].splitlines()[-1])["unchecked"]
+        self.assertEqual((item["code"], item["fix"]), ("board_not_read", last[len("  next    "):]))
+
+    def test_without_a_deepsleep_call_the_doctor_s_plug_in_step_stays(self):
+        self.run_the_scenario()
+        code, _, problems = self.off_usb()
+        self.assertEqual(code, 2)
+        self.assertEqual(problems.strip().splitlines()[-1], "  next    " + board_doctor.step_sentence("plug_in"))
+        (item,) = json.loads(self.off_usb("--json")[1].splitlines()[-1])["unchecked"]
+        self.assertEqual((item["code"], item["fix"]), ("board_not_read", board_doctor.step_sentence("plug_in")))
 
 
 if __name__ == "__main__":

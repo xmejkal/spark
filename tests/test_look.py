@@ -685,6 +685,44 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.assertEqual(board_envelope.asleep_after_doctor(close_other, "/dev/cu.usbmodem101", self.project, places), "")
         self.assertEqual(board_envelope.asleep_after_doctor(None, "/dev/cu.usbmodem101", self.project, places), "")
 
+    #: look.py --port on a port the list does not hold, esptool failing: the doctor's lines (the refuter's find of P1049).
+    NAMED_NOT_LISTED = ["look.py: could not read the board on /dev/cu.usbmodem101",
+                        "  check   port-listed: mpremote devs does not list /dev/cu.usbmodem101 (it lists: none)",
+                        "  next    plug the board straight into the computer with a data cable, not a hub that gives power only, "
+                        "and run it again"]
+
+    def named_not_listed(self, *argv):
+        """(stderr lines, the one unchecked item of --json) of look.py --port on a port that mpremote devs does not list."""
+        go = dict(devs="mpremote-devs-none.txt", fail=True)
+        return self.stops("--port", "/dev/cu.usbmodem101", **go).splitlines(), self.unchecked("--port", "/dev/cu.usbmodem101", **go)
+
+    def test_a_named_port_off_usb_with_a_deepsleep_call_gets_the_asleep_fix_as_the_doctor_s_next_step(self):
+        # P1049: the doctor's plug_in step was the cable advice of the 14:05 sighting again
+        self.sleeper("import machine\nmachine.deepsleep(1)\n")
+        problems, unchecked = self.named_not_listed()
+        self.assertEqual(problems[:2], self.NAMED_NOT_LISTED[:2])
+        self.assertEqual(len(problems), 3)
+        self.assertTrue(problems[2].startswith("  next    What spark knows: the port you named is not on USB, and the project's "
+                                               "firmware calls deepsleep (firmware/main.py:2). " + OWN_USB_SLEEP), problems[2])
+        self.assertFalse([line for line in problems if "plug the board straight" in line])
+        self.assertEqual((unchecked["code"], unchecked["fix"]), ("board_not_read", problems[2][len("  next    "):]))
+        self.assertNotEqual(unchecked["fix"], self.NAMED_NOT_LISTED[2][len("  next    "):])
+        code, said, _ = self.go("--json", "--port", "/dev/cu.usbmodem101", devs="mpremote-devs-none.txt", fail=True)
+        self.assertEqual(json.loads(said[-1])["data"]["doctor"]["next_step"], "plug_in", "D4: the data is what the doctor saw")
+
+    def test_a_named_port_off_usb_without_a_deepsleep_call_keeps_the_doctor_s_step(self):
+        self.sleeper("import machine\nmachine.lightsleep(1)\n")
+        problems, unchecked = self.named_not_listed()
+        self.assertEqual(problems, self.NAMED_NOT_LISTED)
+        self.assertEqual((unchecked["code"], unchecked["fix"]), ("board_not_read", self.NAMED_NOT_LISTED[2][len("  next    "):]))
+
+    def test_a_named_port_off_usb_with_a_file_that_does_not_parse_keeps_the_doctor_s_step(self):
+        # D3: after the doctor, only a found deepsleep call replaces the cable step
+        self.sleeper("import machine\nmachine.deepsleep(1\n")
+        problems, unchecked = self.named_not_listed()
+        self.assertEqual(problems, self.NAMED_NOT_LISTED)
+        self.assertEqual(unchecked["fix"], self.NAMED_NOT_LISTED[2][len("  next    "):])
+
     def test_a_firmware_file_that_does_not_parse_is_named_and_the_cable_sentence_stays(self):
         self.sleeper("import machine\nmachine.deepsleep(1\n")
         self.assertEqual(self.stops(devs="mpremote-devs-none.txt").splitlines(), [

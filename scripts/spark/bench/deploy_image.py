@@ -239,11 +239,10 @@ class DeployFlowService:
         lines = ["%s: %s" % (SCRIPT, cannot)]
         if isinstance(cannot, board_look.LookStopError):
             lines, reached["doctor"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)
-            project = self.service.project
-            sentence, asleep = board_envelope.asleep_stop(cannot, project, board_records.ButtonPlaces.of_project(project))
-            if asleep and not reached["doctor"]:  # P1022: a firmware that deep-sleeps, said as look.py says it
-                reached.update(refusal=sentence, fix=asleep)
-                lines = ["%s: %s" % (SCRIPT, sentence), asleep]
+            # P1022, P1049: a firmware that deep-sleeps, said as look.py says it; `fix` can also be the doctor's step
+            lines, sentence, fix = board_envelope.stop_said(SCRIPT, cannot, (lines, reached["doctor"]), self.asked.port, self.service.project)
+            if fix:
+                reached.update(refusal=sentence, fix=fix)
         self.outside.add_diagnostics(lines)
         return EXIT_COULD_NOT_RUN
 

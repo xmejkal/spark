@@ -237,7 +237,8 @@ def _finding(reached, code):
     `ready` once the board was read, its code the reason, its fix the doctor's step, the fix the run said (P1022) or the
     step of what it waits for."""
     result, doctor = reached.get("result"), reached.get("doctor")
-    fix = (doctor_fix(doctor, board_records.ButtonPlaces.of_project(reached["project"])) if doctor
+    # reached["fix"]: the fix the run said, or the doctor's step; it wins over the doctor's step, so an asleep fix stays (P1049)
+    fix = (doctor_fix(doctor, board_records.ButtonPlaces.of_project(reached["project"])) if doctor and not reached.get("fix")
            else reached.get("fix") or FIX_FOR_NEXT.get(reached.get("next_op"), ""))
     return Finding(outcomes.STATUS_FOR[code], "ready" if result else reached["stage"], reached.get("reason"), reached.get("refusal"), fix)
 
