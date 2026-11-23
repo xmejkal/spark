@@ -34,6 +34,11 @@ spec §9 set two cadences that serve this.
 It is a team tool, not the product, so it lives in `tools/` beside `check_backlog.py`. It reads the boards through the
 PO's own `gh` login and stores nothing.
 
+2026-11-23 (P1021): a third verb, `board.py move <card> <stage>`, moves a card of spark's board. It writes, so the tool
+now writes the day-close and a card's move. It runs the gate's `problems` on a copy of the board with the card moved,
+and a sentence that is new after the move and names the card refuses the move. `--waiting-on WHO` also writes
+*Waiting on* and *Waiting since*, and a move to Done clears both. `--dry-run` writes nothing.
+
 ### `board.py status [--when-in DIR ...]`
 
 At most about twelve lines, for spark's board and the bin's:

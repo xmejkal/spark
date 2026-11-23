@@ -360,17 +360,21 @@ def move(boards, project_id, fields, number, stage, waiting_on, today, ask, dry_
         return json.dumps(fields[name]["id"])
     status = "mutation{%s}" % (SET % ("status", *target, field(STATUS), "singleSelectOptionId",
                                       json.dumps(fields[STATUS]["options"][stage])))
+    # A call that failed may have written in part or timed out after GitHub took it: its own fields "may not have been".
     if waiting_on:
-        wait = "mutation{%s %s}" % (SET % ("on", *target, field(WAITING_ON), "singleSelectOptionId",
+        wait = "mutation{%s %s}" % (SET % ("waitOn", *target, field(WAITING_ON), "singleSelectOptionId",
                                            json.dumps(options[waiting_on])),
-                                    SET % ("since", *target, field(WAITING_SINCE), "date", json.dumps(after["waiting since"])))
-        calls = [(wait, "the Status was not written, read the card's Waiting on and Waiting since"),
-                 (status, "Waiting on and Waiting since were written, the Status was not")]
+                                    SET % ("waitSince", *target, field(WAITING_SINCE), "date",
+                                           json.dumps(after["waiting since"])))
+        calls = [(wait, "Waiting on and Waiting since may not have been written, the Status was not"),
+                 (status, "Waiting on and Waiting since were written, the Status may not have been")]
     elif clears:
-        clear = "mutation{%s %s}" % (CLEAR % ("on", *target, field(WAITING_ON)), CLEAR % ("since", *target, field(WAITING_SINCE)))
-        calls = [(status, "nothing was written"), (clear, "the Status was written (Done), its wait was not cleared")]
+        clear = "mutation{%s %s}" % (CLEAR % ("waitOn", *target, field(WAITING_ON)),
+                                     CLEAR % ("waitSince", *target, field(WAITING_SINCE)))
+        calls = [(status, "the Status may not have been written, its wait was not cleared"),
+                 (clear, "the Status was written (Done), its wait may not have been cleared")]
     else:
-        calls = [(status, "nothing was written")]
+        calls = [(status, "the Status may not have been written")]
     for document, unwritten in calls:
         failed = _write(document, ask)
         if failed:
@@ -549,17 +553,19 @@ CLOSE_HELP = ("post the day's one status update to spark's board: the line, then
 MOVE_HELP = ("move a card of spark's board to a stage (P1021). It checks the gate's limits on a copy of the board first: "
              "a gate sentence that is new after the move and names the card refuses the move (exit 1), with each "
              "sentence, and nothing is written. A limit that other cards broke before the move refuses nothing. Else it "
-             "writes the card's Status. With --waiting-on it first writes Waiting on and Waiting since: today's date, or "
-             "the card's own date when it already waits on the same one. A move to Done clears both after its Status. "
-             "A board it could not read, the bin's board read in part, a field the board lacks or a write that failed "
-             "is could-not-run (exit 1), and a failed write says what was written")
+             "writes the card's Status. With --waiting-on it first writes Waiting on and Waiting since. Waiting since is "
+             "today's date. It keeps the card's own date only when it already waits on the same one and has a date. A "
+             "move to Done clears both after its Status. A card that is not on spark's board, or a WHO that is no "
+             "option of Waiting on, is refused (exit 1). A board it could not read, the bin's board read in part, a "
+             "field or a Status option the board lacks, or a write that failed is could-not-run (exit 1), and a failed "
+             "write says what was written. A stage that is not one of the seven, or --waiting-on with Done, exits 2")
 
 
 def _move_main(args, ask):
     """`board.py move`: gather() both boards, read the fields, and move() the card; the exit code."""
     try:
         boards, _, _, project_id, bin_why, _ = gather(ask=ask)
-    except (OSError, subprocess.SubprocessError, RuntimeError, ValueError, KeyError, TypeError) as unreachable:
+    except FAILURES as unreachable:  # AttributeError too: a node of the wrong shape is could-not-run, not a traceback
         print("board: %s — %s" % (COULD_NOT_RUN, unreachable))
         return 1
     if bin_why is not None:  # the lane's flight would be counted without the bin's cards

@@ -187,7 +187,7 @@ Run the board part yourself — `--help` lists its rules and exit codes — and 
 python3 tools/check_backlog.py
 python3 tools/board.py status
 python3 tools/board.py close --dry-run "the day's one line"
-python3 tools/board.py move 1488 Build --dry-run
+python3 tools/board.py move <card> Build --dry-run
 ```
 
 The gate on the live boards, then the status (the last close's line cut short here):
