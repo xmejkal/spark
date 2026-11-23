@@ -7,11 +7,15 @@ It covers `design/needs_basis`, its writer in `design/set_needs` and its reader 
     python3 -m unittest tests.test_needs_basis
 """
 
+import contextlib
+import io
 import json
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
@@ -19,10 +23,13 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import parts  # noqa: E402
 from spark.design import needs_basis  # noqa: E402
 from spark.records.brief import Brief  # noqa: E402
 
 GOAL = "A clock that shows the date on a press"
+#: The record, as the card names it: a literal, not the code's own.
+RECORD = Path(".spark") / "needs-basis.json"
 MUST = ["The time comes from the internet over Wi-Fi.", "It runs a week on a battery."]
 
 
@@ -86,13 +93,157 @@ class TheStoreTest(unittest.TestCase):
                      json.dumps(dict(good, must_sha256="not hex")), json.dumps([good])):
             with self.subTest(text=text):
                 project = a_project()
-                (project / needs_basis.BASIS_FILE).write_text(text)
-                self.assertIs(needs_basis.NeedsBasisStore(project).held(), needs_basis.BROKEN)
+                (project / RECORD).write_text(text)
+                self.assertEqual(needs_basis.NeedsBasisStore(project).held(), "broken")
 
     def test_a_record_that_is_a_folder_is_broken(self):
         project = a_project()
-        (project / needs_basis.BASIS_FILE).mkdir()
-        self.assertIs(needs_basis.NeedsBasisStore(project).held(), needs_basis.BROKEN)
+        (project / RECORD).mkdir()
+        self.assertEqual(needs_basis.NeedsBasisStore(project).held(), "broken")
+
+
+def needs_set(project, items, *argv):
+    """`parts.py --needs-set <project> <file of items> --json`: (the envelope, the exit code, the text lines without --json)."""
+    given = Path(tempfile.mkdtemp()) / "needs.json"
+    given.write_text(json.dumps(items))
+    with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+        code = parts.main(["--needs-set", str(project), str(given), *argv, "--json"])
+    with contextlib.redirect_stdout(io.StringIO()) as text, contextlib.redirect_stderr(io.StringIO()):
+        parts.main(["--needs-set", str(project), str(given), *argv, "--dry-run"])
+    return json.loads(out.getvalue()), code, text.getvalue().splitlines()
+
+
+def brief_of(goal=GOAL, must=MUST):
+    return {"goal": goal, "must": list(must)}
+
+
+def set_brief(project, goal=GOAL, must=MUST):
+    """Edit the brief as `init_project.py --answers` leaves it: project.json with the goal and the must lines."""
+    (project / ".spark" / "project.json").write_text(json.dumps(brief_of(goal, must)))
+
+
+BOARD = {"id": "board", "does": "compute", "what": "microcontroller"}
+SCREEN = {"id": "screen", "does": "indicate", "what": "time"}
+NOTED = "  noted the goal and the must lines these needs were written from (.spark/needs-basis.json)"
+WOULD_NOTE = "  would note the goal and the must lines these needs were written from (.spark/needs-basis.json)"
+
+
+class WithAStore(unittest.TestCase):
+    def setUp(self):
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def held(self, project):
+        return needs_basis.NeedsBasisStore(project).held()
+
+    def basis_bytes(self, project):
+        path = project / RECORD
+        return path.read_bytes() if path.is_file() else None
+
+
+class TheWriterTest(WithAStore):
+    """`parts.py --needs-set` notes the stamp of the brief on a write that defines a need or is a review (`[]`)."""
+
+    def test_a_write_notes_the_brief_says_so_and_answers_basis_noted(self):
+        project = a_project(brief_of())
+        said, code, _ = needs_set(project, [BOARD, SCREEN])
+        self.assertEqual((code, said["data"]["basis_noted"]), (0, True))
+        self.assertEqual(self.held(project), stamp())
+
+    def test_the_text_answer_holds_the_noted_line(self):
+        project = a_project(brief_of())
+        given = Path(tempfile.mkdtemp()) / "needs.json"
+        given.write_text(json.dumps([BOARD]))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            parts.main(["--needs-set", str(project), str(given)])
+        self.assertIn(NOTED, out.getvalue().splitlines())
+
+    def test_a_dry_run_writes_no_record_and_says_would_note(self):
+        project = a_project(brief_of())
+        said, code, text = needs_set(project, [BOARD], "--dry-run")
+        self.assertEqual((code, said["data"]["basis_noted"], self.basis_bytes(project)), (0, False, None))
+        self.assertIn(WOULD_NOTE, text)
+
+    def test_a_run_with_a_problem_writes_no_record_and_no_line(self):
+        project = a_project(brief_of())
+        said, code, text = needs_set(project, [BOARD, {"id": "Bad Id", "does": "x", "what": "y"}])
+        self.assertEqual((code, said["data"]["basis_noted"], self.basis_bytes(project)), (1, False, None))
+        self.assertNotIn(WOULD_NOTE, text)
+
+    def test_a_brief_with_no_goal_gives_no_record_and_no_line(self):
+        for brief in (None, {"must": MUST}, {"goal": None}):
+            with self.subTest(brief=brief):
+                project = a_project(brief)
+                said, code, text = needs_set(project, [BOARD])
+                self.assertEqual((code, said["data"]["basis_noted"], self.basis_bytes(project)), (0, False, None))
+                self.assertNotIn(WOULD_NOTE, text)
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads any file")
+    def test_a_brief_that_cannot_be_read_never_fails_the_write(self):
+        project = a_project(brief_of())
+        brief = project / ".spark" / "project.json"
+        brief.chmod(0)
+        self.addCleanup(brief.chmod, 0o644)
+        said, code, _ = needs_set(project, [BOARD])
+        self.assertEqual((code, said["data"]["written"], said["data"]["basis_noted"], self.basis_bytes(project)), (0, True, False, None))
+
+    def test_a_deeply_nested_brief_never_fails_the_write(self):
+        project = a_project("[" * 100000 + "]" * 100000)
+        said, code, _ = needs_set(project, [BOARD])
+        self.assertEqual((code, said["data"]["written"], said["data"]["basis_noted"], self.basis_bytes(project)), (0, True, False, None))
+
+    def test_a_review_notes_a_changed_brief_and_leaves_the_needs_byte_for_byte(self):
+        project = a_project(brief_of())
+        needs_set(project, [BOARD, SCREEN])
+        set_brief(project, goal=GOAL + " on a battery")
+        before = (project / ".spark" / "needs.json").read_bytes()
+        said, code, _ = needs_set(project, [])
+        self.assertEqual((code, said["data"]["basis_noted"], said["data"]["changes"]), (0, True, []))
+        self.assertEqual(self.held(project), stamp(goal=GOAL + " on a battery"))
+        self.assertEqual((project / ".spark" / "needs.json").read_bytes(), before)
+
+    def test_a_review_with_a_record_that_fits_writes_nothing(self):
+        project = a_project(brief_of())
+        needs_set(project, [BOARD])
+        record = project / RECORD
+        record.write_text(record.read_text() + "\n")  # a mark of the bytes: a write would take it away
+        said, code, text = needs_set(project, [])
+        self.assertEqual((code, said["data"]["basis_noted"]), (0, False))
+        self.assertTrue(record.read_text().endswith("\n\n"))
+        self.assertNotIn(WOULD_NOTE, text)
+
+    def test_a_review_with_no_needs_notes_nothing(self):
+        project = a_project(brief_of())
+        said, code, _ = needs_set(project, [])
+        self.assertEqual((code, said["data"]["basis_noted"], self.basis_bytes(project)), (0, False, None))
+
+    def test_a_mark_only_or_aside_only_write_leaves_the_record(self):
+        for item in ({"id": "board", "mark": "have"}, {"id": "board", "aside": True}):
+            with self.subTest(item=item):
+                project = a_project(brief_of())
+                needs_set(project, [BOARD])
+                set_brief(project, goal="another goal")
+                before = self.basis_bytes(project)
+                said, code, _ = needs_set(project, [item])
+                self.assertEqual((code, said["data"]["basis_noted"], self.basis_bytes(project)), (0, False, before))
+
+    def test_a_condition_only_write_defines_the_need_and_notes(self):
+        project = a_project(brief_of())
+        needs_set(project, [BOARD])
+        set_brief(project, goal="another goal")
+        said, code, _ = needs_set(project, [{"id": "board", "condition": "when the button is pressed"}])
+        self.assertEqual((code, said["data"]["basis_noted"], self.held(project)), (0, True, stamp(goal="another goal")))
+
+    def test_a_pick_and_a_drop_leave_the_record(self):
+        project = a_project(brief_of())
+        needs_set(project, [BOARD, SCREEN])
+        set_brief(project, goal="another goal")
+        before = self.basis_bytes(project)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            picked = parts.main(["--pick", str(project), "board=xiao-esp32-c6", "--json"])
+            dropped = parts.main(["--needs-drop", str(project), "screen", "--json"])
+        self.assertEqual((picked, dropped, self.basis_bytes(project)), (0, 0, before))
 
 
 if __name__ == "__main__":

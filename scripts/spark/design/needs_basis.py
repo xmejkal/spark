@@ -12,6 +12,7 @@ from pathlib import Path
 
 from spark.design.entry_origin import parts_sha256
 from spark.records import store
+from spark.records.brief import Brief
 
 # --- MVP ---
 #: The record beside the needs, from the project's folder, and the keys it holds.
@@ -23,6 +24,10 @@ PARTS = (("goal", GOAL_SHA256), ("must", MUST_SHA256))
 BROKEN = "broken"
 #: A hash the record holds: 64 hex digits.
 HEX = re.compile(r"[0-9a-f]{64}")
+#: The keys of a `--needs-set` item that define a need: a write with one of them, or an empty list (a review), notes the stamp.
+DEFINING = ("does", "what", "condition")
+#: The line of a `--needs-set` that notes the stamp: "noted" or "would note".
+NOTED_LINE = "  %s the goal and the must lines these needs were written from (.spark/needs-basis.json)"
 
 
 def stamp_of(brief):
@@ -36,6 +41,19 @@ def stamp_of(brief):
 def changed(held, now):
     """The parts of two stamps that differ, in order, from ("goal", "must"). Equal stamps give []."""
     return [part for part, key in PARTS if held[key] != now[key]]
+
+
+def due_stamp(project, items, after):
+    """The stamp a `--needs-set` of `items`, which leaves the needs `after`, notes: the brief's now, when the needs are not
+    empty, the write is a review (`[]`) or defines a need, and the record differs. Else None. A brief that cannot be read
+    gives none, so it never fails the write."""
+    if not after or not (items == [] or any(key in item for item in items for key in DEFINING)):
+        return None
+    try:
+        now = stamp_of(Brief.from_project(project))
+    except (OSError, RecursionError):
+        return None
+    return now if now and NeedsBasisStore(project).held() != now else None
 
 
 class NeedsBasisStore:

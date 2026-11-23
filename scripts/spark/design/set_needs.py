@@ -7,7 +7,7 @@ from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Arg
 from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
 from spark.records.record_kind import Answer
 from spark.sourcing.write_answers import write_lines
-from spark.design import needs
+from spark.design import needs, needs_basis
 
 
 # --- MVP ---
@@ -15,9 +15,10 @@ class SetNeeds(AnswerOperation):
     """Operation: `needs-set` as parts.py answers it: each change made or refused, and whether the file was written."""
 
     name = "needs-set"
-    data_keys = ('changes', 'written')
+    data_keys = ('changes', 'written', 'basis_noted')
     arguments = (Argument(("--needs-set",), "project_and_items", str,
-                          "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds",
+                          "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds, "
+                          "and notes the goal and the must lines they were written from",
                           nargs=2, metavar=("PROJECT", "FILE"), payload=1),
                  ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, WRITES)
@@ -31,5 +32,10 @@ class SetNeeds(AnswerOperation):
         written = not (problems or dry_run)
         if written and changes:
             needs.write(target, after)
-        return Answer({"changes": changes, "written": written}, write_lines(changes, problems, dry_run), problems=problems)
+        stamp = None if problems else needs_basis.due_stamp(target, items, after)
+        if written and stamp:  # P1027: after needs.json, so a failed write leaves the needs out of date
+            needs_basis.NeedsBasisStore(target).save(stamp)
+        said = [needs_basis.NOTED_LINE % ("would note" if dry_run else "noted")] if stamp else []
+        return Answer({"changes": changes, "written": written, "basis_noted": bool(written and stamp)},
+                      write_lines(changes, problems, dry_run, said), problems=problems)
 # --- end MVP ---
