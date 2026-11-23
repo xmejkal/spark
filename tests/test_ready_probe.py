@@ -201,6 +201,65 @@ class WhatTheBoardSaysTest(unittest.TestCase):
         self.assertEqual(verdict, "ready unknown")
 
 
+#: What mpremote printed when the 13:58 deploy's `import main` lost the FireBeetle 2 C6 (p934-display2, 2026-11-23).
+SLEEPER_OUTPUT = ("ready, cpu 80 MHz, deep sleep, power-up\nredraw quote 13:58\ndeep sleep for 67 s\n"
+                  "Traceback (most recent call last):\nOSError: [Errno 6] Device not configured\n")
+SLEEPS = ("firmware/main.py:189",)
+
+
+def lost(output=SLEEPER_OUTPUT):
+    return board_connection.BoardUnreachableError("OSError: [Errno 6] Device not configured", output)
+
+
+class ReadyThenTheBoardWasLostTest(unittest.TestCase):
+    """P1022 slice 3, D1 (the council of 2026-11-23 16:21 CET, delegated): a `ready` line printed before mpremote lost the
+    board is ready seen only when the files match and firmware/ calls deepsleep; files that differ are not seen."""
+
+    def check(self, *answers, sleeps=SLEEPS):
+        return ready_probe.ReadyProbe(FakeBoardConnection(*answers)).check(MAIN, sleeps=sleeps)
+
+    def test_ready_then_lost_with_matching_files_and_a_deepsleep_call_is_seen(self):
+        result = self.check(HASHES, lost())
+        self.assertEqual((result.verdict, result.lost_board, result.files_read), ("ready seen", True, True))
+        self.assertEqual(result.sentence, "the firmware printed 'ready' and the board's 1 files match the image, then mpremote "
+                                          "lost the board (OSError: [Errno 6] Device not configured). firmware/main.py calls deepsleep")
+        self.assertEqual(result.log, HASHES + SLEEPER_OUTPUT)
+
+    def test_ready_then_lost_without_a_deepsleep_call_stays_unknown_and_says_ready_was_printed(self):
+        result = self.check(HASHES, lost(), sleeps=())
+        self.assertEqual((result.verdict, result.files_read, result.lost_board), ("ready unknown", True, True))
+        self.assertEqual(result.sentence, "the firmware printed 'ready', then mpremote lost the board (OSError: [Errno 6] "
+                                          "Device not configured), and spark found no deepsleep call in firmware/")
+
+    def test_ready_then_lost_with_a_file_that_differs_is_not_seen_with_or_without_a_deepsleep_call(self):
+        for sleeps in (SLEEPS, ()):
+            with self.subTest(sleeps=sleeps):
+                result = self.check("file %s /main.py\n" % ("0" * 64), lost(), sleeps=sleeps)
+                self.assertEqual((result.verdict, result.sentence, result.lost_board),
+                                 ("ready not seen", "the board's /main.py is not the files of the image", True))
+
+    def test_lost_with_no_ready_line_is_unknown(self):
+        result = self.check(HASHES, lost("deep sleep for 67 s\n"))
+        self.assertEqual((result.verdict, result.lost_board), ("ready unknown", False))
+        self.assertEqual(result.sentence, "mpremote could not start the firmware: OSError: [Errno 6] Device not configured")
+
+    def test_ready_in_the_settle_s_line_alone_is_no_ready_line(self):
+        # BoardUnreachableError.output is mpremote's stdout and stderr: the settle's note starts with `spark:`
+        result = self.check(HASHES, lost("spark: the 2.5 s settle heard b'ready\\r\\n'\n"))
+        self.assertEqual((result.verdict, result.lost_board), ("ready unknown", False))
+
+    def test_ready_then_a_traceback_on_the_board_is_not_seen_as_before(self):
+        result = self.check(HASHES, board_connection.BoardCodeError("ready\nTraceback\nValueError: x\n", 1))
+        self.assertEqual((result.verdict, result.lost_board), ("ready not seen", False))
+        self.assertTrue(result.sentence.startswith("the firmware stopped with an error"), result.sentence)
+
+    def test_a_copy_and_replace_keep_lost_board(self):
+        result = self.check(HASHES, lost())
+        for made in (result._replace(sentence="x"), copy.copy(result), pickle.loads(pickle.dumps(result))):
+            self.assertEqual((made.lost_board, made.files_read), (True, True))
+        self.assertFalse(ready_probe.ReadyResult("ready seen", "", "").lost_board)
+
+
 def board_ready_probe(connection):
     return ready_probe.ReadyProbe(connection).check(MAIN)
 

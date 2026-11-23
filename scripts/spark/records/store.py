@@ -105,6 +105,7 @@ def format_rerun_line(script, arguments):
 #: `known-boards`: one record per project folder, the board its looks read after the person's yes (P865).
 #: `registered-projects`: the projects that are not spark's and record their deploys, by name (P920).
 #: `launcher`: the file a tool outside spark runs to reach `bench.py` (P920).
+#: A new place is classified in `storage.py` too: served or outside (P1036).
 PLACES = {"sources": "sources", "catalog": "catalog", "downloads": "downloads", "tools": "tools.json",
           "drawer": "drawer", "drawer-import": "drawer-import", "shelf": "shelf", "projects": "projects.json",
           "history": "history.jsonl", "boards": "boards", "grants": "grants", "known-boards": "known-boards",
@@ -209,7 +210,7 @@ def write_json(name, key, data):
     Put one JSON file into a place (§5.1) and say whether it changed. `key` names the file inside the place (None for a
     place that is itself a file). A private place is written 0600 in 0700 folders, never inside a git work tree.
     """
-    target = _target(name, key)
+    target = find_file(name, key)
     _make_ready(name, target)
     return write_file(target, json.dumps(data, indent=2, ensure_ascii=False) + "\n", name in PRIVATE)
 
@@ -217,7 +218,7 @@ def write_json(name, key, data):
 def write_place(name, text):
     """Put `text` into a place that is itself a file (P920: the launcher), as `write_json` puts a JSON file: the git
     refusal and the 0700 folders first, then a private file 0600. Returns whether it changed."""
-    target = _target(name, None)
+    target = find_file(name, None)
     _make_ready(name, target)
     return write_file(target, text, name in PRIVATE)
 
@@ -330,10 +331,16 @@ def locked():
         os.close(held)
 
 
-def _target(name, key):
-    """Where a key goes inside a place (§5.1), refusing a key that is not plain."""
+def require_plain_key(name, key):
+    """StoreError `key_not_plain` for a `key` of the place `name` that is not plain. None passes: a place that is one file."""
     if key is not None and not PLAIN.fullmatch(key):
         raise StoreError("%r is not a plain key — lower-case letters, digits and '-' — so it could leave %s", key, name, code=records_codes.KEY_NOT_PLAIN)
+
+
+def find_file(name, key):
+    """The path that `write_json` writes `key` to in the place `name` (None for a place that is one file). It builds the
+    path and does not check that the file is there. StoreError `key_not_plain` for a key that is not plain (§5.1)."""
+    require_plain_key(name, key)
     return place(name) / (key + ".json") if key is not None else place(name)
 
 
@@ -354,7 +361,7 @@ def _make_ready(name, target):
 
 def copy_folder(name, source, key):
     """Copy a folder into a place under a plain key, as `write_json` writes a file: the same key check and git refusal; in a private place every folder ends 0700 and every file 0600."""
-    _target(name, key)  # the key check
+    find_file(name, key)  # the key check
     target = place(name) / key
     _make_ready(name, target)
     shutil.copytree(source, target, dirs_exist_ok=True)

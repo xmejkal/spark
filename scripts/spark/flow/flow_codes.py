@@ -259,9 +259,20 @@ DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude
               "in your terminal.")
 NEEDS_STALE_NOW = ("Your goal or must lines changed after the needs were written. "
                    "Ask Claude to go through the needs and the must lines with you.")
+#: The idea phase after a need was dropped (P1027, slice 2): the ids, then what Claude asks and how it is taken back. No
+#: record links a need to a must line, so Claude names the line in the chat.
+NEEDS_DROPPED_MESSAGE = "needs dropped after the must lines were last gone through: %s"
+MUST_ASK_MESSAGE = ("Claude asks you about each must line a dropped need served, and on your yes changes it in the brief: "
+                    "git keeps each change, so it can be taken back. If the must lines still hold, Claude runs the "
+                    "review: parts.py --needs-set with []")
+IDEA_STALE_NOW = ("A need was dropped. Claude names it and the must lines it served: tell Claude whether they still "
+                  "hold. Claude can change them for you.")
+#: Why the brief step (`init_project.py --answers`) is the stale idea's step: it runs only on the person's yes.
+BRIEF_WHY = ("On the person's yes: writes the must lines they agreed to into the brief, one commit when git holds it, "
+             "so git revert --no-edit takes it back")
 PROBLEMS_NOW = "The %s phase has problems. Ask Claude to go through them with you."
 COULD_NOT_RUN_NOW = "The %s phase could not run. Ask Claude to read you why."
-NOW_SENTENCES = {(IDEA, None): IDEA_NOW,
+NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (IDEA, STALE): IDEA_STALE_NOW,
                  (NEEDS, STALE): NEEDS_STALE_NOW,
                  (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW, (PARTS, OK_WORD): ALL_ASIDE_NOW,
                  (REQUIREMENTS, NOT_STARTED): REQUIREMENTS_NOW, (REQUIREMENTS, STALE): REQUIREMENTS_STALE_NOW,

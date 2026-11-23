@@ -168,10 +168,11 @@ def pin_time_zone(case, zone="Europe/Prague"):
 
 class FakeConsoleProbe:
     """A fake ConsoleProbe: the console prints `printed`, and the console read calls `on_console` (a test's way to make
-    the board answer again). cure() calls `on_cure` and gives `cured`, a board_console.Cure. Keeps how often each was asked."""
+    the board answer again). With `unread`, the read could not open the port and `unread` says why (P1022). cure() calls
+    `on_cure` and gives `cured`, a board_console.Cure. Keeps how often each was asked."""
 
-    def __init__(self, printed="", on_console=None, cured=None, on_cure=None):
-        self.printed, self.asked = printed, []
+    def __init__(self, printed="", on_console=None, cured=None, on_cure=None, unread=None):
+        self.printed, self.asked, self.unread = printed, [], unread
         self.on_console, self.cured, self.on_cure = on_console, cured, on_cure
 
     def console(self):
@@ -185,7 +186,10 @@ class FakeConsoleProbe:
         if self.on_console:
             self.on_console()
         from spark.bench.download_mode import DOWNLOAD_MODE  # scripts/ is on the path once a test imports spark
-        return DOWNLOAD_MODE in self.printed, self.printed
+        from spark.bench.board_console import UNREAD, ConsoleText
+        if self.unread:  # P1022: the port could not be read, and `unread` says why
+            return False, ConsoleText(UNREAD % self.unread, read=False)
+        return DOWNLOAD_MODE in self.printed, ConsoleText(self.printed)
 
     def cure(self):
         self.asked.append("cure")

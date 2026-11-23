@@ -96,6 +96,15 @@ class TheEsptoolFlasherTest(unittest.TestCase):
         self.assertEqual(flasher.build_esptool_prefix(ESPTOOL), BASE)
 
 
+class TheBootEntryTest(unittest.TestCase):
+    def test_only_the_c6_s_restart_keeps_a_boot_entry_and_the_commands_stay(self):
+        # P1022 slice 3: esptool 5.5.0 falls back to a classic hard reset on the C6, which cannot leave a BOOT entry
+        c6, s3 = flasher.EsptoolFlasher(ESPTOOL, "esp32c6"), flasher.EsptoolFlasher(ESPTOOL, "esp32s3")
+        self.assertEqual((c6.keeps_boot_entry, s3.keeps_boot_entry, flasher.Flasher.keeps_boot_entry), (True, False, False))
+        self.assertEqual(c6.build_commands("i", PORT)[1], BASE + ["--chip", "esp32c6", "--port", PORT, "--after", "watchdog-reset",
+                                                                  "write-flash", "0x0", "i"])
+
+
 class TheBaseTest(unittest.TestCase):
     def test_the_base_supplies_no_commands(self):
         with self.assertRaises(NotImplementedError):

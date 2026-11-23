@@ -12,11 +12,12 @@ What is on the board itself, the facts file, is `board_facts`.
 
 import collections
 import datetime
-import json
+from pathlib import Path
 
 from spark.core import outcomes
 from spark.records import records_codes
 from spark.records import store
+from spark.records.storage import FileStorage
 from spark.core import zone_time
 
 
@@ -26,6 +27,8 @@ WHY_UNREADABLE = "spark's record of it cannot be read"
 ZONE_NOT_STORED = "(zone not stored)"
 #: append_deploy's board when the record keeps its own: an outside deploy names no board (P920).
 KEEP_BOARD = object()
+#: The Storage's namespace of the board records (P1036): the store's `boards` place.
+BOARDS = "boards"
 
 
 def made_by_of(entry):
@@ -85,10 +88,14 @@ class Deploys(collections.namedtuple("Deploys", "state entries why board", defau
 
 class DeployRecordStore:
     """
-    Store. The person's record of each physical board, one file per MAC in `boards/`, written after a deploy (`write_deploy`)
-    and read by the look (`read_last_deploy`). It keeps nothing in memory; `LookAtBoard(records=)` and `DeployImage(records=)`
-    take it as a collaborator, and build the store's own when given None (P475, P458).
+    Store. The person's record of each physical board, one object per MAC in its Storage's `boards` namespace (P1036;
+    FileStorage, the default, keeps one file per MAC in the store's `boards/`), written after a deploy (`write_deploy`) and
+    read by the look (`read_last_deploy`). It keeps no record itself: its Storage holds them. `LookAtBoard(records=)` and
+    `DeployImage(records=)` take it as a collaborator, and build the store's own when given None (P475, P458).
     """
+
+    def __init__(self, storage=None):
+        self.storage = FileStorage() if storage is None else storage
 
     @staticmethod
     def _key(mac):
@@ -96,8 +103,9 @@ class DeployRecordStore:
         return store.slug(mac)
 
     def find_path(self, mac):
-        """The path of the store's record of the board with this MAC: what write_deploy writes and read_last_deploy reads."""
-        return store.place("boards") / (self._key(mac) + ".json")
+        """The path of the record of the board with this MAC, as its Storage names it: what write_deploy writes and
+        read_last_deploy reads, for words and for tests on FileStorage. Scripts never open it."""
+        return Path(self.storage.where(BOARDS, self._key(mac)))
 
     def read_last_deploy(self, mac):
         """The LastDeploy of the board with this `mac`, from the record `write_deploy` writes. It never raises: what it cannot
@@ -106,11 +114,11 @@ class DeployRecordStore:
             return LastDeploy(outcomes.NOT_CHECKED, why=WHY_NO_MAC)
         path = self.find_path(mac)
         try:
-            if not path.exists() and not path.is_symlink():  # a folder or a broken link in its place is no "none"
-                return LastDeploy(outcomes.NONE_RECORDED, record_path=path)
-            record = json.loads(path.read_text())
-        except (OSError, ValueError, RecursionError):
+            record = self.storage.get(BOARDS, self._key(mac))  # a folder or a broken link in its place is no "none"
+        except store.StoreError:
             return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE, record_path=path)
+        if record is None:
+            return LastDeploy(outcomes.NONE_RECORDED, record_path=path)
         deploys = record.get("deploys") if isinstance(record, dict) else None
         newest = deploys[-1] if isinstance(deploys, list) and deploys else None  # write_deploy appends
         kept = [newest.get(key) for key in ("project", "verdict", "deployed")] if isinstance(newest, dict) else []
@@ -127,13 +135,12 @@ class DeployRecordStore:
         dropped in silence."""
         if not mac:
             return Deploys(outcomes.NOT_CHECKED, why=WHY_NO_MAC)
-        path = self.find_path(mac)
         try:
-            if not path.exists() and not path.is_symlink():
-                return Deploys(outcomes.NONE_RECORDED)
-            record = json.loads(path.read_text())
-        except (OSError, ValueError, RecursionError):
+            record = self.storage.get(BOARDS, self._key(mac))
+        except store.StoreError:
             return Deploys(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)
+        if record is None:
+            return Deploys(outcomes.NONE_RECORDED)
         deploys = record.get("deploys") if isinstance(record, dict) else None
         if not isinstance(deploys, list) or not deploys or not all(
                 isinstance(each, dict) and all(isinstance(each.get(key), str) and each[key].strip() for key in ("project", "deployed"))
@@ -144,7 +151,7 @@ class DeployRecordStore:
 
     def write_deploy(self, facts, verdict, who):
         """
-        The store's record of this board, by its MAC, with this deploy added: the project, the image's sha256, the date,
+        The record of this board, by its MAC, with this deploy added: the project, the image's sha256, the date,
         the verdict, `who`, the phrase for whose yes it was (ConsentStrategy.who), and the image's MicroPython banner, read
         from the image file at the deploy (null when the facts hold none, P779). Returns the record's path.
         """
@@ -154,23 +161,23 @@ class DeployRecordStore:
         return self.append_deploy(facts["mac"], deploy, facts["board"])
 
     def append_deploy(self, mac, deploy, board=KEEP_BOARD):
-        """The store's record of the board `mac` with the entry `deploy` added, under the store's lock, and `board` as its
+        """The record of the board `mac` with the entry `deploy` added, under its Storage's lock, and `board` as its
         board id, None too, as spark's own deploy writes it. KEEP_BOARD keeps the record's own: a recorded deploy names no
         board (P920). Returns the record's path. store.StoreError when what is there is no board record (a folder, a
         broken link or a file that is no record): it is left as it is."""
-        with store.locked():
+        with self.storage.locked():
             path = self.find_path(mac)
             try:
-                record = json.loads(path.read_text()) if path.is_file() else (
-                    None if path.exists() or path.is_symlink() else {"mac": mac, "deploys": []})
-            except ValueError:
+                kept = self.storage.get(BOARDS, self._key(mac))
+                record = {"mac": mac, "deploys": []} if kept is None else kept
+            except store.StoreError:
                 record = None
             if not isinstance(record, dict) or not isinstance(record.get("deploys"), list):
                 raise store.StoreError("%s is not a board record, so it was left as it is", path, code=records_codes.NOT_A_BOARD_RECORD)
             if board is not KEEP_BOARD:
                 record["board"] = board
             record["deploys"].append(deploy)
-            store.write_json("boards", self._key(mac), record)
+            self.storage.put(BOARDS, self._key(mac), record)
         return path
 
 

@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import sys
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -17,6 +18,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.records import deploy_record_store  # noqa: E402
 from spark.records import store  # noqa: E402
+from spark.records.storage import UNREADABLE, MemoryStorage  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 STORE = deploy_record_store.DeployRecordStore()
@@ -204,3 +206,61 @@ class ReadLastDeployTest(LastDeployCase):
     def test_an_older_bad_entry_does_not_matter_when_the_newest_is_good(self):
         self.write_deploys([5, {"project": "p", "verdict": "v", "deployed": "d"}])
         self.assertEqual(STORE.read_last_deploy(MAC).project, "p")
+
+
+class TheStoreOverAStorageTest(LastDeployCase):
+    """P1036 (tests 26 and 27): the Store over MemoryStorage gives the answers it gives over the store's files, and a record
+    or a folder it cannot read is not-checked for both readers and no board record for a new deploy."""
+
+    def answers(self, records):
+        """(read_last_deploy's state, read_deploys' state, append_deploy's refusal code or None) of MAC in `records`."""
+        try:
+            records.append_deploy(MAC, {"project": "p", "deployed": "d"})
+            refused = None
+        except store.StoreError as raised:
+            refused = raised.code
+        return records.read_last_deploy(MAC).state, records.read_deploys(MAC).state, refused
+
+    def test_a_deploy_is_kept_in_memory_and_read_back(self):
+        records = deploy_record_store.DeployRecordStore(MemoryStorage())
+        records.write_deploy(said(), "ready seen", "a test")
+        last, deploys = records.read_last_deploy(MAC), records.read_deploys(MAC)
+        self.assertEqual((last.state, last.project, deploys.state, len(deploys.entries)), ("recorded", "blink-c6", "recorded", 1))
+        self.assertFalse(store.place("boards").exists())
+
+    def test_a_planted_entry_that_cannot_be_read_or_is_not_utf8_is_not_checked(self):
+        for data in (UNREADABLE, b"\xff"):
+            memory = MemoryStorage()
+            memory.plant("boards", store.slug(MAC), data)
+            with self.subTest(data=data):
+                self.assertEqual(self.answers(deploy_record_store.DeployRecordStore(memory)),
+                                 ("not-checked", "not-checked", "not_a_board_record"))
+
+    def test_a_record_file_that_is_not_utf8_is_not_checked(self):
+        folder = store.place("boards")
+        folder.mkdir(parents=True)
+        (folder / (store.slug(MAC) + ".json")).write_bytes(b"\xe9")
+        self.assertEqual(self.answers(deploy_record_store.DeployRecordStore()), ("not-checked", "not-checked", "not_a_board_record"))
+
+    def test_a_boards_folder_spark_may_not_search_is_not_checked(self):
+        STORE.write_deploy(said(), "ready seen", "a test")
+        folder = store.place("boards")
+        folder.chmod(0)
+        self.addCleanup(folder.chmod, 0o700)
+        self.assertEqual(self.answers(deploy_record_store.DeployRecordStore()), ("not-checked", "not-checked", "not_a_board_record"))
+
+    def test_a_fifo_in_the_place_of_a_record_is_refused_and_never_waited_on(self):
+        """Review of #1527: main refused what is not a regular file before it read. A read of a FIFO waits for a writer."""
+        folder = store.place("boards")
+        folder.mkdir(parents=True)
+        fifo = folder / (store.slug(MAC) + ".json")
+        os.mkfifo(fifo)
+        said = []
+        runner = threading.Thread(target=lambda: said.append(self.answers(deploy_record_store.DeployRecordStore())), daemon=True)
+        runner.start()
+        runner.join(5)
+        if runner.is_alive():  # let a waiting read go, so the thread ends: a writer that opens and closes gives it the end
+            os.close(os.open(fifo, os.O_WRONLY | os.O_NONBLOCK))
+            runner.join(5)
+        self.assertEqual(said, [("not-checked", "not-checked", "not_a_board_record")])
+

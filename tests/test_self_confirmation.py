@@ -44,6 +44,12 @@ MAY_READ = {
     "outcomes.RECORDED": PINNED, "outcomes.NONE_RECORDED": PINNED, "outcomes.NOT_CHECKED": PINNED,
     "outcomes.NOT_CHECKED_MESSAGE": PINNED,
     "drawing.CODES": PINNED,
+    "storage.NAMESPACES": PINNED + ": the two served namespaces as a literal tuple; and " + AGREEMENT
+                          + ": with storage.OUTSIDE, against store.PLACES, so a new place fails until it is classified (P1036)",
+    "storage.OUTSIDE": AGREEMENT + ": with storage.NAMESPACES, against store.PLACES, the store's own places (P1036)",
+    "store.PLACES": AGREEMENT + ": the second source that storage.NAMESPACES and storage.OUTSIDE together must equal (P1036)",
+    "store.PLAIN": STRUCTURE + ": the key rule each served namespace's name is checked against, not an expectation (P1036)",
+    "storage.UNREADABLE": STRUCTURE + ": the fixture a test plants for an entry that cannot be read, an input (P1036)",
     "board_emitter.SCHEMATIC_STAGE": "the stage a refused input names, looked up in the build's table: the code under test (P852)",
     "board_emitter.FOOTPRINT_STAGE": "the stage a refused input names, looked up in the build's table: the code under test (P852)",
     "drawing.NO_DRAWING_FACT": "the Code object under test (P945): its type, its word and its fix filled with a record, each "

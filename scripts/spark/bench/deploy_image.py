@@ -239,6 +239,11 @@ class DeployFlowService:
         lines = ["%s: %s" % (SCRIPT, cannot)]
         if isinstance(cannot, board_look.LookStopError):
             lines, reached["doctor"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)
+            project = self.service.project
+            sentence, asleep = board_envelope.asleep_stop(cannot, project, board_records.ButtonPlaces.of_project(project))
+            if asleep and not reached["doctor"]:  # P1022: a firmware that deep-sleeps, said as look.py says it
+                reached.update(refusal=sentence, fix=asleep)
+                lines = ["%s: %s" % (SCRIPT, sentence), asleep]
         self.outside.add_diagnostics(lines)
         return EXIT_COULD_NOT_RUN
 
@@ -305,7 +310,8 @@ class DeployFlowService:
             self.say(DeployPhase.VERIFY, "store record: not written: %s" % cannot)
         if ready.verdict == ready_probe.UNKNOWN:
             if reached["reason"] == board_codes.READY_UNKNOWN:  # P1022: what spark knows, what it did not do, what to try
-                reached["fix"] = board_envelope.ready_unknown_fix(result, board_records.ButtonPlaces.of_project(self.service.project))
+                places = board_records.ButtonPlaces.of_project(self.service.project)
+                reached["fix"] = board_envelope.ready_unknown_fix(result, places, self.service.sleeps)
                 self.say(DeployPhase.VERIFY, reached["fix"])
             if result.start is None or result.start.port:  # P462: with the port gone there is nothing to watch
                 self.say(DeployPhase.VERIFY, WATCH % shlex.join(result.repl_command), raw=True)
@@ -383,6 +389,12 @@ spark.json was written. It says what spark did not do: no second flash and no se
 order: look.py after a minute, then RESET once and live.py, then the REPL line. With --json the unchecked item's fix is
 the same text, and `next` holds the look, live and watch steps. The board log keeps what mpremote printed on each
 failed facts copy.
+
+A firmware that deep-sleeps (P1022 slice 3): when the deploy's look finds no board and firmware/ calls deepsleep, it
+says what look.py says. A `ready` line that the firmware printed before mpremote lost the board counts as ready seen
+when the board's files match and firmware/ calls deepsleep; --json says `data.ready.lost_board`. Without a call it is
+ready unknown, and a file that differs is not seen. The ready unknown fix names the deepsleep calls, and on an
+ESP32-C6 over USB-Serial/JTAG it says that a download mode entered with BOOT outlasts esptool's restart: press RESET.
 
 Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)
