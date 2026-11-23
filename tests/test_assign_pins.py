@@ -528,7 +528,8 @@ class TheHelpersEachHaveANameTest(unittest.TestCase):
 
     def test_the_pad_order_puts_plain_then_spi_then_i2c_then_the_kept_pads_by_cost(self):
         # P1010: a pad is kept when it wastes adc or has another job; the rest come plain, SPI, I2C.
-        order = pin_assigner.PAD_ORDER
+        from spark.design import pad_order
+        order = pad_order.PadOrder(pin_assigner._cost, pin_assigner.CONFLICTING_ROLES)
         pads = {"plain": {"gpio": 9, "can": {"pwm", "wake"}, "roles": []},
                 "spi": {"gpio": 8, "can": {"pwm"}, "roles": ["spi"]},
                 "i2c": {"gpio": 7, "can": {"pwm"}, "roles": ["i2c"]},

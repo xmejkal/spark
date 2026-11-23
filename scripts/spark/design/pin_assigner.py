@@ -36,6 +36,7 @@ from spark.records import board_pads
 from spark.records import board_records
 from spark.design import design_codes
 from spark.design import loader
+from spark.design import pad_order
 from spark.records import missing_facts
 from spark.sourcing import part_rules
 from spark.records import provenance
@@ -79,22 +80,12 @@ ROLE_PENALTY = {
     "onboard_led": 10,                # it will blink whatever you put on it
     "onboard_display": 30,            # a signal here drives the screen's bus, and the screen shows the noise
     "onboard_battery_sense": 20,      # a divider from the battery is wired to it, so a signal here corrupts the reading
-    "spi": 5,                         # a bus: a tie-breaker among pins that waste the same abilities (below)
+    "spi": 5,                         # a bus: orders a kept bus pin after an equal kept pin; pad_order puts the rest
     "i2c": 5,
     "adc2_unusable_with_wifi": 1,     # orders an ADC2 pin after an equal plain pin; capability_of gives it no ADC (P798)
 }
-#: THE BUS PENALTY IS A TIE-BREAKER, SMALLER THAN ONE ABILITY ON PURPOSE. Nothing marked SCK,
-#: MI and MO as a bus, so the assigner spent all three on two LEDs and a button — the cheapest
-#: pins left, by its lights — and a later SPI part had nowhere to go. The cost function already
-#: ranks a pin by the abilities it WASTES (`CAPABILITY_COST` each), and a bus pin wastes nothing
-#: scarce by itself; what spent the bus was the tie-break among equal pins, which goes by GPIO
-#: number and on the FireBeetle puts MOSI (15) and MISO (16) before D6 (18). A penalty below
-#: `CAPABILITY_COST` settles that tie and nothing more: a plain signal still takes a bus pin
-#: before it wastes an ADC1 pin. Measured on the bin's 11 signals: at 0, LED_RED lands on MOSI;
-#: at 5, on D6; at 15 — my first value — the bus ranked above the ADC1 pins and two plain
-#: signals were sent onto the board's scarcest inputs instead. Five is also `DEFAULT_ROLE_PENALTY`,
-#: what an unnamed role costs; these entries exist so the reason is written down. A bus signal
-#: still lands on its own named pin regardless: that path runs first and ignores penalties.
+#: The bus penalty is below one ability on purpose (2026-09-29, the bin: at 15 two plain signals went onto ADC1).
+#: Since P1010 the order of the bus pads is `pad_order`'s: plain, SPI, I2C, then the kept pads by this cost.
 DEFAULT_ROLE_PENALTY = 5
 
 #: Roles where something ELSE is already wired to the pin, so sharing it has a consequence a
@@ -362,12 +353,11 @@ def assign(board, signals):
         if not usable:
             raise ImpossibleError(_why_not(board, signal, needs, available, taken_gpio), design_codes.NO_PIN_LEFT)
 
-        # The least capable, least encumbered pin that still does the job — so abilities stay
-        # available for the signals that need them, and pins with another job stay free for as
-        # long as possible. Ties break on GPIO number, for a stable answer.
-        label = min(usable,
-                    key=lambda name: (_cost(usable[name], needs), usable[name]["gpio"]))
-        pin = usable[label]
+        # The least capable, least encumbered pin that still does the job, a bus pad after the plain ones (PAD_ORDER,
+        # P1010) — so abilities stay available for the signals that need them, and pins with another job stay free for
+        # as long as possible. Ties break on GPIO number, for a stable answer. The free pads ride along for the why.
+        label = min(usable, key=lambda name: PAD_ORDER.rank(usable[name], needs))
+        pin = dict(usable[label], free=usable)
         taken_gpio |= joined.holds(label)
         why = _why(needs, pin)
         if signal.get("line") == "SS" and board_dedicates_pins_to(board, signal.get("bus", "")):
@@ -416,8 +406,15 @@ def _cost(pin, needs=frozenset()):
     return wasted * CAPABILITY_COST + _penalty(pin["roles"])
 
 
+#: The order the free pads are offered in, and the why of a bus pad (P1010).
+PAD_ORDER = pad_order.PadOrder(_cost, CONFLICTING_ROLES)
+
+
 def _why(needs, pin):
-    """One sentence a person can disagree with."""
+    """One sentence a person can disagree with. `pin` may carry `free`, the free pads that could serve it (P1010)."""
+    said = PAD_ORDER.why(needs, pin, pin.get("free", {}))
+    if said:
+        return said
     if needs:
         spare = sorted(pin["can"] - needs)
         if spare:
