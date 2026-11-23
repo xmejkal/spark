@@ -4,7 +4,7 @@ Part of the [guide for AI agents](../agents.md). `flow.py show` says where a pro
 ([P825](https://github.com/xmejkal/spark/issues/1183)). The phases go from the idea to the deploy. It reads the project's
 files and the store, and writes nothing. `flow.py` with no verb shows too. `flow.py page` writes the same phases as a page ([below](#the-page)).
 `flow.py run-request` runs the step the page asked for ([a page request](#a-page-request)). `show`'s `next` holds the
-step of the offer to take now ([the next step](#the-next-step)).
+step to take now ([the next step](#the-next-step)).
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" show --project . --json
@@ -291,11 +291,12 @@ line says and ask the person first.
 
 ## The next step
 
-`show --json` fills `next` with the step of the now offer ([P1030](https://github.com/xmejkal/spark/issues/1510)): one `{op, argv, why, effects, needs_yes}`,
-with `needs_person` and `env` when they apply ([their JSON](json.md)). An empty `next` means that spark has no step to
-name: read `data.guide.now`. The `argv` and the `env` are raw, with the whole project path and the store path, while
-`data` is masked. Run the step with the script that answers its op. An offer's key and its step's op are two words on
-purpose:
+`show --json` fills `next` with the step of the now offer ([P1030](https://github.com/xmejkal/spark/issues/1510)), else
+with the now phase's own step ([P1034](https://github.com/xmejkal/spark/issues/1517)): `{op, argv, why, effects,
+needs_yes}`, with `needs_person` and `env` when they apply ([their JSON](json.md)). An empty `next` means that spark has
+no step to name: read `data.guide.now`. The `argv` and the `env` are raw, with the whole project path and the store
+path, while `data` is masked. Run the step with the script that answers its op. An offer's key and its step's op are two
+words on purpose:
 
 | offer key | op | script |
 | --- | --- | --- |
@@ -305,9 +306,19 @@ purpose:
 | `needs-drop:<need>` | `needs-drop` | `parts.py` |
 
 A pick is the person's choice. Its step has `needs_person: true`, and `why` names the part and the need: ask the person
-first. The offers in `data.phases` keep their four keys and no step. Without `--json`, the text ends with the guide in
-the page's words: `NOW (<phase>): <sentence> [<offer key>]`, then `DONE`, `LATER`, the sentence of `no_simulation` and
-`SET ASIDE`. A list with no item draws no line.
+first. The offers in `data.phases` keep their four keys and no step. A phase's own step adds no offer:
+
+| now phase | when | op (script) | `needs_person` |
+| --- | --- | --- | --- |
+| simulate | no `sim/wokwi.toml` | `build-board` (`check_spine.py`), the build's offer step | no key |
+| simulate | no image, an image no run tested, or one older than `firmware/` | `run_scenario` (`run_scenario.py`), one per `sim/scenarios/*.scenario.yaml`. While none is written, it names `sim/scenarios/<name>.scenario.yaml`, and Claude writes that scenario first | true |
+| deploy | `not-started` | `look` (`look.py`), with `--no-simulation` when `data.guide.no_simulation` is set | true |
+
+`run-request` runs the build step from the page's button, and refuses `run_scenario` and `look`. An op named like a
+script is `scripts/<op>.py`, not on the core yet (piece 5 of [P793](https://github.com/xmejkal/spark/issues/1105)). With
+`needs_person`, the person acts first: they run a scenario in their own terminal, and it spends Wokwi CI minutes, so ask
+before each run. Before a look, they plug the wired board into USB. The deploy phase has no end yet: after a deploy, the
+look is still next. The text's NOW line ends with `[<offer key>]`, `[next: <op>]` or `[next: <op>, needs you]`.
 
 ## A page request
 
