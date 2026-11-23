@@ -46,4 +46,4 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 
 ## Board actions
 <!-- Each action, taken or pending, with its D. e.g. `- move the item to Discovery · pending` -->
-- file the four items above · pending: needs a D that names items.md, and spark-main files them (this session moves and files no card) <!-- REQUIRED:board-actions -->
+- file the four items above · pending, D18: spark-main files them (this session moves and files no card) <!-- REQUIRED:board-actions -->
