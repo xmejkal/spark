@@ -38,6 +38,7 @@ from spark.build.stages import Stage  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, OK, SKIPPED  # noqa: E402
 from spark.breadboard import before_power, sheet  # noqa: E402
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TICK, page_words, shown_phase, word_of  # noqa: E402
+from spark.flow.offer_steps import build_step  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
@@ -285,7 +286,7 @@ class TheDocumentTest(unittest.TestCase):
             assert_spark_s_script_only(self, text)
 
     def test_a_sentence_with_an_angle_bracket_is_escaped(self):
-        text = page_of(a_phase("one", says=["<b>bold</b> & more"], offers=[Offer("a<b", "<i>x</i>", "<i>y</i>", ())]), project="<p>")
+        text = page_of(a_phase("one", says=["<b>bold</b> & more"], offers=[Offer("a<b", "<i>x</i>", "<i>y</i>", (), build_step("project"))]), project="<p>")
         self.assertNotIn("<b>", text)
         self.assertNotIn("<i>", text)
         self.assertIn('data-key="a&lt;b"', text)
@@ -297,7 +298,7 @@ class TheDocumentTest(unittest.TestCase):
         self.assertEqual(page_of(*phases), page_of(*phases))
 
     def test_an_offer_shows_its_label_and_effect_and_keeps_its_key_in_data_key(self):
-        text = page_of(a_phase("one", offers=[Offer("build", "Build the board", "Builds the board.", ())]))
+        text = page_of(a_phase("one", offers=[Offer("build", "Build the board", "Builds the board.", (), build_step("project"))]))
         self.assertIn('<li data-key="build" data-makes-stale="">Build the board: Builds the board.</li>', text)
         self.assertNotIn(">build<", text)
         self.assertNotIn("<code>", text)
@@ -1478,7 +1479,7 @@ class ThePageScriptTest(unittest.TestCase):
                 self.assertIn("<p><strong>NOW (parts)</strong> ", text)
 
     def test_a_label_with_markup_cannot_close_the_words_block(self):
-        phase = a_phase("build", offers=[Offer("build", "</script><script>alert(1)</script>", "x", ())])
+        phase = a_phase("build", offers=[Offer("build", "</script><script>alert(1)</script>", "x", (), build_step("project"))])
         text = FlowHtmlPage().text(FlowPage("t", [phase.to_dict()], None, [], []))
         self.assertEqual(len(scripts_of(text)), 2)
         self.assertEqual(words_of(text)["offers"]["build"]["label"], "</script><script>alert(1)</script>")

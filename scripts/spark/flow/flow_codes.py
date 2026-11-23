@@ -80,6 +80,8 @@ MAKES_STALE = {PICK: (REQUIREMENTS,), WRITE_REQUIREMENTS: (BUILD, BREADBOARD), B
 #: The label of each offer, the words of its button (P829). <label> is the part's own name, in quotes, so a name that
 #: starts with a digit never runs into a count.
 PICK_LABEL = "Pick “%s” for %s"
+#: The why of a pick's step (P1030): a pick is the person's choice, so the step names the part and the need.
+PICK_WHY = "The person's choice: “%s” for the %s need"
 DROP_LABEL = "Drop the %s need"
 REQUIREMENTS_LABEL = "Write the parts list"
 BUILD_LABEL = "Build the board"

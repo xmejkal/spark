@@ -15,7 +15,7 @@ from spark.breadboard import sheet
 from spark.design import need_requirements, needs, needs_basis
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
-from spark.flow import flow_codes
+from spark.flow import flow_codes, offer_steps
 from spark.records import record_kind, records_codes, store
 from spark.records.brief import Brief
 from spark.core.errors import CodedMessageError
@@ -24,7 +24,7 @@ from spark.core.zone_time import stamp
 
 # --- MVP ---
 #: The project's requirements file, as every stage names it.
-REQUIREMENTS_FILE = "requirements.json"
+REQUIREMENTS_FILE = offer_steps.REQUIREMENTS_FILE
 #: The firmware Claude writes, as `/spark:build`'s next step names it.
 MAIN_FILE = Path("firmware") / "main.py"
 #: How each status reads: (the word in a person's line, the glyph a page shows). The mark alone says ok, and None is a
@@ -37,8 +37,9 @@ MARKS = {OK: (None, "✓"), PROBLEMS: ("problems", "✗"), COULD_NOT_RUN: ("coul
 NOT_SIMULATED_SAYS = {firmware_codes.NO_SIM_TOML: [flow_codes.NO_SIM_MESSAGE],
                       firmware_codes.NO_IMAGE: [flow_codes.NO_IMAGE_MESSAGE, flow_codes.SCENARIO_HINT]}
 #: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (the words of its button), its effect (plain
-#: sentences that name every write taking it makes) and `makes_stale`, the phases it can make out of date (P829).
-Offer = namedtuple("Offer", "key label effect makes_stale")
+#: sentences that name every write taking it makes), `makes_stale`, the phases it can make out of date (P829), and `step`,
+#: the NextStep that runs it (offer_steps, P1030). The JSON of `data` holds the first four: the step is in `next`.
+Offer = namedtuple("Offer", "key label effect makes_stale step")
 #: The parts phase offers at most this many picks per need (P976, the PO, 2026-11-21: "so many unrelated things").
 OFFERS_PER_NEED = 3
 #: The verb of the need a board serves (`needs`' board need): a board is a plausible pick for it whatever its words.
@@ -53,7 +54,8 @@ class Phase(namedtuple("Phase", "phase status mark by says offers")):
     its glyph from MARKS, who does it, what it says (sentences for a person; a null value reads `unknown`) and its Offers."""
 
     def to_dict(self):
-        return dict(self._asdict(), offers=[dict(offer._asdict(), makes_stale=list(offer.makes_stale)) for offer in self.offers])
+        return dict(self._asdict(), offers=[dict(key=offer.key, label=offer.label, effect=offer.effect, makes_stale=list(offer.makes_stale))
+                                            for offer in self.offers])
 
 
 class PhaseReader:
@@ -143,7 +145,8 @@ class NeedsReader(PhaseReader):
             status, said = without_needs(project, self.PHASE)
             return self.phase(status, [said])
         # a drop is asked in the chat (P829), so its offer names no phase that goes out of date
-        drops = [Offer("%s:%s" % (flow_codes.NEEDS_DROP, need), flow_codes.DROP_LABEL % need, flow_codes.DROP_MESSAGE % need, ())
+        drops = [Offer("%s:%s" % (flow_codes.NEEDS_DROP, need), flow_codes.DROP_LABEL % need, flow_codes.DROP_MESSAGE % need, (),
+                       offer_steps.drop_step(project, need))
                  for need in ids]
         stale, said = basis_says(project)
         return self.phase(flow_codes.STALE if stale else OK, [flow_codes.NEEDS_MESSAGE % (len(ids), ", ".join(ids))] + said, drops)
@@ -301,7 +304,8 @@ def pick_offer(project, need, candidate, listed, notes):
     key, label = "%s:%s:%s" % (flow_codes.PICK, need, pick_id), flow_codes.PICK_LABEL % (candidate_label(candidate), need)
     said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)] + notes
     said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
-    return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK))
+    return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK),
+                 offer_steps.pick_step(project, need, pick_id, candidate_label(candidate)))
 
 
 def counted(listed):
@@ -409,7 +413,7 @@ class RequirementsReader(PhaseReader):
             return self.phase(PROBLEMS if held is not None or is_all_picked(listed) else flow_codes.NOT_STARTED, said)
         effect = " ".join((flow_codes.REQUIREMENTS_MESSAGE, flow_codes.SHELVE_MESSAGE, flow_codes.ORIGIN_MESSAGE))
         offers = [Offer(flow_codes.WRITE_REQUIREMENTS, flow_codes.REQUIREMENTS_LABEL, effect,
-                        makes_stale(project, flow_codes.WRITE_REQUIREMENTS))]
+                        makes_stale(project, flow_codes.WRITE_REQUIREMENTS), offer_steps.requirements_step(project))]
         warned = no_stance_lines(project, given.unsimulated)  # P996: said, never a blocker
         if held is None:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_MESSAGE] + warned, offers)
@@ -463,7 +467,8 @@ class BuildReader(PhaseReader):
 
     def read(self, project):
         record = BuildRecordStore(project).read()
-        offers = ([Offer(flow_codes.BUILD_BOARD, flow_codes.BUILD_LABEL, build_effect(project), makes_stale(project, flow_codes.BUILD_BOARD))]
+        offers = ([Offer(flow_codes.BUILD_BOARD, flow_codes.BUILD_LABEL, build_effect(project), makes_stale(project, flow_codes.BUILD_BOARD),
+                         offer_steps.build_step(project))]
                   if (project / REQUIREMENTS_FILE).is_file() else [])
         if record is None:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_BUILD_MESSAGE], offers)

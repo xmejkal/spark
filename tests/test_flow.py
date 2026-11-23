@@ -42,6 +42,7 @@ from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import STALE  # noqa: E402
 from spark.records import store  # noqa: E402
+from spark.core.result import NextStep  # noqa: E402
 
 #: A built project: requirements.json, the board it names and the circuit a finished build kept with its built-from.json.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -1326,6 +1327,37 @@ class TheRunOnButtonLightTest(unittest.TestCase):
         turned, named = self.turned_stale(WriteRequirements(), {"project": str(self.project), "dry_run": False, "replies": None}, "requirements")
         self.assertEqual(turned, {"build", "breadboard"})
         self.assertLessEqual(turned, named)
+
+
+class TheOfferStepTest(FlowTest):
+    """P1030: each offer carries the core's NextStep that runs it: its op, an argv with the whole project path, and the
+    store's env. A pick is the person's choice, so its step needs the person."""
+
+    def steps_of(self, project):
+        return {offer.key: offer.step for phase in read_flow(project)[0] for offer in phase.offers}
+
+    def test_each_offer_of_a_real_project_carries_its_step(self):
+        project = with_needs(a_built_project(), SOIL)
+        steps, whole, env = self.steps_of(project), str(project.absolute()), {"SPARK_HOME": str(self.home.resolve())}
+        self.assertEqual(steps["pick:soil:x-many"], NextStep("pick", ["--pick", whole, "soil=x-many"],
+                                                             "The person's choice: “A soil probe” for the soil need", ("reads", "writes"),
+                                                             False, True, env))
+        self.assertEqual(steps["build"], NextStep("build-board", [str(project.absolute() / "requirements.json"), "--keep", whole],
+                                                  "Build the board", ("reads", "runs", "writes"), False, None, env))
+        self.assertEqual(steps["needs-drop:soil"], NextStep("needs-drop", ["--needs-drop", whole, "soil"], "Drop the soil need",
+                                                            ("reads", "writes"), False, None, env))
+
+    def test_a_relative_project_s_step_names_it_whole_so_no_name_reads_as_a_flag(self):
+        project = with_needs(a_built_project(), SOIL)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(project.parent)
+        steps = self.steps_of(project.name)
+        self.assertEqual(steps["build"].argv[2], str(Path.cwd() / project.name))  # the folder as the process sees it, whole
+
+    def test_the_offers_in_data_keep_their_four_keys_and_no_step(self):
+        said, _ = show(with_needs(a_built_project(), SOIL))
+        self.assertEqual({tuple(offer) for phase in said["data"]["phases"] for offer in phase["offers"]},
+                         {("key", "label", "effect", "makes_stale")})
 
 
 if __name__ == "__main__":

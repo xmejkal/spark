@@ -32,6 +32,8 @@ from spark.core.outside import build_bare_outside_world  # noqa: E402
 from spark.core.result import Finding, OperationResult  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
+from spark.core.result import NextStep  # noqa: E402
+from spark.flow import offer_steps  # noqa: E402
 from spark.flow.phase_readers import Offer, Phase  # noqa: E402
 from spark.flow.run_request import RunRequest  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
@@ -62,14 +64,25 @@ class FakeStep(Operation):
         return self.result
 
 
+def step_of(project, key):
+    """The step spark's offer of `key` carries (offer_steps), or a step of an op no Operation of the page answers."""
+    kind, _, rest = key.partition(":")
+    if kind == "pick" and rest.count(":") == 1:
+        need, pick = rest.split(":")
+        return offer_steps.pick_step(project, need, pick, pick)
+    steps = {"requirements": lambda: offer_steps.requirements_step(project), "build": lambda: offer_steps.build_step(project),
+             "needs-drop": lambda: offer_steps.drop_step(project, rest)}
+    return steps[kind]() if kind in steps else NextStep(kind, [], "a step no Operation of the page answers")
+
+
 class FakeReader:
-    """Fake PhaseReader: one phase that offers `keys`."""
+    """Fake PhaseReader: one phase that offers `keys`, each with its step."""
 
     def __init__(self, keys):
         self.keys = keys
 
     def answer(self, project):
-        return Phase("parts", None, "·", "you", [], [Offer(key, "label of " + key, "effect of " + key, ()) for key in self.keys])
+        return Phase("parts", None, "·", "you", [], [Offer(key, "label of " + key, "effect of " + key, (), step_of(project, key)) for key in self.keys])
 
 
 class RunRequestTest(unittest.TestCase):
