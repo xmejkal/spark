@@ -401,12 +401,12 @@ class TheDeployViewTest(unittest.TestCase):
         self.assertIs(DeployImage.text_renderer, StatusLine)
 
     def test_each_end_has_its_sentence_and_its_mark(self):
-        unknown = (ready_probe.UNKNOWN, "mpremote could not read the board's files: no port.")
+        unknown = ("ready unknown", "mpremote could not read the board's files: no port.")
         cases = [
-            (reached_with(DeployPhase.VERIFY, (ready_probe.SEEN, "the firmware printed it")), 0, [],
+            (reached_with(DeployPhase.VERIFY, ("ready seen", "the firmware printed it")), 0, [],
              "Flashed, and the board printed ready.", MARK_OK),
             (reached_with(DeployPhase.PLAN, dry_run=True), 0, [], "Dry run: nothing was flashed, and the board was not looked at.", MARK_OK),
-            (reached_with(DeployPhase.VERIFY, (ready_probe.NOT_SEEN, "the firmware printed no 'ready' in 20 s")), 1, stop("x"),
+            (reached_with(DeployPhase.VERIFY, ("ready not seen", "the firmware printed no 'ready' in 20 s")), 1, stop("x"),
              "Flashed, ready not seen: the firmware printed no 'ready' in 20 s.", MARK_STOP),
             (reached_with(DeployPhase.VERIFY, unknown), 2, stop("x"),
              "Flashed, ready unknown: mpremote could not read the board's files: no port. What to try is above.", MARK_UNCHECKED),
