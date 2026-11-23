@@ -40,7 +40,7 @@ flowchart LR
 - The deploy reader is its own story under P793, in parallel with the page (D7).
 - Sharing comes later, on P834 (D9, D20). A live page is designed now and built later (D5).
 - The frontend-design plugin is installed at user level, and Anthropic's design plugin is on for the spark checkout only (D8, D28).
-- The page's script moves to TypeScript (D29). The TypeScript language server is installed for spark, but it does not run with TypeScript 7, and its fix waits for the PO.
+- The page's script moves to TypeScript (D29). The TypeScript language server is installed for spark and runs on TypeScript 6.0.3, while the global tsc stays 7.0.2.
 
 ## What comes next
 
