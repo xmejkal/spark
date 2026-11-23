@@ -13,7 +13,8 @@
     "bench": "sigrok",
     "ts-runtime": "bun",
     "flasher": "esptool",
-    "board-shell": "mpremote"
+    "board-shell": "mpremote",
+    "text-colour": "rich"
   },
   "contracts": {
     "pdf-text": "page-text",
@@ -272,6 +273,16 @@
     "install": {
       "npm": "npm install -g bun",
       "brew": "brew install oven-sh/bun/bun"
+    }
+  },
+  "rich": {
+    "for": "colour in the text view on a terminal (look.py first, P1032). Without it the text is plain",
+    "kind": "python",
+    "module": "rich",
+    "on": false,
+    "version": "15.0.0",
+    "install": {
+      "pip": "python3 -m pip install --user rich=={version}"
     }
   }
 }
