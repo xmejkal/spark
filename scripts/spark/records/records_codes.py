@@ -68,7 +68,8 @@ FILE_NAME_REFUSED = Code("file_name_refused", "a document's file name could leav
                          "keep the document under a short plain name")
 DOCUMENT_NOT_KEPT = Code("document_not_kept", "what was written into the store is not what was fetched, so it was deleted",
                          "check the disk of spark's store, then fetch again")
-#: answer_operation (P726): a file an Operation reads or writes, a project's or the store's, that the disk refused or that is not JSON.
+#: answer_operation (P726), store, storage, keep_file, keep_picture, validate_parts and tool_finder (P1041): a file an
+#: Operation reads or writes, a project's or the store's, that the disk refused or that is not JSON.
 FILE_REFUSED = Code("file_refused", "a file the operation reads or writes could not be read or written, or is not JSON: the sentence names it",
                     "fix the file the sentence names, or its permissions, then run again")
 #: missing_facts: a stage needs a fact the record lacks (P464). The fix is a template of the board's id.

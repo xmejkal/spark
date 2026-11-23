@@ -1,0 +1,7 @@
+[
+ {"file": "scripts/spark/records/tool_finder.py", "name": "a tools file spark may not read escapes as a PermissionError", "find": "    except OSError as cannot:  # P1041: a file", "replace": "    except FileNotFoundError as cannot:  # P1041: a file"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "a folder or a FIFO in the place of a tools file reads as absent", "find": "raise ToolError(\"%s cannot be read (not a regular file) — fix it or delete it\", path, code=records_codes.FILE_REFUSED)", "replace": "return {}"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "a tools file in a folder spark may not enter reads as absent", "find": "    except (FileNotFoundError, NotADirectoryError):  # no file", "replace": "    except OSError:  # no file"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "a tools file the disk refused gets the code of a broken list", "find": "or a link loop\n        raise ToolError(\"%s cannot be read (%s) — fix it or its permissions\", path, cannot.strerror or cannot,\n                        code=records_codes.FILE_REFUSED)", "replace": "or a link loop\n        raise ToolError(\"%s cannot be read (%s) — fix it or its permissions\", path, cannot.strerror or cannot,\n                        code=records_codes.TOOLS_LIST_BROKEN)"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "a downloads folder spark cannot read says the tool is missing", "find": "    except (FileNotFoundError, NotADirectoryError):\n        return False", "replace": "    except OSError:\n        return False"}
+]

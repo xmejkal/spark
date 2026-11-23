@@ -438,6 +438,33 @@ class TheLauncherTest(StoreCase):
         self.assertEqual((done.returncode, [item["code"] for item in json.loads(done.stdout)["unchecked"]]), (2, ["not_registered"]))
 
 
+class AnUnreadableStoreTest(StoreCase):
+    """P1041 (#1529): a store folder of mode 0 was a traceback at tool_finder._read, through the Privacy of every bench
+    Operation. A child, so tool_finder reads its tools file from this store when it starts (D6)."""
+
+    def setUp(self):
+        super().setUp()
+        self.addCleanup(os.chmod, self.home, 0o700)
+        os.chmod(self.home, 0)
+
+    def run_bench(self, *argv):
+        env = golden_bench.child_env(self.home, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
+        done = golden_bench.run_child("bench.py", list(argv), tempfile.mkdtemp(), env)
+        self.assertNotIn("Traceback", done.stdout + done.stderr)
+        return done, json.loads(done.stdout)
+
+    def test_register_is_the_store_s_refusal_and_exits_2(self):
+        done, said = self.run_bench("register", "pixel-games", "--origin", ORIGIN, "--tool", "box.py", "--json")
+        self.assertEqual((done.returncode, [item["code"] for item in said["unchecked"]]), (2, ["store_problem"]), done.stderr)
+        self.assertIn("Not registered.", done.stderr)
+
+    def test_show_names_the_tools_file_it_cannot_read_and_exits_2(self):
+        # D4: the bench gives every ToolError the code tool_missing today, so this pins it
+        done, said = self.run_bench("show", "--json")
+        self.assertEqual((done.returncode, said["unchecked"][0]["code"]), (2, "tool_missing"), done.stderr)
+        self.assertIn("cannot be read", said["unchecked"][0]["sentence"])
+
+
 class TheFixRoundTest(RecordCase):
     """The review of PR #1306: the cases that no test held."""
 

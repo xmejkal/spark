@@ -18,6 +18,7 @@ import json
 import os
 import platform
 import shutil
+import stat
 import string
 import subprocess
 import sys
@@ -70,10 +71,16 @@ class ToolFinder:
 
 
 def _read(path):
-    if not path.is_file():
-        return {}
+    """A tools file as a dict; {} when there is none. A ToolError when it cannot be read (P1041) or is no tools file."""
     try:
+        if not stat.S_ISREG(path.stat().st_mode):  # a folder or a FIFO: a read of a FIFO would wait for a writer
+            raise ToolError("%s cannot be read (not a regular file) — fix it or delete it", path, code=records_codes.FILE_REFUSED)
         data = json.loads(path.read_text())
+    except (FileNotFoundError, NotADirectoryError):  # no file, a broken link, a parent that is a file: no layer, as before
+        return {}
+    except OSError as cannot:  # P1041: a file, or a folder on its way, that spark may not read, or a link loop
+        raise ToolError("%s cannot be read (%s) — fix it or its permissions", path, cannot.strerror or cannot,
+                        code=records_codes.FILE_REFUSED)
     except ValueError as broken:
         raise ToolError("%s is not JSON (%s) — fix it or delete it", path, broken, code=records_codes.TOOLS_LIST_BROKEN)
     if not isinstance(data, dict):
@@ -166,6 +173,18 @@ def fetch_of(entry):
     return fetch["file"], build["url"], build["sha256"], bool(fetch.get("executable"))
 
 
+def _downloaded(path):
+    """Whether spark's downloads hold the file `path`. A ToolError when the disk refuses to say (P1041): a tool in a
+    folder spark cannot read is neither here nor missing, and /spark:setup could not write it there either."""
+    try:
+        return stat.S_ISREG(path.stat().st_mode)
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    except OSError as cannot:
+        raise ToolError("%s cannot be read (%s) — fix it or its permissions", path, cannot.strerror or cannot,
+                        code=records_codes.FILE_REFUSED)
+
+
 def locate(entry, project):
     """The command that runs this tool, by its kind — or None when it is not here."""
     kind = entry.get("kind", "path")
@@ -175,7 +194,7 @@ def locate(entry, project):
         return [sys.executable] if importlib.util.find_spec(entry["module"]) else None
     if kind == "download":
         path = DOWNLOADS / entry["file"]
-        return [str(path)] if path.is_file() else None
+        return [str(path)] if _downloaded(path) else None
     if kind == "bundled":
         path = PLUGIN / entry["file"]
         return [str(path)] if path.is_file() else None
@@ -194,7 +213,7 @@ def locate(entry, project):
             return [str(path)]
     if entry.get("fetch"):
         path = DOWNLOADS / entry["fetch"]["file"]
-        if path.is_file() and os.access(str(path), os.X_OK):
+        if _downloaded(path) and os.access(str(path), os.X_OK):
             return [str(path)]
     return None
 
