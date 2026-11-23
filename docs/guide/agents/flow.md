@@ -55,7 +55,7 @@ The words of a phase:
 
 | key | holds |
 | --- | --- |
-| `status` | `ok`, `problems` or `could-not-run`, a phase word, or `null`. The phase words: `not-started` (nothing done yet), `partial` (some needs have no pick, or a build skipped a stage) and `stale` (done, but something it was made from changed after it: requirements.json for the build and the breadboard, the goal or the must lines for the needs). See `null` below |
+| `status` | `ok`, `problems` or `could-not-run`, a phase word, or `null`. The phase words: `not-started` (nothing done yet), `partial` (some needs have no pick, or a build skipped a stage) and `stale` (done, but what it was made from changed after it: see the build and the needs below). See `null` below |
 | `mark` | the glyph a page shows for the status |
 | `by` | who does the phase: `you`, `claude` or `your terminal` |
 | `says` | sentences for a person. A value nobody recorded reads `unknown` |
