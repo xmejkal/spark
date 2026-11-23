@@ -114,7 +114,8 @@ When no board is on USB and the project's firmware calls deepsleep (read from fi
 line is `no board found.` and the last line, the fix, says that the board can be in deep sleep (P1022). It names the
 calls, and says what to try in order: download mode with BOOT, a wait for the wake, then the cable. A firmware file
 that does not parse is named. With --port, the board doctor can find the named port not on USB. If firmware/ then
-calls deepsleep, the doctor's next line is the same fix, and it opens with the named port (P1049)."""
+calls deepsleep, the doctor's next line is the same fix, and it opens with the named port (P1049). With --json, `next`
+then holds the look step, which needs the person: the same look, run once after the person did step 1 or 2 (P1048)."""
 
 
 class LookAtBoard(Operation):

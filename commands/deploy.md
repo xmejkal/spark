@@ -154,7 +154,7 @@ again to fix this, and never erase. The board log keeps what mpremote printed on
 of the board wrote the facts file or read the files, the fix says so.
 A firmware that deep-sleeps (P1022 slice 3): when the look finds no board, or the port named with `--port` is not on
 USB (P1049), and firmware/ calls deepsleep, the fix says the board can be in deep sleep. Relay it as printed, and do
-not run look.py again in a loop while the board sleeps: the person does step 1 (download mode with BOOT). A `ready`
+not run look.py again in a loop while the board sleeps: the person does step 1 (download mode with BOOT). Then run the look step of `next` once. A `ready`
 line printed before mpremote lost the board is `ready seen` only when the files match and firmware/ calls deepsleep
 (`data.ready.lost_board` is true). On an ESP32-C6 over USB-Serial/JTAG, the ready unknown fix says that a download
 mode entered with BOOT outlasts esptool's restart: after

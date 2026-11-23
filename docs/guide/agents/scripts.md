@@ -128,7 +128,7 @@ These only read:
   in its own words, wait until they say it is done, and run the same command again. If the same `next_step` comes back after the person did it, give
   the `if_not_helped` step; when that is null, stop and say that spark knows no further step. When the `--port` port is off USB and firmware/ calls
   deepsleep, `look.py`, `deploy.py` and `grant.py --minutes` put the asleep fix on the `next` line, under the `check` lines, and in `fix`, while
-  `next_step` stays `plug_in`: relay the `fix` ([P1049](https://github.com/xmejkal/spark/issues/1539); reach.py and live.py: P1057, P1055). A doctor
+  `next_step` stays `plug_in`: relay the `fix`, and `next` holds the look step with `needs_person` (P1048) ([P1049](https://github.com/xmejkal/spark/issues/1539); reach.py and live.py: P1057, P1055). A doctor
   result is never a pass, and a `next_step` of null means the doctor could not look. Its console check opens the port, which can restart the board, so
   say so before you run a command that may call it. Each tool's `silent_step` in the tools list (`hold_boot` for esptool, `press_reset` for mpremote)
   sets the step for a silent board (a firmware that prints nothing is silent too); never change it for the person. When the board record holds
