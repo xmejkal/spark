@@ -59,6 +59,14 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
 
    then without `--dry-run`. A need holds no reason, count or place, and `--needs-set` sets no pick (`--pick` does, below) — the
    file belongs to the project. To remove a need, run `parts.py --needs-drop <project> <need> --dry-run` first, then without it: it releases only the holds of the dropped pick, and every other hold stays, history stays, and it says when requirements.json still lists the part.
+4. A `--needs-set` that defines a need (an item with `does`, `what` or `condition`) also notes the goal and the must
+   lines of the brief in `.spark/needs-basis.json` ([P1027](https://github.com/xmejkal/spark/issues/1506)). A write of
+   marks or `aside` alone notes nothing. A `--needs-set` with `[]` (an empty list) is a review: it changes no need and
+   notes the brief as it is now. When the goal or the must lines change later, `flow.py show` marks the needs phase
+   out of date and names what changed. Then go through the needs and the must lines with the person. Change the brief
+   (`init_project.py --answers`) and then the needs (`--needs-set`) only on their words. When they say that the needs
+   still fit, run `--needs-set` with `[]`. After a `--needs-drop`, run `--needs-set` with `[]` too, to note the goal
+   that the needs answer now. Never drop or change a need, a must line or a record without their words.
 
 ## M — what the store offers for each need
 
