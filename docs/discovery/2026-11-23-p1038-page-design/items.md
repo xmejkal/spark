@@ -4,17 +4,46 @@ block for more. needed by: the decider's words, quoted. value proven by: a proof
 status: proposed, or filed D<n>.
 e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)` -->
 
-## ⟨title⟩
-- type: ⟨fill⟩ <!-- REQUIRED:item-type -->
-- needed by: ⟨fill⟩ <!-- REQUIRED:needed-by -->
-- value proven by: ⟨fill⟩ <!-- REQUIRED:value-proven-by -->
-- depends on: ⟨fill or —⟩ <!-- REQUIRED:depends-on -->
+## The deploy reader reads the project's board logs (P793 piece 6)
+- type: story <!-- REQUIRED:item-type -->
+- needed by: "get back to where the page is and try to show this project on the page ... so we can make it work" (the PO, 2026-11-23, brief.md Frame); the core gap is named in P793 #1105's comment of 2026-11-23 <!-- REQUIRED:needed-by -->
+- value proven by: `flow.py show --project .` in p934-display2 names a stand past the deploy, with the last deploy's time and ready line <!-- REQUIRED:value-proven-by -->
+- depends on: A3 <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
-- label (the repository's type label): ⟨fill⟩ <!-- REQUIRED:spark-process:label -->
-- parent (the epic, as a sub-issue): ⟨fill or —⟩ <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): ⟨fill⟩ <!-- REQUIRED:spark-process:slice -->
-<!-- EXTEND:item-fields -->
+- label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
+- parent (the epic, as a sub-issue): P793 #1105 <!-- REQUIRED:spark-process:parent -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider (spark-main knows P793's slice) <!-- REQUIRED:spark-process:slice -->
+
+## The page offers Build and Pick on a wired board, and a rebuild can move its pins
+- type: bug
+- needed by: the user lens, USER-3 (council/user.md), from the P1010 commit; not seen by the PO
+- value proven by: the page of p934-display2 shows no Build or Pick that moves a pin without saying so
+- depends on: —
+- status: proposed
+- label (the repository's type label): bug
+- parent (the epic, as a sub-issue): P1038 #1521
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider
+
+## The page's step numbers disagree with its picture, and its stamp has no date
+- type: bug
+- needed by: the user lens, USER-4 and USER-7 (council/user.md); the PO: "not very readable or intuitive" (P1011 #1470)
+- value proven by: on a page written again after P1009, step N of the list is pill N of the picture, and the stamp shows a date
+- depends on: —
+- status: proposed
+- label (the repository's type label): bug
+- parent (the epic, as a sub-issue): P1038 #1521
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider
+
+## The README's Bench row looks stale after the P934 walk
+- type: chore
+- needed by: the PO assistant lens, PO-29 (council/po-assistant.md)
+- value proven by: the Bench row of "What works today" matches the walk's deploys, or says why not
+- depends on: —
+- status: proposed
+- label (the repository's type label): chore
+- parent (the epic, as a sub-issue): —
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider
 
 ## Board actions
 <!-- Each action, taken or pending, with its D. e.g. `- move the item to Discovery · pending` -->
-- ⟨fill⟩ | none <!-- REQUIRED:board-actions -->
+- file the four items above · pending: needs a D that names items.md, and spark-main files them (this session moves and files no card) <!-- REQUIRED:board-actions -->
