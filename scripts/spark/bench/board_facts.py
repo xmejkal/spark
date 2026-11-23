@@ -42,18 +42,44 @@ def facts_text(said):
 FACTS_RETRY_WAIT_S = 2
 
 
+#: What the board log keeps of each failed facts copy (P1022): which try, then all that mpremote printed, or "nothing".
+FACTS_HEARD = "the facts copy, %s: mpremote printed:\n%s"
+
+
+def ended(output):
+    """`output` with one newline at its end, or "nothing" and a newline when it is empty (as download_mode.first_read ends a log)."""
+    return output.rstrip("\n") + "\n" if output.strip() else "nothing\n"
+
+
+class FactsLine(str):
+    """
+    Value: the board log's line about the facts file (P1022). It is a str, as board_codes' Code is, so the line that is
+    said, `data.facts_line` and the board log stay as they were. `written` is True when the file is on the board and reads
+    back the same. `heard` is what mpremote printed on each failed try (FACTS_HEARD), or "" for none.
+    """
+
+    def __new__(cls, text, written, heard=""):
+        line = super().__new__(cls, text)
+        line.written, line.heard = written, heard
+        return line
+
+    def __getnewargs__(self):
+        """The arguments copy, deepcopy and pickle make the FactsLine again with."""
+        return str(self), self.written, self.heard
+
+
 class ReadingFile:
     """Adapter: the facts file on one board, through its BoardConnection (board_connection.py). `sleep` waits
-    before the retry."""
+    before the retry. After `write`, `heard` holds what mpremote printed on each failed try (P1022)."""
 
     def __init__(self, connection, sleep=time.sleep):
-        self.connection, self.sleep, self.first_failure = connection, sleep, None
+        self.connection, self.sleep, self.first_failure, self.heard = connection, sleep, None, ""
 
     def write(self, said):
         """None when the facts file is on the board and reads back the same, else why not. When the board refused the raw
         REPL, the copy and its read-back run once more after FACTS_RETRY_WAIT_S, and `first_failure` keeps why (P420). No
         other failure is retried: a full flash or a board that does not answer would fail again."""
-        self.first_failure = None
+        self.first_failure, self.heard = None, ""
         text = facts_text(said)
         with tempfile.TemporaryDirectory() as scratch:
             local = Path(scratch) / FACTS_FILE
@@ -64,6 +90,7 @@ class ReadingFile:
                     back = self.connection.read_file(FACTS_FILE)
                     break
                 except (BoardUnreachableError, BoardCodeError) as cannot:
+                    self.heard += FACTS_HEARD % ("the retry" if retry else "the first try", ended(cannot.output))
                     why = "mpremote could not copy it: %s" % cannot
                     if retry:
                         return "%s (the first try: %s)" % (why, self.first_failure)

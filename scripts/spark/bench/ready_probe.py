@@ -39,9 +39,25 @@ SEEN, NOT_SEEN, UNKNOWN = "ready seen", "ready not seen", "ready unknown"
 #: The verdict of a deploy that a registered project recorded (P920): spark read nothing from the board.
 NOT_READ = "ready not read"
 
-#: Result: what `ReadyProbe.check` returns. `verdict` is SEEN, NOT_SEEN or UNKNOWN, `sentence` says why, and `log` is
-#: what the board printed (the board's log).
-ReadyResult = collections.namedtuple("ReadyResult", "verdict sentence log")
+
+class ReadyResult(collections.namedtuple("ReadyResult", "verdict sentence log")):
+    """Result: what `ReadyProbe.check` returns. `verdict` is SEEN, NOT_SEEN or UNKNOWN, `sentence` says why, and `log` is
+    what the board printed (the board's log). `files_read` is True when the board printed its files' hashes (P1022), as
+    every verdict but UNKNOWN says: an UNKNOWN after the hashes gives it. It is an attribute, so a ReadyResult still
+    unpacks to three, and `_replace`, copy and pickle keep it."""
+
+    def __new__(cls, verdict, sentence, log, files_read=None):
+        ready = super().__new__(cls, verdict, sentence, log)
+        ready.files_read = verdict != UNKNOWN if files_read is None else files_read
+        return ready
+
+    def __getnewargs__(self):
+        """The arguments copy, deepcopy and pickle make the ReadyResult again with."""
+        return tuple(self) + (self.files_read,)
+
+    def _replace(self, **changes):
+        """A ReadyResult with `changes`, and the same `files_read`."""
+        return ReadyResult(*super()._replace(**changes), files_read=self.files_read)
 
 
 class ReadyProbe:
@@ -66,7 +82,7 @@ class ReadyProbe:
         except BoardCodeError as raised:  # the board answered the hashes, so the firmware stopped
             said, stopped = raised.output, str(raised)
         except BoardUnreachableError as cannot:
-            return ReadyResult(UNKNOWN, "mpremote could not start the firmware: %s" % cannot, hashes + cannot.output)
+            return ReadyResult(UNKNOWN, "mpremote could not start the firmware: %s" % cannot, hashes + cannot.output, True)
         log = hashes + said
         if differ:
             return ReadyResult(NOT_SEEN, "the board's %s %s not the files of the image" % (
