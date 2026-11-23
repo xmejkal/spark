@@ -352,7 +352,8 @@ the grant. The grant covers any passed image of any project on that board. The s
 After the flash it copies spark.json to the board: spark's version, the project, the board type, the MAC, the image's
 sha256, each file's sha256 and `simulation` (passed or none). The board log names the file's sha256 and the simulation,
 and the store's boards/<MAC>.json adds this deploy with its verdict, its simulation and whose yes it was. Then it reads
-the board: ready seen means the board's files match the evidence's sha256s and the firmware printed `ready` within %d s.
+the board: ready seen means the board's files match the evidence's sha256s and the firmware printed a line that
+starts with the word `ready` within %d s.
 The board's log goes to sim/runs/board/. A firmware that stops with an error is not seen. If mpremote cannot reach the
 board, for example because its port changed after the flash, or the passed run's log is from before P215 and names no
 files, ready is unknown, never seen. The write restarts the chip with esptool's `--after watchdog-reset` (esptool's troubleshooting
@@ -363,8 +364,8 @@ look's port with DTR and RTS off, unless that is 303a:4001 (MicroPython's own US
 press the board's RESET once (with its place when the board record has it) and waits %d s. A restart counts only when
 mpremote answers after it: a restart that left the board in download mode is said and not counted. At the end of the wait
 ready is unknown with the code `download_mode_stayed`, or `port_gone` when the port was not listed or did not come back
-(then there is no REPL line). If it reads the firmware's `ready`, the board finished its restart late, and deploy.py reads
-it again at once. What the port printed, `nothing`, or why it could not be read goes in the board log.
+(then there is no REPL line). If it reads a line whose first word is the firmware's `ready`, the board finished its
+restart late, and deploy.py reads it again at once. The board log keeps the first read's words too. What the port printed, `nothing`, or why it could not be read goes in the board log.
 
 Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)

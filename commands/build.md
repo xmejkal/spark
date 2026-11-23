@@ -325,8 +325,11 @@ CI minutes. Ask the person before each run and say that it spends minutes, even 
 run: this command's allowed-tools leave it out, but an allow rule of theirs or auto mode would not stop it. Every check
 that costs nothing runs first, and a run that cannot pass stops there.
 
-**The ready contract.** The firmware prints `ready` once its setup is done, and nothing else that contains the word
-before it, such as `already` or `not ready`. `run_scenario.py` adds a wait for the first serial text that contains `ready` before
+**The ready contract.** The firmware prints a line whose first word is `ready` once its setup is done. That line is
+`ready`, or `ready` and then a character that is not a letter, a digit or `_`, such as `ready, cpu 80 MHz`. Before it,
+no other text contains the word, such as `already` or `not ready`. The board check after a deploy counts only such a
+line. The simulation's wait counts any text that contains `ready`, because that is wokwi-cli's own rule. So the board
+is stricter than the simulation on purpose ([P1025](https://github.com/xmejkal/spark/issues/1499)). `run_scenario.py` adds a wait for the first serial text that contains `ready` before
 the scenario's first step, because a step sent earlier reaches a board that is still booting. A scenario that already
 waits for such text before its first input is left as it is. A firmware that never prints it fails with: *the
 firmware never printed 'ready': print it once setup is done (the ready contract, commands/build.md)*. The firmware also

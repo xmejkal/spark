@@ -133,7 +133,7 @@ version, the project, the board type, the MAC, the image's sha256, the MicroPyth
 facts file's sha256, and your store keeps one record for each board by its MAC, `boards/<MAC>.json`, with each
 deploy, its verdict, whose yes it was and `micropython_banner`, read from the image file at the deploy (P779). Then deploy.py reads the board with mpremote. It hashes each file that the evidence names (the passed run's log, or `firmware/` with `--no-simulation`), on the
 board, and then starts the firmware and reads its output. `ready seen` (exit 0) means the files match and the firmware
-printed `ready`. `ready not seen` (exit 1) names the file that differs, or says that no `ready` came or that the
+printed a line whose first word is `ready` (P1025). `ready not seen` (exit 1) names the file that differs, or says that no `ready` came or that the
 firmware stopped with an error. `ready unknown` (exit 2) means mpremote could not reach the board, or the passed run's
 log is from an older spark and names no files, so run the scenario again. Unknown is not a pass. The line ends with mpremote's
 own words, and the board's log keeps all it printed. A crash of deploy.py exits 2 with an envelope (code `crash`), and after the flash `data.board_state` says `may_be_erased` or `flashed_not_verified`. A `DeployError` or a tool problem during the verify is such a crash, not a traceback with exit 1. The board's log goes to `sim/runs/board/`. After the facts line, deploy.py prints `image sha256: <hex>, yes: <whose yes>`, and `--json` has the same in `data.image_sha256` and `data.yes` (P213).
