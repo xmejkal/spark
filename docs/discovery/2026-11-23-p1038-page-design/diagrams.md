@@ -63,6 +63,8 @@ flowchart LR
 
 ## 3. The page's loop as decided
 
+Where this picture and [design.md](design.md) differ, the design holds.
+
 One deploy, from the terminal to the published page. Only Claude's republish changes the published copy (D16's
 limit).
 
@@ -84,6 +86,8 @@ sequenceDiagram
 ```
 
 ## 4. The story map
+
+Where this picture and [design.md](design.md) differ, the design holds.
 
 Slice 0 runs in the core in parallel with slice 1 (D7). After slice 1, one walk runs A1's and A9's tests, and the PO
 decides again before slice 2 (D25).
@@ -119,6 +123,8 @@ flowchart TB
 ```
 
 ## 5. A crude sketch of the first page slice
+
+Where this picture and [design.md](design.md) differ, the design holds.
 
 A sketch of the structure that D11 and the slice 1 rows name, on the clock project, with no style. The words are
 placeholders: the exact sentences belong to the stories' plans and the PO's review (D10).

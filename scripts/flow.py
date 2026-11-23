@@ -63,7 +63,8 @@ requirements.json changed after that build. The needs phase is stale when the go
 after parts.py --needs-set wrote the needs (.spark/needs-basis.json). Spark changes neither. A need dropped after the
 must lines were last gone through makes the idea phase out of date, and its next step is init_project.py --answers, on the
 person's yes. After an ok run that writes to a project, the command ends its next with the step flow.py show names now (P1035):
-parts.py --pick and check_spine.py --keep so far.
+parts.py --pick and check_spine.py --keep so far. It also writes page.html again when the project has one (the build with
+--keep writes its own), and never publishes it.
 
 With --json it prints one envelope: data.phases, data.stands_at, data.fingerprint and data.guide
 (docs/guide/agents/flow.md).

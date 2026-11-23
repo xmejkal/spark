@@ -585,10 +585,15 @@ class FakeFollowUp:
     """Fake of the core's FollowUp Strategy (P1035): `steps(project)` gives the NextSteps `added` it was made with and keeps
     each project it was asked for in `asked`, `line(step)` gives `line of <op>`. `raises` is an exception class that
     `steps` raises, `line_raises` one that `line` raises (for the op `raising_op` only, or every op when None), each with
-    a message that names a home path."""
+    a message that names a home path. `refresh(project, result)` (PR 2) keeps each project in `refreshed_at` and gives
+    the sentence `refreshed` (None: it wrote nothing), or raises `refresh_raises`."""
 
-    def __init__(self, added, raises=None, line_raises=None, raising_op=None):
+    #: The file its refresh names (P1035 PR 2).
+    refreshes = "the page"
+
+    def __init__(self, added, raises=None, line_raises=None, raising_op=None, refreshed=None, refresh_raises=None):
         self.added, self.raises, self.line_raises, self.raising_op, self.asked = list(added), raises, line_raises, raising_op, []
+        self.refreshed, self.refresh_raises, self.refreshed_at = refreshed, refresh_raises, []
 
     def steps(self, project):
         self.asked.append(project)
@@ -600,3 +605,31 @@ class FakeFollowUp:
         if self.line_raises and self.raising_op in (None, step.op):
             raise self.line_raises("the line at /opt/someone failed")
         return "line of %s" % step.op
+
+    def refresh(self, project, result):
+        self.refreshed_at.append(project)
+        if self.refresh_raises:
+            raise self.refresh_raises("the refresh at /opt/someone failed")
+        return self.refreshed
+
+
+class FakePageRenderer:
+    """Fake of the flow page's Renderer (P1035 PR 2): `text(page)` gives `text`, or raises `raises`, an exception class."""
+
+    FILE_NAME = "page.html"
+    PURPOSE_MESSAGE = "a page of a test"
+
+    def __init__(self, text="a page", raises=None):
+        self.given, self.raises = text, raises
+
+    def text(self, page):
+        if self.raises:
+            raise self.raises("the renderer at /opt/someone failed")
+        return self.given
+
+
+class FakeFullDiskPageStore:
+    """Fake of the flow's FlowPageStore Adapter (P1035 PR 2): a disk with no space left, so every write raises OSError."""
+
+    def write(self, project, file_name, text):
+        raise OSError(28, "No space left on device")

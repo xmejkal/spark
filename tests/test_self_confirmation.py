@@ -130,6 +130,9 @@ MAY_READ = {
     "sheet.REFUSALS": PINNED,
     "firmware_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the five it shares with board_codes (P684)",
     "check_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and no code shared with another table (P693)",
+    "codes.CRASH": "a planted crash's code: the Code the core gives a crash, which the refresh's condition keeps out by name (P1035 PR 2)",
+    "flow_codes.NOT_DRAWN_HERE": "the advice the kept build's page must not hold: write_page's sentence for a picture it did not draw, "
+                                 "searched for, never expected (P1035 PR 2, amendment A)",
     "build_codes.DESIGN_NOT_BUILT": "a planted Stage's code: a Code of build_codes, as stages.py makes one, which Finding.of takes the fix from (P935 PR 5)",
     "build_codes.TOOL_MISSING": "a planted Stage's code: a Code of build_codes, as stages.py makes one, which Finding.of takes the fix from (P935 PR 5)",
     "build_codes.STAGE_TIMED_OUT": "a planted Stage's code: the Code of its real ending, which Finding.of takes the fix from (P935 PR 5)",

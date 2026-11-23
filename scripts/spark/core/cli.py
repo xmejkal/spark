@@ -42,6 +42,10 @@ FRAME_START = '  File "'
 TRACE_FAILED_MESSAGE = "trace: %s raised, the result stands"
 #: The diagnostics line of a follow-up that raised (P1035): the class only, as a crash's sentence.
 FOLLOW_FAILED_MESSAGE = "follow-up: %s raised, the result stands"
+#: The diagnostics line of a refresh that raised (P1035 PR 2): the class, as a crash's sentence, and the file not written.
+REFRESH_FAILED_MESSAGE = "refresh: %s raised, %s not written again, the result stands"
+#: The line of a refresh that wrote its file again (P1035 PR 2): its sentence, which is also its note's.
+REFRESHED_LINE = "  %s"
 #: Value: how one run is done (P605, a parameter object). `privacy` masks the result and the values, `trace` is called
 #: once per run with the name, the masked values, the masked result and the seconds, or None, `clock` times the run,
 #: and `follow_up` (a `follow_up.FollowUp`, or None) adds its steps after an ok run that writes to a project (P1035).
@@ -80,11 +84,18 @@ def runs_again(operation, values, step):
         return False
 
 
-def _added_steps(operation, values, follow_up):
+def _written_project(operation, values):
+    """(the run's written project, or None, and the class of what raised, or None): asked once per run (P1035 PR 2)."""
+    try:
+        return operation.written_project(values), None
+    except Exception as failed:  # noqa: BLE001  a follow-up never changes the answer
+        return None, printable(type(failed).__name__)
+
+
+def _added_steps(operation, values, follow_up, project):
     """(the follow-up's steps for the run's written project but one that runs the same again, or [], and the class of what
     raised, or None)."""
     try:
-        project = operation.written_project(values)
         steps = list(follow_up.steps(project)) if project is not None else []
         return [step for step in steps if not runs_again(operation, values, step)], None
     except Exception as failed:  # noqa: BLE001  a follow-up never changes the answer
@@ -102,17 +113,41 @@ def _step_lines(follow_up, added):
     return lines, broken
 
 
+def refreshes(result):
+    """Whether the follow-up writes its file again after `result` (P1035 PR 2): after an ok run alone, and never after a
+    crash, which this function names, so that story 0c of P793, which widens it to a run that wrote before it stopped,
+    keeps a crash out."""
+    return result.status() == outcomes.OK and not any(found.code == codes.CRASH for found in result.findings)
+
+
+def _refreshed(follow_up, project, result):
+    """`result` with the sentence of the follow-up's refresh as a line and a note (P1035 PR 2), or with one diagnostics
+    line when the refresh raised: its status, findings, next, data and lines stand."""
+    try:
+        sentence = follow_up.refresh(project, result)
+    except Exception as failed:  # noqa: BLE001  a refresh never changes the answer
+        said = REFRESH_FAILED_MESSAGE % (printable(type(failed).__name__), follow_up.refreshes)
+        return result._replace(diagnostics=list(result.diagnostics) + [said])
+    if sentence is None:
+        return result
+    return result._replace(lines=list(result.lines) + [REFRESHED_LINE % sentence],
+                           notes=list(result.notes or []) + [{"subject": follow_up.refreshes, "sentence": sentence}])
+
+
 def _followed(operation, values, result, follow_up):
     """`result` with the follow-up's steps after its own, then one line per step (P1035), after an ok run that writes to a
-    project. The steps are added first, so a line that fails never drops a step. Each failure adds one diagnostics line,
-    and the result stands."""
-    if follow_up is None or result.status() != outcomes.OK or WRITES not in operation.effects_of(values):
+    project, then its refresh when `refreshes(result)` (PR 2). The written project is asked once. The steps are added
+    first, so a line that fails never drops a step. Each failure adds one diagnostics line, and the result stands."""
+    steps_due, refresh_due = result.status() == outcomes.OK, refreshes(result)
+    if follow_up is None or not (steps_due or refresh_due) or WRITES not in operation.effects_of(values):
         return result
-    added, failed = _added_steps(operation, values, follow_up)
+    project, failed = _written_project(operation, values)
+    added, raised = _added_steps(operation, values, follow_up, project) if steps_due else ([], None)
     lines, broken = _step_lines(follow_up, added)
-    said = [FOLLOW_FAILED_MESSAGE % name for name in ([failed] if failed else []) + broken]
-    return result._replace(next=list(result.next) + added, lines=list(result.lines) + lines,
-                           diagnostics=list(result.diagnostics) + said)
+    said = [FOLLOW_FAILED_MESSAGE % name for name in [failed, raised] + broken if name]
+    followed = result._replace(next=list(result.next) + added, lines=list(result.lines) + lines,
+                               diagnostics=list(result.diagnostics) + said)
+    return _refreshed(follow_up, project, followed) if refresh_due and project is not None else followed
 
 
 def _guarded_result(operation, values, outside, build_outside):
