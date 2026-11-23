@@ -28,8 +28,9 @@ parts, and so has a project whose last need was dropped, which says so. Written 
 is a key, such as pick:soil:x-led, with a label (the words of its button, such as Build the board), its effect (plain
 sentences that name every write it makes) and makes_stale (the phases it can make out of date, only those that hold
 something now). flow.py show runs no offer. The guide (P977) ends the text: NOW, the phase to act on now, its sentence
-and the key of its offer, then DONE and LATER. With --json, next holds the step of that offer, raw (P1030), and an
-empty next means: read data.guide.now. A build that stopped only because Wokwi has no
+and the key of its offer, or next: and the op of the step of a now phase that holds no offer, with needs you for
+a step the person takes (P1034), then DONE and LATER. With --json, next holds the step of that offer, raw (P1030), or the step of
+the simulate or the deploy (P1034), and an empty next means: read data.guide.now. A build that stopped only because Wokwi has no
 model of its board (board_not_in_wokwi) is counted as done there, and the guide says there is no simulation.
 
 flow.py page writes page.html in the project: the same phases, each with its status word and a mark, the wiring of a built

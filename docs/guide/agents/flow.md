@@ -291,9 +291,13 @@ line says and ask the person first.
 
 ## The next step
 
-`show --json` fills `next` with the step of the now offer ([P1030](https://github.com/xmejkal/spark/issues/1510)): one `{op, argv, why, effects, needs_yes}`,
-with `needs_person` and `env` when they apply ([their JSON](json.md)). An empty `next` means that spark has no step to
-name: read `data.guide.now`. The `argv` and the `env` are raw, with the whole project path and the store path, while
+`show --json` fills `next` with the step of the now offer ([P1030](https://github.com/xmejkal/spark/issues/1510)), or,
+when the now phase holds no offer, with the step of that phase ([P1034](https://github.com/xmejkal/spark/issues/1517),
+below). Each step is `{op, argv, why, effects, needs_yes}`, with `needs_person` and `env` when they apply ([their
+JSON](json.md)). An offer gives one step, and a simulate gives one per scenario. An empty `next` means that spark has no
+step to name: read `data.guide.now`. That is so at the idea, the needs, the parts with no single pick, a breadboard now,
+the firmware (Claude writes `firmware/main.py` in the chat), a failed run, and a phase with the status `problems` or
+`could-not-run`. The `argv` and the `env` are raw, with the whole project path and the store path, while
 `data` is masked. Run the step with the script that answers its op. An offer's key and its step's op are two words on
 purpose:
 
@@ -305,9 +309,36 @@ purpose:
 | `needs-drop:<need>` | `needs-drop` | `parts.py` |
 
 A pick is the person's choice. Its step has `needs_person: true`, and `why` names the part and the need: ask the person
-first. The offers in `data.phases` keep their four keys and no step. Without `--json`, the text ends with the guide in
-the page's words: `NOW (<phase>): <sentence> [<offer key>]`, then `DONE`, `LATER`, the sentence of `no_simulation` and
-`SET ASIDE`. A list with no item draws no line.
+first. The offers in `data.phases` keep their four keys and no step.
+
+When the now phase holds no offer, `next` holds that phase's own step. These steps add no offer: `data.phases` and the
+fingerprint do not change, and `data.guide.now.offer` stays null. With no `sim/wokwi.toml`, the NOW sentence asks Claude
+to build the board again.
+
+| now phase | status or fact | op | script | `needs_person` |
+| --- | --- | --- | --- | --- |
+| simulate | `not-started` with no `sim/wokwi.toml` | `build-board` | `check_spine.py` | no key |
+| simulate | `not-started` (no image), or no status with an image no run tested or one older than `firmware/` | `run_scenario`, one per `sim/scenarios/*.scenario.yaml`, by name, or one for `sim/scenarios/<name>.scenario.yaml` while there is none | `run_scenario.py` | true |
+| deploy | `not-started` | `look`, with `--no-simulation` when `data.guide.no_simulation` is set | `look.py` | true |
+
+The simulate's `build-board` step is the build phase's offer step, the same one the build phase offers. The page's
+button for the build runs it through `run-request`, as always. Of the three, `run-request` refuses `run_scenario` and
+`look`: they are no offer, and it runs neither op. The NOW line on the page has no button for any of the three.
+
+An op in the form of a script's name, such as `run_scenario`, is `scripts/<op>.py`, a script that is not on the core
+yet, so it is no Operation. With `needs_person`, the person runs it in their own terminal: a scenario run spends Wokwi
+CI minutes, so ask before each run. While no scenario is written, the step names
+`sim/scenarios/<name>.scenario.yaml`, and Claude writes the scenario from the person's words first. Without
+`needs_person`, Claude decides. Piece 5 of [P793](https://github.com/xmejkal/spark/issues/1105) moves the script onto
+the core and renames the op to its Operation's name.
+
+The look needs the person: they wire the breadboard and plug the board into USB first. The look's own answer then names
+the deploy step with `needs_yes`. The deploy phase has no end today: its reader reads no deploy record, so a project
+after its deploy still stands at the deploy and names the look.
+
+Without `--json`, the text ends with the guide in the page's words: `NOW (<phase>): <sentence>`, then `[<offer key>]`
+for an offer, `[next: <op>]` for the step of a phase with no offer, or `[next: <op>, needs you]` for one that needs the
+person. Then come `DONE`, `LATER`, the sentence of `no_simulation` and `SET ASIDE`. A list with no item draws no line.
 
 ## A page request
 
