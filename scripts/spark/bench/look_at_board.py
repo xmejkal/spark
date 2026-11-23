@@ -227,9 +227,12 @@ class LookAtBoard(Operation):
         """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
         lines, doctor = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
         places = board_records.ButtonPlaces.of_project(platform.project)
+        sentence, asleep = (str(stop), "") if doctor else board_envelope.asleep_stop(stop, platform.project, places)
+        if asleep:  # P1022: a firmware that deep-sleeps; the fix is the last line, as --json's fix
+            lines = ["%s: %s" % (SCRIPT, sentence), asleep]
         # the port and the button words, each on one line (P430); a tool problem's path is flat already (P444)
         said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)
         return OperationResult({"doctor": board_doctor.as_dict(doctor)} if doctor else None,
-                               [Finding(outcomes.COULD_NOT_RUN, None, stop.reason, str(stop), board_envelope.doctor_fix(doctor, places))],
+                               [Finding(outcomes.COULD_NOT_RUN, None, stop.reason, sentence, board_envelope.doctor_fix(doctor, places) or asleep)],
                                diagnostics=said.split("\n"))
 # --- end MVP ---

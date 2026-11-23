@@ -505,6 +505,21 @@ class TheBusyPortTest(GateCase):
         self.assertIn("deploy.py: no board found", problems)
         self.assertNotIn("next ", problems)
 
+    def test_a_stop_with_no_port_and_a_deepsleep_call_names_deep_sleep(self):
+        # P1022 slice 3: the deploy's look says what look.py says, and --json's fix is the same text
+        self.run_the_scenario()
+        (self.project / "firmware" / "main.py").write_text("import machine\nprint('ready')\nmachine.deepsleep(60000)\n")
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), devs="mpremote-devs-none.txt")
+        self.assertEqual(code, 2)
+        lines = problems.strip().splitlines()
+        self.assertEqual(lines[0], "deploy.py: no board found.")
+        self.assertTrue(lines[1].startswith("What spark knows: no board is on USB, and the project's firmware calls deepsleep "
+                                            "(firmware/main.py:3)."), lines[1])
+        self.assertNotIn("next ", problems)
+        code, said, _ = self.deploy("--json", "--token", "aaaa-bbbb", consent=FakeConsent(True), devs="mpremote-devs-none.txt")
+        (item,) = json.loads(said)["unchecked"]
+        self.assertEqual((item["code"], item["sentence"], item["fix"]), ("no_port", "no board found.", lines[1]))
+
 
 @needs_littlefs
 class TheBoardAfterTheFlashTest(GateCase):

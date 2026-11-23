@@ -69,6 +69,8 @@ BRIEF_PROBLEM_WHYS = {brief.PROBLEM_BAD_JSON: "the project's brief is not valid 
                       brief.PROBLEM_MUST_NOT_LIST: "the brief's must is not a list"}
 #: What the person does about a brief that exists and cannot give its must lines.
 BRIEF_ADVICE = "fix .spark/project.json, then look again"
+#: The start of the no_port stop's sentence, before its cable check: beside the asleep fix it stands alone (P1022).
+NO_BOARD = "no board found."
 # --- end MVP ---
 
 

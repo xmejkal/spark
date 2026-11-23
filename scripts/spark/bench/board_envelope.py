@@ -13,6 +13,7 @@ from pathlib import Path
 
 from spark.bench import board_codes
 from spark.bench import board_doctor
+from spark.bench import board_look
 from spark.bench import download_mode
 from spark.records import board_records
 from spark.bench.deploy_stages import DeployPhase
@@ -22,6 +23,7 @@ from spark.core.result import Finding, NextStep, OperationResult
 from spark.bench import ready_probe
 from spark.records import store
 from spark.bench.deploy_gate import NEXT_LOOK, NEXT_DEPLOY
+from spark.firmware import sleep_calls
 
 #: What the person must do first, said in a step's `why`.
 YES_RULE = "the person types yes in their own terminal%s; the token and \"go ahead\" in a chat are not the yes"
@@ -77,6 +79,57 @@ def ready_unknown_fix(result, places):
         "files": FILES_READ if result.ready.files_read else FILES_NOT_READ, "console": console_words(result.console),
         "facts": FACTS_WRITTEN if result.facts_line.written else FACTS_NOT_WRITTEN,
         "reset": places.reset, "orientation": places.orientation}
+
+
+#: The fix of a look that finds no board while the project's firmware calls deepsleep (P1022 slice 3): an opening for each
+#: code, then the deepsleep calls (at most two), the own-USB words, and the steps with the cable check last. In deep sleep
+#: the chip's own USB-Serial/JTAG is off (ESP-IDF v5.5 docs/en/api-guides/usb-serial-jtag-console.rst lines 83 and
+#: 101-107); a board behind a USB bridge chip stays on USB, so without the record's `usb` pin role the words are a
+#: condition. In download mode the chip runs no program from flash (esptool v5.5.0 boot-mode-selection.rst line 64).
+ASLEEP_OPENING = {board_codes.NO_PORT: "no board is on USB", board_codes.PORT_NOT_LISTED: "the port you named is not on USB"}
+ASLEEP_KNOWS = "What spark knows: "
+ASLEEP_FIX = (ASLEEP_KNOWS + "%(opening)s, and the project's firmware calls deepsleep (%(calls)s). %(usb)s What spark did "
+              "not do: it read no board and wrote nothing. What to try, in order: 1. Hold the board's %(boot)s, press and "
+              "release %(reset)s, then release BOOT%(orientation)s. The board should then wait in download mode: it runs no "
+              "firmware, so it stays on USB. Run look.py again, and use the port it names. After a deploy from download "
+              "mode, press %(reset)s once, with BOOT not held, so the firmware starts. 2. Or wait until the firmware wakes, "
+              "and run look.py while it is awake. 3. If the board still does not show, check the cable: a data cable "
+              "straight into the computer, not a hub that gives power only.")
+OWN_USB_SLEEP = "In deep sleep the chip's own USB is off, so the board leaves USB with the cable in, until it wakes."
+MAYBE_OWN_USB_SLEEP = ("If the board's USB is the chip's own (USB-Serial/JTAG), it is off in deep sleep, and the board "
+                       "leaves USB with the cable in until it wakes.")
+UNPARSED = "spark could not parse %s, so it does not know whether that file calls deepsleep."
+
+
+def own_usb_of(project):
+    """True when the project's board record has the pin role `usb` (board_rules: the chip's own USB D- and D+), so its USB
+    plug is the chip's own and no USB bridge chip's. False when it has none or cannot be read."""
+    try:
+        roles = board_records.load(project).get("pin_roles")
+    except (OSError, ValueError, AttributeError, board_records.BoardError):
+        return False
+    return isinstance(roles, dict) and isinstance(roles.get("usb"), dict)
+
+
+def asleep_fix(project, reason, places):
+    """The fix of a no_port or port_not_listed stop when the project's firmware calls deepsleep: ASLEEP_FIX, its buttons
+    named as `places` (a ButtonPlaces) does; UNPARSED when no call was found and a file did not parse; else ''."""
+    if reason not in ASLEEP_OPENING:
+        return ""
+    found = sleep_calls.deep_sleep_calls(project)
+    if not found.places:
+        return UNPARSED % ", ".join(found.unparsed) if found.unparsed else ""
+    return ASLEEP_FIX % {"opening": ASLEEP_OPENING[reason], "calls": ", ".join(found.places[:2]), "boot": places.boot,
+                         "usb": OWN_USB_SLEEP if own_usb_of(project) else MAYBE_OWN_USB_SLEEP,
+                         "reset": places.reset, "orientation": places.orientation}
+
+
+def asleep_stop(stop, project, places):
+    """(the sentence, the fix) of a LookStopError that no doctor answered: the asleep fix, and beside it on a no_port stop
+    only NO_BOARD, because the fix holds the cable check as its last step. Else the stop's own sentence."""
+    fix = asleep_fix(project, stop.reason, places)
+    no_board = stop.reason == board_codes.NO_PORT and fix.startswith(ASLEEP_KNOWS)
+    return (board_look.NO_BOARD if no_board else str(stop)), fix
 
 
 def yes_rule(evidence, grant_may_answer):
