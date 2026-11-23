@@ -148,7 +148,8 @@ class QuietBoardConnectionTest(unittest.TestCase):
         compile(board_connection.QUIET_MPREMOTE, "QUIET_MPREMOTE", "exec")
 
 
-#: A fake pyserial whose first open vanishes during the settle; with GONE set, the port never comes back (P1007).
+#: A fake pyserial whose first open vanishes during the settle; with GONE set, the port never comes back (P1007). With
+#: KEEP set, the first open stays. HEARD is what the board prints in the settle (P1022).
 FAKE_SERIAL = """import os
 class SerialException(OSError):
     pass
@@ -163,11 +164,11 @@ class Serial:
         print("open dtr=%s rts=%s" % (self.dtr, self.rts))
     @property
     def in_waiting(self):
-        if Serial.opens == 1:
+        if Serial.opens == 1 and not os.environ.get("KEEP"):
             raise OSError(6, "Device not configured")
-        return 0
+        return len(os.environ.get("HEARD", ""))
     def read(self, size):
-        return b""
+        return os.environ.get("HEARD", "").encode()[:size]
     def close(self):
         pass
 """
@@ -183,33 +184,60 @@ def main():
     return 0
 """
 
+#: A fake mpremote transport whose raw REPL, with REFUSE set, raises as mpremote's does when the board is silent (P1022).
+FAKE_TRANSPORT = """import os
+class SerialTransport:
+    def enter_raw_repl(self):
+        if os.environ.get("REFUSE"):
+            raise RuntimeError("could not enter raw repl")
+"""
+#: The fake's last line of stderr on a refused raw REPL: the line mpremote's error message is read from.
+REFUSED = "RuntimeError: could not enter raw repl"
+
 
 class QuietScriptTest(unittest.TestCase):
     """P1007: QUIET_MPREMOTE itself, run against fake modules: DTR and RTS off, and one reopen of a vanished port."""
 
-    def run_script(self, gone):
+    def run_script(self, gone=False, **switches):
         import os
         import tempfile
         here = Path(tempfile.mkdtemp())
         (here / "mpremote").mkdir()
         (here / "mpremote" / "__init__.py").write_text("")
         (here / "mpremote" / "main.py").write_text(FAKE_MAIN)
-        (here / "mpremote" / "transport_serial.py").write_text("class SerialTransport:\n    def enter_raw_repl(self):\n        pass\n")
+        (here / "mpremote" / "transport_serial.py").write_text(FAKE_TRANSPORT)
         (here / "serial.py").write_text(FAKE_SERIAL)
         port = here / "port"
         port.write_text("")
-        env = dict(os.environ, PYTHONPATH=str(here), **({"GONE": "1"} if gone else {}))
+        env = dict(os.environ, PYTHONPATH=str(here), **({"GONE": "1"} if gone else {}), **switches)
         return subprocess.run([sys.executable, "-c", board_connection.QUIET_MPREMOTE, "0", "0.1", "connect", str(port), "exec", "x"],
                               capture_output=True, text=True, env=env, timeout=30)
 
     def test_a_port_that_vanished_is_opened_again_with_dtr_and_rts_off(self):
         done = self.run_script(gone=False)
         self.assertEqual((done.returncode, done.stdout.split("\n")), (0, ["open dtr=False rts=False"] * 2 + ["entered", ""]))
+        self.assertEqual(done.stderr, "")
 
     def test_a_port_that_does_not_come_back_is_mpremote_s_failed_to_access(self):
         done = self.run_script(gone=True)
         self.assertEqual(done.returncode, 1)
         self.assertTrue(done.stderr.startswith("failed to access "), done.stderr)
+
+    def test_a_refused_raw_repl_keeps_what_the_settle_heard_on_stderr(self):
+        done = self.run_script(KEEP="1", HEARD="entry 0x4086b910\r\nready\r\n", REFUSE="1")
+        note = next((line for line in done.stderr.splitlines() if line.startswith("spark: ")), "")
+        self.assertEqual(done.returncode, 1, done.stderr)
+        self.assertTrue(note.startswith("spark: the 0 s settle heard "), done.stderr)
+        self.assertIn("entry 0x4086b910", note)
+        self.assertNotIn("vanished", note)
+        self.assertEqual(done.stderr.splitlines()[-1], REFUSED)
+        self.assertNotIn("spark: ", done.stdout)
+
+    def test_a_port_that_vanished_and_then_refused_says_it_came_back(self):
+        done = self.run_script(REFUSE="1")
+        self.assertEqual(done.returncode, 1, done.stderr)
+        self.assertRegex(done.stderr, r"spark: the 0 s settle heard \(its port vanished and came back after [0-9.]+ s\)")
+        self.assertEqual(done.stderr.splitlines()[-1], REFUSED)
 
 
 if __name__ == "__main__":
