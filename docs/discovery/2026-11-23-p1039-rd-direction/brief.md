@@ -131,4 +131,4 @@ One line per decision. Each option's cost and what it proves are in [direction.m
 not yet: the PO has not confirmed the understanding, the jobs or a direction. Q10, Q11 and Q13 to Q18 are open, and so are the parts of Q2, Q3 and Q7 that D3 names as his. D2 and D3 are delegated <!-- REQUIRED:handoff -->
 
 ## Files
-[Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
+[Direction](direction.md) · [Diagrams](diagrams.md) · [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
