@@ -1,0 +1,31 @@
+# P1030: one step for every interface: a flow offer carries its next step, and flow.py show prints the guide and fills next: rows
+
+Card: [P1030 #1510](https://github.com/xmejkal/spark/issues/1510), piece 1 of the core finding on
+[P793 #1105](https://github.com/xmejkal/spark/issues/1105). The plan was written on main ad5c6d4f and built on 37986857.
+It passed two rounds: round 1 was one lens (Sonnet), the UX and AI-UX lens (Sonnet) and the refuter (Opus), round 2 the
+refuter (Opus), each with a prototype. A "row" in the last column is a row of `tests/mutations/p1030-one-step.json`,
+counted from 1.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | Build piece 1 now, before P829's walk. P829 later reuses the new shape | the PO's choice, 2026-11-23 ("Piece 1 now") | acted | this card. The request file, the four refusal codes and run-request's `data` stay as P829 made them |
+| 2 | The step stays one plain value that an event can carry later | the PO's streaming rule on P793, 2026-11-23 | acted | the Offer holds the core's `NextStep`, a namedtuple of strings, lists, a bool, None and a dict. No new value type |
+| 3 | Piece 2: steps for the phases with no offer today (firmware, simulate, look, deploy) | the plan, section 12 | raised | the epic [P793 #1105](https://github.com/xmejkal/spark/issues/1105). Until then their `next` is `[]` and flow.md says to read `data.guide.now` |
+| 4 | Piece 3: a RunOptions hook adds the flow's now step to `next` after any run that writes to a project | the plan, section 12 | raised | the epic [P793 #1105](https://github.com/xmejkal/spark/issues/1105). It can reuse `show_flow.flow_and_guide` and `now_steps` |
+| 5 | A pick is the person's choice: its step has `needs_person` true and names the part and the need in `why` | round 1 fix 1, round 2 fix A, decided by spark-main in auto mode, delegated, the PO's to change | acted | `offer_steps.pick_step`, `flow_codes.PICK_WHY`. Row 2. json.md says it beside the `watch` step |
+| 6 | `next: []` means: read `data.guide.now` | round 1 fix 2, delegated | acted | flow.md's "The next step", json.md's `next` bullet, flow.py's EPILOG. `test_show_s_next_is_empty_when_the_now_phase_has_no_offer` |
+| 7 | The page runs exactly today's three Operations: `STEP_OPERATIONS` of PickParts, WriteRequirements and BuildBoard. A key whose kind the page never sends, or whose step's op is none of them, is refused | round 1 fix 3, delegated | acted | `run_request.refusal_of`. Row 6, and the re-aimed p829 rows "a key spark does not offer now runs" and "a kind the page never runs is run" |
+| 8 | `values_of` is the core's one parse, and `run_cli` calls it too. A step's argv that does not parse is a refusal, not a crash | round 1 fix 4, round 2 fix C, delegated | acted | `core/cli.values_of` returns (values, as_json), so `run_cli` keeps the json flag for the outside builder. Rows 7, 9. `TheValuesOfTest`, `test_a_step_whose_argv_does_not_parse_is_refused_and_nothing_runs` |
+| 9 | The step's argv holds the resolved project path, so a path that starts with `-` cannot read as a flag | round 1 fix 4 | acted | built as the whole path, `Path(project).absolute()`, not `resolve()`: macOS's temp folder is a link (/var to /private/var), and the existing run-request tests compare the values with the path as given. A whole path starts with `/`, which is the fix's point. Row 4 |
+| 10 | The build's argv names `requirements.json` under the project and `--keep` the project. Test 2 pins each op's effects against its Operation's | round 1 fix 5 | acted | `test_each_step_parses_with_its_own_operation_to_the_values_the_page_ran_before`, `test_the_parts_list_step_parses_with_its_own_operation`. The re-aimed p829 row "the build from the page keeps nothing in the project" |
+| 11 | `read_flow` keeps a cheap path for run-request, with no guide | round 1 fix 6 | acted | built as `show_flow.phases_of`, which run-request reads. `read_flow` keeps its shape `(phases, stands_at)` with the guide's rule, so one rule says where a project stands. The p829 row "the answer gives the page's old fingerprint" is re-aimed onto `phases_of` |
+| 12 | The NOW line names the step's key: `NOW (build): <sentence> [build]` | round 1 fix 7, delegated | acted | `show_flow.guide_lines`. Rows 15, 16 |
+| 13 | No build button on a breadboard now until piece 6 gives it a sentence. Remove the breadboard entry of `JOB_OFFERS` | round 1 fix 8, round 2 fix B, delegated | acted | with that entry gone, each entry of `JOB_OFFERS` named the now phase's own one offer, which the page's rule gives, so the table goes and `guide.job_offer` is that one rule. `test_a_breadboard_now_names_no_offer_and_its_page_line_carries_no_key` |
+| 14 | Re-aim the rows whose text this change removes: p825 "a phase with no status is where the project stands", p977-guide "the guide names no offer for the job", p829-page-script "the NOW line carries no key" and "... two sendable offers", and the five p829-run-request rows | round 1 fix 9, the plan's section 9 | acted | each re-aimed row planted by hand and red as a failure. `--anchors`: 33 refused, as on main |
+| 15 | Dropping the `offers:` line when a NOW line follows, and the NOW sentences' wording for each interface | round 1, the UX and AI-UX lens | rejected | both are piece 6's, with the PO's review of the sentences |
+| 16 | A `phase` field on NextStep | round 1, the refuter | rejected | piece 3, with the hook |
+| 17 | Rebase on 37986857 before step 1 | round 2 fix D | acted | the branch starts at 37986857 |
+| 18 | The plan's row "the build's step loses `--keep`" is the same line and the same replace as the re-aimed p829 row "the build from the page keeps nothing in the project" | the build | acted | the new row was dropped and the p829 row kept, so no line holds two equal mutants |
+| 19 | Step 2 made `docs/guide/map.md` stale: test_flow now imports run_request, which changes its tests column | the hook's quick run on 39006961 | acted | `tools/map.py --write` again, commit bd7652b7 |
+| 20 | `now_of` kept a `by_name` argument that only `job_offer` read | the build, step 4 | acted | the argument is gone |
+| 21 | Steps 3 and 4 are one commit | the build | acted | the hook's run of step 2 was still going, and the two steps share test_flow.py and the rows file |

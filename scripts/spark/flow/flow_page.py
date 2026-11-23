@@ -32,7 +32,7 @@ ShownPhase = namedtuple("ShownPhase", "mark word")
 #: `before_power` the dicts of a BeforePowerItem's fields, `records` the record ids, and `why_missing` says why there is no
 #: wiring to show (None when there is).
 PageWiring = namedtuple("PageWiring", "steps before_power records why_missing")
-#: Value: what a page holds. `phases` are the Phase dicts of the flow, `stands_at` the first open phase or None, `pictures`
+#: Value: what a page holds. `phases` are the Phase dicts of the flow, `stands_at` the guide's now phase or None, `pictures`
 #: Pictures, `notes` fixed lines and `wiring` a PageWiring or None (no section). `fingerprint` is the flow's
 #: (`fingerprint.fingerprint_of`, P829) and `written` the newest change time of its files, both None when not known. A page
 #: is masked before it is rendered.

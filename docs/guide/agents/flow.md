@@ -3,7 +3,8 @@
 Part of the [guide for AI agents](../agents.md). `flow.py show` says where a project stands, phase by phase
 ([P825](https://github.com/xmejkal/spark/issues/1183)). The phases go from the idea to the deploy. It reads the project's
 files and the store, and writes nothing. `flow.py` with no verb shows too. `flow.py page` writes the same phases as a page ([below](#the-page)).
-`flow.py run-request` runs the step the page asked for ([a page request](#a-page-request)).
+`flow.py run-request` runs the step the page asked for ([a page request](#a-page-request)). `show`'s `next` holds the
+step of the offer to take now ([the next step](#the-next-step)).
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" show --project . --json
@@ -17,14 +18,15 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   `.spark/needs.json`, `requirements.json` and `.spark/build.json`. It changes when one of these files changes, or when
   an offer changes: a pick's effect changes with the drawer count. No other file of the project changes it, except through
   an offer. The page carries its first 12 hex digits ([P829](https://github.com/xmejkal/spark/issues/1187)).
-- `stands_at`: the first phase that is open. It passes a phase whose `status` is `ok` or `null`. Only `ok` is a pass
-  that spark judged. The deploy is never done here, so `stands_at` always names a phase. With every need set aside it
-  can say `requirements` while `guide.now` says `parts`: see `guide` below.
+- `stands_at`: the phase of `guide.now`, kept for old readers. Read `guide.now.phase`: it is the same phase, by one rule
+  ([P1030](https://github.com/xmejkal/spark/issues/1510)). It is `null` only with a phase list a test swaps in.
 - `guide` ([P977](https://github.com/xmejkal/spark/issues/1407)): what the person does now. `now` is `{phase, by, says,
   offer, needs, steps}`: the phase to act on, who acts (a list: `["you", "claude"]` when the firmware and the wiring are two
-  jobs, else one item), one sentence for the person, the key of the offer that does the job (or `null`), for the
+  jobs, else one item), one sentence for the person, `offer`, for the
   parts, the needs with no pick, and `steps`: the number of wiring steps when wiring is part of now (the two jobs of the
-  firmware), else `null`.
+  firmware), else `null`. `offer` is the key of the now offer: the now phase's one offer of a kind the page sends (a
+  pick, the parts list or the build), else `null`. With one pick offer for the parts, `offer` is that pick. A
+  breadboard now names no offer, because the build's offer is in the build phase.
 
   While no need is written, `now` is the idea. `now` is `null` only with a phase list a
   test swaps in. `done` names the phases before `now` that were done. With no picks behind the parts list (a
@@ -32,7 +34,7 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   `done` says `requirements (no needs or picks behind it)`.
 
   With every need set aside, the parts phase is `ok` (nothing is left to pick), but no pick can make the parts list, so
-  `now` is `parts` and tells the person to bring a need back and pick a part. `stands_at` can still say `requirements`.
+  `now` is `parts` and tells the person to bring a need back and pick a part.
   The requirements phase has no offer then (no board is picked, P993): ask the person which need to bring back. A
   requirements phase that could not run stays `now`. The
   breadboard is in `done` only once `now` is past the firmware's
@@ -268,8 +270,8 @@ From disk, or wherever `claude.use("db")` gives no database, the script does not
 the artifact's owner (`(await claude.use("user")).isOwner()`), so the published page declares `db` and `user`. For the
 owner it puts the published intro in place of the line under the title, and adds a button to each offer whose kind the
 page sends: a pick, the parts list and the build. A need's drop has none; it is asked in the chat. Such an offer's
-`<li>` carries `data-makes-stale`, the phases it can make out of date, space apart. When the phase of the guide's NOW has
-exactly one such offer, the NOW line carries its `data-key` and `data-makes-stale` too, and gets the same button. A click
+`<li>` carries `data-makes-stale`, the phases it can make out of date, space apart. When `guide.now.offer` names such
+an offer, the NOW line carries its `data-key` and `data-makes-stale` too, and gets the same button. A click
 shows the offer's label, its effect and "These steps may be marked out of date: …" when there are any, with Send and
 Cancel. Send writes the row `requests/<id>`: `{id, key, seen, at}`, a new UUID, the offer's key, the page's
 `data-fingerprint` and the time. One request waits at a time: until its answer, the other buttons are grey, and Copy (it
@@ -287,6 +289,26 @@ as could not run. Never "done" alone.
 Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect
 line says and ask the person first.
 
+## The next step
+
+`show --json` fills `next` with the step of the now offer ([P1030](https://github.com/xmejkal/spark/issues/1510)): one `{op, argv, why, effects, needs_yes}`,
+with `needs_person` and `env` when they apply ([their JSON](json.md)). An empty `next` means that spark has no step to
+name: read `data.guide.now`. The `argv` and the `env` are raw, with the whole project path and the store path, while
+`data` is masked. Run the step with the script that answers its op. An offer's key and its step's op are two words on
+purpose:
+
+| offer key | op | script |
+| --- | --- | --- |
+| `pick:<need>:<id>` | `pick` | `parts.py` |
+| `requirements` | `requirements` | `parts.py` |
+| `build` | `build-board` | `check_spine.py` |
+| `needs-drop:<need>` | `needs-drop` | `parts.py` |
+
+A pick is the person's choice. Its step has `needs_person: true`, and `why` names the part and the need: ask the person
+first. The offers in `data.phases` keep their four keys and no step. Without `--json`, the text ends with the guide in
+the page's words: `NOW (<phase>): <sentence> [<offer key>]`, then `DONE`, `LATER`, the sentence of `no_simulation` and
+`SET ASIDE`. A list with no item draws no line.
+
 ## A page request
 
 `flow.py run-request` runs the step that the person asked for on the page ([P829](https://github.com/xmejkal/spark/issues/1187)).
@@ -301,9 +323,10 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" run-request --project . --json
 
 It reads the file and deletes it at once, so one request runs once at most. A file it cannot delete, and anything that
 is no regular file (a folder), runs nothing and is left. Then it reads the flow, as `show` does. It runs the step only
-when `seen` is the fingerprint now, the key is one of the offers now, and its kind is `pick`, `requirements` or `build`.
-The fingerprint comes first, so a second click on a pick, which is no offer once it ran, is stale. The values of the
-step come from spark's offer, never from the request: a pick of that one part for that need, the parts list with no
+when `seen` is the fingerprint now, the key is one of the offers now, its kind is `pick`, `requirements` or `build`,
+and its step's op is `pick`, `requirements` or `build-board`. The fingerprint comes first, so a second click on a pick,
+which is no offer once it ran, is stale. It runs the offer's step, its argv parsed by the Operation of its op. A step
+whose argv does not parse runs nothing. The values come from spark's offer, never from the request: a pick of that one part for that need, the parts list with no
 `--dry-run` and no `--replies`, so it removes nothing, and the build of the project's `requirements.json` with `--keep`
 the project. The step writes what the offer's effect says. A deploy, a simulation, a look or a grant is never an offer
 here, so a request for one runs nothing.
@@ -336,7 +359,7 @@ envelope's. A refusal is one `unchecked` item, and its fix tells you what to do:
 | `request_malformed` | the file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or could not be deleted | write the page's request to the file as the page sent it; if it was written that way, ask the person to click again |
 | `request_in_chat` | the key is a need's drop, which is asked in the chat | tell Claude in the chat, for example: drop the light need |
 | `request_stale` | the project changed after the page was read: `seen` is not the fingerprint now | write the page again with `flow.py page`, then click again |
-| `request_not_offered` | spark does not offer the key now, or the page never runs its kind | write the page again with `flow.py page`, then click again |
+| `request_not_offered` | spark does not offer the key now, the page never runs its kind or its step's op, or the step's argv does not parse | write the page again with `flow.py page`, then click again |
 
 A stale refusal is normal: a second Build from the same page is stale once the first one ran. The exit is 0 when the step
 ran ok, 1 when it ran with problems and 2 when nothing ran or the step could not run, also for a build with a `note`. Only a wrong argument answers
