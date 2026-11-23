@@ -8,6 +8,7 @@ map file. -->
 Come back → See where it stands → See what to do next → Act (pick, wire, build, deploy) → See it change → Show it <!-- REQUIRED:backbone -->
 
 ## Slices
+Where these rows and the slice table of [design.md](design.md) differ, the design holds.
 <!-- Walking skeleton first: the thinnest slice that runs end to end. One row per story. job: a job in
 jobs-and-journeys.md. tag: as in the brief. proof: something the decider can read.
 e.g. `| 0 | Notice | the assignee gets one daily digest | job 1 | H ★C2 | the digest log for one team |` -->
