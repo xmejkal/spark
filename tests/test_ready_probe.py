@@ -15,9 +15,14 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.bench import board_connection  # noqa: E402
 from spark.bench import board_facts  # noqa: E402
 from spark.bench import ready_probe  # noqa: E402
+from spark.firmware import scenario_steps  # noqa: E402
 from fakes import FakeBoardConnection  # noqa: E402
 
 MAIN = {"/main.py": hashlib.sha256(b"print('ready')\n").hexdigest()}
+#: The XIAO C6's console after a deploy in the P934 walk, 2026-11-22 23:22 CET: its last line is `ready, cpu 80 MHz` (P1025).
+C6_CONSOLE = (ROOT / "tests" / "data" / "ready_line" / "c6-console-2026-11-22.txt").read_text()
+#: The board's answer to the hash code: the one file of MAIN, as the image holds it.
+HASHES = "file %s /main.py\n" % MAIN["/main.py"]
 
 
 
@@ -27,6 +32,20 @@ class HashFilesTest(unittest.TestCase):
         code = ready_probe.HASH_FILES % ["main.py"]
         self.assertIn("print('file', binascii.hexlify(h.digest()).decode(), p)", code)
         self.assertIn("print('file', 'missing', p)", code)
+
+class TheReadyLineTest(unittest.TestCase):
+    """P1025: one rule for the ready line, a line whose first word is `ready` (the council of 2026-11-23, delegated by the PO)."""
+
+    def test_a_line_whose_first_word_is_ready_counts(self):
+        for output in ("ready\n", "ready, cpu 80 MHz\r\n", "  ready \r\n", "ready:\n", "ready.\n", C6_CONSOLE):
+            with self.subTest(output=output[-24:]):
+                self.assertTrue(scenario_steps.has_ready_line(output))
+
+    def test_ready_after_another_word_inside_a_word_or_before_a_letter_does_not_count(self):
+        for output in ("not ready\n", "already\n", "readying\n", "ready_led on\n", "ready2\n", ""):
+            with self.subTest(output=output):
+                self.assertFalse(scenario_steps.has_ready_line(output))
+
 
 class Unreachable:
     """mpremote with no board on the port: exit 1, nothing printed, as subprocess.run reports it. Keeps each command."""
@@ -55,6 +74,17 @@ class ReadyProbeTest(unittest.TestCase):
     def test_a_passed_log_with_no_files_is_a_ready_result_too(self):
         result = ready_probe.ReadyProbe(FakeBoardConnection()).check({})
         self.assertEqual((result.verdict, result.log), ("ready unknown", ""))
+
+    def test_a_firmware_that_prints_its_clock_after_ready_is_seen(self):
+        # pins what stays: the C6 walk's firmware printed `ready, cpu 80 MHz`, and the probe saw it before P1025 too
+        result = ready_probe.ReadyProbe(FakeBoardConnection(HASHES, C6_CONSOLE.splitlines()[-1] + "\n")).check(MAIN)
+        self.assertEqual(result.verdict, "ready seen")
+
+    def test_not_ready_already_and_readying_are_not_seen(self):
+        for said in ("not ready\n", "already\n", "readying\n"):
+            with self.subTest(said=said):
+                result = ready_probe.ReadyProbe(FakeBoardConnection(HASHES, said)).check(MAIN)
+                self.assertEqual((result.verdict, result.sentence), ("ready not seen", "the firmware printed no 'ready' in 20 s"))
 
     def test_each_read_names_the_board_s_port(self):
         run = Unreachable()

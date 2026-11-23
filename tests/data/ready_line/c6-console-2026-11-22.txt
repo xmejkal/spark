@@ -1,0 +1,8 @@
+Saved PC:0x40813056
+SPIWP:0xee
+mode:DIO, clock div:2
+load:0x40875730,len:0xdbc
+load:0x4086b910,len:0xc50
+load:0x4086e610,len:0x2e3c
+entry 0x4086b910
+ready, cpu 80 MHz

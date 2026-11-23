@@ -97,6 +97,11 @@ class TheConsoleTest(unittest.TestCase):
         self.assertFalse(download_mode.booted(""))
         self.assertTrue(download_mode.booted(" ready \n"))
 
+    def test_the_c6_s_ready_line_with_its_clock_is_a_boot(self):
+        # P1025: the P934 walk's C6 printed `ready, cpu 80 MHz` (2026-11-22 23:22 CET), and P245's read again was skipped
+        console = (ROOT / "tests" / "data" / "ready_line" / "c6-console-2026-11-22.txt").read_text()
+        self.assertTrue(download_mode.booted(console))
+
     def test_a_firmware_s_lines_are_not_download_mode(self):
         probe = board_console.ConsoleProbe(["/opt/python3"], PORT, printing("ready\n", []))
         self.assertFalse(probe.waits_in_download_mode()[0])
