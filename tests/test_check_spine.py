@@ -3125,7 +3125,7 @@ class AButtonBetweenAPinAndARailNeedsNoGroundTest(unittest.TestCase):
         circuit = self.circuit() + [{"type": "pcb_trace", "pcb_trace_id": "pt1"}]
         stages = build_stages(requirements, project, toolchain=fake_tsci(root, "true", circuit), project=project)
         built = next(stage for stage in stages if stage.name == "build")
-        self.assertNotEqual(built.code, build_codes.PART_STRANDED, built.detail)
+        self.assertNotEqual(built.code, "part_stranded", built.detail)
 
 
 class TheAmplifierAloneTest(unittest.TestCase):
