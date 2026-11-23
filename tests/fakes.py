@@ -578,3 +578,23 @@ class RealChildRun:
         if image_evidence.COMPILE_CHILD in command:
             return ProgramRunner().run(command, **options)
         return self.run(command, **options)
+
+
+class FakeFollowUp:
+    """Fake of the core's FollowUp Strategy (P1035): `steps(project)` gives the NextSteps `added` it was made with and keeps
+    each project it was asked for in `asked`, `line(step)` gives `line of <op>`. `raises` is an exception class that
+    `steps` raises, `line_raises` one that `line` raises, each with a message that names a home path."""
+
+    def __init__(self, added, raises=None, line_raises=None):
+        self.added, self.raises, self.line_raises, self.asked = list(added), raises, line_raises, []
+
+    def steps(self, project):
+        self.asked.append(project)
+        if self.raises:
+            raise self.raises("the follow-up at /opt/someone failed")
+        return list(self.added)
+
+    def line(self, step):
+        if self.line_raises:
+            raise self.line_raises("the line at /opt/someone failed")
+        return "line of %s" % step.op
