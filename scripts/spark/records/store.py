@@ -221,6 +221,21 @@ def write_place(name, text):
     return write_file(target, text, name in PRIVATE)
 
 
+#: The name of a mark file: lower-case letters and '_', so it never meets a file `write_json` names by a plain key.
+MARK = re.compile(r"[a-z][a-z_]*")
+
+
+def write_mark(name, mark, text):
+    """Put the file `mark` into a place (P1029: grants/direct_flashing_disallowed), as `write_json` puts a JSON file: the
+    git refusal and the 0700 folders first, then a private file 0600. Returns the file's path."""
+    if not MARK.fullmatch(mark):
+        raise StoreError("%r is not a mark name — lower-case letters and '_'", mark, code=records_codes.KEY_NOT_PLAIN)
+    target = place(name) / mark
+    _make_ready(name, target)
+    write_file(target, text, name in PRIVATE)
+    return target
+
+
 #: The stores this process holds, as (thread, home) pairs: what makes `locked()` re-entrant for the thread that holds one.
 _HELD = set()
 

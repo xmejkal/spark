@@ -4,6 +4,7 @@ finds it with `mpremote devs` only, and one after the limit, on another board or
 import datetime
 import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -209,9 +210,61 @@ class ConsentForDeployTest(unittest.TestCase):
         board_grant.GrantStore().save(a_grant())
         self.assertTerminal("ignore older runs", ignore_older_runs=True)
 
-    def test_no_simulation_asks_in_the_terminal(self):
+    def test_a_plain_grant_asks_for_a_no_simulation_deploy(self):
         board_grant.GrantStore().save(a_grant())
         self.assertTerminal("no simulation", evidence=image_evidence.NoSimulationEvidence(self.home))
+
+    def test_a_grant_given_with_no_simulation_answers_a_no_simulation_deploy(self):
+        # P1029: the PO's answer 1
+        board_grant.GrantStore().save(a_grant(no_simulation=True))
+        chosen = self.choose(evidence=image_evidence.NoSimulationEvidence(self.home))
+        self.assertIsInstance(chosen.consent, board_grant.StandingConsentStrategy)
+        self.assertIsNone(chosen.why)
+
+    def test_a_grant_given_with_no_simulation_still_asks_for_ignore_older_runs(self):
+        board_grant.GrantStore().save(a_grant(no_simulation=True))
+        self.assertTerminal("ignore older runs", ignore_older_runs=True)
+
+    def test_disallowed_direct_flashing_refuses_a_no_simulation_grant(self):
+        board_grant.GrantStore().save(a_grant(no_simulation=True))
+        (self.home / "grants" / "direct_flashing_disallowed").write_text("")
+        self.assertTerminal("direct flashing disallowed", evidence=image_evidence.NoSimulationEvidence(self.home))
+
+    def test_disallowed_direct_flashing_leaves_a_grant_of_a_passed_image_as_it_is(self):
+        board_grant.GrantStore().save(a_grant())
+        (self.home / "grants" / "direct_flashing_disallowed").write_text("")
+        self.assertIsNone(self.choose().why)
+
+    def test_an_old_grant_file_reads_as_passed_images_only(self):
+        board_grant.GrantStore().save(a_grant())
+        path = self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json"
+        old = {key: value for key, value in json.loads(path.read_text()).items() if key != "no_simulation"}
+        path.write_text(json.dumps(old))
+        self.assertIs(board_grant.GrantStore().find(MAC, "deploy").no_simulation, False)
+        self.assertTerminal("no simulation", evidence=image_evidence.NoSimulationEvidence(self.home))
+
+    def test_a_file_whose_no_simulation_is_no_true_or_false_is_no_grant(self):
+        (self.home / "grants").mkdir()
+        for value in ("yes", 1, None, "true"):
+            (self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").write_text(
+                json.dumps(dict(a_grant()._asdict(), no_simulation=value)))
+            self.assertTerminal("not a grant", evidence=image_evidence.NoSimulationEvidence(self.home))
+
+    def test_the_standing_yes_names_a_grant_given_with_no_simulation(self):
+        board_grant.GrantStore().save(a_grant(no_simulation=True))
+        self.assertTrue(self.choose().consent.who.endswith(", also for images that no simulation tested"))
+        board_grant.GrantStore().save(a_grant())
+        self.assertNotIn("no simulation", self.choose().consent.who)
+
+    def test_a_grant_may_cover_a_no_simulation_deploy_unless_direct_flashing_is_disallowed(self):
+        evidence = image_evidence.NoSimulationEvidence(self.home)
+        self.assertTrue(self.service.may_cover(a_report(), evidence))
+        self.assertFalse(self.service.may_cover(a_report(), image_evidence.PassedRunEvidence(True)))
+        (self.home / "grants").mkdir()
+        (self.home / "grants" / "direct_flashing_disallowed").write_text("")
+        self.assertFalse(self.service.may_cover(a_report(), evidence))
+        self.assertTrue(self.service.may_cover(a_report(), image_evidence.PassedRunEvidence()))
+        self.assertFalse(self.service.may_cover(a_report("warning"), image_evidence.PassedRunEvidence()))
 
     def test_the_standing_yes_stops_when_the_grant_ends_before_the_erase(self):
         board_grant.GrantStore().save(a_grant())
@@ -228,6 +281,52 @@ class ConsentForDeployTest(unittest.TestCase):
         chosen = board_grant.GrantService().consent_for_deploy(a_report(), image_evidence.PassedRunEvidence(), self.terminal)
         self.assertIsNone(chosen.why)
         self.assertTrue(chosen.consent.ask("x"))
+
+
+class DirectFlashingSettingTest(unittest.TestCase):
+    """P1029: while the file grants/direct_flashing_disallowed is there, no grant answers a deploy with no simulation. Only a
+    missing file allows it: anything else at that path, or a grants place spark cannot read, disallows it."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.grants = board_grant.GrantStore()
+
+    def test_no_store_and_no_file_allow_it(self):
+        self.assertTrue(self.grants.direct_flashing_allowed())
+        (self.home / "grants").mkdir()
+        self.assertTrue(self.grants.direct_flashing_allowed())
+
+    def test_the_file_or_a_folder_or_a_dangling_link_in_its_place_disallow_it(self):
+        (self.home / "grants").mkdir()
+        path = self.home / "grants" / "direct_flashing_disallowed"
+        path.write_text("")
+        self.assertFalse(self.grants.direct_flashing_allowed())
+        path.unlink()
+        path.mkdir()
+        self.assertFalse(self.grants.direct_flashing_allowed())
+        path.rmdir()
+        path.symlink_to(self.home / "nothing-here")
+        self.assertFalse(self.grants.direct_flashing_allowed())
+
+    def test_a_grants_place_that_cannot_be_read_disallows_it(self):
+        (self.home / "grants").write_text("a file, not a folder")
+        self.assertFalse(self.grants.direct_flashing_allowed())
+        (self.home / "grants").unlink()
+        (self.home / "grants").mkdir()
+        os.chmod(self.home / "grants", 0)
+        self.addCleanup(os.chmod, self.home / "grants", 0o700)
+        self.assertFalse(self.grants.direct_flashing_allowed())
+
+    def test_the_disallowing_file_is_kept_private(self):
+        path = self.grants.save_disallowed("disallowed by ada at 2026-11-23T10:00:00+01:00\n")
+        self.assertEqual(path, self.home / "grants" / "direct_flashing_disallowed")
+        self.assertFalse(self.grants.direct_flashing_allowed())
+        self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+        self.assertEqual(stat.S_IMODE((self.home / "grants").stat().st_mode), 0o700)
+        self.assertIn("ada", path.read_text())
 
 
 class LocalTimeTest(unittest.TestCase):

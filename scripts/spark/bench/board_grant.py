@@ -13,6 +13,8 @@ before a live try, and P242 (#249) reuses the same record.
 
 Two scopes (P242): a live grant lets Claude run code on the board (`grants/<mac>.json`); a deploy grant lets Claude erase
 it and write a passed image (`grants/<mac>-deploy.json`). Each reads only its own file, so one never opens the other.
+A deploy grant given with --no-simulation (P1029) also answers a deploy of an image that no simulation tested, unless the
+file `grants/direct_flashing_disallowed` is there.
 
 How a later call knows the board with no look: on the ESP32-C6's built-in USB-Serial/JTAG, `mpremote devs` lists the
 base MAC as the USB serial (bench P228). `devs` never opens the port, so the gadget keeps running. The grant is issued
@@ -22,6 +24,8 @@ only when that serial equals the MAC esptool read, so a board whose serial is no
 import datetime
 import getpass
 import json
+import os
+import shlex
 from collections import namedtuple
 from pathlib import Path
 
@@ -32,15 +36,18 @@ from spark.records import store
 from spark.core.zone_time import say_in_local_zone, stamp  # the grant's times (P401 moved them out, to break an import cycle)
 from spark.bench.deploy_gate import GRANT, ConsentStrategy, GateClosedError, format_rerun_line
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
+from spark.core.text_guards import printable
 
 #: What a grant allows. A file with no `scope` (written before P242) is a live grant.
 SCOPE_LIVE, SCOPE_DEPLOY = "live", "deploy"
 SCOPES = (SCOPE_LIVE, SCOPE_DEPLOY)
 
 
-class Grant(namedtuple("Grant", "mac board_token granted_by granted_at expires_at scope", defaults=(SCOPE_LIVE,))):
+class Grant(namedtuple("Grant", "mac board_token granted_by granted_at expires_at scope no_simulation",
+                       defaults=(SCOPE_LIVE, False))):
     """Value: the grant as the store keeps it. The times are ISO 8601 with the zone: the machine's zone since P291, UTC
-    before."""
+    before. `no_simulation` is True for a deploy grant given with --no-simulation (P1029); a file with no such key reads
+    as False."""
 
     __slots__ = ()
 
@@ -76,6 +83,10 @@ WHY_LOOK_NOT_MATCH, WHY_IGNORE_OLDER_RUNS = "look not a match", "ignore older ru
 WHY_LAST_DEPLOY_NOT_CHECKED = "last deploy not checked"
 WHY_NO_SIMULATION = "no simulation"
 WHY_BAD_SCOPE = "bad scope"
+#: Why a deploy grant does not answer a deploy with no simulation, and grant.py --no-simulation gives none (P1029).
+WHY_DIRECT_FLASHING_DISALLOWED = "direct flashing disallowed"
+#: The file in the grants place that disallows direct flashing while it is there (P1029). Its '_' name is no slug of a MAC.
+DIRECT_FLASHING_DISALLOWED = "direct_flashing_disallowed"
 #: Why a deploy grant is refused for a yes that cannot open the erase, a relayed one (P675).
 WHY_RELAYED_YES = "relayed yes"
 #: grant.py --check --json's `why` when it could not look: no board, two boards, a port not listed, no mpremote.
@@ -86,6 +97,11 @@ GRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parents[2] / "grant.p
 LIVE_QUESTION = "let Claude run code on the board %s (token %s) for %d minutes from your yes?"
 DEPLOY_QUESTION = ("let Claude erase ALL of the flash of the board %s (token %s) and write any passed image of any "
                    "project, with no yes from you for each deploy, for %d minutes from your yes?")
+DEPLOY_NO_SIMULATION_QUESTION = ("let Claude erase ALL of the flash of the board %s (token %s) and write any passed image of "
+                                 "any project, and also firmware that no simulation tested, so the board is the first place it "
+                                 "runs, with no yes from you for each deploy, for %d minutes from your yes?")
+#: What the standing yes adds for a grant given with --no-simulation, in the deploy's `yes:` line and its store record.
+NO_SIMULATION_WHO = ", also for images that no simulation tested"
 #: The command a person types for a deploy grant, by grant.py's whole path (P283).
 DEPLOY_GRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parents[2] / "grant.py",
                                          ["--scope", SCOPE_DEPLOY, "--minutes", "N"])
@@ -99,14 +115,17 @@ MESSAGE_FOR = {
                         "The grant works only on a board with a built-in USB port, like the ESP32-C6's",
     WHY_NO_MAC: "the board's MAC could not be read",
     WHY_BAD_MINUTES: "--minutes must be a whole number from 1 to %d" % MAX_MINUTES,
-    WHY_BAD_SCOPE: "--scope must be %s" % " or ".join(SCOPES),
+    WHY_BAD_SCOPE: "--scope must be %s, and --no-simulation needs --scope %s" % (" or ".join(SCOPES), SCOPE_DEPLOY),
     WHY_ANSWERED_NO: "no grant: the person answered no",
     WHY_LOOK_NOT_MATCH: "the look is not a match (a warning, an unknown field or a stop), so a deploy grant does not "
                         "cover this deploy: the person types yes",
     WHY_LAST_DEPLOY_NOT_CHECKED: "spark could not check its record of this board's last deploy, so a deploy grant does "
                                  "not cover this deploy: the person types yes",
     WHY_IGNORE_OLDER_RUNS: "--ignore-older-runs is never covered by a deploy grant: the person types yes",
-    WHY_NO_SIMULATION: "--no-simulation is never covered by a deploy grant: the person types yes",
+    WHY_NO_SIMULATION: "--no-simulation is covered only by a deploy grant given with --no-simulation: the person types yes",
+    WHY_DIRECT_FLASHING_DISALLOWED: "direct flashing is disallowed in the store: the file grants/%s is there, or spark cannot "
+                                    "read the grants folder. So no deploy grant answers a --no-simulation deploy: the person "
+                                    "types yes" % DIRECT_FLASHING_DISALLOWED,
     WHY_RELAYED_YES: "no deploy grant: a yes given through another program makes a live grant only. The person runs %s "
                      "in their own terminal" % DEPLOY_GRANT_COMMAND,
 }
@@ -124,7 +143,10 @@ CODE_FOR_WHY = {WHY_NO_GRANT: board_codes.NO_GRANT, WHY_EXPIRED: board_codes.GRA
                 WHY_NOT_A_GRANT: board_codes.NOT_A_GRANT, WHY_BAD_MINUTES: board_codes.BAD_MINUTES,
                 WHY_BAD_SCOPE: board_codes.BAD_SCOPE, WHY_NO_MAC: board_codes.NO_MAC,
                 WHY_SERIAL_NOT_MAC: board_codes.SERIAL_NOT_MAC, WHY_ANSWERED_NO: board_codes.ANSWERED_NO,
-                WHY_RELAYED_YES: board_codes.RELAYED_YES_REFUSED}
+                WHY_RELAYED_YES: board_codes.RELAYED_YES_REFUSED,
+                WHY_DIRECT_FLASHING_DISALLOWED: board_codes.DIRECT_FLASHING_DISALLOWED}
+#: What grant.py's refusal adds for disallowed direct flashing: the line that allows it again, for the person's own hands.
+ALLOW_AGAIN = ". To allow it again, the person deletes that file: rm %s"
 #: The exit code for a code that is no refusal but a run that could not finish: 2, as outcomes.py says.
 COULD_NOT_RUN_WHYS = (WHY_NO_MAC, WHY_BAD_MINUTES, WHY_BAD_SCOPE)
 
@@ -150,15 +172,17 @@ class GrantRefusedError(GateClosedError):
     for a code in COULD_NOT_RUN_WHYS."""
 
     def __init__(self, why):
-        super().__init__(MESSAGE_FOR[why], EXIT_COULD_NOT_RUN if why in COULD_NOT_RUN_WHYS else EXIT_PROBLEMS,
-                         reason=CODE_FOR_WHY[why])
+        said = MESSAGE_FOR[why] + (ALLOW_AGAIN % shlex.quote(printable(str(GrantStore.disallowed_path())))
+                                   if why == WHY_DIRECT_FLASHING_DISALLOWED else "")
+        super().__init__(said, EXIT_COULD_NOT_RUN if why in COULD_NOT_RUN_WHYS else EXIT_PROBLEMS, reason=CODE_FOR_WHY[why])
         self.why = why
 
 
 class GrantStore:
     """Reads and writes the store's grants place: one JSON file per board and scope, named by its MAC with dashes, for
     example grants/8c-bf-ea-xx-xx-xx.json (live) and grants/8c-bf-ea-xx-xx-xx-deploy.json (deploy). A new grant replaces
-    the old one of its scope. Deleting the file ends the grant."""
+    the old one of its scope. Deleting the file ends the grant. The file grants/direct_flashing_disallowed disallows
+    direct flashing while it is there (P1029)."""
 
     @staticmethod
     def key(mac, scope=SCOPE_LIVE):
@@ -175,6 +199,26 @@ class GrantStore:
             store.write_json("grants", self.key(grant.mac, grant.scope), grant._asdict())
         return store.place("grants") / (self.key(grant.mac, grant.scope) + ".json")
 
+    @staticmethod
+    def disallowed_path():
+        return store.place("grants") / DIRECT_FLASHING_DISALLOWED
+
+    def direct_flashing_allowed(self):
+        """True only when no file is at grants/direct_flashing_disallowed (P1029). It fails closed: a file, a folder or a
+        dangling link there, or a grants place spark cannot read, disallows direct flashing."""
+        try:
+            os.lstat(self.disallowed_path())
+        except FileNotFoundError:
+            return True
+        except OSError:
+            return False
+        return False
+
+    def save_disallowed(self, text):
+        """Keep the file that disallows direct flashing, holding `text`. Returns its path."""
+        with store.locked():
+            return store.write_mark("grants", DIRECT_FLASHING_DISALLOWED, text)
+
     def find(self, mac, scope=SCOPE_LIVE):
         """The Grant of this `scope` kept for this MAC, or None when there is none. GrantRefusedError(WHY_NOT_A_GRANT)
         when the file is there but holds no grant of this scope for this MAC."""
@@ -186,6 +230,7 @@ class GrantStore:
         except (OSError, ValueError, TypeError, RecursionError):  # P919: a deeply nested file is refused, not a crash
             raise GrantRefusedError(WHY_NOT_A_GRANT)
         if not isinstance(grant.mac, str) or grant.scope != scope or mac_key(grant.mac) != mac_key(mac) \
+                or not isinstance(grant.no_simulation, bool) \
                 or grant.board_token != board_look.board_token(mac_key(mac)):
             raise GrantRefusedError(WHY_NOT_A_GRANT)
         return grant
@@ -205,7 +250,8 @@ class StandingConsentStrategy(ConsentStrategy):
     @property
     def who(self):
         return "standing yes typed by %s at %s, until %s" % (self.grant.granted_by, say_in_local_zone(
-            self.grant.granted_at), say_in_local_zone(self.grant.expires_at))
+            self.grant.granted_at), say_in_local_zone(self.grant.expires_at)) + (
+            NO_SIMULATION_WHO if self.grant.no_simulation is True else "")
 
     def require_ready(self):
         if self.grant.why_not_valid(self.now()):
@@ -215,13 +261,6 @@ class StandingConsentStrategy(ConsentStrategy):
     def ask(self, question):
         self.require_ready()
         return True
-
-
-def grant_may_cover(report, evidence):
-    """True when a deploy grant can answer for this deploy: the look matched, its last deploy was checked, and the
-    evidence allows a grant. consent_for_deploy refuses in the same cases, and deploy.py offers the grant line only here."""
-    return (report.verdict == board_look.VERDICT_MATCH and not report.last_deploy_not_checked()
-            and evidence.grant_refusal is None)
 
 
 class GrantService:
@@ -264,6 +303,24 @@ class GrantService:
         self.grants.save(grant)
         return grant
 
+    def refusal_of(self, evidence, grant=None):
+        """The WHY_ code that keeps a deploy grant from answering for `evidence` (an ImageEvidence), or None (P1029). With
+        no `grant`: for a grant given with --no-simulation, the one deploy.py offers. The store's setting is read only
+        for an image that no simulation tested."""
+        why = evidence.grant_refusal
+        if why != WHY_NO_SIMULATION:
+            return why
+        if not self.grants.direct_flashing_allowed():
+            return WHY_DIRECT_FLASHING_DISALLOWED
+        return None if grant is None or grant.no_simulation is True else WHY_NO_SIMULATION
+
+    def may_cover(self, report, evidence):
+        """True when a deploy grant can answer for this deploy: the look matched, its last deploy was checked, and the
+        evidence allows a grant (one given with --no-simulation for an image no simulation tested). consent_for_deploy
+        refuses in the same cases, and deploy.py offers the grant line only here."""
+        return (report.verdict == board_look.VERDICT_MATCH and not report.last_deploy_not_checked()
+                and self.refusal_of(evidence) is None)
+
     def check(self, port=None, script="grant.py"):
         """A GrantCheckResult for the board on USB (or on `port`). It runs only `mpremote devs`: no contact with the
         board. board_look.LookStopError when the board cannot be found."""
@@ -291,8 +348,9 @@ class GrantService:
             return DeployConsentResult(fallback, WHY_LOOK_NOT_MATCH)
         if report.last_deploy_not_checked():
             return DeployConsentResult(fallback, WHY_LAST_DEPLOY_NOT_CHECKED)
-        if evidence.grant_refusal:
-            return DeployConsentResult(fallback, evidence.grant_refusal)
+        why = self.refusal_of(evidence, grant)
+        if why:
+            return DeployConsentResult(fallback, why)
         why = grant.why_not_valid(self.now())
         if why:
             return DeployConsentResult(fallback, why)

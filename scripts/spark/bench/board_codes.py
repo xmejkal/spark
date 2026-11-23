@@ -50,6 +50,8 @@ MISSING_FACT = "missing_fact"
 NOT_A_GRANT, BAD_MINUTES, BAD_SCOPE, SERIAL_NOT_MAC = "not_a_grant", "bad_minutes", "bad_scope", "serial_not_mac"
 #: grant.py --check's refusals (P657), one code for each WHY_ word that had none.
 NO_GRANT, GRANT_EXPIRED, GRANT_NO_ZONE = "no_grant", "grant_expired", "grant_no_zone"
+#: grant.py --no-simulation's refusal while the store disallows direct flashing (P1029).
+DIRECT_FLASHING_DISALLOWED = "direct_flashing_disallowed"
 #: What reach.py and live.py answer (P657). The answer codes of live.py (board_live.RAN is no finding) are the codes of its findings.
 NOT_REACHED, RESET_FAILED, NO_PROBE = "not_reached", "reset_failed", "no_probe"
 RAISED, REFUSED_NO_GRANT, REFUSED_PIN, REFUSED_NO_PARSE = "raised", "refused_no_grant", "refused_pin", "refused_no_parse"
@@ -102,7 +104,8 @@ CODES = {
     MISSING_FACT: "a stage needs a fact the record lacks, so it stopped short of guessing it",
     NOT_A_GRANT: "the store's grant file for the board is not a grant for it",
     BAD_MINUTES: "--minutes is not a whole number from 1 to 1440",
-    BAD_SCOPE: "--scope is not a scope a grant has",
+    BAD_SCOPE: "--scope is not a scope a grant has, or --no-simulation came without --scope deploy",
+    DIRECT_FLASHING_DISALLOWED: "the store disallows direct flashing, so no deploy grant answers a deploy with no simulation",
     SERIAL_NOT_MAC: "the board's USB serial is not its MAC",
     NO_GRANT: "the board has no live grant",
     GRANT_EXPIRED: "the board's live grant ended",
@@ -123,7 +126,8 @@ CODES = {
 }
 #: The codes whose sentence or fix holds a line a person pastes or a file they open, so Privacy leaves it, and each line
 #: that holds it, as it is (P677): the line to run with no terminal, the grant line, the line that builds the image, and
-#: the store record to repair (the last deploy's, and the kept board's, also the one another board replaces).
+#: the store record to repair (the last deploy's, and the kept board's, also the one another board replaces), and the rm
+#: line that allows direct flashing again (P1029).
 PASTED_CODES = frozenset((NO_TERMINAL, NO_GRANT, GRANT_EXPIRED, GRANT_NO_ZONE, REFUSED_NO_GRANT, NO_IMAGE, EVIDENCE_REFUSES,
-                          LAST_DEPLOY_NOT_CHECKED, KNOWN_BOARD_UNREADABLE, OTHER_BOARD))
+                          LAST_DEPLOY_NOT_CHECKED, KNOWN_BOARD_UNREADABLE, OTHER_BOARD, DIRECT_FLASHING_DISALLOWED))
 # --- end MVP ---

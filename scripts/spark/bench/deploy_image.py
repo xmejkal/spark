@@ -258,7 +258,7 @@ class DeployFlowService:
             reached.update(refusal=str(shut), reason=shut.reason, next_op=shut.next_op)
             if shut.next_op == deploy_gate.NEXT_DEPLOY:
                 reached["run_in_terminal"] = rerun_line(reached["project"], token, look.port, reached["evidence"])
-                if board_grant.grant_may_cover(look, reached["evidence"]):
+                if self.grants.may_cover(look, reached["evidence"]):
                     reached["grant_argv"] = grant_argv(reached["project"], look.port, "60")
             self.outside.add_diagnostics(["%s: %s" % (SCRIPT, shut)])
             return shut.code
@@ -270,7 +270,7 @@ class DeployFlowService:
         person. One line says why the grant was not used, unless there is none."""
         project, evidence = self._reached["project"], self._reached["evidence"]
         line = rerun_line(project, token, look.port, evidence)
-        if board_grant.grant_may_cover(look, evidence):
+        if self.grants.may_cover(look, evidence):
             line += grant_hint(project, look.port)
         chosen = self.grants.consent_for_deploy(look, evidence, self.outside.make_consent(line))
         if chosen.why not in WHY_NOT_SAID:
