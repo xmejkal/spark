@@ -1,6 +1,7 @@
 """P1036 (#1519): one Storage under the Stores. The bytes that the two moved Stores write stay those of main, the contract
 runs on FileStorage and on MemoryStorage, and the namespaces behind the seam are the only ones served."""
 
+import ast
 import hashlib
 import json
 import os
@@ -81,6 +82,55 @@ class TheMemoryBytesTest(ScratchStoreCase):
         write_the_files(RegisteredProjectStore(memory), DeployRecordStore())
         self.assertEqual(sha256_of(store.place("registered-projects")), REGISTERED_SHA256)
         self.assertEqual(memory.get("registered-projects"), json.loads(store.place("registered-projects").read_bytes()))
+
+    def test_memory_keeps_the_board_record_of_the_pinned_file(self):
+        write_the_files(RegisteredProjectStore(), DeployRecordStore())
+        memory = storage.MemoryStorage()
+        write_the_files(RegisteredProjectStore(), DeployRecordStore(memory))
+        board = store.place("boards") / "a0-b1-c2-d3-e4-f5.json"
+        self.assertEqual(sha256_of(board), BOARD_SHA256)
+        self.assertEqual(memory.get("boards", "a0-b1-c2-d3-e4-f5"), json.loads(board.read_bytes()))
+
+
+class TheRecordPathIsNeverOpenedTest(unittest.TestCase):
+    """P1036 (test 24, R2.3): `DeployRecordStore.find_path` names a place for words and for tests on FileStorage, and a
+    MemoryStorage never backs it, so no script opens, reads or writes what it gives. A rule about the code, so it reads
+    the code: every call of a `find_path` that is not KnownBoardStore's (known_board.py, and `self.known` elsewhere)."""
+
+    USES = ("open", "read_text", "read_bytes", "write_text", "write_bytes")
+
+    @staticmethod
+    def calls_of_find_path(tree, source):
+        """The Call nodes of DeployRecordStore's `find_path` in one module's `tree`."""
+        return [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "find_path" and ast.get_source_segment(source, node.func.value) != "self.known"]
+
+    def opened(self, tree, source):
+        """Each line where a result of `find_path`, or a name given one, is opened, read or written."""
+        calls = self.calls_of_find_path(tree, source)
+        names = {target.id for node in ast.walk(tree) if isinstance(node, ast.Assign) and node.value in calls
+                 for target in node.targets if isinstance(target, ast.Name)}
+
+        def is_result(node):
+            return node in calls or (isinstance(node, ast.Name) and node.id in names)
+        lines = [node.lineno for node in ast.walk(tree) if isinstance(node, ast.Attribute) and node.attr in self.USES
+                 and is_result(node.value)]
+        return lines + [node.lineno for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                        and node.func.id == "open" and any(is_result(arg) for arg in node.args)]
+
+    def test_no_script_opens_what_find_path_gives(self):
+        found, opened = set(), {}
+        for module in sorted((ROOT / "scripts").rglob("*.py")):
+            if module.name == "known_board.py":
+                continue
+            source = module.read_text(encoding="utf-8")
+            tree = ast.parse(source)
+            if self.calls_of_find_path(tree, source):
+                found.add(module.name)
+            if self.opened(tree, source):
+                opened[module.name] = self.opened(tree, source)
+        self.assertEqual(opened, {})
+        self.assertTrue({"deploy_record_store.py", "bench_service.py"} <= found, found)
 
 
 class StorageContract:
