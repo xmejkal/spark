@@ -29,7 +29,7 @@ from pathlib import Path
 from spark.records import board_records
 from spark.design import footprint_emitter
 from spark.build import build_codes
-from spark.records import tool_finder
+from spark.records import project_commit, tool_finder
 from spark.design.loader import CIRCUIT_PATHS, one_board_message
 
 from spark.core.result import Refusal
@@ -376,13 +376,40 @@ def answers_in(answers_path, brief_path):
     return answers
 
 
+#: The brief from the project's folder, as git and the commit message name it (P1027, slice 2).
+BRIEF_FILE = ".spark/project.json"
+#: The line after a brief write: its commit and the way back, or why there is no commit (`project_commit`'s reasons).
+COMMITTED = "committed as %s. To go back, run in this project: git revert --no-edit %s"
+NOT_COMMITTED = {
+    project_commit.UNHELD: ("not committed: git does not hold .spark/project.json here, so git cannot take this change back. "
+                            "Ask Claude, and Claude puts the old lines back"),
+    project_commit.UNCOMMITTED: ("not committed: .spark/project.json has changes of yours that are not in git yet. Commit "
+                                 "them first, and spark's next change will be committed on its own"),
+    project_commit.NOT_ON_BRANCH: ("not committed: git is not on a branch now (a detached HEAD or a rebase that stopped), and "
+                                   "a commit made now can be lost. Your change is written")}
+COMMIT_FAILED = "not committed: your change is written, only the commit failed. Git said: %s"
+UNFINISHED_SAID = "git did not finish in %d s"
+
+
+def commit_line(committer, why, stated):
+    """The line of a brief write: `why` there is no commit, or the commit of the brief with the message
+    `spark: <stated fields> in .spark/project.json` (field names only, never the person's words) and its way back."""
+    if why:
+        return NOT_COMMITTED[why]
+    sha, said = committer.commit(BRIEF_FILE, "spark: %s in %s" % (stated, BRIEF_FILE))
+    if sha:
+        return COMMITTED % (sha, sha)
+    return COMMIT_FAILED % (UNFINISHED_SAID % committer.timeout if said == project_commit.UNFINISHED else said)
+
+
 def write_brief(path, answers, answers_name):
     """
     Writes the brief at `path` as `merged(merged(answers, existing), PROJECT_TEMPLATE)`, in the template's key order: a field
     the answers state wins, one they leave out or state as null is kept from the brief (the template when there is none), an
-    empty list in the answers erases nothing, and the template's `//` notes are current. Returns (True, a note naming the
-    fields the answers stated and `answers_name`, the answers file's name), or (False, a note) when the brief says it already
-    and nothing was written. `answers_in` has checked both files, so the brief is read here without a guard, and
+    empty list in the answers erases nothing, and the template's `//` notes are current. Returns (True, [a note naming the
+    fields the answers stated and `answers_name`, the answers file's name, then the commit line]), or (False, a note) when
+    the brief says it already and nothing was written. When git holds the brief as it is, on a branch, the write is one
+    commit (P1027, slice 2). `answers_in` has checked both files, so the brief is read here without a guard, and
     `write(path, payload, force=True)` writes the payload as it is.
     """
     existing = json.loads(path.read_text()) if path.exists() else PROJECT_TEMPLATE
@@ -390,9 +417,12 @@ def write_brief(path, answers, answers_name):
     payload = {key: payload[key] for key in [*PROJECT_TEMPLATE, *payload]}
     if path.exists() and payload == existing:
         return False, "%s already says what %s says" % (path.name, answers_name)
+    committer = project_commit.ProjectCommit(path.parent.parent)
+    why = committer.held_as_is(BRIEF_FILE)
     did, note = write(path, payload, force=True)
     stated = ", ".join(key for key, value in answers.items() if value is not None)
-    return did, "wrote %s into %s from %s" % (stated, path.name, answers_name) if stated else note
+    return did, ["wrote %s into %s from %s" % (stated, path.name, answers_name) if stated else note,
+                 commit_line(committer, why, stated)]
 
 
 def unanswered_fields(project):

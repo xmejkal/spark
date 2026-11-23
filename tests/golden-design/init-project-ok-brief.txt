@@ -2,6 +2,7 @@ spark init in <project-dir>
   on your projects list as 'button light'
   wrote rules.json
   wrote goal into project.json from answers.json
+  not committed: git does not hold .spark/project.json here, so git cannot take this change back. Ask Claude, and Claude puts the old lines back
   wrote package.json
   wrote AGENTS.md with spark's section
   wrote CLAUDE.md: @AGENTS.md
