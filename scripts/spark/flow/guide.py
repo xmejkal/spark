@@ -14,7 +14,7 @@ from spark.build.stages import SIMULATION
 from spark.design import needs
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
-from spark.flow import flow_codes
+from spark.flow import deploy_reading, flow_codes
 from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, set_aside
 from spark.core.errors import CodedMessageError
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS, SKIPPED
@@ -83,8 +83,8 @@ def is_open(phase, fact):
 
 def now_phase(phases, no_model, fact, all_aside=False):
     """The phase to act on now: the first open one not counted as done, or the idea while no need is written, or the parts
-    while every need is set aside (P980: there is no pick to write the parts list from). The deploy is never done here, so
-    there is one; None only in a flow of other readers, which a test gives."""
+    while every need is set aside (P980: there is no pick to write the parts list from). None when no phase is open: a
+    deploy that saw ready on the image now (P1043), or a flow of other readers, which a test gives."""
     now = next((phase for phase in phases if phase.phase not in no_model and is_open(phase, fact)), None)
     if now and now.phase == flow_codes.REQUIREMENTS and now.status != COULD_NOT_RUN and all_aside:  # a broken file is not hidden
         return next((phase for phase in phases if phase.phase == flow_codes.PARTS), now)
@@ -133,6 +133,21 @@ def who_and_sentence(now, open_needs, fact, written=True):
     if said == flow_codes.PARTS_NOW:
         return [now.by], said % (flow_codes.ONE_NEED_HAS if len(open_needs) == 1 else flow_codes.MANY_NEEDS_HAVE % len(open_needs), ", ".join(open_needs))
     return [now.by], said or (flow_codes.PROBLEMS_NOW if now.status == PROBLEMS else flow_codes.COULD_NOT_RUN_NOW) % now.phase
+
+
+def with_deploy_now(project, said, now):
+    """`said` with who acts and the sentence of an open deploy after a deploy (P1043, `deploy_reading.deploy_now`), which
+    reads the board log once more, as `image_fact` reads the image: a fact on every Phase would change the phases' JSON.
+    Else `said` as it is."""
+    told = deploy_reading.deploy_now(project, now.status) if now and now.phase == flow_codes.DEPLOY else None
+    return dict(said, by=told[0], says=told[1]) if told else said
+
+
+def no_open_phase(said, by_name):
+    """The guide's sentence when nothing is open: NO_OPEN_PHASE_NOW when there is no now and the deploy is ok (P1043), else
+    None, so a flow of other readers gets none."""
+    deploy = by_name.get(flow_codes.DEPLOY)
+    return flow_codes.NO_OPEN_PHASE_NOW if said is None and deploy is not None and deploy.status == OK else None
 
 
 def job_offer(now):
@@ -193,7 +208,7 @@ def stands_at_of(guide):
 def guide_of(project, phases, steps=count_steps):
     """
     What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, needs, steps}, "done", "later", "set_aside", "no_simulation"}`. `steps` counts the wiring
+    `{"now": {phase, by, says, offer, needs, steps}, "done", "later", "set_aside", "no_simulation", "no_open_phase"}`. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`).
     """
     by_name, listed = {phase.phase: phase for phase in phases}, readable(lambda: needs.read(project), [])
@@ -209,11 +224,12 @@ def guide_of(project, phases, steps=count_steps):
     count = steps(project) if beside_sheet else None
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
     written = not (now and now.phase == flow_codes.SIMULATE) or bool(scenario_names(project))
-    said = now_of(now, open_needs, fact, count, written) if now else None
+    said = with_deploy_now(project, now_of(now, open_needs, fact, count, written), now) if now else None
     wired = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
     later = [label(phase, no_model) + (flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else "")
              for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]
     return {"now": said, "done": done_of(phases, at, no_model, wired, has_no_picks(by_name)), "later": later,
             "set_aside": [need["id"] for need in set_aside(listed)],
-            "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None}
+            "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None,
+            "no_open_phase": no_open_phase(said, by_name)}
 # --- end MVP ---

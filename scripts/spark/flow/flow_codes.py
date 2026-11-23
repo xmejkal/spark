@@ -290,6 +290,29 @@ SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal
 SCENARIO_HINT = SIMULATE_NOW
 DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then run the deploy "
               "in your terminal.")
+#: The NOW of an open deploy after a deploy (P1043): the job in words, by the status and the cause of the newest board
+#: log (`deploy_reading.deploy_now`). No sentence claims what the board does now, and none names a path or a command.
+DEPLOY_NO_START_NOW = ("Spark did not see the firmware start after the last deploy. Ask Claude to look at the board with "
+                       "you. If the look asks for it, run the deploy again in your terminal.")
+DEPLOY_LOST_NOW = ("Spark saw ready after the last deploy, then lost the board, and cannot tell from here whether the "
+                   "firmware still runs. If your gadget works, nothing is wrong. Else ask Claude to look at the board with you.")
+DEPLOY_AWAY_NOW = "After the last deploy, %s. Ask Claude to look at the board with you."
+DEPLOY_UNKNOWN_NOW = ("The log does not say whether the firmware started after the last deploy. Ask Claude to look at the "
+                      "board with you.")
+DEPLOY_PROBLEMS_NOW = "After the last deploy, %s. Ask Claude to go through the board log with you."
+#: DEPLOY_PROBLEMS_NOW's words when the log records no cause (an old log whose files differed may have printed ready).
+NO_READY_SEEN_WORDS = "spark did not see ready"
+#: A stale deploy (P1043-D4): who acts first and the sentence, by its fact. Claude makes the image for firmware newer than
+#: the image and for no image; the person runs the deploy of the image the project has now.
+STALE_DEPLOY_NOW = {FIRMWARE_NEWER: ([BY_CLAUDE], FIRMWARE_NEWER_MESSAGE + " Ask Claude to make the image again and to look "
+                                                  "at the board. Then run the deploy line in your terminal."),
+                    DEPLOY_NO_IMAGE: ([BY_CLAUDE], NO_IMAGE_NOW_MESSAGE + " Ask Claude to make the image and to look at "
+                                                   "the board. Then run the deploy line in your terminal."),
+                    IMAGE_DIFFERS: ([BY_TERMINAL], OTHER_IMAGE_MESSAGE + " Ask Claude to look at the board, then run the "
+                                                   "deploy line in your terminal.")}
+#: The guide's one line when no phase is open: the deploy is ok (P1043, `guide.no_open_phase`).
+NO_OPEN_PHASE_NOW = ("Nothing is waiting on you: the last deploy started the image this project holds now. Tell Claude what "
+                     "to change next.")
 NEEDS_STALE_NOW = ("Your goal or must lines changed after the needs were written. "
                    "Ask Claude to go through the needs and the must lines with you.")
 #: The idea phase after a need was dropped (P1027, slice 2): the ids, then what Claude asks and how it is taken back. No

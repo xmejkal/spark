@@ -83,6 +83,25 @@ def deployed_says(count, logged, fact):
     return ([opener] if opener else []) + [" ".join(line)]
 
 
+def deploy_now(project, status):
+    """(who acts, the sentence) of an open deploy after a deploy (P1043): a stale one by its fact (STALE_DEPLOY_NOW, P1043-D4),
+    problems with its cause's words, a partial one by its cause's group: a lost board after ready, a port gone or download
+    mode, a start not seen, or a cause not recorded. None for any other status, which keeps its own sentence."""
+    if status not in (flow_codes.STALE, flow_codes.PARTIAL, PROBLEMS):
+        return None
+    _, logged, fact, _ = deploy_state(project)
+    if status == flow_codes.STALE:
+        return flow_codes.STALE_DEPLOY_NOW[fact]
+    words = flow_codes.CAUSE_WORDS.get(logged.cause, (None, None))[0]
+    if status == PROBLEMS:
+        return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_PROBLEMS_NOW % (words or flow_codes.NO_READY_SEEN_WORDS)
+    if logged.cause == board_codes.BOARD_LOST:
+        return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_LOST_NOW
+    if logged.cause in (board_codes.PORT_GONE, board_codes.DOWNLOAD_MODE_STAYED):
+        return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_AWAY_NOW % words
+    return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_NO_START_NOW if words else flow_codes.DEPLOY_UNKNOWN_NOW
+
+
 def deploy_data(project):
     """`data.deploy` of `show`: `{at, image, verdict, cause, fact, read_back}` of the newest board log, or None with no
     log, or one that cannot be read (the phase says why). A null `cause` is ready seen, or a cause not recorded."""

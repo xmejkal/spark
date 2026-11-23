@@ -34,7 +34,7 @@ from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import SimulateReader  # noqa: E402
 from spark.flow.guide import guide_of  # noqa: E402
-from spark.flow.show_flow import ShowFlow, read_flow  # noqa: E402
+from spark.flow.show_flow import ShowFlow, flow_and_guide, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.outcomes import OK, PROBLEMS  # noqa: E402
@@ -646,7 +646,8 @@ class TheGuideTest(FlowTest):
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
-            "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL})
+            "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL,
+            "no_open_phase": None})
 
     def test_the_project_stands_where_the_guide_says_now(self):
         """P1030: one rule says where a project stands, the guide's now phase, in data.stands_at too."""
@@ -673,7 +674,7 @@ class TheGuideTest(FlowTest):
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
-            "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL})
+            "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL, "no_open_phase": None})
 
     def test_any_other_cause_of_a_simulation_that_could_not_run_stops_at_the_build(self):
         for code in ("simulation_fact_missing", "converter_lacks_part", None):
@@ -760,7 +761,7 @@ class TheGuideTest(FlowTest):
             "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
-            "set_aside": [], "no_simulation": None})
+            "set_aside": [], "no_simulation": None, "no_open_phase": None})
 
     def test_needs_set_aside_do_not_count_and_a_picked_one_counts_as_picked(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -2111,6 +2112,101 @@ class TheDeployReaderTest(FlowTest):
         self.assertEqual(said["data"]["deploy"], {"at": "2026-11-23T14:09:49+01:00", "image": hashlib.sha256(b"an image").hexdigest(),
                                                   "verdict": "ready unknown", "cause": "firmware_not_started",
                                                   "fact": "current", "read_back": True})
+
+
+#: The guide's line when no phase is open (P1043).
+NOTHING_WAITS = ("Nothing is waiting on you: the last deploy started the image this project holds now. Tell Claude what to "
+                 "change next.")
+NO_START_NOW = ("Spark did not see the firmware start after the last deploy. Ask Claude to look at the board with you. If the "
+                "look asks for it, run the deploy again in your terminal.")
+
+
+class TheDeployNowTest(FlowTest):
+    """P1043: who acts on an open deploy, and the one sentence when nothing is open. Each NOW says the job in words, never
+    what the board does now; a lost board after ready says what spark saw and never that the start was not seen."""
+
+    def now(self, said):
+        return said["data"]["guide"]["now"]
+
+    def test_a_deploy_that_saw_ready_leaves_nothing_open_and_one_sentence_says_so(self):
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
+        said, _ = show(project)
+        self.assertEqual((self.now(said), said["data"]["guide"]["no_open_phase"]), (None, NOTHING_WAITS))
+        self.assertEqual(lines_of(project)[-1], "  " + NOTHING_WAITS)
+
+    def test_each_open_deploy_has_its_own_now(self):
+        lost = "Spark saw ready after the last deploy, then lost the board, and cannot tell from here whether the firmware still runs. "
+        for name, verdict, sentence, reason, now in (
+                ("no read-back", "ready unknown", FILES_UNREAD_SENTENCE, None, NO_START_NOW),
+                ("not started", "ready unknown", NOT_STARTED_SENTENCE, None, NO_START_NOW),
+                ("lost", "ready unknown", LOST_SENTENCE, "board_lost",
+                 lost + "If your gadget works, nothing is wrong. Else ask Claude to look at the board with you."),
+                ("port gone", "ready unknown", "the board's port is gone: x", "port_gone",
+                 "After the last deploy, the board's port was gone. Ask Claude to look at the board with you."),
+                ("download mode", "ready unknown", "x", "download_mode_stayed",
+                 "After the last deploy, the board stayed in download mode. Ask Claude to look at the board with you."),
+                ("not recorded", "ready unknown", "the firmware printed 'ready', then mpremote lost the board (x: y)", None,
+                 "The log does not say whether the firmware started after the last deploy. Ask Claude to look at the board with you."),
+                ("firmware error", "ready not seen", "the firmware stopped with an error: Traceback ...", None,
+                 "After the last deploy, the firmware stopped with an error. Ask Claude to go through the board log with you."),
+                ("old files differ", "ready not seen", "the board's /main.py is not the files of the image", None,
+                 "After the last deploy, spark did not see ready. Ask Claude to go through the board log with you.")):
+            with self.subTest(name=name):
+                said, _ = show(a_board_log(a_deploy_project(), verdict, sentence, reason=reason))
+                self.assertEqual(self.now(said), {"phase": "deploy", "by": ["your terminal"], "says": now, "offer": None,
+                                                  "needs": [], "steps": None})
+                self.assertEqual([step["op"] for step in said["next"]], ["look"])
+                self.assertIsNone(said["data"]["guide"]["no_open_phase"])
+
+    def test_a_lost_board_never_says_spark_did_not_see_the_firmware_start(self):
+        project = a_board_log(a_deploy_project(), "ready unknown", LOST_SENTENCE, reason="board_lost")
+        self.assertNotIn("did not see the firmware start", json.dumps(show(project)[0]) + "\n".join(lines_of(project)))
+
+    def test_a_stale_deploy_names_who_acts_by_its_fact(self):
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, image=b"another image")
+        self.assertEqual((self.now(show(project)[0])["by"], self.now(show(project)[0])["says"]), (["your terminal"],
+                         "The last deploy wrote a different image from the one this project has now. Ask Claude to look at "
+                         "the board, then run the deploy line in your terminal."))
+        # with no image, a project with a Wokwi model has the simulate first: a board with none reaches the deploy
+        project = a_board_log(an_image(a_firmware(a_project_built_with_no_simulation())), "ready seen", SEEN_SENTENCE)
+        (project / "sim" / "image.bin").unlink()
+        self.assertEqual((self.now(show(project)[0])["by"], self.now(show(project)[0])["says"]), (["claude"],
+                         "This project has no image now. Ask Claude to make the image and to look at the board. Then run "
+                         "the deploy line in your terminal."))
+
+    def test_firmware_newer_than_the_deployed_image_is_claude_s_first_with_no_tick(self):
+        # test 8, P1043-D4: on a board Wokwi has no model of, the simulate is counted as done, so the deploy is now
+        for verdict, sentence in (("ready seen", SEEN_SENTENCE), ("ready unknown", FILES_UNREAD_SENTENCE)):
+            with self.subTest(verdict=verdict):
+                project = a_board_log(an_image(a_firmware(a_project_built_with_no_simulation())), verdict, sentence)
+                os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+                said, _ = show(project)
+                self.assertEqual((deploy_of(said)["status"], deploy_of(said)["mark"]), ("stale", "↻"))
+                self.assertEqual((self.now(said)["phase"], self.now(said)["by"], self.now(said)["says"]), ("deploy", ["claude"],
+                                 "Your firmware changed after the image that the last deploy wrote. Ask Claude to make the "
+                                 "image again and to look at the board. Then run the deploy line in your terminal."))
+                self.assertNotIn("deploy", said["data"]["guide"]["done"])
+
+    def test_with_a_model_the_simulate_s_image_older_comes_first(self):
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
+        os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        said, _ = show(project)
+        self.assertEqual((self.now(said)["phase"], deploy_of(said)["status"]), ("simulate", "stale"))
+        self.assertEqual(self.now(said)["says"], "Your firmware changed after the image. Ask Claude to make the image again, then run the scenario.")
+
+    def test_no_open_phase_is_null_whenever_now_is_set_and_with_other_readers(self):
+        # test 14: a phase list a test swaps in, whose now is None, gets no sentence: only an ok deploy says nothing waits
+        from spark.flow.phase_readers import IdeaReader
+        project = Path(tempfile.mkdtemp())
+
+        class Done(IdeaReader):
+            def read(self, project):
+                return self.phase(OK, ["done"])
+        phases, guide = flow_and_guide(project, (Done(),))
+        self.assertEqual((guide["now"], guide["no_open_phase"]), (None, None))
+        for each in (a_deploy_project(), a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE)):
+            with self.subTest(project=each):
+                self.assertIsNone(show(each)[0]["data"]["guide"]["no_open_phase"])
 
 
 if __name__ == "__main__":
