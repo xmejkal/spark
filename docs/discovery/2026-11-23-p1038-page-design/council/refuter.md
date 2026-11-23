@@ -458,3 +458,150 @@ jobs-and-journeys.md (not in the changed list).
 
 none (no web search or fetch; `gh issue view 1105`, `1521`, `1196` and `gh issue list` in the walk project are reads
 of the repositories' own cards)
+
+## Third pass, 2026-11-23
+
+Run 17:46 to 17:52 CET, read-only; this file is the one file written. Read: brief.md, risks-and-tests.md, items.md,
+story-map.md, verification.md, jobs-and-journeys.md:1-40, the Q2 and Q8 lines of the three answer files, and in the
+walk project .spark/project.json, diary.md:183-206, `git log`, `ls -l breadboard.svg`, `gh issue list --state all`.
+In the store: the keys and facts of shelf/epaper-2in9-bwr-mh-et-live.json and the keys of the board records (no
+address read out). In spark: `gh issue view` 1533 to 1536, 1105 and 1518. Not run: `flow.py page`, any spark command.
+Not seen: the AskUserQuestion dialog, so each D row is judged against the options it lists and the files. Tags as before.
+
+### 2. The changed sections against their detail
+
+The Hand-off against the D rows. Its own rule: "copies only confirmed constraints".
+
+- T-1 · "Claude is the first reader in practice (QA1), so `flow.py show --json` and the how-to carry the same facts":
+  no D holds it. D14 (17:34) lists the option "job 1 through a Claude session first" and kept "the four ... as
+  written"; QA1 came at 17:39, five minutes later, and says a Claude session. Job 1 still ends "so I can go on without
+  asking Claude" (jobs-and-journeys.md:16). The jobs were confirmed before the account that speaks against Job 1, and
+  not asked again. The Results row's gloss "by starting or resuming a Claude session and asking Claude where it stood"
+  is longer than the quoted answer, "A Claude session".
+- T-2 · "a stamp over every file it reads, on its own list apart from the click fingerprint (D5)" under "What the PO
+  decided": D5 says this part was "split and go to Q12 and Q13". Q12 asks the trigger and Q13 the build's name;
+  neither asks the list. The separate list is the architect's route and the facilitator's reading of D1.
+- T-3 · "the first page slice is readability, then the style (D11)": D11 says "'structure first, then the graphic
+  style' is the architect's". D11 states the three seats' answers and no single order.
+- T-4 · D10 contradicts itself, and the Hand-off takes one half. Prefix: a run with no read-back "is not hidden" and
+  shows "written by the flasher, nothing read back, start not seen". Body, still there: "A run whose log holds no
+  verified write shows nothing (the PO seat)" (answers-po.md:26). 8 of the 9 "ready unknown" logs are that case. The
+  Hand-off gives the quoted words as decided; D10's body says "the exact words belong to the story's plan".
+- T-5 · "Constraints and no-gos: see Options' proposed no-gos": that line reads "proposals until the decider
+  confirms", and no D names the no-gos. D21 confirms the direction, the risk and the understanding. Appetite is "—",
+  with the template's "asked only when heading for design". The map is "proposed, not applied". So "Decision needed:
+  None in this discovery" is stronger than the rows: the no-gos, the appetite and the map have no D.
+- T-6 · "Who: the PO ... and Claude": D1 names the PO only; jobs-and-journeys.md:9 marks Claude as a reader "H".
+- T-7 · "Job 3 is real (QA4)" and D20's "he showed a spark page": QA4's row says "a spark page to someone (no detail
+  given)". Which page (the `flow.py page` Artifact, or the hand-made public page of PO-8) is —. D20 adds "this epic
+  makes the page good to show", which D9 ("later, on P834") did not hold; story-map slice 2 already files the style
+  under Job 3.
+- T-8 · Dropped caveats: "A3 met" (the Hand-off, Stands on) without "for one board on this machine; two of the four
+  verdicts". "the design skill at user level at the page cards (D8)" and Ready for's "is read whole and installed"
+  without D8's "The install waits for the PO". D19's caveat (gh and the network at each write) is not in the Hand-off.
+  D16's own limit, "Claude republishes the Artifact at the next /spark:page or when it next acts", is not there
+  either: the hook writes the disk file, and the walk's fault was the published copy (R-2).
+
+QA2's mark, "2 of 4 clearly from spark's records":
+
+- T-9 · The mark does not reproduce from the files as one count. (a) The question asked for five; the row holds four
+  because "the goal and must lines" is one item. `goal` and `must` are two fields of the record (.spark/project.json;
+  brief.py:34-41). Counted as two, the same marks give board, goal, must = 3 of 5, which meets "at least 3 of 5".
+  (b) "the open problems (mostly the project's issues and docs)": the two newest open issues, #13 (wake wire) and
+  #14 (measure the current, the 2000 mAh battery), repeat the two `decided` lines of project.json, which D15 makes a
+  field of the brief record. The e-paper part record holds `partial_refresh: false` (issue #6 asks it),
+  `refresh_current_ma: null` and `module_sleep_current_ua: null` (issue #14's ground) and `busy_active_level: null`.
+  So three of the six open issues have their fact, or its `null`, in a spark record. (c) "the goal ... (spark: brief
+  record)" counts a line that QA3, two minutes later, calls stale. (d) No rule says how "partly" counts, or what four
+  answers mean against a line of five. The count is the facilitator's, made in the minute of the answer (QA2 17:39,
+  D19 17:39), against a collection plan that gives the desk check "about 30 minutes". "Missed" holds only on the
+  facilitator's grouping; on another fair grouping the line is met.
+
+D19 against D4 and the no-gos:
+
+- T-10 · D4 still reads "CONFIRMED by the PO ... Not O2b now (3 of 3)" with no note that D19 replaced that part nine
+  minutes later; Ready for lists both as the direction. D19 says "(O2b)" and names issues only; O2b is "issues and
+  docs", and QA2's mark names "issues and docs". Q2's status still reads "answered D4 (delegated)".
+- T-11 · D19 with D16: the core hook writes page.html "after each run that writes to a project", and D19's reader
+  "needs gh and the network when the page is written". So each such run (27 deploy runs in 25 hours here) calls
+  GitHub, and page.html (tracked, 714,020 bytes) changes when an issue changes. What the page shows with no network or
+  no gh is in no row; the standing no-go says no tick on a `null`. AGENTS.md: "a local CLI before a web service".
+- T-12 · D19 with D1 and A7: the repository is PRIVATE (`gh repo view`). Its issue titles enter page.html and the
+  Artifact. A7's pass line lists the Wi-Fi name, the secrets file, paths and the board's address, and no issue text.
+  With D20 ("good to show") the frame's "must not get worse: the privacy of the page" has no test for this.
+- T-13 · D19's caveat cites "the same bytes for the same flow (the architect's objection, council/answers-architect.md)".
+  The architect's line is "O2b needs gh and the network on every write" (:20). "the same bytes for the same flow" is
+  council/po-assistant.md:85.
+- T-14 · O2c's caveat, "the page cannot say which issue is next", applies to D19 and is not on it. Read today: 6 open
+  issues, 2 `doing` (#4, #8), 2 `next` (#5, #6), 2 with no label (#13, #14). D19: "the next step after the deploy
+  ... come from there".
+
+story-map.md (last written 16:53, before D13 to D21):
+
+- T-15 · D19: no row reads the project's issues. D15: slice 1 holds "the brief's goal and must lines" and no decided
+  lines. D16: the rewrite sits in slice 2 "by the trigger Q12 sets", while D16 puts it in the core (P1035 #1518,
+  "core piece 3", confirmed by its title) and outside P1038's slices. D17: slice 1 cites "(Q13)" and omits "shows a
+  mismatch". D7: the note says "in parallel with, or before"; D7 confirmed "in parallel". D10: slice 0's story has no
+  read-back case, and its proof names "verdict" only. D11 and D12 match. The second slice-1 row (pins) is P1044 and
+  cites no card.
+
+Other changed lines:
+
+- T-16 · QA6 against the diary. The row: "he wired from the picture and from Claude in the chat". diary.md:190: "The
+  PO, 11:41: \"I need to see the breadboard, i've already connected it, but I don't see the names on the pins\"".
+  breadboard.svg was written at 11:44 (`ls -l`; diary.md:203 "wrote breadboard.svg"). At 11:41 no picture existed. The
+  question's own time ("When you wired at 11:41") and the answer cannot both hold. "The picture leads" and the Hand-off's
+  "he wired from the picture" rest on it.
+- T-17 · items.md: item 4's parent is "—"; `gh issue view 1536` gives parent #1521. Item 1's slice line still says
+  "ask the decider" beside "slice v0.10" in its status. Item 3 lacks "names no build", which P1045's title holds.
+  The filing holds: four cards, stage Idea, created 17:38 to 17:40 CET, labels story, bug, bug, chore.
+- T-18 · Stale beside the answers: the collection plan's three rows "when he is back"; the value risk row's "QA1 and
+  QA2 to the PO" as the way to retire it; A1's evidence cell, which lacks QA1's result; the Riskiest line, the same;
+  D8's body ("The reading of 'for everybody' stays his") under a prefix that gives his reading; D6 and D9, "the PO on
+  Fable"; A2's pass line still "proposed:" on a retired row.
+
+### 3. The strongest rival for each interpretation
+
+- "A2 missed, so the page needs the project's issues" (D19): A2 is met on another grouping (T-9), and the open
+  problems he wants are already in spark's records as `decided` lines and `null` facts. Then O2a with D15 carries
+  them, with no gh. Not ruled out.
+- "The issues give the next step and the open problems" (D19): the tracker is as stale as the page was. #4 "step 1:
+  a quote every hour from a local file" is open with `doing`; commit dced993 (2026-11-23 00:54) reads "back to one
+  quote an hour", and QA3 says the gadget is the quotes clock. Who sets the labels is — (★C12). Not ruled out.
+- "Claude is the first reader" (QA1): he opened Claude because the page was a day old and, in his words, not
+  readable, which is A1's own premise. Or every working session starts in Claude whatever the page shows, and then
+  A1 cannot pass. The account does not separate the two.
+- "The picture leads" (QA6): Claude in the chat led and the picture was a check afterwards; his words at 11:41 ask
+  for pad names, not for step numbers (T-16). Then P1045's step-to-pill match matters less than names on the pads.
+- "A partial result was read as a failure" (QA5): a recollection a day later, to a question that quotes "Could not
+  run" back to him. At the time he went on to wire (diary.md:190), so he did not act on a failed build.
+- "Job 3 is real for this page" (QA4, D20): he showed the hand-made public page (PO-8). Not ruled out; no detail.
+- "A core hook keeps the page true" (D16): he opens the Artifact link (journey step 1), and that copy still waits for
+  /spark:page. The walk's 27.5-hour fault stays; only the disk copy is fresh.
+- All six accounts: they came in an AskUserQuestion dialog. If each offered options, the answer is a pick among the
+  facilitator's words, not a recall ("A Claude session" and "The build failed" read as option labels). Not seen.
+
+### 4. Numbers without unit, population, period or provenance
+
+- "2 of 4 clearly from spark's records, against 'at least 3 of 5'": two populations; no rule for "partly" or for
+  fewer than five items; the count is the facilitator's alone.
+- "he named 4 things": a grouping; five by the record's fields.
+- "7 H" (Stands on): seven open rows; A4 and A8 carry "—". "4 of which would change the decision": the four rated
+  high by D3, a rating of three agent seats that he confirmed.
+- "(3 of 3)", "(2 of 3)" inside rows now headed "CONFIRMED by the PO": the population is three agent seats; the
+  heading can be read as his count.
+- "17:39 CET" for QA1, QA2 and D19; "17:42 CET" for QA5 and QA6: dialog times, with no time for the marking.
+- "12 GitHub issues of its own (6 open)" (★C12): reproduced, 2026-11-23 about 17:48 CET.
+- "27 of 27", "27 logged deploy runs": one board, one machine; the store's record for that board holds 27 deploys,
+  all of this project.
+- "slice v0.10" on P1043 to P1046: not read by me (the stage, Idea, was).
+- "piece 6 is size M" (D7) beside "S" for O5a: still no unit.
+- "about 27.5 hours" (★C1): unchanged; 27 h 38 or 39 min.
+
+Not checked: the dialog and its options; the cards' Slice field and bodies; `discovery.py check`; the Artifact server
+(no tool call made); whether he re-wired after 11:46.
+
+### Searches
+
+none (no web search or fetch; `gh issue view`, `gh issue list` and `gh repo view` are reads of the two repositories'
+own cards)

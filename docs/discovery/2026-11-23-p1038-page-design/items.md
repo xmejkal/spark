@@ -12,7 +12,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - status: filed D18 as P1043 #1533 (spark-main, 2026-11-23, Idea, slice v0.10 The basic journey) <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P793 #1105 <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider (spark-main knows P793's slice) <!-- REQUIRED:spark-process:slice -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey (as filed) <!-- REQUIRED:spark-process:slice -->
 
 ## The page offers Build and Pick on a wired board, and a rebuild can move its pins
 - type: bug
@@ -24,7 +24,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - parent (the epic, as a sub-issue): P1038 #1521
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider
 
-## The page's step numbers disagree with its picture, and its stamp has no date
+## The page's step numbers disagree with its picture, and its stamp has no date and names no build
 - type: bug
 - needed by: the user lens, USER-4 and USER-7 (council/user.md); the PO: "not very readable or intuitive" (P1011 #1470); the cause is an old build drawn by new code (R-7)
 - value proven by: on a page written again after P1009, step N of the list is pill N of the picture, and the stamp shows a date
@@ -41,7 +41,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - depends on: —
 - status: filed D18 as P1046 #1536 (spark-main, 2026-11-23, Idea, slice v0.10 The basic journey)
 - label (the repository's type label): chore
-- parent (the epic, as a sub-issue): —
+- parent (the epic, as a sub-issue): P1038 #1521 (as filed)
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider
 
 ## Board actions
