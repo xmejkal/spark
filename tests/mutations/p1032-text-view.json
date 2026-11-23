@@ -1,0 +1,140 @@
+[
+ {
+  "file": "scripts/spark/core/text_style.py",
+  "name": "P1032: a pipe gets colour, the isatty term dropped (test_text_report.TheStyleTest.test_a_pipe_is_plain_whatever_term_says)",
+  "find": "    motion = is_terminal(stream) and environ.get(\"TERM\", \"\") not in DUMB_TERMS",
+  "replace": "    motion = environ.get(\"TERM\", \"\") not in DUMB_TERMS"
+ },
+ {
+  "file": "scripts/spark/core/text_style.py",
+  "name": "P1032: dumb counts as a usable TERM (test_text_report.TheStyleTest.test_dumb_unknown_and_unset_term_are_plain_on_a_terminal)",
+  "find": "DUMB_TERMS = (\"\", \"dumb\", \"unknown\")",
+  "replace": "DUMB_TERMS = (\"\", \"unknown\")"
+ },
+ {
+  "file": "scripts/spark/core/text_style.py",
+  "name": "P1032: an empty NO_COLOR removes colour (test_text_report.TheStyleTest.test_no_color_set_and_not_empty_removes_colour_and_keeps_motion)",
+  "find": "and not environ.get(\"NO_COLOR\")",
+  "replace": "and \"NO_COLOR\" not in environ"
+ },
+ {
+  "file": "scripts/spark/core/text_style.py",
+  "name": "P1032: FORCE_COLOR wins over NO_COLOR (test_text_report.TheStyleTest.test_force_color_adds_colour_never_motion_and_no_color_wins)",
+  "find": "    colour = (motion or bool(environ.get(\"FORCE_COLOR\"))) and not environ.get(\"NO_COLOR\")",
+  "replace": "    colour = bool(environ.get(\"FORCE_COLOR\")) or (motion and not environ.get(\"NO_COLOR\"))"
+ },
+ {
+  "file": "scripts/spark/core/text_style.py",
+  "name": "P1032: FORCE_COLOR adds motion (test_text_report.TheStyleTest.test_force_color_adds_colour_never_motion_and_no_color_wins)",
+  "find": "    return TextStyle(colour, motion, can_encode_marks(stream))",
+  "replace": "    return TextStyle(colour, motion or bool(environ.get(\"FORCE_COLOR\")), can_encode_marks(stream))"
+ },
+ {
+  "file": "scripts/spark/core/text_style.py",
+  "name": "P1032: a stream that raises in isatty crashes the style (test_text_report.TheStyleTest.test_a_stream_that_cannot_say_is_no_terminal)",
+  "find": "    try:\n        return bool(stream.isatty())\n    except (ValueError, OSError):\n        return False",
+  "replace": "    return bool(stream.isatty())"
+ },
+ {
+  "file": "scripts/spark/core/text_style.py",
+  "name": "P1032: symbols is always True (test_text_report.TheStyleTest.test_an_encoding_with_no_marks_gives_the_ascii_words)",
+  "find": "    return TextStyle(colour, motion, can_encode_marks(stream))",
+  "replace": "    return TextStyle(colour, motion, True)"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: a result with no headline gets the layout (test_text_report.TheLayoutTest.test_a_result_with_no_headline_prints_its_lines_as_today_in_every_style)",
+  "find": "        if result.headline is None:\n            return \"\\n\".join(result.lines)",
+  "replace": "        if False:\n            return \"\\n\".join(result.lines)"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: the mark comes from the status, not from the headline (test_look.TheTextViewTest.test_a_warning_has_its_mark_its_field_and_a_problem_with_its_fix)",
+  "find": "        mark = (MARK_SYMBOLS if style.symbols else MARK_WORDS)[headline.mark]",
+  "replace": "        mark = (MARK_SYMBOLS if style.symbols else MARK_WORDS)[{\"ok\": MARK_OK, \"problems\": MARK_STOP}.get(result.status(), MARK_UNCHECKED)]"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: an empty section prints its heading (test_text_report.TheLayoutTest.test_the_layout_holds_the_status_line_the_facts_each_section_and_the_step)",
+  "find": "        return [[(\"  \" + heading, \"heading\")]] + items if items else []",
+  "replace": "        return [[(\"  \" + heading, \"heading\")]] + items"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: a finding's fix is dropped (test_text_report.TheLayoutTest.test_the_layout_holds_the_status_line_the_facts_each_section_and_the_step)",
+  "find": "                items += [[(\"      fix: \" + printable(found.fix), \"quiet\")]] if found.fix else []",
+  "replace": "                items += []"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: a step that needs a yes does not say so (test_text_report.TheLayoutTest.test_the_layout_holds_the_status_line_the_facts_each_section_and_the_step)",
+  "find": "(YES_MESSAGE % step.op if step.needs_yes else \"\")",
+  "replace": "\"\""
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: with no step, no No command line (test_text_report.TheLayoutTest.test_the_layout_holds_the_status_line_the_facts_each_section_and_the_step)",
+  "find": "        return [[(\"  Next:\", \"heading\")], [(\"    \" + NO_COMMAND_MESSAGE % first, \"fact\")]] if first else []",
+  "replace": "        return []"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: the Note comes after Next (test_text_report.TheLayoutTest.test_the_layout_holds_the_status_line_the_facts_each_section_and_the_step)",
+  "find": "        blocks = [TextReport.findings_block(result.findings),\n                  TextReport.section(\"Note\", [[(\"    \" + printable(note), \"quiet\")] for note in notes]), TextReport.next_block(result)]",
+  "replace": "        blocks = [TextReport.findings_block(result.findings),\n                  TextReport.next_block(result), TextReport.section(\"Note\", [[(\"    \" + printable(note), \"quiet\")] for note in notes])]"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: the command skips printable (test_text_report.TheLayoutTest.test_the_command_is_one_line_even_with_a_space_a_newline_and_300_characters)",
+  "find": "    return printable(\" \".join(names + [",
+  "replace": "    return (\" \".join(names + ["
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: the headline's sentence skips printable (test_text_report.TheLayoutTest.test_an_escape_code_in_a_sentence_shows_as_a_question_mark_in_both_styles)",
+  "find": "        status = \" %s: %s. %s\" % (tool, result.status(), printable(headline.sentence))",
+  "replace": "        status = \" %s: %s. %s\" % (tool, result.status(), headline.sentence)"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: painter_for imports rich with colour off (test_text_report.ThePaintersTest.test_painter_for_gives_plain_without_colour_and_when_rich_does_not_import)",
+  "find": "    if not style.colour:\n        return PlainPainter",
+  "replace": "    if False:\n        return PlainPainter"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1032: a rich paint that raises is not caught (test_text_report.ThePaintersTest.test_a_rich_that_raises_gives_the_plain_text)",
+  "find": "        except Exception:  # noqa: BLE001  rich of another version may refuse a setting: the plain text stands",
+  "replace": "        except ImportError:"
+ },
+ {
+  "file": "scripts/spark/core/result.py",
+  "name": "P1032: the headline leaks into to_envelope (test_core.RunOperationTest.test_the_envelope_is_the_same_with_and_without_a_headline)",
+  "find": "notes=self.notes, assumptions=self.assumptions)",
+  "replace": "notes=self.notes or (self.headline and [self.headline.sentence]), assumptions=self.assumptions)"
+ },
+ {
+  "file": "scripts/spark/core/privacy.py",
+  "name": "P1032: the headline is not masked (test_privacy.MaskResultTest.test_privacy_masks_the_headline)",
+  "find": "        return result._replace(headline=self._masked_headline(result.headline, kept),",
+  "replace": "        return result._replace(headline=result.headline,"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "P1032: a warning gets the match headline (test_look.TheTextViewTest.test_a_warning_has_its_mark_its_field_and_a_problem_with_its_fix)",
+  "find": "    if differs:\n        return Headline(WARNING_HEADLINE",
+  "replace": "    if False:\n        return Headline(WARNING_HEADLINE"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "P1032: a stop headline drops the stop's sentence (test_look.TheTextViewTest.test_every_stop_headline_has_a_problem_after_it)",
+  "find": "STOP_HEADLINE % report.stops[0].sentence",
+  "replace": "STOP_HEADLINE % \"a stop\""
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "P1032: the other-board sentence is appended to the lines again (test_known_board.TheTextViewOfTheKeptBoardTest.test_the_other_board_and_the_kept_note_are_said_once)",
+  "find": "findings=findings, next=[], headline=headline)",
+  "replace": "findings=findings, next=[], headline=headline, lines=list(result.lines) + [INDENT + printable(other)])"
+ }
+]

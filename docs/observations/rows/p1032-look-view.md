@@ -1,0 +1,27 @@
+# P1032: look.py's text view: rows
+
+Card: [P1032 #1512](https://github.com/xmejkal/spark/issues/1512). Two plan rounds (round 1: the UX and AI-UX lenses
+and the refuter; round 2: the refuter), then the build. This file holds the acted, raised and rejected findings only
+(rules.md). 2026-11-23.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | the other-board result can also hold a stop or a warning, and its own headline would hide the stop and print `?` beside `problems` | plan refuter, round 2 (A) | acted | `OTHER_BOARD_HEADLINE` only when the status is not `problems`, else `headline_of`'s; `test_another_board_with_a_stop_gets_the_stop_headline`, and the golden `look-problems-stop.txt` (a C6 read on the kept S3's port) |
+| 2 | the unknown headline said "was not read", but a field is also unknown when the record does not hold it | plan refuter, round 2 (B) | acted | `UNKNOWN_HEADLINE` holds each field's own reason, with the mark `?` and no "Warning:"; `test_a_field_the_board_did_not_say_is_unknown_and_the_look_could_not_check_it` |
+| 3 | the other-board sentence and "no token: the look found a stop" printed twice, once as the "No command" reason | plan refuter, round 2 (C) | acted | `NO_COMMAND_MESSAGE`, a short sentence that points to the first item of its section; `test_the_other_board_and_the_kept_note_are_said_once` |
+| 4 | `text_style_of` crashed on a StringIO, whose encoding is None | plan refuter, round 2 (D) | acted | a stream with no encoding counts as `symbols` True; `test_an_encoding_with_no_marks_gives_the_ascii_words` |
+| 5 | the new canned file needs a made-up MAC, listed in the fixtures' README | plan refuter, round 2 (E) | acted | `s3-flash-id-16mb-other-mac.txt` with de:ad:be:ef:12:34: the plan's 02:00:00:00:12:34 is no form that test_no_board_address takes as made up |
+| 6 | nits: test_look:353 changes too, renderers.py's docstring, scripts.md line 111, WARNING_HEADLINE's dead branch, test 21 with no notes, painter_for catches any Exception | plan refuter, round 2 (F) | acted | each done; a field that differs with no stop always gives `problems`, so the warning mark is `!` with no branch |
+| 7 | test_story_tests maps goldens by folder, so the new goldens need no mapping | plan refuter, round 2 (G) | rejected | spark-main's decision: nothing to do (tools/story_tests.py:47) |
+| 8 | `wrong-chip.txt`, the plan's file for the stop golden, is esptool's own failure text: it reads no chip, no flash and no MAC, so it gives no stop | build | acted | the stop golden reads `c6-flash-id.txt`, a C6 with another MAC on the kept S3's port: a stop and the other board, which is round 2's A |
+| 9 | the board question's test needs a replies strategy, which LookScriptCase's world does not hold (the look crashed) | build | acted | the test is in test_known_board's `TheTextViewOfTheKeptBoardTest`, with KnownBoardCase's world |
+| 10 | the mask_result tests live in test_privacy, not test_core | build | acted | test 12 is `test_privacy.MaskResultTest.test_privacy_masks_the_headline` |
+| 11 | a module whose docstring calls itself a leaf must be one of measure.LEAVES, and adding text_style there breaks the planted trees of test_architecture | build | acted | text_style.py's docstring says it imports nothing of spark, with no "leaf"; U1 still holds it (no spark import) |
+| 12 | three pages went over their line budgets, and a table cell over 300 characters | build, test_docs | acted | the words joined onto existing lines; patterns-and-names.md names the text view's pieces in its paragraph, not in the Renderer row |
+| 13 | `step_command` maps an op to `scripts/<op>.py`, which does not hold for `build-board` (check_spine.py) | plan | raised | a card for spark-main to file: the flow's text-view card ("What stays out", 6) |
+| 14 | `LookAtBoard._open`'s step puts `look.py` as `argv[0]`, so a headline on the question would print `look.py look.py` | plan | raised | a note on the stops card that spark-main files ("What stays out", 1) |
+| 15 | esptool brings rich, so the tools.json entry rarely installs anything | plan | dropped because | the card's Done-when names the entry |
+| 16 | the found view is 29 rows at 80 columns, so the status line scrolls out of a 24-row window; the why is the largest part | plan | raised | the reword card that spark-main files ("What stays out", 2) |
+| 17 | two rows of other tables lost their line: `p699-design-net.json`'s secret row (golden_bench's child_env) and `p865-look-names-board.json`'s T7 row (the other-board return) | `mutate.py --anchors` | acted | both follow the moved line; each run once by hand and caught (test_golden_design, test_known_board's T7) |
+| 18 | 33 rows of other tables are refused by `--anchors` on main too | `mutate.py --anchors` | raised | P897 #1273 owns them; this change adds none: 4771 mutation(s) in 400 table(s), 33 refused, as on main (4748 in 399, 33) |
+| 19 | the first hook run was red: map.md not yet written, the made-up MAC 02:00:00:00:12:34 (no form test_no_board_address takes), and test_known_board read KEPT_MESSAGE and OTHER_BOARD_HEADLINE as its expectation (test_self_confirmation) | hook | acted | map.md written in the docs commit; the MAC is de:ad:be:ef:12:34; the two expectations are literals |
