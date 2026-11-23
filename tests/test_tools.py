@@ -3,6 +3,7 @@
 import contextlib
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -15,6 +16,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import golden_bench  # noqa: E402
 import tools  # noqa: E402
 from spark.records import tool_choices  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
@@ -114,6 +116,52 @@ class TheLayersMergeFieldByFieldTest(unittest.TestCase):
             tool_finder.merged(None, layer("[1, 2]"))
         self.assertIn("a tools file is an object", str(refused.exception))
         self.assertEqual(refused.exception.code, "tools_list_broken")
+
+    def refused(self, path):
+        """The ToolError that `merged` gives for the personal layer `path`; it fails the test when there is none."""
+        with self.assertRaises(tool_finder.ToolError) as refused:
+            tool_finder.merged(None, path)
+        self.assertEqual(refused.exception.code, "file_refused")
+        self.assertIn(str(path), str(refused.exception))
+        return str(refused.exception)
+
+    def test_a_tools_file_spark_cannot_read_is_file_refused_never_a_traceback(self):
+        # P1041 (#1529): a store folder of mode 0, then a tools file of mode 0, gave a PermissionError and a traceback
+        folder = layer(DEFAULTS).parent
+        self.addCleanup(os.chmod, folder, 0o700)
+        os.chmod(folder, 0)
+        self.assertIn("cannot be read (Permission denied) — fix it or its permissions", self.refused(folder / "tools.json"))
+        os.chmod(folder, 0o700)
+        unreadable = folder / "tools.json"
+        self.addCleanup(os.chmod, unreadable, 0o600)
+        os.chmod(unreadable, 0)
+        self.assertIn("cannot be read (Permission denied) — fix it or its permissions", self.refused(unreadable))
+
+    def test_a_tools_path_that_is_not_a_regular_file_is_file_refused_and_absence_stays_absent(self):
+        # P1041: a folder or a FIFO in the place of tools.json read as no file; a FIFO is never opened, so this returns at once
+        folder = Path(tempfile.mkdtemp())
+        (folder / "dir").mkdir()
+        os.mkfifo(folder / "fifo")
+        for odd in (folder / "dir", folder / "fifo"):
+            with self.subTest(odd=odd.name):
+                self.assertIn("cannot be read (not a regular file) — fix it or delete it", self.refused(odd))
+        # a link that points at itself: the disk refuses it, so it is a refusal too (the plan check, B)
+        (folder / "loop").symlink_to(folder / "loop")
+        self.assertIn("— fix it or its permissions", self.refused(folder / "loop"))
+        # no file, a broken link and a parent that is a file stay absent, as before (D2)
+        (folder / "broken").symlink_to(folder / "gone")
+        (folder / "a-file").write_text("{}")
+        for absent in (folder / "broken", folder / "a-file" / "tools.json"):
+            with self.subTest(absent=absent.name):
+                self.assertEqual(tool_finder.merged(None, absent), tool_finder.merged(None, self.nobody))
+
+    def test_choose_refuses_a_folder_in_the_place_of_the_tools_file_before_it_writes(self):
+        where = Path(tempfile.mkdtemp()) / "tools.json"
+        where.mkdir()
+        with self.assertRaises(tool_finder.ToolError) as refused:
+            tool_finder.choose(["sigrok", "on"], True, where)
+        self.assertEqual(refused.exception.code, "file_refused")
+        self.assertEqual(list(where.iterdir()), [])
 
     def test_contracts_are_spark_s_to_state(self):
         personal = layer({"contracts": {"pdf-text": "anything"}})
@@ -670,6 +718,20 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
                 self.assertEqual(made.returncode, 0, made.stderr)
                 self.assertIn("home?GRANTED", made.stdout)
                 self.assertEqual([line for line in made.stdout.splitlines() if line.lstrip().startswith("GRANTED")], [])
+
+    def test_status_with_a_store_spark_cannot_read_says_one_line_and_exits_2(self):
+        # P1041 (#1529): SPARK_HOME of mode 0 was a traceback at tool_finder._read and exit 1; a child, so PERSONAL is the store's
+        import subprocess
+        home = Path(tempfile.mkdtemp())
+        self.addCleanup(os.chmod, home, 0o700)
+        os.chmod(home, 0)
+        env = golden_bench.child_env(home, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
+        done = golden_bench.run_child("tools.py", ["--status"], tempfile.mkdtemp(), env)
+        self.assertEqual(done.returncode, tools.EXIT_COULD_NOT_RUN, done.stderr)
+        self.assertEqual(len(done.stderr.splitlines()), 1, done.stderr)
+        self.assertTrue(done.stderr.startswith("tools.py: "), done.stderr)
+        self.assertIn("cannot be read (Permission denied)", done.stderr)
+        self.assertNotIn("Traceback", done.stdout + done.stderr)
 
     # I2 and the tracebacks the rule says never happen.
     def test_status_names_an_entry_it_cannot_use_instead_of_crashing(self):
