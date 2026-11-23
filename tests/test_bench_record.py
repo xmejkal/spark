@@ -375,6 +375,22 @@ class RecordTest(RecordCase):
         self.assertEqual(said["unchecked"][0]["sentence"], "no board on /dev/cu.usbmodem9: mpremote devs does not list it.")
         self.no_record()
 
+    def test_a_file_that_does_not_parse_keeps_the_fix_that_says_what_to_do(self):
+        # the review of #1569, refuter 1: UNPARSED is a fact with no step, so it never takes the place of the AGAIN fix
+        self.register()
+        project = Path(tempfile.mkdtemp())
+        (project / "firmware").mkdir()
+        (project / "firmware" / "main.py").write_text("import machine\nmachine.deepsleep(1\n")
+        self.devs = ""
+        exit_code, said = self.envelope("record", "pixel-games", "--project", str(project))
+        (item,) = said["unchecked"]
+        self.assertEqual((exit_code, item["code"]), (2, "no_port"))
+        self.assertTrue(item["fix"].startswith("fix what the line above says, then run bench.py record pixel-games again"), item["fix"])
+        _, _, err = self.bench("record", "pixel-games", "--project", str(project))
+        self.assertEqual(len(err.splitlines()), 2, err)
+        self.assertNotIn("did not parse", err)
+        self.no_record()
+
     def test_a_board_whose_serial_is_no_mac_writes_nothing_even_when_a_project_keeps_it(self):
         self.register()
         self.keep("/tmp/one", "aa:bb:cc:dd:12:34", "01a2b3c4")  # a kept bridge board: the record reads no kept board

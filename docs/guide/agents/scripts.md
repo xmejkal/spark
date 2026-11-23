@@ -127,12 +127,12 @@ These only read:
   `if_not_helped`. The codes are `plug_in`, `close_other`, `press_reset`, `run_again`, `hold_boot` and `replug`. Your part: tell the person the step
   in its own words, wait until they say it is done, and run the same command again. If the same `next_step` comes back after the person did it, give
   the `if_not_helped` step; when that is null, stop and say that spark knows no further step. When the `--port` port is off USB and firmware/ calls
-  deepsleep, `look.py` and `deploy.py` put the asleep fix on the `next` line, under the `check` lines, and in `fix`, while `next_step` stays
-  `plug_in`: relay the `fix` ([P1049](https://github.com/xmejkal/spark/issues/1539); reach.py and live.py: P1057, P1055). A doctor result is never a
-  pass, and a `next_step` of null means the doctor could not look. Its console check opens the port, which can restart the board, so say so before you
-  run a command that may call it. Each tool's `silent_step` in the tools list (`hold_boot` for esptool, `press_reset` for mpremote) sets the step for
-  a silent board (a firmware that prints nothing is silent too); never change it for the person. When the board record holds `physical.buttons`, a
-  step and a `fix` that name BOOT or RESET say where each button is: relay the sentence as printed;
+  deepsleep, `look.py`, `deploy.py` and `grant.py --minutes` put the asleep fix on the `next` line, under the `check` lines, and in `fix`, while
+  `next_step` stays `plug_in`: relay the `fix` ([P1049](https://github.com/xmejkal/spark/issues/1539); reach.py and live.py: P1057, P1055). A doctor
+  result is never a pass, and a `next_step` of null means the doctor could not look. Its console check opens the port, which can restart the board, so
+  say so before you run a command that may call it. Each tool's `silent_step` in the tools list (`hold_boot` for esptool, `press_reset` for mpremote)
+  sets the step for a silent board (a firmware that prints nothing is silent too); never change it for the person. When the board record holds
+  `physical.buttons`, a step and a `fix` that name BOOT or RESET say where each button is: relay the sentence as printed;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`, `--need`, `--match`, `--needs`, `--audit`,
   `--drawer` and `--tally` among them. Every operation runs on the core (P707, P726), `--describe` included; `parts.py` alone lists them: `parts.py --match <project> --help` lists that operation's own arguments, and a flag it does not take exits 2. `--sources` writes nothing, but reaches the network. `--need --json` (P743) searches what the person owns and what spark
   knows: a `found` row has `id` or `entry`, `is` (part, board, entry), the record's own `kind`, `name`, `in` (the layer or a project), `owned` (a number, "many" or

@@ -82,6 +82,7 @@ class AStopOfAFirmwareThatSleepsSaysTheAsleepFixTest(unittest.TestCase):
     def test_a_named_port_not_listed_keeps_its_sentence_and_the_fix_opens_with_that_port(self):
         stop = board_look.LookStopError("no board on %s: mpremote devs does not list it.", "/dev/cu.usbmodem9", reason="port_not_listed")
         said = stop_result(stop, "grant.py", self.project, "/dev/cu.usbmodem9", stops.undoctored("grant.py"))
+        self.assertEqual(len(said.diagnostics), 2, said.diagnostics)
         self.assertEqual(said.diagnostics[0], "grant.py: no board on /dev/cu.usbmodem9: mpremote devs does not list it.")
         self.assertTrue(said.diagnostics[1].startswith("What spark knows: the port you named is not on USB, and"), said.diagnostics[1])
         (found,) = said.findings
@@ -93,6 +94,12 @@ class AStopOfAFirmwareThatSleepsSaysTheAsleepFixTest(unittest.TestCase):
         said = stop_result(self.no_port, "live.py", self.project, None)
         self.assertEqual((said.diagnostics, said.findings[0].sentence, said.findings[0].fix), (["live.py: " + NO_BOARD], NO_BOARD, ""))
         (self.project / "firmware" / "main.py").write_text("import machine\nmachine.lightsleep(1)\n")
+        said = stop_result(self.no_port, "grant.py", self.project, None, stops.undoctored("grant.py"))
+        self.assertEqual((said.diagnostics, said.findings[0].sentence, said.findings[0].fix), (["grant.py: " + NO_BOARD], NO_BOARD, ""))
+
+    def test_a_file_that_does_not_parse_keeps_the_stop_s_own_words_and_no_fix(self):
+        # the review of #1569, refuter 1: UNPARSED is a fact with no step, so it never takes the place of the script's fix
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.deepsleep(1\n")
         said = stop_result(self.no_port, "grant.py", self.project, None, stops.undoctored("grant.py"))
         self.assertEqual((said.diagnostics, said.findings[0].sentence, said.findings[0].fix), (["grant.py: " + NO_BOARD], NO_BOARD, ""))
 

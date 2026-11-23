@@ -188,6 +188,14 @@ class ASleepingBoardTest(GrantCase):
                                                           "cable, not a hub that gives power only. If the plug is USB-C, turn it "
                                                           "around, or use a USB-A to USB-C cable."])
 
+    def test_a_file_that_does_not_parse_keeps_the_old_stop(self):
+        # the review of #1569, refuter 1: UNPARSED is a fact with no step, so grant.py keeps its old text
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.deepsleep(1\n")
+        self.devs = data("mpremote-devs-none.txt")
+        self.assertEqual(self.stderr("--minutes", "10"), ["grant.py: no board found. Plug it straight into the computer with a data "
+                                                          "cable, not a hub that gives power only. If the plug is USB-C, turn it "
+                                                          "around, or use a USB-A to USB-C cable."])
+
 
 class IssueTest(GrantCase):
     def test_the_yes_keeps_a_grant_for_this_board_until_the_limit(self):
