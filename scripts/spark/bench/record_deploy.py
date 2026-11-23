@@ -11,7 +11,7 @@ from spark.bench import board_look
 from spark.bench import known_board
 from spark.bench import ready_probe
 from spark.bench.firmware_platform import MicroPythonPlatform
-from spark.bench.stops import stop_result
+from spark.bench.stops import stop_result, undoctored
 from spark.core.errors import SparkError
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, WRITES, Argument, Operation
 from spark.core.result import OperationResult
@@ -77,8 +77,9 @@ class RecordDeploy(Operation):
 
     @staticmethod
     def _stopped(cannot, project, port, fix):
-        """stop_result's answer, with `fix` where the stop names none, and a last line that says nothing was written."""
-        stopped = stop_result(cannot, SCRIPT, project, port)
+        """stop_result's answer, with `fix` where the stop names none, and a last line that says nothing was written. A
+        LookStopError is said as look.py says it, so a firmware that deep-sleeps gets the asleep fix (P1049)."""
+        stopped = stop_result(cannot, SCRIPT, project, port, undoctored(SCRIPT))
         return stopped._replace(findings=[found._replace(fix=found.fix or fix) for found in stopped.findings],
                                 diagnostics=list(stopped.diagnostics) + ["%s: %s %s" % (SCRIPT, NOTHING_WRITTEN, fix)])
 # --- end MVP ---

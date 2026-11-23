@@ -723,6 +723,16 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.assertEqual(problems, self.NAMED_NOT_LISTED)
         self.assertEqual(unchecked["fix"], self.NAMED_NOT_LISTED[2][len("  next    "):])
 
+    def test_a_port_not_listed_that_the_person_did_not_name_never_gets_the_port_you_named(self):
+        # P1049 (Round 1 C, Round 2 H): stop_said says "the port you named" only of the port the person named
+        self.sleeper("import machine\nmachine.deepsleep(1)\n")
+        stop = board_look.LookStopError("no board on %s: mpremote devs does not list it.", "/dev/x", reason="port_not_listed")
+        answer = (["look.py: no board on /dev/x: mpremote devs does not list it."], None)
+        self.assertEqual(board_envelope.stop_said("look.py", stop, answer, None, self.project), (answer[0], str(stop), ""))
+        lines, sentence, fix = board_envelope.stop_said("look.py", stop, answer, "/dev/x", self.project)
+        self.assertTrue(fix.startswith("What spark knows: the port you named is not on USB"), fix)
+        self.assertEqual((lines, sentence), (["look.py: " + str(stop), fix], str(stop)))
+
     def test_a_firmware_file_that_does_not_parse_is_named_and_the_cable_sentence_stays(self):
         self.sleeper("import machine\nmachine.deepsleep(1\n")
         self.assertEqual(self.stops(devs="mpremote-devs-none.txt").splitlines(), [
