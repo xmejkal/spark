@@ -545,7 +545,9 @@ class TheHelpersEachHaveANameTest(unittest.TestCase):
         # The S3's SDA is an ADC1 pin: kept, so its I2C role only adds the penalty. It comes after A0 and before the
         # console's TX, which costs more.
         pads = pin_assigner.candidates(self.board)
-        rank = [pin_assigner.PAD_ORDER.rank(pads[label], set()) for label in ("A0", "SDA", "TX")]
+        from spark.design import pad_order
+        order = pad_order.PadOrder(pin_assigner._cost, pin_assigner.CONFLICTING_ROLES)
+        rank = [order.rank(pads[label], set()) for label in ("A0", "SDA", "TX")]
         self.assertEqual(rank, sorted(rank))
 
     def test_why_names_the_bus_and_the_kept_pads_on_a_bus_pad(self):
