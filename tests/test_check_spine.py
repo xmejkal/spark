@@ -3067,6 +3067,67 @@ class ALoadAcrossAPairNeedsNoGroundTest(unittest.TestCase):
         self.assertEqual(islands.call_args.kwargs["across"], ["SpeakerTerminal"])
 
 
+class AButtonBetweenAPinAndARailNeedsNoGroundTest(unittest.TestCase):
+    """
+    P1026 (#1501): the active-high wake button that the tactile-button record recommends, B to 3V3 and a 10 k pull-down on A,
+    stopped the build with "WakeButton reaches no ground". Its return is its other pin, as a pull-up's is. The `pushbutton`
+    footprint gives it four ports, so it cannot be asked the passive question: pin3 and pin4 are on nothing.
+    """
+
+    @staticmethod
+    def circuit(*, ground_the_mcu=True):
+        elements = [
+            {"type": "source_net", "source_net_id": "n_gnd", "name": "GND"},
+            {"type": "source_net", "source_net_id": "n_v33", "name": "V33"},
+            {"type": "source_component", "source_component_id": "c_mcu", "name": "Mcu"},
+            {"type": "source_component", "source_component_id": "c_btn", "name": "WakeButton"},
+            {"type": "source_component", "source_component_id": "c_r", "name": "WakeButtonPulldownA", "ftype": "simple_resistor"},
+            {"type": "source_port", "source_port_id": "p_mcu_a5", "source_component_id": "c_mcu", "name": "A5"},
+            {"type": "source_port", "source_port_id": "p_mcu_gnd", "source_component_id": "c_mcu", "name": "GND"},
+            {"type": "source_port", "source_port_id": "p_mcu_3v3", "source_component_id": "c_mcu", "name": "3V3"}]
+        elements += [{"type": "source_port", "source_port_id": "p_btn_" + name, "source_component_id": "c_btn", "name": name}
+                     for name in ("A", "B", "pin3", "pin4")]
+        elements += [{"type": "source_port", "source_port_id": "p_r" + name[-1], "source_component_id": "c_r", "name": name}
+                     for name in ("pin1", "pin2")]
+        elements += [
+            {"type": "source_trace", "source_trace_id": "t1", "connected_source_port_ids": ["p_mcu_a5", "p_btn_A", "p_r1"],
+             "connected_source_net_ids": []},
+            {"type": "source_trace", "source_trace_id": "t2", "connected_source_port_ids": ["p_btn_B", "p_mcu_3v3"],
+             "connected_source_net_ids": ["n_v33"]},
+            {"type": "source_trace", "source_trace_id": "t3", "connected_source_port_ids": ["p_r2"], "connected_source_net_ids": ["n_gnd"]}]
+        if ground_the_mcu:
+            elements.append({"type": "source_trace", "source_trace_id": "t4", "connected_source_port_ids": ["p_mcu_gnd"],
+                             "connected_source_net_ids": ["n_gnd"]})
+        return elements
+
+    def test_a_button_named_as_having_no_ground_pin_is_not_asked_for_one(self):
+        self.assertEqual(build_service.islands_in(self.circuit()), ["WakeButton reaches no ground"])
+        self.assertEqual(build_service.islands_in(self.circuit(), no_own_ground=("WakeButton",)), [])
+
+    def test_the_mcu_is_still_asked_for_its_ground(self):
+        self.assertEqual(build_service.islands_in(self.circuit(ground_the_mcu=False), no_own_ground=("WakeButton",)),
+                         ["Mcu reaches no ground"])
+
+    def test_the_active_high_wake_button_passes_the_build_stage(self):
+        root = Path(tempfile.mkdtemp())
+        project = root / "project"
+        (project / ".spark").mkdir(parents=True)
+        (project / "parts").mkdir()
+        button = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        button["id"] = "wake-button"
+        button["power"] = [dict(button["power"][0], rail="logic")]
+        pulldown = dict(button["host_parts"][0], kind="pulldown")
+        pulldown.pop("internal_will_do")  # P204 refuses it on a pull-down
+        button["host_parts"] = [pulldown]
+        (project / "parts" / "wake-button.json").write_text(json.dumps(button, indent=2))
+        requirements = {"board": "firebeetle2-esp32s3", "parts": ["wake-button"]}
+        (project / "requirements.json").write_text(json.dumps(requirements))
+        circuit = self.circuit() + [{"type": "pcb_trace", "pcb_trace_id": "pt1"}]
+        stages = build_stages(requirements, project, toolchain=fake_tsci(root, "true", circuit), project=project)
+        built = next(stage for stage in stages if stage.name == "build")
+        self.assertNotEqual(built.code, "part_stranded", built.detail)
+
+
 class TheAmplifierAloneTest(unittest.TestCase):
     """
     P864 (#1230): the DFR0954 alone, with no speaker terminal. The circuit of its build is the amplifier fixture's real build

@@ -126,6 +126,25 @@ def loads_across_a_pair(part_list):
                           for supply in part["power"]))
 
 
+def parts_without_a_ground_pin(part_list):
+    """
+    The parts that `check_spine` does not ask for a ground of their own, by the name the emitted file gives them (P1026).
+    Such a part has exactly two pins in `pin_order`, at least one need and at least one power pin. Each power pin is on a
+    net, and none of them is on a ground net. It is a switch between a pin and a rail, as a pull-up is, and its return is
+    its other pin. The active-high wake button is one: B to 3V3, a pull-down on A. A part with three pins or more is
+    still asked, so a module record that forgets its GND still stops the build.
+
+    The limit: a two-pin record with VCC on a rail and OUT on a pin, and no GND, builds under this rule. The facts of a
+    record cannot tell it from a button between a pin and a rail.
+    """
+    return sorted(component_name(part) for part in part_list
+                  if len(part.get("pin_order") or ()) == 2
+                  and part.get("needs")
+                  and part.get("power")
+                  and all(net_for(supply) for supply in part["power"])
+                  and not any(net_for(supply) in GROUND_NETS for supply in part["power"]))
+
+
 def rails_without_a_source(part_list):
     """
     Rails that something consumes and nothing provides.

@@ -78,7 +78,7 @@ GROUND_NETS = power_rails.GROUND_NETS
 PASSIVE_FTYPES = ("simple_resistor", "simple_capacitor", "simple_inductor", "simple_diode")
 
 
-def islands_in(circuit, claims=(), across=()):
+def islands_in(circuit, claims=(), across=(), no_own_ground=()):
     """
     Every component the board leaves on an island, said in its own words. `across` names the
     components that sit across a driven pair (`power_rails.loads_across_a_pair`: a speaker
@@ -111,7 +111,7 @@ def islands_in(circuit, claims=(), across=()):
     names = {cid: element.get("name") or "?" for cid, element in board.components.items()}
     passives = {cid for cid, element in board.components.items()
                 if element.get("ftype") in PASSIVE_FTYPES or element.get("name") in across}
-    findings, present = _reaches_no_ground(board, names, passives)
+    findings, present = _reaches_no_ground(board, names, passives, no_own_ground)
     findings += ["%s.%s (a terminal connected to nothing)"
                  % (names.get(port.get("source_component_id"), "?"), port.get("name") or port_id)
                  for port_id, port in board.ports.items()
@@ -120,9 +120,10 @@ def islands_in(circuit, claims=(), across=()):
     return sorted(findings + _unfed(board, claims))
 
 
-def _reaches_no_ground(board, names, passives):
+def _reaches_no_ground(board, names, passives, no_own_ground=()):
     """`islands_in`'s first question: each chip wired to something and to no ground, as a finding, and every
-    component wired at all."""
+    component wired at all. A component named in `no_own_ground` (`power_rails.parts_without_a_ground_pin`, P1026) is
+    not asked: a button between a pin and a rail has two pins and no ground pin, and its return is its other pin."""
     ground_ids = {net_id for net_id, net in board.nets.items()
                   if (net.get("name") or "").upper() in GROUND_NETS}
     grounded, present = set(), set()
@@ -131,6 +132,7 @@ def _reaches_no_ground(board, names, passives):
         present.add(owner)
         if net_ids & ground_ids:
             grounded.add(owner)
+    grounded |= {owner for owner in present if names.get(owner) in no_own_ground}
     # A component with no trace at all is a separate complaint, already covered by the parts that
     # refuse to emit. Report only those that are wired to something and to no ground — for a chip.
     findings = ["%s reaches no ground" % names.get(owner, "?")
@@ -365,6 +367,7 @@ class BuildService:
         # routed and reported zero errors, while every module around it was correctly wired to a
         # ground the processor was not on.
         islands = islands_in(circuit, power_rails.supply_inputs(board, part_list),
+                             no_own_ground=power_rails.parts_without_a_ground_pin(part_list),
                              across=power_rails.loads_across_a_pair(part_list))
         if islands:
             stages.append(BUILD.ended(PART_STRANDED_ENDING, "; ".join(islands)))
