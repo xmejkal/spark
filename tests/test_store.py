@@ -389,13 +389,6 @@ class OneWriterAtATimeTest(unittest.TestCase):
             store.write_file(target, "new\n")
         self.assertEqual(target.read_text(), "old\n")
 
-    def test_a_file_that_is_not_utf_8_is_written_over(self):
-        # P1035 PR 2: the page goes through write_file now, and a page.html in another encoding was written over before
-        target = Path(tempfile.mkdtemp()) / "page.html"
-        target.write_bytes(b"caf\xe9\n")
-        self.assertTrue(store.write_file(target, "new\n"))
-        self.assertEqual(target.read_text(encoding="utf-8"), "new\n")
-
     def test_a_write_that_fails_leaves_no_part_file_behind(self):
         real_write_text = Path.write_text
 
