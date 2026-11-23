@@ -151,12 +151,15 @@ SCRIPTS = {"scripts/spark/a/top.py": "from spark.a import mid\n", "scripts/spark
            "scripts/spark/flow/__init__.py": "from spark.flow import page\n"}
 
 
-def walked(*changed, tests, helpers=None):
-    return story_tests.select(list(changed), tests, {}, SCRIPTS, helpers)
+def walked(*changed, tests):
+    return story_tests.select(list(changed), tests, {}, SCRIPTS)
 
 
 class TheImportsThroughScriptsChooseTheTestsTest(unittest.TestCase):
-    """P1017: a test runs the modules its imports reach through scripts/, so a change to one of them runs it."""
+    """
+    P1017: a test runs the modules its imports reach through scripts/, so a change to one of them runs it. The walk only
+    adds tests to a story run that the name rule started. It never ends a doubt, so no change runs fewer tests than on main.
+    """
 
     def assert_runs(self, story, *modules):
         self.assertEqual((story.state, story.why), ("chosen", None))
@@ -166,12 +169,15 @@ class TheImportsThroughScriptsChooseTheTestsTest(unittest.TestCase):
         tests = {"test_x": "import spark.a.top\n", "test_names_it": "low\n", "test_apart": "import json\n"}
         self.assert_runs(walked("scripts/spark/a/low.py", tests=tests), "test_x", "test_names_it")
 
-    def test_a_test_that_only_the_walk_finds_is_a_story_run_and_not_a_doubt(self):
-        self.assert_runs(walked("scripts/spark/a/low.py", tests={"test_x": "import spark.a.top\n"}), "test_x")
+    def test_a_file_that_only_the_walk_finds_stays_the_quick_run_as_on_main(self):
+        # the PR review of #1493: a walk that ended the doubt dropped tests that reach a file through a child process
+        story = walked("scripts/spark/a/low.py", tests={"test_x": "import spark.a.top\n"})
+        self.assertEqual((story.state, story.modules), ("quick_run", ()))
+        self.assertIn("no test names scripts/spark/a/low.py", story.why)
 
     def test_from_a_package_import_names_each_module(self):
-        tests = {"test_x": "from spark.a import other, top\n", "test_y": "from spark.a import other\n"}
-        self.assert_runs(walked("scripts/spark/a/mid.py", tests=tests), "test_x")
+        tests = {"test_x": "from spark.a import other, top\n", "test_y": "from spark.a import other\n", "test_names_it": "mid\n"}
+        self.assert_runs(walked("scripts/spark/a/mid.py", tests=tests), "test_x", "test_names_it")
 
     def test_each_form_of_import_reaches_its_file(self):
         forms = {"test_plain": "import flow\n", "test_dotted": "import spark.flow.page\n", "test_from_spark": "from spark import flow\n",
@@ -182,24 +188,12 @@ class TheImportsThroughScriptsChooseTheTestsTest(unittest.TestCase):
                                               "test_names_it"})
 
     def test_a_package_file_on_the_way_is_run_and_so_reaches_its_imports(self):
-        tests = {"test_x": "from spark.b.page import draw\n", "test_golden_b": ""}
-        self.assert_runs(walked("scripts/spark/b/neighbour.py", tests=tests), "test_x", "test_golden_b")
+        tests = {"test_x": "from spark.b.page import draw\n", "test_golden_b": "", "test_names_it": "neighbour\n"}
+        self.assert_runs(walked("scripts/spark/b/neighbour.py", tests=tests), "test_x", "test_golden_b", "test_names_it")
 
     def test_a_text_that_does_not_parse_imports_nothing(self):
         tests = {"test_broken": "def broken(:\nimport spark.a.top\n", "test_names_it": "low\n"}
         self.assert_runs(walked("scripts/spark/a/low.py", tests=tests), "test_names_it")
-
-    def test_a_test_helper_s_imports_are_not_followed(self):
-        tests = {"test_y": "import fakes\n", "test_names_it": "low\n"}
-        self.assert_runs(walked("scripts/spark/a/low.py", tests=tests, helpers={"fakes": "import spark.a.top\n"}),
-                         "test_names_it")
-
-    def test_a_file_that_only_the_walk_finds_and_a_helper_reaches_is_a_doubt(self):
-        # N5: the walk skips the helpers of tests/, so it cannot vouch for a file that one of them reaches
-        story = walked("scripts/spark/a/low.py", tests={"test_x": "import spark.a.top\n"},
-                       helpers={"fakes": "from spark.a import other\n"})
-        self.assertEqual((story.state, story.modules), ("quick_run", ()))
-        self.assertIn("no test names scripts/spark/a/low.py", story.why)
 
     def test_a_whole_tree_test_that_the_walk_finds_does_not_remove_the_doubt(self):
         story = walked("scripts/spark/a/low.py", tests={"test_docs": "import spark.a.top\n"})

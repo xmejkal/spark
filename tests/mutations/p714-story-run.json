@@ -92,14 +92,14 @@
  {
   "file": "tools/story_tests.py",
   "name": "a file that only an always-run test names adds no test and the push goes on",
-  "find": "    if not (named | reached) - set(ALWAYS_RUN_TESTS):  # a test that reads the whole tree does not test this file\n        return None\n",
-  "replace": "    if not (named | reached) - set(ALWAYS_RUN_TESTS):\n        return set()\n"
+  "find": "    if not named - set(ALWAYS_RUN_TESTS):  # a mention in a test that reads the whole tree does not test this file\n        return None\n",
+  "replace": "    if not named - set(ALWAYS_RUN_TESTS):\n        return set()\n"
  },
  {
   "file": "tools/story_tests.py",
   "name": "a mention in an always-run test removes the doubt",
-  "find": "if not (named | reached) - set(ALWAYS_RUN_TESTS):",
-  "replace": "if not (named | reached):"
+  "find": "if not named - set(ALWAYS_RUN_TESTS):",
+  "replace": "if not named:"
  },
  {
   "file": "tools/story_tests.py",

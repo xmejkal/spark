@@ -6,11 +6,11 @@ worked on." `check_commit.py` calls `select` with what it read from git and from
 holds no git and reads no file.
 
 Each changed file adds the tests that name it and the golden net of its area, and ALWAYS_RUN_TESTS always run. A
-changed file of scripts/ also adds each test whose imports reach it through the files of scripts/, and the golden net of
-each area on the way (P1017). The walk never reads a helper of tests/. A doubt runs more: a file that only
-ALWAYS_RUN_TESTS name or reach, a file that no test names and a helper of tests/ reaches, the core, a package file or
-unread changes make it the whole quick run, with a sentence that says why. The sweeps run what a story leaves out
-(`check_commit.py --full`).
+changed file of scripts/ that a test names also adds each test whose imports reach it through the files of scripts/,
+and the golden net of each area on the way (P1017). The walk only adds to a story run. It never ends a doubt, so no
+change runs fewer tests than without it. A doubt runs more: a file that only ALWAYS_RUN_TESTS name, the core, a package
+file or unread changes make it the whole quick run, with a sentence that says why. The sweeps run what a story leaves
+out (`check_commit.py --full`).
 """
 
 import ast
@@ -50,13 +50,10 @@ AREA_NET_FOLDER = re.compile(r"tests/golden-([^/]+)/")
 GOLDEN_NET = "test_golden_%s"
 CONVERTER_FOLDER = "tools/circuit-to-wokwi/"
 CONVERTER_TEST = "test_converter"
+#: The walk reads only the files of scripts/. To follow the helpers of tests/ costs about 46 s for each breadboard
+#: change (P1017, measured on #1374).
 SCRIPTS_FOLDER = "scripts/"
-HELPER_FOLDER = "tests/"
-HELPER_FILE = HELPER_FOLDER + "%s.py"
 MODULE_SUFFIX = ".py"
-#: Where the walk looks for an imported module. Never in tests/: following the helpers there costs about 46 s per
-#: breadboard change (P1017, measured on #1374).
-IMPORT_ROOTS = (SCRIPTS_FOLDER,)
 
 WHY_CHANGES_UNREAD = "the changes since origin/main could not be read"
 WHY_NO_CHANGE = "nothing differs from origin/main, and the gate measures HEAD, not the ref pushed (P106)"
@@ -105,8 +102,8 @@ def _files_of(dotted, files):
     """The files of `files` that Python runs to import the module `dotted`: each package file on its way, and the module."""
     parts = dotted.split(".")
     ways = ["/".join(parts[:end]) for end in range(1, len(parts) + 1)]
-    return {found for root in IMPORT_ROOTS for found in [root + way + "/" + PACKAGE_FILE for way in ways]
-            + [root + ways[-1] + MODULE_SUFFIX] if found in files}
+    return {found for found in [SCRIPTS_FOLDER + way + "/" + PACKAGE_FILE for way in ways]
+            + [SCRIPTS_FOLDER + ways[-1] + MODULE_SUFFIX] if found in files}
 
 
 def _imported(text, files):
@@ -137,11 +134,11 @@ def _reaching(path, graph):
 
 
 class ImportWalk:
-    """Which tests and helpers import a changed file of scripts/, through the files of scripts/ (P1017). Each text is parsed once."""
+    """Which tests import a changed file of scripts/, through the files of scripts/ (P1017). Each text is parsed once."""
 
-    def __init__(self, test_texts, script_texts, helper_texts):
+    def __init__(self, test_texts, script_texts):
         self._tests = test_texts
-        self._files = {**script_texts, **{HELPER_FILE % stem: text for stem, text in helper_texts.items()}}
+        self._files = script_texts
         self._graph = None
         self._test_imports = None
 
@@ -164,7 +161,11 @@ class ImportWalk:
 
 
 def _tests_for(name, test_texts, golden_texts, walk):
-    """The test modules that the changed file `name` adds, or None when no test of its own names it."""
+    """
+    The test modules that the changed file `name` adds, or None when no test of its own names it: a doubt. A test whose
+    imports reach `name` never ends the doubt, because a test can run a module through a child process and import none
+    of it (the PR review of #1493). It only adds to the tests that name `name`.
+    """
     if name.startswith(NO_TEST_OF_THEIR_OWN) or ("/" not in name and name.endswith(ROOT_DOCUMENT_SUFFIX)):
         return set()
     if name.startswith(BENCH_NET_FOLDER):
@@ -178,29 +179,26 @@ def _tests_for(name, test_texts, golden_texts, walk):
     test_file = TEST_FILE.match(name)
     if test_file and test_file.group(1) in test_texts:
         return named | {test_file.group(1)}
-    reach = walk.reach(name)
-    reached = walk.tests_in(reach)
-    if not (named | reached) - set(ALWAYS_RUN_TESTS):  # a test that reads the whole tree does not test this file
+    if not named - set(ALWAYS_RUN_TESTS):  # a mention in a test that reads the whole tree does not test this file
         return None
-    if not named - set(ALWAYS_RUN_TESTS) and any(found.startswith(HELPER_FOLDER) for found in reach):
-        return None  # the walk skips the helpers of tests/, so it cannot vouch for a file that one of them reaches
+    reach = walk.reach(name)
     areas = {area.group(1) for area in map(AREA_MODULE.match, reach) if area}
-    return named | reached | {GOLDEN_NET % GOLDEN_NET_ELSEWHERE.get(area, area) for area in areas}
+    return named | walk.tests_in(reach) | {GOLDEN_NET % GOLDEN_NET_ELSEWHERE.get(area, area) for area in areas}
 
 
-def select(changed, test_texts, golden_texts, script_texts=None, helper_texts=None):
+def select(changed, test_texts, golden_texts, script_texts=None):
     """
     StoryTests for the file names `changed`. A `changed` of None (git could not tell) gives the quick run. `test_texts`
     maps each module tests/test_*.py to its text, and `golden_texts` each helper tests/golden_*.py to its text.
-    `script_texts` maps each file of scripts/ by its path from the root (scripts/flow.py) to its text, and `helper_texts`
-    each other .py file of tests/ (fakes, golden_design) by its stem. With neither, no import is followed.
+    `script_texts` maps each file of scripts/ by its path from the root (scripts/flow.py) to its text. Without it, no
+    import is followed.
     """
     if changed is None:
         return _quick_run(WHY_CHANGES_UNREAD)
     if not changed:
         return _quick_run(WHY_NO_CHANGE)
     chosen = set(ALWAYS_RUN_TESTS)
-    walk = ImportWalk(test_texts, script_texts or {}, helper_texts or {})
+    walk = ImportWalk(test_texts, script_texts or {})
     for name in changed:
         if name.startswith(CORE_FOLDER) or PurePosixPath(name).name == PACKAGE_FILE:
             return _quick_run(WHY_EVERY_AREA % name)

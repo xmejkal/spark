@@ -343,14 +343,15 @@ class TheStoryRunTest(unittest.TestCase):
         self.assertEqual(check_commit.changed_files(root, "HEAD"), ["a.py", "b.py", "c.py"])
 
     def test_the_story_reads_the_imports_of_the_archived_scripts(self):
-        # P1017: test_x imports top, top imports low, and no text names low
+        # P1017: test_x imports top, top imports low, and only test_names_it names low
         tree = Path(tempfile.mkdtemp())
         for name, text in {"tests/test_x.py": "import spark.a.top\n", "scripts/spark/a/top.py": "from spark.a import low as below\n",
-                           "scripts/spark/a/low.py": "", "tests/test_apart.py": "import json\n"}.items():
+                           "scripts/spark/a/low.py": "", "tests/test_apart.py": "import json\n",
+                           "tests/test_names_it.py": "# low\n"}.items():
             (tree / name).parent.mkdir(parents=True, exist_ok=True)
             (tree / name).write_text(text)
         story = check_commit.story_tests_in(tree, ["scripts/spark/a/low.py"])
-        self.assertEqual((story.state, story.modules), ("chosen", ("test_x",)), story.why)
+        self.assertEqual((story.state, story.modules), ("chosen", ("test_names_it", "test_x")), story.why)
 
 
 if __name__ == "__main__":
