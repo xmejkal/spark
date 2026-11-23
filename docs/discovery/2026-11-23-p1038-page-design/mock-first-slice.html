@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>P1038 mock: the first page slice, on the clock project (light and dark)</title>
+<style>
+  /* spark's page tokens (scripts/spark/flow/flow_page.py:244-248), light and dark; system fonts only (D6) */
+  .light { --bg: #eef1f3; --ink: #1c262e; --muted: #566570; --line: #c3ccd3; --signal: #c8500f; --card: #ffffff;
+           --warn-bg: #fbe9df; --now-bg: #1c262e; --now-ink: #f4f7f9; --now-label: #f6b48a; }
+  .dark  { --bg: #141b21; --ink: #e4eaee; --muted: #9aa9b4; --line: #3a4955; --signal: #f08a48; --card: #1b242b;
+           --warn-bg: #3a2a20; --now-bg: #e4eaee; --now-ink: #141b21; --now-label: #b0480d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; display: flex; gap: 32px; padding: 24px; background: #d9dee2;
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  main { width: 760px; padding: 28px 24px 40px; background: var(--bg); color: var(--ink); }
+  header h1 { font: 600 28px/1.2 ui-serif, Georgia, serif; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin: 0; }
+  .mismatch { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid var(--signal); background: var(--warn-bg);
+              font-size: 13px; }
+  .now { margin: 22px 0; padding: 16px 18px; background: var(--now-bg); color: var(--now-ink); border-radius: 6px; }
+  .now h2 { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--now-label); }
+  .now p { margin: 0; font-size: 17px; line-height: 1.4; }
+  section { margin: 0 0 14px; padding: 14px 18px; background: var(--card); border: 1px solid var(--line);
+            border-radius: 6px; }
+  section h2 { margin: 0 0 8px; font-size: 15px; }
+  section p { margin: 0 0 4px; }
+  .unknown { color: var(--signal); font-weight: 600; }
+  .source { color: var(--muted); font-size: 12px; font-weight: 400; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  td { padding: 4px 0; border-top: 1px solid var(--line); }
+  td.label { width: 90px; color: var(--muted); }
+  .muted { color: var(--muted); }
+  details { margin: 0 0 8px; padding: 10px 18px; background: var(--card); border: 1px solid var(--line);
+            border-radius: 6px; }
+  summary { cursor: pointer; font-weight: 600; }
+  summary span { font-weight: 400; color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="light">
+  <header>
+    <h1>E-paper quotes clock</h1>
+    <p class="meta">Page from 23 Nov, 17:40. Drawn from the build of 22 Nov, 11:44.</p>
+    <p class="mismatch">The wiring list has 12 steps, and the picture of that build has 13 wires. They do not match.</p>
+  </header>
+
+  <div class="now">
+    <h2>Now</h2>
+    <p>Look at the board. The last deploy's start was not seen, and firmware/ is newer than the board's image.</p>
+  </div>
+
+  <section>
+    <h2>On the board</h2>
+    <p>Last deploy on 23 Nov at 14:09, image 2811f223&hellip;</p>
+    <p class="unknown">Written by the flasher, nothing read back, start not seen.</p>
+    <p class="muted">Cause in the log: mpremote could not read the board's files.</p>
+    <p>firmware/ changed at 14:18, after this image. The board is behind.</p>
+  </section>
+
+  <section>
+    <h2>Goal and must lines</h2>
+    <p>A quote with its author and its work, changing every hour.</p>
+    <p>The time comes from the internet over Wi-Fi.</p>
+    <p class="muted">Decided on 23 Nov by the PO: the battery will probably be 2000 mAh.</p>
+  </section>
+
+  <section>
+    <h2>The project's open issues <span class="source">read 23 Nov, 17:40, from the project's repository, not spark's</span></h2>
+    <table>
+      <tr><td class="label">#13</td><td>&lt;issue title&gt;</td><td class="muted">no label</td></tr>
+      <tr><td class="label">#14</td><td>&lt;issue title&gt;</td><td class="muted">no label</td></tr>
+      <tr><td class="label">#4</td><td>&lt;issue title&gt;</td><td class="muted">doing</td></tr>
+      <tr><td class="label">#8</td><td>&lt;issue title&gt;</td><td class="muted">doing</td></tr>
+      <tr><td class="label">#5, #6</td><td>&lt;issue titles&gt;</td><td class="muted">next</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Not checked by spark</h2>
+    <p class="muted">What the panel shows now, and how long the battery lasts.</p>
+  </section>
+
+  <details><summary>Parts and picks <span>4 needs, all picked</span></summary></details>
+  <details><summary>Wiring <span>12 steps, with the picture</span></summary></details>
+  <details><summary>Phases <span>idea to deploy</span></summary></details>
+</main>
+<main class="dark">
+  <header>
+    <h1>E-paper quotes clock</h1>
+    <p class="meta">Page from 23 Nov, 17:40. Drawn from the build of 22 Nov, 11:44.</p>
+    <p class="mismatch">The wiring list has 12 steps, and the picture of that build has 13 wires. They do not match.</p>
+  </header>
+
+  <div class="now">
+    <h2>Now</h2>
+    <p>Look at the board. The last deploy's start was not seen, and firmware/ is newer than the board's image.</p>
+  </div>
+
+  <section>
+    <h2>On the board</h2>
+    <p>Last deploy on 23 Nov at 14:09, image 2811f223&hellip;</p>
+    <p class="unknown">Written by the flasher, nothing read back, start not seen.</p>
+    <p class="muted">Cause in the log: mpremote could not read the board's files.</p>
+    <p>firmware/ changed at 14:18, after this image. The board is behind.</p>
+  </section>
+
+  <section>
+    <h2>Goal and must lines</h2>
+    <p>A quote with its author and its work, changing every hour.</p>
+    <p>The time comes from the internet over Wi-Fi.</p>
+    <p class="muted">Decided on 23 Nov by the PO: the battery will probably be 2000 mAh.</p>
+  </section>
+
+  <section>
+    <h2>The project's open issues <span class="source">read 23 Nov, 17:40, from the project's repository, not spark's</span></h2>
+    <table>
+      <tr><td class="label">#13</td><td>&lt;issue title&gt;</td><td class="muted">no label</td></tr>
+      <tr><td class="label">#14</td><td>&lt;issue title&gt;</td><td class="muted">no label</td></tr>
+      <tr><td class="label">#4</td><td>&lt;issue title&gt;</td><td class="muted">doing</td></tr>
+      <tr><td class="label">#8</td><td>&lt;issue title&gt;</td><td class="muted">doing</td></tr>
+      <tr><td class="label">#5, #6</td><td>&lt;issue titles&gt;</td><td class="muted">next</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Not checked by spark</h2>
+    <p class="muted">What the panel shows now, and how long the battery lasts.</p>
+  </section>
+
+  <details><summary>Parts and picks <span>4 needs, all picked</span></summary></details>
+  <details><summary>Wiring <span>12 steps, with the picture</span></summary></details>
+  <details><summary>Phases <span>idea to deploy</span></summary></details>
+</main>
+</body>
+</html>

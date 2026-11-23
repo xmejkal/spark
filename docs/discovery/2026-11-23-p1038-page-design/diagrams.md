@@ -161,3 +161,6 @@ The issue titles are placeholders, because the project's repository is private a
 stamp (17:40) is the newest file it reads, here the issues file of the fetch in diagram 3. The sketch follows the
 no-gos: no Flash or Deploy button, no tick on an unknown, no link to GitHub, and the issues stay unranked. The all-caps labels are placeholders. The design skill's list of tells names them (C15), so the
 style slice replaces them.
+
+The same structure as a rendered mock in spark's light and dark tokens: [mock-first-slice.html](mock-first-slice.html),
+with its screenshot [mock-first-slice.png](mock-first-slice.png) and a copy in the PO's Figma drafts (D30).
