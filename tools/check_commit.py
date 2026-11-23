@@ -12,7 +12,7 @@ audit, C3). A number a message carries must be measured on what the message desc
 archives the commit into a scratch directory and measures there. The push hook runs it.
 
 The story run (P714) runs the tests that tools/story_tests.py chooses from what the branch changed since origin/main, with
-the `@slow` tests skipped. A doubt about a file makes it the quick run (P425): every test but the slow ones, with a line
+the `@slow` tests skipped. It reads the texts of tests/ and scripts/ in the archive, so it follows the imports (P1017). A doubt about a file makes it the quick run (P425): every test but the slow ones, with a line
 that says why. Neither is the suite count. The full run, `--full`, runs every test, at a sweep: the end of a wave or an
 epic, or when the PO asks.
 
