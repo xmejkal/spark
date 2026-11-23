@@ -74,21 +74,37 @@ def run_operation(operation, values, outside=None, build_outside=None, options=D
     return masked
 
 
+def runs_again(operation, values, step):
+    """Whether `step` runs `operation` again with the same `values` (P1035 review): a follow-up never names the run itself,
+    which would loop. A step whose argv the Operation's parser refuses is another run."""
+    if step.op != operation.name:
+        return False
+    try:
+        return values_of(operation, step.argv)[0] == values
+    except outcomes.BadArgumentError:
+        return False
+
+
 def _added_steps(operation, values, follow_up):
-    """(the follow-up's steps for the run's written project, or [], and the class of what raised, or None)."""
+    """(the follow-up's steps for the run's written project but one that runs the same again, or [], and the class of what
+    raised, or None)."""
     try:
         project = operation.written_project(values)
-        return (list(follow_up.steps(project)) if project is not None else []), None
+        steps = list(follow_up.steps(project)) if project is not None else []
+        return [step for step in steps if not runs_again(operation, values, step)], None
     except Exception as failed:  # noqa: BLE001  a follow-up never changes the answer
         return [], printable(type(failed).__name__)
 
 
 def _step_lines(follow_up, added):
-    """(one line per added step, or [], and the class of what raised, or None)."""
-    try:
-        return [follow_up.line(step) for step in added], None
-    except Exception as broken:  # noqa: BLE001  a line that fails keeps its step
-        return [], printable(type(broken).__name__)
+    """(the line of each added step, and the class of each line that raised): a line that fails drops only itself."""
+    lines, broken = [], []
+    for step in added:
+        try:
+            lines.append(follow_up.line(step))
+        except Exception as failed:  # noqa: BLE001  a line that fails keeps its step and the other lines
+            broken.append(printable(type(failed).__name__))
+    return lines, broken
 
 
 def _followed(operation, values, result, follow_up):
@@ -99,7 +115,7 @@ def _followed(operation, values, result, follow_up):
         return result
     added, failed = _added_steps(operation, values, follow_up)
     lines, broken = _step_lines(follow_up, added)
-    said = [FOLLOW_FAILED_MESSAGE % name for name in (failed, broken) if name]
+    said = [FOLLOW_FAILED_MESSAGE % name for name in ([failed] if failed else []) + broken]
     return result._replace(next=list(result.next) + added, lines=list(result.lines) + lines,
                            diagnostics=list(result.diagnostics) + said)
 

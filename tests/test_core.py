@@ -1122,6 +1122,21 @@ class TheFollowUpTest(unittest.TestCase):
         self.assertEqual(([step.op for step in result.next], list(result.lines)), (["own", "then"], ["  done"]))
         self.assertEqual(list(result.diagnostics), [FOLLOW_FAILED_MESSAGE % "ValueError"])
 
+    def test_a_line_that_raises_drops_only_its_own_line(self):
+        # the review, refuter 4: each line is made on its own
+        result = self.followed(Writing(), FakeFollowUp([THEN, THEN._replace(op="last")], line_raises=ValueError, raising_op="then"))
+        self.assertEqual(([step.op for step in result.next], list(result.lines)), (["own", "then", "last"], ["  done", "line of last"]))
+        self.assertEqual(list(result.diagnostics), [FOLLOW_FAILED_MESSAGE % "ValueError"])
+
+    def test_a_step_that_runs_the_same_again_is_dropped(self):
+        # the review, refuter 1: a follow-up that names the run itself would loop; the same Operation on another project stays
+        again, other = NextStep("writing", ["--project", "p"], "the same run"), NextStep("writing", ["--project", "q"], "another project")
+        follow_up = FakeFollowUp([again, other, NextStep("writing", ["--no-such-flag"], "refused by the parser")])
+        result = self.followed(Writing(), follow_up)
+        self.assertEqual([(step.op, step.argv) for step in result.next], [("own", ["--own"]), ("writing", ["--project", "q"]),
+                                                                          ("writing", ["--no-such-flag"])])
+        self.assertEqual(list(result.lines), ["  done", "line of writing", "line of writing"])
+
     def test_the_follow_up_s_why_is_masked_and_its_argv_stays_raw(self):
         privacy = Privacy.of(Path("/opt/someone/p"), Path("/opt/store"), Path("/opt/home"), ())
         result = self.followed(Writing(), FakeFollowUp([THEN]), privacy=privacy)

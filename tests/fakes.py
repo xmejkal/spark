@@ -584,10 +584,11 @@ class RealChildRun:
 class FakeFollowUp:
     """Fake of the core's FollowUp Strategy (P1035): `steps(project)` gives the NextSteps `added` it was made with and keeps
     each project it was asked for in `asked`, `line(step)` gives `line of <op>`. `raises` is an exception class that
-    `steps` raises, `line_raises` one that `line` raises, each with a message that names a home path."""
+    `steps` raises, `line_raises` one that `line` raises (for the op `raising_op` only, or every op when None), each with
+    a message that names a home path."""
 
-    def __init__(self, added, raises=None, line_raises=None):
-        self.added, self.raises, self.line_raises, self.asked = list(added), raises, line_raises, []
+    def __init__(self, added, raises=None, line_raises=None, raising_op=None):
+        self.added, self.raises, self.line_raises, self.raising_op, self.asked = list(added), raises, line_raises, raising_op, []
 
     def steps(self, project):
         self.asked.append(project)
@@ -596,6 +597,6 @@ class FakeFollowUp:
         return list(self.added)
 
     def line(self, step):
-        if self.line_raises:
+        if self.line_raises and self.raising_op in (None, step.op):
             raise self.line_raises("the line at /opt/someone failed")
         return "line of %s" % step.op

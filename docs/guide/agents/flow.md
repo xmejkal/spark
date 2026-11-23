@@ -317,8 +317,8 @@ look is still next. The text's NOW line ends with `[<offer key>]`, `[next: <op>]
 
 After an ok run that writes to a project, `parts.py --pick` and `check_spine.py --keep` end `next` with the same steps
 ([P1035](https://github.com/xmejkal/spark/issues/1518)), after the command's own, and their text with one `next:` line each,
-which ends with `, needs you` for a step with `needs_person` or `needs_yes`. A run that is not `ok`, a dry run and a build without
-`--keep` get none. Claude fills a `<name>` or an `<answers.json>` before the line runs. A follow-up that fails adds `follow-up: <class> raised, the result stands` on stderr.
+with `, needs you` after the command for a step with `needs_person` or `needs_yes`, as on the NOW line. A run that is not `ok`, a dry run, a build without
+`--keep` and a step that runs the same again get none. Claude fills a `<name>` or an `<answers.json>` before the line runs. A follow-up that fails adds `follow-up: <class> raised, the result stands` on stderr.
 
 ## A page request
 

@@ -139,11 +139,11 @@ class BuildBoard(Operation):
             code = verdict(built.stages)
             kept = keep_all(built.stages, built.workdir, KeepAsked(requirements, keep, sim_dir), tabbed_page.TscircuitExport(built.toolchain), write_kept_page)
             # P945: find the facts that draw a part before the wiring, then P517: write the firmware next
-            following = (drawing_next_steps(kept, project_of(requirements))
+            own_steps = (drawing_next_steps(kept, project_of(requirements))
                          + board_envelope.firmware_next_steps(code == EXIT_OK, requirements))
-            text = guard_lines(render(built.stages, code, left_off(built.requirements)) + board_envelope.next_text(following))
+            text = guard_lines(render(built.stages, code, left_off(built.requirements)) + board_envelope.next_text(own_steps))
             return OperationResult(said_of(built.stages, code, built.requirements, kept), findings_of(built.stages),
-                                   [NextStep(**step) for step in following],
+                                   [NextStep(**step) for step in own_steps],
                                    lines=text[:-1].split("\n"),  # the one final newline is `print`'s
                                    diagnostics=["  %s" % entry["line"] for entry in kept or []])
         finally:

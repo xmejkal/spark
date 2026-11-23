@@ -1643,8 +1643,8 @@ class TheFollowUpTest(FlowTest):
         lines, code = run_main(parts.main, ["--pick", str(other), "soil=x-many"])
         step = now_steps(other, *flow_and_guide(other))[0]
         self.assertEqual((code, lines[-1]), (0, FlowFollowUp().line(step)))
-        self.assertTrue(lines[-1].startswith("  next: ") and lines[-1].endswith(NEEDS_YOU), lines[-1])
-        self.assertIn("/parts.py --pick %s wet=x-many — " % other.absolute(), lines[-1])
+        self.assertTrue(lines[-1].startswith("  next: "), lines[-1])
+        self.assertIn("/parts.py --pick %s wet=x-many%s — " % (other.absolute(), NEEDS_YOU), lines[-1])  # the review: the mark before the why
 
     def test_a_dry_run_pick_names_no_flow_step(self):
         import parts
@@ -1702,6 +1702,16 @@ class TheFollowUpTest(FlowTest):
         self.assertEqual((code, said["status"], said.get("next", [])), (1, "problems", []))
         self.assertEqual([step["op"] for step in show(project)[0]["next"]], ["build-board"])
 
+    def test_a_kept_build_that_kept_no_simulation_never_names_itself_again(self):
+        # the review, refuter 1: with no sim/wokwi.toml kept, the flow names the build again with the run's own argv
+        from spark.build.stages import Stage
+        project = a_firmware(a_built_project())
+        lines, code = a_kept_build(project, [Stage("build", OK, "fine")])
+        flow_steps = show(project)[0]["next"]
+        self.assertEqual([(step["op"], step["argv"]) for step in flow_steps],
+                         [("build-board", [str(project / "requirements.json"), "--keep", str(project)])])
+        self.assertEqual((code, [step["op"] for step in json.loads(lines[0])["next"]]), (0, ["look"]))
+
     def test_a_build_without_keep_names_no_flow_step(self):
         from spark.build.stages import Stage
         project = an_image(a_firmware(a_built_project()))
@@ -1718,9 +1728,8 @@ class TheFollowUpTest(FlowTest):
         step = brief_step(project)
         self.assertEqual((step.needs_yes, step.needs_person), (True, None))
         line = FlowFollowUp().line(step)
-        self.assertTrue(line.endswith(NEEDS_YOU), line)
-        self.assertIn("/init_project.py --project %s --answers %s — " % (project.absolute(), shlex.quote(ANSWERS_PLACEHOLDER)), line)
-        self.assertFalse(FlowFollowUp().line(step._replace(needs_yes=False)).endswith(NEEDS_YOU))
+        self.assertIn("/init_project.py --project %s --answers %s%s — " % (project.absolute(), shlex.quote(ANSWERS_PLACEHOLDER), NEEDS_YOU), line)
+        self.assertNotIn(NEEDS_YOU, FlowFollowUp().line(step._replace(needs_yes=False)))
 
     def test_every_op_a_flow_step_names_has_its_script(self):
         import inspect
