@@ -377,6 +377,13 @@ ready is unknown with the code `download_mode_stayed`, or `port_gone` when the p
 (then there is no REPL line). If it reads a line whose first word is the firmware's `ready`, the board finished its
 restart late, and deploy.py reads it again at once. The board log keeps the first read's words too. What the port printed, `nothing`, or why it could not be read goes in the board log.
 
+When ready is unknown and the passed log names files, deploy.py prints one more line (P1022). It says what spark knows:
+the write passed esptool's hash check, whether the board's files were read, what the console printed, and whether
+spark.json was written. It says what spark did not do: no second flash and no second erase. Then it says what to try, in
+order: look.py after a minute, then RESET once and live.py, then the REPL line. With --json the unchecked item's fix is
+the same text, and `next` holds the look, live and watch steps. The board log keeps what mpremote printed on each
+failed facts copy.
+
 Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)
 

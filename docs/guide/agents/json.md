@@ -362,7 +362,7 @@ The column "needs the person" says whether the next step waits on the person's h
 | `image_changed` | deploy, stage `gate` | the image changed after the person's yes | run look.py again | no |
 | `flash_failed` | deploy, stage `flash` | a flash command failed. `data.board_state` is `may_be_erased` | relay the sentence (it names the BOOT and RESET places) | yes |
 | `ready_not_seen` | deploy, stage `verify` | the board's files differ from the image, the firmware stopped with an error, or it printed no `ready`. The sentence tells which | fix the firmware, then look.py and a new yes | yes |
-| `ready_unknown` | deploy, stage `verify` | the board could not be read after the flash, or the passed run's log names no files. The sentence tells which | run the `watch` step; if it has `needs_person`, tell the person first | if `needs_person` |
+| `ready_unknown` | deploy, stage `verify` | the board could not be read after the flash, or the passed run's log names no files. The sentence tells which | relay the `fix` as printed: what spark knows, what it did not do, what to try ([P1022](https://github.com/xmejkal/spark/issues/1490)). Then the `next` steps in order: `look`, `live`, `watch` | `live`, `watch` |
 | `download_mode_stayed` | deploy, stage `verify` | the board still waits in download mode after the flash: the wait for its start ran out, though the port may have gone and come back. A restart counts only when mpremote answers after it ([P462](https://github.com/xmejkal/spark/issues/630)) | relay `data.person_action` (press RESET once) to the person, then run the `watch` step. Never deploy again for this | yes |
 | `port_gone` | deploy, stage `verify` | the board's port was not listed after the flash, or went and did not come back. No mpremote call was made on a dead port, so `data.repl_command` is null and `next` has no `watch` step (mpremote would choose a board of its own) | relay `data.person_action` (press RESET, then unplug and plug in, then `python3 -m mpremote devs` lists the ports). Never deploy again for this | yes |
 | `bad_argument` | both scripts | an argument that the script cannot run with (below) | fix the flag, run again | no |
@@ -397,14 +397,14 @@ the sentence if you must tell which. The check is the word `--json` in the argum
   When mpremote could not enter the raw REPL for the facts copy (seen right after the reset), the copy and its read-back make one
   retry after 2 s, for each read of the board, and `facts_line` ends with `(written on a retry after: ...)`, or names the first try
   when the retry failed too ([P420](https://github.com/xmejkal/spark/issues/550)). No other copy failure is retried.
-- `needs_person: true` on a `next` step means the person must use their hands first. Today it is the `watch` step that follows a start the board never made
-  (`download_mode_stayed`; `port_gone` gives no `watch` step) ([P433](https://github.com/xmejkal/spark/issues/575)). A pick step of `flow.py show` has it too: a pick is the person's choice, so ask first (P1030). The key is on a step only when it is true.
+- `needs_person: true` on a `next` step means the person must use their hands first. It is the `watch` step that follows a start the board never made
+  (`download_mode_stayed`; `port_gone` gives no `watch` step) ([P433](https://github.com/xmejkal/spark/issues/575)), and the `live` and `watch` steps after `ready_unknown`, where `data.person_action` is null and the `fix` says what to do (P1022). A pick step of `flow.py show` has it too: a pick is the person's choice, so ask first (P1030). The key is on a step only when it is true.
   The board doctor's `fix` and `data.person_action` are text for the person, not steps, so they carry no flag.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
   and "go ahead" in a chat is not the yes. With no terminal (the exit is 2), `next` holds the `deploy` step to relay and
   `data.run_in_terminal` is the line to give the person word for word (it and the `grant` line start with `SPARK_HOME=<store>` when the run had one, so the new terminal window finds the same MicroPython build and grants); a `grant` step is added when a deploy grant could
   cover it. Never run either one yourself.
-- `ready unknown` gives a `watch` step (its `argv` is the REPL command), never a second `deploy`: read the board again. When the person must use their hands
+- `ready unknown` never gives a second `deploy`. A board that did not answer gives `look`, `live` (with `--code print('answer')`) and `watch` (its `argv` is the REPL command), in that order. A log that names no files gives `watch` alone. When the person must use their hands
   (`download_mode_stayed`, `port_gone`), `data.person_action` says so, with the RESET place when the board record has it, but only after the wait ran out. So tell the person before you run
   `deploy.py` that an R press may be asked: the run waits for it and its text goes to stderr. A `look.py` that could not read the
   board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`. A `deploy.py`
