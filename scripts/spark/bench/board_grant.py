@@ -252,9 +252,9 @@ class StandingConsentStrategy(ConsentStrategy):
 
     @property
     def who(self):
-        return "standing yes typed by %s at %s, until %s" % (self.grant.granted_by, say_in_local_zone(
-            self.grant.granted_at), say_in_local_zone(self.grant.expires_at)) + (
-            NO_SIMULATION_WHO if self.grant.no_simulation is True else "")
+        said = "standing yes typed by %s at %s, until %s" % (self.grant.granted_by, say_in_local_zone(
+            self.grant.granted_at), say_in_local_zone(self.grant.expires_at))
+        return said + (NO_SIMULATION_WHO if self.grant.no_simulation is True else "")
 
     def require_ready(self):
         if self.grant.why_not_valid(self.now()):

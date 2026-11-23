@@ -21,8 +21,8 @@
  {
   "file": "scripts/spark/bench/board_grant.py",
   "name": "old-file-reads-as-deploy",
-  "find": "defaults=(SCOPE_LIVE,))",
-  "replace": "defaults=(SCOPE_DEPLOY,))"
+  "find": "defaults=(SCOPE_LIVE, False))",
+  "replace": "defaults=(SCOPE_DEPLOY, False))"
  },
  {
   "file": "scripts/spark/bench/board_grant.py",
@@ -51,8 +51,8 @@
  {
   "file": "scripts/spark/bench/board_grant.py",
   "name": "deploy-grant-saved-as-live",
-  "find": "stamp(now + datetime.timedelta(minutes=minutes)), scope)",
-  "replace": "stamp(now + datetime.timedelta(minutes=minutes)))"
+  "find": "stamp(now + datetime.timedelta(minutes=minutes)), scope,\n",
+  "replace": "stamp(now + datetime.timedelta(minutes=minutes)), SCOPE_LIVE,\n"
  },
  {
   "file": "scripts/spark/bench/board_grant.py",
@@ -131,8 +131,8 @@
  {
   "file": "scripts/spark/bench/board_grant.py",
   "name": "ignore-older-runs-covered",
-  "find": "        if evidence.grant_refusal:\n            return DeployConsentResult(fallback, evidence.grant_refusal)",
-  "replace": "        if False:\n            return DeployConsentResult(fallback, evidence.grant_refusal)",
+  "find": "        why = self.refusal_of(evidence, grant)\n",
+  "replace": "        why = None\n",
   "tier": "critical"
  },
  {
@@ -162,7 +162,7 @@
  {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "hint-for-ignore-older-runs",
-  "find": "        if board_grant.grant_may_cover(look, evidence):\n            line += grant_hint",
+  "find": "        if self.grants.may_cover(look, evidence):\n            line += grant_hint",
   "replace": "        if look.verdict == board_look.VERDICT_MATCH:\n            line += grant_hint"
  },
  {

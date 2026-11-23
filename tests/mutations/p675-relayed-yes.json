@@ -46,8 +46,8 @@
  {
   "file": "scripts/spark/bench/board_grant.py",
   "name": "the deploy grant's refusal comes after the board restarts",
-  "find": "        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched\n            raise GrantRefusedError(WHY_RELAYED_YES)\n        board = self.finder.require_one_board(script, port)\n",
-  "replace": "        board = self.finder.require_one_board(script, port)\n        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched\n            raise GrantRefusedError(WHY_RELAYED_YES)\n"
+  "find": "        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched\n            raise GrantRefusedError(WHY_RELAYED_YES)\n        if no_simulation and scope != SCOPE_DEPLOY:  # P1029: before the board is touched\n            raise GrantRefusedError(WHY_BAD_SCOPE)\n        if no_simulation and not self.grants.direct_flashing_allowed():\n            raise GrantRefusedError(WHY_DIRECT_FLASHING_DISALLOWED)\n        board = self.finder.require_one_board(\"grant.py\", port)\n",
+  "replace": "        if no_simulation and scope != SCOPE_DEPLOY:  # P1029: before the board is touched\n            raise GrantRefusedError(WHY_BAD_SCOPE)\n        if no_simulation and not self.grants.direct_flashing_allowed():\n            raise GrantRefusedError(WHY_DIRECT_FLASHING_DISALLOWED)\n        board = self.finder.require_one_board(\"grant.py\", port)\n        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched\n            raise GrantRefusedError(WHY_RELAYED_YES)\n"
  },
  {
   "file": "scripts/spark/bench/deploy_gate.py",

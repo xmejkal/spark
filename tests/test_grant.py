@@ -641,7 +641,7 @@ class NoSimulationGrantTest(GrantCase):
     def test_disallow_writes_the_file_at_once_from_a_pipe(self):
         code, out, _ = self.disallow_run()
         path = self.home / "grants" / "direct_flashing_disallowed"
-        self.assertEqual((code, self.ran), (0, []))
+        self.assertEqual((code, self.ran, path.is_file()), (0, [], True))
         self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
         self.assertIn("2026-10-17T11:00:00+02:00", path.read_text())
         self.assertIn("rm %s" % shlex.quote(str(path)), out)

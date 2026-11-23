@@ -1493,6 +1493,23 @@ class TheNoSimulationDeployTest(GateCase):
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
             self.deploy("--no-simulation", "--ignore-older-runs")
 
+    @staticmethod
+    def disallow_direct_flashing():
+        """P1029: the person's file that disallows direct flashing, in this test's store."""
+        store.place("grants").mkdir(exist_ok=True)
+        (store.place("grants") / "direct_flashing_disallowed").write_text("")
+
+    def test_the_json_steps_name_the_no_simulation_grant_only_while_the_store_allows_it(self):
+        # P1029: the deploy step's yes rule and the grant step, with no terminal and no grant
+        steps = json.loads(self.flash("--json")[1])["next"]
+        self.assertIn("(or a deploy grant given with --no-simulation stands)", steps[0]["why"])
+        self.assertEqual((steps[1]["op"], steps[1]["argv"][-1]), ("grant", "--no-simulation"))
+        self.assertIn("and with --no-simulation, write firmware that no simulation tested", steps[1]["why"])
+        self.disallow_direct_flashing()
+        steps = json.loads(self.flash("--json")[1])["next"]
+        self.assertEqual([step["op"] for step in steps], ["deploy"])
+        self.assertNotIn("grant", steps[0]["why"])
+
     def test_only_a_grant_given_with_no_simulation_flashes_and_the_store_s_file_stops_both(self):
         # P1029, the card's value proof: a no-simulation grant answers, a plain grant does not, the file refuses both
         clock = FakeClock(datetime.datetime(2026, 10, 17, 9, 0, tzinfo=datetime.timezone.utc))
@@ -1516,7 +1533,7 @@ class TheNoSimulationDeployTest(GateCase):
         self.assertEqual((code, self.flashed()), (0, ["erase-flash", str(self.image)]))
         self.assertIn("yes: standing yes typed by ada", said)
         self.assertIn(", also for images that no simulation tested", said)
-        (Path(os.environ["SPARK_HOME"]) / "grants" / "direct_flashing_disallowed").write_text("")
+        self.disallow_direct_flashing()
         for no_simulation in (True, False):
             code, said, problems = granted(no_simulation)
             self.assertEqual((code, self.flashed()), (2, []), no_simulation)
