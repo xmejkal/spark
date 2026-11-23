@@ -149,6 +149,15 @@ def painter_for(style, importer):
         return PlainPainter
 
 
+def paint_or_plain(painter, lines):
+    """The text of `lines` (each a list of (text, role) spans) as `painter` paints it, or the plain text when the paint
+    raises: rich of another version may refuse a setting, and the plain text stands (P478: the one fallback)."""
+    try:
+        return painter.paint(lines)
+    except Exception:  # noqa: BLE001  a paint that raises never stops the text view
+        return PlainPainter.paint(lines)
+
+
 class TextReport:
     """Renderer: an OperationResult as a person reads it, as one text. It decides nothing again. A result with no
     headline gives its lines as they are; one with a headline gives the layout (P1032)."""
@@ -159,11 +168,7 @@ class TextReport:
         the plain text."""
         if result.headline is None:
             return "\n".join(result.lines)
-        lines = TextReport.layout(result, style, tool)
-        try:
-            return painter_for(style, importer).paint(lines)
-        except Exception:  # noqa: BLE001  rich of another version may refuse a setting: the plain text stands
-            return PlainPainter.paint(lines)
+        return paint_or_plain(painter_for(style, importer), TextReport.layout(result, style, tool))
 
     @staticmethod
     def layout(result, style, tool):

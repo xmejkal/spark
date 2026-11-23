@@ -257,6 +257,17 @@ def _unreadable_payload(prog, unreadable):
                            diagnostics=["%s: %s" % (prog, unreadable)])
 
 
+def _answered(run, prog, reporter):
+    """The result of `run()`, or of a payload it could not read (`_unreadable_payload`), and `reporter.finish()` after it
+    whatever the end, Ctrl-C too: the run is over (P478)."""
+    try:
+        return run()
+    except CodedMessageError as unreadable:
+        return _unreadable_payload(prog, unreadable)
+    finally:
+        reporter.finish()
+
+
 def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     """
     The exit code of `operation` run as a CLI. It parses `argv` (sys.argv without the script when None) from the
@@ -284,12 +295,9 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
         print(line)
         return outcomes.EXIT_COULD_NOT_RUN
     privacy, reporter = _privacy_and_reporter(operation, values, as_json)
-    try:
-        values = load_payloads(operation, values, sys.stdin)
-        result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter, dict(values, **{JSON_DEST: as_json})),
-                               DEFAULT_RUN._replace(privacy=privacy, follow_up=text.follow_up))
-    except CodedMessageError as unreadable:
-        result = _unreadable_payload(text.prog, unreadable)
+    result = _answered(lambda: run_operation(operation, load_payloads(operation, values, sys.stdin), outside, lambda effects: outside_builder(
+        values.get("project"), effects, reporter, dict(values, **{JSON_DEST: as_json})), DEFAULT_RUN._replace(privacy=privacy, follow_up=text.follow_up)),
+        text.prog, reporter)
     said = renderer.render(result, tool, operation.name) if as_json else \
         TextReport.render(result, Terminal().text_style() if result.headline else PLAIN, operation.name)  # P1032
     if said:
