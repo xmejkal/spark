@@ -80,6 +80,8 @@ MAKES_STALE = {PICK: (REQUIREMENTS,), WRITE_REQUIREMENTS: (BUILD, BREADBOARD), B
 #: The label of each offer, the words of its button (P829). <label> is the part's own name, in quotes, so a name that
 #: starts with a digit never runs into a count.
 PICK_LABEL = "Pick “%s” for %s"
+#: The why of a pick's step (P1030): a pick is the person's choice, so the step names the part and the need.
+PICK_WHY = "The person's choice: “%s” for the %s need"
 DROP_LABEL = "Drop the %s need"
 REQUIREMENTS_LABEL = "Write the parts list"
 BUILD_LABEL = "Build the board"
@@ -281,6 +283,4 @@ BUILT_NO_SIMULATION = "build (no simulation)"
 SIMULATE_NO_MODEL = "simulate (no Wokwi model of this board)"
 #: The breadboard in done, once the wiring is no longer part of now: the sheet is current, and spark cannot see the wires.
 SHEET_UNSEEN = "breadboard (spark cannot see it)"
-#: The offer that does the job of a phase to act on now: (the phase that holds it, its key).
-JOB_OFFERS = {REQUIREMENTS: (REQUIREMENTS, WRITE_REQUIREMENTS), BUILD: (BUILD, BUILD_BOARD), BREADBOARD: (BUILD, BUILD_BOARD)}
 # --- end MVP ---

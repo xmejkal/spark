@@ -42,6 +42,7 @@ from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import STALE  # noqa: E402
 from spark.records import store  # noqa: E402
+from spark.core.result import NextStep  # noqa: E402
 
 #: A built project: requirements.json, the board it names and the circuit a finished build kept with its built-from.json.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -154,7 +155,7 @@ class FlowTest(unittest.TestCase):
 
 
 class ThePhasesTest(FlowTest):
-    def test_a_project_with_no_needs_stands_at_the_needs(self):
+    def test_a_project_with_no_needs_stands_at_the_idea(self):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         said, code = show(project)
@@ -163,7 +164,7 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(table(said), {"idea": (None, []), "needs": (NS, []), "parts": (NS, []), "requirements": (NS, []),
                                        "build": (NS, []), "breadboard": (NS, []), "firmware": (NS, []), "simulate": (NS, []),
                                        "deploy": (NS, [])})
-        self.assertEqual(said["data"]["stands_at"], "needs")
+        self.assertEqual(said["data"]["stands_at"], "idea")  # P1030: the guide's now, the one rule
         self.assertEqual(says(said, "idea"), ["Tell Claude your goal in the chat"])
         # P979: the hints name the command and who acts, with no placeholder and no path
         self.assertEqual(says(said, "firmware"), ["No firmware/main.py yet. Ask Claude to write it in the chat."])
@@ -509,7 +510,7 @@ class TheCommandTest(FlowTest):
             code = flow.main(["--project", str(project)])
         self.assertEqual(code, 0)
         self.assertIn("needs: not started", out.getvalue())
-        self.assertIn("stands at: needs", out.getvalue())
+        self.assertIn("NOW (idea)", out.getvalue())  # P1030: the guide's lines, in place of the stands-at line
 
     def test_the_lines_leave_ok_to_the_mark_and_show_five_offer_keys_and_how_many_more(self):
         project = with_needs(a_built_project(), [
@@ -634,7 +635,7 @@ class TheGuideTest(FlowTest):
 
     def test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now(self):
         said, code = show(a_project_built_with_no_simulation())
-        self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "build"))
+        self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "firmware"))  # P1030: the guide's now
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
             "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10,
@@ -642,6 +643,16 @@ class TheGuideTest(FlowTest):
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL})
+
+    def test_the_project_stands_where_the_guide_says_now(self):
+        """P1030: one rule says where a project stands, the guide's now phase, in data.stands_at too."""
+        empty = Path(tempfile.mkdtemp()) / "plant-alarm"
+        empty.mkdir()
+        for project in (empty, with_needs(Path(tempfile.mkdtemp()) / "soil", SOIL), a_built_project(), a_project_built_with_no_simulation(),
+                        a_firmware(a_project_built_with_no_simulation())):
+            with self.subTest(project=project.name):
+                said = show(project)[0]
+                self.assertEqual(said["data"]["stands_at"], said["data"]["guide"]["now"]["phase"])
 
     def test_a_sheet_whose_steps_cannot_be_counted_leaves_the_firmware_one_job_and_the_breadboard_done(self):
         project = a_project_built_with_no_simulation()
@@ -1326,6 +1337,111 @@ class TheRunOnButtonLightTest(unittest.TestCase):
         turned, named = self.turned_stale(WriteRequirements(), {"project": str(self.project), "dry_run": False, "replies": None}, "requirements")
         self.assertEqual(turned, {"build", "breadboard"})
         self.assertLessEqual(turned, named)
+
+
+class TheOfferStepTest(FlowTest):
+    """P1030: each offer carries the core's NextStep that runs it: its op, an argv with the whole project path, and the
+    store's env. A pick is the person's choice, so its step needs the person."""
+
+    def steps_of(self, project):
+        return {offer.key: offer.step for phase in read_flow(project)[0] for offer in phase.offers}
+
+    def test_each_offer_of_a_real_project_carries_its_step(self):
+        project = with_needs(a_built_project(), SOIL)
+        steps, whole, env = self.steps_of(project), str(project.absolute()), {"SPARK_HOME": str(self.home.resolve())}
+        self.assertEqual(steps["pick:soil:x-many"], NextStep("pick", ["--pick", whole, "soil=x-many"],
+                                                             "The person's choice: “A soil probe” for the soil need", ("reads", "writes"),
+                                                             False, True, env))
+        self.assertEqual(steps["build"], NextStep("build-board", [str(project.absolute() / "requirements.json"), "--keep", whole],
+                                                  "Build the board", ("reads", "runs", "writes"), False, None, env))
+        self.assertEqual(steps["needs-drop:soil"], NextStep("needs-drop", ["--needs-drop", whole, "soil"], "Drop the soil need",
+                                                            ("reads", "writes"), False, None, env))
+
+    def test_a_relative_project_s_step_names_it_whole_so_no_name_reads_as_a_flag(self):
+        project = with_needs(a_built_project(), SOIL)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(project.parent)
+        steps = self.steps_of(project.name)
+        self.assertEqual(steps["build"].argv[2], str(Path.cwd() / project.name))  # the folder as the process sees it, whole
+
+    def test_each_step_parses_with_its_own_operation_to_the_values_the_page_ran_before(self):
+        from spark.core.cli import values_of
+        from spark.flow.run_request import STEP_OPERATIONS
+        import parts
+        project = with_needs(a_built_project(), SOIL)
+        whole, steps = project.absolute(), self.steps_of(project)
+        operations = dict(STEP_OPERATIONS, **{"needs-drop": parts.DropNeedFlag})
+        self.assertEqual({key: values_of(operations[step.op](), step.argv) for key, step in steps.items() if key in
+                          ("pick:soil:x-many", "build", "needs-drop:soil")},
+                         {"pick:soil:x-many": ({"project_and_picks": [str(whole), "soil=x-many"], "passed_over": NO_PASSED_OVER, "dry_run": False}, False),
+                          "build": ({"requirements": str(whole / "requirements.json"), "keep": whole, "sim_dir": None, "firmware": None}, False),
+                          "needs-drop:soil": ({"project_and_need": [str(whole), "soil"], "dry_run": False}, False)})
+        self.assertIs(values_of(PickParts(), steps["pick:soil:x-many"].argv)[0]["passed_over"], NO_PASSED_OVER)
+        self.assertEqual({step.op: step.effects for step in steps.values()},
+                         {op: tuple(operation.effects) for op, operation in operations.items() if op in ("pick", "build-board", "needs-drop")})
+
+    def test_the_parts_list_step_parses_with_its_own_operation(self):
+        from spark.core.cli import values_of
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD)
+        step = self.steps_of(project)["requirements"]
+        self.assertEqual((step.op, step.effects, values_of(WriteRequirements(), step.argv)),
+                         ("requirements", tuple(WriteRequirements.effects), ({"project": str(project.absolute()), "dry_run": False, "replies": None}, False)))
+
+    def test_a_parts_phase_with_one_pick_offer_names_it_as_the_now_offer_and_with_two_none(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        self.assertEqual((show(project)[0]["data"]["guide"]["now"]["phase"], show(project)[0]["data"]["guide"]["now"]["offer"]), ("parts", None))
+        for kind, name in (("catalog", "x-unknown"), ("drawer", "unknown")):
+            (self.home / kind / (name + ".json")).unlink()
+        said = show(project)[0]
+        self.assertEqual((offers(said, "parts"), said["data"]["guide"]["now"]["offer"]), (["pick:soil:x-many"], "pick:soil:x-many"))
+
+    def test_a_breadboard_now_names_no_offer_and_its_page_line_carries_no_key(self):
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        project = a_built_project()
+        (project / "breadboard.md").unlink()
+        said = show(project)[0]
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"], offers(said, "build")),
+                         ("breadboard", None, ["build"]))
+        write_page(project, store=FlowPageStore())
+        self.assertIn("<p><strong>NOW (breadboard)</strong> ", (project / "page.html").read_text(encoding="utf-8"))
+
+    def a_hand_written_project(self):
+        project = Path(tempfile.mkdtemp()) / "bl"
+        shutil.copytree(ROOT / "tests" / "data" / "breadboard" / "button-light", project)
+        return project
+
+    def test_show_s_next_holds_the_now_offer_s_step_raw_while_data_is_masked(self):
+        project = self.a_hand_written_project()
+        said, _ = show(project)
+        self.assertEqual((said["data"]["stands_at"], said["data"]["guide"]["now"]["offer"]), ("build", "build"))
+        self.assertEqual(said["next"], [{"op": "build-board", "argv": [str(project.absolute() / "requirements.json"), "--keep", str(project.absolute())],
+                                         "why": "Build the board", "effects": ["reads", "runs", "writes"], "needs_yes": False,
+                                         "env": {"SPARK_HOME": str(self.home.resolve())}}])
+        self.assertNotIn(str(project), json.dumps(said["data"]))
+
+    def test_show_s_next_is_empty_when_the_now_phase_has_no_offer(self):
+        empty = Path(tempfile.mkdtemp()) / "plant-alarm"
+        empty.mkdir()
+        said, _ = show(empty)
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"]), ("idea", []))
+
+    def test_show_s_text_ends_with_the_guide_s_lines_and_no_stands_at_line(self):
+        lines = lines_of(self.a_hand_written_project())
+        self.assertEqual(lines[-3:], ["  NOW (build): Ask Claude in the chat to build the board. It takes seconds and costs nothing. [build]",
+                                      "  DONE: idea, requirements (no needs or picks behind it)",
+                                      "  LATER: breadboard, firmware, simulate, deploy"])
+        self.assertFalse([line for line in lines if "stands at" in line])
+
+    def test_show_s_text_says_why_there_is_no_simulation_and_what_is_set_aside(self):
+        project = a_project_built_with_no_simulation()
+        with_needs(project, [{"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True}])
+        lines = lines_of(project)
+        self.assertEqual(lines[-2:], ["  " + NO_MODEL, "  SET ASIDE: soil"])  # the page's order
+
+    def test_the_offers_in_data_keep_their_four_keys_and_no_step(self):
+        said, _ = show(with_needs(a_built_project(), SOIL))
+        self.assertEqual({tuple(offer) for phase in said["data"]["phases"] for offer in phase["offers"]},
+                         {("key", "label", "effect", "makes_stale")})
 
 
 if __name__ == "__main__":

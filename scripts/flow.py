@@ -27,8 +27,9 @@ offers. The idea has no status. A hand-written project (requirements.json and no
 parts, and so has a project whose last need was dropped, which says so. Written firmware and a simulated image have none, because what their sentences say is for you to judge. An offer
 is a key, such as pick:soil:x-led, with a label (the words of its button, such as Build the board), its effect (plain
 sentences that name every write it makes) and makes_stale (the phases it can make out of date, only those that hold
-something now). flow.py runs no offer. The last line names the first phase that is not done. The guide (P977) says
-what to do now, in one sentence, and which phases are done and later. A build that stopped only because Wokwi has no
+something now). flow.py show runs no offer. The guide (P977) ends the text: NOW, the phase to act on now, its sentence
+and the key of its offer, then DONE and LATER. With --json, next holds the step of that offer, raw (P1030), and an
+empty next means: read data.guide.now. A build that stopped only because Wokwi has no
 model of its board (board_not_in_wokwi) is counted as done there, and the guide says there is no simulation.
 
 flow.py page writes page.html in the project: the same phases, each with its status word and a mark, the wiring of a built
@@ -43,8 +44,9 @@ in .spark/page.json, the id only, and every later page answers it as data.artifa
 is no UUID in lower case is a bad argument, and nothing is written. Only /spark:page publishes the page.
 
 flow.py run-request reads .spark/page-request.json, the page's request {id, key, seen, at}, and deletes it at once. It
-runs the step only when seen is the first 12 hex digits of the fingerprint now, the key is an offer now, and its kind
-is pick, requirements or build. The values come from spark's offer, never from the request. Else it runs nothing:
+runs the step only when seen is the first 12 hex digits of the fingerprint now, the key is an offer now, its kind
+is pick, requirements or build, and its step names an Operation spark runs from the page. The values come from spark's
+offer's step, never from the request. Else it runs nothing:
 request_malformed (no regular file, no JSON object, an id that is no UUID, a key that is no text, a seen that is not 12
 hex digits, or a file it cannot delete), request_in_chat (a need's drop), request_stale (the project changed after the
 page was read) or request_not_offered (not an offer now, or a kind the page never runs). With --json it prints

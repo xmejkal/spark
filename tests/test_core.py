@@ -246,6 +246,32 @@ class TheHelpTextTest(unittest.TestCase):
         self.assertEqual(self.parsed(HelpText("x", "s", ""), Told())[1], "The toy's own paragraph.")
 
 
+class TheValuesOfTest(unittest.TestCase):
+    """P1030: `values_of` is the core's one parse of an argv, for the CLI and for a step spark runs itself."""
+
+    def test_it_gives_the_values_without_the_json_flag_and_the_flag_apart(self):
+        from spark.core.cli import values_of
+
+        class File(Toy):
+            arguments = (Argument(("requirements",), "requirements", str, "a requirements.json", nargs="?"), COMMON_ARGUMENTS["json"])
+        self.assertEqual(values_of(File(), ["r.json", "--json"]), ({"requirements": "r.json"}, True))
+        self.assertEqual(values_of(File(), []), ({"requirements": None}, False))
+
+    def test_an_argument_left_out_keeps_its_own_default_object(self):
+        from spark.core.cli import values_of
+        default = object()
+
+        class Kept(Toy):
+            arguments = (Argument(("--file",), "file", str, "a file", default), COMMON_ARGUMENTS["json"])
+        self.assertIs(values_of(Kept(), [])[0]["file"], default)
+
+    def test_a_bad_argv_raises_bad_argument(self):
+        from spark.core.cli import values_of
+        from spark.core.outcomes import BadArgumentError
+        with self.assertRaises(BadArgumentError):
+            values_of(Toy(), ["--nonsense"])
+
+
 class RunCliTest(unittest.TestCase):
     def test_ok_prints_the_lines_without_json_and_the_envelope_with_it_and_exits_0(self):
         self.assertEqual(cli("--what", "ok", "--left"), (0, "  what   ok\n  left   True\n", ""))

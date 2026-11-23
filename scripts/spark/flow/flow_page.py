@@ -32,7 +32,7 @@ ShownPhase = namedtuple("ShownPhase", "mark word")
 #: `before_power` the dicts of a BeforePowerItem's fields, `records` the record ids, and `why_missing` says why there is no
 #: wiring to show (None when there is).
 PageWiring = namedtuple("PageWiring", "steps before_power records why_missing")
-#: Value: what a page holds. `phases` are the Phase dicts of the flow, `stands_at` the first open phase or None, `pictures`
+#: Value: what a page holds. `phases` are the Phase dicts of the flow, `stands_at` the guide's now phase or None, `pictures`
 #: Pictures, `notes` fixed lines and `wiring` a PageWiring or None (no section). `fingerprint` is the flow's
 #: (`fingerprint.fingerprint_of`, P829) and `written` the newest change time of its files, both None when not known. A page
 #: is masked before it is rendered.
@@ -81,13 +81,11 @@ def _makes_stale(offer):
 
 
 def sendable_now(page):
-    """The one sendable offer dict of the phase the guide's NOW names, or None when that phase has none or more than one
-    (P829 review): the NOW line then carries its key, and the script puts its button there too."""
+    """The offer dict the guide's now names (`now.offer`, P1030) when it is sendable, from any phase, else None: the NOW
+    line then carries its key, and the script puts its button there too. The CLI's `next` holds the same offer's step."""
     now = (page.guide or {}).get("now")
-    if not now:
-        return None
-    offers = [offer for phase in page.phases if phase["phase"] == now["phase"] for offer in phase["offers"] if is_sendable(offer)]
-    return offers[0] if len(offers) == 1 else None
+    offers = [offer for phase in page.phases for offer in phase["offers"] if now and offer["key"] == now.get("offer") and is_sendable(offer)]
+    return offers[0] if offers else None
 
 
 def page_words(phases, wiring_first=False):
