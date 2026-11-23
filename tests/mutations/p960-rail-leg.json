@@ -1,0 +1,7 @@
+[
+ {"file": "scripts/spark/breadboard/drawing.py", "name": "a resistor leg on a rail is pinned like a leg in a row", "find": "if step.act == wiring_steps.JOIN and step.anchor.seat().kind == wiring_steps.ROW:", "replace": "if step.act == wiring_steps.JOIN:"},
+ {"file": "scripts/spark/breadboard/wiring_steps.py", "name": "a resistor leg on a rail runs no jumper", "find": "JOIN, end, anchor, needs_jumper(end) or on_rail, role)", "replace": "JOIN, end, anchor, needs_jumper(end), role)"},
+ {"file": "scripts/spark/breadboard/wiring_steps.py", "name": "a resistor leg on a rail is said to go in the rail", "find": "        if on_rail:", "replace": "        if False:"},
+ {"file": "scripts/spark/breadboard/drawing.py", "name": "a rail leg's own hole drops out of its step's holes", "find": "\", then \".join(filter(None, [words.get(number),", "replace": "\", then \".join(filter(None, [None,"},
+ {"file": "data/wokwi-geometry.json", "name": "a resistor covers no hole between its legs", "find": "\"center\": [29.5, 5.5], \"covers_holes\": true,", "replace": "\"center\": [29.5, 5.5], \"covers_holes\": false,"}
+]
