@@ -126,7 +126,7 @@ Each lacks its unit, population, period or provenance, or does not reproduce.
 - "nine earlier discoveries still collecting evidence" (the frame, the item line): "probe, 2026-11-23", with no command. Not checked by me.
 - "3 of 33 facts verified" (direction.md, stage 2): the diary's count at 13:18 for one record on one day. Not re-read by me.
 
-What I could not check, and why: the Inspect and promptfoo pages, the MCP elicitation page, the Hermes pages for MCP and local models, and spark's formats research of 2026-10-13 (time). The dev.to page (404). The lens's counts in ★C14 (its scripts are gone). The core-gaps finding in the store, which Q5 (a) rests on and which the architect did not read either. The stages of the cards that UJ-17 puts in Idea. The merges of P1001, P1006 and P1007. Whether the PO uses the Codex extension or Cursor. One note for the main session: ★C6's correction names software on the PO's Mac, as the brief already does for `claude`. Whether that line goes into a public file is his.
+What I could not check, and why: the Inspect and promptfoo pages, the MCP elicitation page, the Hermes pages for MCP and local models, and spark's formats research of 2026-10-13 (time). The dev.to page (404). The lens's counts in ★C14 (its scripts are gone). The core-gaps finding in the store, which Q5 (a) rests on and which the architect did not read either. The stages of the cards that UJ-17 puts in Idea. The merges of P1001, P1006 and P1007. Whether the PO uses the second harness or the editor. One note for the main session: ★C6's correction names software on the PO's Mac, as the brief already does for `claude`. Whether that line goes into a public file is his.
 
 ## Searches
 

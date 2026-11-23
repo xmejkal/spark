@@ -67,3 +67,7 @@ The three agents name these, each for its own reason:
 - Whether P417 #545 moves earlier, after P793's pieces 1 to 3 (the architect).
 - Which comes first, the hobbyist's journey or spark as a showcase (the tech lead).
 - Whether the names of his installed software go into this public folder (all three).
+
+## Searches
+
+none

@@ -134,3 +134,7 @@ His only.
 - Whether `check_vendor_pins.py` is one of the nine inner tools that stay off the core.
 - The async opinion under Q6. It is a reading of the code, not a run.
 - P1004 #1463's body (the main session reproduced it).
+
+## Searches
+
+none

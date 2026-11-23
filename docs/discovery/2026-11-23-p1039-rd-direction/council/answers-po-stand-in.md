@@ -108,3 +108,7 @@ his only.
   date when it decides an order.
 - Not a numbered question: whether the names of his installed software go into the public file (the refuter's note).
 - Q13 to Q17, and the confirmation of the final understanding, and the yes to file any card.
+
+## Searches
+
+none

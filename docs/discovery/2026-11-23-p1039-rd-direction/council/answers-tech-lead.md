@@ -85,3 +85,7 @@ untaught name by construction.
   evidence than his own. Also the RA lens's dropped question (council/risks-and-assumptions.md:103): the hobbyist's
   journey first, or showing spark as a project first. That ranks Q2 and Q4, and only he can answer it.
 - Any edit of scrum/VISION.md (Q4 (a)'s "later" lines) is a change to his confirmed page. It goes to him as a PR.
+
+## Searches
+
+none
