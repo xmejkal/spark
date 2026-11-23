@@ -63,6 +63,8 @@ NONE_RECORDED = "spark's store record names no deploy here"
 
 #: A fixed zone for a deploy moment, so a test reads the same on every machine (P291).
 PRAGUE_SUMMER = datetime.timezone(datetime.timedelta(hours=2))
+#: The XIAO C6's console after a deploy in the P934 walk, 2026-11-22 23:22 CET: its last line is `ready, cpu 80 MHz` (P1025).
+C6_CONSOLE = (ROOT / "tests" / "data" / "ready_line" / "c6-console-2026-11-22.txt").read_text()
 
 
 class GateCase(LookCase):
@@ -770,7 +772,34 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertIn("ready seen", said)
         log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
         self.assertIn("facts file spark.json sha256", said)
-        self.assertIn("console with DTR and RTS off: mode:DIO, clock div:2\nentry 0x4086b910\nready\nread again\n", log)
+        first = "console with DTR and RTS off: mode:DIO, clock div:2\nentry 0x4086b910\nready\nthe first read: ready unknown: "
+        self.assertIn(first, log)
+        self.assertLess(log.index(first), log.index("read again\n"))  # P1025: the first read's words, then the read again
+
+    def test_a_read_again_keeps_the_first_read_s_settle_note_in_the_board_log(self):
+        # P1025: the C6's console of the P934 walk (2026-11-22 23:22 CET); the settle note is hand-written in P1022's form
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", "spark: the 2.5 s settle heard b'entry 0x4086b910\\r\\n'\n"
+                                                    "Traceback (most recent call last):\n"
+                                                    "mpremote.transport.TransportError: could not enter raw repl\n")
+        self.uncopied = self.unread
+        code, said, _ = self.flash(FakeConsoleProbe(C6_CONSOLE, on_console=self.answers))
+        self.assertEqual(code, 0)
+        self.assertIn("ready seen", said)
+        log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
+        first = "the first read: ready unknown: mpremote could not read the board's files"
+        self.assertIn(first, log)
+        self.assertIn("spark: the 2.5 s settle heard", log)
+        self.assertLess(log.index(first), log.index("spark: the 2.5 s settle heard"))
+        self.assertLess(log.index("spark: the 2.5 s settle heard"), log.index("read again\n"))
+
+    def test_a_first_read_whose_log_ends_with_no_newline_ends_its_line_before_read_again(self):
+        # P1025: a timed-out read keeps what mpremote printed until then, which may end inside a line
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote.transport.TransportError: could not enter raw repl")
+        self.uncopied = self.unread
+        code, said, _ = self.flash(FakeConsoleProbe(C6_CONSOLE, on_console=self.answers))
+        self.assertEqual(code, 0)
+        log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
+        self.assertIn("mpremote.transport.TransportError: could not enter raw repl\nread again\n", log)
 
     def test_download_mode_with_ready_after_it_still_asks_for_r_and_never_reads_again(self):
         code, said, _ = self.flash(FakeConsoleProbe("waiting for download\nready\n"))
