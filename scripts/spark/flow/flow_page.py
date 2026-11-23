@@ -81,13 +81,11 @@ def _makes_stale(offer):
 
 
 def sendable_now(page):
-    """The one sendable offer dict of the phase the guide's NOW names, or None when that phase has none or more than one
-    (P829 review): the NOW line then carries its key, and the script puts its button there too."""
+    """The offer dict the guide's now names (`now.offer`, P1030) when it is sendable, from any phase, else None: the NOW
+    line then carries its key, and the script puts its button there too. The CLI's `next` holds the same offer's step."""
     now = (page.guide or {}).get("now")
-    if not now:
-        return None
-    offers = [offer for phase in page.phases if phase["phase"] == now["phase"] for offer in phase["offers"] if is_sendable(offer)]
-    return offers[0] if len(offers) == 1 else None
+    offers = [offer for phase in page.phases for offer in phase["offers"] if now and offer["key"] == now.get("offer") and is_sendable(offer)]
+    return offers[0] if offers else None
 
 
 def page_words(phases, wiring_first=False):

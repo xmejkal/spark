@@ -22,7 +22,7 @@ from spark.flow import flow_codes, request_codes
 from spark.flow.fingerprint import SHORT, fingerprint_of
 from spark.flow.guide import NO_MODEL_CODES, stops_only_for_no_model
 from spark.flow.phase_readers import MARKS
-from spark.flow.show_flow import privacy_for, read_flow
+from spark.flow.show_flow import phases_of, privacy_for
 
 # --- MVP ---
 #: The request file, in the project: one request, which `/spark:page` writes and this Operation deletes.
@@ -152,7 +152,7 @@ class RunRequest(Operation):
 
     def run(self, project, *, outside):
         request = read_request(project)
-        phases = read_flow(project, self.readers)[0]
+        phases = phases_of(project, self.readers)
         fingerprint = fingerprint_of(project, phases)
         offers = {offer.key: offer for phase in phases for offer in phase.offers}
         refused = refusal_of(request, offers, fingerprint)
@@ -165,7 +165,7 @@ class RunRequest(Operation):
         except BadArgumentError:
             return refused_answer(request, offer, fingerprint, request_codes.REQUEST_NOT_OFFERED)
         result = run_operation(self.operations.get(step.op) or STEP_OPERATIONS[step.op](), values, outside=outside)
-        after = fingerprint_of(project, read_flow(project, self.readers)[0])
+        after = fingerprint_of(project, phases_of(project, self.readers))
         status, note = answer_of(kind_of(offer.key), result)
         line = RAN_LINE % (offer.label, MARKS[status][0] or OK) if note else line_of(offer.label, result)
         data = {"for": request.id, "key": offer.key, "label": offer.label, "ran": True, "status": status, "mark": MARKS[status][1],

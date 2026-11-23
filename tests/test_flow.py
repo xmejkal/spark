@@ -155,7 +155,7 @@ class FlowTest(unittest.TestCase):
 
 
 class ThePhasesTest(FlowTest):
-    def test_a_project_with_no_needs_stands_at_the_needs(self):
+    def test_a_project_with_no_needs_stands_at_the_idea(self):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         said, code = show(project)
@@ -164,7 +164,7 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(table(said), {"idea": (None, []), "needs": (NS, []), "parts": (NS, []), "requirements": (NS, []),
                                        "build": (NS, []), "breadboard": (NS, []), "firmware": (NS, []), "simulate": (NS, []),
                                        "deploy": (NS, [])})
-        self.assertEqual(said["data"]["stands_at"], "needs")
+        self.assertEqual(said["data"]["stands_at"], "idea")  # P1030: the guide's now, the one rule
         self.assertEqual(says(said, "idea"), ["Tell Claude your goal in the chat"])
         # P979: the hints name the command and who acts, with no placeholder and no path
         self.assertEqual(says(said, "firmware"), ["No firmware/main.py yet. Ask Claude to write it in the chat."])
@@ -510,7 +510,7 @@ class TheCommandTest(FlowTest):
             code = flow.main(["--project", str(project)])
         self.assertEqual(code, 0)
         self.assertIn("needs: not started", out.getvalue())
-        self.assertIn("stands at: needs", out.getvalue())
+        self.assertIn("stands at: idea", out.getvalue())  # P1030: the guide's now (step 5 prints the guide in its place)
 
     def test_the_lines_leave_ok_to_the_mark_and_show_five_offer_keys_and_how_many_more(self):
         project = with_needs(a_built_project(), [
@@ -635,7 +635,7 @@ class TheGuideTest(FlowTest):
 
     def test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now(self):
         said, code = show(a_project_built_with_no_simulation())
-        self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "build"))
+        self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "firmware"))  # P1030: the guide's now
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
             "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10,
@@ -643,6 +643,16 @@ class TheGuideTest(FlowTest):
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL})
+
+    def test_the_project_stands_where_the_guide_says_now(self):
+        """P1030: one rule says where a project stands, the guide's now phase, in data.stands_at too."""
+        empty = Path(tempfile.mkdtemp()) / "plant-alarm"
+        empty.mkdir()
+        for project in (empty, with_needs(Path(tempfile.mkdtemp()) / "soil", SOIL), a_built_project(), a_project_built_with_no_simulation(),
+                        a_firmware(a_project_built_with_no_simulation())):
+            with self.subTest(project=project.name):
+                said = show(project)[0]
+                self.assertEqual(said["data"]["stands_at"], said["data"]["guide"]["now"]["phase"])
 
     def test_a_sheet_whose_steps_cannot_be_counted_leaves_the_firmware_one_job_and_the_breadboard_done(self):
         project = a_project_built_with_no_simulation()
@@ -1376,6 +1386,24 @@ class TheOfferStepTest(FlowTest):
         step = self.steps_of(project)["requirements"]
         self.assertEqual((step.op, step.effects, values_of(WriteRequirements(), step.argv)),
                          ("requirements", tuple(WriteRequirements.effects), ({"project": str(project.absolute()), "dry_run": False, "replies": None}, False)))
+
+    def test_a_parts_phase_with_one_pick_offer_names_it_as_the_now_offer_and_with_two_none(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        self.assertEqual((show(project)[0]["data"]["guide"]["now"]["phase"], show(project)[0]["data"]["guide"]["now"]["offer"]), ("parts", None))
+        for kind, name in (("catalog", "x-unknown"), ("drawer", "unknown")):
+            (self.home / kind / (name + ".json")).unlink()
+        said = show(project)[0]
+        self.assertEqual((offers(said, "parts"), said["data"]["guide"]["now"]["offer"]), (["pick:soil:x-many"], "pick:soil:x-many"))
+
+    def test_a_breadboard_now_names_no_offer_and_its_page_line_carries_no_key(self):
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        project = a_built_project()
+        (project / "breadboard.md").unlink()
+        said = show(project)[0]
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"], offers(said, "build")),
+                         ("breadboard", None, ["build"]))
+        write_page(project, store=FlowPageStore())
+        self.assertIn("<p><strong>NOW (breadboard)</strong> ", (project / "page.html").read_text(encoding="utf-8"))
 
     def test_the_offers_in_data_keep_their_four_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))

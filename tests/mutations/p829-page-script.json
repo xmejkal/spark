@@ -116,13 +116,13 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "the NOW line carries no key (P829 review 5)",
-  "find": "    return offers[0] if len(offers) == 1 else None",
+  "find": "    return offers[0] if offers else None",
   "replace": "    return None"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/guide.py",
   "name": "the NOW line carries a key when its phase has two sendable offers (P829 review 5)",
-  "find": "    return offers[0] if len(offers) == 1 else None",
-  "replace": "    return offers[0] if offers else None"
+  "find": "    return own[0] if len(own) == 1 else None",
+  "replace": "    return own[0] if own else None"
  }
 ]

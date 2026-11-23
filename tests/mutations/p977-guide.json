@@ -128,7 +128,7 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the guide names no offer for the job (P977)",
-  "find": "    return key if holder in by_name and key in [offer.key for offer in by_name[holder].offers] else None",
+  "find": "    return own[0] if len(own) == 1 else None",
   "replace": "    return None"
  },
  {

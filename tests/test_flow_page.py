@@ -1466,6 +1466,9 @@ class ThePageScriptTest(unittest.TestCase):
         self.assertNotIn("0123456789ab", json.dumps(words))
 
     def test_the_now_line_carries_the_key_of_its_phase_s_one_sendable_offer(self):
+        page = sample_page()
+        # P1030: the page reads the guide's one now offer
+        self.text = FlowHtmlPage().text(page._replace(guide=dict(page.guide, now=dict(page.guide["now"], offer="pick:light:led-red-5mm"))))
         self.assertIn('<p data-key="pick:light:led-red-5mm" data-makes-stale="requirements"><strong>NOW (parts)</strong> ', self.text)
         self.assertEqual(self.text.count('data-key="pick:light:led-red-5mm"'), 2)
 

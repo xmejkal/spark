@@ -116,18 +116,20 @@ def who_and_sentence(now, open_needs, fact):
     return [now.by], said or (flow_codes.PROBLEMS_NOW if now.status == PROBLEMS else flow_codes.COULD_NOT_RUN_NOW) % now.phase
 
 
-def job_offer(now, by_name):
-    """The key of the offer that does the job of the phase to act on now (flow_codes.JOB_OFFERS), or None."""
-    holder, key = flow_codes.JOB_OFFERS.get(now.phase, (None, None))
-    return key if holder in by_name and key in [offer.key for offer in by_name[holder].offers] else None
+def job_offer(now):
+    """The key of the offer that does the job of the phase to act on now: its one offer of a kind the page sends, or None
+    when it holds none or more than one (P1030: one rule, so the CLI's `next` and the page's NOW button name one offer). A
+    breadboard now names none: the build's offer is in the build phase, until a NOW sentence names its button (piece 6)."""
+    own = [offer.key for offer in now.offers if offer.key.split(":", 1)[0] in flow_codes.SENDABLE]
+    return own[0] if len(own) == 1 else None
 
 
-def now_of(now, by_name, open_needs, fact, count):
+def now_of(now, open_needs, fact, count):
     """`{phase, by, says, offer, needs, steps}` of the phase to act on now. With `count`, the steps of a current wiring
     sheet beside firmware not started, it is two jobs, the person's and Claude's, and `steps` is that count (else None)."""
     by, says = ([flow_codes.BY_YOU, flow_codes.BY_CLAUDE], flow_codes.TWO_JOBS_NOW % count) if count is not None else \
         who_and_sentence(now, open_needs, fact)
-    return {"phase": now.phase, "by": by, "says": says, "offer": job_offer(now, by_name),
+    return {"phase": now.phase, "by": by, "says": says, "offer": job_offer(now),
             "needs": open_needs if now.phase == flow_codes.PARTS else [], "steps": count}
 
 
@@ -162,6 +164,12 @@ def done_of(phases, at, no_model, wired, no_picks=False):
     return done
 
 
+def stands_at_of(guide):
+    """Where a project stands: the guide's now phase, the one rule (P1030). None when the guide has no now, which only a
+    flow of other readers in a test gives."""
+    return guide["now"]["phase"] if guide["now"] else None
+
+
 def guide_of(project, phases, steps=count_steps):
     """
     What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
@@ -179,7 +187,7 @@ def guide_of(project, phases, steps=count_steps):
     beside_sheet = now and now.phase == flow_codes.FIRMWARE and now.status == flow_codes.NOT_STARTED and is_sheet_current(project, by_name)
     count = steps(project) if beside_sheet else None
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
-    said = now_of(now, by_name, open_needs, fact, count) if now else None
+    said = now_of(now, open_needs, fact, count) if now else None
     wired = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
     later = [label(phase, no_model) + (flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else "")
              for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]

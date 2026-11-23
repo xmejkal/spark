@@ -8,7 +8,7 @@ from pathlib import Path
 
 from spark.flow import flow_codes
 from spark.flow.fingerprint import fingerprint_of
-from spark.flow.guide import guide_of
+from spark.flow.guide import guide_of, stands_at_of
 from spark.flow.phase_readers import MARKS, READERS
 from spark.records import store
 from spark.core.operation import COMMON_ARGUMENTS, READS, Operation
@@ -43,18 +43,28 @@ def phase_line(phase):
     return [printable(line) for line in lines]
 
 
+def phases_of(project, readers=None):
+    """The Phases of `project`, one per reader in the readers' order: the one source of the phases, for `show`, the page
+    (P827) and a request (P829), which needs no guide. `readers` are the PhaseReaders a test swaps (None: `READERS`)."""
+    return [reader.answer(project) for reader in readers or READERS]
+
+
+def flow_and_guide(project, readers=None):
+    """(the Phases of `project`, its guide, `guide.guide_of`): `show` and the page compute the guide once (P1030)."""
+    phases = phases_of(project, readers)
+    return phases, guide_of(project, phases)
+
+
 def read_flow(project, readers=None):
-    """(the Phases of `project`, one per reader in the readers' order, and `stands_at`: the first phase whose status is
-    neither ok nor None, else None). The one source of the phases, for `show` and for the page (P827). `readers` are
-    the PhaseReaders a test swaps (None: `READERS`)."""
-    phases = [reader.answer(project) for reader in readers or READERS]
-    return phases, next((phase.phase for phase in phases if phase.status not in (OK, None)), None)
+    """(the Phases of `project`, and `stands_at`, the guide's now phase: `guide.stands_at_of`, the one rule, P1030)."""
+    phases, guide = flow_and_guide(project, readers)
+    return phases, stands_at_of(guide)
 
 
 class ShowFlow(Operation):
     """
     Operation: where a project stands. It asks each PhaseReader in order and answers `data.phases` (each Phase as a dict),
-    `data.stands_at`, the first phase whose status is neither ok nor None, `data.fingerprint` (`fingerprint_of`, P829) and
+    `data.stands_at`, the guide's now phase (`stands_at_of`, P1030), `data.fingerprint` (`fingerprint_of`, P829) and
     `data.guide` (`guide_of`, P977). A phase that holds problems or could not run
     adds one Finding of that status, so the exit says so; every phase still answers. `readers` are the PhaseReaders a test
     swaps (None: `READERS`).
@@ -71,13 +81,14 @@ class ShowFlow(Operation):
         self.readers = readers or READERS
 
     def run(self, project, *, outside):
-        phases, stands_at = read_flow(project, self.readers)
+        phases, guide = flow_and_guide(project, self.readers)
+        stands_at = stands_at_of(guide)
         findings = [Finding(phase.status, phase.phase, flow_codes.PHASE_PROBLEMS if phase.status == PROBLEMS else flow_codes.PHASE_COULD_NOT_RUN,
                             PHASE_SENTENCE % (phase.phase, phase.says[0]), PHASE_FIX)
                     for phase in phases if phase.status in (PROBLEMS, COULD_NOT_RUN)]
         lines = [line for phase in phases for line in phase_line(phase)]
         lines += [STANDS_AT_LINE % stands_at] if stands_at else []
         data = {"phases": [phase.to_dict() for phase in phases], "stands_at": stands_at, "fingerprint": fingerprint_of(project, phases),
-                "guide": guide_of(project, phases)}
+                "guide": guide}
         return OperationResult(data, findings, lines=lines)
 # --- end MVP ---

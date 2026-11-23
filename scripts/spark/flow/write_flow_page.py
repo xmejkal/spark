@@ -18,8 +18,8 @@ from spark.flow import flow_codes
 from spark.flow.fingerprint import FILES, fingerprint_of
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture
 from spark.flow.phase_readers import REQUIREMENTS_FILE
-from spark.flow.guide import guide_of
-from spark.flow.show_flow import privacy_for, read_flow
+from spark.flow.guide import stands_at_of
+from spark.flow.show_flow import flow_and_guide, privacy_for
 from spark.core import codes
 from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Argument, Operation
 from spark.core.outcomes import COULD_NOT_RUN
@@ -143,10 +143,9 @@ def write_page(project, readers=None, parts=None, renderer=None, store=None):
     and `text(page)`: the page's phases are dicts, its pictures Pictures, and a renderer shows a phase through
     `flow_page.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
     """
-    phases, stands_at = read_flow(project, readers)
+    phases, guide = flow_and_guide(project, readers)  # the guide once: the page draws it and the answer holds it
     shown = (parts or kept_parts)(project)
-    guide = guide_of(project, phases)  # once: the page draws it and the answer holds it
-    page = FlowPage(page_title(Path(project).resolve().name), [phase.to_dict() for phase in phases], stands_at,
+    page = FlowPage(page_title(Path(project).resolve().name), [phase.to_dict() for phase in phases], stands_at_of(guide),
                     shown.pictures, (flow_codes.BENCH_NOTE,), shown.wiring, fingerprint_of(project, phases), newest_change(project), guide)
     privacy = privacy_for(project)
     page = masked_page(page, privacy)

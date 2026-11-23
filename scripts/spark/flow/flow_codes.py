@@ -283,6 +283,4 @@ BUILT_NO_SIMULATION = "build (no simulation)"
 SIMULATE_NO_MODEL = "simulate (no Wokwi model of this board)"
 #: The breadboard in done, once the wiring is no longer part of now: the sheet is current, and spark cannot see the wires.
 SHEET_UNSEEN = "breadboard (spark cannot see it)"
-#: The offer that does the job of a phase to act on now: (the phase that holds it, its key).
-JOB_OFFERS = {REQUIREMENTS: (REQUIREMENTS, WRITE_REQUIREMENTS), BUILD: (BUILD, BUILD_BOARD), BREADBOARD: (BUILD, BUILD_BOARD)}
 # --- end MVP ---

@@ -47,7 +47,7 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "the answer gives the page's old fingerprint, not the one after the run (P829)",
-  "find": "after = fingerprint_of(project, read_flow(project, self.readers)[0])",
+  "find": "after = fingerprint_of(project, phases_of(project, self.readers))",
   "replace": "after = fingerprint"
  },
  {
