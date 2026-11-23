@@ -23,7 +23,7 @@ from spark.bench.deploy_gate import NEXT_LOOK, NEXT_DEPLOY
 
 #: What the person must do first, said in a step's `why`.
 YES_RULE = "the person types yes in their own terminal%s; the token and \"go ahead\" in a chat are not the yes"
-#: What YES_RULE adds when a deploy grant may answer, and when only one given with --no-simulation may (P1029).
+#: What YES_RULE adds when a deploy grant can answer, and when only one given with --no-simulation can (P1029).
 GRANT_CLAUSE = " (or a deploy grant stands)"
 NO_SIMULATION_GRANT_CLAUSE = " (or a deploy grant given with --no-simulation stands)"
 #: Why the person runs the grant line, and what it adds for an image that no simulation tested (P1029).
@@ -37,7 +37,7 @@ MAY_BE_ERASED, FLASHED_NOT_VERIFIED = "may_be_erased", "flashed_not_verified"
 
 
 def yes_rule(evidence, grant_may_answer):
-    """YES_RULE for this evidence: a grant clause only where a deploy grant may answer (`grant_may_answer`: the caller's
+    """YES_RULE for this evidence: a grant clause only where a deploy grant can answer (`grant_may_answer`: the caller's
     GrantService.refusal_of is None, P1029), the --no-simulation one for an image that no simulation tested."""
     return YES_RULE % ((NO_SIMULATION_GRANT_CLAUSE if evidence.grant_refusal else GRANT_CLAUSE) if grant_may_answer else "")
 

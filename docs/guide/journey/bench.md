@@ -144,10 +144,11 @@ for 60 minutes from your yes (one day at most). Type `yes`. The grant is a file 
 `grants/8c-bf-ea-xx-xx-xx-deploy.json`, beside the live grant's file, and the two never open each other. Delete it to end it.
 While it lasts, Claude runs `deploy.py --token T` and deploy.py prints `yes: standing yes typed by ...` instead of asking. It still
 looks at the board, checks the token and refuses an image that changed. It covers only a look that matched the board
-record (no warning, no unknown field, no stop) and never `--ignore-older-runs` or `--no-simulation`: for those deploy.py asks in your
-terminal. The store's record of the board says whose yes it was: `standing yes typed by <you> at <time>, until <time>`.
+record (no warning, no unknown field, no stop) and never `--ignore-older-runs`: for those deploy.py asks in your
+terminal. A deploy with `--no-simulation` asks you too, unless you gave the grant as `grant.py --scope deploy --minutes 60 --no-simulation`.
+That grant also lets Claude flash firmware that no simulation tested (direct flashing, P1029). To disallow direct flashing, run `grant.py --disallow-direct-flashing`: it writes the file `grants/direct_flashing_disallowed`. To allow it again, delete that file. The store's record of the board says whose yes it was: `standing yes typed by <you> at <time>, until <time>`.
 If the board then waits in its download mode, Claude tells you to press its RESET button once, and where it is.
-If the grant cannot be used (it ended, the look showed a warning, or `--ignore-older-runs` or `--no-simulation` is set), Claude stops, tells you why,
+If the grant cannot be used (it ended, the look showed a warning, `--ignore-older-runs` is set, or `--no-simulation` with a plain grant), Claude stops, tells you why,
 and gives you the line to run in your own terminal. grant.py prints the file's full path and the `rm` line that ends the grant.
 
 While the grant lasts, Claude runs a live try ([P247](https://github.com/xmejkal/spark/issues/267)):

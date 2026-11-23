@@ -204,7 +204,7 @@ class LookAtBoard(Operation):
     @staticmethod
     def _found(report, project, evidence, grant_may_answer):
         """The result of a LookReport: the lists LookReport.status counts, as Findings, and the deploy step with a token.
-        `grant_may_answer` says whether a deploy grant may answer the evidence (board_envelope.yes_rule)."""
+        `grant_may_answer` says whether a deploy grant can answer the evidence (board_envelope.yes_rule)."""
         findings = [Finding(outcomes.PROBLEMS, "stop", stop.code, stop.sentence, "deploy.py will refuse") for stop in report.stops]
         findings += [Finding(outcomes.PROBLEMS, "flash", board_codes.FLASH_DIFFERS, warning, "deploy.py asks the person to accept it")
                      for warning in report.warnings]

@@ -456,7 +456,7 @@ class TheDeployEnvelopeYesRuleTest(unittest.TestCase):
         return board_envelope.deploy_result(reached, 2).next[0].why
 
     def test_no_simulation_drops_the_grant_clause_and_a_passed_run_keeps_it(self):
-        # P1029: a grant given with --no-simulation may answer a deploy with no simulation, unless the store disallows it
+        # P1029: a grant given with --no-simulation can answer a deploy with no simulation, unless the store disallows it
         self.assertIn("(or a deploy grant given with --no-simulation stands)", self.step_why(image_evidence.NoSimulationEvidence("p")))
         self.assertNotIn("grant", self.step_why(image_evidence.NoSimulationEvidence("p"), grant_may_answer=False))
         self.assertNotIn("grant", self.step_why(image_evidence.PassedRunEvidence(True), grant_may_answer=False))

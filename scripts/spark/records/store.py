@@ -100,7 +100,8 @@ def format_rerun_line(script, arguments):
 #: body, the cited facts: the PO, 2026-10-04) and no seller listings, which go stale before anyone reads them (W21).
 #: `boards`: one record per physical board the person deployed to, by its MAC (P215, D23, D44) — not a board file.
 #: `board-shelf`: the board files the person chose before, from any project (P989): the shelf's own `boards` folder.
-#: `grants`: one live grant per physical board, by its MAC: the yes the person typed for a time limit (P253, D12).
+#: `grants`: one live grant per physical board, by its MAC: the yes the person typed for a time limit (P253, D12), and the
+#: file `direct_flashing_disallowed`, which keeps every grant from answering a deploy with no simulation (P1029).
 #: `known-boards`: one record per project folder, the board its looks read after the person's yes (P865).
 #: `registered-projects`: the projects that are not spark's and record their deploys, by name (P920).
 #: `launcher`: the file a tool outside spark runs to reach `bench.py` (P920).

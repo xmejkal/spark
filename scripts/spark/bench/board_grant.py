@@ -46,7 +46,7 @@ SCOPES = (SCOPE_LIVE, SCOPE_DEPLOY)
 class Grant(namedtuple("Grant", "mac board_token granted_by granted_at expires_at scope no_simulation",
                        defaults=(SCOPE_LIVE, False))):
     """Value: the grant as the store keeps it. The times are ISO 8601 with the zone: the machine's zone since P291, UTC
-    before. `no_simulation` is True for a deploy grant given with --no-simulation (P1029); a file with no such key reads
+    before. `no_simulation` is True for a deploy grant given with --no-simulation (P1029). A file with no such key reads
     as False."""
 
     __slots__ = ()
@@ -280,7 +280,7 @@ class GrantService:
         """The Grant of `scope` kept for the board on USB (or on `port`) for `minutes` from the yes, after one look and
         a yes from `consent`. `before_look(board)` gets the listed Port and runs just before the board restarts. A live grant
         on a board whose USB serial cannot be its MAC is refused from the list alone, before any read (P892). A deploy
-        grant with `no_simulation` (P1029) also answers a deploy with no simulation; it is refused before the board is
+        grant with `no_simulation` (P1029) also answers a deploy with no simulation. It is refused before the board is
         touched while the store disallows direct flashing. Raises GrantRefusedError, board_look.LookStopError, or
         GateClosedError when consent cannot ask. It saves nothing then."""
         if not 1 <= minutes <= MAX_MINUTES:
@@ -334,7 +334,7 @@ class GrantService:
 
     def disallow_direct_flashing(self):
         """Keep the file that disallows direct flashing (P1029), with who wrote it and when. It only narrows what a grant
-        answers, so it asks no yes. Returns its path; store.StoreError when the store refuses it."""
+        answers, so it asks no yes. Returns its path. store.StoreError when the store refuses it."""
         try:
             login = self.user_name()
         except (OSError, KeyError) as cannot:  # getpass finds no user: OSError since Python 3.13, KeyError before it

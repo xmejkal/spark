@@ -60,7 +60,7 @@ only a deploy whose look matched the board record (no warning, no unknown field,
 built-in USB port: deploy.py finds it by the MAC its own look reads. --check looks for a live grant only.
 
 grant.py --scope deploy --minutes N --no-simulation gives a deploy grant that also covers deploy.py --no-simulation:
-Claude may then put firmware that no simulation tested on the board with no yes from you (direct flashing, P1029).
+Claude can then put firmware that no simulation tested on the board with no yes from you (direct flashing, P1029).
 Without the flag, a deploy with no simulation always asks you. grant.py --disallow-direct-flashing writes the file
 grants/direct_flashing_disallowed at once, with no question. While that file is there, no grant covers a deploy with
 no simulation, and grant.py --no-simulation refuses with direct_flashing_disallowed, exit 1. To allow it again, delete

@@ -320,8 +320,8 @@ the `firmware = ` line of sim/wokwi.toml>`. Then look.py and deploy.py both need
 --no-simulation. deploy.py refuses when firmware/main.py is missing, a .py file under firmware/ does not compile (or kills
 the compiler, or takes over 30 s), a run in
 sim/runs/ failed on this image, or the image is not firmware/ as it is now. It does not run the firmware, so a
-firmware that fails on the board shows only after the flash. The question starts with "%s", only a typed yes
-answers it (a deploy grant never does), and the spark.json, the board log, the store record and the --json data say
+firmware that fails on the board shows only after the flash. The question starts with "%s". A typed yes
+answers it, or a deploy grant given with --no-simulation (P1029). The spark.json, the board log, the store record and the --json data say
 `simulation: none`. It cannot be given with --ignore-older-runs.
 
 It erases the board's flash first. If the erase stops with esptool's exit 2,
@@ -349,8 +349,9 @@ stops at the erase's yes, and the line to run in your own terminal asks the boar
 
 The one other yes is a deploy grant: you ran `grant.py --scope deploy --minutes N` once in your own terminal, for this
 board's MAC. While it lasts, deploy.py takes it as the yes, prints `yes: standing yes typed by ...` and erases with no
-question, but only when the look matched the board record (no warning, no unknown field, no stop) and neither
---ignore-older-runs nor --no-simulation is given. Then the token and the check that the image did not change still hold.
+question, but only when the look matched the board record (no warning, no unknown field, no stop) and
+--ignore-older-runs is not given. --no-simulation needs a grant given with --no-simulation, and no grant answers it
+while the file grants/direct_flashing_disallowed is in your store (P1029). Then the token and the check that the image did not change still hold.
 For anything else, or with no grant or an ended one, deploy.py asks in the terminal as above and says why it did not use
 the grant. The grant covers any passed image of any project on that board. The store's record names whose yes it was.
 
