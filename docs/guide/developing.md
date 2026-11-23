@@ -217,8 +217,8 @@ A refusal: the gate's rules run on the board as `gh` printed it at the migration
     #15 R2.6 — A fourth cold test: waits on the PO since nobody knows — set Waiting since
 ```
 
-The other refusals read the same way, one line each, as the suite expects them: `Build (spark) holds 4 (#1, #2, #3, #4) — its
-limit is 3: finish one before starting another`, `In flight (spark) holds 6 (#1, #2, #3, #4, #5, bin #19) — its limit is 5: the
+The other refusals read the same way, one line each, as the suite expects them: `Build (spark) holds 6 (#1, #2, #3, #4, #5, #6) — its
+limit is 5: finish one before starting another`, `In flight (spark) holds 8 (#1, #2, #3, #4, #5, #6, #7, bin #19) — its limit is 7: the
 spark lane finishes one before starting another`, `2 cards labelled expedite (#1, #2) — one at a time, on the PO's word`,
 and for a card with no slice `#8 P8 — x: on no slice of the story map`. With no `gh` login:
 

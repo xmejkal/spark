@@ -82,9 +82,9 @@ cannot see that" is dropping the test.
 
 ## W6 — Finish before starting
 
-The board's limits are the rule. Discovery, Design and Review each hold two cards, counted across both lanes. Ready, Build and the cards in flight are held per lane, by the card's slice (P730, the PO, 2026-11-09, and
-P918, the PO, 2026-11-18: "A flight total per lane"). The spark lane takes four in Ready, three in Build and five in
-flight (P978, the PO, 2026-11-21). The sound lane, the slices "pixel-games" and "graphics library", takes one in Ready, one in Build and two in
+The board's limits are the rule. Discovery and Design each hold two cards and Review holds three (P1037, the PO, 2026-11-23), counted across both lanes. Ready, Build and the cards in flight are held per lane, by the card's slice (P730, the PO, 2026-11-09, and
+P918, the PO, 2026-11-18: "A flight total per lane"). The spark lane takes four in Ready, five in Build and seven in
+flight (P1037, the PO, 2026-11-23: "Build 5, flight 7, Review 3"; P978, 2026-11-21, had Build 3 and flight 5). The sound lane, the slices "pixel-games" and "graphics library", takes one in Ready, one in Build and two in
 flight. A card with no slice is spark's. In flight means in Discovery, Design, Build or Review. An epic counts in no
 stage, and its stories carry the limit (R9, the PO, 2026-10-18: WIP experiment A, broad form. The PO made it standing
 on 2026-11-05: "Epics do not count"); a plan's task rides on its open story, and a task with no open parent story
