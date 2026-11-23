@@ -55,5 +55,7 @@ The ids are the risks lens's (council/risks-and-assumptions.md:64-75). Every pas
 with its pointer), the pass line met or missed, what it changes. -->
 | date | source and pointer | what was seen | pass line met or missed | what it changes |
 | --- | --- | --- | --- | --- |
+| 2026-11-23 | the PO's answer to Q13 (D6, brief.md) | "No such moment": no moment in 30 days when Claude Code stood in his way for a spark step | A1, arm 1, for the other-harness and local-model directions: missed (no dated occasion) | those directions get no spike from arm 1. Arm 2 (Q18) is still open for them |
+| 2026-11-23 | the PO's answer to Q14 (D7, brief.md) | "The chat with Claude": after the clock first worked, the chat told him where the gadget stood, and he did not open the page or `flow.py` again | A1, arm 1, for the line's end: not met as written, because he named no step that failed him. The chat carried what the flow did not | ★C20's reading "the gadget's later work went on outside spark's flow" gains support: the flow had nothing he used after the deploy. Whether that is a need is his to judge (Q14b, Q18) |
 
 <!-- EXTEND:risks-sections -->
