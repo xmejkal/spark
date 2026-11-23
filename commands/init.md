@@ -56,7 +56,7 @@ file that is not a JSON object, or a brief that cannot be read is refused: exit 
 When git holds `.spark/project.json` as it is, with no other change, and HEAD is on a branch, a write that changes the
 brief is one commit of that file alone, `spark: <fields> in .spark/project.json`
 ([P1027](https://github.com/xmejkal/spark/issues/1506), slice 2). The next line says `committed as <sha>. To go back,
-run in this project: git revert --no-edit <sha>`. Go back newest first. Else the brief is written as before, exit 0,
+run in this project: git revert --no-edit <sha> (the newest change first)`. Go back one commit at a time, newest first. Else the brief is written as before, exit 0,
 and the line says why there is no commit: git does not hold the brief here (no git, no repository, no commit yet, or an
 untracked brief), the brief has changes of the person's that are not in git yet, git is not on a branch (a detached
 HEAD or a rebase that stopped), or the commit failed, with git's first line. The person's git hooks run. A pre-commit

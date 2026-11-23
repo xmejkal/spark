@@ -73,8 +73,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    - If they keep it, run the review (`--needs-set` with `[]`).
    - If they change it, show the old must list and the new one, then ask for their yes. Before the write, say the old
      must list in the chat, so that it is in the conversation even without git. On the yes, write the whole `must` list
-     to the answers file and run `init_project.py --answers <file>`, the brief step. Tell the person the commit and the
-     way back that it prints. Then run the review.
+     to the answers file and run `init_project.py --answers <file>`, the brief step. Quote its `committed as …` or
+     `not committed: …` line to the person, as it prints it: it names the commit and the way back. Then run the review.
    - When the person says "undo that", offer to run `git revert --no-edit <sha>` in the project folder, and run it only
      after their yes. Spark's own code never runs it. Go back newest first: a revert of an older brief commit after a
      later one conflicts. A revert changes the must lines, so the needs phase then says that the must lines changed: go
@@ -84,6 +84,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    - Without git, the brief step says that git cannot take the change back. Put the old lines back on the person's word
      with `init_project.py --answers`.
    - If the person says nothing, write nothing.
+   - Claude's permission prompt for git revert is expected; do not widen allowed-tools.
 
 ## M — what the store offers for each need
 

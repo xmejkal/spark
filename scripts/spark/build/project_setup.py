@@ -379,7 +379,7 @@ def answers_in(answers_path, brief_path):
 #: The brief from the project's folder, as git and the commit message name it (P1027, slice 2).
 BRIEF_FILE = ".spark/project.json"
 #: The line after a brief write: its commit and the way back, or why there is no commit (`project_commit`'s reasons).
-COMMITTED = "committed as %s. To go back, run in this project: git revert --no-edit %s"
+COMMITTED = "committed as %s. To go back, run in this project: git revert --no-edit %s (the newest change first)"
 NOT_COMMITTED = {
     project_commit.UNHELD: ("not committed: git does not hold .spark/project.json here, so git cannot take this change back. "
                             "Ask Claude, and Claude puts the old lines back"),

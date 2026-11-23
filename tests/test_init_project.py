@@ -820,7 +820,7 @@ class TheBriefAnswersTest(unittest.TestCase):
 
 
 #: The lines of a brief write in git (P1027, slice 2), as the card names them: literals, not the code's own.
-COMMITTED = "  committed as %s. To go back, run in this project: git revert --no-edit %s\n"
+COMMITTED = "  committed as %s. To go back, run in this project: git revert --no-edit %s (the newest change first)\n"
 UNHELD_LINE = ("  not committed: git does not hold .spark/project.json here, so git cannot take this change back. Ask Claude, "
                "and Claude puts the old lines back\n")
 UNCOMMITTED_LINE = ("  not committed: .spark/project.json has changes of yours that are not in git yet. Commit them first, and "

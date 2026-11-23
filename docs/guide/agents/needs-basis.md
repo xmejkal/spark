@@ -19,11 +19,12 @@ keeps the phase `ok` and adds one line: `spark cannot tell whether the needs fit
 
 The record also notes the ids of the needs (`needs`, slice 2 of P1027). A review notes the needs as they are. A write
 that defines a need notes its needs and keeps the noted ids it lacks, so only a review clears a drop. A noted need that
-`.spark/needs.json` no longer holds is a dropped need, and the idea phase is then `stale`. Its `says` holds `Tell Claude
-your goal in the chat`, `needs dropped after the must lines were last gone through: <ids>` and `Claude asks you about
+`.spark/needs.json` no longer holds is a dropped need, and the idea phase is then `stale`. Its `says` holds `needs
+dropped after the must lines were last gone through: <ids>` and `Claude asks you about
 each must line a dropped need served, and on your yes changes it in the brief: git keeps each change, so it can be taken
 back. If the must lines still hold, Claude runs the review: parts.py --needs-set with []`. The guide's NOW is the idea,
 by you, and `next` is the brief step, `init_project` with `needs_yes: true` ([the next step](flow.md#the-next-step)).
+Until the review runs, `next` stays the brief step, even after the brief step ran.
 
 A record of slice 1, with no `needs` key, names no drop until the next review. A `needs` value that is no list of ids
 makes the record unreadable, as above. A needs file that cannot be read leaves the idea phase as it was: the needs phase
@@ -34,5 +35,5 @@ says why.
 The brief step names `<answers.json>`: Claude writes the must lines the person agreed to in that file, outside any
 repository, and runs the step only after their yes. When git holds `.spark/project.json` as it is, on a branch, the write
 is one commit of that file alone, and the step prints `committed as <sha>. To go back, run in this project: git revert
---no-edit <sha>`. Go back newest first. Else the brief is written as before and one line says why there is no commit
+--no-edit <sha> (the newest change first)`. Go back one commit at a time, newest first. Else the brief is written as before and one line says why there is no commit
 ([init](../../../commands/init.md)). Then Claude runs the review.

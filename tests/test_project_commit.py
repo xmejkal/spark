@@ -29,7 +29,9 @@ OLD, NEW = '{"must": ["a", "b"]}\n', '{"must": ["a"]}\n'
 
 
 def isolated_env():
-    """The environment every test runs in: no GIT_* variable but an empty global config, and an empty HOME."""
+    """The environment every test runs in: an empty HOME and XDG_CONFIG_HOME, an empty global config and no system config.
+    ProjectCommit drops every GIT_* variable but GIT_CONFIG_GLOBAL and GIT_CONFIG_NOSYSTEM, which only say where git reads
+    its config, so these two reach its git too: no machine's identity answers for a test."""
     empty = Path(tempfile.mkdtemp())
     (empty / "gitconfig").write_text("")
     return {"HOME": str(empty), "XDG_CONFIG_HOME": str(empty / "xdg"), "GIT_CONFIG_GLOBAL": str(empty / "gitconfig"),
@@ -204,6 +206,39 @@ class ARefusedCommitTest(Isolated):
         self.assertLess(time.monotonic() - began, 5)
         self.assertFalse((root / ".git" / "index.lock").exists(), "a killed git leaves index.lock behind")
 
+    def test_a_hook_that_ignores_sigterm_ends_in_bounded_time_and_leaves_no_lock(self):
+        root, hooks = a_repository()
+        with_brief(root)
+        a_hook(hooks, "trap '' TERM\nsleep 30")
+        (root / BRIEF).write_text(NEW)
+        began = time.monotonic()
+        said = ProjectCommit(root, timeout=1).commit(BRIEF, "spark: must")
+        self.assertEqual(said, (None, UNFINISHED))
+        self.assertLess(time.monotonic() - began, 10)
+        self.assertFalse((root / ".git" / "index.lock").exists(), "a killed git leaves index.lock behind")
+
+    def test_a_slow_post_commit_hook_still_reports_the_commit_it_made(self):
+        root, hooks = a_repository()
+        with_brief(root)
+        hook = hooks / "post-commit"
+        hook.write_text("#!/bin/sh\nsleep 10\n")
+        hook.chmod(0o755)
+        (root / BRIEF).write_text(NEW)
+        began = time.monotonic()
+        sha, said = ProjectCommit(root, timeout=1).commit(BRIEF, "spark: must")
+        self.assertLess(time.monotonic() - began, 10)
+        self.assertEqual((sha, said), (git(root, "rev-parse", "--short", "HEAD"), None))
+        self.assertEqual(git(root, "show", "--name-only", "--format=", sha), BRIEF)
+
+    def test_a_refusal_with_no_new_commit_is_no_commit_even_when_the_last_commit_holds_the_brief_alone(self):
+        root, hooks = a_repository()
+        with_brief(root)
+        (root / BRIEF).write_text(NEW)
+        git(root, "commit", "-q", "-am", "the brief again")  # HEAD holds the brief alone, but it was there before
+        (root / BRIEF).write_text(OLD)
+        a_hook(hooks, "exit 1")
+        self.assertEqual(ProjectCommit(root).commit(BRIEF, "spark: must"), (None, "git exited with 1"))
+
     def test_no_identity_is_refused_and_never_guessed(self):
         root, _ = a_repository(identity=False)
         with_brief(root, commit=False)
@@ -215,6 +250,18 @@ class ARefusedCommitTest(Isolated):
             sha, said = ProjectCommit(root).commit(BRIEF, "spark: must")
         self.assertEqual((sha, said), (None, "Author identity unknown"))
         self.assertEqual(git(root, "rev-parse", "HEAD"), head)
+
+
+class TheConfigItReadsTest(Isolated):
+    def test_the_global_config_the_caller_names_reaches_git(self):
+        root, _ = a_repository(identity=False)
+        with_brief(root, commit=False)
+        git(root, "add", BRIEF)
+        git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "the brief")
+        Path(os.environ["GIT_CONFIG_GLOBAL"]).write_text("[user]\n\temail = t@t\n\tname = t\n")
+        (root / BRIEF).write_text(NEW)
+        sha, said = ProjectCommit(root).commit(BRIEF, "spark: must")
+        self.assertEqual((said, git(root, "log", "-1", "--format=%ae")), (None, "t@t"))
 
 
 class TheHooksGitDirTest(Isolated):

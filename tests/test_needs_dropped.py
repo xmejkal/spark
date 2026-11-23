@@ -167,18 +167,23 @@ class ADroppedNeedTest(WithNeedsInGit):
         said, code = show(project)
         idea = phase_of(said, "idea")
         self.assertEqual((code, idea["status"], idea["mark"], idea["by"]), (0, "stale", "↻", "you"))
-        self.assertEqual(idea["says"], [IDEA_LINE, DROPPED_LINE % "wifi", MUST_ASK])
+        self.assertEqual(idea["says"], [DROPPED_LINE % "wifi", MUST_ASK])
         self.assertEqual(phase_of(said, "needs")["status"], "ok")
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "idea", "by": ["you"], "says": IDEA_STALE_NOW, "offer": None,
                                                         "needs": [], "steps": None})
         self.assertEqual(said["next"], [self.brief_step(project)])
         self.assertTrue(now_line(project).endswith(" [next: init_project]"), now_line(project))
 
+    def test_an_out_of_date_idea_does_not_ask_for_the_goal_that_is_set(self):
+        project = self.reviewed_project()
+        drop(project, "wifi")
+        self.assertNotIn(IDEA_LINE, phase_of(show(project)[0], "idea")["says"])
+
     def test_two_dropped_needs_are_named_in_order(self):
         project = self.reviewed_project()
         drop(project, "wifi")
         drop(project, "button")
-        self.assertEqual(phase_of(show(project)[0], "idea")["says"][1], DROPPED_LINE % "button, wifi")
+        self.assertEqual(phase_of(show(project)[0], "idea")["says"][0], DROPPED_LINE % "button, wifi")
 
     def test_a_review_right_after_the_drop_clears_the_idea_and_a_defining_write_does_not(self):
         project = self.reviewed_project()
@@ -237,7 +242,7 @@ class TheBriefStepTest(WithNeedsInGit):
         argv = [str(answers) if each == ANSWERS_PLACEHOLDER else each for each in step["argv"]]
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(init_project.main(argv), 0)
-        sha = re.search(r"committed as ([0-9a-f]+)\. To go back, run in this project: git revert --no-edit \1", out.getvalue())
+        sha = re.search(r"committed as ([0-9a-f]+)\. To go back, run in this project: git revert --no-edit \1 \(the newest change first\)", out.getvalue())
         self.assertIsNotNone(sha, out.getvalue())
         self.assertEqual(phase_of(show(project)[0], "needs")["status"], "stale")  # slice 1: the must lines changed
         needs_set(project, [])

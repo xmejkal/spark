@@ -138,7 +138,7 @@ class IdeaReader(PhaseReader):
         except (store.StoreError, OSError, RecursionError):
             ids = []
         if ids:
-            return self.phase(flow_codes.STALE, [flow_codes.IDEA_MESSAGE, flow_codes.NEEDS_DROPPED_MESSAGE % ", ".join(ids),
+            return self.phase(flow_codes.STALE, [flow_codes.NEEDS_DROPPED_MESSAGE % ", ".join(ids),
                                                  flow_codes.MUST_ASK_MESSAGE])
         return self.phase(None, [flow_codes.IDEA_MESSAGE])
 
