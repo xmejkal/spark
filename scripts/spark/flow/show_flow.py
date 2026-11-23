@@ -1,7 +1,7 @@
 """
 Where a project stands as an Operation on the core (P825, #1183): each phase's reader in order, one line per phase, the
-first phase still open, and the offers each phase holds. It reads and never writes. `flow.py show` is its CLI; the page
-(P827) and the requests (P829) read the same answer.
+offers each phase holds, the guide (P977) and its now offer's step (P1030). It reads and never writes. `flow.py show` is
+its CLI; the page (P827) and the requests (P829) read the same phases.
 """
 
 from pathlib import Path
@@ -12,14 +12,16 @@ from spark.flow.guide import guide_of, stands_at_of
 from spark.flow.phase_readers import MARKS, READERS
 from spark.records import store
 from spark.core.operation import COMMON_ARGUMENTS, READS, Operation
-from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
+from spark.core.outcomes import COULD_NOT_RUN, PROBLEMS
 from spark.core.privacy import Privacy
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
 
 # --- MVP ---
-#: The last line: the first phase still open. The deploy is never done here, so a project always has one.
-STANDS_AT_LINE = "  stands at: %s"
+#: One line of the guide, after the phases (P1030): its label, as the page writes it, and its items, comma apart.
+GUIDE_LINE = "  %s: %s"
+#: The NOW line's end: the key of the now offer, whose step `next` holds.
+NOW_KEY = " [%s]"
 #: How many offer keys a person's line shows; the rest are counted. The JSON holds them all.
 OFFERS_SHOWN = 5
 #: The Finding of a phase that holds problems or could not run: its first sentence, and where to look.
@@ -41,6 +43,25 @@ def phase_line(phase):
     more = ["+%d more" % (len(keys) - OFFERS_SHOWN)] if len(keys) > OFFERS_SHOWN else []
     lines += ["      offers: %s" % ", ".join(keys[:OFFERS_SHOWN] + more)] if keys else []
     return [printable(line) for line in lines]
+
+
+def guide_lines(guide):
+    """The guide as a person reads it, in the page's words and order (P1030): NOW with the key of its offer, DONE, LATER,
+    why there is no simulation, SET ASIDE. A list with no item draws no line, as on the page."""
+    now = guide["now"]
+    lines = [GUIDE_LINE % (flow_codes.GUIDE_NOW % now["phase"], now["says"] + (NOW_KEY % now["offer"] if now["offer"] else ""))] if now else []
+    lines += [GUIDE_LINE % (flow_codes.GUIDE_DONE, ", ".join(guide["done"]))] if guide["done"] else []
+    lines += [GUIDE_LINE % (flow_codes.GUIDE_LATER, ", ".join(guide["later"]))] if guide["later"] else []
+    lines += ["  " + guide["no_simulation"]] if guide["no_simulation"] else []
+    lines += [GUIDE_LINE % (flow_codes.GUIDE_SET_ASIDE, ", ".join(guide["set_aside"]))] if guide["set_aside"] else []
+    return [printable(line) for line in lines]
+
+
+def now_steps(phases, guide):
+    """The `next` of `show`: the step of the offer the guide's now names, else none (P1030). A phase with no offer has no
+    step yet (piece 2), so an empty `next` means: read data.guide.now."""
+    key = guide["now"]["offer"] if guide["now"] else None
+    return [offer.step for phase in phases for offer in phase.offers if offer.key == key]
 
 
 def phases_of(project, readers=None):
@@ -65,9 +86,9 @@ class ShowFlow(Operation):
     """
     Operation: where a project stands. It asks each PhaseReader in order and answers `data.phases` (each Phase as a dict),
     `data.stands_at`, the guide's now phase (`stands_at_of`, P1030), `data.fingerprint` (`fingerprint_of`, P829) and
-    `data.guide` (`guide_of`, P977). A phase that holds problems or could not run
-    adds one Finding of that status, so the exit says so; every phase still answers. `readers` are the PhaseReaders a test
-    swaps (None: `READERS`).
+    `data.guide` (`guide_of`, P977). Its lines end with the guide's, and `next` holds the now offer's step (P1030). A phase
+    that holds problems or could not run adds one Finding of that status, so the exit says so; every phase still answers.
+    `readers` are the PhaseReaders a test swaps (None: `READERS`).
     """
 
     name = "show-flow"
@@ -87,8 +108,8 @@ class ShowFlow(Operation):
                             PHASE_SENTENCE % (phase.phase, phase.says[0]), PHASE_FIX)
                     for phase in phases if phase.status in (PROBLEMS, COULD_NOT_RUN)]
         lines = [line for phase in phases for line in phase_line(phase)]
-        lines += [STANDS_AT_LINE % stands_at] if stands_at else []
+        lines += guide_lines(guide)
         data = {"phases": [phase.to_dict() for phase in phases], "stands_at": stands_at, "fingerprint": fingerprint_of(project, phases),
                 "guide": guide}
-        return OperationResult(data, findings, lines=lines)
+        return OperationResult(data, findings, now_steps(phases, guide), lines=lines)
 # --- end MVP ---

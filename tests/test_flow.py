@@ -510,7 +510,7 @@ class TheCommandTest(FlowTest):
             code = flow.main(["--project", str(project)])
         self.assertEqual(code, 0)
         self.assertIn("needs: not started", out.getvalue())
-        self.assertIn("stands at: idea", out.getvalue())  # P1030: the guide's now (step 5 prints the guide in its place)
+        self.assertIn("NOW (idea)", out.getvalue())  # P1030: the guide's lines, in place of the stands-at line
 
     def test_the_lines_leave_ok_to_the_mark_and_show_five_offer_keys_and_how_many_more(self):
         project = with_needs(a_built_project(), [
@@ -1404,6 +1404,39 @@ class TheOfferStepTest(FlowTest):
                          ("breadboard", None, ["build"]))
         write_page(project, store=FlowPageStore())
         self.assertIn("<p><strong>NOW (breadboard)</strong> ", (project / "page.html").read_text(encoding="utf-8"))
+
+    def a_hand_written_project(self):
+        project = Path(tempfile.mkdtemp()) / "bl"
+        shutil.copytree(ROOT / "tests" / "data" / "breadboard" / "button-light", project)
+        return project
+
+    def test_show_s_next_holds_the_now_offer_s_step_raw_while_data_is_masked(self):
+        project = self.a_hand_written_project()
+        said, _ = show(project)
+        self.assertEqual((said["data"]["stands_at"], said["data"]["guide"]["now"]["offer"]), ("build", "build"))
+        self.assertEqual(said["next"], [{"op": "build-board", "argv": [str(project.absolute() / "requirements.json"), "--keep", str(project.absolute())],
+                                         "why": "Build the board", "effects": ["reads", "runs", "writes"], "needs_yes": False,
+                                         "env": {"SPARK_HOME": str(self.home.resolve())}}])
+        self.assertNotIn(str(project), json.dumps(said["data"]))
+
+    def test_show_s_next_is_empty_when_the_now_phase_has_no_offer(self):
+        empty = Path(tempfile.mkdtemp()) / "plant-alarm"
+        empty.mkdir()
+        said, _ = show(empty)
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"]), ("idea", []))
+
+    def test_show_s_text_ends_with_the_guide_s_lines_and_no_stands_at_line(self):
+        lines = lines_of(self.a_hand_written_project())
+        self.assertEqual(lines[-3:], ["  NOW (build): Ask Claude in the chat to build the board. It takes seconds and costs nothing. [build]",
+                                      "  DONE: idea, requirements (no needs or picks behind it)",
+                                      "  LATER: breadboard, firmware, simulate, deploy"])
+        self.assertFalse([line for line in lines if "stands at" in line])
+
+    def test_show_s_text_says_why_there_is_no_simulation_and_what_is_set_aside(self):
+        project = a_project_built_with_no_simulation()
+        with_needs(project, [{"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True}])
+        lines = lines_of(project)
+        self.assertEqual(lines[-2:], ["  " + NO_MODEL, "  SET ASIDE: soil"])  # the page's order
 
     def test_the_offers_in_data_keep_their_four_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))
