@@ -42,10 +42,11 @@ free + rail. Mark it 3V3`, and each other end gets its own jumper to `the 3V3 ra
 join board 3V3 to a + rail and the other ends to that rail`. The drawing puts a mark on the rail of its sign, on the side
 of the board that holds most of its ends (on a tie, its first end's side), and a second mark of that sign on the other
 side (`spark/breadboard/rails.py`). Three marks of one sign and a rail with no sign (a signal point with more ends than
-a row holds) are `not_drawn_yet`. A resistor leg on a rail goes in a free row close to its other end. Its step says the
-jumper from that row to the rail. Its holes give the leg's hole, then the jumper's two holes, `d39, then from a39 to
-top + rail, hole 32` (P960). A resistor covers the holes between its legs, so no other leg or jumper lands under its
-body. Each rail jumper takes the free rail hole nearest its end that no part's body covers, and the step names it
+a row holds) are `not_drawn_yet`. A resistor leg on a rail goes in a free row close to the row of its other end. Its
+step says the jumper from that row to the rail. Its holes give the leg's hole, then the jumper's two holes, `d39, then
+from a39 to top + rail, hole 32` (P960). The wiring record keeps that step as kind `rail leg`. A rebuild that adds it
+says the same words. A leg that sat in a free row before P953 stays there, and only its jumper to the rail is new. A
+resistor covers the holes between its legs, so no other leg or jumper lands under its body. Each rail jumper takes the free rail hole nearest its end that no part's body covers, and the step names it
 `bottom + rail, hole 5`. No jumper joins the top and bottom rails. A rebuild's line that marks a rail says its sign,
 `a free - rail, which you mark GND`. A record from before P953 has no sign, and its line keeps `a free rail`.
 

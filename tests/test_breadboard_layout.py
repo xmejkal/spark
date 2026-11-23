@@ -738,7 +738,7 @@ class TheRailSeatingTest(unittest.TestCase):
         with in_store():
             read = sheet._read_build(WAKE / "requirements.json")
         self.assertEqual(read.steps.numbered()[3].words, "Put R1 (10kΩ pull-up on WakeButton A), end 2, in a free row "
-                         "close to its other end, and run a jumper from that row to the 3V3 rail.")
+                         "close to the row of its other end, and run a jumper from that row to the 3V3 rail.")
         holes = drawing.StepHoles.of(layout, read.steps)
         self.assertEqual((holes.get(4), holes.get(6)), ("d39, then from a39 to top + rail, hole 32", "d33"))
         self.assertEqual(under_a_resistor(layout), [])

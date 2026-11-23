@@ -36,8 +36,8 @@ One connection per step. The board's pins take the rows beside them, so a board 
 14. Run a jumper from the row of BtnOpen B (either leg of the other pair) to the GND rail.
 15. Run a jumper from the row of JstPh2PowerInlet GND to the GND rail.
 16. Run a jumper from the row of L9110sModule GND to the GND rail.
-17. Put R1 (10kΩ pull-down on L9110sModule AIA), end 2, in a free row close to its other end, and run a jumper from that row to the GND rail.
-18. Put R2 (10kΩ pull-down on L9110sModule AIB), end 2, in a free row close to its other end, and run a jumper from that row to the GND rail.
+17. Put R1 (10kΩ pull-down on L9110sModule AIA), end 2, in a free row close to the row of its other end, and run a jumper from that row to the GND rail.
+18. Put R2 (10kΩ pull-down on L9110sModule AIB), end 2, in a free row close to the row of its other end, and run a jumper from that row to the GND rail.
 19. Run a jumper from the row of JstPh2PowerInlet VCC to a free + rail. Mark it MOTOR6V.
 20. Run a jumper from the row of L9110sModule VCC to the MOTOR6V rail.
 21. Connect the MOTOR6V supply, from off the board, to the MOTOR6V rail. Check its voltage first (Before you power it).

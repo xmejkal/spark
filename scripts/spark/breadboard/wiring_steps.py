@@ -177,11 +177,12 @@ def pill_words(seated):
 
 def move(end, destination, on_rail=False):
     """The words that bring one end to its destination: a resistor leg goes in, everything else gets a jumper. A
-    resistor leg bound for a rail goes in a free row close to its other end, and a jumper joins that row to the rail (P960)."""
+    resistor leg bound for a rail goes in a free row close to the row of its other end, and a jumper joins that row to
+    the rail (P960)."""
     if not needs_jumper(end):
         if on_rail:
-            return "Put %s, in a free row close to its other end, and run a jumper from that row to %s." % (end.words,
-                                                                                                         destination)
+            return ("Put %s, in a free row close to the row of its other end, and run a jumper from that row to %s."
+                    % (end.words, destination))
         return "Put %s, in %s." % (end.words, destination)
     if end.kind == BOARD:
         return "Run a jumper from %s to %s." % (end.words, destination)
