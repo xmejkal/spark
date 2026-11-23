@@ -2,11 +2,13 @@
 
 > Short version: spark needs no second architecture to grow past the MVP, in the opinion of the lenses and the
 > architect. The proposal is seams in the core work now (P793 #1105) and no new epic. A direction gets a first spike
-> only after the PO's own answers show a pull for it. The PO confirmed this understanding (D5). Nothing is filed.
+> only after the PO's own answers show a pull for it. The PO confirmed this understanding (D5) and then answered every
+> question of his own (D8 to D21). Only the line past the breadboard has a pull: one spike for a permanent build, on a
+> perfboard or a PCB, which spark-main files (D21).
 
 This folder is the discovery of the epic P1039 (#1522), run on 2026-11-23 at full depth. Six lenses on Opus read the
 product. The architect on Fable wrote the synthesis, and the refuter on Fable read it twice. A council of three
-answered the questions while the PO was away. The PO confirmed the understanding on 2026-11-23 (D5). Ready for: design. The skill's output test passes.
+answered the questions while the PO was away. The PO confirmed the understanding on 2026-11-23 (D5) and answered his own questions the same evening (D6 to D21). Ready for: an experiment, the permanent-build spike. The skill's output test passes.
 
 ## The picture
 
@@ -25,7 +27,7 @@ flowchart LR
     m["MCP and LangGraph, P417"]:::later
     e["one measured eval row"]:::later
     l["a local model"]:::later
-    f["the line past deploy: iterate, PCB, enclosure"]:::later
+    f["the line past the breadboard: perfboard, PCB, one spike (D21)"]
   end
   cc --> cli --> core
   core --> s
@@ -58,12 +60,18 @@ flowchart LR
 - D2 and D3, delegated to the council and the PO's to change: the ratings of the assumptions, A1 as the riskiest with
   a three-arm test, and an answer for each of Q2 to Q12 (mostly option a: seams only, no new epic, no rewrite now).
 
+- D8 to D21, the PO's own answers on the evening of 2026-11-23:
+  - His own use as a hobbyist decides a first spike, not the showcase (D8).
+  - "Software factory" is the gadget's line, made longer (D12). P934's bench run proves the MVP (D14).
+  - No trial in another harness, no eval and no local model now (D10, D15, D16). "Hermes" is the agent harness (D13).
+  - The clock and the bin needed a permanent build, "including the perfboard optional step, not just pcb" (D11).
+  - He did not know `live.py` and `grant.py` when he asked for a REPL (D17). He read none of the walk's rows (D18).
+  - The folder keeps the installed programs unnamed (D20).
+
 ## What comes next, and what is open for the PO
 
-1. Q10 and Q11, and the account questions Q13b and Q14b to Q17, and the decision Q18. The first part of Q13 and Q14 are answered (D6, D7).
-2. His parts of Q2, Q3 and Q7: which run proves v0.10, what "software factory" means, which "Hermes", and a trial on his account.
-3. Whether this public folder can name the installed harness. It names none.
-4. His yes to file anything from [items.md](items.md). Nothing is filed.
+1. spark-main files one spike under #1522: the clock or the bin from the breadboard to a perfboard (optional) and a PCB, and where spark stops (D21, [items.md](items.md)).
+2. Nothing else is open for the PO in this discovery. The other directions wait as lines under "later".
 
 ## The files
 
