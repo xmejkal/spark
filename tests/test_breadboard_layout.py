@@ -479,8 +479,8 @@ def pulled_down(read, also=None, bleeder=False):
                                                 if end.name in joined]) for point in points]
     points = [point for point in points if len(point.ends) > 1]
     if bleeder:
-        board_3v3 = wiring_steps.End(wiring_steps.BOARD, "board", "board 3V3", "board 3V3", "3V3", power_rail="logic",
-                                     label="3V3")
+        d8 = next(end for point in read.steps.points for end in point.ends if end.name == "board D8")
+        board_3v3 = d8._replace(name="board 3V3", words="board 3V3", pin="3V3", power_rail="logic", label="3V3")
         points.append(wiring_steps.StepPoint([board_3v3, resistor_end("R1", 1)], None, True))
     return wiring_steps.BreadboardSteps(read.steps.placed, points + [ground._replace(ends=ground.ends + legs)])
 

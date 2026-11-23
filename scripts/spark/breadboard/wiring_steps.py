@@ -8,7 +8,8 @@ The board and each part go into the breadboard first, each pin in its own row, b
 rows. Then each point gets an anchor (its first part pin, else its first resistor end, else a free row for its board
 pin's jumper, or a rail when it carries power or ground or its ends do not fit one row), and every other end joins the
 anchor in one step: a jumper, or a resistor leg. A rail for power is a + rail and one for ground a - rail (P953), and
-the step says so. A resistor leg bound for a rail goes in a free row, and a jumper joins that row to the rail (P960). Spark claims no row numbers and no side of the gap, because it does not know them.
+the step says so. A resistor leg bound for a rail goes in a free row, and a jumper joins that row to the rail (P960).
+Spark claims no row numbers and no side of the gap, because it does not know them.
 
 `BreadboardSteps.numbered()` numbers the steps for the step list and the diagram, and gives the data a page reads
 (P826); the drawing (`drawing.py`) and the bench changes (`bench_changes.py`) number `anchored()` themselves. A

@@ -13,7 +13,7 @@ Part of [the scripts](scripts.md). When `breadboard.py` does not write a drawing
 | `no_hole_left` | the part or the end | the part does not fit with a free hole beside each pin, or a jumper finds no free row. A module's body covers the holes under it too. Use a longer breadboard or another part |
 | `no_drawing_fact` | the part | the record has no Wokwi part and no `physical` block. The entry's `record` names it and `fix` says `research.py --part <id> --project .`, which asks for `physical.header`. Never guess it |
 | `no_wokwi_pin` | the end | research the part's `simulation.wokwi.pins`, or a board's `wokwi_pin_naming`. A step to a doubtful pad (GND1 or GND3 of the FireBeetle) finds no pin: wire the pad the sheet names |
-| `row_full`, `not_drawn_yet` | the row; the rail, the supply or the resistor | `row_full`: too many steps join one pin. Report it with the project's steps. `not_drawn_yet`: spark does not draw a rail, a supply from off the board or a resistor whose both legs join rows; `expected` is `true`. Do not retry: tell the person to wire it by hand from the sheet's steps |
+| `row_full`, `not_drawn_yet` | the row; the rail, the supply or the resistor | `row_full`: too many steps join one pin. Report it with the project's steps. `not_drawn_yet`: spark draws no unsigned rail, no third mark of one sign, no off-board supply and no resistor with both legs in rows. `expected` is `true`. Do not retry: tell the person to wire it from the sheet's steps |
 | `no_pin_position`, `planner_fault` | the Wokwi type; the hole, the part or the end | `no_pin_position`: first make sure that the record's `simulation.wokwi.pins` names pins that Wokwi has, then report it. `planner_fault`: a fault in spark's planner. Report it. Do not retry |
 | `no_wokwi_part` | none | none. It is by design, and `expected` is `true`. Do not retry. The `why` names each drawn part that Wokwi has no part for, the board or a module: `Wokwi has no part for the board and e-paper` |
 
@@ -41,10 +41,12 @@ a rail other than ground) goes on a + rail, and a point that carries ground on a
 free + rail. Mark it 3V3`, and each other end gets its own jumper to `the 3V3 rail`. The point's line ends with `— power:
 join board 3V3 to a + rail and the other ends to that rail`. The drawing puts a mark on the rail of its sign, on the side
 of the board that holds most of its ends (on a tie, its first end's side), and a second mark of that sign on the other
-side (`spark/breadboard/rails.py`). Three marks of one sign, a resistor leg on a rail, and a rail with no sign (a signal
-point with more ends than a row holds) are `not_drawn_yet`. Each rail jumper takes the free rail hole nearest its end
-that no part's body covers, and the step names it `bottom + rail, hole 5`. No jumper joins the top and bottom rails. A
-rebuild's line that marks a rail says its sign, `a free - rail, which you mark GND`; a record from before P953 has no
+side (`spark/breadboard/rails.py`). Three marks of one sign and a rail with no sign (a signal point with more ends than
+a row holds) are `not_drawn_yet`. A resistor leg on a rail goes in a free row close to its other end. Its step says the
+jumper from that row to the rail. Its holes give the leg's hole, then the jumper's two holes, `d39, then from a39 to
+top + rail, hole 32` (P960). A resistor covers the holes between its legs, so no other leg or jumper lands under its
+body. Each rail jumper takes the free rail hole nearest its end that no part's body covers, and the step names it
+`bottom + rail, hole 5`. No jumper joins the top and bottom rails. A rebuild's line that marks a rail says its sign, `a free - rail, which you mark GND`; a record from before P953 has no
 sign, and its line keeps `a free rail`.
 
 ## The pills and the wire colours
