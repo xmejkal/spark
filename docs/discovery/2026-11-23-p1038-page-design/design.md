@@ -9,7 +9,7 @@ The full council ran two rounds on this design, as the PO's rules ask for a desi
 - Round 1, on the architect's draft (5e99b392). Three lenses on Opus: architecture, UX and AI-UX, and tech lead with scope and privacy. The refuter ran last, launched on the best model (Fable). The revision cut the published record and kept the secrets file out of every list. It masked the project's secret values before the render and replaced the plugin version with a drawing version. It made the audience rule fail closed, split story 1a, added story 0c and the TypeScript route (D29).
 - The delegated council after round 1. The PO seat (Fable), the architect and the tech lead (Opus) answered Q-A to Q-G alone. The answers are delegated and the PO's to change ([delegated-answers-r1.md](council/design/delegated-answers-r1.md)).
 - Round 2, on the revision (31107da7, with main merged). Two lenses on Opus: architecture with TypeScript, and UX with AI-UX and the PO-assistant view. The refuter ran last, launched on the best model (Fable). Verdict: ready for the PO's confirmation after fixes, with no third round. The fixes: the secrets filter on shown names only, and the TypeScript drift check as a gate step. Also D10's exact words with a cause map, the steps drawn now, and the audience of the page on disk. Also the publish sentence, a paragraph on the D30 mock and the refresh's own condition in P1035 PR 2. Also one secret mask for `show`, `run-request` and the page. Also twelve points for his yes, and the walk order.
-- A last read: the refuter read the diff of the last revision. Its result is below.
+- A last read, not a round: the refuter read the diff of the last revision (31107da7 to bd9428b3). All eleven fixes landed. It found two one-sentence must-fixes: the Council line itself, and the source of Claude's closing lines in `Written`. Both are fixed here, with its smaller points R-3 to R-9 ([r2-refuter.md](council/design/r2-refuter.md), section "The last read").
 
 > **TL;DR.** One new Value, `FlowReading`, holds every fact of a project's stand. `flow.py show --json` prints it, and a pure function, `compose_page`, draws the page from it, so the two carry the same facts by construction (D22). Five parts feed it. They are the deploy reader (P1043), the brief with dated "decided" lines (D15), and a stamp over the project's files. The other two are the picture's drawing version (D17) and the project's open issues from one dated file (D19, D23). The page gets a freshness line, one NOW box, the picks per need and folded sections. Issue text shows only on a page whose audience is known as owner only. The page's script moves to TypeScript, and the compiled file stays committed (D29). Build slice 0 and slice 1, then one walk tests A1 and A9, then the PO decides again (D25).
 
@@ -110,7 +110,7 @@ flowchart TB
 
 The firmware guide documents the rule. If a project names its file otherwise, spark knows no secret of it. The page then masks nothing, and the leak count tool reports its secret rows as `could-not-run`, never as zero. The tool also lists each ignored file under `firmware/` that the rule does not match.
 
-**The filter touches shown names only.** `find_newer_files` stays whole, because the guide and the deploy decide from it. The filter runs in two places: the line that prints the newer files (`phase_readers.py:559`) and the stamp's fold. The line then reads, for example, "main.py and 1 file that holds secrets". One test covers both places.
+**The filter touches shown names only.** `find_newer_files` stays whole, because the guide and the deploy decide from it. The filter runs in two places: the line that prints the newer files (`phase_readers.py:559`) and the stamp's fold. A third place prints the names, the deploy's note (`bench/image_evidence.py:348-350`), and it is not on the page. Story 1c's plan decides whether it joins the filter. The line then reads, for example, "main.py and 1 file that holds secrets". One test covers both places.
 
 **New names** (searched in `scripts`, `tests`, `tools`, `commands` and `docs/guide` today):
 
@@ -123,17 +123,17 @@ The firmware guide documents the rule. If a project names its file otherwise, sp
 | `NamedBuild` | Value | `spark/flow/flow_reading.py` | the build's time, the picture's drawing version, the version now |
 | `DecidedLine` | Value | `spark/records/brief.py` | one decided line with its origin (`line`, `by`, `at`) |
 | `ProjectSecrets`, `is_secret_file` | Adapter, function | `spark/firmware/project_secrets.py` | the secret values, and the rule that names the file |
-| `ProjectIssues` | Value | `spark/flow/project_issues.py` | the read time, the open issues, the last failed try and a `holds` word |
+| `ProjectIssues` | Value | `spark/flow/project_issues.py` | the read time, the open issues, the last failed try and a `readout` word |
 | `ProjectIssuesStore` | Store | `spark/flow/project_issues.py` | reads and writes `.spark/issues.json` |
 | `ReadProjectIssues` | Operation, op `read-project-issues`, verb `flow.py issues` | `spark/flow/read_project_issues.py` | runs `gh`, keeps titles and labels |
 | `--audience VALUE` | argument of `flow.py page` | `write_flow_page.py` | who can read the Artifact, as `get_artifact` answers it |
 | `DRAWING_VERSION` | constant | `spark/breadboard/sheet.py` | a number that rises with each change of the step order or the pills |
 
-Words that needed care. "Issue" is a verb in the op `issue-grant` (`bench/issue_grant.py:64`), so the names say `ProjectIssues`. `drawn_from` is a field of `sheet.WriteResult` (`sheet.py:404`), so the Value is `NamedBuild`. `--read` is a flag of `parts.py`, so the flag is `--audience`. `page_of` exists twice (`VendorFinder.page_of` and a helper in `tests/test_flow_page.py:128`), so the function is `compose_page`. "State" means the page's state in `flow_codes`, and `drawer.listing()` exists, so the issues' word is `holds`. "Stamp" is the core's time text (`zone_time.py:9-11`), and `needs_basis.stamp_of` uses the word for sha256 values. `FlowStamp.newest` is a time text, so it follows the core's meaning.
+Words that needed care. "Issue" is a verb in the op `issue-grant` (`bench/issue_grant.py:64`), so the names say `ProjectIssues`. `drawn_from` is a field of `sheet.WriteResult` (`sheet.py:404`), so the Value is `NamedBuild`. `--read` is a flag of `parts.py`, so the flag is `--audience`. `page_of` exists twice (`VendorFinder.page_of` and a helper in `tests/test_flow_page.py:128`), so the function is `compose_page`. "State" means the page's state in `flow_codes`, `drawer.listing()` exists, and `holds` is a method of `needs` (`design/needs.py:473`) and of `pin_assigner.py:198`. So the issues' word is `readout`, which has no hit in `scripts`, `tests`, `tools`, `commands` or `docs/guide`. "Stamp" is the core's time text (`zone_time.py:9-11`), and `needs_basis.stamp_of` uses the word for sha256 values. `FlowStamp.newest` is a time text, so it follows the core's meaning.
 
 **The architecture test changes.** `TheFlowAreaTest.MODULES` gains each new module (`tests/test_architecture.py:718`). The op list gains `read-project-issues` (`:736`). Stories 1a-i, 1c, 1e and 1f each name their lines.
 
-**The deploy reader (P1043, D10).** It replaces the body of `DeployReader.read` and stays a PhaseReader. It takes three things from a log: the time, the image and the verdict. It never takes the port, the facts line, the console text or a tool's error text. D10's words stand exactly: a run with no read-back shows "written by the flasher, nothing read back, start not seen", with its cause and no tick. The cause has one source. The reader takes the start of spark's own sentence, before its first colon. A table in `flow_codes` maps that start to a code with its words. If the start is not in the table, the page says "cause not recorded". From P1043 on, `BoardLog` writes a reason line with the code. Two more rules go into P1043's plan, for the PO's review:
+**The deploy reader (P1043, D10).** It replaces the body of `DeployReader.read` and stays a PhaseReader. It takes four things from a log: the time, the image, the verdict and the cause below. It never takes the port, the facts line, the console text or a tool's error text. D10's words stand exactly: a run with no read-back shows "written by the flasher, nothing read back, start not seen", with its cause and no tick. The cause has one source. The reader takes the start of spark's own sentence, before its first colon. A table in `flow_codes` maps that start to a code with its words. If the start is not in the table, the page says "cause not recorded". From P1043 on, `BoardLog` writes a reason line with the code. Two more rules go into P1043's plan, for the PO's review:
 
 - Who acts first if the firmware is newer than the deployed image. Today's mapping serves the simulate phase only (`flow_codes.py:289`).
 - The deploy's facts as fields in `show --json`: `at`, `image`, `verdict` and `cause`. Claude then answers "is the new firmware on the board" from fields.
@@ -149,9 +149,9 @@ When no phase is open, `guide.now` stays `null`, and the guide gains one sentenc
 
 The secrets file's time counts through its folder's glob. Its name never shows: the "which files" fold shows each glob with its newest time. One test keeps the list true. For each file of one small fixture, it sets the file's time with `os.utime`, changes its bytes and writes the page. If the page changes and no glob or exclusion names the file, the test fails. The plan measures the test's time before the merge. The stamp covers the project's files. The fingerprint covers the store's effect through the offers (`fingerprint.py:2-5`). The fold says "spark's records of parts and boards are not in this list". The page never holds the time of its own writing.
 
-**The named build and the drawing version (D17).** The steps on the page are drawn now. Only the pictures come from the build or from the sheet's command. So the picture carries its own version. Each time `sheet.write` writes a drawing, it records `DRAWING_VERSION` in it. A test holds a hash of one fixture's steps and pill labels per version, so a PR that changes them must raise the number. `NamedBuild` holds the build's time (the record's `at`), the picture's version and the version now. If the two versions differ, the wiring section says so. If the picture holds no version, the section says that the picture is older than this check. The warning names the act that clears it: write the sheet again, then `/spark:page`. That act moves no pin. The build record gains no key, and the plugin's version is not used. The page offers no rebuild.
+**The named build and the drawing version (D17).** The steps on the page are drawn now. Only the pictures come from the build or from the sheet's command. So the picture carries its own version. Each time `sheet.write` writes a drawing, it records `DRAWING_VERSION` and the time of writing in it. A test holds a hash of one fixture's steps and pill labels per version, so a PR that changes them must raise the number. `NamedBuild` holds the build's time (the record's `at`), the picture's version and the version now. If the two versions differ, the wiring section says so. If the picture holds no version, the section says that the picture is older than this check. The warning names the act that clears it: write the sheet again, then `/spark:page`. That act moves no pin. The build record gains no key, and the plugin's version is not used. The page offers no rebuild.
 
-**The issues (D19, D23, and Q-D of the delegated council).** `ReadProjectIssues` declares `READS`, `RUNS` and `WRITES`. If `git rev-parse --show-toplevel` is not the project folder, it refuses as `could-not-run`, so it never reads a parent repository. It runs `gh issue list` with stdin closed, `GH_PROMPT_DISABLED=1`, a timeout and an explicit `--limit`. A good read writes `{"read_at", "issues": [{"number", "title", "labels"}]}`. A failed read is one `could-not-run` Finding. It keeps the old list and its `read_at` untouched and writes only `last_try: {at, code}` (Q-D, 2 of 3, delegated: this changes D23's "a failed fetch writes nothing"). `ProjectIssues.holds` is one of `not-read`, `unreadable`, `none-open` and `listed`, and `last_try` stands beside it. One table in `flow_codes` maps each failure code to its words, with one test. `last_try` is out of the stamp's newest time and out of the fingerprint. `write_page` and the follow-up call no program. The file is tracked in the project's git, so a read or a failed try changes one file there. Tests and fixtures use made-up titles. The page test guards `src=` and `href=` instead of the bare word "http".
+**The issues (D19, D23, and Q-D of the delegated council).** `ReadProjectIssues` declares `READS`, `RUNS` and `WRITES`. If `git rev-parse --show-toplevel` is not the project folder, it refuses as `could-not-run`, so it never reads a parent repository. It runs `gh issue list` with stdin closed, `GH_PROMPT_DISABLED=1`, a timeout and an explicit `--limit`. A good read writes `{"read_at", "issues": [{"number", "title", "labels"}]}`. A failed read is one `could-not-run` Finding. It keeps the old list and its `read_at` untouched and writes only `last_try: {at, code}` (Q-D, 2 of 3, delegated: this changes D23's "a failed fetch writes nothing"). `ProjectIssues.readout` is one of `not-read`, `unreadable`, `none-open` and `listed`, and `last_try` stands beside it. One table in `flow_codes` maps each failure code to its words, with one test. `last_try` is out of the stamp's newest time and out of the fingerprint. `write_page` and the follow-up call no program. The file is tracked in the project's git, so a read or a failed try changes one file there. Tests and fixtures use made-up titles. The page test guards `src=` and `href=` instead of the bare word "http".
 
 **The audience, fail closed (Q-C, 3 of 3, delegated).** `.spark/page.json` holds `artifact` and `audience`. Every writer merges its key through the store's one atomic write, and a test checks that `--artifact` keeps the audience. Every page write, the refresh's too, takes the audience from that file. The rule has three cases:
 
@@ -163,7 +163,7 @@ The owner-only word is not in the repository. Story 1f's plan reads it first, wi
 
 **The first publish.** Its order in `commands/page.md` and the how-to: `publish_files`, `flow.py page --artifact`, `declare_capabilities`, `get_artifact`, `flow.py page --audience`, a republish, and only then the link.
 
-**The page's writers.** Three callers write the page: `flow.py page`, `write_kept_page` and, after P1035 PR 2, `FlowFollowUp.refresh` in `spark/flow/now_follow_up.py`. All go through `write_page`. Its signature and its `Written` answer stay. The P1035 plan's round-2 rules stay. If `page.html` does not exist, the follow-up writes no page. After a kept build it writes no second page. Each write is atomic.
+**The page's writers.** Three callers write the page: `flow.py page`, `write_kept_page` and, after P1035 PR 2, `FlowFollowUp.refresh` in `spark/flow/now_follow_up.py`. All go through `write_page`. Its signature stays. Its `Written` answer and the op's data gain the reading (`FlowReading.to_dict()`), so Claude's closing lines at `/spark:page` have a source. `docs/guide/agents/json.md` and the contract test change with them. The P1035 plan's round-2 rules stay. If `page.html` does not exist, the follow-up writes no page. After a kept build it writes no second page. Each write is atomic.
 
 **The deploy and the page (story 0c, Q-F, 2 of 3, delegated).** Story 0c stays its own story under P793. P1035 PR 2 gives the refresh its own condition function, apart from the steps' condition. In PR 2 the function is true at status ok, with `WRITES` declared and a written project. Story 0c widens it to every status, for a run that wrote to the project. A result that holds a Finding with the code `crash` never writes a page. Story 0c changes PR 2's test "writes nothing after a run that is not ok" on purpose, and its plan says so. `deploy.py` plugs a follow-up that refreshes and adds no flow step. The dry run writes nothing.
 
@@ -200,7 +200,7 @@ The PO, 2026-11-23: "lets switch to typescript and install the lsp".
 
 - The source is `scripts/spark/flow/page_script.ts`. The compiled `page_script.js` stays committed beside it, as spark's own output. `flow_page.PAGE_SCRIPT` still reads the `.js` file, so a page write needs no compiler. A spark user installs nothing. The page from disk works as today.
 - The compile: one `tsconfig.json` in `scripts/spark/flow/`. It holds only options that TypeScript 6 and 7 both accept. It sets no `module` and no `outFile`: a file with no import compiles as a script. It sets `types: []`, `newLine: "lf"`, kept comments and no source map. Its target is ES2017 to ES2021, or it sets `useDefineForClassFields: false`. One hand-written declaration file names the Artifact runtime's parts and `module`. The repository gets no `package.json` and no `node_modules`.
-- The drift check is a gate step beside `node_refusal` in `tools/check_commit.py`. It is not a unittest. It compiles the source into a temporary folder and compares the result with the committed file. One constant pins the compiler's major and minor version (7.0). If `tsc` is missing or has another version, the gate refuses, and that is not a pass. A mutation run never sees the check, so the node tests decide each row.
+- The drift check is a gate step beside `node_refusal` in `tools/check_commit.py`. It is not a unittest. Its key is the changed files (the `.ts`, the `.js`, `tsconfig.json` and the declaration file), not the story's test modules. It always runs under `--full`. It compiles the source into a temporary folder and compares the result with the committed file. One constant pins the compiler's major and minor version (7.0). If `tsc` is missing or has another version, the gate refuses, and that is not a pass. A mutation run never sees the check, so the node tests decide each row.
 - The node tests keep loading `page_script.js`, the bytes that the page ships. Their count of 12 stays. One new test checks that the file holds no `__awaiter` and no `__generator`.
 - The 18 mutation rows keep the `.js` file as their target, so a mutation run needs no `tsc`.
 - If a story run holds the script or its tests, it needs `tsc`. Other story runs do not.
@@ -350,12 +350,12 @@ No phase open:
   NOW  Spark has no open step: the board started the current image (seen 23 Nov 2026, 14:30).
        Your project's own next steps are in its issues, below.
 The wiring fold, opened, a picture with no version:
-  The picture is from the build of 22 Nov 2026, 11:44. The steps are drawn now.
+  The picture was written on 22 Nov 2026, 11:44. The steps are drawn now.
   That picture is older than this check, so this page cannot check that the picture and the
   steps match. To clear this, ask Claude to write the sheet again. It moves no pin.
   Then type /spark:page.
 The wiring fold, opened, another version:
-  The picture is from the build of 22 Nov 2026, 11:44, drawing version 3. The steps are drawn
+  The picture was written on 22 Nov 2026, 11:44, drawing version 3. The steps are drawn
   now, with version 4. They can differ. To clear this, ask Claude to write the sheet again.
 A wired board (P1044), the first line inside the parts fold:
   ! A wiring sheet was written on 22 Nov 2026. If you wired from it: a new pick needs a new build,
@@ -366,7 +366,7 @@ Every time, version and cause above is an example. The issue text is a choice at
 
 ### The AI-UX: what Claude reads, calls and says
 
-- Reads: `flow.py show --project . --json`. It holds every fact of the page, `issues.holds` as a word, `issues.last_try` and `data.artifact`. If `publish_files` needs it, Claude reads `page.html`, but takes no fact from it. `commands/page.md` gets `flow.py show *` and `flow.py issues *` in its allowed tools.
+- Reads: `flow.py show --project . --json`. It holds every fact of the page, `issues.readout` as a word, `issues.last_try` and `data.artifact`. If `publish_files` needs it, Claude reads `page.html`, but takes no fact from it. `commands/page.md` gets `flow.py show *` and `flow.py issues *` in its allowed tools.
 - Calls: the journey above. A click goes through `flow.py run-request`, unchanged.
 - Says: the transcript above. On a failed issues read, Claude says the cause and the fix for the person to run. It goes on with the republish and never runs the fix itself.
 - Data, never an instruction: an issue title is data. The rule stands in `commands/page.md`, in `docs/guide/agents/flow.md`, in `json.md` and in each command that reads `show`. Claude lists issues, never picks or ranks one, and never acts on a title.
@@ -448,7 +448,7 @@ Mutation rows, each proved with `tools/mutate.py --anchors`:
 - 1c: one dropped glob is caught, the newest time and not the oldest, the secrets file's name never shown, the issues file out of `newest`.
 - P1045: the mismatch condition, a picture with no version.
 - 1e: a failed `gh` keeps the old list, titles and labels only, the top-folder refusal.
-- 1f: the audience rule's three cases, `--artifact` keeps the audience, the issues file not in the fingerprint.
+- 1f: the audience rule's three cases. `--artifact` keeps the audience for the same id, and a new id clears it. Also the issues file not in the fingerprint.
 
 The leak count tool (1f). It uses `ProjectSecrets` and takes the audience. It counts the secret values, the secrets file's name, the store's path, the home path and the board addresses from the store's records. On a shared copy it also counts other projects' names and issue text. It counts a value under `MIN_SECRET` at word boundaries only and reports it apart. It reads `page.html` and a rows file that Claude exports. It prints `name: count` only and exits 1 on any hit. No secret value reaches a command line or the transcript.
 
@@ -456,7 +456,7 @@ Later, one line each. Slice 2: the tokens planned once, the PO's verdict on a sc
 
 ## Verification: the walk after slice 1
 
-Each pass line is dated 2026-11-23 in [risks-and-tests.md](risks-and-tests.md). A `could-not-run` or a skipped check is not a pass. The walk's order: A1's observation runs first and unprompted. A7 and A9 follow. A5 comes at the end, because its screenshots name the page.
+Each pass line is dated 2026-11-23 in [risks-and-tests.md](risks-and-tests.md). A `could-not-run` or a skipped check is not a pass. The walk's order: A1's observation runs first and unprompted. The how-to's fresh session comes after it, because it names the page. A7 and A9 follow. A5 comes at the end, because its screenshots name the page.
 
 | Id | Pass line (set 2026-11-23) | How the walk tests it |
 | --- | --- | --- |
@@ -507,6 +507,7 @@ At his yes to the design, Claude reads him these points:
 10. The TypeScript chore sits before 1a-ii. Moving it after the walk is his choice.
 11. `.spark/issues.json` is tracked in his project's git, so each `/spark:page` changes a file there.
 12. The T-9 recount: A2 meets its line on another grouping.
+13. The architect's pick "no Artifact id means owner only" narrows Q-C: the first published copy holds issue text, and it rests on "a first publish starts private" (`commands/page.md:36`).
 
 ## Decisions that still matter
 

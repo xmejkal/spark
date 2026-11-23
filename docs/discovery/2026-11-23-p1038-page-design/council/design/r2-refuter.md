@@ -53,3 +53,7 @@ Verdict: ready for the PO's confirmation after fixes, with no third round. The s
 Then one refuter read of the diff, a check and not a round. The rest goes to the stories' plans as rows.
 
 Not checked: the Artifact server (get_artifact's owner-only word, an owner-read database path, whether `publish_files` needs a read), a strict compile with real types, TypeScript 6, and `gh issue list` in a nested folder.
+
+## The last read
+
+2026-11-23, about 19:15 CET. The same refuter read the diff of the last revision (31107da7 to bd9428b3), a check and not a round. All eleven items landed. Two must-fixes: R-1, the Council line promised a result that was not there, and R-2, Claude's closing lines had no source in `Written` (write_flow_page.py:44, :182). Smaller points: R-3, the pick "no Artifact id means owner only" narrows Q-C and goes on the PO's list, and a new id clears the audience. R-4, `holds` clashes (design/needs.py:473, pin_assigner.py:198). R-5, the drift check's key is the changed files, and it runs under `--full`. R-6, the picture says "written on", with the time recorded at `sheet.write`. R-7, the how-to's fresh session comes after A1. R-8, the deploy's note (bench/image_evidence.py:348-350) is for 1c's plan. R-9, four things from a log. The main session fixed all nine in design.md. Verdict: ready to leave draft once R-1 and R-2 land.
