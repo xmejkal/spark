@@ -15,7 +15,7 @@ from spark.breadboard import sheet
 from spark.design import need_requirements, needs, needs_basis
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
-from spark.flow import flow_codes, offer_steps
+from spark.flow import deploy_reading, flow_codes, offer_steps
 from spark.records import record_kind, records_codes, store
 from spark.records.brief import Brief
 from spark.core.errors import CodedMessageError
@@ -561,12 +561,18 @@ class SimulateReader(PhaseReader):
 
 
 class DeployReader(PhaseReader):
-    """Strategy: the deploy is done in the person's terminal, after Claude looked at the board, so it is not started here."""
+    """Strategy: the deploy is done in the person's terminal, after Claude looked at the board. It reads the newest board
+    log in sim/runs/board/ (P1043, `deploy_reading`): its time, image, verdict and cause, never its port, facts line,
+    console or a tool's text. With no log it is not started. Only ready seen on the image the project holds now is ok; a
+    log that cannot be read is could-not-run."""
 
     PHASE, BY = flow_codes.DEPLOY, flow_codes.BY_TERMINAL
 
     def read(self, project):
-        return self.phase(flow_codes.NOT_STARTED, [flow_codes.LOOK_FIRST_MESSAGE, flow_codes.DEPLOY_HINT])
+        count, logged, fact, status = deploy_reading.deploy_state(project)
+        if logged is None:
+            return self.phase(flow_codes.NOT_STARTED, [flow_codes.LOOK_FIRST_MESSAGE, flow_codes.DEPLOY_HINT])
+        return self.phase(status, deploy_reading.deployed_says(count, logged, fact))
 
 
 #: The readers of the nine phases, in the order of `flow_codes.PHASES`.

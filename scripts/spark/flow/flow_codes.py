@@ -72,6 +72,39 @@ NO_SIM_MESSAGE = "No simulation files yet (sim/wokwi.toml). Ask Claude to build 
 NO_IMAGE_MESSAGE = "No firmware image yet. The scenario run makes one. To skip the simulation, ask Claude to deploy firmware/ untested."
 IMAGE_UNTESTED_MESSAGE = "No run tested this image yet. To skip the simulation, ask Claude to deploy firmware/ untested."
 DEPLOY_HINT = "Claude then gives you the deploy line. Run it in your terminal and type yes, unless you gave Claude a standing yes for this board."
+#: The deploy phase after a deploy (P1043): what the newest board log in sim/runs/board/ says. Its time as written, the
+#: image's first 12 hex digits, and the words of its verdict; then its cause, and last how many logs there are.
+DEPLOYED_MESSAGE = "Last deploy %s, image %s: %s."
+DEPLOYS_LOGGED = ("%d deploy logged.", "%d deploys logged.")
+#: The words of a verdict: ready seen and ready not seen read the files back; ready unknown by its cause's read-back.
+#: NO_READ_BACK_WORDS are brief D10's words, exactly (the PO, 2026-11-23).
+SEEN_WORDS = "written by the flasher, files read back, ready seen"
+NOT_SEEN_WORDS = "written by the flasher, files read back, ready not seen"
+NO_READ_BACK_WORDS = "written by the flasher, nothing read back, start not seen"
+READ_BACK_WORDS = "written by the flasher, files read back, start not seen"
+LOST_WORDS = "written by the flasher, files read back, ready printed, then the board was lost"
+UNSURE_WORDS = "written by the flasher, start not seen"
+CAUSE_MESSAGE, NO_CAUSE_MESSAGE = "Cause in the log: %s.", "Cause not recorded."
+#: The cause of a deploy that did not see ready, by its code in the board log's reason line (the bench's board_codes,
+#: as equal literals: this module imports nothing of spark): spark's words for it, and whether spark read the board's
+#: files back (True, False, or None: the log cannot tell). A code not here reads as not recorded.
+CAUSE_WORDS = {"files_unread": ("spark did not reach the board to read its files", False),
+               "firmware_not_started": ("the command that starts the firmware failed", True),
+               "no_files_named": ("the passed run's log names no files, so spark had none to read back", False),
+               "board_lost": ("firmware/ calls no deepsleep, so spark does not count the ready", True),
+               "port_gone": ("the board's port was gone", None),
+               "download_mode_stayed": ("the board stayed in download mode", None),
+               "files_differ": ("the board's files are not the image's", True),
+               "firmware_error": ("the firmware stopped with an error", True),
+               "no_ready_line": ("the firmware printed no ready line", True)}
+#: What the image the project holds now says of the last deploy (`deploy_reading.deploy_fact`): the image it wrote, a
+#: different image, firmware/ changed after the image, or no image now. Any but the first makes the deploy stale.
+DEPLOY_CURRENT, IMAGE_DIFFERS, FIRMWARE_NEWER, DEPLOY_NO_IMAGE = "current", "image-differs", "firmware-newer", "no-image"
+FIRMWARE_NEWER_MESSAGE = "Your firmware changed after the image that the last deploy wrote."
+OTHER_IMAGE_MESSAGE = "The last deploy wrote a different image from the one this project has now."
+NO_IMAGE_NOW_MESSAGE = "This project has no image now."
+#: The says line that opens a stale deploy, by its fact.
+STALE_DEPLOY_SAYS = {FIRMWARE_NEWER: FIRMWARE_NEWER_MESSAGE, IMAGE_DIFFERS: OTHER_IMAGE_MESSAGE, DEPLOY_NO_IMAGE: NO_IMAGE_NOW_MESSAGE}
 
 #: The phases each kind of offer can make out of date (P829). An offer names one only when the phase holds something now
 #: (`phase_readers.makes_stale`). The build makes none: the simulation's own staleness is P880's.

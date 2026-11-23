@@ -7,7 +7,7 @@ its CLI; the page (P827) and the requests (P829) read the same phases.
 
 from pathlib import Path
 
-from spark.flow import flow_codes, phase_steps
+from spark.flow import deploy_reading, flow_codes, phase_steps
 from spark.flow.fingerprint import fingerprint_of
 from spark.flow.guide import guide_of, stands_at_of
 from spark.flow.phase_readers import MARKS, READERS
@@ -104,7 +104,7 @@ class ShowFlow(Operation):
     """
     Operation: where a project stands. It asks each PhaseReader in order and answers `data.phases` (each Phase as a dict),
     `data.stands_at`, the guide's now phase (`stands_at_of`, P1030), `data.fingerprint` (`fingerprint_of`, P829) and
-    `data.guide` (`guide_of`, P977). Its lines end with the guide's, and `next` holds the now offer's step (P1030), else
+    `data.guide` (`guide_of`, P977) and `data.deploy`, the newest board log (`deploy_reading.deploy_data`, P1043). Its lines end with the guide's, and `next` holds the now offer's step (P1030), else
     the now phase's next-only step (P1034). A phase
     that holds problems or could not run adds one Finding of that status, so the exit says so; every phase still answers.
     `readers` are the PhaseReaders a test swaps (None: `READERS`).
@@ -114,7 +114,7 @@ class ShowFlow(Operation):
     summary = "Say where a project stands, phase by phase from the idea to the deploy, and what each phase offers next (P825)."
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS,)
-    data_keys = ("phases", "stands_at", "fingerprint", "guide")
+    data_keys = ("phases", "stands_at", "fingerprint", "guide", "deploy")
     privacy_for = staticmethod(privacy_for)
 
     def __init__(self, readers=None):
@@ -130,6 +130,6 @@ class ShowFlow(Operation):
         lines = [line for phase in phases for line in phase_line(phase)]
         lines += guide_lines(guide, steps)
         data = {"phases": [phase.to_dict() for phase in phases], "stands_at": stands_at, "fingerprint": fingerprint_of(project, phases),
-                "guide": guide}
+                "guide": guide, "deploy": deploy_reading.deploy_data(project)}
         return OperationResult(data, findings, steps, lines=lines)
 # --- end MVP ---

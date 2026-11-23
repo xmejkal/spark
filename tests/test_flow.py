@@ -1928,5 +1928,190 @@ class ThePageRefreshTest(FlowTest):
         self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "a new page")
 
 
+#: The moment of a made-up board log, as `BoardLog` writes it (P1043), and a newer one.
+LOGGED_AT = datetime.datetime(2026, 11, 23, 14, 9, 49, tzinfo=datetime.timezone(datetime.timedelta(hours=1)))
+LOG_NAME = "2026-11-23T14-09-49"
+#: The sentences the bench made in real board logs (the refuter's quotes, P1043's plan), with made-up tool text.
+FILES_UNREAD_SENTENCE = "mpremote could not read the board's files: mpremote.transport.TransportError: could not enter raw repl"
+NOT_STARTED_SENTENCE = "mpremote could not start the firmware: OSError: [Errno 6] Device not configured"
+LOST_SENTENCE = ("the firmware printed 'ready', then mpremote lost the board (OSError: [Errno 6] Device not configured), "
+                 "and spark found no deepsleep call in firmware/")
+SEEN_SENTENCE = "the firmware printed 'ready' and the board's 1 files match the image"
+#: The words of the deploy's says line (P1043): brief D10's for a run with no read-back, exactly.
+NO_READ_BACK = "written by the flasher, nothing read back, start not seen"
+
+
+def a_deploy_project():
+    """A built project whose firmware a passed run tested on the image it holds now, so the deploy is the phase now and
+    every other phase is ok or has no status: the exit says the deploy's status alone."""
+    return a_run(an_image(a_firmware(a_built_project())), "passed")
+
+
+def a_board_log(project, verdict, sentence, image=b"an image", reason=None, name=LOG_NAME, **kw):
+    """A board log in sim/runs/board/<name>.log in the real layout (`BoardLog`), with made-up values."""
+    from spark.bench.board_log import BoardLog
+    folder = project / "sim" / "runs" / "board"
+    folder.mkdir(parents=True, exist_ok=True)
+    log = BoardLog(LOGGED_AT, "/dev/cu.usbmodem101", hashlib.sha256(image).hexdigest(), "facts file spark.json sha256: f",
+                   verdict, sentence, "what the board printed\n", "passed", reason)._replace(**kw)
+    (folder / (name + ".log")).write_text(log.text())
+    return project
+
+
+def deploy_of(said):
+    """The deploy phase's dict in an envelope."""
+    return next(phase for phase in said["data"]["phases"] if phase["phase"] == "deploy")
+
+
+def logged(words, *more, count=1, image=b"an image"):
+    """The deploy's says line for a log of LOGGED_AT on `image`: the verdict's words, more sentences, then the count."""
+    return " ".join(["Last deploy 2026-11-23T14:09:49+01:00, image %s: %s." % (hashlib.sha256(image).hexdigest()[:12], words),
+                     *more, "%d deploy%s logged." % (count, "" if count == 1 else "s")])
+
+
+class TheDeployReaderTest(FlowTest):
+    """P1043 (#1533): the deploy phase reads the newest board log in sim/runs/board/: its time, image, verdict and cause.
+    Only ready seen on the image the project holds now is ok, with a tick. Ready unknown is partial, ready not seen is
+    problems, and an image that changed since is stale. A tool's text, the port and the console never reach an answer."""
+
+    def test_no_board_log_keeps_today_s_phase_and_no_deploy_data(self):
+        said, code = show(a_deploy_project())
+        self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["says"]), (0, "not-started", [
+            "Ask Claude to look at the board first (/spark:deploy).", "Claude then gives you the deploy line. Run it in your "
+            "terminal and type yes, unless you gave Claude a standing yes for this board."]))
+        self.assertIsNone(said["data"]["deploy"])
+        self.assertEqual(said["data"]["guide"]["now"]["phase"], "deploy")
+
+    def test_ready_seen_on_the_image_now_is_ok_with_a_tick_and_nothing_is_now(self):
+        said, code = show(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE))
+        self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (0, "ok", "✓"))
+        self.assertEqual(deploy_of(said)["says"], [logged("written by the flasher, files read back, ready seen")])
+        self.assertEqual((said["data"]["guide"]["now"], said["data"]["stands_at"], said["next"]), (None, None, []))
+        self.assertEqual(said["data"]["guide"]["done"][-1], "deploy")
+
+    def test_ready_unknown_with_no_read_back_says_brief_d10_s_words_and_is_partial(self):
+        said, code = show(a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE))
+        self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (0, "partial", "◐"))
+        self.assertEqual(deploy_of(said)["says"], [logged(NO_READ_BACK, "Cause in the log: spark did not reach the board to read its files.")])
+        self.assertEqual((said["problems"], said["unchecked"]), ([], []))
+        self.assertEqual([step["op"] for step in said["next"]], ["look"])
+        self.assertIs(said["data"]["deploy"]["read_back"], False)
+
+    def test_ready_unknown_after_the_files_were_read_says_start_not_seen_once(self):
+        said, _ = show(a_board_log(a_deploy_project(), "ready unknown", NOT_STARTED_SENTENCE))
+        says = deploy_of(said)["says"]
+        self.assertEqual(says, [logged("written by the flasher, files read back, start not seen",
+                                       "Cause in the log: the command that starts the firmware failed.")])
+        self.assertEqual([line.count("start not seen") for line in lines_of(a_board_log(a_deploy_project(), "ready unknown",
+                                                                                         NOT_STARTED_SENTENCE))
+                          if "start not seen" in line], [1])
+        self.assertIs(said["data"]["deploy"]["read_back"], True)
+
+    def test_a_board_lost_after_ready_says_ready_was_printed_and_never_that_the_start_was_not_seen(self):
+        said, _ = show(a_board_log(a_deploy_project(), "ready unknown", LOST_SENTENCE, reason="board_lost"))
+        self.assertEqual(deploy_of(said)["says"], [logged(
+            "written by the flasher, files read back, ready printed, then the board was lost",
+            "Cause in the log: firmware/ calls no deepsleep, so spark does not count the ready.")])
+        self.assertNotIn("start not seen", " ".join(deploy_of(said)["says"]))
+        self.assertEqual((deploy_of(said)["status"], said["data"]["deploy"]["read_back"]), ("partial", True))
+
+    def test_a_port_gone_or_download_mode_says_start_not_seen_and_never_nothing_read_back(self):
+        for reason, sentence, words in (("port_gone", "the board's port is gone: press its RESET once", "the board's port was gone"),
+                                        ("download_mode_stayed", "the board still waits in download mode after 60 s: press its RESET",
+                                         "the board stayed in download mode")):
+            with self.subTest(reason=reason):
+                said, _ = show(a_board_log(a_deploy_project(), "ready unknown", sentence, reason=reason))
+                self.assertEqual(deploy_of(said)["says"], [logged("written by the flasher, start not seen", "Cause in the log: %s." % words)])
+                self.assertIsNone(said["data"]["deploy"]["read_back"])
+                self.assertNotIn("nothing read back", json.dumps(said))
+
+    def test_an_unknown_start_is_cause_not_recorded_and_its_cause_is_null(self):
+        said, _ = show(a_board_log(a_deploy_project(), "ready unknown", "the firmware printed 'ready', then mpremote lost the board (x: y)"))
+        self.assertEqual(deploy_of(said)["says"], [logged("written by the flasher, start not seen", "Cause not recorded.")])
+        self.assertEqual((said["data"]["deploy"]["cause"], said["data"]["deploy"]["read_back"]), (None, None))
+
+    def test_the_reason_line_wins_over_the_start_and_is_read_from_line_4_only(self):
+        project = a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE, reason="board_lost")
+        self.assertEqual(show(project)[0]["data"]["deploy"]["cause"], "board_lost")
+        for heard, reason in (("reason: board_lost\n", None), ("", "a_code_spark_never_wrote")):
+            with self.subTest(heard=heard, reason=reason):
+                project = a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE, reason=reason, heard=heard)
+                self.assertEqual(show(project)[0]["data"]["deploy"]["cause"], "files_unread")
+        project = a_board_log(a_deploy_project(), "ready unknown", "an unknown start: x", reason="a_code_spark_never_wrote")
+        self.assertIsNone(show(project)[0]["data"]["deploy"]["cause"])
+
+    def test_the_newest_log_by_name_wins_and_the_count_says_how_many(self):
+        older, newer = "2026-11-23T14-00-00", "2026-11-23T15-00-00"
+        project = a_board_log(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, name=older),
+                              "ready unknown", FILES_UNREAD_SENTENCE, name=newer)
+        said, _ = show(project)
+        self.assertEqual(deploy_of(said)["status"], "partial")
+        self.assertTrue(deploy_of(said)["says"][-1].endswith("2 deploys logged."), deploy_of(said)["says"])
+        project = a_board_log(a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE, name=older),
+                              "ready seen", SEEN_SENTENCE, name=newer)
+        self.assertEqual(deploy_of(show(project)[0])["status"], "ok")
+
+    def test_a_log_of_another_image_is_stale_and_says_so_first(self):
+        said, code = show(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, image=b"another image"))
+        self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (0, "stale", "↻"))
+        self.assertEqual(deploy_of(said)["says"], [
+            "The last deploy wrote a different image from the one this project has now.",
+            logged("written by the flasher, files read back, ready seen", image=b"another image")])
+        self.assertEqual(said["data"]["deploy"]["fact"], "image-differs")
+
+    def test_no_image_now_is_stale_and_a_firmware_line_spark_cannot_use_could_not_run(self):
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
+        (project / "sim" / "image.bin").unlink()
+        said, _ = show(project)
+        self.assertEqual((deploy_of(said)["status"], deploy_of(said)["says"][0], said["data"]["deploy"]["fact"]),
+                         ("stale", "This project has no image now.", "no-image"))
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = 42\n')
+        said, _ = show(project)  # the simulate has problems for the same line, so the exit is 1
+        self.assertEqual((statuses(said)["simulate"], deploy_of(said)["status"]), ("problems", "could-not-run"))
+        self.assertTrue(deploy_of(said)["says"][0].startswith("sim/wokwi.toml"), deploy_of(said)["says"])
+        self.assertIsNone(said["data"]["deploy"])
+
+    def test_ready_not_seen_is_problems_with_one_finding_and_stale_wins_over_it(self):
+        project = a_board_log(a_deploy_project(), "ready not seen", "the firmware stopped with an error: Traceback ...")
+        said, code = show(project)
+        self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (1, "problems", "✗"))
+        self.assertEqual([(problem["subject"], problem["code"]) for problem in said["problems"]], [("deploy", "phase_problems")])
+        self.assertEqual(deploy_of(said)["says"], [logged("written by the flasher, files read back, ready not seen",
+                                                          "Cause in the log: the firmware stopped with an error.")])
+        os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        said, _ = show(project)
+        self.assertEqual((deploy_of(said)["status"], said["data"]["deploy"]["fact"]), ("stale", "firmware-newer"))
+        self.assertIn("ready not seen", deploy_of(said)["says"][-1])  # the says line keeps the verdict
+
+    def test_a_log_with_no_verdict_line_or_a_verdict_spark_never_writes_could_not_run(self):
+        for case, verdict in (("no verdict line", "a word"), ("ready not read", "ready not read")):
+            with self.subTest(case=case):
+                said, code = show(a_board_log(a_deploy_project(), verdict, "x"))
+                self.assertEqual((code, deploy_of(said)["status"]), (2, "could-not-run"))
+                self.assertEqual([item["subject"] for item in said["unchecked"]], ["deploy"])
+                self.assertIn("sim/runs/board/%s.log cannot be read" % LOG_NAME, said["unchecked"][0]["sentence"])
+
+    def test_nothing_private_or_foreign_reaches_the_answer(self):
+        project = a_deploy_project()
+        (project / "sim" / "runs" / "board").mkdir(parents=True)
+        shutil.copy(ROOT / "tests" / "data" / "board_log" / ("%s.log" % LOG_NAME), project / "sim" / "runs" / "board")
+        a_board_log(project, "ready unknown", "mpremote could not start the firmware: MARK-TOOL TransportError /dev/cu.x",
+                    name="2026-11-23T15-00-00", port="MARK-PORT", facts_line="facts file: not written: MARK-FACTS",
+                    heard="MARK-HEARD /Users/someone/x\n")
+        for project_now in (project, ):
+            said, _ = show(project_now)
+            shown = json.dumps([said["data"]["phases"], said["data"]["guide"], said["data"]["deploy"]]) + "\n".join(lines_of(project_now))
+            for mark in ("MARK-PORT", "MARK-FACTS", "MARK-HEARD", "MARK-TOOL", "TransportError", "/dev/", "/Users/", str(project)):
+                with self.subTest(mark=mark):
+                    self.assertNotIn(mark, shown)
+
+    def test_the_deploy_data_holds_the_six_fields_of_the_newest_log(self):
+        said, _ = show(a_board_log(a_deploy_project(), "ready unknown", NOT_STARTED_SENTENCE))
+        self.assertEqual(said["data"]["deploy"], {"at": "2026-11-23T14:09:49+01:00", "image": hashlib.sha256(b"an image").hexdigest(),
+                                                  "verdict": "ready unknown", "cause": "firmware_not_started",
+                                                  "fact": "current", "read_back": True})
+
+
 if __name__ == "__main__":
     unittest.main()

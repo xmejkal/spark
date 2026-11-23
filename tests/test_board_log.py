@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_connection, board_log, download_mode, ready_probe  # noqa: E402
+from spark.flow import flow_codes  # noqa: E402
 from fakes import FakeBoardConnection  # noqa: E402
 
 MAIN = {"/main.py": hashlib.sha256(b"print('ready')\n").hexdigest()}
@@ -67,6 +68,10 @@ class TheCauseOfASentenceTest(unittest.TestCase):
                 "download_mode_stayed": download_mode.no_reset(PLACES)}
         self.assertEqual({code: board_log.cause_of(sentence) for code, sentence in made.items()}, {code: code for code in made})
         self.assertEqual(sorted(board_log.CAUSES.values()), sorted(made))
+
+    def test_the_flow_has_words_for_each_cause_the_log_can_hold(self):
+        # P1043-D1: the codes and their starts are the bench's, the words the flow's; a lost board and files that differ have no start
+        self.assertEqual(sorted(flow_codes.CAUSE_WORDS), sorted(set(board_log.CAUSES.values()) | {"board_lost", "files_differ"}))
 
     def test_a_lost_board_and_files_that_differ_have_no_start(self):
         lost = board_connection.BoardUnreachableError("OSError: [Errno 6] Device not configured", "ready\n")
