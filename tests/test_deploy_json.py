@@ -23,6 +23,7 @@ from spark.bench import board_envelope  # noqa: E402
 from spark.firmware import sleep_calls  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.records import board_records  # noqa: E402
+from spark.bench import deploy_image  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
 from spark.bench import board_facts  # noqa: E402
@@ -31,7 +32,8 @@ from spark.bench import ready_probe  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
-from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld  # noqa: E402
+from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld, FakeReporter  # noqa: E402
+from spark.core.events import LINE  # noqa: E402
 from test_board_look import data, done  # noqa: E402
 import test_deploy_gate  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
@@ -754,6 +756,59 @@ class DeployPageTest(JsonCase, GateCase):
         for line in deploy["says"]:
             self.assertIn(html.escape(line), page)
         self.assertIn(html.escape("Flash not finished, nothing read back, the board may be erased."), page)  # ON THE BOARD, P1062
+
+    def an_older_ready_seen_log(self):
+        """The scenario ran, and an older board log of the same image says ready seen: the deploy before (P1096 test 4)."""
+        from test_flow import SEEN_SENTENCE, a_board_log
+        self.run_the_scenario()
+        a_board_log(self.project, "ready seen", SEEN_SENTENCE, image=self.image.read_bytes(), name="2026-10-16T09-00-00")
+
+    def assert_show_and_the_next_page_say_the_flash_did_not_finish(self, words):
+        """`flow.py show` says the flash did not finish, with the cause's `words`, and no ready seen. The run itself left
+        page.html as it was: a crash writes no page (P1038's 0c rule, G1). The next page write names the new stand."""
+        import flow
+        from test_flow import FLASH_NOT_FINISHED_WORDS
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        self.assertEqual(self.page.read_text(encoding="utf-8"), "an old page")
+        write_page(self.project, store=FlowPageStore())
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            flow.main(["show", "--project", str(self.project), "--json"])
+        deploy, = [phase for phase in json.loads(out.getvalue())["data"]["phases"] if phase["phase"] == "deploy"]
+        self.assertEqual(deploy["status"], "problems")
+        self.assertIn(FLASH_NOT_FINISHED_WORDS, deploy["says"][0])
+        self.assertIn("Cause in the log: %s." % words, " ".join(deploy["says"]))
+        self.assertNotIn("ready seen", " ".join(deploy["says"]))
+        page = self.page.read_text(encoding="utf-8")
+        for line in deploy["says"]:
+            self.assertIn(html.escape(line), page)
+        self.assertIn(html.escape("Flash not finished, nothing read back, the board may be erased."), page)  # ON THE BOARD, P1062
+        self.assertNotIn("Ready seen", page)
+
+    @needs_littlefs
+    def test_a_crash_in_the_flash_logs_it_and_show_says_the_board_may_be_erased(self):
+        # P1096 test 4 (a), the card's: the deploy before stands no more
+        self.an_older_ready_seen_log()
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=RuntimeError("usb fell off"))
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["status"], said["unchecked"][0]["code"]), (2, "could-not-run", "crash"))
+        older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertEqual((said["data"]["board_log"], said["data"]["board_state"]), (str(newer), "may_be_erased"))
+        self.assert_show_and_the_next_page_say_the_flash_did_not_finish("spark crashed during the flash")
+
+    @needs_littlefs
+    def test_a_ctrl_c_in_the_flash_logs_it_says_so_and_still_ends_the_run(self):
+        # P1096 test 4 (b), the card's: the Ctrl-C goes on after the board log line, and no verify runs
+        self.an_older_ready_seen_log()
+        reporter = FakeReporter()
+        with self.assertRaises(KeyboardInterrupt):
+            self.deploy("--json", "--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=KeyboardInterrupt(),
+                        reporter=reporter)
+        lines = [event.text for event in reporter.events if event.kind == LINE]
+        older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertIn(deploy_image.NOT_FINISHED_LOG_LINE % newer, lines)
+        self.assertEqual([command for command in self.ran if "exec" in command or "fs" in command], [])
+        self.assert_show_and_the_next_page_say_the_flash_did_not_finish("a Ctrl-C interrupted the flash")
 
 
 if __name__ == "__main__":

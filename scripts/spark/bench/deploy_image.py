@@ -23,7 +23,7 @@ from spark.records import store
 from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
 from spark.bench.deploy_stages import PHASE_WHY, DeployPhase
-from spark.bench.deploy_service import DeployService, FlashError
+from spark.bench.deploy_service import DeployService, ended_the_flash
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, SIMULATION_NONE, evidence_for
 from spark.firmware.project_image import DeployError
@@ -235,9 +235,10 @@ class DeployFlowService:
     def refuse_at_look(self, cannot):
         """The exit code of a refusal at the look or after it, said on stderr: a LookStopError with the doctor's lines (P354), a
         SparkError (the kept record, the replies file) as one Finding with its own code and fix (P892), any other as
-        `deploy.py: <why>`. A FlashError keeps the yes that ran it, and names its board log (P1092)."""
+        `deploy.py: <why>`. A FlashError keeps the yes that ran it, and names its board log (P1092): any refusal that the
+        flash loop's handler logged does (P1096, G11)."""
         reached = self._reached
-        if isinstance(cannot, FlashError):
+        if ended_the_flash(cannot):
             self.keep_yes()
             self.say_not_finished(cannot)
         reached.update(refusal=str(cannot), reason=cannot.code if isinstance(cannot, SparkError) else reason_of(cannot))
@@ -255,8 +256,8 @@ class DeployFlowService:
         return EXIT_COULD_NOT_RUN
 
     def say_not_finished(self, failed):
-        """The board log of the FlashError `failed` (P1092): its path, as `data.board_log` with the image it names, or why it
-        was not written."""
+        """The board log of `failed`, what ended the flash after the yes (a FlashError, P1092; a crash or a Ctrl-C, P1096):
+        its path, as `data.board_log` with the image it names, or why it was not written."""
         if failed.log_path is None:
             self.say(DeployPhase.FLASH, NOT_FINISHED_UNLOGGED_LINE % failed.log_error)
             return
@@ -483,12 +484,20 @@ class DeployImage(Operation):
             if flow.stages.stage not in CRASH_STATES:
                 raise
             return self._crashed(flow, crashed)
+        except KeyboardInterrupt as interrupted:  # P1096: a Ctrl-C in the flash says its board log line first
+            if ended_the_flash(interrupted):
+                flow.keep_yes()
+                flow.say_not_finished(interrupted)
+            raise  # P1096: a Ctrl-C still ends the run
         return board_envelope.deploy_result(flow.reached(), code)
 
     def _crashed(self, flow, crashed):
         """The result of a crash after the gate passed: one unchecked Finding with code `crash` that names the board's state,
-        the data reached with the yes and `board_state`, the look as the next step, and the traceback in the diagnostics."""
+        the data reached with the yes and `board_state`, the look as the next step, and the traceback in the diagnostics.
+        A crash in the flash loop also names the board log it wrote (P1096)."""
         flow.keep_yes()  # a crash in the flash loop still says whose yes it was
+        if ended_the_flash(crashed):
+            flow.say_not_finished(crashed)
         reached, name = flow.reached(), type(crashed).__name__
         state = CRASH_STATES[reached["stage"]]
         data = dict(board_envelope.deploy_data(reached), board_state=state.board_state)
