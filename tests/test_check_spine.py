@@ -2281,6 +2281,24 @@ class TheBoardAloneTest(unittest.TestCase):
         self.assertFalse((workdir / "dist").exists())
         self.assertEqual(kept_files.drop_an_older_build(workdir, [Stage("build", check_spine.OK)]), [])
 
+    def test_an_earlier_dist_is_named_only_by_a_record_that_says_so(self):
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        self.assertIsNone(build_record.earlier_dist(project))  # no record
+        record = project / ".spark" / "build.json"
+        record.write_text(json.dumps({"schema": 1, "at": "2026-11-24T00:38:12+01:00"}))
+        (project / "dist").mkdir()
+        self.assertIsNone(build_record.earlier_dist(project))  # a record before the key
+        record.write_text(json.dumps({"schema": 1, "dist_written": True, "at": "2026-11-24T00:38:12+01:00"}))
+        self.assertIsNone(build_record.earlier_dist(project))  # this build wrote it
+        record.write_text(json.dumps({"schema": 1, "dist_written": False, "at": "2026-11-24T00:38:12+01:00"}))
+        self.assertEqual(build_record.earlier_dist(project), "the last build, 2026-11-24T00:38:12+01:00, did not write dist/: build again with check_spine.py --keep before you rely on this circuit")
+        (project / "dist").rmdir()
+        self.assertIsNone(build_record.earlier_dist(project))  # nothing there to name
+        (project / "dist").mkdir()
+        record.write_text("{not json")
+        self.assertIsNone(build_record.earlier_dist(project))  # a record it cannot read
+
     def test_a_string_true_is_not_board_only(self):
         _, stages = self.run_alone(board_only="true")
         self.assertEqual((stages[-1].name, stages[-1].status), ("parts", check_spine.COULD_NOT_RUN))
