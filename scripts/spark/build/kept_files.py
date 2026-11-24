@@ -261,7 +261,7 @@ def keep_breadboard(requirements, destination, stages=(), kept=None):
     if why:
         named = [_left_from_earlier(sheet_path, "breadboard sheet", why, skipped_the_build(stages))] + [
             _left_from_earlier_drawing(path, renderer, why, skipped_the_build(stages)) for path, renderer in drawings]
-        return [entry for entry in named if requirements or entry["did"] != "not written"]  # P1114: only what an earlier build left
+        return [entry for entry in named if requirements or entry["did"] == LEFT_ALONE]  # P1114: only what an earlier build left
     try:
         sheet.record_built_from(requirements, Path(destination) / sheet.BUILT_FROM)
         written = sheet.write(requirements, sheet_path, Path(destination) / sheet.CIRCUIT)

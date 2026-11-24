@@ -463,7 +463,7 @@ def build_effect(project):
     """The effect of the build offer in `project`: what it saves, what it replaces or deletes, the history note of a
     project on the person's list, and that it runs no simulation. A board-only parts list saves less and deletes dist/."""
     if is_board_only(project):
-        said = [flow_codes.BOARD_ONLY_BUILD_EFFECT, flow_codes.BUILD_REFUSED_MESSAGE]
+        said = [flow_codes.BOARD_ONLY_BUILD_EFFECT, flow_codes.BOARD_ONLY_REFUSED_MESSAGE]
         said += [flow_codes.DIST_REMOVED_MESSAGE] if (Path(project) / "dist").is_dir() else []
     else:
         said = [flow_codes.BUILD_MESSAGE, flow_codes.REPLACE_MESSAGE, flow_codes.BUILD_REFUSED_MESSAGE, flow_codes.NO_TOOL_MESSAGE]
