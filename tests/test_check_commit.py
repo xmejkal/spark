@@ -346,12 +346,13 @@ class TheGateChecksTheMutationRowsTest(unittest.TestCase):
         self.assertIn("does not compile", check_commit.refused_rows(root, None)[0][0])
 
     def test_a_clean_run_says_the_rows_line_and_runs_the_suite(self):
-        root = repo_with({"m.py": "def add(a, b):\n    return a + b\n", "notes.md": "x\n",
+        root = repo_with({"scripts/spark/core/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
+                          "m.py": "def add(a, b):\n    return a + b\n", "notes.md": "x\n",
+                          "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
+                                             "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n",
                           self.TABLE: json.dumps([self.GOOD, dict(self.GOOD, file="notes.md", find="x", replace="y")])})
         said = io.StringIO()
-        with mock.patch.object(check_commit, "measure", return_value=("Ran 1 test / OK", True, [], [])), \
-                mock.patch.object(check_commit, "size_line", return_value="size"), a_good_board(), \
-                contextlib.redirect_stdout(said):
+        with a_good_board(), contextlib.redirect_stdout(said):
             code = check_commit.gate(root, "HEAD", Path(tempfile.mkdtemp()), which=lambda _name: None)
         self.assertEqual(code, check_commit.EXIT_OK, said.getvalue())
         self.assertIn("as committed", said.getvalue())
