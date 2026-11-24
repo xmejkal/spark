@@ -20,22 +20,22 @@ PICTURE = "docs/guide/journey.svg"
 #: is the step's name in lower case. A row that links another step's page gives no status.
 STATUS_ROW = re.compile(r"^\| \[(\w+)\]\(docs/guide/journey/([\w-]+)\.md\) \| \*\*(works|partly|not yet)\*\*", re.M)
 #: The strip at the bottom: where we are, and what is next. Each line holds at most STRIP characters.
-WHERE = "the FireBeetle 2 button changed its LED in Wokwi and on the bench on 2026-11-01."
-NEXT = "wire an SPI display to the FireBeetle 2 and run its firmware."
+WHERE = "an e-paper clock, wired from its sheet, ran on a FireBeetle 2 C6 on 2026-11-22."
+NEXT = "run firmware that passed in Wokwi on a breadboard wired from its sheet."
 STRIP = 100
 #: Each step: its name in the README's table, its command, what you do, what you get, a note on how far it works, and
 #: the status that note was written for. A step whose status changes in the table needs a new note here.
 STEPS = [
     ("Drawer", "/spark:drawer", "Say which parts you own.", "Your drawer, kept in your own store.",
-     "Listing and writing entries ran. Your words to entries, and the DFRobot import, did not.", "partly"),
+     "Listing and writing entries ran. In walk 4, /spark:drawer raised a count on your words, 2026-11-01. The DFRobot import did not run.", "partly"),
     ("Idea", "/spark:idea", "Describe the gadget in your own words.",
      "Needs matched to your drawer, a part per need, and a requirements file.",
-     "The scripts ran from needs to a requirements file. A board offers its own parts for a need, and says what a run cannot test of them. The conversation was not run.", "partly"),
+     "The scripts ran from needs to a requirements file. A board offers its own parts for a need, and says what a run cannot test of them. The conversation ran from a goal to a requirements file in the P711 walk 3, 2026-11-16, and in the P934 walk, with three of four picks clicked on the page, 2026-11-22.", "works"),
     ("Research", "/spark:research", "Pick a part for a real gap.", "A part record with a source for every fact.",
-     "The store search (--need over your drawer, the boards and the records, owned first) and research.py run: the DFRobot wiki's documents and the geometry questions, answered live in a terminal or by a replies file, 2026-11-11. parts.py --find-documents keeps a DFRobot board's top view and dimension drawing from its wiki page, 2026-11-21 (P952). Research by agents was not run.", "partly"),
+     "The store search (--need over your drawer, the boards and the records, owned first) and research.py run: the DFRobot wiki's documents and the geometry questions, answered live in a terminal or by a replies file, 2026-11-11. parts.py --find-documents keeps a DFRobot board's top view and dimension drawing from its wiki page, 2026-11-21 (P952). The parts-researcher agent ran in walk 4, 2026-11-01, and in /spark:identify on an e-paper module from photos, 2026-11-19 (P934). The part-finder and datasheet-reader agents were not run.", "partly"),
     ("Build", "/spark:build", "Run it on the requirements file.",
      "A board that builds, a Wokwi diagram, a sheet, a page of tabs.",
-     "Ran end to end on 2026-10-11. Drawn on a half breadboard for the XIAO C6 (a Wokwi diagram). A picture alone for the FireBeetle 2 S3, from its record, 2026-10-29. The page of tabs ran, 2026-10-16. A moved part, jumper or resistor is kept, 2026-10-18. The library's XIAO record builds button + LED, 2026-10-18. An SPI and an I2C part build with 0 errors on the FireBeetle 2 and the XIAO C6, 2026-11-01 (P512). A display on the XIAO still stops at the simulation: it has no Wokwi part. A module with no Wokwi part is drawn from its record's physical block, and the steps name the holes, 2026-11-20 (P945). Power and ground go through the breadboard's + and - rails, 2026-11-20 (P953).", "works"),
+     "Ran end to end on 2026-10-11. Drawn on a half breadboard for the XIAO C6 (a Wokwi diagram). A picture alone for the FireBeetle 2 S3, from its record, 2026-10-29. The page of tabs ran, 2026-10-16. A moved part, jumper or resistor is kept, 2026-10-18. The library's XIAO record builds button + LED, 2026-10-18. An SPI and an I2C part build with 0 errors on the FireBeetle 2 and the XIAO C6, 2026-11-01 (P512). A display on the XIAO still stops at the simulation: it has no Wokwi part. A module with no Wokwi part is drawn from its record's physical block, and the steps name the holes, 2026-11-20 (P945). Power and ground go through the breadboard's + and - rails, 2026-11-20 (P953). A board with no Wokwi part builds, and its simulation stage says could-not-run, 2026-11-20 (P955). The P934 walk built a FireBeetle 2 ESP32-C6 with an e-paper this way, 2026-11-22.", "works"),
     ("Checks", "check_all.py", "Run the checks on the project.", "What holds, and what a check could not look at.",
      "A fresh button-and-LED project passes.", "works"),
     ("Firmware", "import_firmware.py", "Write the firmware with Claude.", "A pin map that the firmware imports.",
@@ -43,10 +43,10 @@ STEPS = [
     ("Simulate", "run_scenario.py", "Say in words what must happen.",
      "The firmware running in Wokwi, with a dated log.", "The button-and-LED project passed on 2026-10-12. A board-only FireBeetle 2 S3 build wires its own LED and button, 2026-11-01. There its button changed its LED's effect (walk 4). A wrong component id stops before the run, and --dry-run needs no token.", "works"),
     ("Bench", "look.py, deploy.py, live.py", "Wire the breadboard and flash the board.", "The tested firmware on the real board.",
-     "look.py reads the board on USB and checks it. deploy.py asks your yes first, or uses a deploy grant you gave once. With --no-simulation it flashes firmware/ that no simulation tested, on a typed yes or a deploy grant given with --no-simulation. It flashed a XIAO ESP32-C6 and read ready. On 2026-11-01 it flashed a FireBeetle 2 ESP32-S3, deploy needed no reset press after the flash, and its button lit its LED. Walk 4 repeated that, and deploy.py put a display with Python games on it. The faster C driver image went on outside spark. live.py runs Claude's code inside your grant. No wired breadboard yet.", "partly"),
+     "look.py reads the board on USB and checks it. deploy.py asks your yes first, or uses a deploy grant you gave once. With --no-simulation it flashes firmware/ that no simulation tested, on a typed yes or a deploy grant given with --no-simulation. It flashed a XIAO ESP32-C6 and read ready. On 2026-11-01 it flashed a FireBeetle 2 ESP32-S3, deploy needed no reset press after the flash, and its button lit its LED. Walk 4 repeated that, and deploy.py put a display with Python games on it. The faster C driver image went on outside spark. live.py runs Claude's code inside your grant. On 2026-11-22 a breadboard wired from its sheet ran an e-paper clock on a FireBeetle 2 ESP32-C6, deployed with no simulation, ready seen (P934). No image that passed in Wokwi ran on a wired breadboard by 2026-11-22.", "partly"),
 ]
 #: Each status: the stop's fill, the label's fill, the label's text color, and its line in the legend.
-COLORS = {"works": ("#2dc75c", "#adf0c7", "#067429", "works: it ran end to end for the docs"),
+COLORS = {"works": ("#2dc75c", "#adf0c7", "#067429", "works: it ran end to end for the docs or in a walk"),
           "partly": ("#ffdc4a", "#fff6b6", "#af7e04", "partly: it stops before its goal, or part of it was not run"),
           "not yet": ("#ff6464", "#ffc6c6", "#bd0a0a", "not yet: nothing does it yet")}
 INK, BODY, ROAD, CARD, LABEL = "#1a1a1a", "#595959", "#b0b0b0", "#f0f5fd", "#305bab"
