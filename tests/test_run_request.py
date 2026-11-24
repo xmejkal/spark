@@ -502,10 +502,23 @@ class TheSecretMaskTest(RunRequestTest):
         envelope = json.loads(out.getvalue())
         self.assertEqual((code, envelope["status"], [item["code"] for item in envelope["unchecked"]], self.ran()),
                          (2, "could-not-run", ["request_secrets_unreadable"], {}))
-        self.assertEqual((envelope["data"]["ran"], envelope["data"]["key"]), (False, "build"))
-        self.assertEqual(envelope["unchecked"][0]["subject"], "wifi_secrets.py")
+        self.assertEqual((envelope["data"]["ran"], envelope["data"]["key"], envelope["data"]["label"]), (False, None, None))
+        self.assertEqual(envelope["unchecked"][0]["subject"], "firmware/wifi_secrets.py")
         self.assertNotIn(HALF_TYPED, out.getvalue() + err.getvalue())
         self.assertFalse((self.project / ".spark" / "page-request.json").exists())
+
+    def test_the_refusal_names_no_key_or_label_as_they_can_hold_the_value_it_cannot_mask(self):
+        # the refuter of #1610: a need named by the value of a half-typed file is in the offer's key and label, which
+        # /spark:page publishes; the refusal answers neither
+        self.readers = [FakeReader(("needs-drop:" + HALF_TYPED,))]
+        self.with_secrets('WIFI_PASSWORD = "%s\n' % HALF_TYPED)
+        self.ask("needs-drop:" + HALF_TYPED)
+        operation = RunRequest(readers=self.readers, operations=self.steps)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = run_cli(HelpText("flow.py", tool="flow"), operation, ["--project", str(self.project), "--json"],
+                           outside_builder=build_bare_outside_world, outside=FakeOutsideWorld())
+        self.assertEqual((code, [item["code"] for item in json.loads(out.getvalue())["unchecked"]]), (2, ["request_secrets_unreadable"]))
+        self.assertNotIn(HALF_TYPED, out.getvalue() + err.getvalue())
 
 
 if __name__ == "__main__":

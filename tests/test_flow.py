@@ -2329,10 +2329,12 @@ class TheSecretMaskTest(FlowTest):
             code = flow.main(["show", "--project", str(project), "--json"])
         envelope = json.loads(out.getvalue())
         self.assertEqual((code, envelope["status"]), (0, OK))
-        self.assertEqual(envelope["notes"], [{"subject": "wifi_secrets.py", "sentence": MASK_OFF % "wifi_secrets.py"}])
+        self.assertEqual(envelope["notes"], [{"subject": "firmware/wifi_secrets.py", "sentence": MASK_OFF % "firmware/wifi_secrets.py"}])
+        self.assertEqual(MASK_OFF % "firmware/", "the mask is off for firmware/: it cannot be read or parsed, so spark cannot mask "
+                                                 "its values. Repair or remove it")  # the lens of #1610: no firmware/firmware
         self.assertNotIn(HALF_TYPED, out.getvalue() + err.getvalue())
         text = "\n".join(lines_of(project))
-        self.assertIn(MASK_OFF % "wifi_secrets.py", text)
+        self.assertIn(MASK_OFF % "firmware/wifi_secrets.py", text)
         self.assertNotIn(HALF_TYPED, text)
 
 

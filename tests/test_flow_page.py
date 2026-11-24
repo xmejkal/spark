@@ -432,8 +432,8 @@ class TheUnreadableSecretsTest(unittest.TestCase):
         self.assertEqual((code, envelope["status"]), (2, COULD_NOT_RUN))
         [item] = envelope["unchecked"]
         self.assertEqual((item["code"], item["fix"]), (NOT_WRITTEN, SECRETS_FIX))
-        self.assertEqual(item["sentence"], "page.html was not written: firmware/ holds a secrets file that cannot be read or parsed "
-                                           "(wifi_secrets.py), so spark cannot mask its values. The page on disk is the old one")
+        self.assertEqual(item["sentence"], "page.html was not written: firmware/wifi_secrets.py cannot be read or parsed, so spark "
+                                           "cannot mask the values of the project's secrets. The page on disk is the old one")
         self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
         self.assertNotIn(HALF_TYPED, out.getvalue() + err.getvalue())
 
@@ -444,7 +444,7 @@ class TheUnreadableSecretsTest(unittest.TestCase):
         kept = [{"file": str(project / "dist"), "did": "wrote"}, {"file": str(project / "breadboard.svg"), "did": "wrote", "why": "a picture"}]
         entry = kept_files.keep_tabbed_page(project, [Stage("build", OK)], kept, FakeTscircuitExport(), write_kept_page)
         self.assertEqual(entry["did"], "not written")
-        self.assertIn("wifi_secrets.py", entry["why"])
+        self.assertIn("firmware/wifi_secrets.py cannot be read or parsed", entry["why"])
         self.assertNotIn(HALF_TYPED, repr(entry))
         self.assertFalse((project / "page.html").exists())
 

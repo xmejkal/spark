@@ -31,6 +31,10 @@ NUL_VALUE = "nul-byte-secret"
 TYPED = "typed-assign-value"
 KEYWORD = "keyword-argument-value"
 CALLED = "bare-call-keyword"
+#: The forms the review found missed (the refuter of #1610): a positional argument, bytes, an f-string, a joined string
+#: and the default of a call.
+POSITIONAL, BYTES, FSTRING = "positional-pw-1", "bytes-password", "fstr-password"
+JOINED_HEAD, JOINED_TAIL, DEFAULT = "concat-", "password-x", "default-token-99"
 
 
 def project_with(files):
@@ -98,6 +102,21 @@ wlan.connect(SSID, key="%s")
 ''' % (TYPED, KEYWORD, CALLED)}))
         self.assertEqual(sorted(reading.values), sorted([TYPED, KEYWORD, CALLED]))
 
+    def test_a_positional_argument_bytes_an_f_string_a_joined_string_and_a_call_s_default_are_read(self):
+        reading = ProjectSecrets.read(project_with({"firmware/secrets.py": '''import os
+wlan.connect("MyNetwork", "%s")
+P = b"%s"
+Q = f"%s{1}"
+R = "%s" + "%s"
+T = os.getenv("X", "%s")
+''' % (POSITIONAL, BYTES, FSTRING, JOINED_HEAD, JOINED_TAIL, DEFAULT)}))
+        self.assertEqual(sorted(reading.values), sorted(["MyNetwork", POSITIONAL, BYTES, FSTRING, JOINED_TAIL,
+                                                         JOINED_HEAD + JOINED_TAIL, DEFAULT]))
+
+    def test_bytes_that_are_no_utf_8_give_what_can_be_read(self):
+        reading = ProjectSecrets.read(project_with({"firmware/secrets.py": b'P = b"\\xff%s"\n' % BYTES.encode()}))
+        self.assertEqual(reading.values, (BYTES,))
+
     def test_a_value_shorter_than_min_secret_is_dropped(self):
         self.assertTrue(0 < len(SHORT) < MIN_SECRET)
         self.assertEqual(sorted(self.reading.values), sorted([NESTED, LISTED]))
@@ -120,7 +139,7 @@ class TheReadTest(unittest.TestCase):
                 project = project_with({"firmware/" + name: content, "firmware/wifi_secrets.py": 'WIFI = "%s"\n' % WIFI_PASSWORD})
                 reading = ProjectSecrets.read(project)
                 self.assertEqual(reading.values, (WIFI_PASSWORD,))
-                self.assertEqual(reading.unreadable, (name,))
+                self.assertEqual(reading.unreadable, ("firmware/" + name,))
                 self.assertNotIn(HALF_TYPED, repr(reading))
                 self.assertNotIn(NUL_VALUE, repr(reading))
 
@@ -130,7 +149,7 @@ class TheReadTest(unittest.TestCase):
         self.addCleanup((project / "firmware").chmod, 0o755)
         if os.access(project / "firmware", os.R_OK):
             self.skipTest("this user reads a folder of mode 000, as root does")
-        self.assertEqual(ProjectSecrets.read(project), ((), ("firmware",)))
+        self.assertEqual(ProjectSecrets.read(project), ((), ("firmware/",)))
 
     def test_the_parse_gives_no_warning_that_could_show_a_line(self):
         project = project_with({"firmware/secrets.py": 'TOKEN = "abc\\d-%s"\n' % TOKEN})
