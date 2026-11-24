@@ -33,6 +33,7 @@ from spark.core.errors import SparkError  # noqa: E402
 from spark.records import launcher  # noqa: E402
 from spark.records import records_codes  # noqa: E402
 from spark.records import store  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from spark.records.deploy_record_store import DeployRecordStore, LastDeploy, outside_deploy  # noqa: E402
 from spark.records.registered_project_store import RegisteredProject, RegisteredProjectStore  # noqa: E402
 from spark.records.storage import UNREADABLE, MemoryStorage  # noqa: E402
@@ -499,10 +500,49 @@ class AnUnreadableStoreTest(StoreCase):
         self.assertIn("Not registered.", done.stderr)
 
     def test_show_names_the_tools_file_it_cannot_read_and_exits_2(self):
-        # D4: the bench gives every ToolError the code tool_missing today, so this pins it
+        # P1058 (#1555): a tools file the bench cannot read keeps its own code and the records fix, not tool_missing
         done, said = self.run_bench("show", "--json")
-        self.assertEqual((done.returncode, said["unchecked"][0]["code"]), (2, "tool_missing"), done.stderr)
+        self.assertEqual((done.returncode, said["unchecked"][0]["code"], said["unchecked"][0]["fix"]),
+                         (2, "file_refused", records_codes.FILE_REFUSED.fix), done.stderr)
         self.assertIn("cannot be read", said["unchecked"][0]["sentence"])
+
+
+class ABrokenToolsFileTest(StoreCase):
+    """P1058 (#1555): a store's tools file that is not JSON is tools_list_broken in the bench, with the records fix, in a
+    child that reads it as it starts, and bench.py record keeps the fix that names its next command (the council's A)."""
+
+    def setUp(self):
+        super().setUp()
+        (self.home / "tools.json").write_text('{"tools": ')
+
+    def test_show_says_the_tools_file_is_no_tools_list_and_exits_2(self):
+        env = golden_bench.child_env(self.home, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
+        done = golden_bench.run_child("bench.py", ["show", "--json"], tempfile.mkdtemp(), env)
+        self.assertNotIn("Traceback", done.stdout + done.stderr)
+        (item,) = json.loads(done.stdout)["unchecked"]
+        self.assertEqual((done.returncode, item["code"], item["fix"]), (2, "tools_list_broken", records_codes.TOOLS_LIST_BROKEN.fix),
+                         done.stderr)
+        self.assertIn("is not JSON", item["sentence"])
+        self.assertEqual(done.stderr.splitlines()[-1], "bench.py: %s" % records_codes.TOOLS_LIST_BROKEN.fix)
+
+
+class ARecordOnABrokenToolsFileTest(RecordCase):
+    """The council's A (P1058): record's fix names its next command for a tools-file stop too, as bench.md says."""
+
+    def test_record_keeps_its_again_fix_for_a_tools_file_stop(self):
+        self.register()
+
+        def broken(name, *args, **kwargs):
+            raise tool_finder.ToolError("<store>/tools.json is not JSON (Expecting value) — fix it or delete it",
+                                        code="tools_list_broken")
+        exit_code, out, _ = self.bench("record", "pixel-games", "--json", find_tool=broken)
+        (item,) = json.loads(out)["unchecked"]
+        self.assertEqual((exit_code, item["code"]), (2, "tools_list_broken"))
+        self.assertTrue(item["fix"].startswith("fix what the line above says, then run bench.py record pixel-games again"), item["fix"])
+        _, _, err = self.bench("record", "pixel-games", find_tool=broken)
+        self.assertEqual(err.splitlines()[1:], ["bench.py: %s" % records_codes.TOOLS_LIST_BROKEN.fix,
+                                                "bench.py: Nothing was written. %s" % item["fix"]])
+        self.no_record()
 
 
 class TheFixRoundTest(RecordCase):

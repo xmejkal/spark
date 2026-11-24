@@ -50,6 +50,9 @@ ENDS_AS = {
     ("footprint", "FOOTPRINT_EMITTER_CRASHED_ENDING"): ("stage_crashed", "could-not-run"),
     ("footprint", "BOARD_ONLY_ENDING"): ("board_only", "skipped"),
     ("build", "ENGINE_MISSING_ENDING"): ("tool_missing", "could-not-run"),
+    # P1058: a tools file the engine lookup cannot read, or one that is no tools list, keeps its own code
+    ("build", "TOOLS_FILE_REFUSED_ENDING"): ("file_refused", "could-not-run"),
+    ("build", "TOOLS_LIST_BROKEN_ENDING"): ("tools_list_broken", "could-not-run"),
     ("build", "TIMED_OUT_ENDING"): ("stage_timed_out", "could-not-run"),
     ("build", "TOOL_CANNOT_BUILD_ENDING"): ("tool_cannot_build", "could-not-run"),
     ("build", "NO_CIRCUIT_ENDING"): ("design_not_built", "problems"),

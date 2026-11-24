@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_look  # noqa: E402
-from spark.records import tool_finder  # noqa: E402
+from spark.records import records_codes, tool_finder  # noqa: E402
 from fakes import FakeOutsideWorld  # noqa: E402
 from spark.bench.check_grant import CheckGrant  # noqa: E402
 from spark.bench import stops  # noqa: E402
@@ -112,6 +112,37 @@ class AStopOfAFirmwareThatSleepsSaysTheAsleepFixTest(unittest.TestCase):
             with self.subTest(main=main):
                 (self.project / "firmware" / "main.py").write_text(main)
                 self.assertEqual(stop_result(self.no_port, "grant.py", self.project, None, stops.undoctored("grant.py")).next, [])
+
+
+class AToolsFileStopKeepsItsCodeTest(unittest.TestCase):
+    """P1058 (#1555): a tools file spark cannot read, or one that is no tools list, keeps its own code and that records
+    Code's fix, on the Finding and as a second line on stderr (the council's C). Every other ToolError stays tool_missing
+    with no fix (D1)."""
+
+    def setUp(self):
+        self.project = Path(tempfile.mkdtemp())
+
+    def said(self, cannot):
+        stopped = stop_result(cannot, "bench.py", self.project, None)
+        (found,) = stopped.findings
+        return found, stopped.diagnostics
+
+    def test_a_tools_file_that_is_no_tools_list_or_cannot_be_read_keeps_its_code_and_fix(self):
+        for code, sentence in ((records_codes.TOOLS_LIST_BROKEN, "<store>/tools.json is not JSON (Expecting value) — fix it or delete it"),
+                               (records_codes.FILE_REFUSED, "<store>/tools.json cannot be read (Permission denied) — fix it or its permissions")):
+            with self.subTest(code=code):
+                found, lines = self.said(tool_finder.ToolError(sentence, code=str(code)))  # a plain str, as a test raises it
+                self.assertEqual((found.severity, found.code, found.sentence, found.fix),
+                                 ("could-not-run", str(code), sentence, code.fix))
+                self.assertEqual(lines, ["bench.py: %s" % sentence, "bench.py: %s" % code.fix])
+
+    def test_a_missing_or_turned_off_tool_stays_tool_missing_with_no_fix(self):
+        for cannot in (tool_finder.ToolMissingError("mpremote is not installed", code=records_codes.TOOL_MISSING),
+                       tool_finder.ToolError("mpremote is turned off", code=records_codes.TOOL_OFF)):
+            with self.subTest(code=cannot.code):
+                found, lines = self.said(cannot)
+                self.assertEqual((found.code, found.fix), ("tool_missing", ""))
+                self.assertEqual(lines, ["bench.py: %s" % cannot])
 
 
 class AStopsDataIsItsOwnTest(unittest.TestCase):

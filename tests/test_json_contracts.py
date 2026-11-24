@@ -309,12 +309,15 @@ class TheBenchCodesTableTest(unittest.TestCase):
         # P935 PR 5: two pairs hold one fix (the other two hold the build's own, row 12 of rows/p935-build.md)
         self.assertEqual(build_codes.BOARD_UNUSABLE.fix, design_codes.BOARD_UNUSABLE.fix)
         self.assertEqual(build_codes.INPUT_AMBIGUOUS.fix, check_codes.INPUT_AMBIGUOUS.fix)
-        # P716: two records codes are equal literals of another leaf, with the same sentence; no other code is shared
+        # P716: two records codes are equal literals of another leaf, with the same sentence; no other code is shared.
+        # P1058: two more are build_codes' too, a tools file the engine lookup cannot read or that is no tools list
         others += (build_codes,)
+        shared_by_records = {"file_refused": build_codes, "missing_fact": board_codes, "tool_missing": board_codes,
+                             "tools_list_broken": build_codes}
         self.assertEqual(sorted(code for code in records_codes.CODES if any(code in other.CODES for other in others)),
-                         ["missing_fact", "tool_missing"])
-        self.assertEqual([records_codes.CODES[code] for code in ("missing_fact", "tool_missing")],
-                         [board_codes.CODES["missing_fact"], board_codes.CODES["tool_missing"]])
+                         ["file_refused", "missing_fact", "tool_missing", "tools_list_broken"])
+        self.assertEqual([records_codes.CODES[code] for code in shared_by_records],
+                         [table.CODES[code] for code, table in shared_by_records.items()])
         # P717: no sourcing code is an equal literal of another leaf
         tables = others + (records_codes,)
         self.assertEqual(set(sourcing_codes.CODES) & set().union(*(other.CODES for other in tables)), set())
@@ -699,7 +702,8 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         self.assertEqual({str(code): code.fix for code in check_codes.CODES}, self.CHECK_FIXES)
         self.assertEqual(len(check_codes.CODES), 19)
 
-    #: P935 PR 5: the fix of each of the build's 26 codes, as the PO read it (the plan check changed twelve)
+    #: P935 PR 5: the fix of each of the build's 28 codes, as the PO read it (the plan check changed twelve; P1058 adds
+    #: file_refused and tools_list_broken for his read)
     BUILD_FIXES = {
         "board_unusable":
             # byte-equal in design_codes (the pair test)
@@ -718,6 +722,11 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             "tell the person each note. If a value the emitter assumed is wrong, write the right one in the part record or the requirements file that the note names, then build again",
         "tool_missing":
             "ask the person to run /spark:setup, which installs the tool that the sentence names, then build again",
+        # P1058: a tools file the engine lookup cannot read, or one that is no tools list; no install fixes these
+        "file_refused":
+            "fix the file the sentence names, or its permissions, or move it away, then build again",
+        "tools_list_broken":
+            "fix the tools file the sentence names, or move it away, then build again",
         "tool_cannot_build":
             "ask the person to run /spark:setup, or `npm i @tscircuit/cli` in the project folder, then build again",
         "design_not_built":
@@ -760,7 +769,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
 
     def test_the_build_s_codes_hold_the_fix_the_po_read(self):
         self.assertEqual({str(code): code.fix for code in build_codes.CODES}, self.BUILD_FIXES)
-        self.assertEqual(len(build_codes.CODES), 26)
+        self.assertEqual(len(build_codes.CODES), 28)
 
     def test_each_code_constant_of_the_table_is_a_word_of_codes_with_that_word_s_meaning(self):
         # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word;
