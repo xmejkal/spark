@@ -10,7 +10,7 @@ sentence alone, with the same exit code as before. Their codes wait in the libra
 
 | script | codes |
 | --- | --- |
-| `run_scenario.py`, before the paid call | `no_sim_project`, `no_main_py`, `unknown_component_id`, `run_input_unusable`, `firmware_line_bad`, `tool_missing` (littlefs, the simulator or the MicroPython build; the sentence ends with each place spark could not read, [P1071](https://github.com/xmejkal/spark/issues/1571)), `interpreter_unusable`, `files_not_written`, `no_token` |
+| `run_scenario.py`, before the paid call | `no_sim_project`, `no_main_py`, `unknown_component_id`, `run_input_unusable`, `firmware_line_bad`, `tool_missing` (littlefs, the simulator or the MicroPython build; it ends with each place spark cannot read, P1071), `interpreter_unusable`, `files_not_written`, `no_token` |
 | `run_scenario.py`, during the run | `simulator_cannot_start`, `simulator_hung` (wokwi-cli outlived its wall clock), `simulator_lost`, `board_silent`, `board_not_started`, `never_ready`, `step_timeout`, `step_failed` |
 | `flash_image.py` | `tool_missing`, `no_interpreter`, `files_not_folder`, `config_not_json`, `interpreter_unusable` (damaged, too large, or not the build for the board's chip), `files_not_written` |
 | `import_firmware.py` | `import_failed`, `import_timeout` (in `--json`), `nothing_to_import`, `no_firmware_folder` (in the library only) |
