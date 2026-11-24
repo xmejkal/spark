@@ -35,7 +35,8 @@ from spark.records import tool_finder  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
 from fakes import FakeClock, FakeConsent, FakeConsoleProbe, FakeOutsideWorld, FakeReporter  # noqa: E402
-from spark.core.events import LINE  # noqa: E402
+from spark.core.events import BEGIN, LINE  # noqa: E402
+from spark.bench.deploy_stages import DeployPhase  # noqa: E402
 from test_board_look import C6_MAC, data, done  # noqa: E402
 import test_deploy_gate  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
@@ -883,10 +884,16 @@ class DeployPageTest(JsonCase, GateCase):
         a_board_log(self.project, "ready seen", SEEN_SENTENCE, image=self.image.read_bytes(), name="2026-10-16T09-00-00")
 
     def assert_show_and_the_next_page_say_the_flash_did_not_finish(self, words):
-        """`flow.py show` says the flash did not finish, with the cause's `words`, and no ready seen. The run itself left
-        page.html as it was: a crash writes no page (P1038's 0c rule, G1). The next page write names the new stand."""
-        import flow
+        """`flow.py show` and the next page say the flash did not finish, with the cause's `words` (P1096 test 4)."""
         from test_flow import FLASH_NOT_FINISHED_WORDS
+        self.assert_show_and_the_next_page_say("problems", FLASH_NOT_FINISHED_WORDS,
+                                               "Flash not finished, nothing read back, the board may be erased.", words)
+
+    def assert_show_and_the_next_page_say(self, status, verdict_words, on_the_board, words):
+        """`flow.py show` says the deploy's `status`, the verdict's words and the cause's `words`, and no ready seen. The
+        run itself left page.html as it was: a crash writes no page (P1038's 0c rule, G1). The next page write names the
+        new stand, with `on_the_board` as its ON THE BOARD line (P1062)."""
+        import flow
         from spark.flow.write_flow_page import FlowPageStore, write_page
         self.assertEqual(self.page.read_text(encoding="utf-8"), "an old page")
         write_page(self.project, store=FlowPageStore())
@@ -894,14 +901,14 @@ class DeployPageTest(JsonCase, GateCase):
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
             flow.main(["show", "--project", str(self.project), "--json"])
         deploy, = [phase for phase in json.loads(out.getvalue())["data"]["phases"] if phase["phase"] == "deploy"]
-        self.assertEqual(deploy["status"], "problems")
-        self.assertIn(FLASH_NOT_FINISHED_WORDS, deploy["says"][0])
+        self.assertEqual(deploy["status"], status)
+        self.assertIn(verdict_words, deploy["says"][0])
         self.assertIn("Cause in the log: %s." % words, " ".join(deploy["says"]))
         self.assertNotIn("ready seen", " ".join(deploy["says"]))
         page = self.page.read_text(encoding="utf-8")
         for line in deploy["says"]:
             self.assertIn(html.escape(line), page)
-        self.assertIn(html.escape("Flash not finished, nothing read back, the board may be erased."), page)  # ON THE BOARD, P1062
+        self.assertIn(html.escape(on_the_board), page)  # ON THE BOARD, P1062
         self.assertNotIn("Ready seen", page)
 
     @needs_littlefs
@@ -913,7 +920,7 @@ class DeployPageTest(JsonCase, GateCase):
         self.assertEqual((code, said["status"], said["unchecked"][0]["code"]), (2, "could-not-run", "crash"))
         older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
         self.assertEqual((said["data"]["board_log"], said["data"]["board_state"]), (str(newer), "may_be_erased"))
-        self.assert_show_and_the_next_page_say_the_flash_did_not_finish("spark crashed during the flash")
+        self.assert_show_and_the_next_page_say_the_flash_did_not_finish("spark crashed during the deploy")
 
     @needs_littlefs
     def test_a_ctrl_c_in_the_flash_logs_it_says_so_and_still_ends_the_run(self):
@@ -928,7 +935,71 @@ class DeployPageTest(JsonCase, GateCase):
         self.assertIn("board log: %s: flash not finished, the board may be erased. Look at the board with Claude, then run "
                       "the deploy again." % newer, lines)
         self.assertEqual([command for command in self.ran if "exec" in command or "fs" in command], [])
-        self.assert_show_and_the_next_page_say_the_flash_did_not_finish("a Ctrl-C interrupted the flash")
+        self.assert_show_and_the_next_page_say_the_flash_did_not_finish("a Ctrl-C interrupted the deploy")
+
+    def assert_show_and_the_next_page_say_the_start_was_not_confirmed(self, words):
+        """`flow.py show` and the next page say the board was written and its start not confirmed (P1110 test 4)."""
+        from spark.flow.flow_codes import UNSURE_WORDS
+        self.assert_show_and_the_next_page_say("partial", UNSURE_WORDS, "Written by the flasher, start not confirmed.", words)
+
+    @needs_littlefs
+    def test_a_crash_in_the_verify_logs_it_and_show_says_the_start_was_not_confirmed(self):
+        # P1110 test 4 (a), the card's: the deploy before, ready seen, stands no more. No store record (D3, P1112)
+        self.an_older_ready_seen_log()
+        self.unread = RuntimeError("usb fell off")
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True))
+        said = self.one(code, said, "deploy", "deploy")
+        item, = said["unchecked"]
+        self.assertEqual((code, item["code"], item["subject"], said["data"]["board_state"]), (2, "crash", "verify", "flashed_not_verified"))
+        older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertEqual((said["data"]["board_log"], said["data"]["store_record"]), (str(newer), None))
+        self.assert_show_and_the_next_page_say_the_start_was_not_confirmed("spark crashed during the deploy")
+
+    @needs_littlefs
+    def test_a_ctrl_c_in_the_verify_logs_it_says_so_and_still_ends_the_run(self):
+        # P1110 test 4 (b), the card's: the Ctrl-C goes on after the board log line
+        from spark.bench.deploy_image import VERIFY_NOT_FINISHED_LOG_LINE
+        self.an_older_ready_seen_log()
+        self.unread = KeyboardInterrupt()
+        reporter = FakeReporter()
+        with self.assertRaises(KeyboardInterrupt):
+            self.deploy("--json", "--token", self.token(), consent=FakeConsent(True), reporter=reporter)
+        lines = [event.text for event in reporter.events if event.kind == LINE]
+        older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertIn(VERIFY_NOT_FINISHED_LOG_LINE % newer, lines)
+        self.assert_show_and_the_next_page_say_the_start_was_not_confirmed("a Ctrl-C interrupted the deploy")
+
+    @needs_littlefs
+    def test_an_image_deleted_after_a_good_flash_keeps_the_crash_s_data_and_its_board_log(self):
+        # P1110 test 6, with P1111: the verify's image_of refuses the gone image, and the crash's answer read the look's
+        # token from the gone file, so its data was null
+        from spark.bench import board_log
+        case = self
+
+        class DeletesTheImageAtTheVerify(FakeReporter):
+            def report(self, event):
+                super().report(event)
+                if event.kind == BEGIN and event.code == DeployPhase.VERIFY:
+                    case.image.unlink()
+
+        self.run_the_scenario()
+        flashed = hashlib.sha256(self.image.read_bytes()).hexdigest()
+        code, said, _ = self.deploy("--json", "--token", self.token(), consent=FakeConsent(True), reporter=DeletesTheImageAtTheVerify())
+        said = self.one(code, said.splitlines(), "deploy", "deploy")
+        item, = said["unchecked"]
+        self.assertEqual((code, item["code"], item["subject"]), (2, "crash", "verify"))
+        self.assertEqual((said["data"]["look"]["token"], said["data"]["look"]["no_token_reason"]), (None, board_look.IMAGE_GONE_REASON))
+        log, = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertEqual(said["data"]["board_log"], str(log))
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1][1:], (flashed, "ready unknown", "crash"))
+        import flow
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            flow.main(["show", "--project", str(self.project), "--json"])
+        shown = json.loads(out.getvalue())["data"]
+        deploy, = [phase for phase in shown["phases"] if phase["phase"] == "deploy"]
+        self.assertEqual(shown["deploy"]["fact"], "no-image")
+        self.assertNotEqual(deploy["status"], "ok")
 
 
 if __name__ == "__main__":
