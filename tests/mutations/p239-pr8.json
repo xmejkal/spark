@@ -2,7 +2,7 @@
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "deploy-returns-none",
-  "find": "        return planned\n",
+  "find": "        return planned._replace(image_sha256=image_sha256)\n",
   "replace": "        return None\n"
  },
  {

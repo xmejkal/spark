@@ -386,7 +386,7 @@ class LookTest(LookCase):
         report = self.look()
         self.image.unlink()
         self.assertIsNone(report.token())
-        self.assertEqual(report.no_token_reason(), board_look.NoToken("no_image", board_look.IMAGE_GONE_REASON))
+        self.assertEqual(report.no_token_reason(), board_look.NoToken("no_image", "the image file is gone or unreadable since the look found it"))
         said = report.to_dict()
         self.assertEqual((said["token"], said["no_token_reason"], said["status"]),
                          (None, "the image file is gone or unreadable since the look found it", outcomes.COULD_NOT_RUN))

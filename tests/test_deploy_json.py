@@ -448,7 +448,7 @@ class DeployJsonTest(JsonCase, GateCase):
                          (2, "grant_ended", "may_be_erased", str(log)))
         self.assertEqual(board_log.newest_logged_deploy(self.project)[1].verdict, "flash not finished")
         self.assertEqual((said["data"]["look"]["token"], said["data"]["look"]["no_token_reason"]),
-                         (None, board_look.IMAGE_GONE_REASON))
+                         (None, "the image file is gone or unreadable since the look found it"))
         self.assertTrue(said["data"]["store_record_error"])
         self.assertIn(NOT_FINISHED_LOG_LINE % log, err)
 
@@ -988,7 +988,7 @@ class DeployPageTest(JsonCase, GateCase):
         said = self.one(code, said.splitlines(), "deploy", "deploy")
         item, = said["unchecked"]
         self.assertEqual((code, item["code"], item["subject"]), (2, "crash", "verify"))
-        self.assertEqual((said["data"]["look"]["token"], said["data"]["look"]["no_token_reason"]), (None, board_look.IMAGE_GONE_REASON))
+        self.assertEqual((said["data"]["look"]["token"], said["data"]["look"]["no_token_reason"]), (None, "the image file is gone or unreadable since the look found it"))
         log, = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
         self.assertEqual(said["data"]["board_log"], str(log))
         self.assertEqual(board_log.newest_logged_deploy(self.project)[1][1:], (flashed, "ready unknown", "crash"))
