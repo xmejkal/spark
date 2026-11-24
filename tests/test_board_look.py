@@ -379,6 +379,18 @@ class LookTest(LookCase):
         self.assertEqual(first.split("-")[0], second.split("-")[0])
         self.assertNotEqual(first.split("-")[1], second.split("-")[1])
 
+    @needs_littlefs
+    def test_an_image_gone_since_the_look_gives_no_token_and_its_reason(self):
+        # P1111 test 7: token() read the gone file and raised FileNotFoundError, and so did to_dict()
+        self.run_the_scenario()
+        report = self.look()
+        self.image.unlink()
+        self.assertIsNone(report.token())
+        self.assertEqual(report.no_token_reason(), board_look.NoToken("no_image", board_look.IMAGE_GONE_REASON))
+        said = report.to_dict()
+        self.assertEqual((said["token"], said["no_token_reason"], said["status"]),
+                         (None, "the image file is gone or unreadable since the look found it", outcomes.COULD_NOT_RUN))
+
     def test_another_chip_is_a_stop_with_no_token(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")

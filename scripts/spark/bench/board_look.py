@@ -99,6 +99,8 @@ class LookStopError(ValueMessageError):
 Stop = namedtuple("Stop", "code sentence")
 #: Value. Why the look gave no token: a board_codes code and the sentence a person reads.
 NoToken = namedtuple("NoToken", "code sentence")
+#: Why there is no token when the image file is gone or unreadable since the look found it (P1111, P779's words).
+IMAGE_GONE_REASON = "the image file is gone or unreadable since the look found it"
 # --- end MVP ---
 
 
@@ -375,7 +377,11 @@ class LookReport:
             return NoToken(board_codes.STOP_FOUND, "the look found a stop")
         if not self.reading.mac:
             return NoToken(board_codes.NO_MAC, "the board's MAC could not be read")
-        return NoToken(self.image_code, self.image_why) if self.image_why else None
+        if self.image_why:
+            return NoToken(self.image_code, self.image_why)
+        if self.image and not os.access(self.image, os.R_OK):  # P1111: token() reads the file, and the answer keeps its data
+            return NoToken(board_codes.NO_IMAGE, IMAGE_GONE_REASON)
+        return None
 
     @functools.cached_property
     def micropython_banner(self):

@@ -427,6 +427,31 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertIn("store record: not written: ", err)
 
     @needs_littlefs
+    def test_an_image_gone_after_a_flash_that_did_not_finish_leaves_its_answer_and_its_board_log(self):
+        # P1111 test 8, the card's: the look's token read the gone file, so the answer was a crash with data null
+        from spark.bench.deploy_image import NOT_FINISHED_LOG_LINE
+        from spark.bench import board_log
+        case = self
+
+        class EndsAndDeletesTheImage(FakeConsent):
+            def require_ready(self):
+                if case.slept:  # the erase's retry wait: the image is deleted, then the yes ends
+                    case.image.unlink()
+                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.", reason="grant_ended")
+
+        self.run_the_scenario()
+        code, said, err = self.go("--token", self.token(), consent=EndsAndDeletesTheImage(True), fails=1)
+        said = self.one(code, said, "deploy", "deploy")
+        log, = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertEqual((code, said["unchecked"][0]["code"], said["data"]["board_state"], said["data"]["board_log"]),
+                         (2, "grant_ended", "may_be_erased", str(log)))
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1].verdict, "flash not finished")
+        self.assertEqual((said["data"]["look"]["token"], said["data"]["look"]["no_token_reason"]),
+                         (None, board_look.IMAGE_GONE_REASON))
+        self.assertTrue(said["data"]["store_record_error"])
+        self.assertIn(NOT_FINISHED_LOG_LINE % log, err)
+
+    @needs_littlefs
     def test_a_store_record_that_cannot_be_written_after_a_failed_flash_leaves_its_answer(self):
         # P1097 test 9: the FlashError's answer stands, and the record's error is said beside the null
         self.run_the_scenario()
