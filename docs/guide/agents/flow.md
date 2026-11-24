@@ -143,7 +143,7 @@ for “Beetle ESP32 Microcontroller”.` before the history sentence. A board th
 parts list places, so then the offer says nothing. An offer for a need that does not compute never says it.
 
 The build phase reads `.spark/build.json`. If the folder of `check_spine.py --keep` is a project, the build writes this
-file and lists it under `kept`. It holds the build's `status`, its `stages`, the `requirements` file, its sha256 and the
+file and lists it under `kept`. It holds the build's `status`, its `stages`, the `requirements` file, its sha256, whether this build wrote `dist/` (`dist_written`, which `check_all` reads, P816) and the
 time. The file is named relative to the project when it is inside the project, else by its whole path. If the sha256 of that file is different now, the build phase is `stale`, and the breadboard phase is `stale` too.
 
 A phase with problems adds one item to `problems`, with the code `phase_problems`. A phase that spark cannot read adds
