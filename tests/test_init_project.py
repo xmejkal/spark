@@ -368,6 +368,51 @@ class TheSelectionThatIsNotTheProjectsBoardIsSaidTest(unittest.TestCase):
         self.assertIn("  the project's board is not known: ", said)
 
 
+class ASelectionThatCannotBeOpenedStopsInitTest(unittest.TestCase):
+    """P1099 (#1617): a boards/active.json that cannot be opened, is a folder or is a dangling link crashed init with a
+    traceback, exit 1: in the projects list, in board_differs and in the write. Init refuses it now, before anything is
+    written: record_file_broken, exit 2, the project not listed."""
+
+    S3 = "firebeetle2-esp32s3"
+
+    def a_broken_selection(self, case):
+        """A project, resolved as init resolves --project, whose boards/active.json is `case`."""
+        root = a_project().resolve()
+        selection = root / "boards" / "active.json"
+        selection.parent.mkdir()
+        if case == "folder":
+            selection.mkdir()
+        elif case == "dangling link":  # F2: exists() is False for it
+            try:
+                os.symlink(root / "boards" / "gone.json", selection)
+            except (OSError, NotImplementedError):
+                self.skipTest("no symlinks here")
+        else:
+            if os.geteuid() == 0:
+                self.skipTest("root reads a file with no read permission")
+            selection.write_text(json.dumps({"schema": 1, "board": self.S3}))
+            selection.chmod(0)
+            self.addCleanup(selection.chmod, 0o644)
+        return root
+
+    def test_a_selection_that_cannot_be_opened_or_is_a_folder_stops_init_with_record_file_broken(self):
+        for case in ("folder", "dangling link", "no read permission"):
+            for argv in ((), ("--board", self.S3), ("--board", self.S3, "--force")):
+                with self.subTest(case=case, argv=argv):
+                    root = self.a_broken_selection(case)
+                    refused = project_setup.why_project_refused(root)
+                    self.assertEqual(refused.code, "record_file_broken")
+                    self.assertTrue(refused.startswith("init_project.py: %s cannot be read: " % (root / "boards" / "active.json")), refused)
+                    home, err = Path(tempfile.mkdtemp()), io.StringIO()
+                    with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}), contextlib.redirect_stdout(io.StringIO()), \
+                            contextlib.redirect_stderr(err):
+                        code = init_project.main(["--project", str(root), *argv])
+                        listed = store.projects()
+                    self.assertEqual((code, err.getvalue()), (init_project.EXIT_COULD_NOT_RUN, refused + "\n"))
+                    self.assertEqual(listed, {}, "a refused run puts the project on no list")
+                    self.assertFalse((root / ".spark" / "project.json").exists())
+
+
 class ForceMustNotEatWhatSomebodyMeasuredTest(unittest.TestCase):
     """
     P53. `--force` REPLACED the rules file, and the documents tell people to use it: *"no built
