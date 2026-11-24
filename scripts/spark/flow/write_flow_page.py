@@ -31,6 +31,8 @@ from spark.core.zone_time import stamp
 #: The Finding of a page that cannot be written: its sentence, and what to do.
 PAGE_SENTENCE = "%s was not written: %s"
 PAGE_FIX = "make the project folder writable and run it again"
+#: The fix of a page whose `.part` is taken by a link, a folder or another writer (P1054): the folder is writable.
+PART_FIX = "something else holds %s.part: remove it if it is not yours, and run it again"
 #: The record of the Artifact the page is published as (P829 PR 4), from the project's folder: its id only, never a path.
 PUBLISHED_FILE = Path(".spark") / "page.json"
 #: An Artifact's id (its slug) as the Artifact tools answer it: a UUID in lower case. Its own pattern, not the request id's
@@ -199,7 +201,8 @@ class WriteFlowPage(Operation):
             written = write_page(project, self.readers, self.parts, renderer, self.store)
         except (OSError, UnicodeError) as refused:  # a text the file cannot hold (a lone surrogate) is a page not written
             said = PAGE_SENTENCE % (renderer.FILE_NAME, refused)
-            return OperationResult(findings=[Finding(COULD_NOT_RUN, renderer.FILE_NAME, flow_codes.PAGE_NOT_WRITTEN, said, PAGE_FIX)],
+            fix = PART_FIX % renderer.FILE_NAME if isinstance(refused, store.PartTakenError) else PAGE_FIX
+            return OperationResult(findings=[Finding(COULD_NOT_RUN, renderer.FILE_NAME, flow_codes.PAGE_NOT_WRITTEN, said, fix)],
                                    lines=[said])
         data = {"file": renderer.FILE_NAME, "did": "wrote", "stands_at": written.stands_at,
                 "phases": [{"phase": phase["phase"], "status": phase["status"]} for phase in written.phases],
