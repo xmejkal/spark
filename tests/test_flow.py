@@ -2073,7 +2073,7 @@ def logged(words, *more, count=1, image=b"an image"):
 class TheDeployReaderTest(FlowTest):
     """P1043 (#1533): the deploy phase reads the newest board log in sim/runs/board/: its time, image, verdict and cause.
     Only ready seen on the image the project holds now is ok, with a tick. Ready unknown is partial, ready not seen is
-    problems, and an image that changed since is stale. A tool's text, the port and the console never reach an answer."""
+    problems, and an image that changed since is stale. A flash that did not finish is problems (P1092). A tool's text, the port and the console never reach an answer."""
 
     def test_no_board_log_keeps_today_s_phase_and_no_deploy_data(self):
         said, code = show(a_deploy_project())

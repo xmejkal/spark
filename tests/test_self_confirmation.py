@@ -156,7 +156,9 @@ MAY_READ = {
     "idea_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and no code it shares (P853)",
     "board_log.CAUSES": AGREEMENT + ": its codes against the codes whose sentences the bench's own probe and download mode "
                         "make, each start checked by running them (P1043)",
-    "flow_codes.CAUSE_WORDS": AGREEMENT + ": its codes against board_log.CAUSES, the bench's table of the same codes (P1043-D1)",
+    "flow_codes.CAUSE_WORDS": AGREEMENT + ": its codes against board_log.REASONS, the bench's table of the same codes (P1043-D1, P1092)",
+    "board_log.REASONS": AGREEMENT + ": its codes against flow_codes.CAUSE_WORDS, so every reason a board log can hold has the "
+                         "flow's words (P1092)",
     "part_pictures.PICTOGRAMS": STRUCTURE,
     "wiring_steps.THE_BOARD": "the name a component has, used to find the board among the parts: vocabulary, not a value",
     "part_pictures.FALLBACK": "the name of the fallback pictogram, compared with itself: sameness, not a value",
