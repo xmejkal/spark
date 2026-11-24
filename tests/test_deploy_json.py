@@ -733,14 +733,25 @@ class DeployPageTest(JsonCase, GateCase):
         self.assertNotIn(half_typed, "\n".join(said) + err)
 
     @needs_littlefs
-    def test_a_write_that_fails_after_the_erase_writes_the_page_that_show_agrees_with(self):
-        # B1, B12: no board log is written, so the page and show agree on the stand before this deploy
+    def test_a_write_that_fails_after_the_erase_logs_it_and_the_page_and_show_say_the_board_may_be_erased(self):
+        # P1092 test 9, the card's: the deploy before stands no more. B1, B12: the page and show agree on the new stand
+        from test_flow import FLASH_NOT_FINISHED_WORDS, SEEN_SENTENCE, a_board_log
         self.run_the_scenario()
+        a_board_log(self.project, "ready seen", SEEN_SENTENCE, image=self.image.read_bytes(), name="2026-10-16T09-00-00")
         code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), write_fails=True)
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"]), (2, "could-not-run"))
         self.assertNotIn("crash", [item["code"] for item in said["unchecked"]])
-        self.assert_the_page_is_the_flow_s(said)
+        older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertEqual(said["data"]["board_log"], str(newer))
+        shown, page = self.assert_the_page_is_the_flow_s(said)
+        deploy, = [phase for phase in shown["phases"] if phase["phase"] == "deploy"]
+        self.assertEqual(deploy["status"], "problems")
+        self.assertIn(FLASH_NOT_FINISHED_WORDS, deploy["says"][0])
+        self.assertNotIn("ready seen", " ".join(deploy["says"]))
+        for line in deploy["says"]:
+            self.assertIn(html.escape(line), page)
+        self.assertIn(html.escape("Flash not finished, nothing read back, the board may be erased."), page)  # ON THE BOARD, P1062
 
 
 if __name__ == "__main__":

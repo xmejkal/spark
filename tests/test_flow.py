@@ -2345,7 +2345,7 @@ class TheDeployNowTest(FlowTest):
 
 #: The bench's sentence in a board log of a flash that did not finish (P1092), and the flow's words for it.
 NOT_FINISHED_SENTENCE = "a flash command failed, so the board may be erased and not written"
-NOT_FINISHED_WORDS = "flash not finished, nothing read back, the board may be erased"
+FLASH_NOT_FINISHED_WORDS = "flash not finished, nothing read back, the board may be erased"
 NOT_FINISHED_NOW = ("The last flash did not finish, so the board may be erased. The board log says what failed. Ask Claude "
                     "to look at the board with you, then run the deploy again in your terminal.")
 
@@ -2366,7 +2366,7 @@ class TheFlashNotFinishedTest(FlowTest):
             with self.subTest(reason=reason):
                 said, code = show(a_not_finished_log(a_deploy_project(), reason))
                 self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (1, "problems", "✗"))
-                self.assertEqual(deploy_of(said)["says"], [logged(NOT_FINISHED_WORDS, "Cause in the log: %s." % words)])
+                self.assertEqual(deploy_of(said)["says"], [logged(FLASH_NOT_FINISHED_WORDS, "Cause in the log: %s." % words)])
                 self.assertEqual(said["data"]["deploy"], {"at": "2026-11-23T14:09:49+01:00", "image": hashlib.sha256(b"an image").hexdigest(),
                                                           "verdict": "flash not finished", "cause": reason, "fact": "current",
                                                           "read_back": False})
@@ -2385,7 +2385,7 @@ class TheFlashNotFinishedTest(FlowTest):
             with self.subTest(fact=fact):
                 said, _ = show(project)
                 self.assertEqual((deploy_of(said)["status"], said["data"]["deploy"]["fact"]), ("problems", fact))
-                self.assertEqual(deploy_of(said)["says"], [logged(NOT_FINISHED_WORDS, "Cause in the log: a flash command failed.", image=image)])
+                self.assertEqual(deploy_of(said)["says"], [logged(FLASH_NOT_FINISHED_WORDS, "Cause in the log: a flash command failed.", image=image)])
                 self.assertEqual(said["data"]["guide"]["now"]["says"], NOT_FINISHED_NOW)
 
     def test_the_newest_log_wins_both_ways(self):
