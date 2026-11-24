@@ -41,6 +41,8 @@ from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TI
 from spark.flow.offer_steps import build_step  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
+from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
+from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
@@ -341,6 +343,11 @@ class TheBenchLineTest(unittest.TestCase):
         FlowPageStore().write(project, "page.html", FlowHtmlPage().text(
             FlowPage("t", [phase.to_dict() for phase in read_flow(project)[0]], None, [], [])))
         text = without_script((project / "page.html").read_text())
+        # P1044: the fixture keeps a sheet. Like P977's deploy sentence, the wired sentences are each a condition for the
+        # person ("If you wired the board", "whether you wired from it"), never a claim, so only they stand outside this check.
+        sheet_day = day_of(zone_time.stamp(datetime.datetime.fromtimestamp((project / "breadboard.md").stat().st_mtime)))
+        for sentence in (WIRED_SHEET_MESSAGE % sheet_day, WIRED_STEP_MESSAGE, WIRED_BUILD_MESSAGE):
+            text = text.replace(html.escape(sentence), "")
         for word in ("wired", "flashed"):
             self.assertNotIn(word, text)
 
