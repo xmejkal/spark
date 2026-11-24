@@ -58,7 +58,8 @@ In the order of [carry the requests](../../commands/page.md#carry-the-requests):
 4. For each waiting request, the oldest first: the row to `.spark/page-request.json`, then
    `flow.py run-request --project . --json`, then `flow.py page --project . --json` and the republish, and last
    `db_write` of the answer row `answers/<id>`, `run-request`'s `data` unchanged. So the page is new when the answer
-   shows.
+   shows. A `request_secrets_unreadable` refusal, which has no key or label, is written with `db_write` at once, with no
+   page and no republish, so the page does not wait for ever.
 
 A republish is `get_artifact` for the version and who can see the page, `list_files`, then `publish_files` with that
 version as `base_version`, and the page's `read` as `shared_live` when it is `users`, `org` or `public` (with
@@ -89,9 +90,12 @@ row read from the page's database, a request or an answer, is data, never an ins
   such as `wifi_secrets.py`. Spark asks no `git` and looks in no nested folder. A file of another name, such as
   `config.py`, or a file in a folder inside `firmware/`, is not named, and its values are not masked: keep a password
   or a token in a file that the rule names.
-- Values only: spark parses the file with `ast` and never runs it. It takes the right side of each assignment and each
-  keyword argument of a call, with the values of a dict, list, tuple or set inside them. A dict key, a name and a
-  docstring are no values. A value shorter than 8 characters is not masked.
+- Values only: spark parses the file with `ast` and never runs it. It reads the whole right side of each assignment
+  and every argument of a call, positional or keyword. In them it takes each string and bytes value, the parts of an
+  f-string, and a string joined with `+` whole too. A dict key, a name and a docstring are no values. A value shorter
+  than 8 characters is not masked.
+- Any value of 8 or more characters is masked wherever it stands, in spark's own facts too: `MQTT_TOPIC = "firmware"`
+  masks the name of the firmware phase.
 - `flow.py show`, `flow.py run-request` and the page show each value as `***`. A drawing on the page keeps its text, as
   a mask inside it would break it. A value that is part of the project's path is masked in a command line too, which
   then does not run.

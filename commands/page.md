@@ -91,6 +91,7 @@ Each time below that says "republish":
 
       It reads the file, deletes it, and runs the step or refuses it. Its `data` is the answer, a refusal's too.
    4. Write the page again with `flow.py page --project . --json`, so that it carries the new state, and republish.
+      When it refused with `request_secrets_unreadable`, write no page: do step 5, tell the person its fix, and stop.
    5. Call `db_write` with one `set` at `answers/<id>`, its data `run-request`'s `data` unchanged.
    6. Tell the person in one line. When the step ran: "Ran <label>: <status word>. Reload the page to see the new state
       and the next button." When `data.note` is not null, add it: a build that built while its simulation could not

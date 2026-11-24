@@ -249,7 +249,7 @@ The words on the page:
 
 The page adds no tick. A phase that is not `ok` never shows the tick, whatever mark it carries. It shows the could-not-run
 mark. A code that the flow does not know shows as itself. No color says a status. The page reads the project's files and its
-board logs, and cannot see the wiring or what the board shows now: one line says so. Every text on it is masked, so no path of the home folder reaches the file, and no value of the project's secrets files (`firmware/*secret*.py`, values only, [P1060](https://github.com/xmejkal/spark/issues/1558)): `show` and `run-request` show each as `***` too. A secrets file that cannot be read or parsed keeps the page from being written (`page_not_written`), and `show` then answers with a note that the mask is off for it ([the secrets](../artifact-how-to.md#10-secrets)).
+board logs, and cannot see the wiring or what the board shows now: one line says so. Every text on it except a drawing's is masked, so no path of the home folder reaches the file, and no value of the project's secrets files (`firmware/*secret*.py`, values only, [P1060](https://github.com/xmejkal/spark/issues/1558)): `show` and `run-request` show each as `***` too. A secrets file that cannot be read or parsed keeps the page from being written (`page_not_written`), and `show` then answers with a note that the mask is off for it ([the secrets](../artifact-how-to.md#10-secrets)).
 
 ### The page script
 
