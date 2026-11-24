@@ -174,9 +174,8 @@ def fetch_of(entry):
 
 
 def _file_here(path, refused=None):
-    """Whether `path` is a regular file. When the disk refuses to say: a ToolError (P1041, a download, which
-    /spark:setup cannot write there either). With a list `refused`: not here, and its sentence goes in the list,
-    for the sentence of a tool that no place finds (P1071: a folder spark cannot read hides no tool on PATH)."""
+    """Whether `path` is a regular file. A refusal raises a ToolError (P1041) unless a list `refused` is given. Then
+    it is not here, and its sentence goes in the list (P1071)."""
     try:
         return stat.S_ISREG(path.stat().st_mode)
     except (FileNotFoundError, NotADirectoryError):
@@ -192,7 +191,8 @@ def _file_here(path, refused=None):
 
 def locate(entry, project, refused=None):
     """The command that runs this tool, by its kind — or None when it is not here. A place spark cannot read is not
-    here, and a given list `refused` collects its sentence (P1071); a download spark cannot read is a ToolError (P1041)."""
+    here, and a given list `refused` collects its sentence (P1071) (a caller with no list passes over such a place
+    silently); a download spark cannot read is a ToolError (P1041)."""
     refused = [] if refused is None else refused
     kind = entry.get("kind", "path")
     if kind == "mcp":

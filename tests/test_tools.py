@@ -313,6 +313,7 @@ class FindingAToolTest(unittest.TestCase):
         self.assertEqual(found.command, [str(root / "node_modules" / ".bin" / "tsci")])
 
 
+@unittest.skipIf(os.geteuid() == 0, "root reads a folder of mode 0")
 class ALookupSparkCannotReadTest(unittest.TestCase):
     """P1071 (#1571): the bundled file, a project's node_modules/.bin and the paths in `also` were each a PermissionError
     when a folder on the way had mode 0. Each is now "not here": the next place is asked, and only a tool that no place

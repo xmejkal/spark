@@ -92,5 +92,5 @@ way: ask the person once, run `tools.py --install <name> --project .`, and carry
 `package.json` rule holds: no `package.json`, `/spark:init` first. Claude Code asks before that `--install` runs, whichever
 command is open (unless the person's own settings already let it run: an allow rule of theirs, or auto mode): none
 lists it. When the line ends with `; <path> cannot be read (…) — fix it or its permissions`, the person fixes that
-folder's permissions first: spark could not look there, and an install there fails too
+folder's permissions first: spark could not look there, and an install into a folder you cannot read fails too
 ([P1071](https://github.com/xmejkal/spark/issues/1571)).
