@@ -8,14 +8,14 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "a hand-edited board.tsx is silently overwritten",
-  "find": "        if target.exists():\n            kept.append({\"file\": str(target), \"did\": \"left alone\",",
-  "replace": "        if False:\n            kept.append({\"file\": str(target), \"did\": \"left alone\","
+  "find": "        if not target.exists() and not target.is_symlink():",
+  "replace": "        if not target.is_symlink():"
  },
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "a file left alone is skipped without saying so",
-  "find": "            kept.append({\"file\": str(target), \"did\": \"left alone\", \"why\": \"delete it to have it regenerated\",\n                         \"line\": \"left alone: %s (delete it to have it regenerated)\" % target})",
-  "replace": "            pass"
+  "find": "            kept.append(_left_alone(target, \"delete it to have it regenerated\"))\n",
+  "replace": "            pass\n"
  },
  {
   "file": "scripts/spark/build/kept_files.py",

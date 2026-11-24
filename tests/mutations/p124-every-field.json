@@ -122,8 +122,8 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "a --keep that cannot write loses the verdict",
-  "find": "        return kept_into(workdir, destination)\n    except OSError as refused:",
-  "replace": "        return kept_into(workdir, destination)\n    except ValueError as refused:"
+  "find": "{}, finished)\n    except OSError as refused:",
+  "replace": "{}, finished)\n    except ValueError as refused:"
  },
  {
   "file": "scripts/spark/sourcing/part_rules.py",

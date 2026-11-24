@@ -14,7 +14,7 @@
  {
   "file": "scripts/spark/bench/look_at_board.py",
   "name": "the evidence gets no run, so a real child starts",
-  "find": "evidence_for(project, no_simulation, ignore_older_runs, find_tool=outside.find_tool, run=outside.run)",
-  "replace": "evidence_for(project, no_simulation, ignore_older_runs, find_tool=outside.find_tool)"
+  "find": "evidence[\"ignore_older_runs\"], find_tool=outside.find_tool, run=outside.run)",
+  "replace": "evidence[\"ignore_older_runs\"], find_tool=outside.find_tool)"
  }
 ]
