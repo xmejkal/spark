@@ -257,12 +257,27 @@ class DeployFlowService:
 
     def say_not_finished(self, failed):
         """The board log of `failed`, what ended the flash after the yes (a FlashError, P1092; a crash or a Ctrl-C, P1096):
-        its path, as `data.board_log` with the image it names, or why it was not written."""
+        its path, as `data.board_log` with the image it names, or why it was not written. Then the store record of the
+        flash that did not finish (P1097)."""
         if failed.log_path is None:
             self.say(DeployPhase.FLASH, NOT_FINISHED_UNLOGGED_LINE % failed.log_error)
-            return
-        self._reached.update(board_log=str(failed.log_path), image_sha256=failed.image_sha256)
-        self.say(DeployPhase.FLASH, NOT_FINISHED_LOG_LINE % failed.log_path, raw=True)  # P677: a file a person opens, as data.board_log
+        else:
+            self._reached.update(board_log=str(failed.log_path), image_sha256=failed.image_sha256)
+            self.say(DeployPhase.FLASH, NOT_FINISHED_LOG_LINE % failed.log_path, raw=True)  # P677: a file a person opens, as data.board_log
+        self.keep_record(lambda: self.service.record_not_finished(self.look, failed.image_sha256, failed.moment, self._reached["who"]))
+
+    def keep_record(self, write):
+        """The store record that `write()` writes, said in the current stage: its path as `data.store_record`, or why it was
+        not written, as `store_record_error` and a note. A DeployError is the image that a flash that did not finish
+        cannot read now (P1097)."""
+        reached, stage = self._reached, self.stages.stage
+        try:
+            reached["store_record"] = str(write())
+            self.say(stage, "store record: %s" % reached["store_record"])
+        except (OSError, KeyError, store.StoreError, DeployError) as cannot:  # KeyError: getpass before Python 3.13
+            reached["store_record_error"] = str(cannot)
+            reached["notes"] = ["the store record was not written: %s" % cannot]
+            self.say(stage, "store record: not written: %s" % cannot)
 
     def look_and_flash(self):
         """The read and its lines, the check that the board read is the kept board (P892), the yes, the gate, then the flash. A
@@ -318,13 +333,7 @@ class DeployFlowService:
         for line in (result.facts_line, DEPLOYED_LINE % (result.image_sha256, reached["who"]), "%s: %s" % (ready.verdict, ready.sentence)):
             self.say(DeployPhase.VERIFY, line)
         self.say(DeployPhase.VERIFY, "board log: %s" % result.log_path, raw=True)  # P677: a file a person opens, as data.board_log
-        try:
-            reached["store_record"] = str(self.service.record(result, self.consent))
-            self.say(DeployPhase.VERIFY, "store record: %s" % reached["store_record"])
-        except (OSError, KeyError, store.StoreError) as cannot:  # KeyError: getpass before Python 3.13
-            reached["store_record_error"] = str(cannot)
-            reached["notes"] = ["the store record was not written: %s" % cannot]
-            self.say(DeployPhase.VERIFY, "store record: not written: %s" % cannot)
+        self.keep_record(lambda: self.service.record(result, self.consent))
         if ready.verdict == ready_probe.UNKNOWN:
             if reached["reason"] == board_codes.READY_UNKNOWN:  # P1022: what spark knows, what it did not do, what to try
                 places = board_records.ButtonPlaces.of_project(self.service.project)

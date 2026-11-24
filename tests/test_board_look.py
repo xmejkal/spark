@@ -1021,6 +1021,12 @@ class SayLastDeployTest(unittest.TestCase):
     def test_a_time_that_does_not_parse_is_as_stored(self):
         self.assertIn("blink-c6, ready seen, last tuesday (its store record", board_look.say_last_deploy(self.recorded("last tuesday")))
 
+    def test_a_flash_that_did_not_finish_says_the_board_may_be_erased(self):
+        # P1097 test 7
+        self.assertEqual(board_look.say_last_deploy(self.recorded("2026-10-19T09:24:50+02:00", verdict="flash not finished")),
+                         "spark's last deploy here: a flash of blink-c6 that did not finish, 2026-10-19T09:24:50+02:00: the "
+                         "board may be erased (its store record, not read from the board)")
+
     def test_none_recorded(self):
         self.assertEqual(board_look.say_last_deploy(deploy_record_store.LastDeploy("none-recorded")),
                          "spark's last deploy here: none in its store record (it keeps its own deploys and those that a registered project recorded)")

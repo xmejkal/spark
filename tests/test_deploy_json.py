@@ -23,6 +23,7 @@ from spark.bench import board_envelope  # noqa: E402
 from spark.firmware import sleep_calls  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.records import board_records  # noqa: E402
+from spark.records import deploy_record_store  # noqa: E402
 from spark.bench import deploy_image  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
@@ -34,7 +35,7 @@ from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core.events import LINE  # noqa: E402
-from test_board_look import data, done  # noqa: E402
+from test_board_look import C6_MAC, data, done  # noqa: E402
 import test_deploy_gate  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
 import test_look  # noqa: E402
@@ -344,6 +345,48 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual((said["unchecked"][0]["code"], said["data"]["board_log"], said["data"]["image_sha256"]), ("flash_failed", None, None))
         self.assertIn("board log: not written: ", err)
         self.assertIn(", so flow.py show may still name an older deploy. The flash did not finish, so the board may be erased.\n", err)
+
+    @needs_littlefs
+    def test_a_flash_that_did_not_finish_is_the_look_s_last_deploy_and_the_next_yes_names_it(self):
+        # P1097 test 8, the card's: a failed command, a crash and a Ctrl-C each add a store entry `flash not finished`
+        self.run_the_scenario()
+        name = self.project.resolve().name
+        for ending, kw in (("failed", {"fails": 2}), ("crash", {"fails": 1, "fail_code": RuntimeError("usb fell off")}),
+                           ("ctrl-c", {"fails": 1, "fail_code": KeyboardInterrupt()})):
+            with self.subTest(ending=ending):
+                self.record_a_deploy()  # the deploy before: finished, ready seen
+                if ending == "ctrl-c":
+                    with self.assertRaises(KeyboardInterrupt):
+                        self.go("--token", self.token(), consent=FakeConsent(True), **kw)
+                else:
+                    code, said, err = self.go("--token", self.token(), consent=FakeConsent(True), **kw)
+                record = deploy_record_store.DeployRecordStore().find_path(C6_MAC)
+                newest = json.loads(record.read_text(encoding="utf-8"))["deploys"][-1]
+                self.assertEqual((newest["verdict"], newest["project"]), ("flash not finished", name))
+                line = board_look.say_last_deploy(self.look().last_deploy)
+                self.assertIn("a flash of %s that did not finish" % name, line)
+                self.assertNotIn("ready seen", line)
+                if ending == "failed":
+                    stored = "<store>/boards/%s" % record.name  # the envelope's privacy names the store so
+                    self.assertEqual(self.one(code, said, "deploy", "deploy")["data"]["store_record"], stored)
+                    self.assertIn("store record: %s\n" % record, err)
+                consent = FakeConsent(True)
+                self.go("--token", self.token(), consent=consent)  # the next yes
+                self.assertIn("names a flash of %s that did not finish here" % name, consent.asked[0])
+                self.assertIn("so the board may be erased", consent.asked[0])
+
+    @needs_littlefs
+    def test_a_store_record_that_cannot_be_written_after_a_failed_flash_leaves_its_answer(self):
+        # P1097 test 9: the FlashError's answer stands, and the record's error is said beside the null
+        self.run_the_scenario()
+        boards = deploy_record_store.DeployRecordStore().find_path(C6_MAC).parent
+        boards.parent.mkdir(parents=True, exist_ok=True)
+        boards.write_text("a file where the folder goes")
+        code, said, err = self.go("--token", self.token(), consent=FakeConsent(True), fails=2)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["unchecked"][0]["code"], said["data"]["store_record"]), (2, "flash_failed", None))
+        self.assertTrue(said["data"]["store_record_error"])
+        self.assertIn("store record: not written: ", err)
 
     @needs_littlefs
     def test_an_erase_retried_once_gives_the_usual_envelope_and_the_retry_line_on_stderr(self):

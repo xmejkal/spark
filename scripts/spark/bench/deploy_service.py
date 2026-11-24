@@ -279,6 +279,16 @@ class DeployService:
         why it was not written. Whose yes it was is read here, as the old main read it."""
         return self.records.write_deploy(result.facts, result.ready.verdict, consent.who)
 
+    def record_not_finished(self, look, image_sha256, moment, who):
+        """Keep a flash that did not finish after the yes in the store's record of the board, with the verdict
+        FLASH_NOT_FINISHED (P1097), so the look and the erase question say that the board may be erased. Returns its
+        path. `moment` is the board log's, `who` the phrase for whose yes it was. OSError and store.StoreError say why it
+        was not written, and a DeployError when the image cannot be read now."""
+        image = image_evidence.image_of(self.project, self.evidence)
+        # the image the flash was given, and no banner: none was written to the board (P1096, G4)
+        facts = dict(self._facts_of(image, look, (), moment), image_sha256=image_sha256, micropython_banner=None)
+        return self.records.write_deploy(facts, board_log.FLASH_NOT_FINISHED, who)
+
     def _read_board(self, image, report, connection, expected, moment):
         """(the facts, the facts line, a ReadyResult) of the board on `connection` after a flash: the facts, then ready. With
         none (the port is gone) nothing is read, because mpremote would choose a board of its own: the facts are made and not written."""
