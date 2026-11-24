@@ -43,12 +43,15 @@ def deploy_fact(project, logged):
 
 def deploy_state(project):
     """(how many board logs, the newest LoggedDeploy, its fact, the phase's status), by the order no log, a log that
-    cannot be read (BoardLogError), the fact, then the verdict: (0, None, None, NOT_STARTED) with no log. A stale image
-    wins over the verdict. Only ready seen on the image now is OK."""
+    cannot be read (BoardLogError), a flash that did not finish, the fact, then the verdict: (0, None, None, NOT_STARTED)
+    with no log. A flash that did not finish is PROBLEMS whatever the image now (P1092), and a stale image wins over the
+    other verdicts. Only ready seen on the image now is OK."""
     count, logged = board_log.newest_logged_deploy(project)
     if not count:
         return 0, None, None, flow_codes.NOT_STARTED
-    fact = deploy_fact(project, logged)
+    fact = deploy_fact(project, logged)  # also for a flash that did not finish: data.deploy says it
+    if not_finished(logged):  # the board may be erased, so no stale opener speaks of what the last deploy wrote
+        return count, logged, fact, PROBLEMS
     if fact != flow_codes.DEPLOY_CURRENT:
         return count, logged, fact, flow_codes.STALE
     if logged.verdict == ready_probe.SEEN:
@@ -65,16 +68,25 @@ def read_deploy(project):
         return DeployState(0, None, None, COULD_NOT_RUN, unread)
 
 
+def not_finished(logged):
+    """True when the LoggedDeploy `logged` is of a flash that did not finish after the yes (P1092)."""
+    return logged.verdict == board_log.FLASH_NOT_FINISHED
+
+
 def read_back_of(logged):
-    """Whether spark read the board's files back after the write: True for ready seen and ready not seen, which only a
-    read of the files gives (ready_probe's files_read), else by the cause (None: the log cannot tell, or the cause is not
-    recorded)."""
+    """Whether spark read the board's files back after the write: False after a flash that did not finish, True for ready
+    seen and ready not seen, which only a read of the files gives (ready_probe's files_read), else by the cause (None: the
+    log cannot tell, or the cause is not recorded)."""
+    if not_finished(logged):  # P1092: no write finished, so nothing was read back, whatever the cause
+        return False
     return True if logged.verdict != ready_probe.UNKNOWN else flow_codes.CAUSE_WORDS.get(logged.cause, (None, None))[1]
 
 
 def verdict_words(logged):
     """The words of the logged verdict: ready seen and ready not seen as they are, ready unknown by its cause's read-back,
-    and a lost board after ready by its own words."""
+    and a lost board after ready by its own words, and a flash that did not finish by its own (P1092)."""
+    if not_finished(logged):
+        return flow_codes.FLASH_NOT_FINISHED_WORDS
     if logged.verdict == ready_probe.SEEN:
         return flow_codes.SEEN_WORDS
     if logged.verdict == ready_probe.NOT_SEEN:
@@ -92,9 +104,11 @@ def cause_words(logged):
 
 def deploy_parts(logged, fact):
     """(a stale fact's opener or None, the verdict's words, [the cause's sentence] or [] for ready seen): the one rule that
-    `deployed_says` and `deployed_line` (P1062) each say in their own template."""
+    `deployed_says` and `deployed_line` (P1062) each say in their own template. A flash that did not finish has no opener:
+    each speaks of the image that the last deploy wrote (P1092)."""
     cause = [cause_words(logged)] if logged.verdict != ready_probe.SEEN else []
-    return flow_codes.STALE_DEPLOY_SAYS.get(fact), verdict_words(logged), cause
+    opener = None if not_finished(logged) else flow_codes.STALE_DEPLOY_SAYS.get(fact)
+    return opener, verdict_words(logged), cause
 
 
 def deployed_says(count, logged, fact):
@@ -120,7 +134,7 @@ def deployed_line(deploy):
 
 def deploy_now(state):
     """(who acts, the sentence) of an open deploy after a deploy (P1043), by its DeployState: a stale one by its fact
-    (STALE_DEPLOY_NOW, P1043-D4), problems with its cause's words, a partial one by its cause's group: a lost board after
+    (STALE_DEPLOY_NOW, P1043-D4), a flash that did not finish (P1092), problems with its cause's words, a partial one by its cause's group: a lost board after
     ready, a port gone or download mode, a start not confirmed, or a cause not recorded. None for any other status, which
     keeps its own sentence."""
     status, logged = state.status, state.logged
@@ -128,6 +142,8 @@ def deploy_now(state):
         return None
     if status == flow_codes.STALE:
         return flow_codes.STALE_DEPLOY_NOW[state.fact]
+    if not_finished(logged):  # P1092: look at the board, then deploy again
+        return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_NOT_FINISHED_NOW
     words = flow_codes.CAUSE_WORDS.get(logged.cause, (None, None))[0]
     if status == PROBLEMS:
         return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_PROBLEMS_NOW % (words or flow_codes.NO_READY_SEEN_WORDS)

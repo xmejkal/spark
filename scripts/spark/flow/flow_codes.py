@@ -86,10 +86,14 @@ NO_READ_BACK_WORDS = "written by the flasher, nothing read back, start not seen"
 READ_BACK_WORDS = "written by the flasher, files read back, start not seen"
 LOST_WORDS = "written by the flasher, files read back, ready printed, then the board was lost"
 UNSURE_WORDS = "written by the flasher, start not confirmed"
+#: The words of a flash that did not finish after the yes (P1092): an erase that did not connect leaves the board as it
+#: was, so they say "may be erased", never "erased".
+FLASH_NOT_FINISHED_WORDS = "flash not finished, nothing read back, the board may be erased"
 CAUSE_MESSAGE, NO_CAUSE_MESSAGE = "Cause in the log: %s.", "Cause not recorded."
-#: The cause of a deploy that did not see ready, by its code in the board log's reason line (the bench's board_codes,
-#: as equal literals: this module imports nothing of spark): spark's words for it, and whether spark read the board's
-#: files back (True, False, or None: the log cannot tell). A code not here reads as not recorded.
+#: The cause of a deploy that did not see ready, or of a flash that did not finish (P1092), by its code in the board
+#: log's reason line (the bench's board_codes, as equal literals: this module imports nothing of spark): spark's words
+#: for it, and whether spark read the board's files back (True, False, or None: the log cannot tell). A code not here
+#: reads as not recorded.
 CAUSE_WORDS = {"files_unread": ("spark did not reach the board to read its files", False),
                "firmware_not_started": ("the command that starts the firmware failed", True),
                "no_files_named": ("the passed run's log names no files, so spark had none to read back", False),
@@ -98,7 +102,9 @@ CAUSE_WORDS = {"files_unread": ("spark did not reach the board to read its files
                "download_mode_stayed": ("the board stayed in download mode", None),
                "files_differ": ("the board's files are not the image's", True),
                "firmware_error": ("the firmware stopped with an error", True),
-               "no_ready_line": ("the firmware printed no ready line", True)}
+               "no_ready_line": ("the firmware printed no ready line", True),
+               "flash_failed": ("a flash command failed", False),
+               "grant_ended": ("your yes ended before the erase's retry", False)}
 #: What the image the project holds now says of the last deploy (`deploy_reading.deploy_fact`): the image it wrote, a
 #: different image, firmware/ changed after the image, or no image now. Any but the first makes the deploy stale.
 DEPLOY_CURRENT, IMAGE_DIFFERS, FIRMWARE_NEWER, DEPLOY_NO_IMAGE = "current", "image-differs", "firmware-newer", "no-image"
@@ -335,6 +341,9 @@ DEPLOY_AWAY_NOW = "After the last deploy, %s. Ask Claude to look at the board wi
 DEPLOY_UNKNOWN_NOW = ("The log does not say whether the firmware started after the last deploy. Ask Claude to look at the "
                       "board with you.")
 DEPLOY_PROBLEMS_NOW = "After the last deploy, %s. Ask Claude to go through the board log with you."
+#: The NOW of a flash that did not finish (P1092): it wins over a stale image.
+DEPLOY_NOT_FINISHED_NOW = ("The last flash did not finish, so the board may be erased. The board log says what failed. Ask "
+                           "Claude to look at the board with you, then run the deploy again in your terminal.")
 #: DEPLOY_PROBLEMS_NOW's words when the log records no cause (an old log whose files differed may have printed ready).
 NO_READY_SEEN_WORDS = "spark did not see ready"
 #: A stale deploy (P1043-D4): who acts first and the sentence, by its fact. Claude makes the image for firmware newer than

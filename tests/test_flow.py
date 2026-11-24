@@ -2085,7 +2085,7 @@ def logged(words, *more, count=1, image=b"an image"):
 class TheDeployReaderTest(FlowTest):
     """P1043 (#1533): the deploy phase reads the newest board log in sim/runs/board/: its time, image, verdict and cause.
     Only ready seen on the image the project holds now is ok, with a tick. Ready unknown is partial, ready not seen is
-    problems, and an image that changed since is stale. A tool's text, the port and the console never reach an answer."""
+    problems, and an image that changed since is stale. A flash that did not finish is problems (P1092). A tool's text, the port and the console never reach an answer."""
 
     def test_no_board_log_keeps_today_s_phase_and_no_deploy_data(self):
         said, code = show(a_deploy_project())
@@ -2355,6 +2355,60 @@ class TheDeployNowTest(FlowTest):
                 self.assertIsNone(show(each)[0]["data"]["guide"]["no_open_phase"])
 
 
+#: The bench's sentence in a board log of a flash that did not finish (P1092), and the flow's words for it.
+NOT_FINISHED_SENTENCE = "a flash command failed, so the board may be erased and not written"
+FLASH_NOT_FINISHED_WORDS = "flash not finished, nothing read back, the board may be erased"
+NOT_FINISHED_NOW = ("The last flash did not finish, so the board may be erased. The board log says what failed. Ask Claude "
+                    "to look at the board with you, then run the deploy again in your terminal.")
+
+
+def a_not_finished_log(project, reason="flash_failed", **kw):
+    """A board log of a flash that did not finish after the yes (P1092), in the layout the bench writes."""
+    return a_board_log(project, "flash not finished", NOT_FINISHED_SENTENCE, reason=reason,
+                       facts_line="facts file: not written: the flash did not finish", **kw)
+
+
+class TheFlashNotFinishedTest(FlowTest):
+    """P1092 tests 6 to 8: a board log of a flash that did not finish after the yes is problems: the board may be erased.
+    It wins over a stale image, because each stale opener speaks of the image that the last deploy wrote, and nothing was
+    read back. The newest log wins, either way."""
+
+    def test_a_flash_not_finished_is_problems_and_says_the_board_may_be_erased(self):
+        for reason, words in (("flash_failed", "a flash command failed"), ("grant_ended", "your yes ended before the erase's retry")):
+            with self.subTest(reason=reason):
+                said, code = show(a_not_finished_log(a_deploy_project(), reason))
+                self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (1, "problems", "✗"))
+                self.assertEqual(deploy_of(said)["says"], [logged(FLASH_NOT_FINISHED_WORDS, "Cause in the log: %s." % words)])
+                self.assertEqual(said["data"]["deploy"], {"at": "2026-11-23T14:09:49+01:00", "image": hashlib.sha256(b"an image").hexdigest(),
+                                                          "verdict": "flash not finished", "cause": reason, "fact": "current",
+                                                          "read_back": False})
+                self.assertEqual((said["data"]["guide"]["now"]["by"], said["data"]["guide"]["now"]["says"]),
+                                 (["your terminal"], NOT_FINISHED_NOW))
+
+    def test_it_wins_over_a_stale_image_and_the_fact_is_still_said_in_the_data(self):
+        other = a_not_finished_log(a_deploy_project(), image=b"another image")
+        # on a board Wokwi has no model of, the simulate is counted as done, so the deploy's NOW is the guide's
+        newer = a_not_finished_log(an_image(a_firmware(a_project_built_with_no_simulation())))
+        os.utime(newer / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        none = a_not_finished_log(an_image(a_firmware(a_project_built_with_no_simulation())))
+        (none / "sim" / "image.bin").unlink()
+        for project, fact, image in ((other, "image-differs", b"another image"), (newer, "firmware-newer", b"an image"),
+                                     (none, "no-image", b"an image")):
+            with self.subTest(fact=fact):
+                said, _ = show(project)
+                self.assertEqual((deploy_of(said)["status"], said["data"]["deploy"]["fact"]), ("problems", fact))
+                self.assertEqual(deploy_of(said)["says"], [logged(FLASH_NOT_FINISHED_WORDS, "Cause in the log: a flash command failed.", image=image)])
+                self.assertEqual(said["data"]["guide"]["now"]["says"], NOT_FINISHED_NOW)
+
+    def test_the_newest_log_wins_both_ways(self):
+        older, newer = "2026-11-23T14-00-00", "2026-11-23T15-00-00"
+        said, _ = show(a_not_finished_log(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, name=older), name=newer))
+        self.assertEqual(deploy_of(said)["status"], "problems")
+        self.assertTrue(deploy_of(said)["says"][-1].endswith("2 deploys logged."), deploy_of(said)["says"])
+        said, _ = show(a_board_log(a_not_finished_log(a_deploy_project(), name=older), "ready seen", SEEN_SENTENCE, name=newer))
+        self.assertEqual(deploy_of(said)["status"], "ok")
+
+
 def with_secrets(project, text):
     """`project` with firmware/wifi_secrets.py holding `text`."""
     (project / "firmware").mkdir(parents=True, exist_ok=True)
@@ -2443,6 +2497,12 @@ class TheDeployedLineTest(unittest.TestCase):
         self.assertEqual(self.line("ready seen", fact="firmware-newer"),
                          "Your firmware changed after the image that the last deploy wrote. Last deploy 23 Nov 2026, 14:09. "
                          "Written by the flasher, files read back, ready seen.")
+
+    def test_a_flash_not_finished_has_no_stale_opener(self):
+        # P1092 test 11: each opener speaks of the image the last deploy wrote, and this one wrote none
+        self.assertEqual(self.line("flash not finished", "flash_failed", fact="image-differs"),
+                         "Last deploy 23 Nov 2026, 14:09. Flash not finished, nothing read back, the board may be erased. "
+                         "Cause in the log: a flash command failed.")
 
     def test_no_deploy_gives_none_and_a_line_holds_no_iso_time_and_no_image(self):
         from spark.flow.deploy_reading import deployed_line
