@@ -20,7 +20,7 @@
  {
   "file": "scripts/spark/bench/board_envelope.py",
   "name": "the envelope names no image",
-  "find": "        \"image_sha256\": result.image_sha256 if result else None,",
+  "find": "        \"image_sha256\": result.image_sha256 if result else reached.get(\"image_sha256\"),",
   "replace": "        \"image_sha256\": None,"
  },
  {
