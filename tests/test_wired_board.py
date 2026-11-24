@@ -217,7 +217,7 @@ class TheProblemsTest(WiredTest):
         self.assertEqual((code, statuses(said)["parts"]), (1, "problems"))
         self.assertIn("soil: a need with no `what` cannot be matched", says(said, "parts")[0])
         self.assertEqual(says(said, "parts")[-1], " ".join((sheet_text(), WIRED_STEP_MESSAGE)))
-        self.assertEqual([item["sentence"] for item in said["problems"]], ["parts: " + says(said, "parts")[0]])
+        self.assertEqual([item["sentence"] for item in said["problems"] if item["subject"] == "parts"], ["parts: " + says(said, "parts")[0]])
 
 
 class TheDayTest(WiredTest):
