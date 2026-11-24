@@ -27,6 +27,9 @@ from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, answers_
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
 from spark.core.result import Refusal  # noqa: E402
 
+#: init's description. The refusal is init's with or without --board (P1099, the PR review's RF3).
+DESCRIPTION = ("Create the files every check and reviewer needs, with nothing guessed. It is refused (exit 2), with nothing "
+               "written, when boards/active.json cannot be opened, is a folder or is a dangling link (P1099).")
 #: The --board help (P988 review): init writes the selection, and requirements.json's board wins when it names one (D35).
 BOARD_HELP = ("board id to write in boards/active.json, the selection. When requirements.json names a board, that board "
               "wins (D35), and init says so. Omit it to see what is available")
@@ -41,7 +44,7 @@ ANSWERS_HELP = ("a JSON object with the brief's answers in the person's words â€
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="init_project.py",
-        description="Create the files every check and reviewer needs, with nothing guessed.")
+        description=DESCRIPTION)
     parser.add_argument("--project", default=".", help="the project to set up (default: here)")
     parser.add_argument("--board", help=BOARD_HELP)
     parser.add_argument("--circuit", help="a built netlist to name the rails from")
