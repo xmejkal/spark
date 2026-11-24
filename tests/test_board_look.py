@@ -351,6 +351,22 @@ class LookNamesTheButtonsTest(LookCase):
         self.assertNotIn("Left and right", str(stop.exception))
 
 
+class TheGoneImageTest(unittest.TestCase):
+    """P1111 with no littlefs (the review of #1640): a LookReport built by hand, so the fix is pinned where LookTest's
+    tests skip. An image file gone since the look gives no token and the reason no_image."""
+
+    def test_an_image_gone_since_the_look_gives_no_token_and_the_reason_no_image(self):
+        image = Path(tempfile.mkdtemp()) / "image.bin"
+        image.write_bytes(b"an image")
+        report = board_look.LookReport("/dev/cu.usbmodem101", board_look.BoardReading("esp32c6", 4, "8c:bf:ea:xx:xx:xx"),
+                                       {"id": "xiao-esp32-c6", "chip": "esp32c6"}, image, None, None, None)
+        self.assertIsNotNone(report.token())
+        image.unlink()
+        self.assertIsNone(report.token())
+        self.assertEqual(report.no_token_reason(),
+                         board_look.NoToken("no_image", "the image file is gone or unreadable since the look found it"))
+
+
 class LookTest(LookCase):
     @needs_littlefs
     def test_a_matching_board_passes_with_a_token(self):
@@ -378,6 +394,18 @@ class LookTest(LookCase):
         second = self.look().token()
         self.assertEqual(first.split("-")[0], second.split("-")[0])
         self.assertNotEqual(first.split("-")[1], second.split("-")[1])
+
+    @needs_littlefs
+    def test_an_image_gone_since_the_look_gives_no_token_and_its_reason(self):
+        # P1111 test 7: token() read the gone file and raised FileNotFoundError, and so did to_dict()
+        self.run_the_scenario()
+        report = self.look()
+        self.image.unlink()
+        self.assertIsNone(report.token())
+        self.assertEqual(report.no_token_reason(), board_look.NoToken("no_image", "the image file is gone or unreadable since the look found it"))
+        said = report.to_dict()
+        self.assertEqual((said["token"], said["no_token_reason"], said["status"]),
+                         (None, "the image file is gone or unreadable since the look found it", outcomes.COULD_NOT_RUN))
 
     def test_another_chip_is_a_stop_with_no_token(self):
         self.run_the_scenario()

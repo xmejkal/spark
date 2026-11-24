@@ -2387,11 +2387,22 @@ class TheFlashNotFinishedTest(FlowTest):
 
     def test_a_crash_and_a_ctrl_c_in_the_flash_have_their_own_words(self):
         # P1096 test 6: the two new causes of a flash that did not finish
-        for reason, words in (("crash", "spark crashed during the flash"), ("interrupted", "a Ctrl-C interrupted the flash")):
+        for reason, words in (("crash", "spark crashed during the deploy"), ("interrupted", "a Ctrl-C interrupted the deploy")):
             with self.subTest(reason=reason):
                 said, _ = show(a_not_finished_log(a_deploy_project(), reason))
                 self.assertEqual(deploy_of(said)["says"], [logged(FLASH_NOT_FINISHED_WORDS, "Cause in the log: %s." % words)])
                 self.assertIs(said["data"]["deploy"]["read_back"], False)
+
+    def test_a_verify_that_did_not_finish_is_partial_and_says_the_start_was_not_confirmed(self):
+        # P1110 test 5: the flash finished, so the board log says ready unknown, and nothing claims a read-back either way
+        from spark.flow.flow_codes import DEPLOY_NO_START_NOW, UNSURE_WORDS
+        for reason, words in (("crash", "spark crashed during the deploy"), ("interrupted", "a Ctrl-C interrupted the deploy")):
+            with self.subTest(reason=reason):
+                said, _ = show(a_board_log(a_deploy_project(), "ready unknown", "spark crashed while it read the board after the flash",
+                                           reason=reason, facts_line="facts file: not known: the read after the flash did not finish"))
+                self.assertEqual((deploy_of(said)["status"], said["data"]["deploy"]["read_back"]), ("partial", None))
+                self.assertEqual(deploy_of(said)["says"], [logged(UNSURE_WORDS, "Cause in the log: %s." % words)])
+                self.assertEqual(said["data"]["guide"]["now"]["says"], DEPLOY_NO_START_NOW)
 
     def test_it_wins_over_a_stale_image_and_the_fact_is_still_said_in_the_data(self):
         other = a_not_finished_log(a_deploy_project(), image=b"another image")

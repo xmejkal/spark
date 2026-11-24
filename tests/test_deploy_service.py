@@ -313,13 +313,89 @@ class TheFlashNotFinishedTest(ServiceCase):
         self.ends_with = RuntimeError("usb fell off")
         raised = self.ended(TypeError, write_log=broken)
         self.assertIs(raised.__context__, self.ends_with)
-        self.assertEqual((deploy_service.ended_the_flash(raised), deploy_service.ended_the_flash(self.ends_with)), (False, False))
+        self.assertEqual((deploy_service.ended_after_the_yes(raised), deploy_service.ended_after_the_yes(self.ends_with)), (False, False))
 
     @needs_littlefs
     def test_an_erase_that_its_retry_passes_writes_only_the_verify_s_log(self):
         code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1)
         log, = self.logs()
         self.assertEqual((code, board_log.newest_logged_deploy(self.project)[1].verdict), (0, "ready seen"))
+
+
+class TheVerifyNotFinishedTest(ServiceCase):
+    """P1110 tests 1 to 3: a crash or a Ctrl-C in the verify, before its board log, writes a board log with the verdict
+    `ready unknown` and the reason crash or interrupted, then goes on unchanged. The flash finished, so the board is not
+    said to be erased. A log that cannot be written never hides what ended the verify."""
+
+    #: What the first command after the two flash commands raises, a crash or a Ctrl-C, or None. A fake: it patches nothing.
+    ends_with = None
+
+    def fake_run(self, command, **kwargs):
+        if self.ends_with is not None and len(self.commands) >= 2:  # the erase and the write ran: this is the verify's
+            self.commands.append(command)
+            raise self.ends_with
+        return super().fake_run(command, **kwargs)
+
+    def logs(self):
+        return sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+
+    def ended(self, kind):
+        """What ended the verify after a good flash, raised as `kind`."""
+        report = self.look()
+        service = self.service()
+        planned = service.deploy(report, report.token(), FakeConsent(True))
+        with self.assertRaises(kind) as raised:
+            service.verify(report, planned)
+        return raised.exception
+
+    @needs_littlefs
+    def test_a_crash_in_the_verify_writes_a_ready_unknown_board_log_and_is_raised_unchanged(self):
+        self.ends_with = RuntimeError("usb fell off at /Users/" + "someone")  # split, so test_orphans finds no home path
+        ended = self.ended(RuntimeError)
+        sha256 = project_image.ProjectImage(self.project).sha256
+        self.assertIs(ended, self.ends_with)
+        self.assertTrue(deploy_service.ended_after_the_yes(ended))
+        self.assertEqual((ended.log_path, ended.image_sha256), (self.logs()[0], sha256))
+        self.assertEqual(board_log.newest_logged_deploy(self.project),
+                         (1, board_log.LoggedDeploy(self.clock.now().isoformat(timespec="seconds"), sha256, "ready unknown", "crash")))
+        text = ended.log_path.read_text(encoding="utf-8")
+        self.assertIn("ready unknown: spark crashed while it read the board after the flash, so ready is not known\n", text)
+        self.assertIn("facts file: not known: the read after the flash did not finish\n", text)
+        self.assertIn("RuntimeError", text)
+        for unsaid in ("usb fell off", "/Users/", "flash not finished"):
+            self.assertNotIn(unsaid, text)
+
+    @needs_littlefs
+    def test_a_ctrl_c_in_the_verify_writes_the_board_log_and_the_ctrl_c_goes_on(self):
+        self.ends_with = KeyboardInterrupt()
+        ended = self.ended(KeyboardInterrupt)
+        self.assertIs(ended, self.ends_with)
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1][2:], ("ready unknown", "interrupted"))
+        self.assertIn("ready unknown: a Ctrl-C interrupted the read of the board after the flash, so ready is not known\n",
+                      ended.log_path.read_text(encoding="utf-8"))
+
+    @needs_littlefs
+    def test_a_verify_log_that_cannot_be_written_keeps_what_ended_the_verify(self):
+        for ends_with in (RuntimeError("usb fell off"), KeyboardInterrupt()):
+            with self.subTest(ended=type(ends_with).__name__):
+                (self.project / "sim" / "runs" / "board").write_text("a file where the folder goes")
+                self.commands, self.ends_with = [], ends_with
+                ended = self.ended(type(ends_with))
+                self.assertIs(ended, ends_with)
+                self.assertIsNone(ended.log_path)
+                self.assertIn("sim/runs/board", ended.log_error)
+
+
+    @needs_littlefs
+    def test_a_verify_with_a_plan_from_plan_writes_its_log_with_the_image_it_reads(self):
+        # the review of #1640 (lens 8): plan() gives image_sha256 None, which only the handler reads; the log names the image
+        report = self.look()
+        service = self.service()
+        planned = service.plan(report.port)
+        self.assertIsNone(planned.image_sha256)
+        result = service.verify(report, planned)
+        self.assertEqual(self.logs(), [result.log_path])
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1].image, project_image.ProjectImage(self.project).sha256)
 
 
 class TheStoreRecordOfAFlashNotFinishedTest(ServiceCase):
