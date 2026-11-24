@@ -30,7 +30,10 @@ def find_toolchain(start):
     """
     `tsci`, or None — the board-engine from the tools list (P82): the project's own node_modules,
     upward from `start`, then the PATH — the same places a person would look, and in that order
-    because a project's own pinned version beats whatever is installed globally.
+    because a project's own pinned version beats whatever is installed globally. None means "no
+    engine to run" for any ToolError, a tools file spark cannot read too: `requirements_build`
+    calls this outside the stage guard, so it never raises, and the build stage asks the tools
+    list again for the sentence and the code (P1058).
     """
     try:
         return Path(tool_finder.find("board-engine", start).command[0])

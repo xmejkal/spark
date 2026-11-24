@@ -7,8 +7,9 @@ and never on the English sentence (no magic strings, P260). The three errors are
 cannot leave its code out; a SparkError and `Finding.of` take the fix from the code. A variant is another Code of its
 parent's word and meaning, named after it, with a fix of its own.
 
-Two codes are equal literals of another leaf, with the same meaning: TOOL_MISSING is board_codes', firmware_codes' and
-build_codes', and MISSING_FACT is board_codes', so `missing_facts` reads no bench leaf.
+Four codes are equal literals of another leaf, with the same meaning: TOOL_MISSING is board_codes', firmware_codes' and
+build_codes', MISSING_FACT is board_codes', so `missing_facts` reads no bench leaf, and FILE_REFUSED and TOOLS_LIST_BROKEN
+are build_codes', for the engine lookup's tools file (P1058).
 """
 
 from spark.core.codes import Code

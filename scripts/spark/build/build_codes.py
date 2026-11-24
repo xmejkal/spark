@@ -9,10 +9,11 @@ and never on the English sentence (no magic strings, P260). Each stage of the bu
 entry of `stages` (P936), and the breadboard sheet's `not written` entry's in `kept`. A `Finding.of` takes the fix from
 its code.
 
-Every code is a Code with its fix (P935 PR 5). Four are equal literals of another leaf, with the same meaning:
+Every code is a Code with its fix (P935 PR 5). Six are equal literals of another leaf, with the same meaning:
 BOARD_UNUSABLE and NO_PROJECT_FOLDER are design_codes', TOOL_MISSING board_codes' and firmware_codes', INPUT_AMBIGUOUS
-check_codes'. BOARD_UNUSABLE and INPUT_AMBIGUOUS hold the other leaf's fix too (a test pins each pair); NO_PROJECT_FOLDER
-and TOOL_MISSING hold the build's own fix, because the build's step says more (row 12 of docs/observations/rows/p935-build.md).
+check_codes', FILE_REFUSED and TOOLS_LIST_BROKEN records_codes' (P1058). BOARD_UNUSABLE and INPUT_AMBIGUOUS hold the other
+leaf's fix too (a test pins each pair); NO_PROJECT_FOLDER, TOOL_MISSING, FILE_REFUSED and TOOLS_LIST_BROKEN hold the
+build's own fix, because the build's step says more (row 12 of docs/observations/rows/p935-build.md).
 """
 
 from spark.core.codes import Code
@@ -42,6 +43,11 @@ SCHEMATIC_NOTED = Code("schematic_noted", "the board emitter wrote the board and
 #: The build: the board engine, and what it built.
 TOOL_MISSING = Code("tool_missing", "a tool the step needs is missing or cannot be used",
                     "ask the person to run /spark:setup, which installs the tool that the sentence names, then build again")
+#: The engine lookup's tools file that spark cannot read, or that is no tools list (P1058): no install fixes either.
+FILE_REFUSED = Code("file_refused", "a file the operation reads or writes could not be read or written, or is not JSON: the sentence names it",
+                    "fix the file the sentence names, or its permissions, or move it away, then build again")
+TOOLS_LIST_BROKEN = Code("tools_list_broken", "a tools file is not JSON, or not in the shape of a tools list: fix it or delete it",
+                         "fix the tools file the sentence names, or move it away, then build again")
 TOOL_CANNOT_BUILD = Code("tool_cannot_build", "the board engine cannot build even a trivial board from here, so the tool is broken, not the design",
                          "ask the person to run /spark:setup, or `npm i @tscircuit/cli` in the project folder, then build again")
 DESIGN_NOT_BUILT = Code("design_not_built", "the board engine built no circuit from the design, or a circuit with errors in it",
@@ -103,7 +109,7 @@ ANSWERS_UNUSABLE = Code("answers_unusable", "--answers names a file that is not 
 #: Each code and the one sentence that says what it means.
 CODES = {code: code.meaning for code in (
     BOARD_UNUSABLE, BOARD_ONLY_WITH_PARTS, NO_PARTS, STAGE_CRASHED, STAGE_TIMED_OUT, SCHEMATIC_REFUSED, SCHEMATIC_NOTED,
-    TOOL_MISSING, TOOL_CANNOT_BUILD, DESIGN_NOT_BUILT, NOT_ROUTED, PART_STRANDED, SIMULATION_FACT_MISSING, CHIP_NOT_COMPILED,
+    TOOL_MISSING, FILE_REFUSED, TOOLS_LIST_BROKEN, TOOL_CANNOT_BUILD, DESIGN_NOT_BUILT, NOT_ROUTED, PART_STRANDED, SIMULATION_FACT_MISSING, CHIP_NOT_COMPILED,
     BOARD_NOT_IN_WOKWI, CONVERTER_LACKS_PART, NO_DIAGRAM, DIAGRAM_UNWIRED, BOARD_ONLY, EVERY_PART_SKIPPED, NO_PROJECT_FOLDER,
     TOOLS_FILE_UNREADABLE, UNKNOWN_BOARD, ANSWERS_UNUSABLE, NOTHING_TO_DO, INPUT_AMBIGUOUS)}
 # --- end MVP ---
