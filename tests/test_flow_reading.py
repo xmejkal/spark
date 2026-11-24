@@ -40,9 +40,10 @@ WRITE_FLOW_PAGE = ROOT / "scripts" / "spark" / "flow" / "write_flow_page.py"
 #: The keys whose leaves the page does not show (the design's exemptions): the fingerprint is the page's data-fingerprint,
 #: its first 12 hex digits only, and the Artifact's id is no fact of the project.
 EXEMPT = ("data.fingerprint", "data.artifact")
-#: The leaves the page says in other words, each by name with the reason (A7). `data.deploy.verdict` is the board log's
-#: verdict word (`ready unknown`), which the deploy phase's sentence says in words: "nothing read back, start not seen".
-SAID_IN_WORDS = {"data.deploy.verdict"}
+#: The leaves the page says in other words, each by its path and its value, with the reason (A7). The board log's verdict
+#: `ready unknown` is said by the deploy phase's sentence in words: "nothing read back, start not seen". Only that value
+#: is exempt, so another verdict the page lost (`ready seen`) still fails (the review of #1605).
+SAID_IN_WORDS = {("data.deploy.verdict", "ready unknown")}
 #: A time as `zone_time.stamp` writes it: ISO 8601 to the second, with the zone.
 STAMP = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d")
 #: An Artifact id as `publish_files` answers it.
@@ -66,7 +67,7 @@ def leaves(value, at="data"):
 def counted(data):
     """The leaves of `data` the page must show: a sentence or a title (it holds a space) or a time, out of EXEMPT."""
     return [(at, text) for at, text in leaves(data)
-            if not at.startswith(EXEMPT) and at not in SAID_IN_WORDS and (" " in text or STAMP.fullmatch(text))]
+            if not at.startswith(EXEMPT) and (at, text) not in SAID_IN_WORDS and (" " in text or STAMP.fullmatch(text))]
 
 
 def show_and_page(project, name):

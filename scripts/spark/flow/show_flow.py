@@ -101,7 +101,7 @@ def phases_of(project, readers=None, deploy=None):
 def flow_and_guide(project, readers=None, deploy=None):
     """(the Phases of `project`, its guide, `guide.guide_of`): `show` and the page compute the guide once (P1030). The
     deploy's state is read once too (`deploy`, else here), and the deploy phase and the guide both take it (P1043)."""
-    deploy = deploy or deploy_reading.read_deploy(project)
+    deploy = deploy if deploy is not None else deploy_reading.read_deploy(project)
     phases = phases_of(project, readers, deploy)
     return phases, guide_of(project, phases, deploy=deploy)
 

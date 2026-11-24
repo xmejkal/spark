@@ -23,7 +23,8 @@ that answer and takes no fact from `page.html`. It reads `page.html` whole only 
 
 ## 3. The first publish, in its order
 
-1. `flow.py show --project . --json`. When `data.artifact` is an id, the page is published: go to the republish.
+1. `flow.py show --project . --json`. When `data.artifact` is an id, the page is published: go to
+   [carry the requests](../../commands/page.md#carry-the-requests) (section 6).
 2. Claude asks the person the question in `commands/page.md`. On a no, it stops.
 3. `flow.py page --project . --json` writes `page.html`.
 4. `publish_files` with one file, `page.html` as `index.html`, the title `data.title` of `show`, and the icon `circuit`.
@@ -48,13 +49,19 @@ the viewer is the owner, so the buttons show only to the owner.
 
 ## 6. The route of a republish
 
+In the order of [carry the requests](../../commands/page.md#carry-the-requests):
+
 1. `flow.py show --project . --json` gives the id, `data.artifact`.
-2. Claude carries each waiting request: the row to `.spark/page-request.json`, `flow.py run-request --project . --json`,
-   then the answer row.
-3. `flow.py page --project . --json` writes the page again.
-4. `get_artifact` gives the version and who can see the page. `publish_files` then gets that version as
-   `base_version`, and the page's `read` as `shared_live` when it is `users`, `org` or `public` (with `data.title` as
-   `artifact_title` when it is `public`).
+2. `db_query` reads the ten newest requests and their answers. A request waits when no answer has its id.
+3. With none waiting: `flow.py page --project . --json` writes the page, then the republish.
+4. For each waiting request, the oldest first: the row to `.spark/page-request.json`, then
+   `flow.py run-request --project . --json`, then `flow.py page --project . --json` and the republish, and last
+   `db_write` of the answer row `answers/<id>`, `run-request`'s `data` unchanged. So the page is new when the answer
+   shows.
+
+A republish is `get_artifact` for the version and who can see the page, `list_files`, then `publish_files` with that
+version as `base_version`, and the page's `read` as `shared_live` when it is `users`, `org` or `public` (with
+`data.title` as `artifact_title` when it is `public`).
 
 ## 7. What Claude says, and the data rule
 
