@@ -31,7 +31,9 @@ REFUSED = subprocess.CalledProcessError(1, [], "", "mpremote.transport.Transport
 RESTART = Cure("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n", None, True, True)
 
 
-class ReachScriptTest(unittest.TestCase):
+class ReachCase(unittest.TestCase):
+    """The helpers only, so a subclass does not run ReachScriptTest's tests again (P1057)."""
+
     def setUp(self):
         home = Path(tempfile.mkdtemp())  # P892: a store of its own, which keeps the C6 for the project, here
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(home)})
@@ -65,6 +67,8 @@ class ReachScriptTest(unittest.TestCase):
             code = reach.main(list(argv), outside=outside, operation=self.operation(probe))
         return code, out.getvalue(), err.getvalue(), outside.ran
 
+
+class ReachScriptTest(ReachCase):
     def test_a_board_that_answers_exits_0_and_says_the_firmware_is_stopped(self):
         code, said, _, ran = self.go()
         self.assertEqual(code, 0)
@@ -236,6 +240,48 @@ class ReachScriptTest(unittest.TestCase):
         stopped = self.operation().run(project=Path("."), port=None, cure_first=False, outside=self.world(devs="mpremote-devs-two.txt"))
         self.assertEqual((stopped.data, [found.code for found in stopped.findings]), (None, ["two_boards"]))
         self.assertTrue(stopped.diagnostics[0].startswith("reach.py: "), stopped.diagnostics)
+
+
+class ASleepingBoardTest(ReachCase):
+    """P1057: with no board on USB, or a named port that is not, and a firmware/ that calls deepsleep, reach.py says the
+    asleep fix on stderr, as look.py does, and not the cable advice. Its --json prints nothing on such a stop (P1057's D4)."""
+
+    def setUp(self):
+        super().setUp()
+        self.project = Path(tempfile.mkdtemp())
+        (self.project / "firmware").mkdir()
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.deepsleep(1)\n")
+
+    def test_no_board_gives_no_board_found_and_the_asleep_fix_and_no_json_line(self):
+        for argv in ((), ("--json",)):
+            with self.subTest(argv=argv):
+                code, said, problems, ran = self.go("--project", str(self.project), *argv, devs="mpremote-devs-none.txt")
+                lines = problems.splitlines()
+                self.assertEqual((code, said, lines[0], len(lines)), (2, "", "reach.py: no board found.", 2))
+                self.assertTrue(lines[1].startswith("What spark knows: no board is on USB, and the project's firmware calls "
+                                                    "deepsleep (firmware/main.py:2)."), lines[1])
+                self.assertEqual([command for command in ran if "devs" not in command], [])
+
+    def test_a_named_port_not_on_usb_opens_the_fix_with_that_port(self):
+        code, _, problems, _ = self.go("--project", str(self.project), "--port", "/dev/cu.usbmodem9")
+        lines = problems.splitlines()
+        self.assertEqual((code, lines[0]), (2, "reach.py: no board on /dev/cu.usbmodem9: mpremote devs does not list it."))
+        self.assertTrue(lines[1].startswith("What spark knows: the port you named is not on USB, and the project's firmware"), lines[1])
+
+    def test_without_a_deepsleep_call_the_stop_is_as_before(self):
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.lightsleep(1)\n")
+        code, _, problems, _ = self.go("--project", str(self.project), devs="mpremote-devs-none.txt")
+        self.assertEqual((code, problems.splitlines()), (2, ["reach.py: no board found. Plug it straight into the computer with a "
+                                                             "data cable, not a hub that gives power only. If the plug is USB-C, "
+                                                             "turn it around, or use a USB-A to USB-C cable."]))
+
+    def test_the_help_says_a_board_in_download_mode_runs_no_firmware(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            reach.main(["--help"], outside=FakeOutsideWorld())
+        said = " ".join(out.getvalue().split())
+        self.assertIn("download mode", said)
+        self.assertIn("runs no firmware", said)
 
 
 if __name__ == "__main__":
