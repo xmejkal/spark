@@ -528,6 +528,25 @@ def why_project_refused(project):
     return None
 
 
+#: What init says when the two files name different boards (P1024): requirements.json's board wins (D35).
+BOARD_DIFFERS = ("requirements.json names %s, so %s stays the project's board: the selection in boards/active.json, %s, is "
+                 "read only when requirements.json names no board (D35)")
+
+
+def board_differs(project):
+    """[the note] when requirements.json and boards/active.json name different boards (P1024), else []. A requirements.json
+    that cannot be read is said too. A selection that cannot be read is not compared."""
+    try:
+        named = board_records.requirements_board(project)
+    except board_records.BoardError as broken:
+        return ["the project's board is not known: %s" % broken]
+    try:
+        selected = board_records.active_id(project)
+    except (board_records.BoardError, AttributeError):  # C10: a selection that holds no JSON object
+        return []
+    return [BOARD_DIFFERS % (named, named, selected)] if named and named != selected else []
+
+
 def why_board_refused(board, project):
     """Value: why `board` cannot be made active, as a Refusal: neither the project nor spark has it. None when one has."""
     if board in board_records.available(project):

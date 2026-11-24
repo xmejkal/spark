@@ -20,8 +20,8 @@ from spark.build import ai_files  # noqa: E402
 from spark.design import footprint_emitter  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.sourcing import record_home  # noqa: E402
-from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, answers_in, boards_offered, design_in,  # noqa: E402
-                                       find_circuit, nets_in, package_file, rules_for, unanswered_fields,
+from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, answers_in, board_differs, boards_offered,  # noqa: E402
+                                       design_in, find_circuit, nets_in, package_file, rules_for, unanswered_fields,
                                        why_board_refused, why_project_refused, write, write_brief)
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
@@ -92,7 +92,7 @@ def main(argv=None):
             print(refused, file=sys.stderr)
             return EXIT_COULD_NOT_RUN
         did, note = write(project / "boards" / "active.json", {"schema": 1, "board": args.board}, args.force)
-        notes.append(note)
+        notes += [note] + board_differs(project)
         stop = footprint_emitter.footprint_stop(args.board, project)  # F12: said where a board is chosen, never refused
         notes += ["board %s: %s" % (args.board, stop)] if stop else []
 

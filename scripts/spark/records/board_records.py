@@ -265,10 +265,9 @@ class ButtonPlaces:
 
     @classmethod
     def of_project(cls, project):
-        """The places in the record requirements.json names, or EMPTY when that record cannot be read."""
+        """The places in the record of the project's board (D35), or EMPTY when that record cannot be read."""
         try:
-            name = json.loads((Path(project) / "requirements.json").read_text()).get("board")
-            return cls.from_record(load(project, name)) if name else cls.EMPTY
+            return cls.from_record(load(project))
         except (OSError, ValueError, AttributeError, BoardError):
             return cls.EMPTY
 
