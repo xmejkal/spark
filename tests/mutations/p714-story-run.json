@@ -128,8 +128,8 @@
  {
   "file": "tools/check_commit.py",
   "name": "the full run is given a story",
-  "find": "story = None if full else story_tests_in(scratch, changed_files(root, commit))",
-  "replace": "story = story_tests_in(scratch, changed_files(root, commit))"
+  "find": "story = None if full else story_tests_in(scratch, changed)",
+  "replace": "story = story_tests_in(scratch, changed)"
  },
  {
   "file": "tools/check_commit.py",
