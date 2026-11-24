@@ -26,7 +26,7 @@
  {
   "file": "scripts/spark/core/describe_operations.py",
   "name": "describe says no operation takes a dry run",
-  "find": "\"dry_run\": bool(words),",
+  "find": "\"dry_run\": any(argument.dest == DRY_RUN_DEST for argument in cls.arguments),",
   "replace": "\"dry_run\": False,"
  },
  {

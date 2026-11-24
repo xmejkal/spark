@@ -68,13 +68,13 @@ The person types a `/spark:` command, and you follow that command's page in [`co
 (`part-finder`, `datasheet-reader`, `parts-researcher`, `design-reviewer`) are launched by the commands and skills that
 name them.
 
-A command page's `allowed-tools` lists the operations Claude Code lets you run without asking. `parts.py --fetch` and
-`--sources`, `tools.py --install` and `--on`, and `check_vendor_pins.py` without `--offline` reach the network and are
-on no command's or skill's list, so Claude Code asks the person before any of them runs, and their answer is the yes.
-Their own settings can answer first: an allow rule of theirs, or auto mode, can let it run without asking, which is a
-yes given in advance, and auto mode can also refuse it. You do not work around either. `parts.py --describe --json`
-marks the network operations of `parts.py`. A new project starts with `/spark:init`, then `/spark:setup`. The
-[journey guide](journey.md) shows each step on real runs.
+A command page's `allowed-tools` lists the operations Claude Code lets you run without asking. `parts.py --fetch`,
+`--sources` and `--find-documents`, `research.py`, `tools.py --install` and `--on`, and `check_vendor_pins.py` without
+`--offline` reach the network and are on no command's or skill's list, so Claude Code asks the person first, and their
+answer is the yes. Their settings can answer first: an allow rule of theirs, or auto mode, can let it run, a yes given
+in advance, and auto mode can also refuse it. You do not work around either. The ones on the core declare `fetches`:
+[`NETWORK` on the map](map.md#registries) lists them from the code. A new project starts with `/spark:init`, then
+`/spark:setup`. The [journey guide](journey.md) shows each step on real runs.
 
 Outside Claude Code, the command pages and skills are plain Markdown, but their agents are Claude Code agent
 definitions (`agents/*.md`: a model and a tool list). The scripts their steps call run anywhere; following a command

@@ -27,10 +27,10 @@ document quietly assumed.
 This file is the CLI (W6-S3b, P721; P726 PR 3): the ordered registry of the thirty Operations `parts.py` offers, the route
 from a flag to its Operation (exact flag, else a unique prefix, as argparse picks a long option), the one flag shape the CLI
 owns (`--needs-drop PROJECT NEED` runs the idea area's `DropNeed`) and `main`, which hands the argv to `run_cli`. Every
-operation is an Operation on the core: the design area's (`design_operations.OPERATIONS`), the sourcing area's
-(`sourcing_operations.OPERATIONS`) and `--describe`, the core's `DescribeOperations` over this registry. A flag that names a
-JSON file (`--drawer-set FILE`, `--fact-set PART FILE`) is read by the core's CLI adapter and handed to the Operation as a
-value (`Argument.payload`): reading stdin is the interface's job (P721 row 6).
+operation is an Operation on the core, read from the Operation catalogue (`operation_catalogue.CATALOGUE`, P1077) by
+`ORDER`, and `--describe`, the core's `DescribeOperations` over this registry, whose lines the help's epilog reuses. A
+flag that names a JSON file (`--drawer-set FILE`, `--fact-set PART FILE`) is read by the core's CLI adapter and handed to
+the Operation as a value (`Argument.payload`): reading stdin is the interface's job (P721 row 6).
 """
 
 import sys
@@ -40,14 +40,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR  # noqa: E402, F401
 from spark.core.cli import HelpText, run_cli, run_operation  # noqa: E402
-from spark.core.describe_operations import OPERATION_LINE, DescribeOperations, effect_words_of, options_of, summary_of  # noqa: E402
+from spark.core.describe_operations import OPERATION_LINE, DescribeOperations  # noqa: E402
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
 from spark.records.answer_operation import ANSWER_ARGUMENTS, BAD_ARGUMENT_FIX, AnswerOperation  # noqa: E402
 from spark.records.record_kind import Answer  # noqa: E402
-from spark.sourcing import sourcing_operations  # noqa: E402
-from spark.design import design_operations  # noqa: E402
+from spark import operation_catalogue  # noqa: E402
 from spark.idea.drop_need import DropNeed  # noqa: E402
 from spark.flow.now_follow_up import FlowFollowUp  # noqa: E402
 
@@ -85,7 +84,7 @@ ORDER = ("list", "show", "validate", "signals", "unverified", "need", "skeleton"
          "pick", "needs-drop", "requirements", "step", "tally", "describe")
 #: Every Operation parts.py offers, by the `op` it prints, in `ORDER`: the ONE registry the route and `--describe` read, so
 #: what an agent reads about an operation cannot drift from what runs (§6.4.3). `list-boards` is boards.py's and stays out.
-OPERATIONS = {name: {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS, DropNeedFlag.name: DropNeedFlag,
+OPERATIONS = {name: {**operation_catalogue.CATALOGUE, DropNeedFlag.name: DropNeedFlag,
                      DescribeOperations.name: DescribeOperations}[name] for name in ORDER}
 #: The flags, for the prefix rule.
 FLAGS = ["--" + name for name in OPERATIONS]
@@ -110,13 +109,13 @@ def asked_on_the_core(argv):
     return None
 
 
-def catalog_epilog():
-    """The text under `parts.py --help`: every operation with its summary and effects, and the options the operations share,
-    so a reader of the describe route sees what the Operations offer (each Operation's own `--help` lists its arguments)."""
-    lines = ["operations (each takes --help):"]
-    lines += [OPERATION_LINE % ("--" + op, summary_of(cls), "  [%s]" % ", ".join(effect_words_of(cls)) if effect_words_of(cls) else "")
-              for op, cls in OPERATIONS.items()]
-    return "\n".join(lines + ["", "options, by the operations that take them:"] + [OPERATION_LINE % (flag, help, "") for flag, help in options_of(OPERATIONS).items()])
+def operations_epilog():
+    """The text under `parts.py --help`: `--describe`'s own lines, every operation with its summary and effects, and the
+    options the operations share, so `--help` and `--describe` cannot drift (each Operation's own `--help` lists its arguments)."""
+    described = DescribeOperations(OPERATIONS).run(outside=None)
+    lines = ["operations (each takes --help):"] + described.lines
+    options = [OPERATION_LINE % (option["flag"], option["summary"], "") for option in described.data["options"]]
+    return "\n".join(lines + ["", "options, by the operations that take them:"] + options)
 
 
 def on_the_core(argv):
@@ -125,7 +124,7 @@ def on_the_core(argv):
     lists the operations (P707, P726)."""
     operation = asked_on_the_core(argv)
     if operation in (None, DescribeOperations):
-        return run_cli(HELP._replace(epilog=catalog_epilog()), DescribeOperations(OPERATIONS), argv, outside_builder=build_bare_outside_world)
+        return run_cli(HELP._replace(epilog=operations_epilog()), DescribeOperations(OPERATIONS), argv, outside_builder=build_bare_outside_world)
     return run_cli(HELP, operation(), argv, outside_builder=build_bare_outside_world)
 
 
