@@ -250,15 +250,15 @@ def keep_breadboard(requirements, destination, stages=()):
     """
     The breadboard sheet beside the kept board (P191, #143), and its drawn breadboard (P267), as kept entries {file,
     did, why, line}. Only from a build that finished in this run, which it records (dist/board/built-from.json) for
-    breadboard.py to compare; a sheet or a drawing left from an earlier build is removed, since it describes another
-    board.
+    breadboard.py to compare. A sheet or a drawing from an earlier build stays and is named as an earlier build's
+    (P1093). A board-only build removes it, since it has nothing to wire (P236).
     """
     sheet_path = Path(destination) / sheet.SHEET
     drawings = [(Path(destination) / renderer.FILE_NAME, renderer) for renderer in sheet.DRAWING_RENDERERS]
     why = why_not_built(stages, "board only: nothing to wire")
     if why:
-        return [_left_from_earlier(sheet_path, "breadboard sheet", why)] + [
-            _left_from_earlier_drawing(path, renderer, why) for path, renderer in drawings]
+        return [_left_from_earlier(sheet_path, "breadboard sheet", why, skipped_the_build(stages))] + [
+            _left_from_earlier_drawing(path, renderer, why, skipped_the_build(stages)) for path, renderer in drawings]
     try:
         sheet.record_built_from(requirements, Path(destination) / sheet.BUILT_FROM)
         written = sheet.write(requirements, sheet_path, Path(destination) / sheet.CIRCUIT)
@@ -271,16 +271,13 @@ def keep_breadboard(requirements, destination, stages=()):
     kept += [{"file": str(path), "did": "wrote", "why": renderer.PURPOSE_MESSAGE, "line": "wrote %s — %s" % (path, renderer.PURPOSE_MESSAGE),
               **({"drawn_from": written.drawn_from} if written.drawn_from else {})} for path, renderer in written.drawings]
     kept += [not_written_entry(one) for one in written.not_written]
-    # what the person changes on the bench since the last sheet (P300)
-    kept += [{"file": str(written.sheet), "did": CHANGED, "code": change.code, "subject": change.name,
+    kept += [{"file": str(written.sheet), "did": CHANGED, "code": change.code, "subject": change.name,  # what the person changes on the bench since the last sheet (P300)
               "color": change.color, "why": sheet.CHANGE_LIST.line(change),
               "line": "%s: %s" % (CHANGED, sheet.CHANGE_LIST.line(change))} for change in written.changes]
-    # a part the person moved in breadboard.json that the build could not keep (P273)
-    kept += [{"file": str(Path(destination) / sheet.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
+    kept += [{"file": str(Path(destination) / sheet.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,  # a part the person moved in breadboard.json that the build could not keep (P273)
               "subject": named.subject, "code": named.code, "why": named.why,
               "line": "move not kept: %s" % named.line} for named in written.not_kept]
-    # an end the drawing joins differently from the points (P279): the sheet's steps stand, the drawing is wrong
-    kept += [{"file": str(Path(destination) / sheet.EDITABLE_DRAWING.FILE_NAME), "did": DRAWING_DIFFERS,
+    kept += [{"file": str(Path(destination) / sheet.EDITABLE_DRAWING.FILE_NAME), "did": DRAWING_DIFFERS,  # an end the drawing joins differently from the points (P279): the sheet's steps stand, the drawing is wrong
               "subject": differs.subject, "code": differs.code, "why": differs.why,
               "line": "%s: %s" % (DRAWING_DIFFERS, differs.why)} for differs in written.differs]
     return kept
@@ -425,18 +422,20 @@ def _breadboard_tab(destination, kept):
     return tabbed_page.Tab("Breadboard", None, entry["why"] if entry else "the breadboard picture was not written")
 
 
-def _left_from_earlier_drawing(path, renderer, why):
+def _left_from_earlier_drawing(path, renderer, why, remove=True):
     """`_left_from_earlier` for a drawing, except the one a person edits: breadboard.json is left in place when it holds
     parts, since it may hold their moves, which the next build that finishes keeps where they still fit (P273)."""
     if renderer is sheet.EDITABLE_DRAWING and path.exists() and sheet.holds_parts(path):
         return {"file": str(path), "did": "left alone", "why": "no %s: %s; it may hold your moves, which the next build "
                 "keeps where they fit" % (renderer.NOUN, why),
                 "line": "left alone: %s (it may hold your moves; no %s: %s)" % (path, renderer.NOUN, why)}
-    return _left_from_earlier(path, renderer.NOUN, why)
+    return _left_from_earlier(path, renderer.NOUN, why, remove)
 
 
-def _left_from_earlier(path, what, why):
-    """One kept entry for a file this run did not write: removed when an earlier build left it, else not written."""
+def _left_from_earlier(path, what, why, remove=True):
+    """One kept entry for a file this run did not write: removed when an earlier build left it, left alone and named as an earlier build's when not `remove`, else not written."""
+    if path.exists() and not remove:
+        return _left_alone(path, why + ", so it is an earlier build's")  # P1093: the witness stays (D6)
     if path.exists():
         path.unlink()
         return {"file": str(path), "did": "removed", "why": why + ", and it described an earlier build",
