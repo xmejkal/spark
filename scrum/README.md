@@ -270,8 +270,8 @@ that merges a design or closes an epic takes the full council even when it is on
   | the lens of a pull request or of a small plan, and the docs, wording and names lenses | the [`lens`](../.claude/agents/lens.md) agent | Sonnet |
   | the tech lead's seat in a council | the [`tech-lead`](../.claude/agents/tech-lead.md) agent | Opus |
   | the refuter | the [`refuter`](../.claude/agents/refuter.md) agent | Opus, and Fable for a bigger refactoring, a design or an epic |
-  | a builder of new logic | the [`builder`](../.claude/agents/builder.md) agent, raised in the launch | Opus |
-  | a builder of a code move that the tests pin or of docs (the `builder` agent), searching and reading sources, the Miro batch, a wrap-up, the day close, a mutation sweep | an agent | Sonnet |
+  | a builder of new logic | the `builder` agent with the model raised in the launch | Opus |
+  | a builder of a code move that the tests pin or of docs (the [`builder`](../.claude/agents/builder.md) agent), searching and reading sources, the Miro batch, a wrap-up, the day close, a mutation sweep | an agent | Sonnet |
   | spark's own agents (`agents/*.md`) | each | the model its file names |
 
   The `lens` and `builder` files name Sonnet. A launch that needs Opus (the architecture lens, a builder of new logic)
