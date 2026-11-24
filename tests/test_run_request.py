@@ -467,5 +467,46 @@ class TheVerbTest(unittest.TestCase):
             self.assertEqual(build.ran, [{"requirements": str(project / "requirements.json"), "keep": project, "sim_dir": None, "firmware": None}])
 
 
+#: A value of the project's secrets file (P1060), and a value whose file does not parse (D5).
+SECRET, HALF_TYPED = "wifi-pass-4711", "half-typed-value-31337"
+
+
+class TheSecretMaskTest(RunRequestTest):
+    """P1060 (#1558): `/spark:page` writes run-request's data to the Artifact's database, so the answer is published. It
+    masks the values of the project's secrets file, and when that file cannot be read or parsed, it runs nothing (D5)."""
+
+    def with_secrets(self, text):
+        (self.project / "firmware").mkdir(exist_ok=True)
+        (self.project / "firmware" / "wifi_secrets.py").write_text(text, encoding="utf-8")
+
+    def test_a_step_s_finding_that_holds_a_secret_is_masked(self):
+        self.with_secrets('WIFI_PASSWORD = "%s"\n' % SECRET)
+        said = "the board joins %s and stops" % SECRET
+        self.steps["build-board"] = FakeStep("build-board", OperationResult({}, [Finding("problems", "board", "a_code", said, "fix it")]))
+        self.ask("build")
+        operation = RunRequest(readers=self.readers, operations=self.steps)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = run_cli(HelpText("flow.py", tool="flow"), operation, ["--project", str(self.project), "--json"],
+                           outside_builder=build_bare_outside_world, outside=FakeOutsideWorld())
+        envelope = json.loads(out.getvalue())
+        self.assertEqual((code, envelope["data"]["ran"], envelope["data"]["line"]), (1, True, "the board joins *** and stops"))
+        self.assertNotIn(SECRET, out.getvalue() + err.getvalue())
+
+    def test_a_secrets_file_that_does_not_parse_runs_nothing_and_shows_none_of_its_text(self):
+        self.with_secrets('WIFI_PASSWORD = "%s\n' % HALF_TYPED)
+        self.ask("build")
+        operation = RunRequest(readers=self.readers, operations=self.steps)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = run_cli(HelpText("flow.py", tool="flow"), operation, ["--project", str(self.project), "--json"],
+                           outside_builder=build_bare_outside_world, outside=FakeOutsideWorld())
+        envelope = json.loads(out.getvalue())
+        self.assertEqual((code, envelope["status"], [item["code"] for item in envelope["unchecked"]], self.ran()),
+                         (2, "could-not-run", ["request_secrets_unreadable"], {}))
+        self.assertEqual((envelope["data"]["ran"], envelope["data"]["key"]), (False, "build"))
+        self.assertEqual(envelope["unchecked"][0]["subject"], "wifi_secrets.py")
+        self.assertNotIn(HALF_TYPED, out.getvalue() + err.getvalue())
+        self.assertFalse((self.project / ".spark" / "page-request.json").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

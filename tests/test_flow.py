@@ -50,6 +50,8 @@ from spark.core.result import NextStep  # noqa: E402
 #: A built project: requirements.json, the board it names and the circuit a finished build kept with its built-from.json.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 PHASES = ["idea", "needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"]
+#: A value of a project's secrets file (P1060), MIN_SECRET characters or more, and a value whose file does not parse (D5).
+SECRET, HALF_TYPED = "wifipass1234", "half-typed-value-31337"
 
 
 def show(project, *argv):
@@ -1937,6 +1939,16 @@ class ThePageRefreshTest(FlowTest):
                 self.assert_one_line_and_the_result_stands(project, follow_up, raised)
                 self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
 
+    def test_a_secrets_file_that_does_not_parse_leaves_the_old_page_and_shows_none_of_its_text(self):
+        # P1060 D5: write_page refuses, and the core says so in one diagnostics line that names the refusal's class only
+        from spark.flow.now_follow_up import FlowFollowUp
+        project = self.with_page(("soil",))  # one open need: the flow names its pick
+        (project / "firmware").mkdir()
+        (project / "firmware" / "wifi_secrets.py").write_text('WIFI_PASSWORD = "%s\n' % HALF_TYPED, encoding="utf-8")
+        self.assert_one_line_and_the_result_stands(project, FlowFollowUp(), "SecretsUnreadableError")
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
+        self.assertNotIn(HALF_TYPED, repr(refreshed_and_alone(project, FlowFollowUp())[0]))
+
     def test_a_page_that_is_not_utf_8_is_written_over_by_flow_page_and_by_the_refresh(self):
         # the review, refuter must-fix: main wrote over such a page, so the whole-file write must not compare it first
         import parts
@@ -2275,6 +2287,53 @@ class TheDeployNowTest(FlowTest):
         for each in (a_deploy_project(), a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE)):
             with self.subTest(project=each):
                 self.assertIsNone(show(each)[0]["data"]["guide"]["no_open_phase"])
+
+
+def with_secrets(project, text):
+    """`project` with firmware/wifi_secrets.py holding `text`."""
+    (project / "firmware").mkdir(parents=True, exist_ok=True)
+    (project / "firmware" / "wifi_secrets.py").write_text(text, encoding="utf-8")
+    return project
+
+
+class TheSecretMaskTest(FlowTest):
+    """P1060 (#1558): `show` masks the values of the project's secrets file as `***`. A file that cannot be read or parsed
+    does not stop `show` (D5: `show` fails open): it masks what it can and says in a note that the mask is off for it."""
+
+    def test_a_secret_value_in_a_phase_sentence_is_masked(self):
+        project = with_secrets(with_needs(Path(tempfile.mkdtemp()) / "plant", [{"id": SECRET, "does": "sense", "what": "soil-moisture"}]),
+                               'WIFI_PASSWORD = "%s"\n' % SECRET)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            flow.main(["show", "--project", str(project), "--json"])
+        self.assertNotIn(SECRET, out.getvalue())
+        self.assertIn("1 need(s): ***", says(json.loads(out.getvalue()), "needs"))
+        self.assertNotIn(SECRET, "\n".join(lines_of(project)))
+
+    def test_a_secret_in_the_project_s_path_is_masked_in_next_s_argv_too_the_known_risk(self):
+        # A11: a raw place keeps its paths and loses its tokens, so a project whose path holds a secret gets a `next`
+        # argv that no longer runs. The plan names this risk and takes it: the mask comes first.
+        project = self.user_home / SECRET / "xiao"
+        shutil.copytree(BUILT, project)  # never built: `next` is the build, whose argv holds the project's path
+        with_secrets(project, 'WIFI_PASSWORD = "%s"\n' % SECRET)
+        envelope, _code = show(project)
+        argv = [part for step in envelope["next"] for part in step["argv"]]
+        self.assertTrue(argv)
+        self.assertNotIn(SECRET, json.dumps(envelope))
+        self.assertTrue(any("/***/" in part for part in argv), argv)
+
+    def test_a_secrets_file_that_does_not_parse_adds_a_note_and_shows_none_of_its_text(self):
+        from spark.flow.show_flow import MASK_OFF
+        project = with_secrets(with_needs(Path(tempfile.mkdtemp()) / "plant", [{"id": "soil", "does": "sense", "what": "soil-moisture"}]),
+                               'WIFI_PASSWORD = "%s\n' % HALF_TYPED)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = flow.main(["show", "--project", str(project), "--json"])
+        envelope = json.loads(out.getvalue())
+        self.assertEqual((code, envelope["status"]), (0, OK))
+        self.assertEqual(envelope["notes"], [{"subject": "wifi_secrets.py", "sentence": MASK_OFF % "wifi_secrets.py"}])
+        self.assertNotIn(HALF_TYPED, out.getvalue() + err.getvalue())
+        text = "\n".join(lines_of(project))
+        self.assertIn(MASK_OFF % "wifi_secrets.py", text)
+        self.assertNotIn(HALF_TYPED, text)
 
 
 if __name__ == "__main__":
