@@ -3,7 +3,7 @@ Whether the person's breadboard can be wired (P1044, #1534): two witnesses say s
 current or stale, by its file's last change) and the newest board log (`deploy_reading`'s DeployState, read once per
 run). Spark never says that the board is wired. With a witness, the parts phase opens with one dated line, and each pick
 and build offer's effect starts with a fixed sentence that has no date, so a date never changes the fingerprint. A
-board-only build has nothing to wire and gets none. It reads and never writes. `show_flow.phases_of` applies it, and
+board-only project has nothing to wire and gets neither. It reads and never writes. `show_flow.phases_of` applies it, and
 the guide answers `data.guide.wired`.
 """
 
@@ -49,23 +49,24 @@ def wired_text(board):
     return " ".join(said + [flow_codes.WIRED_STEP_MESSAGE])
 
 
-def wired_offer(project, offer):
-    """`offer` with its kind's fixed sentence first in its effect: a pick or a build, but no board-only build."""
+def wired_offer(offer):
+    """`offer` with its kind's fixed sentence first in its effect: a pick or a build."""
     kind = offer.key.split(":", 1)[0]
-    if kind not in flow_codes.WIRED_EFFECT or (kind == flow_codes.BUILD_BOARD and phase_readers.is_board_only(project)):
+    if kind not in flow_codes.WIRED_EFFECT:
         return offer
     return offer._replace(effect=" ".join((flow_codes.WIRED_EFFECT[kind], offer.effect)))
 
 
 def with_wired(project, phases, board):
-    """The Phases of `project` as a WiredBoard `board` says them: unchanged for NOT_WIRED. Else the wired text is a line of
-    the parts phase, its first, or its last while it holds problems or could not run (its first line is the Finding's
-    sentence), and each pick's and build's effect opens with its fixed sentence."""
-    if board == NOT_WIRED:
+    """The Phases of `project` as a WiredBoard `board` says them: unchanged for NOT_WIRED, and for a board-only project,
+    which has no part and so nothing wired (the review of #1609). Else the wired text is a line of the parts phase, its
+    first, or its last while it holds problems or could not run (its first line is the Finding's sentence), and each
+    pick's and build's effect opens with its fixed sentence."""
+    if board == NOT_WIRED or phase_readers.is_board_only(project):
         return phases
     text, wired = wired_text(board), []
     for phase in phases:
-        phase = phase._replace(offers=[wired_offer(project, offer) for offer in phase.offers])
+        phase = phase._replace(offers=[wired_offer(offer) for offer in phase.offers])
         if phase.phase == flow_codes.PARTS:
             phase = phase._replace(says=phase.says + [text] if phase.status in (PROBLEMS, COULD_NOT_RUN) else [text] + phase.says)
         wired.append(phase)
