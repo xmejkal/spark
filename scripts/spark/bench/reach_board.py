@@ -85,6 +85,11 @@ board. With --json an open question prints one line: reached false, port, produc
 stop prints nothing on stdout. For other_board, no_known_board and answered_no, the last line on stderr is the stop's
 fix, after its sentence.
 
+If no board is on USB, or the port you named is not, and firmware/ calls deepsleep, the stop's last line, the fix,
+says that the board can be in deep sleep, as look.py's does (P1057). Its first step puts the board in download mode.
+There it runs no firmware, so reach.py cannot reach its REPL: use download mode for look.py or a deploy, then press
+RESET with BOOT not held. To run its line, wait until the firmware wakes. --json carries no fix yet (P1055).
+
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
 and one next step for your hands, as the last line. Its look at the console can restart the board."""
@@ -124,7 +129,8 @@ class ReachBoard(Operation):
             named, port = port, port or row.device
             probe = platform.make_console_probe(port, outside.run)
         except (tool_finder.ToolError, board_look.LookStopError) as cannot:
-            return stop_result(cannot, SCRIPT, project, port)
+            # P1057: a LookStopError comes only from require_one_board, before spark picks a port, so `port` is the named one or None
+            return stop_result(cannot, SCRIPT, project, port, stops.undoctored(SCRIPT))
         if cure_first and probe is None:
             return OperationResult(None, [Finding(outcomes.COULD_NOT_RUN, None, board_codes.NO_PROBE, board_reach.NO_PROBE_MESSAGE, "")],
                                    diagnostics=["%s: %s" % (SCRIPT, board_reach.NO_PROBE_MESSAGE)])
