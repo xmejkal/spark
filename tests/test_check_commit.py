@@ -166,6 +166,112 @@ class TheGateNeedsNodeForThePageScriptTest(unittest.TestCase):
         self.assertIsNone(check_commit.node_refusal(None, lambda _name: None), "the full run")
 
 
+#: The page script's four files (P1061), each from the root, and what a tree holds of them in the tests below.
+FLOW = "scripts/spark/flow/"
+PAGE_TS = {FLOW + "page_script.ts": "const a: number = 1;\n", FLOW + "page_script.js": "const a = 1;\n"}
+
+
+def tsc_7_0(writes="const a = 1;\n", exit_code=0, said=""):
+    """A swapped `subprocess.run` for tsc 7.0.2: `--version` says so, and a compile writes `writes` into its --outDir."""
+    def run(argv, **_kwargs):
+        if "--version" in argv:
+            return subprocess.CompletedProcess(argv, 0, "Version 7.0.2\n", "")
+        if writes is not None:
+            (Path(argv[argv.index("--outDir") + 1]) / "page_script.js").write_text(writes)
+        return subprocess.CompletedProcess(argv, exit_code, said, "")
+    return run
+
+
+def tsc_on_path(_name):
+    return "/usr/local/bin/tsc"
+
+
+class TheGateCompilesThePageScriptTest(unittest.TestCase):
+    """
+    P1061: page_script.ts is the source, and the committed page_script.js must be tsc 7.0's compiled output of it. A
+    missing tsc, or another version, is a refusal (could not run); a compiled output that differs, or a tsc that says
+    errors, is a drift (problems). Every tool is swapped: no real tsc runs.
+    """
+
+    @staticmethod
+    def tree(files):
+        tree = Path(tempfile.mkdtemp())
+        for name, text in files.items():
+            (tree / name).parent.mkdir(parents=True, exist_ok=True)
+            (tree / name).write_text(text)
+        return tree
+
+    def test_a_missing_tsc_refuses_and_names_the_install(self):
+        self.assertEqual(check_commit.tsc_refusal(lambda _name: None, tsc_7_0()),
+                         "could not run: the gate compiles the page script's TypeScript with tsc 7.0 (P1061), and no tsc "
+                         "is on this PATH; install it for the node this PATH finds: npm install -g typescript@7.0")
+
+    def test_another_version_refuses_and_names_the_one_found(self):
+        for found in ("Version 6.0.3", "Version 7.1.0", ""):
+            def run(argv, **_kwargs):
+                return subprocess.CompletedProcess(argv, 0, found + "\n", "")
+            self.assertEqual(check_commit.tsc_refusal(tsc_on_path, run),
+                             "could not run: the gate compiles the page script's TypeScript with tsc 7.0 (P1061), and the "
+                             "tsc on this PATH says %r; install 7.0 for the node this PATH finds: npm install -g "
+                             "typescript@7.0" % found, found)
+
+    def test_tsc_7_0_with_any_patch_is_no_refusal(self):
+        self.assertIsNone(check_commit.tsc_refusal(tsc_on_path, tsc_7_0()))
+
+        def run(argv, **_kwargs):
+            return subprocess.CompletedProcess(argv, 0, "Version 7.0.9\n", "")
+        self.assertIsNone(check_commit.tsc_refusal(tsc_on_path, run))
+
+    def test_the_same_bytes_are_no_drift(self):
+        self.assertIsNone(check_commit.script_drift(self.tree(PAGE_TS), tsc_7_0()))
+
+    def test_other_bytes_are_a_drift_that_names_the_fix(self):
+        self.assertEqual(check_commit.script_drift(self.tree(PAGE_TS), tsc_7_0(writes="const a = 2;\n")),
+                         "page script: the committed scripts/spark/flow/page_script.js is not tsc's compiled output of "
+                         "page_script.ts (P1061); fix it with tsc -p scripts/spark/flow, then commit both files")
+
+    def test_a_tsc_that_says_errors_is_a_drift_with_its_first_error_line(self):
+        for exit_code in (1, 2):  # tsc's own exit 1 or 2 is a drift, never a refusal (C14)
+            said = "page_script.ts(3,5): error TS2339: Property 'x' does not exist on type 'Y'.\nmore\n"
+            self.assertEqual(check_commit.script_drift(self.tree(PAGE_TS), tsc_7_0(writes=None, exit_code=exit_code, said=said)),
+                             "page script: tsc -p scripts/spark/flow says page_script.ts(3,5): error TS2339: Property 'x' "
+                             "does not exist on type 'Y'. (P1061); fix the .ts, then run it again and commit both files",
+                             exit_code)
+
+    def test_a_change_of_one_of_the_four_files_a_doubt_or_the_full_run_needs_tsc(self):
+        tree = self.tree(PAGE_TS)
+        self.assertTrue(check_commit.needs_tsc(tree, ["scripts/spark/flow/tsconfig.json"]))
+        self.assertTrue(check_commit.needs_tsc(tree, ["docs/x.md", "scripts/spark/flow/artifact_runtime.d.ts"]))
+        self.assertTrue(check_commit.needs_tsc(tree, None), "git could not tell what changed: a doubt runs more")
+        self.assertTrue(check_commit.needs_tsc(tree, [], full=True))
+        self.assertFalse(check_commit.needs_tsc(tree, ["scripts/spark/flow/flow_page.py"]))
+        self.assertFalse(check_commit.needs_tsc(tree, []))
+
+    def test_a_tree_without_the_page_script_s_source_needs_no_tsc(self):
+        # a commit before P1061, or a test's tree: there is nothing to compile
+        tree = self.tree({FLOW + "page_script.js": "const a = 1;\n"})
+        self.assertFalse(check_commit.needs_tsc(tree, None))
+        self.assertFalse(check_commit.needs_tsc(tree, [], full=True))
+
+    def full_gate(self, which, run):
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            code = check_commit.gate(repo_with(PAGE_TS), "HEAD", Path(tempfile.mkdtemp()), full=True, which=which, run=run)
+        return code, said.getvalue()
+
+    def test_the_full_run_refuses_without_tsc_and_runs_no_suite(self):
+        code, said = self.full_gate(lambda _name: None, tsc_7_0())
+        self.assertEqual(code, check_commit.EXIT_COULD_NOT_RUN, said)
+        self.assertIn("and no tsc is on this PATH", said)
+        self.assertNotIn("as committed", said, "a refusal runs no suite")
+
+    def test_the_full_run_compiles_the_script_and_a_drift_runs_no_suite(self):
+        code, said = self.full_gate(tsc_on_path, tsc_7_0(writes="const a = 2;\n"))
+        self.assertEqual(code, check_commit.EXIT_PROBLEMS, said)
+        self.assertIn("page script: the committed scripts/spark/flow/page_script.js is not tsc's compiled output", said)
+        self.assertNotIn("as committed", said, "a drift runs no suite")
+
+
 #: A test that passes and leaves a folder in the temp folder behind it — the shape of 1,888 of the 2,291 entries.
 LEAKING_TEST = ("import tempfile, unittest\nclass L(unittest.TestCase):\n"
                 "    def test_leaves_a_folder(self): tempfile.mkdtemp(prefix='left-behind-')\n")

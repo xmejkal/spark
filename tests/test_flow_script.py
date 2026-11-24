@@ -19,6 +19,12 @@ ROOT = Path(__file__).resolve().parent.parent
 #: The script's own tests, named here so tools/story_tests.py maps a change of either file to this module.
 JS_TESTS = ROOT / "tests" / "flow_script" / "page_script.test.js"
 NODE = shutil.which("node")
+FLOW = ROOT / "scripts" / "spark" / "flow"
+#: The compiled output that the page ships and the node tests load (P1061): committed, never written by hand.
+PAGE_SCRIPT = FLOW / "page_script.js"
+#: The script's TypeScript source and its compile settings (P1061), named so tools/story_tests.py maps a change of each
+#: to this module. With the compiled .js they are the gate's check_commit.SCRIPT_SOURCES.
+TS_SOURCES = (FLOW / "page_script.ts", FLOW / "tsconfig.json", FLOW / "artifact_runtime.d.ts")
 
 
 class PageScriptTest(unittest.TestCase):
@@ -30,6 +36,22 @@ class PageScriptTest(unittest.TestCase):
         self.assertEqual(run.returncode, 0, said)
         self.assertIn("# pass 12\n", said)
         self.assertIn("# fail 0\n", said)
+
+
+class TheCompiledScriptTest(unittest.TestCase):
+    """P1061: what tsc writes from page_script.ts, read as text; no node and no tsc, so these never skip."""
+
+    def test_the_compiled_script_keeps_async_with_no_helper(self):
+        # a target below ES2017 rewrites async and await into tsc's helpers: the page's script then carries both
+        text = PAGE_SCRIPT.read_text()
+        for helper in ("__awaiter", "__generator"):
+            self.assertEqual(text.count(helper), 0, helper)
+
+    def test_the_sources_are_the_gate_s(self):
+        sys.path.insert(0, str(ROOT / "tools"))
+        import check_commit
+        self.assertEqual({source.relative_to(ROOT).as_posix() for source in TS_SOURCES + (PAGE_SCRIPT,)},
+                         set(check_commit.SCRIPT_SOURCES))
 
 
 if __name__ == "__main__":
