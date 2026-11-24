@@ -1,6 +1,6 @@
 ---
 description: From a goal in words to needs, each matched against what you own and what spark knows — store first; research only for a real gap — then a part picked per need with what you own reserved, a requirements file for /spark:build, and one cost line.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-drop *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --offer *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-drop *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --offer *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py *)
 ---
 
 # spark:idea
@@ -181,7 +181,10 @@ pick lets go. For each candidate the person passed over, write their reason **in
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
 `--passed-over <file>`: the reason goes to the history in your store, never to the project.
 After a pick that wrote, `next` ends with the step `flow.py show` names now (P1035), and the text with its `next:` line. A `page.html` the project has is written again on disk; `/spark:page` republishes it.
-Relay it. A step with `needs_person` waits for the person.
+Relay it. A step with `needs_person` waits for the person. When that step is the build, first run
+`${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show --project . --json`: a new build can move pins. If `data.guide.wired` is not
+`null`, tell the person the wired line of the parts phase as it is (its first line, or its last when the parts phase
+holds problems or could not run), and ask before the build ([P1044](https://github.com/xmejkal/spark/issues/1534)).
 
 A part pick whose record owes a fact the circuit needs — `footprint`, `pin_order`, `pin_order_proof` — cannot
 be built from; one that owes only its outline (`body_mm`) is written with a warning that the PCB step lays it out at a

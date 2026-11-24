@@ -128,8 +128,9 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show --project . --json
 ```
 
 If `data.guide.wired` is not `null`, a wiring sheet or a board log is in the project, so the person may have wired the
-board. Tell them the parts phase's first line as it is, and ask before the build. `null` means that spark saw no witness,
-never that the board is not wired.
+board. Tell them the wired line of the parts phase as it is: its first line, or its last when the parts phase holds
+problems or could not run. Then ask before the build. `null` means that spark saw no witness, never that the board is
+not wired. A board-only project has no wired line, because it has no part to wire: build it.
 
 ## The one command
 
