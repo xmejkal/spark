@@ -2289,12 +2289,15 @@ class TheBoardAloneTest(unittest.TestCase):
                                                              "no breadboard picture: board only: nothing to wire"])
 
     def test_a_board_only_build_removes_an_earlier_sheet(self):
-        # P1093: only a board-only build removes an earlier sheet (P236): it has nothing to wire
+        # P1093: only a board-only build removes an earlier sheet and its drawings (P236): it has nothing to wire
         workdir, stages = self.run_alone()
-        (workdir / "breadboard.md").write_text("# an earlier build's sheet")
+        earlier = {"breadboard.md": "# an earlier build's sheet", "breadboard.json": "{}", "breadboard.svg": "<svg/>"}
+        for name, text in earlier.items():
+            (workdir / name).write_text(text)
         kept = kept_files.keep_breadboard(workdir / "requirements.json", workdir, stages)
-        self.assertEqual([entry["did"] for entry in kept if entry["file"] == str(workdir / "breadboard.md")], ["removed"])
-        self.assertFalse((workdir / "breadboard.md").exists())
+        for name in earlier:
+            self.assertEqual([entry["did"] for entry in kept if entry["file"] == str(workdir / name)], ["removed"], name)
+            self.assertFalse((workdir / name).exists(), name)
 
     def test_the_store_is_never_told_a_board_alone_was_built(self):
         _, stages = self.run_alone()

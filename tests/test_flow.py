@@ -328,6 +328,14 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(statuses(said)["build"], STALE)
         self.assertEqual(says(said, "build")[0], "the last build was spark's reference design, not requirements.json")
 
+    def test_a_record_without_the_requirements_key_is_read_as_built_from_requirements_json(self):
+        # P1095: only a record that holds requirements null is the reference design's; one that lacks the key keeps the old reading
+        project = a_built_project()
+        BuildRecordStore(project, clock=FakeClock()).write({"status": "ok", "stages": [{"name": "board", "status": "ok"}, {"name": "build", "status": "ok"}],
+                                                           "missing_facts": []})
+        said, _ = show(project)
+        self.assertEqual(says(said, "build")[0], "requirements.json changed after the build")
+
     def test_requirements_changed_after_the_build_make_the_build_and_the_sheet_stale(self):
         project = a_built_project()
         (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6-fresh", "parts": ["tactile-button"]}))

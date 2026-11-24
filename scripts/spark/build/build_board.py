@@ -116,7 +116,8 @@ class BuildBoard(Operation):
                           "breadboard.svg, that drawing as a picture, "
                           "a rebuild also lists what to change on the bench (one `changed` entry for each line), page.html, in a project the flow's phases "
                           "with their status words and the breadboard, schematic and PCB, else the three in tabs, to open in a browser, firmware/pins.py, the pins the firmware imports, with one "
-                          "`missing_facts` item for each fact the board record lacks, and in a project .spark/build.json, which flow.py reads. "
+                          "`missing_facts` item for each fact the board record lacks. In a project it writes .spark/build.json, which flow.py reads, "
+                          "the reference design's too, with `requirements` null (P1095). "
                           "The simulation project goes to DIR/sim", metavar="DIR"),
                  Argument(("--sim-dir",), "sim_dir", Path, "keep the simulation project here instead of DIR/sim: diagram.json, "
                           "wokwi.toml, the chips", metavar="DIR"),
