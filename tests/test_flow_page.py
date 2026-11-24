@@ -1576,10 +1576,11 @@ class TheSliceOneOrderTest(unittest.TestCase):
 
     def test_the_freshness_line_says_the_newest_change_in_the_machine_s_zone_and_keeps_the_iso_time(self):
         text = order_page(written="2026-11-23T14:18:05+01:00")
-        self.assertIn('<p class="fresh">This page shows the project as of 23 Nov 2026, 14:18, its newest change. If you changed or '
-                      'deployed something after that, type /spark:page in the chat.</p>', text)
+        # the review of #1619: the time the files last changed, so it never reads as the board's time
+        self.assertIn('<p class="fresh">This page shows the project as its files last changed, 23 Nov 2026, 14:18. If you changed '
+                      'or deployed something after that, type /spark:page in the chat.</p>', text)
         self.assertIn('data-written="2026-11-23T14:18:05+01:00"', text)
-        self.assertNotIn("as of", order_page(written=None))
+        self.assertNotIn("last changed,", order_page(written=None))
         self.assertIn('<p class="fresh">This page does not know when the project last changed.', order_page(written=None))
 
     def test_the_now_box_says_who_acts_on_the_board_and_next_with_its_hooks(self):
@@ -1603,7 +1604,7 @@ class TheSliceOneOrderTest(unittest.TestCase):
 
     def test_the_developer_lines_are_always_folded(self):
         deploy = {"phase": "deploy", "by": ["you"], "says": "Plug it in.", "offer": None, "needs": [], "steps": None}
-        steps = dict(deploy, phase="firmware", steps=3)
+        steps = dict(deploy, phase="firmware", steps=3, with_wiring=True)
         sheet = [a_phase("breadboard", None).to_dict(), a_need_phase()]
         for guide in (None, a_guide(now=deploy), a_guide(now=steps), a_guide(now=None, no_open_phase="Nothing waits.")):
             with self.subTest(guide=guide and guide["now"]):
@@ -1634,13 +1635,14 @@ class TheSliceOneOrderTest(unittest.TestCase):
         self.assertNotIn(" open", fold(other, "parts"))
         self.assertRegex(other, r'data-fold="parts"><summary><h2>[^\n]*</h2></summary>\n')
 
-    def test_the_wiring_and_pictures_open_with_steps_in_now_or_a_deploy_beside_a_current_sheet(self):
+    def test_the_wiring_and_pictures_open_only_when_the_guide_s_now_holds_the_wiring(self):
+        # the review of #1619: the reading says it (`now.with_wiring`, guide.py, E16); the page reads it and decides nothing
         deploy = dict(a_guide()["now"], phase="deploy", offer=None)
         sheet = [a_phase("breadboard", None).to_dict(), a_phase("deploy", "not-started").to_dict()]
-        stale = [a_phase("breadboard", "stale").to_dict(), a_phase("deploy", "not-started").to_dict()]
-        for guide, phases, shown in ((a_guide(now=dict(deploy, phase="firmware", steps=3)), None, True),
-                                     (a_guide(now=deploy), sheet, True), (a_guide(now=deploy), stale, False),
-                                     (a_guide(now=deploy), sheet[1:], False), (a_guide(), sheet, False),
+        for guide, phases, shown in ((a_guide(now=dict(deploy, with_wiring=True)), sheet, True),
+                                     (a_guide(now=dict(deploy, with_wiring=True)), [], True),
+                                     (a_guide(now=dict(deploy, with_wiring=False)), sheet, False),
+                                     (a_guide(now=dict(deploy, steps=3)), sheet, False), (a_guide(), sheet, False),
                                      (a_guide(now=None), sheet, False)):
             with self.subTest(now=guide["now"], phases=phases and [phase["status"] for phase in phases]):
                 text = order_page(guide=guide, phases=phases)
@@ -1659,6 +1661,16 @@ class TheSliceOneOrderTest(unittest.TestCase):
                          [("light", ["pick:light:led-red", "pick:light:led-green"]),
                           ("button", ["pick:button:tact-6mm", "pick:button:tact-12mm"])])
         self.assertLess(parts.index("1 of 2 needs picked"), parts.index('<li class="need">'))
+
+    def test_a_sentence_the_parts_say_twice_stands_once_above_the_need_rows(self):
+        # the review of #1619 (the lens): one refusal said for every need reads once
+        said = "Spark can save no new pick: the board is held."
+        text = without_script(order_page(phases=[a_need_phase(says=("1 of 2 needs picked", said, said))]))
+        start = text.index(fold(text, "parts"))
+        parts = text[start:text.index("</details>", start)]
+        self.assertEqual(parts.count(said), 1)
+        self.assertLess(parts.index(said), parts.index('<li class="need">'))
+        self.assertLess(parts.index("1 of 2 needs picked"), parts.index(said))
 
     def test_each_sendable_button_stands_exactly_once_and_no_hook_stands_in_the_developer_fold(self):
         build = dict(a_guide()["now"], offer="build")
@@ -1745,6 +1757,9 @@ class ThePageScriptTest(unittest.TestCase):
                                          "/spark:page.")
         self.assertEqual((words["last_request"], words["months"][0], words["months"][10], len(words["months"])),
                          ("Your last request, %s: %s.", "Jan", "Nov", 12))
+        # the review of #1619: a request whose offer left the page is said by its kind's words, never by a part of its key
+        self.assertEqual(words["request_kinds"], {"pick": "a pick", "requirements": "the parts list", "build": "the build"})
+        self.assertEqual(words["request_other"], "a step this page no longer offers")
         self.assertNotIn("page_from", words)
         self.assertEqual((words["not_sent"], words["not_withdrawn"]), ("Could not send. Nothing ran.", "Could not withdraw. The request still waits."))
         self.assertEqual(words["refused"], {

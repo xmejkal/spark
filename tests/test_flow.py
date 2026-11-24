@@ -2446,5 +2446,29 @@ class TheDeployedLineTest(unittest.TestCase):
         self.assertEqual(zone_time.day_and_time("2026-01-15T12:00:00+00:00"), "15 Jan 2026, 13:00")
 
 
+class TheWiringWithNowTest(unittest.TestCase):
+    """The review of #1619 (E16 as a fact): `now.with_wiring` says whether the job now holds the wiring: the two jobs beside a
+    current sheet, or the deploy beside a current sheet. The page opens its wiring fold by it and decides nothing."""
+
+    def now(self, phases, sheet=True):
+        from spark.flow.phase_readers import Phase
+        project = Path(tempfile.mkdtemp())
+        if sheet:
+            (project / "breadboard.md").write_text("# a sheet\n")
+        return guide_of(project, [Phase(*each, "you", ["said"], []) for each in phases], steps=lambda _project: 3)["now"]
+
+    def test_the_deploy_beside_a_current_sheet_holds_the_wiring(self):
+        self.assertIs(self.now([("breadboard", None, "·"), ("deploy", "not-started", "○")])["with_wiring"], True)
+
+    def test_the_deploy_with_no_kept_sheet_or_a_sheet_not_current_does_not(self):
+        self.assertIs(self.now([("breadboard", None, "·"), ("deploy", "not-started", "○")], sheet=False)["with_wiring"], False)
+        self.assertIs(self.now([("breadboard", "stale", "↻"), ("deploy", "not-started", "○")])["with_wiring"], False)
+
+    def test_the_two_jobs_hold_it_and_another_now_does_not(self):
+        two = self.now([("breadboard", None, "·"), ("firmware", "not-started", "○")])
+        self.assertEqual((two["steps"], two["with_wiring"]), (3, True))
+        self.assertIs(self.now([("build", "not-started", "○"), ("breadboard", None, "·")])["with_wiring"], False)
+
+
 if __name__ == "__main__":
     unittest.main()

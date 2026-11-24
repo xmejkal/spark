@@ -23,6 +23,8 @@ const WORDS = {
   not_sent: "Could not send. Nothing ran.", not_withdrawn: "Could not withdraw. The request still waits.",
   waiting_for: "Waiting for Claude: %s.", last_request: "Your last request, %s: %s.",
   months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+  request_kinds: { pick: "a pick", requirements: "the parts list", build: "the build" },
+  request_other: "a step this page no longer offers",
   now_button: { "Ask Claude in the chat to build the board. It takes seconds and costs nothing.":
                 "Build the board. It takes seconds and costs nothing. Use the button." },
   ok: { pick: "Saved as the pick. Nothing is built yet. Reload to see the new state.",
@@ -314,13 +316,25 @@ test("the last request says its date in the page's month words and its label, th
   assert.match(said(build, null), WAITING);
   assert.equal(said(null, null), "");
   assert.equal(said({ id: "y", key: "requirements", at }, { ran: true, status: "problems", line: "R1 has no footprint." }),
-    "Your last request, 21 Nov 2026, 11:36: requirements. ✗ Ran, with problems: R1 has no footprint. Reload to see the new state.");
+    "Your last request, 21 Nov 2026, 11:36: the parts list. ✗ Ran, with problems: R1 has no footprint. Reload to see the new state.");
   const months = WORDS.months.map((month) => month.toUpperCase());
   assert.equal(script.dayAndTime(at, months), "21 NOV 2026, 11:36");
   assert.equal(script.dayAndTime("not a time", months), "?");
   for (const answer of [{ ran: true, status: "could-not-run", line: "x" }, { ran: true, status: "problems", line: "x" }]) {
     assert.equal(said(build, answer).includes("✓"), false);
     assert.equal(said(build, answer).includes("Could not run:"), false);
+  }
+});
+
+test("a request whose offer is no longer on the page is said by its kind's words, never by a part of its key", () => {
+  const at = "2026-11-21T10:36:00.000Z";
+  const said = (key) => script.lastRequest({ id: "x", key, at }, { ran: true, status: "ok", line: "ran x: ok" }, WORDS);
+  assert.equal(said("pick:light:led-green"),
+    "Your last request, 21 Nov 2026, 11:36: a pick. ✓ Saved as the pick. Nothing is built yet. Reload to see the new state.");
+  for (const key of ["constructor", "needs-drop:light", "pick-other"]) {
+    const line = said(key);
+    assert.ok(line.startsWith("Your last request, 21 Nov 2026, 11:36: a step this page no longer offers. "), line);
+    assert.equal(line.includes(key.split(":")[0] + "."), false, line);
   }
 });
 
