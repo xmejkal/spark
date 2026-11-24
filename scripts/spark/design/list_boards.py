@@ -36,7 +36,7 @@ class ListBoards(Operation):
 
     def run(self, project, *, outside, list=True):
         project = project.resolve() if project else board_records.project_or_library()
-        current, note = board_records.marked_board(project)  # None: nothing chosen, or requirements.json cannot be read
+        current, note = board_records.marked_board(project)  # None: nothing chosen, or requirements.json or the selection is broken
         rows, lines = [], []
         for board_id, (layer, path) in sorted(board_records.records(project).items()):
             try:
