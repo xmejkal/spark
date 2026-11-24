@@ -1,0 +1,20 @@
+[
+ {"file": "scripts/spark/records/store.py", "name": "P1054: a .part is opened without O_EXCL, so a link planted there is followed",
+  "find": "            return os.open(part, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)",
+  "replace": "            return os.open(part, os.O_WRONLY | os.O_CREAT, mode)"},
+ {"file": "scripts/spark/records/store.py", "name": "P1054: a link, a folder or a FIFO at a .part is removed, not refused",
+  "find": "                if not stat.S_ISREG(os.lstat(part).st_mode):", "replace": "                if False:"},
+ {"file": "scripts/spark/records/store.py", "name": "P1054: a .part that a killed write left is refused, so the file is never written again",
+  "find": "                if not stat.S_ISREG(os.lstat(part).st_mode):", "replace": "                if True:"},
+ {"file": "scripts/spark/records/store.py", "name": "P1054: a write's cleanup removes a link that refused its .part",
+  "find": "        if made:  # only spark's own `.part`: a link or a folder that refused it stays as it is\n            part.unlink(missing_ok=True)\n        raise\n\n\ndef write_json(",
+  "replace": "        if True:  # only spark's own `.part`: a link or a folder that refused it stays as it is\n            part.unlink(missing_ok=True)\n        raise\n\n\ndef write_json("},
+ {"file": "scripts/spark/records/store.py", "name": "P1054: a file that is not private is made 0600",
+  "find": "_new_part(part, 0o600 if private else 0o666)", "replace": "_new_part(part, 0o600 if private else 0o600)"},
+ {"file": "scripts/spark/records/store.py", "name": "P1054: a kept document is written through a link at its .part",
+  "find": "        descriptor = _new_part(part, 0o666)\n        made = True\n        with open(descriptor, \"wb\") as out:\n            out.write(payload)\n",
+  "replace": "        part.write_bytes(payload)\n        made = True\n"},
+ {"file": "scripts/spark/flow/write_flow_page.py", "name": "P1054: a page whose .part is taken is told to make the folder writable",
+  "find": "            fix = PART_FIX % renderer.FILE_NAME if isinstance(refused, store.PartTakenError) else PAGE_FIX",
+  "replace": "            fix = PAGE_FIX"}
+]
