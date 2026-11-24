@@ -317,7 +317,7 @@ P423 and P430 set these rules for the text output of `parts.py`, `look.py`, `dep
 ## look.py and deploy.py's envelope
 
 `look.py --json` and `deploy.py --json` ([P213](https://github.com/xmejkal/spark/issues/192)) print one `outcomes.envelope` (`envelope`,
-`tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated`, and `notes` for deploy) on stdout. The status is
+`tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated`, and `notes` for deploy, with the `page.html` note when it wrote the page again, P1069) on stdout. The status is
 the exit code's ([the outcomes](../agents.md#the-outcomes-and-their-exit-codes)). With `--json`, deploy.py prints every line a person reads, and
 the flash tool's own output, on **stderr**, so stdout holds the envelope alone. That includes the `why:` line of each stage ([P476](https://github.com/xmejkal/spark/issues/652)). A bad flag prints an envelope with `--json` (below).
 A crash in `look.py` or `deploy.py` prints an envelope with one `unchecked` item, code `crash`, and exits 2; stderr gets `<tool>: crashed, <class>`, the fix and the traceback, never the envelope. A `DeployError` or a `ToolError` raised in deploy's verify, after the flash, is such a crash too (exit 2, `data.board_state` set), where it once printed a traceback with exit 1.

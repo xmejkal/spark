@@ -1,6 +1,9 @@
 """P213 PR a (#192): look.py --json and deploy.py --json print one outcomes.envelope, and change no text and no exit code."""
 
+import contextlib
 import hashlib
+import html
+import io
 import json
 import subprocess
 import sys
@@ -624,6 +627,101 @@ class ReadyUnknownFixTest(unittest.TestCase):
 
     def test_a_log_that_names_no_files_gives_its_own_fix(self):
         self.assertEqual(self.fix(self.unknown(files={})), test_deploy_gate.NO_FILES_FIX)
+
+
+class DeployPageTest(JsonCase, GateCase):
+    """P1069 (story 0c of P793): a deploy that is no dry run writes the project's page.html again at every status but a
+    crash, so the page names the same stand as `flow.py show`. The refresh adds a note and no flow step. The project
+    has an old page.html. D1's cost (B2): every deploy that is no dry run declares writes, so a refused look, a
+    needs_reply, a closed gate and a "no" write the page again too, with the note."""
+
+    go, ready = DeployJsonTest.go, DeployJsonTest.ready
+
+    def setUp(self):
+        super().setUp()
+        self.page = self.project / "page.html"
+        self.page.write_text("an old page", encoding="utf-8")
+
+    def page_notes(self, said):
+        return [note for note in said.get("notes", []) if note.get("subject") == "page.html"]
+
+    def assert_the_page_is_the_flow_s(self, said):
+        """The page note is there, and page.html is the flow's page of the project as it stands and as `flow.py show`
+        says it: the same `stands_at`. Gives the show's data and the page's text."""
+        import flow
+        from spark.flow.now_follow_up import REFRESHED
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        self.assertEqual(self.page_notes(said), [{"subject": "page.html", "sentence": REFRESHED}])
+        page = self.page.read_text(encoding="utf-8")
+        self.assertNotEqual(page, "an old page")
+        written = write_page(self.project, store=FlowPageStore())
+        self.assertEqual(self.page.read_text(encoding="utf-8"), page)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            flow.main(["show", "--project", str(self.project), "--json"])
+        shown = json.loads(out.getvalue())["data"]
+        self.assertEqual(shown["stands_at"], written.stands_at)
+        return shown, page
+
+    @needs_littlefs
+    def test_ready_unknown_writes_the_page_of_the_same_stand_as_show_and_adds_no_flow_step(self):
+        self.unread = subprocess.CalledProcessError(1, "mpremote")
+        code, said, _ = self.ready(probe=FakeConsoleProbe(""))
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+        shown, page = self.assert_the_page_is_the_flow_s(said)
+        deploy, = [phase for phase in shown["phases"] if phase["phase"] == "deploy"]
+        for line in deploy["says"]:
+            self.assertIn(html.escape(line), page)
+        self.assertEqual([step["op"] for step in said["next"]], ["look", "live", "watch"])
+
+    def test_a_crash_after_the_gate_leaves_the_page(self):
+        self.run_the_scenario()
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=RuntimeError("usb fell off"))
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["unchecked"][0]["code"]), (2, "crash"))
+        self.assertEqual((self.page.read_text(encoding="utf-8"), self.page_notes(said)), ("an old page", []))
+
+    @needs_littlefs
+    def test_the_dry_run_leaves_the_page(self):
+        self.run_the_scenario()
+        code, said, _ = self.go("--dry-run", "--port", PORT)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertEqual((self.page.read_text(encoding="utf-8"), self.page_notes(said)), ("an old page", []))
+
+    @needs_littlefs
+    def test_an_ok_deploy_writes_the_page_and_adds_no_flow_step(self):
+        code, said, _ = self.ready()
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["status"], said["next"]), (0, "ok", []))
+        self.assertEqual(said["data"]["ready"]["verdict"], "ready seen")
+        self.assert_the_page_is_the_flow_s(said)
+
+    @needs_littlefs
+    def test_a_secrets_file_that_cannot_be_read_leaves_the_old_page_and_the_deploy_s_answer_stands(self):
+        # test 8, P1060 D5: write_page refuses, and the core says so in one diagnostics line that names the class only
+        from spark.core.cli import REFRESH_FAILED_MESSAGE
+        half_typed = "half-typed-value-31337"
+        (self.project / "firmware" / "wifi_secrets.py").write_text('WIFI_PASSWORD = "%s\n' % half_typed, encoding="utf-8")
+        code, said, err = self.ready()
+        envelope = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, envelope["status"], envelope["problems"], envelope["unchecked"], envelope["next"]), (0, "ok", [], [], []))
+        self.assertEqual(envelope["data"]["ready"]["verdict"], "ready seen")
+        self.assertEqual(self.page_notes(envelope), [])
+        self.assertEqual(err.rstrip("\n").splitlines()[-1], REFRESH_FAILED_MESSAGE % ("SecretsUnreadableError", "page.html"))
+        self.assertEqual(self.page.read_bytes(), b"an old page")
+        self.assertNotIn(half_typed, "\n".join(said) + err)
+
+    @needs_littlefs
+    def test_a_write_that_fails_after_the_erase_writes_the_page_that_show_agrees_with(self):
+        # B1, B12: no board log is written, so the page and show agree on the stand before this deploy
+        self.run_the_scenario()
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), write_fails=True)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+        self.assertNotIn("crash", [item["code"] for item in said["unchecked"]])
+        self.assert_the_page_is_the_flow_s(said)
 
 
 if __name__ == "__main__":
