@@ -523,7 +523,7 @@ class ABrokenToolsFileTest(StoreCase):
         self.assertEqual((done.returncode, item["code"], item["fix"]), (2, "tools_list_broken", records_codes.TOOLS_LIST_BROKEN.fix),
                          done.stderr)
         self.assertIn("is not JSON", item["sentence"])
-        self.assertEqual(done.stderr.splitlines()[-1], "bench.py: %s" % records_codes.TOOLS_LIST_BROKEN.fix)
+        self.assertEqual(done.stderr.splitlines(), ["bench.py: %s" % item["sentence"]])
 
 
 class ARecordOnABrokenToolsFileTest(RecordCase):
@@ -540,8 +540,7 @@ class ARecordOnABrokenToolsFileTest(RecordCase):
         self.assertEqual((exit_code, item["code"]), (2, "tools_list_broken"))
         self.assertTrue(item["fix"].startswith("fix what the line above says, then run bench.py record pixel-games again"), item["fix"])
         _, _, err = self.bench("record", "pixel-games", find_tool=broken)
-        self.assertEqual(err.splitlines()[1:], ["bench.py: %s" % records_codes.TOOLS_LIST_BROKEN.fix,
-                                                "bench.py: Nothing was written. %s" % item["fix"]])
+        self.assertEqual(err.splitlines()[1:], ["bench.py: Nothing was written. %s" % item["fix"]])
         self.no_record()
 
 

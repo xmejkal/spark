@@ -116,8 +116,7 @@ class AStopOfAFirmwareThatSleepsSaysTheAsleepFixTest(unittest.TestCase):
 
 class AToolsFileStopKeepsItsCodeTest(unittest.TestCase):
     """P1058 (#1555): a tools file spark cannot read, or one that is no tools list, keeps its own code and that records
-    Code's fix, on the Finding and as a second line on stderr (the council's C). Every other ToolError stays tool_missing
-    with no fix (D1)."""
+    Code's fix on the Finding, and stderr keeps its one line. Every other ToolError stays tool_missing with no fix (D1)."""
 
     def setUp(self):
         self.project = Path(tempfile.mkdtemp())
@@ -134,7 +133,7 @@ class AToolsFileStopKeepsItsCodeTest(unittest.TestCase):
                 found, lines = self.said(tool_finder.ToolError(sentence, code=str(code)))  # a plain str, as a test raises it
                 self.assertEqual((found.severity, found.code, found.sentence, found.fix),
                                  ("could-not-run", str(code), sentence, code.fix))
-                self.assertEqual(lines, ["bench.py: %s" % sentence, "bench.py: %s" % code.fix])
+                self.assertEqual(lines, ["bench.py: %s" % sentence])
 
     def test_a_missing_or_turned_off_tool_stays_tool_missing_with_no_fix(self):
         for cannot in (tool_finder.ToolMissingError("mpremote is not installed", code=records_codes.TOOL_MISSING),
