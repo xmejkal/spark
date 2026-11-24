@@ -67,20 +67,22 @@ def operation_classes(root):
 
 
 def imported_modules(tree):
-    """Every module an import names, by its full dotted path: `import a.b` gives a.b, and `from a.b import c` gives a.b and
-    a.b.c, so `from spark import flow` is spark.flow and `from spark.flow.guide import x` is spark.flow.guide."""
-    names = []
+    """The modules each import statement names, by their full dotted paths, one list per statement: `import a.b` gives a.b,
+    and `from a.b import c` gives a.b and a.b.c, so `from spark import flow` holds spark.flow and `from spark.flow.guide
+    import x` holds spark.flow.guide."""
+    statements = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            names += [alias.name for alias in node.names]
+            statements.append([alias.name for alias in node.names])
         elif isinstance(node, ast.ImportFrom) and node.module:
-            names += [node.module] + ["%s.%s" % (node.module, alias.name) for alias in node.names]
-    return names
+            statements.append([node.module] + ["%s.%s" % (node.module, alias.name) for alias in node.names])
+    return statements
 
 
 def imports_against_the_direction(root):
     """Each import under `root`/scripts/spark that breaks the direction: a core module that imports an area or the
-    Operation catalogue, or an area module that imports the Operation catalogue, as `<module>: <dotted path>`."""
+    Operation catalogue, or an area module that imports the Operation catalogue, as `<module>: <dotted path>`, once per
+    import statement (its first name that breaks it)."""
     spark = root / "scripts" / "spark"
     areas = {folder.name for folder in spark.iterdir() if (folder / "__init__.py").is_file()} - {"core"}
     found = []
@@ -89,8 +91,9 @@ def imports_against_the_direction(root):
         if len(relative.parts) == 1:
             continue  # spark/__init__.py and the Operation catalogue itself
         forbidden = ["spark.operation_catalogue"] + (["spark." + area for area in sorted(areas)] if relative.parts[0] == "core" else [])
-        found += ["%s: %s" % (relative.as_posix(), name) for name in imported_modules(ast.parse(path.read_text()))
-                  if any(name == one or name.startswith(one + ".") for one in forbidden)]
+        for names in imported_modules(ast.parse(path.read_text())):
+            found += ["%s: %s" % (relative.as_posix(), name) for name in names
+                      if any(name == one or name.startswith(one + ".") for one in forbidden)][:1]
     return found
 
 
