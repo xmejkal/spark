@@ -1,0 +1,38 @@
+[
+ {
+  "file": "tools/check_commit.py",
+  "name": "the gate ignores the refused rows and runs the suite (caught by test_a_row_whose_find_is_gone_stops_the_gate_before_the_suite)",
+  "find": "    if stale:\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the anchor half sees only the changed files' rows (caught by test_a_stale_row_on_a_file_the_branch_did_not_change_is_still_refused)",
+  "find": "    wrong = mutate.anchors(tree, rows)\n",
+  "replace": "    wrong = mutate.anchors(tree, [row for row in rows if row[\"file\"] in (changed or [])])\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a changed table's rows are not compiled (caught by test_a_mutant_that_does_not_compile_is_refused_only_when_its_file_or_table_changed)",
+  "find": "        subset = [row for row in rows if row[\"table\"] in named]\n",
+  "replace": "        subset = []\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "an unknown change set compiles nothing instead of every row (caught by test_a_mutant_that_does_not_compile_is_refused_only_when_its_file_or_table_changed)",
+  "find": "        subset = rows\n",
+  "replace": "        subset = []\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a table that is not JSON stops the check with a traceback instead of a refusal line (caught by test_a_table_that_is_not_json_is_a_refusal_line)",
+  "find": "        except (OSError, ValueError, KeyError, TypeError, AttributeError) as broken:\n",
+  "replace": "        except OSError as broken:\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the compile half is dropped (caught by test_a_mutant_that_does_not_compile_is_refused_only_when_its_file_or_table_changed)",
+  "find": "    lines += [\"%s: %s\" % (name, why) for name, _file, why in mutate.unloadable(tree, subset)]\n",
+  "replace": "    lines += []\n"
+ }
+]

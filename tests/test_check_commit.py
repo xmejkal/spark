@@ -9,7 +9,9 @@ tree, and the file it imported was staged one commit later (sprint-4 close audit
 
 import contextlib
 import io
+import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -299,6 +301,57 @@ class TheGateCompilesThePageScriptTest(unittest.TestCase):
         self.assertEqual(run.compilers, [TSC], "the gate compiles with the tsc that `which` found")
         self.assertIn("page script: the committed scripts/spark/flow/page_script.js is not tsc's compiled output", said)
         self.assertNotIn("as committed", said, "a drift runs no suite")
+
+
+class TheGateChecksTheMutationRowsTest(unittest.TestCase):
+    """P897: every row's anchor at every push, and the mutants of the changed files' and tables' rows."""
+    GOOD = {"file": "m.py", "name": "add becomes sub", "find": "return a + b", "replace": "return a - b"}
+    TABLE = "tests/mutations/t.json"
+
+    def tree(self, rows, text="def add(a, b):\n    return a + b\n", table=None):
+        files = {"m.py": text, "other.py": "x = 1\n", self.TABLE: table if table is not None else json.dumps(rows)}
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root, True)
+        for name, body in files.items():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(body)
+        return root
+
+    def test_a_row_whose_find_is_gone_stops_the_gate_before_the_suite(self):
+        root = repo_with({"m.py": "def add(a, b):\n    return a * b\n", self.TABLE: json.dumps([self.GOOD])})
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            code = check_commit.gate(root, "HEAD", Path(tempfile.mkdtemp()), which=lambda _name: None)
+        self.assertEqual(code, check_commit.EXIT_PROBLEMS, said.getvalue())
+        self.assertIn("t.json[0] add becomes sub", said.getvalue())
+        self.assertIn("re-anchor each refused row", said.getvalue())
+        self.assertNotIn("as committed", said.getvalue(), "a refused row runs no suite")
+
+    def test_a_find_that_occurs_twice_is_refused_too(self):
+        lines = check_commit.refused_rows(self.tree([self.GOOD], "return a + b\nreturn a + b\n"), [])[0]
+        self.assertEqual(len(lines), 1, lines)
+        self.assertIn("occurs 2 time(s)", lines[0])
+
+    def test_a_stale_row_on_a_file_the_branch_did_not_change_is_still_refused(self):
+        lines = check_commit.refused_rows(self.tree([self.GOOD], "def add(a, b):\n    return a * b\n"), ["other.py"])[0]
+        self.assertEqual(len(lines), 1, "the anchor half covers every row, changed or not")
+        self.assertIn("t.json[0]", lines[0])
+
+    def test_a_mutant_that_does_not_compile_is_refused_only_when_its_file_or_table_changed(self):
+        broken = dict(self.GOOD, replace="return (a")
+        root = self.tree([broken])
+        for changed, count in ((["m.py"], 1), ([self.TABLE], 1), (["x.py"], 0), ([], 0), (None, 1)):
+            lines = check_commit.refused_rows(root, changed)[0]
+            self.assertEqual(len(lines), count, (changed, lines))
+        self.assertIn("does not compile", check_commit.refused_rows(root, None)[0][0])
+
+    def test_a_table_that_is_not_json_is_a_refusal_line(self):
+        lines = check_commit.refused_rows(self.tree(None, table="[{"), [])[0]
+        self.assertEqual(len(lines), 1, lines)
+        self.assertIn("t.json", lines[0])
+
+    def test_a_tree_with_no_tables_refuses_nothing(self):
+        self.assertEqual(check_commit.refused_rows(Path(tempfile.mkdtemp()), None), ([], 0, 0, 0))
 
 
 #: A test that passes and leaves a folder in the temp folder behind it — the shape of 1,888 of the 2,291 entries.
