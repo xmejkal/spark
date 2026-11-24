@@ -347,6 +347,7 @@ class TheBenchLineTest(unittest.TestCase):
         # person ("If you wired the board", "whether you wired from it"), never a claim, so only they stand outside this check.
         sheet_day = day_of(zone_time.stamp(datetime.datetime.fromtimestamp((project / "breadboard.md").stat().st_mtime)))
         for sentence in (WIRED_SHEET_MESSAGE % sheet_day, WIRED_STEP_MESSAGE, WIRED_BUILD_MESSAGE):
+            self.assertIn(html.escape(sentence), text)  # the review of #1609, lens 4: each is there, so the rest is checked
             text = text.replace(html.escape(sentence), "")
         for word in ("wired", "flashed"):
             self.assertNotIn(word, text)

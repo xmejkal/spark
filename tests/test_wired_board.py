@@ -221,6 +221,18 @@ class TheProblemsTest(WiredTest):
         self.assertEqual([item["sentence"] for item in said["problems"] if item["subject"] == "parts"], ["parts: " + says(said, "parts")[0]])
 
 
+class TheCouldNotRunTest(WiredTest):
+    def test_a_parts_phase_that_could_not_run_keeps_its_sentence_first_and_the_wired_line_last(self):
+        project = a_sheet_at(a_built_project())
+        (project / ".spark").mkdir(exist_ok=True)
+        (project / ".spark" / "needs.json").write_text("{not json")
+        said, code = show(project)
+        self.assertEqual((code, statuses(said)["parts"]), (2, "could-not-run"))
+        self.assertIn(".spark/needs.json is not JSON", says(said, "parts")[0])
+        self.assertEqual(says(said, "parts")[-1], " ".join((sheet_text(), WIRED_STEP_MESSAGE)))
+        self.assertEqual([item["sentence"] for item in said["unchecked"] if item["subject"] == "parts"], ["parts: " + says(said, "parts")[0]])
+
+
 class TheDayTest(WiredTest):
     def test_a_day_is_the_local_day(self):
         self.assertEqual(wired_board.day_of("2026-11-22T23:30:00+00:00"), "23 Nov 2026")
@@ -250,6 +262,9 @@ class TheTextViewTest(WiredTest):
             parts = [line for line in lines if line.startswith("  ") and " parts: " in line]
             self.assertEqual(len(parts), 1, lines)
             self.assertIn(WIRED_STEP_MESSAGE, parts[0])
+            if (project / "sim" / "runs" / "board").is_dir():  # both witnesses: the sheet, then the log, then the step
+                at = [parts[0].index(text) for text in (sheet_text(), log_text(), WIRED_STEP_MESSAGE)]
+                self.assertEqual(at, sorted(at), parts[0])
             self.assertFalse([line for line in lines if ".," in line], "no sentence ends before a comma")
 
 
@@ -260,6 +275,17 @@ class TheBoardOnlyBuildTest(WiredTest):
         effect = offer_of(show(project)[0], "build")["effect"]
         self.assertTrue(effect.startswith(BOARD_ONLY_BUILD_EFFECT), effect)
         self.assertNotIn(WIRED_BUILD_MESSAGE, effect)
+
+    def test_a_board_only_project_with_a_board_log_gets_no_wired_line(self):
+        # the review of #1609, lens 1: no sheet and no part, so nothing is wired and the line would say what is not true
+        project = a_built_project()
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "board_only": True, "parts": []}))
+        (project / "breadboard.md").unlink()
+        said, _ = show(a_board_log(project, "ready seen", SEEN_SENTENCE))
+        self.assertIsNotNone(said["data"]["deploy"])
+        self.assertFalse([line for line in says(said, "parts") if WIRED_STEP_MESSAGE in line], says(said, "parts"))
+        self.assertFalse([effect for phase in said["data"]["phases"] for effect in (offer["effect"] for offer in phase["offers"])
+                          if effect.startswith(("If you wired",))])
 
 
 class TheValueTest(WiredTest):
