@@ -154,6 +154,8 @@ def active_id(project: Path) -> str:
     marking the active board — an absent character as the only signal that the file is nonsense.
     """
     selection = _read_json(selection_file(project), "board selection")
+    if not isinstance(selection, dict):  # P1094: .get on a list crashed init
+        raise BoardError("%s is not a JSON object", selection_file(project), code=records_codes.RECORD_FILE_BROKEN)
     board_id = selection.get("board")
     if not board_id:
         raise BoardError('%s names no board (expected a "board" key holding a board id)', selection_file(project), code=records_codes.NO_BOARD_SELECTED)
@@ -265,10 +267,9 @@ class ButtonPlaces:
 
     @classmethod
     def of_project(cls, project):
-        """The places in the record requirements.json names, or EMPTY when that record cannot be read."""
+        """The places in the record of the project's board (D35), or EMPTY when that record cannot be read."""
         try:
-            name = json.loads((Path(project) / "requirements.json").read_text()).get("board")
-            return cls.from_record(load(project, name)) if name else cls.EMPTY
+            return cls.from_record(load(project))
         except (OSError, ValueError, AttributeError, BoardError):
             return cls.EMPTY
 
