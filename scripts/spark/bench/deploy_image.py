@@ -445,7 +445,7 @@ class DeployImage(Operation):
         return (READS, RUNS) if values["no_simulation"] else (READS,)
 
     def written_project(self, values):
-        """The project a deploy writes its board log to (P1069): the core writes its page.html again after the run."""
+        """The project a deploy writes to (P1069): the core writes its page.html again after a run that did not crash."""
         return Path(values["project"])
 
     def run(self, project, port, token, dry_run, replies=None, *, outside, **evidence):

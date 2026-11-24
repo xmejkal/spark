@@ -632,7 +632,8 @@ class ReadyUnknownFixTest(unittest.TestCase):
 class DeployPageTest(JsonCase, GateCase):
     """P1069 (story 0c of P793): a deploy that is no dry run writes the project's page.html again at every status but a
     crash, so the page names the same stand as `flow.py show`. The refresh adds a note and no flow step. The project
-    has an old page.html."""
+    has an old page.html. D1's cost (B2): every deploy that is no dry run declares writes, so a refused look, a
+    needs_reply, a closed gate and a "no" write the page again too, with the note."""
 
     go, ready = DeployJsonTest.go, DeployJsonTest.ready
 
