@@ -23,7 +23,7 @@ from spark.records import store
 from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
 from spark.bench.deploy_stages import PHASE_WHY, DeployPhase
-from spark.bench.deploy_service import DeployService, ended_the_flash
+from spark.bench.deploy_service import DeployService, ended_after_the_yes
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, SIMULATION_NONE, evidence_for
 from spark.firmware.project_image import DeployError
@@ -239,7 +239,7 @@ class DeployFlowService:
         `deploy.py: <why>`. A FlashError keeps the yes that ran it, and names its board log (P1092): any refusal that the
         flash loop's handler logged does (P1096, G11)."""
         reached = self._reached
-        if ended_the_flash(cannot):
+        if ended_after_the_yes(cannot):
             self.keep_yes()
             self.say_not_finished(cannot)
         reached.update(refusal=str(cannot), reason=cannot.code if isinstance(cannot, SparkError) else reason_of(cannot))
@@ -497,7 +497,7 @@ class DeployImage(Operation):
                 raise
             return self._crashed(flow, crashed)
         except KeyboardInterrupt as interrupted:  # P1096: a Ctrl-C in the flash says its board log line first
-            if ended_the_flash(interrupted):
+            if ended_after_the_yes(interrupted):
                 flow.keep_yes()
                 flow.say_not_finished(interrupted)
             raise  # P1096: a Ctrl-C still ends the run
@@ -508,7 +508,7 @@ class DeployImage(Operation):
         the data reached with the yes and `board_state`, the look as the next step, and the traceback in the diagnostics.
         A crash in the flash loop also names the board log it wrote (P1096)."""
         flow.keep_yes()  # a crash in the flash loop still says whose yes it was
-        if ended_the_flash(crashed):
+        if ended_after_the_yes(crashed):
             flow.say_not_finished(crashed)
         reached, name = flow.reached(), type(crashed).__name__
         state = CRASH_STATES[reached["stage"]]
