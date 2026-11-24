@@ -444,12 +444,12 @@ def _left_from_earlier(path, what, why, remove=True):
     return {"file": str(path), "did": "not written", "why": why, "line": "no %s: %s" % (what, why)}
 
 
-def keep_pins(requirements, destination):
+def keep_pins(requirements, destination, finished):
     """
     The pin map the firmware imports, beside the kept board (P196, #155), as one kept entry {file, did, why, line}: what
     `assign_pins.py requirements.json --emit-pins` writes, from the same code, and from the requirements alone, so it
-    needs no finished build. One spark wrote is rewritten, since it says not to edit it, and is removed when the pins
-    cannot be placed: it describes another design. A `pins.py` spark did not write is left alone, as `board.tsx` is.
+    needs no finished build. One spark wrote is rewritten, since it says not to edit it. When the pins cannot be placed it
+    stays, named as from the earlier requirements (P1109), unless a build `finished`. Not spark's: left alone, as `board.tsx` is.
     """
     target = Path(destination) / PIN_MODULE
     ours = target.is_file() and target.read_bytes().startswith(pin_assigner.PIN_MODULE_HEADER.encode())
@@ -459,10 +459,8 @@ def keep_pins(requirements, destination):
     try:
         module = pin_assigner.pin_module_for(str(requirements))
     except PIN_MAP_REFUSALS as stopped:
-        if ours:
-            target.unlink()
-            return {"file": str(target), "did": "removed", "why": "%s, and it described an earlier design" % stopped,
-                    "line": "no pin map: %s; removed %s, which described an earlier design" % (stopped, target)}
+        if ours:  # P1109: the firmware imports it; it stays beside the earlier dist/ and sheet, but not beside a new build (D6)
+            return _left_from_earlier(target, "pin map", "%s; the pin map is from the earlier requirements" % stopped, finished)
         return {"file": str(target), "did": "not written", "why": str(stopped), "line": "no pin map: %s" % stopped}
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(module.module)
@@ -471,10 +469,10 @@ def keep_pins(requirements, destination):
         "\n  missing fact: %s. %s" % (item["sentence"], item["fix"]) for item in missing))}, **{"missing_facts": missing} if missing else {})
 
 
-def _kept_pins(requirements, destination):
+def _kept_pins(requirements, destination, finished):
     """`keep_pins`, or one entry saying why the file system refused it: the verdict is printed either way."""
     try:
-        return keep_pins(requirements, destination)
+        return keep_pins(requirements, destination, finished)
     except OSError as refused:
         target = Path(destination) / PIN_MODULE
         return {"file": str(target), "did": "not written", "why": str(refused), "line": "no pin map: %s" % refused}
@@ -567,7 +565,7 @@ def keep_all(stages, workdir, asked, exporter, flow_page=None):
     kept = (_kept(workdir, keep, bool(requirements_file), _built(stages)) if workdir is not None else []) if keeps else None
     if kept is not None:  # P1095: the reference design (no requirements file) names an earlier dist/ and records its build too
         kept += (keep_breadboard(Path(requirements_file), Path(keep), stages, kept) if requirements_file else []) + drop_an_older_build(Path(keep), stages, kept)
-        kept += [_kept_pins(Path(requirements_file), Path(keep))] if requirements_file else []
+        kept += [_kept_pins(Path(requirements_file), Path(keep), _built(stages))] if requirements_file else []
         kept += keep_build_record(Path(keep), Path(requirements_file) if requirements_file else None, stages, kept)  # P825: what flow.py reads
     simulation_folder = simulation_dir(asked.sim_dir, keep)
     simulation = keep_simulation(workdir, simulation_folder, stages) if workdir is not None and simulation_folder else None
