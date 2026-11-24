@@ -10,7 +10,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.build import build_codes
-from spark.build.build_record import DIST_WRITTEN, OWN_FILES, STAGE_IN_THE_WAY, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, StageTakenError, sha256_of
+from spark.build.build_record import DIST_WRITTEN, OWN_FILES, STAGE_IN_THE_WAY, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, StageTakenError, replace_whole, sha256_of
 from spark.build.build_service import verdict
 from spark.build.stages import BUILD, REQUIREMENTS, SIMULATION, skipped_the_build
 from spark.breadboard import drawing, sheet, svg_diagram, tabbed_page
@@ -87,11 +87,11 @@ def design_handed_to(workdir, project):
 
 def kept_into(workdir, destination, written=None, finished=True):
     """
-    Put the built board where a person — and every check — will look for it. `dist/` is pure build output and is
-    replaced. A `.tsx` is a person's to edit, so one that is there is left alone and named, unless `written` (the
-    build record's `{name: sha256}` of what spark wrote, P874) holds its bytes: then it is `replaced`, or `unchanged`
-    when this build made the same board (`_replaced`). Without `written` (an old project, no requirements file) nothing
-    is replaced: delete the file to have it regenerated.
+    Put the built board where a person — and every check — will look for it. `dist/` is pure build output: one that holds
+    the circuit the build reads replaces the earlier one whole, staged (P1088). A `.tsx` is a person's to edit, so one
+    that is there is left alone and named, unless `written` (the build record's `{name: sha256}` of what spark wrote,
+    P874) holds its bytes: then it is `replaced`, or `unchanged` when this build made the same board (`_replaced`).
+    Without `written` (an old project, no requirements file) nothing is replaced: delete the file to have it regenerated.
 
     Each file is {file, did, why, line}: `did` is `wrote`, `replaced`, `unchanged` or `left alone`, and `line` what
     stderr says; a `.tsx` carries the `sha256` of the bytes spark made. A .tsx left alone whose traces are not this
@@ -112,10 +112,9 @@ def kept_into(workdir, destination, written=None, finished=True):
         else:
             kept.append(_left_alone(target, "delete it to have it regenerated"))
             kept += _compare_traces(target, source)
-    built = workdir / "dist"
-    if built.is_dir():
+    if (workdir / sheet.CIRCUIT).is_file():  # P1088: the build stage's own test of a board that was built
         try:
-            shutil.copytree(built, destination / "dist", dirs_exist_ok=True)
+            replace_whole(workdir / "dist", destination / "dist")
         except OSError as refused:  # a copy that fails midway is a shutil.Error; the entries above stand, so the record holds what spark wrote (P891)
             return kept + [{"file": str(destination / "dist"), "did": "not kept", "why": str(refused), "line": "not kept: %s — %s" % (destination / "dist", refused)}]
         kept.append({"file": str(destination / "dist"), "did": WROTE, "why": "this is what every check reads",
@@ -237,7 +236,7 @@ def _kept(workdir, destination, recorded, finished):
 def drop_an_older_build(destination, stages, kept=()):
     """An earlier dist/ this run did not write: left alone and named (P816), or removed for the board alone (P236)."""
     old, why = Path(destination) / "dist", why_not_built(stages, "board only: no board was built")
-    if why is None or not old.is_dir() or str(old) in {entry["file"] for entry in kept if entry["did"] == WROTE}:
+    if why is None or not old.is_dir() or str(old) in {entry["file"] for entry in kept}:
         return []
     if not skipped_the_build(stages):
         return [_left_alone(old, why + ", so it is an earlier build's, which every check reads")]

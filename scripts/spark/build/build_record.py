@@ -5,9 +5,11 @@ the flow area.
 """
 
 import contextlib
+import errno
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 
 from spark.records import records_codes, store
@@ -188,4 +190,37 @@ class PreviousVersionFiles:
             copy.made = False  # it stays: it holds the old bytes
             return copy.staged
         return path
+
+
+#: The end of the name the earlier folder has while the copy takes its place; it is removed after.
+ASIDE_SUFFIX = ".old"
+
+
+def replace_whole(source, target):
+    """
+    Put a copy of the folder `source` at `target`, in place of the folder there. The copy is made at `target` + STAGE_SUFFIX;
+    when it is whole, the earlier folder is moved aside, the copy renamed into place and the earlier one removed. OSError
+    leaves `target` as it was: a copy that fails is removed, a `target` that is a link is not replaced, and a name the stage
+    or the aside needs that is taken is never removed (StageTakenError says so).
+    """
+    target = Path(target)
+    staged, aside = (target.with_name(target.name + suffix) for suffix in (STAGE_SUFFIX, ASIDE_SUFFIX))
+    if target.is_symlink():
+        raise OSError("%s is a link, so spark does not replace it" % target)
+    for name in (staged, aside):
+        if name.exists() or name.is_symlink():
+            raise StageTakenError(errno.EEXIST, "File exists", str(name))
+    moved = False
+    try:
+        shutil.copytree(source, staged)
+        if target.is_dir():
+            target.rename(aside)
+            moved = True
+        staged.rename(target)
+    except OSError:
+        if moved:
+            aside.rename(target)
+        shutil.rmtree(staged, ignore_errors=True)
+        raise
+    shutil.rmtree(aside, ignore_errors=True)
 # --- end MVP ---
