@@ -814,6 +814,7 @@ class SchemaTest(unittest.TestCase):
 
     def test_describe_operations_reflects_over_a_registry(self):
         # P726 PR 3: the rows come from the classes (flag, summary, effect words in a fixed order, the schema), not a table
+        # P1077: `flag` is the Operation's own `--<op>` argument or None, and `dry_run` says it has a `dry_run` argument
         from spark.core.describe_operations import DescribeOperations
         from spark.core.operation import FETCHES, READS, WRITES
         class Fetch(Toy):
@@ -827,7 +828,7 @@ class SchemaTest(unittest.TestCase):
         result = DescribeOperations({"fetch": Fetch, "quiet": Quiet}).run(outside=None)
         rows = result.data["operations"]
         self.assertEqual([(r["flag"], r["summary"], r["effects"], r["dry_run"]) for r in rows],
-                         [("--fetch", "download what a record cites", ["network", "writes"], True), ("--quiet", "says nothing", [], False)])
+                         [("--fetch", "download what a record cites", ["network", "writes"], False), (None, "says nothing", [], False)])
         self.assertEqual(rows[0]["arguments"]["part_id"]["metavar"], "PART")
         self.assertEqual([o["flag"] for o in result.data["options"]], ["--json", "--project"])
         self.assertEqual(result.lines[0], "  --fetch            download what a record cites  [network, writes]")

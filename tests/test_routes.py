@@ -26,6 +26,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import parts  # noqa: E402
+from spark import operation_catalogue  # noqa: E402
+from spark.sourcing.research import research_part  # noqa: E402
 
 #: The chain, in order. A document that routes to the chain names every link.
 CHAIN = ("parts.py", "assign_pins.py", "emit_board.py", "emit_footprint.py", "check_spine.py")
@@ -489,6 +491,19 @@ class TheNetworkIsThePersonsYesTest(unittest.TestCase):
 
     def test_describe_names_the_network_operations_this_test_guards(self):
         self.assertEqual(sorted(self.network_lines()[0]), ["--fetch", "--find-documents", "--sources"])  # P952 adds the third
+
+    def test_each_network_operation_of_the_catalogue_is_guarded(self):
+        # P1077: each op the Operation catalogue lists as a network one has lines here: a parts.py op by its flag, any other by
+        # its script (the frontend's fact, P1081 #1585), so a new network Operation fails until the guard holds its lines
+        network, lines = self.network_lines()
+        script_of = {"research-part": research_part.SCRIPT}
+        for op in operation_catalogue.NETWORK:
+            with self.subTest(op=op):
+                if op in parts.OPERATIONS:
+                    self.assertIn("--" + op, network)
+                else:
+                    self.assertIn(op, script_of, "a network op with no parts.py flag and no script this test knows")
+                    self.assertTrue([line for line in lines if "scripts/%s " % script_of[op] in line], op)
 
     def test_no_command_or_skill_pre_approves_a_network_operation(self):
         _, lines = self.network_lines()
