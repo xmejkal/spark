@@ -193,6 +193,5 @@ The `spark-reverse-engineer` skill writes a bench protocol, but for a board reve
   ([the log](../../observations/2026-10-17-p282-p247-bench.md)).
 
 `look.py --json` and `deploy.py --json` print one envelope for Claude. It holds the token, the stops, the stage, the
-yes and the next step for you ([P213](https://github.com/xmejkal/spark/issues/192)). No breadboard wired from its
-sheet has run on a bench yet. spark's own hardware step is [P79](https://github.com/xmejkal/spark/issues/16). Its first
-walk is the button-and-LED project, flashed and wired from its sheet ([the plan for v0.10](../../../scrum/VISION.md#versions)).
+yes and the next step for you ([P213](https://github.com/xmejkal/spark/issues/192)). On 2026-11-22 a breadboard wired from
+its sheet ran an e-paper clock, with no simulation ([P934](https://github.com/xmejkal/spark/issues/1323)). spark's hardware step is [P79](https://github.com/xmejkal/spark/issues/16).
