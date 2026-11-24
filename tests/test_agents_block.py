@@ -20,7 +20,7 @@ AGENT_FOLDER = ROOT / ".claude" / "agents"
 LINKED_PAGES = ("scrum/VISION.md", "docs/guide/map.md", "docs/guide/how-it-works.md")
 BUDGET_HEADING = "## The token budget"
 #: The agents whose files the token budget's table links. A new row with a link joins this list on purpose.
-LINKED_AGENTS = ("architect", "refuter")
+LINKED_AGENTS = ("architect", "builder", "lens", "plan-writer", "refuter", "tech-lead")
 
 AREA = re.compile(r"scripts/spark/([a-z_]+)")
 MODEL_WORD = re.compile(r"\b(fable|opus|sonnet|haiku)\b")
