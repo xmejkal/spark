@@ -37,7 +37,7 @@
  {"file": "scripts/spark/bench/board_envelope.py", "name": "the flash commands are masked", "find": "PASTED_KEYS = (\"run_in_terminal\", \"board_log\", \"commands\", \"repl_command\")", "replace": "PASTED_KEYS = (\"run_in_terminal\", \"board_log\", \"repl_command\")"},
  {"file": "scripts/spark/bench/board_envelope.py", "name": "the REPL command is masked", "find": "PASTED_KEYS = (\"run_in_terminal\", \"board_log\", \"commands\", \"repl_command\")", "replace": "PASTED_KEYS = (\"run_in_terminal\", \"board_log\", \"commands\")"},
  {"file": "scripts/spark/bench/bench_privacy.py", "name": "the account tokens are never read", "find": "return [os.environ[name] for name in names if isinstance(name, str) and len(os.environ.get(name, \"\")) >= MIN_SECRET]", "replace": "return []"},
- {"file": "scripts/spark/bench/bench_privacy.py", "name": "a short token is masked", "find": "MIN_SECRET = 8", "replace": "MIN_SECRET = 1"},
+ {"file": "scripts/spark/core/privacy.py", "name": "a short token is masked", "find": "MIN_SECRET = 8", "replace": "MIN_SECRET = 1"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "the would-run line is masked", "find": "shlex.join(command), raw=True)  # P677: a command a person may run", "replace": "shlex.join(command))"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "the board log line is masked", "find": "\"board log: %s\" % result.log_path, raw=True)", "replace": "\"board log: %s\" % result.log_path)"},
  {"file": "scripts/spark/bench/deploy_service.py", "name": "the running line is masked", "find": "\"running: %s\" % shlex.join(command), raw=True))", "replace": "\"running: %s\" % shlex.join(command)))"},

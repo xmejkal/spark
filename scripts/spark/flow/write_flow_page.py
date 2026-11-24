@@ -15,6 +15,7 @@ from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture
 from spark.flow.phase_readers import REQUIREMENTS_FILE
 from spark.flow.published_page import ARTIFACT_PATTERN, PublishedPageStore
 from spark.flow.show_flow import privacy_for, reading_of
+from spark.firmware.project_secrets import ProjectSecrets
 from spark.core import codes
 from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Argument, Operation
 from spark.core.outcomes import COULD_NOT_RUN
@@ -27,6 +28,12 @@ PAGE_SENTENCE = "%s was not written: %s"
 PAGE_FIX = "make the project folder writable and run it again"
 #: The fix of a page whose `.part` is taken by a link, a folder or another writer (P1054): the folder is writable.
 PART_FIX = "something else holds %s.part: remove it if it is not yours, and run it again"
+#: The refusal of a page whose project holds a secrets file that cannot be read or parsed (P1060 D5), and its fix. It
+#: names the file, never its text: a parse error's text holds the line, and the line the secret.
+SECRETS_UNREADABLE = "%s cannot be read or parsed, so spark cannot mask the values of the project's secrets"
+SECRETS_FIX = "repair or remove it, then run flow.py page again"
+#: What WriteFlowPage adds to the refusal: the page it did not write is not the page on disk.
+OLD_PAGE = ". The page on disk is the old one"
 #: The Finding of an --artifact that is no Artifact id: its sentence, and what to do.
 ARTIFACT_SENTENCE = "--artifact is no Artifact id: an id is a UUID in lower case, as get_artifact answers it"
 ARTIFACT_FIX = "give the id of the published page, the slug that publish_files or get_artifact answers"
@@ -56,6 +63,17 @@ class FlowPageStore:
         path = Path(project) / file_name
         store.replace_file(path, text)
         return path
+
+
+class SecretsUnreadableError(OSError):
+    """Error: the project holds a secrets file that cannot be read or parsed (P1060 D5), so `write_page` writes nothing: the
+    page is published, and a value spark cannot read it cannot mask. An OSError, so that every writer that reports a page
+    not written reports this one in its own words. Its text names the files by their paths in the project (`names`)
+    and holds nothing of them."""
+
+    def __init__(self, names):
+        super().__init__(SECRETS_UNREADABLE % ", ".join(names))
+        self.names = tuple(names)
 
 
 def kept_pictures(project):
@@ -90,10 +108,12 @@ def kept_parts(project):
     return PageParts(kept_pictures(project), kept_wiring(project))
 
 
-def masked_page(page, privacy):
-    """`page` with every text masked by `privacy`: the title, each phase, the pictures' SVG and reasons, the notes, the wiring."""
+def masked_page(page, privacy, svg_privacy):
+    """`page` with every text masked by `privacy`: the title, each phase, the pictures' titles and reasons, the notes, the
+    wiring and the guide. A picture's SVG takes `svg_privacy`, the paths-only mask (P1060): a secret's value masked inside a
+    drawing would break the drawing."""
     masked = privacy.masked
-    pictures = [Picture(*masked(tuple(picture))) for picture in page.pictures]
+    pictures = [Picture(masked(picture.title), svg_privacy.masked(picture.svg), masked(picture.why_missing)) for picture in page.pictures]
     wiring = PageWiring(*masked(tuple(page.wiring))) if page.wiring else None
     return FlowPage(masked(page.title), masked(page.phases), masked(page.stands_at), pictures, masked(page.notes), wiring,
                     page.fingerprint, page.written, masked(page.guide))
@@ -113,13 +133,18 @@ def write_page(project, readers=None, parts=None, renderer=None, store=None):
     `parts` is a function `project -> PageParts` (None: `kept_parts`), `store` a FlowPageStore. A `renderer` has
     `FILE_NAME`, `PURPOSE_MESSAGE` and `text(page)`: the page's phases are dicts, its pictures Pictures, and a renderer
     shows a phase through `flow_page.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
+    The texts take the mask of the project's secrets (P1060), the SVG and the rendered page the paths-only one. A secrets
+    file that cannot be read or parsed raises SecretsUnreadableError before anything is read or written (D5).
     """
+    secrets = ProjectSecrets.read(project)
+    if secrets.unreadable:
+        raise SecretsUnreadableError(secrets.unreadable)
     page = compose_page(reading_of(project, readers), (parts or kept_parts)(project))
-    privacy = privacy_for(project)
-    page = masked_page(page, privacy)
+    paths = privacy_for(project, secrets=())
+    page = masked_page(page, privacy_for(project, secrets.values), paths)
     renderer = renderer or FlowHtmlPage()
     # masked again once rendered: the inline breadboard's parse turns a character reference (&#47;) into a path
-    path = (store or FlowPageStore()).write(project, renderer.FILE_NAME, privacy.masked(renderer.text(page)))
+    path = (store or FlowPageStore()).write(project, renderer.FILE_NAME, paths.masked(renderer.text(page)))
     return Written(path, page.phases, page.stands_at, page.fingerprint, page.guide)
 
 
@@ -129,6 +154,14 @@ def write_kept_page(project, tabs):
     nothing of the flow. An OSError is the caller's."""
     pictures = [Picture(title, svg, None if svg else flow_codes.NOT_DRAWN_BECAUSE % why) for title, svg, why in tabs]
     return write_page(project, parts=lambda _project: PageParts(pictures, kept_wiring(project))).path, FlowHtmlPage.PURPOSE_MESSAGE
+
+
+def not_written(file_name, refused):
+    """(the sentence, the fix) of a page that `refused` kept from being written: a secrets file that cannot be read (D5)
+    names the old page on disk, a `.part` that something else holds (P1054) its own fix."""
+    if isinstance(refused, SecretsUnreadableError):
+        return PAGE_SENTENCE % (file_name, refused) + OLD_PAGE, SECRETS_FIX
+    return PAGE_SENTENCE % (file_name, refused), PART_FIX % file_name if isinstance(refused, store.PartTakenError) else PAGE_FIX
 
 
 class WriteFlowPage(Operation):
@@ -164,8 +197,7 @@ class WriteFlowPage(Operation):
                 published.write(artifact)
             written = write_page(project, self.readers, self.parts, renderer, self.store)
         except (OSError, UnicodeError) as refused:  # a text the file cannot hold (a lone surrogate) is a page not written
-            said = PAGE_SENTENCE % (renderer.FILE_NAME, refused)
-            fix = PART_FIX % renderer.FILE_NAME if isinstance(refused, store.PartTakenError) else PAGE_FIX
+            said, fix = not_written(renderer.FILE_NAME, refused)
             return OperationResult(findings=[Finding(COULD_NOT_RUN, renderer.FILE_NAME, flow_codes.PAGE_NOT_WRITTEN, said, fix)],
                                    lines=[said])
         data = {"file": renderer.FILE_NAME, "did": "wrote", "stands_at": written.stands_at,

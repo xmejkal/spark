@@ -30,7 +30,9 @@ CITING_FOLDERS = ("scripts", "data", "commands", "skills", "agents")
 #: Files spark writes into a person's project rather than ships; the guides may name them.
 PROJECT_FILES = {"pins.py": "the build and assign_pins.py --emit-pins write it into the project",
                  "main.py": "the project's own boot file, which import_firmware.py leaves unrun",
-                 "boot.py": "MicroPython's other boot file, which import_firmware.py leaves unrun too"}
+                 "boot.py": "MicroPython's other boot file, which import_firmware.py leaves unrun too",
+                 "wifi_secrets.py": "a project's secrets file in firmware/, whose values spark masks and never runs (P1060)",
+                 "config.py": "a project's own file, which the secrets rule does not name (P1060)"}
 #: Lines each page may hold. These numbers only go down: a page over its budget is cut or split, never given a bigger one.
 #: A guide page with no entry gets DEFAULT_BUDGET. A budget for a page that is gone fails, so a split removes its entry.
 BUDGETS = {
