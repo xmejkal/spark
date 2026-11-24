@@ -104,7 +104,8 @@ class Operation:
 
     def written_project(self, values):
         """The project folder, a Path, that a run with these `values` writes to, or None (P1035). A frontend's follow-up
-        names the flow's now step after an ok run that writes. None in the base."""
+        names the flow's now step after an ok run that writes, and writes the project's page again after a run that writes
+        and did not crash (P1069). None in the base."""
         return None
 
     def input_schema(self):

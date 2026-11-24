@@ -43,9 +43,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from spark.records import board_records
-from spark.design import loader
-from spark.design import design_codes
-from spark.design import fab
+from spark.build import build_record
+from spark.design import design_codes, fab, loader
 from spark.checks import check_codes
 from spark.core.outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, answer
 from spark.core.result import Finding, Refusal
@@ -398,6 +397,7 @@ def discover(checked):
         else:
             notes.append("%-12s not found (looked for %s)" % (name, ", ".join(patterns)))
     discover_boards(project, found, notes)
+    notes += ["%-12s %s" % ("circuit", e) for e in [build_record.earlier_dist(checked.folder)] if e and "circuit" in found]  # P816
     return found, notes, ambiguous
 
 

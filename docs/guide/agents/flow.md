@@ -143,7 +143,7 @@ for “Beetle ESP32 Microcontroller”.` before the history sentence. A board th
 parts list places, so then the offer says nothing. An offer for a need that does not compute never says it.
 
 The build phase reads `.spark/build.json`. If the folder of `check_spine.py --keep` is a project, the build writes this
-file and lists it under `kept`. It holds the build's `status`, its `stages`, the `requirements` file, its sha256 and the
+file and lists it under `kept`. It holds the build's `status`, its `stages`, the `requirements` file, its sha256, whether this build wrote `dist/` (`dist_written`, which `check_all` reads, P816) and the
 time. The file is named relative to the project when it is inside the project, else by its whole path. If the sha256 of that file is different now, the build phase is `stale`, and the breadboard phase is `stale` too.
 
 A phase with problems adds one item to `problems`, with the code `phase_problems`. A phase that spark cannot read adds
@@ -319,7 +319,7 @@ board log (P1043). Ready seen on the image the project holds now is `ok`, and no
 After an ok run that writes to a project, `parts.py --pick` and `check_spine.py --keep` end `next` with the same steps
 ([P1035](https://github.com/xmejkal/spark/issues/1518)), after the command's own, and their text with one `next:` line each,
 with `, needs you` after the command for a step with `needs_person` or `needs_yes`, as on the NOW line. A run that is not `ok`, a dry run, a build without
-`--keep` and a step that runs the same again get none. Claude fills a `<name>` or an `<answers.json>` before the line runs. A follow-up that fails adds `follow-up: <class> raised, the result stands` on stderr. Then, when the project already has `page.html` as a regular file (no folder, FIFO or link), spark writes it again on disk, whole or not at all, and never publishes it (the PO's D16): the text ends with `wrote page.html again: /spark:page publishes it`, and `--json` holds that sentence as a note with `subject` `page.html`. The build with `--keep` writes its own page. A write that fails adds `refresh: <class> raised, page.html not written again, the result stands` on stderr; the old page and the run's status, items, `next`, `data` and text stand.
+`--keep` and a step that runs the same again get none. Claude fills a `<name>` or an `<answers.json>` before the line runs. A follow-up that fails adds `follow-up: <class> raised, the result stands` on stderr. Then, after a run that writes and did not crash, at any status, and after `deploy.py` too ([P1069](https://github.com/xmejkal/spark/issues/1567), not `--dry-run`, and with no step added), when the project already has `page.html` as a regular file (no folder, FIFO or link), spark writes it again on disk, whole or not at all, and never publishes it (the PO's D16): the text ends with `wrote page.html again: /spark:page publishes it`, and `--json` holds that sentence as a note with `subject` `page.html` (the build's flat `--json` holds no note). A build with `--keep` that kept files writes its own page; one that stopped before it kept anything gets the page written again. A write that fails adds `refresh: <class> raised, page.html not written again, the result stands` on stderr; the old page and the run's status, items, `next`, `data` and text stand.
 
 ## A page request
 

@@ -190,7 +190,7 @@ Run a short piece of code on the running board inside a grant, say whether the b
 
 These write:
 
-- `init_project.py`: four project files, three files that AI tools read, plus the store's projects list. With `--answers`, a brief that git holds as it is, on a branch, changes in one commit, and `git revert --no-edit <sha>` takes it back, newest first ([the brief step](needs-basis.md#the-brief-step-and-the-way-back)).
+- `init_project.py`: four project files, three files that AI tools read, plus the store's projects list. With `--board`, it says when `requirements.json` names another board than the selection, whose board stays the project's ([P1024](https://github.com/xmejkal/spark/issues/1498)). With `--answers`, a brief that git holds as it is, on a branch, changes in one commit, and `git revert --no-edit <sha>` takes it back, newest first ([the brief step](needs-basis.md#the-brief-step-and-the-way-back)).
 - `flow.py run-request`: it deletes `.spark/page-request.json` and runs the step the page asked for there, a pick, the parts list or the build, which writes what its offer's effect says, only when spark offers it now and the page was read at the project's fingerprint now; else it runs nothing and says why ([a page request](flow.md#a-page-request), P829). Exit 0 the step ran ok, 1 it ran with problems, 2 nothing ran or the step could not run.
 - `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for what
   you have, and refuses a failed or stale build. Its Wiring section has numbered steps (one connection each), a mermaid
@@ -238,7 +238,7 @@ These write:
   the picture `breadboard.md` shows inline: part pictures from `part_pictures.PictogramPartPictures`, a pill on each jumper
   ([the pills](breadboard-codes.md#the-pills-and-the-wire-colours)), a caption by each part and a note line per part ([the captions](breadboard-codes.md#the-labels-the-captions-and-the-note)).
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
-  reads, writes `breadboard.md`, `breadboard.json`, `breadboard.svg` and `page.html` after a build that finished, and creates `.tscircuit/cache/`.
+  reads, or after a build that did not finish leaves an earlier one and names it as an earlier build's, and check_all says the last build did not write it (P816), writes `breadboard.md`, `breadboard.json`, `breadboard.svg` and `page.html` after a build that finished, and creates `.tscircuit/cache/`.
   `page.html` (P271) shows the breadboard picture and tscircuit's schematic and PCB in three tabs, each from
   `tsci export` on the kept `dist/board/circuit.json`. Since 2026-11-17, in a project folder, it is the flow page (P827): the phases of `flow.py`, then the three pictures, the breadboard inline (P949, [flow.md](flow.md#the-page)), written after the simulation project is kept. A folder that is no project keeps the three tabs. A tab that could not be drawn says why. With no build in this
   run, a board-only build, or a `dist/` that was not kept, an old `page.html` is removed and the kept entry says why.

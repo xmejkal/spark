@@ -10,7 +10,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.build import build_codes
-from spark.build.build_record import OWN_FILES, STAGE_IN_THE_WAY, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, StageTakenError, sha256_of
+from spark.build.build_record import DIST_WRITTEN, OWN_FILES, STAGE_IN_THE_WAY, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, StageTakenError, sha256_of
 from spark.build.build_service import verdict
 from spark.build.stages import BUILD, REQUIREMENTS, SIMULATION, skipped_the_build
 from spark.breadboard import drawing, sheet, svg_diagram, tabbed_page
@@ -234,14 +234,13 @@ def _kept(workdir, destination, recorded, finished):
                  "line": "not kept: %s — %s" % (destination, refused)}]
 
 
-def drop_an_older_build(destination, stages):
-    """
-    For the board alone (P236): an earlier build's `dist/` describes another board, and every check reads it, so it
-    is removed and said, as the breadboard sheet is. Returns the kept entries, none when there is nothing to remove.
-    """
-    old = Path(destination) / "dist"
-    if not skipped_the_build(stages) or not old.is_dir():
+def drop_an_older_build(destination, stages, kept=()):
+    """An earlier dist/ this run did not write: left alone and named (P816), or removed for the board alone (P236)."""
+    old, why = Path(destination) / "dist", why_not_built(stages, "board only: no board was built")
+    if why is None or not old.is_dir() or str(old) in {entry["file"] for entry in kept if entry["did"] == WROTE}:
         return []
+    if not skipped_the_build(stages):
+        return [_left_alone(old, why + ", so it is an earlier build's, which every check reads")]
     shutil.rmtree(old)
     why = "board only: no board was built, and it described an earlier build"
     return [{"file": str(old), "did": "removed", "why": why, "line": "removed %s: %s" % (old, why)}]
@@ -390,11 +389,11 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     project = _is_project(destination)
     pictures = KeptPictureFiles(destination, project)
     if why:
-        pictures.drop()
+        if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] == LEFT_ALONE for entry in kept):  # P816: an earlier dist/ that stays keeps its pictures
+            pictures.drop()
         kept.extend(pictures.problems)
         return _left_from_earlier(page, tabbed_page.TabbedHtmlPage.NOUN, why)
-    circuit = Path(destination) / sheet.CIRCUIT
-    exports = pictures.keep([exporter.export_svg(circuit, form) for form in ("schematic-svg", "pcb-svg")])
+    exports = pictures.keep([exporter.export_svg(Path(destination) / sheet.CIRCUIT, form) for form in ("schematic-svg", "pcb-svg")])
     kept.extend(pictures.problems)
     tabs = [_breadboard_tab(destination, kept), tabbed_page.exported_tab("Schematic", exports[0]),
             tabbed_page.exported_tab("PCB", exports[1])]
@@ -503,7 +502,8 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
         record = {"status": STATUS_FOR[verdict(stages)], "stages": [dict({"name": stage.name, "status": stage.status}, **({"code": stage.code} if stage.code else {})) for stage in stages],
                   "missing_facts": [item for entry in kept for item in entry.get("missing_facts", [])],
                   "requirements": _named_from(Path(requirements), destination), "requirements_sha256": sha256_of(requirements),
-                  WRITTEN_SHA256: _written_sha256(records, kept)}
+                  WRITTEN_SHA256: _written_sha256(records, kept),
+                  DIST_WRITTEN: str(destination / "dist") in {entry["file"] for entry in kept if entry["did"] == WROTE}}
         path = records.write(record)
     except OSError as refused:
         return [{"file": str(records.path), "did": "not kept", "why": str(refused), "line": "not kept: %s — %s" % (records.path, refused)}]
@@ -566,7 +566,7 @@ def keep_all(stages, workdir, asked, exporter, flow_page=None):
     keeps = keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())
     kept = (_kept(workdir, keep, bool(requirements_file), _built(stages)) if workdir is not None else []) if keeps else None
     if kept is not None and requirements_file:
-        kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + drop_an_older_build(Path(keep), stages)
+        kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + drop_an_older_build(Path(keep), stages, kept)
         kept.append(_kept_pins(Path(requirements_file), Path(keep)))
         kept += keep_build_record(Path(keep), Path(requirements_file), stages, kept)  # P825: what flow.py reads
     simulation_folder = simulation_dir(asked.sim_dir, keep)

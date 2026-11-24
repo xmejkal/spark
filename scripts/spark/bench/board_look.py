@@ -534,7 +534,7 @@ class LookService:
     @staticmethod
     def record_of(project):
         """The board record requirements.json names, or a LookStopError pointing to P230 (D36: two records only)."""
-        try:
+        try:  # its own read (P1024): no board in requirements.json stops the look, no_board_named, never the selection
             name = json.loads((project / "requirements.json").read_text()).get("board")
         except (OSError, ValueError, AttributeError):
             name = None
