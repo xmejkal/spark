@@ -234,16 +234,16 @@ def _kept(workdir, destination, recorded, finished):
                  "line": "not kept: %s — %s" % (destination, refused)}]
 
 
-def drop_an_older_build(destination, stages):
-    """
-    For the board alone (P236): an earlier build's `dist/` describes another board, and every check reads it, so it
-    is removed and said, as the breadboard sheet is. Returns the kept entries, none when there is nothing to remove.
-    """
-    old = Path(destination) / "dist"
-    if not skipped_the_build(stages) or not old.is_dir():
+def drop_an_older_build(destination, stages, kept=()):
+    """An earlier `dist/`, which every check reads, that this run did not replace: removed and said (P236, P816)."""
+    old, why = Path(destination) / "dist", why_not_built(stages, "board only: no board was built")
+    if why is None or not old.is_dir() or str(old) in {entry["file"] for entry in kept if entry["did"] == WROTE}:
         return []
-    shutil.rmtree(old)
-    why = "board only: no board was built, and it described an earlier build"
+    try:
+        shutil.rmtree(old)
+    except OSError as failed:  # said, as json.md promises; the pin map and the build record still follow
+        return [{"file": str(old), "did": "not kept", "why": str(failed), "line": "not kept: %s — %s" % (old, failed)}]
+    why += ", and it described an earlier build"
     return [{"file": str(old), "did": "removed", "why": why, "line": "removed %s: %s" % (old, why)}]
 
 
@@ -566,7 +566,7 @@ def keep_all(stages, workdir, asked, exporter, flow_page=None):
     keeps = keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())
     kept = (_kept(workdir, keep, bool(requirements_file), _built(stages)) if workdir is not None else []) if keeps else None
     if kept is not None and requirements_file:
-        kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + drop_an_older_build(Path(keep), stages)
+        kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + drop_an_older_build(Path(keep), stages, kept)
         kept.append(_kept_pins(Path(requirements_file), Path(keep)))
         kept += keep_build_record(Path(keep), Path(requirements_file), stages, kept)  # P825: what flow.py reads
     simulation_folder = simulation_dir(asked.sim_dir, keep)

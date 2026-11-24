@@ -1743,8 +1743,9 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
             (project / name).parent.mkdir(parents=True, exist_ok=True)
             (project / name).write_text("kept")
         self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
-        for name in ("firmware/pins.py", "board.tsx", "notes.txt", "dist/board/circuit.json"):
+        for name in ("firmware/pins.py", "board.tsx", "notes.txt"):
             self.assertTrue((project / name).exists(), name)
+        self.assertFalse((project / "dist").exists())  # P816: an earlier dist/ goes, since every check reads it
 
     def test_a_keep_folder_that_is_not_there_is_not_made(self):
         project = self._an_earlier_build()
