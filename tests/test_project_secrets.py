@@ -28,6 +28,9 @@ DOCSTRING = "a docstring that is no secret"
 SHORT = "seven77"
 HALF_TYPED = "hunter2hunter2"
 NUL_VALUE = "nul-byte-secret"
+TYPED = "typed-assign-value"
+KEYWORD = "keyword-argument-value"
+CALLED = "bare-call-keyword"
 
 
 def project_with(files):
@@ -86,6 +89,14 @@ EMPTY = ""
         self.assertGreaterEqual(len(DICT_KEY), MIN_SECRET)
         self.assertNotIn(DICT_KEY, self.reading.values)
         self.assertNotIn(DOCSTRING, self.reading.values)
+
+    def test_a_typed_assign_and_a_keyword_argument_of_a_call_are_read(self):
+        # A17: `PW: str = "..."`, and the keyword values of a call, on the right side or alone
+        reading = ProjectSecrets.read(project_with({"firmware/secrets.py": '''PW: str = "%s"
+CONFIG = dict(ssid="home", password="%s")
+wlan.connect(SSID, key="%s")
+''' % (TYPED, KEYWORD, CALLED)}))
+        self.assertEqual(sorted(reading.values), sorted([TYPED, KEYWORD, CALLED]))
 
     def test_a_value_shorter_than_min_secret_is_dropped(self):
         self.assertTrue(0 < len(SHORT) < MIN_SECRET)
