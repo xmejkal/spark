@@ -49,8 +49,8 @@
 <text x="450" y="970" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">goal to a requirements file</text>
 <text x="450" y="1004" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">in the P711 walk 3,</text>
 <text x="450" y="1038" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-11-16, and in the P934</text>
-<text x="450" y="1072" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">walk, with the picks</text>
-<text x="450" y="1106" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">clicked on the page,</text>
+<text x="450" y="1072" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">walk, with three of four</text>
+<text x="450" y="1106" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">picks clicked on the page,</text>
 <text x="450" y="1140" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-11-22.</text>
 <circle cx="991" cy="276" r="36" fill="#ffdc4a"/>
 <text x="991" y="287" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">3</text>
@@ -233,9 +233,10 @@
 <text x="1214" y="3440" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">FireBeetle 2 ESP32-C6,</text>
 <text x="1214" y="3474" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">deployed with no</text>
 <text x="1214" y="3508" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">simulation, ready seen</text>
-<text x="1214" y="3542" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">(P934). No simulation-</text>
-<text x="1214" y="3576" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">tested image has run on a</text>
-<text x="1214" y="3610" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">wired breadboard yet.</text>
+<text x="1214" y="3542" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">(P934). No image that</text>
+<text x="1214" y="3576" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">passed in Wokwi ran on a</text>
+<text x="1214" y="3610" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">wired breadboard by</text>
+<text x="1214" y="3644" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-11-22.</text>
 <rect x="48" y="3740" width="1504" height="92" rx="12" fill="#1a1a1a"/>
 <text x="72" y="3778" font-size="24" fill="#ffffff"><tspan font-weight="bold">Where we are:</tspan> an e-paper clock, wired from its sheet, ran on a FireBeetle 2 C6 on 2026-11-22.</text>
 <text x="72" y="3812" font-size="24" fill="#ffffff"><tspan font-weight="bold">Next:</tspan> run firmware that passed in Wokwi on a breadboard wired from its sheet.</text>

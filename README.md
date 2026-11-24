@@ -118,7 +118,7 @@ shows the output of each step and gives each status in full. **works**: it ran e
 | step | today | with |
 | --- | --- | --- |
 | [Drawer](docs/guide/journey/drawer.md) | **partly**: the scripts that list and write what you own ran, and `/spark:drawer` raised a count on your words in walk 4, 2026-11-01. The DFRobot import did not run | `/spark:drawer` |
-| [Idea](docs/guide/journey/idea.md) | **works**: the conversation took a goal to needs, picks and a requirements file in the P711 walk 3, 2026-11-16, and in the P934 walk with the picks clicked on the page, 2026-11-22 | `/spark:idea` |
+| [Idea](docs/guide/journey/idea.md) | **works**: the conversation took a goal to needs, picks and a requirements file in the P711 walk 3, 2026-11-16, and in the P934 walk with three of four picks clicked on the page, 2026-11-22 | `/spark:idea` |
 | [Research](docs/guide/journey/research.md) | **partly**: the store search (`--need`, owned first), `research.py` (the DFRobot wiki's documents, geometry questions, 2026-11-11) and `parts.py --find-documents` (2026-11-21) run. The parts-researcher ran in walk 4 and in `/spark:identify` (P934). The part-finder and datasheet-reader did not | `/spark:research`, `/spark:identify` |
 | [Build](docs/guide/journey/build.md) | **works**: a board that builds, with a breadboard sheet, a pin map and a Wokwi diagram. SPI and I2C parts built on the FireBeetle 2 and XIAO C6, 2026-11-01 (P512); a display on the XIAO stops at the simulation. Modules drawn from records (P945), power and ground on rails, 2026-11-20 (P953) | `/spark:build` |
 | [Checks](docs/guide/journey/checks.md) | **works**: `check_all.py` runs spark's five deterministic checks in one command | `check_all.py`, after `/spark:init` again |
@@ -160,9 +160,9 @@ button, a connector), `parts-researcher` for a module, and `design-reviewer`, on
   ([tabled in the 2026-09-24 audit](docs/archive/audit-2026-09-24/autonomous-agent-readiness.md#on-the-eval-and-the-reprioritisation-it-drove)).
   Each run was graded on what the agent found, not by a script. Commit 066c4af removed the cases. "The reviewers
   help" is plausible, not measured.
-- **The bench proved little so far.** `deploy.py` ran on a XIAO ESP32-C6 (2026-10-14, 10-15), a LilyGO T-Display
-  (10-26), a FireBeetle 2 ESP32-S3 (10-31, 11-01) and a FireBeetle 2 ESP32-C6 wired from its sheet (11-22, P934).
-- **Not run for these docs.** The runs here used the scripts, so these parts were not run (walks ran the commands):
+- **The bench proved little so far.** `deploy.py` ran on a XIAO ESP32-C6 (2026-10-14 to 10-23), a LilyGO T-Display
+  (10-26), a FireBeetle 2 ESP32-S3 (10-31 to 11-19) and a FireBeetle 2 ESP32-C6 wired from its sheet (11-22, P934).
+- **Not run for these docs.** The runs here used the scripts. Walks ran the four conversations. Neither ran these:
   - the part-finder and datasheet-reader agents, and the DFRobot order import
   - the agents of `spark-review`, and the `spark-design` and `spark-reverse-engineer` skills, and `check_all.py` on a board written by hand in tscircuit
   - the plugin install above, a tscircuit install that `/spark:setup` made, and any run on Linux or Windows
