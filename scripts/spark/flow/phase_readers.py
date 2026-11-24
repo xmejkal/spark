@@ -317,6 +317,13 @@ def pick_offer(project, need, candidate, listed, notes):
                  offer_steps.pick_step(project, need, pick_id, candidate_label(candidate)))
 
 
+def pick_need(key):
+    """The need of a pick offer's key, as `pick_offer` makes it (`pick:<need>:<pick id>`), else None (P1062): the page
+    puts each pick in its need's row, and the key's format keeps this one owner."""
+    kind, _, rest = key.partition(":")
+    return rest.split(":", 1)[0] if kind == flow_codes.PICK and ":" in rest else None
+
+
 def counted(listed):
     """The needs that count for the parts (P977): each with a pick, and each the person did not set aside. `listed` are
     needs as `needs.read` or `needs.match` gives them; the guide reads the same rule."""
