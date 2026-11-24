@@ -10,7 +10,9 @@ step to take now ([the next step](#the-next-step)).
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" show --project . --json
 ```
 
-With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and `op` `show-flow`. Its `data` holds five keys:
+With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and `op` `show-flow`. Its `data` is one reading of the flow (`reading_of`, [P1060](https://github.com/xmejkal/spark/issues/1558)), the one `flow.py page` draws, in nine keys:
+
+- `name`, `title`, `stamp` and `artifact` (P1060): the project folder's name; the page's title, which names the published Artifact; `stamp.newest`, the newest change time of the fingerprint's three files (`null` with none), the page's `data-written`; the id of the Artifact the page is published as, from `.spark/page.json` (`null` with none kept, or an id that is no Artifact id).
 
 - `phases`: the nine phases in order, `idea`, `needs`, `parts`, `requirements`, `build`, `breadboard`, `firmware`,
   `simulate` and `deploy`. Each is `{phase, status, mark, by, says, offers}`.
@@ -158,8 +160,7 @@ dropped after the must lines were last gone through. [What the needs were writte
 
 ## The page
 
-`flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It reads the
-same phases as `show`, so a person reads them from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). A line under the title says
+`flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It draws the reading `show` prints (P1060), so a person reads the same facts from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). A line under the title says
 what the page is and that every change goes through Claude in the chat. Under it stands the guide
 ([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: `data.guide` as one line each, NOW with its
 phase in parentheses and its sentence, DONE, LATER and SET ASIDE, and a list with no item draws no line.
@@ -379,14 +380,13 @@ with no `data`.
 ## The published page
 
 `/spark:page` publishes the page and carries its requests ([P829](https://github.com/xmejkal/spark/issues/1187),
-[`commands/page.md`](../../../commands/page.md)). It is the only command that publishes or republishes the page. In
-this order:
+[`commands/page.md`](../../../commands/page.md), [the how-to](../artifact-how-to.md)). It is the only command that publishes or republishes the page. It reads with `flow.py show --json` and takes no fact from `page.html`, which it reads only to publish. In this order:
 
-1. The first time, on the person's yes: `publish_files` with `page.html` as `index.html`, then at once
+1. The first time, `data.artifact` is `null`. On the person's yes: `flow.py page`, `publish_files` with `page.html` as `index.html` and `data.title`, then at once
    `flow.py page --artifact ID`, which keeps the id, so a step that fails after it never leaves a second Artifact. Then
    `declare_capabilities` with `{"db": {"rules": [{"path": "", "read": "view", "write": "owner"}]}, "user": {}}`
    (viewers read, only the owner writes, and the script asks who views).
-2. The ten newest rows of `requests` by `at`, and the rows of `answers` whose `for` is one of their ids. For each
+2. The id from `show`'s `data.artifact`, then the ten newest rows of `requests` by `at`, and the rows of `answers` whose `for` is one of their ids. For each
    request with no answer, the oldest first: the row to `.spark/page-request.json` as the page wrote it,
    `flow.py run-request` in the foreground, `flow.py page`, the republish, and last the answer row `answers/<id>`,
    `run-request`'s `data` unchanged. A refusal goes on to the next request; a step that ran with problems or could not
