@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from fakes import FakeOutsideWorld  # noqa: E402
-from test_flow import (FlowTest, LOGGED_AT, LOG_NAME, SEEN_SENTENCE, a_board_log, a_built_project,  # noqa: E402
+from test_flow import (FlowTest, LOGGED_AT, SEEN_SENTENCE, a_board_log, a_built_project,  # noqa: E402
                        a_built_project_with_a_sheet_from, a_deploy_project, lines_of, offer_of, says, show, statuses, with_needs)
 from test_run_request import BUTTON_LIGHT, ID, FakeStep  # noqa: E402
 from spark.core import zone_time  # noqa: E402
