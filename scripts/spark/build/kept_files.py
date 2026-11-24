@@ -246,19 +246,20 @@ def drop_an_older_build(destination, stages, kept=()):
     return [{"file": str(old), "did": "removed", "why": why, "line": "removed %s: %s" % (old, why)}]
 
 
-def keep_breadboard(requirements, destination, stages=()):
+def keep_breadboard(requirements, destination, stages=(), kept=None):
     """
     The breadboard sheet beside the kept board (P191, #143), and its drawn breadboard (P267), as kept entries {file,
     did, why, line}. Only from a build that finished in this run, which it records (dist/board/built-from.json) for
-    breadboard.py to compare; a sheet or a drawing left from an earlier build is removed, since it describes another
-    board.
+    breadboard.py to compare. A sheet or a drawing from an earlier build stays and is named as an earlier build's
+    (P1093). A board-only build removes it (P236). With `kept`, a dist/ this run did not copy writes no sheet (P1095).
     """
     sheet_path = Path(destination) / sheet.SHEET
     drawings = [(Path(destination) / renderer.FILE_NAME, renderer) for renderer in sheet.DRAWING_RENDERERS]
     why = why_not_built(stages, "board only: nothing to wire")
+    why = why or (why_not_kept(destination, stages, kept) if kept is not None else None)  # P1095: a dist/ copy that failed
     if why:
-        return [_left_from_earlier(sheet_path, "breadboard sheet", why)] + [
-            _left_from_earlier_drawing(path, renderer, why) for path, renderer in drawings]
+        return [_left_from_earlier(sheet_path, "breadboard sheet", why, skipped_the_build(stages))] + [
+            _left_from_earlier_drawing(path, renderer, why, skipped_the_build(stages)) for path, renderer in drawings]
     try:
         sheet.record_built_from(requirements, Path(destination) / sheet.BUILT_FROM)
         written = sheet.write(requirements, sheet_path, Path(destination) / sheet.CIRCUIT)
@@ -271,16 +272,13 @@ def keep_breadboard(requirements, destination, stages=()):
     kept += [{"file": str(path), "did": "wrote", "why": renderer.PURPOSE_MESSAGE, "line": "wrote %s — %s" % (path, renderer.PURPOSE_MESSAGE),
               **({"drawn_from": written.drawn_from} if written.drawn_from else {})} for path, renderer in written.drawings]
     kept += [not_written_entry(one) for one in written.not_written]
-    # what the person changes on the bench since the last sheet (P300)
-    kept += [{"file": str(written.sheet), "did": CHANGED, "code": change.code, "subject": change.name,
+    kept += [{"file": str(written.sheet), "did": CHANGED, "code": change.code, "subject": change.name,  # what the person changes on the bench since the last sheet (P300)
               "color": change.color, "why": sheet.CHANGE_LIST.line(change),
               "line": "%s: %s" % (CHANGED, sheet.CHANGE_LIST.line(change))} for change in written.changes]
-    # a part the person moved in breadboard.json that the build could not keep (P273)
-    kept += [{"file": str(Path(destination) / sheet.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
+    kept += [{"file": str(Path(destination) / sheet.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,  # a part the person moved in breadboard.json that the build could not keep (P273)
               "subject": named.subject, "code": named.code, "why": named.why,
               "line": "move not kept: %s" % named.line} for named in written.not_kept]
-    # an end the drawing joins differently from the points (P279): the sheet's steps stand, the drawing is wrong
-    kept += [{"file": str(Path(destination) / sheet.EDITABLE_DRAWING.FILE_NAME), "did": DRAWING_DIFFERS,
+    kept += [{"file": str(Path(destination) / sheet.EDITABLE_DRAWING.FILE_NAME), "did": DRAWING_DIFFERS,  # an end the drawing joins differently from the points (P279): the sheet's steps stand, the drawing is wrong
               "subject": differs.subject, "code": differs.code, "why": differs.why,
               "line": "%s: %s" % (DRAWING_DIFFERS, differs.why)} for differs in written.differs]
     return kept
@@ -309,10 +307,10 @@ def why_not_built(stages, board_only_why):
     return "the build did not finish in this run"
 
 
-def why_no_page(destination, stages, kept):
-    """Why the page (P271) cannot be drawn in this run, or None: its three tabs read the one circuit.json kept in this
-    run, so a refused requirements file, a build that did not finish, a board-only one, or a dist/ that was not copied
-    leaves no page."""
+def why_not_kept(destination, stages, kept):
+    """Why this run kept no board of its own, or None: the page's three tabs (P271) and the sheet read only the circuit.json
+    kept in this run, so a refused requirements file, a build that did not finish, a board-only one, or a dist/ that was
+    not copied (P1095) leaves no page and no new sheet."""
     why = why_not_built(stages, "board only: nothing to draw")
     if why:
         return why
@@ -385,7 +383,7 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     since it describes another board.
     """
     page = Path(destination) / tabbed_page.TabbedHtmlPage.FILE_NAME
-    why = why_no_page(destination, stages, kept)
+    why = why_not_kept(destination, stages, kept)
     project = _is_project(destination)
     pictures = KeptPictureFiles(destination, project)
     if why:
@@ -425,18 +423,20 @@ def _breadboard_tab(destination, kept):
     return tabbed_page.Tab("Breadboard", None, entry["why"] if entry else "the breadboard picture was not written")
 
 
-def _left_from_earlier_drawing(path, renderer, why):
+def _left_from_earlier_drawing(path, renderer, why, remove=True):
     """`_left_from_earlier` for a drawing, except the one a person edits: breadboard.json is left in place when it holds
     parts, since it may hold their moves, which the next build that finishes keeps where they still fit (P273)."""
     if renderer is sheet.EDITABLE_DRAWING and path.exists() and sheet.holds_parts(path):
         return {"file": str(path), "did": "left alone", "why": "no %s: %s; it may hold your moves, which the next build "
                 "keeps where they fit" % (renderer.NOUN, why),
                 "line": "left alone: %s (it may hold your moves; no %s: %s)" % (path, renderer.NOUN, why)}
-    return _left_from_earlier(path, renderer.NOUN, why)
+    return _left_from_earlier(path, renderer.NOUN, why, remove)
 
 
-def _left_from_earlier(path, what, why):
-    """One kept entry for a file this run did not write: removed when an earlier build left it, else not written."""
+def _left_from_earlier(path, what, why, remove=True):
+    """One kept entry for a file this run did not write: removed when an earlier build left it, left alone and named as an earlier build's when not `remove`, else not written."""
+    if path.exists() and not remove:
+        return _left_alone(path, why + ", so it is an earlier build's")  # P1093: the witness stays (D6)
     if path.exists():
         path.unlink()
         return {"file": str(path), "did": "removed", "why": why + ", and it described an earlier build",
@@ -490,7 +490,7 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
     The record of this build in the project's `.spark/build.json` (P825), as a list of one kept entry {file, did, why,
     line}: `wrote`, or `not kept` with the OSError. None is written, and the list is empty, when `destination` is no
     project folder itself (`board_records.project_root`): a `.spark/` folder would make it one. A could-not-run build is
-    recorded too. `requirements` is named relative to the project when it is inside it, else by its whole path; `kept` gives the
+    recorded too. `requirements` is named relative to the project when it is inside it, else by its whole path, and is None for the reference design (P1095); `kept` gives the
     pin map's missing facts. `records` is the BuildRecordStore a test gives.
     """
     destination = Path(destination)
@@ -501,7 +501,7 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
         # each stage's code when it did not end ok (P977), which the flow's guide reads; never its detail, which can hold a path
         record = {"status": STATUS_FOR[verdict(stages)], "stages": [dict({"name": stage.name, "status": stage.status}, **({"code": stage.code} if stage.code else {})) for stage in stages],
                   "missing_facts": [item for entry in kept for item in entry.get("missing_facts", [])],
-                  "requirements": _named_from(Path(requirements), destination), "requirements_sha256": sha256_of(requirements),
+                  "requirements": requirements and _named_from(requirements, destination), "requirements_sha256": requirements and sha256_of(requirements),
                   WRITTEN_SHA256: _written_sha256(records, kept),
                   DIST_WRITTEN: str(destination / "dist") in {entry["file"] for entry in kept if entry["did"] == WROTE}}
         path = records.write(record)
@@ -555,20 +555,20 @@ KeepAsked = namedtuple("KeepAsked", "requirements_file keep sim_dir")
 def keep_all(stages, workdir, asked, exporter, flow_page=None):
     """
     What a build run keeps (P804), as kept entries {file, did, why, line}: the built board in `asked.keep` (`_kept`); with
-    a requirements file also the breadboard sheet, the pin map and the build record; the simulation project in
+    a requirements file also the breadboard sheet and the pin map; the build record (the reference design's too, P1095); the simulation project in
     `simulation_dir`; and last the page (its tabs drawn by `exporter`; in a project the flow page `flow_page` writes, P827),
     since the flow page reads what the others kept. None when --keep was not given, or was given with no work
     folder and no requirements file that is there. Even then, a kept simulation project is one entry. With no work folder, a refused
-    requirements file that is there still removes what an earlier build left (P280); a missing one, which can be a typo,
+    requirements file that is there still removes the page and the pin map an earlier build left (P280, P1093); a missing one, which can be a typo,
     removes nothing. It removes no work folder: the caller does.
     """
     requirements_file, keep = asked.requirements_file, asked.keep
     keeps = keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())
     kept = (_kept(workdir, keep, bool(requirements_file), _built(stages)) if workdir is not None else []) if keeps else None
-    if kept is not None and requirements_file:
-        kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + drop_an_older_build(Path(keep), stages, kept)
-        kept.append(_kept_pins(Path(requirements_file), Path(keep)))
-        kept += keep_build_record(Path(keep), Path(requirements_file), stages, kept)  # P825: what flow.py reads
+    if kept is not None:  # P1095: the reference design (no requirements file) names an earlier dist/ and records its build too
+        kept += (keep_breadboard(Path(requirements_file), Path(keep), stages, kept) if requirements_file else []) + drop_an_older_build(Path(keep), stages, kept)
+        kept += [_kept_pins(Path(requirements_file), Path(keep))] if requirements_file else []
+        kept += keep_build_record(Path(keep), Path(requirements_file) if requirements_file else None, stages, kept)  # P825: what flow.py reads
     simulation_folder = simulation_dir(asked.sim_dir, keep)
     simulation = keep_simulation(workdir, simulation_folder, stages) if workdir is not None and simulation_folder else None
     if simulation is not None:

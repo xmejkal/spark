@@ -319,6 +319,23 @@ class ThePhasesTest(FlowTest):
         said, _ = show(a_built_project())
         self.assertEqual([line for line in says(said, "build") if "did not write dist/" in line], [])
 
+    def test_a_reference_build_says_so_in_the_build_phase(self):
+        # P1095: a record with requirements null is the reference design's build, not one of requirements.json
+        project = a_built_project()
+        BuildRecordStore(project, clock=FakeClock()).write({"status": "ok", "stages": [{"name": "board", "status": "ok"}, {"name": "build", "status": "ok"}],
+                                                           "missing_facts": [], "requirements": None, "requirements_sha256": None})
+        said, _ = show(project)
+        self.assertEqual(statuses(said)["build"], STALE)
+        self.assertEqual(says(said, "build")[0], "the last build was spark's reference design, not requirements.json")
+
+    def test_a_record_without_the_requirements_key_is_read_as_built_from_requirements_json(self):
+        # P1095: only a record that holds requirements null is the reference design's; one that lacks the key keeps the old reading
+        project = a_built_project()
+        BuildRecordStore(project, clock=FakeClock()).write({"status": "ok", "stages": [{"name": "board", "status": "ok"}, {"name": "build", "status": "ok"}],
+                                                           "missing_facts": []})
+        said, _ = show(project)
+        self.assertEqual(says(said, "build")[0], "requirements.json changed after the build")
+
     def test_requirements_changed_after_the_build_make_the_build_and_the_sheet_stale(self):
         project = a_built_project()
         (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6-fresh", "parts": ["tactile-button"]}))
@@ -924,9 +941,10 @@ class TheBuildOfferTest(FlowTest):
         # P1044: the fixture keeps a sheet, so the wired sentence comes first
         self.assertTrue(build["effect"].startswith(WIRED_BUILD_MESSAGE + " Saves its files in this project: the board file"))
         self.assertIn("the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn", build["effect"])
-        self.assertIn("If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page "
-                      "are deleted.", build["effect"])
-        self.assertIn("If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted.", build["effect"])
+        self.assertIn("If the board tool is not installed, the board is not built, the old wiring sheet and drawings stay as an "
+                      "earlier build's, and this page is deleted.", build["effect"])
+        self.assertIn("If the parts list has a problem, the old wiring sheet and drawings stay as an earlier build's, and this page "
+                      "and the pin map are deleted.", build["effect"])
         self.assertTrue(build["effect"].endswith("Runs no simulation and costs nothing."))
         self.assertNotIn("history", build["effect"])
 

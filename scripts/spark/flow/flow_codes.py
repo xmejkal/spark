@@ -52,6 +52,8 @@ REQUIREMENTS_STALE_MESSAGE = "requirements.json differs from what the picks give
 NO_BUILD_MESSAGE = "no build recorded yet"
 BUILT_MESSAGE = "the last build, %s: %s"
 BUILD_STALE_MESSAGE = "%s changed after the build"
+#: A record with `requirements: null` (P1095): the last build was the reference design, built from no requirements file.
+REFERENCE_BUILD_MESSAGE = "the last build was spark's reference design, not %s"
 MISSING_FACTS_MESSAGE = "%d fact(s) the board record lacks, named in firmware/pins.py"
 #: A build on the board alone (P878): its four skipped stages are final, so the build and the sheet say so and have no status.
 BOARD_ONLY_BUILD_MESSAGE = "board only: nothing to wire, no board was built"
@@ -182,10 +184,12 @@ BUILD_MESSAGE = ("Saves its files in this project: the board file and its footpr
                  "simulation files, the build record in .spark/build.json and this page.")
 REPLACE_MESSAGE = ("A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you "
                    "changed is left alone.")
-BUILD_REFUSED_MESSAGE = "If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted."
-#: A build whose board tool (tscircuit) is not installed does not finish: kept_files removes what described an earlier build.
-NO_TOOL_MESSAGE = ("If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this "
-                   "page are deleted.")
+BUILD_REFUSED_MESSAGE = ("If the parts list has a problem, the old wiring sheet and drawings stay as an earlier build's, and "
+                         "this page and the pin map are deleted.")
+#: A build whose board tool (tscircuit) is not installed does not finish: kept_files keeps the earlier sheet and drawings,
+#: named as an earlier build's (P1093), and removes the page.
+NO_TOOL_MESSAGE = ("If the board tool is not installed, the board is not built, the old wiring sheet and drawings stay as an "
+                   "earlier build's, and this page is deleted.")
 #: A parts list that says board_only and names no part: the build skips every stage but the board and the simulation.
 BOARD_ONLY_BUILD_EFFECT = ("This board needs no parts, so nothing is built or wired. Saves the pin map your firmware "
                            "imports, the simulation files and the build record in .spark/build.json.")
