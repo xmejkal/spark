@@ -14,6 +14,7 @@ from spark.flow.fingerprint import FILES, fingerprint_of
 from spark.flow.flow_reading import FlowReading
 from spark.flow.guide import guide_of
 from spark.flow.published_page import PublishedPageStore
+from spark.flow.wired_board import read_wired, with_wired
 from spark.flow.phase_readers import MARKS, READERS, DeployReader
 from spark.firmware.project_secrets import ProjectSecrets
 from spark.records import store
@@ -53,7 +54,9 @@ def phase_line(phase):
     """One phase as a person reads it: `  ✓ needs: 2 need(s): soil, wet (claude)`, where the mark alone says ok, then up
     to OFFERS_SHOWN offer keys and how many more, indented."""
     word = MARKS[phase.status][0]
-    lines = ["  %s %s: %s (%s)" % (phase.mark, phase.phase, ", ".join(([word] if word else []) + phase.says), phase.by)]
+    items = ([word] if word else []) + phase.says  # P1044: no comma after a full stop, a space
+    said = "".join(item + (" " if item.endswith(".") else ", ") for item in items[:-1]) + "".join(items[-1:])
+    lines = ["  %s %s: %s (%s)" % (phase.mark, phase.phase, said, phase.by)]
     keys = [offer.key for offer in phase.offers]
     more = ["+%d more" % (len(keys) - OFFERS_SHOWN)] if len(keys) > OFFERS_SHOWN else []
     lines += ["      offers: %s" % ", ".join(keys[:OFFERS_SHOWN] + more)] if keys else []
@@ -95,22 +98,27 @@ def now_steps(project, phases, guide):
     return phase_steps.steps_of(project, phases, guide)
 
 
-def phases_of(project, readers=None, deploy=None):
+def phases_of(project, readers=None, deploy=None, board=None):
     """The Phases of `project`, one per reader in the readers' order: the one source of the phases, for `show`, the page
     (P827) and a request (P829), which needs no guide. `readers` are the PhaseReaders a test swaps (None: `READERS`).
-    With `deploy`, the run's DeployState, the deploy phase is read from it (P1043)."""
+    The deploy phase is read from `deploy`, the run's DeployState (P1043; None: read here, once), and the phases are said
+    as the WiredBoard `board` says them (P1044, `wired_board.with_wired`; None: read here from the sheet and the deploy)."""
     readers = readers or READERS
-    if deploy is not None:
-        readers = [DeployReader(deploy) if isinstance(reader, DeployReader) else reader for reader in readers]
-    return [reader.answer(project) for reader in readers]
+    deploy = deploy if deploy is not None else deploy_reading.read_deploy(project)
+    readers = [DeployReader(deploy) if isinstance(reader, DeployReader) else reader for reader in readers]
+    board = board if board is not None else read_wired(project, deploy)
+    phases = [reader.answer(project) for reader in readers]
+    return with_wired(project, phases, board)
 
 
 def flow_and_guide(project, readers=None, deploy=None):
     """(the Phases of `project`, its guide, `guide.guide_of`): `show` and the page compute the guide once (P1030). The
-    deploy's state is read once too (`deploy`, else here), and the deploy phase and the guide both take it (P1043)."""
+    deploy's state is read once too (`deploy`, else here), and the deploy phase and the guide both take it (P1043), and so
+    is the WiredBoard (P1044)."""
     deploy = deploy if deploy is not None else deploy_reading.read_deploy(project)
-    phases = phases_of(project, readers, deploy)
-    return phases, guide_of(project, phases, deploy=deploy)
+    board = read_wired(project, deploy)  # once: the phases and data.guide.wired agree (P1044)
+    phases = phases_of(project, readers, deploy, board)
+    return phases, guide_of(project, phases, deploy=deploy, board=board)
 
 
 def stamp_of(project):
