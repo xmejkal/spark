@@ -672,7 +672,7 @@ class TheGuideTest(FlowTest):
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "firmware"))  # P1030: the guide's now
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10,
+            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10, "with_wiring": True,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
@@ -701,7 +701,7 @@ class TheGuideTest(FlowTest):
         project = a_firmware(a_project_built_with_no_simulation())
         said, _ = show(project)
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None,
+            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None, "with_wiring": True,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
@@ -790,7 +790,7 @@ class TheGuideTest(FlowTest):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         self.assertEqual(show(project)[0]["data"]["guide"], {
-            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None,
+            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None, "with_wiring": False,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None})  # P1044: no sheet and no board log
@@ -856,7 +856,7 @@ class TheGuideTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual(guide["now"], {
-            "phase": "parts", "by": ["you"], "offer": None, "needs": [], "steps": None,
+            "phase": "parts", "by": ["you"], "offer": None, "needs": [], "steps": None, "with_wiring": False,
             "says": "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, "
                     "then pick a part."})
         self.assertEqual((guide["done"], guide["later"], guide["set_aside"]), (
@@ -1442,7 +1442,9 @@ class TheOfferStepTest(FlowTest):
         self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"], offers(said, "build")),
                          ("breadboard", None, ["build"]))
         write_page(project, store=FlowPageStore())
-        self.assertIn("<p><strong>NOW (breadboard)</strong> ", (project / "page.html").read_text(encoding="utf-8"))
+        page = (project / "page.html").read_text(encoding="utf-8")  # P1062: the NOW box, its NEXT line with no key
+        self.assertIn("<p><strong>NOW (breadboard), by ", page)
+        self.assertIn('<p class="next"><strong>NEXT</strong> ', page)
 
     def a_hand_written_project(self):
         project = Path(tempfile.mkdtemp()) / "bl"
@@ -1573,7 +1575,7 @@ class TheNextOnlyStepTest(FlowTest):
         said, _ = show(project)
         whole = str(project.absolute())
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "simulate", "by": ["claude"], "says": SIM_FILES_NOW, "offer": None,
-                                                        "needs": [], "steps": None})
+                                                        "needs": [], "steps": None, "with_wiring": False})
         self.assertEqual(said["next"], [{"op": "build-board", "argv": [str(project.absolute() / "requirements.json"), "--keep", whole],
                                          "why": "Build the board", "effects": ["reads", "runs", "writes"], "needs_yes": False,
                                          "env": self.env()}])
@@ -1609,7 +1611,9 @@ class TheNextOnlyStepTest(FlowTest):
         self.assertIsNone(said["data"]["guide"]["now"]["offer"])
         self.assertFalse([offer for phase in said["data"]["phases"] for offer in phase["offers"] if offer["key"].startswith("look")])
         write_page(deploy, store=FlowPageStore())
-        self.assertIn("<p><strong>NOW (deploy)</strong> ", (deploy / "page.html").read_text(encoding="utf-8"))
+        page = (deploy / "page.html").read_text(encoding="utf-8")  # P1062: the NOW box, its NEXT line with no key
+        self.assertIn("<p><strong>NOW (deploy), by ", page)
+        self.assertIn('<p class="next"><strong>NEXT</strong> ', page)
 
     def test_no_step_names_a_home_path_and_only_argv_and_env_name_the_project(self):
         # the projects are under HOME (FlowTest), so a raw argv names the home folder: only argv and env may
@@ -2296,7 +2300,7 @@ class TheDeployNowTest(FlowTest):
             with self.subTest(name=name):
                 said, _ = show(a_board_log(a_deploy_project(), verdict, sentence, reason=reason))
                 self.assertEqual(self.now(said), {"phase": "deploy", "by": ["your terminal"], "says": now, "offer": None,
-                                                  "needs": [], "steps": None})
+                                                  "needs": [], "steps": None, "with_wiring": True})
                 self.assertEqual([step["op"] for step in said["next"]], ["look"])
                 self.assertIsNone(said["data"]["guide"]["no_open_phase"])
 
@@ -2398,6 +2402,84 @@ class TheSecretMaskTest(FlowTest):
         text = "\n".join(lines_of(project))
         self.assertIn(MASK_OFF % "firmware/wifi_secrets.py", text)
         self.assertNotIn(HALF_TYPED, text)
+
+
+def in_prague(test):
+    """Pin the zone of `test` to Europe/Prague for its run, so a time said in words is known."""
+    import time
+    patcher = mock.patch.dict(os.environ, {"TZ": "Europe/Prague"})
+    patcher.start()
+    test.addCleanup(time.tzset)
+    test.addCleanup(patcher.stop)
+    time.tzset()
+
+
+class TheDeployedLineTest(unittest.TestCase):
+    """P1062 (test 9): ON THE BOARD's sentence on the page, from `data.deploy`: a readable time in the machine's zone, the
+    verdict's words, the cause unless ready was seen, and a stale fact's opener first, by the one rule of deployed_says."""
+
+    AT = "2026-11-23T13:09:41+00:00"
+
+    def setUp(self):
+        in_prague(self)
+
+    def line(self, verdict, cause=None, fact="current"):
+        from spark.flow.deploy_reading import deployed_line
+        return deployed_line({"at": self.AT, "image": "ab" * 32, "verdict": verdict, "cause": cause, "fact": fact, "read_back": None})
+
+    def test_ready_unknown_with_a_known_cause_says_the_verdict_and_the_cause(self):
+        self.assertEqual(self.line("ready unknown", "files_unread"),
+                         "Last deploy 23 Nov 2026, 14:09. Written by the flasher, nothing read back, start not seen. "
+                         "Cause in the log: spark did not reach the board to read its files.")
+
+    def test_ready_unknown_with_no_cause_says_the_cause_is_not_recorded(self):
+        self.assertEqual(self.line("ready unknown"),
+                         "Last deploy 23 Nov 2026, 14:09. Written by the flasher, start not confirmed. Cause not recorded.")
+
+    def test_ready_seen_has_no_cause_sentence(self):
+        self.assertEqual(self.line("ready seen"), "Last deploy 23 Nov 2026, 14:09. Written by the flasher, files read back, ready seen.")
+
+    def test_a_stale_fact_with_ready_seen_opens_with_its_sentence_so_it_never_reads_as_a_pass(self):
+        self.assertEqual(self.line("ready seen", fact="firmware-newer"),
+                         "Your firmware changed after the image that the last deploy wrote. Last deploy 23 Nov 2026, 14:09. "
+                         "Written by the flasher, files read back, ready seen.")
+
+    def test_no_deploy_gives_none_and_a_line_holds_no_iso_time_and_no_image(self):
+        from spark.flow.deploy_reading import deployed_line
+        self.assertIsNone(deployed_line(None))
+        said = self.line("ready not seen", "no_ready_line")
+        self.assertNotIn(self.AT, said)
+        self.assertNotIn("abab", said)
+        self.assertIn("Cause in the log: the firmware printed no ready line.", said)
+
+    def test_the_day_and_time_of_a_stored_time_is_the_machine_s_and_one_that_does_not_parse_stays(self):
+        self.assertEqual(zone_time.day_and_time("2026-11-02T23:30:05+00:00"), "3 Nov 2026, 00:30")
+        self.assertEqual(zone_time.day_and_time("not a time"), "not a time")
+        self.assertEqual(zone_time.day_and_time("2026-01-15T12:00:00+00:00"), "15 Jan 2026, 13:00")
+
+
+class TheWiringWithNowTest(unittest.TestCase):
+    """The review of #1619 (E16 as a fact): `now.with_wiring` says whether the job now holds the wiring: the two jobs beside a
+    current sheet, or the deploy beside a current sheet. The page opens its wiring fold by it and decides nothing."""
+
+    def now(self, phases, sheet=True):
+        from spark.flow.phase_readers import Phase
+        project = Path(tempfile.mkdtemp())
+        if sheet:
+            (project / "breadboard.md").write_text("# a sheet\n")
+        return guide_of(project, [Phase(*each, "you", ["said"], []) for each in phases], steps=lambda _project: 3)["now"]
+
+    def test_the_deploy_beside_a_current_sheet_holds_the_wiring(self):
+        self.assertIs(self.now([("breadboard", None, "·"), ("deploy", "not-started", "○")])["with_wiring"], True)
+
+    def test_the_deploy_with_no_kept_sheet_or_a_sheet_not_current_does_not(self):
+        self.assertIs(self.now([("breadboard", None, "·"), ("deploy", "not-started", "○")], sheet=False)["with_wiring"], False)
+        self.assertIs(self.now([("breadboard", "stale", "↻"), ("deploy", "not-started", "○")])["with_wiring"], False)
+
+    def test_the_two_jobs_hold_it_and_another_now_does_not(self):
+        two = self.now([("breadboard", None, "·"), ("firmware", "not-started", "○")])
+        self.assertEqual((two["steps"], two["with_wiring"]), (3, True))
+        self.assertIs(self.now([("build", "not-started", "○"), ("breadboard", None, "·")])["with_wiring"], False)
 
 
 if __name__ == "__main__":

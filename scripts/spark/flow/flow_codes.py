@@ -76,6 +76,8 @@ DEPLOY_HINT = "Claude then gives you the deploy line. Run it in your terminal an
 #: image's first 12 hex digits, and the words of its verdict; then its cause, and last how many logs there are.
 DEPLOYED_MESSAGE = "Last deploy %s, image %s: %s."
 DEPLOYS_LOGGED = ("%d deploy logged.", "%d deploys logged.")
+#: ON THE BOARD on the page (P1062, `deploy_reading.deployed_line`): the time read in the machine's zone and the verdict's words.
+DEPLOYED_LINE = "Last deploy %s. %s."
 #: The words of a verdict: ready seen and ready not seen read the files back; ready unknown by its cause's read-back.
 #: NO_READ_BACK_WORDS are brief D10's words, exactly (the PO, 2026-11-23).
 SEEN_WORDS = "written by the flasher, files read back, ready seen"
@@ -215,7 +217,11 @@ NOT_WITHDRAWN_SAYS = "Could not withdraw. The request still waits."
 #: The intro of the published page, for its owner: the script puts it in place of PAGE_INTRO.
 PUBLISHED_INTRO = "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page."
 WAITING_FOR = "Waiting for Claude: %s."
-PAGE_FROM = "Page from %s."
+#: The last request under the NOW box (P1062): its time in the browser's zone and its label, then what the page says of it.
+LAST_REQUEST_SAYS = "Your last request, %s: %s."
+#: The last request's words when its offer is no longer on the page (the review of #1619): by its kind, else one sentence.
+LAST_REQUEST_KINDS = {PICK: "a pick", WRITE_REQUIREMENTS: "the parts list", BUILD_BOARD: "the build"}
+LAST_REQUEST_OTHER = "a step this page no longer offers"
 NEW_STATE = "Reload to see the new state."
 #: What the page says when a step ran ok, by its kind: what it did and what is not done yet.
 RAN_OK_SAYS = {PICK: "Saved as the pick. Nothing is built yet. " + NEW_STATE,
@@ -247,12 +253,24 @@ STANDS_AT_LINE = "The project stands at: %s."
 #: The line under the page's title (P828 step 2, the PO, 2026-11-21: "it just doesn't guide a person"): what the page
 #: is and how to act on it. From disk every action is a message to Claude.
 PAGE_INTRO = "Where this project stands. This page only shows it. To change anything, tell Claude in the chat."
-#: Said under the intro when the page holds wiring steps, so the wiring comes first and the phases are folded below it.
-WIRING_FIRST = "Below: the wiring and its pictures, then each phase, folded: click one to read it."
+#: The freshness line under the title (P1062, the P1038 design): the newest change of the fingerprint's files, read in the
+#: machine's zone (`zone_time.day_and_time`), or the line for a page that knows no time.
+FRESH_LINE = ("This page shows the project as its files last changed, %s. If you changed or deployed something after that, "
+              "type /spark:page in the chat.")
+FRESH_NONE = ("This page does not know when the project last changed. If you changed or deployed something, type "
+              "/spark:page in the chat.")
 NOTHING_OPEN_LINE = "No phase is open."
-#: The guide on the page (P977 PR 2): the label of each line (NOW also names its phase, to tie it to the rail). The link to the
-#: first wiring step is the wiring section's own (ONE_AT_A_TIME), drawn when the guide's now holds the wiring (`now.steps`).
+#: The guide on the page (P977 PR 2, P1062): the NOW box's heading (its phase and who acts, `now.by` joined by NOW_BY_JOIN),
+#: ON THE BOARD and NEXT, then the muted lines' labels. The link to the first wiring step is the wiring section's own
+#: (ONE_AT_A_TIME), drawn on NEXT when the guide's now holds the wiring (`now.steps`).
+NOW_BY, NOW_BY_JOIN, ON_BOARD_LABEL, NEXT_ACT_LABEL = "NOW (%s), by %s", " and ", "ON THE BOARD", "NEXT"
+#: GUIDE_NOW is the CLI's NOW line (`show_flow`).
 GUIDE_NOW, GUIDE_DONE, GUIDE_LATER, GUIDE_SET_ASIDE = "NOW (%s)", "DONE", "LATER", "SET ASIDE"
+#: The folds' headings (P1062): the parts, the wiring with its count of steps, the pictures, and the developer fold, always
+#: closed, which holds the phases, each offer's key and effect, the marks and the record ids.
+PARTS_HEADING, PICTURES_HEADING = "Parts", "Pictures"
+WIRING_STEPS = ("Wiring: %d step", "Wiring: %d steps")
+DEVELOPER_HEADING = "For developers: the phases, each offer's key and effect, the marks, the record ids"
 NOT_DRAWN_HERE = "Not drawn here. The build draws it: run /spark:build --keep."
 NO_PICTURE_FILE = "Not drawn: %s is not in the project yet. The build with --keep writes it."
 UNREADABLE_PICTURE = "Not drawn: %s cannot be read."
