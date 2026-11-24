@@ -30,9 +30,18 @@ The page script's drift check (P1061): page_script.ts is the source, and the com
 gate compiles the archive's `.ts` into a temporary folder and compares the bytes. A missing tsc, or another version, is
 could-not-run; a tsc error or other bytes is a problem, with the fix `tsc -p scripts/spark/flow`. Either stops the gate
 before the suite runs. A tree with no page_script.ts, from before P1061, has nothing to compile.
+
+The mutation rows' check (P897, which puts back what P208 took out): every row of every tests/mutations/*.json must have
+its `find` once in its file, whatever the branch changed, so that a merge which moves an anchored line says so at once.
+The .py and .json rows of a changed file or a changed table also get their mutants compiled in memory; at `--full`, or
+when git could not tell what changed, every such row does. On an idle machine: 0.45 s for the anchors of all rows, 0.4 to
+0.8 s with the compile of one changed file or table, 22.7 s at `--full` (the review measured 1 to 4 s and 79 s at load
+22). A refused row is a problem, printed as `table[index] name`, and it stops the gate before the suite, as the drift
+check does. A row with no `file`, `find` or `replace` as strings is refused too. Nothing runs and nothing is written.
 """
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -50,6 +59,7 @@ sys.path.append(str(ROOT / "tests"))  # after the rest: only suite_runs is wante
 from spark.core.outcomes import EXIT_FOR, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
 from suite_runs import GATE_ARCHIVE, GATE_TREE, SLOW_PREFIX  # noqa: E402
 import story_tests  # noqa: E402  (beside this file)
+import mutate  # noqa: E402  (beside this file, P897) the rows' own anchor and compile checks
 from suite_lines import TEST_NAMED, red_tests  # noqa: E402  (beside this file, P797)
 
 #: How many of the names left behind the gate's line shows; the count says the rest.
@@ -100,6 +110,47 @@ def needs_tsc(tree, changed, full=False):
     if not (tree / SCRIPT_SOURCES[0]).is_file():
         return named and any((tree / name).is_file() for name in SCRIPT_SOURCES[1:])
     return full or changed is None or named
+
+
+#: The mutation tables, from the root (P897).
+MUTATION_TABLES = "tests/mutations"
+#: The files whose mutants `mutate.unloadable` compiles or parses; a .ts, .js or .md row is only anchored.
+COMPILED = (".py", ".json")
+ROWS_FIX = "  rows: re-anchor each refused row, or remove it with its reason (docs/guide/developing.md)"
+
+
+def refused_rows(tree, changed):
+    """
+    The `[refused]` lines of the mutation rows in `tree` (P897), [] when none, and how many rows and tables were read:
+    (lines, rows, tables, compiled): `compiled` counts the .py and .json rows that were checked. Every row whose `find` does not occur once in its file is refused, and so is each
+    row of a file or table in `changed` whose mutant does not compile or parse (every row when `changed` is None: the
+    full run, or git could not tell). It runs nothing and writes nothing.
+    """
+    lines, rows, tables = [], [], sorted((tree / MUTATION_TABLES).glob("*.json"))
+    for table in tables:
+        try:
+            loaded = json.loads(table.read_text())
+            if not isinstance(loaded, list):
+                raise TypeError("the table is not a list")
+        except (OSError, ValueError, TypeError) as broken:
+            lines.append("%s/%s: not a list of rows: %s" % (MUTATION_TABLES, table.name, broken))
+            continue
+        for index, row in enumerate(loaded):
+            where = "%s[%d]" % (table.name, index)
+            if not isinstance(row, dict) or not all(isinstance(row.get(key), str) for key in ("file", "find", "replace")):
+                lines.append("%s: a row needs `file`, `find` and `replace`, each a string" % where)
+            else:
+                rows.append(dict(row, table=table.name, index=index, name="%s %s" % (where, row.get("name", row["find"]))))
+    wrong = mutate.anchors(tree, rows)
+    lines += ["%s: `find` occurs %d time(s) in %s" % (name, count, file) for name, file, count in wrong]
+    if changed is None:
+        subset = rows
+    else:
+        named = {Path(name).name for name in changed if name.startswith(MUTATION_TABLES + "/")}
+        subset = [row for row in rows if row["table"] in named]
+        subset += [row for row in mutate.related(rows, changed) if row not in subset]
+    lines += ["%s: %s" % (name, why) for name, _file, why in mutate.unloadable(tree, subset)]
+    return lines, len(rows), len(tables), len([row for row in subset if row["file"].endswith(COMPILED)])
 
 
 def tsc_refusal(which=shutil.which, run=subprocess.run):
@@ -318,14 +369,13 @@ def measure(tree, full=False, story=None):
     # The verdict's own `skipped=N` caps the count: a failure's traceback can embed a child's -v lines.
     skipped_in_all = sum(int(count) for line in suite_said for count in re.findall(r"skipped=(\d+)", line))
     slow_skipped = min(skipped_in_all, sum(1 for line in suite.stderr.splitlines() if " ... skipped '%s" % SLOW_PREFIX in line))
-    # The mutation tables' anchors are no longer checked here (P208): the tables are history, and a moved line no
-    # longer blocks a push.
+    # The mutation rows' anchors are checked before the suite, in `gate` (`refused_rows`, P897), not here: this only runs tests.
     ok = suite.returncode == 0
     return suite_line(suite_said or last_line_said, run, slow_skipped, scope), ok, left, [] if ok else red_tests(suite.stderr + suite.stdout)
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="The suite on the tree as committed: the story run by default.")
+    parser = argparse.ArgumentParser(description="The mutation rows' anchors, then the suite on the tree as committed: the story run by default.")
     parser.add_argument("commit", nargs="?", default="HEAD", help="the commit to measure (default HEAD)")
     parser.add_argument("--full", action="store_true",
                         help="the full run: every test, the slow ones too; a sweep at the end of a wave or an epic, or when the PO asks")
@@ -357,6 +407,12 @@ def gate(root, commit, scratch, full=False, which=shutil.which, run=subprocess.r
     if drift:
         print(drift)
         return EXIT_PROBLEMS
+    stale, row_count, table_count, compiled = refused_rows(scratch, changed)
+    if stale:
+        for line in stale:
+            print("  [refused] " + line)
+        print(ROWS_FIX)
+        return EXIT_PROBLEMS
     suite, ok, left, red = measure(scratch, full=full, story=story)
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()
@@ -368,6 +424,9 @@ def gate(root, commit, scratch, full=False, which=shutil.which, run=subprocess.r
     if left != []:
         print("  " + temp_line(left))
     print("  " + size_line(root, commit))
+    if table_count:
+        print("  rows: every anchor of %d rows in %d tables occurs once, and the mutants of the %d rows checked compile"
+              % (row_count, table_count, compiled))
     if compiles:
         print("  page script: the committed %s is tsc %s's compiled output of %s (P1061)"
               % (Path(SCRIPT_SOURCES[1]).name, TSC_VERSION, Path(SCRIPT_SOURCES[0]).name))

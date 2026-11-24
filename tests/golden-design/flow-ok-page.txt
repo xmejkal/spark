@@ -6,29 +6,25 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>button light circuit</title>
-<style>:root{--bg:#eef1f3;--ink:#1c262e;--muted:#566570;--line:#c3ccd3;--signal:#c8500f;--backdrop:#fff;--display:ui-serif,Georgia,serif;--body:system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:light}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}}:root[data-theme="dark"]{--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}body{max-width:1180px;margin:0 auto;padding:12px 16px;font:16px/1.55 var(--body);background:var(--bg);color:var(--ink)}h1,h2{font-family:var(--display);line-height:1.2}nav ol{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:0;padding:0}a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}#guide{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}#guide p{margin:6px 0}.phase{border-top:1px solid var(--line);padding:4px 0}summary{cursor:pointer}summary h2{display:inline}p,li{overflow-wrap:anywhere}img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}.fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:6px}.fig svg{display:block;width:100%;height:auto}.pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;color:var(--muted)}.sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;vertical-align:-2px;border:1px solid var(--line)}#steps>li .nav{display:none}#steps>li:target .nav{display:block}#steps:has(>li:target)>li:not(:target){display:none}@media print{#steps>li{display:list-item!important}#steps .nav{display:none!important}}</style>
+<style>:root{--bg:#eef1f3;--ink:#1c262e;--muted:#566570;--line:#c3ccd3;--signal:#c8500f;--backdrop:#fff;--display:ui-serif,Georgia,serif;--body:system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:light}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}}:root[data-theme="dark"]{--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}body{max-width:1180px;margin:0 auto;padding:12px 16px;font:16px/1.55 var(--body);background:var(--bg);color:var(--ink)}h1,h2{font-family:var(--display);line-height:1.2}a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}#guide{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}#guide p{margin:6px 0}.now{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}.next{font-size:1.4em}.muted,#request{color:var(--muted)}.fold,.phase{border-top:1px solid var(--line);padding:4px 0}summary{cursor:pointer}summary h2{display:inline}p,li{overflow-wrap:anywhere}img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}.fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:6px}.fig svg{display:block;width:100%;height:auto}.pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;color:var(--muted)}.sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;vertical-align:-2px;border:1px solid var(--line)}#steps>li .nav{display:none}#steps>li:target .nav{display:block}#steps:has(>li:target)>li:not(:target){display:none}@media print{#steps>li{display:list-item!important}#steps .nav{display:none!important}}</style>
 </head>
 <body data-stands-at="build" data-fingerprint="b43d63777aab" data-written="<time>">
 <h1>button light circuit</h1>
-<p class="intro">Where this project stands. This page only shows it. To change anything, tell Claude in the chat. Below: the wiring and its pictures, then each phase, folded: click one to read it.</p>
+<p class="fresh">This page shows the project as its files last changed, <time>. If you changed or deployed something after that, type /spark:page in the chat.</p>
+<p class="intro">Where this project stands. This page only shows it. To change anything, tell Claude in the chat.</p>
 <section id="guide">
-<p data-key="build" data-makes-stale=""><strong>NOW (build)</strong> Ask Claude in the chat to build the board. It takes seconds and costs nothing.</p>
-<p><strong>DONE</strong> idea, requirements (no needs or picks behind it)</p>
-<p><strong>LATER</strong> breadboard, firmware, simulate, deploy</p>
+<div class="now">
+<p><strong>NOW (build), by claude</strong></p>
+<p class="next" data-key="build" data-makes-stale=""><strong>NEXT</strong> Ask Claude in the chat to build the board. It takes seconds and costs nothing.</p>
+</div>
+<p class="muted"><strong>DONE</strong> idea, requirements (no needs or picks behind it)</p>
+<p class="muted"><strong>LATER</strong> breadboard, firmware, simulate, deploy</p>
 </section>
-<nav aria-label="Phases"><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a><ol>
-<li data-phase="idea" data-status="none"><a href="#phase-idea"><span aria-hidden="true">·</span> idea <span>not checked by spark</span></a></li>
-<li data-phase="needs" data-status="none"><a href="#phase-needs"><span aria-hidden="true">·</span> needs <span>not checked by spark</span></a></li>
-<li data-phase="parts" data-status="none"><a href="#phase-parts"><span aria-hidden="true">·</span> parts <span>not checked by spark</span></a></li>
-<li data-phase="requirements" data-status="none"><a href="#phase-requirements"><span aria-hidden="true">·</span> requirements <span>not checked by spark</span></a></li>
-<li data-phase="build" data-status="not-started"><a href="#phase-build"><span aria-hidden="true">○</span> build <span>not started</span></a></li>
-<li data-phase="breadboard" data-status="not-started"><a href="#phase-breadboard"><span aria-hidden="true">○</span> breadboard <span>not started</span></a></li>
-<li data-phase="firmware" data-status="none"><a href="#phase-firmware"><span aria-hidden="true">·</span> firmware <span>not checked by spark</span></a></li>
-<li data-phase="simulate" data-status="not-started"><a href="#phase-simulate"><span aria-hidden="true">○</span> simulate <span>not started</span></a></li>
-<li data-phase="deploy" data-status="not-started"><a href="#phase-deploy"><span aria-hidden="true">○</span> deploy <span>not started</span></a></li>
-</ol></nav>
+<details class="fold" data-fold="parts"><summary><h2><span aria-hidden="true">·</span> Parts <span>not checked by spark</span></h2></summary>
+<p>a hand-written project: requirements.json and no needs</p>
+</details>
+<details class="fold" data-fold="wiring"><summary><h2>Wiring: 10 steps</h2></summary>
 <section id="wiring">
-<h2>Wiring</h2>
 <p>Read the lines before power first.</p>
 <h3>Before you power it</h3>
 <ul>
@@ -36,7 +32,6 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <li><strong>6x6 mm tactile push button</strong><ul><li>Decide the polarity against deep sleep, not convenience. MicroPython&#x27;s esp32.wake_on_ext1(pins, level) takes ONE level for every pin in the mask, on every chip (ports/esp32/modesp32.c, v1.29.0), so a board with two wake sources must have them assert in the same direction. Both directions are an OR on the S3 and C6: WAKEUP_ALL_LOW is a true AND only on the original ESP32, and ESP-IDF aliases it to ANY_LOW on every later chip (components/esp_hw_support/include/esp_sleep.h, v5.5.2). Prefer wiring a wake button to 3V3 behind a pull-down and arming WAKEUP_ANY_HIGH: low-level wake has an open MicroPython bug, micropython#17334 (&#x27;stuck pin&#x27;, reported on a C6, v1.25.0). Corrected 2026-10-01 (spark P63): this line used to say ALL_LOW is an AND here, which is false on these chips.</li><li>Debounce in firmware, not hardware, unless the button is also a wake source — a wake pin&#x27;s first edge is the one that matters and it is not debounced by anything.</li></ul></li>
 <li><strong>Kingbright L-7113ID 5 mm red LED</strong><ul><li>A series resistor between the GPIO and the anode, always: without it the LED&#x27;s current is set only by the pin&#x27;s drive strength, and it either runs far past 30 mA or droops the pin&#x27;s level.</li><li>Keep it off the chip&#x27;s strapping pins: an LED and resistor to ground load the pin while the chip samples its straps at reset, and can change how it boots. (Reasoned from the circuit, not from this datasheet.)</li><li>On a breadboard: the LONG lead (anode) goes to the resistor; the short lead, on the side of the flat in the rim, goes to ground. Once the leads are trimmed equal, the flat is the mark that survives.</li></ul></li>
 </ul>
-<p>Each record whole, with what it asks of the board: <code>parts.py --show led-red-5mm</code>, <code>parts.py --show tactile-button</code>.</p>
 <p><a href="#step-1">One at a time: start at step 1</a></p>
 <ol id="steps">
 <li id="step-1" value="1" tabindex="-1">Put the board in the breadboard, each pin in its own row.<div class="nav">Step 1 of 10 <a href="#step-2" aria-label="Next: step 2">Next</a> <a href="#wiring">All steps</a></div></li>
@@ -51,12 +46,17 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <li id="step-10" value="10" tabindex="-1">Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A.<div class="nav">Step 10 of 10 <a href="#step-9" aria-label="Back to step 9">Back</a> <a href="#wiring">All steps</a></div></li>
 </ol>
 </section>
-<section id="pictures"><h2>Pictures</h2>
+</details>
+<details class="fold" data-fold="pictures"><summary><h2>Pictures</h2></summary>
+<section id="pictures">
 <div class="picture"><h3>Breadboard</h3><p>Not drawn: breadboard.svg is not in the project yet. The build with --keep writes it.</p></div>
 <div class="picture"><h3>Schematic</h3><p>Not drawn here. The build draws it: run /spark:build --keep.</p></div>
 <div class="picture"><h3>PCB</h3><p>Not drawn here. The build draws it: run /spark:build --keep.</p></div>
 </section>
-<section class="legend"><h2>Marks</h2><ul><li><span aria-hidden="true">✓</span> ok</li><li><span aria-hidden="true">✗</span> problems</li><li><span aria-hidden="true">?</span> could not run</li><li><span aria-hidden="true">○</span> not started</li><li><span aria-hidden="true">◐</span> partly done</li><li><span aria-hidden="true">↻</span> out of date</li><li><span aria-hidden="true">·</span> not checked by spark: spark does not judge this phase, so no mark says it is done</li></ul></section>
+</details>
+<section class="notes"><h2>Notes</h2><p>This page reads the project&#x27;s files and its board logs. It cannot see your wiring or what the board shows now.</p></section>
+<details class="fold" data-fold="developer"><summary><h2>For developers: the phases, each offer&#x27;s key and effect, the marks, the record ids</h2></summary>
+<section id="developer">
 <section class="phase" data-phase="idea" data-status="none">
 <details><summary><h2><span aria-hidden="true">·</span> idea <span>not checked by spark</span></h2></summary>
 <div id="phase-idea">
@@ -94,7 +94,7 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <div id="phase-build">
 <p>Done by: claude</p>
 <p>no build recorded yet</p>
-<ul><li data-key="build" data-makes-stale="">Build the board: Saves its files in this project: the board file and its footprint, the dist folder with the schematic and PCB pictures, the wiring sheet and its record, the breadboard picture, the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn, the pin map your firmware imports, the simulation files, the build record in .spark/build.json and this page. A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you changed is left alone. If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted. If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page are deleted. Runs no simulation and costs nothing.</li></ul>
+<ul><li><code>build</code> Build the board: Saves its files in this project: the board file and its footprint, the dist folder with the schematic and PCB pictures, the wiring sheet and its record, the breadboard picture, the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn, the pin map your firmware imports, the simulation files, the build record in .spark/build.json and this page. A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you changed is left alone. If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted. If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page are deleted. Runs no simulation and costs nothing.</li></ul>
 </div>
 </details>
 </section>
@@ -131,15 +131,19 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 </div>
 </details>
 </section>
-<section class="notes"><h2>Notes</h2><p>This page reads the project&#x27;s files and its board logs. It cannot see your wiring or what the board shows now.</p></section>
-<script type="application/json" id="spark-words">{"cancel": "Cancel", "command": "/spark:page", "copy": "Copy", "could_not_run": "Could not run: %s. Reload to see the new state.", "intro": "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page. Below: the wiring and its pictures, then each phase, folded: click one to read it.", "marks": {"could-not-run": "?", "not-run": "–", "ok": "✓", "problems": "✗"}, "not_sent": "Could not send. Nothing ran.", "not_withdrawn": "Could not withdraw. The request still waits.", "note": "Note: %s.", "now_button": {"Ask Claude in the chat to build the board. It takes seconds and costs nothing.": "Build the board. It takes seconds and costs nothing. Use the button.", "Ask Claude in the chat to write the parts list from your picks.": "Write the parts list from your picks. Use the button.", "The parts list changed since the last build. Ask Claude to build again.": "The parts list changed since the last build. Build the board again. Use the button.", "Your picks changed. Ask Claude to write the parts list again.": "Your picks changed. Write the parts list again. Use the button."}, "offers": {"build": {"label": "Build the board", "says": ["Saves its files in this project: the board file and its footprint, the dist folder with the schematic and PCB pictures, the wiring sheet and its record, the breadboard picture, the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn, the pin map your firmware imports, the simulation files, the build record in .spark/build.json and this page. A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you changed is left alone. If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted. If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page are deleted. Runs no simulation and costs nothing."]}}, "ok": {"build": "The board builds. It is not wired, not flashed and not simulated yet. Reload to see the new state.", "pick": "Saved as the pick. Nothing is built yet. Reload to see the new state.", "requirements": "The parts list is written. Nothing is built yet. Reload to see the new state."}, "page_from": "Page from %s.", "problems": "Ran, with problems: %s. Reload to see the new state.", "ran": "Spark says: %s. Reload to see the new state.", "refused": {"the project changed after the page was read, so nothing ran": "Nothing ran. The project changed after you clicked. Reload this page and click again.", "the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or could not be deleted, so nothing ran": "Nothing ran. The request could not be read. Reload the page and click again.", "the request names a step that is asked in the chat, never from the page, so nothing ran": "Nothing ran. A need is dropped in the chat: tell Claude which one.", "the request names a step that spark does not offer now, so nothing ran": "Nothing ran. This button is no longer offered. Reload the page."}, "send": "Send", "waiting": "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.", "waiting_for": "Waiting for Claude: %s.", "withdraw": "Withdraw", "withdrawn": "Withdrawn. If Claude had already started it, its answer shows here."}</script>
+<section class="legend"><h2>Marks</h2><ul><li><span aria-hidden="true">✓</span> ok</li><li><span aria-hidden="true">✗</span> problems</li><li><span aria-hidden="true">?</span> could not run</li><li><span aria-hidden="true">○</span> not started</li><li><span aria-hidden="true">◐</span> partly done</li><li><span aria-hidden="true">↻</span> out of date</li><li><span aria-hidden="true">·</span> not checked by spark: spark does not judge this phase, so no mark says it is done</li></ul></section>
+<p>Each record whole, with what it asks of the board: <code>parts.py --show led-red-5mm</code>, <code>parts.py --show tactile-button</code>.</p>
+</section>
+</details>
+<script type="application/json" id="spark-words">{"cancel": "Cancel", "command": "/spark:page", "copy": "Copy", "could_not_run": "Could not run: %s. Reload to see the new state.", "intro": "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.", "last_request": "Your last request, %s: %s.", "marks": {"could-not-run": "?", "not-run": "–", "ok": "✓", "problems": "✗"}, "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], "not_sent": "Could not send. Nothing ran.", "not_withdrawn": "Could not withdraw. The request still waits.", "note": "Note: %s.", "now_button": {"Ask Claude in the chat to build the board. It takes seconds and costs nothing.": "Build the board. It takes seconds and costs nothing. Use the button.", "Ask Claude in the chat to write the parts list from your picks.": "Write the parts list from your picks. Use the button.", "The parts list changed since the last build. Ask Claude to build again.": "The parts list changed since the last build. Build the board again. Use the button.", "Your picks changed. Ask Claude to write the parts list again.": "Your picks changed. Write the parts list again. Use the button."}, "offers": {"build": {"label": "Build the board", "says": ["Saves its files in this project: the board file and its footprint, the dist folder with the schematic and PCB pictures, the wiring sheet and its record, the breadboard picture, the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn, the pin map your firmware imports, the simulation files, the build record in .spark/build.json and this page. A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you changed is left alone. If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted. If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page are deleted. Runs no simulation and costs nothing."]}}, "ok": {"build": "The board builds. It is not wired, not flashed and not simulated yet. Reload to see the new state.", "pick": "Saved as the pick. Nothing is built yet. Reload to see the new state.", "requirements": "The parts list is written. Nothing is built yet. Reload to see the new state."}, "problems": "Ran, with problems: %s. Reload to see the new state.", "ran": "Spark says: %s. Reload to see the new state.", "refused": {"the project changed after the page was read, so nothing ran": "Nothing ran. The project changed after you clicked. Reload this page and click again.", "the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or could not be deleted, so nothing ran": "Nothing ran. The request could not be read. Reload the page and click again.", "the request names a step that is asked in the chat, never from the page, so nothing ran": "Nothing ran. A need is dropped in the chat: tell Claude which one.", "the request names a step that spark does not offer now, so nothing ran": "Nothing ran. This button is no longer offered. Reload the page."}, "request_kinds": {"build": "the build", "pick": "a pick", "requirements": "the parts list"}, "request_other": "a step this page no longer offers", "send": "Send", "waiting": "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.", "waiting_for": "Waiting for Claude: %s.", "withdraw": "Withdraw", "withdrawn": "Withdrawn. If Claude had already started it, its answer shows here."}</script>
 <script>/*
  * The page's one script (P829 PR 3, #1187). From disk it does nothing: the page stays as it is. In a published page with
  * the Artifact database, for the artifact's owner only, it says how the page is used in the intro, adds a button to each
  * offer the page may send (a pick, the parts list, the build), asks the person to confirm with the offer's own words, and
- * writes one request row {id, key, seen, at}. One request waits at a time, with Copy and Withdraw; the answer row that
- * /spark:page writes shows under the intro. Python writes every word in the inert block "spark-words"; this script fills
- * in only a time, an offer's label or spark's own line. It never shows the key or the fingerprint, and never "done"
+ * writes one request row {id, key, seen, at}. One request waits at a time, with Copy and Withdraw; the panel stands last
+ * in the guide, under the NOW box (P1062), and says the last request with its date, in the browser's zone, and its label,
+ * then the answer row that /spark:page writes. Python writes every word in the inert block "spark-words"; this script
+ * fills in only a time, an offer's label or spark's own line. It never shows the key or the fingerprint, and never "done"
  * alone. Rows from the database are data: set as text only.
  */
 "use strict";
@@ -163,6 +167,13 @@ function clock(moment) {
         return "?";
     return String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0");
 }
+/** A moment as "22 Nov 2026, 11:36" in the browser's zone, the month from Python's `months`, or "?" when it is no time. */
+function dayAndTime(moment, months) {
+    const date = new Date(moment);
+    if (Number.isNaN(date.getTime()))
+        return "?";
+    return date.getDate() + " " + months[date.getMonth()] + " " + date.getFullYear() + ", " + clock(moment);
+}
 /** The kind of an offer's key: the word before its first colon. */
 function kindOf(key) {
     return String(key).split(":")[0];
@@ -173,9 +184,10 @@ function sentence(line) {
 }
 /**
  * What the page says of the latest request and its answer: {mark, text, grey}, or null when there is no request. Pure.
- * A request that waits, one withdrawn with no answer yet, an ok by its kind with its note (P1008), problems, could not run, and a refusal in
- * grey. A withdrawn request whose answer came says the answer: Claude may have run it before the withdraw. Never a word
- * alone: each text is one of the page's sentences.
+ * A request that waits, one withdrawn with no answer yet, an ok by its kind with its note (P1008), problems, a step that
+ * ran and could not finish in spark's own line (never "Could not run:", P1062), could not run, and a refusal in grey. A
+ * withdrawn request whose answer came says the answer: Claude may have run it before the withdraw. Never a word alone:
+ * each text is one of the page's sentences.
  */
 function shownState(request, answer, words) {
     if (!request)
@@ -198,7 +210,25 @@ function shownState(request, answer, words) {
     }
     if (answer.status === "problems")
         return { mark: words.marks.problems, text: fill(words.problems, sentence(answer.line)), grey: false };
-    return { mark: words.marks["could-not-run"], text: fill(words.could_not_run, sentence(answer.line)), grey: false };
+    return { mark: words.marks["could-not-run"], text: fill(words.ran, sentence(answer.line)), grey: false };
+}
+/** A Shown as the status line says it: its mark, then its text. */
+function said(shown) {
+    return (shown.mark ? shown.mark + " " : "") + shown.text;
+}
+/**
+ * The status line of the last request (P1062): "Your last request, <its time>: <its label>." and what `shownState` says,
+ * or the waiting line alone, or the empty text with no request. The label is the offer's on this page, else its kind's words, else
+ * `request_other`: never a part of the key. Pure.
+ */
+function lastRequest(request, answer, words) {
+    const shown = shownState(request, answer, words);
+    if (!request || !shown)
+        return "";
+    if (!request.withdrawn && !answer)
+        return said(shown);
+    const label = labelOf(words, request.key) || own(words.request_kinds, kindOf(request.key)) || words.request_other;
+    return fill(fill(words.last_request, dayAndTime(request.at, words.months)), label) + " " + said(shown);
 }
 /**
  * Strategy: RequestChannel, how a request leaves the page and its answer comes back: send(row) and withdraw(id), each a
@@ -333,8 +363,9 @@ function labelOf(words, key) {
 }
 /**
  * View: the intro, the status panel, the buttons and the confirm, made with createElement and addEventListener, every
- * text set as text. The panel stands under the intro; a button stands on each element that carries `data-makes-stale`
- * (a sendable offer, and the guide's line of what to do now when its phase has one sendable offer).
+ * text set as text. The panel stands last in the guide, under the NOW box (P1062), or under the intro on a page with no
+ * guide; a button stands on each element that carries `data-makes-stale` (a sendable offer, and the NOW box's NEXT line
+ * when the guide's now names one sendable offer).
  */
 class PageView {
     constructor(win, requests, words) {
@@ -364,15 +395,13 @@ class PageView {
         const intro = doc.querySelector(".intro");
         intro.textContent = this.words.intro;
         this.panel.id = "request";
-        const written = doc.body.getAttribute("data-written");
-        if (written && written !== "none") {
-            const from = doc.createElement("p");
-            from.textContent = fill(this.words.page_from, clock(written));
-            this.panel.appendChild(from);
-        }
         this.status.setAttribute("aria-live", "polite");
         [this.status, this.copy, this.withdraw].forEach((part) => this.panel.appendChild(part));
-        intro.parentNode.insertBefore(this.panel, intro.nextSibling);
+        const guide = doc.querySelector("#guide");
+        if (guide)
+            guide.appendChild(this.panel);
+        else
+            intro.parentNode.insertBefore(this.panel, intro.nextSibling);
     }
     drawButtons() {
         this.doc.querySelectorAll("[data-makes-stale]").forEach((item) => {
@@ -427,7 +456,8 @@ class PageView {
     render() {
         const shown = this.requests.shown();
         const waiting = this.requests.waiting();
-        this.status.textContent = shown ? (shown.mark ? shown.mark + " " : "") + shown.text : "";
+        const latest = lastRequest(this.requests.latest, this.requests.answer, this.words);
+        this.status.textContent = shown ? (this.requests.note ? said(shown) : latest) : "";
         this.status.style.color = shown && shown.grey ? "var(--muted)" : "";
         this.copy.hidden = !waiting;
         this.withdraw.hidden = !waiting;
@@ -458,7 +488,7 @@ async function start(win) {
     return requests;
 }
 if (typeof module === "object" && module.exports) {
-    module.exports = { REQUESTS, ANSWERS, shownState, DbChannel, Requests, PageView, start };
+    module.exports = { REQUESTS, ANSWERS, shownState, lastRequest, dayAndTime, DbChannel, Requests, PageView, start };
 }
 else {
     start(window).catch(() => { });

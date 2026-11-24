@@ -74,7 +74,7 @@
  {
   "file": "scripts/spark/bench/look_at_board.py",
   "name": "look.py ignores flag",
-  "find": ".run(project, port, evidence)",
-  "replace": ".run(project, port, evidence_for(project, False, False, outside.find_tool))"
+  "find": "evidence_for(project, evidence[\"no_simulation\"], evidence[\"ignore_older_runs\"],",
+  "replace": "evidence_for(project, False, False,"
  }
 ]

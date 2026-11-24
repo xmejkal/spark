@@ -392,7 +392,10 @@ def unloadable(root, mutations):
     said = []
     for mutation in mutations:
         path = root / mutation["file"]
-        text = path.read_text() if path.is_file() else ""
+        try:
+            text = path.read_text() if path.is_file() else ""
+        except UnicodeDecodeError:
+            text = ""
         if text.count(mutation["find"]) == 1:
             why = _loads(mutation["file"], text.replace(mutation["find"], mutation["replace"]))
             if why:
@@ -426,7 +429,10 @@ def anchors(root, mutations):
     wrong = []
     for mutation in mutations:
         path = root / mutation["file"]
-        count = path.read_text().count(mutation["find"]) if path.is_file() else 0
+        try:
+            count = path.read_text().count(mutation["find"]) if path.is_file() else 0
+        except UnicodeDecodeError:  # a file that is not text holds no anchor
+            count = 0
         if count != 1:
             wrong.append((mutation.get("name", mutation["find"]), mutation["file"], count))
     return wrong

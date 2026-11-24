@@ -20,8 +20,8 @@ from spark.build import ai_files  # noqa: E402
 from spark.design import footprint_emitter  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.sourcing import record_home  # noqa: E402
-from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, answers_in, boards_offered, design_in,  # noqa: E402
-                                       find_circuit, nets_in, package_file, rules_for, unanswered_fields,
+from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, answers_in, board_differs, boards_offered,  # noqa: E402
+                                       design_in, find_circuit, nets_in, package_file, rules_for, unanswered_fields,
                                        why_board_refused, why_project_refused, write, write_brief)
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
@@ -29,7 +29,7 @@ from spark.core.result import Refusal  # noqa: E402
 
 #: The --board help (P988 review): init writes the selection, and requirements.json's board wins when it names one (D35).
 BOARD_HELP = ("board id to write in boards/active.json, the selection. When requirements.json names a board, that board "
-              "wins (D35). Omit it to see what is available")
+              "wins (D35), and init says so. Omit it to see what is available")
 #: The --answers help. The commit and its way back are P1027's, slice 2.
 ANSWERS_HELP = ("a JSON object with the brief's answers in the person's words — goal, must, prefer, sellers, decided — merged "
                 "into project.json: what it states wins (a list replaces the list, so give the whole list; an empty list is a "
@@ -92,7 +92,7 @@ def main(argv=None):
             print(refused, file=sys.stderr)
             return EXIT_COULD_NOT_RUN
         did, note = write(project / "boards" / "active.json", {"schema": 1, "board": args.board}, args.force)
-        notes.append(note)
+        notes += [note] + board_differs(project)
         stop = footprint_emitter.footprint_stop(args.board, project)  # F12: said where a board is chosen, never refused
         notes += ["board %s: %s" % (args.board, stop)] if stop else []
 

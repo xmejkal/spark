@@ -272,6 +272,8 @@ CLOCK = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d")
 #: The time the breadboard sheet's changes heading and the line under it name (P875): the time of a sheet spark wrote at run time, to the minute.
 SHEET_TIME = re.compile(r"((?:Changes since the sheet spark wrote on|wired the sheet from) )\d{4}-\d\d-\d\d \d\d:\d\d")
 
+#: The page's freshness line (P1062): the newest change of the copied fixture's files, read as a day and a time.
+FRESH_TIME = re.compile(r"(files last changed, )\d{1,2} [A-Z][a-z]{2} \d{4}, \d\d:\d\d")
 
 #: The name of a board log, a moment of the run (sim/runs/board/<moment>.log), which CLOCK does not match (P383).
 BOARD_LOG = re.compile(r"\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d\.log")
@@ -286,10 +288,11 @@ QUOTED_PLACE = re.compile(r"'(<(?:project-dir|spark-home|repo|python)>[^'\s]*(?:
 
 def scrub(text, places):
     """`text` with each key of `places` replaced by its placeholder, longest first, the quotes around a placed path
-    dropped, reach's moment replaced by `<at>` and a grant's clock times by `<time>`."""
+    dropped, reach's moment replaced by `<at>`, and a grant's clock times and the page's freshness time by `<time>`."""
     pattern = re.compile("|".join(re.escape(place) for place in places))
     placed = QUOTED_PLACE.sub(r"\1", pattern.sub(lambda found: places[found.group(0)], text))
     timed = CLOCK.sub("<time>", MOMENT.sub('"at": "<at>"', placed))
+    timed = FRESH_TIME.sub(r"\1<time>", timed)
     return FACTS_SHA.sub(r"\1<facts-sha256>", BOARD_LOG.sub("<time>.log", SHEET_TIME.sub(r"\1<time>", timed)))
 
 

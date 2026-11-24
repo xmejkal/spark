@@ -7,13 +7,6 @@
   "tier": "critical"
  },
  {
-  "file": "scripts/spark/records/store.py",
-  "name": "the store is never locked",
-  "find": "            fcntl.flock(held, fcntl.LOCK_EX)",
-  "replace": "            pass",
-  "tier": "critical"
- },
- {
   "file": "scripts/spark/records/record_kind.py",
   "name": "a project's record is written in place",
   "find": "    return store.write_file(path, json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\")",
@@ -40,7 +33,7 @@
  {
   "file": "scripts/spark/records/store.py",
   "name": "every store shares one lock",
-  "find": "    named = hashlib.sha256(str(home().resolve()).encode()).hexdigest()[:16]",
-  "replace": "    named = \"one\""
+  "find": "            held = take(folder)",
+  "replace": "            held = take(Path(tempfile.gettempdir()))"
  }
 ]

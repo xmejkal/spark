@@ -44,6 +44,12 @@ already in rules.json. Without `--force` it leaves an existing rules.json alone,
 ${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id> --force
 ```
 
+When `requirements.json` names another board than `boards/active.json` after the run, init prints `requirements.json
+names <X>, so <X> stays the project's board: …` (D35, [P1024](https://github.com/xmejkal/spark/issues/1498)). Relay
+it to the person. Do not edit `active.json` to "fix" it. After `--board`, when `requirements.json` cannot be
+read (not valid JSON, no JSON object, a `board` that is no string, or a file it cannot open), init prints `the
+project's board is not known: …` instead, and still exits 0. Relay it, and fix `requirements.json`.
+
 **When the person answers the brief** (`/spark:idea` step S is the first time), run it with `--answers <file>`: a JSON
 object of the brief's fields (`goal`, `must`, `prefer`, `sellers`, `decided`) in the person's words, written with the Write
 tool in the system's temp folder, outside any repository, never on a command line. It merges them into `project.json`:

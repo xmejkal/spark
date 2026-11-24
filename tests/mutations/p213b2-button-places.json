@@ -14,8 +14,8 @@
  {
   "file": "scripts/spark/records/board_records.py",
   "name": "of_project ignores board name",
-  "find": "return cls.from_record(load(project, name)) if name else cls.EMPTY",
-  "replace": "return cls.from_record(load(project, None)) if name else cls.EMPTY"
+  "find": "            return cls.from_record(load(project))\n",
+  "replace": "            return cls.EMPTY\n"
  },
  {
   "file": "scripts/spark/records/board_records.py",

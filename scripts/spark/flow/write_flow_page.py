@@ -10,7 +10,7 @@ from pathlib import Path
 
 from spark.breadboard import sheet, tabbed_page
 from spark.breadboard.svg_diagram import SvgBreadboardDiagram
-from spark.flow import flow_codes
+from spark.flow import deploy_reading, flow_codes
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture
 from spark.flow.phase_readers import REQUIREMENTS_FILE
 from spark.flow.published_page import ARTIFACT_PATTERN, PublishedPageStore
@@ -116,15 +116,17 @@ def masked_page(page, privacy, svg_privacy):
     pictures = [Picture(masked(picture.title), svg_privacy.masked(picture.svg), masked(picture.why_missing)) for picture in page.pictures]
     wiring = PageWiring(*masked(tuple(page.wiring))) if page.wiring else None
     return FlowPage(masked(page.title), masked(page.phases), masked(page.stands_at), pictures, masked(page.notes), wiring,
-                    page.fingerprint, page.written, masked(page.guide))
+                    page.fingerprint, page.written, masked(page.guide), masked(page.deployed))
 
 
 def compose_page(reading, parts):
     """The FlowPage of `reading`, a FlowReading, and `parts`, its PageParts: the reading's title, its phases as dicts,
     where it stands, the pictures, the bench note, the wiring, the fingerprint, the newest change as `written` and the
-    guide. Pure: it reads no file, so every fact on the page is one that `flow.py show` prints (D22, P1060)."""
+    guide, and ON THE BOARD's sentence from `data.deploy` (P1062). Pure: it reads no file, so every fact on the page is one
+    that `flow.py show` prints (D22, P1060)."""
     return FlowPage(reading.title, [phase.to_dict() for phase in reading.phases], reading.stands_at,
-                    parts.pictures, (flow_codes.BENCH_NOTE,), parts.wiring, reading.fingerprint, reading.stamp["newest"], reading.guide)
+                    parts.pictures, (flow_codes.BENCH_NOTE,), parts.wiring, reading.fingerprint, reading.stamp["newest"], reading.guide,
+                    deploy_reading.deployed_line(reading.deploy))
 
 
 def write_page(project, readers=None, parts=None, renderer=None, store=None):

@@ -22,6 +22,10 @@ BUILD_RECORD_FILE = Path(".spark") / "build.json"
 SCHEMA = 1
 #: The record's key for the sha256 of each file spark wrote (P874), by its name in the project.
 WRITTEN_SHA256 = "written_sha256"
+#: The record's key for whether the last build wrote `dist/` (P816): false means a `dist/` there is an earlier build's.
+DIST_WRITTEN = "dist_written"
+#: What a reader of `dist/` says when the last build did not write it (P816): the build's time.
+EARLIER_DIST = "the last build, %s, did not write dist/: build again with check_spine.py --keep before you rely on this circuit"
 #: The files whose sha256 the record holds: spark replaces one only when it is still the bytes spark wrote. A footprint's `.tsx` is not here.
 OWN_FILES = ("board.tsx",)
 #: Where the previous version of a replaced file is kept, relative to the project.
@@ -51,7 +55,7 @@ def is_build_record(record):
 class BuildRecordStore:
     """
     Store: the record of a project's last build, `<project>/.spark/build.json`: `{"schema", "status", "stages": [{name,
-    status, and code when the stage did not end ok (P977)}], "missing_facts", "requirements", "requirements_sha256", "written_sha256", "at"}`. `write` adds the schema and the time, from
+    status, and code when the stage did not end ok (P977)}], "missing_facts", "requirements", "requirements_sha256", "written_sha256", "dist_written", "at"}`. `write` adds the schema and the time, from
     `clock` (SystemClock), through `writer` (TextFileWriter); a test gives a fake of each. `read` raises store.StoreError
     for a file that is no JSON or is no build record (`is_build_record`), and OSError for one it cannot open.
     """
@@ -85,6 +89,18 @@ class BuildRecordStore:
         """Write `record` with the schema first and the time last. Returns the path. OSError when it cannot be written."""
         self.writer.write(self.path, json.dumps(dict({"schema": SCHEMA}, **record, at=stamp(self.clock.now())), indent=1) + "\n")
         return self.path
+
+
+def earlier_dist(project):
+    """The sentence that names `project`'s `dist/` as one the last build did not write (P816), or None: no record, one it
+    cannot read, one without the key (it says nothing), a build that wrote `dist/`, or no `dist/`."""
+    try:
+        record = BuildRecordStore(project).read() or {}
+    except (OSError, store.StoreError):
+        return None
+    if record.get(DIST_WRITTEN) is False and (Path(project) / "dist").is_dir():
+        return EARLIER_DIST % record.get("at")
+    return None
 
 
 class StageTakenError(FileExistsError):
