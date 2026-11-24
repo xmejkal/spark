@@ -3,6 +3,7 @@ rule names a file directly in `firmware/` whose lower-case name matches `*secret
 with `ast` and never imports it, takes values only (A3), and never raises (A2): a file it cannot read or parse is named,
 and nothing of its text reaches the result."""
 
+import os
 import sys
 import tempfile
 import unittest
@@ -111,6 +112,14 @@ class TheReadTest(unittest.TestCase):
                 self.assertEqual(reading.unreadable, (name,))
                 self.assertNotIn(HALF_TYPED, repr(reading))
                 self.assertNotIn(NUL_VALUE, repr(reading))
+
+    def test_a_firmware_folder_that_cannot_be_listed_is_named(self):
+        project = project_with({"firmware/secrets.py": 'TOKEN = "%s"\n' % TOKEN})
+        (project / "firmware").chmod(0)
+        self.addCleanup((project / "firmware").chmod, 0o755)
+        if os.access(project / "firmware", os.R_OK):
+            self.skipTest("this user reads a folder of mode 000, as root does")
+        self.assertEqual(ProjectSecrets.read(project), ((), ("firmware",)))
 
     def test_the_parse_gives_no_warning_that_could_show_a_line(self):
         project = project_with({"firmware/secrets.py": 'TOKEN = "abc\\d-%s"\n' % TOKEN})
