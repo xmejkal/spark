@@ -72,8 +72,8 @@ SAMPLE = ROOT / "tests" / "data" / "flow-page"
 
 def without_script(text):
     """`text` without the script block and the script's hooks (data-makes-stale on a sendable offer, data-key with it on the
-    NOW line): the page as it was before the script."""
-    text = re.sub(r'<p data-key="[^"]*" data-makes-stale="[^"]*">', "<p>", SCRIPT_BLOCK.sub("", text, count=1))
+    NOW box's NEXT line, P1062): the page as it was before the script."""
+    text = re.sub(r'<p class="next" data-key="[^"]*" data-makes-stale="[^"]*">', '<p class="next">', SCRIPT_BLOCK.sub("", text, count=1))
     return re.sub(r' data-makes-stale="[^"]*"', "", text)
 
 
@@ -178,20 +178,21 @@ class Parsed(html.parser.HTMLParser):
 class FlowOfNPhasesTest(unittest.TestCase):
     """The page has one entry and one section for each phase the flow gives it, in the flow's order, and no other."""
 
-    def test_a_flow_of_ten_phases_gives_ten_rail_entries_and_ten_sections_in_order(self):
+    def test_a_flow_of_ten_phases_gives_ten_sections_in_order_in_the_developer_fold(self):
         names = NINE + ["bench-test"]
-        parsed = Parsed(page_of(*[a_phase(name) for name in names]))
-        self.assertEqual([attrs["data-phase"] for attrs, _ in parsed.rail], names)
-        self.assertEqual([attrs["data-phase"] for attrs, _ in parsed.sections], names)
+        text = page_of(*[a_phase(name) for name in names])
+        self.assertEqual([attrs["data-phase"] for attrs, _ in Parsed(text).sections], names)
+        self.assertEqual([attrs["data-phase"] for attrs, _ in Parsed(developer(text)).sections], names)
 
     def test_a_flow_of_one_phase_gives_one(self):
         parsed = Parsed(page_of(a_phase("only")))
-        self.assertEqual(([attrs["data-phase"] for attrs, _ in parsed.rail], len(parsed.sections)), (["only"], 1))
+        self.assertEqual(([attrs["data-phase"] for attrs, _ in parsed.sections], len(parsed.sections)), (["only"], 1))
 
     def test_the_page_holds_no_phase_name_the_flow_did_not_give(self):
+        # P1062: as a word, so the freshness line's "deployed" is no phase name
         text = without_script(page_of(a_phase("alpha"), a_phase("beta"))).lower()
         for name in NINE:
-            self.assertNotIn(name, text)
+            self.assertIsNone(re.search(r"\b%s\b" % name, text), name)
 
     def test_show_and_page_read_the_same_phases(self):
         phases = readers_of(a_phase("one", "stale"), a_phase("two", None))
@@ -211,13 +212,11 @@ class TheMarkTest(unittest.TestCase):
         for status in self.NOT_OK:
             with self.subTest(status=status):
                 parsed = Parsed(page_of(a_phase("liar", status, mark=TICK)))
-                self.assertNotIn(TICK, parsed.rail[0][1])
                 self.assertNotIn(TICK, parsed.sections[0][1])
-                self.assertIn(MARKS[COULD_NOT_RUN][1], parsed.rail[0][1])
+                self.assertIn(MARKS[COULD_NOT_RUN][1], parsed.sections[0][1])
 
     def test_ok_shows_the_tick(self):
         parsed = Parsed(page_of(a_phase("fine", OK)))
-        self.assertIn(TICK, parsed.rail[0][1])
         self.assertIn(TICK, parsed.sections[0][1])
 
     def test_the_word_of_each_status(self):
@@ -232,8 +231,7 @@ class TheMarkTest(unittest.TestCase):
         for status in MARKS.keys() | {UNKNOWN_CODE}:
             with self.subTest(status=status):
                 parsed = Parsed(page_of(a_phase("one", status)))
-                for _attrs, said in (parsed.rail[0], parsed.sections[0]):
-                    self.assertIn(word_of(status), said)
+                self.assertIn(word_of(status), parsed.sections[0][1])
         self.assertEqual(shown_phase(a_phase("one", None).to_dict()).word, NOT_CHECKED)
 
     def test_every_mark_is_hidden_from_a_screen_reader(self):
@@ -271,20 +269,24 @@ class TheDocumentTest(unittest.TestCase):
     def test_the_page_says_its_language(self):
         self.assertIn('<html lang="en">', self.text)
 
-    def test_the_rail_is_a_named_nav(self):
-        self.assertTrue(self.parsed.nav.get("aria-label"))
+    def test_there_is_no_rail_and_the_phases_stand_in_the_closed_developer_fold(self):
+        # P1062: the rail is gone; the developer fold's phase sections, each one closed line with its mark, are the same list
+        self.assertIsNone(self.parsed.nav)
+        self.assertNotIn(" open", fold(self.text, "developer"))
+        self.assertEqual(len(Parsed(developer(self.text)).sections), 7)
 
-    def test_every_rail_link_points_to_an_id_that_exists(self):
-        links = [href for href in self.parsed.hrefs if href.startswith("#")]
-        self.assertEqual(len(links), 7)
+    def test_every_link_points_to_an_id_that_exists(self):
+        text = order_page(guide=a_guide(now=dict(a_guide()["now"], steps=3)))
+        parsed = Parsed(text)
+        links = [href for href in parsed.hrefs if href.startswith("#")]
+        self.assertGreater(len(links), 7)
         for href in links:
-            self.assertIn(href[1:], self.parsed.ids)
+            self.assertIn(href[1:], parsed.ids)
 
     def test_each_section_s_data_status_is_the_flow_s_status(self):
+        self.assertEqual(len(self.parsed.sections), 7)
         for (attrs, _said), status in zip(self.parsed.sections, MARKS):
             self.assertEqual(attrs["data-status"], "none" if status is None else status)
-        for (rail, _), (section, _) in zip(self.parsed.rail, self.parsed.sections):
-            self.assertEqual(rail["data-status"], section["data-status"])
 
     def test_the_page_runs_nothing_and_loads_nothing(self):
         for text in (self.text, page_of(a_phase("one"), pictures=[Picture("Breadboard", "<svg/>", None)])):
@@ -294,7 +296,7 @@ class TheDocumentTest(unittest.TestCase):
         text = page_of(a_phase("one", says=["<b>bold</b> & more"], offers=[Offer("a<b", "<i>x</i>", "<i>y</i>", (), build_step("project"))]), project="<p>")
         self.assertNotIn("<b>", text)
         self.assertNotIn("<i>", text)
-        self.assertIn('data-key="a&lt;b"', text)
+        self.assertIn("<code>a&lt;b</code>", text)
         self.assertIn("&lt;b&gt;bold&lt;/b&gt; &amp; more", text)
         self.assertIn("a&lt;b", text)
 
@@ -303,24 +305,24 @@ class TheDocumentTest(unittest.TestCase):
         self.assertEqual(page_of(*phases), page_of(*phases))
 
     def test_an_offer_shows_its_label_and_effect_and_keeps_its_key_in_data_key(self):
+        # P1062: the sendable row stands once, in the parts fold; the developer fold shows its key as text, with no hook
         text = page_of(a_phase("one", offers=[Offer("build", "Build the board", "Builds the board.", (), build_step("project"))]))
-        self.assertIn('<li data-key="build" data-makes-stale="">Build the board: Builds the board.</li>', text)
-        self.assertNotIn(">build<", text)
-        self.assertNotIn("<code>", text)
+        self.assertEqual(text.count('<li data-key="build" data-makes-stale="">Build the board: Builds the board.</li>'), 1)
+        self.assertLess(text.index('<li data-key="build"'), text.index(fold(text, "developer")))
+        self.assertIn("<li><code>build</code> Build the board: Builds the board.</li>", developer(text))
+        self.assertEqual(without_script(text).count(">build<"), 1)
         self.assertNotIn("<button", text)
 
-    def test_the_pictures_stand_together_after_the_phases_and_before_the_legend_with_a_link_in_the_rail(self):
+    def test_the_pictures_stand_together_in_their_fold_before_the_developer_fold_s_phases_and_legend(self):
+        # P1062: the pictures fold comes before the developer fold, which holds the phases and the legend
         pictures = [Picture("Breadboard", "<svg/>", None), Picture("Schematic", None, "Not drawn, because no tsci.")]
         text = page_of(a_phase("one"), pictures=pictures)
         self.assertEqual(text.count('<section id="pictures">'), 1)
-        order = [text.index(mark) for mark in ('id="phase-one"', '<section id="pictures">', "<h3>Breadboard</h3>", "<h3>Schematic</h3>",
-                                                '<section class="legend">')]
+        order = [text.index(mark) for mark in (fold(text, "pictures"), '<section id="pictures">', "<h3>Breadboard</h3>",
+                                                "<h3>Schematic</h3>", fold(text, "developer"), 'id="phase-one"', '<section class="legend">')]
         self.assertEqual(order, sorted(order))
         self.assertIn("Not drawn, because no tsci.", text)
-        parsed = Parsed(text)
-        self.assertIn("#pictures", parsed.hrefs)
-        self.assertEqual(len(parsed.rail), 1)
-        self.assertLess(text.index('</ol><a href="#pictures">Pictures</a></nav>'), text.index('id="phase-one"'))
+        self.assertIn('data-fold="pictures"><summary><h2>Pictures</h2></summary>', text)
 
     def test_a_page_with_no_pictures_has_no_pictures_section_and_no_link(self):
         text = page_of(a_phase("one"))
@@ -569,13 +571,16 @@ class TheCommandTest(unittest.TestCase):
         parsed = Parsed((project / "page.html").read_text(encoding="utf-8"))
         phases = shown["data"]["phases"]
         self.assertEqual([attrs["data-phase"] for attrs, _ in parsed.sections], [phase["phase"] for phase in phases])
-        self.assertEqual([attrs["data-phase"] for attrs, _ in parsed.rail], [phase["phase"] for phase in phases])
+        text = (project / "page.html").read_text(encoding="utf-8")
+        self.assertEqual([attrs["data-phase"] for attrs, _ in Parsed(developer(text)).sections], [phase["phase"] for phase in phases])
         for phase, (attrs, said) in zip(phases, parsed.sections):
             self.assertEqual(attrs["data-status"], "none" if phase["status"] is None else phase["status"])
             self.assertEqual(TICK in said, phase["status"] == OK, phase["phase"])
         ok = [phase for phase in phases if phase["status"] == OK]
-        self.assertEqual(sum(TICK in said for _attrs, said in parsed.rail), len(ok))
         self.assertEqual(sum(TICK in said for _attrs, said in parsed.sections), len(ok))
+        outside = re.sub(r'<section class="legend">.*?</section>', "", without_script(text))
+        parts_ok = [phase for phase in ok if phase["phase"] == "parts"]  # the parts fold's summary shows the parts phase's mark
+        self.assertEqual(outside.count(TICK), len(ok) + len(parts_ok))
 
     def test_a_build_record_that_is_ok_with_every_stage_skipped_gets_a_tick_only_where_the_flow_says_ok(self):
         project = a_built_project(OK, SKIPPED)
@@ -742,23 +747,21 @@ class TheWiringTest(unittest.TestCase):
         self.assertNotIn("<li>", steps)
         self.assertNotIn("Before you power it", steps)
 
-    def test_a_page_with_a_sheet_opens_on_the_wiring_then_the_pictures_then_the_phases_with_a_link_in_the_rail(self):
-        # P828 step 2 (the PO, 2026-11-21: "it just doesn't guide a person"): the person at the bench finds step 1 first.
+    def test_a_page_with_a_sheet_shows_the_wiring_then_the_pictures_then_the_bench_note_then_the_phases(self):
+        # P828 step 2, P1062: the wiring and its pictures come before the phases, which stand in the developer fold, last
         text = page_of_wiring(PageWiring(THREE, [], [], None), THREE_PICTURES)
-        order = [text.index(mark) for mark in ('<section id="wiring">', '<section id="pictures">', '<section class="legend">',
-                                                'id="phase-one"', '<section class="notes">')]
+        order = [text.index(mark) for mark in ('<section id="wiring">', '<section id="pictures">', '<section class="notes">',
+                                                'id="phase-one"', '<section class="legend">')]
         self.assertEqual(order, sorted(order))
-        self.assertIn(WIRING_FIRST, text)
-        # The rail follows the page: the wiring and its pictures first, then the phases.
-        self.assertIn('<nav aria-label="Phases"><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a><ol>', text)
-        self.assertEqual(len(Parsed(text).rail), 1)
+        self.assertNotIn("<nav", text)
 
     def test_the_section_holds_its_heading_the_fixed_sentence_the_lines_the_link_and_the_steps_in_that_order(self):
         text = page_of_wiring(PageWiring(THREE, [an_item()], ["rec"], None), THREE_PICTURES)
-        marks = ["<h2>Wiring</h2>", "<p>Read the lines before power first. In the Breadboard picture below, each jumper "
+        # P1062: the heading is the fold's summary, and the records line stands in the developer fold, after the steps
+        marks = ["<h2>Wiring: 3 steps</h2>", "<p>Read the lines before power first. In the Breadboard picture below, each jumper "
                  "carries a pill with its step&#x27;s number and the two pads it joins: find the holes there.</p>",
                  "<h3>Before you power it</h3>", "<ul>", "</ul>",
-                 "Each record whole", "One at a time: start at step 1", '<ol id="steps">']
+                 "One at a time: start at step 1", '<ol id="steps">', fold(text, "developer"), "Each record whole"]
         order = [text.index(mark) for mark in marks]
         self.assertEqual(order, sorted(order))
 
@@ -891,10 +894,11 @@ class TheWiringWordsTest(unittest.TestCase):
 
     def test_no_fixed_word_of_the_wiring_says_wired_done_or_flashed(self):
         text = page_of_wiring(PageWiring(THREE, self.ITEMS, ["rec"], None), THREE_PICTURES)
-        rail = text.split("</ol>")[1].split("</nav>")[0]
+        # P1062: the rail is gone; the wiring fold's summary is its one other fixed line
+        summary = text.split(fold(text, "wiring"))[1].split("</summary>")[0]
         for word in ("wired", "done", "flashed"):
             self.assertNotIn(word, wiring_section(text).lower())
-            self.assertNotIn(word, rail.lower())
+            self.assertNotIn(word, summary.lower())
 
     def test_the_page_still_runs_nothing_and_loads_nothing_with_wiring_and_three_pictures(self):
         assert_spark_s_script_only(self, page_of_wiring(PageWiring(THREE, self.ITEMS, ["rec"], None), THREE_PICTURES))
@@ -1308,32 +1312,29 @@ class TheKeepStepTest(unittest.TestCase):
 class TheGuidingOrderTest(unittest.TestCase):
     """P828 step 2: the line under the title, the order with no sheet, the folded phases and the grouped lines before power."""
 
-    def test_a_page_with_no_sheet_keeps_the_phases_first_and_says_no_wiring_comes_first(self):
+    def test_with_no_wiring_steps_the_phases_stay_folded_and_no_wiring_line_is_said(self):
+        # P1062: with or without a sheet the phases stand closed in the developer fold, and the intro says no order
         for wiring in (PageWiring([], [], [], "no sheet yet"), None):
             text = page_of_wiring(wiring, THREE_PICTURES)
-            order = [text.index(mark) for mark in ('id="phase-one"', '<section id="pictures">')]
-            self.assertEqual(order, sorted(order), wiring)
-            self.assertNotIn(WIRING_FIRST, text)
+            self.assertNotIn("<details open><summary><h2>", developer(text))
+            self.assertLess(text.index('<section id="pictures">'), text.index('id="phase-one"'))
+            self.assertIn('<p class="intro">%s</p>' % html.escape(PAGE_INTRO), text)
 
-    def test_with_no_wiring_steps_every_phase_stands_open_and_the_rail_keeps_its_links_last(self):
-        text = page_of_wiring(None, THREE_PICTURES)
-        self.assertIn("<details open><summary><h2>", text)
-        self.assertNotIn("<details><summary>", text)
-        self.assertIn('</ol><a href="#pictures">Pictures</a></nav>', text)
-
-    def test_a_rail_link_targets_the_text_inside_the_fold_so_the_browser_opens_it(self):
+    def test_a_link_to_the_wiring_or_the_pictures_targets_the_text_inside_its_fold_so_the_browser_opens_it(self):
         # A fragment inside a closed <details> (not its summary) opens it, with no script (HTML's ancestor revealing).
         text = page_of_wiring(PageWiring(THREE, [], [], None), THREE_PICTURES)
-        section = text.split('<section class="phase"')[1].split("</section>")[0]
-        self.assertIn('<a href="#phase-one">', text)
-        self.assertLess(section.index("</summary>"), section.index('<div id="phase-one">'))
-        self.assertLess(section.index('<div id="phase-one">'), section.index("Done by:"))
-        self.assertEqual(text.count('id="phase-one"'), 1)
+        for name in ("wiring", "pictures"):
+            inside = text.split(fold(text, name))[1]
+            self.assertLess(inside.index("</summary>"), inside.index('<section id="%s">' % name))
+            self.assertLess(inside.index('<section id="%s">' % name), inside.index("</details>"))
+        self.assertIn('<a href="#wiring">', text)
+        self.assertIn('<a href="#pictures">', text)
 
-    def test_the_intro_stands_under_the_title_and_above_the_rail(self):
+    def test_the_intro_stands_under_the_freshness_line_and_above_the_folds(self):
         text = page_of_wiring(None, THREE_PICTURES)
-        self.assertLess(text.index("</h1>"), text.index(PAGE_INTRO))
-        self.assertLess(text.index(PAGE_INTRO), text.index('<nav aria-label="Phases">'))
+        self.assertLess(text.index("</h1>"), text.index('class="fresh"'))
+        self.assertLess(text.index('class="fresh"'), text.index(PAGE_INTRO))
+        self.assertLess(text.index(PAGE_INTRO), text.index(fold(text, "pictures")))
 
     def test_every_phase_is_folded_closed_under_a_summary_that_holds_its_heading(self):
         text = page_of_wiring(PageWiring(THREE, [], [], None), THREE_PICTURES)
@@ -1379,31 +1380,32 @@ def guide_page(guide, wiring=None, phases=("one",)):
 def guide_lines(text):
     """(the labelled lines of the page's guide section as (label, the rest of the line), the section's markup)."""
     section = text.split('<section id="guide">')[1].split("</section>")[0]
-    return re.findall(r"<p><strong>([^<]*)</strong> (.*?)</p>", section), section
+    return re.findall(r"<p[^>]*><strong>([^<]*)</strong> ?(.*?)</p>", section), section
 
 
 class TheGuideSectionTest(unittest.TestCase):
     """P977 PR 2: the page draws data.guide under the intro and above the rail."""
 
-    def test_the_guide_stands_between_the_intro_and_the_rail_with_the_hook_id(self):
+    def test_the_guide_stands_between_the_intro_and_the_folds_with_the_hook_id(self):
         text = guide_page(a_guide())
         self.assertEqual(text.count('<section id="guide">'), 1)
-        order = [text.index(mark) for mark in ('class="intro"', '<section id="guide">', '<nav aria-label="Phases">')]
+        order = [text.index(mark) for mark in ('class="intro"', '<section id="guide">', '<section class="notes">', fold(text, "developer"))]
         self.assertEqual(order, sorted(order))
 
     def test_each_line_shows_its_items_in_order_and_an_empty_list_shows_no_line(self):
+        # P1062: the NOW box (who acts, then NEXT), then the muted lines
         lines, _section = guide_lines(guide_page(a_guide()))
-        self.assertEqual(lines, [("NOW (build)", "Ask Claude to build the board."), ("DONE", "idea, needs"), ("LATER", "firmware, deploy"),
-                                 ("SET ASIDE", "stick")])
+        self.assertEqual(lines, [("NOW (build), by claude", ""), ("NEXT", "Ask Claude to build the board."), ("DONE", "idea, needs"),
+                                 ("LATER", "firmware, deploy"), ("SET ASIDE", "stick")])
         lines, _section = guide_lines(guide_page(a_guide(done=[], set_aside=[])))
-        self.assertEqual([label for label, _rest in lines], ["NOW (build)", "LATER"])
+        self.assertEqual([label for label, _rest in lines], ["NOW (build), by claude", "NEXT", "LATER"])
         lines, _section = guide_lines(guide_page(a_guide(later=[])))
-        self.assertEqual([label for label, _rest in lines], ["NOW (build)", "DONE", "SET ASIDE"])
+        self.assertEqual([label for label, _rest in lines], ["NOW (build), by claude", "NEXT", "DONE", "SET ASIDE"])
 
     def test_no_simulation_is_its_own_line_under_later(self):
         text = guide_page(a_guide(no_simulation="No simulation: Wokwi has no model of this board."))
         _lines, section = guide_lines(text)
-        self.assertIn("<p>No simulation: Wokwi has no model of this board.</p>", section)
+        self.assertIn('<p class="muted">No simulation: Wokwi has no model of this board.</p>', section)
         self.assertLess(section.index("firmware, deploy"), section.index("No simulation: Wokwi"))
         self.assertLess(section.index("No simulation: Wokwi"), section.index("SET ASIDE"))
         self.assertNotIn("No simulation", guide_page(a_guide()))
@@ -1411,13 +1413,14 @@ class TheGuideSectionTest(unittest.TestCase):
     def test_a_null_now_draws_no_now_line(self):
         lines, _section = guide_lines(guide_page(a_guide(now=None)))
         self.assertEqual([label for label, _rest in lines], ["DONE", "LATER", "SET ASIDE"])
-        self.assertNotIn("NOW", guide_page(a_guide(now=None)))
+        self.assertNotIn("NOW", without_script(guide_page(a_guide(now=None))))
+        self.assertNotIn('<div class="now">', guide_page(a_guide(now=None)))
 
     def test_the_step_link_shows_with_steps_in_now_and_wiring_steps_on_the_page(self):
         now = dict(a_guide()["now"], steps=3)
         wiring = PageWiring([(1, "Put the board in."), (2, "Run a jumper."), (3, "Run another.")], [], [], None)
         lines, section = guide_lines(guide_page(a_guide(now=now), wiring))
-        self.assertEqual(lines[0], ("NOW (build)", 'Ask Claude to build the board. <a href="#step-1">One at a time: start at step 1</a>'))
+        self.assertEqual(lines[1], ("NEXT", 'Ask Claude to build the board. <a href="#step-1">One at a time: start at step 1</a>'))
 
     def test_the_step_link_goes_to_the_first_step_s_own_number(self):
         now = dict(a_guide()["now"], steps=2)
@@ -1506,9 +1509,11 @@ class TheDeployedPageTest(unittest.TestCase):
     def test_a_partial_deploy_has_no_tick(self):
         from test_flow import FILES_UNREAD_SENTENCE
         text = self.page("ready unknown", FILES_UNREAD_SENTENCE)
-        rail = re.search(r'<li data-phase="deploy" data-status="partial">.*?</li>', text).group(0)
         section = re.search(r'<section class="phase" data-phase="deploy" data-status="partial">.*?</section>', text, re.S).group(0)
-        for shown in (rail, section):
+        box = text.split('<div class="now">')[1].split("</div>")[0]
+        self.assertIn('<p class="board"><strong>ON THE BOARD</strong> Last deploy ', box)  # P1062
+        self.assertNotIn(TICK, box)
+        for shown in (section,):
             self.assertNotIn(TICK, shown)
             self.assertIn("◐", shown)
         self.assertNotIn(self.NOTHING_WAITS, text)
@@ -1546,8 +1551,8 @@ def fold(text, name):
 
 
 def developer(text):
-    """The developer fold, from its tag to the end of the page's body."""
-    return text[text.index(fold(text, "developer")):text.index("</body>")]
+    """The developer fold, from its tag to the script block."""
+    return text[text.index(fold(text, "developer")):text.index("<script")]
 
 
 class TheSliceOneOrderTest(unittest.TestCase):
@@ -1616,7 +1621,7 @@ class TheSliceOneOrderTest(unittest.TestCase):
             with self.subTest(status=status):
                 parts = dict(a_need_phase(status=status), mark=TICK)
                 text = without_script(order_page(phases=[parts]))
-                self.assertNotIn(TICK, text.replace(Parsed(text).legend, ""))
+                self.assertNotIn(TICK, re.sub(r'<section class="legend">.*?</section>', "", text))  # the legend names every mark
                 self.assertIn(MARKS[COULD_NOT_RUN][1], fold(text, "parts") + text.split(fold(text, "parts"))[1].split("</summary>")[0])
         board = order_page(deployed="Last deploy 23 Nov 2026, 14:09. Written by the flasher.")
         line = re.search(r'<p class="board">.*?</p>', board).group(0)
@@ -1693,6 +1698,7 @@ class ThePageScriptTest(unittest.TestCase):
     """P829 PR 3: the page holds one inert words block and one script; without them it is the page before the script."""
 
     def setUp(self):
+        in_prague(self)  # P1062: the freshness line reads the time in the machine's zone
         self.text = FlowHtmlPage().text(sample_page())
 
     def test_the_page_without_its_script_is_the_page_before_the_script_byte_for_byte(self):
@@ -1704,7 +1710,8 @@ class ThePageScriptTest(unittest.TestCase):
         self.assertIn('<li data-key="pick:light:led-red-5mm" data-makes-stale="requirements">', self.text)
         self.assertIn('<li data-key="requirements" data-makes-stale="build breadboard">', self.text)
         self.assertIn('<li data-key="build" data-makes-stale="">', self.text)
-        self.assertIn('<li data-key="needs-drop:light">Drop the light need: ', self.text)
+        self.assertIn('<li><code>needs-drop:light</code> Drop the light need: ', self.text)  # P1062: in the developer fold, no hook
+        self.assertNotIn('data-key="needs-drop', self.text)
 
     def test_the_words_block_holds_each_sendable_offer_s_confirm_and_no_drop(self):
         words = words_of(self.text)
@@ -1717,7 +1724,7 @@ class ThePageScriptTest(unittest.TestCase):
 
     def test_the_words_block_holds_the_plan_s_words_and_never_done_alone(self):
         words = words_of(self.text)
-        self.assertEqual(words, page_words(sample_page().phases, wiring_first=True))
+        self.assertEqual(words, page_words(sample_page().phases))
         self.assertEqual(page_words([])["intro"], "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.")
         # P993: where the script adds the NOW button, it puts the step and "Use the button." in place of the sentence
         # that names Claude; the page from disk and `flow.py show` keep that sentence
@@ -1733,8 +1740,12 @@ class ThePageScriptTest(unittest.TestCase):
             "pick": "Saved as the pick. Nothing is built yet. Reload to see the new state.",
             "requirements": "The parts list is written. Nothing is built yet. Reload to see the new state.",
             "build": "The board builds. It is not wired, not flashed and not simulated yet. Reload to see the new state."})
+        # P1062: no wiring sentence in the intro, and the last request's line with its month words
         self.assertEqual(words["intro"], "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next "
-                                         "/spark:page. Below: the wiring and its pictures, then each phase, folded: click one to read it.")
+                                         "/spark:page.")
+        self.assertEqual((words["last_request"], words["months"][0], words["months"][10], len(words["months"])),
+                         ("Your last request, %s: %s.", "Jan", "Nov", 12))
+        self.assertNotIn("page_from", words)
         self.assertEqual((words["not_sent"], words["not_withdrawn"]), ("Could not send. Nothing ran.", "Could not withdraw. The request still waits."))
         self.assertEqual(words["refused"], {
             "the project changed after the page was read, so nothing ran":
@@ -1746,10 +1757,10 @@ class ThePageScriptTest(unittest.TestCase):
             "the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or "
             "could not be deleted, so nothing ran": "Nothing ran. The request could not be read. Reload the page and click again."})
         self.assertEqual(words["marks"], {"ok": "✓", "problems": "✗", "could-not-run": "?", "not-run": "–"})
-        said = [words[name] for name in ("send", "cancel", "copy", "withdraw", "withdrawn", "waiting_for", "page_from", "ran",
+        said = [words[name] for name in ("send", "cancel", "copy", "withdraw", "withdrawn", "waiting_for", "last_request", "ran",
                                          "problems", "could_not_run")] + list(words["ok"].values()) + list(words["refused"].values())
         self.assertEqual(said[:7], ["Send", "Cancel", "Copy", "Withdraw", "Withdrawn. If Claude had already started it, its answer shows here.",
-                                    "Waiting for Claude: %s.", "Page from %s."])
+                                    "Waiting for Claude: %s.", "Your last request, %s: %s."])
         for line in said:
             self.assertNotEqual(line.strip(". ").lower(), "done")
         self.assertNotIn("0123456789ab", json.dumps(words))
@@ -1758,8 +1769,9 @@ class ThePageScriptTest(unittest.TestCase):
         page = sample_page()
         # P1030: the page reads the guide's one now offer
         self.text = FlowHtmlPage().text(page._replace(guide=dict(page.guide, now=dict(page.guide["now"], offer="pick:light:led-red-5mm"))))
-        self.assertIn('<p data-key="pick:light:led-red-5mm" data-makes-stale="requirements"><strong>NOW (parts)</strong> ', self.text)
-        self.assertEqual(self.text.count('data-key="pick:light:led-red-5mm"'), 2)
+        # P1062 (E17): the button stands on the NOW box's NEXT line only, so the key stands once
+        self.assertIn('<p class="next" data-key="pick:light:led-red-5mm" data-makes-stale="requirements"><strong>NEXT</strong> ', self.text)
+        self.assertEqual(self.text.count('data-key="pick:light:led-red-5mm"'), 1)
 
     def test_the_now_line_carries_no_key_with_two_sendable_offers_or_none(self):
         page = sample_page()
@@ -1768,7 +1780,7 @@ class ThePageScriptTest(unittest.TestCase):
         for phases in (two, [phase for phase in page.phases if phase["phase"] != "parts"]):
             with self.subTest(len(phases)):
                 text = FlowHtmlPage().text(page._replace(phases=phases))
-                self.assertIn("<p><strong>NOW (parts)</strong> ", text)
+                self.assertIn('<p class="next"><strong>NEXT</strong> ', text)
 
     def test_a_label_with_markup_cannot_close_the_words_block(self):
         phase = a_phase("build", offers=[Offer("build", "</script><script>alert(1)</script>", "x", (), build_step("project"))])

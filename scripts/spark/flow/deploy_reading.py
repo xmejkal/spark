@@ -14,6 +14,7 @@ from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import flow_codes
 from spark.core.errors import CodedMessageError
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
+from spark.core.zone_time import day_and_time
 
 # --- MVP ---
 #: How many hex digits of the image's sha256 a says line shows. `data.deploy.image` holds them all.
@@ -89,14 +90,32 @@ def cause_words(logged):
     return flow_codes.CAUSE_MESSAGE % words[0] if words else flow_codes.NO_CAUSE_MESSAGE
 
 
+def deploy_parts(logged, fact):
+    """(a stale fact's opener or None, the verdict's words, [the cause's sentence] or [] for ready seen): the one rule that
+    `deployed_says` and `deployed_line` (P1062) each say in their own template."""
+    cause = [cause_words(logged)] if logged.verdict != ready_probe.SEEN else []
+    return flow_codes.STALE_DEPLOY_SAYS.get(fact), verdict_words(logged), cause
+
+
 def deployed_says(count, logged, fact):
     """The deploy phase's says after a deploy, one line: a stale fact's opener, then the time, the image, the verdict's
     words, the cause and last how many logs there are, each sentence after the one before."""
-    line = [flow_codes.DEPLOYED_MESSAGE % (logged.at, logged.image[:SHORT_IMAGE], verdict_words(logged))]
-    line += [cause_words(logged)] if logged.verdict != ready_probe.SEEN else []
+    opener, words, cause = deploy_parts(logged, fact)
+    line = [flow_codes.DEPLOYED_MESSAGE % (logged.at, logged.image[:SHORT_IMAGE], words)] + cause
     line += [flow_codes.DEPLOYS_LOGGED[count != 1] % count]
-    opener = flow_codes.STALE_DEPLOY_SAYS.get(fact)
     return [" ".join(([opener] if opener else []) + line)]
+
+
+def deployed_line(deploy):
+    """ON THE BOARD's sentence on the page (P1062), from `data.deploy` (`deploy_data`), or None for None: a stale fact's
+    opener, the time read in the machine's zone, the verdict's words and the cause unless ready was seen, by the rule of
+    `deploy_parts`. It holds no image digits and no count: the deploy phase's own line says those."""
+    if deploy is None:
+        return None
+    logged = board_log.LoggedDeploy(deploy["at"], deploy["image"], deploy["verdict"], deploy["cause"])
+    opener, words, cause = deploy_parts(logged, deploy["fact"])
+    line = [flow_codes.DEPLOYED_LINE % (day_and_time(deploy["at"]), words[:1].upper() + words[1:])] + cause
+    return " ".join(([opener] if opener else []) + line)
 
 
 def deploy_now(state):

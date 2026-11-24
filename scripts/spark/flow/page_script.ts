@@ -2,9 +2,10 @@
  * The page's one script (P829 PR 3, #1187). From disk it does nothing: the page stays as it is. In a published page with
  * the Artifact database, for the artifact's owner only, it says how the page is used in the intro, adds a button to each
  * offer the page may send (a pick, the parts list, the build), asks the person to confirm with the offer's own words, and
- * writes one request row {id, key, seen, at}. One request waits at a time, with Copy and Withdraw; the answer row that
- * /spark:page writes shows under the intro. Python writes every word in the inert block "spark-words"; this script fills
- * in only a time, an offer's label or spark's own line. It never shows the key or the fingerprint, and never "done"
+ * writes one request row {id, key, seen, at}. One request waits at a time, with Copy and Withdraw; the panel stands last
+ * in the guide, under the NOW box (P1062), and says the last request with its date, in the browser's zone, and its label,
+ * then the answer row that /spark:page writes. Python writes every word in the inert block "spark-words"; this script
+ * fills in only a time, an offer's label or spark's own line. It never shows the key or the fingerprint, and never "done"
  * alone. Rows from the database are data: set as text only.
  */
 "use strict";
@@ -37,7 +38,8 @@ interface Words {
   not_sent: string;
   not_withdrawn: string;
   waiting_for: string;
-  page_from: string;
+  last_request: string;
+  months: string[];
   ran: string;
   note: string;
   problems: string;
@@ -89,6 +91,13 @@ function clock(moment: string): string {
   return String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0");
 }
 
+/** A moment as "22 Nov 2026, 11:36" in the browser's zone, the month from Python's `months`, or "?" when it is no time. */
+function dayAndTime(moment: string, months: string[]): string {
+  const date = new Date(moment);
+  if (Number.isNaN(date.getTime())) return "?";
+  return date.getDate() + " " + months[date.getMonth()] + " " + date.getFullYear() + ", " + clock(moment);
+}
+
 /** The kind of an offer's key: the word before its first colon. */
 function kindOf(key: string): string {
   return String(key).split(":")[0];
@@ -101,9 +110,10 @@ function sentence(line: unknown): string {
 
 /**
  * What the page says of the latest request and its answer: {mark, text, grey}, or null when there is no request. Pure.
- * A request that waits, one withdrawn with no answer yet, an ok by its kind with its note (P1008), problems, could not run, and a refusal in
- * grey. A withdrawn request whose answer came says the answer: Claude may have run it before the withdraw. Never a word
- * alone: each text is one of the page's sentences.
+ * A request that waits, one withdrawn with no answer yet, an ok by its kind with its note (P1008), problems, a step that
+ * ran and could not finish in spark's own line (never "Could not run:", P1062), could not run, and a refusal in grey. A
+ * withdrawn request whose answer came says the answer: Claude may have run it before the withdraw. Never a word alone:
+ * each text is one of the page's sentences.
  */
 function shownState(request: RequestRow | null, answer: AnswerRow | null, words: Words): Shown | null {
   if (!request) return null;
@@ -121,7 +131,25 @@ function shownState(request: RequestRow | null, answer: AnswerRow | null, words:
     return { mark: words.marks.ok, text: said + note, grey: false };
   }
   if (answer.status === "problems") return { mark: words.marks.problems, text: fill(words.problems, sentence(answer.line)), grey: false };
-  return { mark: words.marks["could-not-run"], text: fill(words.could_not_run, sentence(answer.line)), grey: false };
+  return { mark: words.marks["could-not-run"], text: fill(words.ran, sentence(answer.line)), grey: false };
+}
+
+/** A Shown as the status line says it: its mark, then its text. */
+function said(shown: Shown): string {
+  return (shown.mark ? shown.mark + " " : "") + shown.text;
+}
+
+/**
+ * The status line of the last request (P1062): "Your last request, <its time>: <its label>." and what `shownState` says,
+ * or the waiting line alone, or the empty text with no request. The label is the offer's on this page, else its key's
+ * kind. Pure.
+ */
+function lastRequest(request: RequestRow | null, answer: AnswerRow | null, words: Words): string {
+  const shown = shownState(request, answer, words);
+  if (!request || !shown) return "";
+  if (!request.withdrawn && !answer) return said(shown);
+  const label = labelOf(words, request.key) || kindOf(request.key);
+  return fill(fill(words.last_request, dayAndTime(request.at, words.months)), label) + " " + said(shown);
 }
 
 /**
@@ -273,8 +301,9 @@ function labelOf(words: Words, key: string): string {
 
 /**
  * View: the intro, the status panel, the buttons and the confirm, made with createElement and addEventListener, every
- * text set as text. The panel stands under the intro; a button stands on each element that carries `data-makes-stale`
- * (a sendable offer, and the guide's line of what to do now when its phase has one sendable offer).
+ * text set as text. The panel stands last in the guide, under the NOW box (P1062), or under the intro on a page with no
+ * guide; a button stands on each element that carries `data-makes-stale` (a sendable offer, and the NOW box's NEXT line
+ * when the guide's now names one sendable offer).
  */
 class PageView {
   declare win: Window;
@@ -318,15 +347,11 @@ class PageView {
     const intro = doc.querySelector(".intro")!;
     intro.textContent = this.words.intro;
     this.panel.id = "request";
-    const written = doc.body.getAttribute("data-written");
-    if (written && written !== "none") {
-      const from = doc.createElement("p");
-      from.textContent = fill(this.words.page_from, clock(written));
-      this.panel.appendChild(from);
-    }
     this.status.setAttribute("aria-live", "polite");
     [this.status, this.copy, this.withdraw].forEach((part) => this.panel.appendChild(part));
-    intro.parentNode!.insertBefore(this.panel, intro.nextSibling);
+    const guide = doc.querySelector("#guide");
+    if (guide) guide.appendChild(this.panel);
+    else intro.parentNode!.insertBefore(this.panel, intro.nextSibling);
   }
 
   drawButtons() {
@@ -381,7 +406,8 @@ class PageView {
   render() {
     const shown = this.requests.shown();
     const waiting = this.requests.waiting();
-    this.status.textContent = shown ? (shown.mark ? shown.mark + " " : "") + shown.text : "";
+    const latest = lastRequest(this.requests.latest, this.requests.answer, this.words);
+    this.status.textContent = shown ? (this.requests.note ? said(shown) : latest) : "";
     this.status.style.color = shown && shown.grey ? "var(--muted)" : "";
     this.copy.hidden = !waiting;
     this.withdraw.hidden = !waiting;
@@ -413,7 +439,7 @@ async function start(win: Window) {
 }
 
 if (typeof module === "object" && module.exports) {
-  module.exports = { REQUESTS, ANSWERS, shownState, DbChannel, Requests, PageView, start };
+  module.exports = { REQUESTS, ANSWERS, shownState, lastRequest, dayAndTime, DbChannel, Requests, PageView, start };
 } else {
   start(window).catch(() => {});
 }

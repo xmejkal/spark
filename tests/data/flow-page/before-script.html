@@ -4,25 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Button light</title>
-<style>:root{--bg:#eef1f3;--ink:#1c262e;--muted:#566570;--line:#c3ccd3;--signal:#c8500f;--backdrop:#fff;--display:ui-serif,Georgia,serif;--body:system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:light}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}}:root[data-theme="dark"]{--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}body{max-width:1180px;margin:0 auto;padding:12px 16px;font:16px/1.55 var(--body);background:var(--bg);color:var(--ink)}h1,h2{font-family:var(--display);line-height:1.2}nav ol{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:0;padding:0}a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}#guide{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}#guide p{margin:6px 0}.phase{border-top:1px solid var(--line);padding:4px 0}summary{cursor:pointer}summary h2{display:inline}p,li{overflow-wrap:anywhere}img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}.fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:6px}.fig svg{display:block;width:100%;height:auto}.pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;color:var(--muted)}.sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;vertical-align:-2px;border:1px solid var(--line)}#steps>li .nav{display:none}#steps>li:target .nav{display:block}#steps:has(>li:target)>li:not(:target){display:none}@media print{#steps>li{display:list-item!important}#steps .nav{display:none!important}}</style>
+<style>:root{--bg:#eef1f3;--ink:#1c262e;--muted:#566570;--line:#c3ccd3;--signal:#c8500f;--backdrop:#fff;--display:ui-serif,Georgia,serif;--body:system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:light}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}}:root[data-theme="dark"]{--bg:#141b21;--ink:#e4eaee;--muted:#9aa9b4;--line:#3a4955;--signal:#f08a48;--backdrop:#fff;color-scheme:dark}body{max-width:1180px;margin:0 auto;padding:12px 16px;font:16px/1.55 var(--body);background:var(--bg);color:var(--ink)}h1,h2{font-family:var(--display);line-height:1.2}a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}#guide{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}#guide p{margin:6px 0}.now{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}.next{font-size:1.4em}.muted,#request{color:var(--muted)}.fold,.phase{border-top:1px solid var(--line);padding:4px 0}summary{cursor:pointer}summary h2{display:inline}p,li{overflow-wrap:anywhere}img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}.fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:6px}.fig svg{display:block;width:100%;height:auto}.pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;color:var(--muted)}.sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;vertical-align:-2px;border:1px solid var(--line)}#steps>li .nav{display:none}#steps>li:target .nav{display:block}#steps:has(>li:target)>li:not(:target){display:none}@media print{#steps>li{display:list-item!important}#steps .nav{display:none!important}}</style>
 </head>
 <body data-stands-at="parts" data-fingerprint="0123456789ab" data-written="2026-11-21T15:40:00+01:00">
 <h1>Button light</h1>
-<p class="intro">Where this project stands. This page only shows it. To change anything, tell Claude in the chat. Below: the wiring and its pictures, then each phase, folded: click one to read it.</p>
+<p class="fresh">This page shows the project as of 21 Nov 2026, 15:40, its newest change. If you changed or deployed something after that, type /spark:page in the chat.</p>
+<p class="intro">Where this project stands. This page only shows it. To change anything, tell Claude in the chat.</p>
 <section id="guide">
-<p><strong>NOW (parts)</strong> 1 need has no part yet: light. Tell Claude a pick for each, or to set it aside.</p>
-<p><strong>DONE</strong> idea, needs</p>
-<p><strong>LATER</strong> requirements, build</p>
+<div class="now">
+<p><strong>NOW (parts), by you</strong></p>
+<p class="next"><strong>NEXT</strong> 1 need has no part yet: light. Tell Claude a pick for each, or to set it aside.</p>
+</div>
+<p class="muted"><strong>DONE</strong> idea, needs</p>
+<p class="muted"><strong>LATER</strong> requirements, build</p>
 </section>
-<nav aria-label="Phases"><a href="#wiring">Wiring</a> <a href="#pictures">Pictures</a><ol>
-<li data-phase="idea" data-status="none"><a href="#phase-idea"><span aria-hidden="true">·</span> idea <span>not checked by spark</span></a></li>
-<li data-phase="needs" data-status="ok"><a href="#phase-needs"><span aria-hidden="true">✓</span> needs <span>ok</span></a></li>
-<li data-phase="parts" data-status="partial"><a href="#phase-parts"><span aria-hidden="true">◐</span> parts <span>partly done</span></a></li>
-<li data-phase="requirements" data-status="stale"><a href="#phase-requirements"><span aria-hidden="true">↻</span> requirements <span>out of date</span></a></li>
-<li data-phase="build" data-status="ok"><a href="#phase-build"><span aria-hidden="true">✓</span> build <span>ok</span></a></li>
-</ol></nav>
+<details class="fold" data-fold="parts" open><summary><h2><span aria-hidden="true">◐</span> Parts <span>partly done</span></h2></summary>
+<p>1 of 2 needs picked</p>
+<ul><li class="need"><strong>light</strong><ul><li data-key="pick:light:led-red-5mm">Pick “Red LED 5 mm” for light: Saves “Red LED 5 mm” as the pick for the light need in this project. Uses 1 of your 3 “Red LED 5 mm” for the light. May note the choice in your history.</li></ul></li>
+<li data-key="requirements">Write the parts list: Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay.</li>
+<li data-key="build">Build the board: Saves its files in this project. Runs no simulation and costs nothing.</li></ul>
+</details>
+<details class="fold" data-fold="wiring"><summary><h2>Wiring: 2 steps</h2></summary>
 <section id="wiring">
-<h2>Wiring</h2>
 <p>Read the lines before power first. In the Breadboard picture below, each jumper carries a pill with its step&#x27;s number and the two pads it joins: find the holes there.</p>
 <p><a href="#step-1">One at a time: start at step 1</a></p>
 <ol id="steps">
@@ -30,11 +33,16 @@
 <li id="step-2" value="2" tabindex="-1">Run a jumper from D2 to the button.<div class="nav">Step 2 of 2 <a href="#step-1" aria-label="Back to step 1">Back</a> <a href="#wiring">All steps</a> <a href="#pictures">Picture</a></div></li>
 </ol>
 </section>
-<section id="pictures"><h2>Pictures</h2>
+</details>
+<details class="fold" data-fold="pictures"><summary><h2>Pictures</h2></summary>
+<section id="pictures">
 <div class="picture"><h3>Breadboard</h3><figure class="fig" aria-label="Breadboard"><svg><rect width="4" height="2" /></svg></figure></div>
 <div class="picture"><h3>Schematic</h3><p>Not drawn here.</p></div>
 </section>
-<section class="legend"><h2>Marks</h2><ul><li><span aria-hidden="true">✓</span> ok</li><li><span aria-hidden="true">✗</span> problems</li><li><span aria-hidden="true">?</span> could not run</li><li><span aria-hidden="true">○</span> not started</li><li><span aria-hidden="true">◐</span> partly done</li><li><span aria-hidden="true">↻</span> out of date</li><li><span aria-hidden="true">·</span> not checked by spark: spark does not judge this phase, so no mark says it is done</li></ul></section>
+</details>
+<section class="notes"><h2>Notes</h2><p>This page reads the project&#x27;s files. It does not know whether the board is wired or flashed.</p></section>
+<details class="fold" data-fold="developer"><summary><h2>For developers: the phases, each offer&#x27;s key and effect, the marks, the record ids</h2></summary>
+<section id="developer">
 <section class="phase" data-phase="idea" data-status="none">
 <details><summary><h2><span aria-hidden="true">·</span> idea <span>not checked by spark</span></h2></summary>
 <div id="phase-idea">
@@ -56,7 +64,7 @@
 <div id="phase-parts">
 <p>Done by: you</p>
 <p>1 of 2 needs picked</p>
-<ul><li data-key="pick:light:led-red-5mm">Pick “Red LED 5 mm” for light: Saves “Red LED 5 mm” as the pick for the light need in this project. Uses 1 of your 3 “Red LED 5 mm” for the light. May note the choice in your history.</li><li data-key="needs-drop:light">Drop the light need: To drop this need, tell Claude: “drop the light need”.</li></ul>
+<ul><li><code>pick:light:led-red-5mm</code> Pick “Red LED 5 mm” for light: Saves “Red LED 5 mm” as the pick for the light need in this project. Uses 1 of your 3 “Red LED 5 mm” for the light. May note the choice in your history.</li><li><code>needs-drop:light</code> Drop the light need: To drop this need, tell Claude: “drop the light need”.</li></ul>
 </div>
 </details>
 </section>
@@ -65,7 +73,7 @@
 <div id="phase-requirements">
 <p>Done by: claude</p>
 <p>requirements.json differs from what the picks give</p>
-<ul><li data-key="requirements">Write the parts list: Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay.</li></ul>
+<ul><li><code>requirements</code> Write the parts list: Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay.</li></ul>
 </div>
 </details>
 </section>
@@ -74,10 +82,12 @@
 <div id="phase-build">
 <p>Done by: claude</p>
 <p>the last build, 2026-11-21T15:40:00+01:00: ok</p>
-<ul><li data-key="build">Build the board: Saves its files in this project. Runs no simulation and costs nothing.</li></ul>
+<ul><li><code>build</code> Build the board: Saves its files in this project. Runs no simulation and costs nothing.</li></ul>
 </div>
 </details>
 </section>
-<section class="notes"><h2>Notes</h2><p>This page reads the project&#x27;s files. It does not know whether the board is wired or flashed.</p></section>
+<section class="legend"><h2>Marks</h2><ul><li><span aria-hidden="true">✓</span> ok</li><li><span aria-hidden="true">✗</span> problems</li><li><span aria-hidden="true">?</span> could not run</li><li><span aria-hidden="true">○</span> not started</li><li><span aria-hidden="true">◐</span> partly done</li><li><span aria-hidden="true">↻</span> out of date</li><li><span aria-hidden="true">·</span> not checked by spark: spark does not judge this phase, so no mark says it is done</li></ul></section>
+</section>
+</details>
 </body>
 </html>

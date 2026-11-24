@@ -8,6 +8,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 
+// P1062: the last request's time is read in the browser's zone; the tests pin it, as the Python tests pin the machine's.
+process.env.TZ = "Europe/Prague";
 const script = require(path.join(__dirname, "..", "..", "scripts", "spark", "flow", "page_script.js"));
 
 // The words as the page's words block holds them: literals, the plan's section 9 and the review's words, not the code's own.
@@ -19,7 +21,8 @@ const WORDS = {
   waiting: "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
   withdrawn: "Withdrawn. If Claude had already started it, its answer shows here.",
   not_sent: "Could not send. Nothing ran.", not_withdrawn: "Could not withdraw. The request still waits.",
-  waiting_for: "Waiting for Claude: %s.", page_from: "Page from %s.",
+  waiting_for: "Waiting for Claude: %s.", last_request: "Your last request, %s: %s.",
+  months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   now_button: { "Ask Claude in the chat to build the board. It takes seconds and costs nothing.":
                 "Build the board. It takes seconds and costs nothing. Use the button." },
   ok: { pick: "Saved as the pick. Nothing is built yet. Reload to see the new state.",
@@ -49,16 +52,24 @@ class FakeElement {
   setAttribute(name, value) { this.attributes[name] = String(value); }
   addEventListener(kind, act) { this.listeners[kind] = act; }
   appendChild(child) { child.parentNode = this; this.children.push(child); return child; }
-  insertBefore(child, _before) { return this.appendChild(child); }
+  get nextSibling() { const siblings = this.parentNode ? this.parentNode.children : []; return siblings[siblings.indexOf(this) + 1] || null; }
+  insertBefore(child, before) {
+    const at = this.children.indexOf(before);
+    child.parentNode = this;
+    this.children.splice(at < 0 ? this.children.length : at, 0, child);
+    return child;
+  }
   remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter((each) => each !== this); }
   click() { return this.listeners.click(); }
 }
 
 /** Fake: a page with an intro, one sendable offer and the guide's NOW line of it, and a window whose claude.use gives `db`
- * and a user who is the owner unless `owner` is false (null: no user capability). */
-function fakeWindow(db, owner = true, nowKey = "build") {
+ * and a user who is the owner unless `owner` is false (null: no user capability). With `guide`, the page holds the guide's
+ * section (P1062), whose NOW box holds the NOW line. */
+function fakeWindow(db, owner = true, nowKey = "build", guide = true) {
   const body = new FakeElement("body", { "data-fingerprint": "0123456789ab", "data-written": "2026-11-21T15:40:00+01:00" });
   const intro = body.appendChild(new FakeElement("p", { class: "intro" }));
+  const section = guide ? new FakeElement("section", { id: "guide" }) : null;
   intro.textContent = "Where this project stands. This page only shows it. To change anything, tell Claude in the chat.";
   const now = body.appendChild(new FakeElement("p", { "data-key": nowKey, "data-makes-stale": "" }));
   now.appendChild(new FakeElement("#text")).textContent = nowKey === "build" ? " " + BUILD_NOW : " Tell Claude a pick for each.";
@@ -71,13 +82,14 @@ function fakeWindow(db, owner = true, nowKey = "build") {
     createElement: (tag) => { const element = new FakeElement(tag); made.push(element); return element; },
     createTextNode: (text) => ({ text }),
     getElementById: (id) => (id === "spark-words" ? words : null),
-    querySelector: (selector) => (selector === ".intro" ? intro : null),
+    querySelector: (selector) => ({ ".intro": intro, "#guide": section }[selector] || null),
     querySelectorAll: (selector) => (selector === "[data-makes-stale]" ? [now, offer] : []),
   };
   const user = owner === null ? null : { isOwner: async () => owner };
   const uses = { db, user };
   const win = { document, crypto: globalThis.crypto, claude: { use: async (name) => (name in uses ? uses[name] : null) } };
-  return { win, made, offer, now, body, intro };
+  if (section) body.appendChild(section);
+  return { win, made, offer, now, body, intro, section };
 }
 
 /** Fake: the Artifact database, in memory: the rows written and deleted, and the watches. `refuse` names a verb that rejects. */
@@ -120,7 +132,7 @@ test("with no database, or for a viewer who is not the owner, the script makes n
     const { win, made, body, intro } = fakeWindow(db, owner);
     assert.equal(await script.start(win), null);
     assert.deepEqual(made, []);
-    assert.equal(body.children.length, 3);
+    assert.equal(body.children.length, 4);
     assert.match(intro.textContent, /This page only shows it/);
     assert.equal(body.children[1].children[0].textContent, " " + BUILD_NOW);  // P993: a viewer's NOW line keeps who acts
   }
@@ -130,7 +142,7 @@ test("with no database, or for a viewer who is not the owner, the script makes n
   assert.deepEqual(nothing.made, []);
 });
 
-test("for the owner each sendable offer and the NOW line get a button, the intro says how, the panel the page's time", async () => {
+test("for the owner each sendable offer and the NOW line get a button, and the intro says how", async () => {
   const db = fakeDb();
   const { win, made, offer, now, intro } = fakeWindow(db);
   await script.start(win);
@@ -145,8 +157,6 @@ test("for the owner each sendable offer and the NOW line get a button, the intro
   await script.start(picked.win);
   assert.equal(picked.now.children[0].textContent, " Tell Claude a pick for each.");
   assert.equal(intro.textContent, "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.");
-  const panel = made.find((element) => element.tag === "section");
-  assert.match(panel.children[0].textContent, /^Page from \d\d:\d\d\.$/);
   assert.deepEqual(db.watched.map(([name]) => name), ["requests"]);
 });
 
@@ -229,7 +239,9 @@ test("Withdraw says withdrawn only once the delete is done, and still shows the 
   assert.equal(name, "answers/" + row.id);
   answerHeard({ exists: true, data: () => ({ for: row.id, ran: true, status: "ok", line: "ran Build the board: ok" }) });
   assert.deepEqual(asked.shown(), { mark: "✓", text: BUILT, grey: false });
-  assert.equal(statusOf(made).textContent, "✓ " + BUILT);
+  // P1062: the status line says the last request with its date and label first
+  assert.match(statusOf(made).textContent, /^Your last request, \d{1,2} [A-Z][a-z]{2} \d{4}, \d\d:\d\d: Build the board\. ✓ /);
+  assert.ok(statusOf(made).textContent.endsWith("✓ " + BUILT));
 });
 
 test("a withdraw the database refuses leaves the request waiting and says so", async () => {
@@ -275,8 +287,9 @@ test("the status line says each state in the page's words, and never done alone"
   assert.deepEqual(said({ ran: true, status: "ok", line: "ran Build the board: ok", note: null }), { mark: "✓", text: BUILT, grey: false });
   assert.deepEqual(said({ ran: true, status: "problems", line: "R1 has no footprint." }),
     { mark: "✗", text: "Ran, with problems: R1 has no footprint. Reload to see the new state.", grey: false });
+  // P1062 (E13): a step that ran never reads "Could not run:"; it says spark's own line
   assert.deepEqual(said({ ran: true, status: "could-not-run", line: "tsci is not installed" }),
-    { mark: "?", text: "Could not run: tsci is not installed. Reload to see the new state.", grey: false });
+    { mark: "?", text: "Spark says: tsci is not installed. Reload to see the new state.", grey: false });
   assert.deepEqual(said({ ran: false, status: "could-not-run", line: "the project changed after the page was read, so nothing ran" }),
     { mark: "–", text: "Nothing ran. The project changed after you clicked. Reload this page and click again.", grey: true });
   assert.deepEqual(said({ ran: false, status: "could-not-run", line: "constructor" }),
@@ -288,6 +301,40 @@ test("the status line says each state in the page's words, and never done alone"
     assert.notEqual(text.trim().toLowerCase(), "done");
     assert.ok(text.split(" ").length > 3, text);
   }
+});
+
+test("the last request says its date in the page's month words and its label, then what spark answered", () => {
+  const at = "2026-11-21T10:36:00.000Z";
+  const build = { id: "x", key: "build", at };
+  const said = (request, answer) => script.lastRequest(request, answer, WORDS);
+  assert.equal(said(build, { ran: true, status: "ok", line: "ran Build the board: ok" }),
+    "Your last request, 21 Nov 2026, 11:36: Build the board. ✓ " + BUILT);
+  assert.equal(said(Object.assign({}, build, { withdrawn: true }), null),
+    "Your last request, 21 Nov 2026, 11:36: Build the board. – Withdrawn. If Claude had already started it, its answer shows here.");
+  assert.match(said(build, null), WAITING);
+  assert.equal(said(null, null), "");
+  assert.equal(said({ id: "y", key: "requirements", at }, { ran: true, status: "problems", line: "R1 has no footprint." }),
+    "Your last request, 21 Nov 2026, 11:36: requirements. ✗ Ran, with problems: R1 has no footprint. Reload to see the new state.");
+  const months = WORDS.months.map((month) => month.toUpperCase());
+  assert.equal(script.dayAndTime(at, months), "21 NOV 2026, 11:36");
+  assert.equal(script.dayAndTime("not a time", months), "?");
+  for (const answer of [{ ran: true, status: "could-not-run", line: "x" }, { ran: true, status: "problems", line: "x" }]) {
+    assert.equal(said(build, answer).includes("✓"), false);
+    assert.equal(said(build, answer).includes("Could not run:"), false);
+  }
+});
+
+test("the panel stands last in the guide, under the NOW box, or after the intro on a page with no guide", async () => {
+  const { win, made, section } = fakeWindow(fakeDb());
+  await script.start(win);
+  const panel = made.find((element) => element.tag === "section");
+  assert.equal(section.lastChild, panel);
+  assert.equal(panel.id, "request");
+  assert.equal(panel.children.length, 3, "the status line, Copy and Withdraw: no line of the page's time");
+  const plain = fakeWindow(fakeDb(), true, "build", false);
+  await script.start(plain.win);
+  const alone = plain.made.find((element) => element.tag === "section");
+  assert.equal(plain.body.children[1], alone);
 });
 
 test("the script's text holds no markup of a control, no web address and no closing tag", () => {

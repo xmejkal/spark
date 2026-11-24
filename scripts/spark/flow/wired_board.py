@@ -12,7 +12,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.core.outcomes import COULD_NOT_RUN, PROBLEMS
-from spark.core.zone_time import stamp
+from spark.core.zone_time import MONTHS, stamp
 from spark.flow import flow_codes, phase_readers
 
 # --- MVP ---
@@ -39,7 +39,7 @@ def day_of(iso):
         moment = datetime.datetime.fromisoformat(iso).astimezone()
     except ValueError:
         return iso
-    return "%d %s" % (moment.day, moment.strftime("%b %Y"))
+    return "%d %s %d" % (moment.day, MONTHS[moment.month - 1], moment.year)
 
 
 def wired_text(board):

@@ -1430,7 +1430,9 @@ class TheOfferStepTest(FlowTest):
         self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"], offers(said, "build")),
                          ("breadboard", None, ["build"]))
         write_page(project, store=FlowPageStore())
-        self.assertIn("<p><strong>NOW (breadboard)</strong> ", (project / "page.html").read_text(encoding="utf-8"))
+        page = (project / "page.html").read_text(encoding="utf-8")  # P1062: the NOW box, its NEXT line with no key
+        self.assertIn("<p><strong>NOW (breadboard), by ", page)
+        self.assertIn('<p class="next"><strong>NEXT</strong> ', page)
 
     def a_hand_written_project(self):
         project = Path(tempfile.mkdtemp()) / "bl"
@@ -1597,7 +1599,9 @@ class TheNextOnlyStepTest(FlowTest):
         self.assertIsNone(said["data"]["guide"]["now"]["offer"])
         self.assertFalse([offer for phase in said["data"]["phases"] for offer in phase["offers"] if offer["key"].startswith("look")])
         write_page(deploy, store=FlowPageStore())
-        self.assertIn("<p><strong>NOW (deploy)</strong> ", (deploy / "page.html").read_text(encoding="utf-8"))
+        page = (deploy / "page.html").read_text(encoding="utf-8")  # P1062: the NOW box, its NEXT line with no key
+        self.assertIn("<p><strong>NOW (deploy), by ", page)
+        self.assertIn('<p class="next"><strong>NEXT</strong> ', page)
 
     def test_no_step_names_a_home_path_and_only_argv_and_env_name_the_project(self):
         # the projects are under HOME (FlowTest), so a raw argv names the home folder: only argv and env may
