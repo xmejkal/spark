@@ -278,6 +278,72 @@ class AShelfBoardIsOfferedTest(unittest.TestCase):
         self.assertIn("x-board", builds.split(", "), refused)
 
 
+class TheSelectionThatIsNotTheProjectsBoardIsSaidTest(unittest.TestCase):
+    """P1024 (P988's row 26): after `--board`, init says when requirements.json and boards/active.json name different
+    boards: requirements.json's board stays the project's board (D35). It reads the two files, not the flag (C1)."""
+
+    C6, S3 = "xiao-esp32-c6", "firebeetle2-esp32s3"
+    NOTE = ("  requirements.json names xiao-esp32-c6, so xiao-esp32-c6 stays the project's board: the selection in "
+            "boards/active.json, %s, is read only when requirements.json names no board (D35)\n")
+
+    def init(self, root, board, *flags):
+        """(exit code, what init printed) for `--board board` in `root`."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = init_project.main(["--project", str(root), "--board", board, *flags])
+        return code, out.getvalue()
+
+    def a_project_naming(self, requirements, selection=None):
+        """A project whose requirements.json is `requirements` (None: no file) and whose boards/active.json holds
+        `selection` (None: no file)."""
+        root = a_project()
+        if requirements is not None:
+            (root / "requirements.json").write_text(requirements)
+        if selection is not None:
+            (root / "boards").mkdir()
+            (root / "boards" / "active.json").write_text(json.dumps(selection))
+        return root
+
+    def selected(self, root):
+        return json.loads((root / "boards" / "active.json").read_text())["board"]
+
+    def test_a_board_other_than_the_requirements_board_is_written_and_said(self):
+        root = self.a_project_naming(json.dumps({"board": self.C6}))
+        for flags in ((), ("--force",)):
+            with self.subTest(flags=flags):
+                code, said = self.init(root, self.S3, *flags)
+                self.assertEqual((code, self.selected(root)), (init_project.EXIT_OK, self.S3))
+                self.assertIn(self.NOTE % self.S3, said)
+
+    def test_the_note_reads_the_files_not_the_flag(self):
+        # C1: the files agree, and a --board that was left alone changes neither, so init says nothing
+        root = self.a_project_naming(json.dumps({"board": self.C6}), {"schema": 1, "board": self.C6})
+        code, said = self.init(root, self.S3)
+        self.assertEqual((code, self.selected(root)), (init_project.EXIT_OK, self.C6))
+        self.assertIn("  active.json already exists, left alone\n", said)
+        self.assertNotIn("stays the project's board", said)
+        code, said = self.init(root, self.S3, "--force")
+        self.assertEqual((code, self.selected(root)), (init_project.EXIT_OK, self.S3))
+        self.assertIn(self.NOTE % self.S3, said)
+
+    def test_the_same_board_or_none_named_says_nothing_and_a_broken_file_is_said(self):
+        for requirements in (json.dumps({"board": self.C6}), "{}", None):
+            with self.subTest(requirements=requirements):
+                code, said = self.init(self.a_project_naming(requirements), self.C6)
+                self.assertEqual(code, init_project.EXIT_OK)
+                self.assertNotIn("stays the project's board", said)
+                self.assertNotIn("is not known", said)
+        code, said = self.init(self.a_project_naming(json.dumps({"board": 3})), self.C6)
+        self.assertEqual(code, init_project.EXIT_OK)
+        self.assertIn("  the project's board is not known: ", said)
+        # C10: a selection that holds no JSON object is not compared, and init does not crash on it
+        root = self.a_project_naming(json.dumps({"board": self.C6}), [1])
+        code, said = self.init(root, self.S3)
+        self.assertEqual(code, init_project.EXIT_OK)
+        self.assertIn("  active.json already exists, left alone\n", said)
+        self.assertNotIn("stays the project's board", said)
+
+
 class ForceMustNotEatWhatSomebodyMeasuredTest(unittest.TestCase):
     """
     P53. `--force` REPLACED the rules file, and the documents tell people to use it: *"no built

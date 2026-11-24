@@ -230,6 +230,19 @@ class ButtonPlacesTest(unittest.TestCase):
         (root / "requirements.json").write_text(json.dumps({}))
         self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button")
 
+    def test_of_project_reads_the_projects_board_the_selection_when_requirements_names_none(self):
+        # P1024 (D35): the places come from the record of the project's board, as the flasher's do
+        mine = definition("mine", physical={"footprint_module": "X", "footprint_export": "X", "buttons": BUTTONS})
+        for text in (None, "{}", json.dumps({"board": None})):
+            with self.subTest(requirements=text):
+                root = project(active="mine", own={"mine": mine})
+                if text is not None:
+                    (root / "requirements.json").write_text(text)
+                self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button (B, top right)")
+        root = project(active="mine", own={"mine": mine})
+        (root / "requirements.json").write_text(json.dumps({"board": LIBRARY_BOARD}))
+        self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button")
+
 
 # --- MVP --- (P512, #708) the one reader of physical.pad_aliases
 class BoardPadsTest(unittest.TestCase):
