@@ -39,14 +39,15 @@ def reason_of(refusal):
 
 
 def stop_result(cannot, script, project, port, doctor_for=None):
-    """The OperationResult of a stop before the board answered: no data (a caller `_replace`s it), one unchecked Finding with the stop's code, and
-    its line on stderr as `<script>: <cannot>`, the port and the project put on one line first (P430). A SparkError's fix is
-    the Finding's and a second line. A ToolError of a tools file (TOOLS_FILE_CODES) keeps its code, and that Code's fix is
-    the Finding's, while stderr keeps its one line (P1058); reason_of folds this in later (P1083). `doctor_for(stop)`,
-    when given, is asked for a LookStopError and answers (lines, DoctorProbeResult or None) as `board_doctor.stop_answer`
-    does: `board_envelope.stop_said` then says the stop as look.py does, the doctor's lines or the asleep fix of a firmware that deep-sleeps, `port` being the port the person named (P1049).
-    UNPARSED, a fact with no step, never takes the stop's own words. grant.py and bench.py record give it; live.py and
-    reach.py not yet (P1057). After the asleep fix, `next` holds the look step that needs the person (P1048)."""
+    """The OperationResult of a stop before the board answered: no data (a caller `_replace`s it), one unchecked Finding
+    with the stop's code, and its line on stderr as `<script>: <cannot>`, the port and the project put on one line first
+    (P430). A SparkError's fix is the Finding's and a second line. A ToolError of a tools file (TOOLS_FILE_CODES) keeps
+    its code, and that Code's fix is the Finding's, while stderr keeps its one line (P1058); reason_of folds this in
+    later (P1083). `doctor_for(stop)`, when given, is asked for a LookStopError and answers (lines, DoctorProbeResult or
+    None) as `board_doctor.stop_answer` does: `board_envelope.stop_said` then says the stop as look.py does, the
+    doctor's lines or the asleep fix of a firmware that deep-sleeps, `port` being the port the person named (P1049).
+    UNPARSED, a fact with no step, never takes the stop's own words. grant.py, bench.py record, live.py and reach.py
+    give it (P1057). After the asleep fix, `next` holds the look step that needs the person (P1048)."""
     places, sentence = board_records.ButtonPlaces.of_project(project), str(cannot)
     tools_file = _tools_file_code(cannot)
     fix, steps = (cannot.fix if isinstance(cannot, SparkError) else tools_file.fix if tools_file else ""), []

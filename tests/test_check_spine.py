@@ -2843,8 +2843,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
 
     def test_what_the_chain_was_handed_is_what_is_recorded_not_what_the_file_became_meanwhile(self):
         def the_person_edits_the_file():
-            (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [
-            "l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}))
+            (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]}))
         built = self.meanwhile(the_person_edits_the_file)
         self.assertEqual([[p["id"] for p in e["parts"]] for e in built], [["tactile-button"]])
 

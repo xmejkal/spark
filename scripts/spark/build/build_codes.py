@@ -45,7 +45,7 @@ TOOL_MISSING = Code("tool_missing", "a tool the step needs is missing or cannot 
                     "ask the person to run /spark:setup, which installs the tool that the sentence names, then build again")
 #: The engine lookup's tools file that spark cannot read, or that is no tools list (P1058): no install fixes either.
 FILE_REFUSED = Code("file_refused", "a file the operation reads or writes could not be read or written, or is not JSON: the sentence names it",
-                    "fix the file the sentence names, or its permissions, or move it away, then build again")
+                    "fix the file the sentence names or its permissions, or move the file away, then build again")
 TOOLS_LIST_BROKEN = Code("tools_list_broken", "a tools file is not JSON, or not in the shape of a tools list: fix it or delete it",
                          "fix the tools file the sentence names, or move it away, then build again")
 TOOL_CANNOT_BUILD = Code("tool_cannot_build", "the board engine cannot build even a trivial board from here, so the tool is broken, not the design",

@@ -298,7 +298,8 @@ class TheBenchCodesTableTest(unittest.TestCase):
         self.assertEqual(sorted(set(design_codes.CODES) & set(check_codes.CODES)), ["rules_refused"])
         self.assertEqual(design_codes.CODES["rules_refused"], check_codes.CODES["rules_refused"])
         self.assertEqual(design_codes.RULES_REFUSED.fix, check_codes.RULES_REFUSED.fix)  # P935 PR 4: the pair holds one fix
-        # P701: four build codes are equal literals of another leaf, with the same sentence; no other code is shared
+        # P701: four build codes are equal literals of these leaves, with the same sentence; no other code of the build is
+        # shared with them. Two more, file_refused and tools_list_broken, are records_codes' (P1058), checked below
         shared = {"board_unusable": design_codes, "no_project_folder": design_codes, "tool_missing": board_codes,
                   "input_ambiguous": check_codes}
         others = (board_codes, codes, firmware_codes, breadboard_codes, check_codes, design_codes)
@@ -724,7 +725,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             "ask the person to run /spark:setup, which installs the tool that the sentence names, then build again",
         # P1058: a tools file the engine lookup cannot read, or one that is no tools list; no install fixes these
         "file_refused":
-            "fix the file the sentence names, or its permissions, or move it away, then build again",
+            "fix the file the sentence names or its permissions, or move the file away, then build again",
         "tools_list_broken":
             "fix the tools file the sentence names, or move it away, then build again",
         "tool_cannot_build":
