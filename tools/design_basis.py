@@ -12,6 +12,7 @@ import argparse
 import importlib
 import json
 import sys
+from collections import namedtuple
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -39,11 +40,19 @@ UNBUILT = (
 )
 NOT_BUILT = "not built"
 NO_WORD = "(the mark alone)"
-INTRO = ("The phases, statuses, actors, offers and Operations are read from the code. The moment of each phase and the unbuilt steps "
-         "are hand-written, last on %s. The usual actor of a phase is the one its reader names. The guide can name another actor in "
-         "some states, so `guide.now.by` holds the actual one. An offer key names a kind of offer, not one project's offer. "
-         "A status with no word is shown by its mark alone. The label of an offer keeps its `%%s` places. "
-         "A key is `<group>:<name>`, and the group makes it unique.") % HAND_WRITTEN
+INTRO = """How to read this page:
+
+- The moment of each phase and the unbuilt steps are hand-written, last on %s.
+- The phases, statuses, actors and Operations are read from the code.
+- The offer kinds, their labels and their phases are written in the tool. A test checks them against the code.
+- A key is `<group>:<name>`, and the group makes it unique.
+- A phase reader is the code that reads one phase of a project. The usual actor of a phase is the one its reader names.
+  In some states the guide names another actor, and `guide.now.by` holds the actual one.
+- This page does not list which statuses each phase can show. Each phase reader decides that from the project's files.
+- An offer key names a kind of offer, not one project's offer. Its label keeps its `%%s` places.
+- "From the page" says whether a click on the project page can send the offer. If it says no, you ask Claude in the chat.
+- A status with no word is shown by its mark alone.
+- The summary of an Operation is the one that `--describe` prints.""" % HAND_WRITTEN
 
 
 def spark_modules():
@@ -59,26 +68,30 @@ def slug(name):
     return "none" if name is None else str(name).replace(" ", "-")
 
 
-def offer_steps_by_kind(flow_codes, offer_steps):
-    """{offer kind: a function that gives its NextStep, with placeholder values}. The step's op is the only thing read."""
-    return {flow_codes.PICK: lambda: offer_steps.pick_step("/project", "need", "id", "name"),
-            flow_codes.WRITE_REQUIREMENTS: lambda: offer_steps.requirements_step("/project"),
-            flow_codes.BUILD_BOARD: lambda: offer_steps.build_step("/project"),
-            flow_codes.NEEDS_DROP: lambda: offer_steps.drop_step("/project", "need")}
+#: Value: one offer kind as written here: the phase whose reader makes it, the name of its label in flow_codes, and a function
+#: that gives its NextStep with placeholder values. The step's op is the only thing read from the step.
+Offer = namedtuple("Offer", "phase label step")
 
 
+def offers_by_kind(flow_codes, offer_steps):
+    """{offer kind: Offer}, in the order the page shows them. T6 checks the kinds against the code's lists."""
+    return {flow_codes.PICK: Offer(flow_codes.PARTS, "PICK_LABEL", lambda: offer_steps.pick_step("/project", "need", "id", "name")),
+            flow_codes.WRITE_REQUIREMENTS: Offer(flow_codes.REQUIREMENTS, "REQUIREMENTS_LABEL", lambda: offer_steps.requirements_step("/project")),
+            flow_codes.BUILD_BOARD: Offer(flow_codes.BUILD, "BUILD_LABEL", lambda: offer_steps.build_step("/project")),
+            flow_codes.NEEDS_DROP: Offer(flow_codes.NEEDS, "DROP_LABEL", lambda: offer_steps.drop_step("/project", "need"))}
+
+
+# Puts scripts/ on sys.path, so that the import below finds spark.
 spark_modules()
 from spark.flow import flow_codes as _codes, offer_steps as _steps  # noqa: E402
 
-#: The offer kinds, each with the function that gives its step: the kinds of `flow_codes.SENDABLE` and `run_request.IN_CHAT`.
-OFFER_STEPS = offer_steps_by_kind(_codes, _steps)
-LABELS = {_codes.PICK: "PICK_LABEL", _codes.WRITE_REQUIREMENTS: "REQUIREMENTS_LABEL", _codes.BUILD_BOARD: "BUILD_LABEL",
-          _codes.NEEDS_DROP: "DROP_LABEL"}
+#: The offer kinds: those of `flow_codes.SENDABLE` and `run_request.IN_CHAT`, each with its phase, label and step.
+OFFER_STEPS = offers_by_kind(_codes, _steps)
 
 
 class DesignBasis:
     """
-    Value: the design basis, `items` as a list of dicts, each with a `key`. `DesignBasis.of(root)` reads the code,
+    Value: the design basis, `items` as a list of dicts, each with a `key`. `DesignBasis.of()` reads the code,
     `json_text()` and `markdown()` are the two files, and `missing()` names a phase with no moment or a moment with no phase.
     """
 
@@ -86,7 +99,7 @@ class DesignBasis:
         self.items = items
 
     @classmethod
-    def of(cls, root=ROOT):
+    def of(cls):
         flow_codes, phase_readers, run_request, _, catalogue, describe = spark_modules()
         usual = {reader.PHASE: reader.BY for reader in phase_readers.READERS}
         items = [{"key": "phase:" + phase, "phase": phase, "usual_by": usual[phase], "moment": MOMENTS.get(phase, "")}
@@ -94,10 +107,10 @@ class DesignBasis:
         items += [{"key": "status:" + slug(status), "status": status, "word": word, "mark": mark}
                   for status, (word, mark) in phase_readers.MARKS.items()]
         items += [{"key": "by:" + slug(name), "name": name} for name in (flow_codes.BY_YOU, flow_codes.BY_CLAUDE, flow_codes.BY_TERMINAL)]
-        for kind, step in OFFER_STEPS.items():
-            op = step().op
-            items.append({"key": "offer:" + kind, "kind": kind, "label": getattr(flow_codes, LABELS[kind]), "op": op,
-                          "from_page": kind in flow_codes.SENDABLE and op in run_request.STEP_OPERATIONS})
+        for kind, offer in OFFER_STEPS.items():
+            op = offer.step().op
+            items.append({"key": "offer:" + kind, "kind": kind, "phase": offer.phase, "label": getattr(flow_codes, offer.label), "op": op,
+                          "from_page": kind in flow_codes.SENDABLE and op in run_request.STEP_OPERATIONS and kind not in run_request.IN_CHAT})
         for op, operation in catalogue.CATALOGUE.items():
             area = next(name for name, table in catalogue.TABLES if table.get(op) is operation)
             items.append({"key": "op:" + op, "op": op, "area": area, "summary": " ".join(describe.summary_of(operation).split()),
@@ -123,16 +136,17 @@ class DesignBasis:
         lines += ["", "## Statuses", "", "| Key | Word | Mark |", "|---|---|---|"]
         lines += ["| `%s` | %s | %s |" % (one["key"], one["word"] or NO_WORD, one["mark"]) for one in self.of_group("status")]
         lines += ["", "## Actors", ""] + ["- `%(key)s`: %(name)s" % one for one in self.of_group("by")]
-        lines += ["", "## Offers", "", "| Key | Label | Op | From the page |", "|---|---|---|---|"]
-        lines += ["| `%s` | `%s` | %s | %s |" % (one["key"], one["label"], one["op"], "yes" if one["from_page"] else "no") for one in self.of_group("offer")]
+        lines += ["", "## Offers", "", "| Key | Phase | Label | Op | From the page |", "|---|---|---|---|---|"]
+        lines += ["| `%s` | %s | `%s` | %s | %s |" % (one["key"], one["phase"], one["label"], one["op"], "yes" if one["from_page"] else "no")
+                  for one in self.of_group("offer")]
         lines += ["", "## Operations"]
         for area in dict.fromkeys(one["area"] for one in self.of_group("op")):
             lines += ["", "### %s" % area, ""]
             for one in self.of_group("op"):
                 if one["area"] == area:
                     lines += ["- `%s`" % one["key"],
-                              "  - Effects: %s. Network: %s. Keys: %s." % (", ".join(one["effects"]) or "none", "yes" if one["network"] else "no",
-                                                                           ", ".join(one["data_keys"]) or "none"),
+                              "  - Effects: %s. Data keys: %s." % (", ".join(one["effects"]) or "none, it only reads",
+                                                                    ", ".join(one["data_keys"]) or "none"),
                               "  - Summary: %s" % one["summary"]]
         lines += ["", "## Unbuilt steps", "", "| Key | Status | Moment |", "|---|---|---|"]
         lines += ["| `%(key)s` | %(status)s | %(moment)s |" % one for one in self.of_group("unbuilt")]
@@ -142,8 +156,9 @@ class DesignBasis:
 def main(argv=None, root=ROOT):
     parser = argparse.ArgumentParser(description="Print the design basis, or write it to %s and %s." % (MARKDOWN_PAGE, JSON_PAGE))
     parser.add_argument("--write", action="store_true", help="write %s and %s instead of printing" % (MARKDOWN_PAGE, JSON_PAGE))
-    basis = DesignBasis.of(root)
-    if parser.parse_args(argv).write:
+    write = parser.parse_args(argv).write
+    basis = DesignBasis.of()
+    if write:
         (Path(root) / "docs" / "guide").mkdir(parents=True, exist_ok=True)
         (Path(root) / MARKDOWN_PAGE).write_text(basis.markdown(), encoding="utf-8")
         (Path(root) / JSON_PAGE).write_text(basis.json_text(), encoding="utf-8")

@@ -113,6 +113,7 @@
   {
    "key": "offer:pick",
    "kind": "pick",
+   "phase": "parts",
    "label": "Pick “%s” for %s",
    "op": "pick",
    "from_page": true
@@ -120,6 +121,7 @@
   {
    "key": "offer:requirements",
    "kind": "requirements",
+   "phase": "requirements",
    "label": "Write the parts list",
    "op": "requirements",
    "from_page": true
@@ -127,6 +129,7 @@
   {
    "key": "offer:build",
    "kind": "build",
+   "phase": "build",
    "label": "Build the board",
    "op": "build-board",
    "from_page": true
@@ -134,6 +137,7 @@
   {
    "key": "offer:needs-drop",
    "kind": "needs-drop",
+   "phase": "needs",
    "label": "Drop the %s need",
    "op": "needs-drop",
    "from_page": false

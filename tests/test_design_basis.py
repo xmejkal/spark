@@ -21,7 +21,7 @@ from spark.core import describe_operations  # noqa: E402
 from spark.flow import flow_codes, run_request  # noqa: E402
 
 STALE = "docs/guide/design-basis.json and .md are stale: run python3 tools/design_basis.py --write"
-BASIS = design_basis.DesignBasis.of(ROOT)
+BASIS = design_basis.DesignBasis.of()
 
 
 @contextmanager
@@ -61,9 +61,9 @@ class ThePhasesTest(unittest.TestCase):
         self.assertEqual(BASIS.missing(), [])
         without = {phase: moment for phase, moment in design_basis.MOMENTS.items() if phase != "deploy"}
         with swapped(design_basis, "MOMENTS", without):
-            self.assertEqual(design_basis.DesignBasis.of(ROOT).missing(), ["deploy"], "add deploy to MOMENTS in tools/design_basis.py")
+            self.assertEqual(design_basis.DesignBasis.of().missing(), ["deploy"], "add deploy to MOMENTS in tools/design_basis.py")
         with swapped(design_basis, "MOMENTS", dict(design_basis.MOMENTS, ghost="x")):
-            self.assertEqual(design_basis.DesignBasis.of(ROOT).missing(), ["ghost"], "remove ghost from MOMENTS in tools/design_basis.py")
+            self.assertEqual(design_basis.DesignBasis.of().missing(), ["ghost"], "remove ghost from MOMENTS in tools/design_basis.py")
 
 
 class TheStatusesTest(unittest.TestCase):
@@ -86,7 +86,7 @@ class TheOperationsTest(unittest.TestCase):
             cls = operation_catalogue.CATALOGUE[op]
             self.assertEqual(one["area"], areas[op])
             self.assertEqual(one["network"], op in operation_catalogue.NETWORK, op)
-            self.assertEqual(one["summary"], describe_operations.summary_of(cls))
+            self.assertEqual(one["summary"], " ".join(describe_operations.summary_of(cls).split()))
             self.assertIsNotNone(one["summary"], op)
         self.assertTrue(any(one["network"] for one in ops))
 
@@ -95,16 +95,20 @@ class TheOffersTest(unittest.TestCase):
     def test_t6_the_offer_kinds_are_the_codes_and_from_page_needs_both_lists(self):  # T6
         kinds = tuple(flow_codes.SENDABLE) + tuple(run_request.IN_CHAT)
         self.assertEqual(set(design_basis.OFFER_STEPS), set(kinds))
-        self.assertEqual([one["key"] for one in group("offer")], ["offer:" + kind for kind in design_basis.OFFER_STEPS])
+        self.assertEqual([(one["key"], one["phase"]) for one in group("offer")],
+                         [("offer:pick", "parts"), ("offer:requirements", "requirements"), ("offer:build", "build"),
+                          ("offer:needs-drop", "needs")])
         self.assertEqual({one["key"]: one["op"] for one in group("offer")},
                          {"offer:pick": "pick", "offer:requirements": "requirements", "offer:build": "build-board",
                           "offer:needs-drop": "needs-drop"})
         self.assertEqual({one["key"]: one["from_page"] for one in group("offer")},
                          {"offer:pick": True, "offer:requirements": True, "offer:build": True, "offer:needs-drop": False})
         with swapped(flow_codes, "SENDABLE", ("pick", "requirements")):
-            self.assertFalse(item("offer:build", design_basis.DesignBasis.of(ROOT))["from_page"])
+            self.assertFalse(item("offer:build", design_basis.DesignBasis.of())["from_page"])
+        with swapped(run_request, "IN_CHAT", ("needs-drop", "build")):
+            self.assertFalse(item("offer:build", design_basis.DesignBasis.of())["from_page"])
         with swapped(run_request, "STEP_OPERATIONS", {op: one for op, one in run_request.STEP_OPERATIONS.items() if op != "build-board"}):
-            self.assertFalse(item("offer:build", design_basis.DesignBasis.of(ROOT))["from_page"])
+            self.assertFalse(item("offer:build", design_basis.DesignBasis.of())["from_page"])
 
     def test_t10_each_label_is_its_flow_codes_constant_with_the_percent_kept(self):  # T10
         self.assertEqual({one["key"]: one["label"] for one in group("offer")},
