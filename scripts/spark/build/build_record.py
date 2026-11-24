@@ -25,7 +25,7 @@ WRITTEN_SHA256 = "written_sha256"
 #: The record's key for whether the last build wrote `dist/` (P816): false means a `dist/` there is an earlier build's.
 DIST_WRITTEN = "dist_written"
 #: What a reader of `dist/` says when the last build did not write it (P816): the build's time.
-EARLIER_DIST = "the last build, %s, did not write dist/"
+EARLIER_DIST = "the last build, %s, did not write dist/: build again with check_spine.py --keep before you rely on this circuit"
 #: The files whose sha256 the record holds: spark replaces one only when it is still the bytes spark wrote. A footprint's `.tsx` is not here.
 OWN_FILES = ("board.tsx",)
 #: Where the previous version of a replaced file is kept, relative to the project.

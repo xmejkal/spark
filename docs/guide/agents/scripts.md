@@ -238,7 +238,7 @@ These write:
   the picture `breadboard.md` shows inline: part pictures from `part_pictures.PictogramPartPictures`, a pill on each jumper
   ([the pills](breadboard-codes.md#the-pills-and-the-wire-colours)), a caption by each part and a note line per part ([the captions](breadboard-codes.md#the-labels-the-captions-and-the-note)).
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
-  reads, or after a build that did not finish leaves an earlier one and names it (P816), writes `breadboard.md`, `breadboard.json`, `breadboard.svg` and `page.html` after a build that finished, and creates `.tscircuit/cache/`.
+  reads, or after a build that did not finish leaves an earlier one and names it as an earlier build's, and check_all says the last build did not write it (P816), writes `breadboard.md`, `breadboard.json`, `breadboard.svg` and `page.html` after a build that finished, and creates `.tscircuit/cache/`.
   `page.html` (P271) shows the breadboard picture and tscircuit's schematic and PCB in three tabs, each from
   `tsci export` on the kept `dist/board/circuit.json`. Since 2026-11-17, in a project folder, it is the flow page (P827): the phases of `flow.py`, then the three pictures, the breadboard inline (P949, [flow.md](flow.md#the-page)), written after the simulation project is kept. A folder that is no project keeps the three tabs. A tab that could not be drawn says why. With no build in this
   run, a board-only build, or a `dist/` that was not kept, an old `page.html` is removed and the kept entry says why.

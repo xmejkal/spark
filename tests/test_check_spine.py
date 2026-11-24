@@ -2292,7 +2292,7 @@ class TheBoardAloneTest(unittest.TestCase):
         record.write_text(json.dumps({"schema": 1, "dist_written": True, "at": "2026-11-24T00:38:12+01:00"}))
         self.assertIsNone(build_record.earlier_dist(project))  # this build wrote it
         record.write_text(json.dumps({"schema": 1, "dist_written": False, "at": "2026-11-24T00:38:12+01:00"}))
-        self.assertEqual(build_record.earlier_dist(project), "the last build, 2026-11-24T00:38:12+01:00, did not write dist/")
+        self.assertEqual(build_record.earlier_dist(project), "the last build, 2026-11-24T00:38:12+01:00, did not write dist/: build again with check_spine.py --keep before you rely on this circuit")
         (project / "dist").rmdir()
         self.assertIsNone(build_record.earlier_dist(project))  # nothing there to name
         (project / "dist").mkdir()

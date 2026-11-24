@@ -105,14 +105,16 @@ class UnfinishedBuildDistTest(unittest.TestCase):
         def draw(project):
             for name in PICTURES:
                 (project / "dist" / "board" / name).write_text("<svg>" + name + "</svg>")
-        code, project, _ = self.run_build(NO_TSCI, before=draw)
+        code, project, report = self.run_build(NO_TSCI, before=draw)
         self.assertEqual(code, 2)
         for name in PICTURES:
             self.assertEqual((project / "dist" / "board" / name).read_text(), "<svg>" + name + "</svg>")
+        self.assertEqual(len(self.dist_entries(report)), 1)
+        self.assertEqual(self.dist_entries(report)[0]["did"], "left alone")
 
     def test_check_all_names_an_earlier_dist(self):
         _, project, _ = self.run_build(NO_TSCI)
-        line = "circuit      the last build, %s, did not write dist/" % self.record(project)["at"]
+        line = "circuit      the last build, %s, did not write dist/: build again with check_spine.py --keep before you rely on this circuit" % self.record(project)["at"]
         _, report = self.check_all(project)
         self.assertIn(line, report["resolved"])
         _, text = self.check_all(project, json_out=False)
