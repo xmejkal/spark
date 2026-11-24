@@ -1086,17 +1086,24 @@ class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
 
     def test_a_broken_selection_is_said_once_by_list_and_validate(self):
         # P1098 (#1616): a boards/active.json that cannot be read (record_file_broken) is said once, as a broken
-        # requirements.json is (P988). P1099 (#1617): a folder (F4) or one with no read permission is said, never a crash.
+        # requirements.json is (P988). P1099 (#1617): a folder (F4), a dangling link (the lens's L1) or one with no read
+        # permission is said, never a crash.
         selection = self.project / "boards" / "active.json"
         for case, sentence in (("{x", "active.json is not valid JSON"), ("[1]", "active.json is not a JSON object"),
-                               ("folder", "active.json cannot be read: "), ("no read permission", "active.json cannot be read: ")):
+                               ("folder", "active.json cannot be read: "), ("dangling link", "active.json cannot be read: "),
+                               ("no read permission", "active.json cannot be read: ")):
             with self.subTest(case=case):
-                if selection.is_dir():
+                if selection.is_dir() and not selection.is_symlink():
                     selection.rmdir()
                 else:
-                    selection.unlink()
+                    selection.unlink(missing_ok=True)
                 if case == "folder":
                     selection.mkdir()
+                elif case == "dangling link":
+                    try:
+                        os.symlink(self.project / "boards" / "gone.json", selection)
+                    except (OSError, NotImplementedError):
+                        self.skipTest("no symlinks here")
                 elif case == "no read permission":  # the last case, so the cleanup finds the file
                     if os.geteuid() == 0:
                         self.skipTest("root reads a file with no read permission")
@@ -1114,7 +1121,8 @@ class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
                 self.assertIn(sentence, notes[0])
                 code, valid, _ = self._run("--validate")
                 self.assertEqual((code, valid.count(sentence)), (0, 1), valid)
-                self.assertEqual(self._run("--id")[0], 1)
+                code, _, err = self._run("--id")
+                self.assertEqual((code, sentence in err), (1, True), err)
 
     def test_a_missing_selection_or_one_naming_no_board_says_nothing(self):
         # P1098: a selection that names no board (no_board_selected) or none at all (board_file_missing) marks no board

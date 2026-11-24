@@ -400,6 +400,7 @@ class ASelectionThatCannotBeOpenedStopsInitTest(unittest.TestCase):
             for argv in ((), ("--board", self.S3), ("--board", self.S3, "--force")):
                 with self.subTest(case=case, argv=argv):
                     root = self.a_broken_selection(case)
+                    before = sorted(root.rglob("*"))
                     refused = project_setup.why_project_refused(root)
                     self.assertEqual(refused.code, "record_file_broken")
                     self.assertTrue(refused.startswith("init_project.py: %s cannot be read: " % (root / "boards" / "active.json")), refused)
@@ -410,7 +411,7 @@ class ASelectionThatCannotBeOpenedStopsInitTest(unittest.TestCase):
                         listed = store.projects()
                     self.assertEqual((code, err.getvalue()), (init_project.EXIT_COULD_NOT_RUN, refused + "\n"))
                     self.assertEqual(listed, {}, "a refused run puts the project on no list")
-                    self.assertFalse((root / ".spark" / "project.json").exists())
+                    self.assertEqual(sorted(root.rglob("*")), before, "a refused run writes nothing (the lens's L3)")
 
 
 class ForceMustNotEatWhatSomebodyMeasuredTest(unittest.TestCase):
