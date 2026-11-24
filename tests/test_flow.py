@@ -943,7 +943,7 @@ class TheBuildOfferTest(FlowTest):
         self.assertIn("the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn", build["effect"])
         self.assertIn("If the board tool is not installed, the board is not built, the old wiring sheet and drawings stay as an "
                       "earlier build's, and this page is deleted.", build["effect"])
-        self.assertIn("If the parts list has a problem, the old wiring sheet, drawings and pin map stay as an earlier build's, and "
+        self.assertIn("If spark refuses the parts list, the old wiring sheet, drawings and pin map stay as an earlier build's, and "
                       "this page is deleted.", build["effect"])
         self.assertTrue(build["effect"].endswith("Runs no simulation and costs nothing."))
         self.assertNotIn("history", build["effect"])
@@ -966,7 +966,7 @@ class TheBuildOfferTest(FlowTest):
         project = a_built_project()
         (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "board_only": True, "parts": []}))
         effect = offer_of(show(project)[0], "build")["effect"]
-        self.assertIn("If the parts list has a problem, the old dist folder, wiring sheet, drawings and pin map stay as an "
+        self.assertIn("If spark refuses the parts list, the old dist folder, wiring sheet, drawings and pin map stay as an "
                       "earlier build's, and this page is deleted.", effect)
         self.assertNotIn("the old wiring sheet, drawings and pin map stay", effect)
 

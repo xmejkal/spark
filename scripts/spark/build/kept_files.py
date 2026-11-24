@@ -461,7 +461,7 @@ def keep_pins(requirements, destination, finished):
     try:
         module = pin_assigner.pin_module_for(str(requirements))
     except PIN_MAP_REFUSALS as stopped:
-        if ours:  # P1109: the firmware imports it; it stays whenever no build finished, even beside the dist/ of a build with problems, as the sheet does (P1093, D6)
+        if ours:  # P1109: the firmware imports it; it stays whenever no build finished, even beside a problem build's dist/, as the sheet does (P1093)
             return _left_from_earlier(target, "pin map", "%s; the pin map is from the earlier requirements" % stopped, finished)
         return {"file": str(target), "did": "not written", "why": str(stopped), "line": "no pin map: %s" % stopped}
     target.parent.mkdir(parents=True, exist_ok=True)
