@@ -248,20 +248,20 @@
  {
   "file": "scripts/spark/design/pick_parts.py",
   "name": "a project picked for is not put on the list",
-  "find": "        if not problems and not dry_run:\n            store.add_project(target)\n",
-  "replace": "        if not problems and not dry_run:\n            pass\n"
+  "find": "record_home.list_project(target, dry_run) if not problems",
+  "replace": "record_home.list_project(target, True) if not problems"
  },
  {
   "file": "scripts/spark/design/pick_parts.py",
   "name": "a dry run of a pick is written",
-  "find": "        if not problems and not dry_run:\n            store.add_project(target)",
-  "replace": "        if not problems:\n            store.add_project(target)"
+  "find": "        if not problems and not dry_run:\n            drawer.apply(changes)",
+  "replace": "        if not problems:\n            drawer.apply(changes)"
  },
  {
   "file": "scripts/spark/design/pick_parts.py",
   "name": "a dry run of a pick says it was written",
-  "find": "\"released\": released, \"written\": not problems and not dry_run},",
-  "replace": "\"released\": released, \"written\": not problems},"
+  "find": "\"written\": not problems and not dry_run,",
+  "replace": "\"written\": not problems,"
  },
  {
   "file": "scripts/spark/design/pick_parts.py",

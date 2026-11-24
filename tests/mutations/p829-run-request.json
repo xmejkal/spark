@@ -71,8 +71,8 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "an ok step's line names the machine key, not the offer's label (P829 review)",
-  "find": "\"line\": line_of(offer.label, result)",
-  "replace": "\"line\": line_of(offer.key, result)"
+  "find": "else line_of(offer.label, result)",
+  "replace": "else line_of(offer.key, result)"
  },
  {
   "file": "scripts/spark/flow/offer_steps.py",

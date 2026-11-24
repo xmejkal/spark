@@ -278,8 +278,8 @@
  {
   "file": "scripts/spark/sourcing/mark_step.py",
   "name": "C-17: a step says nothing of the project it lists",
-  "find": "                      + ([] if listed else [\"  %s %s on your projects\" % (\"would list\" if dry_run else \"listed\", event[\"project\"])]))",
-  "replace": "                      + [])"
+  "find": "                      + ([] if listed else [\"  %s %s on your projects\" % (\"would list\" if dry_run else \"listed\", event[\"project\"])])\n",
+  "replace": "                      + []\n"
  },
  {
   "file": "scripts/spark/sourcing/mark_step.py",

@@ -3,7 +3,8 @@
   "file": "scripts/spark/records/store.py",
   "name": "the store's folder is opened and not held, so two writers do not take turns",
   "find": "        fcntl.flock(held, fcntl.LOCK_EX)",
-  "replace": "        pass"
+  "replace": "        pass",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/records/store.py",
