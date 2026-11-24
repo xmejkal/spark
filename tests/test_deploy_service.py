@@ -231,15 +231,17 @@ class TheFlashNotFinishedTest(ServiceCase):
 
     @needs_littlefs
     def test_a_bug_in_the_log_write_replaces_the_flash_s_error_and_keeps_it(self):
-        # F13, on purpose: a TypeError is a bug, so it fails loudly, and the FlashError stays its __context__
-        def broken(project, log):
-            raise TypeError("a bug")
+        # F13, on purpose: a TypeError or a KeyError is a bug, so it fails loudly, and the FlashError stays its __context__
+        for bug in (TypeError, KeyError):
+            with self.subTest(bug=bug.__name__):
+                def broken(project, log):
+                    raise bug("a bug")
 
-        self.write_fails = True
-        report = self.look()
-        with self.assertRaises(TypeError) as raised:
-            self.service_with(broken).deploy(report, report.token(), FakeConsent(True))
-        self.assertIsInstance(raised.exception.__context__, deploy_service.FlashError)
+                self.write_fails = True
+                report = self.look()
+                with self.assertRaises(bug) as raised:
+                    self.service_with(broken).deploy(report, report.token(), FakeConsent(True))
+                self.assertIsInstance(raised.exception.__context__, deploy_service.FlashError)
 
     @needs_littlefs
     def test_a_refusal_before_the_flash_writes_no_board_log(self):

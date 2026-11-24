@@ -60,6 +60,12 @@ REPLIES_HELP = ('a file of your own with the person\'s yes to the deploy\'s boar
 LOOK_WHY = {board_codes.OTHER_BOARD: "the board on USB is not this project's kept board: the look asks the person before it reads it",
             board_codes.NO_KNOWN_BOARD: "spark keeps no board for this project yet: the look asks the person once and keeps it"}
 LOOK_WHY_AFTER_READ = "the board read is not this project's kept board: plug in the kept board, or read this one with the look"
+#: The board log line after a flash that did not finish (P1092, the review of #1632): the log, the fact and the next step;
+#: or why no log was written, and what that leaves flow.py show saying.
+NOT_FINISHED_LOG_LINE = ("board log: %s: flash not finished, the board may be erased. Look at the board with Claude, then run "
+                         "the deploy again.")
+NOT_FINISHED_UNLOGGED_LINE = ("board log: not written: %s, so flow.py show may still name an older deploy. The flash did not "
+                              "finish, so the board may be erased.")
 #: The refusals from the look to the flash that one handler says (P354, P892).
 REFUSALS = (board_look.LookStopError, DeployError, tool_finder.ToolError, SparkError)
 
@@ -252,10 +258,10 @@ class DeployFlowService:
         """The board log of the FlashError `failed` (P1092): its path, as `data.board_log` with the image it names, or why it
         was not written."""
         if failed.log_path is None:
-            self.say(DeployPhase.FLASH, "board log: not written: %s" % failed.log_error)
+            self.say(DeployPhase.FLASH, NOT_FINISHED_UNLOGGED_LINE % failed.log_error)
             return
         self._reached.update(board_log=str(failed.log_path), image_sha256=failed.image_sha256)
-        self.say(DeployPhase.FLASH, "board log: %s" % failed.log_path, raw=True)  # P677: a file a person opens, as data.board_log
+        self.say(DeployPhase.FLASH, NOT_FINISHED_LOG_LINE % failed.log_path, raw=True)  # P677: a file a person opens, as data.board_log
 
     def look_and_flash(self):
         """The read and its lines, the check that the board read is the kept board (P892), the yes, the gate, then the flash. A

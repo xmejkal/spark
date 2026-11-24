@@ -321,7 +321,8 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual(Path(data["board_log"]).parent, self.project / "sim" / "runs" / "board")
         self.assertTrue(Path(data["board_log"]).is_file())
         self.assertEqual(data["image_sha256"], hashlib.sha256(self.image.read_bytes()).hexdigest())
-        self.assertIn("board log: %s\n" % data["board_log"], err)
+        self.assertIn("board log: %s: flash not finished, the board may be erased. Look at the board with Claude, then run the "
+                      "deploy again.\n" % data["board_log"], err)  # the review of #1632: the fact and the next step
 
     @needs_littlefs
     def test_a_failed_flash_says_the_board_may_be_erased(self):
@@ -340,6 +341,7 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((said["unchecked"][0]["code"], said["data"]["board_log"], said["data"]["image_sha256"]), ("flash_failed", None, None))
         self.assertIn("board log: not written: ", err)
+        self.assertIn(", so flow.py show may still name an older deploy. The flash did not finish, so the board may be erased.\n", err)
 
     @needs_littlefs
     def test_an_erase_retried_once_gives_the_usual_envelope_and_the_retry_line_on_stderr(self):
