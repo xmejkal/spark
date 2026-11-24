@@ -727,9 +727,9 @@ class TheFlowAreaTest(unittest.TestCase):
     """P825: the flow area's modules live in `scripts/spark/flow/`, its `__init__.py` imports nothing, each module imports
     alone, and `flow_operations.OPERATIONS` maps each op to its Operation. `scripts/` keeps the CLI `flow.py`."""
     FLOW = ROOT / "scripts" / "spark" / "flow"
-    #: The modules of the area, by the names of its page (`areas/flow.md`).
-    MODULES = ["deploy_reading", "fingerprint", "flow_codes", "flow_operations", "flow_page", "guide", "now_follow_up", "offer_steps", "phase_readers", "phase_steps", "request_codes", "run_request", "show_flow",
-               "write_flow_page"]
+    #: The modules of the area, as the map lists them (`docs/guide/map.md`, the flow's rows).
+    MODULES = ["deploy_reading", "fingerprint", "flow_codes", "flow_operations", "flow_page", "flow_reading", "guide", "now_follow_up", "offer_steps", "phase_readers", "phase_steps",
+               "published_page", "request_codes", "run_request", "show_flow", "wired_board", "write_flow_page"]
 
     def test_the_area_holds_its_modules_and_scripts_holds_no_copy(self):
         self.assertEqual(sorted(path.stem for path in self.FLOW.glob("*.py") if path.name != "__init__.py"), self.MODULES)

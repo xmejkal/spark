@@ -40,16 +40,19 @@ seen is problems. Firmware newer than that image, an image that differs from the
 stale, and stale wins over problems. The says line keeps the verdict. With the deploy ok, guide.now is null and
 guide.no_open_phase says why. data.deploy holds the logged deploy: at, image, verdict, cause, fact and read_back.
 
-flow.py page writes page.html in the project: the same phases, each with its status word and a mark, the wiring of a built
-project (the lines before power, then the steps, one at a time or all at once) and the pictures the project holds: the
-breadboard, and the schematic and the PCB that the build with --keep kept as files. The page adds no tick of its own: a
+flow.py page writes page.html in the project from the one reading that flow.py show prints (P1060): the phases, each
+with its status word and a mark, the wiring of a built project (the lines before power, then the steps, one at a time
+or all at once) and the pictures the project holds: the breadboard, and the schematic and the PCB that the build with
+--keep kept as files. The page adds no tick of its own: a
 phase that is not ok never shows one. Only the build with --keep draws the schematic and the PCB. The page reads the
 project's files and its board logs, and cannot see your wiring or what the board shows now. Each offer shows its label and its effect. The page's <body> carries
 data-fingerprint (the first 12 hex digits of the fingerprint) and data-written (the newest change time of the three files
-below). With --json it prints data.file, data.did, data.stands_at, data.phases (each phase and its status),
-data.fingerprint, data.guide and data.artifact. --artifact ID keeps the id of the Artifact the page is published as
+below). With --json, flow.py page prints its own keys, not show's nine: data.file, data.did, data.stands_at,
+data.phases (each phase and its status only), data.fingerprint, data.guide and data.artifact. --artifact ID keeps the id of the Artifact the page is published as
 in .spark/page.json, the id only, and every later page answers it as data.artifact (null when none is kept). An id that
-is no UUID in lower case is a bad argument, and nothing is written. Only /spark:page publishes the page.
+is no UUID in lower case is a bad argument, and nothing is written. Only /spark:page publishes the page. Show,
+run-request and the page show each value of the project's secrets files (firmware/*secret*.py, values only) as ***
+(P1060); a secrets file that cannot be read or parsed keeps the page from being written, and show notes the mask is off.
 
 flow.py run-request reads .spark/page-request.json, the page's request {id, key, seen, at}, and deletes it at once. It
 runs the step only when seen is the first 12 hex digits of the fingerprint now, the key is an offer now, its kind
@@ -57,7 +60,8 @@ is pick, requirements or build, and its step names an Operation spark runs from 
 offer's step, never from the request. Else it runs nothing:
 request_malformed (no regular file, no JSON object, an id that is no UUID, a key that is no text, a seen that is not 12
 hex digits, or a file it cannot delete), request_in_chat (a need's drop), request_stale (the project changed after the
-page was read) or request_not_offered (not an offer now, or a kind the page never runs). With --json it prints
+page was read), request_not_offered (not an offer now, or a kind the page never runs) or request_secrets_unreadable
+(a secrets file in firmware/ that cannot be read or parsed). With --json it prints
 data.for, data.key, data.label, data.ran, data.status, data.mark, data.line and data.fingerprint, the one after the
 run, a refusal too; key and label only of an offer. After a run, write the page again with flow.py page.
 
@@ -72,8 +76,9 @@ person's yes. After an ok run that writes to a project, the command ends its nex
 parts.py --pick and check_spine.py --keep. At any status but a crash, they and deploy.py (not --dry-run, P1069) also write
 page.html again when the project has one (the build with --keep writes its own), and never publish it.
 
-With --json it prints one envelope: data.phases, data.stands_at, data.fingerprint, data.guide and data.deploy
-(docs/guide/agents/flow.md).
+With --json it prints one envelope: data.phases, data.stands_at, data.fingerprint, data.guide, data.deploy, then
+data.name (the project folder's), data.title (the page's), data.stamp (newest: the page's data-written) and
+data.artifact (the id kept in .spark/page.json, else null) (docs/guide/agents/flow.md).
 
 Exit codes: 0 no phase holds problems or could not run, 1 a phase holds problems (a need that cannot be matched,
 requirements the picks cannot give, a build that failed, a firmware line in sim/wokwi.toml that spark cannot use), 2 a

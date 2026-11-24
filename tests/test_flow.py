@@ -43,6 +43,8 @@ from spark.design import needs  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import LOOK_WHY, SCENARIO_FIRST_WHY, SCENARIO_WHY, SIM_FILES_NOW, STALE  # noqa: E402
+from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
+from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.phase_steps import SCENARIO_PLACEHOLDER  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.core.result import NextStep  # noqa: E402
@@ -50,6 +52,8 @@ from spark.core.result import NextStep  # noqa: E402
 #: A built project: requirements.json, the board it names and the circuit a finished build kept with its built-from.json.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 PHASES = ["idea", "needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"]
+#: A value of a project's secrets file (P1060), MIN_SECRET characters or more, and a value whose file does not parse (D5).
+SECRET, HALF_TYPED = "wifipass1234", "half-typed-value-31337"
 
 
 def show(project, *argv):
@@ -131,6 +135,16 @@ def lines_of(project):
     with contextlib.redirect_stdout(io.StringIO()) as out:
         flow.main(["show", "--project", str(project)])
     return out.getvalue().splitlines()
+
+
+def sheet_at(project):
+    """The time of the project's breadboard.md, with its zone, as `data.guide.wired.sheet_at` holds it (P1044)."""
+    return zone_time.stamp(datetime.datetime.fromtimestamp((project / "breadboard.md").stat().st_mtime))
+
+
+def wired_line(project):
+    """The parts phase's first line on a project whose only witness is its sheet (P1044)."""
+    return " ".join((WIRED_SHEET_MESSAGE % day_of(sheet_at(project)), WIRED_STEP_MESSAGE))
 
 
 def a_built_project_with_a_sheet_from(requirements):
@@ -277,10 +291,12 @@ class ThePhasesTest(FlowTest):
 
     def test_a_project_whose_last_need_was_dropped_says_so_and_is_no_hand_written_project(self):
         # P984: needs.json holds no need and requirements.json was written from picks: nothing was written by hand.
-        said, code = show(with_needs(a_built_project(), []))
+        project = with_needs(a_built_project(), [])
+        said, code = show(project)
         self.assertEqual(code, 0)
         self.assertEqual(says(said, "needs"), ["no need is left: the last one was dropped"])
-        self.assertEqual(says(said, "parts"), ["no need or pick is behind the parts list"])
+        # P1044: the fixture keeps a sheet, so the parts phase's first line is the wired line
+        self.assertEqual(says(said, "parts"), [wired_line(project), "no need or pick is behind the parts list"])
         self.assertEqual(table(said), BUILT_TABLE)
 
     def test_a_build_that_could_not_run_says_so_and_exits_2(self):
@@ -639,7 +655,8 @@ class TheGuideTest(FlowTest):
     """P977: `data.guide` says what to do now, what is done, what comes later and what the person set aside."""
 
     def test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now(self):
-        said, code = show(a_project_built_with_no_simulation())
+        project = a_project_built_with_no_simulation()
+        said, code = show(project)
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "firmware"))  # P1030: the guide's now
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
@@ -648,7 +665,7 @@ class TheGuideTest(FlowTest):
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL,
-            "no_open_phase": None})
+            "no_open_phase": None, "wired": {"sheet_at": sheet_at(project), "deploy_at": None}})  # P1044: the fixture keeps a sheet
 
     def test_the_project_stands_where_the_guide_says_now(self):
         """P1030: one rule says where a project stands, the guide's now phase, in data.stands_at too."""
@@ -669,13 +686,15 @@ class TheGuideTest(FlowTest):
         self.assertIn("breadboard (spark cannot see it)", guide["done"])
 
     def test_with_the_firmware_written_the_deploy_is_now_and_the_simulate_stays_later(self):
-        said, _ = show(a_firmware(a_project_built_with_no_simulation()))
+        project = a_firmware(a_project_built_with_no_simulation())
+        said, _ = show(project)
         self.assertEqual(said["data"]["guide"], {
             "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
-            "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL, "no_open_phase": None})
+            "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL, "no_open_phase": None,
+            "wired": {"sheet_at": sheet_at(project), "deploy_at": None}})  # P1044: the fixture keeps a sheet
 
     def test_any_other_cause_of_a_simulation_that_could_not_run_stops_at_the_build(self):
         for code in ("simulation_fact_missing", "converter_lacks_part", None):
@@ -762,7 +781,7 @@ class TheGuideTest(FlowTest):
             "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
-            "set_aside": [], "no_simulation": None, "no_open_phase": None})
+            "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None})  # P1044: no sheet and no board log
 
     def test_needs_set_aside_do_not_count_and_a_picked_one_counts_as_picked(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -890,7 +909,8 @@ class TheBuildOfferTest(FlowTest):
         said, _ = show(a_built_project())
         build = offer_of(said, "build")
         self.assertEqual(build["label"], "Build the board")
-        self.assertTrue(build["effect"].startswith("Saves its files in this project: the board file"))
+        # P1044: the fixture keeps a sheet, so the wired sentence comes first
+        self.assertTrue(build["effect"].startswith(WIRED_BUILD_MESSAGE + " Saves its files in this project: the board file"))
         self.assertIn("the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn", build["effect"])
         self.assertIn("If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page "
                       "are deleted.", build["effect"])
@@ -1969,6 +1989,16 @@ class ThePageRefreshTest(FlowTest):
                 self.assert_one_line_and_the_result_stands(project, follow_up, raised)
                 self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
 
+    def test_a_secrets_file_that_does_not_parse_leaves_the_old_page_and_shows_none_of_its_text(self):
+        # P1060 D5: write_page refuses, and the core says so in one diagnostics line that names the refusal's class only
+        from spark.flow.now_follow_up import FlowFollowUp
+        project = self.with_page(("soil",))  # one open need: the flow names its pick
+        (project / "firmware").mkdir()
+        (project / "firmware" / "wifi_secrets.py").write_text('WIFI_PASSWORD = "%s\n' % HALF_TYPED, encoding="utf-8")
+        self.assert_one_line_and_the_result_stands(project, FlowFollowUp(), "SecretsUnreadableError")
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
+        self.assertNotIn(HALF_TYPED, repr(refreshed_and_alone(project, FlowFollowUp())[0]))
+
     def test_a_page_that_is_not_utf_8_is_written_over_by_flow_page_and_by_the_refresh(self):
         # the review, refuter must-fix: main wrote over such a page, so the whole-file write must not compare it first
         import parts
@@ -2307,6 +2337,55 @@ class TheDeployNowTest(FlowTest):
         for each in (a_deploy_project(), a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE)):
             with self.subTest(project=each):
                 self.assertIsNone(show(each)[0]["data"]["guide"]["no_open_phase"])
+
+
+def with_secrets(project, text):
+    """`project` with firmware/wifi_secrets.py holding `text`."""
+    (project / "firmware").mkdir(parents=True, exist_ok=True)
+    (project / "firmware" / "wifi_secrets.py").write_text(text, encoding="utf-8")
+    return project
+
+
+class TheSecretMaskTest(FlowTest):
+    """P1060 (#1558): `show` masks the values of the project's secrets file as `***`. A file that cannot be read or parsed
+    does not stop `show` (D5: `show` fails open): it masks what it can and says in a note that the mask is off for it."""
+
+    def test_a_secret_value_in_a_phase_sentence_is_masked(self):
+        project = with_secrets(with_needs(Path(tempfile.mkdtemp()) / "plant", [{"id": SECRET, "does": "sense", "what": "soil-moisture"}]),
+                               'WIFI_PASSWORD = "%s"\n' % SECRET)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            flow.main(["show", "--project", str(project), "--json"])
+        self.assertNotIn(SECRET, out.getvalue())
+        self.assertIn("1 need(s): ***", says(json.loads(out.getvalue()), "needs"))
+        self.assertNotIn(SECRET, "\n".join(lines_of(project)))
+
+    def test_a_secret_in_the_project_s_path_is_masked_in_next_s_argv_too_the_known_risk(self):
+        # A11: a raw place keeps its paths and loses its tokens, so a project whose path holds a secret gets a `next`
+        # argv that no longer runs. The plan names this risk and takes it: the mask comes first.
+        project = self.user_home / SECRET / "xiao"
+        shutil.copytree(BUILT, project)  # never built: `next` is the build, whose argv holds the project's path
+        with_secrets(project, 'WIFI_PASSWORD = "%s"\n' % SECRET)
+        envelope, _code = show(project)
+        argv = [part for step in envelope["next"] for part in step["argv"]]
+        self.assertTrue(argv)
+        self.assertNotIn(SECRET, json.dumps(envelope))
+        self.assertTrue(any("/***/" in part for part in argv), argv)
+
+    def test_a_secrets_file_that_does_not_parse_adds_a_note_and_shows_none_of_its_text(self):
+        from spark.flow.show_flow import MASK_OFF
+        project = with_secrets(with_needs(Path(tempfile.mkdtemp()) / "plant", [{"id": "soil", "does": "sense", "what": "soil-moisture"}]),
+                               'WIFI_PASSWORD = "%s\n' % HALF_TYPED)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = flow.main(["show", "--project", str(project), "--json"])
+        envelope = json.loads(out.getvalue())
+        self.assertEqual((code, envelope["status"]), (0, OK))
+        self.assertEqual(envelope["notes"], [{"subject": "firmware/wifi_secrets.py", "sentence": MASK_OFF % "firmware/wifi_secrets.py"}])
+        self.assertEqual(MASK_OFF % "firmware/", "the mask is off for firmware/: it cannot be read or parsed, so spark cannot mask "
+                                                 "its values. Repair or remove it")  # the lens of #1610: no firmware/firmware
+        self.assertNotIn(HALF_TYPED, out.getvalue() + err.getvalue())
+        text = "\n".join(lines_of(project))
+        self.assertIn(MASK_OFF % "firmware/wifi_secrets.py", text)
+        self.assertNotIn(HALF_TYPED, text)
 
 
 if __name__ == "__main__":

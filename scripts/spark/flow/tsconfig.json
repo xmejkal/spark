@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    "types": [],
+    "strict": true,
+    "newLine": "lf",
+    "removeComments": false,
+    "sourceMap": false
+  },
+  "files": ["page_script.ts", "artifact_runtime.d.ts"]
+}

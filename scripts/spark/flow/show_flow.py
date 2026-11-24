@@ -2,21 +2,28 @@
 Where a project stands as an Operation on the core (P825, #1183): each phase's reader in order, one line per phase, the
 offers each phase holds, the guide (P977) and the step of its now: the now offer's (P1030), else the now phase's
 (P1034, `phase_steps`). It reads and never writes. `flow.py show` is
-its CLI; the page (P827) and the requests (P829) read the same phases.
+its CLI. `reading_of` reads the flow once as a FlowReading, which `show` prints and the page (P827) draws (P1060); the
+requests (P829) read the same phases.
 """
 
+import datetime
 from pathlib import Path
 
 from spark.flow import deploy_reading, flow_codes, phase_steps
-from spark.flow.fingerprint import fingerprint_of
-from spark.flow.guide import guide_of, stands_at_of
+from spark.flow.fingerprint import FILES, fingerprint_of
+from spark.flow.flow_reading import FlowReading
+from spark.flow.guide import guide_of
+from spark.flow.published_page import PublishedPageStore
+from spark.flow.wired_board import read_wired, with_wired
 from spark.flow.phase_readers import MARKS, READERS, DeployReader
+from spark.firmware.project_secrets import ProjectSecrets
 from spark.records import store
 from spark.core.operation import COMMON_ARGUMENTS, READS, Operation
 from spark.core.outcomes import COULD_NOT_RUN, PROBLEMS
 from spark.core.privacy import Privacy
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
+from spark.core.zone_time import stamp
 
 # --- MVP ---
 #: One line of the guide, after the phases (P1030): its label, as the page writes it, and its items, comma apart.
@@ -30,18 +37,26 @@ OFFERS_SHOWN = 5
 #: The Finding of a phase that holds problems or could not run: its first sentence, and where to look.
 PHASE_SENTENCE = "%s: %s"
 PHASE_FIX = "read what the phase says in data.phases"
+#: The note of `show` on a secrets file that cannot be read or parsed (P1060 D5): `show` runs, and the mask is off for that
+#: file's values. It names the file, never its text: a parse error's text holds the line, and the line the secret.
+MASK_OFF = "the mask is off for %s: it cannot be read or parsed, so spark cannot mask its values. Repair or remove it"
 
 
-def privacy_for(project):
-    """The Privacy of a run on `project`: its path, the store's and the home folder's masked (P677)."""
-    return Privacy.of(project, store.home(), Path.home(), ())
+def privacy_for(project, secrets=None):
+    """The Privacy of a run on `project`: its path, the store's and the home folder's masked (P677), and the values of its
+    secrets files as `***` (P1060): `secrets`, else `ProjectSecrets.read`'s. With `secrets=()` it masks the paths only."""
+    if secrets is None:
+        secrets = ProjectSecrets.read(project).values
+    return Privacy.of(project, store.home(), Path.home(), secrets)
 
 
 def phase_line(phase):
     """One phase as a person reads it: `  ✓ needs: 2 need(s): soil, wet (claude)`, where the mark alone says ok, then up
     to OFFERS_SHOWN offer keys and how many more, indented."""
     word = MARKS[phase.status][0]
-    lines = ["  %s %s: %s (%s)" % (phase.mark, phase.phase, ", ".join(([word] if word else []) + phase.says), phase.by)]
+    items = ([word] if word else []) + phase.says  # P1044: no comma after a full stop, a space
+    said = "".join(item + (" " if item.endswith(".") else ", ") for item in items[:-1]) + "".join(items[-1:])
+    lines = ["  %s %s: %s (%s)" % (phase.mark, phase.phase, said, phase.by)]
     keys = [offer.key for offer in phase.offers]
     more = ["+%d more" % (len(keys) - OFFERS_SHOWN)] if len(keys) > OFFERS_SHOWN else []
     lines += ["      offers: %s" % ", ".join(keys[:OFFERS_SHOWN] + more)] if keys else []
@@ -83,36 +98,60 @@ def now_steps(project, phases, guide):
     return phase_steps.steps_of(project, phases, guide)
 
 
-def phases_of(project, readers=None, deploy=None):
+def phases_of(project, readers=None, deploy=None, board=None):
     """The Phases of `project`, one per reader in the readers' order: the one source of the phases, for `show`, the page
     (P827) and a request (P829), which needs no guide. `readers` are the PhaseReaders a test swaps (None: `READERS`).
-    With `deploy`, the run's DeployState, the deploy phase is read from it (P1043)."""
+    The deploy phase is read from `deploy`, the run's DeployState (P1043; None: read here, once), and the phases are said
+    as the WiredBoard `board` says them (P1044, `wired_board.with_wired`; None: read here from the sheet and the deploy)."""
     readers = readers or READERS
-    if deploy is not None:
-        readers = [DeployReader(deploy) if isinstance(reader, DeployReader) else reader for reader in readers]
-    return [reader.answer(project) for reader in readers]
+    deploy = deploy if deploy is not None else deploy_reading.read_deploy(project)
+    readers = [DeployReader(deploy) if isinstance(reader, DeployReader) else reader for reader in readers]
+    board = board if board is not None else read_wired(project, deploy)
+    phases = [reader.answer(project) for reader in readers]
+    return with_wired(project, phases, board)
 
 
 def flow_and_guide(project, readers=None, deploy=None):
     """(the Phases of `project`, its guide, `guide.guide_of`): `show` and the page compute the guide once (P1030). The
-    deploy's state is read once too (`deploy`, else here), and the deploy phase and the guide both take it (P1043)."""
-    deploy = deploy or deploy_reading.read_deploy(project)
-    phases = phases_of(project, readers, deploy)
-    return phases, guide_of(project, phases, deploy=deploy)
+    deploy's state is read once too (`deploy`, else here), and the deploy phase and the guide both take it (P1043), and so
+    is the WiredBoard (P1044)."""
+    deploy = deploy if deploy is not None else deploy_reading.read_deploy(project)
+    board = read_wired(project, deploy)  # once: the phases and data.guide.wired agree (P1044)
+    phases = phases_of(project, readers, deploy, board)
+    return phases, guide_of(project, phases, deploy=deploy, board=board)
+
+
+def stamp_of(project):
+    """`{"newest": time}`: the newest change time of the fingerprint's files in `project`, in the machine's zone
+    (`zone_time.stamp`), or None when none is there. Python writes it, so the page stays the same bytes for the same flow
+    (P829); the page carries it as data-written."""
+    times = [path.stat().st_mtime for path in (Path(project) / name for name in FILES) if path.is_file()]
+    return {"newest": stamp(datetime.datetime.fromtimestamp(max(times))) if times else None}
+
+
+def reading_of(project, readers=None):
+    """The FlowReading of `project`, the flow read once (P1060): its folder's name, the phases and the guide
+    (`flow_and_guide`), the fingerprint, the deploy, the stamp and the Artifact the page is published as. `show` prints
+    it and the page draws it. It adds no rule of its own. `readers` are the PhaseReaders a test swaps (None: `READERS`)."""
+    deploy = deploy_reading.read_deploy(project)  # once: the phase, the guide and data.deploy agree (the review of #1579)
+    phases, guide = flow_and_guide(project, readers, deploy)
+    return FlowReading(Path(project).resolve().name, phases, guide, fingerprint_of(project, phases), deploy_reading.deploy_data(deploy),
+                       stamp_of(project), PublishedPageStore(project).read())
 
 
 def read_flow(project, readers=None):
-    """(the Phases of `project`, and `stands_at`, the guide's now phase: `guide.stands_at_of`, the one rule, P1030)."""
-    phases, guide = flow_and_guide(project, readers)
-    return phases, stands_at_of(guide)
+    """(the Phases of `project`, and `stands_at`, the guide's now phase): a projection of `reading_of`, for the tests."""
+    reading = reading_of(project, readers)
+    return reading.phases, reading.stands_at
 
 
 class ShowFlow(Operation):
     """
-    Operation: where a project stands. It asks each PhaseReader in order and answers `data.phases` (each Phase as a dict),
-    `data.stands_at`, the guide's now phase (`stands_at_of`, P1030), `data.fingerprint` (`fingerprint_of`, P829) and
-    `data.guide` (`guide_of`, P977) and `data.deploy`, the newest board log (`deploy_reading.deploy_data`, P1043). Its lines end with the guide's, and `next` holds the now offer's step (P1030), else
-    the now phase's next-only step (P1034). A phase
+    Operation: where a project stands. Its data is the FlowReading of `reading_of` (P1060): `data.phases` (each Phase as a
+    dict), `data.stands_at`, the guide's now phase (`stands_at_of`, P1030), `data.fingerprint` (`fingerprint_of`, P829),
+    `data.guide` (`guide_of`, P977), `data.deploy`, the newest board log (`deploy_reading.deploy_data`, P1043), then
+    `data.name`, `data.title` (the page's), `data.stamp` and `data.artifact`. Its lines end with the guide's, and `next`
+    holds the now offer's step (P1030), else the now phase's next-only step (P1034). A phase
     that holds problems or could not run adds one Finding of that status, so the exit says so; every phase still answers.
     `readers` are the PhaseReaders a test swaps (None: `READERS`).
     """
@@ -121,23 +160,23 @@ class ShowFlow(Operation):
     summary = "Say where a project stands, phase by phase from the idea to the deploy, and what each phase offers next (P825)."
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS,)
-    data_keys = ("phases", "stands_at", "fingerprint", "guide", "deploy")
+    data_keys = ("phases", "stands_at", "fingerprint", "guide", "deploy", "name", "title", "stamp", "artifact")
     privacy_for = staticmethod(privacy_for)
 
     def __init__(self, readers=None):
         self.readers = readers or READERS
 
     def run(self, project, *, outside):
-        deploy = deploy_reading.read_deploy(project)  # once: the phase, the guide and data.deploy agree (the review of #1579)
-        phases, guide = flow_and_guide(project, self.readers, deploy)
-        stands_at = stands_at_of(guide)
+        reading = reading_of(project, self.readers)
+        phases, guide = reading.phases, reading.guide
         findings = [Finding(phase.status, phase.phase, flow_codes.PHASE_PROBLEMS if phase.status == PROBLEMS else flow_codes.PHASE_COULD_NOT_RUN,
                             PHASE_SENTENCE % (phase.phase, phase.says[0]), PHASE_FIX)
                     for phase in phases if phase.status in (PROBLEMS, COULD_NOT_RUN)]
         steps = now_steps(project, phases, guide)
         lines = [line for phase in phases for line in phase_line(phase)]
         lines += guide_lines(guide, steps)
-        data = {"phases": [phase.to_dict() for phase in phases], "stands_at": stands_at, "fingerprint": fingerprint_of(project, phases),
-                "guide": guide, "deploy": deploy_reading.deploy_data(deploy)}
-        return OperationResult(data, findings, steps, lines=lines)
+        data = reading.to_dict()
+        notes = [{"subject": name, "sentence": MASK_OFF % name} for name in ProjectSecrets.read(project).unreadable]
+        lines += [printable("  " + note["sentence"]) for note in notes]  # show has no headline, so its text holds its lines only
+        return OperationResult(data, findings, steps, lines=lines, notes=notes or None)
 # --- end MVP ---

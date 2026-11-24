@@ -41,6 +41,8 @@ from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TI
 from spark.flow.offer_steps import build_step  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
+from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
+from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
@@ -341,6 +343,12 @@ class TheBenchLineTest(unittest.TestCase):
         FlowPageStore().write(project, "page.html", FlowHtmlPage().text(
             FlowPage("t", [phase.to_dict() for phase in read_flow(project)[0]], None, [], [])))
         text = without_script((project / "page.html").read_text())
+        # P1044: the fixture keeps a sheet. Like P977's deploy sentence, the wired sentences are each a condition for the
+        # person ("If you wired the board", "whether you wired from it"), never a claim, so only they stand outside this check.
+        sheet_day = day_of(zone_time.stamp(datetime.datetime.fromtimestamp((project / "breadboard.md").stat().st_mtime)))
+        for sentence in (WIRED_SHEET_MESSAGE % sheet_day, WIRED_STEP_MESSAGE, WIRED_BUILD_MESSAGE):
+            self.assertIn(html.escape(sentence), text)  # the review of #1609, lens 4: each is there, so the rest is checked
+            text = text.replace(html.escape(sentence), "")
         for word in ("wired", "flashed"):
             self.assertNotIn(word, text)
 
@@ -364,6 +372,89 @@ class TheMaskTest(unittest.TestCase):
         # The test can fail: the same page, rendered without the mask, holds the home path.
         unmasked = FlowHtmlPage().text(FlowPage("t", [phase.to_dict()], None, [picture], []))
         self.assertIn(str(home), unmasked)
+
+
+#: A value of the project's secrets file (P1060), MIN_SECRET characters or more, and one that the page never shows.
+SECRET, OTHER_SECRET = "wifi-pass-4711", "never-on-the-page-0815"
+#: A secrets file that does not parse: its value holds no closing quote. No answer may show its text (D5).
+HALF_TYPED = "half-typed-value-31337"
+
+
+def a_project_with_secrets(text):
+    """A project folder whose firmware/wifi_secrets.py holds `text`."""
+    project = Path(tempfile.mkdtemp()) / "project"
+    (project / "firmware").mkdir(parents=True)
+    (project / "firmware" / "wifi_secrets.py").write_text(text, encoding="utf-8")
+    return project
+
+
+def a_secrets_line(value):
+    return 'WIFI_PASSWORD = "%s"\n' % value
+
+
+class TheSecretMaskTest(unittest.TestCase):
+    """P1060 (#1558): the values of the project's secrets file are masked in the page's texts, and a picture's SVG takes
+    the paths-only mask (A12): masking a value inside a drawing would break it, as the design's short-secret test says."""
+
+    def test_a_secret_is_masked_in_a_phase_sentence_and_kept_in_the_svg(self):
+        project = a_project_with_secrets(a_secrets_line(SECRET))
+        phase = a_phase("one", says=["joins the network %s" % SECRET])
+        drawn = Picture("Breadboard", '<svg xmlns="http://www.w3.org/2000/svg"><text>%s</text></svg>' % SECRET, None)
+        missing = Picture("Schematic", None, "not drawn for %s" % SECRET)
+        store = FakeStore()
+        write_page(project, readers_of(phase), parts_of([drawn, missing]), store=store)
+        text = without_script(store.written[0][2])
+        self.assertIn("joins the network ***", text)
+        self.assertIn("not drawn for ***", text)
+        self.assertEqual(text.count(SECRET), 1)
+        self.assertIn("<text>%s</text>" % SECRET, text)
+
+    def test_the_bytes_change_only_where_a_secret_was(self):
+        # A10: the SVG holds no secret here, so the page with the mask is the page without it, each secret made ***
+        phase = a_phase("one", says=["joins the network %s" % SECRET])
+        drawn = Picture("Breadboard", '<svg xmlns="http://www.w3.org/2000/svg"><text>a drawing</text></svg>', None)
+        project = a_project_with_secrets(a_secrets_line(OTHER_SECRET))
+        pages = []
+        for value in (OTHER_SECRET, SECRET):
+            (project / "firmware" / "wifi_secrets.py").write_text(a_secrets_line(value), encoding="utf-8")
+            store = FakeStore()
+            write_page(project, readers_of(phase), parts_of([drawn]), store=store)
+            pages.append(store.written[0][2])
+        without_mask, with_mask = pages
+        self.assertIn(SECRET, without_mask)
+        self.assertEqual(with_mask, without_mask.replace(SECRET, "***"))
+
+
+class TheUnreadableSecretsTest(unittest.TestCase):
+    """P1060 D5 (the delegated council, the PO's to change): what reaches the published Artifact fails closed. When a
+    secrets file cannot be read or parsed, write_page writes nothing, and each writer says so in its own words, naming the
+    file only: the text of a parse error holds the line, and the line holds the secret."""
+
+    def test_flow_page_writes_nothing_and_says_the_page_on_disk_is_the_old_one(self):
+        from spark.flow.write_flow_page import SECRETS_FIX
+        project = a_project_with_secrets('WIFI_PASSWORD = "%s\n' % HALF_TYPED)
+        (project / "page.html").write_text("an old page", encoding="utf-8")
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = flow.main(["page", "--project", str(project), "--json"])
+        envelope = json.loads(out.getvalue())
+        self.assertEqual((code, envelope["status"]), (2, COULD_NOT_RUN))
+        [item] = envelope["unchecked"]
+        self.assertEqual((item["code"], item["fix"]), (NOT_WRITTEN, SECRETS_FIX))
+        self.assertEqual(item["sentence"], "page.html was not written: firmware/wifi_secrets.py cannot be read or parsed, so spark "
+                                           "cannot mask the values of the project's secrets. The page on disk is the old one")
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
+        self.assertNotIn(HALF_TYPED, out.getvalue() + err.getvalue())
+
+    def test_the_build_s_kept_page_is_not_written_and_names_the_file(self):
+        project = a_project_with_secrets('WIFI_PASSWORD = "%s\n' % HALF_TYPED)
+        (project / ".spark").mkdir()
+        (project / "breadboard.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg"/>')
+        kept = [{"file": str(project / "dist"), "did": "wrote"}, {"file": str(project / "breadboard.svg"), "did": "wrote", "why": "a picture"}]
+        entry = kept_files.keep_tabbed_page(project, [Stage("build", OK)], kept, FakeTscircuitExport(), write_kept_page)
+        self.assertEqual(entry["did"], "not written")
+        self.assertIn("firmware/wifi_secrets.py cannot be read or parsed", entry["why"])
+        self.assertNotIn(HALF_TYPED, repr(entry))
+        self.assertFalse((project / "page.html").exists())
 
 
 def a_built_project(status=OK, stage_status=OK):
