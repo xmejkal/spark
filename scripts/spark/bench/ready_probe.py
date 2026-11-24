@@ -10,7 +10,9 @@ passed run's log from before P215, which names no files.
 """
 
 import collections
+import copy
 
+from spark.bench import board_codes
 from spark.bench.board_connection import BoardUnreachableError, BoardCodeError
 from spark.firmware.scenario_steps import READY, has_ready_line
 
@@ -49,18 +51,26 @@ class ReadyResult(collections.namedtuple("ReadyResult", "verdict sentence log"))
     """Result: what `ReadyProbe.check` returns. `verdict` is SEEN, NOT_SEEN or UNKNOWN, `sentence` says why, and `log` is
     what the board printed (the board's log). `files_read` is True when the board printed its files' hashes (P1022), as
     every verdict but UNKNOWN says: an UNKNOWN after the hashes gives it. `lost_board` is True when the firmware printed
-    a `ready` line and then mpremote lost the board (P1022 slice 3). They are attributes, so a ReadyResult still
-    unpacks to three. `_replace` keeps them, and copy and pickle keep them with the instance's other attributes."""
+    a `ready` line and then mpremote lost the board (P1022 slice 3). `code` is the board_codes code of the cause, which the
+    board log's reason line holds, or None for ready seen (P1043): `coded` gives it. They are attributes, so a ReadyResult
+    still unpacks to three. `_replace` keeps them, and copy and pickle keep them with the instance's other attributes."""
 
     def __new__(cls, verdict, sentence, log, files_read=None, lost_board=False):
         ready = super().__new__(cls, verdict, sentence, log)
         ready.files_read = verdict != UNKNOWN if files_read is None else files_read
         ready.lost_board = lost_board
+        ready.code = None
         return ready
 
+    def coded(self, code):
+        """A copy of this ReadyResult whose `code` is `code`."""
+        made = copy.copy(self)
+        made.code = code
+        return made
+
     def _replace(self, **changes):
-        """A ReadyResult with `changes`, and the same `files_read` and `lost_board`."""
-        return ReadyResult(*super()._replace(**changes), files_read=self.files_read, lost_board=self.lost_board)
+        """A ReadyResult with `changes`, and the same `files_read`, `lost_board` and `code`."""
+        return ReadyResult(*super()._replace(**changes), files_read=self.files_read, lost_board=self.lost_board).coded(self.code)
 
 
 class ReadyProbe:
@@ -73,11 +83,11 @@ class ReadyProbe:
         """A ReadyResult for the files `expected` {path: sha256}: SEEN, NOT_SEEN or UNKNOWN. `sleeps` are the deepsleep
         calls of firmware/ (sleep_calls): with one, a `ready` line before mpremote lost the board counts (D1, P1022)."""
         if not expected:
-            return ReadyResult(UNKNOWN, "the passed run's log names no files (an older spark): run its scenario again", "")
+            return ReadyResult(UNKNOWN, "the passed run's log names no files (an older spark): run its scenario again", "").coded(board_codes.NO_FILES_NAMED)
         try:
             hashes = self.connection.run_code(HASH_FILES % sorted(expected))
         except (BoardUnreachableError, BoardCodeError) as cannot:
-            return ReadyResult(UNKNOWN, "mpremote could not read the board's files: %s" % cannot, cannot.output)
+            return ReadyResult(UNKNOWN, "mpremote could not read the board's files: %s" % cannot, cannot.output).coded(board_codes.FILES_UNREAD)
         read = dict(line.split(" ", 2)[1:][::-1] for line in hashes.splitlines() if line.startswith(HASH_LINE + " "))
         differ = [path for path in sorted(expected) if read.get(path) != expected[path]]
         stopped = lost = None
@@ -87,17 +97,17 @@ class ReadyProbe:
             said, stopped = raised.output, str(raised)
         except BoardUnreachableError as cannot:
             if not has_ready_line(cannot.output):
-                return ReadyResult(UNKNOWN, "mpremote could not start the firmware: %s" % cannot, hashes + cannot.output, True)
+                return ReadyResult(UNKNOWN, "mpremote could not start the firmware: %s" % cannot, hashes + cannot.output, True).coded(board_codes.FIRMWARE_NOT_STARTED)
             said, lost = cannot.output, LOST % cannot  # P1022 slice 3: the firmware printed ready first
         log = hashes + said
         if differ:
             return ReadyResult(NOT_SEEN, "the board's %s %s not the files of the image" % (
-                ", ".join(differ), "is" if len(differ) == 1 else "are"), log, lost_board=bool(lost))
+                ", ".join(differ), "is" if len(differ) == 1 else "are"), log, lost_board=bool(lost)).coded(board_codes.FILES_DIFFER)
         if stopped is not None:
-            return ReadyResult(NOT_SEEN, "the firmware stopped with an error: %s" % stopped, log)
+            return ReadyResult(NOT_SEEN, "the firmware stopped with an error: %s" % stopped, log).coded(board_codes.FIRMWARE_ERROR)
         if not has_ready_line(said):
-            return ReadyResult(NOT_SEEN, "the firmware printed no %r in %d s" % (READY, READY_WAIT_S), log)
+            return ReadyResult(NOT_SEEN, "the firmware printed no %r in %d s" % (READY, READY_WAIT_S), log).coded(board_codes.NO_READY_LINE)
         if lost and not sleeps:  # D1: without a deepsleep call a lost board is one spark could not look at
-            return ReadyResult(UNKNOWN, LOST_NO_CALL % (READY, lost), log, True, lost_board=True)
+            return ReadyResult(UNKNOWN, LOST_NO_CALL % (READY, lost), log, True, lost_board=True).coded(board_codes.BOARD_LOST)
         return ReadyResult(SEEN, "the firmware printed %r and the board's %d files match the image%s" % (
             READY, len(expected), LOST_SLEEPS % (lost, sleeps[0].split(":")[0]) if lost else ""), log, lost_board=bool(lost))

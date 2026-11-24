@@ -68,8 +68,8 @@
  {
   "file": "scripts/spark/flow/write_flow_page.py",
   "name": "the page is built with no guide (P977 PR 2)",
-  "find": "newest_change(project), guide)",
-  "replace": "newest_change(project), None)"
+  "find": "reading.stamp[\"newest\"], reading.guide)",
+  "replace": "reading.stamp[\"newest\"], None)"
  },
  {
   "file": "scripts/spark/flow/write_flow_page.py",

@@ -34,14 +34,21 @@ the step of the simulate or the deploy (P1034), and an empty next means: read da
 only because Wokwi has no model of its board (board_not_in_wokwi) is counted as done there, and the guide says there
 is no simulation.
 
-flow.py page writes page.html in the project: the same phases, each with its status word and a mark, the wiring of a built
-project (the lines before power, then the steps, one at a time or all at once) and the pictures the project holds: the
-breadboard, and the schematic and the PCB that the build with --keep kept as files. The page adds no tick of its own: a
-phase that is not ok never shows one. Only the build with --keep draws the schematic and the PCB. The page does not know
-whether the board is wired or flashed. Each offer shows its label and its effect. The page's <body> carries
+The deploy phase reads the newest board log in sim/runs/board/: its time, image, verdict and cause, never its port or
+console text (P1043). Only ready seen on the image the project holds now is ok. Ready unknown is partial, and ready not
+seen is problems. Firmware newer than that image, an image that differs from the last deploy's, or no image makes it
+stale, and stale wins over problems. The says line keeps the verdict. With the deploy ok, guide.now is null and
+guide.no_open_phase says why. data.deploy holds the logged deploy: at, image, verdict, cause, fact and read_back.
+
+flow.py page writes page.html in the project from the one reading that flow.py show prints (P1060): the phases, each
+with its status word and a mark, the wiring of a built project (the lines before power, then the steps, one at a time
+or all at once) and the pictures the project holds: the breadboard, and the schematic and the PCB that the build with
+--keep kept as files. The page adds no tick of its own: a
+phase that is not ok never shows one. Only the build with --keep draws the schematic and the PCB. The page reads the
+project's files and its board logs, and cannot see your wiring or what the board shows now. Each offer shows its label and its effect. The page's <body> carries
 data-fingerprint (the first 12 hex digits of the fingerprint) and data-written (the newest change time of the three files
-below). With --json it prints data.file, data.did, data.stands_at, data.phases (each phase and its status),
-data.fingerprint, data.guide and data.artifact. --artifact ID keeps the id of the Artifact the page is published as
+below). With --json, flow.py page prints its own keys, not show's nine: data.file, data.did, data.stands_at,
+data.phases (each phase and its status only), data.fingerprint, data.guide and data.artifact. --artifact ID keeps the id of the Artifact the page is published as
 in .spark/page.json, the id only, and every later page answers it as data.artifact (null when none is kept). An id that
 is no UUID in lower case is a bad argument, and nothing is written. Only /spark:page publishes the page.
 
@@ -66,8 +73,9 @@ person's yes. After an ok run that writes to a project, the command ends its nex
 parts.py --pick and check_spine.py --keep so far. It also writes page.html again when the project has one (the build with
 --keep writes its own), and never publishes it.
 
-With --json it prints one envelope: data.phases, data.stands_at, data.fingerprint and data.guide
-(docs/guide/agents/flow.md).
+With --json it prints one envelope: data.phases, data.stands_at, data.fingerprint, data.guide, data.deploy, then
+data.name (the project folder's), data.title (the page's), data.stamp (newest: the page's data-written) and
+data.artifact (the id kept in .spark/page.json, else null) (docs/guide/agents/flow.md).
 
 Exit codes: 0 no phase holds problems or could not run, 1 a phase holds problems (a need that cannot be matched,
 requirements the picks cannot give, a build that failed, a firmware line in sim/wokwi.toml that spark cannot use), 2 a

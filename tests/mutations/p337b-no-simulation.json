@@ -48,10 +48,10 @@
   "replace": "\"yes\": who,"
  },
  {
-  "file": "scripts/spark/bench/deploy_service.py",
+  "file": "scripts/spark/bench/board_log.py",
   "name": "log-says-passed",
-  "find": "self.image_sha256, self.simulation, self.facts_line,",
-  "replace": "self.image_sha256, \"passed\", self.facts_line,"
+  "find": "self.port, self.image_sha256, self.simulation,",
+  "replace": "self.port, self.image_sha256, \"passed\","
  },
  {
   "file": "scripts/spark/bench/image_evidence.py",
