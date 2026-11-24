@@ -9,7 +9,7 @@ import json
 from collections import namedtuple
 from pathlib import Path
 
-from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256_of
+from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, earlier_dist, sha256_of
 from spark.build.stages import BUILD, SIMULATION
 from spark.breadboard import sheet
 from spark.design import need_requirements, needs, needs_basis
@@ -491,6 +491,7 @@ class BuildReader(PhaseReader):
         says = [flow_codes.BUILT_MESSAGE % (record.get("at") or flow_codes.UNKNOWN, record.get("status") or flow_codes.UNKNOWN)]
         says += ["%s: %s" % (stage.get("name"), stage.get("status")) for stage in record.get("stages") or [] if stage.get("status") != OK]
         says += [flow_codes.MISSING_FACTS_MESSAGE % len(record["missing_facts"])] if record.get("missing_facts") else []
+        says += [line for line in [earlier_dist(project)] if line]  # P1088: a dist/ the last build did not write (P816)
         stale = why_build_stale(project, record)
         if stale:
             return self.phase(flow_codes.STALE, [stale] + says, offers)

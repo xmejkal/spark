@@ -10,7 +10,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.build import build_codes
-from spark.build.build_record import DIST_WRITTEN, OWN_FILES, STAGE_IN_THE_WAY, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, StageTakenError, sha256_of
+from spark.build.build_record import DIST_WRITTEN, OWN_FILES, STAGE_IN_THE_WAY, STAGE_SUFFIX, WRITTEN_SHA256, BuildRecordStore, PreviousVersionFiles, StagedFile, StageTakenError, replace_whole, sha256_of
 from spark.build.build_service import verdict
 from spark.build.stages import BUILD, REQUIREMENTS, SIMULATION, skipped_the_build
 from spark.breadboard import drawing, sheet, svg_diagram, tabbed_page
@@ -46,6 +46,7 @@ REPLACED = "replaced"
 UNCHANGED = "unchanged"
 #: The `did` of a kept entry for a .tsx that is not touched.
 LEFT_ALONE = "left alone"
+NOT_KEPT = "not kept"  # the `did` of a kept entry for a file that could not be kept
 #: Why a board is left alone when the replace failed: its first step is the new board, its second the previous version.
 WRITE_FAILED = "spark could not write the new board, so it is left as it was: %s"
 #: Why a board spark wrote and nobody changed is left alone: the build did not finish, so its board is not to be trusted.
@@ -87,11 +88,11 @@ def design_handed_to(workdir, project):
 
 def kept_into(workdir, destination, written=None, finished=True):
     """
-    Put the built board where a person — and every check — will look for it. `dist/` is pure build output and is
-    replaced. A `.tsx` is a person's to edit, so one that is there is left alone and named, unless `written` (the
-    build record's `{name: sha256}` of what spark wrote, P874) holds its bytes: then it is `replaced`, or `unchanged`
-    when this build made the same board (`_replaced`). Without `written` (an old project, no requirements file) nothing
-    is replaced: delete the file to have it regenerated.
+    Put the built board where a person — and every check — will look for it. `dist/` is pure build output: one that holds
+    the circuit the build reads replaces the earlier one whole, staged (P1088). A `.tsx` is a person's to edit, so one
+    that is there is left alone and named, unless `written` (the build record's `{name: sha256}` of what spark wrote,
+    P874) holds its bytes: then it is `replaced`, or `unchanged` when this build made the same board (`_replaced`).
+    Without `written` (an old project, no requirements file) nothing is replaced: delete the file to have it regenerated.
 
     Each file is {file, did, why, line}: `did` is `wrote`, `replaced`, `unchanged` or `left alone`, and `line` what
     stderr says; a `.tsx` carries the `sha256` of the bytes spark made. A .tsx left alone whose traces are not this
@@ -112,14 +113,13 @@ def kept_into(workdir, destination, written=None, finished=True):
         else:
             kept.append(_left_alone(target, "delete it to have it regenerated"))
             kept += _compare_traces(target, source)
-    built = workdir / "dist"
-    if built.is_dir():
+    if (workdir / sheet.CIRCUIT).is_file():  # P1088: the build stage's own test of a board that was built
         try:
-            shutil.copytree(built, destination / "dist", dirs_exist_ok=True)
+            left = replace_whole(workdir / "dist", destination / "dist")  # an earlier dist/ set aside that stays is named (P1088)
         except OSError as refused:  # a copy that fails midway is a shutil.Error; the entries above stand, so the record holds what spark wrote (P891)
             return kept + [{"file": str(destination / "dist"), "did": "not kept", "why": str(refused), "line": "not kept: %s — %s" % (destination / "dist", refused)}]
-        kept.append({"file": str(destination / "dist"), "did": WROTE, "why": "this is what every check reads",
-                     "line": "wrote %s — this is what every check reads" % (destination / "dist")})
+        kept += [{"file": str(destination / "dist"), "did": WROTE, "why": "this is what every check reads",
+                  "line": "wrote %s — this is what every check reads" % (destination / "dist")}] + left
     return kept
 
 
@@ -235,9 +235,9 @@ def _kept(workdir, destination, recorded, finished):
 
 
 def drop_an_older_build(destination, stages, kept=()):
-    """An earlier dist/ this run did not write: left alone and named (P816), or removed for the board alone (P236)."""
+    """An earlier dist/ this run did not write: left alone and named (P816), or named `not kept` (P1088), or removed for the board alone (P236)."""
     old, why = Path(destination) / "dist", why_not_built(stages, "board only: no board was built")
-    if why is None or not old.is_dir() or str(old) in {entry["file"] for entry in kept if entry["did"] == WROTE}:
+    if why is None or not old.is_dir() or str(old) in {entry["file"] for entry in kept}:
         return []
     if not skipped_the_build(stages):
         return [_left_alone(old, why + ", so it is an earlier build's, which every check reads")]
@@ -389,7 +389,7 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     project = _is_project(destination)
     pictures = KeptPictureFiles(destination, project)
     if why:
-        if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] == LEFT_ALONE for entry in kept):  # P816: an earlier dist/ that stays keeps its pictures
+        if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] in (LEFT_ALONE, NOT_KEPT) for entry in kept):  # P816: an earlier dist/ that stays keeps its pictures
             pictures.drop()
         kept.extend(pictures.problems)
         return _left_from_earlier(page, tabbed_page.TabbedHtmlPage.NOUN, why)

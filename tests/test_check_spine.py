@@ -1172,25 +1172,31 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         self.assertEqual((waiting.read_text(), self.board.read_text()), (self.BOARD_A, self.BOARD_B))
 
     def build_with_dist(self, text, stages=None):
-        """One build run whose work folder holds a `dist/blocked/x.json` too; every kept entry, as {file name: its first entry}."""
+        """One build run whose work folder holds its `dist/board/circuit.json` and a `dist/blocked/x.json` too (a link to
+        nothing after `block_dist`); every kept entry, as {file name: its first entry}."""
         work = Path(tempfile.mkdtemp())
         (work / "board.tsx").write_text(text)
         (work / "dist" / "blocked").mkdir(parents=True)
-        (work / "dist" / "blocked" / "x.json").write_text("{}")
+        (work / "dist" / "board").mkdir()
+        (work / "dist" / "board" / "circuit.json").write_text("[]")
+        if getattr(self, "blocked", False):
+            (work / "dist" / "blocked" / "x.json").symlink_to("no-such-file")
+        else:
+            (work / "dist" / "blocked" / "x.json").write_text("{}")
         args = argparse.Namespace(json=True, keep=self.project, requirements=str(self.project / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
             run_build_board(stages or [Stage("build", check_spine.OK, "fine")], args, work)
         return {Path(entry["file"]).name: entry for entry in reversed(json.loads(out.getvalue())["kept"])}  # the first entry of a file wins
 
     def block_dist(self):
-        """A file where the folder `dist/blocked` goes: the copy of the work folder's `dist/` cannot be finished."""
-        (self.project / "dist" / "blocked").write_text("a file where the folder goes")
+        """A link to nothing at the work folder's `dist/blocked/x.json` (P1088): the copy of its `dist/` cannot be finished."""
+        self.blocked = True
 
     def test_a_board_replaced_before_a_dist_copy_that_fails_is_unchanged_then_replaced_by_the_next_builds(self):
         self.build(self.BOARD_A)
         self.block_dist()
         self.build_with_dist(self.BOARD_B)
-        (self.project / "dist" / "blocked").unlink()
+        self.blocked = False
         self.assertEqual(self.build_with_dist(self.BOARD_B)["board.tsx"]["did"], "unchanged")
         self.assertEqual(self.build_with_dist(self.BOARD_C)["board.tsx"]["did"], "replaced")
         self.assertEqual(self.board.read_text(), self.BOARD_C)
@@ -1210,7 +1216,7 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         entries = self.build_with_dist(self.BOARD_A)
         self.assertEqual((entries["board.tsx"]["did"], entries["dist"]["did"]), ("wrote", "not kept"))
         self.assertEqual(self.record()["written_sha256"], {"board.tsx": self.sha256(self.BOARD_A)})
-        (self.project / "dist" / "blocked").unlink()
+        self.blocked = False
         self.assertEqual(self.build_with_dist(self.BOARD_B)["board.tsx"]["did"], "replaced")
 
     def test_an_unfinished_build_whose_dist_copy_fails_replaces_nothing_and_keeps_the_sha256(self):
@@ -1321,7 +1327,7 @@ class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
             self.skipTest("root reads a file whatever its mode")
         board = Path(tempfile.mkdtemp()) / "board.tsx"; board.write_text(self.BUILT); board.chmod(0)
         work = Path(tempfile.mkdtemp()); (work / "board.tsx").write_text(self.BUILT)
-        (work / "dist").mkdir()
+        (work / "dist" / "board").mkdir(parents=True); (work / "dist" / "board" / "circuit.json").write_text("[]")
         try:
             kept = kept_files.kept_into(work, board.parent)
         finally:

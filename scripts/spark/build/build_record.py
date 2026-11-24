@@ -1,13 +1,15 @@
 """
 The record of a project's last build (P825): `check_spine.py --keep` writes `<project>/.spark/build.json`, and `flow.py
 show` reads it to say whether the build is done, failed or older than requirements.json. A library for `kept_files` and
-the flow area.
+the flow area, and the staged copy of a folder (P1088).
 """
 
 import contextlib
+import errno
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 
 from spark.records import records_codes, store
@@ -188,4 +190,46 @@ class PreviousVersionFiles:
             copy.made = False  # it stays: it holds the old bytes
             return copy.staged
         return path
+
+
+#: The end of the name the earlier folder has while the copy takes its place: it is set aside, moved out of the way under
+#: this name and kept whole until the copy is in place, then removed.
+ASIDE_SUFFIX = ".old"
+#: What an earlier folder set aside that cannot be removed says: its path, the folder it was, and what to do (P1088).
+ASIDE_LEFT = "%s is spark's own earlier %s, set aside for the new one, and it could not be removed: delete it before the next build"
+
+
+def replace_whole(source, target, rename=os.rename):
+    """
+    Put a copy of the folder `source` at `target`, in place of the folder there. The copy is made at `target` + STAGE_SUFFIX;
+    when it is whole, the earlier folder is set aside at `target` + ASIDE_SUFFIX, the copy renamed into place and the earlier
+    one removed. Any error, a Ctrl-C too, leaves `target` as it was: a copy that fails is removed, a `target` that is a link
+    is not replaced (OSError), and a name the stage or the aside needs that is taken is never removed (StageTakenError says
+    so). Returns the kept entries {file, did, why, line} of what it left: one `not kept` for an earlier folder set aside
+    that it could not remove, or none. `rename` moves a folder (os.rename); a test gives a fake that fails.
+    """
+    target = Path(target)
+    staged, aside = (target.with_name(target.name + suffix) for suffix in (STAGE_SUFFIX, ASIDE_SUFFIX))
+    if target.is_symlink():
+        raise OSError("%s is a link, so spark does not replace it" % target)
+    for name in (staged, aside):
+        if name.exists() or name.is_symlink():
+            raise StageTakenError(errno.EEXIST, "File exists", str(name))
+    moved = False
+    try:
+        shutil.copytree(source, staged)
+        if target.is_dir():
+            rename(target, aside)
+            moved = True
+        rename(staged, target)
+    except BaseException:  # a Ctrl-C too: the earlier folder goes back and the copy goes
+        if moved:
+            rename(aside, target)
+        shutil.rmtree(staged, ignore_errors=True)
+        raise
+    shutil.rmtree(aside, ignore_errors=True)
+    if not (aside.exists() or aside.is_symlink()):
+        return []
+    why = ASIDE_LEFT % (aside, target.name + "/")
+    return [{"file": str(aside), "did": "not kept", "why": why, "line": "not kept: %s — %s" % (aside, why)}]
 # --- end MVP ---
