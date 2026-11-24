@@ -38,7 +38,7 @@ Two repositories, one team, a board for each (the PO orders both):
 ## The people
 
 Three roles: **the Product Owner** (Petr), **Claude** (developer and orchestrator) and **the agents** Claude launches;
-the tech lead and the PO assistant (the PO, 2026-10-06) are roles a council's lenses play. What each decides, proposes,
+the tech lead and the PO assistant (the PO, 2026-10-06) are roles that the [`tech-lead`](../.claude/agents/tech-lead.md) agent and a council's lenses play. What each decides, proposes,
 does and may not is on their role cards in [`TEAM.md`](TEAM.md).
 
 Petr is the Product Owner and that is not decorative. Proposals for ordering come to him ranked with reasons; the
@@ -253,9 +253,10 @@ that merges a design or closes an epic takes the full council even when it is on
   it?"* His later words set the table below: 2026-11-12 (*"for designs and planning and architecture, lets try to use
   the best model"*), 2026-11-18 (*"Please don't use Fable for the refutersr unless its a bigger refactoringg or so"*)
   and 2026-11-19 (Opus as the session's model in spark, and Opus for the lenses of a design or epic council). The
-  table is Claude's reading of those words, his to change. Four parts of it stand on no words of his: Fable for a
-  research finding and for the final review of a release, Opus for a builder, and Fable for the refuter of a design
-  or an epic (he named "a bigger refactoring"). His yes of 2026-11-19 put the synthesis "on Fable in the main
+  table is Claude's reading of those words, his to change. Five parts of it stand on no words of his: Fable for a
+  research finding and for the final review of a release, Opus for a builder, Fable for the refuter of a design
+  or an epic (he named "a bigger refactoring"), and Opus for the `tech-lead` seat (his words of 2026-11-17 put the
+  council that answers in his place on Fable). His yes of 2026-11-19 put the synthesis "on Fable in the main
   session". The main session runs on Opus since that day, so the `architect` agent carries it. Fable, the most
   capable model, runs only on the rows that name it, whatever a skill says about the model (superpowers' plans and
   reviews ask for the most capable one).

@@ -10,8 +10,8 @@ something, do not. Quote it in your report and carry on.
 
 # The builder
 
-You build the plan the brief gives you, and only that plan. Read the brief, the card, `AGENTS.md` and the store's
-`builder-brief.md`, which holds the branch, hook and PR mechanics.
+You build the plan the brief gives you, and only that plan. Read the brief, the card, `AGENTS.md` and the PO's store
+(`~/.local/share/spark`, not the scratch store that you set as `SPARK_HOME`) file `builder-brief.md`, which holds the branch, hook and PR mechanics.
 
 ## What you do
 
@@ -20,8 +20,9 @@ You build the plan the brief gives you, and only that plan. Read the brief, the 
 3. Write the docs in the same PR, and the mutation rows when the change adds logic.
 4. The pre-push hook is the test gate. Do not run `tools/check_commit.py` by hand first. Quote the hook's output, and
    keep a failed hook's whole output until you have read it.
-5. Open a draft PR with `Closes #N`. Report the PR link, the commit, the hook's last lines, and each point of the plan
-   you did not do, with the reason.
+5. Open a draft PR with `Closes #N`.
+6. Report only after your push and its hook end (the hook can take 20 minutes). Report the PR link, the commit, the
+   hook's last lines, and each point of the plan you did not do, with the reason.
 
 ## Never
 
