@@ -19,6 +19,6 @@ Sonnet and the refuter on Opus, each item decided by spark-main (delegated, the 
 | 10 | The freshness line's "as of <time>, its newest change" reads older than ON THE BOARD's deploy | the lens (UX) | acted | `FRESH_LINE` says "as its files last changed, <time>" |
 | 11 | Two blank lines before `def counted` (phase_readers.py) | the refuter | acted | one was missing; fixed |
 | 12 | The TZ `mock.patch.dict(os.environ, ...)` in test_flow_page.py | the lens | rejected | `in_prague` is test_wired_board's pattern (P1044), restoring with `time.tzset` at cleanup; the hook's architecture test accepts it, and no new `mock.patch` was added in the review |
-| 13 | DONE lists "firmware" while the deploy is not confirmed | the lens | rejected | DONE lists the phases whose own status is ok; the firmware is written, and ON THE BOARD says start not seen. A change of DONE's rule is beyond this card |
+| 13 | DONE lists "firmware" while the deploy is not confirmed | the lens | raised | destination: P1106 [#1626](https://github.com/xmejkal/spark/issues/1626): the PO chose that DONE says "firmware (written)" in that case. Beyond this card |
 | 14 | "✓ Parts ok" should say "4 of 4 picked" | the lens | rejected | the reading has no count field yet (D3 of the plan) |
 | 15 | The freshness line covers only the fingerprint's three files | the build, the lens | acted | destination: P1064 [#1562](https://github.com/xmejkal/spark/issues/1562) (story 1c, FlowStamp) |
