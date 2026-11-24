@@ -181,6 +181,22 @@ BOARD_ONLY_BUILD_EFFECT = ("This board needs no parts, so nothing is built or wi
 DIST_REMOVED_MESSAGE = "This board needs no wiring, so the old dist folder is deleted."
 BUILT_HISTORY_MESSAGE = "Notes the build in your history."
 NO_SIMULATION_MESSAGE = "Runs no simulation and costs nothing."
+#: P1044: the witnesses that the person's breadboard can be wired, each with its day ("22 Nov 2026", `wired_board.day_of`).
+#: The kept sheet's day is its file's last change, so the line says "dated", never "written", and what spark cannot see.
+WIRED_SHEET_MESSAGE = "A wiring sheet dated %s is in the project. Spark cannot see whether you wired from it."
+#: The newest board log's day: a log of ready not seen is still a board on the bench, so no word says the firmware ran.
+WIRED_DEPLOY_MESSAGE = "Spark logged a deploy to a board on %s."
+#: The step after the witnesses, in the parts phase's line: a condition for the person, never a claim that it is wired.
+WIRED_STEP_MESSAGE = ("If you wired the board: a new pick needs a new build, and a new build can move pins. Compare the new "
+                      "sheet with your wiring before power, and rewire what differs.")
+#: The fixed sentences that open a pick's and a build's effect on a board that can be wired. They hold no date, so a newer
+#: sheet or log never changes the fingerprint; only a witness that appears or goes away does.
+WIRED_PICK_MESSAGE = ("If you wired the board, this pick needs a new build, and a new build can move pins: compare the new "
+                      "sheet with your wiring before power, and rewire what differs.")
+WIRED_BUILD_MESSAGE = ("If you wired the board, this build can move pins: compare the new sheet with your wiring before "
+                       "power, and rewire what differs.")
+#: The fixed sentence of each kind of offer that can move a pin.
+WIRED_EFFECT = {PICK: WIRED_PICK_MESSAGE, BUILD_BOARD: WIRED_BUILD_MESSAGE}
 
 #: The page's script (P829 PR 3): the kinds of offer the page sends from its buttons (a drop is asked in the chat, P883),
 #: and every word the script shows. Python writes them into the page's inert words block; the script fills in only a

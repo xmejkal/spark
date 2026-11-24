@@ -43,6 +43,8 @@ from spark.design import needs  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import LOOK_WHY, SCENARIO_FIRST_WHY, SCENARIO_WHY, SIM_FILES_NOW, STALE  # noqa: E402
+from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
+from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.phase_steps import SCENARIO_PLACEHOLDER  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.core.result import NextStep  # noqa: E402
@@ -131,6 +133,16 @@ def lines_of(project):
     with contextlib.redirect_stdout(io.StringIO()) as out:
         flow.main(["show", "--project", str(project)])
     return out.getvalue().splitlines()
+
+
+def sheet_at(project):
+    """The time of the project's breadboard.md, with its zone, as `data.guide.wired.sheet_at` holds it (P1044)."""
+    return zone_time.stamp(datetime.datetime.fromtimestamp((project / "breadboard.md").stat().st_mtime))
+
+
+def wired_line(project):
+    """The parts phase's first line on a project whose only witness is its sheet (P1044)."""
+    return " ".join((WIRED_SHEET_MESSAGE % day_of(sheet_at(project)), WIRED_STEP_MESSAGE))
 
 
 def a_built_project_with_a_sheet_from(requirements):
@@ -277,10 +289,12 @@ class ThePhasesTest(FlowTest):
 
     def test_a_project_whose_last_need_was_dropped_says_so_and_is_no_hand_written_project(self):
         # P984: needs.json holds no need and requirements.json was written from picks: nothing was written by hand.
-        said, code = show(with_needs(a_built_project(), []))
+        project = with_needs(a_built_project(), [])
+        said, code = show(project)
         self.assertEqual(code, 0)
         self.assertEqual(says(said, "needs"), ["no need is left: the last one was dropped"])
-        self.assertEqual(says(said, "parts"), ["no need or pick is behind the parts list"])
+        # P1044: the fixture keeps a sheet, so the parts phase's first line is the wired line
+        self.assertEqual(says(said, "parts"), [wired_line(project), "no need or pick is behind the parts list"])
         self.assertEqual(table(said), BUILT_TABLE)
 
     def test_a_build_that_could_not_run_says_so_and_exits_2(self):
@@ -639,7 +653,8 @@ class TheGuideTest(FlowTest):
     """P977: `data.guide` says what to do now, what is done, what comes later and what the person set aside."""
 
     def test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now(self):
-        said, code = show(a_project_built_with_no_simulation())
+        project = a_project_built_with_no_simulation()
+        said, code = show(project)
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "firmware"))  # P1030: the guide's now
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
@@ -648,7 +663,7 @@ class TheGuideTest(FlowTest):
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL,
-            "no_open_phase": None})
+            "no_open_phase": None, "wired": {"sheet_at": sheet_at(project), "deploy_at": None}})  # P1044: the fixture keeps a sheet
 
     def test_the_project_stands_where_the_guide_says_now(self):
         """P1030: one rule says where a project stands, the guide's now phase, in data.stands_at too."""
@@ -669,13 +684,15 @@ class TheGuideTest(FlowTest):
         self.assertIn("breadboard (spark cannot see it)", guide["done"])
 
     def test_with_the_firmware_written_the_deploy_is_now_and_the_simulate_stays_later(self):
-        said, _ = show(a_firmware(a_project_built_with_no_simulation()))
+        project = a_firmware(a_project_built_with_no_simulation())
+        said, _ = show(project)
         self.assertEqual(said["data"]["guide"], {
             "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
-            "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL, "no_open_phase": None})
+            "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL, "no_open_phase": None,
+            "wired": {"sheet_at": sheet_at(project), "deploy_at": None}})  # P1044: the fixture keeps a sheet
 
     def test_any_other_cause_of_a_simulation_that_could_not_run_stops_at_the_build(self):
         for code in ("simulation_fact_missing", "converter_lacks_part", None):
@@ -762,7 +779,7 @@ class TheGuideTest(FlowTest):
             "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
-            "set_aside": [], "no_simulation": None, "no_open_phase": None})
+            "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None})  # P1044: no sheet and no board log
 
     def test_needs_set_aside_do_not_count_and_a_picked_one_counts_as_picked(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -890,7 +907,8 @@ class TheBuildOfferTest(FlowTest):
         said, _ = show(a_built_project())
         build = offer_of(said, "build")
         self.assertEqual(build["label"], "Build the board")
-        self.assertTrue(build["effect"].startswith("Saves its files in this project: the board file"))
+        # P1044: the fixture keeps a sheet, so the wired sentence comes first
+        self.assertTrue(build["effect"].startswith(WIRED_BUILD_MESSAGE + " Saves its files in this project: the board file"))
         self.assertIn("the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn", build["effect"])
         self.assertIn("If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page "
                       "are deleted.", build["effect"])
