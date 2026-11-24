@@ -228,7 +228,7 @@ The `find` line is the **anchor**: the exact text the mutation attaches to. It m
 matched nothing would run an unmutated suite and report on a change it never made, which reads
 like a pass.
 
-**When code moves, the anchors on it stop matching.** Since [P208](https://github.com/xmejkal/spark/issues/175) the push gate did not check anchors, and the tables went stale. Since P897 (2026-11-24) it checks every row's anchor again, and compiles the mutants of the changed files' and tables' rows, so a merge that moves an anchored line says so at once. A run names each row
+**When code moves, the anchors on it stop matching.** [P208](https://github.com/xmejkal/spark/issues/175) took the anchor check out of the push gate in 2026-10, and the tables went stale. P897 brought it back on 2026-11-24: the gate checks every row's anchor again, and compiles the mutants of the changed files' and tables' rows, so a merge that moves an anchored line says so at once. A run names each row
 whose anchor moved, or whose mutant does not load, as **refused**. You then **re-anchor** it (point it at the new code and run it again, to prove that
 it still bites), or you delete it and give the reason in the commit. `--for` over a branch's changed files shows
 exactly the guards that the branch moved.

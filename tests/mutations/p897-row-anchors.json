@@ -26,7 +26,7 @@
  {
   "file": "tools/check_commit.py",
   "name": "a table that is not JSON stops the check with a traceback instead of a refusal line (caught by test_a_table_that_is_not_json_is_a_refusal_line)",
-  "find": "        except (OSError, ValueError, KeyError, TypeError, AttributeError) as broken:\n",
+  "find": "        except (OSError, ValueError, TypeError) as broken:\n",
   "replace": "        except OSError as broken:\n"
  },
  {
@@ -34,5 +34,35 @@
   "name": "the compile half is dropped (caught by test_a_mutant_that_does_not_compile_is_refused_only_when_its_file_or_table_changed)",
   "find": "    lines += [\"%s: %s\" % (name, why) for name, _file, why in mutate.unloadable(tree, subset)]\n",
   "replace": "    lines += []\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the clean-run rows line is never printed (caught by test_a_clean_run_says_the_rows_line_and_runs_the_suite)",
+  "find": "    if table_count:\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the changed set's related rows are left out of the compile (caught by test_a_mutant_that_does_not_compile_is_refused_only_when_its_file_or_table_changed)",
+  "find": "        subset += [row for row in mutate.related(rows, changed) if row not in subset]\n",
+  "replace": "        pass\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a row's keys are only looked for, not checked as strings (caught by test_a_row_with_a_missing_or_not_string_key_is_a_refusal_line_not_a_crash)",
+  "find": "not all(isinstance(row.get(key), str) for key in (\"file\", \"find\", \"replace\")):",
+  "replace": "not all(key in row for key in (\"file\", \"find\", \"replace\")):"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the compile count takes every row, a .md row too (caught by test_a_clean_run_says_the_rows_line_and_runs_the_suite)",
+  "find": "COMPILED = (\".py\", \".json\")\n",
+  "replace": "COMPILED = (\".py\", \".json\", \".md\")\n"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "a file that is not text crashes the anchor check (caught by test_a_file_that_is_not_text_is_a_refusal_not_a_crash)",
+  "find": "        except UnicodeDecodeError:  # a file that is not text holds no anchor\n",
+  "replace": "        except OSError:  # a file that is not text holds no anchor\n"
  }
 ]

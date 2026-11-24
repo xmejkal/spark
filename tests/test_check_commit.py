@@ -345,6 +345,31 @@ class TheGateChecksTheMutationRowsTest(unittest.TestCase):
             self.assertEqual(len(lines), count, (changed, lines))
         self.assertIn("does not compile", check_commit.refused_rows(root, None)[0][0])
 
+    def test_a_clean_run_says_the_rows_line_and_runs_the_suite(self):
+        root = repo_with({"m.py": "def add(a, b):\n    return a + b\n", "notes.md": "x\n",
+                          self.TABLE: json.dumps([self.GOOD, dict(self.GOOD, file="notes.md", find="x", replace="y")])})
+        said = io.StringIO()
+        with mock.patch.object(check_commit, "measure", return_value=("Ran 1 test / OK", True, [], [])), \
+                mock.patch.object(check_commit, "size_line", return_value="size"), a_good_board(), \
+                contextlib.redirect_stdout(said):
+            code = check_commit.gate(root, "HEAD", Path(tempfile.mkdtemp()), which=lambda _name: None)
+        self.assertEqual(code, check_commit.EXIT_OK, said.getvalue())
+        self.assertIn("as committed", said.getvalue())
+        self.assertIn("rows: every anchor of 2 rows in 1 tables occurs once, and the mutants of the 1 rows checked compile", said.getvalue())
+
+    def test_a_row_with_a_missing_or_not_string_key_is_a_refusal_line_not_a_crash(self):
+        rows = [{"find": "a", "replace": "b"}, dict(self.GOOD, file=None), dict(self.GOOD, replace=3), "text", self.GOOD]
+        lines = check_commit.refused_rows(self.tree(rows), None)[0]
+        self.assertEqual(len(lines), 4, lines)
+        self.assertIn("t.json[0]", lines[0])
+
+    def test_a_file_that_is_not_text_is_a_refusal_not_a_crash(self):
+        root = self.tree([self.GOOD])
+        (root / "m.py").write_bytes(b"\xff\xfe\x00")
+        lines = check_commit.refused_rows(root, None)[0]
+        self.assertEqual(len(lines), 1, lines)
+        self.assertIn("occurs 0 time(s)", lines[0])
+
     def test_a_table_that_is_not_json_is_a_refusal_line(self):
         lines = check_commit.refused_rows(self.tree(None, table="[{"), [])[0]
         self.assertEqual(len(lines), 1, lines)

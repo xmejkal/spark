@@ -32,10 +32,12 @@ could-not-run; a tsc error or other bytes is a problem, with the fix `tsc -p scr
 before the suite runs. A tree with no page_script.ts, from before P1061, has nothing to compile.
 
 The mutation rows' check (P897, which puts back what P208 took out): every row of every tests/mutations/*.json must have
-its `find` once in its file, whatever the branch changed (about 0.5 s), so that a merge which moves an anchored line says
-so at once. The rows of a changed file or a changed table also get their mutants compiled in memory (0.1 to 1.5 s); at
-`--full`, or when git could not tell what changed, every row does (about 30 s). A refused row is a problem, printed as
-`table[index] name`, and it stops the gate before the suite, as the drift check does. Nothing runs and nothing is written.
+its `find` once in its file, whatever the branch changed, so that a merge which moves an anchored line says so at once.
+The .py and .json rows of a changed file or a changed table also get their mutants compiled in memory; at `--full`, or
+when git could not tell what changed, every such row does. On an idle machine: 0.45 s for the anchors of all rows, 0.4 to
+0.8 s with the compile of one changed file or table, 22.7 s at `--full` (the review measured 1 to 4 s and 79 s at load
+22). A refused row is a problem, printed as `table[index] name`, and it stops the gate before the suite, as the drift
+check does. A row with no `file`, `find` or `replace` as strings is refused too. Nothing runs and nothing is written.
 """
 
 import argparse
@@ -112,13 +114,15 @@ def needs_tsc(tree, changed, full=False):
 
 #: The mutation tables, from the root (P897).
 MUTATION_TABLES = "tests/mutations"
+#: The files whose mutants `mutate.unloadable` compiles or parses; a .ts, .js or .md row is only anchored.
+COMPILED = (".py", ".json")
 ROWS_FIX = "  rows: re-anchor each refused row, or remove it with its reason (docs/guide/developing.md)"
 
 
 def refused_rows(tree, changed):
     """
     The `[refused]` lines of the mutation rows in `tree` (P897), [] when none, and how many rows and tables were read:
-    (lines, rows, tables, compiled). Every row whose `find` does not occur once in its file is refused, and so is each
+    (lines, rows, tables, compiled): `compiled` counts the .py and .json rows that were checked. Every row whose `find` does not occur once in its file is refused, and so is each
     row of a file or table in `changed` whose mutant does not compile or parse (every row when `changed` is None: the
     full run, or git could not tell). It runs nothing and writes nothing.
     """
@@ -126,10 +130,17 @@ def refused_rows(tree, changed):
     for table in tables:
         try:
             loaded = json.loads(table.read_text())
-            rows += [dict(row, table=table.name, index=index, name="%s[%d] %s" % (table.name, index, row.get("name", row["find"])))
-                     for index, row in enumerate(loaded)]
-        except (OSError, ValueError, KeyError, TypeError, AttributeError) as broken:
-            lines.append("%s/%s: not a list of rows with `file` and `find`: %s" % (MUTATION_TABLES, table.name, broken))
+            if not isinstance(loaded, list):
+                raise TypeError("the table is not a list")
+        except (OSError, ValueError, TypeError) as broken:
+            lines.append("%s/%s: not a list of rows: %s" % (MUTATION_TABLES, table.name, broken))
+            continue
+        for index, row in enumerate(loaded):
+            where = "%s[%d]" % (table.name, index)
+            if not isinstance(row, dict) or not all(isinstance(row.get(key), str) for key in ("file", "find", "replace")):
+                lines.append("%s: a row needs `file`, `find` and `replace`, each a string" % where)
+            else:
+                rows.append(dict(row, table=table.name, index=index, name="%s %s" % (where, row.get("name", row["find"]))))
     wrong = mutate.anchors(tree, rows)
     lines += ["%s: `find` occurs %d time(s) in %s" % (name, count, file) for name, file, count in wrong]
     if changed is None:
@@ -139,7 +150,7 @@ def refused_rows(tree, changed):
         subset = [row for row in rows if row["table"] in named]
         subset += [row for row in mutate.related(rows, changed) if row not in subset]
     lines += ["%s: %s" % (name, why) for name, _file, why in mutate.unloadable(tree, subset)]
-    return lines, len(rows), len(tables), len(subset)
+    return lines, len(rows), len(tables), len([row for row in subset if row["file"].endswith(COMPILED)])
 
 
 def tsc_refusal(which=shutil.which, run=subprocess.run):
@@ -414,7 +425,7 @@ def gate(root, commit, scratch, full=False, which=shutil.which, run=subprocess.r
         print("  " + temp_line(left))
     print("  " + size_line(root, commit))
     if table_count:
-        print("  rows: every anchor of %d rows in %d tables occurs once, and the mutants of the changed files' %d rows compile"
+        print("  rows: every anchor of %d rows in %d tables occurs once, and the mutants of the %d rows checked compile"
               % (row_count, table_count, compiled))
     if compiles:
         print("  page script: the committed %s is tsc %s's compiled output of %s (P1061)"
