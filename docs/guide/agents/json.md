@@ -99,7 +99,7 @@ The fields:
 | `tool` | the script that answered |
 | `status` | the overall outcome |
 | `unmeasured` | how many `?` lines the answer rests on: values nobody has measured or verified, and advisories. An `ok` with a count above 0 is an `ok` on those lines. Added after the runs shown here ([P108](https://github.com/xmejkal/spark/issues/42)) |
-| `resolved` | display lines: what `--project` found by convention for the circuit, rules, package and boards, or where it looked. A file named by an explicit flag replaces its line, shown as typed with `(given)`. After a build that did not write `dist/`, a second `circuit` line says the last build, with its time, did not write it (P816). With no `--project`, it is empty |
+| `resolved` | display lines: what `--project` found by convention for the circuit, rules, package and boards, or where it looked. A file named by an explicit flag replaces its line, shown as typed with `(given)`. With no `--project`, it is empty |
 | `results[].check` | the check's name; [how it works](../how-it-works.md#the-checks) names its script |
 | `results[].what` | what the check claims |
 | `results[].status` | `ok`, `problems`, `could-not-run` or `skipped` |
@@ -119,7 +119,7 @@ could-not-run, both in `status` and in the exit code, so read every `unchecked` 
 
 **In the text output,** `problems` are the `-` lines, `unchecked` the `!` lines and `unmeasured` the `?` lines.
 
-The requirements files, which buildability and physics also read, are not listed in `resolved`. vendor-truth checks every board definition available, including the library's.
+After a build that did not write `dist/`, a second `circuit` line in `resolved` says the last build, with its time, did not write it (P816). The requirements files, which buildability and physics also read, are not listed in `resolved`. vendor-truth checks every board definition available, including the library's.
 
 ## The other scripts' JSON
 
