@@ -114,10 +114,10 @@ def _step_lines(follow_up, added):
 
 
 def refreshes(result):
-    """Whether the follow-up writes its file again after `result` (P1035 PR 2): after an ok run alone, and never after a
-    crash, which this function names, so that story 0c of P793, which widens it to a run that wrote before it stopped,
-    keeps a crash out."""
-    return result.status() == outcomes.OK and not any(found.code == codes.CRASH for found in result.findings)
+    """Whether the follow-up writes its file again after `result` (P1035 PR 2): story 0c of P793 (P1069) widened it from
+    an ok run to a run at any status, so a run that wrote before it stopped is refreshed too, and never after a crash,
+    which this function names."""
+    return not any(found.code == codes.CRASH for found in result.findings)
 
 
 def _refreshed(follow_up, project, result):
@@ -136,8 +136,9 @@ def _refreshed(follow_up, project, result):
 
 def _followed(operation, values, result, follow_up):
     """`result` with the follow-up's steps after its own, then one line per step (P1035), after an ok run that writes to a
-    project, then its refresh when `refreshes(result)` (PR 2). The written project is asked once. The steps are added
-    first, so a line that fails never drops a step. Each failure adds one diagnostics line, and the result stands."""
+    project, then its refresh when `refreshes(result)`: a run that writes, at any status but a crash (PR 2, P1069). The
+    written project is asked once. The steps are added first, so a line that fails never drops a step. Each failure adds
+    one diagnostics line, and the result stands."""
     steps_due, refresh_due = result.status() == outcomes.OK, refreshes(result)
     if follow_up is None or not (steps_due or refresh_due) or WRITES not in operation.effects_of(values):
         return result

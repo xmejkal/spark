@@ -1111,8 +1111,9 @@ THEN = NextStep("then", ["--project", "/opt/someone/p"], "then this, for /opt/so
 
 class TheFollowUpTest(unittest.TestCase):
     """P1035: after an ok run that writes to a project, `run_operation` adds the follow-up's steps after the Operation's own,
-    with one line each. A run that is not ok, that does not write or that names no written project gets none, and a
-    follow-up that raises adds one diagnostics line and leaves the result standing."""
+    with one line each, and then, after a run that writes at any status but a crash (P1069), its refresh. A run that is not
+    ok gets no steps, one that does not write or names no written project gets nothing, and a follow-up that raises adds
+    one diagnostics line and leaves the result standing."""
 
     def followed(self, operation, follow_up, found=None, privacy=Privacy()):
         values = {"project": Path("p"), "found": found}
@@ -1201,20 +1202,31 @@ class TheFollowUpTest(unittest.TestCase):
         result = self.followed(Writing(), follow_up)
         self.assertEqual((list(result.lines), result.notes, follow_up.refreshed_at), (["  done", "line of then"], None, [Path("p")]))
 
-    def test_no_refresh_after_a_run_that_is_not_ok_does_not_write_names_no_project_or_crashed(self):
-        for operation, found in ((Writing(), "problems"), (Writing(), "unchecked"), (ReadsOnly(), None), (NoProject(), None),
-                                 (Crashing(), None)):
-            with self.subTest(operation=type(operation).__name__, found=found):
+    def test_no_refresh_after_a_run_that_does_not_write_names_no_project_or_crashed(self):
+        for operation in (ReadsOnly(), NoProject(), Crashing()):
+            with self.subTest(operation=type(operation).__name__):
                 follow_up = FakeFollowUp([], refreshed="wrote the page again")
-                result = self.followed(operation, follow_up, found)
+                result = self.followed(operation, follow_up)
                 self.assertEqual((follow_up.refreshed_at, result.notes), ([], None))
                 self.assertNotIn("  wrote the page again", list(result.lines))
 
-    def test_the_refresh_s_condition_is_an_ok_run_that_did_not_crash(self):
-        # the P1038 design's round 2 (B11): story 0c of P793 widens this one function, and a crash stays out by name
-        crash = OperationResult(findings=[Finding.of(outcomes.COULD_NOT_RUN, None, codes.CRASH, "RuntimeError")])
-        self.assertEqual([refreshes(OperationResult()), refreshes(OperationResult(findings=[PROBLEM])), refreshes(crash)],
-                         [True, False, False])
+    def test_a_run_that_is_not_ok_and_writes_is_refreshed_with_no_steps(self):
+        # P1069, story 0c of P793: a run that wrote before it stopped writes the page again, and the steps stay an ok run's
+        for found, status in (("problems", outcomes.PROBLEMS), ("unchecked", outcomes.COULD_NOT_RUN)):
+            with self.subTest(found=found):
+                follow_up = FakeFollowUp([THEN], refreshed="wrote the page again")
+                result = self.followed(Writing(), follow_up, found)
+                self.assertEqual((follow_up.refreshed_at, follow_up.asked), ([Path("p")], []))
+                self.assertEqual(list(result.notes), [{"subject": "the page", "sentence": "wrote the page again"}])
+                self.assertEqual(list(result.lines), ["  done", "  wrote the page again"])
+                self.assertEqual(([step.op for step in result.next], result.status(), list(result.diagnostics)), (["own"], status, []))
+
+    def test_the_refresh_s_condition_is_a_run_that_did_not_crash(self):
+        # the P1038 design's round 2 (B11): story 0c of P793 (P1069) widened this one function, and a crash stays out by name
+        crash = Finding.of(outcomes.COULD_NOT_RUN, None, codes.CRASH, "RuntimeError")
+        results = [OperationResult(), OperationResult(findings=[PROBLEM]), OperationResult(findings=[UNCHECKED]),
+                   OperationResult(findings=[crash]), OperationResult(findings=[PROBLEM, crash])]
+        self.assertEqual([refreshes(result) for result in results], [True, True, True, False, False])
 
     def test_a_refresh_that_raises_adds_one_diagnostics_line_and_the_result_stands(self):
         alone = self.followed(Writing(), FakeFollowUp([THEN]))
