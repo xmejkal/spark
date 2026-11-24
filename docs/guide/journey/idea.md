@@ -6,7 +6,7 @@ Step 2 of 8 in [the journey](../journey.md). Next: [Research](research.md).
 against your drawer and spark's records. It marks each need: have, have-unknown, know or gap; a need you leave out is
 set aside on your word. Then a part is picked per need (`parts.py --pick`), what you own is reserved, and the picks become a requirements file
 (`parts.py --requirements`) ([P97](https://github.com/xmejkal/spark/issues/18)). Those steps ran for this page, in
-[a recorded run](recorded-run.md#a-recorded-run-a-button-and-an-led) below. The conversation ran in [walk 4](https://github.com/xmejkal/spark/issues/705) on 2026-11-01 and in the [P934](https://github.com/xmejkal/spark/issues/1323) walk on 2026-11-22.
+[a recorded run](recorded-run.md#a-recorded-run-a-button-and-an-led) below. The conversation ran in the [P711](https://github.com/xmejkal/spark/issues/960) walk 3 on 2026-11-16 and in the [P934](https://github.com/xmejkal/spark/issues/1323) walk on 2026-11-22.
 
 **Today, in full.** `--match` offers a board for a need that its own LED, buttons, display, charger, voltage regulator,
 battery input, battery-level pin or chip radio serve ([P389](https://github.com/xmejkal/spark/issues/504),
