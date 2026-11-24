@@ -41,8 +41,8 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "P989: a writer of a board looks for its shelf copy in the parts' shelf",
-  "find": "    shelf = store.place(\"board-shelf\" if kind == \"board\" else \"shelf\")",
-  "replace": "    shelf = store.place(\"shelf\")",
+  "find": "    shelf = store.place(\"board-shelf\" if kind == \"board\" else \"shelf\")  # P989",
+  "replace": "    shelf = store.place(\"shelf\")  # P989",
   "tier": "critical"
  },
  {

@@ -60,7 +60,7 @@
   "replace": "Terminal(stdout=reporter.stream)"
  },
  {
-  "file": "scripts/spark/sourcing/research/__init__.py",
+  "file": "scripts/spark/core/replies.py",
   "name": "a terminal that is not live is asked anyway",
   "find": "    parts += [TerminalReplyStrategy(terminal)] if terminal is not None and terminal.live else []\n",
   "replace": "    parts += [TerminalReplyStrategy(terminal)] if terminal is not None else []\n"

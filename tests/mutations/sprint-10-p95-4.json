@@ -15,7 +15,7 @@
  {"file": "scripts/spark/sourcing/part_facts.py", "name": "the digest reads the record's name too",
   "find": "BUILD_FACTS = (\"needs\", \"power\", \"unused_pins\", \"pin_order\", \"footprint\", \"host_parts\")", "replace": "BUILD_FACTS = (\"needs\", \"power\", \"unused_pins\", \"pin_order\", \"footprint\", \"host_parts\", \"name\")"},
  {"file": "scripts/init_project.py", "name": "init never says whether the project is on the list",
-  "find": "    notes.append(listed)", "replace": "    pass"},
+  "find": "    notes += listed\n", "replace": "    pass\n"},
  {"file": "scripts/spark/records/store.py", "name": "an unchanged private file is left as loose as it was",
   "find": "        if private:\n            os.chmod(path, 0o600)\n        return False", "replace": "        return False"},
  {"file": "scripts/spark/records/store.py", "name": "a copied folder's files are left as the source had them",
