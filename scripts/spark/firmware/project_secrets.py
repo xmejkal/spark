@@ -5,9 +5,10 @@ directly in `firmware/` whose name, in lower case, matches `*secret*.py`, such a
 and looks in no nested folder, so `firmware/lib/x_secret.py` and a `config.py` are not named.
 
 `ProjectSecrets.read` parses each file with `ast` and never imports it, so no line of it runs. It takes values only:
-the right side of an assignment, dict values and list, tuple and set items, walked down. A dict key and a bare string,
-such as a docstring, are no values. A file that cannot be read or parsed is named, never shown: the text of a parse
-error holds the line, and the line holds the secret.
+the right side of an assignment, typed or not, the value of a keyword argument of a call, and dict values and
+list, tuple and set items, walked down. A dict key and a bare string, such as a docstring, are no values. A file
+that cannot be read or parsed is named, never shown: the text of a parse error holds the line, and the line holds
+the secret.
 """
 
 import ast
@@ -47,14 +48,22 @@ def strings_of(node):
     return [text for child in children for text in strings_of(child)]
 
 
+def values_of(node):
+    """The value nodes of one node: the right side of an assignment, or the keyword values of a call."""
+    if isinstance(node, ASSIGNMENTS) and node.value is not None:
+        return [node.value]
+    if isinstance(node, ast.Call):
+        return [keyword.value for keyword in node.keywords]
+    return []
+
+
 def values_in(source):
-    """The str values that the assignments of `source` hold, in the order they stand. It raises what `ast.parse` raises.
+    """The str values that the assignments and the keyword arguments of `source` hold. It raises what `ast.parse` raises.
     The parse shows no warning, as a warning can print the line it is about."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         tree = ast.parse(source)
-    return [text for node in ast.walk(tree) if isinstance(node, ASSIGNMENTS) and node.value is not None
-            for text in strings_of(node.value)]
+    return [text for node in ast.walk(tree) for value in values_of(node) for text in strings_of(value)]
 
 
 class ProjectSecrets:
