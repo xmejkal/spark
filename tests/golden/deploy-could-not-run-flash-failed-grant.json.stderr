@@ -19,4 +19,5 @@
 fake esptool: erase-flash failed
   retry in 5 s: <python> -m esptool --chip esp32s3 --port /dev/cu.usbmodem101 erase-flash stopped with exit 2 (esptool's exit for any stop, a failed connect among them)
 fake esptool: erase-flash failed
+  board log: <project-dir>/sim/runs/board/<time>.log
 deploy.py: `<python> -m esptool --chip esp32s3 --port /dev/cu.usbmodem101 erase-flash` failed (Command '[<python>, '-m', 'esptool', '--chip', 'esp32s3', '--port', '/dev/cu.usbmodem101', 'erase-flash']' returned non-zero exit status 2.): if esptool could not connect, hold the board's BOOT button, press and release RESET, release BOOT, and run it again

@@ -315,13 +315,31 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual((code, said["next"], self.flashed()), (2, [], []))
         self.assertEqual(said["unchecked"][0]["code"], "answered_no")
 
+    def assert_the_log_is_named(self, said, err):
+        """P1092 test 10: the envelope names the board log of the flash that did not finish, and the image it names."""
+        data = said["data"]
+        self.assertEqual(Path(data["board_log"]).parent, self.project / "sim" / "runs" / "board")
+        self.assertTrue(Path(data["board_log"]).is_file())
+        self.assertEqual(data["image_sha256"], hashlib.sha256(self.image.read_bytes()).hexdigest())
+        self.assertIn("board log: %s\n" % data["board_log"], err)
+
     @needs_littlefs
     def test_a_failed_flash_says_the_board_may_be_erased(self):
         self.run_the_scenario()
-        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), fails=2)
+        code, said, err = self.go("--token", self.token(), consent=FakeConsent(True), fails=2)
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((said["data"]["stage"], said["data"]["board_state"]), ("flash", "may_be_erased"))
         self.assertEqual(said["unchecked"][0]["code"], "flash_failed")
+        self.assert_the_log_is_named(said, err)
+
+    @needs_littlefs
+    def test_a_failed_flash_whose_log_cannot_be_written_says_why_and_names_none(self):
+        self.run_the_scenario()
+        (self.project / "sim" / "runs" / "board").write_text("a file where the folder goes")
+        code, said, err = self.go("--token", self.token(), consent=FakeConsent(True), fails=2)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((said["unchecked"][0]["code"], said["data"]["board_log"], said["data"]["image_sha256"]), ("flash_failed", None, None))
+        self.assertIn("board log: not written: ", err)
 
     @needs_littlefs
     def test_an_erase_retried_once_gives_the_usual_envelope_and_the_retry_line_on_stderr(self):
@@ -333,10 +351,11 @@ class DeployJsonTest(JsonCase, GateCase):
     @needs_littlefs
     def test_a_yes_that_ends_during_the_retry_wait_says_the_board_may_be_erased(self):
         self.run_the_scenario()
-        code, said, _ = self.go("--token", self.token(), consent=self.ends_during_the_wait(), fails=1)
+        code, said, err = self.go("--token", self.token(), consent=self.ends_during_the_wait(), fails=1)
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((said["data"]["stage"], said["data"]["board_state"]), ("flash", "may_be_erased"))
         self.assertEqual(said["unchecked"][0]["code"], "grant_ended")  # the cause the agent acts on, not the flash
+        self.assert_the_log_is_named(said, err)
 
     def test_a_tool_that_cannot_be_used_is_tool_missing(self):
         self.run_the_scenario()

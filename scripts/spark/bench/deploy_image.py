@@ -229,10 +229,11 @@ class DeployFlowService:
     def refuse_at_look(self, cannot):
         """The exit code of a refusal at the look or after it, said on stderr: a LookStopError with the doctor's lines (P354), a
         SparkError (the kept record, the replies file) as one Finding with its own code and fix (P892), any other as
-        `deploy.py: <why>`. A FlashError keeps the yes that ran it."""
+        `deploy.py: <why>`. A FlashError keeps the yes that ran it, and names its board log (P1092)."""
         reached = self._reached
         if isinstance(cannot, FlashError):
             self.keep_yes()
+            self.say_not_finished(cannot)
         reached.update(refusal=str(cannot), reason=cannot.code if isinstance(cannot, SparkError) else reason_of(cannot))
         if isinstance(cannot, SparkError):
             reached["findings"] = [Finding(cannot.status, self.stages.stage, cannot.code, str(cannot), cannot.fix)]
@@ -246,6 +247,15 @@ class DeployFlowService:
                 reached["asleep_next"] = board_envelope.asleep_next(fix, reached["project"], reached["evidence"])  # P1048
         self.outside.add_diagnostics(lines)
         return EXIT_COULD_NOT_RUN
+
+    def say_not_finished(self, failed):
+        """The board log of the FlashError `failed` (P1092): its path, as `data.board_log` with the image it names, or why it
+        was not written."""
+        if failed.log_path is None:
+            self.say(DeployPhase.FLASH, "board log: not written: %s" % failed.log_error)
+            return
+        self._reached.update(board_log=str(failed.log_path), image_sha256=failed.image_sha256)
+        self.say(DeployPhase.FLASH, "board log: %s" % failed.log_path, raw=True)  # P677: a file a person opens, as data.board_log
 
     def look_and_flash(self):
         """The read and its lines, the check that the board read is the kept board (P892), the yes, the gate, then the flash. A
