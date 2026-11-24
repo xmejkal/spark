@@ -246,16 +246,17 @@ def drop_an_older_build(destination, stages, kept=()):
     return [{"file": str(old), "did": "removed", "why": why, "line": "removed %s: %s" % (old, why)}]
 
 
-def keep_breadboard(requirements, destination, stages=()):
+def keep_breadboard(requirements, destination, stages=(), kept=None):
     """
     The breadboard sheet beside the kept board (P191, #143), and its drawn breadboard (P267), as kept entries {file,
     did, why, line}. Only from a build that finished in this run, which it records (dist/board/built-from.json) for
     breadboard.py to compare. A sheet or a drawing from an earlier build stays and is named as an earlier build's
-    (P1093). A board-only build removes it, since it has nothing to wire (P236).
+    (P1093). A board-only build removes it (P236). With `kept`, a dist/ this run did not copy writes no sheet (P1095).
     """
     sheet_path = Path(destination) / sheet.SHEET
     drawings = [(Path(destination) / renderer.FILE_NAME, renderer) for renderer in sheet.DRAWING_RENDERERS]
     why = why_not_built(stages, "board only: nothing to wire")
+    why = why or (why_not_kept(destination, stages, kept) if kept is not None else None)  # P1095: a dist/ copy that failed
     if why:
         return [_left_from_earlier(sheet_path, "breadboard sheet", why, skipped_the_build(stages))] + [
             _left_from_earlier_drawing(path, renderer, why, skipped_the_build(stages)) for path, renderer in drawings]
@@ -306,10 +307,10 @@ def why_not_built(stages, board_only_why):
     return "the build did not finish in this run"
 
 
-def why_no_page(destination, stages, kept):
-    """Why the page (P271) cannot be drawn in this run, or None: its three tabs read the one circuit.json kept in this
-    run, so a refused requirements file, a build that did not finish, a board-only one, or a dist/ that was not copied
-    leaves no page."""
+def why_not_kept(destination, stages, kept):
+    """Why this run kept no board of its own, or None: the page's three tabs (P271) and the sheet read only the circuit.json
+    kept in this run, so a refused requirements file, a build that did not finish, a board-only one, or a dist/ that was
+    not copied (P1095) leaves no page and no new sheet."""
     why = why_not_built(stages, "board only: nothing to draw")
     if why:
         return why
@@ -382,7 +383,7 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     since it describes another board.
     """
     page = Path(destination) / tabbed_page.TabbedHtmlPage.FILE_NAME
-    why = why_no_page(destination, stages, kept)
+    why = why_not_kept(destination, stages, kept)
     project = _is_project(destination)
     pictures = KeptPictureFiles(destination, project)
     if why:
