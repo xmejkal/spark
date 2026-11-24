@@ -73,8 +73,8 @@ A command page's `allowed-tools` lists the operations Claude Code lets you run w
 `--offline` reach the network and are on no command's or skill's list, so Claude Code asks the person first, and their
 answer is the yes. Their settings can answer first: an allow rule of theirs, or auto mode, can let it run, a yes given
 in advance, and auto mode can also refuse it. You do not work around either. The ones on the core declare `fetches`:
-[`NETWORK` on the map](map.md#registries) lists them from the code. A new project starts with `/spark:init`, then `/spark:setup`. The
-[journey guide](journey.md) shows each step on real runs.
+[`NETWORK` on the map](map.md#registries) lists them from the code. A new project starts with `/spark:init`, then
+`/spark:setup`. The [journey guide](journey.md) shows each step on real runs.
 
 Outside Claude Code, the command pages and skills are plain Markdown, but their agents are Claude Code agent
 definitions (`agents/*.md`: a model and a tool list). The scripts their steps call run anywhere; following a command

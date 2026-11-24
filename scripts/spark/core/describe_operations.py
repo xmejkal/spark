@@ -18,6 +18,8 @@ from spark.core.result import OperationResult
 EFFECT_WORDS = ((FETCHES, "network"), (WRITES, "writes"), (DELETES, "deletes"))
 #: One text line per Operation: the flag, the summary, the effects when it has any.
 OPERATION_LINE = "  %-18s %s%s"
+#: The dest of the Argument that makes an Operation's run a dry run: `dry_run` says whether the Operation has one (P1077).
+DRY_RUN_DEST = "dry_run"
 
 
 def summary_of(operation):
@@ -72,7 +74,7 @@ class DescribeOperations(Operation):
             words = effect_words_of(cls)
             own = any("--" + op in argument.flags for argument in cls.arguments)
             operations.append({"op": op, "flag": ("--" + op) if own else None, "summary": summary_of(cls), "effects": words,
-                               "dry_run": any(argument.dest == "dry_run" for argument in cls.arguments),
+                               "dry_run": any(argument.dest == DRY_RUN_DEST for argument in cls.arguments),
                                "arguments": properties, "data": list(cls.data_keys)})
         exits = {str(code): status for status, code in outcomes.EXIT_FOR.items()}
         lines = [OPERATION_LINE % (one["flag"] or one["op"], one["summary"], "  [%s]" % ", ".join(one["effects"]) if one["effects"] else "") for one in operations]

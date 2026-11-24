@@ -74,6 +74,8 @@ def imported_modules(tree):
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             statements.append([alias.name for alias in node.names])
+        elif isinstance(node, ast.ImportFrom) and node.level:
+            statements.append(["." * node.level + (node.module or "")])  # relative: the direction cannot be read, so a finding
         elif isinstance(node, ast.ImportFrom) and node.module:
             statements.append([node.module] + ["%s.%s" % (node.module, alias.name) for alias in node.names])
     return statements
@@ -82,7 +84,7 @@ def imported_modules(tree):
 def imports_against_the_direction(root):
     """Each import under `root`/scripts/spark that breaks the direction: a core module that imports an area or the
     Operation catalogue, or an area module that imports the Operation catalogue, as `<module>: <dotted path>`, once per
-    import statement (its first name that breaks it)."""
+    import statement (its first name that breaks it). A relative import is a finding too: its direction is not read."""
     spark = root / "scripts" / "spark"
     areas = {folder.name for folder in spark.iterdir() if (folder / "__init__.py").is_file()} - {"core"}
     found = []
@@ -93,7 +95,7 @@ def imports_against_the_direction(root):
         forbidden = ["spark.operation_catalogue"] + (["spark." + area for area in sorted(areas)] if relative.parts[0] == "core" else [])
         for names in imported_modules(ast.parse(path.read_text())):
             found += ["%s: %s" % (relative.as_posix(), name) for name in names
-                      if any(name == one or name.startswith(one + ".") for one in forbidden)][:1]
+                      if name.startswith(".") or any(name == one or name.startswith(one + ".") for one in forbidden)][:1]
     return found
 
 
@@ -105,6 +107,7 @@ class TheOperationCatalogueTest(unittest.TestCase):
         for package, table in tables:
             for op, cls in table.items():
                 self.assertIs(operation_catalogue.CATALOGUE.get(op), cls, (package, op))
+                self.assertTrue(cls.__module__.startswith("spark.%s." % package), (package, op, cls.__module__))
         self.assertEqual(sum(len(table) for _, table in tables), len(operation_catalogue.CATALOGUE), "an op is in two tables")
 
     def test_every_operation_class_under_scripts_spark_is_in_the_catalogue(self):
@@ -162,8 +165,10 @@ class TheOperationCatalogueTest(unittest.TestCase):
         root = planted({"scripts/spark/__init__.py": "", "scripts/spark/core/__init__.py": "",
                         "scripts/spark/core/deep.py": "from spark.flow.guide import guide_of\nfrom spark.core import outcomes\n",
                         "scripts/spark/flow/__init__.py": "", "scripts/spark/bench/__init__.py": "",
-                        "scripts/spark/bench/reader.py": "from spark import operation_catalogue\nimport spark.flow.guide\n"}, leaves=False)
-        self.assertEqual(imports_against_the_direction(root), ["bench/reader.py: spark.operation_catalogue", "core/deep.py: spark.flow.guide"])
+                        "scripts/spark/bench/reader.py": "from spark import operation_catalogue\nimport spark.flow.guide\n",
+                        "scripts/spark/bench/near.py": "from . import reader\n"}, leaves=False)
+        self.assertEqual(imports_against_the_direction(root), ["bench/near.py: .", "bench/reader.py: spark.operation_catalogue",
+                                                               "core/deep.py: spark.flow.guide"])
 
     def test_parts_help_holds_describe_s_lines_in_order(self):
         lines = DescribeOperations(parts.OPERATIONS).run(outside=None).lines

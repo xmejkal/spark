@@ -38,9 +38,9 @@ the design and the pin of each signal. `scripts/spark/build` holds the run from 
 builds. `scripts/spark/checks` holds the checks of a built design against facts in records.
 `scripts/spark/breadboard` holds the sheet that a person wires from. `scripts/spark/firmware` holds the flash
 image, the import check and a scenario's run. `scripts/spark/bench` holds the Operations on a board on USB.
-`scripts/spark/flow` says where a project stands. The module `spark.operation_catalogue`, beside the areas and outside
-the core, lists every Operation of every area: `--describe`, the docs and a later MCP server read this one list. See [the map](docs/guide/map.md) and [how it
-works](docs/guide/how-it-works.md).
+`scripts/spark/flow` says where a project stands. The module `spark.operation_catalogue`, beside the areas and
+outside the core, lists every Operation of every area: `--describe`, the docs and a later MCP server read this one
+list. See [the map](docs/guide/map.md) and [how it works](docs/guide/how-it-works.md).
 
 ## Principles for changing spark
 

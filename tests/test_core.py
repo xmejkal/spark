@@ -832,6 +832,7 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual(rows[0]["arguments"]["part_id"]["metavar"], "PART")
         self.assertEqual([o["flag"] for o in result.data["options"]], ["--json", "--project"])
         self.assertEqual(result.lines[0], "  --fetch            download what a record cites  [network, writes]")
+        self.assertEqual(result.lines[1], "  quiet              says nothing")  # P1077: no flag of its own, so the line names the op
         self.assertEqual(result.data["exits"], {"0": "ok", "1": "problems", "2": "could-not-run"})
 
     def test_the_output_schema_requires_the_keys_of_a_real_envelope(self):

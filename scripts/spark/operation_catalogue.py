@@ -4,9 +4,10 @@ each prints to its class. It sits above the areas, outside the core: it imports 
 core or of an area imports it (tests/test_operation_catalogue.py). A frontend hands it, or its slice, to the core's
 DescribeOperations through the constructor. A later MCP server lists it.
 
-Every entry builds with no argument, so a frontend that lists or runs it needs nothing else: a dependency comes from the
-frontend through `outside`, or as a constructor keyword with a harmless default (each entry builds with no argument and
-no SPARK_HOME, and writes nothing). DescribeOperations, which needs a registry, is the one exception and is no entry.
+Every entry builds with no argument, so a frontend that lists it needs nothing else, and a frontend that runs it hands
+the area's outside builder. A dependency comes from the frontend through `outside`, or as a constructor keyword with a
+harmless default (each entry builds with no argument and no SPARK_HOME, and writes nothing). DescribeOperations, which
+needs a registry, is the one exception and is no entry.
 
 The word is not parts.py's --catalog, catalog_records or CATALOG_KEYS: those are the part records research kept.
 """
