@@ -228,8 +228,7 @@ The `find` line is the **anchor**: the exact text the mutation attaches to. It m
 matched nothing would run an unmutated suite and report on a change it never made, which reads
 like a pass.
 
-**When code moves, the anchors on it stop matching.** Since [P208](https://github.com/xmejkal/spark/issues/175), the push gate no longer checks anchors. So the
-1,418 rows in the 124 tables written before 2026-10-12 are history, and nobody keeps them current. A run names each row
+**When code moves, the anchors on it stop matching.** Since [P208](https://github.com/xmejkal/spark/issues/175) the push gate did not check anchors, and the tables went stale. Since P897 (2026-11-24) it checks every row's anchor again, and compiles the mutants of the changed files' and tables' rows, so a merge that moves an anchored line says so at once. A run names each row
 whose anchor moved, or whose mutant does not load, as **refused**. You then **re-anchor** it (point it at the new code and run it again, to prove that
 it still bites), or you delete it and give the reason in the commit. `--for` over a branch's changed files shows
 exactly the guards that the branch moved.
@@ -281,7 +280,7 @@ A snapshot now writes the scratch folders and the random part as placeholders.
 A git hook, installed once per clone, that runs `tools/check_commit.py` before a push leaves the
 machine. It archives **the committed tree** and runs the suite against *that*, not against your
 working copy — so uncommitted files cannot make it pass. It produces the line quoted in every commit
-(this one from 2026-09-30, when the gate also checked every mutation anchor, which ended with [P208](https://github.com/xmejkal/spark/issues/175)):
+(this one from 2026-09-30, when the gate also checked every mutation anchor, which ended with [P208](https://github.com/xmejkal/spark/issues/175) and came back with P897, as a step before the suite: a refused row stops the push):
 
 ```
 bec7b88 as committed: Ran 689 tests in 9.332s / OK; 176 mutation(s) in 37 table(s): every anchor present, once
