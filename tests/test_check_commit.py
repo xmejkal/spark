@@ -171,19 +171,28 @@ FLOW = "scripts/spark/flow/"
 PAGE_TS = {FLOW + "page_script.ts": "const a: number = 1;\n", FLOW + "page_script.js": "const a = 1;\n"}
 
 
+#: Where the swapped `which` finds tsc.
+TSC = "/usr/local/bin/tsc"
+
+
 def tsc_7_0(writes="const a = 1;\n", exit_code=0, said=""):
-    """A swapped `subprocess.run` for tsc 7.0.2: `--version` says so, and a compile writes `writes` into its --outDir."""
+    """
+    A swapped `subprocess.run` for tsc 7.0.2: `--version` says so, and a compile writes `writes` into its --outDir. Its
+    `compilers` lists the program each compile ran.
+    """
     def run(argv, **_kwargs):
         if "--version" in argv:
             return subprocess.CompletedProcess(argv, 0, "Version 7.0.2\n", "")
+        run.compilers.append(argv[0])
         if writes is not None:
             (Path(argv[argv.index("--outDir") + 1]) / "page_script.js").write_text(writes)
         return subprocess.CompletedProcess(argv, exit_code, said, "")
+    run.compilers = []
     return run
 
 
 def tsc_on_path(_name):
-    return "/usr/local/bin/tsc"
+    return TSC
 
 
 class TheGateCompilesThePageScriptTest(unittest.TestCase):
@@ -223,17 +232,20 @@ class TheGateCompilesThePageScriptTest(unittest.TestCase):
         self.assertIsNone(check_commit.tsc_refusal(tsc_on_path, run))
 
     def test_the_same_bytes_are_no_drift(self):
-        self.assertIsNone(check_commit.script_drift(self.tree(PAGE_TS), tsc_7_0()))
+        run = tsc_7_0()
+        self.assertIsNone(check_commit.script_drift(self.tree(PAGE_TS), TSC, run))
+        self.assertEqual(run.compilers, [TSC], "the compile runs the tsc whose version was read")
 
     def test_other_bytes_are_a_drift_that_names_the_fix(self):
-        self.assertEqual(check_commit.script_drift(self.tree(PAGE_TS), tsc_7_0(writes="const a = 2;\n")),
+        self.assertEqual(check_commit.script_drift(self.tree(PAGE_TS), TSC, tsc_7_0(writes="const a = 2;\n")),
                          "page script: the committed scripts/spark/flow/page_script.js is not tsc's compiled output of "
                          "page_script.ts (P1061); fix it with tsc -p scripts/spark/flow, then commit both files")
 
     def test_a_tsc_that_says_errors_is_a_drift_with_its_first_error_line(self):
         for exit_code in (1, 2):  # tsc's own exit 1 or 2 is a drift, never a refusal (C14)
             said = "page_script.ts(3,5): error TS2339: Property 'x' does not exist on type 'Y'.\nmore\n"
-            self.assertEqual(check_commit.script_drift(self.tree(PAGE_TS), tsc_7_0(writes=None, exit_code=exit_code, said=said)),
+            self.assertEqual(check_commit.script_drift(self.tree(PAGE_TS), TSC, tsc_7_0(writes=None, exit_code=exit_code,
+                                                                                             said=said)),
                              "page script: tsc -p scripts/spark/flow says page_script.ts(3,5): error TS2339: Property 'x' "
                              "does not exist on type 'Y'. (P1061); fix the .ts, then run it again and commit both files",
                              exit_code)
@@ -253,6 +265,21 @@ class TheGateCompilesThePageScriptTest(unittest.TestCase):
         self.assertFalse(check_commit.needs_tsc(tree, None))
         self.assertFalse(check_commit.needs_tsc(tree, [], full=True))
 
+    def test_a_branch_that_deleted_the_source_still_needs_tsc(self):
+        # the review of #1606: a deleted page_script.ts beside an edited page_script.js must not turn the check off
+        deleted = FLOW + "page_script.ts"
+        self.assertTrue(check_commit.needs_tsc(self.tree({FLOW + "page_script.js": "const a = 2;\n"}), [deleted]))
+        self.assertFalse(check_commit.needs_tsc(self.tree({}), [deleted]), "a test's empty archive holds none of the four")
+        root = repo_with(PAGE_TS)
+        subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=str(root), check=True, env=own_env())
+        for command in (["git", "rm", "-q", deleted], ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "two"]):
+            subprocess.run(command, cwd=str(root), check=True, capture_output=True, env=own_env())
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            code = check_commit.gate(root, "HEAD", Path(tempfile.mkdtemp()), which=lambda _name: None, run=tsc_7_0())
+        self.assertEqual(code, check_commit.EXIT_COULD_NOT_RUN, said.getvalue())
+        self.assertIn("and no tsc is on this PATH", said.getvalue())
+
     def full_gate(self, which, run):
         said = io.StringIO()
         with contextlib.redirect_stdout(said):
@@ -266,8 +293,10 @@ class TheGateCompilesThePageScriptTest(unittest.TestCase):
         self.assertNotIn("as committed", said, "a refusal runs no suite")
 
     def test_the_full_run_compiles_the_script_and_a_drift_runs_no_suite(self):
-        code, said = self.full_gate(tsc_on_path, tsc_7_0(writes="const a = 2;\n"))
+        run = tsc_7_0(writes="const a = 2;\n")
+        code, said = self.full_gate(tsc_on_path, run)
         self.assertEqual(code, check_commit.EXIT_PROBLEMS, said)
+        self.assertEqual(run.compilers, [TSC], "the gate compiles with the tsc that `which` found")
         self.assertIn("page script: the committed scripts/spark/flow/page_script.js is not tsc's compiled output", said)
         self.assertNotIn("as committed", said, "a drift runs no suite")
 
