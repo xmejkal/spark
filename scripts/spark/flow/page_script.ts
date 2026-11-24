@@ -40,6 +40,8 @@ interface Words {
   waiting_for: string;
   last_request: string;
   months: string[];
+  request_kinds: Record<string, string>;
+  request_other: string;
   ran: string;
   note: string;
   problems: string;
@@ -141,14 +143,14 @@ function said(shown: Shown): string {
 
 /**
  * The status line of the last request (P1062): "Your last request, <its time>: <its label>." and what `shownState` says,
- * or the waiting line alone, or the empty text with no request. The label is the offer's on this page, else its key's
- * kind. Pure.
+ * or the waiting line alone, or the empty text with no request. The label is the offer's on this page, else its kind's words, else
+ * `request_other`: never a part of the key. Pure.
  */
 function lastRequest(request: RequestRow | null, answer: AnswerRow | null, words: Words): string {
   const shown = shownState(request, answer, words);
   if (!request || !shown) return "";
   if (!request.withdrawn && !answer) return said(shown);
-  const label = labelOf(words, request.key) || kindOf(request.key);
+  const label = labelOf(words, request.key) || own(words.request_kinds, kindOf(request.key)) || words.request_other;
   return fill(fill(words.last_request, dayAndTime(request.at, words.months)), label) + " " + said(shown);
 }
 

@@ -323,6 +323,7 @@ def pick_need(key):
     kind, _, rest = key.partition(":")
     return rest.split(":", 1)[0] if kind == flow_codes.PICK and ":" in rest else None
 
+
 def counted(listed):
     """The needs that count for the parts (P977): each with a pick, and each the person did not set aside. `listed` are
     needs as `needs.read` or `needs.match` gives them; the guide reads the same rule."""

@@ -219,6 +219,9 @@ PUBLISHED_INTRO = "Where this project stands. Use a button to ask spark for a st
 WAITING_FOR = "Waiting for Claude: %s."
 #: The last request under the NOW box (P1062): its time in the browser's zone and its label, then what the page says of it.
 LAST_REQUEST_SAYS = "Your last request, %s: %s."
+#: The last request's words when its offer is no longer on the page (the review of #1619): by its kind, else one sentence.
+LAST_REQUEST_KINDS = {PICK: "a pick", WRITE_REQUIREMENTS: "the parts list", BUILD_BOARD: "the build"}
+LAST_REQUEST_OTHER = "a step this page no longer offers"
 NEW_STATE = "Reload to see the new state."
 #: What the page says when a step ran ok, by its kind: what it did and what is not done yet.
 RAN_OK_SAYS = {PICK: "Saved as the pick. Nothing is built yet. " + NEW_STATE,
@@ -252,7 +255,7 @@ STANDS_AT_LINE = "The project stands at: %s."
 PAGE_INTRO = "Where this project stands. This page only shows it. To change anything, tell Claude in the chat."
 #: The freshness line under the title (P1062, the P1038 design): the newest change of the fingerprint's files, read in the
 #: machine's zone (`zone_time.day_and_time`), or the line for a page that knows no time.
-FRESH_LINE = ("This page shows the project as of %s, its newest change. If you changed or deployed something after that, "
+FRESH_LINE = ("This page shows the project as its files last changed, %s. If you changed or deployed something after that, "
               "type /spark:page in the chat.")
 FRESH_NONE = ("This page does not know when the project last changed. If you changed or deployed something, type "
               "/spark:page in the chat.")

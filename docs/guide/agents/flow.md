@@ -23,9 +23,9 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
 - `stands_at`: the phase of `guide.now`, kept for old readers. Read `guide.now.phase`: it is the same phase, by one rule
   ([P1030](https://github.com/xmejkal/spark/issues/1510)). It is `null` when no phase is open (the deploy is `ok`), or with a phase list a test swaps in.
 - `guide` ([P977](https://github.com/xmejkal/spark/issues/1407)): what the person does now. `now` is `{phase, by, says,
-  offer, needs, steps}`: the phase to act on, who acts (a list: `["you", "claude"]` when the firmware and the wiring are two jobs, else one item), one sentence for the person, `offer`, for the
+  offer, needs, steps, with_wiring}`: the phase to act on, who acts (a list: `["you", "claude"]` when the firmware and the wiring are two jobs, else one item), one sentence for the person, `offer`, for the
   parts, the needs with no pick, and `steps`: the number of wiring steps when wiring is part of now (the two jobs of the
-  firmware), else `null`. `offer` is the key of the now offer: the now phase's one offer of a kind the page sends (a
+  firmware), else `null`; `with_wiring` is true when the job now holds the wiring (those two jobs, or the deploy beside a current sheet, P1062). `offer` is the key of the now offer: the now phase's one offer of a kind the page sends (a
   pick, the parts list or the build), else `null`. With one pick offer for the parts, `offer` is that pick. A
   breadboard now names no offer, because the build's offer is in the build phase. `wired` ([P1044](https://github.com/xmejkal/spark/issues/1534)) is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, each a time with its zone or `null`: the last change of the kept sheet `breadboard.md` (current or stale), and `data.deploy.at`. Read `guide.wired`, not an effect. `null` means that spark saw no witness, never that the board is not wired. A board log that cannot be read is no witness (the deploy phase is `could-not-run`). A build that does not finish deletes the old sheet, so with no board log the witness goes, though the person may have wired from it.
 - `deploy` ([P1043](https://github.com/xmejkal/spark/issues/1533)): the newest board log in `sim/runs/board/`, or `null` with none or with one that cannot be read (the deploy phase says why). `at` is its time as written, with its zone; `image` the whole sha256 of the image it wrote; `verdict` `ready seen`, `ready not seen` or `ready unknown`; `cause` the code of the cause, from the log's reason line or its sentence's fixed start; `fact` `current`, `image-differs`, `firmware-newer` or `no-image` (what the image the project holds now says of it); `read_back` whether spark read the board's files back after the write (`null`: the log cannot tell). A `null` `cause` means ready seen, or a cause not recorded: never fill it in. To answer "is the new firmware on the board", read `fact`, `read_back` and `verdict` together: `fact` `current` says only that the log's image is the image the project holds now.
@@ -163,7 +163,7 @@ dropped after the must lines were last gone through. [What the needs were writte
 `flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It draws the reading `show` prints (P1060), so a person reads the same facts from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). Under the title, the freshness line says the newest change of the fingerprint's files as "23 Nov 2026, 14:18", in the machine's zone, and a line says
 what the page is and that every change goes through Claude in the chat ([P1062](https://github.com/xmejkal/spark/issues/1560)). Under it stands the guide
 ([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: the NOW box (`class="now"`) with the now phase and who acts, ON THE BOARD (the last deploy's time in the machine's zone, verdict and cause from `data.deploy`, after a deploy only) and NEXT, the guide's sentence, then,
-muted, DONE, LATER and SET ASIDE, and a list with no item draws no line. On a board that can be wired, the parts fold's first line is the wired line, and a pick's or a build's confirm opens with its fixed sentence ([P1044](https://github.com/xmejkal/spark/issues/1534)).
+muted, DONE, LATER and SET ASIDE, and a list with no item draws no line. A line the parts phase says twice stands once. On a board that can be wired, the parts fold's first line is the wired line, and a pick's or a build's confirm opens with its fixed sentence ([P1044](https://github.com/xmejkal/spark/issues/1534)).
 
 When `now.steps` is set and the page holds wiring
 steps, NEXT ends in the link "One at a time: start at step N", the wiring section's own link, to the first step's own `#step-N`. The sentence about why there is
@@ -172,7 +172,7 @@ project stands at" is not drawn; a page from a caller that gives no guide keeps 
 
 Then come three folds, each a `<details class="fold" data-fold="NAME">` with a one-line summary, open only while its job is NOW: the parts
 (`parts`: the parts phase's mark, word and lines, then one row per need with its picks, then the parts list and the build), the wiring
-(`wiring`, when the project holds a `requirements.json`, [P828](https://github.com/xmejkal/spark/issues/1186); open when `now.steps` is set, or the deploy is now beside a current sheet) and
+(`wiring`, when the project holds a `requirements.json`, [P828](https://github.com/xmejkal/spark/issues/1186); open when `now.with_wiring` is true) and
 the pictures (`pictures`, open with the wiring). Then the bench note, and last the developer fold (`developer`), always closed: each phase
 closed under its heading (the phase name, a mark and a status word), with who does it, what it says and its offers' keys and effects as
 text, then the marks and the line that names each record whole. No mark shows a tick for a status that is not ok. In "Before you power it", the host requirements of one part that
@@ -277,7 +277,7 @@ watching that request's answer. The script watches the latest request by `at`, a
 page's own request, then the row `answers/<id>`.
 
 The answer row holds `flow.py run-request`'s `data` unchanged ([a page request](#a-page-request)). The script says it in
-the page's words, after "Your last request, <its time in the browser's zone>: <its offer's label, else its key's kind>." (the request lives in the page's database, not in `show`): what ran ok by its kind, the step's first problem (`line`), spark's line for a step that ran and could not run, or why it could not run. A refusal shows as
+the page's words, after "Your last request, <its time in the browser's zone>: <its offer's label, else its kind's words (`request_kinds`), else `request_other`>." (the request lives in the page's database, not in `show`): what ran ok by its kind, the step's first problem (`line`), spark's line for a step that ran and could not run, or why it could not run. A refusal shows as
 its code's own words only when `line` is exactly that code's meaning, in grey; any other `line` with `ran: false` shows
 as could not run. Never "done" alone.
 

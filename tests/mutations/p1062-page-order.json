@@ -54,16 +54,16 @@
   "replace": ".get(\"phase\") != flow_codes.PARTS)"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
-  "name": "P1062: the wiring fold opens on a deploy beside a stale sheet (E16, test 6)",
-  "find": "sheet is not None and sheet[\"status\"] is None)",
-  "replace": "sheet is not None)"
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1062: the guide says the deploy holds the wiring beside a sheet that is not current (E16, test_flow.TheWiringWithNowTest)",
+  "find": "    return count is not None or (now.phase == flow_codes.DEPLOY and is_sheet_current(project, by_name))",
+  "replace": "    return count is not None or now.phase == flow_codes.DEPLOY"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
-  "name": "P1062: the wiring fold stands open with no now.steps and no deploy (test 6)",
-  "find": "return bool(now.get(\"steps\")) or",
-  "replace": "return True or"
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1062: the guide says every now holds the wiring (test_flow.TheWiringWithNowTest)",
+  "find": "    return count is not None or (now.phase == flow_codes.DEPLOY and is_sheet_current(project, by_name))",
+  "replace": "    return True"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
@@ -112,5 +112,23 @@
   "name": "P1062: a step that ran and could not run reads \"Could not run:\" again (E13, page_script.test.js status line test)",
   "find": "return { mark: words.marks[\"could-not-run\"], text: fill(words.ran, sentence(answer.line)), grey: false };",
   "replace": "return { mark: words.marks[\"could-not-run\"], text: fill(words.could_not_run, sentence(answer.line)), grey: false };"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: the page opens the wiring fold whatever now.with_wiring says (test_flow_page, test 6)",
+  "find": "        return bool((((page.guide or {}).get(\"now\")) or {}).get(\"with_wiring\"))",
+  "replace": "        return False"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062 review: a line the parts phase says twice stands twice (test_flow_page.TheSliceOneOrderTest)",
+  "find": "said = list(dict.fromkeys(phase[\"says\"])) if phase else []",
+  "replace": "said = list(phase[\"says\"]) if phase else []"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1062 review: a request whose offer left the page is said by a part of its key (page_script.test.js)",
+  "find": "    const label = labelOf(words, request.key) || own(words.request_kinds, kindOf(request.key)) || words.request_other;",
+  "replace": "    const label = labelOf(words, request.key) || kindOf(request.key);"
  }
 ]

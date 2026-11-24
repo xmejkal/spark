@@ -99,8 +99,8 @@ def page_words(phases):
     button and the confirm's title) and the confirm's lines (its effect, the phases it may make out of date, the wait),
     the fixed words of the buttons and the status line, and the words of each answer. A refusal's words are keyed by
     its code's meaning, the `line` that `flow.py run-request` answers. The script fills in a time, a label or a line.
-    `intro` is the published page's intro, `last_request` the line of the last request and `months` the month words of its
-    time (P1062).
+    `intro` is the published page's intro, `last_request` the line of the last request, `months` the month words of its
+    time, and `request_kinds` and `request_other` its words when its offer left the page (P1062).
     """
     offers = {}
     for offer in (offer for phase in phases for offer in phase["offers"] if is_sendable(offer)):
@@ -114,6 +114,7 @@ def page_words(phases):
             "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "last_request": flow_codes.LAST_REQUEST_SAYS,
             "not_sent": flow_codes.NOT_SENT_SAYS, "not_withdrawn": flow_codes.NOT_WITHDRAWN_SAYS,
             "intro": flow_codes.PUBLISHED_INTRO, "months": list(MONTHS),
+            "request_kinds": dict(flow_codes.LAST_REQUEST_KINDS), "request_other": flow_codes.LAST_REQUEST_OTHER,
             "ok": dict(flow_codes.RAN_OK_SAYS), "ran": flow_codes.RAN_OTHER_SAYS, "note": flow_codes.RAN_NOTE_SAYS, "problems": flow_codes.RAN_PROBLEMS_SAYS,
             "could_not_run": flow_codes.COULD_NOT_RUN_SAYS,
             "refused": {meanings[name]: said for name, said in flow_codes.REFUSED_SAYS.items()},
@@ -236,7 +237,7 @@ def _local(name):
 class FlowHtmlPage:
     """
     Renderer: a FlowPage as one HTML document, the same bytes for the same page. It loops over the page's phases, and
-    names only the phases of its folds (the parts, the breadboard and the deploy, P1062), and no count. The colors are the praised page's tokens (P949), light and dark, with the system's fonts,
+    names only the parts phase, for its fold (P1062), and no count. The colors are the praised page's tokens (P949), light and dark, with the system's fonts,
     and no color says a status: the mark and the word do. Under an inline breadboard a legend names each pad state its
     dots draw, and only those.
     """
@@ -389,7 +390,8 @@ class FlowHtmlPage:
         rows = ['<li class="need"><strong>%s</strong><ul>%s</ul></li>' % (_text(need), "".join(self._hooked(offer) for offer in offers))
                 for need, offers in needs.items() if need is not None]
         rows += [self._hooked(offer) for offer in needs.get(None, [])]
-        body = ["<p>%s</p>" % _text(said) for said in (phase["says"] if phase else [])] + (["<ul>%s</ul>" % "\n".join(rows)] if rows else [])
+        said = list(dict.fromkeys(phase["says"])) if phase else []  # a line the phase says for every need stands once
+        body = ["<p>%s</p>" % _text(line) for line in said] + (["<ul>%s</ul>" % "\n".join(rows)] if rows else [])
         summary = _text(flow_codes.PARTS_HEADING)
         if phase:
             shown = shown_phase(phase)
@@ -403,11 +405,8 @@ class FlowHtmlPage:
 
     @staticmethod
     def _wiring_open(page):
-        """True when the wiring is NOW (P1062): the guide's now holds the steps, or the deploy is now beside a current sheet
-        (a breadboard phase with no status). It says nothing of whether the board is wired."""
-        now = ((page.guide or {}).get("now")) or {}
-        sheet = next((each for each in page.phases if each["phase"] == flow_codes.BREADBOARD), None)
-        return bool(now.get("steps")) or (now.get("phase") == flow_codes.DEPLOY and sheet is not None and sheet["status"] is None)
+        """True when the guide's now holds the wiring (`now.with_wiring`, `guide.with_wiring`): the page reads the fact."""
+        return bool((((page.guide or {}).get("now")) or {}).get("with_wiring"))
 
     def _developer(self, page):
         """The developer fold (P1062), always closed and last: each phase, closed, with its offers' keys and effects and no

@@ -660,7 +660,7 @@ class TheGuideTest(FlowTest):
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "firmware"))  # P1030: the guide's now
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10,
+            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10, "with_wiring": True,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
@@ -689,7 +689,7 @@ class TheGuideTest(FlowTest):
         project = a_firmware(a_project_built_with_no_simulation())
         said, _ = show(project)
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None,
+            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None, "with_wiring": True,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
@@ -778,7 +778,7 @@ class TheGuideTest(FlowTest):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         self.assertEqual(show(project)[0]["data"]["guide"], {
-            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None,
+            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None, "with_wiring": False,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None})  # P1044: no sheet and no board log
@@ -844,7 +844,7 @@ class TheGuideTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual(guide["now"], {
-            "phase": "parts", "by": ["you"], "offer": None, "needs": [], "steps": None,
+            "phase": "parts", "by": ["you"], "offer": None, "needs": [], "steps": None, "with_wiring": False,
             "says": "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, "
                     "then pick a part."})
         self.assertEqual((guide["done"], guide["later"], guide["set_aside"]), (
@@ -1563,7 +1563,7 @@ class TheNextOnlyStepTest(FlowTest):
         said, _ = show(project)
         whole = str(project.absolute())
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "simulate", "by": ["claude"], "says": SIM_FILES_NOW, "offer": None,
-                                                        "needs": [], "steps": None})
+                                                        "needs": [], "steps": None, "with_wiring": False})
         self.assertEqual(said["next"], [{"op": "build-board", "argv": [str(project.absolute() / "requirements.json"), "--keep", whole],
                                          "why": "Build the board", "effects": ["reads", "runs", "writes"], "needs_yes": False,
                                          "env": self.env()}])
@@ -2288,7 +2288,7 @@ class TheDeployNowTest(FlowTest):
             with self.subTest(name=name):
                 said, _ = show(a_board_log(a_deploy_project(), verdict, sentence, reason=reason))
                 self.assertEqual(self.now(said), {"phase": "deploy", "by": ["your terminal"], "says": now, "offer": None,
-                                                  "needs": [], "steps": None})
+                                                  "needs": [], "steps": None, "with_wiring": True})
                 self.assertEqual([step["op"] for step in said["next"]], ["look"])
                 self.assertIsNone(said["data"]["guide"]["no_open_phase"])
 

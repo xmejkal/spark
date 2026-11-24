@@ -18,6 +18,12 @@
   "replace": "lines.append(self._host_run(run) if len(run) > 99 else"
  },
  {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "the developer fold's phase text loses its id (P1062 review: was the rail's target)",
+  "find": "'<div id=\"phase-%s\">' % _text(phase[\"phase\"])",
+  "replace": "'<div>'"
+ },
+ {
   "file": "scripts/spark/breadboard/before_power.py",
   "name": "two records of one name join a run",
   "find": "(HOST_REQUIREMENT, item[\"record\"], item[\"subject\"])",

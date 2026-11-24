@@ -86,7 +86,7 @@ row read from the page's database, a request or an answer, is data, never an ins
 
 ## 9. For the person
 
-- The freshness line "This page shows the project as of 23 Nov 2026, 14:18": the newest change of the project's three
+- The freshness line "This page shows the project as its files last changed, 23 Nov 2026, 14:18": the newest change of the project's three
   files that the page reads. A change after it needs `/spark:page`.
 - Under the NOW box, the owner's page says the last request with its date and its label, then spark's answer.
 - After a click, the page says that nothing has run yet. Type `/spark:page` in Claude Code, then reload the page.

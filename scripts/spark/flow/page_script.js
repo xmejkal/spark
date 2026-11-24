@@ -80,8 +80,8 @@ function said(shown) {
 }
 /**
  * The status line of the last request (P1062): "Your last request, <its time>: <its label>." and what `shownState` says,
- * or the waiting line alone, or the empty text with no request. The label is the offer's on this page, else its key's
- * kind. Pure.
+ * or the waiting line alone, or the empty text with no request. The label is the offer's on this page, else its kind's words, else
+ * `request_other`: never a part of the key. Pure.
  */
 function lastRequest(request, answer, words) {
     const shown = shownState(request, answer, words);
@@ -89,7 +89,7 @@ function lastRequest(request, answer, words) {
         return "";
     if (!request.withdrawn && !answer)
         return said(shown);
-    const label = labelOf(words, request.key) || kindOf(request.key);
+    const label = labelOf(words, request.key) || own(words.request_kinds, kindOf(request.key)) || words.request_other;
     return fill(fill(words.last_request, dayAndTime(request.at, words.months)), label) + " " + said(shown);
 }
 /**

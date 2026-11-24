@@ -199,6 +199,12 @@ def done_of(phases, at, no_model, sheet_done, no_picks=False):
     return done
 
 
+def with_wiring(project, now, by_name, count):
+    """True when the job now holds the wiring (P1062, the review of #1619): the two jobs beside a current sheet (`count`),
+    or the deploy beside a current sheet. The page opens its wiring fold by it. Spark never says the board is wired."""
+    return count is not None or (now.phase == flow_codes.DEPLOY and is_sheet_current(project, by_name))
+
+
 def stands_at_of(guide):
     """Where a project stands: the guide's now phase, the one rule (P1030). None when the guide has no now, which only a
     flow of other readers in a test gives."""
@@ -208,7 +214,7 @@ def stands_at_of(guide):
 def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     """
     What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, needs, steps}, "done", "later", "set_aside", "no_simulation", "no_open_phase", "wired"}`. `steps` counts the wiring
+    `{"now": {phase, by, says, offer, needs, steps, with_wiring}, "done", "later", "set_aside", "no_simulation", "no_open_phase", "wired"}`. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
     run's DeployState (P1043), None to read it here. `board` is the run's WiredBoard (P1044), None to read it here:
     `wired` is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, or None when spark saw none.
@@ -227,6 +233,7 @@ def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
     written = not (now and now.phase == flow_codes.SIMULATE) or bool(scenario_names(project))
     said = with_deploy_now(project, now_of(now, open_needs, fact, count, written), now, deploy) if now else None
+    said = dict(said, with_wiring=with_wiring(project, now, by_name, count)) if said else None
     sheet_done = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
     later = [label(phase, no_model) + (flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else "")
              for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]

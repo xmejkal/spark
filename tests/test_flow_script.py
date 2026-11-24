@@ -37,7 +37,7 @@ class PageScriptTest(unittest.TestCase):
         run = subprocess.run([NODE, "--test", str(JS_TESTS)], capture_output=True, text=True, cwd=str(ROOT), timeout=120)
         said = run.stdout + run.stderr
         self.assertEqual(run.returncode, 0, said)
-        self.assertIn("# pass 14\n", said)
+        self.assertIn("# pass 15\n", said)
         self.assertIn("# fail 0\n", said)
 
 

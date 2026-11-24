@@ -273,7 +273,7 @@ CLOCK = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d")
 SHEET_TIME = re.compile(r"((?:Changes since the sheet spark wrote on|wired the sheet from) )\d{4}-\d\d-\d\d \d\d:\d\d")
 
 #: The page's freshness line (P1062): the newest change of the copied fixture's files, read as a day and a time.
-FRESH_TIME = re.compile(r"(as of )\d{1,2} [A-Z][a-z]{2} \d{4}, \d\d:\d\d")
+FRESH_TIME = re.compile(r"(files last changed, )\d{1,2} [A-Z][a-z]{2} \d{4}, \d\d:\d\d")
 
 #: The name of a board log, a moment of the run (sim/runs/board/<moment>.log), which CLOCK does not match (P383).
 BOARD_LOG = re.compile(r"\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d\.log")
