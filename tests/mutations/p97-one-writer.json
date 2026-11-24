@@ -33,7 +33,7 @@
  {
   "file": "scripts/spark/records/store.py",
   "name": "every store shares one lock",
-  "find": "    folder, made, cannot = Path(os.path.abspath(home())), set(),",
-  "replace": "    folder, made, cannot = Path(tempfile.gettempdir()), set(),"
+  "find": "            held = take(folder)",
+  "replace": "            held = take(Path(tempfile.gettempdir()))"
  }
 ]
