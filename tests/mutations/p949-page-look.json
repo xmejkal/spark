@@ -16,5 +16,5 @@
  {"file": "scripts/spark/flow/flow_page.py", "name": "P949 review: a value is read as written, not lowercased", "find": "any(word in value.lower() for value", "replace": "any(word in value for value"},
  {"file": "scripts/spark/breadboard/part_pictures.py", "name": "P949 review: a CSS escape is plain", "find": "\"javascript:\", \"expression\", \"\\\\\")", "replace": "\"javascript:\", \"expression\")"},
  {"file": "scripts/spark/flow/flow_page.py", "name": "P949: a DOCTYPE is taken", "find": "        if \"<!doctype\" in svg.lower():", "replace": "        if False:"},
- {"file": "scripts/spark/flow/write_flow_page.py", "name": "P949 review: the rendered page is not masked again", "find": "privacy.masked(renderer.text(page))", "replace": "renderer.text(page)"}
+ {"file": "scripts/spark/flow/write_flow_page.py", "name": "P949 review: the rendered page is not masked again", "find": "paths.masked(renderer.text(page))", "replace": "renderer.text(page)"}
 ]

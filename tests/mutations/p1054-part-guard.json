@@ -15,6 +15,6 @@
   "find": "    descriptor = _new_part(part, 0o666)  # before the try: a `.part` it refused is never removed\n    try:\n        with open(descriptor, \"wb\") as out:\n            out.write(payload)\n",
   "replace": "    try:\n        part.write_bytes(payload)\n"},
  {"file": "scripts/spark/flow/write_flow_page.py", "name": "P1054: a page whose .part is taken is told to make the folder writable",
-  "find": "            fix = PART_FIX % renderer.FILE_NAME if isinstance(refused, store.PartTakenError) else PAGE_FIX",
-  "replace": "            fix = PAGE_FIX"}
+  "find": "    return PAGE_SENTENCE % (file_name, refused), PART_FIX % file_name if isinstance(refused, store.PartTakenError) else PAGE_FIX",
+  "replace": "    return PAGE_SENTENCE % (file_name, refused), PAGE_FIX"}
 ]

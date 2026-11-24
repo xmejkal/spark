@@ -432,8 +432,8 @@ class TheUnreadableSecretsTest(unittest.TestCase):
         self.assertEqual((code, envelope["status"]), (2, COULD_NOT_RUN))
         [item] = envelope["unchecked"]
         self.assertEqual((item["code"], item["fix"]), (NOT_WRITTEN, SECRETS_FIX))
-        self.assertIn("wifi_secrets.py", item["sentence"])
-        self.assertIn("the page on disk is the old one", item["sentence"])
+        self.assertEqual(item["sentence"], "page.html was not written: firmware/ holds a secrets file that cannot be read or parsed "
+                                           "(wifi_secrets.py), so spark cannot mask its values. The page on disk is the old one")
         self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
         self.assertNotIn(HALF_TYPED, out.getvalue() + err.getvalue())
 

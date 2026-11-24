@@ -15,6 +15,7 @@ from spark.flow.flow_reading import FlowReading
 from spark.flow.guide import guide_of
 from spark.flow.published_page import PublishedPageStore
 from spark.flow.phase_readers import MARKS, READERS, DeployReader
+from spark.firmware.project_secrets import ProjectSecrets
 from spark.records import store
 from spark.core.operation import COMMON_ARGUMENTS, READS, Operation
 from spark.core.outcomes import COULD_NOT_RUN, PROBLEMS
@@ -35,11 +36,17 @@ OFFERS_SHOWN = 5
 #: The Finding of a phase that holds problems or could not run: its first sentence, and where to look.
 PHASE_SENTENCE = "%s: %s"
 PHASE_FIX = "read what the phase says in data.phases"
+#: The note of `show` on a secrets file that cannot be read or parsed (P1060 D5): `show` runs, and the mask is off for that
+#: file's values. It names the file, never its text: a parse error's text holds the line, and the line the secret.
+MASK_OFF = "the mask is off for firmware/%s: it cannot be read or parsed, so spark cannot mask its values. Repair or remove it"
 
 
-def privacy_for(project):
-    """The Privacy of a run on `project`: its path, the store's and the home folder's masked (P677)."""
-    return Privacy.of(project, store.home(), Path.home(), ())
+def privacy_for(project, secrets=None):
+    """The Privacy of a run on `project`: its path, the store's and the home folder's masked (P677), and the values of its
+    secrets files as `***` (P1060): `secrets`, else `ProjectSecrets.read`'s. With `secrets=()` it masks the paths only."""
+    if secrets is None:
+        secrets = ProjectSecrets.read(project).values
+    return Privacy.of(project, store.home(), Path.home(), secrets)
 
 
 def phase_line(phase):
@@ -161,5 +168,7 @@ class ShowFlow(Operation):
         lines = [line for phase in phases for line in phase_line(phase)]
         lines += guide_lines(guide, steps)
         data = reading.to_dict()
-        return OperationResult(data, findings, steps, lines=lines)
+        notes = [{"subject": name, "sentence": MASK_OFF % name} for name in ProjectSecrets.read(project).unreadable]
+        lines += [printable("  " + note["sentence"]) for note in notes]  # show has no headline, so its text holds its lines only
+        return OperationResult(data, findings, steps, lines=lines, notes=notes or None)
 # --- end MVP ---
