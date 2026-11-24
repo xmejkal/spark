@@ -348,6 +348,29 @@ class TheFirmwarePlatformTest(ServiceCase):
             self.platform().make_flasher()
         self.assertEqual(self.finder.asked, [])
 
+    def test_the_platform_reads_the_projects_board_and_refuses_a_project_with_no_requirements_json(self):
+        # P1024: board_of and record_of read the project's board (D35); no requirements.json stays chip_unknown, never
+        # the selection's chip
+        (self.project / "boards").mkdir(exist_ok=True)
+        (self.project / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "firebeetle2-esp32s3"}))
+        (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        self.assertEqual(self.platform().board_of(), "xiao-esp32-c6")
+        self.assertEqual(firmware_platform.record_of(self.project)["chip"], "esp32c6")
+        (self.project / "requirements.json").unlink()
+        with self.assertRaises(project_image.DeployError) as refused:
+            self.platform().make_flasher()
+        self.assertEqual(refused.exception.reason, "chip_unknown")
+        self.assertEqual(self.finder.asked, [])
+        with self.subTest(requirements="a folder"):  # C3 (the review's R2): a folder is no file, so chip_unknown too
+            (self.project / "requirements.json").mkdir()
+            with self.assertRaises(project_image.DeployError) as refused:
+                self.platform().make_flasher()
+            self.assertEqual(refused.exception.reason, "chip_unknown")
+            (self.project / "requirements.json").rmdir()
+        with self.subTest(requirements="{}"):  # D35 (the review's R3): no board named gives the selection's record
+            (self.project / "requirements.json").write_text("{}")
+            self.assertEqual(firmware_platform.record_of(self.project)["chip"], "esp32s3")
+
 
 class TheWhyLineTest(unittest.TestCase):
     """P476: a BEGIN of a deploy stage is followed by one line that says why the stage happens."""
