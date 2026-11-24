@@ -13,12 +13,14 @@ standard library and the leaf `text_guards`, which imports nothing of spark.
 
 import atexit
 import contextlib
+import errno
 import hashlib
 import json
 import os
 import re
 import shlex
 import shutil
+import stat
 import sys
 import tempfile
 import threading
@@ -165,6 +167,40 @@ class StoreError(CodedMessageError):
     """Error: a store spark cannot read, or a write it will not make. The message is the whole sentence; its values are flattened (P444), and its `code` is records_codes'."""
 
 
+#: What a write says when its `.part` is taken by something spark never makes there (P1054).
+PART_IN_THE_WAY = ("%s is in the way: spark makes a new file there before the file takes its name, and never writes through"
+                   " a link, a folder or a FIFO — delete it if it is not yours")
+#: What a write says when another writer made the `.part` again after spark removed a stale one (P1054).
+PART_BEING_WRITTEN = "%s is being written by another run: run it again once that one is done"
+
+
+class PartTakenError(FileExistsError):
+    """Error: a `.part` name taken by a link, a folder, a FIFO or another writer's file (P1054). An OSError, so each
+    caller that answers a failed write answers it. `filename` is the `.part`, `strerror` the whole sentence."""
+
+    def __str__(self):
+        return self.strerror
+
+
+def _new_part(part, mode):
+    """
+    The descriptor of `part`, made new for writing at `mode` (P1054). O_EXCL never follows a link at the name, so nothing
+    outside is written. A regular file there is what a killed write left, and it is removed and the create tried once
+    more; one gone in between was renamed by another writer. Anything else there is PartTakenError, left as it is.
+    """
+    for _ in range(2):
+        try:
+            return os.open(part, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)  # O_EXCL also refuses a link at the name
+        except FileExistsError:
+            try:
+                if not stat.S_ISREG(os.lstat(part).st_mode):
+                    raise PartTakenError(errno.EEXIST, PART_IN_THE_WAY % part, str(part)) from None
+                os.unlink(part)
+            except FileNotFoundError:
+                pass  # another writer renamed its `.part` away in between: the name is free again
+    raise PartTakenError(errno.EEXIST, PART_BEING_WRITTEN % part, str(part))
+
+
 def slug(text):
     """A key made from words (§5.1): lower case, letters and digits joined by '-', at most 60 — never a raw label or SKU."""
     made = re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-")[:60].rstrip("-")
@@ -184,7 +220,8 @@ def write_file(path, text, private=False):
     """
     A whole file (§6.1): written to `.part` and renamed, so a write that fails halfway leaves the old file whole and no
     `.part` behind — and only when the bytes differ, so a retried write changes nothing. A private file is 0600, and its
-    `.part` is made new at 0600 before it holds a byte. Returns whether it changed.
+    `.part` is made new at 0600 before it holds a byte. A `.part` is made new: a link, a folder or a FIFO there is refused
+    (PartTakenError), and a file that a killed write left is removed (P1054). Returns whether it changed.
     """
     path = Path(path)
     if path.is_file() and path.read_text(encoding="utf-8") == text:
@@ -199,20 +236,24 @@ def replace_file(path, text, private=False):
     """
     Write `path` whole, whatever it holds now (P1035 PR 2): `text` goes to `.part`, which is renamed over it, so a write
     that fails halfway leaves the old file whole and no `.part` behind. A link or a FIFO at `path` is replaced by the file,
-    never written through. A private file's `.part` is made new at 0600 before it holds a byte. `write_file` calls it
-    once the bytes differ; the page calls it directly, so an old page that is not UTF-8 never stops its write.
+    never written through. A private file's `.part` is made new at 0600 before it holds a byte. A `.part` is made new: a
+    link, a folder or a FIFO there is refused (PartTakenError), and a file that a killed write left is removed (P1054).
+    `write_file` calls it once the bytes differ; the page calls it directly, so an old page that is not UTF-8 never stops
+    its write.
     """
     path = Path(path)
-    part = path.with_name(path.name + ".part")
+    part = path.with_name(path.name + PART_SUFFIX)
+    made = False
     try:
-        if private:
-            # made new at 0600, so its bytes are never readable by others, not even for a moment — an old `.part` may be looser
-            part.unlink(missing_ok=True)
-            os.close(os.open(part, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
-        part.write_text(text, encoding="utf-8")
+        # private: made new at 0600, so its bytes are never readable by others, not even for a moment
+        descriptor = _new_part(part, 0o600 if private else 0o666)
+        made = True
+        with open(descriptor, "w", encoding="utf-8") as out:
+            out.write(text)
         part.replace(path)
     except BaseException:
-        part.unlink(missing_ok=True)
+        if made:  # only spark's own `.part`: a link or a folder that refused it stays as it is
+            part.unlink(missing_ok=True)
         raise
 
 
@@ -550,7 +591,8 @@ def keep(payload, name):
     renamed — what does not match what was fetched is deleted and named, never kept. Returns the checksum. A name that
     `file_name_problem` refuses (a path out of the sources, a control character, one too long to keep) is refused before
     anything is made. A keep that fails for any reason leaves no `.part` behind: `--kept` lists a file under `sources` that
-    no record cites yet, so a stray one would read as kept.
+    no record cites yet, so a stray one would read as kept. A `.part` is made new: a link, a folder or a FIFO there is
+    refused (PartTakenError), and a file that a killed write left is removed (P1054).
     """
     problem = file_name_problem(name)
     if problem:
@@ -559,12 +601,17 @@ def keep(payload, name):
     folder = place("sources") / digest
     folder.mkdir(parents=True, exist_ok=True)
     part = folder / (name + PART_SUFFIX)
+    made = False
     try:
-        part.write_bytes(payload)
+        descriptor = _new_part(part, 0o666)
+        made = True
+        with open(descriptor, "wb") as out:
+            out.write(payload)
         if hashlib.sha256(part.read_bytes()).hexdigest() != digest:
             raise StoreError("%s was not kept: what was written is not what was fetched", name, code=records_codes.DOCUMENT_NOT_KEPT)
         part.replace(folder / name)
     except BaseException:
-        part.unlink(missing_ok=True)
+        if made:  # only spark's own `.part`: a link or a folder that refused it stays as it is
+            part.unlink(missing_ok=True)
         raise
     return digest

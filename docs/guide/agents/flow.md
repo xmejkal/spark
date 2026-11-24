@@ -211,8 +211,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json
 With `--json` it prints the envelope with `op` `write-flow-page`. Its `data` holds `file` (`page.html`, relative to the
 project), `did` (`wrote`), `stands_at`, `phases`, each only `{phase, status}`, `fingerprint` and `guide`, as `show`'s,
 and `artifact`: the id of the Artifact the page is published as, or `null`. A page that cannot be written is one
-`unchecked` item with the code `page_not_written`, and the exit is 2. A phase that holds problems does not change this
-status. Read it with `show`.
+`unchecked` item with the code `page_not_written`, and the exit is 2. A link, a folder or a FIFO at `page.html.part` is refused and left, never written through, and the item's `fix` says to remove it ([P1054](https://github.com/xmejkal/spark/issues/1551)).
+A phase that holds problems does not change this status. Read it with `show`.
 
 `--artifact ID` keeps the id in `.spark/page.json` before it writes the page: `{"artifact": ID}`, the id only, never a
 path ([P829](https://github.com/xmejkal/spark/issues/1187)). An id that is no UUID in lower case is a `bad_argument`, exit 2, and nothing is

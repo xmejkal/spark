@@ -1899,7 +1899,7 @@ class ThePageRefreshTest(FlowTest):
         self.assertEqual((code, envelope["status"]), (2, "could-not-run"))
         [item] = envelope["unchecked"]
         self.assertEqual((item["code"], item["fix"]), ("page_not_written", PART_FIX % "page.html"))
-        self.assertIn(str(project / "page.html.part"), item["sentence"])
+        self.assertIn("page.html.part is in the way", item["sentence"])  # the answer masks the project's path
         self.assertEqual(person.read_text(encoding="utf-8"), "the person's own")
         self.assertFalse((project / "page.html").is_symlink())
         self.assertTrue((project / "page.html.part").is_symlink())
@@ -1910,14 +1910,15 @@ class ThePageRefreshTest(FlowTest):
         from spark.flow.now_follow_up import FlowFollowUp
         person = Path(tempfile.mkdtemp()) / "a-file-of-the-person.html"
         person.write_text("the person's own", encoding="utf-8")
-        project = self.open_needs("soil")  # one open need: the flow names its pick
+        project = self.with_page(("soil",))  # one open need: the flow names its pick; the refresh writes an old page only
         (project / "page.html.part").symlink_to(person)
         result, alone = refreshed_and_alone(project, FlowFollowUp())
         self.assertEqual(result._replace(diagnostics=()), alone._replace(diagnostics=()))
         self.assertEqual(list(result.diagnostics), list(alone.diagnostics) + [REFRESH_FAILED_MESSAGE % ("PartTakenError", "page.html")])
         self.assertTrue(result.next)
         self.assertEqual(person.read_text(encoding="utf-8"), "the person's own")
-        self.assertEqual(((project / "page.html").exists(), (project / "page.html.part").is_symlink()), (False, True))
+        self.assertEqual(((project / "page.html").read_text(encoding="utf-8"), (project / "page.html").is_symlink()), ("an old page", False))
+        self.assertTrue((project / "page.html.part").is_symlink())
 
     def test_a_read_only_folder_a_full_disk_or_a_renderer_that_raises_leaves_the_old_page(self):
         from fakes import FakeFullDiskPageStore, FakePageRenderer
