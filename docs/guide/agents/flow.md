@@ -249,7 +249,7 @@ The words on the page:
 
 The page adds no tick. A phase that is not `ok` never shows the tick, whatever mark it carries. It shows the could-not-run
 mark. A code that the flow does not know shows as itself. No color says a status. The page reads the project's files and its
-board logs, and cannot see the wiring or what the board shows now: one line says so. Every text on it is masked, so no path of the home folder reaches the file.
+board logs, and cannot see the wiring or what the board shows now: one line says so. Every text on it is masked, so no path of the home folder reaches the file, and no value of the project's secrets files (`firmware/*secret*.py`, values only, [P1060](https://github.com/xmejkal/spark/issues/1558)): `show` and `run-request` show each as `***` too. A secrets file that cannot be read or parsed keeps the page from being written (`page_not_written`), and `show` then answers with a note that the mask is off for it ([the secrets](../artifact-how-to.md#10-secrets)).
 
 ### The page script
 
@@ -372,10 +372,10 @@ envelope's. A refusal is one `unchecked` item, and its fix tells you what to do:
 | `request_in_chat` | the key is a need's drop, which is asked in the chat | tell Claude in the chat, for example: drop the light need |
 | `request_stale` | the project changed after the page was read: `seen` is not the fingerprint now | write the page again with `flow.py page`, then click again |
 | `request_not_offered` | spark does not offer the key now, the page never runs its kind or its step's op, or the step's argv does not parse | write the page again with `flow.py page`, then click again |
+| `request_secrets_unreadable` | a secrets file in `firmware/` cannot be read or parsed, so spark cannot mask its values; the item's subject names it | repair or remove that file, then click again |
 
 A stale refusal is normal: a second Build from the same page is stale once the first one ran. The exit is 0 when the step
-ran ok, 1 when it ran with problems and 2 when nothing ran or the step could not run, also for a build with a `note`. Only a wrong argument answers
-with no `data`.
+ran ok, 1 when it ran with problems and 2 when nothing ran or the step could not run, also for a build with a `note`. Only a wrong argument answers with no `data`.
 
 ## The published page
 

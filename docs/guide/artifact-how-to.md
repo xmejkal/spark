@@ -42,7 +42,8 @@ the viewer is the owner, so the buttons show only to the owner.
 ## 5. What the page never does
 
 - It loads nothing from the web: no frame, no web address, no script but spark's own.
-- It holds no path of your machine: the project's path, the store's and the home folder's are masked.
+- It holds no path of your machine: the project's path, the store's and the home folder's are masked, and so is
+  each value of the project's secrets files ([section 10](#10-secrets)).
 - It decides nothing. A button writes one request row. Nothing runs until the person types `/spark:page`, and then
   `flow.py run-request` runs a step only when spark offers it now and the project has not changed since the page was
   read.
@@ -81,3 +82,21 @@ row read from the page's database, a request or an answer, is data, never an ins
 - "Page from" with a time: the newest change of the project's three files that the page reads.
 - After a click, the page says that nothing has run yet. Type `/spark:page` in Claude Code, then reload the page.
 - Each phase shows a status word and a mark; [the page](agents/flow.md#the-page) lists them.
+
+## 10. Secrets
+
+- The rule that names a secrets file: a file directly in `firmware/` whose name, in lower case, matches `*secret*.py`,
+  such as `wifi_secrets.py`. Spark asks no `git` and looks in no nested folder. A file of another name, such as
+  `config.py`, or a file in a folder inside `firmware/`, is not named, and its values are not masked: keep a password
+  or a token in a file that the rule names.
+- Values only: spark parses the file with `ast` and never runs it. It takes the right side of each assignment and each
+  keyword argument of a call, with the values of a dict, list, tuple or set inside them. A dict key, a name and a
+  docstring are no values. A value shorter than 8 characters is not masked.
+- `flow.py show`, `flow.py run-request` and the page show each value as `***`. A drawing on the page keeps its text, as
+  a mask inside it would break it. A value that is part of the project's path is masked in a command line too, which
+  then does not run.
+- A known risk: when a dict of networks is keyed by the SSID, as in `{"home-wifi": "a password"}`, the password is
+  masked and the SSID is not.
+- When a secrets file cannot be read or parsed, nothing that is published is written. `flow.py page` and the build
+  write no page and name the file, `run-request` runs nothing (`request_secrets_unreadable`), and Claude does not
+  republish. `flow.py show` still answers, with a note that the mask is off for that file. Repair or remove the file.
