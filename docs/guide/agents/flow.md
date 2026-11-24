@@ -117,8 +117,8 @@ build go on, and a deploy asks your yes for firmware that no simulation tested.`
 `problems` once every need that counts has a pick (exit 1, and the guide says the phase has problems), else
 `not-started`: the parts phase is `now` and holds the blocker. The guide's NOW sentence of the parts list and of the build
 names Claude (`Ask Claude in the chat to build the board. …`) in `flow.py show`, on the page from disk and for a viewer.
-Where the published page's script adds the NOW line's button for the owner, it puts the step and `Use the button.` in its
-place (`Build the board. … Use the button.`, the words block's `now_button`). A pick's NOW line stays as it is.
+Where the published page's script adds the NEXT line's button for the owner, it puts the step and `Use the button.` in its
+place (`Build the board. … Use the button.`, the words block's `now_button`). A pick's NEXT line stays as it is.
 
 The parts phase offers at most three picks per need ([P976](https://github.com/xmejkal/spark/issues/1406)). They are
 the need's plausible candidates in the order of `parts.py --match`: each holds the need's words or scores above 0 with
@@ -160,22 +160,22 @@ dropped after the must lines were last gone through. [What the needs were writte
 
 ## The page
 
-`flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It draws the reading `show` prints (P1060), so a person reads the same facts from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). A line under the title says
-what the page is and that every change goes through Claude in the chat. Under it stands the guide
-([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: `data.guide` as one line each, NOW with its
-phase in parentheses and its sentence, DONE, LATER and SET ASIDE, and a list with no item draws no line. On a board that can be wired, the parts fold's first line after "Done by" is the wired line, and a pick's or a build's confirm opens with its fixed sentence ([P1044](https://github.com/xmejkal/spark/issues/1534)).
+`flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It draws the reading `show` prints (P1060), so a person reads the same facts from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). Under the title, the freshness line says the newest change of the fingerprint's files as "23 Nov 2026, 14:18", in the machine's zone, and a line says
+what the page is and that every change goes through Claude in the chat ([P1062](https://github.com/xmejkal/spark/issues/1560)). Under it stands the guide
+([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: the NOW box (`class="now"`) with the now phase and who acts, ON THE BOARD (the last deploy's time in the machine's zone, verdict and cause from `data.deploy`, after a deploy only) and NEXT, the guide's sentence, then,
+muted, DONE, LATER and SET ASIDE, and a list with no item draws no line. On a board that can be wired, the parts fold's first line is the wired line, and a pick's or a build's confirm opens with its fixed sentence ([P1044](https://github.com/xmejkal/spark/issues/1534)).
 
 When `now.steps` is set and the page holds wiring
-steps, the NOW line ends in the link "One at a time: start at step N", the wiring section's own link, to the first step's own `#step-N`. The sentence about why there is
-no simulation stands as a line of its own under LATER. A `now` that is `null` draws no NOW line. With a guide the line "The
+steps, NEXT ends in the link "One at a time: start at step N", the wiring section's own link, to the first step's own `#step-N`. The sentence about why there is
+no simulation stands as a muted line of its own under LATER. A `now` that is `null` draws no NOW line: the box holds only the line that nothing is open, if any. With a guide the line "The
 project stands at" is not drawn; a page from a caller that gives no guide keeps it.
 
-Then comes a rail of links, one for each phase,
-and one section for each phase. Each section is folded (`<details>`) under its heading: the phase name, a mark and a
-status word. Opened, it shows who does it, what it says and its offers as plain text. A section `Wiring` comes when the
-project holds a `requirements.json` ([P828](https://github.com/xmejkal/spark/issues/1186)). If the section holds wiring steps,
-the wiring, the pictures and the marks come first and the folded phases after them, so a person at the bench finds step 1
-at once. If it holds no sheet, the phases come first, each open. In "Before you power it", the host requirements of one part that
+Then come three folds, each a `<details class="fold" data-fold="NAME">` with a one-line summary, open only while its job is NOW: the parts
+(`parts`: the parts phase's mark, word and lines, then one row per need with its picks, then the parts list and the build), the wiring
+(`wiring`, when the project holds a `requirements.json`, [P828](https://github.com/xmejkal/spark/issues/1186); open when `now.steps` is set, or the deploy is now beside a current sheet) and
+the pictures (`pictures`, open with the wiring). Then the bench note, and last the developer fold (`developer`), always closed: each phase
+closed under its heading (the phase name, a mark and a status word), with who does it, what it says and its offers' keys and effects as
+text, then the marks and the line that names each record whole. No mark shows a tick for a status that is not ok. In "Before you power it", the host requirements of one part that
 stand together are one item, with the part's name once. It has the lines "Before you power it" first, then
 the wiring steps, one connection each, which a person can follow to wire a breadboard. When the project is not built, or
 was built from other requirements, the section shows no steps and says why in the refusal's own words. A failure that is not the sheet's own refusal gives one fixed sentence: run the build again. The sentence about the Breadboard picture shows only when that picture is drawn. The pictures
@@ -219,12 +219,12 @@ A phase that holds problems does not change this status. Read it with `show`.
 path ([P829](https://github.com/xmejkal/spark/issues/1187)). An id that is no UUID in lower case is a `bad_argument`, exit 2, and nothing is
 written. A record that spark cannot read, or that holds no such id, answers `null`.
 
-For an agent or a later script, the page has hooks. Each rail entry and each section has `data-phase` (the phase name) and
+For an agent or a later script, the page has hooks. Each phase's section in the developer fold has `data-phase` (the phase name) and
 `data-status` (the flow's code, or `none` for no status). The `<body>` has `data-stands-at` (the guide's now phase, or `none`
-when no phase is open). Each offer is an `<li>` with `data-key` (its key), the `<body>` has `data-fingerprint` (the first
-12 hex digits of the fingerprint) and `data-written` (the newest change time of the three files, with its zone, or `none`). All the pictures stand together in the section `id="pictures"`, which the rail links to. The
-wiring is in the section `id="wiring"`, which the rail links to as "Wiring". Its steps are the items of `<ol id="steps">`,
-each `<li id="step-N" value="N">`, and the lines before power are a `<ul>` of their own, never inside the steps. In that list, a run of one record's host requirements is one `<li>` with the part's name in `<strong>` and a nested `<ul>` of its lines. Each phase's rail link targets `<div id="phase-NAME">` inside the phase's `<details>`, so following it opens a folded phase.
+when no phase is open). A sendable offer stands once, with `data-key` (its key): on NEXT when it is `now.offer`, else as an `<li>` in the parts fold; the developer fold shows each key as `<code>` text, with no hook. The `<body>` has `data-fingerprint` (the first
+12 hex digits of the fingerprint) and `data-written` (the newest change time of the three files, with its zone, or `none`). All the pictures stand together in the section `id="pictures"`, inside its fold. The
+wiring is in the section `id="wiring"`, inside its fold; a link to either opens its fold. Its steps are the items of `<ol id="steps">`,
+each `<li id="step-N" value="N">`, and the lines before power are a `<ul>` of their own, never inside the steps. In that list, a run of one record's host requirements is one `<li>` with the part's name in `<strong>` and a nested `<ul>` of its lines. Each phase's text is in `<div id="phase-NAME">` inside the phase's `<details>`.
 
 One at a time lives in the URL. The link "One at a time: start at step 1" goes to `#step-1`. While a step is the target of
 the URL, the page shows that step alone, with its menu, the element `class="nav"`. The menu says "Step N of M" and has the
@@ -266,18 +266,18 @@ the artifact's owner (`(await claude.use("user")).isOwner()`), so the published 
 owner it puts the published intro in place of the line under the title, and adds a button to each offer whose kind the
 page sends: a pick, the parts list and the build. A need's drop has none; it is asked in the chat. Such an offer's
 `<li>` carries `data-makes-stale`, the phases it can make out of date, space apart. When `guide.now.offer` names such
-an offer, the NOW line carries its `data-key` and `data-makes-stale` too, and gets the same button. A click
+an offer, NEXT carries its `data-key` and `data-makes-stale` in place of the parts fold's row, and gets the button. A click
 shows the offer's label, its effect and "These steps may be marked out of date: …" when there are any, with Send and
 Cancel. Send writes the row `requests/<id>`: `{id, key, seen, at}`, a new UUID, the offer's key, the page's
 `data-fingerprint` and the time. One request waits at a time: until its answer, the other buttons are grey, and Copy (it
-copies `/spark:page`, the command that carries the request to spark) and Withdraw stand under the intro. A
+copies `/spark:page`, the command that carries the request to spark) and Withdraw stand in the panel, last in the guide under the NOW box. A
 write the database refuses puts the page back and says "Could not send. Nothing ran.". Withdraw deletes the row, and
 only once the delete is done says "Withdrawn. If Claude had already started it, its answer shows here.": it keeps
 watching that request's answer. The script watches the latest request by `at`, and ignores a snapshot older than the
 page's own request, then the row `answers/<id>`.
 
 The answer row holds `flow.py run-request`'s `data` unchanged ([a page request](#a-page-request)). The script says it in
-the page's words: what ran ok by its kind, the step's first problem (`line`), or why it could not run. A refusal shows as
+the page's words, after "Your last request, <its time in the browser's zone>: <its offer's label, else its key's kind>." (the request lives in the page's database, not in `show`): what ran ok by its kind, the step's first problem (`line`), spark's line for a step that ran and could not run, or why it could not run. A refusal shows as
 its code's own words only when `line` is exactly that code's meaning, in grey; any other `line` with `ran: false` shows
 as could not run. Never "done" alone.
 

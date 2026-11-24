@@ -1,7 +1,9 @@
 """
 The page of a project (P827, #1185): the flow's phases as one plain HTML file, `page.html`, each with a status word and a
-mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it. The page
-adds no tick of its own: a phase whose status is not ok never shows one (`shown_phase`). It loads nothing from the web and is
+mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it, in the
+slice 1 order (P1062): the freshness line, the NOW box, the Parts, Wiring and Pictures folds, the bench note, and the
+developer fold, always closed. The page adds no tick of its own: a phase whose status is not ok never shows one
+(`shown_phase`). It loads nothing from the web and is
 the same bytes for the same flow. Its one script (P829 PR 3) does nothing from disk: `page_words` writes every word it
 shows. The breadboard stands in it as plain shapes (`SvgInliner`, P949),
 with its keys for a player and a legend of its pads; every other picture is an <img>.
