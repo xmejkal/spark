@@ -249,7 +249,7 @@ class TheThreeAskTest(BoardQuestionCase):
 
     def test_8_reach_stops_a_port_the_list_does_not_hold_with_port_not_listed_also_after_a_yes(self):
         nowhere = "/dev/cu.nowhere"  # P1056: a yes once crashed reach with an AttributeError on the row that was None
-        self.answer(True, known_board.question_for(known_board.CANNOT_TELL, None, nowhere, None, known_board.REACH).key)
+        self.answer(True, known_board.question_for("cannot_tell", None, nowhere, None, known_board.REACH).key)
         for argv in (("--port", nowhere), ("--json", "--port", nowhere)):
             with self.subTest(argv=argv):
                 code, said, err = self.main(REACH, *argv)
