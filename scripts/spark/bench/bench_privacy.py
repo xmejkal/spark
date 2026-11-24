@@ -19,13 +19,9 @@ from spark.bench import board_codes
 from spark.bench import board_envelope
 from spark.records import store
 from spark.records import tool_finder
-from spark.core.privacy import Pasted, Privacy
+from spark.core.privacy import MIN_SECRET, Pasted, Privacy
 
 # --- MVP ---
-
-#: A token shorter than this is not masked: it would mask the same characters wherever they stand, in every line.
-MIN_SECRET = 8
-
 
 class AccountSecrets:
     """Adapter: the account tokens a run may hold: the value of each `account_env` the tool lists name, read from the
