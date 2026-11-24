@@ -178,7 +178,7 @@ def requirements_board(project: Path):
     """requirements.json's `board` (D35, P988), or None for no requirements.json, no key, `null` or `""`. A file that
     cannot be read, is no JSON object or holds any other value that is no string is a BoardError (RECORD_FILE_BROKEN)."""
     requirements = Path(project) / REQUIREMENTS_NAME
-    if not requirements.is_file():
+    if not (requirements.exists() or requirements.is_symlink()):  # RF1: a folder or a dangling link is broken, not absent
         return None
     wanted = _read_json(requirements, "requirements file")
     if not isinstance(wanted, dict):
