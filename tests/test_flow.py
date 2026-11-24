@@ -31,7 +31,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import flow  # noqa: E402
 from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
-from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256_of  # noqa: E402
+from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import SimulateReader  # noqa: E402
 from spark.flow.guide import guide_of  # noqa: E402
@@ -306,6 +306,18 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(said["data"]["stands_at"], "build")
         self.assertEqual([(item["subject"], item["code"]) for item in said["unchecked"]], [("build", "phase_could_not_run")])
         self.assertIn("build: could-not-run", says(said, "build"))
+
+    def test_a_build_that_did_not_write_dist_says_so_in_the_build_phase(self):
+        # P1088: the record's dist_written false (P816) over a dist/ that is there names it as an earlier build's
+        project = a_built_project("could-not-run")
+        BuildRecordStore(project, clock=FakeClock()).write({"status": "could-not-run", "stages": [{"name": "board", "status": "ok"}, {"name": "build", "status": "could-not-run"}],
+                                                           "missing_facts": [], "requirements": "requirements.json",
+                                                           "requirements_sha256": sha256_of(project / "requirements.json"), "dist_written": False})
+        self.assertTrue((project / "dist").is_dir())
+        said, _ = show(project)
+        self.assertIn(EARLIER_DIST % BuildRecordStore(project).read()["at"], says(said, "build"))
+        said, _ = show(a_built_project())
+        self.assertEqual([line for line in says(said, "build") if "did not write dist/" in line], [])
 
     def test_requirements_changed_after_the_build_make_the_build_and_the_sheet_stale(self):
         project = a_built_project()
