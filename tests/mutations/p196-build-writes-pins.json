@@ -2,7 +2,7 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "P196: the build writes no pin map again",
-  "find": "        kept += [_kept_pins(Path(requirements_file), Path(keep))] if requirements_file else []\n",
+  "find": "        kept += [_kept_pins(Path(requirements_file), Path(keep), _built(stages))] if requirements_file else []\n",
   "replace": ""
  },
  {
@@ -13,9 +13,9 @@
  },
  {
   "file": "scripts/spark/build/kept_files.py",
-  "name": "P196: spark's pin map from an earlier design stays when the pins cannot be placed",
-  "find": "        if ours:\n            target.unlink()",
-  "replace": "        if False:\n            target.unlink()"
+  "name": "P196/P1109: no name for spark's earlier pin map after a pin refusal (test_a_pin_map_from_an_earlier_design_is_removed_when_the_pins_cannot_be_placed, test_a_refused_file_keeps_spark_s_pin_map_and_says_it_is_from_the_earlier_requirements)",
+  "find": "        if ours:  # P1109",
+  "replace": "        if False:  # P1109"
  },
  {
   "file": "scripts/spark/build/kept_files.py",
@@ -26,7 +26,7 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "P196 refuter: a firmware path that cannot be written crashes the report again",
-  "find": "        return keep_pins(requirements, destination)\n    except OSError as refused:",
+  "find": "        return keep_pins(requirements, destination, finished)\n    except OSError as refused:",
   "replace": "        return keep_pins(requirements, destination)\n    except ZeroDivisionError as refused:"
  },
  {
