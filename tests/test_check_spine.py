@@ -541,7 +541,8 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
                 one = drawing.NotWritten(Path("breadboard.svg"), sheet.DRAWING_RENDERERS[0], code, "x", "why")
                 self.assertFalse(kept_files.not_written_entry(one)["expected"])
 
-    def test_a_drawing_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
+    def test_a_drawing_from_an_earlier_build_is_left_alone_and_named_when_a_build_does_not_finish(self):
+        # P1093: it describes the earlier dist/ that stays, so it is named as an earlier build's
         import argparse
         import contextlib
         import io
@@ -551,8 +552,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
             run_build_board([Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)], args, self.workdir())
-        self.assertFalse((into / "breadboard.json").exists())
-        self.assertIn("no drawn breadboard: the build did not finish in this run; removed", err.getvalue())
+        self.assertEqual((into / "breadboard.json").read_text(), "{}")
+        self.assertIn("left alone: %s (the build did not finish in this run, so it is an earlier build's)" % (into / "breadboard.json"),
+                      err.getvalue())
 
     def test_a_breadboard_json_that_holds_parts_is_left_when_a_build_does_not_finish(self):
         # P273: it may hold the person's moves, and a typo in requirements.json must not wipe them.
@@ -570,7 +572,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             run_build_board([Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)], args, self.workdir())
         self.assertEqual((into / "breadboard.json").read_text(), earlier)
         self.assertIn("left alone: %s (it may hold your moves" % (into / "breadboard.json"), err.getvalue())
-        self.assertFalse((into / "breadboard.svg").exists())
+        self.assertTrue((into / "breadboard.svg").is_file())  # P1093: the earlier build's picture stays, named
+        self.assertIn("left alone: %s (the build did not finish in this run, so it is an earlier build's)" % (into / "breadboard.svg"),
+                      err.getvalue())
 
     def test_a_build_that_did_not_finish_writes_no_sheet_and_says_why(self):
         # P191's council: a failed build wrote a sheet from the earlier dist/, wiring parts the requirements had dropped.
@@ -585,8 +589,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertFalse((into / "breadboard.md").exists())
         self.assertIn("no breadboard sheet: the build did not finish", err.getvalue())
 
-    def test_a_sheet_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
-        # The refuter: it described another board, and sat beside the new requirements.
+    def test_a_sheet_from_an_earlier_build_is_left_alone_and_named_when_a_build_does_not_finish(self):
+        # P191's refuter: it described another board, and sat beside the new requirements. P1093: it is the witness that
+        # the board can be wired (P1044), so it stays, named as an earlier build's.
         import argparse
         import contextlib
         import io
@@ -596,8 +601,10 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
             run_build_board([Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)], args, self.workdir())
-        self.assertFalse((into / "breadboard.md").exists())
-        self.assertIn("removed", err.getvalue())
+        self.assertEqual((into / "breadboard.md").read_text(), "# an earlier build's sheet")
+        self.assertIn("left alone: %s (the build did not finish in this run, so it is an earlier build's)" % (into / "breadboard.md"),
+                      err.getvalue())
+        self.assertNotIn("removed", err.getvalue())
 
     def keep_with_pins(self, into, requirements=None, stages=None):
         """`report` keeping into `into` with --json: what --json printed under `kept`, and what stderr said."""
@@ -1681,8 +1688,10 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
             self.assertNotIn(stage_run, out, "nothing was emitted, nothing built")
 
     # P280 (#318): a refused file kept nothing and cleaned nothing, so an earlier build's sheet and page stayed beside a
-    # requirements file that no longer builds, describing another board.
+    # requirements file that no longer builds, describing another board. P1093: the sheet and its drawings stay, each
+    # named as an earlier build's (the sheet is P1044's witness); the page and the pin map are removed.
     EARLIER_BUILD = ("breadboard.md", "breadboard.json", "breadboard.svg", "page.html")
+    EARLIER_SHEET = ("breadboard.md", "breadboard.json", "breadboard.svg")
 
     @staticmethod
     def _main_with_stderr(argv):
@@ -1701,26 +1710,31 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
             (project / "requirements.json").write_text(requirements_text)
         return project
 
-    def test_a_refused_file_removes_the_earlier_build_s_sheet_drawings_page_and_pin_map(self):
+    def test_a_refused_file_leaves_the_earlier_sheet_and_drawings_and_removes_the_page_and_pin_map(self):
         project = self._an_earlier_build()
         code, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
         self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
-        for name in self.EARLIER_BUILD + ("firmware/pins.py",):
+        for name in self.EARLIER_SHEET:
+            self.assertEqual((project / name).read_text(), "from an earlier build", name)
+        for name in ("page.html", "firmware/pins.py"):
             self.assertFalse((project / name).exists(), name)
-        self.assertIn("no breadboard sheet: ", err)
         self.assertIn("not JSON", err)
-        self.assertIn("; removed %s" % (project / "breadboard.md"), err)
+        sheet_line = next(line for line in err.splitlines() if line.strip().startswith("left alone: %s (" % (project / "breadboard.md")))
+        self.assertIn("not JSON", sheet_line)
+        self.assertTrue(sheet_line.endswith(", so it is an earlier build's)"), sheet_line)
 
-    def test_with_json_each_removed_file_is_a_kept_entry_with_the_reason(self):
+    def test_with_json_each_earlier_file_is_a_kept_entry_with_the_reason(self):
         project = self._an_earlier_build()
         _, out, _ = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project), "--json"])
         said = json.loads(out)
         detail = said["stages"][0]["detail"]
         by_file = {Path(entry["file"]).name: entry for entry in said["kept"]}
         self.assertEqual(sorted(by_file), sorted(self.EARLIER_BUILD + ("pins.py",)))
-        for name in self.EARLIER_BUILD:
-            self.assertEqual(by_file[name]["did"], "removed")
-            self.assertEqual(by_file[name]["why"], detail + ", and it described an earlier build")
+        for name in self.EARLIER_SHEET:
+            self.assertEqual(by_file[name]["did"], "left alone")
+            self.assertEqual(by_file[name]["why"], detail + ", so it is an earlier build's")
+        self.assertEqual(by_file["page.html"]["did"], "removed")
+        self.assertEqual(by_file["page.html"]["why"], detail + ", and it described an earlier build")
         self.assertEqual(by_file["pins.py"]["did"], "removed")
         self.assertIn("is not JSON", by_file["pins.py"]["why"])
 
@@ -2273,6 +2287,14 @@ class TheBoardAloneTest(unittest.TestCase):
         self.assertEqual([entry["line"] for entry in kept], ["no breadboard sheet: board only: nothing to wire",
                                                              "no drawn breadboard: board only: nothing to wire",
                                                              "no breadboard picture: board only: nothing to wire"])
+
+    def test_a_board_only_build_removes_an_earlier_sheet(self):
+        # P1093: only a board-only build removes an earlier sheet (P236): it has nothing to wire
+        workdir, stages = self.run_alone()
+        (workdir / "breadboard.md").write_text("# an earlier build's sheet")
+        kept = kept_files.keep_breadboard(workdir / "requirements.json", workdir, stages)
+        self.assertEqual([entry["did"] for entry in kept if entry["file"] == str(workdir / "breadboard.md")], ["removed"])
+        self.assertFalse((workdir / "breadboard.md").exists())
 
     def test_the_store_is_never_told_a_board_alone_was_built(self):
         _, stages = self.run_alone()

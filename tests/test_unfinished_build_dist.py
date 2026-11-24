@@ -9,7 +9,13 @@ P1088 (#1598): a work `dist/` is kept only when it holds `dist/board/circuit.jso
 and then it replaces the earlier `dist/` whole, staged beside it: a copy that fails leaves the earlier `dist/` as it was,
 with one `not kept` entry that the record and check_all agree with, and the earlier pictures stay. A name the stage or
 the aside needs that is taken, or a `dist/` that is a link, stops the copy and is named; an earlier `dist/` set aside
-that cannot be removed is named too. `ReplaceWholeTest` runs `replace_whole` itself for an error or a Ctrl-C midway."""
+that cannot be removed is named too. `ReplaceWholeTest` runs `replace_whole` itself for an error or a Ctrl-C midway.
+
+P1093 (#1608) and P1095 (#1613): a build that kept no `dist/` of its own (it did not finish, or its copy failed) leaves
+the earlier `breadboard.md` as one `left alone` entry, an earlier build's, so P1044's witness stays and `flow.py show`
+and `flow.py page` still warn; a copy that failed writes no `built-from.json` or sheet beside the earlier circuit. The
+reference design (no requirements file) records its build too, with `requirements: null`, and names an earlier `dist/`
+it did not replace."""
 
 import json
 import os
@@ -27,6 +33,8 @@ import golden_design  # noqa: E402
 from spark.build.build_record import replace_whole  # noqa: E402
 from golden_design import Case  # noqa: E402
 from golden_firmware import STDERR_MARK  # noqa: E402
+from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE  # noqa: E402
+from spark.flow.wired_board import day_of  # noqa: E402
 
 KEEP = [golden_design.REQUIREMENTS, "--keep", "."]
 NO_TSCI = ((".spark/tools.json", json.dumps({"tscircuit": {"kind": "path", "exe": "tsci", "also": [], "needs": []}})),)
@@ -43,6 +51,13 @@ DANGLING = {"FAKE_TSCI_DANGLING": "1"}
 IN_THE_WAY = (("dist.new", "mine\n"),)
 #: What an earlier dist/ set aside that cannot be removed says (P1088).
 ASIDE_LEFT = "dist.old is spark's own earlier dist/, set aside for the new one, and it could not be removed: delete it before the next build"
+#: The reference design built into the project (P1095): no requirements file, and what the fake tsci builds for it.
+REFERENCE = ["--keep", "."]
+REFERENCE_ENV = {"FAKE_TSCI_CIRCUIT": golden_design.FAKES_TOKEN + "/" + golden_design.REFERENCE_CIRCUIT}
+#: An earlier build's wiring sheet, and its last change (18 Nov 2026), which P1044 reads as the witness.
+SHEET, SHEET_TIME = "# an earlier build's sheet\n", 1795000000
+#: The earlier build's mark in dist/board/built-from.json, which a copy that failed must not overwrite (P1095 comment 1).
+MARKED = '{"requirements": "an earlier build"}\n'
 
 
 def files_of(folder):
@@ -65,10 +80,10 @@ class UnfinishedBuildDistTest(unittest.TestCase):
         cls.shims = golden_design.make_fakes(cls.folder)
         cls.project = golden_design.build_project(cls.folder, cls.shims)
 
-    def run_build(self, plant=(), env=None, json_out=True, without_dist=False, before=None):
-        """check_spine.py --keep . in a copy of the project: its exit code, the project, and its --json report (None
-        without --json, then the whole text)."""
-        case = Case("check-spine", "check_spine.py", KEEP + (["--json"] if json_out else []), None, plant, env or {})
+    def run_build(self, plant=(), env=None, json_out=True, without_dist=False, before=None, args=KEEP):
+        """check_spine.py `args` (--keep . with the requirements file) in a copy of the project: its exit code, the
+        project, and its --json report (None without --json, then the whole text)."""
+        case = Case("check-spine", "check_spine.py", args + (["--json"] if json_out else []), None, plant, env or {})
         work = Path(tempfile.mkdtemp(dir=self.folder))
         project = golden_design.copy_project(case, self.project, work)
         if without_dist:
@@ -83,6 +98,18 @@ class UnfinishedBuildDistTest(unittest.TestCase):
 
     def record(self, project):
         return json.loads((project / ".spark" / "build.json").read_text())
+
+    def entry_of(self, report, name):
+        """The one kept entry for the file `name`."""
+        entries = [entry for entry in report["kept"] if entry["file"] == name]
+        self.assertEqual(len(entries), 1, entries)
+        return entries[0]
+
+    def flow(self, project, *argv):
+        """flow.py `argv` --project . in `project`, with the store the build used: its exit code and its stdout."""
+        case = Case("flow", "flow.py", list(argv) + ["--project", golden_design.golden_checks.PROJECT], None)
+        code, text = golden_design.run_case(case, project, project.parent / "store", self.shims)
+        return code, text.split(STDERR_MARK)[0]
 
     def check_all(self, project, json_out=True):
         """check_all.py --project . in `project`, with the store the build used: its exit code and its --json report (the
@@ -280,6 +307,82 @@ class UnfinishedBuildDistTest(unittest.TestCase):
         self.assertTrue((project / "dist.old" / "locked" / "x.json").is_file())
         self.assertFalse((project / "dist" / "locked").exists())
         self.assertIs(self.record(project)["dist_written"], True)
+
+    # --- P1093 (#1608), P1095 (#1613) ---
+    def plant_sheet(self, project):
+        (project / "breadboard.md").write_text(SHEET)
+        os.utime(project / "breadboard.md", (SHEET_TIME, SHEET_TIME))
+
+    def test_a_failed_build_keeps_the_earlier_sheet_and_flow_still_warns(self):
+        code, project, report = self.run_build(NO_TSCI, before=self.plant_sheet)
+        self.assertEqual(code, 2)
+        self.assertEqual((project / "breadboard.md").read_text(), SHEET)
+        self.assertEqual((project / "breadboard.md").stat().st_mtime, SHEET_TIME)
+        entry = self.entry_of(report, "breadboard.md")
+        self.assertEqual(entry["did"], "left alone")
+        self.assertTrue(entry["why"].endswith(", so it is an earlier build's"), entry["why"])
+        _, text = self.flow(project, "show", "--json")
+        shown = json.loads(text)
+        sheet_at = shown["data"]["guide"]["wired"]["sheet_at"]
+        self.assertIsNotNone(sheet_at)
+        build = next(offer for phase in shown["data"]["phases"] for offer in phase["offers"] if offer["key"] == "build")
+        self.assertTrue(build["effect"].startswith(WIRED_BUILD_MESSAGE), build["effect"])
+        parts = next(phase for phase in shown["data"]["phases"] if phase["phase"] == "parts")
+        self.assertTrue(parts["says"][0].startswith(WIRED_SHEET_MESSAGE % day_of(sheet_at)), parts["says"])
+        code, _ = self.flow(project, "page")
+        self.assertEqual(code, 0)
+        page = (project / "page.html").read_text()
+        self.assertIn(WIRED_SHEET_MESSAGE % day_of(sheet_at), page)
+        self.assertIn(WIRED_BUILD_MESSAGE, page)
+
+    def test_a_finished_build_whose_dist_copy_fails_writes_no_sheet_or_built_from(self):
+        def mark(project):
+            self.plant_sheet(project)
+            (project / "dist" / "board" / "built-from.json").write_text(MARKED)
+        code, project, report = self.run_build(env=DANGLING, before=mark)
+        self.assertEqual([entry["did"] for entry in self.dist_entries(report)], ["not kept"])
+        self.assertEqual((project / "dist" / "board" / "built-from.json").read_text(), MARKED)
+        self.assertEqual((project / "breadboard.md").read_text(), SHEET)
+        entry = self.entry_of(report, "breadboard.md")
+        self.assertEqual(entry["did"], "left alone")
+        self.assertIn("the build was not kept in this run", entry["why"])
+
+    def test_a_build_with_problems_leaves_an_earlier_sheet_named_and_the_breadboard_stale(self):
+        # the refuter's fix 1: a build that ends `problems` replaces dist/ but writes no sheet, so the earlier sheet stays
+        # beside the new circuit, named, and the breadboard phase reads it as stale
+        code, project, report = self.run_build(env=ERRORED, before=self.plant_sheet)
+        self.assertEqual(code, 1)
+        self.assertEqual([entry["did"] for entry in self.dist_entries(report)], ["wrote"])
+        self.assertEqual((project / "breadboard.md").read_text(), SHEET)
+        entry = self.entry_of(report, "breadboard.md")
+        self.assertEqual(entry["did"], "left alone")
+        self.assertTrue(entry["why"].endswith(", so it is an earlier build's"), entry["why"])
+        _, text = self.flow(project, "show", "--json")
+        breadboard = next(phase for phase in json.loads(text)["data"]["phases"] if phase["phase"] == "breadboard")
+        self.assertEqual(breadboard["status"], "stale")
+
+    def test_a_reference_design_build_records_that_it_wrote_dist(self):
+        def earlier(project):
+            (project / ".spark" / "build.json").write_text(json.dumps({"schema": 1, "status": "could-not-run", "stages": [],
+                                                                       "missing_facts": [], "requirements": "requirements.json",
+                                                                       "dist_written": False, "at": "2026-01-01T00:00:00+01:00"}))
+        code, project, report = self.run_build(env=REFERENCE_ENV, before=earlier, args=REFERENCE)
+        self.assertEqual([entry["did"] for entry in self.dist_entries(report)], ["wrote"])
+        record = self.record(project)
+        self.assertIs(record["dist_written"], True)
+        self.assertIsNone(record["requirements"])
+        self.assertNotEqual(record["at"], "2026-01-01T00:00:00+01:00")
+        _, checked = self.check_all(project)
+        self.assertEqual([one for one in checked["resolved"] if "did not write dist/" in one], [])
+
+    def test_a_reference_design_build_without_a_circuit_names_the_earlier_dist(self):
+        code, project, report = self.run_build(env=PARTIAL, args=REFERENCE)
+        self.assertEqual([(entry["did"], entry["why"]) for entry in self.dist_entries(report)], [("left alone", WHY)])
+        self.assertIs(self.record(project)["dist_written"], False)
+        line = "circuit      the last build, %s, did not write dist/: build again with check_spine.py --keep before you rely on this circuit" % self.record(project)["at"]
+        _, checked = self.check_all(project)
+        self.assertIn(line, checked["resolved"])
+    # --- end P1093, P1095 ---
 
 
 class ReplaceWholeTest(unittest.TestCase):
