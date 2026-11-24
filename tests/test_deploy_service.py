@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_connection  # noqa: E402
+from spark.bench import board_log  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
@@ -123,6 +124,134 @@ class TheFlashTest(ServiceCase):
         with self.assertRaises(project_image.DeployError):
             self.service().deploy(report, report.token(), Ended(True))
         self.assertEqual(self.commands, [])
+
+
+class TheFlashNotFinishedTest(ServiceCase):
+    """P1092 tests 1 to 4: a flash that does not finish after the yes writes a board log with the verdict `flash not
+    finished` and the FlashError's reason, then raises the same FlashError. A log that cannot be written never hides it.
+    A crash, a refusal before the flash and an erase that its retry passes write no such log."""
+
+    #: The write fails after a good erase (F5), as GateCase's `write_fails`.
+    write_fails = False
+
+    def fake_run(self, command, **kwargs):
+        if self.write_fails and "write-flash" in command:
+            self.commands.append(command)
+            raise subprocess.CalledProcessError(1, command)
+        return super().fake_run(command, **kwargs)
+
+    def logs(self):
+        return sorted((self.project / board_log.BOARD_LOGS).glob("*.log"))
+
+    def not_finished(self, consent=None, **kwargs):
+        """The FlashError of a deploy whose flash does not finish."""
+        report = self.look()
+        with self.assertRaises(deploy_service.FlashError) as failed:
+            self.service(**kwargs).deploy(report, report.token(), consent or FakeConsent(True))
+        return failed.exception
+
+    def assert_logged(self, failed, reason):
+        """The FlashError's log is the one board log, and it reads back as a flash not finished with `reason`."""
+        sha256 = project_image.ProjectImage(self.project).sha256
+        self.assertEqual((failed.reason, failed.log_path, failed.log_error), (reason, self.logs()[0], None))
+        self.assertEqual(board_log.newest_logged_deploy(self.project),
+                         (1, board_log.LoggedDeploy(self.clock.now().isoformat(timespec="seconds"), sha256, "flash not finished", reason)))
+        self.assertFalse([line for line in failed.log_path.read_text(encoding="utf-8").splitlines() if line.startswith("ready ")])
+
+    @needs_littlefs
+    def test_an_erase_that_fails_twice_writes_a_board_log_and_raises_the_same_error(self):
+        self.fails = True
+        failed = self.not_finished()
+        self.assertTrue(str(failed).startswith("`") and "erase-flash" in str(failed), str(failed))
+        self.assert_logged(failed, "flash_failed")
+        self.assertIn("a flash command failed, so the board may be erased and not written", failed.log_path.read_text(encoding="utf-8"))
+
+    @needs_littlefs
+    def test_a_write_that_fails_after_a_good_erase_writes_a_board_log_and_raises_the_same_error(self):
+        self.write_fails = True
+        failed = self.not_finished()
+        self.assertTrue(str(failed).startswith("`") and "write-flash" in str(failed), str(failed))
+        self.assertEqual(len(self.commands), 2)  # the erase ran, then the write failed
+        self.assert_logged(failed, "flash_failed")
+
+    @needs_littlefs
+    def test_a_yes_that_ends_in_the_retry_wait_logs_grant_ended(self):
+        self.fails = True
+        case = self
+
+        class EndsDuringTheWait(FakeConsent):
+            def require_ready(self):
+                if case.slept:
+                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.", reason="grant_ended")
+
+        failed = self.not_finished(EndsDuringTheWait(True))
+        self.assertIn("and its retry did not run: the deploy grant ended", str(failed))
+        self.assert_logged(failed, "grant_ended")
+        self.assertIn("flash not finished: the yes ended before the erase's retry\n", failed.log_path.read_text(encoding="utf-8"))
+
+    @needs_littlefs
+    def test_a_flash_error_of_another_reason_logs_its_own_sentence(self):
+        # the `.get` of the sentence (F2): a reason with no sentence of its own, as no_terminal at the retry, keeps the error's
+        self.fails = True
+        case = self
+
+        class NoTerminalAtTheRetry(FakeConsent):
+            def require_ready(self):
+                if case.slept:
+                    raise deploy_gate.GateClosedError("no terminal", reason="no_terminal")
+
+        failed = self.not_finished(NoTerminalAtTheRetry(True))
+        self.assertIn("flash not finished: %s\n" % failed, failed.log_path.read_text(encoding="utf-8"))
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1][2:], ("flash not finished", None))
+
+    @needs_littlefs
+    def test_a_log_that_cannot_be_written_keeps_the_flash_s_error(self):
+        self.fails = True
+        (self.project / "sim" / "runs" / "board").write_text("a file where the folder goes")
+        failed = self.not_finished()
+        self.assertEqual((failed.reason, failed.log_path), ("flash_failed", None))
+        self.assertIn("sim/runs/board", failed.log_error)
+
+    @needs_littlefs
+    def test_a_log_writer_that_raises_a_value_error_keeps_the_flash_s_error(self):
+        def refuses(project, log):
+            raise ValueError("surrogates not allowed")
+
+        self.write_fails = True
+        failed = self.not_finished(write_log=refuses)
+        self.assertEqual((failed.reason, failed.log_path, failed.log_error), ("flash_failed", None, "surrogates not allowed"))
+        self.assertEqual(self.logs(), [])
+
+    @needs_littlefs
+    def test_a_bug_in_the_log_write_replaces_the_flash_s_error_and_keeps_it(self):
+        # F13, on purpose: a TypeError is a bug, so it fails loudly, and the FlashError stays its __context__
+        def broken(project, log):
+            raise TypeError("a bug")
+
+        self.write_fails = True
+        report = self.look()
+        with self.assertRaises(TypeError) as raised:
+            self.service(write_log=broken).deploy(report, report.token(), FakeConsent(True))
+        self.assertIsInstance(raised.exception.__context__, deploy_service.FlashError)
+
+    @needs_littlefs
+    def test_a_refusal_before_the_flash_writes_no_board_log(self):
+        report = self.look()
+        with self.assertRaises(deploy_gate.GateClosedError):
+            self.service().deploy(report, "aaaa-bbbb", FakeConsent(True))
+        self.assertEqual(self.logs(), [])
+
+    @needs_littlefs
+    def test_a_crash_in_the_flash_loop_writes_no_board_log(self):
+        # D5: a crash is no FlashError, so P1096 #1614 holds it
+        code, _, _ = self.deploy("--token", self.token(), "--json", consent=FakeConsent(True), fails=1, fail_code=RuntimeError("usb fell off"))
+        self.assertEqual((code, self.logs()), (2, []))
+
+    @needs_littlefs
+    def test_an_erase_that_its_retry_passes_writes_only_the_verify_s_log(self):
+        code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1)
+        log, = self.logs()
+        self.assertEqual((code, board_log.newest_logged_deploy(self.project)[1].verdict), (0, "ready seen"))
 
 
 class TheLookTest(ServiceCase):

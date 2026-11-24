@@ -1,5 +1,6 @@
 """
-The board log (P1043): the file `sim/runs/board/<moment>.log` that a deploy writes after a flash, beside the run logs.
+The board log (P1043): the file `sim/runs/board/<moment>.log` that a deploy writes after a flash, or after a flash that
+did not finish (P1092), beside the run logs.
 A library. `BoardLog` is its text and `write_board_log` writes it. `newest_logged_deploy` reads the newest log back for
 the flow's deploy reader: its time, its image, its verdict and its cause. It never takes the port, the facts line, the
 console text or a tool's text, so none of them reaches a sentence.
@@ -21,14 +22,18 @@ BOARD_LOGS = Path("sim") / "runs" / "board"
 MOMENT_LINE, IMAGE_LINE, REASON_LINE = "# deploy ", "image sha256: ", "reason: "
 #: The line of the reason, counted from 0: after the moment, the image and the simulation, which are one line each.
 REASON_AT = 3
-#: The three verdicts a board log holds (ready_probe's). A registered project's `ready not read` is never in a log.
-VERDICTS = (ready_probe.SEEN, ready_probe.NOT_SEEN, ready_probe.UNKNOWN)
-#: The verdict line: a verdict, VERDICT_SEP, then spark's sentence. Every verdict word starts with VERDICT_START.
+#: The verdict of a log of a flash that did not finish after the yes (P1092): nothing was read back, and the board may be erased.
+FLASH_NOT_FINISHED = "flash not finished"
+#: The verdicts a board log holds: ready_probe's three, and FLASH_NOT_FINISHED. A registered project's `ready not read` is never in a log.
+VERDICTS = (ready_probe.SEEN, ready_probe.NOT_SEEN, ready_probe.UNKNOWN, FLASH_NOT_FINISHED)
+#: The verdict line: a verdict, VERDICT_SEP, then spark's sentence. ready_probe's verdict words start with VERDICT_START.
 VERDICT_START, VERDICT_SEP = "ready ", ": "
-#: The codes a reason line may hold: the causes of a verdict that is not ready seen.
+#: What a verdict line starts with: a ready verdict's word, or FLASH_NOT_FINISHED and VERDICT_SEP.
+VERDICT_STARTS = (VERDICT_START, FLASH_NOT_FINISHED + VERDICT_SEP)
+#: The codes a reason line may hold: the causes of a verdict that is not ready seen, and of a flash that did not finish.
 REASONS = (board_codes.FILES_UNREAD, board_codes.FIRMWARE_NOT_STARTED, board_codes.NO_FILES_NAMED, board_codes.BOARD_LOST,
            board_codes.PORT_GONE, board_codes.DOWNLOAD_MODE_STAYED, board_codes.FILES_DIFFER, board_codes.FIRMWARE_ERROR,
-           board_codes.NO_READY_LINE)
+           board_codes.NO_READY_LINE, board_codes.FLASH_FAILED, board_codes.GRANT_ENDED)
 #: The cause of an older log's sentence, by its fixed start before the first colon. A lost board and files that differ
 #: have no fixed start, so such an old log has no cause. A wait's start comes from its constant, so a changed wait leaves
 #: the older logs with no cause, never a wrong one.
@@ -58,7 +63,7 @@ def unreadable(name, missing):
 
 class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard simulation reason",
                                       defaults=(None,))):
-    """Value: the facts of the board's log after a flash. `heard` is the console text, then what the board printed.
+    """Value: the facts of the board's log after a flash, or after a flash that did not finish. `heard` is the console text, then what the board printed.
     `reason` is the cause's code (P1043), written as line 4, or None for no line."""
 
     def text(self):
@@ -73,7 +78,7 @@ def write_board_log(project, log):
     its path."""
     path = project / BOARD_LOGS / ("%s.log" % log.moment.strftime("%Y-%m-%dT%H-%M-%S"))
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(log.text())
+    path.write_text(log.text(), encoding="utf-8")
     return path
 
 
@@ -98,7 +103,7 @@ def logged_deploy(name, text):
     lines = text.splitlines()
     at = lines[0][len(MOMENT_LINE):].split(" ", 1)[0] if lines and lines[0].startswith(MOMENT_LINE) else ""
     image = next((line[len(IMAGE_LINE):] for line in lines if line.startswith(IMAGE_LINE)), "")
-    said = next((line.split(VERDICT_SEP, 1) for line in lines[REASON_AT:] if line.startswith(VERDICT_START) and VERDICT_SEP in line),
+    said = next((line.split(VERDICT_SEP, 1) for line in lines[REASON_AT:] if line.startswith(VERDICT_STARTS) and VERDICT_SEP in line),
                 None)
     if not at or not image or said is None:
         raise unreadable(name, "no moment, image or verdict line")

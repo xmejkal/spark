@@ -116,6 +116,24 @@ class TheReasonLineTest(unittest.TestCase):
         self.assertEqual(board_log.newest_logged_deploy(Path(tempfile.mkdtemp())), (0, None))
 
 
+class TheFlashNotFinishedLogTest(unittest.TestCase):
+    """P1092 test 5: the log of a flash that did not finish reads back as its verdict and its cause. A verdict that is
+    not one of VERDICTS still cannot be read."""
+
+    def test_a_flash_not_finished_reads_back_with_its_cause(self):
+        for reason in ("flash_failed", "grant_ended"):
+            with self.subTest(reason=reason):
+                log = a_log(verdict="flash not finished", sentence="a flash command failed", reason=reason,
+                            facts_line="facts file: not written: the flash did not finish")
+                self.assertEqual(board_log.newest_logged_deploy(a_project_with(log.text())),
+                                 (1, board_log.LoggedDeploy("2026-11-23T14:09:49+01:00", "ab" * 32, "flash not finished", reason)))
+
+    def test_a_verdict_that_is_not_one_of_the_verdicts_still_cannot_be_read(self):
+        with self.assertRaises(board_log.BoardLogError) as raised:
+            board_log.newest_logged_deploy(a_project_with(a_log(verdict="ready not read").text()))
+        self.assertIn("its verdict is not one of", str(raised.exception))
+
+
 class TheUnreadableLogTest(unittest.TestCase):
     """Test 19: a log that is not UTF-8, or misses its moment, image or verdict line, cannot be read."""
 

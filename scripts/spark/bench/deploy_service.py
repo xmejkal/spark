@@ -18,6 +18,7 @@ from spark.bench.deploy_stages import DeployPhase
 from spark.bench import board_facts
 from spark.records import board_records
 from spark.bench import board_look
+from spark.bench import board_log
 from spark.bench.board_log import BoardLog, write_board_log
 from spark.bench import board_start
 from spark.bench import deploy_gate
@@ -48,9 +49,20 @@ def _keeps_boot_entry(planned, row):
     return bool(planned.flasher.keeps_boot_entry and row and row.usb == board_connection.USB_SERIAL_JTAG)
 
 
+#: The board log's sentence of a flash that did not finish (P1092), by the FlashError's reason. board_codes' own
+#: grant_ended sentence says "before the erase", which is true at the gate and false here: the first erase ran.
+NOT_FINISHED_SENTENCES = {board_codes.FLASH_FAILED: board_codes.CODES[board_codes.FLASH_FAILED],
+                          board_codes.GRANT_ENDED: "the yes ended before the erase's retry"}
+#: The board log's facts line of a flash that did not finish: no facts file went on the board.
+NOT_FINISHED_FACTS = "facts file: not written: the flash did not finish"
+
+
 class FlashError(DeployError):
     """Error: a flash command failed, so the board may be erased and not written. Its `reason` is flash_failed, or the
-    gate's grant_ended when the yes ended before the retry."""
+    gate's grant_ended when the yes ended before the retry. `log_path` is the board log that DeployService.deploy wrote
+    for it (P1092), or None with `log_error` saying why none was written; `image_sha256` is the image the flash was given."""
+
+    log_path = log_error = image_sha256 = None
 
 
 def every_read(reads):
@@ -71,8 +83,9 @@ class DeployService:
     step. Its methods raise `DeployError`, `ToolError`, `board_look.LookStopError` or `deploy_gate.GateClosedError` to
     say why a step cannot go on; they never print and never exit."""
 
-    def __init__(self, project, platform, evidence, outside, records=None):
+    def __init__(self, project, platform, evidence, outside, records=None, write_log=write_board_log):
         self.project, self.platform, self.evidence = project, platform, evidence
+        self.write_log = write_log  # (project, BoardLog) -> its path: board_log's own, or a test's
         self.run, self.clock, self.report = outside.run, outside.clock, outside.report
         self.records = records or deploy_record_store.DeployRecordStore()
         self.sleeps = sleep_calls.deep_sleep_calls(project)  # P1022 slice 3: read once, from firmware/
@@ -107,9 +120,11 @@ class DeployService:
         """
         Pass the gate, then run the flash commands, erase first. Returns the DeployPlan it ran. `look` is the LookReport,
         `consent` the person's yes. It reports the gate's yes line, a BEGIN of the flash and a line per command (E2).
-        GateClosedError, DeployError and tool_finder.ToolError say why nothing, or not everything, was flashed.
+        GateClosedError, DeployError and tool_finder.ToolError say why nothing, or not everything, was flashed. A FlashError
+        says that the flash did not finish after the yes: it comes with the board log that says so (P1092).
         """
-        image_path = image_evidence.image_of(self.project, self.evidence).path.relative_to(self.project)
+        image = image_evidence.image_of(self.project, self.evidence)
+        image_path = image.path.relative_to(self.project)
         deploy_gate.require_open_gate(look, token, consent, image_path, look.question_caveats())
         if consent.yes_kind == deploy_gate.GRANT:
             self.report(Event.line(DeployPhase.GATE, "yes: %s" % consent.who))
@@ -117,16 +132,36 @@ class DeployService:
         if look.token() != token:  # AT116: the image changed while the person answered
             raise DeployError("the image changed after your yes: run look.py again. not flashed.", reason=board_codes.IMAGE_CHANGED)
         consent.require_ready()  # a deploy grant can end while the plan reads the image
+        image_sha256 = image.sha256  # read once, after the token's check: the image the flash commands are given
         self.report(Event.begin(DeployPhase.FLASH))
-        for index, command in enumerate(planned.commands):
-            self.report(Event.line(DeployPhase.FLASH, "running: %s" % shlex.join(command), raw=True))  # P677: a command
-            try:
-                self._run_flash(command, planned.flasher, consent, retry=index == 0)
-            except (OSError, subprocess.CalledProcessError) as failed:
-                hint = planned.flasher.boot_hint
-                raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""),
-                                 reason=board_codes.FLASH_FAILED)
+        try:
+            for index, command in enumerate(planned.commands):
+                self.report(Event.line(DeployPhase.FLASH, "running: %s" % shlex.join(command), raw=True))  # P677: a command
+                try:
+                    self._run_flash(command, planned.flasher, consent, retry=index == 0)
+                except (OSError, subprocess.CalledProcessError) as failed:
+                    hint = planned.flasher.boot_hint
+                    raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""),
+                                     reason=board_codes.FLASH_FAILED)
+        except FlashError as failed:  # P1092: the flow's one source, the newest board log, must not name the deploy before
+            failed.log_path, failed.image_sha256 = self.log_not_finished(look, image_sha256, failed), image_sha256
+            raise
         return planned
+
+    def log_not_finished(self, look, image_sha256, failed):
+        """The path of the board log of a flash that did not finish after the yes (P1092): the verdict FLASH_NOT_FINISHED and
+        the FlashError `failed`'s reason, as its line 4. None when an OSError or a ValueError kept it from being written:
+        `failed.log_error` then says why, and the flash's own error stays the answer. On purpose, a TypeError or a KeyError
+        is a bug: it replaces the FlashError, keeps it as its __context__, and the run crashes at stage flash, whose
+        board_state stays may_be_erased (F13)."""
+        log = BoardLog(self.clock.now(), look.port, image_sha256, board_facts.FactsLine(NOT_FINISHED_FACTS, False),
+                       board_log.FLASH_NOT_FINISHED, NOT_FINISHED_SENTENCES.get(failed.reason, str(failed)), str(failed) + "\n",
+                       self.evidence.simulation, failed.reason)
+        try:
+            return self.write_log(self.project, log)
+        except (OSError, ValueError) as unwritten:
+            failed.log_error = str(unwritten)
+            return None
 
     def _run_flash(self, command, flasher, consent, retry):
         """Run one flash command; the flash tool's own output goes where `outside.run` echoes it. With `retry`, a stop with the
@@ -178,7 +213,7 @@ class DeployService:
         if start and start.code:
             ready = ready._replace(sentence=start.sentence)
         image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
-        log_path = write_board_log(self.project, BoardLog(moment, look.port, image_sha256,
+        log_path = self.write_log(self.project, BoardLog(moment, look.port, image_sha256,
                                                           facts_line, ready.verdict, ready.sentence,
                                                           "".join(starter.heard) + ready.log + "".join(read[1].heard for read in reads), self.evidence.simulation,
                                                           (start and start.code) or ready.code))
