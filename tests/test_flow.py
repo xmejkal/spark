@@ -2356,5 +2356,59 @@ class TheSecretMaskTest(FlowTest):
         self.assertNotIn(HALF_TYPED, text)
 
 
+def in_prague(test):
+    """Pin the zone of `test` to Europe/Prague for its run, so a time said in words is known."""
+    import time
+    patcher = mock.patch.dict(os.environ, {"TZ": "Europe/Prague"})
+    patcher.start()
+    test.addCleanup(time.tzset)
+    test.addCleanup(patcher.stop)
+    time.tzset()
+
+
+class TheDeployedLineTest(unittest.TestCase):
+    """P1062 (test 9): ON THE BOARD's sentence on the page, from `data.deploy`: a readable time in the machine's zone, the
+    verdict's words, the cause unless ready was seen, and a stale fact's opener first, by the one rule of deployed_says."""
+
+    AT = "2026-11-23T13:09:41+00:00"
+
+    def setUp(self):
+        in_prague(self)
+
+    def line(self, verdict, cause=None, fact="current"):
+        from spark.flow.deploy_reading import deployed_line
+        return deployed_line({"at": self.AT, "image": "ab" * 32, "verdict": verdict, "cause": cause, "fact": fact, "read_back": None})
+
+    def test_ready_unknown_with_a_known_cause_says_the_verdict_and_the_cause(self):
+        self.assertEqual(self.line("ready unknown", "files_unread"),
+                         "Last deploy 23 Nov 2026, 14:09. Written by the flasher, nothing read back, start not seen. "
+                         "Cause in the log: spark did not reach the board to read its files.")
+
+    def test_ready_unknown_with_no_cause_says_the_cause_is_not_recorded(self):
+        self.assertEqual(self.line("ready unknown"),
+                         "Last deploy 23 Nov 2026, 14:09. Written by the flasher, start not confirmed. Cause not recorded.")
+
+    def test_ready_seen_has_no_cause_sentence(self):
+        self.assertEqual(self.line("ready seen"), "Last deploy 23 Nov 2026, 14:09. Written by the flasher, files read back, ready seen.")
+
+    def test_a_stale_fact_with_ready_seen_opens_with_its_sentence_so_it_never_reads_as_a_pass(self):
+        self.assertEqual(self.line("ready seen", fact="firmware-newer"),
+                         "Your firmware changed after the image that the last deploy wrote. Last deploy 23 Nov 2026, 14:09. "
+                         "Written by the flasher, files read back, ready seen.")
+
+    def test_no_deploy_gives_none_and_a_line_holds_no_iso_time_and_no_image(self):
+        from spark.flow.deploy_reading import deployed_line
+        self.assertIsNone(deployed_line(None))
+        said = self.line("ready not seen", "no_ready_line")
+        self.assertNotIn(self.AT, said)
+        self.assertNotIn("abab", said)
+        self.assertIn("Cause in the log: the firmware printed no ready line.", said)
+
+    def test_the_day_and_time_of_a_stored_time_is_the_machine_s_and_one_that_does_not_parse_stays(self):
+        self.assertEqual(zone_time.day_and_time("2026-11-02T23:30:05+00:00"), "3 Nov 2026, 00:30")
+        self.assertEqual(zone_time.day_and_time("not a time"), "not a time")
+        self.assertEqual(len(zone_time.MONTHS), 12)
+
+
 if __name__ == "__main__":
     unittest.main()

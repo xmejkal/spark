@@ -45,6 +45,7 @@ from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRE
 from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
+from test_flow import in_prague  # noqa: E402
 from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
 
 #: The built fixture test_flow.py builds its projects from.
@@ -1515,6 +1516,165 @@ class TheDeployedPageTest(unittest.TestCase):
     def test_a_guide_with_no_no_open_phase_key_draws_as_before(self):
         self.assertEqual(guide_page(a_guide(now=None)), guide_page(a_guide(now=None, no_open_phase=None)))
         self.assertIn("<p>said once</p>", guide_page(a_guide(now=None, no_open_phase="said once")))
+
+
+def a_need_phase(says=("1 of 2 needs picked",), status="partial"):
+    """A parts phase dict with two needs of two picks each, and a drop: the picks in the reading's order."""
+    def pick(need, part):
+        return {"key": "pick:%s:%s" % (need, part), "label": "Pick %s for %s" % (part, need), "effect": "Saves %s." % part,
+                "makes_stale": ["requirements"]}
+    offers = [pick("light", "led-red"), pick("button", "tact-6mm"), pick("light", "led-green"), pick("button", "tact-12mm"),
+              {"key": "needs-drop:light", "label": "Drop the light need", "effect": "Drops it.", "makes_stale": []}]
+    return dict(a_phase("parts", status, says=says).to_dict(), offers=offers)
+
+
+def order_page(guide=None, phases=None, wiring=PageWiring(THREE, [an_item()], ["rec"], None), deployed=None,
+               written="2026-11-23T14:18:05+01:00", pictures=tuple(THREE_PICTURES)):
+    """The text of FlowHtmlPage's page (P1062): by default the parts are NOW, with two needs and the build's offer."""
+    build = {"key": "build", "label": "Build the board", "effect": "Builds it.", "makes_stale": []}
+    phases = phases if phases is not None else [a_phase("idea", None).to_dict(), a_need_phase(),
+                                                 dict(a_phase("build", "not-started").to_dict(), offers=[build])]
+    now = {"phase": "parts", "by": ["you"], "says": "2 needs have no part yet.", "offer": None, "needs": ["light"], "steps": None}
+    guide = guide if guide is not None else a_guide(now=now)
+    return FlowHtmlPage().text(FlowPage("t", phases, "parts", list(pictures), ["The bench note."], wiring, None, written, guide,
+                                        deployed))
+
+
+def fold(text, name):
+    """The `<details>` tag of the fold `name`."""
+    return re.search(r'<details class="fold" data-fold="%s"[^>]*>' % name, text).group(0)
+
+
+def developer(text):
+    """The developer fold, from its tag to the end of the page's body."""
+    return text[text.index(fold(text, "developer")):text.index("</body>")]
+
+
+class TheSliceOneOrderTest(unittest.TestCase):
+    """P1062: the slice 1 order (the P1038 design's mockup): the freshness line, one NOW box with ON THE BOARD and NEXT, the
+    muted lines, three folds open only for their NOW, the bench note, and one developer fold, always closed, last."""
+
+    ORDER = ["<h1>", 'class="fresh"', 'class="intro"', '<section id="guide">', '<div class="now">', 'class="muted"',
+             'data-fold="parts"', 'data-fold="wiring"', 'data-fold="pictures"', 'class="notes"', 'data-fold="developer"']
+
+    def setUp(self):
+        in_prague(self)
+
+    def test_the_order_is_the_same_with_a_sheet_without_one_and_with_no_steps(self):
+        for wiring in (PageWiring(THREE, [], [], None), PageWiring([], [], [], "no sheet yet"), None):
+            with self.subTest(wiring=wiring):
+                text = without_script(order_page(wiring=wiring))
+                marks = [mark for mark in self.ORDER if wiring or mark != 'data-fold="wiring"']
+                order = [text.index(mark) for mark in marks]
+                self.assertEqual(order, sorted(order))
+                self.assertNotIn("<nav", text)
+
+    def test_the_freshness_line_says_the_newest_change_in_the_machine_s_zone_and_keeps_the_iso_time(self):
+        text = order_page(written="2026-11-23T14:18:05+01:00")
+        self.assertIn('<p class="fresh">This page shows the project as of 23 Nov 2026, 14:18, its newest change. If you changed or '
+                      'deployed something after that, type /spark:page in the chat.</p>', text)
+        self.assertIn('data-written="2026-11-23T14:18:05+01:00"', text)
+        self.assertNotIn("as of", order_page(written=None))
+        self.assertIn('<p class="fresh">This page does not know when the project last changed.', order_page(written=None))
+
+    def test_the_now_box_says_who_acts_on_the_board_and_next_with_its_hooks(self):
+        build = dict(a_guide()["now"], by=["you", "claude"])
+        text = order_page(guide=a_guide(now=build), deployed="Last deploy 23 Nov 2026, 14:09. Written by the flasher.")
+        box = text.split('<div class="now">')[1].split("</div>")[0]
+        lines = re.findall(r"<p[^>]*><strong>([^<]*)</strong> ?(.*?)</p>", box)
+        self.assertEqual(lines, [("NOW (build), by you and claude", ""),
+                                 ("ON THE BOARD", "Last deploy 23 Nov 2026, 14:09. Written by the flasher."),
+                                 ("NEXT", "Ask Claude to build the board.")])
+        self.assertIn('<p class="next" data-key="build" data-makes-stale=""><strong>NEXT</strong>', box)
+        self.assertNotIn("ON THE BOARD", order_page(guide=a_guide(now=build)))
+        nothing = order_page(guide=a_guide(now=None, no_open_phase="Nothing is waiting on you."))
+        self.assertIn('<div class="now">\n<p>Nothing is waiting on you.</p>\n</div>', nothing)
+        self.assertNotIn('<div class="now">', order_page(guide=a_guide(now=None)))
+
+    def test_the_step_link_stands_on_the_next_line_with_steps_in_now(self):
+        now = dict(a_guide()["now"], steps=3)
+        box = order_page(guide=a_guide(now=now)).split('<div class="now">')[1].split("</div>")[0]
+        self.assertIn('<a href="#step-1">One at a time: start at step 1</a></p>', box)
+
+    def test_the_developer_lines_are_always_folded(self):
+        deploy = {"phase": "deploy", "by": ["you"], "says": "Plug it in.", "offer": None, "needs": [], "steps": None}
+        steps = dict(deploy, phase="firmware", steps=3)
+        sheet = [a_phase("breadboard", None).to_dict(), a_need_phase()]
+        for guide in (None, a_guide(now=deploy), a_guide(now=steps), a_guide(now=None, no_open_phase="Nothing waits.")):
+            with self.subTest(guide=guide and guide["now"]):
+                text = order_page(guide=guide, phases=sheet) if guide else order_page()
+                self.assertNotIn(" open", fold(text, "developer"))
+                inside = developer(text)
+                self.assertEqual(re.findall(r"<details[^>]* open", inside), [])
+                outside = text[:text.index(fold(text, "developer"))]
+                for word in ('class="phase"', '<section class="legend">', "parts.py --show", "Done by:"):
+                    self.assertIn(word, inside)
+                    self.assertNotIn(word, outside)
+
+    def test_no_tick_outside_the_script_for_a_status_that_is_not_ok(self):
+        for status in ("partial", "could-not-run", None):
+            with self.subTest(status=status):
+                parts = dict(a_need_phase(status=status), mark=TICK)
+                text = without_script(order_page(phases=[parts]))
+                self.assertNotIn(TICK, text.replace(Parsed(text).legend, ""))
+                self.assertIn(MARKS[COULD_NOT_RUN][1], fold(text, "parts") + text.split(fold(text, "parts"))[1].split("</summary>")[0])
+        board = order_page(deployed="Last deploy 23 Nov 2026, 14:09. Written by the flasher.")
+        line = re.search(r'<p class="board">.*?</p>', board).group(0)
+        for _word, glyph in MARKS.values():
+            self.assertNotIn(glyph, line)
+
+    def test_the_parts_fold_opens_only_while_the_parts_are_now(self):
+        self.assertIn(" open", fold(order_page(), "parts"))
+        other = order_page(guide=a_guide())
+        self.assertNotIn(" open", fold(other, "parts"))
+        self.assertRegex(other, r'data-fold="parts"><summary><h2>[^\n]*</h2></summary>\n')
+
+    def test_the_wiring_and_pictures_open_with_steps_in_now_or_a_deploy_beside_a_current_sheet(self):
+        deploy = dict(a_guide()["now"], phase="deploy", offer=None)
+        sheet = [a_phase("breadboard", None).to_dict(), a_phase("deploy", "not-started").to_dict()]
+        stale = [a_phase("breadboard", "stale").to_dict(), a_phase("deploy", "not-started").to_dict()]
+        for guide, phases, shown in ((a_guide(now=dict(deploy, phase="firmware", steps=3)), None, True),
+                                     (a_guide(now=deploy), sheet, True), (a_guide(now=deploy), stale, False),
+                                     (a_guide(now=deploy), sheet[1:], False), (a_guide(), sheet, False),
+                                     (a_guide(now=None), sheet, False)):
+            with self.subTest(now=guide["now"], phases=phases and [phase["status"] for phase in phases]):
+                text = order_page(guide=guide, phases=phases)
+                for name in ("wiring", "pictures"):
+                    self.assertEqual(" open" in fold(text, name), shown, name)
+                    self.assertRegex(text, r'data-fold="%s"( open)?><summary><h2>[^\n]*</h2></summary>\n' % name)
+
+    def test_each_need_has_its_own_row_of_picks_in_the_reading_s_order_after_the_wired_line(self):
+        wired = "You kept a wiring sheet on 22 Nov 2026. Each pick says what it changes."
+        text = without_script(order_page(phases=[a_need_phase(says=(wired, "1 of 2 needs picked"))]))
+        start = text.index(fold(text, "parts"))
+        parts = text[start:text.index("</details>", start)]
+        self.assertLess(parts.index(wired), parts.index("1 of 2 needs picked"))
+        rows = re.findall(r'<li class="need"><strong>([^<]*)</strong><ul>(.*?)</ul></li>', parts)
+        self.assertEqual([(need, re.findall(r'data-key="([^"]*)"', row)) for need, row in rows],
+                         [("light", ["pick:light:led-red", "pick:light:led-green"]),
+                          ("button", ["pick:button:tact-6mm", "pick:button:tact-12mm"])])
+        self.assertLess(parts.index("1 of 2 needs picked"), parts.index('<li class="need">'))
+
+    def test_each_sendable_button_stands_exactly_once_and_no_hook_stands_in_the_developer_fold(self):
+        build = dict(a_guide()["now"], offer="build")
+        for guide in (None, a_guide(now=build)):
+            with self.subTest(now=guide and guide["now"]["offer"]):
+                text = order_page(guide=guide) if guide else order_page()
+                for key in ("pick:light:led-red", "pick:light:led-green", "pick:button:tact-6mm", "pick:button:tact-12mm", "build"):
+                    self.assertEqual(text.count('data-key="%s"' % key), 1, key)
+                self.assertNotIn("data-key", developer(text))
+                self.assertNotIn("data-makes-stale", developer(text))
+                self.assertNotIn('data-key="needs-drop:light"', text)
+                self.assertIn("<code>needs-drop:light</code> Drop the light need: Drops it.", developer(text))
+        self.assertIn('<p class="next" data-key="build"', order_page(guide=a_guide(now=build)))
+        self.assertIn('<li data-key="build" data-makes-stale="">Build the board: Builds it.</li>', order_page())
+
+    def test_the_need_of_a_pick_offer_s_key(self):
+        from spark.flow.phase_readers import pick_need
+        self.assertEqual(pick_need("pick:light:led-red-5mm"), "light")
+        self.assertEqual(pick_need("pick:light:drawer:7"), "light")
+        for key in ("build", "needs-drop:light", "requirements", "pick"):
+            self.assertIsNone(pick_need(key), key)
 
 
 def sample_page():
