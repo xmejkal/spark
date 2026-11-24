@@ -24,7 +24,6 @@ from spark.firmware import sleep_calls  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.records import deploy_record_store  # noqa: E402
-from spark.bench import deploy_image  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
 from spark.bench import board_facts  # noqa: E402
@@ -849,7 +848,8 @@ class DeployPageTest(JsonCase, GateCase):
                         reporter=reporter)
         lines = [event.text for event in reporter.events if event.kind == LINE]
         older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
-        self.assertIn(deploy_image.NOT_FINISHED_LOG_LINE % newer, lines)
+        self.assertIn("board log: %s: flash not finished, the board may be erased. Look at the board with Claude, then run "
+                      "the deploy again." % newer, lines)
         self.assertEqual([command for command in self.ran if "exec" in command or "fs" in command], [])
         self.assert_show_and_the_next_page_say_the_flash_did_not_finish("a Ctrl-C interrupted the flash")
 

@@ -26,7 +26,7 @@
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "deploy clock naive datetime.now",
-  "find": "moment = self.clock.now()",
+  "find": "moment = self.clock.now()  # once: the facts file and the board log share it",
   "replace": "moment = __import__('datetime').datetime.now()"
  }
 ]

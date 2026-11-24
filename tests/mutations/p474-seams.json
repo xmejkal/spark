@@ -44,13 +44,13 @@
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "the records seam is ignored",
-  "find": "return self.records.write_deploy(",
-  "replace": "return deploy_record_store.DeployRecordStore().write_deploy("
+  "find": "return self.records.write_deploy(result.facts",
+  "replace": "return deploy_record_store.DeployRecordStore().write_deploy(result.facts"
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "the deploy moment is read from the system clock",
-  "find": "moment = self.clock.now()",
+  "find": "moment = self.clock.now()  # once: the facts file and the board log share it",
   "replace": "moment = board_console.SystemClock.now()"
  },
  {
