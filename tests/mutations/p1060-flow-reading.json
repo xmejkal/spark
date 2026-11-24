@@ -1,0 +1,6 @@
+[
+  {"file": "scripts/spark/flow/write_flow_page.py", "name": "P1060: one reading feeds both: compose_page draws an empty guide, not the reading's (test_flow_reading.FromShowToThePageTest)", "find": "reading.stamp[\"newest\"], reading.guide)", "replace": "reading.stamp[\"newest\"], {\"now\": None, \"done\": [], \"later\": [], \"set_aside\": [], \"no_simulation\": None})"},
+  {"file": "scripts/spark/flow/write_flow_page.py", "name": "P1060: one reading feeds both: compose_page takes its title from a fixed word, not from the reading (test_flow_reading.FromShowToThePageTest)", "find": "    return FlowPage(reading.title, ", "replace": "    return FlowPage(\"spark circuit\", "},
+  {"file": "scripts/spark/flow/show_flow.py", "name": "P1060: reading_of answers no Artifact (test_flow_reading.ShowAnswersTheArtifactTest.test_a_kept_id_is_data_artifact_and_show_writes_nothing)", "find": "stamp_of(project), PublishedPageStore(project).read())", "replace": "stamp_of(project), None)"},
+  {"file": "scripts/spark/flow/flow_reading.py", "name": "P1060: to_dict leaves out stamp (test_flow_reading.FromShowToThePageTest, test_flow.TheCommandTest.test_the_data_keys_are_a_real_answer_s_keys)", "find": "\"title\": self.title, \"stamp\": self.stamp,", "replace": "\"title\": self.title,"}
+]
