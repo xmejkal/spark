@@ -173,20 +173,27 @@ def fetch_of(entry):
     return fetch["file"], build["url"], build["sha256"], bool(fetch.get("executable"))
 
 
-def _downloaded(path):
-    """Whether spark's downloads hold the file `path`. A ToolError when the disk refuses to say (P1041): a tool in a
-    folder spark cannot read is neither here nor missing, and /spark:setup could not write it there either."""
+def _file_here(path, refused=None):
+    """Whether `path` is a regular file. When the disk refuses to say: a ToolError (P1041, a download, which
+    /spark:setup cannot write there either). With a list `refused`: not here, and its sentence goes in the list,
+    for the sentence of a tool that no place finds (P1071: a folder spark cannot read hides no tool on PATH)."""
     try:
         return stat.S_ISREG(path.stat().st_mode)
     except (FileNotFoundError, NotADirectoryError):
         return False
     except OSError as cannot:
-        raise ToolError("%s cannot be read (%s) — fix it or its permissions", path, cannot.strerror or cannot,
-                        code=records_codes.FILE_REFUSED)
+        refusal = ToolError("%s cannot be read (%s) — fix it or its permissions", path, cannot.strerror or cannot,
+                            code=records_codes.FILE_REFUSED)
+        if refused is None:
+            raise refusal
+        refused.append(str(refusal))
+        return False
 
 
-def locate(entry, project):
-    """The command that runs this tool, by its kind — or None when it is not here."""
+def locate(entry, project, refused=None):
+    """The command that runs this tool, by its kind — or None when it is not here. A place spark cannot read is not
+    here, and a given list `refused` collects its sentence (P1071); a download spark cannot read is a ToolError (P1041)."""
+    refused = [] if refused is None else refused
     kind = entry.get("kind", "path")
     if kind == "mcp":
         return None  # Claude Code runs a server; spark has no command for it
@@ -194,26 +201,26 @@ def locate(entry, project):
         return [sys.executable] if importlib.util.find_spec(entry["module"]) else None
     if kind == "download":
         path = DOWNLOADS / entry["file"]
-        return [str(path)] if _downloaded(path) else None
+        return [str(path)] if _file_here(path) else None
     if kind == "bundled":
         path = PLUGIN / entry["file"]
-        return [str(path)] if path.is_file() else None
+        return [str(path)] if _file_here(path, refused) else None
     exe = entry["exe"]
     if kind == "npm" and project:
         for directory in board_records.walk_up(Path(project).absolute()):
             local = directory / "node_modules" / ".bin" / exe
-            if local.is_file():
+            if _file_here(local, refused):
                 return [str(local)]
     found = shutil.which(exe)
     if found:
         return [found]
     for also in entry.get("also") or []:
         path = Path(also).expanduser()
-        if path.is_file():
+        if _file_here(path, refused):
             return [str(path)]
     if entry.get("fetch"):
         path = DOWNLOADS / entry["fetch"]["file"]
-        if _downloaded(path) and os.access(str(path), os.X_OK):
+        if _file_here(path) and os.access(str(path), os.X_OK):
             return [str(path)]
     return None
 
@@ -305,10 +312,12 @@ def find(name, project=None, personal=None, _seen=()):
             find(need, project, personal, _seen + (tool_name,))
         except ToolError as inner:
             raise type(inner)("%s needs %s: %s", tool_name, need, inner, code=inner.code)
-    command = locate(entry, project)
+    refused = []
+    command = locate(entry, project, refused)
     if command is None:
-        raise ToolMissingError("%s (%s) is not installed — install: %s",
-                               role or tool_name, tool_name, install_hint(entry) or "see its entry in %s" % DEFAULTS, code=records_codes.TOOL_MISSING)
+        raise ToolMissingError("%s (%s) is not installed — install: %s%s", role or tool_name, tool_name,
+                               install_hint(entry) or "see its entry in %s" % DEFAULTS,
+                               "".join("; " + line for line in refused), code=records_codes.TOOL_MISSING)
     here = versions.too_old(entry)
     if here:
         raise ToolError("%s %s is too old: spark needs %s or newer. Install: %s", tool_name, here,
