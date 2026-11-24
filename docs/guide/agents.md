@@ -110,6 +110,10 @@ not the same as one that could not look. More in the glossary:
    - Without `--board`, it exits 1 when every file exists ("nothing to do").
    - With `--board`, it exits 0 even when it wrote nothing.
    - It exits 2 after writing everything when two built designs left the rails unseeded.
+   - It exits 2, with nothing written and the project not listed, for a refusal before it starts: no folder, a tools
+     file or a brief that cannot be read, or a boards/active.json that cannot be opened, is a folder or is a dangling
+     link (`record_file_broken`, [P1099](https://github.com/xmejkal/spark/issues/1617)). An unknown `--board` exits 2
+     too, after the other files are written.
 
    1 is also what a crash returns, so check stdout for the nothing-to-do line before reading exit 1 that way.
 5. `parts.py` given an id it does not know ("no part called …") exits 1, and so does `--show` of a record with a

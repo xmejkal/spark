@@ -50,6 +50,11 @@ it to the person. Do not edit `active.json` to "fix" it. After `--board`, when `
 read (not valid JSON, no JSON object, a `board` that is no string, or a file it cannot open), init prints `the
 project's board is not known: …` instead, and still exits 0. Relay it, and fix `requirements.json`.
 
+When `boards/active.json` cannot be opened (no read permission), is a folder or is a link to a file that is gone, init
+stops before it writes anything: `init_project.py: <path> cannot be read: <why>`, exit 2, the project not listed
+([P1099](https://github.com/xmejkal/spark/issues/1617)). Relay it. The person fixes or removes the file, then runs init
+again. A selection that is not valid JSON or no JSON object is not refused: `--board <id> --force` writes over it.
+
 **When the person answers the brief** (`/spark:idea` step S is the first time), run it with `--answers <file>`: a JSON
 object of the brief's fields (`goal`, `must`, `prefer`, `sellers`, `decided`) in the person's words, written with the Write
 tool in the system's temp folder, outside any repository, never on a command line. It merges them into `project.json`:
