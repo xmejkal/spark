@@ -70,8 +70,9 @@ class TheCauseOfASentenceTest(unittest.TestCase):
         self.assertEqual(sorted(board_log.CAUSES.values()), sorted(made))
 
     def test_the_flow_has_words_for_each_cause_the_log_can_hold(self):
-        # P1043-D1: the codes and their starts are the bench's, the words the flow's; a lost board and files that differ have no start
-        self.assertEqual(sorted(flow_codes.CAUSE_WORDS), sorted(set(board_log.CAUSES.values()) | {"board_lost", "files_differ"}))
+        # P1043-D1: the codes are the bench's, the words the flow's. P1092: every reason a log can hold has words, so a
+        # reason line never reads as not recorded
+        self.assertEqual(sorted(flow_codes.CAUSE_WORDS), sorted(board_log.REASONS))
 
     def test_a_lost_board_has_its_own_start_and_files_that_differ_have_none(self):
         # the review of #1579: the lost board's sentence holds mpremote's text before its first colon, so its start is its own
