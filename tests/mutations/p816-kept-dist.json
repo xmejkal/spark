@@ -1,6 +1,6 @@
 [
  {"file": "scripts/spark/build/kept_files.py", "name": "P816: an unfinished build says nothing of its dist (test_unfinished_build_dist, tests 1 and 2)", "find": "why_not_built(stages, \"board only: no board was built\")", "replace": "(\"board only: no board was built\" if skipped_the_build(stages) else None)"},
- {"file": "scripts/spark/build/kept_files.py", "name": "P816: a dist this run wrote is named too (test_a_build_with_problems_writes_its_dist_and_names_nothing)", "find": " or str(old) in {entry[\"file\"] for entry in kept if entry[\"did\"] == WROTE}:", "replace": ":"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "P816: a dist this run wrote is named too (test_a_build_with_problems_writes_its_dist_and_names_nothing)", "find": " or str(old) in {entry[\"file\"] for entry in kept}:", "replace": ":"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P816: keep_all hands no kept entries (test_a_build_with_problems_writes_its_dist_and_names_nothing)", "find": "drop_an_older_build(Path(keep), stages, kept)", "replace": "drop_an_older_build(Path(keep), stages)"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P816: an unfinished build removes the earlier dist (test_a_build_that_did_not_finish_keeps_the_earlier_dist_and_names_it)", "find": "    if not skipped_the_build(stages):\n", "replace": "    if False:\n"},
  {"file": "scripts/spark/build/kept_files.py", "name": "P816: a missing dist is named (test_no_earlier_dist_no_entry)", "find": " or not old.is_dir()", "replace": ""},

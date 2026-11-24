@@ -2,7 +2,7 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "dist never arrives, so no check can read the board",
-  "find": "        shutil.copytree(built, destination / \"dist\", dirs_exist_ok=True)",
+  "find": "        replace_whole(workdir / \"dist\", destination / \"dist\")",
   "replace": "        pass"
  },
  {
