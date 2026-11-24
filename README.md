@@ -111,20 +111,20 @@ After either road, type `/spark:init` again. It names the rails from the built b
 The same journey is on Miro, beside the plans: [the journey frame](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687016851094),
 [the story map by release](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687094797318), [the roadmap](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764688467218869) and [the code architecture](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687681319899).
 
-Each status comes from runs made for these docs, up to 2026-11-01. [The journey guide](docs/guide/journey.md) shows the
-output of each step and gives each status in full. **works**: it ran end to end for these docs. **partly**: it stops
-before its goal, or part of it was not run here. **not yet**: nothing does it yet.
+Each status comes from runs for these docs and in walks, up to 2026-11-22. [The journey guide](docs/guide/journey.md)
+shows the output of each step and gives each status in full. **works**: it ran end to end for these docs or in a walk.
+**partly**: it stops before its goal, or part of it was not run here. **not yet**: nothing does it yet.
 
 | step | today | with |
 | --- | --- | --- |
-| [Drawer](docs/guide/journey/drawer.md) | **partly**: the scripts that list and write what you own ran, but the conversation and the DFRobot import did not | `/spark:drawer` |
-| [Idea](docs/guide/journey/idea.md) | **partly**: the scripts ran from a goal's needs to a requirements file, but the conversation did not | `/spark:idea` |
-| [Research](docs/guide/journey/research.md) | **partly**: the store search (`--need` over your drawer, the boards and the records, owned first), `research.py` (the DFRobot wiki's documents and the geometry questions, 2026-11-11) and `parts.py --find-documents` (a DFRobot board's top view and drawing, 2026-11-21) run, but not the research agents | `/spark:research`, `/spark:identify` |
+| [Drawer](docs/guide/journey/drawer.md) | **partly**: the scripts that list and write what you own ran, and `/spark:drawer` raised a count on your words in walk 4, 2026-11-01. The DFRobot import did not run | `/spark:drawer` |
+| [Idea](docs/guide/journey/idea.md) | **works**: the conversation took a goal to needs, picks and a requirements file in the P711 walk 3, 2026-11-16, and in the P934 walk with three of four picks clicked on the page, 2026-11-22 | `/spark:idea` |
+| [Research](docs/guide/journey/research.md) | **partly**: the store search (`--need`, owned first), `research.py` (the DFRobot wiki's documents, geometry questions, 2026-11-11) and `parts.py --find-documents` (2026-11-21) run. The parts-researcher ran in walk 4 and in `/spark:identify` (P934). The part-finder and datasheet-reader did not | `/spark:research`, `/spark:identify` |
 | [Build](docs/guide/journey/build.md) | **works**: a board that builds, with a breadboard sheet, a pin map and a Wokwi diagram. SPI and I2C parts built on the FireBeetle 2 and XIAO C6, 2026-11-01 (P512); a display on the XIAO stops at the simulation. Modules drawn from records (P945), power and ground on rails, 2026-11-20 (P953) | `/spark:build` |
 | [Checks](docs/guide/journey/checks.md) | **works**: `check_all.py` runs spark's five deterministic checks in one command | `check_all.py`, after `/spark:init` again |
 | [Firmware](docs/guide/journey/firmware.md) | **partly**: an import check proves the firmware's names, not that it drives every signal | `/spark:build`, `assign_pins.py --emit-pins`, `import_firmware.py` |
 | [Simulate](docs/guide/journey/simulate.md) | **works**: `run_scenario.py` runs your firmware in Wokwi on the built diagram and keeps a dated log. A scenario that names a component the diagram lacks stops before the run. `--dry-run` needs no token. On 2026-11-01 the FireBeetle 2's button changed its LED's effect there (walk 4) | `/spark:build --keep .`, then `run_scenario.py` |
-| [Bench](docs/guide/journey/bench.md) | **partly**: `deploy.py` flashes the firmware onto the board after your yes, but no breadboard wired from a sheet has run yet. On 2026-11-01 it put a button-and-LED program and Python games on a FireBeetle 2. A C driver image went on outside spark (walk 4) | `/spark:deploy`: `look.py`, `deploy.py`, `grant.py`, `live.py` |
+| [Bench](docs/guide/journey/bench.md) | **partly**: `deploy.py` flashes the firmware after your yes. A breadboard wired from its sheet ran an e-paper clock on a FireBeetle 2 C6, `ready seen`, 2026-11-22 (P934), with no simulation. A simulation-tested image ran on a FireBeetle 2 alone, 2026-11-01 (walk 4), not yet on a wired breadboard | `/spark:deploy`: `look.py`, `deploy.py`, `grant.py`, `live.py` |
 
 ## Commands, skills and agents
 
@@ -160,10 +160,10 @@ button, a connector), `parts-researcher` for a module, and `design-reviewer`, on
   ([tabled in the 2026-09-24 audit](docs/archive/audit-2026-09-24/autonomous-agent-readiness.md#on-the-eval-and-the-reprioritisation-it-drove)).
   Each run was graded on what the agent found, not by a script. Commit 066c4af removed the cases. "The reviewers
   help" is plausible, not measured.
-- **The bench proved little so far.** The author ran `deploy.py` on two boards: a XIAO ESP32-C6 on 2026-10-14 and
-  2026-10-15, and a FireBeetle 2 ESP32-S3 on 2026-10-31 and 2026-11-01. No breadboard wired from a sheet has run yet.
-- **Not run for these docs.** The runs here used the scripts, so these parts were not run:
-  - the conversations of `/spark:drawer`, `/spark:idea`, `/spark:research` and `/spark:identify`, and the DFRobot order import
+- **The bench proved little so far.** `deploy.py` ran on a XIAO ESP32-C6 (2026-10-14 to 10-23), a LilyGO T-Display
+  (10-26), a FireBeetle 2 ESP32-S3 (10-31 to 11-19) and a FireBeetle 2 ESP32-C6 wired from its sheet (11-22, P934).
+- **Not run for these docs.** The runs here used the scripts. Walks ran the four conversations. Neither ran these:
+  - the part-finder and datasheet-reader agents, and the DFRobot order import
   - the agents of `spark-review`, and the `spark-design` and `spark-reverse-engineer` skills, and `check_all.py` on a board written by hand in tscircuit
   - the plugin install above, a tscircuit install that `/spark:setup` made, and any run on Linux or Windows
 
