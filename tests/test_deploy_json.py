@@ -970,6 +970,29 @@ class DeployPageTest(JsonCase, GateCase):
         self.assert_show_and_the_next_page_say_the_start_was_not_confirmed("a Ctrl-C interrupted the deploy")
 
     @needs_littlefs
+    def test_a_crash_after_the_verify_s_own_log_writes_no_second_log(self):
+        # the review of #1640 (refuter), D8: the verify's block ends at its board log, so a crash after it leaves that
+        # log, ready seen, the newest: no second log hides it
+        from spark.bench import board_log
+
+        def crashes():
+            raise RuntimeError("the REPL line crashed")
+
+        class ReplCrashes(firmware_platform.MicroPythonPlatform):
+            def make_connection(self, command, port, run, usb=None):
+                connection = super().make_connection(command, port, run, usb)
+                connection.repl_command = crashes  # a fake on the instance: only the verify's REPL line calls it
+                return connection
+
+        self.an_older_ready_seen_log()
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), platform=ReplCrashes(self.project, self.find_tool))
+        item, = self.one(code, said, "deploy", "deploy")["unchecked"]
+        self.assertEqual((code, item["code"], item["subject"]), (2, "crash", "verify"))
+        older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1].verdict, "ready seen")
+        self.assertNotIn("ready unknown", newer.read_text(encoding="utf-8"))
+
+    @needs_littlefs
     def test_an_image_deleted_after_a_good_flash_keeps_the_crash_s_data_and_its_board_log(self):
         # P1110 test 6, with P1111: the verify's image_of refuses the gone image, and the crash's answer read the look's
         # token from the gone file, so its data was null

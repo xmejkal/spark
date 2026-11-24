@@ -386,6 +386,18 @@ class TheVerifyNotFinishedTest(ServiceCase):
                 self.assertIn("sim/runs/board", ended.log_error)
 
 
+    @needs_littlefs
+    def test_a_verify_with_a_plan_from_plan_writes_its_log_with_the_image_it_reads(self):
+        # the review of #1640 (lens 8): plan() gives image_sha256 None, which only the handler reads; the log names the image
+        report = self.look()
+        service = self.service()
+        planned = service.plan(report.port)
+        self.assertIsNone(planned.image_sha256)
+        result = service.verify(report, planned)
+        self.assertEqual(self.logs(), [result.log_path])
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1].image, project_image.ProjectImage(self.project).sha256)
+
+
 class TheStoreRecordOfAFlashNotFinishedTest(ServiceCase):
     """The review of #1635 (lens 3, refuter 6): record_not_finished writes through the records seam, with the image the
     flash was given and no banner."""

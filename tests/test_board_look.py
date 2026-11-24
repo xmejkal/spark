@@ -351,6 +351,22 @@ class LookNamesTheButtonsTest(LookCase):
         self.assertNotIn("Left and right", str(stop.exception))
 
 
+class TheGoneImageTest(unittest.TestCase):
+    """P1111 with no littlefs (the review of #1640): a LookReport built by hand, so the fix is pinned where LookTest's
+    tests skip. An image file gone since the look gives no token and the reason no_image."""
+
+    def test_an_image_gone_since_the_look_gives_no_token_and_the_reason_no_image(self):
+        image = Path(tempfile.mkdtemp()) / "image.bin"
+        image.write_bytes(b"an image")
+        report = board_look.LookReport("/dev/cu.usbmodem101", board_look.BoardReading("esp32c6", 4, "8c:bf:ea:xx:xx:xx"),
+                                       {"id": "xiao-esp32-c6", "chip": "esp32c6"}, image, None, None, None)
+        self.assertIsNotNone(report.token())
+        image.unlink()
+        self.assertIsNone(report.token())
+        self.assertEqual(report.no_token_reason(),
+                         board_look.NoToken("no_image", "the image file is gone or unreadable since the look found it"))
+
+
 class LookTest(LookCase):
     @needs_littlefs
     def test_a_matching_board_passes_with_a_token(self):

@@ -54,7 +54,8 @@ def _keeps_boot_entry(planned, row):
 
 #: The board log's sentence of a flash that did not finish (P1092), by its reason. board_codes' own grant_ended sentence
 #: says "before the erase", which is true at the gate and false here: the first erase ran. The crash's is its own (P1096):
-#: the core's meaning points to a traceback on stderr, and a person reads the log days later.
+#: the core's meaning points to a traceback on stderr, and a person reads the log days later. These sentences name the
+#: flash on purpose, while flow_codes.CAUSE_WORDS say "during the deploy": the verify's log has its own (P1110).
 NOT_FINISHED_SENTENCES = {board_codes.FLASH_FAILED: board_codes.CODES[board_codes.FLASH_FAILED],
                           board_codes.GRANT_ENDED: "the yes ended before the erase's retry",
                           board_codes.INTERRUPTED: board_codes.CODES[board_codes.INTERRUPTED],

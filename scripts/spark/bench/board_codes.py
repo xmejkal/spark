@@ -140,6 +140,7 @@ CODES = {
     EVIDENCE_REFUSES: "the evidence refuses the image: no passed run names it, or another check failed",
     IMAGE_CHANGED: "the image changed after the person's yes",
     FLASH_FAILED: "a flash command failed, so the board may be erased and not written",
+    # the flash log's own sentence names the flash on purpose; flow_codes.CAUSE_WORDS say "during the deploy" (P1110)
     INTERRUPTED: "a Ctrl-C interrupted the flash, so the board may be erased and not written",
     READY_NOT_SEEN: "the board's files differ from the image, the firmware stopped with an error, or it printed no ready",
     READY_UNKNOWN: READY_UNKNOWN.meaning,

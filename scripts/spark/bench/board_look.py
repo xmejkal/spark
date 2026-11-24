@@ -99,7 +99,8 @@ class LookStopError(ValueMessageError):
 Stop = namedtuple("Stop", "code sentence")
 #: Value. Why the look gave no token: a board_codes code and the sentence a person reads.
 NoToken = namedtuple("NoToken", "code sentence")
-#: Why there is no token when the image file is gone or unreadable since the look found it (P1111, P779's words).
+#: Why there is no token when the image file is gone or unreadable since the look found it (P1111), with the same
+#: reason, no_image, as the deploy gate gives.
 IMAGE_GONE_REASON = "the image file is gone or unreadable since the look found it"
 # --- end MVP ---
 

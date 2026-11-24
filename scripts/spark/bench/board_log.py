@@ -1,6 +1,6 @@
 """
 The board log (P1043): the file `sim/runs/board/<moment>.log` that a deploy writes after a flash, or after a flash that
-did not finish: a failed command (P1092), a crash or a Ctrl-C (P1096), or a read after the flash that did not finish
+did not finish: a failed command (P1092), a crash or a Ctrl-C (P1096), or a verify that did not finish
 (P1110). It sits beside the run logs.
 A library. `BoardLog` is its text and `write_board_log` writes it. `newest_logged_deploy` reads the newest log back for
 the flow's deploy reader: its time, its image, its verdict and its cause. It never takes the port, the facts line, the
