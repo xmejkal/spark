@@ -1,0 +1,16 @@
+# P816: an unfinished --keep build removes the earlier dist/ and says so: rows
+
+Card: [P816 #1168](https://github.com/xmejkal/spark/issues/1168). This file holds the acted, raised and rejected findings
+only. The plan had a council, a lens on Sonnet and the refuter on Opus, and spark-main decided each item (auto mode,
+delegated, the PO's to change). The PR's review rows come after it. 2026-11-24.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | tests/test_check_spine.py's `test_a_refused_file_touches_nothing_else` asserts that the old `dist/board/circuit.json` survives a refused requirements file (P280 pinned it "so a change is seen") | the plan council, the refuter (A) | acted | fixed: that one assertion now says `dist/` is gone, with a P816 note; `git merge-tree` with #1594's branch (`p1058-tool-file-codes`) is clean |
+| 2 | the gate "the PR names no file of a held PR" cannot pass: json.md is #1579's and #1580's, scripts.md #1580's | the plan council, the refuter (B) | acted | fixed: json.md's `kept` bullet and scripts.md's `check_spine.py` bullet only, outside the held hunks; `git merge-tree` with `p1043-deploy-reader` and `p478-deploy-view` is clean |
+| 3 | a `dist/` that cannot be removed crashes the build with a traceback at `shutil.rmtree`, so `firmware/pins.py` and `.spark/build.json` are not written | the plan council, the refuter (C) | acted | fixed: the OSError is one `not kept` entry for `dist`, and the pin map and the build record follow; a test with a read-only `dist/board` (mode restored, skipped as root) and mutation row 6 |
+| 4 | one `_not_kept(path, refused)` helper should replace the three copies of the `not kept` entry, so kept_files.py stays at or under 600 lines | the plan council (C) | rejected | dropped because the helper costs five lines and saves two, so the module would reach 603 lines, an R1 breach that changes `tests/architecture_baseline.json` (held by #1579); the entry is written inline and the module stays at 600 lines |
+| 5 | a build that leaves a partial work `dist/` merges it over the earlier one, so an old `circuit.json` survives under `wrote dist`; the held pages (flow_codes.py's build offer, commands/build.md, never-assume.md, how-it-works.md) do not say what an unfinished build removes | the plan council, the lens and the refuter (D) | raised | [P1088 #1598](https://github.com/xmejkal/spark/issues/1598) |
+| 6 | docs/guide/commands.md and docs/guide/journey/build.md can say it now, since no held PR touches them | the plan council (D) | acted | fixed: one sentence each |
+| 7 | `Case` comes from golden_design, a long line is wrapped, and json.md says "no check reads an earlier board after a build that did not finish" | the plan council (E) | acted | fixed: the test imports golden_design's `Case`; no new line passes 120 characters; json.md has those words |
+| 8 | the card's comment says that P867's D6 (the PO, 2026-11-17: nothing is deleted when an earlier record changes) picks "kept and named", while the plan and its council pick "removed and said" | the build | raised | spark-main decides before the merge: the council's choice was delegated and is the PO's to change |

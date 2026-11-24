@@ -105,7 +105,7 @@ class BuildBoard(Operation):
                                                    "build, then the step that flow.py show names now, P1035)"),
                  Argument(("--keep",), "keep", Path,
                           "write the built board into DIR: board.tsx, its footprint and "
-                          "dist/, where every check already looks. After a build whose build stage ended ok, a board.tsx that spark wrote and nobody changed is `replaced` "
+                          "dist/, where every check already looks; a build that did not finish removes an earlier dist/ (P816). After a build whose build stage ended ok, a board.tsx that spark wrote and nobody changed is `replaced` "
                           "(its previous version is .spark/previous/board.tsx.txt), or `unchanged` when this build made the "
                           "same board. Other .tsx files are left alone and named, and so is one when the build did not finish or the replace failed; "
                                                     "`traces differ` names the traces that differ from this build's; with --json, each file is listed under kept. With a requirements "

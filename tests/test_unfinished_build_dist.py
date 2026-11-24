@@ -5,6 +5,7 @@ dist/board/), with the fake tsci, as the goldens check-spine-ok-keep, -problems-
 -could-not-run-requirements set it up."""
 
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -80,6 +81,7 @@ class UnfinishedBuildDistTest(unittest.TestCase):
         self.assertEqual(self.dist_entries(report), [])
         self.assertFalse((project / "dist").exists())
 
+    @unittest.skipIf(os.geteuid() == 0, "root removes a read-only folder's files")
     def test_a_dist_that_cannot_be_removed_is_not_kept_and_the_rest_is_written(self):
         # Council C: a read-only dist/board stops the removal; the build still writes the pin map and its record.
         def read_only(project):
