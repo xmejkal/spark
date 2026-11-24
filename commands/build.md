@@ -1,6 +1,6 @@
 ---
 description: From a requirements file — a board and a list of parts — to a board that builds, with a Wokwi diagram and a breadboard sheet (the parts and how to wire them) generated from it, or the stage that stopped it. Deterministic, seconds, no agents.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show *)
 ---
 
 # spark:build
@@ -118,6 +118,18 @@ The project is found up from the requirements file's own directory, so this work
 and from nowhere: a file inside no project is built from the plugin's own library, with no rules,
 and every command says so. `/spark:init` in a directory makes it a project, which is where a
 design's own parts, boards and rules live.
+
+## Before a rebuild: a board that can be wired
+
+A new build can move pins. When the project was built before, run this first ([P1044](https://github.com/xmejkal/spark/issues/1534)):
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show --project . --json
+```
+
+If `data.guide.wired` is not `null`, a wiring sheet or a board log is in the project, so the person may have wired the
+board. Tell them the parts phase's first line as it is, and ask before the build. `null` means that spark saw no witness,
+never that the board is not wired.
 
 ## The one command
 
