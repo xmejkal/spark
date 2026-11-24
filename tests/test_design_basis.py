@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import design_basis  # noqa: E402
 from spark import operation_catalogue  # noqa: E402
 from spark.core import describe_operations  # noqa: E402
-from spark.flow import flow_codes, phase_readers, run_request  # noqa: E402
+from spark.flow import flow_codes, run_request  # noqa: E402
 
 STALE = "docs/guide/design-basis.json and .md are stale: run python3 tools/design_basis.py --write"
 BASIS = design_basis.DesignBasis.of(ROOT)
@@ -51,9 +51,11 @@ class TheCommittedFilesTest(unittest.TestCase):
 
 class ThePhasesTest(unittest.TestCase):
     def test_t2_the_phases_are_the_flow_codes_in_order_with_their_readers_actor(self):  # T2
-        usual = {reader.PHASE: reader.BY for reader in phase_readers.READERS}
         self.assertEqual([(one["key"], one["usual_by"]) for one in group("phase")],
-                         [("phase:" + phase, usual[phase]) for phase in flow_codes.PHASES])
+                         [("phase:idea", "you"), ("phase:needs", "claude"), ("phase:parts", "you"),
+                          ("phase:requirements", "claude"), ("phase:build", "claude"), ("phase:breadboard", "you"),
+                          ("phase:firmware", "claude"), ("phase:simulate", "your terminal"),
+                          ("phase:deploy", "your terminal")])
 
     def test_t3_a_phase_with_no_moment_and_a_moment_with_no_phase_are_named(self):  # T3
         self.assertEqual(BASIS.missing(), [])
@@ -66,9 +68,11 @@ class ThePhasesTest(unittest.TestCase):
 
 class TheStatusesTest(unittest.TestCase):
     def test_t4_the_statuses_are_the_marks_with_their_word_and_glyph(self):  # T4
-        expected = [("status:" + ("none" if status is None else status.replace(" ", "-")), word, mark)
-                    for status, (word, mark) in phase_readers.MARKS.items()]
-        self.assertEqual([(one["key"], one["word"], one["mark"]) for one in group("status")], expected)
+        self.assertEqual([(one["key"], one["word"], one["mark"]) for one in group("status")],
+                         [("status:ok", None, "✓"), ("status:problems", "problems", "✗"),
+                          ("status:could-not-run", "could not run", "?"), ("status:not-started", "not started", "○"),
+                          ("status:partial", "partly done", "◐"), ("status:stale", "out of date", "↻"),
+                          ("status:none", None, "·")])
         self.assertIn("status:none", [one["key"] for one in group("status")])
 
 
@@ -97,15 +101,15 @@ class TheOffersTest(unittest.TestCase):
                           "offer:needs-drop": "needs-drop"})
         self.assertEqual({one["key"]: one["from_page"] for one in group("offer")},
                          {"offer:pick": True, "offer:requirements": True, "offer:build": True, "offer:needs-drop": False})
-        with swapped(flow_codes, "SENDABLE", tuple(kind for kind in flow_codes.SENDABLE if kind != "build")):
+        with swapped(flow_codes, "SENDABLE", ("pick", "requirements")):
             self.assertFalse(item("offer:build", design_basis.DesignBasis.of(ROOT))["from_page"])
         with swapped(run_request, "STEP_OPERATIONS", {op: one for op, one in run_request.STEP_OPERATIONS.items() if op != "build-board"}):
             self.assertFalse(item("offer:build", design_basis.DesignBasis.of(ROOT))["from_page"])
 
     def test_t10_each_label_is_its_flow_codes_constant_with_the_percent_kept(self):  # T10
         self.assertEqual({one["key"]: one["label"] for one in group("offer")},
-                         {"offer:pick": flow_codes.PICK_LABEL, "offer:requirements": flow_codes.REQUIREMENTS_LABEL,
-                          "offer:build": flow_codes.BUILD_LABEL, "offer:needs-drop": flow_codes.DROP_LABEL})
+                         {"offer:pick": "Pick “%s” for %s", "offer:requirements": "Write the parts list",
+                          "offer:build": "Build the board", "offer:needs-drop": "Drop the %s need"})
         self.assertIn("%s", item("offer:pick")["label"])
 
 
@@ -137,7 +141,7 @@ class TheShapeTest(unittest.TestCase):
 
     def test_t11_the_actors_are_the_three_by_values_and_each_phase_uses_one(self):  # T11
         names = [one["name"] for one in group("by")]
-        self.assertEqual(names, [flow_codes.BY_YOU, flow_codes.BY_CLAUDE, flow_codes.BY_TERMINAL])
+        self.assertEqual(names, ["you", "claude", "your terminal"])
         for one in group("phase"):
             self.assertIn(one["usual_by"], names)
 
