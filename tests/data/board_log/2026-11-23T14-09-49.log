@@ -1,0 +1,11 @@
+# deploy 2026-11-23T14:09:49+01:00 on /dev/cu.usbmodem101
+image sha256: d5f369208413cf1d5b089b5d5ee3f7fcabc87c1a19a536baab29c1a23d7e4931
+simulation: none
+facts file spark.json sha256: f1052bdb3a65233bf6fb2639a4aab0cd7c1143f3600170870690a85bbf604b86
+ready unknown: mpremote could not read the board's files: mpremote.transport.TransportError: could not enter raw repl
+
+console with DTR and RTS off: nothing
+b''
+Traceback (most recent call last):
+mpremote.transport.TransportError: could not enter raw repl
+

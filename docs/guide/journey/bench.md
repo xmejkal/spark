@@ -90,7 +90,7 @@ mode: press the board's RESET (R, top left, beside the USB-C) once`. Press R onc
 and for mpremote to answer, and then reads the board again. A restart that leaves the board in download mode is printed and not
 counted ([P462](https://github.com/xmejkal/spark/issues/630); [P243](https://github.com/xmejkal/spark/issues/252),
 [the bench log](../../observations/2026-10-14-p243-bench.md)). The XIAO's R and B buttons are the small parts at the two top
-corners, beside the USB plug.
+corners, beside the USB plug. After a deploy, `flow.py show` and the page say what the newest board log says, with a tick only for a ready line on the image the project holds now ([P1043](https://github.com/xmejkal/spark/issues/1533)).
 
 ### The button-and-LED firmware on the board
 

@@ -27,12 +27,12 @@ from spark.bench import ready_probe  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld, FakeToolFinder  # noqa: E402
+from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld, FakeToolFinder  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event  # noqa: E402
 from spark.bench.deploy_image import StageTrackingReporter, WhyLineReporter  # noqa: E402
 from spark.bench.deploy_stages import PHASE_WHY, DeployPhase  # noqa: E402
 from test_board_look import FOUND  # noqa: E402
-from test_deploy_gate import GateCase  # noqa: E402
+from test_deploy_gate import C6_CONSOLE, SETTLE_STDERR, GateCase  # noqa: E402
 
 PORT = "/dev/cu.usbmodem101"
 
@@ -264,6 +264,43 @@ class TheVerifyTest(ServiceCase):
         self.assertEqual((code, envelope["data"]["yes"]["who"]), (0, "not known ('getpwuid(): uid not found: 501')"))
         self.assertIsNone(envelope["data"]["store_record"])  # the record cannot say whose yes, so it is not written
         self.assertIn("uid not found", envelope["data"]["store_record_error"])
+
+
+@needs_littlefs
+class TheBoardLogReasonTest(GateCase):
+    """P1043 (test 20): the board log's line 4 is `reason: <code>`, the start's code before the ready probe's, so the
+    deploy reader takes the cause from spark's own code and never from a tool's text."""
+
+    def flash(self, probe=None, devs_text=None):
+        self.run_the_scenario()
+        return self.deploy("--token", self.token(), consent=FakeConsent(True), probe=probe, devs_text=devs_text)
+
+    def line_4(self):
+        return next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text().splitlines()[3]
+
+    def test_a_board_whose_files_cannot_be_read_writes_files_unread(self):
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"])
+        self.flash()
+        self.assertEqual(self.line_4(), "reason: files_unread")
+
+    def test_a_port_not_listed_after_the_flash_writes_port_gone(self):
+        self.flash(FakeConsoleProbe("waiting for download\n"), [self.LISTED, self.GONE])
+        self.assertEqual(self.line_4(), "reason: port_gone")
+
+    def test_ready_seen_writes_no_reason_line(self):
+        self.flash()
+        self.assertTrue(self.line_4().startswith("facts file spark.json sha256: "), self.line_4())
+
+    def test_a_read_again_that_cannot_read_the_files_keeps_the_first_read_s_code(self):
+        # P1043 Round 2 (C): the first read hashed the files and could not start the firmware, the read again could not
+        # read the files. The files were read, so the cause is the first read's, never files_unread
+        self.prints = subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        refused = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+
+        def refuse_the_hashes():
+            self.unread = refused
+        self.flash(FakeConsoleProbe(C6_CONSOLE, on_console=refuse_the_hashes))
+        self.assertEqual(self.line_4(), "reason: firmware_not_started")
 
 
 class ThePlanTest(ServiceCase):
