@@ -1835,14 +1835,40 @@ class ThePageRefreshTest(FlowTest):
         self.assertNotIn("refresh:", err.getvalue())  # no page is no failure
         self.assertFalse((project / "page.html").exists())
 
-    def test_a_dry_run_or_a_refused_pick_leaves_the_page(self):
+    def test_a_dry_run_leaves_the_page_and_a_refused_pick_writes_it_again(self):
+        # P1069 (D1): a run that writes is refreshed at any status but a crash, so the refused pick writes the page as the
+        # project stands, with its note; the dry run writes nothing
         import parts
-        for pick in (["soil=x-many", "--dry-run"], ["soil=x-held"]):
-            with self.subTest(pick=pick):
-                project = self.with_page()
-                lines, code = run_main(parts.main, ["--pick", str(project)] + pick + ["--json"])
-                self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
-                self.assertNotIn("page.html", json.dumps(json.loads(lines[0]).get("notes", [])))
+        from spark.flow.now_follow_up import REFRESHED
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        project = self.with_page()
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many", "--dry-run", "--json"])
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
+        self.assertNotIn("page.html", json.dumps(json.loads(lines[0]).get("notes", [])))
+        project = self.with_page()
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-held", "--json"])
+        said = json.loads(lines[0])
+        self.assertNotEqual((code, said["status"]), (0, "ok"))
+        self.assertIn({"subject": "page.html", "sentence": REFRESHED}, said.get("notes", []))
+        page = (project / "page.html").read_text(encoding="utf-8")
+        self.assertNotEqual(page, "an old page")
+        write_page(project, store=FlowPageStore())  # the flow's page of the project as it stands now
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), page)
+
+    def test_a_kept_build_that_failed_before_it_kept_anything_writes_the_page_again(self):
+        # P1069 (B5, B9): the build could not run, so it kept nothing, and the page is the flow's page of the project as it stands
+        import check_spine
+        from spark.flow.now_follow_up import REFRESHED
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        project = a_firmware(a_built_project())
+        (project / "page.html").write_text("an old page", encoding="utf-8")
+        lines, code = run_main(check_spine.main, [str(project / "none.json"), "--keep", str(project), "--json"])
+        said = json.loads(lines[0])
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+        self.assertIn({"subject": "page.html", "sentence": REFRESHED}, said.get("notes", []))
+        page = (project / "page.html").read_text(encoding="utf-8")
+        write_page(project, store=FlowPageStore())
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), page)
 
     def test_a_kept_build_keeps_its_own_page_and_is_not_written_again(self):
         # round 2, amendment A (decision H, measured): write_page after the kept build would call the drawn pictures
