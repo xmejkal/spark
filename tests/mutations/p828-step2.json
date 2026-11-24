@@ -1,27 +1,9 @@
 [
  {
   "file": "scripts/spark/flow/flow_page.py",
-  "name": "a page with no wiring steps opens on the wiring too",
-  "find": "return bool(page.wiring) and not page.wiring.why_missing",
-  "replace": "return page.wiring is not None"
- },
- {
-  "file": "scripts/spark/flow/flow_page.py",
-  "name": "a page with wiring steps keeps the phases first",
-  "find": "return (shown + phases if first else phases + shown)",
-  "replace": "return (phases + shown if first else phases + shown)"
- },
- {
-  "file": "scripts/spark/flow/flow_page.py",
-  "name": "every phase opens unfolded",
-  "find": "\"\" if folded else \" open\"",
-  "replace": "\" open\" if folded else \" open\""
- },
- {
-  "file": "scripts/spark/flow/flow_page.py",
   "name": "the intro is not said",
-  "find": "said = [flow_codes.PAGE_INTRO] + ",
-  "replace": "said = [] + "
+  "find": "return '<p class=\"intro\">%s</p>' % _text(flow_codes.PAGE_INTRO)",
+  "replace": "return '<p class=\"intro\">%s</p>' % \"\""
  },
  {
   "file": "scripts/spark/breadboard/before_power.py",
@@ -34,30 +16,6 @@
   "name": "the part's name is said once more for each line",
   "find": "lines.append(self._host_run(run) if len(run) > 1 else",
   "replace": "lines.append(self._host_run(run) if len(run) > 99 else"
- },
- {
-  "file": "scripts/spark/flow/flow_page.py",
-  "name": "the wiring-first sentence is not said",
-  "find": "([flow_codes.WIRING_FIRST] if self._wiring_first(page) else [])",
-  "replace": "([])"
- },
- {
-  "file": "scripts/spark/flow/flow_page.py",
-  "name": "a phase with no wiring steps is folded too",
-  "find": "phases = [self._phase(phase, folded=first) for phase in page.phases]",
-  "replace": "phases = [self._phase(phase, folded=True) for phase in page.phases]"
- },
- {
-  "file": "scripts/spark/flow/flow_page.py",
-  "name": "the rail keeps the wiring last when the page opens on it",
-  "find": "if self._wiring_first(page):  # the rail follows the page",
-  "replace": "if False:  # the rail follows the page"
- },
- {
-  "file": "scripts/spark/flow/flow_page.py",
-  "name": "the rail's target is the section, which no link opens",
-  "find": "'<div id=\"phase-%s\">' % _text(phase[\"phase\"])",
-  "replace": "'<div>'"
  },
  {
   "file": "scripts/spark/breadboard/before_power.py",

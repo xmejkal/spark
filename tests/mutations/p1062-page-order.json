@@ -1,0 +1,116 @@
+[
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: the freshness line stands after the NOW box (test_flow_page.TheSliceOneOrderTest, test 1)",
+  "find": "self._fresh(page), self._intro(), self._guide(page), self._stands_at(page)]",
+  "replace": "self._intro(), self._guide(page), self._fresh(page), self._stands_at(page)]"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: the developer fold stands before the parts fold (test 1)",
+  "find": "        return [self._parts(page), self._wiring(page, wiring_open), self._pictures(page.pictures, wiring_open),\n                self._notes(page.notes), self._developer(page)]",
+  "replace": "        return [self._developer(page), self._parts(page), self._wiring(page, wiring_open), self._pictures(page.pictures, wiring_open),\n                self._notes(page.notes)]"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: with the parts NOW, the developer fold opens (test 4)",
+  "find": "body + [\"</section>\"], False)",
+  "replace": "body + [\"</section>\"], ((page.guide or {}).get(\"now\") or {}).get(\"phase\") == flow_codes.PARTS)"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: a phase inside the developer fold opens (test 4)",
+  "find": "\"<details><summary><h2>%s %s <span>%s</span></h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])",
+  "replace": "\"<details open><summary><h2>%s %s <span>%s</span></h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: the records line stands in the wiring fold again (test 4)",
+  "find": "+ self.before_power.items(wiring.before_power) + [\"</ul>\"]",
+  "replace": "+ self.before_power.items(wiring.before_power) + [\"</ul>\", self.before_power.records_line(wiring.records)]"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: the parts fold's summary takes the phase's mark raw, not shown_phase's (test 5)",
+  "find": "            shown = shown_phase(phase)\n            summary = ",
+  "replace": "            shown = ShownPhase(phase[\"mark\"], word_of(phase[\"status\"]))\n            summary = "
+ },
+ {
+  "file": "scripts/spark/flow/deploy_reading.py",
+  "name": "P1062: for ready unknown, the cause sentence is dropped (test_flow.TheDeployedLineTest, test 9)",
+  "find": "    cause = [cause_words(logged)] if logged.verdict != ready_probe.SEEN else []",
+  "replace": "    cause = [cause_words(logged)] if logged.verdict == ready_probe.NOT_SEEN else []"
+ },
+ {
+  "file": "scripts/spark/flow/deploy_reading.py",
+  "name": "P1062: ON THE BOARD drops a stale fact's opener, so a stale ready seen reads as a pass (test 9)",
+  "find": "    return \" \".join(([opener] if opener else []) + line)\n",
+  "replace": "    return \" \".join(line)\n"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: the parts fold stands open while the parts are not NOW (test 6)",
+  "find": ".get(\"phase\") == flow_codes.PARTS)",
+  "replace": ".get(\"phase\") != flow_codes.PARTS)"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: the wiring fold opens on a deploy beside a stale sheet (E16, test 6)",
+  "find": "sheet is not None and sheet[\"status\"] is None)",
+  "replace": "sheet is not None)"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: the wiring fold stands open with no now.steps and no deploy (test 6)",
+  "find": "return bool(now.get(\"steps\")) or",
+  "replace": "return True or"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P1062: pick_need gives the pick id, so a pick stands under another row (tests 7, 10)",
+  "find": "    return rest.split(\":\", 1)[0] if kind == flow_codes.PICK and \":\" in rest else None",
+  "replace": "    return rest.split(\":\", 1)[-1] if kind == flow_codes.PICK and \":\" in rest else None"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: an offer in the developer fold keeps data-makes-stale, a second button (test 8)",
+  "find": "offers = [\"<li><code>%s</code> %s: %s</li>\" % (_text(offer[\"key\"]),",
+  "replace": "offers = [\"<li%s><code>%s</code> %s: %s</li>\" % (_makes_stale(offer), _text(offer[\"key\"]),"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: the NOW offer's button stands in the parts fold too (E17, test 8)",
+  "find": "is_sendable(offer) and offer[\"key\"] != on_now)",
+  "replace": "is_sendable(offer))"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1062: the freshness line says FRESH_NONE with a time (test 2)",
+  "find": "flow_codes.FRESH_LINE % day_and_time(page.written) if page.written else flow_codes.FRESH_NONE",
+  "replace": "flow_codes.FRESH_NONE if page.written else flow_codes.FRESH_NONE"
+ },
+ {
+  "file": "scripts/spark/core/zone_time.py",
+  "name": "P1062: a day said in words takes the next month (test_flow.TheDeployedLineTest)",
+  "find": "MONTHS[moment.month - 1], moment.year, moment.hour",
+  "replace": "MONTHS[moment.month % 12], moment.year, moment.hour"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1062: the last request's line drops its time (page_script.test.js, test 11)",
+  "find": "    return date.getDate() + \" \" + months[date.getMonth()] + \" \" + date.getFullYear() + \", \" + clock(moment);",
+  "replace": "    return \"\";"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1062: the panel goes after the intro even with a #guide (page_script.test.js, test 12)",
+  "find": "        if (guide)\n            guide.appendChild(this.panel);",
+  "replace": "        if (false)\n            guide.appendChild(this.panel);"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1062: a step that ran and could not run reads \"Could not run:\" again (E13, page_script.test.js status line test)",
+  "find": "return { mark: words.marks[\"could-not-run\"], text: fill(words.ran, sentence(answer.line)), grey: false };",
+  "replace": "return { mark: words.marks[\"could-not-run\"], text: fill(words.could_not_run, sentence(answer.line)), grey: false };"
+ }
+]
