@@ -36,6 +36,7 @@ from spark.bench import build_project_outside_world
 from spark.bench.deploy_image import DeployImage
 from spark.core.cli import HelpText, run_cli
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK  # noqa: F401  (the tests read deploy's exit codes here)
+from spark.flow.now_follow_up import PageFollowUp
 
 #: The CLI's own text in `--help`, after DeployImage's details (P855): its --json and its exit codes.
 EPILOG = """--json prints one envelope on stdout (docs/guide/agents/json.md): the token, the look, the stage the run reached, the
@@ -53,7 +54,7 @@ kept one (other_board) or none is kept (no_known_board), there was no terminal, 
 def main(argv=None, outside=None, operation=None):
     """Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `outside` is the OutsideWorld
     a test gives (a run builds the project's), `operation` the DeployImage a test gives with its Fakes. Returns the exit code."""
-    return run_cli(HelpText("deploy.py", epilog=EPILOG), operation or DeployImage(), argv,
+    return run_cli(HelpText("deploy.py", epilog=EPILOG, follow_up=PageFollowUp()), operation or DeployImage(), argv,
                    outside_builder=build_project_outside_world, outside=outside)
 
 

@@ -1856,19 +1856,25 @@ class ThePageRefreshTest(FlowTest):
         self.assertEqual((project / "page.html").read_text(encoding="utf-8"), page)
 
     def test_a_kept_build_that_failed_before_it_kept_anything_writes_the_page_again(self):
-        # P1069 (B5, B9): the build could not run, so it kept nothing, and the page is the flow's page of the project as it stands
+        # P1069 (B5, B9): the build could not run, so it kept nothing, and the page is the flow's page of the project as it
+        # stands. The build's --json is a flat line with no notes, so its text run holds the refresh's line
         import check_spine
         from spark.flow.now_follow_up import REFRESHED
         from spark.flow.write_flow_page import FlowPageStore, write_page
-        project = a_firmware(a_built_project())
-        (project / "page.html").write_text("an old page", encoding="utf-8")
-        lines, code = run_main(check_spine.main, [str(project / "none.json"), "--keep", str(project), "--json"])
-        said = json.loads(lines[0])
-        self.assertEqual((code, said["status"]), (2, "could-not-run"))
-        self.assertIn({"subject": "page.html", "sentence": REFRESHED}, said.get("notes", []))
-        page = (project / "page.html").read_text(encoding="utf-8")
-        write_page(project, store=FlowPageStore())
-        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), page)
+        for as_json in (["--json"], []):
+            with self.subTest(as_json=as_json):
+                project = a_firmware(a_built_project())
+                (project / "page.html").write_text("an old page", encoding="utf-8")
+                lines, code = run_main(check_spine.main, [str(project / "none.json"), "--keep", str(project)] + as_json)
+                self.assertEqual(code, 2)
+                if as_json:
+                    self.assertEqual(json.loads(lines[0])["status"], "could-not-run")
+                else:
+                    self.assertEqual(lines[-1], "  " + REFRESHED)
+                page = (project / "page.html").read_text(encoding="utf-8")
+                self.assertNotEqual(page, "an old page")
+                write_page(project, store=FlowPageStore())
+                self.assertEqual((project / "page.html").read_text(encoding="utf-8"), page)
 
     def test_a_kept_build_keeps_its_own_page_and_is_not_written_again(self):
         # round 2, amendment A (decision H, measured): write_page after the kept build would call the drawn pictures

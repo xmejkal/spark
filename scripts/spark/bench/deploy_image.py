@@ -444,6 +444,10 @@ class DeployImage(Operation):
             return self.effects
         return (READS, RUNS) if values["no_simulation"] else (READS,)
 
+    def written_project(self, values):
+        """The project a deploy writes its board log to (P1069): the core writes its page.html again after the run."""
+        return Path(values["project"])
+
     def run(self, project, port, token, dry_run, replies=None, *, outside, **evidence):
         """`evidence` holds the two flags of EVIDENCE_GROUP, `ignore_older_runs` and `no_simulation`."""
         picked = evidence_for(project, evidence["no_simulation"], evidence["ignore_older_runs"], find_tool=outside.find_tool, run=outside.run)
