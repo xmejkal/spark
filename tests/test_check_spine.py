@@ -3557,12 +3557,14 @@ class TheKeepRecordsTheBuildTest(unittest.TestCase):
         self.assertFalse((project / ".spark").exists())
         self.assertNotIn("build.json", kept)
 
-    def test_a_run_with_no_requirements_file_writes_no_record(self):
+    def test_a_run_with_no_requirements_file_records_the_reference_design(self):  # P1095: was "writes no record"
         project, workdir = self.a_project(), Path(tempfile.mkdtemp())
         args = argparse.Namespace(json=True, keep=project, requirements=None)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             run_build_board([Stage("build", check_spine.OK, "fine")], args, workdir)
-        self.assertFalse((project / ".spark" / "build.json").exists())
+        record = json.loads((project / ".spark" / "build.json").read_text())
+        self.assertIsNone(record["requirements"])
+        self.assertIsNone(record["requirements_sha256"])
 
     def test_a_record_that_cannot_be_written_is_not_kept_and_says_why(self):
         project = self.a_project()
