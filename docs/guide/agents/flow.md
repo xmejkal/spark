@@ -27,15 +27,7 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   parts, the needs with no pick, and `steps`: the number of wiring steps when wiring is part of now (the two jobs of the
   firmware), else `null`. `offer` is the key of the now offer: the now phase's one offer of a kind the page sends (a
   pick, the parts list or the build), else `null`. With one pick offer for the parts, `offer` is that pick. A
-  breadboard now names no offer, because the build's offer is in the build phase.
-
-  `wired` ([P1044](https://github.com/xmejkal/spark/issues/1534)) is `{sheet_at, deploy_at}` or `null`: the witnesses of
-  a board that can be wired, each a time with its zone or `null`. `sheet_at` is the last change of the kept wiring sheet,
-  `breadboard.md`, current or stale. `deploy_at` is the newest board log's time, the same as `data.deploy.at`. Read
-  `data.guide.wired`, not an offer's effect. `null` means that spark saw no witness, never that the board is not wired.
-  A board log that cannot be read is no witness: it shows as the deploy phase's `could-not-run`. A build that does not
-  finish deletes the old sheet, so with no board log the witness is gone after it, though the person may still have
-  wired from that sheet.
+  breadboard now names no offer, because the build's offer is in the build phase. `wired` ([P1044](https://github.com/xmejkal/spark/issues/1534)) is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, each a time with its zone or `null`: the last change of the kept sheet `breadboard.md` (current or stale), and `data.deploy.at`. Read `guide.wired`, not an effect. `null` means that spark saw no witness, never that the board is not wired. A board log that cannot be read is no witness (the deploy phase is `could-not-run`). A build that does not finish deletes the old sheet, so with no board log the witness goes, though the person may have wired from it.
 - `deploy` ([P1043](https://github.com/xmejkal/spark/issues/1533)): the newest board log in `sim/runs/board/`, or `null` with none or with one that cannot be read (the deploy phase says why). `at` is its time as written, with its zone; `image` the whole sha256 of the image it wrote; `verdict` `ready seen`, `ready not seen` or `ready unknown`; `cause` the code of the cause, from the log's reason line or its sentence's fixed start; `fact` `current`, `image-differs`, `firmware-newer` or `no-image` (what the image the project holds now says of it); `read_back` whether spark read the board's files back after the write (`null`: the log cannot tell). A `null` `cause` means ready seen, or a cause not recorded: never fill it in. To answer "is the new firmware on the board", read `fact`, `read_back` and `verdict` together: `fact` `current` says only that the log's image is the image the project holds now.
 
   While no need is written, `now` is the idea. `now` is `null` when the deploy is `ok`, and then `no_open_phase` holds one sentence that says nothing waits (else it is `null`), or with a phase list a
@@ -112,14 +104,7 @@ A build that ended `ok` and skipped any other stage is `partial`. No build does 
 `sim/runs/`, the simulate phase says to run a scenario. It blames an older spark only for a log that names no image.
 
 The offer keys are `needs-drop:<need>`, `pick:<need>:<id or entry>`, `requirements` and `build`. A pick's effect says
-how many the person has. With a witness in `guide.wired`, a pick's and a build's effect start with one fixed sentence
-that says a new build can move pins and asks the person to compare the new sheet with their wiring before power
-([P1044](https://github.com/xmejkal/spark/issues/1534)). The sentence has no date, so a newer sheet or board log never
-changes the fingerprint: only a witness that appears or goes away does. A board-only build's effect gets none, because
-it has nothing to wire. The parts phase's first line names each witness with its day, as "22 Nov 2026" in the machine's
-zone, then the same step. While the parts phase holds problems or could not run, that line is its last, so its first
-stays the Finding's sentence. In the person's lines, an item that ends in a full stop is followed by a space, not a
-comma.
+how many the person has. With a witness in `guide.wired`, a pick's and a build's effect start with a fixed sentence: a new build can move pins, so compare the new sheet with the wiring before power ([P1044](https://github.com/xmejkal/spark/issues/1534)). It has no date, so only a witness that appears or goes away changes the fingerprint. A board-only build gets none. The parts phase's first line names each witness's day ("22 Nov 2026", the machine's zone), then the same step; with problems or could-not-run it is the last line, so the first stays the Finding's. In a person's line, an item that ends in a full stop is followed by a space, not a comma.
 
 Since [P993](https://github.com/xmejkal/spark/issues/1446), the requirements phase has the `requirements` offer only
 when the parts list's own rule (`need_requirements.requirements`) has no problems, so a click is never one that writes
@@ -178,9 +163,7 @@ dropped after the must lines were last gone through. [What the needs were writte
 `flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It draws the reading `show` prints (P1060), so a person reads the same facts from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). A line under the title says
 what the page is and that every change goes through Claude in the chat. Under it stands the guide
 ([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: `data.guide` as one line each, NOW with its
-phase in parentheses and its sentence, DONE, LATER and SET ASIDE, and a list with no item draws no line. On a board that
-can be wired (`guide.wired`), the parts fold's first line after "Done by" is the wired line, and a pick's or a build's
-confirm opens with its fixed sentence ([P1044](https://github.com/xmejkal/spark/issues/1534)).
+phase in parentheses and its sentence, DONE, LATER and SET ASIDE, and a list with no item draws no line. On a board that can be wired, the parts fold's first line after "Done by" is the wired line, and a pick's or a build's confirm opens with its fixed sentence ([P1044](https://github.com/xmejkal/spark/issues/1534)).
 
 When `now.steps` is set and the page holds wiring
 steps, the NOW line ends in the link "One at a time: start at step N", the wiring section's own link, to the first step's own `#step-N`. The sentence about why there is
