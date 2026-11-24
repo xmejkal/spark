@@ -33,7 +33,6 @@ from spark.core.errors import SparkError  # noqa: E402
 from spark.records import launcher  # noqa: E402
 from spark.records import records_codes  # noqa: E402
 from spark.records import store  # noqa: E402
-from spark.records import tool_finder  # noqa: E402
 from spark.records.deploy_record_store import DeployRecordStore, LastDeploy, outside_deploy  # noqa: E402
 from spark.records.registered_project_store import RegisteredProject, RegisteredProjectStore  # noqa: E402
 from spark.records.storage import UNREADABLE, MemoryStorage  # noqa: E402
@@ -503,7 +502,7 @@ class AnUnreadableStoreTest(StoreCase):
         # P1058 (#1555): a tools file the bench cannot read keeps its own code and the records fix, not tool_missing
         done, said = self.run_bench("show", "--json")
         self.assertEqual((done.returncode, said["unchecked"][0]["code"], said["unchecked"][0]["fix"]),
-                         (2, "file_refused", records_codes.FILE_REFUSED.fix), done.stderr)
+                         (2, "file_refused", "fix the file the sentence names, or its permissions, then run again"), done.stderr)
         self.assertIn("cannot be read", said["unchecked"][0]["sentence"])
 
 
@@ -515,33 +514,29 @@ class ABrokenToolsFileTest(StoreCase):
         super().setUp()
         (self.home / "tools.json").write_text('{"tools": ')
 
-    def test_show_says_the_tools_file_is_no_tools_list_and_exits_2(self):
+    def run_bench(self, *argv):
         env = golden_bench.child_env(self.home, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
-        done = golden_bench.run_child("bench.py", ["show", "--json"], tempfile.mkdtemp(), env)
+        done = golden_bench.run_child("bench.py", list(argv), tempfile.mkdtemp(), env)
         self.assertNotIn("Traceback", done.stdout + done.stderr)
-        (item,) = json.loads(done.stdout)["unchecked"]
-        self.assertEqual((done.returncode, item["code"], item["fix"]), (2, "tools_list_broken", records_codes.TOOLS_LIST_BROKEN.fix),
-                         done.stderr)
+        return done, json.loads(done.stdout)
+
+    def test_show_says_the_tools_file_is_no_tools_list_and_exits_2(self):
+        done, said = self.run_bench("show", "--json")
+        (item,) = said["unchecked"]
+        self.assertEqual((done.returncode, item["code"], item["fix"]),
+                         (2, "tools_list_broken", "fix the tools file the sentence names, or delete it"), done.stderr)
         self.assertIn("is not JSON", item["sentence"])
         self.assertEqual(done.stderr.splitlines(), ["bench.py: %s" % item["sentence"]])
 
-
-class ARecordOnABrokenToolsFileTest(RecordCase):
-    """The council's A (P1058): record's fix names its next command for a tools-file stop too, as bench.md says."""
-
     def test_record_keeps_its_again_fix_for_a_tools_file_stop(self):
-        self.register()
-
-        def broken(name, *args, **kwargs):
-            raise tool_finder.ToolError("<store>/tools.json is not JSON (Expecting value) — fix it or delete it",
-                                        code="tools_list_broken")
-        exit_code, out, _ = self.bench("record", "pixel-games", "--json", find_tool=broken)
-        (item,) = json.loads(out)["unchecked"]
-        self.assertEqual((exit_code, item["code"]), (2, "tools_list_broken"))
+        # the council's A (P1058): record's fix names its next command for a tools-file stop too, as bench.md says
+        RegisteredProjectStore().register("pixel-games", ORIGIN, "box.py", REGISTERED_AT)
+        done, said = self.run_bench("record", "pixel-games", "--json")
+        (item,) = said["unchecked"]
+        self.assertEqual((done.returncode, item["code"]), (2, "tools_list_broken"), done.stderr)
         self.assertTrue(item["fix"].startswith("fix what the line above says, then run bench.py record pixel-games again"), item["fix"])
-        _, _, err = self.bench("record", "pixel-games", find_tool=broken)
-        self.assertEqual(err.splitlines()[1:], ["bench.py: Nothing was written. %s" % item["fix"]])
-        self.no_record()
+        self.assertEqual(done.stderr.splitlines(), ["bench.py: %s" % item["sentence"], "bench.py: Nothing was written. %s" % item["fix"]])
+        self.assertFalse(store.place("boards").exists())
 
 
 class TheFixRoundTest(RecordCase):
