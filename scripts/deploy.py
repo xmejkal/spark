@@ -44,7 +44,8 @@ yes, the board log and the store record in `data`, and in `next` the step that w
 line above then goes to stderr, and so does the flash tool's own output. Exit codes do not change; the envelope's status
 is the exit code's. Every `problems` and `unchecked` item has a `code` (scripts/spark/bench/board_codes.py). A bad flag
 with --json prints an envelope (status could-not-run, code bad_argument, exit 2); without --json it prints the usage and
-the error on stderr and exits 2.
+the error on stderr and exits 2. A deploy that is not a dry run and did not crash writes the project's page.html again
+when it has one, at any status, and says so in a line and a note (P1069); /spark:page publishes it.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, the board question waits for a reply (needs_reply), the board is not the
