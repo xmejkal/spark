@@ -32,8 +32,8 @@
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "P993: the owner's NOW button line keeps the sentence that names Claude (test_flow_script.PageScriptTest)",
-  "find": "if (step) said.textContent = \" \" + step;",
-  "replace": "if (false) said.textContent = \" \" + step;"
+  "find": "            if (step)\n                said.textContent = \" \" + step;",
+  "replace": "            if (false)\n                said.textContent = \" \" + step;"
  },
  {
   "file": "scripts/spark/flow/page_script.js",

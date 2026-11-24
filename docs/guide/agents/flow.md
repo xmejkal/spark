@@ -10,7 +10,9 @@ step to take now ([the next step](#the-next-step)).
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" show --project . --json
 ```
 
-With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and `op` `show-flow`. Its `data` holds four keys:
+With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and `op` `show-flow`. Its `data` is one reading of the flow (`reading_of`, [P1060](https://github.com/xmejkal/spark/issues/1558)), the one `flow.py page` draws, in nine keys:
+
+- `name`, `title`, `stamp` and `artifact` (P1060): the project folder's name; the page's title, which names the published Artifact; `stamp.newest`, the newest change time of the fingerprint's three files (`null` with none), the page's `data-written`; the id of the Artifact the page is published as, from `.spark/page.json` (`null` with none kept, or an id that is no Artifact id).
 
 - `phases`: the nine phases in order, `idea`, `needs`, `parts`, `requirements`, `build`, `breadboard`, `firmware`,
   `simulate` and `deploy`. Each is `{phase, status, mark, by, says, offers}`.
@@ -19,16 +21,16 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   an offer changes: a pick's effect changes with the drawer count. No other file of the project changes it, except through
   an offer. The page carries its first 12 hex digits ([P829](https://github.com/xmejkal/spark/issues/1187)).
 - `stands_at`: the phase of `guide.now`, kept for old readers. Read `guide.now.phase`: it is the same phase, by one rule
-  ([P1030](https://github.com/xmejkal/spark/issues/1510)). It is `null` only with a phase list a test swaps in.
+  ([P1030](https://github.com/xmejkal/spark/issues/1510)). It is `null` when no phase is open (the deploy is `ok`), or with a phase list a test swaps in.
 - `guide` ([P977](https://github.com/xmejkal/spark/issues/1407)): what the person does now. `now` is `{phase, by, says,
-  offer, needs, steps}`: the phase to act on, who acts (a list: `["you", "claude"]` when the firmware and the wiring are two
-  jobs, else one item), one sentence for the person, `offer`, for the
+  offer, needs, steps}`: the phase to act on, who acts (a list: `["you", "claude"]` when the firmware and the wiring are two jobs, else one item), one sentence for the person, `offer`, for the
   parts, the needs with no pick, and `steps`: the number of wiring steps when wiring is part of now (the two jobs of the
   firmware), else `null`. `offer` is the key of the now offer: the now phase's one offer of a kind the page sends (a
   pick, the parts list or the build), else `null`. With one pick offer for the parts, `offer` is that pick. A
   breadboard now names no offer, because the build's offer is in the build phase.
+- `deploy` ([P1043](https://github.com/xmejkal/spark/issues/1533)): the newest board log in `sim/runs/board/`, or `null` with none or with one that cannot be read (the deploy phase says why). `at` is its time as written, with its zone; `image` the whole sha256 of the image it wrote; `verdict` `ready seen`, `ready not seen` or `ready unknown`; `cause` the code of the cause, from the log's reason line or its sentence's fixed start; `fact` `current`, `image-differs`, `firmware-newer` or `no-image` (what the image the project holds now says of it); `read_back` whether spark read the board's files back after the write (`null`: the log cannot tell). A `null` `cause` means ready seen, or a cause not recorded: never fill it in. To answer "is the new firmware on the board", read `fact`, `read_back` and `verdict` together: `fact` `current` says only that the log's image is the image the project holds now.
 
-  While no need is written, `now` is the idea. `now` is `null` only with a phase list a
+  While no need is written, `now` is the idea. `now` is `null` when the deploy is `ok`, and then `no_open_phase` holds one sentence that says nothing waits (else it is `null`), or with a phase list a
   test swaps in. `done` names the phases before `now` that were done. With no picks behind the parts list (a
   requirements.json written by hand, or a project whose last need was dropped), `needs` and `parts` are left out and
   `done` says `requirements (no needs or picks behind it)`.
@@ -158,8 +160,7 @@ dropped after the must lines were last gone through. [What the needs were writte
 
 ## The page
 
-`flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It reads the
-same phases as `show`, so a person reads them from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). A line under the title says
+`flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It draws the reading `show` prints (P1060), so a person reads the same facts from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). A line under the title says
 what the page is and that every change goes through Claude in the chat. Under it stands the guide
 ([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: `data.guide` as one line each, NOW with its
 phase in parentheses and its sentence, DONE, LATER and SET ASIDE, and a list with no item draws no line.
@@ -247,18 +248,18 @@ The words on the page:
 | `null` | not checked by spark |
 
 The page adds no tick. A phase that is not `ok` never shows the tick, whatever mark it carries. It shows the could-not-run
-mark. A code that the flow does not know shows as itself. No color says a status. The page does not know whether the board is
-wired or flashed, and says so in one line. Every text on it is masked, so no path of the home folder reaches the file.
+mark. A code that the flow does not know shows as itself. No color says a status. The page reads the project's files and its
+board logs, and cannot see the wiring or what the board shows now: one line says so. Every text on it is masked, so no path of the home folder reaches the file.
 
 ### The page script
 
 The page ends with one script and its words ([P829](https://github.com/xmejkal/spark/issues/1187)): an inert block
 `<script type="application/json" id="spark-words">`, then one `<script>` with no `src`, whose text is
-`scripts/spark/flow/page_script.js`. Python writes every word the script shows into the block: per offer it may send its
-label and the lines of its confirm, the published page's intro, and the words of the wait and of each answer. The script
-fills in only a time, a label or spark's own line, and never shows a key or the fingerprint. Without the block the page
-is the page with no script, byte for byte, but its hooks (below). The markup holds no `<button`, `<input`, `onclick` or
-`<iframe`.
+`scripts/spark/flow/page_script.js`, compiled from `page_script.ts` (P1061). Python writes every word the script shows
+into the block: per offer it may send its label and the lines of its confirm, the published page's intro, and the words
+of the wait and of each answer. The script fills in only a time, a label or spark's own line, and never shows a key or
+the fingerprint. Without the block the page is the page with no script, byte for byte, but its hooks (below). The markup
+holds no `<button`, `<input`, `onclick` or `<iframe`.
 
 From disk, or wherever `claude.use("db")` gives no database, the script does nothing. Nor does it for a viewer who is not
 the artifact's owner (`(await claude.use("user")).isOwner()`), so the published page declares `db` and `user`. For the
@@ -306,14 +307,14 @@ first. The offers in `data.phases` keep their four keys and no step. A phase's o
 | --- | --- | --- | --- |
 | simulate | no `sim/wokwi.toml` | `build-board` (`check_spine.py`), the build's offer step | no key |
 | simulate | no image, an image no run tested, or one older than `firmware/` | `run_scenario` (`run_scenario.py`), one per `sim/scenarios/*.scenario.yaml`. While none is written, it names `sim/scenarios/<name>.scenario.yaml`, and Claude writes that scenario first | true |
-| deploy | `not-started` | `look` (`look.py`), with `--no-simulation` when `data.guide.no_simulation` is set | true |
+| deploy | `not-started`, `partial`, `problems` or `stale` | `look` (`look.py`), with `--no-simulation` when `data.guide.no_simulation` is set | true |
 | idea | `stale` (a need was dropped) | `init_project` (`init_project.py`), the brief step, with `needs_yes: true` and `--answers <answers.json>` | no key |
 
 `run-request` runs the build step from the page's button, and refuses `run_scenario` and `look`. An op named like a
 script is `scripts/<op>.py`, not on the core yet (piece 5 of [P793](https://github.com/xmejkal/spark/issues/1105)). With
 `needs_person`, the person acts first: they run a scenario in their own terminal, and it spends Wokwi CI minutes, so ask
-before each run. Before a look, they plug the wired board into USB. The deploy phase has no end yet: after a deploy, the
-look is still next. The text's NOW line ends with `[<offer key>]`, `[next: <op>]` or `[next: <op>, needs you]`.
+before each run. Before a look, they plug the wired board into USB. After a deploy, the deploy phase reads the newest
+board log (P1043). Ready seen on the image the project holds now is `ok`, and nothing is open. Ready unknown is `partial`, ready not seen is `problems`, and firmware newer than that image, another image or no image is `stale`, which wins over `problems`; the says line keeps the verdict. Claude acts first on firmware newer than the image and on no image (`by` `["claude"]`), the person's terminal on another image. The cause's words are spark's own, by the code: the log's own sentence, port and console stay in the file. `sim/runs/` is gitignored, so a clone has no board log and shows the deploy `not-started`. The text's NOW line ends with `[<offer key>]`, `[next: <op>]` or `[next: <op>, needs you]`.
 
 After an ok run that writes to a project, `parts.py --pick` and `check_spine.py --keep` end `next` with the same steps
 ([P1035](https://github.com/xmejkal/spark/issues/1518)), after the command's own, and their text with one `next:` line each,
@@ -379,14 +380,13 @@ with no `data`.
 ## The published page
 
 `/spark:page` publishes the page and carries its requests ([P829](https://github.com/xmejkal/spark/issues/1187),
-[`commands/page.md`](../../../commands/page.md)). It is the only command that publishes or republishes the page. In
-this order:
+[`commands/page.md`](../../../commands/page.md), [the how-to](../artifact-how-to.md)). It is the only command that publishes or republishes the page. It reads with `flow.py show --json` and takes no fact from `page.html`, which it reads only to publish. In this order:
 
-1. The first time, on the person's yes: `publish_files` with `page.html` as `index.html`, then at once
+1. The first time, `data.artifact` is `null`. On the person's yes: `flow.py page`, `publish_files` with `page.html` as `index.html` and `data.title`, then at once
    `flow.py page --artifact ID`, which keeps the id, so a step that fails after it never leaves a second Artifact. Then
    `declare_capabilities` with `{"db": {"rules": [{"path": "", "read": "view", "write": "owner"}]}, "user": {}}`
    (viewers read, only the owner writes, and the script asks who views).
-2. The ten newest rows of `requests` by `at`, and the rows of `answers` whose `for` is one of their ids. For each
+2. The id from `show`'s `data.artifact`, then the ten newest rows of `requests` by `at`, and the rows of `answers` whose `for` is one of their ids. For each
    request with no answer, the oldest first: the row to `.spark/page-request.json` as the page wrote it,
    `flow.py run-request` in the foreground, `flow.py page`, the republish, and last the answer row `answers/<id>`,
    `run-request`'s `data` unchanged. A refusal goes on to the next request; a step that ran with problems or could not

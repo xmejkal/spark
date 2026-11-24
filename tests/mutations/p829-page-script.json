@@ -2,14 +2,14 @@
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "from disk, with no database, the script still makes its buttons (P829)",
-  "find": "  if (!db) return null;",
-  "replace": "  if (false) return null;"
+  "find": "    if (!db)\n        return null;",
+  "replace": "    if (false)\n        return null;"
  },
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "a second send while one waits writes a second row (P829)",
-  "find": "    if (this.waiting()) return null;",
-  "replace": "    if (false) return null;"
+  "find": "        if (this.waiting())\n            return null;",
+  "replace": "        if (false)\n            return null;"
  },
  {
   "file": "scripts/spark/flow/page_script.js",
@@ -20,8 +20,8 @@
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "a request with no answer says done (P829)",
-  "find": "if (!answer) return { mark: \"\", text: fill(words.waiting, clock(request.at)), grey: false };",
-  "replace": "if (!answer) return { mark: \"\", text: \"done\", grey: false };"
+  "find": "    if (!answer)\n        return { mark: \"\", text: fill(words.waiting, clock(request.at)), grey: false };",
+  "replace": "    if (!answer)\n        return { mark: \"\", text: \"done\", grey: false };"
  },
  {
   "file": "scripts/spark/flow/page_script.js",
@@ -38,7 +38,7 @@
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "the withdrawn row's own snapshot puts the wait back on (P829)",
-  "find": "    if (local && local.withdrawn && request.id === local.id) return;\n",
+  "find": "        if (local && local.withdrawn && request.id === local.id)\n            return;\n",
   "replace": "\n"
  },
  {
@@ -68,8 +68,8 @@
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "a withdraw says withdrawn before the delete is done (P829 review 1)",
-  "find": "    this.note = null;\n    try {\n      await this.channel.withdraw(waiting.id);",
-  "replace": "    this.note = null;\n    this.latest = Object.assign({}, waiting, { withdrawn: true });\n    try {\n      await this.channel.withdraw(waiting.id);"
+  "find": "        this.note = null;\n        try {\n            await this.channel.withdraw(waiting.id);",
+  "replace": "        this.note = null;\n        this.latest = Object.assign({}, waiting, { withdrawn: true });\n        try {\n            await this.channel.withdraw(waiting.id);"
  },
  {
   "file": "scripts/spark/flow/page_script.js",
@@ -92,14 +92,14 @@
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "a viewer who is not the owner gets the buttons (P829 review 3)",
-  "find": "  if (!user || !(await user.isOwner())) return null;",
-  "replace": "  if (false) return null;"
+  "find": "    if (!user || !(await user.isOwner()))\n        return null;",
+  "replace": "    if (false)\n        return null;"
  },
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "a snapshot older than the page's own send puts the buttons back (P829 review 8)",
-  "find": "    if (local && (!request || String(request.at) < String(local.at))) return;",
-  "replace": "    if (false) return;"
+  "find": "        if (local && (!request || String(request.at) < String(local.at)))\n            return;",
+  "replace": "        if (false)\n            return;"
  },
  {
   "file": "scripts/spark/flow/page_script.js",

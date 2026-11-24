@@ -308,7 +308,8 @@ class FlowHtmlPage:
     def _guide(self, page):
         """The guide (P977 PR 2) in `<section id="guide">`, under the intro: NOW with its sentence (and, when the guide's now
         holds the wiring and the page holds steps, a link to the first), then DONE, LATER (with the line on why there is no
-        simulation) and SET ASIDE. A list with no item draws no line. Nothing with no guide, or a guide with no line."""
+        simulation) and SET ASIDE, then the line that says nothing is open (P1043, read with `.get`, so an older guide draws
+        as before). A list with no item draws no line. Nothing with no guide, or a guide with no line."""
         guide = page.guide
         if guide is None:
             return ""
@@ -321,7 +322,8 @@ class FlowHtmlPage:
                  self._guide_line(flow_codes.GUIDE_DONE, guide["done"], ""),
                  self._guide_line(flow_codes.GUIDE_LATER, guide["later"], ""),
                  "<p>%s</p>" % _text(guide["no_simulation"]) if guide["no_simulation"] else "",
-                 self._guide_line(flow_codes.GUIDE_SET_ASIDE, guide["set_aside"], "")]
+                 self._guide_line(flow_codes.GUIDE_SET_ASIDE, guide["set_aside"], ""),
+                 "<p>%s</p>" % _text(guide["no_open_phase"]) if guide.get("no_open_phase") else ""]
         lines = [line for line in lines if line]
         return "\n".join(['<section id="guide">'] + lines + ["</section>"]) if lines else ""
 

@@ -18,6 +18,7 @@ from spark.bench.deploy_stages import DeployPhase
 from spark.bench import board_facts
 from spark.records import board_records
 from spark.bench import board_look
+from spark.bench.board_log import BoardLog, write_board_log
 from spark.bench import board_start
 from spark.bench import deploy_gate
 from spark.records import deploy_record_store
@@ -52,32 +53,15 @@ class FlashError(DeployError):
     gate's grant_ended when the yes ended before the retry."""
 
 
-class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard simulation")):
-    """Value: the facts of the board's log after a flash. `heard` is the console text, then what the board printed."""
-
-    def text(self):
-        """The log file's text."""
-        return "# deploy %s on %s\nimage sha256: %s\nsimulation: %s\n%s\n%s: %s\n\n%s\n" % (
-            self.moment.isoformat(timespec="seconds"), self.port, self.image_sha256, self.simulation, self.facts_line,
-            self.verdict, self.sentence, self.heard)
-
-
 def every_read(reads):
     """The last of `reads`, each (the facts, a board_facts.FactsLine, a ReadyResult), with the facts file written and the board's
     files read when any read did (P1022): a read again after P245 can fail where the first read worked. `lost_board` is the
-    last read's."""
+    last read's. So is `code` (P1043), but never FILES_UNREAD after a read that read the files: that read's code stays."""
     facts, line, ready = reads[-1]
+    read_before = [read[2] for read in reads if read[2].files_read]
+    code = read_before[-1].code if read_before and ready.code == board_codes.FILES_UNREAD else ready.code
     return (facts, board_facts.FactsLine(line, any(read[1].written for read in reads), line.heard),
-            ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads), lost_board=ready.lost_board))
-
-
-def write_board_log(project, log):
-    """The board's log (a BoardLog) in sim/runs/board/ beside the run logs, whose *.log glob does not reach it. Returns
-    its path."""
-    path = project / "sim" / "runs" / "board" / ("%s.log" % log.moment.strftime("%Y-%m-%dT%H-%M-%S"))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(log.text())
-    return path
+            ready_probe.ReadyResult(*ready, files_read=any(read[2].files_read for read in reads), lost_board=ready.lost_board).coded(code))
 
 
 class DeployService:
@@ -196,7 +180,8 @@ class DeployService:
         image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
         log_path = write_board_log(self.project, BoardLog(moment, look.port, image_sha256,
                                                           facts_line, ready.verdict, ready.sentence,
-                                                          "".join(starter.heard) + ready.log + "".join(read[1].heard for read in reads), self.evidence.simulation))
+                                                          "".join(starter.heard) + ready.log + "".join(read[1].heard for read in reads), self.evidence.simulation,
+                                                          (start and start.code) or ready.code))
         shown_on = start.port if start else port  # the REPL names the port the board answered on, or none when it is gone
         repl = self.platform.make_connection(planned.mpremote, shown_on, self.run).repl_command()
         result = DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)._replace(console=starter.console)

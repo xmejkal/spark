@@ -1,31 +1,25 @@
 """
 The page of a project as an Operation on the core (P827, #1185): the flow's phases, each with a status word and a mark, and
 the project's pictures and its wiring (P828, #1186), written as `page.html` in the project. `flow.py page` is its CLI. It
-reads the same phases as `flow.py show` (`show_flow.read_flow`). A build with --keep writes the same page through
-`write_kept_page`, with the three pictures it drew.
+draws the reading that `flow.py show` prints (`show_flow.reading_of`, P1060) with the pure `compose_page`. A build with
+--keep writes the same page through `write_kept_page`, with the three pictures it drew.
 """
 
-import datetime
-import json
-import re
 from collections import namedtuple
 from pathlib import Path
 
 from spark.breadboard import sheet, tabbed_page
 from spark.breadboard.svg_diagram import SvgBreadboardDiagram
-from spark.breadboard.tabbed_page import page_title
 from spark.flow import flow_codes
-from spark.flow.fingerprint import FILES, fingerprint_of
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture
 from spark.flow.phase_readers import REQUIREMENTS_FILE
-from spark.flow.guide import stands_at_of
-from spark.flow.show_flow import flow_and_guide, privacy_for
+from spark.flow.published_page import ARTIFACT_PATTERN, PublishedPageStore
+from spark.flow.show_flow import privacy_for, reading_of
 from spark.core import codes
 from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Argument, Operation
 from spark.core.outcomes import COULD_NOT_RUN
 from spark.records import store
 from spark.core.result import Finding, OperationResult
-from spark.core.zone_time import stamp
 
 # --- MVP ---
 #: The Finding of a page that cannot be written: its sentence, and what to do.
@@ -33,11 +27,6 @@ PAGE_SENTENCE = "%s was not written: %s"
 PAGE_FIX = "make the project folder writable and run it again"
 #: The fix of a page whose `.part` is taken by a link, a folder or another writer (P1054): the folder is writable.
 PART_FIX = "something else holds %s.part: remove it if it is not yours, and run it again"
-#: The record of the Artifact the page is published as (P829 PR 4), from the project's folder: its id only, never a path.
-PUBLISHED_FILE = Path(".spark") / "page.json"
-#: An Artifact's id (its slug) as the Artifact tools answer it: a UUID in lower case. Its own pattern, not the request id's
-#: (run_request imports the build, which imports this module). Read with `fullmatch`: `$` alone lets a trailing newline in.
-ARTIFACT_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 #: The Finding of an --artifact that is no Artifact id: its sentence, and what to do.
 ARTIFACT_SENTENCE = "--artifact is no Artifact id: an id is a UUID in lower case, as get_artifact answers it"
 ARTIFACT_FIX = "give the id of the published page, the slug that publish_files or get_artifact answers"
@@ -67,29 +56,6 @@ class FlowPageStore:
         path = Path(project) / file_name
         store.replace_file(path, text)
         return path
-
-
-class PublishedPageStore:
-    """Store: `.spark/page.json` of one project, the id of the Artifact its page is published as (P829 PR 4). `read`
-    gives the id, or None when there is no record or spark cannot use it; `write` keeps `{"artifact": id}`, the id only,
-    through the store's one atomic write. An OSError from the write is the caller's."""
-
-    def __init__(self, project):
-        self.path = Path(project) / PUBLISHED_FILE
-
-    def read(self):
-        """The id the record holds, or None: no record, no JSON object, or an id that is no Artifact id."""
-        try:
-            held = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return None
-        artifact = held.get("artifact") if isinstance(held, dict) else None
-        return artifact if isinstance(artifact, str) and ARTIFACT_PATTERN.fullmatch(artifact) else None
-
-    def write(self, artifact):
-        """Keep `artifact`, an Artifact id, as the project's published page."""
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        store.write_file(self.path, json.dumps({"artifact": artifact}) + "\n")
 
 
 def kept_pictures(project):
@@ -133,24 +99,22 @@ def masked_page(page, privacy):
                     page.fingerprint, page.written, masked(page.guide))
 
 
-def newest_change(project):
-    """The newest change time of the fingerprint's files in `project`, in the machine's zone (`zone_time.stamp`), or None
-    when none is there. Python writes it, so the page stays the same bytes for the same flow (P829)."""
-    times = [path.stat().st_mtime for path in (Path(project) / name for name in FILES) if path.is_file()]
-    return stamp(datetime.datetime.fromtimestamp(max(times))) if times else None
+def compose_page(reading, parts):
+    """The FlowPage of `reading`, a FlowReading, and `parts`, its PageParts: the reading's title, its phases as dicts,
+    where it stands, the pictures, the bench note, the wiring, the fingerprint, the newest change as `written` and the
+    guide. Pure: it reads no file, so every fact on the page is one that `flow.py show` prints (D22, P1060)."""
+    return FlowPage(reading.title, [phase.to_dict() for phase in reading.phases], reading.stands_at,
+                    parts.pictures, (flow_codes.BENCH_NOTE,), parts.wiring, reading.fingerprint, reading.stamp["newest"], reading.guide)
 
 
 def write_page(project, readers=None, parts=None, renderer=None, store=None):
     """
-    Read the flow of `project`, build its FlowPage, mask it, render it and write it: a Written. `parts` is a function
-    `project -> PageParts` (None: `kept_parts`), `store` a FlowPageStore. A `renderer` has `FILE_NAME`, `PURPOSE_MESSAGE`
-    and `text(page)`: the page's phases are dicts, its pictures Pictures, and a renderer shows a phase through
-    `flow_page.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
+    Read the flow of `project` once (`reading_of`), compose its FlowPage, mask it, render it and write it: a Written.
+    `parts` is a function `project -> PageParts` (None: `kept_parts`), `store` a FlowPageStore. A `renderer` has
+    `FILE_NAME`, `PURPOSE_MESSAGE` and `text(page)`: the page's phases are dicts, its pictures Pictures, and a renderer
+    shows a phase through `flow_page.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
     """
-    phases, guide = flow_and_guide(project, readers)  # the guide once: the page draws it and the answer holds it
-    shown = (parts or kept_parts)(project)
-    page = FlowPage(page_title(Path(project).resolve().name), [phase.to_dict() for phase in phases], stands_at_of(guide),
-                    shown.pictures, (flow_codes.BENCH_NOTE,), shown.wiring, fingerprint_of(project, phases), newest_change(project), guide)
+    page = compose_page(reading_of(project, readers), (parts or kept_parts)(project))
     privacy = privacy_for(project)
     page = masked_page(page, privacy)
     renderer = renderer or FlowHtmlPage()

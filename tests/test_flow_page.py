@@ -54,7 +54,9 @@ UNKNOWN_CODE = "a-new-code"
 #: The nine phases of a real flow, the words of the page and its codes, as the card says them: literals, not the code's own.
 NINE = ["idea", "needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"]
 NOT_CHECKED = "not checked by spark"
-BENCH = "This page reads the project's files. It does not know whether the board is wired or flashed."
+#: The bench note (P1043-D10, the review of #1579); before it: "This page reads the project's files. It does not know whether the
+#: board is wired or flashed."
+BENCH = "This page reads the project's files and its board logs. It cannot see your wiring or what the board shows now."
 NOT_WRITTEN = "page_not_written"
 NOT_DRAWN_HERE = "Not drawn here. The build draws it: run /spark:build --keep."
 NO_BREADBOARD_FILE = "Not drawn: breadboard.svg is not in the project yet. The build with --keep writes it."
@@ -1386,6 +1388,42 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
         self.assertIn("<strong>DONE</strong> read ~/secret</p>", store.written[0][2])
         self.assertEqual(written.guide["done"], ["read ~/secret"])
 
+
+
+class TheDeployedPageTest(unittest.TestCase):
+    """P1043 (test 15): after a deploy that saw ready on the image the project holds now, the page says nothing waits, under
+    the bench note. A partial deploy gets no tick. A guide with no `no_open_phase` key draws as before."""
+
+    NOTHING_WAITS = ("Nothing is waiting on you: the last deploy started the image this project holds now. Tell Claude what "
+                     "to change next.")
+
+    def page(self, verdict, sentence):
+        from test_flow import a_board_log, a_deploy_project
+        project = a_board_log(a_deploy_project(), verdict, sentence)
+        run_flow("page", "--project", str(project), "--json")
+        return (project / "page.html").read_text(encoding="utf-8")
+
+    def test_a_deployed_project_s_page_says_nothing_waits_under_the_bench_note(self):
+        from test_flow import SEEN_SENTENCE
+        text = self.page("ready seen", SEEN_SENTENCE)
+        self.assertIn("<p>%s</p>" % html.escape(self.NOTHING_WAITS), text)
+        self.assertEqual(text.count(html.escape(BENCH)), 1)
+        self.assertIn('data-stands-at="none"', text)
+        self.assertIn('data-phase="deploy" data-status="ok"', text)
+
+    def test_a_partial_deploy_has_no_tick(self):
+        from test_flow import FILES_UNREAD_SENTENCE
+        text = self.page("ready unknown", FILES_UNREAD_SENTENCE)
+        rail = re.search(r'<li data-phase="deploy" data-status="partial">.*?</li>', text).group(0)
+        section = re.search(r'<section class="phase" data-phase="deploy" data-status="partial">.*?</section>', text, re.S).group(0)
+        for shown in (rail, section):
+            self.assertNotIn(TICK, shown)
+            self.assertIn("◐", shown)
+        self.assertNotIn(self.NOTHING_WAITS, text)
+
+    def test_a_guide_with_no_no_open_phase_key_draws_as_before(self):
+        self.assertEqual(guide_page(a_guide(now=None)), guide_page(a_guide(now=None, no_open_phase=None)))
+        self.assertIn("<p>said once</p>", guide_page(a_guide(now=None, no_open_phase="said once")))
 
 
 def sample_page():

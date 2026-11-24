@@ -72,6 +72,39 @@ NO_SIM_MESSAGE = "No simulation files yet (sim/wokwi.toml). Ask Claude to build 
 NO_IMAGE_MESSAGE = "No firmware image yet. The scenario run makes one. To skip the simulation, ask Claude to deploy firmware/ untested."
 IMAGE_UNTESTED_MESSAGE = "No run tested this image yet. To skip the simulation, ask Claude to deploy firmware/ untested."
 DEPLOY_HINT = "Claude then gives you the deploy line. Run it in your terminal and type yes, unless you gave Claude a standing yes for this board."
+#: The deploy phase after a deploy (P1043): what the newest board log in sim/runs/board/ says. Its time as written, the
+#: image's first 12 hex digits, and the words of its verdict; then its cause, and last how many logs there are.
+DEPLOYED_MESSAGE = "Last deploy %s, image %s: %s."
+DEPLOYS_LOGGED = ("%d deploy logged.", "%d deploys logged.")
+#: The words of a verdict: ready seen and ready not seen read the files back; ready unknown by its cause's read-back.
+#: NO_READ_BACK_WORDS are brief D10's words, exactly (the PO, 2026-11-23).
+SEEN_WORDS = "written by the flasher, files read back, ready seen"
+NOT_SEEN_WORDS = "written by the flasher, files read back, ready not seen"
+NO_READ_BACK_WORDS = "written by the flasher, nothing read back, start not seen"
+READ_BACK_WORDS = "written by the flasher, files read back, start not seen"
+LOST_WORDS = "written by the flasher, files read back, ready printed, then the board was lost"
+UNSURE_WORDS = "written by the flasher, start not confirmed"
+CAUSE_MESSAGE, NO_CAUSE_MESSAGE = "Cause in the log: %s.", "Cause not recorded."
+#: The cause of a deploy that did not see ready, by its code in the board log's reason line (the bench's board_codes,
+#: as equal literals: this module imports nothing of spark): spark's words for it, and whether spark read the board's
+#: files back (True, False, or None: the log cannot tell). A code not here reads as not recorded.
+CAUSE_WORDS = {"files_unread": ("spark did not reach the board to read its files", False),
+               "firmware_not_started": ("the command that starts the firmware failed", True),
+               "no_files_named": ("the passed run's log names no files, so spark had none to read back", False),
+               "board_lost": ("spark found no deepsleep call in firmware/, so it does not count the ready", True),
+               "port_gone": ("the board's port was gone", None),
+               "download_mode_stayed": ("the board stayed in download mode", None),
+               "files_differ": ("the board's files are not the image's", True),
+               "firmware_error": ("the firmware stopped with an error", True),
+               "no_ready_line": ("the firmware printed no ready line", True)}
+#: What the image the project holds now says of the last deploy (`deploy_reading.deploy_fact`): the image it wrote, a
+#: different image, firmware/ changed after the image, or no image now. Any but the first makes the deploy stale.
+DEPLOY_CURRENT, IMAGE_DIFFERS, FIRMWARE_NEWER, DEPLOY_NO_IMAGE = "current", "image-differs", "firmware-newer", "no-image"
+FIRMWARE_NEWER_MESSAGE = "Your firmware changed after the image that the last deploy wrote."
+OTHER_IMAGE_MESSAGE = "The last deploy wrote a different image from the one this project has now."
+NO_IMAGE_NOW_MESSAGE = "This project has no image now."
+#: The says line that opens a stale deploy, by its fact.
+STALE_DEPLOY_SAYS = {FIRMWARE_NEWER: FIRMWARE_NEWER_MESSAGE, IMAGE_DIFFERS: OTHER_IMAGE_MESSAGE, DEPLOY_NO_IMAGE: NO_IMAGE_NOW_MESSAGE}
 
 #: The phases each kind of offer can make out of date (P829). An offer names one only when the phase holds something now
 #: (`phase_readers.makes_stale`). The build makes none: the simulation's own staleness is P880's.
@@ -192,7 +225,8 @@ PAGE_NOT_WRITTEN = "page_not_written"
 OK_WORD = "ok"
 NOT_CHECKED_WORD = "not checked by spark"
 NOT_CHECKED_LEGEND = "spark does not judge this phase, so no mark says it is done"
-BENCH_NOTE = "This page reads the project's files. It does not know whether the board is wired or flashed."
+#: The design's meaning (P1043-D10) in words that name no phase (the review of #1579).
+BENCH_NOTE = "This page reads the project's files and its board logs. It cannot see your wiring or what the board shows now."
 STANDS_AT_LINE = "The project stands at: %s."
 #: The line under the page's title (P828 step 2, the PO, 2026-11-21: "it just doesn't guide a person"): what the page
 #: is and how to act on it. From disk every action is a message to Claude.
@@ -257,6 +291,29 @@ SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal
 SCENARIO_HINT = SIMULATE_NOW
 DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then run the deploy "
               "in your terminal.")
+#: The NOW of an open deploy after a deploy (P1043): the job in words, by the status and the cause of the newest board
+#: log (`deploy_reading.deploy_now`). No sentence claims what the board does now, and none names a path or a command.
+DEPLOY_NO_START_NOW = ("Spark could not confirm that the firmware started after the last deploy. Ask Claude to look at "
+                       "the board with you. If the look asks for it, run the deploy again in your terminal.")
+DEPLOY_LOST_NOW = ("Spark saw ready after the last deploy, then lost the board, and cannot tell from here whether the "
+                   "firmware still runs. If your gadget works, nothing is wrong. Else ask Claude to look at the board with you.")
+DEPLOY_AWAY_NOW = "After the last deploy, %s. Ask Claude to look at the board with you."
+DEPLOY_UNKNOWN_NOW = ("The log does not say whether the firmware started after the last deploy. Ask Claude to look at the "
+                      "board with you.")
+DEPLOY_PROBLEMS_NOW = "After the last deploy, %s. Ask Claude to go through the board log with you."
+#: DEPLOY_PROBLEMS_NOW's words when the log records no cause (an old log whose files differed may have printed ready).
+NO_READY_SEEN_WORDS = "spark did not see ready"
+#: A stale deploy (P1043-D4): who acts first and the sentence, by its fact. Claude makes the image for firmware newer than
+#: the image and for no image; the person runs the deploy of the image the project has now.
+STALE_DEPLOY_NOW = {FIRMWARE_NEWER: ([BY_CLAUDE], FIRMWARE_NEWER_MESSAGE + " Ask Claude to make the image again and to look "
+                                                  "at the board. Then run the deploy line in your terminal."),
+                    DEPLOY_NO_IMAGE: ([BY_CLAUDE], NO_IMAGE_NOW_MESSAGE + " Ask Claude to make the image and to look at "
+                                                   "the board. Then run the deploy line in your terminal."),
+                    IMAGE_DIFFERS: ([BY_TERMINAL], OTHER_IMAGE_MESSAGE + " Ask Claude to look at the board, then run the "
+                                                   "deploy line in your terminal.")}
+#: The guide's one line when no phase is open: the deploy is ok (P1043, `guide.no_open_phase`).
+NO_OPEN_PHASE_NOW = ("Nothing is waiting on you: the last deploy started the image this project holds now. Tell Claude what "
+                     "to change next.")
 NEEDS_STALE_NOW = ("Your goal or must lines changed after the needs were written. "
                    "Ask Claude to go through the needs and the must lines with you.")
 #: The idea phase after a need was dropped (P1027, slice 2): the ids, then what Claude asks and how it is taken back. No

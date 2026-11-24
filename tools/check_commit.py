@@ -24,6 +24,12 @@ The archive has no `.git`, so the suite runs with `SPARK_GATE_TREE=archive` (`su
 tracked file holds a board's address walks the archive's files, which are exactly the tracked ones (P797). Without it
 that test asked `git grep`, which found no repository and so nothing, and the check never ran at the gate.
 A red run names its red tests under the verdict line, each `FAIL:`, `ERROR:` and `...Error:` line (P797).
+
+The page script's drift check (P1061): page_script.ts is the source, and the committed page_script.js must be what tsc
+7.0 compiles from it. At every `--full`, and when the branch changed one of SCRIPT_SOURCES (or git could not tell), the
+gate compiles the archive's `.ts` into a temporary folder and compares the bytes. A missing tsc, or another version, is
+could-not-run; a tsc error or other bytes is a problem, with the fix `tsc -p scripts/spark/flow`. Either stops the gate
+before the suite runs. A tree with no page_script.ts, from before P1061, has nothing to compile.
 """
 
 import argparse
@@ -67,6 +73,62 @@ def node_refusal(story, which=shutil.which):
     """The line that stops the gate when `story` needs node and `which` (a test's swap) finds none, else None."""
     if needs_node(story) and which("node") is None:
         return NO_NODE_LINE % NODE_TEST
+    return None
+
+
+#: The pinned major.minor of tsc, TypeScript's compiler, that compiles the page script (P1061, D29).
+TSC_VERSION = "7.0"
+#: The page script's folder, from the root; `tsc -p` reads its tsconfig.json.
+SCRIPT_FOLDER = "scripts/spark/flow"
+#: The four files, from the root, whose change runs the page script's drift check: the source first.
+SCRIPT_SOURCES = tuple(SCRIPT_FOLDER + "/" + name
+                       for name in ("page_script.ts", "page_script.js", "tsconfig.json", "artifact_runtime.d.ts"))
+TSC_REFUSAL = ("could not run: the gate compiles the page script's TypeScript with tsc %s (P1061), and %s; install %s "
+               "for the node this PATH finds: npm install -g typescript@%s")
+#: How many of tsc's error lines a drift line quotes.
+TSC_LINES_SHOWN = 1
+
+
+def needs_tsc(tree, changed, full=False):
+    """
+    True when the archived `tree` holds the page script's source, and `full` asks for every check, or `changed` (None
+    when git could not tell: a doubt runs more) holds one of SCRIPT_SOURCES. A tree with none of the four, a test's or
+    one from before P1061, has nothing to compile. A tree whose `changed` deleted the source while another of the four
+    stays still needs tsc, so that a deletion never turns the check off (the review of #1606).
+    """
+    named = changed is not None and any(name in SCRIPT_SOURCES for name in changed)
+    if not (tree / SCRIPT_SOURCES[0]).is_file():
+        return named and any((tree / name).is_file() for name in SCRIPT_SOURCES[1:])
+    return full or changed is None or named
+
+
+def tsc_refusal(which=shutil.which, run=subprocess.run):
+    """The could-not-run line for a tsc that `which` does not find, or whose `--version` is not TSC_VERSION; else None."""
+    found = which("tsc")
+    if found is None:
+        return TSC_REFUSAL % (TSC_VERSION, "no tsc is on this PATH", "it", TSC_VERSION)
+    said = run([found, "--version"], capture_output=True, text=True).stdout.strip()
+    if not said.startswith("Version %s." % TSC_VERSION):
+        return TSC_REFUSAL % (TSC_VERSION, "the tsc on this PATH says %r" % said, TSC_VERSION, TSC_VERSION)
+    return None
+
+
+def script_drift(tree, tsc, run=subprocess.run):
+    """
+    The problems line when `tsc` (the path `which` found), compiling `tree`'s page script into a temporary folder, says
+    errors, or writes other bytes than the committed page_script.js; else None. The folder goes, whatever tsc did.
+    """
+    committed = tree / SCRIPT_SOURCES[1]
+    with tempfile.TemporaryDirectory(prefix="spark-tsc-") as out:
+        compiled = run([tsc, "-p", SCRIPT_FOLDER, "--outDir", out], cwd=str(tree), capture_output=True, text=True)
+        if compiled.returncode != 0:
+            first = (compiled.stdout + compiled.stderr).strip().splitlines()[:TSC_LINES_SHOWN]
+            return ("page script: tsc -p %s says %s (P1061); fix the .ts, then run it again and commit both files"
+                    % (SCRIPT_FOLDER, " ".join(first) or "nothing, and exits %d" % compiled.returncode))
+        output = Path(out) / committed.name
+        if not output.is_file() or not committed.is_file() or output.read_bytes() != committed.read_bytes():
+            return ("page script: the committed %s is not tsc's compiled output of %s (P1061); fix it with tsc -p %s, "
+                    "then commit both files" % (SCRIPT_SOURCES[1], Path(SCRIPT_SOURCES[0]).name, SCRIPT_FOLDER))
     return None
 
 
@@ -275,19 +337,26 @@ def main(argv=None):
         shutil.rmtree(scratch, ignore_errors=True)  # the archive, 6.2 MB a push (P172); a link in it is unlinked, never followed
 
 
-def gate(root, commit, scratch, full=False):
-    """Archive `commit` into `scratch`, measure it, say the lines; the exit code."""
+def gate(root, commit, scratch, full=False, which=shutil.which, run=subprocess.run):
+    """Archive `commit` into `scratch`, check the page script, measure it, say the lines; the exit code. `which` and
+    `run` find and run node and tsc (a test's swaps)."""
     began = time.monotonic()
     try:
         archive(root, commit, scratch)
     except (ValueError, subprocess.CalledProcessError) as broken:
         print("could not archive %s: %s" % (commit, broken), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    story = None if full else story_tests_in(scratch, changed_files(root, commit))
-    refused = node_refusal(story)
+    changed = None if full else changed_files(root, commit)
+    story = None if full else story_tests_in(scratch, changed)
+    compiles = needs_tsc(scratch, changed, full)
+    refused = node_refusal(story, which) or (compiles and tsc_refusal(which, run))
     if refused:
         print(refused)
         return EXIT_COULD_NOT_RUN
+    drift = compiles and script_drift(scratch, which("tsc"), run)
+    if drift:
+        print(drift)
+        return EXIT_PROBLEMS
     suite, ok, left, red = measure(scratch, full=full, story=story)
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()
@@ -299,6 +368,9 @@ def gate(root, commit, scratch, full=False):
     if left != []:
         print("  " + temp_line(left))
     print("  " + size_line(root, commit))
+    if compiles:
+        print("  page script: the committed %s is tsc %s's compiled output of %s (P1061)"
+              % (Path(SCRIPT_SOURCES[1]).name, TSC_VERSION, Path(SCRIPT_SOURCES[0]).name))
     sys.path.insert(0, str(ROOT / "tools"))
     import check_backlog
     backlog = check_backlog.main()

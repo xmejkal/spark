@@ -370,7 +370,8 @@ sha256, each file's sha256 and `simulation` (passed or none). The board log name
 and the store's boards/<MAC>.json adds this deploy with its verdict, its simulation and whose yes it was. Then it reads
 the board: ready seen means the board's files match the evidence's sha256s and the firmware printed a line that
 starts with the word `ready` within %d s.
-The board's log goes to sim/runs/board/. A firmware that stops with an error is not seen. If mpremote cannot reach the
+The board's log goes to sim/runs/board/. Its fourth line names the cause's code, when ready was not seen (reason: files_unread,
+for example; P1043), and flow.py show reads it. A firmware that stops with an error is not seen. If mpremote cannot reach the
 board, for example because its port changed after the flash, or the passed run's log is from before P215 and names no
 files, ready is unknown, never seen. The write restarts the chip with esptool's `--after watchdog-reset` (esptool's troubleshooting
 page says the ESP32-S3 then leaves download mode; not yet run on a board that was entered with BOOT; the C6 and the classic ESP32 fall
