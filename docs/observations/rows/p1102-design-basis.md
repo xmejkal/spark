@@ -22,5 +22,5 @@ column is a row of `tests/mutations/p1102-design-basis.json`, counted from 1.
 | 13 | `main` reads the code before it parses its arguments | PR lens | acted | It parses first, as map.py does |
 | 14 | A help text with a double space fails T5 though the tool is right | PR refuter | acted | T5 joins the expected sentence's words as the tool does |
 | 15 | "Effects: none" reads wrong for an op that only reads, and Network shows twice | PR refuter | acted | "none, it only reads". Network stays in the JSON and in the effect words |
-| 16 | Nothing checks that `HAND_WRITTEN` changes when a moment changes | PR refuter | dropped | The code holds no second source for the date. The PR diff shows a changed moment to the review |
-| 17 | developing.md's new sentence makes line 5 long | PR lens | dropped | The page is at its budget of 379 lines, so the sentence stays on line 5 |
+| 16 | Nothing checks that `HAND_WRITTEN` changes when a moment changes | PR refuter | rejected | The code holds no second source for the date. The PR diff shows a changed moment to the review |
+| 17 | developing.md's new sentence makes line 5 long | PR lens | rejected | The page is at its budget of 379 lines, so the sentence stays on line 5 |
