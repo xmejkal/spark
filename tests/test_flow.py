@@ -2411,7 +2411,7 @@ class TheDeployedLineTest(unittest.TestCase):
     def test_the_day_and_time_of_a_stored_time_is_the_machine_s_and_one_that_does_not_parse_stays(self):
         self.assertEqual(zone_time.day_and_time("2026-11-02T23:30:05+00:00"), "3 Nov 2026, 00:30")
         self.assertEqual(zone_time.day_and_time("not a time"), "not a time")
-        self.assertEqual(len(zone_time.MONTHS), 12)
+        self.assertEqual(zone_time.day_and_time("2026-01-15T12:00:00+00:00"), "15 Jan 2026, 13:00")
 
 
 if __name__ == "__main__":
