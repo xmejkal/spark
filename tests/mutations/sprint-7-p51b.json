@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "dist never arrives, so no check can read the board",
-  "find": "        replace_whole(workdir / \"dist\", destination / \"dist\")",
-  "replace": "        pass"
+  "find": "left = replace_whole(workdir / \"dist\", destination / \"dist\")",
+  "replace": "left = []"
  },
  {
   "file": "scripts/spark/build/kept_files.py",

@@ -7,19 +7,25 @@ holds an earlier dist/board/), with the fake tsci, as the goldens check-spine-ok
 
 P1088 (#1598): a work `dist/` is kept only when it holds `dist/board/circuit.json`, the file the build stage itself tests,
 and then it replaces the earlier `dist/` whole, staged beside it: a copy that fails leaves the earlier `dist/` as it was,
-with one `not kept` entry that the record and check_all agree with."""
+with one `not kept` entry that the record and check_all agree with, and the earlier pictures stay. A name the stage or
+the aside needs that is taken, or a `dist/` that is a link, stops the copy and is named; an earlier `dist/` set aside
+that cannot be removed is named too. `ReplaceWholeTest` runs `replace_whole` itself for an error or a Ctrl-C midway."""
 
 import json
+import os
 import shutil
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import golden_design  # noqa: E402
+from spark.build.build_record import replace_whole  # noqa: E402
 from golden_design import Case  # noqa: E402
 from golden_firmware import STDERR_MARK  # noqa: E402
 
@@ -36,6 +42,8 @@ PARTIAL = {"FAKE_TSCI_CIRCUIT": golden_design.FAKES_TOKEN + "/no-such-circuit.js
 DANGLING = {"FAKE_TSCI_DANGLING": "1"}
 #: A file of the person's at the name the staged copy would take.
 IN_THE_WAY = (("dist.new", "mine\n"),)
+#: What an earlier dist/ set aside that cannot be removed says (P1088).
+ASIDE_LEFT = "dist.old is spark's own earlier dist/, set aside for the new one, and it could not be removed: delete it before the next build"
 
 
 def files_of(folder):
@@ -212,10 +220,14 @@ class UnfinishedBuildDistTest(unittest.TestCase):
         before = {}
 
         def remember(project):
+            for name in PICTURES:
+                (project / "dist" / "board" / name).write_text("<svg>" + name + "</svg>")
             before["dist"] = files_of(project / "dist")
         code, project, report = self.run_build(env=dict(ERRORED, **DANGLING), before=remember)
         self.assertEqual(code, 1)
         self.assertIn("dist/board/built-from.json", ["dist/" + name for name in before["dist"]])
+        for name in PICTURES:
+            self.assertEqual((project / "dist" / "board" / name).read_text(), "<svg>" + name + "</svg>")
         self.assertEqual(files_of(project / "dist"), before["dist"])
         self.assertEqual(sorted(each.name for each in project.iterdir() if each.name.startswith("dist")), ["dist"])
 
@@ -226,6 +238,85 @@ class UnfinishedBuildDistTest(unittest.TestCase):
         self.assertIn("dist.new is in the way: delete it if it is not yours", entries[0]["why"])
         self.assertEqual((project / "dist.new").read_text(), "mine\n")
         self.assertIs(self.record(project)["dist_written"], False)
+
+    def test_a_file_at_the_aside_name_is_left_and_named(self):
+        code, project, report = self.run_build((("dist.old", "mine\n"),))
+        entries = self.dist_entries(report)
+        self.assertEqual([entry["did"] for entry in entries], ["not kept"])
+        self.assertIn("dist.old is in the way: delete it if it is not yours", entries[0]["why"])
+        self.assertEqual((project / "dist.old").read_text(), "mine\n")
+        self.assertTrue((project / "dist" / "board" / "circuit.json").is_file())
+        self.assertIs(self.record(project)["dist_written"], False)
+
+    def test_a_dist_that_is_a_link_is_not_kept_and_untouched(self):
+        before = {}
+
+        def link(project):
+            elsewhere = project.parent / "elsewhere"
+            (project / "dist").rename(elsewhere)
+            (project / "dist").symlink_to(elsewhere, target_is_directory=True)
+            before["files"] = files_of(elsewhere)
+        code, project, report = self.run_build(env=ERRORED, before=link)
+        entries = self.dist_entries(report)
+        self.assertEqual([entry["did"] for entry in entries], ["not kept"])
+        self.assertIn("is a link, so spark does not replace it", entries[0]["why"])
+        self.assertTrue((project / "dist").is_symlink())
+        self.assertEqual(files_of(project.parent / "elsewhere"), before["files"])
+        self.assertIs(self.record(project)["dist_written"], False)
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root removes a read-only folder")
+    def test_an_earlier_dist_that_cannot_be_removed_is_named(self):
+        def lock(project):
+            locked = project / "dist" / "locked"
+            locked.mkdir()
+            (locked / "x.json").write_text("[]")
+            locked.chmod(0o555)
+            for each in (locked, project / "dist.old" / "locked"):
+                self.addCleanup(lambda folder=each: folder.is_dir() and folder.chmod(0o755))
+        code, project, report = self.run_build(before=lock)
+        self.assertEqual(code, 0)
+        self.assertEqual([entry["did"] for entry in self.dist_entries(report)], ["wrote"])
+        self.assertEqual([(entry["did"], entry["why"]) for entry in report["kept"] if entry["file"] == "dist.old"],
+                         [("not kept", ASIDE_LEFT)])
+        self.assertTrue((project / "dist.old" / "locked" / "x.json").is_file())
+        self.assertFalse((project / "dist" / "locked").exists())
+        self.assertIs(self.record(project)["dist_written"], True)
+
+
+class ReplaceWholeTest(unittest.TestCase):
+    """`replace_whole` itself, when the rename that puts the copy in place fails or is stopped midway."""
+
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.folder, True)
+        for name, text in (("new", "new"), ("dist", "earlier")):
+            (self.folder / name / "board").mkdir(parents=True)
+            (self.folder / name / "board" / "circuit.json").write_text(text)
+
+    def replace_with_a_stop(self, stop):
+        """replace_whole while the rename of the staged copy raises `stop`."""
+        real = Path.rename
+
+        def rename(path, target):
+            if path.name == "dist.new":
+                raise stop
+            return real(path, target)
+        with mock.patch.object(Path, "rename", rename):
+            replace_whole(self.folder / "new", self.folder / "dist")
+
+    def assert_earlier_whole(self):
+        self.assertEqual(files_of(self.folder / "dist"), {"board/circuit.json": b"earlier"})
+        self.assertEqual(sorted(each.name for each in self.folder.iterdir()), ["dist", "new"])
+
+    def test_a_rename_that_fails_puts_the_earlier_dist_back(self):
+        with self.assertRaises(OSError):
+            self.replace_with_a_stop(OSError("full"))
+        self.assert_earlier_whole()
+
+    def test_a_ctrl_c_midway_puts_the_earlier_dist_back_and_removes_the_copy(self):
+        with self.assertRaises(KeyboardInterrupt):
+            self.replace_with_a_stop(KeyboardInterrupt())
+        self.assert_earlier_whole()
 
 
 if __name__ == "__main__":

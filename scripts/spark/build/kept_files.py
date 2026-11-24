@@ -114,11 +114,11 @@ def kept_into(workdir, destination, written=None, finished=True):
             kept += _compare_traces(target, source)
     if (workdir / sheet.CIRCUIT).is_file():  # P1088: the build stage's own test of a board that was built
         try:
-            replace_whole(workdir / "dist", destination / "dist")
+            left = replace_whole(workdir / "dist", destination / "dist")  # an earlier dist/ set aside that stays is named (P1088)
         except OSError as refused:  # a copy that fails midway is a shutil.Error; the entries above stand, so the record holds what spark wrote (P891)
             return kept + [{"file": str(destination / "dist"), "did": "not kept", "why": str(refused), "line": "not kept: %s — %s" % (destination / "dist", refused)}]
-        kept.append({"file": str(destination / "dist"), "did": WROTE, "why": "this is what every check reads",
-                     "line": "wrote %s — this is what every check reads" % (destination / "dist")})
+        kept += [{"file": str(destination / "dist"), "did": WROTE, "why": "this is what every check reads",
+                  "line": "wrote %s — this is what every check reads" % (destination / "dist")}] + left
     return kept
 
 
@@ -234,7 +234,7 @@ def _kept(workdir, destination, recorded, finished):
 
 
 def drop_an_older_build(destination, stages, kept=()):
-    """An earlier dist/ this run did not write: left alone and named (P816), or removed for the board alone (P236)."""
+    """An earlier dist/ this run did not write: left alone and named (P816), or named `not kept` (P1088), or removed for the board alone (P236)."""
     old, why = Path(destination) / "dist", why_not_built(stages, "board only: no board was built")
     if why is None or not old.is_dir() or str(old) in {entry["file"] for entry in kept}:
         return []
@@ -388,7 +388,7 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     project = _is_project(destination)
     pictures = KeptPictureFiles(destination, project)
     if why:
-        if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] == LEFT_ALONE for entry in kept):  # P816: an earlier dist/ that stays keeps its pictures
+        if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] in (LEFT_ALONE, "not kept") for entry in kept):  # P816: an earlier dist/ that stays keeps its pictures
             pictures.drop()
         kept.extend(pictures.problems)
         return _left_from_earlier(page, tabbed_page.TabbedHtmlPage.NOUN, why)
