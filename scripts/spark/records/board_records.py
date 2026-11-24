@@ -154,6 +154,8 @@ def active_id(project: Path) -> str:
     marking the active board — an absent character as the only signal that the file is nonsense.
     """
     selection = _read_json(selection_file(project), "board selection")
+    if not isinstance(selection, dict):  # P1094: .get on a list crashed init
+        raise BoardError("%s is not a JSON object", selection_file(project), code=records_codes.RECORD_FILE_BROKEN)
     board_id = selection.get("board")
     if not board_id:
         raise BoardError('%s names no board (expected a "board" key holding a board id)', selection_file(project), code=records_codes.NO_BOARD_SELECTED)

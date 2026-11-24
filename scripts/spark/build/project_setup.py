@@ -542,7 +542,7 @@ def board_differs(project):
         return ["the project's board is not known: %s" % broken]
     try:
         selected = board_records.active_id(project)
-    except (board_records.BoardError, AttributeError):  # C10: a selection that holds no JSON object
+    except board_records.BoardError:  # a selection that cannot be read is not compared
         return []
     return [BOARD_DIFFERS % (named, named, selected)] if named and named != selected else []
 
