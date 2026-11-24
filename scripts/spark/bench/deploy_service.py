@@ -28,6 +28,7 @@ from spark.bench import image_evidence
 from spark.bench import ready_probe
 from spark.firmware import sleep_calls
 from spark.firmware.project_image import DeployError
+from spark.core import codes
 from spark.core.events import Event
 
 #: Value: what `plan` returns. `flasher` is the Flasher, `commands` are the flash commands it builds, `mpremote` is
@@ -49,10 +50,13 @@ def _keeps_boot_entry(planned, row):
     return bool(planned.flasher.keeps_boot_entry and row and row.usb == board_connection.USB_SERIAL_JTAG)
 
 
-#: The board log's sentence of a flash that did not finish (P1092), by the FlashError's reason. board_codes' own
-#: grant_ended sentence says "before the erase", which is true at the gate and false here: the first erase ran.
+#: The board log's sentence of a flash that did not finish (P1092), by its reason. board_codes' own grant_ended sentence
+#: says "before the erase", which is true at the gate and false here: the first erase ran. The crash's is its own (P1096):
+#: the core's meaning points to a traceback on stderr, and a person reads the log days later.
 NOT_FINISHED_SENTENCES = {board_codes.FLASH_FAILED: board_codes.CODES[board_codes.FLASH_FAILED],
-                          board_codes.GRANT_ENDED: "the yes ended before the erase's retry"}
+                          board_codes.GRANT_ENDED: "the yes ended before the erase's retry",
+                          board_codes.INTERRUPTED: board_codes.CODES[board_codes.INTERRUPTED],
+                          codes.CRASH: "spark crashed during the flash, so the board may be erased and not written"}
 #: The board log's facts line of a flash that did not finish: no facts file went on the board.
 NOT_FINISHED_FACTS = "facts file: not written: the flash did not finish"
 
@@ -60,9 +64,25 @@ NOT_FINISHED_FACTS = "facts file: not written: the flash did not finish"
 class FlashError(DeployError):
     """Error: a flash command failed, so the board may be erased and not written. Its `reason` is flash_failed, or the
     gate's grant_ended when the yes ended before the retry. `log_path` is the board log that DeployService.deploy wrote
-    for it (P1092), or None with `log_error` saying why none was written; `image_sha256` is the image the flash was given."""
+    for it (P1092), or None with `log_error` saying why none was written; `image_sha256` is the image the flash was given,
+    and `moment` the board log's. The handler sets the same on a crash and a Ctrl-C in the flash loop (P1096)."""
 
-    log_path = log_error = image_sha256 = None
+    log_path = log_error = image_sha256 = moment = None
+
+
+def not_finished_reason(ended):
+    """The board log's reason of a flash that `ended` ended (P1096): a FlashError's own, interrupted for a Ctrl-C, else
+    the core's crash."""
+    if isinstance(ended, FlashError):
+        return ended.reason
+    return board_codes.INTERRUPTED if isinstance(ended, KeyboardInterrupt) else codes.CRASH
+
+
+def ended_the_flash(raised):
+    """True when the flash loop's handler in DeployService.deploy handled `raised` (P1096): only it sets the attribute
+    `image_sha256`, the one channel of this mark. A crash outside the loop, and a bug in the log write that replaced what
+    ended the flash, give False."""
+    return getattr(raised, "image_sha256", None) is not None
 
 
 def every_read(reads):
@@ -123,7 +143,8 @@ class DeployService:
         Pass the gate, then run the flash commands, erase first. Returns the DeployPlan it ran. `look` is the LookReport,
         `consent` the person's yes. It reports the gate's yes line, a BEGIN of the flash and a line per command (E2).
         GateClosedError, DeployError and tool_finder.ToolError say why nothing, or not everything, was flashed. A FlashError
-        says that the flash did not finish after the yes: it comes with the board log that says so (P1092).
+        says that the flash did not finish after the yes: it comes with the board log that says so (P1092). A crash and a
+        Ctrl-C in the loop get the same log, and go on unchanged (P1096; build_record.py's handler is the precedent).
         """
         image = image_evidence.image_of(self.project, self.evidence)
         image_path = image.path.relative_to(self.project)
@@ -145,20 +166,24 @@ class DeployService:
                     hint = planned.flasher.boot_hint
                     raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""),
                                      reason=board_codes.FLASH_FAILED)
-        except FlashError as failed:  # P1092: the flow's one source, the newest board log, must not name the deploy before
-            failed.log_path, failed.image_sha256 = self.log_not_finished(look, image_sha256, failed), image_sha256
-            raise
+        except (Exception, KeyboardInterrupt) as ended:  # P1092, P1096: the newest board log must not name the deploy before
+            moment = self.clock.now()  # once: the board log and the store record share it
+            ended.log_path, ended.image_sha256, ended.moment = self.log_not_finished(look, image_sha256, ended, moment), image_sha256, moment
+            raise  # P1096: what ended the flash goes on
         return planned
 
-    def log_not_finished(self, look, image_sha256, failed):
-        """The path of the board log of a flash that did not finish after the yes (P1092): the verdict FLASH_NOT_FINISHED and
-        the FlashError `failed`'s reason, as its line 4. None when an OSError or a ValueError kept it from being written:
-        `failed.log_error` then says why, and the flash's own error stays the answer. On purpose, a TypeError or a KeyError
-        is a bug: it replaces the FlashError, keeps it as its __context__, and the run crashes at stage flash, whose
-        board_state stays may_be_erased (F13)."""
-        log = BoardLog(self.clock.now(), look.port, image_sha256, board_facts.FactsLine(NOT_FINISHED_FACTS, False),
-                       board_log.FLASH_NOT_FINISHED, NOT_FINISHED_SENTENCES.get(failed.reason, str(failed)), str(failed) + "\n",
-                       self.evidence.simulation, failed.reason)
+    def log_not_finished(self, look, image_sha256, failed, moment):
+        """The path of the board log of a flash that did not finish after the yes (P1092), written at `moment`: the verdict
+        FLASH_NOT_FINISHED and the reason of `failed` (a FlashError, a crash or a Ctrl-C, P1096) as its line 4. A crash
+        keeps its class name only, as its message can hold a home path (D5). None when an OSError or a ValueError kept it
+        from being written: `failed.log_error` then says why, and the flash's own error stays the answer. On purpose, a
+        TypeError or a KeyError is a bug: it replaces what ended the flash, keeps it as its __context__, and the run
+        crashes at stage flash, whose board_state stays may_be_erased (F13). After a Ctrl-C it exits 2, not 130."""
+        reason = not_finished_reason(failed)
+        said = str(failed) if isinstance(failed, FlashError) else type(failed).__name__
+        log = BoardLog(moment, look.port, image_sha256, board_facts.FactsLine(NOT_FINISHED_FACTS, False),
+                       board_log.FLASH_NOT_FINISHED, NOT_FINISHED_SENTENCES.get(reason, said), said + "\n",
+                       self.evidence.simulation, reason)
         try:
             return self.write_log(self.project, log)
         except (OSError, ValueError) as unwritten:

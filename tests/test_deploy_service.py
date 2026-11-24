@@ -129,12 +129,18 @@ class TheFlashTest(ServiceCase):
 class TheFlashNotFinishedTest(ServiceCase):
     """P1092 tests 1 to 4: a flash that does not finish after the yes writes a board log with the verdict `flash not
     finished` and the FlashError's reason, then raises the same FlashError. A log that cannot be written never hides it.
-    A crash, a refusal before the flash and an erase that its retry passes write no such log."""
+    P1096 tests 1 to 3: a crash and a Ctrl-C in the flash loop write the same log, with the reason crash or interrupted,
+    and go on unchanged. A refusal before the flash and an erase that its retry passes write no such log."""
 
     #: The write fails after a good erase (F5), as GateCase's `write_fails`.
     write_fails = False
+    #: What the erase raises in place of running, a crash or a Ctrl-C (P1096), or None. A fake: it patches nothing.
+    ends_with = None
 
     def fake_run(self, command, **kwargs):
+        if self.ends_with is not None and "erase-flash" in command:
+            self.commands.append(command)
+            raise self.ends_with
         if self.write_fails and "write-flash" in command:
             self.commands.append(command)
             raise subprocess.CalledProcessError(1, command)
@@ -250,11 +256,63 @@ class TheFlashNotFinishedTest(ServiceCase):
             self.service().deploy(report, "aaaa-bbbb", FakeConsent(True))
         self.assertEqual(self.logs(), [])
 
+    def ended(self, kind, write_log=None):
+        """What ended the flash of a deploy, raised as `kind` (P1096)."""
+        report = self.look()
+        with self.assertRaises(kind) as raised:
+            self.service_with(write_log).deploy(report, report.token(), FakeConsent(True))
+        return raised.exception
+
     @needs_littlefs
-    def test_a_crash_in_the_flash_loop_writes_no_board_log(self):
-        # D5: a crash is no FlashError, so P1096 #1614 holds it
-        code, _, _ = self.deploy("--token", self.token(), "--json", consent=FakeConsent(True), fails=1, fail_code=RuntimeError("usb fell off"))
-        self.assertEqual((code, self.logs()), (2, []))
+    def test_a_crash_in_the_flash_loop_writes_a_board_log_and_is_raised_unchanged(self):
+        # P1096 test 1, in place of P1092's test_a_crash_in_the_flash_loop_writes_no_board_log, which pinned the gap. D5:
+        # the log keeps the class name only, as a message can hold a home path
+        self.ends_with = RuntimeError("usb fell off at /Users/x")
+        ended = self.ended(RuntimeError)
+        sha256 = project_image.ProjectImage(self.project).sha256
+        self.assertIs(ended, self.ends_with)
+        self.assertEqual((ended.log_path, ended.image_sha256), (self.logs()[0], sha256))
+        self.assertEqual(board_log.newest_logged_deploy(self.project),
+                         (1, board_log.LoggedDeploy(self.clock.now().isoformat(timespec="seconds"), sha256, "flash not finished", "crash")))
+        text = ended.log_path.read_text(encoding="utf-8")
+        self.assertIn("flash not finished: spark crashed during the flash, so the board may be erased and not written\n", text)
+        self.assertIn("RuntimeError", text)
+        self.assertNotIn("usb fell off", text)
+        self.assertNotIn("/Users/", text)
+
+    @needs_littlefs
+    def test_a_ctrl_c_in_the_flash_loop_writes_a_board_log_and_the_ctrl_c_goes_on(self):
+        # P1096 test 2: the KeyboardInterrupt itself goes on, so the run still stops
+        self.ends_with = KeyboardInterrupt()
+        ended = self.ended(KeyboardInterrupt)
+        self.assertIs(ended, self.ends_with)
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1].cause, "interrupted")
+        self.assertIn("flash not finished: a Ctrl-C interrupted the flash, so the board may be erased and not written\n",
+                      ended.log_path.read_text(encoding="utf-8"))
+        self.assertEqual(len(self.commands), 1)  # the write never ran
+
+    @needs_littlefs
+    def test_a_log_that_cannot_be_written_keeps_what_ended_the_flash(self):
+        # P1096 test 3
+        for ends_with in (RuntimeError("usb fell off"), KeyboardInterrupt()):
+            with self.subTest(ended=type(ends_with).__name__):
+                (self.project / "sim" / "runs" / "board").write_text("a file where the folder goes")
+                self.ends_with = ends_with
+                ended = self.ended(type(ends_with))
+                self.assertIs(ended, ends_with)
+                self.assertIsNone(ended.log_path)
+                self.assertIn("sim/runs/board", ended.log_error)
+
+    @needs_littlefs
+    def test_a_bug_in_the_log_write_leaves_no_mark_of_an_ended_flash(self):
+        # P1096 test 11 (G12, G20): a TypeError replaces what ended the flash (F13), and neither carries the marker
+        def broken(project, log):
+            raise TypeError("a bug")
+
+        self.ends_with = RuntimeError("usb fell off")
+        raised = self.ended(TypeError, write_log=broken)
+        self.assertIs(raised.__context__, self.ends_with)
+        self.assertEqual((deploy_service.ended_the_flash(raised), deploy_service.ended_the_flash(self.ends_with)), (False, False))
 
     @needs_littlefs
     def test_an_erase_that_its_retry_passes_writes_only_the_verify_s_log(self):
