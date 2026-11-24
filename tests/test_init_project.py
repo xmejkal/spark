@@ -343,6 +343,16 @@ class TheSelectionThatIsNotTheProjectsBoardIsSaidTest(unittest.TestCase):
         self.assertIn("  active.json already exists, left alone\n", said)
         self.assertNotIn("stays the project's board", said)
 
+    @unittest.skipIf(os.geteuid() == 0, "root reads a file with no read permission")
+    def test_a_requirements_json_that_cannot_be_opened_is_said_not_a_crash(self):
+        # the review's R1: an OSError from requirements.json crashed init after active.json was written
+        root = self.a_project_naming(json.dumps({"board": self.C6}))
+        (root / "requirements.json").chmod(0)
+        self.addCleanup((root / "requirements.json").chmod, 0o644)
+        code, said = self.init(root, self.S3)
+        self.assertEqual((code, self.selected(root)), (init_project.EXIT_OK, self.S3))
+        self.assertIn("  the project's board is not known: ", said)
+
 
 class ForceMustNotEatWhatSomebodyMeasuredTest(unittest.TestCase):
     """

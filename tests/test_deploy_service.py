@@ -361,6 +361,15 @@ class TheFirmwarePlatformTest(ServiceCase):
             self.platform().make_flasher()
         self.assertEqual(refused.exception.reason, "chip_unknown")
         self.assertEqual(self.finder.asked, [])
+        with self.subTest(requirements="a folder"):  # C3 (the review's R2): a folder is no file, so chip_unknown too
+            (self.project / "requirements.json").mkdir()
+            with self.assertRaises(project_image.DeployError) as refused:
+                self.platform().make_flasher()
+            self.assertEqual(refused.exception.reason, "chip_unknown")
+            (self.project / "requirements.json").rmdir()
+        with self.subTest(requirements="{}"):  # D35 (the review's R3): no board named gives the selection's record
+            (self.project / "requirements.json").write_text("{}")
+            self.assertEqual(firmware_platform.record_of(self.project)["chip"], "esp32s3")
 
 
 class TheWhyLineTest(unittest.TestCase):

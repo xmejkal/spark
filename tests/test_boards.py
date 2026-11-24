@@ -242,6 +242,10 @@ class ButtonPlacesTest(unittest.TestCase):
         root = project(active="mine", own={"mine": mine})
         (root / "requirements.json").write_text(json.dumps({"board": LIBRARY_BOARD}))
         self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button")
+        root = project(own={"mine": mine})  # the review's R4: a selection that holds no JSON object gives the plain words
+        (root / "boards" / "active.json").write_text("[1]")
+        (root / "requirements.json").write_text("{}")
+        self.assertIs(board_records.ButtonPlaces.of_project(root), board_records.ButtonPlaces.EMPTY)
 
 
 # --- MVP --- (P512, #708) the one reader of physical.pad_aliases
