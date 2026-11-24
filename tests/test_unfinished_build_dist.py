@@ -18,7 +18,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
@@ -294,15 +293,12 @@ class ReplaceWholeTest(unittest.TestCase):
             (self.folder / name / "board" / "circuit.json").write_text(text)
 
     def replace_with_a_stop(self, stop):
-        """replace_whole while the rename of the staged copy raises `stop`."""
-        real = Path.rename
-
-        def rename(path, target):
-            if path.name == "dist.new":
+        """replace_whole with a rename that raises `stop` for the staged copy."""
+        def rename(source, target):
+            if Path(source).name == "dist.new":
                 raise stop
-            return real(path, target)
-        with mock.patch.object(Path, "rename", rename):
-            replace_whole(self.folder / "new", self.folder / "dist")
+            os.rename(source, target)
+        replace_whole(self.folder / "new", self.folder / "dist", rename)
 
     def assert_earlier_whole(self):
         self.assertEqual(files_of(self.folder / "dist"), {"board/circuit.json": b"earlier"})

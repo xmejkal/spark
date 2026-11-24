@@ -199,14 +199,14 @@ ASIDE_SUFFIX = ".old"
 ASIDE_LEFT = "%s is spark's own earlier %s, set aside for the new one, and it could not be removed: delete it before the next build"
 
 
-def replace_whole(source, target):
+def replace_whole(source, target, rename=os.rename):
     """
     Put a copy of the folder `source` at `target`, in place of the folder there. The copy is made at `target` + STAGE_SUFFIX;
     when it is whole, the earlier folder is set aside at `target` + ASIDE_SUFFIX, the copy renamed into place and the earlier
     one removed. Any error, a Ctrl-C too, leaves `target` as it was: a copy that fails is removed, a `target` that is a link
     is not replaced (OSError), and a name the stage or the aside needs that is taken is never removed (StageTakenError says
     so). Returns the kept entries {file, did, why, line} of what it left: one `not kept` for an earlier folder set aside
-    that it could not remove, or none.
+    that it could not remove, or none. `rename` moves a folder (os.rename); a test gives a fake that fails.
     """
     target = Path(target)
     staged, aside = (target.with_name(target.name + suffix) for suffix in (STAGE_SUFFIX, ASIDE_SUFFIX))
@@ -219,12 +219,12 @@ def replace_whole(source, target):
     try:
         shutil.copytree(source, staged)
         if target.is_dir():
-            target.rename(aside)
+            rename(target, aside)
             moved = True
-        staged.rename(target)
+        rename(staged, target)
     except BaseException:  # a Ctrl-C too: the earlier folder goes back and the copy goes
         if moved:
-            aside.rename(target)
+            rename(aside, target)
         shutil.rmtree(staged, ignore_errors=True)
         raise
     shutil.rmtree(aside, ignore_errors=True)
