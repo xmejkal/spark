@@ -1140,6 +1140,33 @@ class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
                 _, valid, _ = self._run("--validate")
                 self.assertNotIn("no board is marked", valid)
 
+    def test_a_requirements_json_that_is_a_folder_or_a_dangling_link_is_said_never_the_selection(self):
+        # the PR review's RF1: requirements_board's own is_file() gate read a folder or a dangling link as no
+        # requirements.json, so --id printed the selection's board and --list marked it: a quiet fall back (D35)
+        requirements = self.project / "requirements.json"
+        for case in ("folder", "dangling link"):
+            with self.subTest(case=case):
+                if requirements.is_symlink():
+                    requirements.unlink()
+                elif requirements.is_dir():
+                    requirements.rmdir()
+                if case == "folder":
+                    requirements.mkdir()
+                else:
+                    try:
+                        os.symlink(self.project / "gone.json", requirements)
+                    except (OSError, NotImplementedError):
+                        self.skipTest("no symlinks here")
+                with self.assertRaises(board_records.BoardError) as refused:
+                    board_records.project_board_id(self.project)
+                self.assertEqual(refused.exception.code, "record_file_broken")
+                code, _, err = self._run("--id")
+                self.assertEqual((code, "requirements.json cannot be read: " in err), (1, True), err)
+                code, listed, _ = self._run("--list")
+                said = (code, listed.count("no board is marked: "), listed.count("requirements.json cannot be read: "))
+                self.assertEqual(said, (0, 1, 1), listed)
+                self.assertNotIn("*", listed)
+
 
 class TheProjectsBoardIsTheRequirementsBoardTest(unittest.TestCase):
     """P988 (D35): requirements.json's `board` names the project's board. The selection, boards/active.json, is read as the
