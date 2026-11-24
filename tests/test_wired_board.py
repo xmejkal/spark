@@ -36,13 +36,13 @@ from test_run_request import BUTTON_LIGHT, ID, FakeStep  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.core.cli import HelpText, run_cli  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
-from spark.flow import flow_codes, phase_readers, wired_board  # noqa: E402
+from spark.flow import phase_readers, wired_board  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.flow.flow_codes import (BOARD_ONLY_BUILD_EFFECT, WIRED_BUILD_MESSAGE, WIRED_DEPLOY_MESSAGE, WIRED_PICK_MESSAGE,  # noqa: E402
                                    WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE)
 from spark.flow.flow_page import page_words  # noqa: E402
 from spark.flow.run_request import RunRequest  # noqa: E402
-from spark.flow.show_flow import read_flow  # noqa: E402
+from spark.flow.show_flow import phases_of, read_flow  # noqa: E402
 from spark.flow.write_flow_page import write_page  # noqa: E402
 
 #: The sheet's moment: noon UTC on 22 Nov 2026, 13:00 in Prague.
@@ -100,13 +100,14 @@ class NoWitnessTest(WiredTest):
         project = with_needs(a_built_project(), NEEDS)
         (project / "breadboard.md").unlink()
         said, _ = show(project)
-        own = {reader.PHASE: reader.answer(project) for reader in phase_readers.READERS}
-        self.assertEqual(says(said, "parts"), own["parts"].says)
+        parts = phase_readers.PartsReader().answer(project)
+        self.assertEqual(says(said, "parts"), parts.says)
         self.assertEqual(effects(said, "build"), [phase_readers.build_effect(project)])
-        self.assertEqual(effects(said, "pick"), [offer.effect for offer in own["parts"].offers])
+        self.assertEqual(effects(said, "pick"), [offer.effect for offer in parts.offers])
         self.assertTrue(effects(said, "pick"))
         self.assertIsNone(wired_of(said))
-        self.assertEqual(said["data"]["fingerprint"], fingerprint_of(project, list(own.values())))
+        # with_wired bypassed: a board with no witness
+        self.assertEqual(said["data"]["fingerprint"], fingerprint_of(project, phases_of(project, board=wired_board.WiredBoard(None, None))))
 
 
 class TheSheetTest(WiredTest):
@@ -263,12 +264,12 @@ class TheBoardOnlyBuildTest(WiredTest):
 
 class TheValueTest(WiredTest):
     def test_not_wired_has_no_data_and_changes_no_phase(self):
-        self.assertIsNone(wired_board.wired_data(wired_board.NOT_WIRED))
-        phases = [phase_readers.Phase(flow_codes.PARTS, None, "·", "you", [], [])]
-        self.assertIs(wired_board.with_wired(Path("nowhere"), phases, wired_board.NOT_WIRED), phases)
+        self.assertIsNone(wired_board.wired_data(wired_board.WiredBoard(None, None)))
+        phases = [phase_readers.Phase("parts", None, "·", "you", [], [])]
+        self.assertIs(wired_board.with_wired(Path("nowhere"), phases, wired_board.WiredBoard(None, None)), phases)
 
     def test_an_empty_parts_says_gets_the_line_alone(self):
-        phases = [phase_readers.Phase(flow_codes.PARTS, None, "·", "you", [], [])]
+        phases = [phase_readers.Phase("parts", None, "·", "you", [], [])]
         board = wired_board.WiredBoard(None, "2026-11-23T14:09:49+01:00")
         self.assertEqual(wired_board.with_wired(Path("nowhere"), phases, board)[0].says, [" ".join((log_text(), WIRED_STEP_MESSAGE))])
 
