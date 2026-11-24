@@ -327,7 +327,7 @@ class ThePhasesTest(FlowTest):
                                                            "missing_facts": [], "requirements": None, "requirements_sha256": None})
         said, _ = show(project)
         self.assertEqual(statuses(said)["build"], STALE)
-        self.assertEqual(says(said, "build")[0], flow_codes.REFERENCE_BUILD_MESSAGE % "requirements.json")
+        self.assertEqual(says(said, "build")[0], "the last build was spark's reference design, not requirements.json")
 
     def test_requirements_changed_after_the_build_make_the_build_and_the_sheet_stale(self):
         project = a_built_project()
