@@ -16,7 +16,7 @@ raised findings only (rules.md). 2026-11-24.
 | 8 | F8 (2): the look's "last deploy" sentence reads the store record, so it names the last finished deploy on a board that may be erased | plan council | raised | P1097 #1615 |
 | 9 | F10: the log's name has second resolution, so a failed flash and a deploy in the same second write one file | plan council | acted | said in the PR body |
 | 10 | F11: the log sentences live in `NOT_FINISHED_SENTENCES`, and `board_codes.CODES` stays as it is | second round | acted | `deploy_service.NOT_FINISHED_SENTENCES` |
-| 11 | F12: row 3's mutant is `except KeyError`, and the ValueError test injects a log writer, with no `mock.patch` | second round | acted | `DeployService(write_log=...)` |
+| 11 | F12: row 3's mutant is `except KeyError`, and the ValueError test injects a log writer, with no `mock.patch` | second round | acted | `DeployService.write_log`, a class attribute that a test sets on the instance, so `__init__` keeps five parameters (R3) |
 | 12 | F13: a TypeError or KeyError in the log write replaces the FlashError, on purpose | second round | acted | the docstring of `log_not_finished` says so; a test checks the `__context__` |
 | 13 | F15: `data.image_sha256` is filled beside `data.board_log` | second round | acted | `reached["image_sha256"]`, its own row; the `.json` golden changes in two keys |
 | 14 | the envelope's change refused row "the envelope names no image" of `p213b1-deploy-command.json` | the builder's `--anchors` | acted | re-anchored in place on the new line, with the same mutant |
