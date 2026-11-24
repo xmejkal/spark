@@ -15,7 +15,7 @@ P1093 (#1608) and P1095 (#1613): a build that kept no `dist/` of its own (it did
 the earlier `breadboard.md` as one `left alone` entry, an earlier build's, so P1044's witness stays and `flow.py show`
 and `flow.py page` still warn; a copy that failed writes no `built-from.json` or sheet beside the earlier circuit. The
 reference design (no requirements file) records its build too, with `requirements: null`, and names an earlier `dist/`
-it did not replace."""
+it did not replace. P1114 (#1643): it writes no sheet, so it names an earlier sheet and drawing as an earlier build's."""
 
 import json
 import os
@@ -58,6 +58,8 @@ REFERENCE_ENV = {"FAKE_TSCI_CIRCUIT": golden_design.FAKES_TOKEN + "/" + golden_d
 SHEET, SHEET_TIME = "# an earlier build's sheet\n", 1795000000
 #: The earlier build's mark in dist/board/built-from.json, which a copy that failed must not overwrite (P1095 comment 1).
 MARKED = '{"requirements": "an earlier build"}\n'
+#: An earlier build's Wokwi drawing with no part on it, so it holds no moves of the person's (P1114).
+NO_PARTS = '{"version": 1, "author": "spark", "editor": "wokwi", "parts": [], "connections": []}\n'
 
 
 def files_of(folder):
@@ -382,7 +384,31 @@ class UnfinishedBuildDistTest(unittest.TestCase):
         line = "circuit      the last build, %s, did not write dist/: build again with check_spine.py --keep before you rely on this circuit" % self.record(project)["at"]
         _, checked = self.check_all(project)
         self.assertIn(line, checked["resolved"])
-    # --- end P1093, P1095 ---
+
+    # P1114 (#1643): a reference build writes no sheet, so an earlier sheet and drawing stay, named as an earlier build's
+    def test_a_reference_design_build_names_an_earlier_sheet_and_drawing_as_an_earlier_builds(self):
+        def earlier(project):
+            self.plant_sheet(project)
+            (project / "breadboard.json").write_text(NO_PARTS)
+        code, project, report = self.run_build(env=REFERENCE_ENV, before=earlier, args=REFERENCE)
+        self.assertEqual(code, 2)  # its simulation cannot run (no node), as in check-spine-could-not-run-reference
+        self.assertEqual([entry["did"] for entry in self.dist_entries(report)], ["wrote"])
+        self.assertEqual(((project / "breadboard.md").read_text(), (project / "breadboard.json").read_text()), (SHEET, NO_PARTS))
+        for name in ("breadboard.md", "breadboard.json"):
+            entry = self.entry_of(report, name)
+            self.assertEqual((entry["did"], entry["why"]), ("left alone", "spark's reference design has no breadboard sheet, so it is an earlier build's"))
+        _, text = self.flow(project, "show", "--json")
+        breadboard = next(phase for phase in json.loads(text)["data"]["phases"] if phase["phase"] == "breadboard")
+        self.assertEqual(breadboard["status"], "stale")
+
+    def test_a_reference_design_build_with_no_earlier_sheet_names_none(self):
+        def no_sheet(project):
+            for each in project.glob("breadboard.*"):
+                each.unlink()
+        code, project, report = self.run_build(env=REFERENCE_ENV, before=no_sheet, args=REFERENCE)
+        self.assertEqual(code, 2)
+        self.assertEqual([entry for entry in report["kept"] if entry["file"].startswith("breadboard.")], [])
+    # --- end P1093, P1095, P1114 ---
 
 
 class ReplaceWholeTest(unittest.TestCase):

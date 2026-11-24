@@ -184,8 +184,12 @@ BUILD_MESSAGE = ("Saves its files in this project: the board file and its footpr
                  "simulation files, the build record in .spark/build.json and this page.")
 REPLACE_MESSAGE = ("A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you "
                    "changed is left alone.")
-BUILD_REFUSED_MESSAGE = ("If the parts list has a problem, the old wiring sheet and drawings stay as an earlier build's, and "
-                         "this page and the pin map are deleted.")
+#: A refused parts list builds nothing: kept_files keeps the earlier sheet, drawings (P1093) and pin map (P1109).
+BUILD_REFUSED_MESSAGE = ("If spark refuses the parts list, the old wiring sheet, drawings and pin map stay as an earlier "
+                         "build's, and this page is deleted.")
+#: The same for a board-only parts list, whose build deletes dist/ and the sheet (P236), and a refused one neither (P1109).
+BOARD_ONLY_REFUSED_MESSAGE = ("If spark refuses the parts list, the old dist folder, wiring sheet, drawings and pin map stay "
+                              "as an earlier build's, and this page is deleted.")
 #: A build whose board tool (tscircuit) is not installed does not finish: kept_files keeps the earlier sheet and drawings,
 #: named as an earlier build's (P1093), and removes the page.
 NO_TOOL_MESSAGE = ("If the board tool is not installed, the board is not built, the old wiring sheet and drawings stay as an "

@@ -37,6 +37,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
 ROOT = Path(__file__).resolve().parent.parent
+#: How a kept entry ends for spark's pin map that a refused file leaves in place (P1109), a literal as the card says it.
+PIN_MAP_EARLIER = "; the pin map is from the earlier requirements, so it is an earlier build's"
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.design import pin_assigner  # noqa: E402
@@ -676,6 +678,21 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertEqual([entry["did"] for entry in kept if entry["file"].endswith("pins.py")], ["removed"])
         self.assertIn("no pin map: ", err)
         self.assertIn("no-such-part", err)
+
+    def test_a_pin_map_from_an_earlier_design_stays_when_the_pins_cannot_be_placed_and_no_build_finished(self):
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        broken = Path(tempfile.mkdtemp()) / "requirements.json"
+        broken.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["no-such-part"]}))
+        into = Path(tempfile.mkdtemp()) / "project"
+        (into / "firmware").mkdir(parents=True)
+        earlier = self.emitted_pins(fixture / "requirements.json")
+        (into / "firmware" / "pins.py").write_text(earlier)
+        stages = [Stage("build", check_spine.COULD_NOT_RUN, "no tsci", build_codes.TOOL_MISSING)]
+        kept, err = self.keep_with_pins(into, requirements=broken, stages=stages)
+        self.assertEqual((into / "firmware" / "pins.py").read_text(), earlier)
+        entry = [each for each in kept if each["file"].endswith("pins.py")]
+        self.assertEqual([each["did"] for each in entry], ["left alone"])
+        self.assertIn("the pin map is from the earlier requirements", entry[0]["why"])
 
     def test_the_one_command_keeps_the_simulation_project_too(self):
         # JB1: `--keep .` kept the board, dist/ and the sheet, but the Wokwi diagram only with `--sim-dir sim`.
@@ -1689,7 +1706,8 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
 
     # P280 (#318): a refused file kept nothing and cleaned nothing, so an earlier build's sheet and page stayed beside a
     # requirements file that no longer builds, describing another board. P1093: the sheet and its drawings stay, each
-    # named as an earlier build's (the sheet is P1044's witness); the page and the pin map are removed.
+    # named as an earlier build's (the sheet is P1044's witness); the page is removed. P1109: so does spark's pin map,
+    # which the firmware imports, named as from the earlier requirements.
     EARLIER_BUILD = ("breadboard.md", "breadboard.json", "breadboard.svg", "page.html")
     EARLIER_SHEET = ("breadboard.md", "breadboard.json", "breadboard.svg")
 
@@ -1710,14 +1728,15 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
             (project / "requirements.json").write_text(requirements_text)
         return project
 
-    def test_a_refused_file_leaves_the_earlier_sheet_and_drawings_and_removes_the_page_and_pin_map(self):
+    def test_a_refused_file_leaves_the_earlier_sheet_drawings_and_pin_map_and_removes_the_page(self):
         project = self._an_earlier_build()
+        pins = (project / "firmware" / "pins.py").read_bytes()
         code, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
         self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
         for name in self.EARLIER_SHEET:
             self.assertEqual((project / name).read_text(), "from an earlier build", name)
-        for name in ("page.html", "firmware/pins.py"):
-            self.assertFalse((project / name).exists(), name)
+        self.assertFalse((project / "page.html").exists())
+        self.assertEqual((project / "firmware" / "pins.py").read_bytes(), pins)
         self.assertIn("not JSON", err)
         sheet_line = next(line for line in err.splitlines() if line.strip().startswith("left alone: %s (" % (project / "breadboard.md")))
         self.assertIn("not JSON", sheet_line)
@@ -1735,8 +1754,33 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
             self.assertEqual(by_file[name]["why"], detail + ", so it is an earlier build's")
         self.assertEqual(by_file["page.html"]["did"], "removed")
         self.assertEqual(by_file["page.html"]["why"], detail + ", and it described an earlier build")
-        self.assertEqual(by_file["pins.py"]["did"], "removed")
+        self.assertEqual(by_file["pins.py"]["did"], "left alone")
         self.assertIn("is not JSON", by_file["pins.py"]["why"])
+        self.assertTrue(by_file["pins.py"]["why"].endswith(PIN_MAP_EARLIER), by_file["pins.py"]["why"])
+
+    def test_a_refused_file_keeps_spark_s_pin_map_and_says_it_is_from_the_earlier_requirements(self):
+        # P1109 (#1633): main.py imports pins from firmware/, so the earlier pin map stays in place, named (D6)
+        project = self._an_earlier_build()
+        pins = (project / "firmware" / "pins.py").read_bytes()
+        code, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
+        self.assertEqual((project / "firmware" / "pins.py").read_bytes(), pins)
+        line = next(line.strip() for line in err.splitlines() if "%s (" % (project / "firmware" / "pins.py") in line)
+        self.assertTrue(line.startswith("left alone: %s (" % (project / "firmware" / "pins.py")), line)
+        self.assertIn("not JSON", line)
+        self.assertTrue(line.endswith(PIN_MAP_EARLIER + ")"), line)
+
+    def test_a_refused_board_only_file_leaves_the_earlier_dist_sheet_and_pin_map_and_removes_the_page(self):
+        # P1109's council, decision 4: a board-only file can be refused, and then nothing is removed but the page
+        project = self._an_earlier_build(json.dumps({"board": "firebeetle2-esp32s3", "board_only": True, "signals": "nope"}))
+        (project / "dist" / "board").mkdir(parents=True)
+        (project / "dist" / "board" / "circuit.json").write_text("[]")
+        code, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
+        self.assertIn("signals is", err)
+        for name in self.EARLIER_SHEET + ("firmware/pins.py", "dist/board/circuit.json"):
+            self.assertTrue((project / name).exists(), name)
+        self.assertFalse((project / "page.html").exists())
 
     def test_a_file_that_reads_but_is_refused_gives_its_own_reason(self):
         project = self._an_earlier_build(json.dumps({"board": "firebeetle2-esp32s3",
@@ -1744,7 +1788,7 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
                                                                {"part": "tactile-button", "name": "Openlid"}]}))
         _, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
         self.assertFalse((project / "page.html").exists())
-        self.assertFalse((project / "firmware" / "pins.py").exists())
+        self.assertTrue((project / "firmware" / "pins.py").exists())
         page_line = next(line for line in err.splitlines() if "no page: " in line)
         self.assertIn("parts[0] is called OpenLid and parts[1] Openlid", page_line)
 
