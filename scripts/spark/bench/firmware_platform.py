@@ -18,7 +18,8 @@ from spark.firmware.project_image import DeployError
 
 
 def board_of(project):
-    """The project's board type (D35): requirements.json's `board`, else the selection."""
+    """The project's board type (D35): requirements.json's `board`, else the selection. The deploy never reaches the
+    selection here: its look stops first with no_board_named when requirements.json names no board."""
     return board_records.project_board_id(project)
 
 

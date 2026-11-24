@@ -538,7 +538,7 @@ def board_differs(project):
     that cannot be read is said too. A selection that cannot be read is not compared."""
     try:
         named = board_records.requirements_board(project)
-    except board_records.BoardError as broken:
+    except (board_records.BoardError, OSError) as broken:  # the review's R1: a file that cannot be opened
         return ["the project's board is not known: %s" % broken]
     try:
         selected = board_records.active_id(project)
