@@ -644,7 +644,7 @@ class TheSourcingAreaTest(unittest.TestCase):
                "validate_parts", "vendor_documents", "write_answers", "write_skeleton"]
     #: `parts.py`'s own top-level names since P726 PR 3: the CLI's flag shape of `DropNeed`, the route to the Operations on
     #: the core, the help epilog and `main`. The text printer's rule is `record_kind.Answer.text_lines` and `run_cli`'s.
-    PARTS_CLI = ["DropNeedFlag", "asked_on_the_core", "catalog_epilog", "main", "on_the_core"]
+    PARTS_CLI = ["DropNeedFlag", "asked_on_the_core", "main", "on_the_core", "operations_epilog"]
 
     def test_the_area_holds_its_modules_and_the_band_is_bound_there_alone(self):
         modules = sorted(path.stem for path in self.SOURCING.glob("*.py") if path.name != "__init__.py")
