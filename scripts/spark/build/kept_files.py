@@ -490,7 +490,7 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
     The record of this build in the project's `.spark/build.json` (P825), as a list of one kept entry {file, did, why,
     line}: `wrote`, or `not kept` with the OSError. None is written, and the list is empty, when `destination` is no
     project folder itself (`board_records.project_root`): a `.spark/` folder would make it one. A could-not-run build is
-    recorded too. `requirements` is named relative to the project when it is inside it, else by its whole path; `kept` gives the
+    recorded too. `requirements` is named relative to the project when it is inside it, else by its whole path, and is None for the reference design (P1095); `kept` gives the
     pin map's missing facts. `records` is the BuildRecordStore a test gives.
     """
     destination = Path(destination)
@@ -501,7 +501,7 @@ def keep_build_record(destination, requirements, stages, kept, records=None):
         # each stage's code when it did not end ok (P977), which the flow's guide reads; never its detail, which can hold a path
         record = {"status": STATUS_FOR[verdict(stages)], "stages": [dict({"name": stage.name, "status": stage.status}, **({"code": stage.code} if stage.code else {})) for stage in stages],
                   "missing_facts": [item for entry in kept for item in entry.get("missing_facts", [])],
-                  "requirements": _named_from(Path(requirements), destination), "requirements_sha256": sha256_of(requirements),
+                  "requirements": requirements and _named_from(requirements, destination), "requirements_sha256": requirements and sha256_of(requirements),
                   WRITTEN_SHA256: _written_sha256(records, kept),
                   DIST_WRITTEN: str(destination / "dist") in {entry["file"] for entry in kept if entry["did"] == WROTE}}
         path = records.write(record)
@@ -555,20 +555,20 @@ KeepAsked = namedtuple("KeepAsked", "requirements_file keep sim_dir")
 def keep_all(stages, workdir, asked, exporter, flow_page=None):
     """
     What a build run keeps (P804), as kept entries {file, did, why, line}: the built board in `asked.keep` (`_kept`); with
-    a requirements file also the breadboard sheet, the pin map and the build record; the simulation project in
+    a requirements file also the breadboard sheet and the pin map; the build record (the reference design's too, P1095); the simulation project in
     `simulation_dir`; and last the page (its tabs drawn by `exporter`; in a project the flow page `flow_page` writes, P827),
     since the flow page reads what the others kept. None when --keep was not given, or was given with no work
     folder and no requirements file that is there. Even then, a kept simulation project is one entry. With no work folder, a refused
-    requirements file that is there still removes what an earlier build left (P280); a missing one, which can be a typo,
+    requirements file that is there still removes the page and the pin map an earlier build left (P280, P1093); a missing one, which can be a typo,
     removes nothing. It removes no work folder: the caller does.
     """
     requirements_file, keep = asked.requirements_file, asked.keep
     keeps = keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())
     kept = (_kept(workdir, keep, bool(requirements_file), _built(stages)) if workdir is not None else []) if keeps else None
-    if kept is not None and requirements_file:
-        kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + drop_an_older_build(Path(keep), stages, kept)
-        kept.append(_kept_pins(Path(requirements_file), Path(keep)))
-        kept += keep_build_record(Path(keep), Path(requirements_file), stages, kept)  # P825: what flow.py reads
+    if kept is not None:  # P1095: the reference design (no requirements file) names an earlier dist/ and records its build too
+        kept += (keep_breadboard(Path(requirements_file), Path(keep), stages, kept) if requirements_file else []) + drop_an_older_build(Path(keep), stages, kept)
+        kept += [_kept_pins(Path(requirements_file), Path(keep))] if requirements_file else []
+        kept += keep_build_record(Path(keep), Path(requirements_file) if requirements_file else None, stages, kept)  # P825: what flow.py reads
     simulation_folder = simulation_dir(asked.sim_dir, keep)
     simulation = keep_simulation(workdir, simulation_folder, stages) if workdir is not None and simulation_folder else None
     if simulation is not None:
