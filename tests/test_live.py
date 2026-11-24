@@ -34,8 +34,9 @@ MAC = "8c:bf:ea:xx:xx:xx"
 RESTART = Cure("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n", None, True, True)
 
 
-class LiveScriptTest(unittest.TestCase):
-    """A scratch store with a grant for P228's bench C6, and a project whose board is the XIAO ESP32-C6."""
+class LiveCase(unittest.TestCase):
+    """A scratch store with a grant for P228's bench C6, and a project whose board is the XIAO ESP32-C6: the helpers only,
+    so a subclass does not run LiveScriptTest's tests again (P1057)."""
 
     def setUp(self):
         home = Path(tempfile.mkdtemp())
@@ -50,12 +51,13 @@ class LiveScriptTest(unittest.TestCase):
         know_the_board(self.project, MAC, known_board.comparable_key(MAC))  # P892: live runs on the kept board with no question
 
     def world(self, answers=("1\n", ""), devs="mpremote-devs-one.txt", minutes_later=0):
-        """A FakeOutsideWorld whose `run` answers mpremote devs from a fixture, then the exec and the reset from `answers` in turn."""
-        answers = list(answers)
+        """A FakeOutsideWorld whose `run` answers mpremote devs from a fixture, then the exec and the reset from `answers` in turn.
+        `devs` is one fixture, or a tuple of fixtures, one for each list in turn, the last for every list after it (P1057)."""
+        answers, lists = list(answers), [devs] if isinstance(devs, str) else list(devs)
 
         def run(command, **kw):
             if "devs" in command:
-                return done(data(devs))
+                return done(data(lists.pop(0) if len(lists) > 1 else lists[0]))
             answer = answers.pop(0)
             if isinstance(answer, Exception):
                 raise answer
@@ -76,6 +78,8 @@ class LiveScriptTest(unittest.TestCase):
             code = live.main(argv, outside=outside, operation=operation)
         return code, out.getvalue(), err.getvalue(), outside.ran
 
+
+class LiveScriptTest(LiveCase):
     def test_print_1_runs_on_the_checked_port_and_the_board_is_reset(self):
         code, said, _, ran = self.go("--code", "print(1)", "--json")
         line = json.loads(said)
@@ -273,6 +277,68 @@ class LiveScriptTest(unittest.TestCase):
         code, said, problems, _ = self.go("--code", "print(1)", "--json", answers=(RuntimeError("boom"),))
         self.assertEqual((code, said), (2, ""))
         self.assertIn("Traceback (most recent call last):", problems)
+
+
+class ASleepingBoardTest(LiveCase):
+    """P1057: with no board on USB, or a port the person named that is not, and a firmware/ that calls deepsleep, live.py
+    says the asleep fix on stderr, as look.py and grant.py do, and not the cable advice. A port that spark picked and that
+    left USB before the grant check keeps its own words: the fix never says "the port you named" of it."""
+
+    def setUp(self):
+        super().setUp()
+        (self.project / "firmware").mkdir()
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.deepsleep(1)\n")
+
+    def test_no_board_gives_no_board_found_and_the_asleep_fix(self):
+        code, _, problems, ran = self.go("--code", "print(1)", devs="mpremote-devs-none.txt")
+        lines = problems.splitlines()
+        self.assertEqual((code, lines[0], len(lines)), (2, "live.py: no board found.", 2))
+        self.assertTrue(lines[1].startswith("What spark knows: no board is on USB, and the project's firmware calls "
+                                            "deepsleep (firmware/main.py:2)."), lines[1])
+        self.assertEqual([command for command in ran if "devs" not in command], [])
+
+    def test_a_named_port_not_on_usb_opens_the_fix_with_that_port(self):
+        code, _, problems, _ = self.go("--code", "print(1)", "--port", "/dev/cu.usbmodem9")
+        lines = problems.splitlines()
+        self.assertEqual((code, lines[0]), (2, "live.py: no board on /dev/cu.usbmodem9: mpremote devs does not list it."))
+        self.assertTrue(lines[1].startswith("What spark knows: the port you named is not on USB, and the project's firmware"), lines[1])
+
+    def test_a_named_port_that_leaves_usb_before_the_grant_check_opens_the_fix_with_that_port(self):
+        # the review of #1596: the grant check lists the boards a second time, and the port the person named is gone
+        code, _, problems, _ = self.go("--code", "print(1)", "--port", C6_PORT, devs=("mpremote-devs-one.txt", "mpremote-devs-none.txt"))
+        lines = problems.splitlines()
+        self.assertEqual((code, lines[0], len(lines)), (2, "live.py: no board on %s: mpremote devs does not list it." % C6_PORT, 2))
+        self.assertTrue(lines[1].startswith("What spark knows: the port you named is not on USB, and the project's firmware"), lines[1])
+
+    def test_a_picked_port_that_left_usb_keeps_its_own_words(self):
+        # the grant check lists the boards a second time, and the board spark picked is gone (D2 of the plan: PR 2)
+        code, _, problems, _ = self.go("--code", "print(1)", devs=("mpremote-devs-one.txt", "mpremote-devs-none.txt"))
+        self.assertEqual((code, problems.splitlines()), (2, ["live.py: no board on %s: mpremote devs does not list it." % C6_PORT]))
+        self.assertNotIn("the port you named", problems)
+
+    def test_the_json_line_says_the_finding_s_sentence_and_ends_with_the_look_that_needs_the_person(self):
+        code, said, _, _ = self.go("--code", "print(1)", "--json", devs="mpremote-devs-none.txt")
+        line = json.loads(said)
+        (step,) = line["next"]
+        self.assertEqual((code, line["answer"], line["why"]), (2, "could-not-run", "no board found."))
+        self.assertEqual((step["op"], step["argv"], step["needs_person"]), ("look", ["--project", str(self.project.resolve())], True))
+
+    def test_without_a_deepsleep_call_the_stop_is_as_before(self):
+        for main in ("import machine\nmachine.lightsleep(1)\n", "import machine\nmachine.deepsleep(\n"):
+            with self.subTest(main=main):
+                (self.project / "firmware" / "main.py").write_text(main)
+                code, said, problems, _ = self.go("--code", "print(1)", devs="mpremote-devs-none.txt")
+                self.assertEqual((code, problems.splitlines()), (2, ["live.py: no board found. Plug it straight into the computer "
+                                                                     "with a data cable, not a hub that gives power only. If the "
+                                                                     "plug is USB-C, turn it around, or use a USB-A to USB-C cable."]))
+
+    def test_the_help_says_a_board_in_download_mode_runs_no_firmware(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            live.main(["--help"], outside=FakeOutsideWorld())
+        said = " ".join(out.getvalue().split())
+        self.assertIn("download mode", said)
+        self.assertIn("runs no firmware", said)
 
 
 class TheHelpTest(unittest.TestCase):

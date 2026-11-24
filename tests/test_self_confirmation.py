@@ -158,6 +158,11 @@ MAY_READ = {
     "wiring_steps.THE_BOARD": "the name a component has, used to find the board among the parts: vocabulary, not a value",
     "part_pictures.FALLBACK": "the name of the fallback pictogram, compared with itself: sameness, not a value",
     "tool_finder.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
+    "operation_catalogue.CATALOGUE": STRUCTURE + " (P1077: the registry the Operation catalogue's tests walk, each entry checked against its table)",
+    "operation_catalogue.TABLES": STRUCTURE + " (P1077: the area tables the Operation catalogue's tests walk; their packages are a literal)",
+    "operation_catalogue.NETWORK": PINNED + " (P1077: the four network ops as a literal tuple); the agents' page and the routes' guard walk it",
+    "run_request.STEP_OPERATIONS": SAMENESS + " (P1077: each op the page may run is the Operation catalogue's own class)",
+    "research_part.SCRIPT": STRUCTURE + " (P1077: the script a frontend names research-part by, where the page and the guard look)",
     "parts.OPERATIONS": "the --describe row of audit is compared with AuditRecords' own help and effects: two sources that must agree, "
                         "neither the expectation (P707, until P726 deletes the row)",
 }

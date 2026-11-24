@@ -38,7 +38,8 @@ PageRequest = namedtuple("PageRequest", "id key seen")
 RAN_LINE = "ran %s: %s"
 
 
-#: The Operations the page may run, by op: today's three (P829). Piece 4's catalogue of ops replaces this table (P793).
+#: The Operations the page may run, by op: today's three (P829). The page's allow-list, a subset of the Operation catalogue
+#: (P1077 pins it); RunRequest runs the offer's step (P1030). Its end is P1082 #1587's.
 STEP_OPERATIONS = {operation.name: operation for operation in (PickParts, WriteRequirements, BuildBoard)}
 
 
