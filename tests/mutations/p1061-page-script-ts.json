@@ -1,0 +1,50 @@
+[
+ {
+  "file": "tools/check_commit.py",
+  "name": "a missing tsc passes the page script's check (P1061)",
+  "find": "    if found is None:\n        return TSC_REFUSAL",
+  "replace": "    if False:\n        return TSC_REFUSAL"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a tsc that is not 7.0 passes the page script's check (P1061)",
+  "find": "    if not said.startswith(\"Version %s.\" % TSC_VERSION):",
+  "replace": "    if False:"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a committed page_script.js that is not tsc's output passes (P1061)",
+  "find": " or output.read_bytes() != committed.read_bytes():",
+  "replace": " or False:"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a tsc that says errors passes, or is not quoted (P1061)",
+  "find": "        if compiled.returncode != 0:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a change of tsconfig.json runs no check of the page script (P1061)",
+  "find": "(\"page_script.ts\", \"page_script.js\", \"tsconfig.json\", \"artifact_runtime.d.ts\")",
+  "replace": "(\"page_script.ts\", \"page_script.js\", \"artifact_runtime.d.ts\")"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "--full does not check the page script (P1061)",
+  "find": "    return full or changed is None",
+  "replace": "    return changed is None"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a tree from before P1061 is compiled, and the gate fails a tree with no TypeScript (P1061)",
+  "find": "    if not (tree / SCRIPT_SOURCES[0]).is_file():\n        return False",
+  "replace": "    if False:\n        return False"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the gate runs the suite on a page script that drifted (P1061)",
+  "find": "    drift = compiles and script_drift(scratch, run)",
+  "replace": "    drift = None"
+ }
+]
