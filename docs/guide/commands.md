@@ -186,7 +186,7 @@ A requirements file becomes a board that builds, with a Wokwi diagram generated 
 stopped it. It runs no simulation. It runs in seconds, with no agents ([journey: Build](journey/build.md)).
 
 With `--keep .` it writes `board.tsx`, its footprint, `dist/`, `breadboard.md` (the parts and how to wire them), `breadboard.json` (the same wiring on a Wokwi breadboard, for the XIAO ESP32-C6 today),
-`firmware/pins.py` (the pins the firmware imports) and `sim/` (the Wokwi project) into the project. A build that did not finish removes an earlier `dist/` and says so, since every check reads it (P816). After a build whose build stage ended ok, a `board.tsx` that spark wrote and nobody changed is `replaced`
+`firmware/pins.py` (the pins the firmware imports) and `sim/` (the Wokwi project) into the project. After a build that did not finish, an earlier `dist/` stays and is named as an earlier build's, here and in `check_all` (P816). After a build whose build stage ended ok, a `board.tsx` that spark wrote and nobody changed is `replaced`
 (`unchanged` when this build made the same board; the previous version is `.spark/previous/board.tsx.txt`). Any other is left alone,
 and so is one when the build did not finish or the replace failed. `dist/` is built from the requirements file, not from your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)). To check an edited `board.tsx`, build it with `npx --no tsci build board.tsx`; to regenerate it, delete it. When its traces join other
 pins than this build's, a `traces differ` line names each one (P660). `--sim-dir DIR` keeps the Wokwi project in DIR instead

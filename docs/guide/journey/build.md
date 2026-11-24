@@ -176,7 +176,7 @@ wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
 19 routed traces carry the 22 written connections: a group of N connected pins needs N−1 traces.
 
 `--keep .` writes the board into the project: `board.tsx`, the board's footprint and `dist/`, where every
-check looks. A build that did not finish removes an earlier `dist/` and says so, so no check reads an older board (P816). After a build whose build stage ended ok, a `board.tsx` that spark wrote and nobody changed is `replaced` (`unchanged` when this build made the same board; the previous version is `.spark/previous/board.tsx.txt`). Any other is left alone, and so is one when the build did not finish or the replace failed. `dist/` is built from the requirements file, not
+check looks. After a build that did not finish, an earlier `dist/` stays and is named as an earlier build's, here and in `check_all` (P816). After a build whose build stage ended ok, a `board.tsx` that spark wrote and nobody changed is `replaced` (`unchanged` when this build made the same board; the previous version is `.spark/previous/board.tsx.txt`). Any other is left alone, and so is one when the build did not finish or the replace failed. `dist/` is built from the requirements file, not
 from your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)). When the traces of your `board.tsx` differ from the board this build made, a `traces differ` line names each one (P660). It also writes `firmware/pins.py`, the pins
 that the firmware imports ([P196](https://github.com/xmejkal/spark/issues/155)). Without `--keep`, the chain builds in a temporary
 folder and deletes it.
