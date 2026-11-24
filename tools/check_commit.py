@@ -92,11 +92,14 @@ TSC_LINES_SHOWN = 1
 def needs_tsc(tree, changed, full=False):
     """
     True when the archived `tree` holds the page script's source, and `full` asks for every check, or `changed` (None
-    when git could not tell: a doubt runs more) holds one of SCRIPT_SOURCES. A tree from before P1061 has nothing to compile.
+    when git could not tell: a doubt runs more) holds one of SCRIPT_SOURCES. A tree with none of the four, a test's or
+    one from before P1061, has nothing to compile. A tree whose `changed` deleted the source while another of the four
+    stays still needs tsc, so that a deletion never turns the check off (the review of #1606).
     """
+    named = changed is not None and any(name in SCRIPT_SOURCES for name in changed)
     if not (tree / SCRIPT_SOURCES[0]).is_file():
-        return False
-    return full or changed is None or any(name in SCRIPT_SOURCES for name in changed)
+        return named and any((tree / name).is_file() for name in SCRIPT_SOURCES[1:])
+    return full or changed is None or named
 
 
 def tsc_refusal(which=shutil.which, run=subprocess.run):
@@ -110,14 +113,14 @@ def tsc_refusal(which=shutil.which, run=subprocess.run):
     return None
 
 
-def script_drift(tree, run=subprocess.run):
+def script_drift(tree, tsc, run=subprocess.run):
     """
-    The problems line when tsc, compiling `tree`'s page script into a temporary folder, says errors, or writes other
-    bytes than the committed page_script.js; else None. The folder goes, whatever tsc did.
+    The problems line when `tsc` (the path `which` found), compiling `tree`'s page script into a temporary folder, says
+    errors, or writes other bytes than the committed page_script.js; else None. The folder goes, whatever tsc did.
     """
     committed = tree / SCRIPT_SOURCES[1]
     with tempfile.TemporaryDirectory(prefix="spark-tsc-") as out:
-        compiled = run(["tsc", "-p", SCRIPT_FOLDER, "--outDir", out], cwd=str(tree), capture_output=True, text=True)
+        compiled = run([tsc, "-p", SCRIPT_FOLDER, "--outDir", out], cwd=str(tree), capture_output=True, text=True)
         if compiled.returncode != 0:
             first = (compiled.stdout + compiled.stderr).strip().splitlines()[:TSC_LINES_SHOWN]
             return ("page script: tsc -p %s says %s (P1061); fix the .ts, then run it again and commit both files"
@@ -350,7 +353,7 @@ def gate(root, commit, scratch, full=False, which=shutil.which, run=subprocess.r
     if refused:
         print(refused)
         return EXIT_COULD_NOT_RUN
-    drift = compiles and script_drift(scratch, run)
+    drift = compiles and script_drift(scratch, which("tsc"), run)
     if drift:
         print(drift)
         return EXIT_PROBLEMS

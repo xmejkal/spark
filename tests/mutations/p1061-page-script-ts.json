@@ -32,19 +32,31 @@
  {
   "file": "tools/check_commit.py",
   "name": "--full does not check the page script (P1061)",
-  "find": "    return full or changed is None",
-  "replace": "    return changed is None"
+  "find": "    return full or changed is None or named",
+  "replace": "    return changed is None or named"
  },
  {
   "file": "tools/check_commit.py",
   "name": "a tree from before P1061 is compiled, and the gate fails a tree with no TypeScript (P1061)",
-  "find": "    if not (tree / SCRIPT_SOURCES[0]).is_file():\n        return False",
-  "replace": "    if False:\n        return False"
+  "find": "    if not (tree / SCRIPT_SOURCES[0]).is_file():\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a branch that deleted page_script.ts turns the check off (the review of #1606)",
+  "find": "        return named and any((tree / name).is_file() for name in SCRIPT_SOURCES[1:])",
+  "replace": "        return False"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the compile runs a bare tsc, not the one whose version was read (the review of #1606)",
+  "find": "compiled = run([tsc, \"-p\", SCRIPT_FOLDER",
+  "replace": "compiled = run([\"tsc\", \"-p\", SCRIPT_FOLDER"
  },
  {
   "file": "tools/check_commit.py",
   "name": "the gate runs the suite on a page script that drifted (P1061)",
-  "find": "    drift = compiles and script_drift(scratch, run)",
+  "find": "    drift = compiles and script_drift(scratch, which(\"tsc\"), run)",
   "replace": "    drift = None"
  }
 ]
