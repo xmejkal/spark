@@ -1,5 +1,5 @@
 """
-The guide of a project (P977, #1407): from the Phases `show_flow.read_flow` gives, the phase the person acts on now, who
+The guide of a project (P977, #1407): from the Phases `show_flow.reading_of` reads, the phase the person acts on now, who
 acts and one sentence for it, the phases done and later, the needs set aside, and why there is no simulation. It reads
 and never writes. `flow.py show` and `flow.py page` answer it as `data.guide`.
 """
