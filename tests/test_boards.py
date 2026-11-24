@@ -246,6 +246,9 @@ class ButtonPlacesTest(unittest.TestCase):
         (root / "boards" / "active.json").write_text("[1]")
         (root / "requirements.json").write_text("{}")
         self.assertIs(board_records.ButtonPlaces.of_project(root), board_records.ButtonPlaces.EMPTY)
+        root = project(active="mine", own={"mine": [1]})  # a record of no JSON object: load's AttributeError, so EMPTY
+        (root / "requirements.json").write_text("{}")
+        self.assertIs(board_records.ButtonPlaces.of_project(root), board_records.ButtonPlaces.EMPTY)
 
 
 # --- MVP --- (P512, #708) the one reader of physical.pad_aliases
@@ -1126,6 +1129,18 @@ class TheProjectsBoardIsTheRequirementsBoardTest(unittest.TestCase):
         with self.assertRaises(board_records.BoardError) as refused:
             board_records.load(root)
         self.assertEqual(refused.exception.code, "no_board_definition")
+
+    def test_a_selection_that_is_no_json_object_is_record_file_broken(self):
+        # P1094 (#1612, folded into P1024): active_id called .get on it, and init crashed with an AttributeError
+        for text in ("[1]", '"x"', "3"):
+            with self.subTest(selection=text):
+                root = self.apart("{}")
+                (root / "boards" / "active.json").write_text(text)
+                for read in (board_records.active_id, board_records.project_board_id):
+                    with self.assertRaises(board_records.BoardError) as refused:
+                        read(root)
+                    self.assertEqual(refused.exception.code, "record_file_broken")
+                    self.assertIn("active.json is not a JSON object", str(refused.exception))
 
 
 class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):

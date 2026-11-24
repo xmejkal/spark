@@ -343,6 +343,20 @@ class TheSelectionThatIsNotTheProjectsBoardIsSaidTest(unittest.TestCase):
         self.assertIn("  active.json already exists, left alone\n", said)
         self.assertNotIn("stays the project's board", said)
 
+    def test_a_selection_of_no_json_object_and_no_board_named_is_no_crash(self):
+        # P1094 (#1612): requirements.json names no board, active.json holds no JSON object: a traceback in loader.py,
+        # with or without --force. The loader reads the BoardError (record_file_broken) as no board, as for a selection
+        # that names none; --force writes the selection.
+        for argv in ((), ("--board", self.S3), ("--board", self.S3, "--force")):
+            with self.subTest(argv=argv):
+                root = self.a_project_naming("{}", [1])
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                    code = init_project.main(["--project", str(root), *argv])
+                self.assertEqual(code, init_project.EXIT_OK)
+                self.assertNotIn("stays the project's board", out.getvalue())
+        self.assertEqual(self.selected(root), self.S3)
+
     @unittest.skipIf(os.geteuid() == 0, "root reads a file with no read permission")
     def test_a_requirements_json_that_cannot_be_opened_is_said_not_a_crash(self):
         # the review's R1: an OSError from requirements.json crashed init after active.json was written
