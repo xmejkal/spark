@@ -323,13 +323,14 @@ class ContainedWritesTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE((self.home / "drawer").stat().st_mode), 0o700)
 
     def test_a_private_part_file_is_0600_before_it_holds_a_byte(self):
-        real_write_text = Path.write_text
+        real_new_part = store._new_part
         seen = []
 
-        def look_at_the_part_first(path, text, *args, **kwargs):
-            if path.name.endswith(".part"):
-                seen.append((stat.S_IMODE(path.stat().st_mode), path.stat().st_size))
-            return real_write_text(path, text, *args, **kwargs)
+        def look_at_the_part_first(part, mode):  # P1054: the bytes go through the descriptor `_new_part` makes
+            descriptor = real_new_part(part, mode)
+            made = os.fstat(descriptor)
+            seen.append((stat.S_IMODE(made.st_mode), made.st_size))
+            return descriptor
 
         for stale in (False, True):
             with self.subTest(stale=stale):
@@ -339,7 +340,7 @@ class ContainedWritesTest(unittest.TestCase):
                     left_behind.write_text("half of an old write")
                     os.chmod(left_behind, 0o644)
                 seen.clear()
-                with mock.patch.object(Path, "write_text", autospec=True, side_effect=look_at_the_part_first):
+                with mock.patch.object(store, "_new_part", side_effect=look_at_the_part_first):
                     store.write_file(target, "secret\n", private=True)
                 self.assertEqual(seen, [(0o600, 0)])
                 self.assertEqual((target.read_text(), stat.S_IMODE(target.stat().st_mode)), ("secret\n", 0o600))
@@ -390,19 +391,18 @@ class OneWriterAtATimeTest(unittest.TestCase):
         self.assertEqual(target.read_text(), "old\n")
 
     def test_a_write_that_fails_leaves_no_part_file_behind(self):
-        real_write_text = Path.write_text
+        real_new_part = store._new_part
 
-        def runs_out_of_room_on_the_part(path, text, *args, **kwargs):
-            if path.name.endswith(".part"):
-                real_write_text(path, text[:2], *args, **kwargs)  # half of it lands first
-                raise OSError("the disk is full")
-            return real_write_text(path, text, *args, **kwargs)
+        def runs_out_of_room_on_the_part(part, mode):  # P1054: the bytes go through the descriptor `_new_part` makes
+            with open(real_new_part(part, mode), "w") as out:
+                out.write("ne")  # half of it lands first
+            return os.open(part, os.O_RDONLY)  # so the write of the rest fails with an OSError
 
         for private in (False, True):
             with self.subTest(private=private):
                 target = Path(tempfile.mkdtemp()) / "record.json"
                 target.write_text("old\n")
-                with mock.patch.object(Path, "write_text", autospec=True, side_effect=runs_out_of_room_on_the_part):
+                with mock.patch.object(store, "_new_part", side_effect=runs_out_of_room_on_the_part):
                     with self.assertRaises(OSError):
                         store.write_file(target, "new\n", private=private)
                 self.assertEqual(sorted(found.name for found in target.parent.iterdir()), ["record.json"])
@@ -563,6 +563,100 @@ class OneWriterAtATimeTest(unittest.TestCase):
             self.assertFalse(entered.wait(timeout=0.5), "another thread got in while this one held the store")
         other.join(timeout=20)
         self.assertTrue(entered.is_set())
+
+
+class APartNameTakenTest(unittest.TestCase):
+    """P1054 (#1551): a `.part` is made new. A link, a folder or a FIFO at its name is refused and left, nothing outside the
+    folder is written, and a `.part` that a killed write left is removed. Real links, folders and FIFOs, no patched write."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.outside = Path(tempfile.mkdtemp()) / "a-file-of-the-person.txt"
+        self.outside.write_text("the person's own\n")
+
+    @staticmethod
+    def a_file(name, text):
+        """`name` in a folder of its own, holding `text`."""
+        made = Path(tempfile.mkdtemp()) / name
+        made.write_text(text)
+        return made
+
+    def assert_refused_and_left(self, write, target, old):
+        """`write()` raises PartTakenError naming the `.part`, the link there is still a link, and nothing changed."""
+        part = target.with_name(target.name + ".part")
+        with self.assertRaises(store.PartTakenError) as refused:
+            write()
+        self.assertIn(str(part), str(refused.exception))
+        self.assertEqual(self.outside.read_text(), "the person's own\n")
+        self.assertTrue(part.is_symlink())
+        self.assertEqual((target.read_text(), target.is_symlink()), (old, False))
+
+    def test_a_link_at_a_records_part_is_refused_and_nothing_outside_is_written(self):
+        for private in (False, True):
+            with self.subTest(private=private):
+                target = self.a_file("record.json", "old\n")
+                target.with_name("record.json.part").symlink_to(self.outside)
+                self.assert_refused_and_left(lambda: store.write_file(target, "new\n", private=private), target, "old\n")
+
+    def test_a_link_at_the_pages_part_is_refused_and_nothing_outside_is_written(self):
+        page = self.a_file("page.html", "<html>the old page</html>\n")
+        page.with_name("page.html.part").symlink_to(self.outside)
+        self.assert_refused_and_left(lambda: store.replace_file(page, "<html>the page</html>\n"), page, "<html>the old page</html>\n")
+
+    def test_a_dangling_link_at_a_part_makes_no_file_outside(self):
+        made_by_spark = self.outside.with_name("made-by-spark.txt")
+        page = Path(tempfile.mkdtemp()) / "page.html"
+        page.with_name("page.html.part").symlink_to(made_by_spark)
+        with self.assertRaises(store.PartTakenError):
+            store.replace_file(page, "<html>the page</html>\n")
+        self.assertEqual((made_by_spark.exists(), page.exists()), (False, False))
+        self.assertTrue(page.with_name("page.html.part").is_symlink())
+
+    def test_a_folder_or_a_fifo_at_a_part_is_refused_and_left(self):
+        def a_fifo_with_a_reader(part):
+            os.mkfifo(part)  # a reader holds it open, so a write into it would not wait for one
+            reader = os.open(part, os.O_RDONLY | os.O_NONBLOCK)
+            self.addCleanup(os.close, reader)
+
+        for name, make, kind in (("folder", Path.mkdir, stat.S_ISDIR), ("fifo", a_fifo_with_a_reader, stat.S_ISFIFO)):
+            for private in (False, True):
+                with self.subTest(name, private=private):
+                    target = self.a_file("record.json", "old\n")
+                    make(target.with_name("record.json.part"))
+                    with self.assertRaises(store.PartTakenError):
+                        store.write_file(target, "new\n", private=private)
+                    self.assertTrue(kind(target.with_name("record.json.part").lstat().st_mode))
+                    self.assertEqual(target.read_text(), "old\n")
+
+    def test_a_part_a_killed_write_left_is_removed_and_the_write_goes_through(self):
+        probe = Path(tempfile.mkdtemp()) / "probe"
+        with open(probe, "w"):  # the mode a file made new gets here: 0666 less the umask, read and never set
+            pass
+        new_file_mode = stat.S_IMODE(probe.stat().st_mode)
+        # the stale part's mode is never the one expected, so a mode it leaks shows
+        for private, stale_mode, mode in ((False, 0o600, new_file_mode), (True, 0o644, 0o600)):
+            with self.subTest(private=private):
+                target = self.a_file("record.json", "old\n")
+                left_behind = target.with_name("record.json.part")
+                left_behind.write_text("half of an old write")
+                os.chmod(left_behind, stale_mode)
+                self.assertTrue(store.write_file(target, "new\n", private=private))
+                self.assertEqual((target.read_text(), stat.S_IMODE(target.stat().st_mode)), ("new\n", mode))
+                self.assertEqual(sorted(found.name for found in target.parent.iterdir()), ["record.json"])
+
+    def test_a_link_at_a_kept_documents_part_is_refused(self):
+        import hashlib
+        folder = self.home / "sources" / hashlib.sha256(b"datasheet bytes").hexdigest()
+        folder.mkdir(parents=True)
+        (folder / "ds.pdf.part").symlink_to(self.outside)
+        with self.assertRaises(store.PartTakenError):
+            store.keep(b"datasheet bytes", "ds.pdf")
+        self.assertEqual(self.outside.read_text(), "the person's own\n")
+        self.assertEqual(((folder / "ds.pdf").exists(), (folder / "ds.pdf").is_symlink()), (False, False))
+        self.assertTrue((folder / "ds.pdf.part").is_symlink())
 
 
 class AValueInAStoreSentenceIsOnOneLineTest(unittest.TestCase):
@@ -792,8 +886,14 @@ class TheOneDoorTest(unittest.TestCase):
         self.assertEqual((self.home / "sources" / digest / "drawing.pdf").read_bytes(), b"%PDF drawing")
 
     def test_a_kept_file_is_checked_before_it_takes_its_name(self):
-        real = Path.write_bytes
-        with mock.patch.object(Path, "write_bytes", lambda self, data: real(self, data[:3])), \
+        real, elsewhere = store._new_part, Path(tempfile.mkdtemp()) / "the-rest"
+
+        def lands_only_three_bytes(part, mode):  # P1054: the bytes go through the descriptor `_new_part` makes
+            with open(real(part, mode), "wb") as out:
+                out.write(b"%PDF drawing"[:3])
+            return os.open(elsewhere, os.O_WRONLY | os.O_CREAT)  # the rest never reaches the part
+
+        with mock.patch.object(store, "_new_part", lands_only_three_bytes), \
                 self.assertRaises(store.StoreError) as refused:
             store.keep(b"%PDF drawing", "drawing.pdf")
         self.assertEqual(refused.exception.code, "document_not_kept")
@@ -920,20 +1020,19 @@ class TheOneDoorTest(unittest.TestCase):
         self.assertEqual((self.home / "sources" / digest / "drawing.pdf").read_bytes(), b"%PDF drawing")
 
     def test_a_keep_that_fails_leaves_no_part_file_and_no_file_under_the_name(self):
-        real_write, real_replace = Path.write_bytes, Path.replace
+        real_new_part, real_replace = store._new_part, Path.replace
 
-        def runs_out_of_room_on_the_part(part, data):
-            if part.name.endswith(".part"):
-                real_write(part, data[:3])  # a little of it lands first
-                raise OSError("the disk is full")
-            return real_write(part, data)
+        def runs_out_of_room_on_the_part(part, mode):  # P1054: the bytes go through the descriptor `_new_part` makes
+            with open(real_new_part(part, mode), "wb") as out:
+                out.write(b"%PD")  # a little of it lands first
+            return os.open(part, os.O_RDONLY)  # so the write of the rest fails with an OSError
 
         def runs_out_of_room_at_the_rename(part, target):
             if Path(target).name == "drawing.pdf":
                 raise OSError("the disk is full")
             return real_replace(part, target)
 
-        for what, failing in (("on the part", mock.patch.object(Path, "write_bytes", autospec=True, side_effect=runs_out_of_room_on_the_part)),
+        for what, failing in (("on the part", mock.patch.object(store, "_new_part", side_effect=runs_out_of_room_on_the_part)),
                               ("at the rename", mock.patch.object(Path, "replace", autospec=True, side_effect=runs_out_of_room_at_the_rename))):
             with self.subTest(runs_out_of_room=what):
                 home = Path(tempfile.mkdtemp())  # a store of its own, so what one mode leaves is not blamed on the next
