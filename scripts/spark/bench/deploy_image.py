@@ -23,7 +23,7 @@ from spark.records import store
 from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
 from spark.bench.deploy_stages import PHASE_WHY, DeployPhase
-from spark.bench.deploy_service import DeployService, ended_the_flash
+from spark.bench.deploy_service import DeployService, ended_after_the_yes
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, SIMULATION_NONE, evidence_for
 from spark.firmware.project_image import DeployError
@@ -66,6 +66,14 @@ NOT_FINISHED_LOG_LINE = ("board log: %s: flash not finished, the board may be er
                          "the deploy again.")
 NOT_FINISHED_UNLOGGED_LINE = ("board log: not written: %s, so flow.py show may still name an older deploy. The flash did not "
                               "finish, so the board may be erased.")
+#: The same two lines after a verify that did not finish (P1110): the flash finished, so the fix is CRASH_STATES' verify fix.
+VERIFY_NOT_FINISHED_LOG_LINE = ("board log: %s: ready unknown: the flash finished, and spark did not finish reading the board. "
+                                "Read the board with look.py; do not deploy again.")
+VERIFY_NOT_FINISHED_UNLOGGED_LINE = ("board log: not written: %s, so flow.py show may still name an older deploy. The board is "
+                                     "flashed, not verified.")
+#: The (logged, not logged) lines of a stage that did not finish after the yes, by the stage.
+NOT_FINISHED_LINES = {DeployPhase.FLASH: (NOT_FINISHED_LOG_LINE, NOT_FINISHED_UNLOGGED_LINE),
+                      DeployPhase.VERIFY: (VERIFY_NOT_FINISHED_LOG_LINE, VERIFY_NOT_FINISHED_UNLOGGED_LINE)}
 #: The refusals from the look to the flash that one handler says (P354, P892).
 REFUSALS = (board_look.LookStopError, DeployError, tool_finder.ToolError, SparkError)
 
@@ -239,7 +247,7 @@ class DeployFlowService:
         `deploy.py: <why>`. A FlashError keeps the yes that ran it, and names its board log (P1092): any refusal that the
         flash loop's handler logged does (P1096, G11)."""
         reached = self._reached
-        if ended_the_flash(cannot):
+        if ended_after_the_yes(cannot):
             self.keep_yes()
             self.say_not_finished(cannot)
         reached.update(refusal=str(cannot), reason=cannot.code if isinstance(cannot, SparkError) else reason_of(cannot))
@@ -257,15 +265,18 @@ class DeployFlowService:
         return EXIT_COULD_NOT_RUN
 
     def say_not_finished(self, failed):
-        """The board log of `failed`, what ended the flash after the yes (a FlashError, P1092; a crash or a Ctrl-C, P1096):
-        its path, as `data.board_log` with the image it names, or why it was not written. Then the store record of the
-        flash that did not finish (P1097)."""
+        """The board log of `failed`, what ended the flash or the verify after the yes (a FlashError, P1092; a crash or a
+        Ctrl-C, P1096, P1110), in that stage: its path, as `data.board_log` with the image it names, or why it was not
+        written. Then the store record of a flash that did not finish (P1097); a verify keeps none (D3)."""
+        stage = self.stages.stage
+        logged_line, unlogged_line = NOT_FINISHED_LINES[stage]
         if failed.log_path is None:
-            self.say(DeployPhase.FLASH, NOT_FINISHED_UNLOGGED_LINE % failed.log_error)
+            self.say(stage, unlogged_line % failed.log_error)
         else:
             self._reached.update(board_log=str(failed.log_path), image_sha256=failed.image_sha256)
-            self.say(DeployPhase.FLASH, NOT_FINISHED_LOG_LINE % failed.log_path, raw=True)  # P677: a file a person opens, as data.board_log
-        self.keep_record(lambda: self.service.record_not_finished(self.look, failed.image_sha256, failed.moment, self._reached["who"]))
+            self.say(stage, logged_line % failed.log_path, raw=True)  # P677: a file a person opens, as data.board_log
+        if stage == DeployPhase.FLASH:
+            self.keep_record(lambda: self.service.record_not_finished(self.look, failed.image_sha256, failed.moment, self._reached["who"]))
 
     def keep_record(self, write):
         """The store record that `write()` writes, said in the current stage: its path as `data.store_record`, or why it was
@@ -399,7 +410,8 @@ that did not finish too (verdict `flash not finished`, P1097). Then it reads
 the board: ready seen means the board's files match the evidence's sha256s and the firmware printed a line that
 starts with the word `ready` within %d s.
 The board's log goes to sim/runs/board/, also after a flash that did not finish (a failed command, a crash or a Ctrl-C,
-with the verdict `flash not finished`). Its fourth line names the cause's code, when ready was not seen (reason: files_unread,
+with the verdict `flash not finished`), and after a crash or a Ctrl-C in the read after the flash, with the verdict
+ready unknown (P1110). Its fourth line names the cause's code, when ready was not seen (reason: files_unread,
 for example; P1043), and flow.py show reads it. A firmware that stops with an error is not seen. If mpremote cannot reach the
 board, for example because its port changed after the flash, or the passed run's log is from before P215 and names no
 files, ready is unknown, never seen. The write restarts the chip with esptool's `--after watchdog-reset` (esptool's troubleshooting
@@ -497,7 +509,7 @@ class DeployImage(Operation):
                 raise
             return self._crashed(flow, crashed)
         except KeyboardInterrupt as interrupted:  # P1096: a Ctrl-C in the flash says its board log line first
-            if ended_the_flash(interrupted):
+            if ended_after_the_yes(interrupted):
                 flow.keep_yes()
                 flow.say_not_finished(interrupted)
             raise  # P1096: a Ctrl-C still ends the run
@@ -508,7 +520,7 @@ class DeployImage(Operation):
         the data reached with the yes and `board_state`, the look as the next step, and the traceback in the diagnostics.
         A crash in the flash loop also names the board log it wrote (P1096)."""
         flow.keep_yes()  # a crash in the flash loop still says whose yes it was
-        if ended_the_flash(crashed):
+        if ended_after_the_yes(crashed):
             flow.say_not_finished(crashed)
         reached, name = flow.reached(), type(crashed).__name__
         state = CRASH_STATES[reached["stage"]]

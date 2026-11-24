@@ -87,8 +87,8 @@
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "DeployPlan field order swapped",
-  "find": "\"flasher commands mpremote notes\"",
-  "replace": "\"commands flasher mpremote notes\""
+  "find": "\"flasher commands mpremote notes image_sha256\"",
+  "replace": "\"commands flasher mpremote notes image_sha256\""
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",

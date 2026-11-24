@@ -95,7 +95,8 @@ CAUSE_MESSAGE, NO_CAUSE_MESSAGE = "Cause in the log: %s.", "Cause not recorded."
 #: The cause of a deploy that did not see ready, or of a flash that did not finish (P1092, P1096), by its code in the board
 #: log's reason line (the bench's board_codes and the core's crash, as equal literals: this module imports nothing of spark): spark's words
 #: for it, and whether spark read the board's files back (True, False, or None: the log cannot tell). A code not here
-#: reads as not recorded.
+#: reads as not recorded. A crash and a Ctrl-C end a flash or a verify (P1110), so their words name no stage, and their
+#: read-back is None: a flash not finished takes False from its verdict, and a verify's ready unknown cannot tell.
 CAUSE_WORDS = {"files_unread": ("spark did not reach the board to read its files", False),
                "firmware_not_started": ("the command that starts the firmware failed", True),
                "no_files_named": ("the passed run's log names no files, so spark had none to read back", False),
@@ -107,8 +108,8 @@ CAUSE_WORDS = {"files_unread": ("spark did not reach the board to read its files
                "no_ready_line": ("the firmware printed no ready line", True),
                "flash_failed": ("a flash command failed", False),
                "grant_ended": ("your yes ended before the erase's retry", False),
-               "crash": ("spark crashed during the flash", False),
-               "interrupted": ("a Ctrl-C interrupted the flash", False)}
+               "crash": ("spark crashed during the deploy", None),
+               "interrupted": ("a Ctrl-C interrupted the deploy", None)}
 #: What the image the project holds now says of the last deploy (`deploy_reading.deploy_fact`): the image it wrote, a
 #: different image, firmware/ changed after the image, or no image now. Any but the first makes the deploy stale.
 DEPLOY_CURRENT, IMAGE_DIFFERS, FIRMWARE_NEWER, DEPLOY_NO_IMAGE = "current", "image-differs", "firmware-newer", "no-image"

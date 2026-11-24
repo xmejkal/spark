@@ -8,6 +8,7 @@ result.
 """
 
 import collections
+import contextlib
 import hashlib
 import shlex
 import subprocess
@@ -32,8 +33,9 @@ from spark.core import codes
 from spark.core.events import Event
 
 #: Value: what `plan` returns. `flasher` is the Flasher, `commands` are the flash commands it builds, `mpremote` is
-#: the board shell's command, and `notes` are sentences for the person.
-DeployPlan = collections.namedtuple("DeployPlan", "flasher commands mpremote notes")
+#: the board shell's command, and `notes` are sentences for the person. `image_sha256` is the image that `deploy` gave the
+#: flash commands, None from `plan`: the verify's board log names it when the verify does not finish (P1110).
+DeployPlan = collections.namedtuple("DeployPlan", "flasher commands mpremote notes image_sha256", defaults=(None,))
 #: Result: what `verify` returns. `facts` are the board's facts, `ready` is a ReadyResult, `log_path` the board log's file.
 #: `repl_command` is the argv that opens the board's REPL.
 #: `start` is None when no wait for a start came (the board answered), else a board_start.BoardStartResult: its `code` is
@@ -52,20 +54,32 @@ def _keeps_boot_entry(planned, row):
 
 #: The board log's sentence of a flash that did not finish (P1092), by its reason. board_codes' own grant_ended sentence
 #: says "before the erase", which is true at the gate and false here: the first erase ran. The crash's is its own (P1096):
-#: the core's meaning points to a traceback on stderr, and a person reads the log days later.
+#: the core's meaning points to a traceback on stderr, and a person reads the log days later. These sentences name the
+#: flash on purpose, while flow_codes.CAUSE_WORDS say "during the deploy": the verify's log has its own (P1110).
 NOT_FINISHED_SENTENCES = {board_codes.FLASH_FAILED: board_codes.CODES[board_codes.FLASH_FAILED],
                           board_codes.GRANT_ENDED: "the yes ended before the erase's retry",
                           board_codes.INTERRUPTED: board_codes.CODES[board_codes.INTERRUPTED],
                           codes.CRASH: "spark crashed during the flash, so the board may be erased and not written"}
 #: The board log's facts line of a flash that did not finish: no facts file went on the board.
 NOT_FINISHED_FACTS = "facts file: not written: the flash did not finish"
+#: Value: what the board log of a stage that did not finish after the yes says: its verdict, its sentence by the reason
+#: (a reason not there keeps what ended it) and its facts line (P1110).
+NotFinishedLog = collections.namedtuple("NotFinishedLog", "verdict sentences facts")
+FLASH_NOT_FINISHED_LOG = NotFinishedLog(board_log.FLASH_NOT_FINISHED, NOT_FINISHED_SENTENCES, NOT_FINISHED_FACTS)
+#: The verify's (P1110): the flash finished and passed esptool's hash check, and spark did not finish reading the board
+#: back, so ready is unknown, never "flash not finished". Its facts line never says more than spark knows.
+VERIFY_NOT_FINISHED_SENTENCES = {
+    codes.CRASH: "spark crashed while it read the board after the flash, so ready is not known",
+    board_codes.INTERRUPTED: "a Ctrl-C interrupted the read of the board after the flash, so ready is not known"}
+VERIFY_NOT_FINISHED_FACTS = "facts file: not known: the read after the flash did not finish"
+VERIFY_NOT_FINISHED_LOG = NotFinishedLog(ready_probe.UNKNOWN, VERIFY_NOT_FINISHED_SENTENCES, VERIFY_NOT_FINISHED_FACTS)
 
 
 class FlashError(DeployError):
     """Error: a flash command failed, so the board may be erased and not written. Its `reason` is flash_failed, or the
     gate's grant_ended when the yes ended before the retry. `log_path` is the board log that DeployService.deploy wrote
     for it (P1092), or None with `log_error` saying why none was written; `image_sha256` is the image the flash was given,
-    and `moment` the board log's. The handler sets the same on a crash and a Ctrl-C in the flash loop (P1096)."""
+    and `moment` the board log's. The handler sets the same on a crash and a Ctrl-C in the flash loop (P1096) and the verify (P1110)."""
 
     log_path = log_error = image_sha256 = moment = None
 
@@ -78,10 +92,10 @@ def not_finished_reason(ended):
     return board_codes.INTERRUPTED if isinstance(ended, KeyboardInterrupt) else codes.CRASH
 
 
-def ended_the_flash(raised):
-    """True when the flash loop's handler in DeployService.deploy handled `raised` (P1096): only it sets the attribute
-    `image_sha256`, the one channel of this mark. A crash outside the loop, and a bug in the log write that replaced what
-    ended the flash, give False."""
+def ended_after_the_yes(raised):
+    """True when the flash loop's or the verify's handler, DeployService.logs_what_ends, handled `raised` (P1096, P1110):
+    only it sets the attribute `image_sha256`, the one channel of this mark. A crash outside them, and a bug in the log
+    write that replaced what ended the stage, give False."""
     return getattr(raised, "image_sha256", None) is not None
 
 
@@ -157,7 +171,7 @@ class DeployService:
         consent.require_ready()  # a deploy grant can end while the plan reads the image
         image_sha256 = image.sha256  # read once, after the token's check: the image the flash commands are given
         self.report(Event.begin(DeployPhase.FLASH))
-        try:
+        with self.logs_what_ends(look, image_sha256, FLASH_NOT_FINISHED_LOG):
             for index, command in enumerate(planned.commands):
                 self.report(Event.line(DeployPhase.FLASH, "running: %s" % shlex.join(command), raw=True))  # P677: a command
                 try:
@@ -166,15 +180,23 @@ class DeployService:
                     hint = planned.flasher.boot_hint
                     raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""),
                                      reason=board_codes.FLASH_FAILED)
+        return planned._replace(image_sha256=image_sha256)
+
+    @contextlib.contextmanager
+    def logs_what_ends(self, look, image_sha256, logged):
+        """The one handler of a stage after the yes (P1096, P1110): what ends the block, a crash, a Ctrl-C or an error, gets
+        the board log `logged` (a NotFinishedLog) of the image `image_sha256`, with `log_path`, `image_sha256` and `moment`
+        set on it, then goes on unchanged."""
+        try:
+            yield
         except (Exception, KeyboardInterrupt) as ended:  # P1092, P1096: the newest board log must not name the deploy before
             now = self.clock.now()  # once: the board log and the store record share it
-            ended.log_path, ended.image_sha256, ended.moment = self.log_not_finished(look, image_sha256, ended, now), image_sha256, now
-            raise  # P1096: what ended the flash goes on
-        return planned
+            ended.log_path, ended.image_sha256, ended.moment = self.log_not_finished(look, image_sha256, ended, now, logged), image_sha256, now
+            raise  # P1096, P1110: what ended the flash or the verify goes on
 
-    def log_not_finished(self, look, image_sha256, failed, moment):
-        """The path of the board log of a flash that did not finish after the yes (P1092), written at `moment`: the verdict
-        FLASH_NOT_FINISHED and the reason of `failed` (a FlashError, a crash or a Ctrl-C, P1096) as its line 4. A crash
+    def log_not_finished(self, look, image_sha256, failed, moment, logged):
+        """The path of the board log of a stage that did not finish after the yes (P1092, P1110), written at `moment`: the
+        NotFinishedLog `logged` and the reason of `failed` (a FlashError, a crash or a Ctrl-C, P1096) as its line 4. A crash
         keeps its class name only, as its message can hold a home path (D5). None when an OSError or a ValueError kept it
         from being written: `failed.log_error` then says why, and the flash's own error stays the answer. On purpose, a
         TypeError or a KeyError is a bug: it replaces what ended the flash, keeps it as its __context__, and the run
@@ -182,8 +204,8 @@ class DeployService:
         exit 2, not 130."""
         reason = not_finished_reason(failed)
         said = str(failed) if isinstance(failed, FlashError) else type(failed).__name__
-        log = BoardLog(moment, look.port, image_sha256, board_facts.FactsLine(NOT_FINISHED_FACTS, False),
-                       board_log.FLASH_NOT_FINISHED, NOT_FINISHED_SENTENCES.get(reason, said), said + "\n",
+        log = BoardLog(moment, look.port, image_sha256, board_facts.FactsLine(logged.facts, False),
+                       logged.verdict, logged.sentences.get(reason, said), said + "\n",
                        self.evidence.simulation, reason)
         try:
             return self.write_log(self.project, log)
@@ -213,38 +235,39 @@ class DeployService:
     def verify(self, look, planned):
         """
         Read the board after the flash: find its port by the MAC, copy the facts file, check each file's sha256 and wait for
-        `ready`, with the recovery for a board in download mode (P243 to P245, P462). Writes the board log. Raises DeployError
-        when the passed run's log cannot be read, and ToolError when a tool is missing: after the flash they are not
-        turned into a sentence. `look` is the LookReport, `planned` the DeployPlan that `deploy` returned. Returns a DeployResult.
+        `ready`, with the recovery for a board in download mode (P243 to P245, P462). Writes the board log, also when a crash
+        or a Ctrl-C ends the read (P1110). Raises DeployError when the passed run's log cannot be read, and ToolError when a
+        tool is missing: after the flash they are not turned into a sentence. `planned` is the DeployPlan `deploy` returned.
         """
-        image = image_evidence.image_of(self.project, self.evidence)  # fresh: the flash and the person's wait are behind us
-        expected = self.evidence.expected_files(image)
-        moment = self.clock.now()  # once: the facts file and the board log share it
-        starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), look.reading.mac, self.clock,
-                                                board_records.ButtonPlaces.of_project(self.project))
-        row = starter.find_port(look.port)
-        port, reads = row and row.device, []  # P1022: every read of the board, for the facts copies' block and the fix
+        with self.logs_what_ends(look, planned.image_sha256, VERIFY_NOT_FINISHED_LOG):  # P1110: a crash or a Ctrl-C
+            image = image_evidence.image_of(self.project, self.evidence)  # fresh: the flash and the person's wait are behind us
+            expected = self.evidence.expected_files(image)
+            moment = self.clock.now()  # once: the facts file and the board log share it
+            starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), look.reading.mac, self.clock,
+                                                    board_records.ButtonPlaces.of_project(self.project))
+            row = starter.find_port(look.port)
+            port, reads = row and row.device, []  # P1022: every read of the board, for the facts copies' block and the fix
 
-        def read(on):  # P1007: the USB id the port has at this read picks the connection
-            connection = on and self.platform.make_connection(planned.mpremote, on, self.run, starter.usb_of(on) or (row and row.usb))
-            board = self._read_board(image, look, connection, expected, moment)
-            reads.append(board)
-            return board
+            def read(on):  # P1007: the USB id the port has at this read picks the connection
+                connection = on and self.platform.make_connection(planned.mpremote, on, self.run, starter.usb_of(on) or (row and row.usb))
+                board = self._read_board(image, look, connection, expected, moment)
+                reads.append(board)
+                return board
 
-        board, start = read(port), None
-        if port is None:
-            start = starter.gone_result()
-        elif (board[2].verdict == ready_probe.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
-              and board_start.console_may_be_read(row, look.port)):
-            board, start = self._after_silence(starter, row, board, read)
-        facts, facts_line, ready = every_read(reads)  # board is the last of them
-        if start and start.code:
-            ready = ready._replace(sentence=start.sentence)
-        image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
-        log_path = self.write_log(self.project, BoardLog(moment, look.port, image_sha256,
-                                                          facts_line, ready.verdict, ready.sentence,
-                                                          "".join(starter.heard) + ready.log + "".join(read[1].heard for read in reads), self.evidence.simulation,
-                                                          (start and start.code) or ready.code))
+            board, start = read(port), None
+            if port is None:
+                start = starter.gone_result()
+            elif (board[2].verdict == ready_probe.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
+                  and board_start.console_may_be_read(row, look.port)):
+                board, start = self._after_silence(starter, row, board, read)
+            facts, facts_line, ready = every_read(reads)  # board is the last of them
+            if start and start.code:
+                ready = ready._replace(sentence=start.sentence)
+            image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
+            log_path = self.write_log(self.project, BoardLog(moment, look.port, image_sha256,
+                                                              facts_line, ready.verdict, ready.sentence,
+                                                              "".join(starter.heard) + ready.log + "".join(read[1].heard for read in reads), self.evidence.simulation,
+                                                              (start and start.code) or ready.code))
         shown_on = start.port if start else port  # the REPL names the port the board answered on, or none when it is gone
         repl = self.platform.make_connection(planned.mpremote, shown_on, self.run).repl_command()
         result = DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)._replace(console=starter.console)
