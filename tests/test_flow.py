@@ -45,7 +45,6 @@ from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import LOOK_WHY, SCENARIO_FIRST_WHY, SCENARIO_WHY, SIM_FILES_NOW, STALE  # noqa: E402
 from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
 from spark.flow.wired_board import day_of  # noqa: E402
-from spark.flow import flow_codes  # noqa: E402
 from spark.flow.phase_steps import SCENARIO_PLACEHOLDER  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.core.result import NextStep  # noqa: E402
