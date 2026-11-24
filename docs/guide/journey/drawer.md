@@ -13,7 +13,7 @@ You say what you own in plain words. Claude writes the entries to a file and sho
 ]
 ```
 
-The conversation was not run for this page. These entries were written by hand; the commands below are real runs.
+The conversation ran in walk 4, 2026-11-01, not for this page. Its entries are by hand, and the commands below ran.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --drawer-set ../drawer.json --dry-run
