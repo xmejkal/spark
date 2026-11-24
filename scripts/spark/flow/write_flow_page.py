@@ -30,8 +30,8 @@ PAGE_FIX = "make the project folder writable and run it again"
 PART_FIX = "something else holds %s.part: remove it if it is not yours, and run it again"
 #: The refusal of a page whose project holds a secrets file that cannot be read or parsed (P1060 D5), and its fix. It
 #: names the file, never its text: a parse error's text holds the line, and the line the secret.
-SECRETS_UNREADABLE = "firmware/ holds a secrets file that cannot be read or parsed (%s), so spark cannot mask its values"
-SECRETS_FIX = "repair or remove that file in firmware/, then run flow.py page again"
+SECRETS_UNREADABLE = "%s cannot be read or parsed, so spark cannot mask the values of the project's secrets"
+SECRETS_FIX = "repair or remove it, then run flow.py page again"
 #: What WriteFlowPage adds to the refusal: the page it did not write is not the page on disk.
 OLD_PAGE = ". The page on disk is the old one"
 #: The Finding of an --artifact that is no Artifact id: its sentence, and what to do.
@@ -68,7 +68,8 @@ class FlowPageStore:
 class SecretsUnreadableError(OSError):
     """Error: the project holds a secrets file that cannot be read or parsed (P1060 D5), so `write_page` writes nothing: the
     page is published, and a value spark cannot read it cannot mask. An OSError, so that every writer that reports a page
-    not written reports this one in its own words. Its text names the files (`names`) and holds nothing of them."""
+    not written reports this one in its own words. Its text names the files by their paths in the project (`names`)
+    and holds nothing of them."""
 
     def __init__(self, names):
         super().__init__(SECRETS_UNREADABLE % ", ".join(names))

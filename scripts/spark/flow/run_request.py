@@ -136,8 +136,8 @@ class RunRequest(Operation):
     Operation: run the step the page asked for. It reads the request and deletes it (`read_request`), reads the flow, and
     refuses with one could-not-run Finding of `request_codes` (`refusal_of`), or runs the kind's Operation through
     `run_operation` with the values of spark's offer: its step, parsed by the Operation of the step's op (`values_of`). A
-    step whose argv does not parse is refused too, and so is any request while a secrets file cannot be read (P1060 D5). Its data says for which request, what ran and how it ended, and the
-    fingerprint after the run. A step's Findings and diagnostics are its own. `readers` and `operations` ({op: Operation})
+    step whose argv does not parse is refused too, and so is any request while a secrets file cannot be read (P1060 D5),
+    with no key or label. Its data says for which request, what ran and how it ended, and the fingerprint after the run. A step's Findings and diagnostics are its own. `readers` and `operations` ({op: Operation})
     are what a test swaps (None: the real ones).
     """
 
@@ -157,11 +157,11 @@ class RunRequest(Operation):
         phases = phases_of(project, self.readers)
         fingerprint = fingerprint_of(project, phases)
         offers = {offer.key: offer for phase in phases for offer in phase.offers}
+        unreadable = ProjectSecrets.read(project).unreadable  # D5 first: the answer is published, and the mask has a hole
+        if unreadable:  # no offer: its key and label can hold a value of the file that could not be read (#1610 review)
+            return refused_answer(request, None, fingerprint, request_codes.REQUEST_SECRETS_UNREADABLE, ", ".join(unreadable))
         refused = refusal_of(request, offers, fingerprint)
         offer = offers.get(key_of(request))
-        unreadable = ProjectSecrets.read(project).unreadable  # D5: the answer is published, so a mask with a hole runs nothing
-        if unreadable:
-            return refused_answer(request, offer, fingerprint, request_codes.REQUEST_SECRETS_UNREADABLE, ", ".join(unreadable))
         if refused:
             return refused_answer(request, offer, fingerprint, refused)
         step = offer.step

@@ -129,7 +129,8 @@ class TheReadTest(unittest.TestCase):
         marker = Path(tempfile.mkdtemp(prefix="spark-tests-secrets-")) / "imported"
         project = project_with({"firmware/secrets.py": 'from pathlib import Path\nPath(%r).write_text("x")\nTOKEN = "%s"\n'
                                 % (str(marker), TOKEN)})
-        self.assertEqual(ProjectSecrets.read(project).values, (TOKEN,))
+        # the marker's path is a call's argument, so it is a value too (the review of #1610)
+        self.assertEqual(ProjectSecrets.read(project).values, (TOKEN, str(marker)))
         self.assertFalse(marker.exists())
 
     def test_a_file_that_does_not_parse_is_named_and_shows_none_of_its_text(self):

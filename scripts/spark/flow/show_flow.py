@@ -38,7 +38,7 @@ PHASE_SENTENCE = "%s: %s"
 PHASE_FIX = "read what the phase says in data.phases"
 #: The note of `show` on a secrets file that cannot be read or parsed (P1060 D5): `show` runs, and the mask is off for that
 #: file's values. It names the file, never its text: a parse error's text holds the line, and the line the secret.
-MASK_OFF = "the mask is off for firmware/%s: it cannot be read or parsed, so spark cannot mask its values. Repair or remove it"
+MASK_OFF = "the mask is off for %s: it cannot be read or parsed, so spark cannot mask its values. Repair or remove it"
 
 
 def privacy_for(project, secrets=None):
