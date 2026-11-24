@@ -1,0 +1,31 @@
+# P1024: the five hand reads of requirements.json's board, and init's silent selection: rows
+
+Card: [P1024 #1498](https://github.com/xmejkal/spark/issues/1498), from rows 6 and 26 of
+`docs/observations/rows/p988-project-board.md` ([P988 #1441](https://github.com/xmejkal/spark/issues/1441), PR #1497).
+The plan council: round 1 a lens (Sonnet) and the refuter (Opus) on main 455a04b9, round 2 the refuter (Opus) on the
+changed parts. The build adds its own rows. This file holds the acted, raised and rejected findings only, and the closed
+ones that a later reader needs. A "row" in the last column is a row of `tests/mutations/p1024-board-reads.json`, counted
+from 1.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | `firmware_platform.board_of` takes the project's board through `project_board_id` (D35). Its one caller outside the module, `DeployService._facts_of`, runs only after the look, whose `no_board_named` stop means requirements.json names a board there, so the facts name the same board | plan | acted | `test_the_platform_reads_the_projects_board_and_refuses_a_project_with_no_requirements_json` (green on main by design: it pins what the refactor keeps). Row 1 |
+| 2 | `firmware_platform.record_of` reads the record of the project's board, and keeps its own presence check: no requirements.json, or a folder of that name, is `chip_unknown`, never the selection's chip | plan, C2, C3 | acted | the same test. Rows 2 and 3. `import json` goes from firmware_platform |
+| 3 | `image_builder.board_build` keeps its own read: scripts.md documents the `firmware-image` default for a project with no board in requirements.json, and `project_board_id` would give the selection's build and other codes | plan | verified | a one-line comment on its `try:` line. scripts.md stays true |
+| 4 | `board_look.LookService.record_of` keeps its own read: the documented `no_board_named` stop (json.md), and the deploy's gate before the board question | plan | verified | a one-line comment on its `try:` line. `test_requirements_missing_or_naming_no_board_stops_without_a_name_of_none` and test_board_doctor stay green |
+| 5 | `ButtonPlaces.of_project` reads the record of the project's board (D35): for a requirements.json that names no board, the hint names the selection's buttons, as the flasher's already does | plan | acted | `test_of_project_reads_the_projects_board_the_selection_when_requirements_names_none` (3 subtests red on main). Row 4. The p213b2 row "of_project ignores board name" is re-aimed, see row 13 of this file |
+| 6 | P988's row 6 reason for `board_of`, "the deploy record's board type", does not hold | plan | rejected | see row 1 of this file: at the facts, requirements.json always names a board |
+| 7 | P988's row 6 reason for `board_look.record_of`, "D36's two records", is the wrong reason | plan | rejected | D36 is the second stop, `no_board_record` (P230). The real reason is the documented `no_board_named`, row 4 of this file |
+| 8 | After `init_project.py --board`, init says one note when requirements.json and boards/active.json name different boards: requirements.json's board stays the project's board (D35). No new stop or exit code; init has no `--json`. This closes P988's row 26 | plan | acted | `project_setup.board_differs` and `BOARD_DIFFERS`, one changed line in `main` (R1 stays 76). `test_a_board_other_than_the_requirements_board_is_written_and_said`. Rows 5 and 8 |
+| 9 | C1: the note reads the two files after the write, not the `--board` flag. A `--board` left alone ("active.json already exists, left alone") over two files that agree says nothing | round 1 refuter (reproduced) | acted | `test_the_note_reads_the_files_not_the_flag`. Rows 5 and 6 |
+| 10 | C2: write out `record_of`'s new body, with the presence check inside the `try`, so its OSError still becomes `chip_unknown` | round 1 lens | acted | firmware_platform.py. Row 2 |
+| 11 | C3: `is_file()`, not `stat()`: a requirements.json that is a folder passes `stat()` and would take the selection's chip | round 1 refuter | acted | firmware_platform.py. Row 2 |
+| 12 | C4: commit after each step and push; the pre-push hook runs the story run; `check_commit` is never run by hand; `--anchors` runs once before the push | round 1 lens | acted | the PR's commits and the hook's output in the PR body |
+| 13 | C5: `of_project`'s place and docstring, and `json` and `Path` stay in use in board_records | round 1 lens | acted | the docstring says "the record of the project's board (D35)". board_records goes from 599 to 598 lines |
+| 14 | C6: the place of the text in commands/init.md, and the anchor line in boards/README.md | round 1 lens | acted | commands/init.md after the `--force` block; boards/README.md after the selection's JSON block, and the button places paragraph |
+| 15 | C7: the rows come after the code commit, because their find strings exist only then | round 1 lens | acted | the rows commit follows the code commit |
+| 16 | C8: without the re-aim of the p213b2 row "of_project ignores board name", `--anchors` refuses 34 | round 1 refuter (confirmed) | verified | the row's find is now `return cls.from_record(load(project))`, its replace `return cls.EMPTY`. Planted, `test_of_project_reads_the_record_requirements_names` goes red. `--anchors`: 4909 mutation(s) in 413 table(s): 33 would be refused, as on main |
+| 17 | C9: a test of `record_of`'s words for a broken requirements.json | round 1 lens | rejected | dropped because the code stays `chip_unknown`; only the words change |
+| 18 | C10: a boards/active.json that holds no JSON object crashes the note: `active_id` raises `AttributeError`, and the second `try` caught only `BoardError` | round 2 refuter (reproduced) | acted | `except (board_records.BoardError, AttributeError):`. The case is in `test_the_same_board_or_none_named_says_nothing_and_a_broken_file_is_said`, red (an ERROR) before the fix. Row 9 |
+| 19 | C11: `record_of`'s words for no file or a folder, "there is no file", are loose | round 2 refuter | acted | the words are "it is not a file" |
+| 20 | A requirements.json that cannot be read is said by init in one note, never a traceback | plan, open choice 3 | acted | `the project's board is not known: …`. `test_the_same_board_or_none_named_says_nothing_and_a_broken_file_is_said`. Row 7 |

@@ -33,6 +33,9 @@ selection:
 { "schema": 1, "board": "firebeetle2-esp32s3" }
 ```
 
+`init_project.py --board` says so when `requirements.json` names another board
+([P1024](https://github.com/xmejkal/spark/issues/1498)).
+
 A folder with only `requirements.json` is not found as a project without `--project`: the scripts find a project by
 its `boards/active.json` or its `.spark/` folder.
 
@@ -148,7 +151,8 @@ read which pins the role lists.
 
 ## Button places
 
-`physical.buttons` says where the BOOT and RESET buttons are. Each hint that tells a person to press one reads it.
+`physical.buttons` says where the BOOT and RESET buttons are. Each hint that tells a person to press one reads it
+from the record of the project's board (D35).
 Write `seen_from` (how to hold the board), then `boot` and `reset`, each with its `silkscreen` letter and its `place`.
 Write its `//buttons` source beside it. Write it only from a photo of a board you hold or from the maker's page. A
 record without it, or with a part missing, gives the plain hint: "the BOOT button" and "RESET", with no place.

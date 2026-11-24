@@ -29,7 +29,7 @@ from spark.core.result import Refusal  # noqa: E402
 
 #: The --board help (P988 review): init writes the selection, and requirements.json's board wins when it names one (D35).
 BOARD_HELP = ("board id to write in boards/active.json, the selection. When requirements.json names a board, that board "
-              "wins (D35). Omit it to see what is available")
+              "wins (D35), and init says so. Omit it to see what is available")
 #: The --answers help. The commit and its way back are P1027's, slice 2.
 ANSWERS_HELP = ("a JSON object with the brief's answers in the person's words — goal, must, prefer, sellers, decided — merged "
                 "into project.json: what it states wins (a list replaces the list, so give the whole list; an empty list is a "
