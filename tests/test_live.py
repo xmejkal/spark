@@ -303,6 +303,13 @@ class ASleepingBoardTest(LiveCase):
         self.assertEqual((code, lines[0]), (2, "live.py: no board on /dev/cu.usbmodem9: mpremote devs does not list it."))
         self.assertTrue(lines[1].startswith("What spark knows: the port you named is not on USB, and the project's firmware"), lines[1])
 
+    def test_a_named_port_that_leaves_usb_before_the_grant_check_opens_the_fix_with_that_port(self):
+        # the review of #1596: the grant check lists the boards a second time, and the port the person named is gone
+        code, _, problems, _ = self.go("--code", "print(1)", "--port", C6_PORT, devs=("mpremote-devs-one.txt", "mpremote-devs-none.txt"))
+        lines = problems.splitlines()
+        self.assertEqual((code, lines[0], len(lines)), (2, "live.py: no board on %s: mpremote devs does not list it." % C6_PORT, 2))
+        self.assertTrue(lines[1].startswith("What spark knows: the port you named is not on USB, and the project's firmware"), lines[1])
+
     def test_a_picked_port_that_left_usb_keeps_its_own_words(self):
         # the grant check lists the boards a second time, and the board spark picked is gone (D2 of the plan: PR 2)
         code, _, problems, _ = self.go("--code", "print(1)", devs=("mpremote-devs-one.txt", "mpremote-devs-none.txt"))

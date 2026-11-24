@@ -88,7 +88,7 @@ fix, after its sentence.
 If no board is on USB, or the port you named is not, and firmware/ calls deepsleep, the stop's last line, the fix,
 says that the board can be in deep sleep, as look.py's does (P1057). Its first step puts the board in download mode.
 There it runs no firmware, so reach.py cannot reach its REPL: use download mode for look.py or a deploy, then press
-RESET with BOOT not held. To run its line, wait until the firmware wakes. --json carries no fix yet (P1055).
+RESET with BOOT not held. To reach the REPL, wait until the firmware wakes. --json carries no fix yet (P1055).
 
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
