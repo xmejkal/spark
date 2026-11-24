@@ -186,7 +186,7 @@ tick: a phase that is not ok never shows one. It reads the project's files and i
 project keeps the three tabs. Open it in a browser. It loads nothing from the web. Its one script does nothing from disk; in a published page with the Artifact database it adds the buttons of a pick, the parts list and the build ([P829](https://github.com/xmejkal/spark/issues/1187), docs/guide/agents/flow.md). Its colors are tokens with a dark mode, and its title has two to
 four words (P272), so it also follows the Artifact page rules. Only `/spark:page` publishes it and republishes it, on the person's yes (P829). A tab that could not be drawn, for example when `tsci export`
 fails, says why. A build whose tsci left no `dist/board/circuit.json` copies nothing, so an earlier `dist/` stays, named as an
-earlier build's, and `check_all` says the last build did not write it (P816, P1088). `dist/` is still replaced with a build of the freshly generated board, not of
+earlier build's, and `check_all` says the last build did not write it (P816, P1088). The copy is staged at `dist.new`, and the earlier one is set aside at `dist.old`; a file of yours at either name, or a `dist/` that is a link, stops the copy and is named. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`. After a `traces differ` line, that command builds the old pins into `dist/`.
 
