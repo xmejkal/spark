@@ -46,6 +46,7 @@ REPLACED = "replaced"
 UNCHANGED = "unchanged"
 #: The `did` of a kept entry for a .tsx that is not touched.
 LEFT_ALONE = "left alone"
+NOT_KEPT = "not kept"  # the `did` of a kept entry for a file that could not be kept
 #: Why a board is left alone when the replace failed: its first step is the new board, its second the previous version.
 WRITE_FAILED = "spark could not write the new board, so it is left as it was: %s"
 #: Why a board spark wrote and nobody changed is left alone: the build did not finish, so its board is not to be trusted.
@@ -388,7 +389,7 @@ def keep_tabbed_page(destination, stages, kept, exporter, flow_page=None):
     project = _is_project(destination)
     pictures = KeptPictureFiles(destination, project)
     if why:
-        if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] in (LEFT_ALONE, "not kept") for entry in kept):  # P816: an earlier dist/ that stays keeps its pictures
+        if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] in (LEFT_ALONE, NOT_KEPT) for entry in kept):  # P816: an earlier dist/ that stays keeps its pictures
             pictures.drop()
         kept.extend(pictures.problems)
         return _left_from_earlier(page, tabbed_page.TabbedHtmlPage.NOUN, why)
