@@ -2,7 +2,7 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "P196: the build writes no pin map again",
-  "find": "        kept.append(_kept_pins(Path(requirements_file), Path(keep)))\n",
+  "find": "        kept += [_kept_pins(Path(requirements_file), Path(keep))] if requirements_file else []\n",
   "replace": ""
  },
  {

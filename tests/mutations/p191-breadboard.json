@@ -92,8 +92,8 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "--keep writes no breadboard sheet",
-  "find": "        kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + ",
-  "replace": "        kept += "
+  "find": "keep_breadboard(Path(requirements_file), Path(keep), stages, kept) if requirements_file else []",
+  "replace": "[]"
  },
  {
   "file": "scripts/spark/build/kept_files.py",
