@@ -679,6 +679,21 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertIn("no pin map: ", err)
         self.assertIn("no-such-part", err)
 
+    def test_a_pin_map_from_an_earlier_design_stays_when_the_pins_cannot_be_placed_and_no_build_finished(self):
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        broken = Path(tempfile.mkdtemp()) / "requirements.json"
+        broken.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["no-such-part"]}))
+        into = Path(tempfile.mkdtemp()) / "project"
+        (into / "firmware").mkdir(parents=True)
+        earlier = self.emitted_pins(fixture / "requirements.json")
+        (into / "firmware" / "pins.py").write_text(earlier)
+        stages = [Stage("build", check_spine.COULD_NOT_RUN, "no tsci", build_codes.TOOL_MISSING)]
+        kept, err = self.keep_with_pins(into, requirements=broken, stages=stages)
+        self.assertEqual((into / "firmware" / "pins.py").read_text(), earlier)
+        entry = [each for each in kept if each["file"].endswith("pins.py")]
+        self.assertEqual([each["did"] for each in entry], ["left alone"])
+        self.assertIn("the pin map is from the earlier requirements", entry[0]["why"])
+
     def test_the_one_command_keeps_the_simulation_project_too(self):
         # JB1: `--keep .` kept the board, dist/ and the sheet, but the Wokwi diagram only with `--sim-dir sim`.
         import contextlib

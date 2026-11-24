@@ -27,7 +27,7 @@
   "file": "scripts/spark/build/kept_files.py",
   "name": "P196 refuter: a firmware path that cannot be written crashes the report again",
   "find": "        return keep_pins(requirements, destination, finished)\n    except OSError as refused:",
-  "replace": "        return keep_pins(requirements, destination)\n    except ZeroDivisionError as refused:"
+  "replace": "        return keep_pins(requirements, destination, finished)\n    except ZeroDivisionError as refused:"
  },
  {
   "file": "scripts/spark/build/kept_files.py",
