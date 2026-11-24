@@ -589,7 +589,7 @@ class APartNameTakenTest(unittest.TestCase):
         part = target.with_name(target.name + ".part")
         with self.assertRaises(store.PartTakenError) as refused:
             write()
-        self.assertIn(str(part), str(refused.exception))
+        self.assertEqual(str(refused.exception), store.PART_IN_THE_WAY % part)
         self.assertEqual(self.outside.read_text(), "the person's own\n")
         self.assertTrue(part.is_symlink())
         self.assertEqual((target.read_text(), target.is_symlink()), (old, False))
