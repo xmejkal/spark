@@ -28,9 +28,9 @@ This file is the CLI (W6-S3b, P721; P726 PR 3): the ordered registry of the thir
 from a flag to its Operation (exact flag, else a unique prefix, as argparse picks a long option), the one flag shape the CLI
 owns (`--needs-drop PROJECT NEED` runs the idea area's `DropNeed`) and `main`, which hands the argv to `run_cli`. Every
 operation is an Operation on the core, read from the Operation catalogue (`operation_catalogue.CATALOGUE`, P1077) by
-`ORDER`, and `--describe`, the core's `DescribeOperations` over this registry, whose lines the help's epilog reuses. A flag that names a
-JSON file (`--drawer-set FILE`, `--fact-set PART FILE`) is read by the core's CLI adapter and handed to the Operation as a
-value (`Argument.payload`): reading stdin is the interface's job (P721 row 6).
+`ORDER`, and `--describe`, the core's `DescribeOperations` over this registry, whose lines the help's epilog reuses. A
+flag that names a JSON file (`--drawer-set FILE`, `--fact-set PART FILE`) is read by the core's CLI adapter and handed to
+the Operation as a value (`Argument.payload`): reading stdin is the interface's job (P721 row 6).
 """
 
 import sys
