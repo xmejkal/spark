@@ -5,9 +5,8 @@ import json
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
-from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
@@ -23,6 +22,17 @@ from spark.flow import flow_codes, phase_readers, run_request  # noqa: E402
 
 STALE = "docs/guide/design-basis.json and .md are stale: run python3 tools/design_basis.py --write"
 BASIS = design_basis.DesignBasis.of(ROOT)
+
+
+@contextmanager
+def swapped(module, name, value):
+    """The attribute of the module is the value inside the block, and as it was after it."""
+    old = getattr(module, name)
+    setattr(module, name, value)
+    try:
+        yield
+    finally:
+        setattr(module, name, old)
 
 
 def group(name, basis=BASIS):
@@ -48,9 +58,9 @@ class ThePhasesTest(unittest.TestCase):
     def test_t3_a_phase_with_no_moment_and_a_moment_with_no_phase_are_named(self):  # T3
         self.assertEqual(BASIS.missing(), [])
         without = {phase: moment for phase, moment in design_basis.MOMENTS.items() if phase != "deploy"}
-        with mock.patch.object(design_basis, "MOMENTS", without):
+        with swapped(design_basis, "MOMENTS", without):
             self.assertEqual(design_basis.DesignBasis.of(ROOT).missing(), ["deploy"], "add deploy to MOMENTS in tools/design_basis.py")
-        with mock.patch.object(design_basis, "MOMENTS", dict(design_basis.MOMENTS, ghost="x")):
+        with swapped(design_basis, "MOMENTS", dict(design_basis.MOMENTS, ghost="x")):
             self.assertEqual(design_basis.DesignBasis.of(ROOT).missing(), ["ghost"], "remove ghost from MOMENTS in tools/design_basis.py")
 
 
@@ -87,9 +97,9 @@ class TheOffersTest(unittest.TestCase):
                           "offer:needs-drop": "needs-drop"})
         self.assertEqual({one["key"]: one["from_page"] for one in group("offer")},
                          {"offer:pick": True, "offer:requirements": True, "offer:build": True, "offer:needs-drop": False})
-        with mock.patch.object(flow_codes, "SENDABLE", tuple(kind for kind in flow_codes.SENDABLE if kind != "build")):
+        with swapped(flow_codes, "SENDABLE", tuple(kind for kind in flow_codes.SENDABLE if kind != "build")):
             self.assertFalse(item("offer:build", design_basis.DesignBasis.of(ROOT))["from_page"])
-        with mock.patch.object(run_request, "STEP_OPERATIONS", {op: one for op, one in run_request.STEP_OPERATIONS.items() if op != "build-board"}):
+        with swapped(run_request, "STEP_OPERATIONS", {op: one for op, one in run_request.STEP_OPERATIONS.items() if op != "build-board"}):
             self.assertFalse(item("offer:build", design_basis.DesignBasis.of(ROOT))["from_page"])
 
     def test_t10_each_label_is_its_flow_codes_constant_with_the_percent_kept(self):  # T10
