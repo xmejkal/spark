@@ -439,7 +439,9 @@ class RequirementsReader(PhaseReader):
 
 
 def why_build_stale(project, record):
-    """The sentence that says the requirements file changed after the build `record` was made, or None when it did not."""
+    """The sentence that says the requirements file changed after the build `record`, or that it was the reference design's (P1095), or None."""
+    if "requirements" in record and record["requirements"] is None:  # P1095: the reference design's build, from no file
+        return flow_codes.REFERENCE_BUILD_MESSAGE % REQUIREMENTS_FILE
     named = Path(record.get("requirements") or REQUIREMENTS_FILE)
     path = named if named.is_absolute() else Path(project) / named
     if not path.is_file() or sha256_of(path) != record.get("requirements_sha256"):

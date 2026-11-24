@@ -52,6 +52,8 @@ REQUIREMENTS_STALE_MESSAGE = "requirements.json differs from what the picks give
 NO_BUILD_MESSAGE = "no build recorded yet"
 BUILT_MESSAGE = "the last build, %s: %s"
 BUILD_STALE_MESSAGE = "%s changed after the build"
+#: A record with `requirements: null` (P1095): the last build was the reference design, built from no requirements file.
+REFERENCE_BUILD_MESSAGE = "the last build was spark's reference design, not %s"
 MISSING_FACTS_MESSAGE = "%d fact(s) the board record lacks, named in firmware/pins.py"
 #: A build on the board alone (P878): its four skipped stages are final, so the build and the sheet say so and have no status.
 BOARD_ONLY_BUILD_MESSAGE = "board only: nothing to wire, no board was built"
