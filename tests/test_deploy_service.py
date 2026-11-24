@@ -141,13 +141,20 @@ class TheFlashNotFinishedTest(ServiceCase):
         return super().fake_run(command, **kwargs)
 
     def logs(self):
-        return sorted((self.project / board_log.BOARD_LOGS).glob("*.log"))
+        return sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
 
-    def not_finished(self, consent=None, **kwargs):
+    def service_with(self, write_log=None):
+        """The service, with the board log's writer `write_log` when given (no mock.patch, rule T2)."""
+        service = self.service()
+        if write_log:
+            service.write_log = write_log
+        return service
+
+    def not_finished(self, consent=None, write_log=None):
         """The FlashError of a deploy whose flash does not finish."""
         report = self.look()
         with self.assertRaises(deploy_service.FlashError) as failed:
-            self.service(**kwargs).deploy(report, report.token(), consent or FakeConsent(True))
+            self.service_with(write_log).deploy(report, report.token(), consent or FakeConsent(True))
         return failed.exception
 
     def assert_logged(self, failed, reason):
@@ -231,7 +238,7 @@ class TheFlashNotFinishedTest(ServiceCase):
         self.write_fails = True
         report = self.look()
         with self.assertRaises(TypeError) as raised:
-            self.service(write_log=broken).deploy(report, report.token(), FakeConsent(True))
+            self.service_with(broken).deploy(report, report.token(), FakeConsent(True))
         self.assertIsInstance(raised.exception.__context__, deploy_service.FlashError)
 
     @needs_littlefs

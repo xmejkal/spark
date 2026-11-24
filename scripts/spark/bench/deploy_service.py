@@ -83,9 +83,11 @@ class DeployService:
     step. Its methods raise `DeployError`, `ToolError`, `board_look.LookStopError` or `deploy_gate.GateClosedError` to
     say why a step cannot go on; they never print and never exit."""
 
-    def __init__(self, project, platform, evidence, outside, records=None, write_log=write_board_log):
+    #: (project, BoardLog) -> the board log's path: board_log's own; a test sets another on the instance (P1092).
+    write_log = staticmethod(write_board_log)
+
+    def __init__(self, project, platform, evidence, outside, records=None):
         self.project, self.platform, self.evidence = project, platform, evidence
-        self.write_log = write_log  # (project, BoardLog) -> its path: board_log's own, or a test's
         self.run, self.clock, self.report = outside.run, outside.clock, outside.report
         self.records = records or deploy_record_store.DeployRecordStore()
         self.sleeps = sleep_calls.deep_sleep_calls(project)  # P1022 slice 3: read once, from firmware/
