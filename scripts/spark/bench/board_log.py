@@ -14,8 +14,8 @@ from pathlib import Path
 
 from spark.bench import board_codes, download_mode, ready_probe
 from spark.core import codes
-from spark.records import store
 from spark.core.errors import CodedMessageError
+from spark.records import store
 
 # --- MVP ---
 #: The board logs' folder in a project, beside the run logs, whose *.log glob does not reach it.

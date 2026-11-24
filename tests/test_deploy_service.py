@@ -25,6 +25,7 @@ from spark.firmware import image_builder  # noqa: E402
 from spark.bench import flasher  # noqa: E402
 from spark.firmware import project_image  # noqa: E402
 from spark.bench import ready_probe  # noqa: E402
+from spark.records import deploy_record_store  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
@@ -32,7 +33,7 @@ from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, Fak
 from spark.core.events import BEGIN, LINE, Event  # noqa: E402
 from spark.bench.deploy_image import StageTrackingReporter, WhyLineReporter  # noqa: E402
 from spark.bench.deploy_stages import PHASE_WHY, DeployPhase  # noqa: E402
-from test_board_look import FOUND  # noqa: E402
+from test_board_look import FOUND, INTERPRETER_WITH_BANNER  # noqa: E402
 from test_deploy_gate import C6_CONSOLE, SETTLE_STDERR, GateCase  # noqa: E402
 
 PORT = "/dev/cu.usbmodem101"
@@ -319,6 +320,23 @@ class TheFlashNotFinishedTest(ServiceCase):
         code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1)
         log, = self.logs()
         self.assertEqual((code, board_log.newest_logged_deploy(self.project)[1].verdict), (0, "ready seen"))
+
+
+class TheStoreRecordOfAFlashNotFinishedTest(ServiceCase):
+    """The review of #1635 (lens 3, refuter 6): record_not_finished writes through the records seam, with the image the
+    flash was given and no banner."""
+
+    @needs_littlefs
+    def test_it_goes_through_the_records_seam_with_the_flash_s_image_and_no_banner(self):
+        report = self.look()
+        self.image.write_bytes(INTERPRETER_WITH_BANNER)  # the image holds a banner now, which never reached the board
+        records = FakeDeployRecordStore()
+        path = self.service(records=records).record_not_finished(report, "ab" * 32, self.clock.now(), "a test")
+        (facts, verdict, who), = records.written
+        self.assertEqual((path, verdict, who), (records.path, "flash not finished", "a test"))
+        self.assertEqual((facts["image_sha256"], facts["micropython_banner"], facts["deployed"]),
+                         ("ab" * 32, None, self.clock.now().isoformat(timespec="seconds")))
+        self.assertFalse(deploy_record_store.DeployRecordStore().find_path(report.reading.mac).exists())
 
 
 class TheLookTest(ServiceCase):

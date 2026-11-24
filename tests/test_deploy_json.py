@@ -5,6 +5,7 @@ import hashlib
 import html
 import io
 import json
+import re
 import subprocess
 import sys
 import unittest
@@ -22,6 +23,7 @@ from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 from spark.firmware import sleep_calls  # noqa: E402
 from spark.bench import board_look  # noqa: E402
+from spark.bench import deploy_gate  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.records import deploy_record_store  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
@@ -32,7 +34,7 @@ from spark.bench import ready_probe  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
-from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld, FakeReporter  # noqa: E402
+from fakes import FakeClock, FakeConsent, FakeConsoleProbe, FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core.events import LINE  # noqa: E402
 from test_board_look import C6_MAC, data, done  # noqa: E402
 import test_deploy_gate  # noqa: E402
@@ -373,6 +375,56 @@ class DeployJsonTest(JsonCase, GateCase):
                 self.go("--token", self.token(), consent=consent)  # the next yes
                 self.assertIn("names a flash of %s that did not finish here" % name, consent.asked[0])
                 self.assertIn("so the board may be erased", consent.asked[0])
+
+    def newest_stored(self):
+        """The newest entry of the store record of the C6 the fake tools show."""
+        return json.loads(deploy_record_store.DeployRecordStore().find_path(C6_MAC).read_text(encoding="utf-8"))["deploys"][-1]
+
+    @needs_littlefs
+    def test_a_who_that_cannot_be_read_still_keeps_the_flash_that_did_not_finish(self):
+        # the review of #1635 (lens 1): the erase is a fact, so its entry is kept, and who says why it is not known
+        class NoLogin(FakeConsent):
+            @property
+            def who(self):
+                raise KeyError("getpwuid(): uid not found: 501")
+
+        self.run_the_scenario()
+        self.go("--token", self.token(), consent=NoLogin(True), fails=2)
+        newest = self.newest_stored()
+        self.assertEqual(newest["verdict"], "flash not finished")
+        self.assertTrue(newest["yes"].startswith("not known ("), newest["yes"])
+
+    @needs_littlefs
+    def test_the_store_entry_of_a_flash_that_did_not_finish_has_the_board_log_s_moment(self):
+        # the review of #1635 (lens 6, refuter 6): a clock that moves at each read, so a second read gives another time
+        class Moving(FakeClock):
+            def now(self):
+                self.advance(seconds=1)
+                return self.moment
+
+        self.run_the_scenario()
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), fails=2, clock=Moving())
+        log = Path(self.one(code, said, "deploy", "deploy")["data"]["board_log"])
+        self.assertEqual(self.newest_stored()["deployed"], log.read_text(encoding="utf-8").split(" ")[2])
+
+    @needs_littlefs
+    def test_an_image_that_cannot_be_read_after_a_flash_that_did_not_finish_leaves_its_answer(self):
+        # the review of #1635 (refuter 6): keep_record catches the DeployError of image_of, so the answer is not a crash
+        case = self
+
+        class EndsAndMovesTheImage(FakeConsent):
+            def require_ready(self):
+                if case.slept:  # the erase's retry wait: sim/wokwi.toml now names an image outside sim/
+                    toml = case.project / "sim" / "wokwi.toml"
+                    toml.write_text(re.sub(r'firmware = "[^"]*"', 'firmware = "../outside.bin"', toml.read_text()))
+                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.", reason="grant_ended")
+
+        self.run_the_scenario()
+        code, said, err = self.go("--token", self.token(), consent=EndsAndMovesTheImage(True), fails=1)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["unchecked"][0]["code"], said["data"]["store_record"]), (2, "grant_ended", None))
+        self.assertTrue(said["data"]["store_record_error"])
+        self.assertIn("store record: not written: ", err)
 
     @needs_littlefs
     def test_a_store_record_that_cannot_be_written_after_a_failed_flash_leaves_its_answer(self):

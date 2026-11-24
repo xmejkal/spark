@@ -94,7 +94,8 @@ def grant_hint(project, port, evidence):
 
 def who_said_yes(consent):
     """Whose yes it was, as a phrase, read once. getpass can find no user (OSError since Python 3.13, KeyError before
-    it), and then the phrase says so; the store record names the error itself."""
+    it), and then the phrase says so. After a verify the store record is not written then and names the error itself;
+    a flash that did not finish keeps its entry with this phrase (P1097)."""
     try:
         return consent.who
     except (OSError, KeyError) as cannot:

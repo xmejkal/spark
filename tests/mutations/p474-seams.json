@@ -50,7 +50,7 @@
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "the deploy moment is read from the system clock",
-  "find": "moment = self.clock.now()  # once: the facts file and the board log share it",
+  "find": "moment = self.clock.now()",
   "replace": "moment = board_console.SystemClock.now()"
  },
  {

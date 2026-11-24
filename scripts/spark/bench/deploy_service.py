@@ -167,8 +167,8 @@ class DeployService:
                     raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""),
                                      reason=board_codes.FLASH_FAILED)
         except (Exception, KeyboardInterrupt) as ended:  # P1092, P1096: the newest board log must not name the deploy before
-            moment = self.clock.now()  # once: the board log and the store record share it
-            ended.log_path, ended.image_sha256, ended.moment = self.log_not_finished(look, image_sha256, ended, moment), image_sha256, moment
+            now = self.clock.now()  # once: the board log and the store record share it
+            ended.log_path, ended.image_sha256, ended.moment = self.log_not_finished(look, image_sha256, ended, now), image_sha256, now
             raise  # P1096: what ended the flash goes on
         return planned
 
@@ -178,7 +178,8 @@ class DeployService:
         keeps its class name only, as its message can hold a home path (D5). None when an OSError or a ValueError kept it
         from being written: `failed.log_error` then says why, and the flash's own error stays the answer. On purpose, a
         TypeError or a KeyError is a bug: it replaces what ended the flash, keeps it as its __context__, and the run
-        crashes at stage flash, whose board_state stays may_be_erased (F13). After a Ctrl-C it exits 2, not 130."""
+        crashes at stage flash, whose board_state stays may_be_erased (F13). After a Ctrl-C, such a bug ends the run with
+        exit 2, not 130."""
         reason = not_finished_reason(failed)
         said = str(failed) if isinstance(failed, FlashError) else type(failed).__name__
         log = BoardLog(moment, look.port, image_sha256, board_facts.FactsLine(NOT_FINISHED_FACTS, False),
@@ -282,7 +283,8 @@ class DeployService:
     def record_not_finished(self, look, image_sha256, moment, who):
         """Keep a flash that did not finish after the yes in the store's record of the board, with the verdict
         FLASH_NOT_FINISHED (P1097), so the look and the erase question say that the board may be erased. Returns its
-        path. `moment` is the board log's, `who` the phrase for whose yes it was. OSError and store.StoreError say why it
+        path. `moment` is the board log's, `who` the phrase for whose yes it was: "not known (...)" when the login could
+        not be read, because the erase is a fact to keep (the review of #1635). OSError and store.StoreError say why it
         was not written, and a DeployError when the image cannot be read now."""
         image = image_evidence.image_of(self.project, self.evidence)
         # the image the flash was given, and no banner: none was written to the board (P1096, G4)
