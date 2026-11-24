@@ -19,6 +19,7 @@ import os
 import re
 import shlex
 import shutil
+import stat
 import sys
 import tempfile
 import threading
@@ -165,6 +166,33 @@ class StoreError(CodedMessageError):
     """Error: a store spark cannot read, or a write it will not make. The message is the whole sentence; its values are flattened (P444), and its `code` is records_codes'."""
 
 
+#: What a write says when its `.part` is taken by a link, a folder or a FIFO, or made again by another run (P1054).
+PART_IN_THE_WAY = "%s is in the way: spark makes a new file there before the file takes its name, and never writes through a link, a folder or a FIFO — delete it if it is not yours"
+PART_BEING_WRITTEN = "%s is being written by another run: run it again once that one is done"
+
+
+class PartTakenError(FileExistsError):
+    """Error: a `.part` taken by a link, a folder, a FIFO or another run (P1054). An OSError, so each caller of a write answers it."""
+
+
+def _clear_part(part):
+    """Remove the regular `.part` a killed write left, and refuse anything else there. One gone was renamed by another run."""
+    with contextlib.suppress(FileNotFoundError):
+        if not stat.S_ISREG(os.lstat(part).st_mode):
+            raise PartTakenError(PART_IN_THE_WAY % part) from None
+        os.unlink(part)
+
+
+def _new_part(part, mode):
+    """The descriptor of `part`, made new at `mode` (P1054): O_EXCL never follows a link, so nothing outside is written."""
+    for _ in range(2):
+        try:
+            return os.open(part, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)  # O_EXCL also refuses a link at the name
+        except FileExistsError:
+            _clear_part(part)
+    raise PartTakenError(PART_BEING_WRITTEN % part)
+
+
 def slug(text):
     """A key made from words (§5.1): lower case, letters and digits joined by '-', at most 60 — never a raw label or SKU."""
     made = re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-")[:60].rstrip("-")
@@ -199,17 +227,16 @@ def replace_file(path, text, private=False):
     """
     Write `path` whole, whatever it holds now (P1035 PR 2): `text` goes to `.part`, which is renamed over it, so a write
     that fails halfway leaves the old file whole and no `.part` behind. A link or a FIFO at `path` is replaced by the file,
-    never written through. A private file's `.part` is made new at 0600 before it holds a byte. `write_file` calls it
-    once the bytes differ; the page calls it directly, so an old page that is not UTF-8 never stops its write.
+    never written through. Its `.part` is made new (P1054): a link, a folder or a FIFO there is PartTakenError, a file a
+    killed write left is removed, and a private one is 0600 before it holds a byte. `write_file` calls it once the bytes
+    differ; the page calls it directly, so an old page that is not UTF-8 never stops its write.
     """
     path = Path(path)
-    part = path.with_name(path.name + ".part")
+    part = path.with_name(path.name + PART_SUFFIX)
+    descriptor = _new_part(part, 0o600 if private else 0o666)  # before the try: a `.part` it refused is never removed
     try:
-        if private:
-            # made new at 0600, so its bytes are never readable by others, not even for a moment — an old `.part` may be looser
-            part.unlink(missing_ok=True)
-            os.close(os.open(part, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
-        part.write_text(text, encoding="utf-8")
+        with open(descriptor, "w", encoding="utf-8") as out:
+            out.write(text)
         part.replace(path)
     except BaseException:
         part.unlink(missing_ok=True)
@@ -550,7 +577,7 @@ def keep(payload, name):
     renamed — what does not match what was fetched is deleted and named, never kept. Returns the checksum. A name that
     `file_name_problem` refuses (a path out of the sources, a control character, one too long to keep) is refused before
     anything is made. A keep that fails for any reason leaves no `.part` behind: `--kept` lists a file under `sources` that
-    no record cites yet, so a stray one would read as kept.
+    no record cites yet, so a stray one would read as kept. Its `.part` is made new, as `replace_file`'s is (P1054).
     """
     problem = file_name_problem(name)
     if problem:
@@ -559,8 +586,10 @@ def keep(payload, name):
     folder = place("sources") / digest
     folder.mkdir(parents=True, exist_ok=True)
     part = folder / (name + PART_SUFFIX)
+    descriptor = _new_part(part, 0o666)  # before the try: a `.part` it refused is never removed
     try:
-        part.write_bytes(payload)
+        with open(descriptor, "wb") as out:
+            out.write(payload)
         if hashlib.sha256(part.read_bytes()).hexdigest() != digest:
             raise StoreError("%s was not kept: what was written is not what was fetched", name, code=records_codes.DOCUMENT_NOT_KEPT)
         part.replace(folder / name)

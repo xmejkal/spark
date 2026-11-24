@@ -1887,6 +1887,39 @@ class ThePageRefreshTest(FlowTest):
                 self.assertTrue(kind((project / "page.html").lstat().st_mode))
         self.assertEqual(person.read_text(encoding="utf-8"), "the person's own")
 
+    def test_a_link_at_page_html_part_is_refused_and_the_persons_file_is_untouched(self):
+        # P1054 (#1551): the store's .part is made new, so a link planted there is refused, never written through
+        from spark.flow.write_flow_page import PART_FIX
+        person = Path(tempfile.mkdtemp()) / "a-file-of-the-person.html"
+        person.write_text("the person's own", encoding="utf-8")
+        project = self.open_needs("soil")
+        (project / "page.html.part").symlink_to(person)
+        said, code = run_main(flow.main, ["page", "--project", str(project), "--json"])
+        envelope = json.loads(said[0])
+        self.assertEqual((code, envelope["status"]), (2, "could-not-run"))
+        [item] = envelope["unchecked"]
+        self.assertEqual((item["code"], item["fix"]), ("page_not_written", PART_FIX % "page.html"))
+        self.assertIn("page.html.part is in the way", item["sentence"])  # the answer masks the project's path
+        self.assertEqual(person.read_text(encoding="utf-8"), "the person's own")
+        self.assertFalse((project / "page.html").is_symlink())
+        self.assertTrue((project / "page.html.part").is_symlink())
+
+    def test_a_link_at_page_html_part_is_one_line_after_a_pick_and_the_result_stands(self):
+        # P1054 (#1551): assert_one_line_and_the_result_stands, but the planted link stays where it was
+        from spark.core.cli import REFRESH_FAILED_MESSAGE
+        from spark.flow.now_follow_up import FlowFollowUp
+        person = Path(tempfile.mkdtemp()) / "a-file-of-the-person.html"
+        person.write_text("the person's own", encoding="utf-8")
+        project = self.with_page(("soil",))  # one open need: the flow names its pick; the refresh writes an old page only
+        (project / "page.html.part").symlink_to(person)
+        result, alone = refreshed_and_alone(project, FlowFollowUp())
+        self.assertEqual(result._replace(diagnostics=()), alone._replace(diagnostics=()))
+        self.assertEqual(list(result.diagnostics), list(alone.diagnostics) + [REFRESH_FAILED_MESSAGE % ("PartTakenError", "page.html")])
+        self.assertTrue(result.next)
+        self.assertEqual(person.read_text(encoding="utf-8"), "the person's own")
+        self.assertEqual(((project / "page.html").read_text(encoding="utf-8"), (project / "page.html").is_symlink()), ("an old page", False))
+        self.assertTrue((project / "page.html.part").is_symlink())
+
     def test_a_read_only_folder_a_full_disk_or_a_renderer_that_raises_leaves_the_old_page(self):
         from fakes import FakeFullDiskPageStore, FakePageRenderer
         from spark.flow.now_follow_up import FlowFollowUp
