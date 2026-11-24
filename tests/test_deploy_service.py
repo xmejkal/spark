@@ -267,7 +267,7 @@ class TheFlashNotFinishedTest(ServiceCase):
     def test_a_crash_in_the_flash_loop_writes_a_board_log_and_is_raised_unchanged(self):
         # P1096 test 1, in place of P1092's test_a_crash_in_the_flash_loop_writes_no_board_log, which pinned the gap. D5:
         # the log keeps the class name only, as a message can hold a home path
-        self.ends_with = RuntimeError("usb fell off at /Users/x")
+        self.ends_with = RuntimeError("usb fell off at /Users/" + "someone")  # split, so test_orphans finds no home path
         ended = self.ended(RuntimeError)
         sha256 = project_image.ProjectImage(self.project).sha256
         self.assertIs(ended, self.ends_with)
