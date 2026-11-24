@@ -126,14 +126,14 @@ def project_or_library(start: Path = None) -> Path:
 
 
 def _read_json(path: Path, what: str) -> dict:
-    if not path.exists():  # P1099: a folder is broken, not missing (was is_file())
+    if not (path.exists() or path.is_symlink()):  # P1099: a folder or a dangling link is broken, not missing (was is_file())
         raise BoardError("no %s at %s", what, path, code=records_codes.BOARD_FILE_MISSING)
     try:
         return json.loads(path.read_text())
     except ValueError as broken:
         raise BoardError("%s is not valid JSON: %s", path, broken, code=records_codes.RECORD_FILE_BROKEN) from broken
     except OSError as broken:  # P1099: a file that cannot be opened is broken too, never a traceback
-        raise BoardError("%s cannot be read: %s", path, broken.strerror, code=records_codes.RECORD_FILE_BROKEN) from broken
+        raise BoardError("%s cannot be read: %s", path, broken.strerror or broken, code=records_codes.RECORD_FILE_BROKEN) from broken
 
 
 def selection_file(project: Path) -> Path:

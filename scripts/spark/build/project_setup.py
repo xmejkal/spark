@@ -531,7 +531,7 @@ def why_project_refused(project):
         if os.path.lexists(selection):  # F2: exists() is False for a dangling link
             selection.read_bytes()
     except OSError as broken:
-        return Refusal("init_project.py: %s cannot be read: %s" % (selection, broken.strerror), records_codes.RECORD_FILE_BROKEN)
+        return Refusal("init_project.py: %s cannot be read: %s" % (selection, broken.strerror or broken), records_codes.RECORD_FILE_BROKEN)
     return None
 
 
