@@ -248,18 +248,20 @@ def drop_an_older_build(destination, stages, kept=()):
 
 def keep_breadboard(requirements, destination, stages=(), kept=None):
     """
-    The breadboard sheet beside the kept board (P191, #143), and its drawn breadboard (P267), as kept entries {file,
-    did, why, line}. Only from a build that finished in this run, which it records (dist/board/built-from.json) for
-    breadboard.py to compare. A sheet or a drawing from an earlier build stays and is named as an earlier build's
-    (P1093). A board-only build removes it (P236). With `kept`, a dist/ this run did not copy writes no sheet (P1095).
+    The breadboard sheet beside the kept board (P191, #143), and its drawn breadboard (P267), as kept entries {file, did,
+    why, line}. Only from a build that finished in this run, which it records (dist/board/built-from.json) for breadboard.py
+    to compare. An earlier build's sheet or drawing stays, named as an earlier build's (P1093); without `requirements` (the
+    reference design) only that (P1114). A board-only build removes it (P236). A dist/ not copied writes no sheet (P1095).
     """
     sheet_path = Path(destination) / sheet.SHEET
     drawings = [(Path(destination) / renderer.FILE_NAME, renderer) for renderer in sheet.DRAWING_RENDERERS]
     why = why_not_built(stages, "board only: nothing to wire")
     why = why or (why_not_kept(destination, stages, kept) if kept is not None else None)  # P1095: a dist/ copy that failed
+    why = why or (None if requirements else "spark's reference design has no breadboard sheet")  # P1114
     if why:
-        return [_left_from_earlier(sheet_path, "breadboard sheet", why, skipped_the_build(stages))] + [
+        named = [_left_from_earlier(sheet_path, "breadboard sheet", why, skipped_the_build(stages))] + [
             _left_from_earlier_drawing(path, renderer, why, skipped_the_build(stages)) for path, renderer in drawings]
+        return [entry for entry in named if requirements or entry["did"] != "not written"]  # P1114: only what an earlier build left
     try:
         sheet.record_built_from(requirements, Path(destination) / sheet.BUILT_FROM)
         written = sheet.write(requirements, sheet_path, Path(destination) / sheet.CIRCUIT)
@@ -552,19 +554,19 @@ KeepAsked = namedtuple("KeepAsked", "requirements_file keep sim_dir")
 
 def keep_all(stages, workdir, asked, exporter, flow_page=None):
     """
-    What a build run keeps (P804), as kept entries {file, did, why, line}: the built board in `asked.keep` (`_kept`); with
-    a requirements file also the breadboard sheet and the pin map; the build record (the reference design's too, P1095); the simulation project in
+    What a build run keeps (P804), as kept entries {file, did, why, line}: the built board in `asked.keep` (`_kept`); the
+    breadboard sheet (the reference design names an earlier one, P1114); with a requirements file the pin map; the build record (P1095); the simulation project in
     `simulation_dir`; and last the page (its tabs drawn by `exporter`; in a project the flow page `flow_page` writes, P827),
     since the flow page reads what the others kept. None when --keep was not given, or was given with no work
     folder and no requirements file that is there. Even then, a kept simulation project is one entry. With no work folder, a refused
-    requirements file that is there still removes the page and the pin map an earlier build left (P280, P1093); a missing one, which can be a typo,
+    requirements file that is there still removes the page and names the pin map an earlier build left (P280, P1093, P1109); a missing one, which can be a typo,
     removes nothing. It removes no work folder: the caller does.
     """
     requirements_file, keep = asked.requirements_file, asked.keep
     keeps = keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())
     kept = (_kept(workdir, keep, bool(requirements_file), _built(stages)) if workdir is not None else []) if keeps else None
     if kept is not None:  # P1095: the reference design (no requirements file) names an earlier dist/ and records its build too
-        kept += (keep_breadboard(Path(requirements_file), Path(keep), stages, kept) if requirements_file else []) + drop_an_older_build(Path(keep), stages, kept)
+        kept += keep_breadboard(Path(requirements_file) if requirements_file else None, Path(keep), stages, kept) + drop_an_older_build(Path(keep), stages, kept)
         kept += [_kept_pins(Path(requirements_file), Path(keep), _built(stages))] if requirements_file else []
         kept += keep_build_record(Path(keep), Path(requirements_file) if requirements_file else None, stages, kept)  # P825: what flow.py reads
     simulation_folder = simulation_dir(asked.sim_dir, keep)
