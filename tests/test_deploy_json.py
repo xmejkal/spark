@@ -699,6 +699,21 @@ class DeployPageTest(JsonCase, GateCase):
         self.assert_the_page_is_the_flow_s(said)
 
     @needs_littlefs
+    def test_a_secrets_file_that_cannot_be_read_leaves_the_old_page_and_the_deploy_s_answer_stands(self):
+        # test 8, P1060 D5: write_page refuses, and the core says so in one diagnostics line that names the class only
+        from spark.core.cli import REFRESH_FAILED_MESSAGE
+        half_typed = "half-typed-value-31337"
+        (self.project / "firmware" / "wifi_secrets.py").write_text('WIFI_PASSWORD = "%s\n' % half_typed, encoding="utf-8")
+        code, said, err = self.ready()
+        envelope = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, envelope["status"], envelope["problems"], envelope["unchecked"], envelope["next"]), (0, "ok", [], [], []))
+        self.assertEqual(envelope["data"]["ready"]["verdict"], "ready seen")
+        self.assertEqual(self.page_notes(envelope), [])
+        self.assertEqual(err.rstrip("\n").splitlines()[-1], REFRESH_FAILED_MESSAGE % ("SecretsUnreadableError", "page.html"))
+        self.assertEqual(self.page.read_bytes(), b"an old page")
+        self.assertNotIn(half_typed, "\n".join(said) + err)
+
+    @needs_littlefs
     def test_a_write_that_fails_after_the_erase_writes_the_page_that_show_agrees_with(self):
         # B1, B12: no board log is written, so the page and show agree on the stand before this deploy
         self.run_the_scenario()
