@@ -254,11 +254,11 @@ board logs, and cannot see the wiring or what the board shows now: one line says
 
 The page ends with one script and its words ([P829](https://github.com/xmejkal/spark/issues/1187)): an inert block
 `<script type="application/json" id="spark-words">`, then one `<script>` with no `src`, whose text is
-`scripts/spark/flow/page_script.js`, compiled from `page_script.ts` ([P1061](https://github.com/xmejkal/spark/issues/1559)). Python writes every word the script shows into the block: per offer it may send its
-label and the lines of its confirm, the published page's intro, and the words of the wait and of each answer. The script
-fills in only a time, a label or spark's own line, and never shows a key or the fingerprint. Without the block the page
-is the page with no script, byte for byte, but its hooks (below). The markup holds no `<button`, `<input`, `onclick` or
-`<iframe`.
+`scripts/spark/flow/page_script.js`, compiled from `page_script.ts` (P1061). Python writes every word the script shows
+into the block: per offer it may send its label and the lines of its confirm, the published page's intro, and the words
+of the wait and of each answer. The script fills in only a time, a label or spark's own line, and never shows a key or
+the fingerprint. Without the block the page is the page with no script, byte for byte, but its hooks (below). The markup
+holds no `<button`, `<input`, `onclick` or `<iframe`.
 
 From disk, or wherever `claude.use("db")` gives no database, the script does nothing. Nor does it for a viewer who is not
 the artifact's owner (`(await claude.use("user")).isOwner()`), so the published page declares `db` and `user`. For the
