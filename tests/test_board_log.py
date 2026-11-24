@@ -129,6 +129,15 @@ class TheFlashNotFinishedLogTest(unittest.TestCase):
                 self.assertEqual(board_log.newest_logged_deploy(a_project_with(log.text())),
                                  (1, board_log.LoggedDeploy("2026-11-23T14:09:49+01:00", "ab" * 32, "flash not finished", reason)))
 
+    def test_a_crash_and_a_ctrl_c_in_the_flash_read_back_with_their_cause(self):
+        # P1096 test 5: the two new reasons of a flash that did not finish
+        for reason in ("crash", "interrupted"):
+            with self.subTest(reason=reason):
+                log = a_log(verdict="flash not finished", sentence="spark crashed during the flash", reason=reason,
+                            facts_line="facts file: not written: the flash did not finish")
+                self.assertEqual(board_log.newest_logged_deploy(a_project_with(log.text())),
+                                 (1, board_log.LoggedDeploy("2026-11-23T14:09:49+01:00", "ab" * 32, "flash not finished", reason)))
+
     def test_a_verdict_that_is_not_one_of_the_verdicts_still_cannot_be_read(self):
         with self.assertRaises(board_log.BoardLogError) as raised:
             board_log.newest_logged_deploy(a_project_with(a_log(verdict="ready not read").text()))

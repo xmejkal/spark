@@ -26,6 +26,7 @@ from collections import namedtuple
 from dataclasses import dataclass
 
 from spark.bench import board_codes
+from spark.bench import board_log
 from spark.records import board_records
 from spark.records import brief
 from spark.records import deploy_record_store
@@ -410,6 +411,8 @@ class LookReport:
 # --- MVP ---
 #: The look's words for a board with no deploy in its store record, and what the record keeps (P920).
 NONE_RECORDED_NOTE = "none in its store record (it keeps its own deploys and those that a registered project recorded)"
+#: The look's words for a last deploy whose flash did not finish after the yes (P1097): its project and its time.
+NOT_FINISHED_NOTE = "a flash of %s that did not finish, %s: the board may be erased (its store record, not read from the board)"
 
 
 def say_last_deploy(last):
@@ -418,6 +421,8 @@ def say_last_deploy(last):
     if last.state == outcomes.RECORDED and last.made_by:  # P920: a registered project recorded it, and spark read nothing
         said = printable("%s, made by %s and not by spark, %s (its store record, not read from the board)" % (
             last.project, last.made_by, last.time_said()))
+    elif last.state == outcomes.RECORDED and last.verdict == board_log.FLASH_NOT_FINISHED:
+        said = printable(NOT_FINISHED_NOTE % (last.project, last.time_said()))
     elif last.state == outcomes.RECORDED:
         said = printable("%s, %s, %s%s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said(),
                                                                                        last.banner_said()))

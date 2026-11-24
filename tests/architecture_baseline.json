@@ -94,7 +94,6 @@
 "T1:scripts/assign_pins.py:file-write": 1,
 "T1:scripts/emit_footprint.py:file-write": 1,
 "T1:scripts/flash_image.py:file-write": 1,
-"T1:scripts/spark/bench/board_log.py:file-write": 1,
 "T1:scripts/spark/bench/board_look.py:subprocess": 5,
 "T1:scripts/spark/bench/deploy_service.py:subprocess": 2,
 "T1:scripts/spark/bench/image_evidence.py:subprocess": 1,

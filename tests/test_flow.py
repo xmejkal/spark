@@ -2385,6 +2385,14 @@ class TheFlashNotFinishedTest(FlowTest):
                 self.assertEqual((said["data"]["guide"]["now"]["by"], said["data"]["guide"]["now"]["says"]),
                                  (["your terminal"], NOT_FINISHED_NOW))
 
+    def test_a_crash_and_a_ctrl_c_in_the_flash_have_their_own_words(self):
+        # P1096 test 6: the two new causes of a flash that did not finish
+        for reason, words in (("crash", "spark crashed during the flash"), ("interrupted", "a Ctrl-C interrupted the flash")):
+            with self.subTest(reason=reason):
+                said, _ = show(a_not_finished_log(a_deploy_project(), reason))
+                self.assertEqual(deploy_of(said)["says"], [logged(FLASH_NOT_FINISHED_WORDS, "Cause in the log: %s." % words)])
+                self.assertIs(said["data"]["deploy"]["read_back"], False)
+
     def test_it_wins_over_a_stale_image_and_the_fact_is_still_said_in_the_data(self):
         other = a_not_finished_log(a_deploy_project(), image=b"another image")
         # on a board Wokwi has no model of, the simulate is counted as done, so the deploy's NOW is the guide's

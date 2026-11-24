@@ -5,6 +5,7 @@ import hashlib
 import html
 import io
 import json
+import re
 import subprocess
 import sys
 import unittest
@@ -22,7 +23,9 @@ from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 from spark.firmware import sleep_calls  # noqa: E402
 from spark.bench import board_look  # noqa: E402
+from spark.bench import deploy_gate  # noqa: E402
 from spark.records import board_records  # noqa: E402
+from spark.records import deploy_record_store  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
 from spark.bench import board_facts  # noqa: E402
@@ -31,8 +34,9 @@ from spark.bench import ready_probe  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
-from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld  # noqa: E402
-from test_board_look import data, done  # noqa: E402
+from fakes import FakeClock, FakeConsent, FakeConsoleProbe, FakeOutsideWorld, FakeReporter  # noqa: E402
+from spark.core.events import LINE  # noqa: E402
+from test_board_look import C6_MAC, data, done  # noqa: E402
 import test_deploy_gate  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
 import test_look  # noqa: E402
@@ -342,6 +346,98 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual((said["unchecked"][0]["code"], said["data"]["board_log"], said["data"]["image_sha256"]), ("flash_failed", None, None))
         self.assertIn("board log: not written: ", err)
         self.assertIn(", so flow.py show may still name an older deploy. The flash did not finish, so the board may be erased.\n", err)
+
+    @needs_littlefs
+    def test_a_flash_that_did_not_finish_is_the_look_s_last_deploy_and_the_next_yes_names_it(self):
+        # P1097 test 8, the card's: a failed command, a crash and a Ctrl-C each add a store entry `flash not finished`
+        self.run_the_scenario()
+        name = self.project.resolve().name
+        for ending, kw in (("failed", {"fails": 2}), ("crash", {"fails": 1, "fail_code": RuntimeError("usb fell off")}),
+                           ("ctrl-c", {"fails": 1, "fail_code": KeyboardInterrupt()})):
+            with self.subTest(ending=ending):
+                self.record_a_deploy()  # the deploy before: finished, ready seen
+                if ending == "ctrl-c":
+                    with self.assertRaises(KeyboardInterrupt):
+                        self.go("--token", self.token(), consent=FakeConsent(True), **kw)
+                else:
+                    code, said, err = self.go("--token", self.token(), consent=FakeConsent(True), **kw)
+                record = deploy_record_store.DeployRecordStore().find_path(C6_MAC)
+                newest = json.loads(record.read_text(encoding="utf-8"))["deploys"][-1]
+                self.assertEqual((newest["verdict"], newest["project"]), ("flash not finished", name))
+                line = board_look.say_last_deploy(self.look().last_deploy)
+                self.assertIn("a flash of %s that did not finish" % name, line)
+                self.assertNotIn("ready seen", line)
+                if ending == "failed":
+                    stored = "<store>/boards/%s" % record.name  # the envelope's privacy names the store so
+                    self.assertEqual(self.one(code, said, "deploy", "deploy")["data"]["store_record"], stored)
+                    self.assertIn("store record: %s\n" % record, err)
+                consent = FakeConsent(True)
+                self.go("--token", self.token(), consent=consent)  # the next yes
+                self.assertIn("names a flash of %s that did not finish here" % name, consent.asked[0])
+                self.assertIn("so the board may be erased", consent.asked[0])
+
+    def newest_stored(self):
+        """The newest entry of the store record of the C6 the fake tools show."""
+        return json.loads(deploy_record_store.DeployRecordStore().find_path(C6_MAC).read_text(encoding="utf-8"))["deploys"][-1]
+
+    @needs_littlefs
+    def test_a_who_that_cannot_be_read_still_keeps_the_flash_that_did_not_finish(self):
+        # the review of #1635 (lens 1): the erase is a fact, so its entry is kept, and who says why it is not known
+        class NoLogin(FakeConsent):
+            @property
+            def who(self):
+                raise KeyError("getpwuid(): uid not found: 501")
+
+        self.run_the_scenario()
+        self.go("--token", self.token(), consent=NoLogin(True), fails=2)
+        newest = self.newest_stored()
+        self.assertEqual(newest["verdict"], "flash not finished")
+        self.assertTrue(newest["yes"].startswith("not known ("), newest["yes"])
+
+    @needs_littlefs
+    def test_the_store_entry_of_a_flash_that_did_not_finish_has_the_board_log_s_moment(self):
+        # the review of #1635 (lens 6, refuter 6): a clock that moves at each read, so a second read gives another time
+        class Moving(FakeClock):
+            def now(self):
+                self.advance(seconds=1)
+                return self.moment
+
+        self.run_the_scenario()
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), fails=2, clock=Moving())
+        log = Path(self.one(code, said, "deploy", "deploy")["data"]["board_log"])
+        self.assertEqual(self.newest_stored()["deployed"], log.read_text(encoding="utf-8").split(" ")[2])
+
+    @needs_littlefs
+    def test_an_image_that_cannot_be_read_after_a_flash_that_did_not_finish_leaves_its_answer(self):
+        # the review of #1635 (refuter 6): keep_record catches the DeployError of image_of, so the answer is not a crash
+        case = self
+
+        class EndsAndMovesTheImage(FakeConsent):
+            def require_ready(self):
+                if case.slept:  # the erase's retry wait: sim/wokwi.toml now names an image outside sim/
+                    toml = case.project / "sim" / "wokwi.toml"
+                    toml.write_text(re.sub(r'firmware = "[^"]*"', 'firmware = "../outside.bin"', toml.read_text()))
+                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.", reason="grant_ended")
+
+        self.run_the_scenario()
+        code, said, err = self.go("--token", self.token(), consent=EndsAndMovesTheImage(True), fails=1)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["unchecked"][0]["code"], said["data"]["store_record"]), (2, "grant_ended", None))
+        self.assertTrue(said["data"]["store_record_error"])
+        self.assertIn("store record: not written: ", err)
+
+    @needs_littlefs
+    def test_a_store_record_that_cannot_be_written_after_a_failed_flash_leaves_its_answer(self):
+        # P1097 test 9: the FlashError's answer stands, and the record's error is said beside the null
+        self.run_the_scenario()
+        boards = deploy_record_store.DeployRecordStore().find_path(C6_MAC).parent
+        boards.parent.mkdir(parents=True, exist_ok=True)
+        boards.write_text("a file where the folder goes")
+        code, said, err = self.go("--token", self.token(), consent=FakeConsent(True), fails=2)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["unchecked"][0]["code"], said["data"]["store_record"]), (2, "flash_failed", None))
+        self.assertTrue(said["data"]["store_record_error"])
+        self.assertIn("store record: not written: ", err)
 
     @needs_littlefs
     def test_an_erase_retried_once_gives_the_usual_envelope_and_the_retry_line_on_stderr(self):
@@ -754,6 +850,60 @@ class DeployPageTest(JsonCase, GateCase):
         for line in deploy["says"]:
             self.assertIn(html.escape(line), page)
         self.assertIn(html.escape("Flash not finished, nothing read back, the board may be erased."), page)  # ON THE BOARD, P1062
+
+    def an_older_ready_seen_log(self):
+        """The scenario ran, and an older board log of the same image says ready seen: the deploy before (P1096 test 4)."""
+        from test_flow import SEEN_SENTENCE, a_board_log
+        self.run_the_scenario()
+        a_board_log(self.project, "ready seen", SEEN_SENTENCE, image=self.image.read_bytes(), name="2026-10-16T09-00-00")
+
+    def assert_show_and_the_next_page_say_the_flash_did_not_finish(self, words):
+        """`flow.py show` says the flash did not finish, with the cause's `words`, and no ready seen. The run itself left
+        page.html as it was: a crash writes no page (P1038's 0c rule, G1). The next page write names the new stand."""
+        import flow
+        from test_flow import FLASH_NOT_FINISHED_WORDS
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        self.assertEqual(self.page.read_text(encoding="utf-8"), "an old page")
+        write_page(self.project, store=FlowPageStore())
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            flow.main(["show", "--project", str(self.project), "--json"])
+        deploy, = [phase for phase in json.loads(out.getvalue())["data"]["phases"] if phase["phase"] == "deploy"]
+        self.assertEqual(deploy["status"], "problems")
+        self.assertIn(FLASH_NOT_FINISHED_WORDS, deploy["says"][0])
+        self.assertIn("Cause in the log: %s." % words, " ".join(deploy["says"]))
+        self.assertNotIn("ready seen", " ".join(deploy["says"]))
+        page = self.page.read_text(encoding="utf-8")
+        for line in deploy["says"]:
+            self.assertIn(html.escape(line), page)
+        self.assertIn(html.escape("Flash not finished, nothing read back, the board may be erased."), page)  # ON THE BOARD, P1062
+        self.assertNotIn("Ready seen", page)
+
+    @needs_littlefs
+    def test_a_crash_in_the_flash_logs_it_and_show_says_the_board_may_be_erased(self):
+        # P1096 test 4 (a), the card's: the deploy before stands no more
+        self.an_older_ready_seen_log()
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=RuntimeError("usb fell off"))
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["status"], said["unchecked"][0]["code"]), (2, "could-not-run", "crash"))
+        older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertEqual((said["data"]["board_log"], said["data"]["board_state"]), (str(newer), "may_be_erased"))
+        self.assert_show_and_the_next_page_say_the_flash_did_not_finish("spark crashed during the flash")
+
+    @needs_littlefs
+    def test_a_ctrl_c_in_the_flash_logs_it_says_so_and_still_ends_the_run(self):
+        # P1096 test 4 (b), the card's: the Ctrl-C goes on after the board log line, and no verify runs
+        self.an_older_ready_seen_log()
+        reporter = FakeReporter()
+        with self.assertRaises(KeyboardInterrupt):
+            self.deploy("--json", "--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=KeyboardInterrupt(),
+                        reporter=reporter)
+        lines = [event.text for event in reporter.events if event.kind == LINE]
+        older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertIn("board log: %s: flash not finished, the board may be erased. Look at the board with Claude, then run "
+                      "the deploy again." % newer, lines)
+        self.assertEqual([command for command in self.ran if "exec" in command or "fs" in command], [])
+        self.assert_show_and_the_next_page_say_the_flash_did_not_finish("a Ctrl-C interrupted the flash")
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ import abc
 import getpass
 
 from spark.bench import board_codes
+from spark.bench import board_log
 from spark.records.store import format_rerun_line  # noqa: F401  (board_grant, grant and deploy take it from here)
 from spark.core import outcomes
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
@@ -149,6 +150,9 @@ def say_last_deploy_in_question(last):
     if last.state == outcomes.RECORDED and last.made_by:  # P920: a registered project recorded it
         return printable("spark's store record names %s as its last deploy here, %s, made by %s and not by spark" % (
             last.project, last.time_said(), last.made_by))
+    if last.state == outcomes.RECORDED and last.verdict == board_log.FLASH_NOT_FINISHED:
+        return printable("spark's store record names a flash of %s that did not finish here, %s, so the board may be erased" % (
+            last.project, last.time_said()))
     if last.state == outcomes.RECORDED:
         return printable("spark's store record names %s as its last deploy here, %s, %s%s" % (last.project, last.time_said(), last.verdict,
                                                                                          last.banner_said()))

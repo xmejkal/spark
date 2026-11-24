@@ -9,7 +9,8 @@ site names its code in `reason`, and `CODES` says in one sentence what each code
     the look's findings    a Stop's code, and the code of a warning or an unchecked item of a LookReport
     the gate's refusals    a GateClosedError's `reason`: the deploy gate stays shut
     the grant's refusals   a GrantRefusedError's `reason`, from its WHY_ word (board_grant.CODE_FOR_WHY)
-    deploy's own           a DeployError's `reason`, and what deploy.py reports when the flash or the board's start fails
+    deploy's own           a DeployError's `reason`, and what deploy.py reports when the flash or the board's start fails;
+                           INTERRUPTED is only a board log's reason (P1096)
 
 The codes every Operation can write (`bad_argument`, `crash`) are the core's, in `spark.core.codes` (P442).
 NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE, LOG_UNREADABLE and TOOL_MISSING are also firmware_codes', as equal literals in two
@@ -44,6 +45,8 @@ LOG_UNREADABLE, CHIP_UNKNOWN = "log_unreadable", "chip_unknown"
 EVIDENCE_REFUSES, IMAGE_CHANGED = "evidence_refuses", "image_changed"
 #: What deploy.py reports on its own: the flash and the board's start.
 FLASH_FAILED = "flash_failed"
+#: The board log's reason of a flash that a Ctrl-C ended (P1096). It reaches no envelope: the Ctrl-C goes on.
+INTERRUPTED = "interrupted"
 READY_NOT_SEEN = "ready_not_seen"
 #: P1022: after a write that passed esptool's hash check, ready was not confirmed. Its fix is a template that only
 #: board_envelope.ready_unknown_fix fills (never codes.fix_of): what spark knows, what it did not do and what to try, in
@@ -136,6 +139,7 @@ CODES = {
     EVIDENCE_REFUSES: "the evidence refuses the image: no passed run names it, or another check failed",
     IMAGE_CHANGED: "the image changed after the person's yes",
     FLASH_FAILED: "a flash command failed, so the board may be erased and not written",
+    INTERRUPTED: "a Ctrl-C interrupted the flash, so the board may be erased and not written",
     READY_NOT_SEEN: "the board's files differ from the image, the firmware stopped with an error, or it printed no ready",
     READY_UNKNOWN: READY_UNKNOWN.meaning,
     DOWNLOAD_MODE_STAYED: "the board still waits in download mode after the flash, and the person's RESET press did not start it",
