@@ -116,7 +116,7 @@ serial, and none of them keeps or replaces a board. `grant.py --check` asks noth
 | no kept board, and a board with a USB serial | stop before the touch with `no_known_board`. The fix names `look.py`, which asks once and keeps the board |
 | a board with no serial | reach asks on every run, with `--port` too. The grant asks for `--scope deploy` only: a live grant is refused first with `serial_not_mac`, exit 1, with no question and no read. Live refuses it with `refused_no_grant`: `grant.py` gives such a board no live grant |
 | a kept board whose record trusts no USB serial (it showed none, or one that its firmware set), and a board on Espressif's own USB whose serial does not start with the kept MAC | ask on every run, with `--port` too: spark cannot tell another board from the kept one. More below the table |
-| a `--port` that the list does not hold | reach asks. The grant and live stop with `port_not_listed` |
+| a `--port` that the list does not hold | stop with `port_not_listed` before the question and touch nothing ([P1056](https://github.com/xmejkal/spark/issues/1553)) |
 
 In the state of the fifth row, a live grant on a serial that a firmware set is refused first with `serial_not_mac`. A board
 whose serial is its MAC is asked, and after a yes the grant's read stops another board with `other_board`. It is the one state

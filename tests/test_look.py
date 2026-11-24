@@ -698,8 +698,8 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.assertIn("(firmware/main.py:2, firmware/main.py:3).", self.unchecked(devs="mpremote-devs-none.txt")["fix"])
 
     def test_a_named_port_that_is_not_on_usb_opens_with_that_port_never_with_no_board(self):
-        # look.py and deploy.py read a --port the list does not hold, and reach.py asks the board question for it (P892),
-        # so only grant.py, live.py and bench.py record stop with port_not_listed: the fix is asked for that code directly
+        # look.py and deploy.py read a --port the list does not hold (P892), so only grant.py, live.py, reach.py (P1056) and
+        # bench.py record stop with port_not_listed: the fix is asked for that code directly
         self.sleeper("import machine\nmachine.deepsleep(1)\n")
         places = board_records.ButtonPlaces.of_project(self.project)
         fix = board_envelope.asleep_fix(self.project, "port_not_listed", places)
