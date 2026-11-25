@@ -317,8 +317,8 @@ class DeployService:
             facts = dict(self._facts_of(image_evidence.image_of(self.project, self.evidence), look, (), moment),
                          image_sha256=image_sha256, micropython_banner=None)
         else:  # P1112: a verify's entry needs no read of the file, which may be gone by now
-            facts = board_facts.facts_of(self.project, self.platform.board_of(), look.reading.mac, image_sha256, None, (), moment,
-                                         self.evidence.simulation)
+            facts = dict(board_facts.facts_without_image(self.project, self.platform.board_of(), look.reading.mac, moment,
+                                                         self.evidence.simulation), image_sha256=image_sha256)
         return self.records.write_deploy(facts, verdict, who)
 
     def _read_board(self, image, report, connection, expected, moment):

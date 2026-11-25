@@ -409,7 +409,7 @@ the grant. The grant covers any passed image of any project on that board. The s
 After the flash it copies spark.json to the board: spark's version, the project, the board type, the MAC, the image's
 sha256, each file's sha256 and `simulation` (passed or none). The board log names the file's sha256 and the simulation,
 and the store's boards/<MAC>.json adds this deploy with its verdict, its simulation and whose yes it was, and a flash
-that did not finish too (verdict `flash not finished`, P1097). Then it reads
+that did not finish too (verdict `flash not finished`, P1097), and a verify that did not finish (verdict `ready unknown`, P1112). Then it reads
 the board: ready seen means the board's files match the evidence's sha256s and the firmware printed a line that
 starts with the word `ready` within %d s.
 The board's log goes to sim/runs/board/, also after a flash that did not finish (a failed command, a crash or a Ctrl-C,
