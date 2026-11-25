@@ -12,7 +12,6 @@ import argparse
 import importlib
 import json
 import sys
-from collections import namedtuple
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,17 +39,20 @@ UNBUILT = (
 )
 NOT_BUILT = "not built"
 NO_WORD = "(the mark alone)"
+#: The Op cell of a chat offer, which has no step of spark's: Claude does its job in the chat (P1122).
+NO_OP = "none"
 INTRO = """How to read this page:
 
 - The moment of each phase and the unbuilt steps are hand-written, last on %s.
 - The phases, statuses, actors and Operations are read from the code.
-- The offer kinds, their labels and their phases are written in the tool. A test checks them against the code.
+- The offer kinds, their phases, labels and tells are read from `flow_codes.OFFER_KINDS`. Only each step is written in the tool.
 - A key is `<group>:<name>`, and the group makes it unique.
 - A phase reader is the code that reads one phase of a project. The usual actor of a phase is the one its reader names.
   In some states the guide names another actor, and `guide.now.by` holds the actual one.
 - This page does not list which statuses each phase can show. Each phase reader decides that from the project's files.
 - An offer key names a kind of offer, not one project's offer. Its label keeps its `%%s` places.
 - "From the page" says whether a click on the project page can send the offer. If it says no, you ask Claude in the chat.
+- A tell is one sentence for Claude that names a job only Claude does. An offer with a tell is a chat offer, with no op.
 - A status with no word is shown by its mark alone.
 - The summary of an Operation is the one that `--describe` prints.""" % HAND_WRITTEN
 
@@ -68,25 +70,21 @@ def slug(name):
     return "none" if name is None else str(name).replace(" ", "-")
 
 
-#: Value: one offer kind as written here: the phase whose reader makes it, the name of its label in flow_codes, and a function
-#: that gives its NextStep with placeholder values. The step's op is the only thing read from the step.
-Offer = namedtuple("Offer", "phase label step")
-
-
-def offers_by_kind(flow_codes, offer_steps):
-    """{offer kind: Offer}, in the order the page shows them. T6 checks the kinds against the code's lists."""
-    return {flow_codes.PICK: Offer(flow_codes.PARTS, "PICK_LABEL", lambda: offer_steps.pick_step("/project", "need", "id", "name")),
-            flow_codes.WRITE_REQUIREMENTS: Offer(flow_codes.REQUIREMENTS, "REQUIREMENTS_LABEL", lambda: offer_steps.requirements_step("/project")),
-            flow_codes.BUILD_BOARD: Offer(flow_codes.BUILD, "BUILD_LABEL", lambda: offer_steps.build_step("/project")),
-            flow_codes.NEEDS_DROP: Offer(flow_codes.NEEDS, "DROP_LABEL", lambda: offer_steps.drop_step("/project", "need"))}
+def steps_by_kind(flow_codes, offer_steps):
+    """{offer kind: a function that gives its NextStep with placeholder values}, for each kind with a step. The step's op
+    is the only thing read from it. The kinds, their phases, labels and tells are `flow_codes.OFFER_KINDS` (P1115)."""
+    return {flow_codes.PICK: lambda: offer_steps.pick_step("/project", "need", "id", "name"),
+            flow_codes.WRITE_REQUIREMENTS: lambda: offer_steps.requirements_step("/project"),
+            flow_codes.BUILD_BOARD: lambda: offer_steps.build_step("/project"),
+            flow_codes.NEEDS_DROP: lambda: offer_steps.drop_step("/project", "need")}
 
 
 # Puts scripts/ on sys.path, so that the import below finds spark.
 spark_modules()
 from spark.flow import flow_codes as _codes, offer_steps as _steps  # noqa: E402
 
-#: The offer kinds: those of `flow_codes.SENDABLE` and `run_request.IN_CHAT`, each with its phase, label and step.
-OFFER_STEPS = offers_by_kind(_codes, _steps)
+#: The step of each offer kind that has one. A kind with none is a job Claude does in the chat, so its op is None.
+STEPS = steps_by_kind(_codes, _steps)
 
 
 class DesignBasis:
@@ -107,10 +105,10 @@ class DesignBasis:
         items += [{"key": "status:" + slug(status), "status": status, "word": word, "mark": mark}
                   for status, (word, mark) in phase_readers.MARKS.items()]
         items += [{"key": "by:" + slug(name), "name": name} for name in (flow_codes.BY_YOU, flow_codes.BY_CLAUDE, flow_codes.BY_TERMINAL)]
-        for kind, offer in OFFER_STEPS.items():
-            op = offer.step().op
-            items.append({"key": "offer:" + kind, "kind": kind, "phase": offer.phase, "label": getattr(flow_codes, offer.label), "op": op,
-                          "from_page": kind in flow_codes.SENDABLE and op in run_request.STEP_OPERATIONS and kind not in run_request.IN_CHAT})
+        for kind, row in flow_codes.OFFER_KINDS.items():
+            op = STEPS[kind]().op if kind in STEPS else None
+            items.append({"key": "offer:" + kind, "kind": kind, "phase": row.phase, "label": row.label, "op": op,
+                          "from_page": row.from_page and op in run_request.STEP_OPERATIONS, "tell": row.tell})
         for op, operation in catalogue.CATALOGUE.items():
             area = next(name for name, table in catalogue.TABLES if table.get(op) is operation)
             items.append({"key": "op:" + op, "op": op, "area": area, "summary": " ".join(describe.summary_of(operation).split()),
@@ -136,8 +134,9 @@ class DesignBasis:
         lines += ["", "## Statuses", "", "| Key | Word | Mark |", "|---|---|---|"]
         lines += ["| `%s` | %s | %s |" % (one["key"], one["word"] or NO_WORD, one["mark"]) for one in self.of_group("status")]
         lines += ["", "## Actors", ""] + ["- `%(key)s`: %(name)s" % one for one in self.of_group("by")]
-        lines += ["", "## Offers", "", "| Key | Phase | Label | Op | From the page |", "|---|---|---|---|---|"]
-        lines += ["| `%s` | %s | `%s` | %s | %s |" % (one["key"], one["phase"], one["label"], one["op"], "yes" if one["from_page"] else "no")
+        lines += ["", "## Offers", "", "| Key | Phase | Label | Op | From the page | Tell |", "|---|---|---|---|---|---|"]
+        lines += ["| `%s` | %s | `%s` | %s | %s | %s |" % (one["key"], one["phase"], one["label"], one["op"] or NO_OP,
+                                                        "yes" if one["from_page"] else "no", one["tell"] or "")
                   for one in self.of_group("offer")]
         lines += ["", "## Operations"]
         for area in dict.fromkeys(one["area"] for one in self.of_group("op")):

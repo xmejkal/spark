@@ -303,7 +303,7 @@ class TheReaderTest(WithAStore):
         self.assertEqual([offer["key"] for offer in phase["offers"]], ["needs-drop:board", "needs-drop:screen"])
         self.assertEqual(said["data"]["stands_at"], "needs")
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "needs", "by": ["claude"], "says": STALE_NOW, "offer": None,
-                                                        "needs": [], "steps": None, "with_wiring": False})
+                                                        "chat_offer": None, "needs": [], "steps": None, "with_wiring": False})
 
     def test_the_text_line_says_out_of_date_and_what_changed(self):
         project = self.written_project()

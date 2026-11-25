@@ -30,8 +30,6 @@ REQUEST_FILE = Path(".spark") / "page-request.json"
 #: An id as the page writes it (`crypto.randomUUID()`), and `seen`, the first SHORT hex digits of the fingerprint.
 ID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 SEEN_PATTERN = re.compile(r"^[0-9a-f]{12}$")
-#: The kinds of offer that are asked in the chat, never from the page: a need's drop.
-IN_CHAT = (flow_codes.NEEDS_DROP,)
 #: Value: one request, as the file holds it: the page's id, the offer's key and the fingerprint's first digits the page
 #: was read at. A field the file lacks is None; the page's `at` is its own, and spark does not read it.
 PageRequest = namedtuple("PageRequest", "id key seen")
@@ -93,7 +91,7 @@ def refusal_of(request, offered, fingerprint):
     key = key_of(request)
     if id_of(request) is None or key is None or not (isinstance(request.seen, str) and SEEN_PATTERN.fullmatch(request.seen)):
         return request_codes.REQUEST_MALFORMED
-    if kind_of(key) in IN_CHAT:
+    if kind_of(key) in flow_codes.IN_CHAT:
         return request_codes.REQUEST_IN_CHAT
     if request.seen != fingerprint[:SHORT]:
         return request_codes.REQUEST_STALE

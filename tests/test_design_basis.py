@@ -92,20 +92,26 @@ class TheOperationsTest(unittest.TestCase):
 
 
 class TheOffersTest(unittest.TestCase):
-    def test_t6_the_offer_kinds_are_the_codes_and_from_page_needs_both_lists(self):  # T6
-        kinds = tuple(flow_codes.SENDABLE) + tuple(run_request.IN_CHAT)
-        self.assertEqual(set(design_basis.OFFER_STEPS), set(kinds))
+    def test_t6_the_offer_kinds_are_the_table_and_from_page_needs_the_row_and_the_allow_list(self):  # T6 (P1115)
+        self.assertEqual([one["kind"] for one in group("offer")], list(flow_codes.OFFER_KINDS))
         self.assertEqual([(one["key"], one["phase"]) for one in group("offer")],
                          [("offer:pick", "parts"), ("offer:requirements", "requirements"), ("offer:build", "build"),
-                          ("offer:needs-drop", "needs")])
+                          ("offer:needs-drop", "needs"), ("offer:write-firmware", "firmware"),
+                          ("offer:run-simulation", "simulate"), ("offer:look-at-board", "deploy")])
         self.assertEqual({one["key"]: one["op"] for one in group("offer")},
                          {"offer:pick": "pick", "offer:requirements": "requirements", "offer:build": "build-board",
-                          "offer:needs-drop": "needs-drop"})
+                          "offer:needs-drop": "needs-drop", "offer:write-firmware": None, "offer:run-simulation": None,
+                          "offer:look-at-board": None})
         self.assertEqual({one["key"]: one["from_page"] for one in group("offer")},
-                         {"offer:pick": True, "offer:requirements": True, "offer:build": True, "offer:needs-drop": False})
-        with swapped(flow_codes, "SENDABLE", ("pick", "requirements")):
-            self.assertFalse(item("offer:build", design_basis.DesignBasis.of())["from_page"])
-        with swapped(run_request, "IN_CHAT", ("needs-drop", "build")):
+                         {"offer:pick": True, "offer:requirements": True, "offer:build": True, "offer:needs-drop": False,
+                          "offer:write-firmware": False, "offer:run-simulation": False, "offer:look-at-board": False})
+        self.assertEqual({one["key"]: one["tell"] for one in group("offer")},
+                         {"offer:pick": None, "offer:requirements": None, "offer:build": None, "offer:needs-drop": None,
+                          "offer:write-firmware": "Write the firmware for this project's board.",
+                          "offer:run-simulation": "Help me run the simulation of this project.",
+                          "offer:look-at-board": "Look at this project's board with me."})
+        build = flow_codes.OFFER_KINDS["build"]._replace(from_page=False)
+        with swapped(flow_codes, "OFFER_KINDS", dict(flow_codes.OFFER_KINDS, build=build)):
             self.assertFalse(item("offer:build", design_basis.DesignBasis.of())["from_page"])
         with swapped(run_request, "STEP_OPERATIONS", {op: one for op, one in run_request.STEP_OPERATIONS.items() if op != "build-board"}):
             self.assertFalse(item("offer:build", design_basis.DesignBasis.of())["from_page"])
@@ -113,7 +119,9 @@ class TheOffersTest(unittest.TestCase):
     def test_t10_each_label_is_its_flow_codes_constant_with_the_percent_kept(self):  # T10
         self.assertEqual({one["key"]: one["label"] for one in group("offer")},
                          {"offer:pick": "Pick “%s” for %s", "offer:requirements": "Write the parts list",
-                          "offer:build": "Build the board", "offer:needs-drop": "Drop the %s need"})
+                          "offer:build": "Build the board", "offer:needs-drop": "Drop the %s need",
+                          "offer:write-firmware": "Write the firmware", "offer:run-simulation": "Run the simulation",
+                          "offer:look-at-board": "Look at the board"})
         self.assertIn("%s", item("offer:pick")["label"])
 
 

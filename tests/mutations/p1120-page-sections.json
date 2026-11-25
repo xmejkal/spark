@@ -6,7 +6,7 @@
   "replace": "PicturesHtmlFold(), DeveloperHtmlFold())"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1123: the parts fold names a key the design basis does not hold (test_design_basis T14)",
   "find": "KEYS = (\"phase:parts\", \"status:*\")",
   "replace": "KEYS = (\"phase:part\", \"status:*\")"

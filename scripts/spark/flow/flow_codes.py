@@ -4,6 +4,8 @@ phase, the keys of its offers and its fixed sentences. A leaf: it imports nothin
 envelope's `status`, which stays ok, problems or could-not-run.
 """
 
+from collections import namedtuple
+
 # --- MVP ---
 #: The nine phases of a project, in the order the person goes through them.
 PHASES = ("idea", "needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy")
@@ -18,6 +20,8 @@ BY_YOU, BY_CLAUDE, BY_TERMINAL = "you", "claude", "your terminal"
 
 #: The keys of the offers. A pick's key is `pick:<need>:<id or entry>` and a drop's `needs-drop:<need>`.
 PICK, NEEDS_DROP, WRITE_REQUIREMENTS, BUILD_BOARD = "pick", "needs-drop", "requirements", "build"
+#: The keys of the chat offers (P1122): the jobs only Claude does, asked in the chat, each with a tell and no step of spark's.
+WRITE_FIRMWARE, RUN_SIMULATION, LOOK_AT_BOARD = "write-firmware", "run-simulation", "look-at-board"
 
 #: The codes of the Findings: a phase that holds problems, and one that could not be read or whose last build could not run.
 PHASE_PROBLEMS, PHASE_COULD_NOT_RUN = "phase_problems", "phase_could_not_run"
@@ -91,6 +95,9 @@ UNSURE_WORDS = "written by the flasher, start not confirmed"
 #: The words of a flash that did not finish after the yes (P1092): an erase that did not connect leaves the board as it
 #: was, so they say "may be erased", never "erased".
 FLASH_NOT_FINISHED_WORDS = "flash not finished, nothing read back, the board may be erased"
+#: The verdict of that flash in a board log: the bench's `board_log.FLASH_NOT_FINISHED`, an equal literal, as CAUSE_WORDS'
+#: codes are, because this module imports nothing of spark. CHAT_NOW reads it.
+FLASH_NOT_FINISHED = "flash not finished"
 CAUSE_MESSAGE, NO_CAUSE_MESSAGE = "Cause in the log: %s.", "Cause not recorded."
 #: The cause of a deploy that did not see ready, or of a flash that did not finish (P1092, P1096), by its code in the board
 #: log's reason line (the bench's board_codes and the core's crash, as equal literals: this module imports nothing of spark): spark's words
@@ -131,6 +138,23 @@ PICK_WHY = "The person's choice: “%s” for the %s need"
 DROP_LABEL = "Drop the %s need"
 REQUIREMENTS_LABEL = "Write the parts list"
 BUILD_LABEL = "Build the board"
+WRITE_FIRMWARE_LABEL, RUN_SIMULATION_LABEL, LOOK_AT_BOARD_LABEL = "Write the firmware", "Run the simulation", "Look at the board"
+#: Value: one kind of offer (P1115): the phase whose reader offers it, its label (the name of its button), whether the page
+#: sends it from a button (`from_page`), and `tell`, one sentence for Claude that names the job, never the how, or None.
+OfferKind = namedtuple("OfferKind", "phase label from_page tell")
+#: The kinds of offer, in the order the design basis lists them (P1115): the one place a kind is spelled. A drop is asked in
+#: the chat (P883), so the page never sends it, and it has no tell: its words are DROP_MESSAGE (P1118). A *chat offer* is a
+#: kind with a tell (P1122): a job only Claude does, so the page never sends it either and shows its tell under ASK_CLAUDE.
+OFFER_KINDS = {PICK: OfferKind(PARTS, PICK_LABEL, True, None),
+               WRITE_REQUIREMENTS: OfferKind(REQUIREMENTS, REQUIREMENTS_LABEL, True, None),
+               BUILD_BOARD: OfferKind(BUILD, BUILD_LABEL, True, None),
+               NEEDS_DROP: OfferKind(NEEDS, DROP_LABEL, False, None),
+               WRITE_FIRMWARE: OfferKind(FIRMWARE, WRITE_FIRMWARE_LABEL, False, "Write the firmware for this project's board."),
+               RUN_SIMULATION: OfferKind(SIMULATE, RUN_SIMULATION_LABEL, False, "Help me run the simulation of this project."),
+               LOOK_AT_BOARD: OfferKind(DEPLOY, LOOK_AT_BOARD_LABEL, False, "Look at this project's board with me.")}
+#: The kinds the page sends from its buttons, and the kinds asked in the chat, never from the page (`run_request`).
+SENDABLE = tuple(kind for kind, row in OFFER_KINDS.items() if row.from_page)
+IN_CHAT = tuple(kind for kind, row in OFFER_KINDS.items() if not row.from_page)
 #: The effect of each offer: plain sentences that name every write (P829, the PO, 2026-11-21). The real run on a copy of
 #: button-light showed each one (docs/observations/rows/p829-run-request.md).
 PICK_MESSAGE = "Saves “%s” as the pick for the %s need in this project."
@@ -217,10 +241,9 @@ WIRED_BUILD_MESSAGE = ("If you wired the board, this build can move pins: compar
 #: The fixed sentence of each kind of offer that can move a pin.
 WIRED_EFFECT = {PICK: WIRED_PICK_MESSAGE, BUILD_BOARD: WIRED_BUILD_MESSAGE}
 
-#: The page's script (P829 PR 3): the kinds of offer the page sends from its buttons (a drop is asked in the chat, P883),
-#: and every word the script shows. Python writes them into the page's inert words block; the script fills in only a
-#: time, an offer's label or spark's own line. No word says "done" alone.
-SENDABLE = (PICK, WRITE_REQUIREMENTS, BUILD_BOARD)
+#: The page's script (P829 PR 3): every word the script shows, for the kinds of offer the page sends (`SENDABLE`). Python
+#: writes them into the page's inert words block; the script fills in only a time, an offer's label or spark's own line.
+#: No word says "done" alone.
 CONFIRM_STALE = "These steps may be marked out of date: %s."
 SEND, CANCEL, COPY, WITHDRAW = "Send", "Cancel", "Copy", "Withdraw"
 #: What Copy puts on the clipboard: the command that carries the request to spark.
@@ -253,10 +276,14 @@ COULD_NOT_RUN_SAYS = "Could not run: %s. " + NEW_STATE
 #: What the page says of each refusal of `flow.py run-request`, by the code's name: nothing ran, in grey, never red.
 REFUSED_SAYS = {"request_stale": "Nothing ran. The project changed after you clicked. Reload this page and click again.",
                 "request_not_offered": "Nothing ran. This button is no longer offered. Reload the page.",
-                "request_in_chat": "Nothing ran. A need is dropped in the chat: tell Claude which one.",
+                "request_in_chat": "Nothing ran. This step is asked in the chat: tell Claude.",
                 "request_malformed": "Nothing ran. The request could not be read. Reload the page and click again."}
 #: The mark of a request that ran nothing: a dash, grey.
 NOT_RUN_MARK = "–"
+#: The head of the NOW box's block of a chat offer (P1122): plain bold text, never a button. Under it the tell stands in a
+#: code box, and the owner's page adds COPY beside it, which says COPIED_SAYS once it copied the tell. It never sends.
+ASK_CLAUDE = "Ask Claude"
+COPIED_SAYS = "Copied: paste it in Claude Code."
 
 #: The page of the project (P827): its code when the file cannot be written, the words a status has no word for, and the
 #: bench note. This page does not look at the board, and the note says so.
@@ -323,7 +350,7 @@ REQUIREMENTS_NO_PICKS = "requirements (no needs or picks behind it)"
 REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
 BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
 BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
-#: The NOW sentences that can carry the page's button (`flow_page.sendable_now`), each with what the published page says
+#: The NOW sentences that can carry the page's button (`page_sections.sendable_now`), each with what the published page says
 #: in its place where its script adds the button (P993): the step, and to use the button. The page from disk, a viewer
 #: who is not the owner and `flow.py show` keep the sentence that names Claude.
 NOW_BUTTON = {REQUIREMENTS_NOW: "Write the parts list from your picks. Use the button.",
@@ -419,4 +446,12 @@ BUILT_NO_SIMULATION = "build (no simulation)"
 SIMULATE_NO_MODEL = "simulate (no Wokwi model of this board)"
 #: The breadboard in done, once the wiring is no longer part of now: the sheet is current, and spark cannot see the wires.
 SHEET_UNSEEN = "breadboard (spark cannot see it)"
+#: The chat offer whose job the NOW sentence asks Claude for (P1122), by (the now phase, the value the guide picked that
+#: sentence by): a status, a simulate's image fact (IMAGE_NOW's keys), a stale deploy's fact or the verdict of a flash that
+#: did not finish. Any other is None, so no tell stands beside a sentence that asks for something else: a failed run, an
+#: image to make again, problems or a run that could not run.
+CHAT_NOW = {(FIRMWARE, NOT_STARTED): WRITE_FIRMWARE,
+            (SIMULATE, NOT_STARTED): RUN_SIMULATION, (SIMULATE, IMAGE_UNTESTED): RUN_SIMULATION,
+            (DEPLOY, NOT_STARTED): LOOK_AT_BOARD, (DEPLOY, PARTIAL): LOOK_AT_BOARD, (DEPLOY, FLASH_NOT_FINISHED): LOOK_AT_BOARD,
+            (DEPLOY, IMAGE_DIFFERS): LOOK_AT_BOARD}
 # --- end MVP ---

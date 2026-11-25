@@ -6,13 +6,14 @@ How to read this page:
 
 - The moment of each phase and the unbuilt steps are hand-written, last on 2026-11-24.
 - The phases, statuses, actors and Operations are read from the code.
-- The offer kinds, their labels and their phases are written in the tool. A test checks them against the code.
+- The offer kinds, their phases, labels and tells are read from `flow_codes.OFFER_KINDS`. Only each step is written in the tool.
 - A key is `<group>:<name>`, and the group makes it unique.
 - A phase reader is the code that reads one phase of a project. The usual actor of a phase is the one its reader names.
   In some states the guide names another actor, and `guide.now.by` holds the actual one.
 - This page does not list which statuses each phase can show. Each phase reader decides that from the project's files.
 - An offer key names a kind of offer, not one project's offer. Its label keeps its `%s` places.
 - "From the page" says whether a click on the project page can send the offer. If it says no, you ask Claude in the chat.
+- A tell is one sentence for Claude that names a job only Claude does. An offer with a tell is a chat offer, with no op.
 - A status with no word is shown by its mark alone.
 - The summary of an Operation is the one that `--describe` prints.
 
@@ -50,12 +51,15 @@ How to read this page:
 
 ## Offers
 
-| Key | Phase | Label | Op | From the page |
-|---|---|---|---|---|
-| `offer:pick` | parts | `Pick “%s” for %s` | pick | yes |
-| `offer:requirements` | requirements | `Write the parts list` | requirements | yes |
-| `offer:build` | build | `Build the board` | build-board | yes |
-| `offer:needs-drop` | needs | `Drop the %s need` | needs-drop | no |
+| Key | Phase | Label | Op | From the page | Tell |
+|---|---|---|---|---|---|
+| `offer:pick` | parts | `Pick “%s” for %s` | pick | yes |  |
+| `offer:requirements` | requirements | `Write the parts list` | requirements | yes |  |
+| `offer:build` | build | `Build the board` | build-board | yes |  |
+| `offer:needs-drop` | needs | `Drop the %s need` | needs-drop | no |  |
+| `offer:write-firmware` | firmware | `Write the firmware` | none | no | Write the firmware for this project's board. |
+| `offer:run-simulation` | simulate | `Run the simulation` | none | no | Help me run the simulation of this project. |
+| `offer:look-at-board` | deploy | `Look at the board` | none | no | Look at this project's board with me. |
 
 ## Operations
 
