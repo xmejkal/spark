@@ -2,7 +2,7 @@
 
 Cards: [P1120 #1649](https://github.com/xmejkal/spark/issues/1649) and [P1123 #1653](https://github.com/xmejkal/spark/issues/1653).
 The plan council: a lens on Sonnet (the everyday model, UX and AI-UX) and the refuter on Opus, two rounds, 2026-11-25.
-Rows 1 to 24 are the council's, rows 25 to 32 the build's. This file holds the acted, raised and rejected findings
+Rows 1 to 24 are the council's, rows 25 to 32 the build's, rows 33 to 37 the review's. This file holds the acted, raised and rejected findings
 only. 2026-11-25.
 
 | # | claim | source | status | evidence / where it went |
@@ -22,7 +22,7 @@ only. 2026-11-25.
 | 13 | a section that returns "" drops silently; add a case per droppable section | round 1, lens | rejected | dropped because the golden holds the sections (but see row 25) |
 | 14 | no card asks for `--space-*`, `--size-*`, `PLANES` or T14 | round 1, lens | rejected | P1123 asks for radius, size and space, P1120 for state planes with a mark and a word, and P1123 for each section's basis keys |
 | 15 | small counts in the plan were wrong | round 1, refuter | acted | fixed in the plan's text |
-| 16 | the Artifact's CSP for Google Fonts is unchecked | round 1, refuter | raised | risk R4: if the CSP blocks the font, only the look changes. Destination: the owner's check on the published page after the font lands (row 26) |
+| 16 | the Artifact's CSP for Google Fonts is unchecked | round 1, refuter | raised | dropped because a blocked font changes only the look: the system fonts take over |
 | 17 | while Send shows, the offer button stays teal beside it | round 2, lens | acted | `[data-makes-stale]:has(>[role=group])>button` and its hover fall back to the outline; the disabled test checks it |
 | 18 | "a button inside `.now`" reaches Send and Cancel: a halo edge on white is 1.48:1 | round 2, lens and refuter | acted | the selector is `.now [data-makes-stale]>button` |
 | 19 | `a{color:var(--ink)}` beats the Now color, so the step link is ink on ink | round 2, refuter | acted | `.now a{color:var(--now-ink)}`; the contrast test checks the rule; p1120-page-tokens row 8 |
@@ -31,11 +31,16 @@ only. 2026-11-25.
 | 22 | dark: the confirm frame's teal edge is 2.74:1 on the Now plane | round 2, refuter | acted | `--accent-edge` is `#5eead4` in dark; the pair is in `EDGE_PAIRS` |
 | 23 | the anchors hold only while `_now`, `_step_link`, `_stands_at`, `_guide` and `_parts` stay at their indent | round 2, refuter | acted | their bodies stay methods (8 spaces); `--anchors` refuses none |
 | 24 | check once that the golden holds all ten sections | round 2, lens | acted | checked after commit 1: nine of ten (row 25) |
-| 25 | the golden cannot hold all ten sections: the stands-at line shows only with no guide, and the sample has a guide | the build | raised | proposed: dropped because the stands-at line has its own test (`test_with_a_guide_the_stands_at_line_goes_and_without_one_it_stays`); the review decides |
+| 25 | the golden cannot hold all ten sections: the stands-at line shows only with no guide, and the sample has a guide | the build | raised | dropped because the refuter rendered all 238 pages of tests.test_flow_page before and after the move, stands-at included, byte for byte the same, and the stands-at line has its own test (`test_with_a_guide_the_stands_at_line_goes_and_without_one_it_stays`) |
 | 26 | `TheInlinePictureTest.test_the_breadboard_is_inline_with_no_namespace_and_the_schematic_and_pcb_stay_img` forbids `http` in the whole page (`test_flow_page.py:978`), so the font link turns it red; the plan does not name it | the build | acted | the font commit, applied on spark-main's yes: the test keeps `xmlns` and `ns0:` on the whole page and checks `http` with `assert_only_the_font_is_loaded`, the page with the font link removed; p1120-page-tokens rows 12 to 14 |
-| 27 | R1 caps a module at 600 raw lines; the plan's 480 counted code lines, and flow_page.py would reach 605 | the build | raised | the page's STYLE is repacked to 120 columns (the same bytes): 593 lines. Destination: a card that moves the sections into their own module before the next page card (P1115, P1122) |
+| 27 | R1 caps a module at 600 raw lines; the plan's 480 counted code lines, and flow_page.py would reach 605 | the build | raised | the page's STYLE is repacked to 120 columns (the same bytes): 593 lines. Destination: P1128 #1659 |
 | 28 | the amber and red tokens are unused until the planes, so the token test (defined equals used) fails in commit 2 | the build | acted | they join both themes in commit 4, with the planes |
 | 29 | the plane class changes the developer heading line, p1062 row 3's anchor | the build | acted | row 3 is re-anchored on the new line, with the same name and test |
 | 30 | the Round 2 fixes 3 and 4 have no row | the build | acted | p1120-page-tokens rows 7 and 8 |
 | 31 | a circle (the Now dot, the pad swatch) has no radius token | the build | acted | the radius test allows `50%` beside the two radius tokens, as the plan's full text says |
 | 32 | on the NOW box's NEXT line the confirm takes the line's 20px size, so its lines read large | the build's screenshots | acted | `[role=group]{font-size:var(--size-text)}`; `test_the_confirm_reads_at_the_text_size_wherever_it_stands`; p1120-page-tokens row 11 |
+| 33 | five planted mutants pass TheLookTest and only the goldens catch them: the confirm-open rule before the teal rule, no ink on the confirm, `filter:drop-shadow`, `border-top-left-radius`, a muted NEXT line | the review | acted | fixed: the fallback is tested after the teal rule and the confirm's color and fill are pinned; the no-shadow test reads every property and value, the radius test every property with "radius", and a new test reads every rule that reaches the Now plane; p1120-page-tokens rows 15 to 20, each run by hand against its test (the ink one was already red in the contrast test) |
+| 34 | the confirm-open fallback `[data-makes-stale]:has(>[role=group])>button` outranks `button:disabled`, so a disabled offer with the confirm open loses its disabled look | the review | acted | fixed: the fallback rules hold `:not(:disabled)`; `test_the_confirm_open_outline_never_styles_a_disabled_offer_and_stands_after_the_teal_rule`; p1120-page-tokens row 16 |
+| 35 | a disabled offer on the Now plane keeps the halo edge | the review | rejected | dropped because the edge is needed for 3:1 against the dark plane (without it 1.18:1), the grey fill still says disabled, and the style's comment says so; the test checks the fill |
+| 36 | the privacy sentence names only the IP address, and the font files come from fonts.gstatic.com | the review | acted | fixed: four places say the stylesheet's host, the font files' host, the IP address, the User-Agent, and the origin of a published page |
+| 37 | the commit order differs from the plan's commit 3 | the review | rejected | dropped because the PR body names the plan's commit 3 |
