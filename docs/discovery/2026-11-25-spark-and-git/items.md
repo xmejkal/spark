@@ -4,7 +4,7 @@ block for more. needed by: the decider's words, quoted. value proven by: a proof
 status: proposed, or filed D<n>.
 e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)` -->
 
-None is filed. The P-numbers were read on 2026-11-25 (the highest was P1148 #1683) and are read again at filing.
+All nine are filed in Idea by spark-main on the PO's yes (D16, 2026-11-25): P1149 #1685, P1150 #1686, P1151 #1687, P1152 #1688, P1153 #1689, P1154 #1690, P1155 #1691, P1156 #1692, P1157 #1693.
 
 ## P1149 — one rules file reaches spark's developers, the PO's lane projects and every gadget session → the team's process moves to `scrum/`, the PO's own lines to a file of his in `scrum/`, and the store's `rules.md` links to it (replaces the on-hold rules move)
 - type: chore <!-- REQUIRED:item-type -->

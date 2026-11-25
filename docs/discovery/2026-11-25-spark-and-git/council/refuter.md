@@ -332,7 +332,7 @@ first pass and checked them against the D rows, this report's first pass and the
 7. **Numbers.** A4: "modified 2026-11-25 15:35" has no zone. A2: "a 30-minute scratch spike" has no source. A3: "the
    next two walks after slice 0" has no date, and "a request" has no rule for what counts as one. A7's and C4's "6
    repositories" rest on the first pass's re-run, which gives no time. P1154's pass line (28 entries, 5 gone, 23
-   remain) re-ran at 19:18 CET: 28 and 5 (p138, walk, p, project, b). It is a value of the store that changes, so it
+   remain) re-ran at 19:18 CET: 28 and 5. It is a value of the store that changes, so it
    needs the date it was read. The 81 `.bin` in the ethics row is 80 + 1 across two repositories, and only C15 says so.
 
 Checked and found holding: D13's pass line is the same in the brief, risks-and-tests.md and P1155. D11's words are the

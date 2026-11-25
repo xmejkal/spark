@@ -1,8 +1,9 @@
 # UX and AI-UX lens: spark and git
 
 The lens reads the person's side and the agent's side of the change, and changes no file but this one. Read on
-2026-11-25 at origin/main 142656a9, in the discovery's worktree. Project names from the person's projects list are
-left out on purpose: that list is private (docs/guide/agents/scripts.md:71). Projects are called A and B below.
+2026-11-25 at origin/main 142656a9, in the discovery's worktree. The projects list itself is private
+(docs/guide/agents/scripts.md:71), so this report calls projects A and B. Other reports name projects that spark's
+public docs already name.
 
 ## 1. Findings
 
