@@ -307,18 +307,21 @@ class DeployService:
 
     def record_not_finished(self, look, image_sha256, moment, who, verdict):
         """Keep a flash or a verify that did not finish after the yes in the store's record of the board, with the board
-        log's `verdict`: FLASH_NOT_FINISHED (P1097), so the look and the erase question say that the board may be erased,
-        or ready unknown for a verify (P1112). Returns its path. A verify's entry does not read the image file, so a file
-        deleted since the flash does not hide it. `moment` is the board log's, `who` the phrase for whose yes it was: "not known (...)" when the login could
-        not be read, because the erase is a fact to keep (the review of #1635). OSError and store.StoreError say why it
-        was not written, and a DeployError when a flash's image cannot be read now."""
+        log's `verdict`: FLASH_NOT_FINISHED (P1097), so the look and the erase question say that the board may be
+        erased, or ready unknown for a verify (P1112); any other verdict is a bug and raises ValueError. Returns its
+        path. A verify's entry does not read the image file, so a file deleted since the flash does not hide it.
+        `moment` is the board log's, `who` the phrase for whose yes it was: "not known (...)" when the login could not
+        be read, because the erase is a fact to keep (the review of #1635). OSError and store.StoreError say why it was
+        not written, and a DeployError when a flash's image cannot be read now."""
         # the image the flash was given, and no banner: none was written to the board (P1096, G4)
         if verdict == board_log.FLASH_NOT_FINISHED:  # P1111: a flash that did not finish still says an image it cannot read
             facts = dict(self._facts_of(image_evidence.image_of(self.project, self.evidence), look, (), moment),
                          image_sha256=image_sha256, micropython_banner=None)
-        else:  # P1112: a verify's entry needs no read of the file, which may be gone by now
+        elif verdict == ready_probe.UNKNOWN:  # P1112: a verify's entry needs no read of the file, which may be gone by now
             facts = dict(board_facts.facts_without_image(self.project, self.platform.board_of(), look.reading.mac, moment,
                                                          self.evidence.simulation), image_sha256=image_sha256)
+        else:
+            raise ValueError("no store entry for the verdict %r of a stage that did not finish" % verdict)
         return self.records.write_deploy(facts, verdict, who)
 
     def _read_board(self, image, report, connection, expected, moment):

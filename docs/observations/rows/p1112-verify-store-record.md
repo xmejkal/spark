@@ -15,3 +15,8 @@ only (rules.md). 2026-11-25.
 | 7 | T1's Ctrl-C subtest leaves `self.unread` set for the next yes | plan refuter | acted | `self.unread = None` before each older deploy and after each stop |
 | 8 | the plan's rows 3 to 5 name `VERDICT_WORDS` | plan architect | acted | the constant is `STORE_VERDICT_WORDS`, with a comment that gives the rule |
 | 9 | `p779-board-record.json` row 7's find went with the split of `board_facts.facts` | the builder | acted | re-anchored on the call `micropython_banner=image_builder.banner_in(data)` |
+| 10 | the verify entry's `simulation` and board id are not pinned: two mutants survive | PR refuter | acted | `test_a_verify_entry_keeps_the_stance_the_board_the_image_and_no_files` (passed and none evidence); mutation rows 8, 9, 10 and 11, planted and caught |
+| 11 | `record_not_finished`'s else takes any verdict as a verify | PR lens | acted | `elif verdict == ready_probe.UNKNOWN`, else ValueError; `test_a_verdict_that_no_stage_gives_is_refused`; row 12 |
+| 12 | T1's `deployed` assert only says "not the older date" | PR refuter | acted | compares with the newest board log's moment |
+| 13 | the doc names only the REPL command as the window with no entry | PR refuter | acted | deploy.md names `own_usb_of`, `_keeps_boot_entry` and the lines before the store write; the same window is card P1125 |
+| 14 | the image-gone test relied on an exception's `__bool__` | PR lens | acted | the fake board's `on_board` deletes the image and raises |

@@ -423,6 +423,25 @@ class TheStoreRecordOfAFlashNotFinishedTest(ServiceCase):
                          ("ab" * 32, None, self.clock.now().isoformat(timespec="seconds")))
         self.assertFalse(deploy_record_store.DeployRecordStore().find_path(report.reading.mac).exists())
 
+    @needs_littlefs
+    def test_a_verify_entry_keeps_the_stance_the_board_the_image_and_no_files(self):
+        # P1112 review (refuter 3, lens 3): a --no-simulation deploy's entry says `none`, not `passed`
+        for evidence, stance in ((image_evidence.PassedRunEvidence(), "passed"), (image_evidence.NoSimulationEvidence(self.project), "none")):
+            with self.subTest(stance=stance):
+                records = FakeDeployRecordStore()
+                service = deploy_service.DeployService(self.project, self.platform(), evidence, self.service_outside(), records=records)
+                report = self.look(evidence=evidence)
+                self.image.unlink(missing_ok=True)  # a verify's entry reads no image: it may be gone by then
+                service.record_not_finished(report, "ab" * 32, self.clock.now(), "a test", "ready unknown")
+                (facts, verdict, who), = records.written
+                self.assertEqual((verdict, facts["simulation"], facts["board"], facts["files"]), ("ready unknown", stance, "xiao-esp32-c6", ()))
+                self.assertEqual((facts["image_sha256"], facts["micropython_banner"], facts["mac"]), ("ab" * 32, None, "8c:bf:ea:xx:xx:xx"))
+
+    @needs_littlefs
+    def test_a_verdict_that_no_stage_gives_is_refused(self):
+        with self.assertRaises(ValueError):
+            self.service(records=FakeDeployRecordStore()).record_not_finished(self.look(), "ab" * 32, self.clock.now(), "a test", "ready seen")
+
 
 class TheLookTest(ServiceCase):
     def test_the_look_reads_the_board_with_the_reader_of_the_platform_the_service_was_given(self):

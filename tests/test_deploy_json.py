@@ -380,6 +380,8 @@ class DeployJsonTest(JsonCase, GateCase):
     @needs_littlefs
     def test_a_verify_that_did_not_finish_is_the_look_s_last_deploy_and_the_next_yes_names_it(self):
         # P1112 test 1, the card's: a crash and a Ctrl-C in the verify each add a store entry `ready unknown`
+        from spark.bench import board_log
+
         self.run_the_scenario()
         name = self.project.resolve().name
         for ending, unread in (("crash", RuntimeError("usb fell off")), ("ctrl-c", KeyboardInterrupt())):
@@ -397,11 +399,12 @@ class DeployJsonTest(JsonCase, GateCase):
                 newest = self.newest_stored()
                 self.assertEqual((newest["verdict"], newest["project"], newest["micropython_banner"]), ("ready unknown", name, None))
                 self.assertEqual(newest["image_sha256"], hashlib.sha256(self.image.read_bytes()).hexdigest())
-                self.assertNotEqual(newest["deployed"], "2026-10-19T09:24:50+02:00")
+                logged = board_log.newest_logged_deploy(self.project)[1]
+                self.assertEqual((newest["deployed"], newest["simulation"]), (logged.at, "passed"))  # the newest board log's moment
                 line = board_look.say_last_deploy(self.look().last_deploy)
                 self.assertIn("%s, written by the flasher, start not confirmed, " % name, line)
                 self.assertNotIn("ready seen", line)
-                if ending == "crash":
+                if ending == "crash":  # a Ctrl-C ends the run with 130 and no envelope, so only the crash's answer names the record
                     stored = "<store>/boards/%s" % record.name
                     self.assertEqual(self.one(code, said, "deploy", "deploy")["data"]["store_record"], stored)
                 consent = FakeConsent(True)
@@ -413,19 +416,16 @@ class DeployJsonTest(JsonCase, GateCase):
     @needs_littlefs
     def test_a_verify_that_did_not_finish_keeps_its_entry_when_the_image_is_gone_by_then(self):
         # P1112 test 2 (the refuter's finding 4): the entry is built without reading the image, so it is not the older deploy
-        case = self
-
-        class CrashesAndDeletesTheImage(RuntimeError):
-            def __bool__(self):  # the fake board checks `if self.unread` before it raises it
-                case.image.unlink(missing_ok=True)  # an exception is tested for truth again when it is shown
-                return True
-
         self.run_the_scenario()
         sha256 = hashlib.sha256(self.image.read_bytes()).hexdigest()
         self.record_a_deploy()
-        self.unread = CrashesAndDeletesTheImage("usb fell off")
+
+        def crashes_and_deletes_the_image(command):  # the fake board's exec: the verify's first read
+            self.image.unlink(missing_ok=True)
+            raise RuntimeError("usb fell off")
+        self.on_board = crashes_and_deletes_the_image
         code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True))
-        self.unread = None
+        del self.on_board
         data = self.one(code, said, "deploy", "deploy")["data"]
         self.assertIsNone(data.get("store_record_error"))
         self.assertTrue(data["store_record"].startswith("<store>/boards/"))
