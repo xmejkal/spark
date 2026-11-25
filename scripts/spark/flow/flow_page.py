@@ -59,7 +59,8 @@ def page_words(phases):
     the fixed words of the buttons and the status line, and the words of each answer. A refusal's words are keyed by
     its code's meaning, the `line` that `flow.py run-request` answers. The script fills in a time, a label or a line.
     `intro` is the published page's intro, `last_request` the line of the last request, `months` the month words of its
-    time, and `request_kinds` and `request_other` its words when its offer left the page (P1062).
+    time, and `request_kinds` and `request_other` its words when its offer left the page (P1062). `copied` is what Copy says
+    once it copied a chat offer's tell (P1122).
     """
     offers = {}
     for offer in (offer for phase in phases for offer in phase["offers"] if is_sendable(offer)):
@@ -67,7 +68,7 @@ def page_words(phases):
         offers[offer["key"]] = {"label": offer["label"], "says": [offer["effect"]] + stale}
     meanings = {str(code): meaning for code, meaning in request_codes.CODES.items()}
     marks = {status: MARKS[status][1] for status in (OK, PROBLEMS, COULD_NOT_RUN)}
-    return {"offers": offers, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY,
+    return {"offers": offers, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY, "copied": flow_codes.COPIED_SAYS,
             "withdraw": flow_codes.WITHDRAW, "command": flow_codes.PAGE_COMMAND, "waiting": flow_codes.WAITING_SAYS,
             "now_button": flow_codes.NOW_BUTTON,
             "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "last_request": flow_codes.LAST_REQUEST_SAYS,
@@ -141,6 +142,8 @@ class FlowHtmlPage:
              ".now>p:first-child::before{content:\"\";display:inline-block;width:8px;height:8px;"
              "margin-right:var(--space-s);border:2px solid var(--now-halo);border-radius:50%;vertical-align:1px}"
              ".next{font-size:var(--size-heading)}.muted,#request{color:var(--muted)}"
+             ".ask code{display:block;margin:var(--space-s) 0;padding:var(--space-s) var(--space-m);background:var(--bg);"
+             "color:var(--ink);border:1px solid var(--line);border-radius:var(--radius-button);overflow-wrap:anywhere}"
              ".plane-amber{color:var(--amber-ink);background:var(--amber-plane);"
              "border-left:3px solid var(--amber-ink);padding:0 var(--space-s)}.plane-red{color:var(--red-ink);"
              "background:var(--red-plane);border-left:3px solid var(--red-ink);padding:0 var(--space-s)}"

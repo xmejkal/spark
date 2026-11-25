@@ -206,8 +206,10 @@ def _wiring_open(page):
 
 #: The one wiring Renderer: the page's style, the wiring fold and the developer fold's records line use it.
 WIRING = WiringHtmlSection()
-#: The design-basis keys of the offers the page sends from a button (`flow_codes.SENDABLE`).
+#: The design-basis keys of the offers the page sends from a button (`flow_codes.SENDABLE`), and of the chat offers, whose
+#: tell the NOW box shows under ASK_CLAUDE (P1122).
 SENDABLE_KEYS = tuple("offer:" + kind for kind in flow_codes.SENDABLE)
+CHAT_KEYS = tuple("offer:" + kind for kind, row in flow_codes.OFFER_KINDS.items() if row.tell)
 
 
 class TitleHtmlHeading:
@@ -248,7 +250,7 @@ class GuideHtmlSection:
     """Renderer: the guide (P977, P1062) as one `<section id="guide">`: the NOW box and the muted lines under it."""
 
     NAME = "guide"
-    KEYS = ("phase:*", "by:*") + SENDABLE_KEYS
+    KEYS = ("phase:*", "by:*") + SENDABLE_KEYS + CHAT_KEYS
 
     def text(self, page):
         """The guide (P977 PR 2, P1062) in `<section id="guide">`, under the intro: the NOW box, then, muted, DONE, LATER (with
@@ -266,9 +268,9 @@ class GuideHtmlSection:
         return "\n".join(['<section id="guide">'] + lines + ["</section>"]) if lines else ""
 
     def _now(self, page):
-        """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), and NEXT, the
-        guide's sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`). With no now,
-        the line that says nothing is open (P1043, read with `.get`), or nothing."""
+        """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), NEXT, the guide's
+        sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`), and the chat offer's
+        block (`_ask`). With no now, the line that says nothing is open (P1043, read with `.get`), or nothing."""
         now = page.guide["now"]
         if not now:
             said = page.guide.get("no_open_phase")
@@ -280,7 +282,20 @@ class GuideHtmlSection:
         hooks = ' data-key="%s"%s' % (_text(offer["key"]), _makes_stale(offer)) if offer else ""
         lines.append('<p class="next"%s><strong>%s</strong> %s%s</p>' % (
             hooks, _text(flow_codes.NEXT_ACT_LABEL), _text(now["says"]), self._step_link(page)))
-        return "\n".join(['<div class="now">'] + lines + ["</div>"])
+        return "\n".join(['<div class="now">'] + lines + self._ask(now) + ["</div>"])
+
+    @staticmethod
+    def _ask(now):
+        """The block of the chat offer the guide's now names (P1122, `now.chat_offer`, read with `.get`), under NEXT: the head
+        ASK_CLAUDE in bold, never a button, and the offer's tell in a code box, which a person selects from disk. `data-key`
+        is the hook where the owner's script puts Copy; no `data-makes-stale`, so nothing on it sends. Nothing with no chat
+        offer, or a key with no tell."""
+        key = now.get("chat_offer")
+        row = flow_codes.OFFER_KINDS.get(key)
+        if not (row and row.tell):
+            return []
+        return ['<div class="ask" data-key="%s"><strong>%s</strong> <code>%s</code></div>' % (
+            _text(key), _text(flow_codes.ASK_CLAUDE), _text(row.tell))]
 
     @staticmethod
     def _step_link(page):
