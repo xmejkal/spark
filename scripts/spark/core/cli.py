@@ -17,11 +17,12 @@ from spark.core.errors import CodedMessageError, SparkError
 from spark.core.events import TerminalReporter
 from spark.core.operation import JSON_DEST, JSON_FLAG, WRITES
 from spark.core.privacy import MaskingReporter, Privacy
-from spark.core.renderers import TextReport
+from spark.core.renderers import PlainPainter, TextReport, import_rich, painter_for  # noqa: F401  (test_core reads TextReport here)
 from spark.core.replies import Terminal
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines, printable
 from spark.core.text_style import PLAIN
+from spark.core.view_reporter import TextViewReporter
 
 # --- MVP ---
 #: Value: what a CLI says and adds to its answer: in `--help` its file name, one sentence, and the CLI's own text after the
@@ -240,10 +241,30 @@ def load_payloads(operation, values, stdin):
     return values
 
 
-def _privacy_and_reporter(operation, values, as_json):
-    """The run's Privacy and Reporter: the Operation's `privacy_for(project)` masks the result and each Event (P677), else
-    the default passes everything through; the reporter prints events on stdout, on stderr with --json (P507)."""
-    privacy, reporter = DEFAULT_RUN.privacy, TerminalReporter.for_json(as_json)
+#: Value: how one CLI run shows itself (P478), made once by `view_for`: the `style` of its stdout, the `painter` chosen
+#: once for it, the `reporter` of its events and `render(result, tool)`, the text printed on stdout at the end.
+View = namedtuple("View", "style painter reporter render")
+
+
+def view_for(operation, as_json, streams, environ=None, importer=import_rich):
+    """The View of one run of `operation` (P478): the one place that decides --json, a pipe or a terminal, from what it is
+    given. `streams` is (stdout, stderr), `environ` the environment (None: the process's, which `Terminal` reads) and
+    `importer` gives rich. With --json: PLAIN, the events on stderr through TerminalReporter, which prints no heading, and
+    the Operation's `json_renderer`, so both streams keep their bytes. Without: the style of stdout, its painter chosen
+    once, a TextViewReporter over the Operation's `stages`, and its `text_renderer` with the same painter."""
+    stdout, stderr = streams
+    if as_json:
+        return View(PLAIN, PlainPainter, TerminalReporter(stderr), lambda result, tool: operation.json_renderer.render(result, tool, operation.name))
+    style = Terminal(stdout=stdout).text_style(environ)
+    painter = painter_for(style, importer)
+    return View(style, painter, TextViewReporter(stdout, painter, operation.stages),
+                lambda result, tool: operation.text_renderer.render(result, style, tool, painter))
+
+
+def _privacy_and_reporter(operation, values, reporter):
+    """The run's Privacy and Reporter: the Operation's `privacy_for(project)` masks the result and, through a
+    MaskingReporter around `reporter`, each Event (P677), else the default passes everything through."""
+    privacy = DEFAULT_RUN.privacy
     if operation.privacy_for:
         privacy = operation.privacy_for(values.get("project"))
         reporter = MaskingReporter(reporter, privacy)
@@ -258,20 +279,26 @@ def _unreadable_payload(prog, unreadable):
                            diagnostics=["%s: %s" % (prog, unreadable)])
 
 
+def _answered(run, prog, reporter):
+    """The result of `run()`, or of a payload it could not read (`_unreadable_payload`), and `reporter.finish()` after it
+    whatever the end, Ctrl-C too: the run is over (P478)."""
+    try:
+        return run()
+    except CodedMessageError as unreadable:
+        return _unreadable_payload(prog, unreadable)
+    finally:
+        reporter.finish()
+
+
 def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     """
     The exit code of `operation` run as a CLI. It parses `argv` (sys.argv without the script when None) from the
-    Operation's arguments and answers a bad flag with the Renderer's `render_bad_argument` under --json (an envelope with
-    `bad_argument`, or None for a flat Operation: then the usage), the usage on stderr without (P433). The envelope's `tool`
-    is `text.tool`, or the Operation's name when the CLI gave none (P707). It builds the
-    outside with `outside_builder(project, effects, reporter, values)`, the effects those of `operation.effects_of(values)`
-    and `values` the parsed arguments plus `json`, from which a frontend picks what the Operation never builds itself (the
-    ReplyStrategy of `--replies`, and no terminal under --json, P737), unless a test gave `outside`, the reporter `TerminalReporter.for_json(as_json)`
-    (P507: the events on stdout, on stderr with --json), runs,
-    prints the rendering on stdout as it is (--json keeps every value raw, and the report's lines guard themselves) and
-    the diagnostics on stderr through `guard_lines`, and returns the exit code of the result's status. The one place in
-    the core that prints (rule X2). The Operation's `privacy_for(project)` gives the run's Privacy (P677), which masks
-    the result and, through a MaskingReporter, each Event; None passes everything through.
+    Operation's arguments and answers a bad flag with the Renderer's `render_bad_argument` under --json, or the usage on
+    stderr (P433). The envelope's `tool` is `text.tool`, or the Operation's name (P707). `view_for` makes the run's View
+    (P478). Unless a test gave `outside`, it builds it with `outside_builder(project, effects, reporter, values)`: the
+    View's Reporter, masked by the Operation's `privacy_for(project)` (P677), and the parsed values plus `json` (P737).
+    It runs, finishes the Reporter, prints the View's rendering on stdout, flushed, then the diagnostics on stderr
+    through `guard_lines`, and returns the exit code of the result's status. The one place in the core that prints (X2).
     """
     parser, renderer, tool = parser_for(text, operation), operation.json_renderer, text.tool or operation.name
     argv = sys.argv[1:] if argv is None else list(argv)
@@ -284,17 +311,14 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
             parser.exit_with_usage(guard_lines(str(bad) + (" — " + text.bad_argument_fix if text.bad_argument_fix else "")))
         print(line)
         return outcomes.EXIT_COULD_NOT_RUN
-    privacy, reporter = _privacy_and_reporter(operation, values, as_json)
-    try:
-        values = load_payloads(operation, values, sys.stdin)
-        result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter, dict(values, **{JSON_DEST: as_json})),
-                               DEFAULT_RUN._replace(privacy=privacy, follow_up=text.follow_up))
-    except CodedMessageError as unreadable:
-        result = _unreadable_payload(text.prog, unreadable)
-    said = renderer.render(result, tool, operation.name) if as_json else \
-        TextReport.render(result, Terminal().text_style() if result.headline else PLAIN, operation.name)  # P1032
+    view = view_for(operation, as_json, (sys.stdout, sys.stderr))
+    privacy, reporter = _privacy_and_reporter(operation, values, view.reporter)
+    result = _answered(lambda: run_operation(operation, load_payloads(operation, values, sys.stdin), outside, lambda effects: outside_builder(
+        values.get("project"), effects, reporter, dict(values, **{JSON_DEST: as_json})), DEFAULT_RUN._replace(privacy=privacy, follow_up=text.follow_up)),
+        text.prog, reporter)
+    said = view.render(result, tool)
     if said:
-        print(said)
+        print(said, flush=True)  # P478: before the diagnostics, so a stop's lines come after the status line
     if result.diagnostics:
         print(guard_lines("\n".join(result.diagnostics)), file=sys.stderr)
     return outcomes.EXIT_FOR[result.status()]

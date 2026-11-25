@@ -46,12 +46,18 @@ from spark.bench.firmware_platform import MicroPythonPlatform  # noqa: E402
 from spark.bench import build_project_outside_world, deploy_image  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import Event, TerminalReporter  # noqa: E402
+from spark.core.cli import view_for  # noqa: E402
 from spark.core.operation import ASKS  # noqa: E402
 from spark.core.outside import build_outside_world  # noqa: E402
 from spark.core.privacy import MaskingReporter, Privacy  # noqa: E402
 from spark.core.replies import AGENT, EITHER, PERSON, VALUE, YES_NO, Question, Reply, ReplyStrategy  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
 from test_board_look import BANNER, C6_MAC, FOUND, INTERPRETER_WITH_BANNER, LookCase, data, done, found  # noqa: E402
+
+
+def line_after(said, start):
+    """The rest of the line of `said` that holds `start`, after it (P478: the status line follows the store record's line)."""
+    return said.split(start, 1)[1].split("\n", 1)[0].strip()
 
 
 def find_fake_tool(name, **where):
@@ -117,7 +123,7 @@ class GateCase(LookCase):
                                                                                      else MicroPythonPlatform(project, find_tool)),
                                 grant_service=grant_service)
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            outside = self.outside_world(run, consent, reporter or TerminalReporter.for_json("--json" in argv), clock)
+            outside = self.outside_world(run, consent, reporter or view_for(operation, "--json" in argv, (sys.stdout, sys.stderr), {}).reporter, clock)  # P478: as run_cli shows it
             code = deploy.main(["--project", str(self.project), *argv], outside=outside, operation=operation)
         return code, out.getvalue(), err.getvalue()
 
@@ -426,7 +432,8 @@ class TheGateTest(GateCase):
     def test_no_board_on_usb_is_a_sentence_and_erases_nothing(self):
         self.run_the_scenario()
         code, said, problems = self.deploy("--token", "aaaa-bbbb", devs_text="\n", consent=FakeConsent(True))
-        self.assertEqual((code, said, self.flashed()), (2, "  %s\n  %s\n" % (PHASE_WHY[DeployPhase.PLAN], PHASE_WHY[DeployPhase.LOOK]), []))
+        self.assertEqual((code, said, self.flashed()), (2, "[1/5] plan\n  %s\n\n[2/5] look\n  %s\n\n? deploy: could-not-run. Not flashed: no board found.\n" % (
+            PHASE_WHY[DeployPhase.PLAN], PHASE_WHY[DeployPhase.LOOK]), []))  # P478: the headings, and the status line last
         self.assertIn("deploy.py: no board found.", problems)
 
     def test_the_dry_run_never_touches_usb(self):
@@ -1108,7 +1115,7 @@ class TheFactsAfterTheFlashTest(GateCase):
     @needs_littlefs
     def test_the_store_keeps_one_record_per_mac_and_adds_each_deploy(self):
         _, said, _ = self.flash()
-        record = Path(said.split("store record: ")[1].strip())
+        record = Path(line_after(said, "store record: "))
         before = len(json.loads(record.read_text())["deploys"])  # the suite's store is shared, so count from here
         self.flash()
         kept = json.loads(record.read_text())
@@ -1120,14 +1127,14 @@ class TheFactsAfterTheFlashTest(GateCase):
     @needs_littlefs
     def test_the_record_keeps_whose_yes_the_consent_says(self):
         _, said, _ = self.flash(FakeConsent(True))
-        record = Path(said.split("store record: ")[1].strip())
+        record = Path(line_after(said, "store record: "))
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["yes"], "a test")
 
     @needs_littlefs
     def test_a_yes_typed_in_a_terminal_is_recorded_as_typed_in_a_terminal(self):
         terminal = deploy_gate.TerminalConsentStrategy("x", stdin=Stream("yes\n"), stdout=Stream(), user_name=lambda: "ada")
         _, said, _ = self.flash(terminal)
-        record = Path(said.split("store record: ")[1].strip())
+        record = Path(line_after(said, "store record: "))
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["yes"], "typed in a terminal by ada")
 
     @needs_littlefs
@@ -1161,7 +1168,7 @@ class TheFactsAfterTheFlashTest(GateCase):
         self.micropython.write_bytes(INTERPRETER_WITH_BANNER)
         _, said, _ = self.flash()
         self.assertEqual(json.loads(self.copied["spark.json"])["micropython_banner"], BANNER)
-        record = Path(said.split("store record: ")[1].strip())
+        record = Path(line_after(said, "store record: "))
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["micropython_banner"], BANNER)
         consent = FakeConsent(True)
         self.flash(consent)
@@ -1191,7 +1198,7 @@ class TheFactsAfterTheFlashTest(GateCase):
     def test_the_record_is_named_by_the_mac_private_and_keeps_the_verdict(self):
         self.files_on_board = {"/main.py": b"print('old')\n"}
         _, said, _ = self.flash()
-        record = Path(said.split("store record: ")[1].strip())
+        record = Path(line_after(said, "store record: "))
         self.assertEqual(record.name, store.slug(self.look().reading.mac) + ".json")
         self.assertEqual(record.stat().st_mode & 0o777, 0o600)
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["verdict"], "ready not seen")
@@ -1226,7 +1233,7 @@ class TheFactsAfterTheFlashTest(GateCase):
     @needs_littlefs
     def test_a_board_record_that_is_not_one_is_left_as_it_is_and_the_verdict_stands(self):
         _, said, _ = self.flash()
-        record = Path(said.split("store record: ")[1].strip())
+        record = Path(line_after(said, "store record: "))
         good = record.read_text()
         self.addCleanup(record.write_text, good)  # the suite's store is shared
         for bad in ("", "[]", '{"mac": "x"}'):
@@ -1684,7 +1691,7 @@ class TheNoSimulationDeployTest(GateCase):
         self.assertFalse(list((self.project / "sim" / "runs").glob("*.log")))
         self.assertEqual(json.loads(self.copied["spark.json"])["simulation"], "none")
         self.assertIn("simulation: none", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
-        record = Path(said.split("store record: ")[1].strip())
+        record = Path(line_after(said, "store record: "))
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["simulation"], "none")
         self.assertIn("ready seen", said)
 

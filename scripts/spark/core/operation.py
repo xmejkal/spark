@@ -6,7 +6,7 @@ The Operation (P442, W3-3): one job, with one public method, `run`. A CLI, an ag
 from collections import namedtuple
 from pathlib import Path
 
-from spark.core.renderers import JsonEnvelope
+from spark.core.renderers import JsonEnvelope, TextReport
 from spark.core.replies import REPLIES_FILE
 from spark.core.result import output_schema
 
@@ -91,6 +91,9 @@ class Operation:
     #: The Renderer of the `--json` line: `JsonEnvelope`, or a class with `render` and `render_bad_argument`, such as
     #: `renderers.FlatJsonLine`. A class attribute, not a flag (P657).
     json_renderer = JsonEnvelope
+    #: The Renderer of the text view, what stdout shows at the end without `--json` (P478): `TextReport`, the full layout,
+    #: or `renderers.StatusLine`, the status line alone, for an Operation whose events already said the rest.
+    text_renderer = TextReport
     #: `privacy_for(project)` gives the Privacy of a run on `project` (P677), or None: the run passes everything through.
     privacy_for = None
 

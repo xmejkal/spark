@@ -45,8 +45,8 @@
  {
   "file": "scripts/spark/core/events.py",
   "name": "the terminal prints an event's text as it is",
-  "find": "print(\"\\n\".join(INDENT + line for line in guard_lines(event.text).split(\"\\n\")), file=self.stream, flush=True)",
-  "replace": "print(\"\\n\".join(INDENT + line for line in event.text.split(\"\\n\")), file=self.stream, flush=True)"
+  "find": "return \"\\n\".join(INDENT + line for line in guard_lines(event.text).split(\"\\n\"))",
+  "replace": "return \"\\n\".join(INDENT + line for line in event.text.split(\"\\n\"))"
  },
  {
   "file": "scripts/spark/bench/deploy_image.py",

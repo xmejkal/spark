@@ -15,7 +15,7 @@ import re
 from collections import namedtuple
 from pathlib import Path, PurePath
 
-from spark.core.events import Reporter
+from spark.core.events import ReporterDecorator
 
 # --- MVP ---
 #: What the project folder and a path under the store become. `<store>` is SPARK_HOME, as `docs/guide/agents.md` says.
@@ -156,19 +156,16 @@ class Privacy:
                               fix=self.masked(found.fix, kept, raw))
 
 
-class MaskingReporter(Reporter):
-    """Decorator: a Reporter that passes each Event through `privacy.mask_event` to `inner`, which shows it. Its `stream`
-    is the inner one's, where the terminal consent asks."""
+class MaskingReporter(ReporterDecorator):
+    """Decorator: a Reporter that passes each Event through `privacy.mask_event` to `inner`, which shows it. Its `stream`,
+    `echo_fd` and `finish` are the inner one's (a ReporterDecorator, P478)."""
 
     def __init__(self, inner, privacy):
-        self.inner, self.privacy = inner, privacy
-        self.stream = getattr(inner, "stream", None)
+        super().__init__(inner)
+        self.privacy = privacy
 
     def report(self, event):
         self.inner.report(self.privacy.mask_event(event))
-
-    def echo_fd(self):
-        return self.inner.echo_fd()
 
     def mask(self, text):
         return self.privacy.mask_text(text)

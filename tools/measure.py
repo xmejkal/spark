@@ -254,8 +254,8 @@ LEAF_PACKAGE = "spark.core"
 #: U1: the names OC8 (P418) moved into `text_guards`, by the module that held them. No script reads them from there again.
 MOVED_GUARDS = {"drawer": {"clean", "CONTROL", "LABEL_MAX", "TEXT_MAX", "TAGS_MAX"}, "parts": {"one_line", "COMMENT_UNSAFE"}}
 #: X2: a class that may print, read and exit in `scripts/spark/`: the Renderers (by role word), the terminal adapter (the one tty
-#: reader, P737) and the terminal reporter (P507).
-TERMINAL_CLASSES = ("Terminal", "TerminalReporter")
+#: reader, P737), the terminal reporter (P507) and the text view's reporter (P478).
+TERMINAL_CLASSES = ("Terminal", "TerminalReporter", "TextViewReporter")
 #: X2: the one function that prints in `scripts/spark/`, by file and top-level name: the CLI frontend, which prints what a
 #: Renderer rendered (P442). A nested def or a method of that name elsewhere is counted.
 TERMINAL_FUNCTIONS = (("scripts/spark/core/cli.py", "run_cli"),)
@@ -285,7 +285,7 @@ RULES = {
     "T1": "only an Adapter runs a program, reads the clock or the environment, calls the network or writes a file",
     "T2": "a test file never adds a mock.patch (mock.patch.dict on os.environ is the exception)",
     "T4": "code never branches on what is imported, as in `\"unittest\" in sys.modules`",
-    "X2": "scripts/spark/ holds no main, print, input, stdin, stdout, stderr, exit, quit or os.write, by any name, outside a Renderer, the terminal adapter, the terminal reporter and run_cli",
+    "X2": "scripts/spark/ holds no main, print, input, stdin, stdout, stderr, exit, quit or os.write, by any name, outside a Renderer, the terminal adapter, the terminal and text view reporters and run_cli",
     "U1": "a leaf imports nothing of spark but a leaf of %s, matching imports no drawer, and no script reads a moved guard from its old module"
           % LEAF_PACKAGE,
     "C1": "a file name under scripts/ is unique, and an exception name ends in Error",

@@ -5,6 +5,7 @@ import json
 import shlex
 import subprocess
 import sys
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -32,7 +33,13 @@ from spark.records import tool_finder  # noqa: E402
 from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld, FakeToolFinder  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event  # noqa: E402
 from spark.bench.deploy_image import StageTrackingReporter, WhyLineReporter  # noqa: E402
-from spark.bench.deploy_stages import PHASE_WHY, DeployPhase  # noqa: E402
+from spark.bench.deploy_stages import DEPLOY_STAGES, PHASE_WHY, DeployPhase  # noqa: E402
+from spark.bench import board_envelope  # noqa: E402
+from spark.bench.deploy_image import DeployImage  # noqa: E402
+from spark.core import outcomes  # noqa: E402
+from spark.core.result import MARK_OK, MARK_STOP, MARK_UNCHECKED, Finding  # noqa: E402
+from spark.core.renderers import StatusLine  # noqa: E402
+from spark.build.stage_help_table import StageMarkdownTable  # noqa: E402
 from test_board_look import FOUND, INTERPRETER_WITH_BANNER  # noqa: E402
 from test_deploy_gate import C6_CONSOLE, SETTLE_STDERR, GateCase  # noqa: E402
 
@@ -525,6 +532,11 @@ class TheVerifyTest(ServiceCase):
         self.assertIn("deploy: crashed, RuntimeError\n", problems)
         self.assertIn("usb fell off", problems)
 
+    def test_a_crash_in_the_flash_loop_ends_the_text_view_with_the_board_s_state(self):
+        # P478, D7: the status line of a crash after the gate names the board's state in CRASH_STATES' words
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=RuntimeError("usb fell off"))
+        self.assertEqual((code, said.splitlines()[-2:]), (2, ["", "? deploy: could-not-run. The board may be erased: deploy crashed."]))
+
     def test_the_look_after_a_flash_crash_names_the_port_the_deploy_was_given(self):
         # P655: the next step is the look on the same port, so the person does not have to find the board again
         code, said, _ = self.deploy("--port", PORT, "--token", self.token(), "--json", consent=FakeConsent(True), fails=1, fail_code=RuntimeError("usb fell off"))
@@ -541,8 +553,9 @@ class TheVerifyTest(ServiceCase):
         code, said, _ = self.deploy("--token", self.token(), consent=Nobody(True))
         lines = said.splitlines()
         self.assertEqual(code, 0)
-        self.assertTrue(lines[-1].startswith("  store record: not written: no user"), lines[-1])
-        self.assertTrue(lines[-2].startswith("  board log: "), lines[-2])
+        self.assertEqual(lines[-2:], ["", "✓ deploy: ok. Flashed, and the board printed ready."])  # P478: the status line is last
+        self.assertTrue(lines[-3].startswith("  store record: not written: no user"), lines[-3])
+        self.assertTrue(lines[-4].startswith("  board log: "), lines[-4])
 
     def test_a_who_that_cannot_be_read_still_gives_the_envelope_after_the_flash(self):
         class Nobody(FakeConsent):
@@ -717,6 +730,72 @@ class TheServiceHoldsNoPrintTest(unittest.TestCase):
         imported |= {alias.name for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) for alias in node.names}  # from spark.bench import x
         self.assertNotIn("deploy_service", imported)
         self.assertNotIn("spark.bench.deploy_service", imported)
+
+
+def reached_with(stage, ready=None, **more):
+    """A `reached` dict as the deploy fills it, at `stage`, with a verify result whose ready is `ready` (verdict, sentence)."""
+    result = None if ready is None else types.SimpleNamespace(ready=ready_probe.ReadyResult(*ready, ""))
+    return dict({"project": Path("/p"), "evidence": None, "stage": stage, "result": result}, **more)
+
+
+def stop(sentence):
+    return [Finding(outcomes.COULD_NOT_RUN, "look", "no_board", sentence, "")]
+
+
+class TheDeployViewTest(unittest.TestCase):
+    """P478: deploy's stages are rows the text view numbers, and its headline is one sentence per way the run ends (D7)."""
+
+    def test_the_stages_are_the_five_phases_in_order_and_the_why_lines_are_their_summaries(self):
+        self.assertEqual([stage.name for stage in DEPLOY_STAGES], [DeployPhase.PLAN, DeployPhase.LOOK, DeployPhase.GATE, DeployPhase.FLASH, DeployPhase.VERIFY])
+        self.assertEqual(PHASE_WHY, {stage.name: "why: " + stage.summary for stage in DEPLOY_STAGES})
+        self.assertIs(DeployImage.stages, DEPLOY_STAGES)
+        self.assertIs(DeployImage.text_renderer, StatusLine)
+
+    def test_a_stages_block_renders_deploy_s_stages(self):
+        # P478 review: a page's stages block reads DEPLOY_STAGES as it reads build's rows
+        table = StageMarkdownTable.render(DeployImage.stages).split("\n")
+        self.assertEqual([line.split(" | ")[0] for line in table[-5:]], ["| plan", "| look", "| gate", "| flash", "| verify"])
+
+    def test_each_end_has_its_sentence_and_its_mark(self):
+        unknown = ("ready unknown", "mpremote could not read the board's files: no port.")
+        cases = [
+            (reached_with(DeployPhase.VERIFY, ("ready seen", "the firmware printed it")), 0, [],
+             "Flashed, and the board printed ready.", MARK_OK),
+            (reached_with(DeployPhase.PLAN, dry_run=True), 0, [], "Dry run: nothing was flashed, and the board was not looked at.", MARK_OK),
+            (reached_with(DeployPhase.VERIFY, ("ready not seen", "the firmware printed no 'ready' in 20 s")), 1, stop("x"),
+             "Flashed, ready not seen: the firmware printed no 'ready' in 20 s.", MARK_STOP),
+            (reached_with(DeployPhase.VERIFY, unknown, reason="ready_unknown"), 2, stop("x"),
+             "Flashed, ready unknown: mpremote could not read the board's files: no port. What to try is above.", MARK_UNCHECKED),
+            (reached_with(DeployPhase.VERIFY, unknown, reason="port_gone"), 2, stop("x"),  # no fix line was said, so no pointer
+             "Flashed, ready unknown: mpremote could not read the board's files: no port.", MARK_UNCHECKED),
+            (reached_with(DeployPhase.FLASH), 2, stop("`esptool erase-flash` failed (exit 2)"), "The board may be erased: the flash stopped.", MARK_UNCHECKED),
+            (reached_with(DeployPhase.GATE), 1, [Finding(outcomes.PROBLEMS, "gate", "chip_differs", "this board is an esp32c6, the project is "
+                                                         "for an esp32s3. not flashed.", "")],
+             "Not flashed: this board is an esp32c6, the project is for an esp32s3.", MARK_STOP),
+            (reached_with(DeployPhase.GATE), 2, stop("not flashed: you answered no."), "Not flashed: you answered no.", MARK_UNCHECKED),
+            (reached_with(DeployPhase.LOOK), 2, stop("no board found."), "Not flashed: no board found.", MARK_UNCHECKED),
+            (reached_with(DeployPhase.LOOK), 2, stop("not flashed: ."), "Not flashed: deploy stopped before the flash.", MARK_UNCHECKED),
+            (reached_with(DeployPhase.PLAN), 2, [], "Not flashed: deploy stopped before the flash.", MARK_UNCHECKED),
+            (reached_with(DeployPhase.LOOK), 2, stop("a \x1b[2J b. more"), "Not flashed: a ?[2J b.", MARK_UNCHECKED),
+        ]
+        for reached, code, findings, sentence, mark in cases:
+            with self.subTest(sentence=sentence):
+                headline = board_envelope.deploy_headline(reached, code, findings)
+                self.assertEqual((headline.sentence, headline.mark), (sentence, mark))
+                if reached["stage"] in (DeployPhase.PLAN, DeployPhase.LOOK, DeployPhase.GATE):
+                    self.assertNotIn(reached["stage"], headline.sentence.lower())
+
+    def test_the_first_sentence_cuts_drops_and_falls_back(self):
+        self.assertEqual(board_envelope.first_sentence("one. two. three"), "one")
+        self.assertEqual(board_envelope.first_sentence("not flashed: you answered no."), "you answered no")
+        self.assertEqual(board_envelope.first_sentence("no board found.."), "no board found")
+        self.assertEqual(board_envelope.first_sentence(None), "")
+
+    def test_the_headline_never_changes_the_envelope(self):
+        reached = reached_with(DeployPhase.LOOK, refusal="no board found.", reason="no_board")
+        result = board_envelope.deploy_result(reached, 2)
+        self.assertEqual(result.headline.sentence, "Not flashed: no board found.")
+        self.assertEqual(result.to_envelope("deploy", "deploy"), result._replace(headline=None).to_envelope("deploy", "deploy"))
 
 
 if __name__ == "__main__":

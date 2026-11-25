@@ -52,6 +52,37 @@ class Reporter:
         """`text` that the frontend writes beside the events, such as the yes question, as a reader may see it (P677)."""
         return text
 
+    def finish(self):
+        """The run is over: a Reporter puts the terminal back as it was (P478). The base has nothing to put back."""
+
+
+class ReporterDecorator(Reporter):
+    """Decorator: the base of a Reporter that wraps `inner` and adds one behaviour around it (P478). `report` passes each
+    event on, and `finish`, `echo_fd` and `mask` are the inner one's, so a wrapped Reporter is finished too. `stream` is
+    the inner one's, where the terminal consent asks."""
+
+    def __init__(self, inner):
+        self.inner = inner
+        self.stream = getattr(inner, "stream", None)
+
+    def report(self, event):
+        self.inner.report(event)
+
+    def finish(self):
+        self.inner.finish()
+
+    def echo_fd(self):
+        return self.inner.echo_fd()
+
+    def mask(self, text):
+        return self.inner.mask(text)
+
+
+def event_lines(event):
+    """The text of the LINE `event` as a terminal shows it: guarded, and each of its lines indented by INDENT. Both the
+    terminal's Reporters print it, so a LINE has one form (P478)."""
+    return "\n".join(INDENT + line for line in guard_lines(event.text).split("\n"))
+
 
 class TerminalReporter(Reporter):
     """Strategy: the CLI's Reporter. It prints a LINE at once, guarded and each of its lines indented, and nothing for a BEGIN, so every line
@@ -60,14 +91,9 @@ class TerminalReporter(Reporter):
     def __init__(self, stream):
         self.stream = stream
 
-    @classmethod
-    def for_json(cls, as_json):
-        """The Reporter on stderr with --json and on stdout without, read at the call, so a redirected stream is the one used."""
-        return cls(sys.stderr if as_json else sys.stdout)
-
     def report(self, event):
         if event.kind == LINE:
-            print("\n".join(INDENT + line for line in guard_lines(event.text).split("\n")), file=self.stream, flush=True)
+            print(event_lines(event), file=self.stream, flush=True)
 
     def echo_fd(self):
         """fd 2 when the events go to stderr (--json), so a child's output stays out of the envelope; None on stdout, as it is."""
