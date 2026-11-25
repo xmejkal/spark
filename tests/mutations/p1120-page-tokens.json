@@ -1,0 +1,56 @@
+[
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: links are teal (test_flow_page.TheLookTest, the teal role test)",
+  "find": "\"a{color:var(--ink)}",
+  "replace": "\"a{color:var(--accent)}"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: a box-shadow on every button (TheLookTest, the no-shadow test)",
+  "find": "\"button{min-height:var(--button-height);",
+  "replace": "\"button{box-shadow:0 1px 2px var(--line);min-height:var(--button-height);"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: a button's radius is a 6px literal (TheLookTest, the radius test)",
+  "find": "border-radius:var(--radius-button);background:var(--surface)",
+  "replace": "border-radius:6px;background:var(--surface)"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the dark muted text is too dark to read (TheLookTest, the contrast test)",
+  "find": "\"--muted\": \"#a3a9b5\"",
+  "replace": "\"--muted\": \"#3a4048\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: dark has no --surface (TheLookTest, the token test)",
+  "find": "TOKENS_DARK = {\"--bg\": \"#121417\", \"--surface\": \"#1b1e24\", ",
+  "replace": "TOKENS_DARK = {\"--bg\": \"#121417\", "
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the kind-1 fill goes on every button (TheLookTest, the teal role test)",
+  "find": "\"[data-makes-stale]>button:not(:disabled),[data-makes-stale]",
+  "replace": "\"button:not(:disabled),[data-makes-stale]"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the dark focus ring stands at 1.11:1 on the dark ground (TheLookTest, the contrast test)",
+  "find": "\"--focus\": \"#5eead4\", \"--now-bg\": \"#23272f\"",
+  "replace": "\"--focus\": \"#1b1e24\", \"--now-bg\": \"#23272f\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: a disabled offer button stays teal (Round 2 #4; TheLookTest, the disabled test)",
+  "find": "\"[data-makes-stale]>button:not(:disabled),[data-makes-stale]",
+  "replace": "\"[data-makes-stale]>button,[data-makes-stale]"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the Now link is ink on the ink plane (Round 2 #3; TheLookTest, the contrast test's rules)",
+  "find": ".now a{color:var(--now-ink)}",
+  "replace": ""
+ }
+]

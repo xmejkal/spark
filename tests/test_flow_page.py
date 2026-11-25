@@ -1090,12 +1090,83 @@ def pad_legend(text):
 
 
 def token_block(pattern, style):
-    return dict(re.findall(r"(--[a-z]+):([^;]+)", re.search(pattern, style).group(1)))
+    return dict(re.findall(r"(--[a-z-]+):([^;]+)", re.search(pattern, style).group(1)))
+
+
+#: The page's colour tokens (P1120), by name: each stands in light and in dark. The tests check rules, never the values.
+COLOUR_TOKENS = {"--bg", "--surface", "--ink", "--muted", "--line", "--accent", "--accent-hover", "--on-accent", "--accent-edge",
+                 "--focus", "--now-bg", "--now-ink", "--now-halo", "--backdrop"}
+#: The shape and font tokens, in light's :root only: they do not change with the scheme.
+SHAPE_TOKENS = {"--radius-button", "--radius-frame", "--button-height", "--size-text", "--size-heading", "--size-title",
+                "--space-s", "--space-m", "--space-l", "--body"}
+#: Teal (the P1113 council's accent) and the tokens of its family, by name.
+TEAL = "#0f766e"
+TEAL_FAMILY = {"--accent", "--accent-hover", "--accent-edge", "--focus", "--now-halo"}
+#: Where a teal token may stand, as (selector, property): a kind-1 button's fill and edge (the offer's own button and Send),
+#: the confirm frame's edge, the focus ring, and the Now plane's halo (its dot and the edge of its offer button). Never a
+#: text colour, a fill or a stroke.
+TEAL_ROLES = {(selector, prop) for selector in ("[data-makes-stale]>button:not(:disabled)",
+                                                "[data-makes-stale] [role=group]>button:first-of-type:not(:disabled)",
+                                                "[data-makes-stale]>button:hover:not(:disabled)",
+                                                "[data-makes-stale] [role=group]>button:first-of-type:hover:not(:disabled)")
+              for prop in ("background", "border-color")} | {
+    ("[data-makes-stale] [role=group]", "border-color"), ("a:focus-visible", "outline"), ("button:focus-visible", "outline"),
+    ("summary:focus-visible", "outline"), (".now [data-makes-stale]>button", "border-color"),
+    (".now [data-makes-stale]>button:hover", "border-color"), (".now>p:first-child::before", "border")}
+#: (text, ground) pairs that a person reads: 4.5:1 in both themes. The outline button and the confirm box are ink on the
+#: surface, the disabled label is muted on the line, and the Now link is the Now ink on the Now plane.
+TEXT_PAIRS = [("--ink", "--bg"), ("--ink", "--surface"), ("--muted", "--bg"), ("--muted", "--surface"), ("--muted", "--line"),
+              ("--on-accent", "--accent"), ("--on-accent", "--accent-hover"), ("--now-ink", "--now-bg")]
+#: (edge, ground) pairs of a control or a ring: 3:1 in both themes. The kind-1 fill and Send on a frame or the ground, the
+#: outline, the focus ring on each ground it can stand on, the Now dot and the Now button's edge, and the confirm frame.
+EDGE_PAIRS = [("--accent", "--surface"), ("--accent", "--bg"), ("--ink", "--surface"), ("--focus", "--bg"), ("--focus", "--surface"),
+              ("--focus", "--now-bg"), ("--now-halo", "--now-bg"), ("--accent-edge", "--surface"), ("--accent-edge", "--now-bg")]
+
+
+def page_style(page):
+    return re.search(r"<style>(.*?)</style>", page, re.S).group(1)
+
+
+def themes(style):
+    """The light tokens, and the dark ones: the light :root with the dark block over it, as a browser reads them."""
+    light = token_block(r"^:root\{([^}]*)\}", style)
+    return light, dict(light, **token_block(r':root\[data-theme="dark"\]\{([^}]*)\}', style))
+
+
+def declarations(style):
+    """(selector, property, value) of each declaration of the style outside the token blocks, once per selector of a list."""
+    found = []
+    for selectors, body in re.findall(r"([^{}]+)\{([^{}]*)\}", style):
+        if selectors.startswith(":root"):
+            continue
+        for declaration in filter(None, body.split(";")):
+            prop, _colon, value = declaration.partition(":")
+            found += [(selector.strip(), prop.strip(), value.strip()) for selector in selectors.split(",")]
+    return found
+
+
+def luminance(colour):
+    """The WCAG 2 relative luminance of a #rgb or #rrggbb colour."""
+    value = colour.strip().lstrip("#")
+    value = "".join(each * 2 for each in value) if len(value) == 3 else value
+    channels = [int(value[at:at + 2], 16) / 255 for at in (0, 2, 4)]
+    red, green, blue = [each / 12.92 if each <= 0.04045 else ((each + 0.055) / 1.055) ** 2.4 for each in channels]
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+
+def contrast(one, other):
+    high, low = sorted((luminance(one), luminance(other)), reverse=True)
+    return (high + 0.05) / (low + 0.05)
 
 
 class TheLookTest(unittest.TestCase):
-    """P949: the praised page's colours, light and dark, with system fonts and nothing loaded, and a legend of the pads
-    under the breadboard that says only what the picture draws."""
+    """P949, P1120: the page's tokens, light and dark, with teal only on a button's fill, a frame's edge or a ring, no shadow,
+    radii from their tokens, every pair readable, nothing loaded, and a legend of the pads under the breadboard that says
+    only what the picture draws."""
+
+    def setUp(self):
+        self.page = page_of_wiring(PageWiring(THREE, [], ["rec"], None), THREE_PICTURES)
+        self.style = page_style(self.page)
 
     def test_the_pad_legend_follows_an_inline_breadboard_only(self):
         svg = (a_drawn_project() / "breadboard.svg").read_text()
@@ -1113,19 +1184,18 @@ class TheLookTest(unittest.TestCase):
                 self.assertNotIn('class="pads"', page_of(a_phase("one"), pictures=pictures))
 
     def test_every_token_is_defined_light_and_dark_and_the_style_uses_only_them(self):
-        page = page_of_wiring(PageWiring(THREE, [], ["rec"], None), THREE_PICTURES)
-        style = re.search(r"<style>(.*?)</style>", page, re.S).group(1)
+        page, style = self.page, self.style
         light = token_block(r"^:root\{([^}]*)\}", style)
         dark = token_block(r'@media \(prefers-color-scheme: dark\)\{:root:not\(\[data-theme="light"\]\)\{([^}]*)\}\}', style)
         self.assertEqual(dark, token_block(r':root\[data-theme="dark"\]\{([^}]*)\}', style))
-        colours = {"--bg", "--ink", "--muted", "--line", "--signal", "--backdrop"}
-        self.assertEqual((set(light), set(dark)), (colours | {"--display", "--body"}, colours))
-        for name in colours - {"--backdrop"}:
+        self.assertEqual((set(light), set(dark)), (COLOUR_TOKENS | SHAPE_TOKENS, COLOUR_TOKENS))
+        self.assertIn("--radius-button", light)  # a name with a hyphen is read whole
+        for name in ("--bg", "--surface", "--ink", "--muted", "--line"):
             self.assertNotEqual(light[name], dark[name], name)
-        # the praised page's ground, and a white ground under the pictures in both, which are drawn for a light one
-        self.assertEqual((light["--bg"], dark["--bg"], light["--backdrop"], dark["--backdrop"]),
-                         ("#eef1f3", "#141b21", "#fff", "#fff"))
-        self.assertEqual(set(re.findall(r"var\((--[a-z]+)\)", style)), set(light))
+        # the dark ground is the darker one, and a white ground under the pictures in both, which are drawn for a light one
+        self.assertLess(luminance(dark["--bg"]), luminance(light["--bg"]))
+        self.assertEqual((light["--backdrop"], dark["--backdrop"]), ("#fff", "#fff"))
+        self.assertEqual(set(re.findall(r"var\((--[a-z-]+)\)", style)), set(light))
         self.assertTrue(light["--body"].startswith("system-ui"), light["--body"])
         outside = re.sub(r"\{[^{}]*--bg:[^{}]*\}", "{}", style)
         self.assertEqual(style.count("--bg:"), 3)
@@ -1133,6 +1203,65 @@ class TheLookTest(unittest.TestCase):
         self.assertNotRegex(outside, r"(?:color|background|border-color):\s*(?!var\(|transparent|inherit)[a-z]+")
         for word in ("url(", "@import", "@font-face"):
             self.assertNotIn(word, page)
+
+    def test_teal_is_only_a_button_fill_a_frame_edge_or_a_focus_ring(self):
+        light, dark = themes(self.style)
+        teal = TEAL_FAMILY | {name for theme in (light, dark) for name, value in theme.items() if value.strip().lower() == TEAL}
+        self.assertEqual(teal, TEAL_FAMILY)  # a token that holds teal is one of the family, whatever its name
+        used = [(selector, prop, value) for selector, prop, value in declarations(self.style)
+                if any("var(%s)" % name in value for name in teal)]
+        self.assertTrue(used)
+        for selector, prop, value in used:
+            self.assertNotIn(prop, ("color", "fill", "stroke"), selector)
+            self.assertIn((selector, prop), TEAL_ROLES, "%s{%s:%s}" % (selector, prop, value))
+            self.assertEqual(prop == "outline", "var(--focus)" in value, selector)  # the ring is --focus, and --focus only a ring
+
+    def test_no_accent_fill_reaches_a_disabled_button_or_cancel(self):
+        found = declarations(self.style)
+        fills = [selector for selector, prop, value in found if prop == "background" and "var(--accent" in value]
+        self.assertTrue(fills)
+        for selector in fills:
+            self.assertIn(":not(:disabled)", selector)
+            if "[role=group]" in selector:  # Send is the confirm's first button; Cancel, the second, keeps the outline
+                self.assertIn(">button:first-of-type", selector)
+        rule = {(selector, prop): value for selector, prop, value in found}
+        self.assertEqual((rule[("button:disabled", "background")], rule[("button:disabled", "color")]), ("var(--line)", "var(--muted)"))
+        # while the confirm shows, the offer's own button is an outline again, so Send is the one teal button
+        for selector in ("[data-makes-stale]:has(>[role=group])>button", "[data-makes-stale]:has(>[role=group])>button:hover"):
+            self.assertEqual(rule[(selector, "background")], "var(--surface)", selector)
+        self.assertEqual(rule[("button", "background")], "var(--surface)")
+
+    def test_no_shadow_no_gradient_and_each_radius_is_a_token(self):
+        for word in ("box-shadow", "text-shadow", "gradient"):
+            self.assertNotIn(word, self.style)
+        found = declarations(self.style)
+        radii = [value for _selector, prop, value in found if prop == "border-radius"]
+        self.assertTrue(radii)
+        for value in radii:
+            self.assertIn(value, ("var(--radius-button)", "var(--radius-frame)", "50%"))
+        button = {prop: value for selector, prop, value in found if selector == "button"}
+        self.assertEqual((button["border-radius"], button["min-height"]), ("var(--radius-button)", "var(--button-height)"))
+        light, _dark = themes(self.style)
+        self.assertGreaterEqual(int(light["--button-height"].rstrip("px")), 44)  # a finger's target
+        self.assertLess(int(light["--radius-button"].rstrip("px")), int(light["--radius-frame"].rstrip("px")))
+
+    def test_each_text_pair_meets_its_contrast_in_both_themes(self):
+        for name, theme in zip(("light", "dark"), themes(self.style)):
+            for pairs, floor in ((TEXT_PAIRS, 4.5), (EDGE_PAIRS, 3.0)):
+                for one, other in pairs:
+                    with self.subTest(theme=name, pair=(one, other)):
+                        self.assertGreaterEqual(contrast(theme[one], theme[other]), floor)
+        # the rules that set those pairs: the Now plane and its link, the confirm box, the Now button's edge
+        rule = {(selector, prop): value for selector, prop, value in declarations(self.style)}
+        for selector, prop, value in ((".now", "background", "var(--now-bg)"), (".now", "color", "var(--now-ink)"),
+                                      (".now a", "color", "var(--now-ink)"), ("[role=group]", "color", "var(--ink)"),
+                                      ("[role=group]", "background", "var(--surface)"),
+                                      (".now [data-makes-stale]>button", "border-color", "var(--now-halo)")):
+            self.assertEqual(rule.get((selector, prop)), value, selector)
+
+    def test_the_orange_signal_is_gone(self):
+        self.assertNotIn("--signal", self.page)
+        self.assertNotIn("#c8500f", self.page.lower())
 
 
 class TheBudgetTest(unittest.TestCase):

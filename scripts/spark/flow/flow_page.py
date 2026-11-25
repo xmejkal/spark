@@ -494,35 +494,70 @@ class FlowHtmlPage:
     Renderer: a FlowPage as one HTML document, the same bytes for the same page. Between its head and its script it writes
     its `SECTIONS` in order (P1123), each a small Renderer with a `NAME`, the design-basis `KEYS` it shows and `text(page)`;
     a section with nothing to show writes nothing. It names only the parts phase, for its fold (P1062), and no count. The
-    colors are the praised page's tokens (P949), light and dark, with the system's fonts,
-    and no color says a status: the mark and the word do. Under an inline breadboard a legend names each pad state its
-    dots draw, and only those.
+    colors are the page's tokens (P1120), light and dark, with the system's fonts. Teal is only a button's fill, the
+    confirm frame's edge or the focus ring; a button is kind 1, teal, when spark runs the step (the offer's own button and
+    Send), and kind 2, an outline, for every other. The Now box is an ink plane whose dot is a halo drawn by `::before`, as
+    the canvas's `box-shadow` ring, since the page has no shadow. No color says a status: the mark and the word do. Under an
+    inline breadboard a legend names each pad state its dots draw, and only those.
     """
 
     FILE_NAME = "page.html"
     NOUN = "page"
     PURPOSE_MESSAGE = "where the project stands, phase by phase, with its pictures: open it in a browser"
 
-    #: The praised page's colors by token, light and dark. The picture ground stays white in both, as the tabbed page's:
-    #: the pictures are drawn for a light ground. The fonts are the system's, so the page loads nothing.
-    TOKENS_LIGHT = {"--bg": "#eef1f3", "--ink": "#1c262e", "--muted": "#566570", "--line": "#c3ccd3", "--signal": "#c8500f",
-                    "--backdrop": "#fff", "--display": "ui-serif,Georgia,serif",
+    #: The page's colors by token, light and dark (P1120: the P1113 council's light set, the PO's dark set of 2026-11-25).
+    #: The shape and font tokens stand in light only: they do not change with the scheme. The picture ground stays white in
+    #: both, as the tabbed page's: the pictures are drawn for a light ground. The fonts are the system's, so the page loads
+    #: nothing.
+    TOKENS_LIGHT = {"--bg": "#f6f5f1", "--surface": "#ffffff", "--ink": "#15181d", "--muted": "#5b6270", "--line": "#e4e1d8",
+                    "--accent": "#0f766e", "--accent-hover": "#0b5c56", "--on-accent": "#ffffff", "--accent-edge": "#0f766e",
+                    "--focus": "#0f766e", "--now-bg": "#15181d", "--now-ink": "#f6f5f1", "--now-halo": "#5eead4",
+                    "--backdrop": "#fff",
+                    "--radius-button": "8px", "--radius-frame": "12px", "--button-height": "44px",
+                    "--size-text": "16px", "--size-heading": "20px", "--size-title": "40px",
+                    "--space-s": "8px", "--space-m": "12px", "--space-l": "16px",
                     "--body": 'system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif'}
-    TOKENS_DARK = {"--bg": "#141b21", "--ink": "#e4eaee", "--muted": "#9aa9b4", "--line": "#3a4955", "--signal": "#f08a48",
+    TOKENS_DARK = {"--bg": "#121417", "--surface": "#1b1e24", "--ink": "#eceae4", "--muted": "#a3a9b5", "--line": "#2e333b",
+                   "--accent": "#0f766e", "--accent-hover": "#0b5c56", "--on-accent": "#ffffff", "--accent-edge": "#5eead4",
+                   "--focus": "#5eead4", "--now-bg": "#23272f", "--now-ink": "#eceae4", "--now-halo": "#5eead4",
                    "--backdrop": "#fff"}
-    STYLE = ("body{max-width:1180px;margin:0 auto;padding:12px 16px;font:16px/1.55 var(--body);background:var(--bg);"
-             "color:var(--ink)}"
-             "h1,h2{font-family:var(--display);line-height:1.2}"
-             "a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}"
-             "#guide{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}"
-             "#guide p{margin:6px 0}"
-             ".now{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}.next{font-size:1.4em}"
+    #: Kind 1 is the button of a sendable offer and Send, the confirm's first button, never a disabled one: until P1115
+    #: writes a class by who acts, the selectors read where the script puts each button. While the confirm shows, the
+    #: offer's own button is an outline again, so Send is the one teal button.
+    STYLE = ("body{max-width:1180px;margin:0 auto;padding:var(--space-m) var(--space-l);font:var(--size-text)/1.55 var(--body);"
+             "background:var(--bg);color:var(--ink)}"
+             "h1,h2{font-weight:600;line-height:1.2;letter-spacing:-0.02em}h1{font-size:var(--size-title);line-height:1.1}"
+             "h2{font-size:var(--size-heading)}"
+             "a{color:var(--ink)}.now a{color:var(--now-ink)}"
+             "a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}"
+             "button{min-height:var(--button-height);padding:0 var(--space-l);border:1px solid var(--ink);"
+             "border-radius:var(--radius-button);background:var(--surface);color:var(--ink);font:600 var(--size-text)/1 var(--body);"
+             "cursor:pointer}"
+             "button+button{margin-left:var(--space-s)}"
+             "[data-makes-stale]>button:not(:disabled),[data-makes-stale] [role=group]>button:first-of-type:not(:disabled)"
+             "{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}"
+             "[data-makes-stale]>button:hover:not(:disabled),"
+             "[data-makes-stale] [role=group]>button:first-of-type:hover:not(:disabled)"
+             "{background:var(--accent-hover);border-color:var(--accent-hover)}"
+             "[data-makes-stale]:has(>[role=group])>button,[data-makes-stale]:has(>[role=group])>button:hover"
+             "{background:var(--surface);border-color:var(--ink);color:var(--ink)}"
+             ".now [data-makes-stale]>button,.now [data-makes-stale]>button:hover{border-color:var(--now-halo)}"
+             "button:disabled{background:var(--line);border-color:var(--line);color:var(--muted);cursor:not-allowed}"
+             "#guide,.fold,[role=group]{border:1px solid var(--line);border-radius:var(--radius-frame);background:var(--surface);"
+             "padding:var(--space-s) var(--space-l);margin:var(--space-s) 0}"
+             "[role=group]{color:var(--ink)}[data-makes-stale] [role=group]{border-color:var(--accent-edge)}"
+             "#guide p{margin:var(--space-s) 0}"
+             ".now{background:var(--now-bg);color:var(--now-ink);border-radius:var(--radius-frame);padding:var(--space-s) var(--space-l);"
+             "margin:var(--space-s) 0}"
+             ".now>p:first-child::before{content:\"\";display:inline-block;width:8px;height:8px;margin-right:var(--space-s);"
+             "border:2px solid var(--now-halo);border-radius:50%;vertical-align:1px}"
+             ".next{font-size:var(--size-heading)}"
              ".muted,#request{color:var(--muted)}"
-             ".fold,.phase{border-top:1px solid var(--line);padding:4px 0}"
+             ".phase{border-top:1px solid var(--line);padding:4px 0}"
              "summary{cursor:pointer}summary h2{display:inline}"
              "p,li{overflow-wrap:anywhere}"
              "img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}"
-             ".fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:6px}"
+             ".fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:var(--radius-frame)}"
              ".fig svg{display:block;width:100%;height:auto}"
              ".pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;color:var(--muted)}"
              ".sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;vertical-align:-2px;"
