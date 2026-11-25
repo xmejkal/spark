@@ -24,8 +24,9 @@ from spark.sourcing import drawer, record_home
 
 # --- MVP ---
 #: The help of `--move-hold`, the one sentence `--describe` prints.
-MOVE_HELP = ("move a part that one project holds to another: FROM keeps each need that picked it, with no pick, and TO picks "
-             "it for NEED. Without --apply it says what each project loses and what goes out of date, and writes nothing")
+MOVE_HELP = ("with --apply only, move a part that one project holds to another: FROM keeps each need that picked it, with no "
+             "pick, and TO picks it for NEED. Without --apply it writes nothing, and says what each project loses and what goes "
+             "out of date")
 #: The help of `--apply`.
 APPLY_HELP = "with --move-hold: write the move, after the person's yes to the plan it printed"
 #: What `--help` says after the arguments.
