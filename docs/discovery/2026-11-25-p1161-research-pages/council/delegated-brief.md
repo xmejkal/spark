@@ -43,3 +43,7 @@ Answer each one. For each, give the option you choose, one or two sentences of r
 - Name each question that you think only the PO himself must answer, and why. A choice that reverses one of his own
   decisions (for example P1122's "no channel carries text", or D8's list of kept steps) is one.
 - Name the one sentence for the PO to read first tomorrow.
+
+## Searches
+
+None.

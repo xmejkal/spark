@@ -6,7 +6,7 @@ The cards come from the architect's synthesis (`council/synthesis.md` part 6) an
 ## P?: a need with no fitting part has no way out on the page → the Parts moment offers "Ask Claude" to research a part the person names, with a sentence spark fills from its records (slice 0, the walking skeleton; P992 #1445 refined in place)
 - type: story <!-- REQUIRED:item-type -->
 - needed by: the PO, 2026-11-25, #1697: "We should also have pages for editing records and possibly for researching when adding new parts"; and at the P934 walk, #1445: "what if it's not in the store ? I can still have it and want to add it" <!-- REQUIRED:needed-by -->
-- value proven by: a walk row on the DFR0928 (in the drawer, count 1, no record): `flow.py show --json` lists the offer's key and its sentence for the need; after the research and `/spark:page` the part is a pick, and the board builds; `run_cost.py` counts the run; the walk diary holds the A1 rows (D2, D3). The trigger also covers a pick that is a drawer entry with no record <!-- REQUIRED:value-proven-by -->
+- value proven by: a walk row on the DFR0928 (in the drawer, count 1, no record): `flow.py show --json` lists the offer's key and its sentence for the need; after the research and `/spark:page` the part is a pick, and the board builds; `scripts/cost.py <transcript>` counts the run, because no command writes a research step that `run_cost.py` reads (★C9); the walk diary holds the A1 rows (D2, D3). The trigger also covers a pick that is a drawer entry with no record <!-- REQUIRED:value-proven-by -->
 - depends on: the research run's token cost named and asked first (D13); a test that the sentence carries only the chosen part's maker and part number (A9, D6); the drawer rule's new words read to the PO (D6). Filed as P992 #1445 refined in place, no new number (D5, D14) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
@@ -27,7 +27,7 @@ The cards come from the architect's synthesis (`council/synthesis.md` part 6) an
 - type: story <!-- REQUIRED:item-type -->
 - needed by: the PO, 2026-11-25, #1696: "Somwe files might need to be regenerated, etc."; and #1700: "what changes influence in later steps" <!-- REQUIRED:needed-by -->
 - value proven by: a row from a real run: change one fact with `--fact-set`, and `flow.py show` names the build as out of date; build again, and it reads current <!-- REQUIRED:value-proven-by -->
-- depends on: — (change 6 of the P1160 #1696 finding). It merges before slice 1's offer ships (D9). Its plan names which copy of a record the build reads (A4) <!-- REQUIRED:depends-on -->
+- depends on: — (change 6 of the P1160 #1696 finding). It merges before slice 1's offer ships (D9). Its plan names which copy of a record the build reads (A4), and what a build record written before the stamp reads as (the refuter) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1161 #1697 <!-- REQUIRED:spark-process:parent -->
@@ -46,7 +46,7 @@ The cards come from the architect's synthesis (`council/synthesis.md` part 6) an
 ## P?: spike: nobody knows what a find by criteria returns or costs for a module → one real need run two ways, with the candidates and the tokens counted (slice 3)
 - type: spike <!-- REQUIRED:item-type -->
 - needed by: the PO, 2026-11-25, #1697: "just finding online a part/board/module that could do what we need, setting up criteria" <!-- REQUIRED:needed-by -->
-- value proven by: a finding with each way's candidates, their fits and lacks lines, and `run_cost.py`'s count for each run <!-- REQUIRED:value-proven-by -->
+- value proven by: a finding with each way's candidates, their fits and lacks lines, and `scripts/cost.py`'s count for each run's transcript <!-- REQUIRED:value-proven-by -->
 - depends on: D11, D12; filed in Idea (D14); its run waits on the PO's money answer and its token cost is named and asked first (D13) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->

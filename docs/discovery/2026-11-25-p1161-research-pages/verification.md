@@ -3,9 +3,32 @@
 the line it read, verbatim. result: reproduced · not reproduced · rejected. keep: the words any summary of the claim
 must carry (phrases separated by ;), or none; keep comes last on the line.
 e.g. `- ★C3 · STATUS.md:84 · refuter: partly — "Shown on the C6, assumed for the S3" · reproduced how: re-read STATUS.md:84 · result: reproduced · keep: assumed for the S3` -->
-- ⟨fill⟩ <!-- REQUIRED:claims -->
+- ★C1 · scripts/spark/flow/run_request.py:1-6, tests/test_run_request.py:272-276 · refuter: holds — "The values of the step come from spark's own offer key, never from the request." · reproduced how: re-read both lines in this session · result: reproduced · keep: none
+- ★C2 · scripts/spark/sourcing/research/research_part.py:145 · refuter: holds — "effects = (READS, WRITES, ASKS, FETCHES)" · reproduced how: re-read the line · result: reproduced · keep: no test enforces the bar yet
+- ★C3 · scripts/spark/sourcing/set_facts.py:28-32, :47-50 · refuter: holds — "a write fills a fact, it never empties one" · reproduced how: re-read the lines · result: reproduced · keep: none
+- ★C4 · scripts/spark/flow/fingerprint.py:17-18, scripts/spark/build/build_record.py:25-33 · refuter: holds, with a stale caveat — "FILES = (needs.FILE, Path(REQUIREMENTS_FILE), BUILD_RECORD_FILE)" · reproduced how: re-read both; the caveat changed to P1160 Done · result: reproduced · keep: none
+- ★C5 · scripts/spark/checks/physics_check.py:193-199, scripts/spark/sourcing/part_rules.py:138-144 · refuter: holds — "elif load["unverified"] or not supply["verified"]:" · reproduced how: re-read the lines · result: reproduced · keep: read from the code
+- ★C6 · docs/discovery/2026-11-25-spark-and-git/brief.md:125, scripts/spark/records/store.py:145-148 · refuter: partly — the lenses read D8 two ways (PO-28 against TL-23, ARCH-12) · reproduced how: re-read D8; the claim changed to name the split · result: reproduced after the change · keep: the lenses read D8 two ways
+- ★C7 · `<store>/drawer/*.json` · refuter: holds — 114 files, `is` in 19, 93 of 95 with `part_number`, dfrobot in 99, photos in 4 · reproduced how: a read-only count in this session, before 20:57 CET · result: reproduced · keep: none
+- ★C8 · `<walks>/p934-display2/diary.md`:157-165, :268-271 · refuter: partly — "research by the panel marking (P997) was not tried" · reproduced how: the refuter's quote; the claim changed · result: reproduced after the change · keep: 1 of 1 case
+- ★C9 · docs/guide/research-cost.md:3-11, scripts/spark/sourcing/run_cost.py:45, commands/idea.md:17 · refuter: partly — "about 5.0 M tokens processed"; no command writes a G step · reproduced how: re-read research-cost.md and the history's steps in this session · result: reproduced after the change · keep: n = 1 per lean run
+- ★C10 · canvas:Parts.dc.html:196 · refuter: holds — "sendLabel: ready ? 'Send 4 picks to spark' : 'Pick ' + (4 - picked) + ' more first'" · reproduced how: re-read the copy, and a grep for "not here" found 0 · result: reproduced · keep: a design, not built
+- ★C11 · agents/parts-researcher.md:35-38, README.md:122 · refuter: partly — "Stop at the first vendor with a part that fits the need unless you were asked to compare." · reproduced how: re-read the lines; the qualifier added · result: reproduced after the change · keep: unless asked to compare
+- ★C12 · council/po-assistant.md PO-4, PO-5, and the three landing pages · refuter: partly — DigiKey's page "does not say that an account is needed" · reproduced how: not reproduced here; the refuter re-read the DigiKey, Nexar and TME pages, and could not re-run the jlcpcb calls · result: reproduced after the change, in part · keep: one module query
+- ★C13 · scripts/spark/flow/run_request.py:150-157, scripts/spark/sourcing/write_skeleton.py:2-3 · refuter: holds — "a record to fill in, written to the project's parts/" · reproduced how: re-read the lines · result: reproduced · keep: none
+- ★C14 · grep of `place("catalog")`, scripts/spark/sourcing/record_home.py:181 · refuter: partly — "Set fields of a part record in its own home (§5.4) — the catalog's, a project's, or a listed project's behind a shelf copy" · reproduced how: re-ran the grep (five uses, none creates); the claim changed · result: reproduced after the change · keep: none
+- ★C15 · `<walks>/p934-display2/diary.md`:277-290, council/po-assistant.md PO-2, PO-10 · refuter: partly — "`--fact-set` has no key for host_requirements, so it stays wrong until a card fixes the route" · reproduced how: the refuter's quote; the claim narrowed · result: reproduced after the change · keep: n = 1
+- ★C16 · `parts.py --unverified dfr0664-tft-2in`, council/user.md USER-3 · refuter: partly — 3 of 9 facts were not sorted · reproduced how: the refuter re-ran the command ("9 thing(s) nobody has checked"); the claim changed · result: reproduced after the change · keep: the user lens's reading
+- ★C17 · docs/discovery/2026-10-16-p269-views-and-editors/brief.md:108, its jobs-and-journeys.md:16 · refuter: refuted in one clause — "So J7 is the most important" (J7 is the same circuit in every view, not the catalogue editor) · reproduced how: re-read through the refuter's quote; the clause removed · result: rejected in that clause, the rest reproduced · keep: none <!-- REQUIRED:claims -->
 
 ## Agree / split
 <!-- Where the lenses and the refuter agree, and where they split; each split becomes a question.
 e.g. `- Split: Feasibility says a day, Risks says a week · Q4` -->
-- ⟨fill⟩ <!-- REQUIRED:agree-split -->
+- Agree: the five lenses, the synthesis and the three delegated seats agree that research, identify and find are "Ask Claude" offers, that nothing new travels from the page now, and that the first slice is a need with no part (D4, D5) <!-- REQUIRED:agree-split -->
+- Agree: the refuter and the three seats found the same two gaps (no refuter report then, the clock times), and both are now closed or recorded (C23)
+- Split: the refuter says the plan builds before it tests A1, and the collection plan can test A1 before any build. The three seats chose to measure A1 in the slice 0 walk without holding slice 0 (D3). Raised to the PO with D3, which is his to change
+- Split: the refuter says closing P1002 drops his "always offering". The seats agreed, and D5 keeps P1002 open
+- Split: D8 read two ways (PO-28 against TL-23 and ARCH-12). D10 answers for now (plain words), and a part record as a kept step is the PO's own (Q8 B)
+- Split: the architect seat asks for a card of its own for the record-write Operation and misfit M1; the other two seats keep it as a line. It goes to the PO as a misfit
+- Split: the stale stamp's order: before slice 1's offer (D9, 3 of 3), against the tech lead lens's "before everything". D9 holds
+- Not resolved: the clock times (C23); the cause is not known

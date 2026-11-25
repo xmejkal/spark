@@ -64,3 +64,7 @@ Every research and record edit starts as an "Ask Claude" sentence that spark fil
 travels from the page. The first slice researches your DFR0928 for a need with no part. Three things wait only on you:
 whether tokens on your plan count as money, with your ceiling for the first run, the agents that write whole records
 outside any Operation, and your go to design.
+
+## Searches
+
+None.
