@@ -269,7 +269,8 @@ RAN_OK_SAYS = {PICK: "Saved as the pick. Nothing is built yet. " + NEW_STATE,
                BUILD_BOARD: "The board builds. It is not wired, not flashed and not simulated yet. " + NEW_STATE}
 #: A step of another kind that ran ok, with spark's own line (`ran <label>: ok`); the page sends no other kind today.
 RAN_OTHER_SAYS = "Spark says: %s. " + NEW_STATE
-#: The note after an ok answer that has one (P1008): a build that built while its simulation could not run.
+#: The note after an ok answer that has one: a build that built while its simulation could not run (P1008), or the
+#: notes of a parts-list write, such as the entries it kept that no pick explains (P1139).
 RAN_NOTE_SAYS = "Note: %s."
 RAN_PROBLEMS_SAYS = "Ran, with problems: %s. " + NEW_STATE
 COULD_NOT_RUN_SAYS = "Could not run: %s. " + NEW_STATE

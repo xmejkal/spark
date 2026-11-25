@@ -35,6 +35,8 @@ SEEN_PATTERN = re.compile(r"^[0-9a-f]{12}$")
 PageRequest = namedtuple("PageRequest", "id key seen")
 #: The line of a step that ran: its offer's label and its status. A refusal's line is its code's meaning.
 RAN_LINE = "ran %s: %s"
+#: Between two notes of a step in the answer's one note: the page ends the note with its own full stop.
+NOTES_JOIN = "; "
 
 
 #: The Operations the page may run, by op: today's three (P829). The page's allow-list, a subset of the Operation catalogue
@@ -112,11 +114,15 @@ def answer_of(kind, result):
     """(status, note) of the answer of a step of `kind` that ran: a build that could not run only because Wokwi has no
     model of the board answers ok, with its code's meaning as the note (never a record's field name), as the guide counts it done (P1008). It
     asks the guide's rule of the run's own Findings, one per stopped stage, never .spark/build.json: a crashed build
-    leaves an older record there. Any other run answers its own status and no note."""
+    leaves an older record there. A parts-list write that ran ok answers its own notes' sentences, joined by NOTES_JOIN,
+    such as the entries it kept that no pick explains (P1139); with none, or not ok, no note, so a refusal's sentence stays
+    the line. Any other run answers its own status and no note."""
     status = result.status()
     stopped = {"stages": [{"name": finding.subject, "status": finding.severity, "code": finding.code} for finding in result.findings]}
     if kind == flow_codes.BUILD_BOARD and status == COULD_NOT_RUN and stops_only_for_no_model(stopped):
         return OK, next(code.meaning for code in NO_MODEL_CODES if code == result.findings[0].code)
+    if kind == flow_codes.WRITE_REQUIREMENTS and status == OK and result.notes:
+        return status, NOTES_JOIN.join(note["sentence"] for note in result.notes)
     return status, None
 
 
