@@ -2,7 +2,7 @@
 
 Cards: [P1120 #1649](https://github.com/xmejkal/spark/issues/1649) and [P1123 #1653](https://github.com/xmejkal/spark/issues/1653).
 The plan council: a lens on Sonnet (the everyday model, UX and AI-UX) and the refuter on Opus, two rounds, 2026-11-25.
-Rows 1 to 24 are the council's, rows 25 to 31 the build's. This file holds the acted, raised and rejected findings
+Rows 1 to 24 are the council's, rows 25 to 32 the build's. This file holds the acted, raised and rejected findings
 only. 2026-11-25.
 
 | # | claim | source | status | evidence / where it went |
@@ -38,3 +38,4 @@ only. 2026-11-25.
 | 29 | the plane class changes the developer heading line, p1062 row 3's anchor | the build | acted | row 3 is re-anchored on the new line, with the same name and test |
 | 30 | the Round 2 fixes 3 and 4 have no row | the build | acted | p1120-page-tokens rows 7 and 8 |
 | 31 | a circle (the Now dot, the pad swatch) has no radius token | the build | acted | the radius test allows `50%` beside the two radius tokens, as the plan's full text says |
+| 32 | on the NOW box's NEXT line the confirm takes the line's 20px size, so its lines read large | the build's screenshots | acted | `[role=group]{font-size:var(--size-text)}`; `test_the_confirm_reads_at_the_text_size_wherever_it_stands`; p1120-page-tokens row 11 |

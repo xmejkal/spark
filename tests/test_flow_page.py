@@ -1276,6 +1276,12 @@ class TheLookTest(unittest.TestCase):
                 self.assertEqual(text.count('class="plane-'), 2 if status in hues else 0)
                 self.assertIn('<span aria-hidden="true">%s</span>' % html.escape(shown_phase(a_phase("parts", status).to_dict()).mark), text)
 
+    def test_the_confirm_reads_at_the_text_size_wherever_it_stands(self):
+        # the confirm opens inside its offer's element, and on the NOW box's NEXT line it would take the line's larger size
+        rule = {(selector, prop): value for selector, prop, value in declarations(self.style)}
+        self.assertEqual(rule[(".next", "font-size")], "var(--size-heading)")
+        self.assertEqual(rule[("[role=group]", "font-size")], "var(--size-text)")
+
     def test_the_orange_signal_is_gone(self):
         self.assertNotIn("--signal", self.page)
         self.assertNotIn("#c8500f", self.page.lower())

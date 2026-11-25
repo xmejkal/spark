@@ -64,5 +64,11 @@
   "name": "P1120: every status word stands on a plane (TheLookTest, the plane test)",
   "find": "PLANES.get(status) if status in PLANES else",
   "replace": "PLANES.get(status) if True else"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the confirm on the NEXT line takes the line's larger size (TheLookTest, the confirm size test)",
+  "find": "[role=group]{color:var(--ink);font-size:var(--size-text)}",
+  "replace": "[role=group]{color:var(--ink)}"
  }
 ]
