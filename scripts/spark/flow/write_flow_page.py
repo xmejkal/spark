@@ -134,7 +134,7 @@ def write_page(project, readers=None, parts=None, renderer=None, store=None):
     Read the flow of `project` once (`reading_of`), compose its FlowPage, mask it, render it and write it: a Written.
     `parts` is a function `project -> PageParts` (None: `kept_parts`), `store` a FlowPageStore. A `renderer` has
     `FILE_NAME`, `PURPOSE_MESSAGE` and `text(page)`: the page's phases are dicts, its pictures Pictures, and a renderer
-    shows a phase through `flow_page.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
+    shows a phase through `page_sections.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
     The texts take the mask of the project's secrets (P1060), the SVG and the rendered page the paths-only one. A secrets
     file that cannot be read or parsed raises SecretsUnreadableError before anything is read or written (D5).
     """

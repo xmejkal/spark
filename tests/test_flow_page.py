@@ -37,7 +37,8 @@ from spark.breadboard.tabbed_page import SvgExportResult  # noqa: E402
 from spark.build.stages import Stage  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, OK, SKIPPED  # noqa: E402
 from spark.breadboard import before_power, sheet  # noqa: E402
-from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TICK, page_words, shown_phase, word_of  # noqa: E402
+from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, page_words  # noqa: E402
+from spark.flow.page_sections import TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.offer_steps import build_step  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402

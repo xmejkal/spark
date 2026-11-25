@@ -323,7 +323,7 @@ REQUIREMENTS_NO_PICKS = "requirements (no needs or picks behind it)"
 REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
 BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
 BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
-#: The NOW sentences that can carry the page's button (`flow_page.sendable_now`), each with what the published page says
+#: The NOW sentences that can carry the page's button (`page_sections.sendable_now`), each with what the published page says
 #: in its place where its script adds the button (P993): the step, and to use the button. The page from disk, a viewer
 #: who is not the owner and `flow.py show` keep the sentence that names Claude.
 NOW_BUTTON = {REQUIREMENTS_NOW: "Write the parts list from your picks. Use the button.",

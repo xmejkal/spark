@@ -54,13 +54,13 @@
   "replace": ""
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1120: the hues of the two planes are swapped (TheLookTest, the plane test)",
   "find": "PLANES = {flow_codes.STALE: \"amber\", PROBLEMS: \"red\"}",
   "replace": "PLANES = {flow_codes.STALE: \"red\", PROBLEMS: \"amber\"}"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1120: every status word stands on a plane (TheLookTest, the plane test)",
   "find": "PLANES.get(status) if status in PLANES else",
   "replace": "PLANES.get(status) if True else"

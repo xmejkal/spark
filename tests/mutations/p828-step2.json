@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "the intro is not said",
   "find": "return '<p class=\"intro\">%s</p>' % _text(flow_codes.PAGE_INTRO)",
   "replace": "return '<p class=\"intro\">%s</p>' % \"\""
@@ -18,7 +18,7 @@
   "replace": "lines.append(self._host_run(run) if len(run) > 99 else"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "the developer fold's phase text loses its id (P1062 review: was the rail's target)",
   "find": "'<div id=\"phase-%s\">' % _text(phase[\"phase\"])",
   "replace": "'<div>'"

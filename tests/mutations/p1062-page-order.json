@@ -12,25 +12,25 @@
   "replace": "DeveloperHtmlFold(), PartsHtmlFold(), WiringHtmlFold(), PicturesHtmlFold(), NotesHtmlSection())"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: with the parts NOW, the developer fold opens (test 4)",
   "find": "body + [\"</section>\"], False)",
   "replace": "body + [\"</section>\"], ((page.guide or {}).get(\"now\") or {}).get(\"phase\") == flow_codes.PARTS)"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: a phase inside the developer fold opens (test 4)",
   "find": "\"<details><summary><h2>%s %s %s</h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])",
   "replace": "\"<details open><summary><h2>%s %s %s</h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: the records line stands in the wiring fold again (test 4)",
   "find": "+ self.before_power.items(wiring.before_power) + [\"</ul>\"]",
   "replace": "+ self.before_power.items(wiring.before_power) + [\"</ul>\", self.before_power.records_line(wiring.records)]"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: the parts fold's summary takes the phase's mark raw, not shown_phase's (test 5)",
   "find": "            shown = shown_phase(phase)\n            summary = ",
   "replace": "            shown = ShownPhase(phase[\"mark\"], word_of(phase[\"status\"]))\n            summary = "
@@ -48,7 +48,7 @@
   "replace": "    return \" \".join(line)\n"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: the parts fold stands open while the parts are not NOW (test 6)",
   "find": ".get(\"phase\") == flow_codes.PARTS)",
   "replace": ".get(\"phase\") != flow_codes.PARTS)"
@@ -72,19 +72,19 @@
   "replace": "    return rest.split(\":\", 1)[-1] if kind == flow_codes.PICK and \":\" in rest else None"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: an offer in the developer fold keeps data-makes-stale, a second button (test 8)",
   "find": "offers = [\"<li><code>%s</code> %s: %s</li>\" % (_text(offer[\"key\"]),",
   "replace": "offers = [\"<li%s><code>%s</code> %s: %s</li>\" % (_makes_stale(offer), _text(offer[\"key\"]),"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: the NOW offer's button stands in the parts fold too (E17, test 8)",
   "find": "is_sendable(offer) and offer[\"key\"] != on_now)",
   "replace": "is_sendable(offer))"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: the freshness line says FRESH_NONE with a time (test 2)",
   "find": "flow_codes.FRESH_LINE % day_and_time(page.written) if page.written else flow_codes.FRESH_NONE",
   "replace": "flow_codes.FRESH_NONE if page.written else flow_codes.FRESH_NONE"
@@ -114,13 +114,13 @@
   "replace": "return { mark: words.marks[\"could-not-run\"], text: fill(words.could_not_run, sentence(answer.line)), grey: false };"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: the page opens the wiring fold whatever now.with_wiring says (test_flow_page, test 6)",
   "find": "    return bool((((page.guide or {}).get(\"now\")) or {}).get(\"with_wiring\"))",
   "replace": "    return False"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062 review: a line the parts phase says twice stands twice (test_flow_page.TheSliceOneOrderTest)",
   "find": "said = list(dict.fromkeys(phase[\"says\"])) if phase else []",
   "replace": "said = list(phase[\"says\"]) if phase else []"
