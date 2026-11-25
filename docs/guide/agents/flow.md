@@ -202,8 +202,8 @@ inside a `title`. Else the page shows it as an `<img>`, as
 it shows the schematic and the PCB, so a script in a hand-edited `breadboard.svg` never runs, and nothing loads. The
 dot on each pin is yellow when its row joins a wire or another part and gold when it is free. Under the picture a
 legend names the states that the dots draw: "pad in use" and "pad free". "Pad held: do not use" shows only when a pad
-is held, and spark draws none yet ([P950](https://github.com/xmejkal/spark/issues/1354)). The page takes the colours of
-the wiring page that the PO chose as the model, light and dark, with the system's fonts. It loads nothing.
+is held, and spark draws none yet ([P950](https://github.com/xmejkal/spark/issues/1354)). Its colours are tokens, light and dark, with the system's fonts
+([P1120](https://github.com/xmejkal/spark/issues/1649)): teal only fills a button that runs spark's step, edges the confirm and rings the focus, and a step out of date or with problems stands on an amber or a red plane beside its mark and word. It loads nothing.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json
@@ -268,7 +268,7 @@ page sends: a pick, the parts list and the build. A need's drop has none; it is 
 `<li>` carries `data-makes-stale`, the phases it can make out of date, space apart. When `guide.now.offer` names such
 an offer, NEXT carries its `data-key` and `data-makes-stale` in place of the parts fold's row, and gets the button. A click
 shows the offer's label, its effect and "These steps may be marked out of date: …" when there are any, with Send and
-Cancel. Send writes the row `requests/<id>`: `{id, key, seen, at}`, a new UUID, the offer's key, the page's
+Cancel. The offer's own button and Send are teal, as spark runs that step, and Cancel, Copy and Withdraw are outlines (P1120). Send writes the row `requests/<id>`: `{id, key, seen, at}`, a new UUID, the offer's key, the page's
 `data-fingerprint` and the time. One request waits at a time: until its answer, the other buttons are grey, and Copy (it
 copies `/spark:page`, the command that carries the request to spark) and Withdraw stand in the panel, last in the guide under the NOW box. A
 write the database refuses puts the page back and says "Could not send. Nothing ran.". Withdraw deletes the row, and
