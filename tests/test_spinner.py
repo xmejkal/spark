@@ -42,6 +42,18 @@ class BrokenStream(Stream):
         return super().write(text)
 
 
+class CutStream(Stream):
+    """A terminal whose next write raises KeyboardInterrupt once a test sets `cut`: a Ctrl-C during the erase."""
+
+    cut = False
+
+    def write(self, text):
+        if self.cut:
+            self.cut = False
+            raise KeyboardInterrupt
+        return super().write(text)
+
+
 class SpinnerCase(unittest.TestCase):
     def spinner(self, painter=PlainPainter, style=SYMBOLS, stream=None, ticker=None):
         self.stream, self.clock = stream or Stream(tty=True), FakeClock()
@@ -121,6 +133,18 @@ class TheTerminalSpinnerTest(SpinnerCase):
         self.assertEqual((self.ticker.stopped - stopped, self.stream.getvalue()[len(before):]), (2, "\r\x1b[2K\x1b[?25h"))
 
 
+    def test_a_ctrl_c_during_the_erase_leaves_the_next_stop_to_erase_and_show_the_cursor(self):
+        # the review of #1664 (refuter 1): the row counts as drawn until its erase is written
+        spinner = self.spinner(stream=CutStream(tty=True))
+        spinner.start()
+        self.tick(2)
+        self.stream.cut = True
+        with self.assertRaises(KeyboardInterrupt):
+            spinner.stop()
+        spinner.stop()
+        self.assertTrue(self.stream.getvalue().endswith("\r\x1b[2K\x1b[?25h"), repr(self.stream.getvalue()))
+
+
 class TheColourTest(SpinnerCase):
     """Test 6: the frame is cyan through rich, and the row without its codes is the plain row."""
 
@@ -156,6 +180,16 @@ class TheThreadTickerTest(unittest.TestCase):
         time.sleep(0.05)
         self.assertEqual((thread.is_alive(), len(counted), ticker.thread), (False, count, None))
         ticker.stop()
+
+    def test_a_second_start_stops_the_first_thread(self):
+        # the review of #1664 (refuter 8): a reused ticker leaves no thread running
+        ticker, ticked = ThreadTicker(), threading.Event()
+        ticker.start(ticked.set)
+        first = ticker.thread
+        ticker.start(lambda: None)
+        alive = first.is_alive()
+        ticker.stop()
+        self.assertEqual((alive, ticker.thread), (False, None))
 
     def test_a_stop_after_one_that_a_ctrl_c_cut_before_its_join_still_waits_for_the_tick(self):
         entered, release, ended = threading.Event(), threading.Event(), []

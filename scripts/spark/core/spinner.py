@@ -45,7 +45,9 @@ class TerminalSpinner(Spinner):
     """Strategy: the spinner of a terminal with motion. From SHOW_AFTER_S on, each tick of `ticker` redraws one row, a frame
     painted in the role `spinner` and the seconds since `start` in `quiet`, and hides the cursor. `stop` always stops the
     ticker first, also after a stop that a Ctrl-C cut, and only then erases the row and shows the cursor, so no tick draws
-    after the erase. A stream that raises in a tick (a closed terminal) ends the drawing."""
+    after the erase. A stream that raises in a tick (a closed terminal) ends the drawing. `ticker` is any object with
+    `start(tick)`, which calls `tick` every TICK_S from then on, and `stop()`, which returns only when no tick runs:
+    ThreadTicker, or the tests' FakeTicker."""
 
     def __init__(self, stream, painter, style, clock, ticker):
         self.stream, self.painter, self.clock, self.ticker = stream, painter, clock, ticker
@@ -60,8 +62,8 @@ class TerminalSpinner(Spinner):
     def stop(self):
         self.ticker.stop()
         if self.drawn:
-            self.drawn = 0
             print(ERASE + SHOW_CURSOR, end="", flush=True, file=self.stream)
+            self.drawn = 0  # only after the erase: a Ctrl-C in the write leaves it to the next stop
 
     def tick(self):
         """Redraw the row, unless the wait is shorter than SHOW_AFTER_S or the stream broke."""
@@ -81,12 +83,13 @@ class TerminalSpinner(Spinner):
 class ThreadTicker:
     """Adapter: a daemon thread of the OS that calls `tick` every TICK_S until `stop`. `stop` sets the thread's Event and
     joins it whenever it still holds the thread, and lets the thread go only after the join returned, so a stop that a
-    Ctrl-C cut is joined by the next one."""
+    Ctrl-C cut is joined by the next one. `start` stops a thread it still holds first."""
 
     def __init__(self):
         self.thread, self.stopped = None, threading.Event()
 
     def start(self, tick):
+        self.stop()  # a reused ticker leaves no thread running
         self.stopped = threading.Event()
         self.thread = threading.Thread(target=self._loop, args=(tick, self.stopped), daemon=True)
         self.thread.start()
