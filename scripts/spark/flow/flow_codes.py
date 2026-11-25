@@ -465,8 +465,10 @@ UNBUILT_STEPS = (
     ("case", "Case", "At the printer: a case for the board."),
 )
 NOT_BUILT = "not built"
-#: The station line's name for a screen reader (P1119).
+#: The station line's name for a screen reader (P1119), and what each station says to it after its name: its place and its
+#: status word, comma apart ("Wiring: now, not started"), since its mark is hidden from it.
 STATIONS_LABEL = "Where the project stands"
+STATION_SAID = ": %s"
 #: The chat offer whose job the NOW sentence asks Claude for (P1122), by (the now phase, the value the guide picked that
 #: sentence by): a status, a simulate's image fact (IMAGE_NOW's keys), a stale deploy's fact or the verdict of a flash that
 #: did not finish. Any other is None, so no tell stands beside a sentence that asks for something else: a failed run, an

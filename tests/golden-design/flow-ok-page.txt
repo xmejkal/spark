@@ -14,15 +14,15 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <p class="fresh">This page shows the project as its files last changed, <time>. If you changed or deployed something after that, type /spark:page in the chat.</p>
 <p class="intro">Where this project stands. This page only shows it. To change anything, tell Claude in the chat.</p>
 <ol class="stations" aria-label="Where the project stands">
-<li data-phase="idea" data-place="done"><span class="mark" aria-hidden="true">·</span><span class="name">Idea</span></li>
-<li data-phase="needs" data-place="done"><span class="mark" aria-hidden="true">·</span><span class="name">Needs</span></li>
-<li data-phase="parts" data-place="done"><span class="mark" aria-hidden="true">·</span><span class="name">Parts</span></li>
-<li data-phase="requirements" data-place="done"><span class="mark" aria-hidden="true">·</span><span class="name">Parts list</span><span class="note">no needs or picks behind it</span></li>
-<li data-phase="build" data-place="now" aria-current="step"><span class="mark" aria-hidden="true">○</span><span class="name">Board files</span></li>
-<li data-phase="breadboard" data-place="later"><span class="mark" aria-hidden="true">○</span><span class="name">Wiring</span></li>
-<li data-phase="firmware" data-place="later"><span class="mark" aria-hidden="true">·</span><span class="name">Firmware</span></li>
-<li data-phase="simulate" data-place="later"><span class="mark" aria-hidden="true">○</span><span class="name">Simulation</span></li>
-<li data-phase="deploy" data-place="later"><span class="mark" aria-hidden="true">○</span><span class="name">On the board</span></li>
+<li data-phase="idea" data-place="done"><span class="mark" aria-hidden="true">·</span><span class="name">Idea</span><span class="clip">: done, not checked by spark</span></li>
+<li data-phase="needs" data-place="done"><span class="mark" aria-hidden="true">·</span><span class="name">Needs</span><span class="clip">: done, not checked by spark</span></li>
+<li data-phase="parts" data-place="done"><span class="mark" aria-hidden="true">·</span><span class="name">Parts</span><span class="clip">: done, not checked by spark</span></li>
+<li data-phase="requirements" data-place="done"><span class="mark" aria-hidden="true">·</span><span class="name">Parts list</span><span class="clip">: done, not checked by spark</span><span class="note">no needs or picks behind it</span></li>
+<li data-phase="build" data-place="now" aria-current="step"><span class="mark" aria-hidden="true">○</span><span class="name">Board files</span><span class="clip">: now, not started</span></li>
+<li data-phase="breadboard" data-place="later"><span class="mark" aria-hidden="true">○</span><span class="name">Wiring</span><span class="clip">: later, not started</span></li>
+<li data-phase="firmware" data-place="later"><span class="mark" aria-hidden="true">·</span><span class="name">Firmware</span><span class="clip">: later, not checked by spark</span></li>
+<li data-phase="simulate" data-place="later"><span class="mark" aria-hidden="true">○</span><span class="name">Simulation</span><span class="clip">: later, not started</span></li>
+<li data-phase="deploy" data-place="later"><span class="mark" aria-hidden="true">○</span><span class="name">On the board</span><span class="clip">: later, not started</span></li>
 <li class="unbuilt" data-unbuilt="perfboard"><span class="mark"></span><span class="name">Perfboard</span><span class="clip"> not built</span></li>
 <li class="unbuilt" data-unbuilt="pcb"><span class="mark"></span><span class="name">PCB</span><span class="clip"> not built</span></li>
 <li class="unbuilt" data-unbuilt="case"><span class="mark"></span><span class="name">Case</span><span class="clip"> not built</span></li>

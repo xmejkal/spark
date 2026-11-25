@@ -276,13 +276,16 @@ class StationsHtmlLine:
 
     def _station(self, station, phase):
         """One station's `<li>`: its phase and place for the style and an agent, `aria-current` when it is now, its mark (an
-        empty one when the page holds no such phase), its name and its note's words, if any."""
+        empty one when the page holds no such phase), its name, its place and status word clipped for a screen reader (the
+        mark is hidden from it) and its note's words, if any."""
         current = ' aria-current="step"' if station["place"] == flow_codes.NOW_PLACE else ""
         mark = '<span class="mark" aria-hidden="true">%s</span>' % _text(shown_phase(phase).mark) if phase else '<span class="mark"></span>'
+        said = [station["place"]] + ([shown_phase(phase).word] if phase else [])
+        clip = '<span class="clip">%s</span>' % _text(flow_codes.STATION_SAID % ", ".join(said))
         words = note_words(station)
         note = '<span class="note">%s</span>' % _text(words) if words else ""
-        return '<li data-phase="%s" data-place="%s"%s>%s<span class="name">%s</span>%s</li>' % (
-            _text(station["phase"]), _text(station["place"]), current, mark, _text(self._name(station)), note)
+        return '<li data-phase="%s" data-place="%s"%s>%s<span class="name">%s</span>%s%s</li>' % (
+            _text(station["phase"]), _text(station["place"]), current, mark, _text(self._name(station)), clip, note)
 
     @staticmethod
     def _name(station):

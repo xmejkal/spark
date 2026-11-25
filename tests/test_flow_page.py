@@ -1689,7 +1689,7 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
         self.assertEqual(written.guide["later"], ["two (done, may change)", "three"])
         # P1119: the page draws the station line, where two is later with its own tick and its note, and no LATER line
         self.assertIn('<li data-phase="two" data-place="later"><span class="mark" aria-hidden="true">✓</span><span class="name">two</span>'
-                      '<span class="note">done, may change</span></li>', store.written[0][2])
+                      '<span class="clip">: later, ok</span><span class="note">done, may change</span></li>', store.written[0][2])
         self.assertNotIn("<strong>LATER</strong>", before_developer(store.written[0][2]))  # the developer fold holds it (D22)
 
     def test_write_page_draws_the_guide_it_answers(self):
@@ -1754,13 +1754,25 @@ class TheStationLineTest(unittest.TestCase):
         self.assertEqual([(attrs["data-phase"], attrs["data-place"]) for attrs, _said in parsed.rail],
                          [(phase, place) for phase, place, _note in TWO_JOBS])
         self.assertEqual([said for _attrs, said in parsed.rail],
-                         ["○Idea", "○Needs", "○Parts", "○Parts list", "○Board files", "○Wiring", "○Firmware", "○Simulation",
-                          "○On the board"])
+                         ["○Idea: done, not started", "○Needs: done, not started", "○Parts: done, not started",
+                          "○Parts list: done, not started", "○Board files: done, not started", "○Wiring: now, not started",
+                          "○Firmware: now, not started", "○Simulation: later, not started", "○On the board: later, not started"])
         cells = re.findall(r'<li class="unbuilt" data-unbuilt="([a-z]+)">(.*?)</li>', line_of(station_page(TWO_JOBS)))
         self.assertEqual([(key, re.sub("<[^>]+>", "", inner)) for key, inner in cells],
                          [("perfboard", "Perfboard not built"), ("pcb", "PCB not built"), ("case", "Case not built")])
         line = line_of(station_page(TWO_JOBS))
         self.assertLess(line.index('data-phase="deploy"'), line.index('data-unbuilt="perfboard"'))
+
+    def test_each_station_says_its_place_and_its_status_word_to_a_screen_reader_only(self):
+        # the PR review (lens 1): the mark is hidden from a screen reader, so a clipped span says the place and the status
+        phases = [a_phase("idea", OK).to_dict(), a_phase("needs", None).to_dict(), a_phase("parts", "stale").to_dict()]
+        line = line_of(station_page((("idea", "done", None), ("needs", "now", None), ("parts", "later", None), ("ghost", "later", None)),
+                                    phases=phases))
+        said = dict(re.findall(r'<li data-phase="([a-z]+)"[^>]*>.*?<span class="clip">([^<]*)</span>', line))
+        self.assertEqual(said, {"idea": ": done, ok", "needs": ": now, not checked by spark", "parts": ": later, out of date",
+                                "ghost": ": later"})  # a station the page holds no phase of says its place only
+        for _key, inner in re.findall(r'<li class="unbuilt" data-unbuilt="([a-z]+)">(.*?)</li>', line):
+            self.assertEqual(re.findall(r'<span class="clip">([^<]*)</span>', inner), [" not built"])
 
     def test_an_unbuilt_cell_has_no_status_mark_and_says_not_built_to_a_screen_reader_only(self):
         for _key, inner in re.findall(r'<li class="unbuilt" data-unbuilt="([a-z]+)">(.*?)</li>', line_of(station_page(TWO_JOBS))):
