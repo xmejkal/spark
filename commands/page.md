@@ -110,5 +110,5 @@ Each time below that says "republish":
 - Never add `--dry-run`, and never run a step in the chat because the page asked for it. The page asks only through
   `flow.py run-request`.
 - Never share or unshare the Artifact. The person decides who sees it.
-- The page sends only its buttons. Anything else the person wants, they say in the chat.
+- The page sends only its buttons. Anything else the person wants, they say in the chat. "Ask Claude" sends nothing: its Copy puts a sentence on the clipboard, which the person pastes in the chat.
 - When an Artifact tool is not there, or refuses, say so and stop. Do not retry in a loop.
