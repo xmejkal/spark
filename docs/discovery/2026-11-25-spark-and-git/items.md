@@ -28,11 +28,11 @@ None is filed. The P-numbers were read on 2026-11-25 (the highest was P1148 #168
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one (P1004 #1463's slice is a candidate) <!-- REQUIRED:spark-process:slice -->
 <!-- EXTEND:item-fields -->
 
-## P1151 — no step makes a project's folder, and init and the brief write are no Operations → "start a project" is a core Operation that makes the folder in the projects home and calls the project-history strategy (with P793 #1105)
+## P1151 — no step makes a project's folder, and init and the brief write are no Operations → init is a core Operation that calls the exchangeable project strategy, and the strategy makes the folder: the git strategy makes it in the projects home with its repository, and a human strategy leaves it to the person (with P793 #1105)
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "maybe it should be Sparks agents that create the folder and call the init?" and "the init operation calls it I would say" (the PO, 2026-11-25), D5, D10 <!-- REQUIRED:needed-by -->
-- value proven by: `--json` of one start in a scratch home: the folder made, the project listed only after the folder exists, the strategy called, and the same Operation listed by `--describe` <!-- REQUIRED:value-proven-by -->
-- depends on: P1150, P1152 <!-- REQUIRED:depends-on -->
+- value proven by: `--json` of one init in a scratch home with the git strategy: the folder and its repository made, the project listed only after the folder exists, and the same Operation listed by `--describe`. With a Fake human strategy: no folder made, and one line that asks the person for it <!-- REQUIRED:value-proven-by -->
+- depends on: P1150, and P1152's first slice, built together with this item <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P793 #1105 <!-- REQUIRED:spark-process:parent -->
@@ -43,7 +43,9 @@ None is filed. The P-numbers were read on 2026-11-25 (the highest was P1148 #168
 - type: epic <!-- REQUIRED:item-type -->
 - needed by: "it should again be a good architecture so that the strategy of the revert and init and all these are exchangable, but the first one we implement for spark is going to be git" (the PO, 2026-11-25), D5 to D9 <!-- REQUIRED:needed-by -->
 - value proven by: A1's pass line (D13), then A2, A6 and A7 in scratch, each quoted in its PR <!-- REQUIRED:value-proven-by -->
-- depends on: P1155 (the A1 test), P1156 (the seam's word) <!-- REQUIRED:depends-on -->
+- first slice: the strategy's seam and the git strategy's init: it makes the folder and the repository, writes the ignore list (P1150) and makes a first commit of the files spark wrote, called by init (P1151). A setting in the person's store turns the repository off once (D6), and then the strategy keeps nothing and says so in one line
+- later slices: each decided record kept as one step (D8), the read-only history (D9) and the take-back after the yes (D7). A take-back of a pick also releases or restores the pick's hold in the store, which is outside the project's git (D8's caveat, UX-3). These slices wait on P1155's result
+- depends on: the first slice on P1150 and P1157 (the seam's word), built with P1151. The later slices on P1155's result (the A1 test) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): epic <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
@@ -64,7 +66,7 @@ None is filed. The P-numbers were read on 2026-11-25 (the highest was P1148 #168
 ## P1154 — the projects list holds 5 entries whose folders are gone, and no command lists the projects or takes one off → a command lists the person's projects and takes a gone one off
 - type: story <!-- REQUIRED:item-type -->
 - needed by: D10 ("a command can then list the person's projects", the PO, 2026-11-25) <!-- REQUIRED:needed-by -->
-- value proven by: its `--json` on the PO's store lists 28 entries and marks the 5 gone. After the take-off, 23 remain <!-- REQUIRED:value-proven-by -->
+- value proven by: its `--json` on the PO's store lists 28 entries and marks the 5 gone (the store as read by the refuter's second pass, 2026-11-25 19:18 CET). After the take-off, 23 remain <!-- REQUIRED:value-proven-by -->
 - depends on: P1151 <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
@@ -76,7 +78,7 @@ None is filed. The P-numbers were read on 2026-11-25 (the highest was P1148 #168
 - type: spike <!-- REQUIRED:item-type -->
 - needed by: D13 (the PO, 2026-11-25: "A1, spark's commits happen and are safe, in a scratch folder") <!-- REQUIRED:needed-by -->
 - value proven by: the run's lines quoted: 3 of 3 kept lines, 0 tracked files the list covers, and the count in the 9 repositories <!-- REQUIRED:value-proven-by -->
-- depends on: P1150 <!-- REQUIRED:depends-on -->
+- depends on: P1150, and P1152's first slice (init makes the repository and a first commit, through P1151), because with today's code a brief not in HEAD is never committed (brief ★C14) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1152 (the epic above) <!-- REQUIRED:spark-process:parent -->

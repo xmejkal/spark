@@ -291,3 +291,53 @@ modelcontextprotocol.io/specification/2026-07-28/changelog.
 - RES-15's README.
 - Whether a `CLAUDE.local.md` symlink pointing outside the project needs approval under `claude -p`.
 - The page-actions note in the store.
+
+## Second pass
+
+The refuter, on Opus, 2026-11-25 19:10 to 19:25 CET, read-only, at 02ffe8f1. It read the sections changed since the
+first pass and checked them against the D rows, this report's first pass and the code. It decides nothing.
+
+1. **The A1 test cannot run before the build it is meant to gate.** D13's pass line needs "3 of 3 brief writes print a
+   kept line" in a new repository. With today's code a brief that is not in HEAD answers UNHELD and spark never stages
+   (`project_commit.py:5, 71-73`, ★C14), so the line can only pass once the git strategy makes the first commit, which
+   is P1152's build. Yet P1155 (the test) depends on P1150 alone, P1152 depends on P1155, and the collection plan runs
+   A1 "after the PO's yes to items.md", before "the build of slice 0" that it blocks. The test's "start" also needs
+   P1151. Fix: say which build the spike runs against (P1150 plus the strategy's first commit, in scratch code), or make
+   P1155 depend on P1152's first step.
+2. **D7's caveat that is not written: the permission prompt no longer guards a revert.** The PO's words of 11-23 (★C25)
+   are "revert stays out of the idea command's allowed tools; his permission prompt is the second guard".
+   `commands/idea.md:3` allows `Bash(${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py *)`, and every other script it runs.
+   A revert that the strategy runs inside a spark script therefore gets no prompt. ★C25's caveat says only "D7 replaces
+   the sentence", and Q18 asks about the yes's strength, not about the lost guard. Fix: name it in D7's option caveat
+   and in Q18.
+3. **items.md misses two parts of the D rows.** D6's "a person can turn it off once in their settings" is in no item,
+   story or test (grep for "setting" in items.md, story-map.md, risks-and-tests.md and jobs-and-journeys.md finds
+   nothing). D8's caveat (UX-3: a pick's hold in the store is outside the project's git) is in no item and in no pass
+   line. A2 checks only "the earlier content", so a take-back of a pick that leaves the hold passes. Fix: one line in
+   P1152 for each, and the hold in A2's pass line.
+4. **P1151, job 1 and slice 0 are stronger than D5.** D5 says "the init operation calls it" and names a strategy where
+   a "human does that, using just file manipulation". It chooses none of the three options offered for Q4 (one
+   Operation, Claude with mkdir, the person). P1151 builds a new "start a project" Operation that makes the folder
+   whatever the strategy is. That is the architect's F-c, not D5's words. Job 1's tag "D D5" carries "spark makes its
+   folder". Q4's "answered D5" should say that D5 answered with a strategy, and that who makes the folder under a
+   non-git strategy is still open.
+5. **Two texts contradict a D.** Story map slice 2: "a second strategy (by hand, or a server's)". D12 says "nothing for
+   a server is built", and the brief's own no-go is "No work for a host that does not exist (D12)". Fix: "by hand, or a
+   Fake". The Frame's D-e still lists "spark's own code never runs it" as already decided, and Q11 says it "decides:
+   D-e". D7 replaces it, and ★C25 says it was never the PO's. Fix: mark D-e as replaced by D7.
+6. **verification.md rejects a claim the first pass did not make.** Line 19, the Options row for the PO's own lines and
+   the Agree/split line say "the refuter's reading that `rules.md` is a link today" is rejected. The first pass says
+   that a store file "can also be a link", and that the on-hold worktree "is built on exactly that link", which is a
+   design. It never says that today's file is a link. Fix: drop the rejection row, or quote the line it rejects.
+7. **Numbers.** A4: "modified 2026-11-25 15:35" has no zone. A2: "a 30-minute scratch spike" has no source. A3: "the
+   next two walks after slice 0" has no date, and "a request" has no rule for what counts as one. A7's and C4's "6
+   repositories" rest on the first pass's re-run, which gives no time. P1154's pass line (28 entries, 5 gone, 23
+   remain) re-ran at 19:18 CET: 28 and 5 (p138, walk, p, project, b). It is a value of the store that changes, so it
+   needs the date it was read. The 81 `.bin` in the ethics row is 80 + 1 across two repositories, and only C15 says so.
+
+Checked and found holding: D13's pass line is the same in the brief, risks-and-tests.md and P1155. D11's words are the
+same in P1153. P1004 #1463's parent is P820 #1173 (gh, graphql). P793 #1105 and P794 #1106 are open epics. The
+projects list has 28 entries, and 5 of them are gone. `rules.md` is a regular file of 8219 bytes.
+
+Not checked: the #1506 comment was not read again. No scratch git run was made, because git writes were forbidden. The
+board's Slice options ("team tools", "10 The store") were not read.

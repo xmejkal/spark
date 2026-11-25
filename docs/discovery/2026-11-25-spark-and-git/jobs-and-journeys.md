@@ -13,7 +13,7 @@ e.g. `- Team leads who assign work · H Lena's belief, no interview yet` -->
 ## Jobs
 <!-- One job story per line, each clause tagged: When …, I want to …, so I can ….
 e.g. `- When I assign a task in a meeting [E tickets.csv:6], I want the assignee to see it that day [H Lena], so I can stop chasing people [E tickets.csv:7]` -->
-- Job 1 · When I start a new gadget idea [E commands/idea.md:25], I want spark to make its folder in my projects home with a repository, an ignore list and a first commit [D D5, D6, D10, the PO 2026-11-25], so I never take a folder or git step by hand [D the PO's message 1, "I would definitely like the Spark projects to have a Git repository"] <!-- REQUIRED:jobs -->
+- Job 1 · When I start a new gadget idea [E commands/idea.md:25], I want spark's init to call a strategy that makes the folder, and with git, the folder in my projects home with a repository, an ignore list and a first commit [D D5, D6, D10, the PO 2026-11-25], so I never take a folder or git step by hand [D the PO's message 1, "I would definitely like the Spark projects to have a Git repository"] <!-- REQUIRED:jobs -->
 - Job 2 · When I change a record I decided (the brief, the needs, the picks, the requirements, the board) [E scripts/spark/build/project_setup.py:383-386], I want each decision kept as one step in plain words [D D8, D11], so I can say "undo that" and get any earlier step back after my yes [D D7, D9]
 - Job 3 · When an agent opens a session in a gadget folder [E scripts/spark/build/ai_files.py:36], I want it to load my own lines and spark's project rules, not the team's process [D D3, D4], so it does not send the session to spark's board, lanes and PRs [E `council/user.md`, its rules table]
 - Job 4 · When spark runs on another interface (in code, over MCP, on a website) [H the PO's messages 4 to 6], I want the folder, the yes and the way back to come through the core [D D5, D7, D12], so every interface starts, keeps and takes back the same way [D AGENTS.md, one core, many interfaces]
@@ -56,7 +56,7 @@ flowchart LR
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
 | 1 | says "new project: a plant alarm" | D D5, D10 | — | not yet | — |
-| 2 | spark's start Operation makes the folder in the projects home and calls the strategy | D D5, D6, D10 | a person with no git identity gets a refusal (A5) | not yet | Q7 (a repository that existed) |
+| 2 | spark's init Operation calls the strategy, and the git strategy makes the folder in the projects home (a human strategy would leave it to the person) | D D5, D6, D10 | a person with no git identity gets a refusal (A5) | not yet | Q7 (a repository that existed) |
 | 3 | the git strategy writes the ignore list, makes the repository and a first commit of spark's files, said in one line | D D6, D11 | a project inside another repository (no instance today) | not yet | Q8 |
 | 4 | an agent session loads the PO's lines and spark's project rules, no team rule | D D3, D4 | spark's own sessions still need the team's process | not yet | Q16, Q17 |
 | 5 | each decided record is written and kept as one step: "Kept. To take it back, say: undo that." | D D8, D11 | a pick's hold in the store is outside the project's git | not yet | Q14 (which branch) |
@@ -64,7 +64,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  t1["new project:<br/>a plant alarm"] --> t2["start Operation<br/>folder in projects home"] --> t3["strategy: ignore list,<br/>repository, first commit"]
+  t1["new project:<br/>a plant alarm"] --> t2["init Operation calls<br/>the strategy"] --> t3["git strategy: folder, ignore list,<br/>repository, first commit"]
   t3 --> t4["session loads own lines<br/>and project rules"] --> t5["decided records<br/>each kept as a step"]
   t5 --> t6{"undo that"}
   t6 --> t7["kept steps shown,<br/>the person says yes"] --> t8["strategy takes it back<br/>(git revert for git)"]
