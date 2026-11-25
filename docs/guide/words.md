@@ -29,3 +29,6 @@ Four words stay out of these names, because each has a meaning already. "History
 is git's word and a method of `ProjectCommit`, `PreviousVersionFiles`, `StagedFile` and `WiringLogStore`. "Revision"
 is a board's hardware revision (`replies.py:34`, `physics_check.py:404`). "Change" has `ChangeList`, the bench's changes to a wiring
 (`breadboard/bench_changes.py`).
+
+Git's two words for a file differ (P1150). "Held" is `ProjectCommit.held_as_is`: in HEAD and the same on disk. "Tracked" is git's
+word for a file in the index (`tracks`, `tracked_files`, `IgnoreList.already_tracked`), committed or not.
