@@ -26,8 +26,7 @@ the project's board (requirements.json's `board`), and esptool refuses a board w
 When each of the five stages starts (plan, look, gate, flash, verify), deploy.py prints a heading, `[n/5] <stage>`, and
 one `why:` line that says why the stage happens (P476, P478). The run ends with one status line, the last line of
 stdout. With --json there is no heading and no status line: stdout holds the envelope, and stderr every other line a
-person reads. A slow wait prints its line, such as `reading the board`, and on a terminal a spinner with the seconds
-under it, erased before the next line (P478). TERM=dumb or a pipe gives a still screen, and --json prints neither.
+person reads.
 esptool and mpremote are the tools list's `flasher` and `board-shell`, which /spark:setup installs.
 """
 

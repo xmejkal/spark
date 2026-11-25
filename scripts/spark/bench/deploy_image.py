@@ -449,7 +449,9 @@ download mode entered with BOOT outlasts esptool's restart: press RESET.
 Without --json each stage starts with a heading, `[n/5] <stage>`, and the run ends with one status line, bold on a
 terminal, its mark in colour: `✓ deploy: ok. Flashed, and the board printed ready.` With --json there is no heading
 and no status line: stdout holds the envelope, and stderr the other lines as before (P478).
-Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
+Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify). A slow wait prints its line, such as
+`reading the board`, and on a terminal a spinner with the seconds under it, erased before the next line (P478).
+TERM=dumb or a pipe gives a still screen, and --json prints neither.""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 

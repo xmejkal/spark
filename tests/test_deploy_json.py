@@ -819,7 +819,7 @@ class TheWaitsTest(GateCase):
         self.assertEqual(self.after(events, press)[:3], [reset_wait, ("line", "verify", not_counted), reset_wait])
         self.assertTrue(self.after(events, press)[3][2].startswith("facts file"), events)  # the reads in the wait said nothing
 
-    def test_the_read_again_after_a_console_that_heard_ready_adds_no_event(self):
+    def test_after_a_console_that_heard_ready_the_first_event_after_the_verify_wait_is_the_facts_line(self):
         # P245's path: the WAIT after the verify's BEGIN is still open while the board is read again
         self.uncopied = self.unread
         probe = FakeConsoleProbe("mode:DIO, clock div:2\nentry 0x4086b910\nready\n", on_console=self.answers)

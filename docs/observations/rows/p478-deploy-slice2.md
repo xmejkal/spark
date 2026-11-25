@@ -26,4 +26,13 @@ refuter; round 2: the refuter), then the build of slice 2. This file holds the a
 | 18 | A test that reads a constant as `module.NAME` fails test_self_confirmation | plan round 2, refuter 4 | acted | the tests assert literals |
 | 19 | Text fixes: `DeployFlowService.verify`, test 14 through the flow, rows with context, two import lines change | plan round 2, refuter 5 | acted | test_deploy_json.TheWaitsTest runs the whole deploy; the rows' finds carry their comments, so each occurs once |
 | 20 | `FakeTicker(interrupt=True)` raised at `start`, which stops the old ticker first | build | acted | a test sets `interrupt` after the start; `start` still always stops the old ticker, so no thread leaks |
-| 21 | The plan put the wait's sentence in both deploy.py's EPILOG and `DETAILS` | build | rejected | dropped because both print in one `--help`, so the sentence would show twice; the EPILOG holds the text view's paragraph |
+| 21 | The plan put the wait's sentence in both deploy.py's EPILOG and `DETAILS` | build | acted | once, in `DETAILS`, which `--help` prints: the build first put it in deploy.py's module docstring, which `--help` does not print (row 25) |
+| 22 | `TerminalSpinner.stop` set `drawn = 0` before the erase, so a Ctrl-C in the write left the cursor hidden | PR review, refuter 1 | acted | the erase first, then `drawn = 0`. A test with a stream cut by KeyboardInterrupt, and its row |
+| 23 | look.py could report `Event.wait` before its read and get the spinner with no copy | PR review, refuter 8 | raised | P1131 |
+| 24 | `ThreadTicker.start` called twice with no stop leaves a thread running | PR review, refuter 8 | acted | `start` stops a thread it still holds first. A test and its row |
+| 25 | The wait sentence did not reach `--help` | PR review, lens 1 | acted | in `DETAILS`; `deploy.py --help` prints it |
+| 26 | The "baseline lists the breaches" paragraph of patterns-and-names.md was reflowed with no change in words | PR review, lens 2 | rejected | dropped because the page is at its budget (279): the two class-diagram lines cost two lines, and restoring the paragraph gives 281 |
+| 27 | The Fake row did not list `FakeTicker` | PR review, lens 3 | acted | added to the examples |
+| 28 | The ticker's contract had no docs line | PR review, lens 4 | acted | one sentence in `TerminalSpinner`'s docstring: `start(tick)` and `stop()` |
+| 29 | `view_for` builds `SystemClock()` and `ThreadTicker()` inline | PR review, lens 5 | rejected | dropped because the lens found it acceptable: the tests set `reporter.spinner`, a plain attribute |
+| 30 | The read-again test's name said more than it checks | PR review, lens 6 | acted | renamed: the first event after the verify wait is the facts line |
