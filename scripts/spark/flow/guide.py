@@ -1,6 +1,7 @@
 """
 The guide of a project (P977, #1407): from the Phases `show_flow.reading_of` reads, the phase the person acts on now, who
-acts and one sentence for it, the phases done and later, the needs set aside, and why there is no simulation. It reads
+acts and one sentence for it, where each phase stands (its station, P1119), the phases done and later built from the
+stations, the needs set aside, and why there is no simulation. It reads
 and never writes. `flow.py show` and `flow.py page` answer it as `data.guide`.
 """
 
@@ -195,13 +196,6 @@ def now_of(now, open_needs, fact, count, written=True):
             "needs": open_needs if now.phase == flow_codes.PARTS else [], "steps": count}
 
 
-def label(phase, no_model):
-    """The name the guide shows for `phase`: one counted as done because Wokwi has no model of the board says so."""
-    if phase.phase in no_model:
-        return flow_codes.BUILT_NO_SIMULATION if phase.phase == flow_codes.BUILD else flow_codes.SIMULATE_NO_MODEL
-    return phase.phase
-
-
 def has_no_picks(by_name):
     """True when the needs phase has no status: no needs are written, so the requirements have no picks behind them (a
     requirements.json written by hand, or a last need dropped). An unreadable needs.json gives could-not-run, so false."""
@@ -209,21 +203,68 @@ def has_no_picks(by_name):
     return needs_phase is not None and needs_phase.status is None
 
 
-def done_of(phases, at, no_model, sheet_done, no_picks=False):
-    """The names of the phases before `at`: a simulate with no model is later, and the breadboard is there only when
-    `sheet_done` (a current sheet once the wiring is no longer part of now), with what spark cannot see. With `no_picks`
-    the needs and parts are left out (nobody did them) and the requirements say so (P980)."""
-    done = []
-    for phase in phases[:at]:
-        if no_picks and phase.phase in (flow_codes.NEEDS, flow_codes.PARTS):
-            continue
-        if no_picks and phase.phase == flow_codes.REQUIREMENTS:
-            done.append(flow_codes.REQUIREMENTS_NO_PICKS)
-        elif phase.phase == flow_codes.BREADBOARD:
-            done += [flow_codes.SHEET_UNSEEN] if sheet_done else []
-        elif not (phase.phase == flow_codes.SIMULATE and phase.phase in no_model):
-            done.append(label(phase, no_model))
-    return done
+def place_of(index, name, at, no_model, breadboard_place):
+    """Where the phase `name`, at `index` of the phases, stands beside the now phase at `at` (P1119): done before it, now,
+    later after it. A simulate with no model is later wherever it stands, and the breadboard is now while
+    `breadboard_place` is."""
+    if name == flow_codes.SIMULATE and name in no_model:
+        return flow_codes.LATER_PLACE
+    if name == flow_codes.BREADBOARD and breadboard_place == flow_codes.NOW_PLACE:
+        return flow_codes.NOW_PLACE
+    return flow_codes.DONE_PLACE if index < at else flow_codes.NOW_PLACE if index == at else flow_codes.LATER_PLACE
+
+
+def note_of(phase, place, no_model, breadboard_place, no_picks):
+    """The one note of `phase` at `place` (P1119, `flow_codes.NO_PICKS_NOTE` and its kin), or None. Before now, with
+    `no_picks` the needs and the parts are not done and the requirements have no picks behind them (P980), and the breadboard
+    is unseen while `breadboard_place` is done (a current sheet) or has no sheet. A phase counted as done for no model says
+    so, and a later phase whose status is ok may change."""
+    name, done = phase.phase, place == flow_codes.DONE_PLACE
+    if done and no_picks and name in (flow_codes.NEEDS, flow_codes.PARTS):
+        return flow_codes.NOT_DONE_NOTE
+    if done and no_picks and name == flow_codes.REQUIREMENTS:
+        return flow_codes.NO_PICKS_NOTE
+    if name in no_model:
+        return flow_codes.NO_MODEL_NOTE
+    if done and name == flow_codes.BREADBOARD:
+        return flow_codes.UNSEEN_NOTE if breadboard_place == flow_codes.DONE_PLACE else flow_codes.NO_SHEET_NOTE
+    return flow_codes.MAY_CHANGE_NOTE if place == flow_codes.LATER_PLACE and phase.status == OK else None
+
+
+def stations_of(phases, at, no_model, breadboard_place, no_picks=False):
+    """
+    The station of each of the `phases` the guide is given, in their order (P1119): `{"phase", "place", "note"}`, with
+    `place_of` and `note_of`. `at` is the index of the now phase, `len(phases)` with none. `no_model` holds the phases
+    counted as done for no Wokwi model. `breadboard_place` is where the breadboard stands: NOW_PLACE beside the firmware
+    (the two jobs), DONE_PLACE with a current sheet, else None. `no_picks`: no needs are written (`has_no_picks`). Pure: it
+    reads no file.
+    """
+    stations = []
+    for index, phase in enumerate(phases):
+        place = place_of(index, phase.phase, at, no_model, breadboard_place)
+        stations.append({"phase": phase.phase, "place": place, "note": note_of(phase, place, no_model, breadboard_place, no_picks)})
+    return stations
+
+
+def note_words(station):
+    """The words of a station's note (P1119): its phase's own (`flow_codes.STATION_NOTES_BY_PHASE`), else the note's
+    (`flow_codes.STATION_NOTES`). None for no note, or a note of LEFT_OUT_NOTES, which is in no list and on no line."""
+    note = station["note"]
+    if note is None or note in flow_codes.LEFT_OUT_NOTES:
+        return None
+    return flow_codes.STATION_NOTES_BY_PHASE.get((note, station["phase"])) or flow_codes.STATION_NOTES[note]
+
+
+def named(station):
+    """The name DONE and LATER show for a station: its phase, with its note's words in parentheses (NOTED_PHASE)."""
+    words = note_words(station)
+    return flow_codes.NOTED_PHASE % (station["phase"], words) if words else station["phase"]
+
+
+def names_at(stations, place):
+    """The names (`named`) of the `stations` at `place`, in order: `done` with DONE_PLACE and `later` with LATER_PLACE. A
+    station with a note of LEFT_OUT_NOTES is in no list."""
+    return [named(station) for station in stations if station["place"] == place and station["note"] not in flow_codes.LEFT_OUT_NOTES]
 
 
 def with_wiring(project, now, by_name, count):
@@ -241,7 +282,8 @@ def stands_at_of(guide):
 def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     """
     What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring}, "done", "later", "set_aside", "no_simulation", "no_open_phase", "wired"}`. `steps` counts the wiring
+    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring}, "stations", "done", "later", "set_aside", "no_simulation", "no_open_phase", "wired"}`.
+    `stations` places each phase beside the now (`stations_of`, P1119), and `done` and `later` are built from it. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
     run's DeployState (P1043), None to read it here. `board` is the run's WiredBoard (P1044), None to read it here:
     `wired` is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, or None when spark saw none.
@@ -261,13 +303,13 @@ def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     written = not (now and now.phase == flow_codes.SIMULATE) or bool(scenario_names(project))
     said = with_deploy_now(project, now_of(now, open_needs, fact, count, written), now, deploy) if now else None
     said = dict(said, with_wiring=with_wiring(project, now, by_name, count)) if said else None
-    sheet_done = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
-    later = [label(phase, no_model) + (flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else "")
-             for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]
+    # beside the firmware, the wiring is part of now
+    breadboard_place = flow_codes.NOW_PLACE if two_jobs else flow_codes.DONE_PLACE if is_sheet_current(project, by_name) else None
+    stations = stations_of(phases, at, no_model, breadboard_place, has_no_picks(by_name))
     if board is None:
         board = wired_board.read_wired(project, deploy if deploy is not None else deploy_reading.read_deploy(project))
-    return {"now": said, "done": done_of(phases, at, no_model, sheet_done, has_no_picks(by_name)), "later": later,
-            "set_aside": [need["id"] for need in set_aside(listed)],
+    return {"now": said, "stations": stations, "done": names_at(stations, flow_codes.DONE_PLACE),
+            "later": names_at(stations, flow_codes.LATER_PLACE), "set_aside": [need["id"] for need in set_aside(listed)],
             "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None,
             "no_open_phase": no_open_phase(said, by_name), "wired": wired_board.wired_data(board)}
 # --- end MVP ---

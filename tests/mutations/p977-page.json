@@ -92,14 +92,14 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "a phase after now that is ok loses its done suffix (P977 PR 2 review)",
-  "find": "(flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else \"\")",
-  "replace": "\"\""
+  "find": "    return flow_codes.MAY_CHANGE_NOTE if place == flow_codes.LATER_PLACE and phase.status == OK else None",
+  "replace": "    return None"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "every phase after now gets the done suffix (P977 PR 2 review)",
-  "find": "flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else \"\"",
-  "replace": "flow_codes.LATER_BUT_DONE if index > at else \"\""
+  "find": "if place == flow_codes.LATER_PLACE and phase.status == OK else None",
+  "replace": "if place == flow_codes.LATER_PLACE else None"
  },
  {
   "file": "scripts/spark/flow/page_sections.py",

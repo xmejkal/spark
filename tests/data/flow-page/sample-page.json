@@ -130,13 +130,40 @@
    ],
    "steps": null
   },
+  "stations": [
+   {
+    "phase": "idea",
+    "place": "done",
+    "note": null
+   },
+   {
+    "phase": "needs",
+    "place": "done",
+    "note": null
+   },
+   {
+    "phase": "parts",
+    "place": "now",
+    "note": null
+   },
+   {
+    "phase": "requirements",
+    "place": "later",
+    "note": null
+   },
+   {
+    "phase": "build",
+    "place": "later",
+    "note": "may-change"
+   }
+  ],
   "done": [
    "idea",
    "needs"
   ],
   "later": [
    "requirements",
-   "build"
+   "build (done, may change)"
   ],
   "set_aside": [],
   "no_simulation": null

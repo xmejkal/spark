@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "P1062: the freshness line stands after the NOW box (test_flow_page.TheSliceOneOrderTest, test 1)",
-  "find": "FreshHtmlLine(), IntroHtmlLine(), GuideHtmlSection()",
-  "replace": "IntroHtmlLine(), GuideHtmlSection(), FreshHtmlLine()"
+  "find": "FreshHtmlLine(), IntroHtmlLine(), StationsHtmlLine(), GuideHtmlSection()",
+  "replace": "IntroHtmlLine(), StationsHtmlLine(), GuideHtmlSection(), FreshHtmlLine()"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",

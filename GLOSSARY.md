@@ -507,6 +507,15 @@ It lives in `scripts/spark/sourcing/matching.py` as `Offer`. `parts.py --offer K
 failure behind it:** a chooser saw only a score and a label for a candidate, not what the part says of itself. The
 flow's offer is another word: a step a phase lists, `{key, label, effect, makes_stale}` (`phase_readers.Offer`, P829).
 
+### Station, and place
+
+One phase of a project as the guide places it: `{phase, place, note}` in `data.guide.stations`
+(`stations_of` in `scripts/spark/flow/guide.py`, P1119). Its *place* is `done`, `now` or `later` beside the phase to act
+on now. Its *note* says why it stands there, or why it is in no list. The page draws the stations as its station line,
+then the three steps spark does not have yet, greyed. `done` and `later` are built from the stations. **The failure
+behind it:** the page said where a project stands only in text, and the PO, walking it, found "way too much text" and the
+next step "not visible really". DONE and LATER each had their own rule for where a phase stands.
+
 ### Fingerprint
 
 The sha256 of a project's flow as a click sees it: the current offers of `flow.py show` (each key, effect and

@@ -110,20 +110,20 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the breadboard never shows in done (P977 review 7)",
-  "find": "            done += [flow_codes.SHEET_UNSEEN] if sheet_done else []",
-  "replace": "            pass"
+  "find": "        return flow_codes.UNSEEN_NOTE if breadboard_place == flow_codes.DONE_PLACE else flow_codes.NO_SHEET_NOTE",
+  "replace": "        return flow_codes.NO_SHEET_NOTE"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the breadboard shows in done while the wiring is part of now (P977 review 7)",
-  "find": "    sheet_done = is_sheet_current(project, by_name) and not two_jobs",
-  "replace": "    sheet_done = is_sheet_current(project, by_name)"
+  "find": "    breadboard_place = flow_codes.NOW_PLACE if two_jobs else flow_codes.DONE_PLACE",
+  "replace": "    breadboard_place = flow_codes.DONE_PLACE"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "a passed simulate before now leaves the later list (P977)",
-  "find": "for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]",
-  "replace": "for index, phase in enumerate(phases) if index > at]"
+  "find": "    if name == flow_codes.SIMULATE and name in no_model:\n        return flow_codes.LATER_PLACE\n",
+  "replace": ""
  },
  {
   "file": "scripts/spark/flow/guide.py",

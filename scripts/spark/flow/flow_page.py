@@ -2,8 +2,8 @@
 The page of a project (P827, #1185): the flow's phases as one plain HTML file, `page.html`, each with a status word and a
 mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it, as an
 ordered table of sections (`SECTIONS`, P1123, whose Renderers live in `page_sections`, P1128) in the slice 1 order
-(P1062): the freshness line, the NOW box, the Parts, Wiring and Pictures folds, the bench note, and the developer fold,
-always closed. The page adds no tick of its own: a phase whose status is not ok never shows one (`shown_phase`). It
+(P1062): the freshness line, the station line (P1119), the NOW box, the Parts, Wiring and Pictures folds, the bench note,
+and the developer fold, always closed. The page adds no tick of its own: a phase whose status is not ok never shows one (`shown_phase`). It
 writes the same bytes for the same flow. It loads the font's stylesheet from fonts.googleapis.com (P1120), which then
 loads the font files from fonts.gstatic.com; Google gets each visitor's IP address and browser string (User-Agent), and
 from a published page its origin. With no network the page uses the system fonts. Its one script (P829 PR 3) does
@@ -19,8 +19,8 @@ from spark.breadboard.tabbed_page import token_styles
 from spark.flow import flow_codes, request_codes
 from spark.flow.fingerprint import SHORT
 from spark.flow.page_sections import (WIRING, DeveloperHtmlFold, FreshHtmlLine, GuideHtmlSection, IntroHtmlLine, NotesHtmlSection,
-                                      PartsHtmlFold, PicturesHtmlFold, StandsAtHtmlLine, TitleHtmlHeading, WiringHtmlFold, _text,
-                                      is_sendable)
+                                      PartsHtmlFold, PicturesHtmlFold, StandsAtHtmlLine, StationsHtmlLine, TitleHtmlHeading,
+                                      WiringHtmlFold, _text, is_sendable)
 from spark.flow.phase_readers import MARKS
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import MONTHS
@@ -79,6 +79,32 @@ def page_words(phases):
             "could_not_run": flow_codes.COULD_NOT_RUN_SAYS,
             "refused": {meanings[name]: said for name, said in flow_codes.REFUSED_SAYS.items()},
             "marks": dict(marks, **{"not-run": flow_codes.NOT_RUN_MARK})}
+
+
+#: The station line's style (P1119): twelve equal cells in a row. Each cell's `::before` is the 2px segment that leads to it,
+#: solid ink up to now and dashed muted after it, dotted for an unbuilt step after a thin divider; the first has none. A
+#: note's words stand small and muted under the name (the PO's "Visible note"). A mark
+#: stands on the ground over its segment, and each now station's mark has a 2px ink ring. Only ink and muted: no teal. On a
+#: phone the names and notes are clipped (a screen reader still reads them), the marks are 14px and the caption, of no height
+#: elsewhere, names the now stations on one line.
+STATIONS_STYLE = (".stations{display:flex;list-style:none;padding:0;margin:var(--space-l) 0 var(--space-s)}"
+                  ".stations>li{flex:1 1 0;min-width:0;position:relative;text-align:center;overflow-wrap:normal}"
+                  ".stations>li::before{content:\"\";position:absolute;top:13px;left:-50%;width:100%;border-top:2px solid var(--ink)}"
+                  ".stations>li:first-child::before{content:none}"
+                  ".stations>[data-place=\"later\"]::before{border-top:2px dashed var(--muted)}"
+                  ".stations>.unbuilt::before{border-top:2px dotted var(--muted)}"
+                  ".stations>li:not(.unbuilt)+.unbuilt{border-left:1px solid var(--muted)}"
+                  ".stations .mark{position:relative;display:inline-block;box-sizing:border-box;width:28px;height:28px;"
+                  "line-height:24px;border:2px solid transparent;border-radius:50%;background:var(--bg)}"
+                  ".stations [aria-current] .mark{border-color:var(--ink)}"
+                  ".stations .unbuilt .mark{border:2px dotted var(--muted)}"
+                  ".stations .name{display:block}.stations .note{display:block;font-size:13px;line-height:1.3;color:var(--muted)}"
+                  ".unbuilt{color:var(--muted)}"
+                  ".clip{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}"
+                  ".stations-now{max-height:0;overflow:hidden;white-space:nowrap;margin:0}"
+                  "@media (max-width: 600px){.stations .name,.stations .note{position:absolute;width:1px;height:1px;overflow:hidden;"
+                  "clip:rect(0 0 0 0);white-space:nowrap}.stations .mark{width:14px;height:14px;line-height:10px;font-size:10px}"
+                  ".stations>li::before{top:6px}.stations-now{max-height:none;margin:0 0 var(--space-s)}}")
 
 
 class FlowHtmlPage:
@@ -153,9 +179,9 @@ class FlowHtmlPage:
              "border:1px solid var(--line);border-radius:var(--radius-frame)}.fig svg{display:block;width:100%;"
              "height:auto}.pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;"
              "color:var(--muted)}.sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;"
-             "vertical-align:-2px;border:1px solid var(--line)}")
+             "vertical-align:-2px;border:1px solid var(--line)}" + STATIONS_STYLE)
     #: The page's sections, in the order it stands (P1062, P1123): a new part of the page is one more entry here.
-    SECTIONS = (TitleHtmlHeading(), FreshHtmlLine(), IntroHtmlLine(), GuideHtmlSection(), StandsAtHtmlLine(),
+    SECTIONS = (TitleHtmlHeading(), FreshHtmlLine(), IntroHtmlLine(), StationsHtmlLine(), GuideHtmlSection(), StandsAtHtmlLine(),
                 PartsHtmlFold(), WiringHtmlFold(), PicturesHtmlFold(), NotesHtmlSection(), DeveloperHtmlFold())
 
     def text(self, page):

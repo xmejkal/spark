@@ -5,54 +5,63 @@
   {
    "key": "phase:idea",
    "phase": "idea",
+   "name": "Idea",
    "usual_by": "you",
    "moment": "At the desk, in a chat with Claude: you say what you want the gadget to do."
   },
   {
    "key": "phase:needs",
    "phase": "needs",
+   "name": "Needs",
    "usual_by": "claude",
    "moment": "At the desk: you read the needs Claude wrote from your goal and agree or change them."
   },
   {
    "key": "phase:parts",
    "phase": "parts",
+   "name": "Parts",
    "usual_by": "you",
    "moment": "At the desk: you pick a part for each need, the parts you own first."
   },
   {
    "key": "phase:requirements",
    "phase": "requirements",
+   "name": "Parts list",
    "usual_by": "claude",
    "moment": "At the desk: Claude writes the parts list from your picks. You wait."
   },
   {
    "key": "phase:build",
    "phase": "build",
+   "name": "Board files",
    "usual_by": "claude",
    "moment": "At the desk: spark builds the board files in seconds. You read what built and what was skipped."
   },
   {
    "key": "phase:breadboard",
    "phase": "breadboard",
+   "name": "Wiring",
    "usual_by": "you",
    "moment": "At the bench, hands busy, the USB cable out: you wire one step at a time, often from a phone."
   },
   {
    "key": "phase:firmware",
    "phase": "firmware",
+   "name": "Firmware",
    "usual_by": "claude",
    "moment": "At the desk, in the chat: you say what the gadget does, and Claude writes the firmware."
   },
   {
    "key": "phase:simulate",
    "phase": "simulate",
+   "name": "Simulation",
    "usual_by": "your terminal",
    "moment": "At the desk: you run the simulation in your terminal and read whether it passed."
   },
   {
    "key": "phase:deploy",
    "phase": "deploy",
+   "name": "On the board",
    "usual_by": "your terminal",
    "moment": "At the bench, the board on USB: you run the deploy in your terminal and look at the board."
   },
@@ -873,19 +882,19 @@
   },
   {
    "key": "unbuilt:perfboard",
-   "name": "perfboard",
+   "name": "Perfboard",
    "status": "not built",
    "moment": "At the bench with a soldering iron: the same circuit, soldered to last. Optional."
   },
   {
    "key": "unbuilt:pcb",
-   "name": "pcb",
+   "name": "PCB",
    "status": "not built",
    "moment": "At the desk: a board to order, once the breadboard works."
   },
   {
    "key": "unbuilt:case",
-   "name": "case",
+   "name": "Case",
    "status": "not built",
    "moment": "At the printer: a case for the board."
   }

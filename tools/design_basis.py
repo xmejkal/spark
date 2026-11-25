@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Write the design basis (P1102): what every interface of spark shows, read from the code. The phases with their usual actor,
-the statuses with their mark, the actors, the offers and the Operations, each with a fixed key. The person's moment at each
-phase and the steps that are not built yet are hand-written here, with a date.
+Write the design basis (P1102): what every interface of spark shows, read from the code. The phases with their usual actor
+and plain name, the statuses with their mark, the actors, the offers, the Operations and the steps that are not built yet
+(`flow_codes.UNBUILT_STEPS`, P1119), each with a fixed key. The person's moment at each phase is hand-written here, with a
+date.
 
     python3 tools/design_basis.py            # prints docs/guide/design-basis.md
     python3 tools/design_basis.py --write    # writes it and docs/guide/design-basis.json; tests/test_design_basis.py fails while they are stale
@@ -31,20 +32,14 @@ MOMENTS = {
     "simulate": "At the desk: you run the simulation in your terminal and read whether it passed.",
     "deploy": "At the bench, the board on USB: you run the deploy in your terminal and look at the board.",
 }
-#: The steps the code does not have yet, hand-written: (name, moment).
-UNBUILT = (
-    ("perfboard", "At the bench with a soldering iron: the same circuit, soldered to last. Optional."),
-    ("pcb", "At the desk: a board to order, once the breadboard works."),
-    ("case", "At the printer: a case for the board."),
-)
-NOT_BUILT = "not built"
 NO_WORD = "(the mark alone)"
 #: The Op cell of a chat offer, which has no step of spark's: Claude does its job in the chat (P1122).
 NO_OP = "none"
 INTRO = """How to read this page:
 
-- The moment of each phase and the unbuilt steps are hand-written, last on %s.
-- The phases, statuses, actors and Operations are read from the code.
+- The moment of each phase and of each unbuilt step is hand-written, last on %s. The unbuilt steps stand in
+  `flow_codes.UNBUILT_STEPS`, which the page's station line reads too.
+- The phases with their plain names, the statuses, actors and Operations are read from the code.
 - The offer kinds, their phases, labels and tells are read from `flow_codes.OFFER_KINDS`. Only each step is written in the tool.
 - A key is `<group>:<name>`, and the group makes it unique.
 - A phase reader is the code that reads one phase of a project. The usual actor of a phase is the one its reader names.
@@ -100,8 +95,8 @@ class DesignBasis:
     def of(cls):
         flow_codes, phase_readers, run_request, _, catalogue, describe = spark_modules()
         usual = {reader.PHASE: reader.BY for reader in phase_readers.READERS}
-        items = [{"key": "phase:" + phase, "phase": phase, "usual_by": usual[phase], "moment": MOMENTS.get(phase, "")}
-                 for phase in flow_codes.PHASES]
+        items = [{"key": "phase:" + phase, "phase": phase, "name": flow_codes.PHASE_NAMES.get(phase), "usual_by": usual[phase],
+                  "moment": MOMENTS.get(phase, "")} for phase in flow_codes.PHASES]
         items += [{"key": "status:" + slug(status), "status": status, "word": word, "mark": mark}
                   for status, (word, mark) in phase_readers.MARKS.items()]
         items += [{"key": "by:" + slug(name), "name": name} for name in (flow_codes.BY_YOU, flow_codes.BY_CLAUDE, flow_codes.BY_TERMINAL)]
@@ -114,23 +109,26 @@ class DesignBasis:
             items.append({"key": "op:" + op, "op": op, "area": area, "summary": " ".join(describe.summary_of(operation).split()),
                           "effects": describe.effect_words_of(operation), "data_keys": list(operation.data_keys),
                           "network": op in catalogue.NETWORK})
-        items += [{"key": "unbuilt:" + name, "name": name, "status": NOT_BUILT, "moment": moment} for name, moment in UNBUILT]
+        items += [{"key": "unbuilt:" + key, "name": name, "status": flow_codes.NOT_BUILT, "moment": moment}
+                  for key, name, moment in flow_codes.UNBUILT_STEPS]
         return cls(items)
 
     def of_group(self, name):
         return [one for one in self.items if one["key"].startswith(name + ":")]
 
     def missing(self):
-        """The phases with no moment, then the moments with no phase, by name."""
+        """The phases with no moment, then the moments with no phase, then the phases with no plain name (P1119), by phase."""
         phases = [one["phase"] for one in self.of_group("phase")]
-        return [phase for phase in phases if phase not in MOMENTS] + [phase for phase in MOMENTS if phase not in phases]
+        return [phase for phase in phases if phase not in MOMENTS] + [phase for phase in MOMENTS if phase not in phases] + [
+            one["phase"] for one in self.of_group("phase") if not one["name"]]
 
     def json_text(self):
         return json.dumps({"header": HEADER, "hand_written": HAND_WRITTEN, "items": self.items}, indent=1, ensure_ascii=False) + "\n"
 
     def markdown(self):
-        lines = ["# Design basis", "", HEADER, "", INTRO, "", "## Phases", "", "| Key | Phase | Usual actor | Moment |", "|---|---|---|---|"]
-        lines += ["| `%(key)s` | %(phase)s | %(usual_by)s | %(moment)s |" % one for one in self.of_group("phase")]
+        lines = ["# Design basis", "", HEADER, "", INTRO, "", "## Phases", "", "| Key | Phase | Name | Usual actor | Moment |",
+                 "|---|---|---|---|---|"]
+        lines += ["| `%(key)s` | %(phase)s | %(name)s | %(usual_by)s | %(moment)s |" % one for one in self.of_group("phase")]
         lines += ["", "## Statuses", "", "| Key | Word | Mark |", "|---|---|---|"]
         lines += ["| `%s` | %s | %s |" % (one["key"], one["word"] or NO_WORD, one["mark"]) for one in self.of_group("status")]
         lines += ["", "## Actors", ""] + ["- `%(key)s`: %(name)s" % one for one in self.of_group("by")]
@@ -147,8 +145,8 @@ class DesignBasis:
                               "  - Effects: %s. Data keys: %s." % (", ".join(one["effects"]) or "none, it only reads",
                                                                     ", ".join(one["data_keys"]) or "none"),
                               "  - Summary: %s" % one["summary"]]
-        lines += ["", "## Unbuilt steps", "", "| Key | Status | Moment |", "|---|---|---|"]
-        lines += ["| `%(key)s` | %(status)s | %(moment)s |" % one for one in self.of_group("unbuilt")]
+        lines += ["", "## Unbuilt steps", "", "| Key | Name | Status | Moment |", "|---|---|---|---|"]
+        lines += ["| `%(key)s` | %(name)s | %(status)s | %(moment)s |" % one for one in self.of_group("unbuilt")]
         return "\n".join(lines) + "\n"
 
 
