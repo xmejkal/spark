@@ -14,7 +14,9 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/bench.py" show --json
 With `--json` it prints the envelope, as `parts.py` does, with `tool` `bench` and `op` `show-bench`. Its `data` holds
 `boards`: one row per board, in the order `mpremote devs` lists them. `[]` is no board on USB, a complete answer.
 `null` is a list that did not run, or a store that cannot be read. It is never "no board", and `unchecked` holds
-`list_failed`, `tool_missing` or `store_problem`.
+`list_failed`, `tool_missing`, `store_problem`, `file_refused` or `tools_list_broken`. The last two are a tools file
+that spark cannot read, or one that is not a tools list. The sentence names the file, and the fix says what to do with
+it (P1058).
 
 | key | holds |
 | --- | --- |
@@ -89,7 +91,7 @@ The envelope has `op` `record-deploy` and `data` `{entry, mac, device}`. The ent
 at the call, with its zone. `verdict` is `ready not read`. Each `null` means that spark read nothing. Each stop writes
 nothing, exits 2, and its fix names the next command. The sentence of `not_registered` and `cannot_tell_board` says
 "Nothing was written." The last line on stderr says it for these codes: `no_port`, `two_boards` (give `--port`),
-`port_not_listed`, `tool_missing`, `list_failed` and `store_problem`.
+`port_not_listed`, `tool_missing`, `file_refused`, `tools_list_broken`, `list_failed` and `store_problem`.
 
 The deploy tool of pixel-games records since P921 (#1303). When the launcher file is there, its deploy runs the
 launcher once, after the last copy and before the reset. It prints one line that starts with `spark's store:`. The line

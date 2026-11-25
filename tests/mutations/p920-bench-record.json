@@ -74,7 +74,7 @@
  {
   "file": "scripts/spark/bench/record_deploy.py",
   "name": "a stop that names no fix names no next command",
-  "find": "        return stopped._replace(findings=[found._replace(fix=found.fix or fix) for found in stopped.findings],",
+  "find": "        return stopped._replace(findings=[found._replace(fix=fix if found.code in TOOLS_FILE_CODES else found.fix or fix)\n                                          for found in stopped.findings],",
   "replace": "        return stopped._replace(findings=list(stopped.findings),"
  },
  {

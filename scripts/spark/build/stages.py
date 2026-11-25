@@ -90,6 +90,9 @@ SCHEMATIC_REFUSED_ENDING = StageEnding(build_codes.SCHEMATIC_REFUSED, COULD_NOT_
 SCHEMATIC_NOTED_ENDING = StageEnding(build_codes.SCHEMATIC_NOTED, PROBLEMS, "%s")
 ENGINE_MISSING_ENDING = StageEnding(build_codes.TOOL_MISSING, COULD_NOT_RUN,
                                     "%s — so the chain was not exercised; /spark:setup installs it")
+#: A tools file the engine lookup cannot read, or one that is no tools list (P1058): its own code, and no /spark:setup tail.
+TOOLS_FILE_REFUSED_ENDING = StageEnding(build_codes.FILE_REFUSED, COULD_NOT_RUN, "%s — so the chain was not exercised")
+TOOLS_LIST_BROKEN_ENDING = StageEnding(build_codes.TOOLS_LIST_BROKEN, COULD_NOT_RUN, "%s — so the chain was not exercised")
 TOOL_CANNOT_BUILD_ENDING = StageEnding(build_codes.TOOL_CANNOT_BUILD, COULD_NOT_RUN,
                                        "%s (%s) cannot build even a trivial board from here, so this is the toolchain, not "
                                        "the design. Use the project's own tsci (npm i @tscircuit/cli in the project) or one "
@@ -137,8 +140,9 @@ SCHEMATIC_NOTES = StageDefinition("schematic-notes", "what the board emitter not
 FOOTPRINT = StageDefinition("footprint", "the board's footprint that board.tsx imports, drawn with the design's rules",
                             (DESIGN_ERROR, FOOTPRINT_EMITTER_CRASHED_ENDING, BOARD_ONLY_ENDING))
 BUILD = StageDefinition("build", "the board engine (tsci) builds board.tsx, and the copper is counted",
-                        (ENGINE_MISSING_ENDING, TIMED_OUT_ENDING, TOOL_CANNOT_BUILD_ENDING, NO_CIRCUIT_ENDING,
-                         PART_STRANDED_ENDING, CIRCUIT_ERRORS_ENDING, NOT_ROUTED_ENDING, BOARD_ONLY_ENDING))
+                        (ENGINE_MISSING_ENDING, TOOLS_FILE_REFUSED_ENDING, TOOLS_LIST_BROKEN_ENDING, TIMED_OUT_ENDING,
+                         TOOL_CANNOT_BUILD_ENDING, NO_CIRCUIT_ENDING, PART_STRANDED_ENDING, CIRCUIT_ERRORS_ENDING,
+                         NOT_ROUTED_ENDING, BOARD_ONLY_ENDING))
 SIMULATION = StageDefinition("simulation", "the Wokwi diagram, its chips and wokwi.toml; no simulation runs",
                              (CONVERTER_MISSING_ENDING, FACT_MISSING_ENDING, NO_WOKWI_PART_TYPE_ENDING,
                               CHIP_NOT_COMPILED_ENDING, TIMED_OUT_ENDING, CONVERTER_LACKS_PART_ENDING, NO_DIAGRAM_ENDING,

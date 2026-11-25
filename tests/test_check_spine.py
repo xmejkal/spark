@@ -3467,6 +3467,7 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
         "stage_timed_out", "converter_lacks_part", "no_diagram",
         "board_unusable", "board_only_with_parts", "no_parts", "broken.code", "refused.code", "stage_crashed",
         "schematic_refused", "schematic_noted", "disagreement.code", "stage_crashed", "tool_missing",
+        "file_refused", "tools_list_broken",  # P1058: a tools file the engine lookup cannot read, or no tools list
         "tool_cannot_build", "design_not_built", "stage_timed_out", "part_stranded", "design_not_built", "not_routed",
         "simulation_fact_missing", "diagram_unwired", "every_part_skipped", "chip_not_compiled",
         "board_not_in_wokwi", "board_only", "simulation_fact_missing",  # P977: the board with no Wokwi part has its own code
@@ -3496,6 +3497,23 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
             last = build_stages(requirements, workdir)[-1]
             self.assertEqual((last.name, last.code), wanted, requirements)
         self.assertIsNone(build_stages({"board": "firebeetle2-esp32s3"}, workdir)[0].code)  # the board stage, ok
+
+    def test_a_store_tools_file_that_is_not_json_ends_the_build_with_its_own_code(self):
+        # P1058 (#1555): the real path, no patch. The engine lookup reads the store's tools file before it looks for tsci,
+        # so this holds with tsci on PATH or without it (the council's H)
+        home, workdir = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (home / "tools.json").write_text('{"tools": ')
+        (workdir / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [
+            "l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}))
+        done = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_spine.py"), str(workdir / "requirements.json"),
+                               "--json"], capture_output=True, text=True, env=dict(os.environ, SPARK_HOME=str(home)),
+                              cwd=str(workdir), timeout=120)
+        self.assertNotIn("Traceback", done.stderr)
+        build = json.loads(done.stdout)["stages"][-1]
+        self.assertEqual((done.returncode, build["name"], build["status"], build["code"]),
+                         (2, "build", "could-not-run", "tools_list_broken"), done.stderr)
+        self.assertIn("is not JSON", build["detail"])
+        self.assertNotIn("/spark:setup", build["detail"])
 
     def test_a_sheet_not_written_carries_its_code_into_the_json(self):
         project = Path(tempfile.mkdtemp())

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 from spark.records import board_records
 from spark.build import board_engine
+from spark.build import build_codes
 from spark.build import project_setup
 from spark.build.board_engine import convert, converter_stage_problem, find_converter
 from spark.build.pour_contact import PourContact
@@ -19,7 +20,8 @@ from spark.build.stages import (BOARD, BOARD_EMITTER_CRASHED_ENDING, BOARD_ONLY_
                                 FOOTPRINT, FOOTPRINT_EMITTER_CRASHED_ENDING, NO_CIRCUIT_ENDING, NO_FOOTPRINT_HINT,
                                 NO_PARTS_ENDING, NO_WOKWI_PART_TYPE_ENDING, NOT_ROUTED_ENDING, PART_STRANDED_ENDING, PARTS,
                                 SCHEMATIC, SCHEMATIC_NOTED_ENDING, SCHEMATIC_NOTES, SCHEMATIC_REFUSED_ENDING, SIMULATION,
-                                STAGE_NAMED, TIMED_OUT_ENDING, TOOL_CANNOT_BUILD_ENDING)
+                                STAGE_NAMED, TIMED_OUT_ENDING, TOOL_CANNOT_BUILD_ENDING, TOOLS_FILE_REFUSED_ENDING,
+                                TOOLS_LIST_BROKEN_ENDING)
 from spark.design import board_emitter  # read by name, so a test's patch of `board_emitter.read_inputs` reaches the emitter
 from spark.design import board_sections
 from spark.design import power_rails
@@ -315,6 +317,13 @@ class BuildService:
                 said = "the board engine was not found"
             except tool_finder.ToolError as missing:
                 said = str(missing)  # the tools list's own sentence, with what installs it (P82)
+                # P1058: a tools file spark cannot read, or one that is no tools list, keeps its code; no install fixes it
+                if missing.code == build_codes.FILE_REFUSED:
+                    stages.append(BUILD.ended(TOOLS_FILE_REFUSED_ENDING, said))
+                    return None
+                if missing.code == build_codes.TOOLS_LIST_BROKEN:
+                    stages.append(BUILD.ended(TOOLS_LIST_BROKEN_ENDING, said))
+                    return None
             stages.append(BUILD.ended(ENGINE_MISSING_ENDING, said))
             return None
         ran = self._run_engine(engine, inputs.workdir, stages)
