@@ -1599,26 +1599,28 @@ class TheGuideSectionTest(unittest.TestCase):
         self.assertEqual(order, sorted(order))
 
     def test_each_line_shows_its_items_in_order_and_an_empty_list_shows_no_line(self):
-        # P1062: the NOW box (who acts, then NEXT), then the muted lines
+        # P1062: the NOW box (who acts, then NEXT), then the muted lines. P1119: the station line says what is done and
+        # later, so the page draws no DONE or LATER line; SET ASIDE stays
         lines, _section = guide_lines(guide_page(a_guide()))
-        self.assertEqual(lines, [("NOW (build), by claude", ""), ("NEXT", "Ask Claude to build the board."), ("DONE", "idea, needs"),
-                                 ("LATER", "firmware, deploy"), ("SET ASIDE", "stick")])
+        self.assertEqual(lines, [("NOW (build), by claude", ""), ("NEXT", "Ask Claude to build the board."), ("SET ASIDE", "stick")])
         lines, _section = guide_lines(guide_page(a_guide(done=[], set_aside=[])))
-        self.assertEqual([label for label, _rest in lines], ["NOW (build), by claude", "NEXT", "LATER"])
+        self.assertEqual([label for label, _rest in lines], ["NOW (build), by claude", "NEXT"])
         lines, _section = guide_lines(guide_page(a_guide(later=[])))
-        self.assertEqual([label for label, _rest in lines], ["NOW (build), by claude", "NEXT", "DONE", "SET ASIDE"])
+        self.assertEqual([label for label, _rest in lines], ["NOW (build), by claude", "NEXT", "SET ASIDE"])
+        for gone in ("<strong>DONE</strong>", "<strong>LATER</strong>", "idea, needs", "firmware, deploy"):
+            self.assertNotIn(gone, guide_page(a_guide()))
 
     def test_no_simulation_is_its_own_line_under_later(self):
         text = guide_page(a_guide(no_simulation="No simulation: Wokwi has no model of this board."))
         _lines, section = guide_lines(text)
         self.assertIn('<p class="muted">No simulation: Wokwi has no model of this board.</p>', section)
-        self.assertLess(section.index("firmware, deploy"), section.index("No simulation: Wokwi"))
+        self.assertLess(section.index('<p class="next"'), section.index("No simulation: Wokwi"))  # P1119: LATER is gone
         self.assertLess(section.index("No simulation: Wokwi"), section.index("SET ASIDE"))
         self.assertNotIn("No simulation", guide_page(a_guide()))
 
     def test_a_null_now_draws_no_now_line(self):
         lines, _section = guide_lines(guide_page(a_guide(now=None)))
-        self.assertEqual([label for label, _rest in lines], ["DONE", "LATER", "SET ASIDE"])
+        self.assertEqual([label for label, _rest in lines], ["SET ASIDE"])  # P1119: no DONE or LATER line
         self.assertNotIn("NOW", without_script(guide_page(a_guide(now=None))))
         self.assertNotIn('<div class="now">', guide_page(a_guide(now=None)))
 
@@ -1683,7 +1685,10 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
         written = write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one", "not-started"), a_phase("two", OK),
                                                                             a_phase("three", "not-started")), parts_of([]), store=store)
         self.assertEqual(written.guide["later"], ["two (done, may change)", "three"])
-        self.assertIn("<strong>LATER</strong> two (done, may change), three</p>", store.written[0][2])
+        # P1119: the page draws the station line, where two is later with its own tick, and no LATER line
+        self.assertIn('<li data-phase="two" data-place="later"><span class="mark" aria-hidden="true">✓</span><span class="name">two</span></li>',
+                      store.written[0][2])
+        self.assertNotIn("<strong>LATER</strong>", store.written[0][2])
 
     def test_write_page_draws_the_guide_it_answers(self):
         store = FakeStore()
@@ -1692,18 +1697,141 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
         text = store.written[0][2]
         self.assertEqual(text.count('<section id="guide">'), 1)
         self.assertEqual(written.guide["done"], ["one"])
-        self.assertIn("<strong>DONE</strong> one</p>", text)
+        self.assertIn('<li data-phase="one" data-place="done">', text)  # P1119: the station line, no DONE line
+        self.assertNotIn("<strong>DONE</strong>", text)
         self.assertNotIn("The project stands at", text)
 
     def test_no_home_path_reaches_the_guide_on_the_page_or_in_what_is_answered(self):
         home = Path(tempfile.mkdtemp()).resolve()
-        store = FakeStore()  # a phase's name reaches the guide's DONE line
+        store = FakeStore()  # a phase's name reaches the guide's station line (P1119)
         with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
             written = write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("read %s/secret" % home)),
                                  parts_of([]), store=store)
         self.assertNotIn(str(home), store.written[0][2])
-        self.assertIn("<strong>DONE</strong> read ~/secret</p>", store.written[0][2])
+        self.assertIn('<span class="name">read ~/secret</span>', store.written[0][2])
         self.assertEqual(written.guide["done"], ["read ~/secret"])
+
+
+def stations(*rows):
+    """The guide's `stations` (P1119) from (phase, place, note) rows."""
+    return [{"phase": phase, "place": place, "note": note} for phase, place, note in rows]
+
+
+def line_of(text):
+    """The station line: its `<ol>` and the caption under it, or None with no line."""
+    found = re.search(r'<ol class="stations".*?</ol>(?:\n<p class="stations-now"[^>]*>[^<]*</p>)?', text, re.S)
+    return found.group(0) if found else None
+
+
+def station_page(rows, phases=None, **changes):
+    """The page of `phases` (Phase dicts; by default one per row, each not started) with a guide whose stations are `rows`."""
+    phases = phases or [a_phase(phase, "not-started").to_dict() for phase, _place, _note in rows]
+    page = FlowPage("t", phases, phases[0]["phase"], [], [], None, None, None, a_guide(stations=stations(*rows), **changes))
+    return FlowHtmlPage().text(page)
+
+
+#: The rows of the two jobs beside the firmware (P1119): the breadboard is now with the firmware, with no note.
+TWO_JOBS = (("idea", "done", None), ("needs", "done", None), ("parts", "done", None), ("requirements", "done", None),
+            ("build", "done", None), ("breadboard", "now", None), ("firmware", "now", None), ("simulate", "later", None),
+            ("deploy", "later", None))
+
+
+class TheStationLineTest(unittest.TestCase):
+    """P1119: above the guide, one line of the stations the guide gives, as given: a mark and a plain name each, a ring on
+    each now station, then spark's three unbuilt steps greyed. It uses only ink and muted, and on a phone the names hide."""
+
+    def test_the_line_stands_after_the_intro_and_before_the_guide(self):
+        text = station_page(TWO_JOBS)
+        order = [text.index(mark) for mark in ('class="intro"', '<ol class="stations" aria-label="Where the project stands">',
+                                               '<section id="guide">')]
+        self.assertEqual(order, sorted(order))
+        self.assertEqual(text.count('<ol class="stations"'), 1)
+
+    def test_each_station_in_the_guide_s_order_with_its_place_mark_and_plain_name_then_the_three_unbuilt(self):
+        parsed = Parsed(line_of(station_page(TWO_JOBS)))
+        self.assertEqual([(attrs["data-phase"], attrs["data-place"]) for attrs, _said in parsed.rail],
+                         [(phase, place) for phase, place, _note in TWO_JOBS])
+        self.assertEqual([said for _attrs, said in parsed.rail],
+                         ["○Idea", "○Needs", "○Parts", "○Parts list", "○Board files", "○Wiring", "○Firmware", "○Simulation",
+                          "○On the board"])
+        cells = re.findall(r'<li class="unbuilt" data-unbuilt="([a-z]+)">(.*?)</li>', line_of(station_page(TWO_JOBS)))
+        self.assertEqual([(key, re.sub("<[^>]+>", "", inner)) for key, inner in cells],
+                         [("perfboard", "Perfboard not built"), ("pcb", "PCB not built"), ("case", "Case not built")])
+        line = line_of(station_page(TWO_JOBS))
+        self.assertLess(line.index('data-phase="deploy"'), line.index('data-unbuilt="perfboard"'))
+
+    def test_an_unbuilt_cell_has_no_status_mark_and_says_not_built_to_a_screen_reader_only(self):
+        for _key, inner in re.findall(r'<li class="unbuilt" data-unbuilt="([a-z]+)">(.*?)</li>', line_of(station_page(TWO_JOBS))):
+            self.assertIn('<span class="mark"></span>', inner)
+            self.assertIn('<span class="clip"> not built</span>', inner)
+            self.assertFalse(set(inner) & {glyph for _word, glyph in MARKS.values()}, inner)
+
+    def test_each_now_station_carries_the_ring_and_the_phone_caption_names_them(self):
+        line = line_of(station_page(TWO_JOBS))
+        current = re.findall(r'<li data-phase="([a-z]+)" data-place="now" aria-current="step">', line)
+        self.assertEqual(current, ["breadboard", "firmware"])
+        self.assertEqual(line.count("aria-current"), 2)
+        self.assertIn('<p class="stations-now" aria-hidden="true">Wiring, Firmware</p>', line)
+        one = line_of(station_page((("idea", "done", None), ("needs", "now", None), ("parts", "later", None))))
+        self.assertEqual(re.findall(r'data-phase="([a-z]+)"[^>]*aria-current', one), ["needs"])
+        self.assertIn('<p class="stations-now" aria-hidden="true">Needs</p>', one)
+
+    def test_with_no_now_no_station_has_the_ring_and_there_is_no_caption(self):
+        line = line_of(station_page((("idea", "done", None), ("simulate", "later", "no-model")), now=None))
+        self.assertNotIn("aria-current", line)
+        self.assertNotIn("stations-now", line)
+
+    def test_the_mark_keeps_the_tick_guard_and_hides_from_a_screen_reader(self):
+        liar = a_phase("idea", "stale", mark=TICK).to_dict()
+        line = line_of(station_page((("idea", "done", None),), phases=[liar]))
+        self.assertNotIn(TICK, line)
+        self.assertIn('<span class="mark" aria-hidden="true">%s</span>' % MARKS[COULD_NOT_RUN][1], line)
+        fine = line_of(station_page((("idea", "done", None),), phases=[a_phase("idea", OK).to_dict()]))
+        self.assertIn('<span class="mark" aria-hidden="true">%s</span>' % TICK, fine)
+
+    def test_a_phase_with_no_plain_name_shows_its_word_escaped(self):
+        line = line_of(station_page((("bench-test", "now", None), ("<b>x</b>", "later", None))))
+        self.assertIn('<span class="name">bench-test</span>', line)
+        self.assertIn("&lt;b&gt;x&lt;/b&gt;", line)
+        self.assertNotIn("<b>x", line)
+
+    def test_no_guide_or_a_guide_with_no_stations_draws_no_line(self):
+        self.assertIsNone(line_of(guide_page(None)))
+        self.assertIsNone(line_of(guide_page(a_guide())))  # an older page value has no stations
+        self.assertIsNone(line_of(guide_page(a_guide(stations=[]))))
+
+    def test_the_line_uses_ink_and_muted_and_no_teal_token(self):
+        style = page_style(station_page(TWO_JOBS))
+        rules = [(selector, prop, value) for selector, prop, value in declarations(style) if "stations" in selector or "unbuilt" in selector]
+        self.assertTrue(rules)
+        used = {name for _selector, _prop, value in rules for name in re.findall(r"var\((--[a-z-]+)\)", value)}
+        self.assertEqual(used - {"--space-s", "--space-m", "--space-l"}, {"--ink", "--muted", "--bg"})
+        self.assertFalse(used & TEAL_FAMILY)
+        rule = {(selector, prop): value for selector, prop, value in rules}
+        self.assertEqual(rule[(".stations [aria-current] .mark", "border-color")], "var(--ink)")  # the ring, on each now
+        self.assertEqual(rule[(".stations>li::before", "border-top")], "2px solid var(--ink)")
+        self.assertEqual(rule[('.stations>[data-place="later"]::before', "border-top")], "2px dashed var(--muted)")
+        self.assertEqual(rule[(".stations>li:first-child::before", "content")], "none")
+
+    def test_on_a_phone_the_names_are_clipped_the_marks_small_and_the_caption_shown(self):
+        style = page_style(station_page(TWO_JOBS))
+        phone = re.search(r"@media \(max-width: 600px\)\{((?:[^{}]+\{[^{}]*\})+)\}", style).group(1)
+        rule = {(selector, prop): value for selector, prop, value in declarations(phone)}
+        self.assertEqual((rule[(".stations .name", "position")], rule[(".stations .name", "clip")]), ("absolute", "rect(0 0 0 0)"))
+        self.assertEqual((rule[(".stations .mark", "width")], rule[(".stations .mark", "height")]), ("14px", "14px"))
+        self.assertEqual(rule[(".stations-now", "max-height")], "none")
+        outside = {(selector, prop): value for selector, prop, value in declarations(style.replace(phone, ""))}
+        self.assertEqual((outside[(".stations-now", "max-height")], outside[(".stations-now", "overflow")],
+                          outside[(".stations-now", "white-space")]), ("0", "hidden", "nowrap"))
+
+    def test_the_two_jobs_of_a_real_project_put_the_ring_on_wiring_and_firmware(self):
+        from test_flow import a_project_built_with_no_simulation
+        project = a_project_built_with_no_simulation()
+        run_flow("page", "--project", str(project), "--json")
+        line = line_of((project / "page.html").read_text(encoding="utf-8"))
+        self.assertEqual(re.findall(r'data-phase="([a-z]+)" data-place="now" aria-current="step"', line), ["breadboard", "firmware"])
+        self.assertEqual(re.findall(r'data-phase="([a-z]+)" data-place="later"', line), ["simulate", "deploy"])
+        self.assertIn('<p class="stations-now" aria-hidden="true">Wiring, Firmware</p>', line)
 
 
 
@@ -1922,7 +2050,8 @@ class TheSectionsTest(unittest.TestCase):
     def test_the_page_s_sections_stand_in_this_order(self):
         # a literal list, the slice 1 order (P1062): a section that moves or goes fails here, whatever SECTIONS holds
         self.assertEqual([section.NAME for section in FlowHtmlPage.SECTIONS],
-                         ["title", "fresh", "intro", "guide", "stands-at", "parts", "wiring", "pictures", "notes", "developer"])
+                         ["title", "fresh", "intro", "stations", "guide", "stands-at", "parts", "wiring", "pictures", "notes",
+                          "developer"])
 
 
 def sample_page():

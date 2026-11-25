@@ -246,6 +246,45 @@ class IntroHtmlLine:
         return '<p class="intro">%s</p>' % _text(flow_codes.PAGE_INTRO)
 
 
+class StationsHtmlLine:
+    """
+    Renderer: the station line (P1119) as one `<ol class="stations">` above the guide: one `<li>` per station the guide
+    gives (`guide.stations`), in its order, with its mark (`shown_phase`, so the tick guard holds) and its plain name
+    (`flow_codes.PHASE_NAMES`, else the phase word), then spark's unbuilt steps (`flow_codes.UNBUILT_STEPS`) greyed, with no
+    status mark. Each now station is `aria-current`, which the style rings. Under the line, a caption names the now
+    stations for a phone, where the names are clipped. It draws the places as given and decides nothing. No line with no
+    guide, or a guide with no stations (an older page value).
+    """
+
+    NAME = "stations"
+    KEYS = ("phase:*", "status:*", "unbuilt:*")
+
+    def text(self, page):
+        stations = (page.guide or {}).get("stations")
+        if not stations:
+            return ""
+        by_name = {phase["phase"]: phase for phase in page.phases}
+        items = [self._station(station, by_name.get(station["phase"])) for station in stations]
+        items += ['<li class="unbuilt" data-unbuilt="%s"><span class="mark"></span><span class="name">%s</span>'
+                  '<span class="clip"> %s</span></li>' % (_text(key), _text(name), _text(flow_codes.NOT_BUILT))
+                  for key, name, _moment in flow_codes.UNBUILT_STEPS]
+        now = [self._name(station) for station in stations if station["place"] == flow_codes.NOW_PLACE]
+        caption = ['<p class="stations-now" aria-hidden="true">%s</p>' % _text(", ".join(now))] if now else []
+        return "\n".join(['<ol class="stations" aria-label="%s">' % _text(flow_codes.STATIONS_LABEL)] + items + ["</ol>"] + caption)
+
+    def _station(self, station, phase):
+        """One station's `<li>`: its phase and place for the style and an agent, `aria-current` when it is now, its mark (an
+        empty one when the page holds no such phase) and its name."""
+        current = ' aria-current="step"' if station["place"] == flow_codes.NOW_PLACE else ""
+        mark = '<span class="mark" aria-hidden="true">%s</span>' % _text(shown_phase(phase).mark) if phase else '<span class="mark"></span>'
+        return '<li data-phase="%s" data-place="%s"%s>%s<span class="name">%s</span></li>' % (
+            _text(station["phase"]), _text(station["place"]), current, mark, _text(self._name(station)))
+
+    @staticmethod
+    def _name(station):
+        return flow_codes.PHASE_NAMES.get(station["phase"], station["phase"])
+
+
 class GuideHtmlSection:
     """Renderer: the guide (P977, P1062) as one `<section id="guide">`: the NOW box and the muted lines under it."""
 
@@ -253,15 +292,14 @@ class GuideHtmlSection:
     KEYS = ("phase:*", "by:*") + SENDABLE_KEYS + CHAT_KEYS
 
     def text(self, page):
-        """The guide (P977 PR 2, P1062) in `<section id="guide">`, under the intro: the NOW box, then, muted, DONE, LATER (with
-        the line on why there is no simulation) and SET ASIDE. A list with no item draws no line. Nothing with no guide, or a
-        guide with no line. The script puts its panel last in it."""
+        """The guide (P977 PR 2, P1062) in `<section id="guide">`, under the station line: the NOW box, then, muted, the line on
+        why there is no simulation and SET ASIDE. The station line says what is done and later (P1119), so the page draws no
+        DONE or LATER line; `flow.py show` keeps them. A list with no item draws no line. Nothing with no guide, or a guide
+        with no line. The script puts its panel last in it."""
         guide = page.guide
         if guide is None:
             return ""
         lines = [self._now(page),
-                 self._muted(flow_codes.GUIDE_DONE, guide["done"]),
-                 self._muted(flow_codes.GUIDE_LATER, guide["later"]),
                  '<p class="muted">%s</p>' % _text(guide["no_simulation"]) if guide["no_simulation"] else "",
                  self._muted(flow_codes.GUIDE_SET_ASIDE, guide["set_aside"])]
         lines = [line for line in lines if line]
