@@ -4271,7 +4271,7 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         self.assertEqual(rows["fetch"]["effects"], ["network", "writes"])
         from spark.design import design_operations
         from spark.sourcing import sourcing_operations
-        self.assertEqual(set(parts.OPERATIONS), (set(design_operations.OPERATIONS) | set(sourcing_operations.OPERATIONS) | {"needs-drop", "describe"}) - {"list-boards"})
+        self.assertEqual(set(parts.OPERATIONS), (set(design_operations.OPERATIONS) | set(sourcing_operations.OPERATIONS) | {"needs-drop", "move-hold", "describe"}) - {"list-boards"})
         self.assertEqual(rows["fact-set"]["arguments"]["part_and_facts"]["prefixItems"][1], {"type": ["object", "array"]})
 
     def test_each_part_operation_s_help_lists_its_own_arguments_alone(self):

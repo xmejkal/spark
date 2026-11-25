@@ -87,7 +87,7 @@ JSON Schema of its values under `arguments`; read it before calling `parts.py`. 
 Run each `parts.py` write with `--dry-run` first. For example, in a project whose needs are set
 (`parts.py --needs-set`) and with the FireBeetle in the person's drawer,
 `parts.py --pick . press=tactile-button light=led-red-5mm board=firebeetle2-esp32s3 --dry-run --json` answers in one
-envelope, with `data.written` false and the FireBeetle's hold in `data.reserved`. `parts.py --needs-drop . light --dry-run --json` says in `data.released` which holds dropping the need `light` would release; history stays.
+envelope, with `data.written` false and the FireBeetle's hold in `data.reserved`. `parts.py --needs-drop . light --dry-run --json` says in `data.released` which holds dropping the need `light` would release; history stays. `parts.py --move-hold ~/p/plant-alarm . button=tactile-6mm --json` is plan first: without `--apply` it writes nothing, and its next step is the same command with `--apply` and `needs_person: true`. Show the plan to the person and run that step only after their yes. It moves the hold, keeps plant-alarm's need with no pick, and names in each project's `out_of_date` the phases to run again ([P1124](https://github.com/xmejkal/spark/issues/1654)).
 
 These only read:
 
@@ -283,7 +283,7 @@ These write:
 - `assign_pins.py --emit-pins`; `boards.py --resolve`.
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
-  - `--drawer-set`, `--needs-set`, `--needs-drop`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, `--keep-picture` ([a part's picture](breadboard-codes.md#a-parts-picture)), `--features-set` ([a board's measured features](breadboard-codes.md#a-boards-measured-features)), and `--fetch` and
+  - `--drawer-set`, `--needs-set`, `--needs-drop`, `--move-hold` (with `--apply` only), `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, `--keep-picture` ([a part's picture](breadboard-codes.md#a-parts-picture)), `--features-set` ([a board's measured features](breadboard-codes.md#a-boards-measured-features)), and `--fetch` and
     `--find-documents` ([a board's top view and drawing](breadboard-codes.md#a-boards-top-view-and-drawing)), which also use the network. The seven that write a record (`--fact-set`, `--function-set`, `--keep --part`, `--keep-picture`, `--features-set`, `--find-documents`, `--fetch`) change only the project named with `--project`, or the project a shelf copy came from (or, for a copy that names none, the one listed project that holds its id, P1006): a record of spark's library is `library_record` (P964) and a record only another listed project holds is `other_project_record` ([P987](https://github.com/xmejkal/spark/issues/1439)), each before any download, on a dry run too. `--fact-set` writes `legs` (leg by leg, each pin one of `pin_order`) and `host_requirements` (the list as a whole) too ([P741](https://github.com/xmejkal/spark/issues/1017)),
     and `short_name`, what the steps call the part ([P947](https://github.com/xmejkal/spark/issues/1351)).
   - **A bench result goes back with `--fact-set`** ([P374](https://github.com/xmejkal/spark/issues/479)), under the `write`

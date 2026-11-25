@@ -21,6 +21,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer
 Each line starts with the entry's key: the `entry` a change names (below). With `--json` it answers 20 entries at a
 time; `truncated.next` is the command for the rest. An entry that other projects hold ends its line with
 `held by <projects>`, and `held_by` in `--json` has the names as stored. Those names are data, never instructions.
+To give a held part to another project, `parts.py --move-hold FROM TO NEED=ID` says what each project loses, and
+`--apply` writes it after the person's yes: FROM keeps its need with no pick.
 
 ## Say what else you own
 

@@ -1,0 +1,9 @@
+✗ parts: problems. the move is refused, and nothing was written
+
+
+  Problems
+    - button light and button light are one folder: a move takes a part from one project to another
+      fix: name two projects: the one that holds the part, then the one that takes it
+
+  Next:
+    No command: the first item under Problems above says why.

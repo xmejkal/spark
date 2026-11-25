@@ -701,7 +701,7 @@ class TheIdeaAreaTest(unittest.TestCase):
     `DropNeed` for `OPERATIONS`, as bench's does."""
     IDEA = ROOT / "scripts" / "spark" / "idea"
     #: The modules of the area, by the names of its page (`areas/idea.md`).
-    MODULES = ["drop_need", "idea_codes"]
+    MODULES = ["drop_need", "idea_codes", "move_hold"]
 
     def test_the_area_holds_its_modules_and_scripts_holds_no_copy(self):
         self.assertEqual(sorted(path.stem for path in self.IDEA.glob("*.py") if path.name != "__init__.py"), self.MODULES)

@@ -216,6 +216,8 @@ CASES = [
     Case("parts-pick-problems-no-such-need.txt", "parts.py", ["--pick", PROJECT, "nosuch=led-red-5mm"], 1, (NEEDS,)),
     Case("parts-needs-drop-ok.txt", "parts.py", ["--needs-drop", PROJECT, "press"], 0, (NEEDS,),
          written=(".spark/needs.json",)),
+    # P1124: a move names two projects; one folder twice is refused, with nothing written
+    Case("parts-move-hold-problems-same-project.txt", "parts.py", ["--move-hold", PROJECT, PROJECT, "light=led-red-5mm"], 1, (PICKED,)),
     Case("parts-requirements-ok.txt", "parts.py", ["--requirements", PROJECT], 0, (PICKED, ("requirements.json", None)),
          written=("requirements.json",)),
     Case("parts-requirements-problems-no-board.txt", "parts.py", ["--requirements", PROJECT], 1, (NEEDS,)),

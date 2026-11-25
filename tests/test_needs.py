@@ -1199,6 +1199,14 @@ class ThePicksTest(unittest.TestCase):
         _, _, events, _, problems = needs.plan_pick(self.project, [("soil", "x-soil")])
         self.assertEqual((problems, events), ([], [{"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x-soil"}]))
 
+    def test_a_plan_given_a_drawer_plans_on_that_drawer_and_not_on_the_store_s(self):
+        """P1124: `entries=` is the drawer the plan reads (the move's drawer after the other project's release)."""
+        given = dict(drawer.entries(), probe=dict(drawer.entries()["probe"], count=1, used_in={"other-gadget": 1}))
+        _, _, _, _, problems = needs.plan_pick(self.project, [("soil", "x-soil")], entries=given)
+        self.assertEqual([problem["subject"] for problem in problems], ["x-soil"])
+        _, changes, _, _, problems = needs.plan_pick(self.project, [("soil", "x-soil")])
+        self.assertEqual((problems, [change["entry"] for change in changes]), ([], ["probe"]))
+
     def test_a_pick_answers_with_the_project_what_it_picked_what_it_reserved_and_that_it_was_written(self):
         said, code = run(["--pick", str(self.project), "soil=x-soil"])
         self.assertEqual((code, said["data"]), (0, {"project": "plant-alarm", "picks": [{"need": "soil", "pick": [{"part": "x-soil"}]}],
@@ -2033,6 +2041,227 @@ class TheNeedsDropTest(unittest.TestCase):
         said, _ = run(["--describe"])
         row = next(op for op in said["data"]["operations"] if op["op"] == "needs-drop")
         self.assertEqual((row["effects"], row["data"]), (["writes"], ["project", "need", "dropped", "released", "written"]))
+# --- end MVP ---
+
+
+# --- MVP ---
+class TheMoveHoldTest(unittest.TestCase):
+    """P1124 (#1654): `--move-hold FROM TO NEED=ID`, a core Operation (spark/idea/move_hold.py): FROM keeps its need with no
+    pick, TO picks the part, and nothing is written without `--apply`. The fixture is TheNeedsDropTest's, with door-bell."""
+
+    def setUp(self):
+        self.home, parent = a_store_with_a_drawer(), Path(tempfile.mkdtemp())
+        self.project, self.other = parent / "plant-alarm", parent / "door-bell"
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        (self.home / "drawer" / "buzzer.json").write_text(json.dumps({"schema": 1, "label": "a buzzer", "count": 1,
+                                                                       "function": [{"does": "sound", "what": "buzzer"}]}))
+        run(["--needs-set", str(self.project), a_file([
+            {"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "alarm", "does": "sound", "what": "alarm"},
+            {"id": "input", "does": "input", "what": "button"}])])
+        run(["--pick", str(self.project), "soil=x-soil", "alarm=speaker"])
+        (self.other / ".spark").mkdir(parents=True)
+        (self.other / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "chime", "does": "sound", "what": "alarm"}, {"id": "moist", "does": "sense", "what": "soil-moisture"},
+            {"id": "brain", "does": "compute", "what": "microcontroller"}]}))
+
+    def move(self, given, *more):
+        return run(["--move-hold", str(self.project), str(self.other), given] + list(more))
+
+    def entry(self, key):
+        return json.loads((self.home / "drawer" / (key + ".json")).read_text())
+
+    def picks(self, folder):
+        return {need["id"]: need.get("pick") for need in json.loads((folder / ".spark" / "needs.json").read_text())["needs"]}
+
+    def digest(self):
+        import hashlib
+        return {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
+                for root in (self.home, self.project.parent) for path in sorted(root.rglob("*")) if path.is_file()}
+
+    def text(self, argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            parts.main(argv)
+        return out.getvalue()
+
+    def test_without_apply_it_writes_no_byte_and_no_file_and_its_next_step_asks_the_person_first(self):
+        (self.other / "page.html").write_text("<p>the page</p>")
+        before = self.digest()
+        said, code = self.move("chime=speaker")
+        self.assertEqual((said["status"], code, said["data"]["written"], self.digest()), ("ok", 0, False, before))
+        step = said["next"][0]
+        self.assertEqual((step["op"], step["needs_person"], step["argv"][-1], step["effects"]), ("move-hold", True, "--apply", ["writes"]))
+        self.assertEqual(step["argv"], ["--move-hold", str(self.project), str(self.other), "chime=speaker", "--apply"])
+        self.assertEqual((said["data"]["from_project"], said["data"]["to_project"], said["data"]["need"], said["data"]["pick"]),
+                         ("plant-alarm", "door-bell", "chime", {"entry": "speaker"}))
+        self.assertEqual(said["data"]["projects"][0], {"project": "plant-alarm", "needs_without_pick": ["alarm"],
+                                                       "released": [{"entry": "speaker", "was": 1, "now": 0}], "out_of_date": []})
+        shown = self.text(["--move-hold", str(self.project), str(self.other), "chime=speaker"])
+        for line in ("move speaker from plant-alarm to door-bell: nothing written yet", "alarm keeps its need, with no pick (was speaker)",
+                     "would release 1 of 1: speaker — its pick is taken off, the need stays", "chime: speaker",
+                     "would list door-bell on your projects"):
+            self.assertIn(line, shown)
+        self.assertEqual(self.digest(), before)
+
+    def test_with_apply_the_need_stays_with_no_pick_and_the_other_project_picks_and_holds_the_part(self):
+        run(["--pick", str(self.other), "chime=buzzer"])
+        self.assertEqual(self.entry("buzzer")["used_in"], {"door-bell": 1})
+        said, code = self.move("chime=speaker", "--apply")
+        self.assertEqual((said["status"], code, said["data"]["written"]), ("ok", 0, True))
+        self.assertEqual(self.picks(self.project), {"soil": [{"part": "x-soil"}], "alarm": None, "input": None})
+        self.assertNotIn("pick", json.loads((self.project / ".spark" / "needs.json").read_text())["needs"][1])
+        self.assertEqual((self.entry("speaker")["used_in"], self.entry("buzzer")["used_in"]), ({"door-bell": 1}, {}))
+        self.assertEqual(self.picks(self.other)["chime"], [{"entry": "speaker"}])
+        self.assertEqual(said["data"]["projects"][1]["released"], [{"entry": "buzzer", "was": 1, "now": 0}])
+        self.assertNotIn("move-hold", [step["op"] for step in said["next"]])
+
+    def test_a_pick_by_its_drawer_entry_and_by_its_record_id_moves_the_one_stock(self):
+        for given in ("moist=probe", "moist=x-soil"):
+            with self.subTest(given=given):
+                said, code = self.move(given, "--apply")
+                self.assertEqual((code, said["data"]["pick"], self.entry("probe")["used_in"]), (0, {"part": "x-soil"}, {"door-bell": 1}))
+                self.assertEqual((self.picks(self.project)["soil"], self.picks(self.other)["moist"]), (None, [{"part": "x-soil"}]))
+                run(["--move-hold", str(self.other), str(self.project), "soil=x-soil", "--apply"])
+                self.assertEqual(self.entry("probe")["used_in"], {"plant-alarm": 1})
+
+    def test_one_pick_of_two_moves_and_the_need_keeps_the_other(self):
+        run(["--pick", str(self.project), "alarm=speaker", "alarm=buzzer"])
+        said, code = self.move("chime=buzzer", "--apply")
+        self.assertEqual((code, self.picks(self.project)["alarm"], said["data"]["projects"][0]["needs_without_pick"]),
+                         (0, [{"entry": "speaker"}], []))
+        self.assertEqual((self.entry("speaker")["used_in"], self.entry("buzzer")["used_in"]), ({"plant-alarm": 1}, {"door-bell": 1}))
+        run(["--move-hold", str(self.other), str(self.project), "alarm=buzzer"])
+        shown = self.text(["--move-hold", str(self.other), str(self.project), "alarm=buzzer"])
+        self.assertIn("chime keeps its need, with no pick (was buzzer)", shown)
+
+    def test_a_board_picked_by_two_needs_moves_whole(self):
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}}))
+        run(["--pick", str(self.project), "input=xiao-esp32-c6", "alarm=xiao-esp32-c6"])
+        said, code = self.move("brain=xiao-esp32-c6", "--apply")
+        self.assertEqual((code, said["data"]["projects"][0]["needs_without_pick"], self.entry("xiao")["used_in"]),
+                         (0, ["alarm", "input"], {"door-bell": 1}))
+        self.assertEqual(said["data"]["released"], [{"entry": "xiao", "was": 1, "now": 0}])
+
+    def refused(self, given, code, *, source=None, target=None):
+        before = self.digest()
+        said, exit_code = run(["--move-hold", str(source or self.project), str(target or self.other), given, "--apply"])
+        self.assertEqual((said["status"], exit_code, said["problems"][0]["code"], said["data"]["written"], self.digest()),
+                         ("problems", 1, code, False, before))
+        return said
+
+    def test_each_refusal_exits_1_with_its_code_and_writes_nothing(self):
+        self.refused("chime=speaker", "move_same_project", target=self.project)
+        twin = Path(tempfile.mkdtemp()) / "door-bell"
+        twin.mkdir()
+        said = self.refused("chime=speaker", "move_same_project", source=twin)
+        self.assertIn("whose holds would go under one name, door-bell", said["problems"][0]["sentence"])
+        said = self.refused("chime=x-other", "move_not_picked")
+        self.assertEqual(said["problems"][0]["sentence"], "no need of plant-alarm picks x-other, so plant-alarm holds no x-other to move")
+        said = self.refused("nope=speaker", None)
+        self.assertIn("no need called nope", said["problems"][0]["sentence"])
+        run(["--pick", str(self.project), "alarm=speaker", "input=speaker"])
+        said = self.refused("chime=speaker", "move_part_of_count")
+        self.assertEqual(said["problems"][0]["sentence"],
+                         "plant-alarm would let go 2 of speaker and door-bell would take 1: a move of part of a count is not there yet")
+
+    def test_a_pick_the_other_project_refuses_even_with_the_hold_let_go_is_its_own_problem(self):
+        run(["--drawer-set", a_file([{"entry": "speaker", "count": 1, "used_in": {"plant-alarm": 1, "other-gadget": 1}}])])
+        said = self.refused("chime=speaker", None)
+        self.assertIn("held by other-gadget", said["problems"][0]["sentence"])
+
+    def test_a_part_the_other_project_already_picks_while_this_one_holds_it_is_refused_as_already_picked(self):
+        run(["--drawer-set", a_file([{"entry": "speaker", "count": 2}])])
+        run(["--pick", str(self.other), "chime=speaker"])
+        self.assertEqual(self.entry("speaker")["used_in"], {"plant-alarm": 1, "door-bell": 1})
+        said = self.refused("chime=speaker", "move_already_picked")
+        self.assertEqual(said["problems"][0]["sentence"], "door-bell already picks speaker for chime, and plant-alarm holds it too")
+
+    def test_a_file_that_cannot_be_read_while_planning_says_nothing_was_written(self):
+        for broken in (self.home / "projects.json", self.other / ".spark" / "needs.json"):
+            with self.subTest(broken=broken.name):
+                kept = broken.read_text() if broken.is_file() else None
+                broken.write_text("{not json")
+                before = self.digest()
+                said, code = self.move("chime=speaker", "--apply")
+                self.assertEqual((said["status"], code, said["unchecked"][0]["code"], self.digest()), ("could-not-run", 2, "move_unreadable", before))
+                self.assertIn("nothing was moved: ", said["unchecked"][0]["sentence"])
+                broken.unlink() if kept is None else broken.write_text(kept)
+
+    def test_a_second_move_of_the_same_hold_is_refused(self):
+        self.move("chime=speaker", "--apply")
+        self.refused("chime=speaker", "move_not_picked")
+        shown = self.text(["--move-hold", str(self.project), str(self.other), "chime=speaker"])
+        self.assertIn("the move is refused, and nothing was written", shown)
+        self.assertIn("no need of plant-alarm picks speaker, so plant-alarm holds no speaker to move", shown)
+
+    def test_a_bad_need_and_id_exits_2_and_writes_nothing(self):
+        before = self.digest()
+        for given in ("chime", "=speaker", "chime="):
+            with self.subTest(given=given):
+                said, code = self.move(given, "--apply")
+                self.assertEqual((said["status"], code, said["unchecked"][0]["code"], self.digest()), ("could-not-run", 2, "bad_argument", before))
+
+    def test_a_pick_that_did_not_finish_stops_the_move_and_the_same_move_again_finishes_it(self):
+        from spark.design.pick_parts import PickParts
+        from spark.idea.move_hold import MoveHold
+
+        class FullStore(PickParts):
+            def build_answer(self, **values):
+                raise OSError("disk full")
+
+        values = {"move": [str(self.project), str(self.other), "chime=speaker"], "apply": True}
+        result = run_operation(MoveHold(picker=FullStore()), values, build_outside=lambda effects: None)
+        self.assertEqual((result.status(), result.findings[-1].code), ("could-not-run", "move_unwritten"))
+        self.assertEqual((self.picks(self.project)["alarm"], self.entry("speaker").get("used_in")), ([{"entry": "speaker"}], {}))
+        said, code = self.move("chime=speaker", "--apply")
+        self.assertEqual((code, self.picks(self.project)["alarm"], self.entry("speaker")["used_in"]), (0, None, {"door-bell": 1}))
+
+    def test_a_needs_file_that_refuses_the_last_write_is_finished_by_the_same_move_again(self):
+        from spark.idea.move_hold import MoveHold
+
+        class FullNeeds:
+            def __getattr__(self, attr):
+                return getattr(needs, attr)
+
+            @staticmethod
+            def write(project, after):
+                raise OSError("disk full")
+
+        values = {"move": [str(self.project), str(self.other), "chime=speaker"], "apply": True}
+        result = run_operation(MoveHold(needs_file=FullNeeds()), values, build_outside=lambda effects: None)
+        self.assertEqual((result.status(), result.findings[0].code), ("could-not-run", "move_unwritten"))
+        self.assertEqual((self.picks(self.project)["alarm"], self.picks(self.other)["chime"], self.entry("speaker")["used_in"]),
+                         ([{"entry": "speaker"}], [{"entry": "speaker"}], {"door-bell": 1}))
+        said, code = self.move("chime=speaker", "--apply")
+        self.assertEqual((code, said["data"]["released"], self.picks(self.project)["alarm"]), (0, [], None))
+
+    def test_out_of_date_names_the_requirements_and_what_was_made_from_them_where_requirements_json_is(self):
+        (self.project / "requirements.json").write_text(json.dumps({"parts": [{"part": "x-soil"}]}))
+        said, _ = self.move("chime=speaker")
+        self.assertEqual([side["out_of_date"] for side in said["data"]["projects"]], [["requirements", "build", "breadboard"], []])
+        (self.other / "requirements.json").write_text(json.dumps({"parts": []}))
+        said, _ = self.move("chime=speaker")
+        self.assertEqual([side["out_of_date"] for side in said["data"]["projects"]], [["requirements", "build", "breadboard"]] * 2)
+        self.assertIn("out of date: requirements, build, breadboard. Run parts.py --requirements %s, then build." % self.other.resolve(),
+                      self.text(["--move-hold", str(self.project), str(self.other), "chime=speaker"]))
+
+    def test_release_picks_alone_lets_go_every_pick_and_keeps_every_need(self):
+        from spark.idea.move_hold import release_picks
+        before = needs.read(self.project)
+        release = release_picks("plant-alarm", before, drawer.entries(), lambda pick: True)
+        self.assertEqual((release.after, release.released), ([{"id": "soil", "does": "sense", "what": "soil-moisture"},
+                                                              {"id": "alarm", "does": "sound", "what": "alarm"},
+                                                              {"id": "input", "does": "input", "what": "button"}],
+                                                             [{"entry": "probe", "was": 1, "now": 0}, {"entry": "speaker", "was": 1, "now": 0}]))
+        self.assertEqual((needs.read(self.project), self.entry("speaker")["used_in"]), (before, {"plant-alarm": 1}))
+
+    def test_describe_lists_the_move_as_a_write_only_with_apply(self):
+        said, _ = run(["--describe"])
+        row = next(op for op in said["data"]["operations"] if op["op"] == "move-hold")
+        self.assertEqual((row["effects"], row["dry_run"], row["apply"], row["data"]),
+                         (["writes"], True, True, ["from_project", "to_project", "need", "pick", "released", "written", "projects"]))
 # --- end MVP ---
 
 class TheRequirementsFileTest(unittest.TestCase):

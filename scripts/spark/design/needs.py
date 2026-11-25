@@ -505,7 +505,7 @@ class PickPlan:
         return of_old, [hold for hold in released if hold not in of_old]
 
 
-def plan_pick(project, given, passed_over=()):
+def plan_pick(project, given, passed_over=(), entries=None):
     """
     What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
     [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
@@ -514,9 +514,11 @@ def plan_pick(project, given, passed_over=()):
     longer picks. A pick no entry holds is to get, not reserved. A drawer entry of a record spark knows, picked by its key, is
     a pick of that record, and says so. A `reused` event is written for each pick except a record the project keeps in its
     own parts/ or boards/: that was not there before the project. A reason a part was passed over is kept in the person's
-    words, without any URL or price in them (`kept_reason`), and said when one was taken out. Nothing is written here.
+    words, without any URL or price in them (`kept_reason`), and said when one was taken out. `entries` is the drawer it plans
+    on, None for the store's (P1124: a move plans on the drawer after the other project lets go). Nothing is written here.
     """
-    name, current, entries = store.plan_listed_name(project), read(project), drawer.entries()
+    name, current = store.plan_listed_name(project), read(project)
+    entries = drawer.entries() if entries is None else entries
     rows = drawer.linkable(project)
     known, ids = {row[:2]: row[2] for row in rows}, {need["id"] for need in current}
     picked, notes, problems = _picks_given(given, known, entries, ids)

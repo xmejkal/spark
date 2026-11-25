@@ -194,6 +194,25 @@
    "network": false
   },
   {
+   "key": "op:move-hold",
+   "op": "move-hold",
+   "area": "idea",
+   "summary": "with --apply only, move a part that one project holds to another: FROM keeps each need that picked it, with no pick, and TO picks it for NEED. Without --apply it writes nothing, and says what each project loses and what goes out of date",
+   "effects": [
+    "writes"
+   ],
+   "data_keys": [
+    "from_project",
+    "to_project",
+    "need",
+    "pick",
+    "released",
+    "written",
+    "projects"
+   ],
+   "network": false
+  },
+  {
    "key": "op:list",
    "op": "list",
    "area": "sourcing",
