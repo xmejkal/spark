@@ -39,7 +39,7 @@ None is filed. The P-numbers were read on 2026-11-25 (the highest was P1148 #168
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one <!-- REQUIRED:spark-process:slice -->
 <!-- EXTEND:item-fields -->
 
-## P1152 — the git adapter is built inside `write_brief`, so no interface can swap it, and only the brief is ever kept → an exchangeable project-history strategy, git first: init makes the repository and a first commit, each decided record is kept as one step, a read-only history lists the steps, and a take-back runs after the person's yes through the core
+## P1152 — the git adapter is built inside `write_brief`, so no interface can swap it, and only the brief is ever kept → an exchangeable project-history strategy, git first: init makes the repository and a first commit, each decided record is kept as one step, a read-only history lists the steps, and a take-back runs after the person's yes through the core, with a preview of what goes back, file by file, and never answered by auto mode (D14)
 - type: epic <!-- REQUIRED:item-type -->
 - needed by: "it should again be a good architecture so that the strategy of the revert and init and all these are exchangable, but the first one we implement for spark is going to be git" (the PO, 2026-11-25), D5 to D9 <!-- REQUIRED:needed-by -->
 - value proven by: A1's pass line (D13), then A2, A6 and A7 in scratch, each quoted in its PR <!-- REQUIRED:value-proven-by -->
