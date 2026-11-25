@@ -35,14 +35,10 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   requirements.json written by hand, or a project whose last need was dropped), `needs` and `parts` are left out and
   `done` says `requirements (no needs or picks behind it)`.
 
-  With every need set aside, the parts phase is `ok` (nothing is left to pick), but no pick can make the parts list, so
-  `now` is `parts` and tells the person to bring a need back and pick a part.
-  The requirements phase has no offer then (no board is picked, P993): ask the person which need to bring back. A
-  requirements phase that could not run stays `now`. The
-  breadboard is in `done` only once `now` is past the firmware's
-  two jobs and the sheet is current, as `breadboard (spark cannot see it)`. `later` names the phases after `now`; one whose status is
-  `ok` carries the suffix ` (done, may change)`, because a change before it can make it stale. An item of `done` or
-  `later` can carry a suffix in parentheses: match on the name before it.
+  With every need set aside, the parts phase is `ok` (nothing is left to pick), but no pick can make the parts list, so `now` is `parts` and tells the person to bring a need back and pick a part. The requirements phase has no offer then (no board is picked, P993): ask the person which need to bring back. A requirements phase that could not run stays `now`. The breadboard is in `done` only once `now` is past the firmware's two jobs and the sheet is current, as `breadboard (spark cannot see it)`. `later` names the phases after `now`; one whose status is `ok` carries the suffix ` (done, may change)`, because a change before it can make it stale. An item of `done` or `later` can carry a suffix in parentheses: match on the name before it.
+
+  `stations` ([P1119](https://github.com/xmejkal/spark/issues/1648)) holds one `{phase, place, note}` per phase, in the phases' order. `place` is `done` before the now phase, `now` for it and `later` after it; with no `now`, every phase is `done`. A simulate with no Wokwi model is `later` wherever it stands, and beside the firmware's two jobs the breadboard is `now` too, with no note. `note` is `null` or one of six codes: `no-picks` (the requirements before now with no needs or picks behind them), `not-done` (the needs and the parts then, which nobody did), `no-model` (the build or the simulate counted for a board Wokwi has no model of), `unseen` (a breadboard before now with a current sheet, which spark cannot see), `no-sheet` (a breadboard before now with no current sheet) and `may-change` (a later phase whose status is `ok`).
+  `done` and `later` are built from `stations`: each lists the stations of its place, a phase with a note in its parentheses, and a phase with `not-done` or `no-sheet` in neither. Read the place from `stations`, not from the words of `done`. The page draws `stations` as its station line.
 
   `set_aside` lists the needs
   the person set aside (`aside: true`). To bring one back, the person tells Claude, which writes `{"id", "aside": null}`
@@ -161,13 +157,17 @@ dropped after the must lines were last gone through. [What the needs were writte
 ## The page
 
 `flow.py page` writes `page.html` in the project ([P827](https://github.com/xmejkal/spark/issues/1185)). It draws the reading `show` prints (P1060), so a person reads the same facts from the disk, in a browser. Its one script does nothing there ([the page script](#the-page-script)). Under the title, the freshness line says the newest change of the fingerprint's files as "23 Nov 2026, 14:18", in the machine's zone, and a line says
-what the page is and that every change goes through Claude in the chat ([P1062](https://github.com/xmejkal/spark/issues/1560)). Under it stands the guide
+what the page is and that every change goes through Claude in the chat ([P1062](https://github.com/xmejkal/spark/issues/1560)).
+
+Under it stands the station line ([P1119](https://github.com/xmejkal/spark/issues/1648)), an `<ol class="stations" aria-label="Where the project stands">` that draws `guide.stations` as given. Each station is an `<li data-phase data-place>` with the phase's mark and its plain name: Idea, Needs, Parts, Parts list, Board files, Wiring, Firmware, Simulation, On the board (`flow_codes.PHASE_NAMES`, else the phase word). Each `now` station has `aria-current="step"` and an ink ring. The segment up to a station is solid up to now and dashed after it. After the nine come Perfboard, PCB and Case (`flow_codes.UNBUILT_STEPS`), each an `<li class="unbuilt" data-unbuilt>`, greyed with a dotted ring and no status mark; its "not built" is for a screen reader only. The line names no note. On a phone the names are clipped, and the caption `<p class="stations-now">` under the line names the now stations. A guide with no `stations` draws no line. The page draws no DONE or LATER line, because the line shows them; `flow.py show` keeps them in the terminal.
+
+Under the line stands the guide
 ([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: the NOW box (`class="now"`) with the now phase and who acts, ON THE BOARD (the last deploy's time in the machine's zone, verdict and cause from `data.deploy`, after a deploy only) and NEXT, the guide's sentence, then,
-muted, DONE, LATER and SET ASIDE, and a list with no item draws no line. A line the parts phase says twice stands once. On a board that can be wired, the parts fold's first line is the wired line, and a pick's or a build's confirm opens with its fixed sentence ([P1044](https://github.com/xmejkal/spark/issues/1534)).
+muted, SET ASIDE, and a list with no item draws no line. A line the parts phase says twice stands once. On a board that can be wired, the parts fold's first line is the wired line, and a pick's or a build's confirm opens with its fixed sentence ([P1044](https://github.com/xmejkal/spark/issues/1534)).
 
 When `now.steps` is set and the page holds wiring
 steps, NEXT ends in the link "One at a time: start at step N", the wiring section's own link, to the first step's own `#step-N`. The sentence about why there is
-no simulation stands as a muted line of its own under LATER. A `now` that is `null` draws no NOW line: the box holds only the line that nothing is open, if any. With a guide the line "The
+no simulation stands as a muted line of its own under NEXT. A `now` that is `null` draws no NOW line: the box holds only the line that nothing is open, if any. With a guide the line "The
 project stands at" is not drawn; a page from a caller that gives no guide keeps it.
 
 Then come three folds, each a `<details class="fold" data-fold="NAME">` with a one-line summary, open only while its job is NOW: the parts

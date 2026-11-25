@@ -70,15 +70,18 @@ class ThePhaseNamesTest(unittest.TestCase):
     def test_t15_each_phase_has_its_plain_name_and_one_with_none_is_named(self):  # T15 (P1119)
         self.assertEqual([one["name"] for one in group("phase")],
                          ["Idea", "Needs", "Parts", "Parts list", "Board files", "Wiring", "Firmware", "Simulation", "On the board"])
-        without = {phase: name for phase, name in flow_codes.PHASE_NAMES.items() if phase != "build"}
+        without = {"idea": "Idea", "needs": "Needs", "parts": "Parts", "requirements": "Parts list", "breadboard": "Wiring",
+                   "firmware": "Firmware", "simulate": "Simulation", "deploy": "On the board"}
         with swapped(flow_codes, "PHASE_NAMES", without):
             self.assertEqual(design_basis.DesignBasis.of().missing(), ["build"], "add build to PHASE_NAMES in flow_codes")
 
-    def test_t16_the_unbuilt_steps_are_the_flow_codes_ones_with_their_names(self):  # T16 (P1119)
-        self.assertEqual([(one["key"], one["name"], one["moment"]) for one in group("unbuilt")],
-                         [("unbuilt:" + key, name, moment) for key, name, moment in flow_codes.UNBUILT_STEPS])
-        self.assertEqual([one["name"] for one in group("unbuilt")], ["Perfboard", "PCB", "Case"])
-        self.assertEqual({one["status"] for one in group("unbuilt")}, {flow_codes.NOT_BUILT})
+    def test_t16_the_unbuilt_steps_are_read_from_flow_codes_with_their_names(self):  # T16 (P1119)
+        self.assertEqual([(one["key"], one["name"], one["status"]) for one in group("unbuilt")],
+                         [("unbuilt:perfboard", "Perfboard", "not built"), ("unbuilt:pcb", "PCB", "not built"),
+                          ("unbuilt:case", "Case", "not built")])
+        with swapped(flow_codes, "UNBUILT_STEPS", (("lathe", "Lathe", "At the lathe."),)):
+            self.assertEqual([(one["key"], one["name"], one["moment"]) for one in group("unbuilt", design_basis.DesignBasis.of())],
+                             [("unbuilt:lathe", "Lathe", "At the lathe.")])
 
 
 class TheStatusesTest(unittest.TestCase):
