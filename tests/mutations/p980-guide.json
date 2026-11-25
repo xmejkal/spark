@@ -2,14 +2,14 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "done lists a hand-written project's needs and parts (P980)",
-  "find": "phase.phase in (flow_codes.NEEDS, flow_codes.PARTS)",
+  "find": "name in (flow_codes.NEEDS, flow_codes.PARTS)",
   "replace": "False"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "a requirements with no picks behind it loses its label (P980)",
-  "find": "done.append(flow_codes.REQUIREMENTS_NO_PICKS)",
-  "replace": "done.append(phase.phase)"
+  "find": "        return flow_codes.NO_PICKS_NOTE",
+  "replace": "        return None"
  },
  {
   "file": "scripts/spark/flow/guide.py",
