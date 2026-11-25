@@ -30,7 +30,7 @@ A record of slice 1, with no `needs` key, names no drop until the next review. A
 makes the record unreadable, as above. A needs file that cannot be read leaves the idea phase as it was: the needs phase
 says why.
 
-## The brief step and its take-back
+## The brief step and the way back
 
 The brief step names `<answers.json>`: Claude writes the must lines the person agreed to in that file, outside any
 repository, and runs the step only after their yes. When git holds `.spark/project.json` as it is, on a branch, the write
