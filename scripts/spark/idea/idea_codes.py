@@ -26,6 +26,9 @@ MOVE_ALREADY_PICKED = Code("move_already_picked", "the second project's need alr
                            "still holds it, so there is no pick to move", "if the second project should hold the first one's "
                            "piece, free the first project's hold (pick it another part, or --needs-drop its need), then run "
                            "the second project's parts.py --pick again")
+MOVE_UNREADABLE = Code("move_unreadable", "a needs file, the drawer, the projects list or the store's lock could not be read "
+                       "or taken before the move wrote anything, so nothing is moved", "fix the file the sentence names, "
+                       "then run the same move again")
 MOVE_UNWRITTEN = Code("move_unwritten", "the move could not be read or written whole, so the same move again finishes it",
                       "check the disk and the store folder, then run the same move again: the drawer is written first and "
                       "the first project's needs.json last")
@@ -35,5 +38,6 @@ BAD_ARGUMENT_MOVE = Code(codes.BAD_ARGUMENT, codes.BAD_ARGUMENT.meaning, "give t
 
 #: Each code and the one sentence that says what it means.
 CODES = {code: code.meaning for code in (NEED_UNKNOWN, NEEDS_UNREADABLE, DROP_UNWRITTEN, MOVE_SAME_PROJECT, MOVE_NOT_PICKED,
-                                         MOVE_PART_OF_COUNT, MOVE_ALREADY_PICKED, MOVE_UNWRITTEN)}
+                                         MOVE_PART_OF_COUNT, MOVE_ALREADY_PICKED, MOVE_UNREADABLE,
+                                         MOVE_UNWRITTEN)}
 # --- end MVP ---

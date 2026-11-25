@@ -167,9 +167,9 @@ class MoveHold(Operation):
         try:
             with store.locked():
                 plan = self.plan(source, target, need, pick_id)
-                stopped = self._write(plan, given, outside) if apply and not plan.findings else None
-        except (OSError, store.StoreError) as failed:
-            raise SparkError("the move of %s was not finished: %s", pick_id, failed, code=idea_codes.MOVE_UNWRITTEN)
+                stopped = self._written(plan, given, outside) if apply and not plan.findings else None
+        except (OSError, store.StoreError) as failed:  # the lock or a read before any write: nothing is written
+            raise SparkError("nothing was moved: %s", failed, code=idea_codes.MOVE_UNREADABLE)
         return stopped or self._result(plan, pick_id, move, apply and not plan.findings)
 
     def plan(self, source, target, need, pick_id):
@@ -221,6 +221,14 @@ class MoveHold(Operation):
             return [Finding.of(outcomes.PROBLEMS, pick_id, idea_codes.MOVE_PART_OF_COUNT,
                                PART_OF_COUNT_SENTENCE % (sides[0].name, let_go, pick_id, sides[1].name, takes))]
         return []
+
+    def _written(self, plan, given, outside):
+        """`_write`'s result, with a refused write a could-not-run SparkError: the drawer and TO's pick may be written, so
+        the same move again finishes it."""
+        try:
+            return self._write(plan, given, outside)
+        except (OSError, store.StoreError) as failed:
+            raise SparkError("the move of %s was not finished: %s", given.partition("=")[2], failed, code=idea_codes.MOVE_UNWRITTEN)
 
     def _write(self, plan, given, outside):
         """The three writes of a planned move, in their order; the result that stops the move when TO's pick did not finish."""

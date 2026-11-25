@@ -2178,6 +2178,17 @@ class TheMoveHoldTest(unittest.TestCase):
         said = self.refused("chime=speaker", "move_already_picked")
         self.assertEqual(said["problems"][0]["sentence"], "door-bell already picks speaker for chime, and plant-alarm holds it too")
 
+    def test_a_file_that_cannot_be_read_while_planning_says_nothing_was_written(self):
+        for broken in (self.home / "projects.json", self.other / ".spark" / "needs.json"):
+            with self.subTest(broken=broken.name):
+                kept = broken.read_text() if broken.is_file() else None
+                broken.write_text("{not json")
+                before = self.digest()
+                said, code = self.move("chime=speaker", "--apply")
+                self.assertEqual((said["status"], code, said["unchecked"][0]["code"], self.digest()), ("could-not-run", 2, "move_unreadable", before))
+                self.assertIn("nothing was moved: ", said["unchecked"][0]["sentence"])
+                broken.unlink() if kept is None else broken.write_text(kept)
+
     def test_a_second_move_of_the_same_hold_is_refused(self):
         self.move("chime=speaker", "--apply")
         self.refused("chime=speaker", "move_not_picked")
