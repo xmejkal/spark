@@ -40,14 +40,14 @@ rejected findings only. The PR review's rows follow the councils' in the same ta
 | 30 | E2: test_board_questions pins only the key `fix` on the question lines of reach and live, not its value | the PR review, E2 | acted | fixed: both tests assert that `fix` is stderr's fix line; reach's holds the JSON to paste, live's other_board fix names look.py |
 | 31 | E3: the no-deepsleep doctor-road tests pin no `fix` value; live's pins none at all | the PR review, E3 | acted | fixed: live and reach assert that `fix` is the doctor's plug_in sentence, the text's next line |
 | 32 | E4: scripts.md's key list of live gives `fix` without its null meaning, which grant's entry gives | the PR review, E4 | acted | fixed on the same line: "the fix line's words, or null: no fix" |
-| 33 | E5: no script-level test of an unnamed port for deploy.py (row 27) | the PR review, E5 | raised | destination: card P???? |
+| 33 | E5: no script-level test of an unnamed port for deploy.py (row 27) | the PR review, E5 | raised | destination: card P1178 #1719 |
 | 34 | A-1: `asleep_next`'s docstring names only stop_said's fix, and live and reach ask it of doctor_said's | the PR review, A-1 | acted | fixed: "stop_said's or doctor_said's fix" |
-| 35 | A-2: the PR review's finding A-2 | the PR review, A-2 | raised | destination: card P????, filed by spark-main |
-| 36 | A-3: the PR review's finding A-3 | the PR review, A-3 | raised | destination: card P????, filed by spark-main |
+| 35 | A-2: five callers pair a said call with `asleep_next` (look_at_board.py, stops.py, deploy_image.py, run_live_code.py, reach_board.py), so a new road can forget the look step, as R3 found | the PR review, A-2 | raised | destination: card P1176 #1717 |
+| 36 | A-3: `_finding`'s doctor branch in board_envelope.py can only give an empty fix, because only deploy_image.py sets `reached["doctor"]`, beside `stop_said`. It was dead before this PR | the PR review, A-3 | raised | destination: card P1176 #1717 |
 | 37 | A-4: `FlatJsonLineWithFix` breaks patterns-and-names.md's rule: what varies, then the base's whole name | the PR review, A-4 | acted | renamed `FixFlatJsonLine` in the code, the docs, this file and the mutation rows; `tools/mutate.py --anchors` passes |
-| 38 | A-4's older half: `JsonDocument` breaks the same rule | the PR review, A-4 | raised | destination: card P???? |
-| 39 | A-5: the PR review's finding A-5 | the PR review, A-5 | raised | destination: card P????, filed by spark-main |
+| 38 | A-4's older half: `JsonDocument` breaks the same rule | the PR review, A-4 | raised | destination: card P1177 #1718 |
+| 39 | A-5: `doctor_said`, `stop_said`, `asleep_fix` and `doctor_next` break "a function starts with a verb"; the module's functions are renamed together | the PR review, A-5 | raised | destination: card P1176 #1717 |
 | 40 | A-6: GLOSSARY.md does not say that "found by spark" is the person's word for the unnamed port | the PR review, A-6 | acted | fixed: one sentence in the port entry |
 | 41 | A-7: the PR body | the PR review, A-7 | acted | the PR body was corrected before the refuter read it |
 | 42 | reach.py's --help says the open-question line holds reached, port, product, open and known_board, without `fix` | the PR review, refuter | acted | fixed in ReachBoard's DETAILS; reach.py's EPILOG lists no keys |
-| 43 | the refuter's point on where the `fix` of grant's two_boards and refused_no_grant stops comes from | the PR review, refuter | raised | destination: card P???? |
+| 43 | on grant's two_boards line the `--port` hint is only in the text's why, and on refused_no_grant spark's step is in `why` while `fix` is null | the PR review, refuter | raised | destination: card P1179 #1720 |
