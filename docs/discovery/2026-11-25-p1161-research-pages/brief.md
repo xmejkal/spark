@@ -157,4 +157,4 @@ we assume (H) · links to the journeys and the map · riskiest assumptions and t
 not yet: no D confirms the frame, the jobs, a direction or the remaining risk. The time box set by spark-main (delegated, 2026-11-25) ends this discovery at items.md and the decisions <!-- REQUIRED:handoff -->
 
 ## Files
-[Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
+[README](README.md) · [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
