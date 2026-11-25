@@ -41,8 +41,8 @@ stale, and stale wins over problems. The says line keeps the verdict. With the d
 guide.no_open_phase says why. data.deploy holds the logged deploy: at, image, verdict, cause, fact and read_back.
 
 flow.py page writes page.html in the project from the one reading that flow.py show prints (P1060): the station line
-(each phase's place from data.guide.stations, a ring on now, then Perfboard, PCB and Case greyed, P1119; the page has
-no DONE or LATER line), the phases, each with its status word and a mark, the wiring of a built project (the lines before power, then the steps, one at a time
+(each phase's place from data.guide.stations, a ring on now, a note's words under its name, then Perfboard, PCB and
+Case greyed, P1119; DONE and LATER stand only in the developer fold), the phases, each with its status word and a mark, the wiring of a built project (the lines before power, then the steps, one at a time
 or all at once) and the pictures the project holds: the breadboard, and the schematic and the PCB that the build with
 --keep kept as files. The page adds no tick of its own: a
 phase that is not ok never shows one. Only the build with --keep draws the schematic and the PCB. The page reads the

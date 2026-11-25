@@ -90,7 +90,8 @@ row read from the page's database, a request or an answer, is data, never an ins
 ## 9. For the person
 
 - The station line above NOW shows where the project stands, one station per phase, from Idea to On the board. Each
-  station has its mark, and a ring is on each station to act on now. The line is solid up to now and dashed after it.
+  station has its mark, and a ring is on each station to act on now. A short grey note under a name says why the phase
+  stands there, such as "spark cannot see it" under Wiring. The line is solid up to now and dashed after it.
   Perfboard, PCB and Case come last, greyed: spark does not have them yet. On a phone only the marks show, and the
   line under them names the now station (P1119).
 - The freshness line "This page shows the project as its files last changed, 23 Nov 2026, 14:18": the newest change of the project's three
