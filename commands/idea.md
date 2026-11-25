@@ -1,6 +1,6 @@
 ---
 description: From a goal in words to needs, each matched against what you own and what spark knows — store first; research only for a real gap — then a part picked per need with what you own reserved, a requirements file for /spark:build, and one cost line.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-drop *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --offer *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-drop *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --move-hold *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --offer *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py *)
 ---
 
 # spark:idea
@@ -58,7 +58,10 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    ```
 
    then without `--dry-run`. A need holds no reason, count or place, and `--needs-set` sets no pick (`--pick` does, below) — the
-   file belongs to the project. To remove a need, run `parts.py --needs-drop <project> <need> --dry-run` first, then without it: it releases only the holds of the dropped pick, and every other hold stays, history stays, and it says when requirements.json still lists the part.
+   file belongs to the project. To remove a need, run `parts.py --needs-drop <project> <need> --dry-run` first, then without it: it releases only the holds of the dropped pick, and every other hold stays, history stays, and it says when requirements.json still lists the part. To use in this
+   project a part that another project holds, and keep that project's need, offer the move instead: `parts.py --move-hold
+   <other project> <project> <need>=<id>` prints the plan and writes nothing; show it to the person, and run it with
+   `--apply` only after their yes ([P1124](https://github.com/xmejkal/spark/issues/1654)).
 4. A `--needs-set` that defines a need (an item with `does`, `what` or `condition`) also notes the goal and the must
    lines of the brief in `.spark/needs-basis.json` ([P1027](https://github.com/xmejkal/spark/issues/1506)). A write of
    marks or `aside` alone notes nothing. A `--needs-set` with `[]` (an empty list) is a review: it changes no need and
@@ -93,7 +96,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match <project>
 ```
 
 Owned candidates come first, each with how many are owned and **free** (a part another project holds is not free,
-and the line says `free N, held by <project>`, the other projects that hold any of it; `held_by` in `--json` has them raw),
+and the line says `free N, held by <project>`, the other projects that hold any of it; `held_by` in `--json` has them raw;
+when the person wants that part here, offer `parts.py --move-hold <that project> <project> <need>=<id>`, plan first),
 "maybe owned" when the person was not sure, what it does, and what it **owes**: a pick owing a `footprint`, a
 `pin_order`, its `pin_order_proof` or a `simulation` stance (a Wokwi stand-in, or `{"skip": "why"}`) is taken, but
 `--requirements` writes nothing until that is filled (C, below); one owing only its outline (`body_mm`) is written and

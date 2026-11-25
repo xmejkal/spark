@@ -68,6 +68,9 @@ How to read this page:
 - `op:needs-drop`
   - Effects: writes. Data keys: none.
   - Summary: Drop a need and its pick from .spark/needs.json, and release only the holds of the dropped pick.
+- `op:move-hold`
+  - Effects: writes. Data keys: from_project, to_project, need, pick, released, written, projects.
+  - Summary: move a part that one project holds to another: FROM keeps each need that picked it, with no pick, and TO picks it for NEED. Without --apply it says what each project loses and what goes out of date, and writes nothing
 
 ### sourcing
 

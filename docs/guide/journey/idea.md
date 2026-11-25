@@ -67,7 +67,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .
 
 How to read the matches:
 
-- Owned parts come first, from the drawer above, with how many are free.
+- Owned parts come first, from the drawer above, with how many are free. A part another project holds is not free. To use it here and keep that project's need, `parts.py --move-hold ~/p/plant-alarm . button=tactile-6mm` prints what each project loses and what goes out of date, and writes nothing. The same command with `--apply` moves the hold, after your yes: plant-alarm keeps its need with no pick ([P1124](https://github.com/xmejkal/spark/issues/1654)).
 - `owes` names facts a [record](../../../GLOSSARY.md#record--and-the-four-places-one-lives) lacks
   ([owed facts and gaps](owed-facts.md#owed-facts-and-gaps) shows one):
   - a pick owing a `footprint`, a `pin_order`, its `pin_order_proof` or a `simulation` stance is taken, but
