@@ -253,9 +253,6 @@ These rules name a class, a function or a constant:
   `_MESSAGE` suffix. `tests/test_no_magic_strings.py` fails on a literal with a space in a comparison, a `match`
   case or a search such as `startswith` or `re.search`. It does not see a one-word literal, a sentence built at run
   time, a dictionary key or a split, so a reviewer checks those.
-- "Spark's section" is the block between spark's two marker lines in a person's file, `AGENTS.md` or `.gitignore`
-  (the Value `SparkSection`, P1150). "Your ignore list" is the person's whole `.gitignore`, and spark's section is a
-  part of it.
 - An exception's name under `scripts/` ends in `Error`; rule C1 fails one that does not ([P709](https://github.com/xmejkal/spark/issues/956)).
 
 Each docstring says these things:
