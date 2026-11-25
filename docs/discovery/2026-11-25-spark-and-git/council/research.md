@@ -144,6 +144,8 @@ The limit was ten searches. Three were run. The page fetches follow the table.
 | `site:docs.wokwi.com save project share link versions` | (6) hosted tools | Used. It led to https://docs.wokwi.com/faq. |
 | `Gemini CLI GEMINI.md context file name AGENTS.md configuration docs` | (3) tool-neutral conventions | Used. It led to https://geminicli.com/docs/cli/gemini-md/. |
 
+## 6. Pages fetched (not searches)
+
 Pages fetched directly, all on 2026-11-25:
 
 - (1) https://code.claude.com/docs/en/memory

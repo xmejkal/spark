@@ -283,6 +283,8 @@ No web search was run. Three cited pages were opened by direct fetch on 2026-11-
 code.claude.com/docs/en/memory, code.claude.com/docs/en/plugins-reference and
 modelcontextprotocol.io/specification/2026-07-28/changelog.
 
+## Not checked
+
 **Not checked:**
 
 - The scratch git runs (C14, C16 experiment F, C18, C19), because the brief forbade git writes.

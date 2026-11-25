@@ -450,3 +450,7 @@ In the board's style, "what is wrong → what changes". The order follows part 4
 - What the tracked images and run files hold: no file was opened.
 - Whether "the way back" is free in the P323 glossary and on Miro: only `scripts`, `commands` and `docs/guide` were
   searched.
+
+## Searches
+
+- none. The architect made no web search and read no web page (see Not checked).
