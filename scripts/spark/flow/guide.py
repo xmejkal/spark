@@ -244,13 +244,19 @@ def stations_of(phases, at, no_model, wiring, no_picks=False):
     return stations
 
 
+def note_words(station):
+    """The words of a station's note (P1119): its phase's own (`flow_codes.STATION_NOTES_BY_PHASE`), else the note's
+    (`flow_codes.STATION_NOTES`). None for no note, or a note of LEFT_OUT_NOTES, which is in no list and on no line."""
+    note = station["note"]
+    if note is None or note in flow_codes.LEFT_OUT_NOTES:
+        return None
+    return flow_codes.STATION_NOTES_BY_PHASE.get((note, station["phase"])) or flow_codes.STATION_NOTES[note]
+
+
 def named(station):
     """The name DONE and LATER show for a station: its phase, with its note's words in parentheses (NOTED_PHASE)."""
-    note = station["note"]
-    if note is None:
-        return station["phase"]
-    words = flow_codes.STATION_NOTES_BY_PHASE.get((note, station["phase"])) or flow_codes.STATION_NOTES[note]
-    return flow_codes.NOTED_PHASE % (station["phase"], words)
+    words = note_words(station)
+    return flow_codes.NOTED_PHASE % (station["phase"], words) if words else station["phase"]
 
 
 def names_at(stations, place):

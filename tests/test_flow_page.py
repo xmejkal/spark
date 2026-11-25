@@ -1608,7 +1608,7 @@ class TheGuideSectionTest(unittest.TestCase):
         lines, _section = guide_lines(guide_page(a_guide(later=[])))
         self.assertEqual([label for label, _rest in lines], ["NOW (build), by claude", "NEXT", "SET ASIDE"])
         for gone in ("<strong>DONE</strong>", "<strong>LATER</strong>", "idea, needs", "firmware, deploy"):
-            self.assertNotIn(gone, guide_page(a_guide()))
+            self.assertNotIn(gone, before_developer(guide_page(a_guide())))  # the developer fold holds them (P1119, D22)
 
     def test_no_simulation_is_its_own_line_under_later(self):
         text = guide_page(a_guide(no_simulation="No simulation: Wokwi has no model of this board."))
@@ -1687,10 +1687,10 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
         written = write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one", "not-started"), a_phase("two", OK),
                                                                             a_phase("three", "not-started")), parts_of([]), store=store)
         self.assertEqual(written.guide["later"], ["two (done, may change)", "three"])
-        # P1119: the page draws the station line, where two is later with its own tick, and no LATER line
-        self.assertIn('<li data-phase="two" data-place="later"><span class="mark" aria-hidden="true">✓</span><span class="name">two</span></li>',
-                      store.written[0][2])
-        self.assertNotIn("<strong>LATER</strong>", store.written[0][2])
+        # P1119: the page draws the station line, where two is later with its own tick and its note, and no LATER line
+        self.assertIn('<li data-phase="two" data-place="later"><span class="mark" aria-hidden="true">✓</span><span class="name">two</span>'
+                      '<span class="note">done, may change</span></li>', store.written[0][2])
+        self.assertNotIn("<strong>LATER</strong>", before_developer(store.written[0][2]))  # the developer fold holds it (D22)
 
     def test_write_page_draws_the_guide_it_answers(self):
         store = FakeStore()
@@ -1700,7 +1700,7 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
         self.assertEqual(text.count('<section id="guide">'), 1)
         self.assertEqual(written.guide["done"], ["one"])
         self.assertIn('<li data-phase="one" data-place="done">', text)  # P1119: the station line, no DONE line
-        self.assertNotIn("<strong>DONE</strong>", text)
+        self.assertNotIn("<strong>DONE</strong>", before_developer(text))  # the developer fold holds it (D22)
         self.assertNotIn("The project stands at", text)
 
     def test_no_home_path_reaches_the_guide_on_the_page_or_in_what_is_answered(self):
@@ -1826,6 +1826,31 @@ class TheStationLineTest(unittest.TestCase):
         self.assertEqual((outside[(".stations-now", "max-height")], outside[(".stations-now", "overflow")],
                           outside[(".stations-now", "white-space")]), ("0", "hidden", "nowrap"))
 
+    def test_a_station_with_a_note_shows_its_words_under_its_name_and_a_left_out_note_shows_none(self):
+        # the PO's "Visible note" (2026-11-25): the note's words stand on the line, small and muted
+        rows = (("needs", "done", "not-done"), ("requirements", "done", "no-picks"), ("build", "done", "no-model"),
+                ("breadboard", "done", "unseen"), ("firmware", "now", None), ("simulate", "later", "no-model"),
+                ("deploy", "later", "may-change"))
+        line = line_of(station_page(rows))
+        cells = re.findall(r'<li data-phase="([a-z]+)"[^>]*>(.*?)</li>', line)
+        notes = {phase: re.findall(r'<span class="note">([^<]*)</span>', inner) for phase, inner in cells}
+        self.assertEqual(notes, {"needs": [], "requirements": ["no needs or picks behind it"], "build": ["no simulation"],
+                                 "breadboard": ["spark cannot see it"], "firmware": [], "simulate": ["no Wokwi model of this board"],
+                                 "deploy": ["done, may change"]})
+        for _phase, inner in cells:  # under the name
+            if "note" in inner:
+                self.assertLess(inner.index('class="name"'), inner.index('class="note"'))
+        self.assertNotIn('class="note"', line_of(station_page((("breadboard", "done", "no-sheet"), ("idea", "now", None)))))
+
+    def test_the_note_is_muted_and_clipped_on_a_phone_with_the_names(self):
+        style = page_style(station_page(TWO_JOBS))
+        rule = {(selector, prop): value for selector, prop, value in declarations(style)}
+        self.assertEqual(rule[(".stations .note", "color")], "var(--muted)")
+        phone = re.search(r"@media \(max-width: 600px\)\{((?:[^{}]+\{[^{}]*\})+)\}", style).group(1)
+        inside = {(selector, prop): value for selector, prop, value in declarations(phone)}
+        for selector in (".stations .name", ".stations .note"):
+            self.assertEqual((inside[(selector, "position")], inside[(selector, "clip")]), ("absolute", "rect(0 0 0 0)"), selector)
+
     def test_the_two_jobs_of_a_real_project_put_the_ring_on_wiring_and_firmware(self):
         from test_flow import a_project_built_with_no_simulation
         project = a_project_built_with_no_simulation()
@@ -1835,6 +1860,33 @@ class TheStationLineTest(unittest.TestCase):
         self.assertEqual(re.findall(r'data-phase="([a-z]+)" data-place="later"', line), ["simulate", "deploy"])
         self.assertIn('<p class="stations-now" aria-hidden="true">Wiring, Firmware</p>', line)
 
+
+
+class TheDeveloperGuideLinesTest(unittest.TestCase):
+    """P1119, the PO's choice for D22: the developer fold writes the guide's DONE and LATER lines as the page wrote them, so
+    every label of `flow.py show` stands in the page's text, and they stand nowhere else on the page."""
+
+    def test_the_fold_holds_done_and_later_and_the_page_before_it_does_not(self):
+        text = guide_page(a_guide(done=["idea", "requirements (no needs or picks behind it)"], later=["firmware", "deploy"]))
+        fold_text = developer(text)
+        self.assertIn('<p class="muted"><strong>DONE</strong> idea, requirements (no needs or picks behind it)</p>', fold_text)
+        self.assertIn('<p class="muted"><strong>LATER</strong> firmware, deploy</p>', fold_text)
+        self.assertLess(fold_text.index("<strong>DONE</strong>"), fold_text.index("<strong>LATER</strong>"))
+        for gone in ("<strong>DONE</strong>", "<strong>LATER</strong>"):
+            self.assertNotIn(gone, before_developer(text))
+
+    def test_an_empty_list_or_no_guide_writes_no_line_in_the_fold(self):
+        self.assertNotIn("<strong>DONE</strong>", developer(guide_page(a_guide(done=[]))))
+        self.assertNotIn("<strong>LATER</strong>", developer(guide_page(a_guide(later=[]))))
+        self.assertIn("<strong>LATER</strong>", developer(guide_page(a_guide(done=[]))))
+        for gone in ("<strong>DONE</strong>", "<strong>LATER</strong>"):
+            self.assertNotIn(gone, guide_page(None))
+
+    def test_the_fold_s_lines_are_escaped(self):
+        fold_text = developer(guide_page(a_guide(done=["<i>x</i>"], later=["a&b"])))
+        self.assertIn("&lt;i&gt;x&lt;/i&gt;", fold_text)
+        self.assertIn("a&amp;b", fold_text)
+        self.assertNotIn("<i>x", fold_text)
 
 
 class TheDeployedPageTest(unittest.TestCase):
@@ -1900,6 +1952,11 @@ def order_page(guide=None, phases=None, wiring=PageWiring(THREE, [an_item()], ["
 def fold(text, name):
     """The `<details>` tag of the fold `name`."""
     return re.search(r'<details class="fold" data-fold="%s"[^>]*>' % name, text).group(0)
+
+
+def before_developer(text):
+    """The page before the developer fold."""
+    return text[:text.index(fold(text, "developer"))]
 
 
 def developer(text):

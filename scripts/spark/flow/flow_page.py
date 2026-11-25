@@ -82,9 +82,10 @@ def page_words(phases):
 
 
 #: The station line's style (P1119): twelve equal cells in a row. Each cell's `::before` is the 2px segment that leads to it,
-#: solid ink up to now and dashed muted after it, dotted for an unbuilt step after a thin divider; the first has none. A mark
+#: solid ink up to now and dashed muted after it, dotted for an unbuilt step after a thin divider; the first has none. A
+#: note's words stand small and muted under the name (the PO's "Visible note"). A mark
 #: stands on the ground over its segment, and each now station's mark has a 2px ink ring. Only ink and muted: no teal. On a
-#: phone the names are clipped (a screen reader still reads them), the marks are 14px and the caption, of no height
+#: phone the names and notes are clipped (a screen reader still reads them), the marks are 14px and the caption, of no height
 #: elsewhere, names the now stations on one line.
 STATIONS_STYLE = (".stations{display:flex;list-style:none;padding:0;margin:var(--space-l) 0 var(--space-s)}"
                   ".stations>li{flex:1 1 0;min-width:0;position:relative;text-align:center;overflow-wrap:normal}"
@@ -97,10 +98,11 @@ STATIONS_STYLE = (".stations{display:flex;list-style:none;padding:0;margin:var(-
                   "line-height:24px;border:2px solid transparent;border-radius:50%;background:var(--bg)}"
                   ".stations [aria-current] .mark{border-color:var(--ink)}"
                   ".stations .unbuilt .mark{border:2px dotted var(--muted)}"
-                  ".stations .name{display:block}.unbuilt{color:var(--muted)}"
+                  ".stations .name{display:block}.stations .note{display:block;font-size:13px;line-height:1.3;color:var(--muted)}"
+                  ".unbuilt{color:var(--muted)}"
                   ".clip{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}"
                   ".stations-now{max-height:0;overflow:hidden;white-space:nowrap;margin:0}"
-                  "@media (max-width: 600px){.stations .name{position:absolute;width:1px;height:1px;overflow:hidden;"
+                  "@media (max-width: 600px){.stations .name,.stations .note{position:absolute;width:1px;height:1px;overflow:hidden;"
                   "clip:rect(0 0 0 0);white-space:nowrap}.stations .mark{width:14px;height:14px;line-height:10px;font-size:10px}"
                   ".stations>li::before{top:6px}.stations-now{max-height:none;margin:0 0 var(--space-s)}}")
 

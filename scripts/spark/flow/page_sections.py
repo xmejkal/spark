@@ -13,6 +13,7 @@ from collections import namedtuple
 from spark.breadboard import before_power, part_pictures, picture_check
 from spark.breadboard.svg_diagram import PAD_MARKS
 from spark.flow import flow_codes
+from spark.flow.guide import note_words
 from spark.flow.phase_readers import MARKS, pick_need
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import day_and_time
@@ -250,7 +251,8 @@ class StationsHtmlLine:
     """
     Renderer: the station line (P1119) as one `<ol class="stations">` above the guide: one `<li>` per station the guide
     gives (`guide.stations`), in its order, with its mark (`shown_phase`, so the tick guard holds) and its plain name
-    (`flow_codes.PHASE_NAMES`, else the phase word), then spark's unbuilt steps (`flow_codes.UNBUILT_STEPS`) greyed, with no
+    (`flow_codes.PHASE_NAMES`, else the phase word), with its note's words under it (`guide.note_words`, the PO's "Visible
+    note" of 2026-11-25; none for a note left out of every list), then spark's unbuilt steps (`flow_codes.UNBUILT_STEPS`) greyed, with no
     status mark. Each now station is `aria-current`, which the style rings. Under the line, a caption names the now
     stations for a phone, where the names are clipped. It draws the places as given and decides nothing. No line with no
     guide, or a guide with no stations (an older page value).
@@ -274,11 +276,13 @@ class StationsHtmlLine:
 
     def _station(self, station, phase):
         """One station's `<li>`: its phase and place for the style and an agent, `aria-current` when it is now, its mark (an
-        empty one when the page holds no such phase) and its name."""
+        empty one when the page holds no such phase), its name and its note's words, if any."""
         current = ' aria-current="step"' if station["place"] == flow_codes.NOW_PLACE else ""
         mark = '<span class="mark" aria-hidden="true">%s</span>' % _text(shown_phase(phase).mark) if phase else '<span class="mark"></span>'
-        return '<li data-phase="%s" data-place="%s"%s>%s<span class="name">%s</span></li>' % (
-            _text(station["phase"]), _text(station["place"]), current, mark, _text(self._name(station)))
+        words = note_words(station)
+        note = '<span class="note">%s</span>' % _text(words) if words else ""
+        return '<li data-phase="%s" data-place="%s"%s>%s<span class="name">%s</span>%s</li>' % (
+            _text(station["phase"]), _text(station["place"]), current, mark, _text(self._name(station)), note)
 
     @staticmethod
     def _name(station):
@@ -466,12 +470,24 @@ class DeveloperHtmlFold:
     KEYS = ("phase:*", "status:*", "by:*", "offer:*")
 
     def text(self, page):
-        """The developer fold (P1062), always closed and last: each phase, closed, with its offers' keys and effects and no
-        hook, the marks, and the line that names each record whole."""
-        body = ['<section id="developer">'] + [self._phase(phase) for phase in page.phases] + [self._legend()]
+        """The developer fold (P1062), always closed and last: the guide's DONE and LATER lines as the page wrote them before
+        the station line (P1119, the PO's choice for D22: every label `flow.py show` answers stands in the page's text), each
+        phase, closed, with its offers' keys and effects and no hook, the marks, and the line that names each record whole."""
+        body = (['<section id="developer">'] + self._guide_lines(page.guide) + [self._phase(phase) for phase in page.phases]
+                + [self._legend()])
         if page.wiring and page.wiring.before_power:
             body.append(WIRING.before_power.records_line(page.wiring.records))
         return _fold("developer", _text(flow_codes.DEVELOPER_HEADING), body + ["</section>"], False)
+
+    @staticmethod
+    def _guide_lines(guide):
+        """DONE and LATER, muted, each with its items comma apart (`GuideHtmlSection._muted`); nothing for an empty list, or
+        with no guide."""
+        if guide is None:
+            return []
+        lines = [GuideHtmlSection._muted(flow_codes.GUIDE_DONE, guide["done"]),
+                 GuideHtmlSection._muted(flow_codes.GUIDE_LATER, guide["later"])]
+        return [line for line in lines if line]
 
     def _phase(self, phase):
         """A phase's section in the developer fold: its heading in a `<summary>`, its text in a `<div>`, always closed. An offer
