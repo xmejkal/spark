@@ -3,11 +3,11 @@ The page of a project (P827, #1185): the flow's phases as one plain HTML file, `
 mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it, as an
 ordered table of sections (`SECTIONS`, P1123) in the slice 1 order (P1062): the freshness line, the NOW box, the Parts,
 Wiring and Pictures folds, the bench note, and the developer fold, always closed. The page adds no tick of its own: a
-phase whose status is not ok never shows one (`shown_phase`). It is the same bytes for the same flow, and loads one thing
-from the web, the font's stylesheet from Google Fonts (P1120), which sends Google each visitor's IP address; with no
-network it uses the system's fonts. Its one script (P829 PR 3) does nothing from disk: `page_words` writes every word it
-shows. The breadboard stands in it as plain shapes (`SvgInliner`, P949),
-with its keys for a player and a legend of its pads; every other picture is an <img>.
+phase whose status is not ok never shows one (`shown_phase`). It writes the same bytes for the same flow. It loads the font's
+stylesheet from fonts.googleapis.com (P1120), which then loads the font files from fonts.gstatic.com; Google gets each
+visitor's IP address and browser string (User-Agent), and from a published page its origin. With no network the page uses the
+system fonts. Its one script (P829 PR 3) does nothing from disk; `page_words` writes its words. The breadboard stands in it as
+plain shapes (`SvgInliner`, P949) with its keys for a player and a legend of its pads; every other picture is an <img>.
 """
 
 import base64
@@ -534,7 +534,8 @@ class FlowHtmlPage:
                    "--backdrop": "#fff"}
     #: Kind 1, teal, is spark's step: a sendable offer's button and Send (the confirm's first), never a disabled one; kind 2, an
     #: outline, is every other. Until P1115 the selectors read where the script puts a button. While the confirm shows, the
-    #: offer's own button is an outline again, so Send is the one teal button.
+    #: offer's own button is an outline again, so Send is the one teal button. A disabled offer on the Now plane keeps its halo
+    #: edge, since without it the dark edge is 1.18:1 against the plane; the grey fill still says disabled.
     STYLE = ("body{max-width:1180px;margin:0 auto;padding:var(--space-m) var(--space-l);"
              "font:var(--size-text)/1.55 var(--body);background:var(--bg);color:var(--ink)}h1,h2{font-weight:600;"
              "line-height:1.2;letter-spacing:-0.02em}h1{font-size:var(--size-title);line-height:1.1}"
@@ -547,8 +548,8 @@ class FlowHtmlPage:
              "[data-makes-stale] [role=group]>button:first-of-type:not(:disabled){background:var(--accent);"
              "border-color:var(--accent);color:var(--on-accent)}[data-makes-stale]>button:hover:not(:disabled),"
              "[data-makes-stale] [role=group]>button:first-of-type:hover:not(:disabled){background:var(--accent-hover);"
-             "border-color:var(--accent-hover)}[data-makes-stale]:has(>[role=group])>button,"
-             "[data-makes-stale]:has(>[role=group])>button:hover{background:var(--surface);border-color:var(--ink);"
+             "border-color:var(--accent-hover)}[data-makes-stale]:has(>[role=group])>button:not(:disabled),"
+             "[data-makes-stale]:has(>[role=group])>button:hover:not(:disabled){background:var(--surface);border-color:var(--ink);"
              "color:var(--ink)}.now [data-makes-stale]>button,"
              ".now [data-makes-stale]>button:hover{border-color:var(--now-halo)}"
              "button:disabled{background:var(--line);border-color:var(--line);color:var(--muted);cursor:not-allowed}"

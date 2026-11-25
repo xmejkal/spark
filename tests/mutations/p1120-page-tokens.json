@@ -88,5 +88,41 @@
   "name": "P1120: the font blocks the text until it loads (TheLookTest, the font test)",
   "find": "&display=swap\"",
   "replace": "&display=block\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the confirm-open fallback stands before the teal rule, so the offer stays teal (TheLookTest, the confirm-open test)",
+  "find": "\"[data-makes-stale]>button:not(:disabled),\"",
+  "replace": "\"[data-makes-stale]:has(>[role=group])>button:not(:disabled){background:var(--surface);border-color:var(--ink);color:var(--ink)}\"\n             \"[data-makes-stale]>button:not(:disabled),\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the confirm-open fallback styles a disabled offer too (TheLookTest, the confirm-open test)",
+  "find": "[data-makes-stale]:has(>[role=group])>button:not(:disabled),\"",
+  "replace": "[data-makes-stale]:has(>[role=group])>button,\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the confirm's label has no ink, white on white (TheLookTest, the confirm-open test)",
+  "find": "[role=group]{color:var(--ink);font-size",
+  "replace": "[role=group]{font-size"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: a drop-shadow filter on every button (TheLookTest, the no-shadow test)",
+  "find": "\"button{min-height:var(--button-height);",
+  "replace": "\"button{filter:drop-shadow(0 1px 2px var(--line));min-height:var(--button-height);"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: a button's top-left radius is a 2px literal (TheLookTest, the radius test)",
+  "find": "\"button{min-height:var(--button-height);",
+  "replace": "\"button{border-top-left-radius:2px;min-height:var(--button-height);"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the NEXT line in the Now plane is muted, 2.9:1 on the light plane (TheLookTest, the Now plane test)",
+  "find": ".next{font-size:var(--size-heading)}",
+  "replace": ".next{font-size:var(--size-heading);color:var(--muted)}"
  }
 ]

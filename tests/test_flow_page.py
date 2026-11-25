@@ -1243,16 +1243,36 @@ class TheLookTest(unittest.TestCase):
         rule = {(selector, prop): value for selector, prop, value in found}
         self.assertEqual((rule[("button:disabled", "background")], rule[("button:disabled", "color")]), ("var(--line)", "var(--muted)"))
         # while the confirm shows, the offer's own button is an outline again, so Send is the one teal button
-        for selector in ("[data-makes-stale]:has(>[role=group])>button", "[data-makes-stale]:has(>[role=group])>button:hover"):
+        fallback = ("[data-makes-stale]:has(>[role=group])>button:not(:disabled)",
+                    "[data-makes-stale]:has(>[role=group])>button:hover:not(:disabled)")
+        for selector in fallback:
             self.assertEqual(rule[(selector, "background")], "var(--surface)", selector)
         self.assertEqual(rule[("button", "background")], "var(--surface)")
 
+    def test_the_confirm_open_outline_never_styles_a_disabled_offer_and_stands_after_the_teal_rule(self):
+        style = self.style
+        found = declarations(style)
+        # a disabled offer keeps the grey fill, whether or not the confirm is open: the fallback is for a button that can send
+        for selector, prop, value in found:
+            if ":has(" in selector and prop in ("background", "border-color", "color"):
+                self.assertIn(":not(:disabled)", selector, selector)
+        # the fill is the disabled rule's, and no Now rule paints a fill over it (the Now edge stays: see the style's comment)
+        self.assertEqual([selector for selector, prop, _value in found if prop == "background" and ".now" in selector], [".now"])
+        # the fallback outranks the teal rule by its place as well as by its weight, so the offer stays an outline
+        self.assertGreater(style.index("[data-makes-stale]:has(>[role=group])>button:not(:disabled)"),
+                           style.index("[data-makes-stale]>button:not(:disabled)"))
+        self.assertGreater(style.index("[data-makes-stale]:has(>[role=group])>button:hover:not(:disabled)"),
+                           style.index("[data-makes-stale]>button:hover:not(:disabled)"))
+        rule = {(selector, prop): value for selector, prop, value in found}
+        self.assertEqual((rule[("[role=group]", "color")], rule[("[role=group]", "background")]), ("var(--ink)", "var(--surface)"))
+
     def test_no_shadow_no_gradient_and_each_radius_is_a_token(self):
-        for word in ("box-shadow", "text-shadow", "gradient"):
-            self.assertNotIn(word, self.style)
         found = declarations(self.style)
-        radii = [value for _selector, prop, value in found if prop == "border-radius"]
+        for word in ("shadow", "gradient"):  # in a property or a value: box-shadow, filter:drop-shadow(...), a gradient
+            self.assertEqual([(selector, prop) for selector, prop, value in found if word in prop or word in value], [])
+        radii = [value for _selector, prop, value in found if "radius" in prop]
         self.assertTrue(radii)
+        self.assertEqual({prop for _selector, prop, _value in found if "radius" in prop}, {"border-radius"})
         for value in radii:
             self.assertIn(value, ("var(--radius-button)", "var(--radius-frame)", "50%"))
         button = {prop: value for selector, prop, value in found if selector == "button"}
@@ -1274,6 +1294,16 @@ class TheLookTest(unittest.TestCase):
                                       ("[role=group]", "background", "var(--surface)"),
                                       (".now [data-makes-stale]>button", "border-color", "var(--now-halo)")):
             self.assertEqual(rule.get((selector, prop)), value, selector)
+
+    def test_nothing_inside_the_now_plane_is_muted_or_off_its_ink(self):
+        box = re.search(r'<div class="now">(.*?)</div>', guide_page(a_guide()), re.S).group(1)
+        inside = set(re.findall(r'class="([^"]+)"', box)) | {"now"}  # the classes the plane holds, and its own
+        self.assertIn("next", inside)
+        for selector, prop, value in declarations(self.style):
+            if set(re.findall(r"\.([a-z-]+)", selector)) & inside:
+                self.assertNotIn("var(--muted)", value, selector)  # --muted is for a light ground: 2.9:1 on the Now plane
+                if prop == "color":
+                    self.assertEqual(value, "var(--now-ink)", selector)
 
     def test_a_stale_or_problems_word_stands_on_its_plane_and_no_other_status_has_one(self):
         hues = {"stale": "amber", "problems": "red"}  # by hue, so the style names no status code
