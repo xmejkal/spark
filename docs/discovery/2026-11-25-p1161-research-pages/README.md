@@ -81,11 +81,12 @@ More sketches: [council/synthesis.md](council/synthesis.md) part 4, [council/ux-
 - D8: the chat alone writes `verified: true`, and its source names who, when and how. A one-click mark is a no-go.
 - D9: the build goes out of date after a record it read changes, before slice 1's offer ships.
 - D12, D13: find by criteria starts with a spike. The page says "not measured yet" until a run is measured.
-- D2: the riskiest assumption is A1, that he starts a job from the page's sentence. Its test is the next walk's diary.
+- D2: the riskiest assumption is A1, that he starts a job from the page's sentence. Its test is a walk's diary. When it runs is Q13, his.
 - D14: six cards to file, listed in [items.md](items.md).
 
 ## What waits on the PO
 
+1. When A1 is tested: before any build, or in the slice 0 walk (Q13, no majority).
 1. Whether tokens on his plan count as money under his rule D-g, and his ceiling for the first research run.
 2. The misfits M1 (agents write whole records outside any Operation) and M3 (the shelf and the catalog sit outside
    the Storage seam).

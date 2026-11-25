@@ -25,10 +25,12 @@ e.g. `- ★C3 · STATUS.md:84 · refuter: partly — "Shown on the C6, assumed f
 <!-- Where the lenses and the refuter agree, and where they split; each split becomes a question.
 e.g. `- Split: Feasibility says a day, Risks says a week · Q4` -->
 - Agree: the five lenses, the synthesis and the three delegated seats agree that research, identify and find are "Ask Claude" offers, that nothing new travels from the page now, and that the first slice is a need with no part (D4, D5) <!-- REQUIRED:agree-split -->
-- Agree: the refuter and the three seats found the same two gaps (no refuter report then, the clock times), and both are now closed or recorded (C23)
-- Split: the refuter says the plan builds before it tests A1, and the collection plan can test A1 before any build. The three seats chose to measure A1 in the slice 0 walk without holding slice 0 (D3). Raised to the PO with D3, which is his to change
-- Split: the refuter says closing P1002 drops his "always offering". The seats agreed, and D5 keeps P1002 open
+- Agree: the seats found that no refuter report existed when they read; the refuter found the clock times. Both are now closed or recorded (C23)
+- Split: the refuter says the plan builds before it tests A1, and the collection plan can test A1 before any build. The seats were not asked; their remarks differ. D3 is withdrawn, and the question is Q13, the PO's
+- Split: the refuter says closing P1002 drops his "always offering". The seats, who did not read the refuter's report, also keep P1002 open (D5)
 - Split: D8 read two ways (PO-28 against TL-23 and ARCH-12). D10 answers for now (plain words), and a part record as a kept step is the PO's own (Q8 B)
 - Split: the architect seat asks for a card of its own for the record-write Operation and misfit M1; the other two seats keep it as a line. It goes to the PO as a misfit
 - Split: the stale stamp's order: before slice 1's offer (D9, 3 of 3), against the tech lead lens's "before everything". D9 holds
 - Not resolved: the clock times (C23); the cause is not known
+- Caveat on D1 to D14: the seats read the brief before the refuter's corrections to ★C6, ★C8, ★C9, ★C11, ★C12, ★C14, ★C15, ★C16 and ★C17. The main session's reading is that no correction changes a chosen option, because each narrows a claim that no option rests on alone (H, not re-asked)
+- Second pass (council/refuter-2.md): D2, D3, D4 and D7 said more than the majority column; fixed in brief.md. Q5's and Q7's pointers corrected to record_home.py:49-54 and finding.md:201
