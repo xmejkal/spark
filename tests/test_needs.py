@@ -1199,6 +1199,14 @@ class ThePicksTest(unittest.TestCase):
         _, _, events, _, problems = needs.plan_pick(self.project, [("soil", "x-soil")])
         self.assertEqual((problems, events), ([], [{"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x-soil"}]))
 
+    def test_a_plan_given_a_drawer_plans_on_that_drawer_and_not_on_the_store_s(self):
+        """P1124: `entries=` is the drawer the plan reads (the move's drawer after the other project's release)."""
+        given = dict(drawer.entries(), probe=dict(drawer.entries()["probe"], count=1, used_in={"other-gadget": 1}))
+        _, _, _, _, problems = needs.plan_pick(self.project, [("soil", "x-soil")], entries=given)
+        self.assertEqual([problem["subject"] for problem in problems], ["x-soil"])
+        _, changes, _, _, problems = needs.plan_pick(self.project, [("soil", "x-soil")])
+        self.assertEqual((problems, [change["entry"] for change in changes]), ([], ["probe"]))
+
     def test_a_pick_answers_with_the_project_what_it_picked_what_it_reserved_and_that_it_was_written(self):
         said, code = run(["--pick", str(self.project), "soil=x-soil"])
         self.assertEqual((code, said["data"]), (0, {"project": "plant-alarm", "picks": [{"need": "soil", "pick": [{"part": "x-soil"}]}],
