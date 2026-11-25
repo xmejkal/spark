@@ -43,7 +43,7 @@ of sha256 values in each generated record, still no graph.
 ## The chain
 
 Paths below start at `scripts/spark/`. A solid arrow is stamped and checked. A thick arrow is stamped, but blind or
-noisy in a named case. A dotted arrow has no check.
+noisy in a named case. A dotted arrow has no check. Links 12 to 14, found by the refuter, are in the table only.
 
 ```mermaid
 flowchart TD
@@ -71,10 +71,13 @@ flowchart TD
 | 5 | requirements.json → build record, dist/, board.tsx | `.spark/build.json`: `requirements_sha256`, `written_sha256` (`build/kept_files.py:505-507`) | build phase: "requirements.json changed after the build" (`flow/phase_readers.py:441-449`) | Works |
 | 6 | requirements.json → pin map, Wokwi diagram | a header line, no hash (`design/pin_assigner.py:562`). The diagram has none (`build/board_engine.py:228`) | none of their own. Link 5 covers them while the build writes them | No own check. Covered by link 5 |
 | 7 | build → breadboard.md | `dist/board/built-from.json`, a copy of the requirements (`breadboard/sheet.py:119-121`) | breadboard phase (`flow/phase_readers.py:531-532`) | Works |
-| 8 | pin map → firmware | none | none in the flow. The import check runs only on request (`scripts/import_firmware.py:47`) | No check before a scenario run |
+| 8 | pin map → firmware | none | none in the flow. The import check runs only on request (`firmware/import_probe.py:48-67`, through `scripts/import_firmware.py`) | No check before a scenario run |
 | 9 | firmware → image and verdict | the run log: sha256 of the image and of each file (`firmware/scenario_run.py:229-248`) | simulate phase: the verdict by sha256 (`firmware/project_image.py:86-102`), "changed after the image" by file time (`:121-125`) | Safe, with false alarms |
 | 10 | image → board | the board log's image sha256 | deploy phase (`flow/deploy_reading.py:29-41`) | As link 9 |
 | 11 | records → page | a fingerprint of three files (`flow/fingerprint.py:18-36`) | an older click is refused | Works. The page is made again |
+| 12 | part records, boards, `.spark/rules.json` → build | none. The build stamp holds only `requirements_sha256` (`build/kept_files.py:505`), while the build reads parts/, boards/ and rules.json (`loader.py:300-307, 445-458`) | none | No check. Outside the kept steps today, but a rules.json change goes unseen |
+| 13 | Wokwi diagram → scenario run and verdict | none. The run log stamps the image and the firmware files, not sim/diagram.json (`firmware/scenario_run.py:240-248`) | only at the next run, which checks the scenario's step ids (`firmware/scenario_run.py:160-165`) | No check. The refuter's experiment: a changed diagram still read "a passed run tested the current image" |
+| 14 | wiring sheet → the wired bench | the sheet's file time (`breadboard/wired_board.py:25-33`) | "Spark cannot see whether you wired from it" | No check, by design. Not in the preview |
 
 Link 4, measured in a scratch project with `flow.py show`. A pick goes and its need stays: the phase says stale.
 A need goes with its pick: the phase says ok, and the file still lists the part. One of two picks of the same part
@@ -82,23 +85,26 @@ goes: the phase says ok. `_merge_parts` keeps every entry that no pick explains 
 The reader never reads the `unexplained` value that names them (`design/need_requirements.py:338-339`).
 
 Links 9 and 10. Git rewrites only the files whose content changes, and they get the time of the take-back. So
-"changed after the image" is correct after a take-back. The weakness is noise: every kept build writes the pin map
-again, same bytes or not (`build/kept_files.py:469`).
+"changed after the image" is correct after a take-back. Every kept build writes the pin map again, same bytes or not
+(`build/kept_files.py:469`). That gives false alarms, but today it is also the only alarm for a changed circuit
+(link 13).
 
 ## The check after a take-back
 
 The check is the `show-flow` Operation as it is (`flow/show_flow.py:148-159`). It reads every phase from the files
-and says which are out of date. It is blind on links 2, 3 and 8 and on link 4's two cases. Changes 1 and 2 close
-links 3 and 4. Links 2 and 8 stay open and are named below.
+and says which are out of date. It is blind on links 2, 3, 8, 12 and 13 and on link 4's two cases. Changes 1 and 2
+close links 3 and 4. The other links stay open and are named below.
 
 The take-back then runs in this order:
 
 1. The preview: each file with its content after (D14), and each hold that will change, from `needs.plan_holds` on the
    needs as they will be. That function writes nothing (`design/needs.py:355-393`).
 2. The person's yes through the core (D7, D14).
-3. The strategy takes the step back. Spark reads each record again with its own reader. A record that does not read
-   undoes the take-back, and spark refuses in plain words.
-4. Spark applies the holds with `drawer.apply`, as a pick does (`design/pick_parts.py:82`).
+3. Spark applies the holds with `drawer.apply`, as a pick does (`design/pick_parts.py:82`). The project's own files
+   come last, as in a pick (`design/pick_parts.py:84-87`).
+4. The strategy takes the step back. Spark reads each record again with its own reader. A record that does not read
+   undoes the take-back, and spark refuses in plain words. A failure between steps 3 and 4 leaves holds that differ
+   from the picks, and change 1 names them.
 5. The `show-flow` reading runs. The answer names each phase that went out of date and the one next offer.
 
 The take-back makes nothing again by itself. The flow's own offers do that, one yes at a time.
@@ -119,7 +125,9 @@ On a conflict, spark refuses, changes nothing (A2) and offers the other take-bac
 ## The changes, in order
 
 1. Before the take-back slice. The store's hold is never compared with the picks → one small class over
-   `needs.plan_holds` names each hold that differs. The parts phase says it, and P1152's preview reuses it.
+   `needs.plan_holds` names each hold that differs. The parts phase says it, and P1152's preview reuses it. It must
+   say how it treats a hold that the person set by hand: today a pick releases one and a drop keeps one
+   (`design/needs.py:406-410`, the refuter's experiment).
 2. Before the take-back slice. The flow reads a parts list as current while it lists a part whose pick is gone →
    the requirements phase reads `unexplained.removable` and says out of date, with the entries named.
 3. A line in P1152's kept-step slice. A stamp can go back without its record → a kept step holds needs.json with
@@ -127,9 +135,13 @@ On a conflict, spark refuses, changes nothing (A2) and offers the other take-bac
    map, the sheet or sim/.
 4. Lines in P1152's take-back slice. Nobody reads the chain after a take-back → the five steps above. A2's test
    gains three cases: a need gone with its pick, a later pick on the same need, a hold that another project took.
-5. Can wait. "Changed after the image" compares file times → compare each file's sha256 with the run log's file
-   lines (`firmware/scenario_steps.py:470-472`).
-6. Can wait. Nothing checks the firmware against a changed pin map before a scenario run → if the pin map changed
+5. Can wait. A changed Wokwi diagram leaves a passed run reading current, and "changed after the image" compares
+   file times → each run log also stamps the sha256 of sim/diagram.json, and the simulate phase compares the diagram
+   and each file's sha256 with the log (`firmware/scenario_steps.py:470-472`). The file-time alarm stays until the
+   diagram stamp exists, because it is the only alarm for a changed circuit today.
+6. Can wait. The build stamp leaves out the part records, the boards and `.spark/rules.json` → the build record
+   also stamps the records it read, and the build phase compares them (link 12).
+7. Can wait. Nothing checks the firmware against a changed pin map before a scenario run → if the pin map changed
    after the image, the flow's guide names the free import check.
 
 Link 2 gets no card now. It exists without any take-back, and no check asks for it yet.
@@ -151,7 +163,8 @@ Link 2 gets no card now. It exists without any take-back, and no check asks for 
 4. The person's own commits between spark's steps. Recommended: the preview names them and the range take-back refuses.
 5. The store's history after a take-back. Recommended: one new "taken back" event, and no event is removed.
 6. Risk: a clean merge gives valid JSON with a wrong meaning. Step 3 catches only a record that does not read.
-7. Risk: links 2 and 8 stay with no check after these changes.
+7. Risk: links 2, 8 and 14 stay with no check after these changes.
+8. A hold that the person set by hand: does a take-back keep it, or does it follow the picks like a pick does?
 
 ## Checked and not checked
 
@@ -174,4 +187,17 @@ map. What a renamed project does to its holds. No size here is measured.
 
 ## Refuter
 
-Pending.
+The refuter (Opus) reproduced the claims in scratch folders with a scratch store, and removed them after. Verdict:
+holds with fixes. All three fixes are in the text above.
+
+- The main answer: confirmed, with a gap. A changed Wokwi diagram still read "a passed run tested the current
+  image" (link 13). The gap is a missing stamp, not a reason for a graph.
+- Link 4: confirmed by experiment, also through a real `--needs-drop`. `unexplained.removable` named the leftover
+  entry, so change 2 works.
+- Link 3: confirmed. A dropped need, then a git revert of the drop: the flow read ok while the hold stayed empty.
+- Links 9 and 10: confirmed for file content.
+- Citations: 16 checked, all hold. One was too weak and now cites `firmware/import_probe.py`.
+- The take-back order: rejected as first written. The holds now come before the project's files, as in a pick.
+- Added: links 12, 13 and 14, change 5 rewritten, change 6 new, open question 8.
+
+Not checked: the "only this step" conflict cases beyond n = 2, a real build, and a Wokwi run, which is paid.
