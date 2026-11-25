@@ -36,7 +36,7 @@ means. The build's output prints the stages below, from one table, `stages.BUILD
 | schematic | board.tsx, written by the board emitter with the pin map made inside it | could-not-run: a design error, with its own code (design_codes), `stage_crashed`, `schematic_refused`; skipped: `board_only` |
 | schematic-notes | what the board emitter notes about a board it wrote; listed only when there is a note, and the build goes on | problems: `schematic_noted` |
 | footprint | the board's footprint that board.tsx imports, drawn with the design's rules | could-not-run: a design error, with its own code (design_codes), `stage_crashed`; skipped: `board_only` |
-| build | the board engine (tsci) builds board.tsx, and the copper is counted | could-not-run: `tool_missing`, `stage_timed_out`, `tool_cannot_build`; problems: `design_not_built`, `part_stranded`, `not_routed`; skipped: `board_only` |
+| build | the board engine (tsci) builds board.tsx, and the copper is counted | could-not-run: `tool_missing`, `file_refused`, `tools_list_broken`, `stage_timed_out`, `tool_cannot_build`; problems: `design_not_built`, `part_stranded`, `not_routed`; skipped: `board_only` |
 | simulation | the Wokwi diagram, its chips and wokwi.toml; no simulation runs | could-not-run: `tool_missing`, `simulation_fact_missing`, `board_not_in_wokwi`, `chip_not_compiled`, `stage_timed_out`, `converter_lacks_part`; problems: `no_diagram`, `diagram_unwired`; skipped: `every_part_skipped` |
 | check_spine | not a stage the build runs: an error of the run itself that no stage caught | could-not-run: `stage_crashed` |
 
@@ -51,7 +51,7 @@ The files that join the steps:
 | --- | --- | --- |
 | `requirements.json` | you, `parts.py --requirements` from your picks (it keeps a row for each entry it wrote in `.spark/requirements-origin.json`, to name an entry written for a pick that is gone), or the `spark-design` skill with you | the chain, `assign_pins.py`, and `check_all.py` for buildability and physics |
 | `board.tsx`, and the dev board's footprint beside it | the schematic and footprint stages, kept with `--keep .` | tscircuit |
-| `dist/board/circuit.json`, the built netlist | tscircuit's build | every check, `init_project.py` (to name the rails), and the Wokwi converter |
+| `dist/board/circuit.json`, the built netlist | tscircuit's build, kept by `--keep` only when it built (else an earlier one stays, named, P1088) | every check, `init_project.py` (to name the rails), and the Wokwi converter |
 | `sim/diagram.json`, `sim/wokwi.toml` and the chips | the simulation stage, kept with `--keep` or `--sim-dir` | `wokwi-cli`, and Wokwi for VS Code |
 | `.spark/rules.json` | `init_project.py`, then you | the checks, and the generator, which sizes a rail's traces from its `max_current_a` |
 | `.spark/needs.json`, and `.spark/needs-basis.json` beside it: the sha256 of the goal and the must lines the needs were written from, and the ids of the needs | `parts.py --needs-set` (the second only on a write that defines a need, or a review: `[]`), `--pick` for a need's pick, `--needs-drop` | `parts.py --match`, and `flow.py`, whose needs phase is out of date when the goal or the must lines changed, and whose idea phase is out of date when a need was dropped |

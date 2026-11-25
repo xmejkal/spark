@@ -44,8 +44,8 @@
  {
   "file": "tools/circuit-to-wokwi/cli.ts",
   "name": "--netlist is ignored and the circuit is read",
-  "find": "  const { netlist, problems: designProblems } = options.netlist\n",
-  "replace": "  const { netlist, problems: designProblems } = false\n"
+  "find": "  const { netlist: designed, problems: designProblems } = options.netlist\n",
+  "replace": "  const { netlist: designed, problems: designProblems } = false\n"
  },
  {
   "file": "scripts/spark/records/board_records.py",

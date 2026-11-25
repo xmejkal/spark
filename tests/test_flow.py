@@ -3,7 +3,8 @@ The flow reader (P825, #1183): `flow.py show` says where a project stands, phase
 stages wrote, and offers the next steps as keys. On five projects (no needs, picked, built by hand with no needs, a build
 that ended in could-not-run, requirements changed after the build) each test pins all nine phases' status and offer keys
 from `flow.py show --json`, and `stands_at`. More tests pin one phase each.
-It covers the area's modules `show_flow`, `phase_readers` and `flow_codes`, and the build record `build_record`.
+It covers the area's modules `show_flow`, `phase_readers`, `deploy_reading` (P1043, the deploy phase) and `flow_codes`, and the
+build record `build_record`.
 
     python3 -m unittest tests.test_flow
 """
@@ -30,11 +31,11 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import flow  # noqa: E402
 from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
-from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256_of  # noqa: E402
+from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import SimulateReader  # noqa: E402
 from spark.flow.guide import guide_of  # noqa: E402
-from spark.flow.show_flow import ShowFlow, read_flow  # noqa: E402
+from spark.flow.show_flow import ShowFlow, flow_and_guide, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.outcomes import OK, PROBLEMS  # noqa: E402
@@ -42,6 +43,8 @@ from spark.design import needs  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import LOOK_WHY, SCENARIO_FIRST_WHY, SCENARIO_WHY, SIM_FILES_NOW, STALE  # noqa: E402
+from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
+from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.phase_steps import SCENARIO_PLACEHOLDER  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.core.result import NextStep  # noqa: E402
@@ -49,6 +52,8 @@ from spark.core.result import NextStep  # noqa: E402
 #: A built project: requirements.json, the board it names and the circuit a finished build kept with its built-from.json.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 PHASES = ["idea", "needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"]
+#: A value of a project's secrets file (P1060), MIN_SECRET characters or more, and a value whose file does not parse (D5).
+SECRET, HALF_TYPED = "wifipass1234", "half-typed-value-31337"
 
 
 def show(project, *argv):
@@ -130,6 +135,16 @@ def lines_of(project):
     with contextlib.redirect_stdout(io.StringIO()) as out:
         flow.main(["show", "--project", str(project)])
     return out.getvalue().splitlines()
+
+
+def sheet_at(project):
+    """The time of the project's breadboard.md, with its zone, as `data.guide.wired.sheet_at` holds it (P1044)."""
+    return zone_time.stamp(datetime.datetime.fromtimestamp((project / "breadboard.md").stat().st_mtime))
+
+
+def wired_line(project):
+    """The parts phase's first line on a project whose only witness is its sheet (P1044)."""
+    return " ".join((WIRED_SHEET_MESSAGE % day_of(sheet_at(project)), WIRED_STEP_MESSAGE))
 
 
 def a_built_project_with_a_sheet_from(requirements):
@@ -276,10 +291,12 @@ class ThePhasesTest(FlowTest):
 
     def test_a_project_whose_last_need_was_dropped_says_so_and_is_no_hand_written_project(self):
         # P984: needs.json holds no need and requirements.json was written from picks: nothing was written by hand.
-        said, code = show(with_needs(a_built_project(), []))
+        project = with_needs(a_built_project(), [])
+        said, code = show(project)
         self.assertEqual(code, 0)
         self.assertEqual(says(said, "needs"), ["no need is left: the last one was dropped"])
-        self.assertEqual(says(said, "parts"), ["no need or pick is behind the parts list"])
+        # P1044: the fixture keeps a sheet, so the parts phase's first line is the wired line
+        self.assertEqual(says(said, "parts"), [wired_line(project), "no need or pick is behind the parts list"])
         self.assertEqual(table(said), BUILT_TABLE)
 
     def test_a_build_that_could_not_run_says_so_and_exits_2(self):
@@ -289,6 +306,35 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(said["data"]["stands_at"], "build")
         self.assertEqual([(item["subject"], item["code"]) for item in said["unchecked"]], [("build", "phase_could_not_run")])
         self.assertIn("build: could-not-run", says(said, "build"))
+
+    def test_a_build_that_did_not_write_dist_says_so_in_the_build_phase(self):
+        # P1088: the record's dist_written false (P816) over a dist/ that is there names it as an earlier build's
+        project = a_built_project("could-not-run")
+        BuildRecordStore(project, clock=FakeClock()).write({"status": "could-not-run", "stages": [{"name": "board", "status": "ok"}, {"name": "build", "status": "could-not-run"}],
+                                                           "missing_facts": [], "requirements": "requirements.json",
+                                                           "requirements_sha256": sha256_of(project / "requirements.json"), "dist_written": False})
+        self.assertTrue((project / "dist").is_dir())
+        said, _ = show(project)
+        self.assertIn(EARLIER_DIST % BuildRecordStore(project).read()["at"], says(said, "build"))
+        said, _ = show(a_built_project())
+        self.assertEqual([line for line in says(said, "build") if "did not write dist/" in line], [])
+
+    def test_a_reference_build_says_so_in_the_build_phase(self):
+        # P1095: a record with requirements null is the reference design's build, not one of requirements.json
+        project = a_built_project()
+        BuildRecordStore(project, clock=FakeClock()).write({"status": "ok", "stages": [{"name": "board", "status": "ok"}, {"name": "build", "status": "ok"}],
+                                                           "missing_facts": [], "requirements": None, "requirements_sha256": None})
+        said, _ = show(project)
+        self.assertEqual(statuses(said)["build"], STALE)
+        self.assertEqual(says(said, "build")[0], "the last build was spark's reference design, not requirements.json")
+
+    def test_a_record_without_the_requirements_key_is_read_as_built_from_requirements_json(self):
+        # P1095: only a record that holds requirements null is the reference design's; one that lacks the key keeps the old reading
+        project = a_built_project()
+        BuildRecordStore(project, clock=FakeClock()).write({"status": "ok", "stages": [{"name": "board", "status": "ok"}, {"name": "build", "status": "ok"}],
+                                                           "missing_facts": []})
+        said, _ = show(project)
+        self.assertEqual(says(said, "build")[0], "requirements.json changed after the build")
 
     def test_requirements_changed_after_the_build_make_the_build_and_the_sheet_stale(self):
         project = a_built_project()
@@ -638,15 +684,17 @@ class TheGuideTest(FlowTest):
     """P977: `data.guide` says what to do now, what is done, what comes later and what the person set aside."""
 
     def test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now(self):
-        said, code = show(a_project_built_with_no_simulation())
+        project = a_project_built_with_no_simulation()
+        said, code = show(project)
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "firmware"))  # P1030: the guide's now
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10,
+            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10, "with_wiring": True,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
-            "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL})
+            "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL,
+            "no_open_phase": None, "wired": {"sheet_at": sheet_at(project), "deploy_at": None}})  # P1044: the fixture keeps a sheet
 
     def test_the_project_stands_where_the_guide_says_now(self):
         """P1030: one rule says where a project stands, the guide's now phase, in data.stands_at too."""
@@ -667,13 +715,15 @@ class TheGuideTest(FlowTest):
         self.assertIn("breadboard (spark cannot see it)", guide["done"])
 
     def test_with_the_firmware_written_the_deploy_is_now_and_the_simulate_stays_later(self):
-        said, _ = show(a_firmware(a_project_built_with_no_simulation()))
+        project = a_firmware(a_project_built_with_no_simulation())
+        said, _ = show(project)
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None,
+            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None, "with_wiring": True,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
-            "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL})
+            "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL, "no_open_phase": None,
+            "wired": {"sheet_at": sheet_at(project), "deploy_at": None}})  # P1044: the fixture keeps a sheet
 
     def test_any_other_cause_of_a_simulation_that_could_not_run_stops_at_the_build(self):
         for code in ("simulation_fact_missing", "converter_lacks_part", None):
@@ -757,10 +807,10 @@ class TheGuideTest(FlowTest):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         self.assertEqual(show(project)[0]["data"]["guide"], {
-            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None,
+            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None, "with_wiring": False,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
-            "set_aside": [], "no_simulation": None})
+            "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None})  # P1044: no sheet and no board log
 
     def test_needs_set_aside_do_not_count_and_a_picked_one_counts_as_picked(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -823,7 +873,7 @@ class TheGuideTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual(guide["now"], {
-            "phase": "parts", "by": ["you"], "offer": None, "needs": [], "steps": None,
+            "phase": "parts", "by": ["you"], "offer": None, "needs": [], "steps": None, "with_wiring": False,
             "says": "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, "
                     "then pick a part."})
         self.assertEqual((guide["done"], guide["later"], guide["set_aside"]), (
@@ -888,11 +938,13 @@ class TheBuildOfferTest(FlowTest):
         said, _ = show(a_built_project())
         build = offer_of(said, "build")
         self.assertEqual(build["label"], "Build the board")
-        self.assertTrue(build["effect"].startswith("Saves its files in this project: the board file"))
+        # P1044: the fixture keeps a sheet, so the wired sentence comes first
+        self.assertTrue(build["effect"].startswith(WIRED_BUILD_MESSAGE + " Saves its files in this project: the board file"))
         self.assertIn("the Wokwi drawing breadboard.json when Wokwi has a part for each part drawn", build["effect"])
-        self.assertIn("If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this page "
-                      "are deleted.", build["effect"])
-        self.assertIn("If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted.", build["effect"])
+        self.assertIn("If the board tool is not installed, the board is not built, the old wiring sheet and drawings stay as an "
+                      "earlier build's, and this page is deleted.", build["effect"])
+        self.assertIn("If spark refuses the parts list, the old wiring sheet, drawings and pin map stay as an earlier build's, and "
+                      "this page is deleted.", build["effect"])
         self.assertTrue(build["effect"].endswith("Runs no simulation and costs nothing."))
         self.assertNotIn("history", build["effect"])
 
@@ -908,6 +960,15 @@ class TheBuildOfferTest(FlowTest):
         self.assertIn("This board needs no wiring, so the old dist folder is deleted.", effect)
         self.assertTrue(effect.startswith("This board needs no parts, so nothing is built or wired."))
         self.assertNotIn("board file", effect)
+
+    def test_a_board_only_parts_list_says_what_a_refused_file_leaves(self):
+        # P1109's council, decision 4: a board-only build removes the old sheet and dist/, a refused file removes neither
+        project = a_built_project()
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "board_only": True, "parts": []}))
+        effect = offer_of(show(project)[0], "build")["effect"]
+        self.assertIn("If spark refuses the parts list, the old dist folder, wiring sheet, drawings and pin map stay as an "
+                      "earlier build's, and this page is deleted.", effect)
+        self.assertNotIn("the old wiring sheet, drawings and pin map stay", effect)
 
 
 class TheReviewRoundTest(FlowTest):
@@ -1408,7 +1469,9 @@ class TheOfferStepTest(FlowTest):
         self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"], offers(said, "build")),
                          ("breadboard", None, ["build"]))
         write_page(project, store=FlowPageStore())
-        self.assertIn("<p><strong>NOW (breadboard)</strong> ", (project / "page.html").read_text(encoding="utf-8"))
+        page = (project / "page.html").read_text(encoding="utf-8")  # P1062: the NOW box, its NEXT line with no key
+        self.assertIn("<p><strong>NOW (breadboard), by ", page)
+        self.assertIn('<p class="next"><strong>NEXT</strong> ', page)
 
     def a_hand_written_project(self):
         project = Path(tempfile.mkdtemp()) / "bl"
@@ -1539,7 +1602,7 @@ class TheNextOnlyStepTest(FlowTest):
         said, _ = show(project)
         whole = str(project.absolute())
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "simulate", "by": ["claude"], "says": SIM_FILES_NOW, "offer": None,
-                                                        "needs": [], "steps": None})
+                                                        "needs": [], "steps": None, "with_wiring": False})
         self.assertEqual(said["next"], [{"op": "build-board", "argv": [str(project.absolute() / "requirements.json"), "--keep", whole],
                                          "why": "Build the board", "effects": ["reads", "runs", "writes"], "needs_yes": False,
                                          "env": self.env()}])
@@ -1575,7 +1638,9 @@ class TheNextOnlyStepTest(FlowTest):
         self.assertIsNone(said["data"]["guide"]["now"]["offer"])
         self.assertFalse([offer for phase in said["data"]["phases"] for offer in phase["offers"] if offer["key"].startswith("look")])
         write_page(deploy, store=FlowPageStore())
-        self.assertIn("<p><strong>NOW (deploy)</strong> ", (deploy / "page.html").read_text(encoding="utf-8"))
+        page = (deploy / "page.html").read_text(encoding="utf-8")  # P1062: the NOW box, its NEXT line with no key
+        self.assertIn("<p><strong>NOW (deploy), by ", page)
+        self.assertIn('<p class="next"><strong>NEXT</strong> ', page)
 
     def test_no_step_names_a_home_path_and_only_argv_and_env_name_the_project(self):
         # the projects are under HOME (FlowTest), so a raw argv names the home folder: only argv and env may
@@ -1833,14 +1898,46 @@ class ThePageRefreshTest(FlowTest):
         self.assertNotIn("refresh:", err.getvalue())  # no page is no failure
         self.assertFalse((project / "page.html").exists())
 
-    def test_a_dry_run_or_a_refused_pick_leaves_the_page(self):
+    def test_a_dry_run_leaves_the_page_and_a_refused_pick_writes_it_again(self):
+        # P1069 (D1): a run that writes is refreshed at any status but a crash, so the refused pick writes the page as the
+        # project stands, with its note; the dry run writes nothing
         import parts
-        for pick in (["soil=x-many", "--dry-run"], ["soil=x-held"]):
-            with self.subTest(pick=pick):
-                project = self.with_page()
-                lines, code = run_main(parts.main, ["--pick", str(project)] + pick + ["--json"])
-                self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
-                self.assertNotIn("page.html", json.dumps(json.loads(lines[0]).get("notes", [])))
+        from spark.flow.now_follow_up import REFRESHED
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        project = self.with_page()
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many", "--dry-run", "--json"])
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
+        self.assertNotIn("page.html", json.dumps(json.loads(lines[0]).get("notes", [])))
+        project = self.with_page()
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-held", "--json"])
+        said = json.loads(lines[0])
+        self.assertNotEqual((code, said["status"]), (0, "ok"))
+        self.assertIn({"subject": "page.html", "sentence": REFRESHED}, said.get("notes", []))
+        page = (project / "page.html").read_text(encoding="utf-8")
+        self.assertNotEqual(page, "an old page")
+        write_page(project, store=FlowPageStore())  # the flow's page of the project as it stands now
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), page)
+
+    def test_a_kept_build_that_failed_before_it_kept_anything_writes_the_page_again(self):
+        # P1069 (B5, B9): the build could not run, so it kept nothing, and the page is the flow's page of the project as it
+        # stands. The build's --json is a flat line with no notes, so its text run holds the refresh's line
+        import check_spine
+        from spark.flow.now_follow_up import REFRESHED
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        for as_json in (["--json"], []):
+            with self.subTest(as_json=as_json):
+                project = a_firmware(a_built_project())
+                (project / "page.html").write_text("an old page", encoding="utf-8")
+                lines, code = run_main(check_spine.main, [str(project / "none.json"), "--keep", str(project)] + as_json)
+                self.assertEqual(code, 2)
+                if as_json:
+                    self.assertEqual(json.loads(lines[0])["status"], "could-not-run")
+                else:
+                    self.assertEqual(lines[-1], "  " + REFRESHED)
+                page = (project / "page.html").read_text(encoding="utf-8")
+                self.assertNotEqual(page, "an old page")
+                write_page(project, store=FlowPageStore())
+                self.assertEqual((project / "page.html").read_text(encoding="utf-8"), page)
 
     def test_a_kept_build_keeps_its_own_page_and_is_not_written_again(self):
         # round 2, amendment A (decision H, measured): write_page after the kept build would call the drawn pictures
@@ -1887,6 +1984,39 @@ class ThePageRefreshTest(FlowTest):
                 self.assertTrue(kind((project / "page.html").lstat().st_mode))
         self.assertEqual(person.read_text(encoding="utf-8"), "the person's own")
 
+    def test_a_link_at_page_html_part_is_refused_and_the_persons_file_is_untouched(self):
+        # P1054 (#1551): the store's .part is made new, so a link planted there is refused, never written through
+        from spark.flow.write_flow_page import PART_FIX
+        person = Path(tempfile.mkdtemp()) / "a-file-of-the-person.html"
+        person.write_text("the person's own", encoding="utf-8")
+        project = self.open_needs("soil")
+        (project / "page.html.part").symlink_to(person)
+        said, code = run_main(flow.main, ["page", "--project", str(project), "--json"])
+        envelope = json.loads(said[0])
+        self.assertEqual((code, envelope["status"]), (2, "could-not-run"))
+        [item] = envelope["unchecked"]
+        self.assertEqual((item["code"], item["fix"]), ("page_not_written", PART_FIX % "page.html"))
+        self.assertIn("page.html.part is in the way", item["sentence"])  # the answer masks the project's path
+        self.assertEqual(person.read_text(encoding="utf-8"), "the person's own")
+        self.assertFalse((project / "page.html").is_symlink())
+        self.assertTrue((project / "page.html.part").is_symlink())
+
+    def test_a_link_at_page_html_part_is_one_line_after_a_pick_and_the_result_stands(self):
+        # P1054 (#1551): assert_one_line_and_the_result_stands, but the planted link stays where it was
+        from spark.core.cli import REFRESH_FAILED_MESSAGE
+        from spark.flow.now_follow_up import FlowFollowUp
+        person = Path(tempfile.mkdtemp()) / "a-file-of-the-person.html"
+        person.write_text("the person's own", encoding="utf-8")
+        project = self.with_page(("soil",))  # one open need: the flow names its pick; the refresh writes an old page only
+        (project / "page.html.part").symlink_to(person)
+        result, alone = refreshed_and_alone(project, FlowFollowUp())
+        self.assertEqual(result._replace(diagnostics=()), alone._replace(diagnostics=()))
+        self.assertEqual(list(result.diagnostics), list(alone.diagnostics) + [REFRESH_FAILED_MESSAGE % ("PartTakenError", "page.html")])
+        self.assertTrue(result.next)
+        self.assertEqual(person.read_text(encoding="utf-8"), "the person's own")
+        self.assertEqual(((project / "page.html").read_text(encoding="utf-8"), (project / "page.html").is_symlink()), ("an old page", False))
+        self.assertTrue((project / "page.html.part").is_symlink())
+
     def test_a_read_only_folder_a_full_disk_or_a_renderer_that_raises_leaves_the_old_page(self):
         from fakes import FakeFullDiskPageStore, FakePageRenderer
         from spark.flow.now_follow_up import FlowFollowUp
@@ -1901,6 +2031,16 @@ class ThePageRefreshTest(FlowTest):
                     self.addCleanup(project.chmod, 0o755)
                 self.assert_one_line_and_the_result_stands(project, follow_up, raised)
                 self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
+
+    def test_a_secrets_file_that_does_not_parse_leaves_the_old_page_and_shows_none_of_its_text(self):
+        # P1060 D5: write_page refuses, and the core says so in one diagnostics line that names the refusal's class only
+        from spark.flow.now_follow_up import FlowFollowUp
+        project = self.with_page(("soil",))  # one open need: the flow names its pick
+        (project / "firmware").mkdir()
+        (project / "firmware" / "wifi_secrets.py").write_text('WIFI_PASSWORD = "%s\n' % HALF_TYPED, encoding="utf-8")
+        self.assert_one_line_and_the_result_stands(project, FlowFollowUp(), "SecretsUnreadableError")
+        self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "an old page")
+        self.assertNotIn(HALF_TYPED, repr(refreshed_and_alone(project, FlowFollowUp())[0]))
 
     def test_a_page_that_is_not_utf_8_is_written_over_by_flow_page_and_by_the_refresh(self):
         # the review, refuter must-fix: main wrote over such a page, so the whole-file write must not compare it first
@@ -1926,6 +2066,526 @@ class ThePageRefreshTest(FlowTest):
         self.assertEqual(((project / "page.html").read_text(encoding="utf-8"), (project / "page.html.part").exists()), ("an old page", False))
         self.assertEqual(FlowPageStore().write(project, "page.html", "a new page"), project / "page.html")
         self.assertEqual((project / "page.html").read_text(encoding="utf-8"), "a new page")
+
+
+#: The moment of a made-up board log, as `BoardLog` writes it (P1043), and a newer one.
+LOGGED_AT = datetime.datetime(2026, 11, 23, 14, 9, 49, tzinfo=datetime.timezone(datetime.timedelta(hours=1)))
+LOG_NAME = "2026-11-23T14-09-49"
+#: The sentences the bench made in real board logs (the refuter's quotes, P1043's plan), with made-up tool text.
+FILES_UNREAD_SENTENCE = "mpremote could not read the board's files: mpremote.transport.TransportError: could not enter raw repl"
+NOT_STARTED_SENTENCE = "mpremote could not start the firmware: OSError: [Errno 6] Device not configured"
+LOST_SENTENCE = ("the firmware printed 'ready', then mpremote lost the board (OSError: [Errno 6] Device not configured), "
+                 "and spark found no deepsleep call in firmware/")
+SEEN_SENTENCE = "the firmware printed 'ready' and the board's 1 files match the image"
+#: The words of the deploy's says line (P1043): brief D10's for a run with no read-back, exactly.
+NO_READ_BACK = "written by the flasher, nothing read back, start not seen"
+
+
+def a_deploy_project():
+    """A built project whose firmware a passed run tested on the image it holds now, so the deploy is the phase now and
+    every other phase is ok or has no status: the exit says the deploy's status alone."""
+    return a_run(an_image(a_firmware(a_built_project())), "passed")
+
+
+def a_board_log(project, verdict, sentence, image=b"an image", reason=None, name=LOG_NAME, **kw):
+    """A board log in sim/runs/board/<name>.log in the real layout (`BoardLog`), with made-up values."""
+    from spark.bench.board_log import BoardLog
+    folder = project / "sim" / "runs" / "board"
+    folder.mkdir(parents=True, exist_ok=True)
+    log = BoardLog(LOGGED_AT, "/dev/cu.usbmodem101", hashlib.sha256(image).hexdigest(), "facts file spark.json sha256: f",
+                   verdict, sentence, "what the board printed\n", "passed", reason)._replace(**kw)
+    (folder / (name + ".log")).write_text(log.text())
+    return project
+
+
+def deploy_of(said):
+    """The deploy phase's dict in an envelope."""
+    return next(phase for phase in said["data"]["phases"] if phase["phase"] == "deploy")
+
+
+def logged(words, *more, count=1, image=b"an image"):
+    """The deploy's says line for a log of LOGGED_AT on `image`: the verdict's words, more sentences, then the count."""
+    return " ".join(["Last deploy 2026-11-23T14:09:49+01:00, image %s: %s." % (hashlib.sha256(image).hexdigest()[:12], words),
+                     *more, "%d deploy%s logged." % (count, "" if count == 1 else "s")])
+
+
+class TheDeployReaderTest(FlowTest):
+    """P1043 (#1533): the deploy phase reads the newest board log in sim/runs/board/: its time, image, verdict and cause.
+    Only ready seen on the image the project holds now is ok, with a tick. Ready unknown is partial, ready not seen is
+    problems, and an image that changed since is stale. A flash that did not finish is problems (P1092). A tool's text, the port and the console never reach an answer."""
+
+    def test_no_board_log_keeps_today_s_phase_and_no_deploy_data(self):
+        said, code = show(a_deploy_project())
+        self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["says"]), (0, "not-started", [
+            "Ask Claude to look at the board first (/spark:deploy).", "Claude then gives you the deploy line. Run it in your "
+            "terminal and type yes, unless you gave Claude a standing yes for this board."]))
+        self.assertIsNone(said["data"]["deploy"])
+        self.assertEqual(said["data"]["guide"]["now"]["phase"], "deploy")
+
+    def test_ready_seen_on_the_image_now_is_ok_with_a_tick_and_nothing_is_now(self):
+        said, code = show(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE))
+        self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (0, "ok", "✓"))
+        self.assertEqual(deploy_of(said)["says"], [logged("written by the flasher, files read back, ready seen")])
+        self.assertEqual((said["data"]["guide"]["now"], said["data"]["stands_at"], said["next"]), (None, None, []))
+        self.assertEqual(said["data"]["guide"]["done"][-1], "deploy")
+
+    def test_ready_unknown_with_no_read_back_says_brief_d10_s_words_and_is_partial(self):
+        said, code = show(a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE))
+        self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (0, "partial", "◐"))
+        self.assertEqual(deploy_of(said)["says"], [logged(NO_READ_BACK, "Cause in the log: spark did not reach the board to read its files.")])
+        self.assertEqual((said["problems"], said["unchecked"]), ([], []))
+        self.assertEqual([step["op"] for step in said["next"]], ["look"])
+        self.assertIs(said["data"]["deploy"]["read_back"], False)
+
+    def test_ready_unknown_after_the_files_were_read_says_start_not_seen_once(self):
+        said, _ = show(a_board_log(a_deploy_project(), "ready unknown", NOT_STARTED_SENTENCE))
+        says = deploy_of(said)["says"]
+        self.assertEqual(says, [logged("written by the flasher, files read back, start not seen",
+                                       "Cause in the log: the command that starts the firmware failed.")])
+        self.assertEqual([line.count("start not seen") for line in lines_of(a_board_log(a_deploy_project(), "ready unknown",
+                                                                                         NOT_STARTED_SENTENCE))
+                          if "start not seen" in line], [1])
+        self.assertIs(said["data"]["deploy"]["read_back"], True)
+
+    def test_a_board_lost_after_ready_says_ready_was_printed_and_never_that_the_start_was_not_seen(self):
+        said, _ = show(a_board_log(a_deploy_project(), "ready unknown", LOST_SENTENCE, reason="board_lost"))
+        self.assertEqual(deploy_of(said)["says"], [logged(
+            "written by the flasher, files read back, ready printed, then the board was lost",
+            "Cause in the log: spark found no deepsleep call in firmware/, so it does not count the ready.")])
+        self.assertNotIn("start not seen", " ".join(deploy_of(said)["says"]))
+        self.assertEqual((deploy_of(said)["status"], said["data"]["deploy"]["read_back"]), ("partial", True))
+
+    def test_a_port_gone_or_download_mode_says_start_not_confirmed_and_never_nothing_read_back(self):
+        for reason, sentence, words in (("port_gone", "the board's port is gone: press its RESET once", "the board's port was gone"),
+                                        ("download_mode_stayed", "the board still waits in download mode after 60 s: press its RESET",
+                                         "the board stayed in download mode")):
+            with self.subTest(reason=reason):
+                said, _ = show(a_board_log(a_deploy_project(), "ready unknown", sentence, reason=reason))
+                self.assertEqual(deploy_of(said)["says"], [logged("written by the flasher, start not confirmed", "Cause in the log: %s." % words)])
+                self.assertIsNone(said["data"]["deploy"]["read_back"])
+                self.assertNotIn("nothing read back", json.dumps(said))
+
+    def test_an_unknown_start_is_cause_not_recorded_and_its_cause_is_null(self):
+        said, _ = show(a_board_log(a_deploy_project(), "ready unknown", "the board said something new: x"))
+        self.assertEqual(deploy_of(said)["says"], [logged("written by the flasher, start not confirmed", "Cause not recorded.")])
+        self.assertEqual((said["data"]["deploy"]["cause"], said["data"]["deploy"]["read_back"]), (None, None))
+
+    def test_the_reason_line_wins_over_the_start_and_is_read_from_line_4_only(self):
+        project = a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE, reason="board_lost")
+        self.assertEqual(show(project)[0]["data"]["deploy"]["cause"], "board_lost")
+        for heard, reason in (("reason: board_lost\n", None), ("", "a_code_spark_never_wrote")):
+            with self.subTest(heard=heard, reason=reason):
+                project = a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE, reason=reason, heard=heard)
+                self.assertEqual(show(project)[0]["data"]["deploy"]["cause"], "files_unread")
+        project = a_board_log(a_deploy_project(), "ready unknown", "an unknown start: x", reason="a_code_spark_never_wrote")
+        self.assertIsNone(show(project)[0]["data"]["deploy"]["cause"])
+
+    def test_the_newest_log_by_name_wins_and_the_count_says_how_many(self):
+        older, newer = "2026-11-23T14-00-00", "2026-11-23T15-00-00"
+        project = a_board_log(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, name=older),
+                              "ready unknown", FILES_UNREAD_SENTENCE, name=newer)
+        said, _ = show(project)
+        self.assertEqual(deploy_of(said)["status"], "partial")
+        self.assertTrue(deploy_of(said)["says"][-1].endswith("2 deploys logged."), deploy_of(said)["says"])
+        project = a_board_log(a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE, name=older),
+                              "ready seen", SEEN_SENTENCE, name=newer)
+        self.assertEqual(deploy_of(show(project)[0])["status"], "ok")
+
+    def test_a_log_of_another_image_is_stale_and_says_so_first(self):
+        said, code = show(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, image=b"another image"))
+        self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (0, "stale", "↻"))
+        self.assertEqual(deploy_of(said)["says"], [  # one line: the opener, then the log (the review of #1579)
+            "The last deploy wrote a different image from the one this project has now. "
+            + logged("written by the flasher, files read back, ready seen", image=b"another image")])
+        self.assertFalse([line for line in lines_of(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, image=b"another image"))
+                          if ".," in line], "no sentence ends before a comma")
+        self.assertEqual(said["data"]["deploy"]["fact"], "image-differs")
+
+    def test_no_image_now_is_stale_and_a_firmware_line_spark_cannot_use_could_not_run(self):
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
+        (project / "sim" / "image.bin").unlink()
+        said, _ = show(project)
+        self.assertEqual((deploy_of(said)["status"], deploy_of(said)["says"][0].split(" Last deploy")[0], said["data"]["deploy"]["fact"]),
+                         ("stale", "This project has no image now.", "no-image"))
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = 42\n')
+        said, _ = show(project)  # the simulate has problems for the same line, so the exit is 1
+        self.assertEqual((statuses(said)["simulate"], deploy_of(said)["status"]), ("problems", "could-not-run"))
+        self.assertTrue(deploy_of(said)["says"][0].startswith("sim/wokwi.toml"), deploy_of(said)["says"])
+        self.assertIsNone(said["data"]["deploy"])
+
+    def test_ready_not_seen_is_problems_with_one_finding_and_stale_wins_over_it(self):
+        project = a_board_log(a_deploy_project(), "ready not seen", "the firmware stopped with an error: Traceback ...")
+        said, code = show(project)
+        self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (1, "problems", "✗"))
+        self.assertEqual([(problem["subject"], problem["code"]) for problem in said["problems"]], [("deploy", "phase_problems")])
+        self.assertEqual(deploy_of(said)["says"], [logged("written by the flasher, files read back, ready not seen",
+                                                          "Cause in the log: the firmware stopped with an error.")])
+        os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        said, _ = show(project)
+        self.assertEqual((deploy_of(said)["status"], said["data"]["deploy"]["fact"]), ("stale", "firmware-newer"))
+        self.assertIn("ready not seen", deploy_of(said)["says"][-1])  # the says line keeps the verdict
+
+    def test_a_log_with_no_verdict_line_or_a_verdict_spark_never_writes_could_not_run(self):
+        for case, verdict in (("no verdict line", "a word"), ("ready not read", "ready not read")):
+            with self.subTest(case=case):
+                said, code = show(a_board_log(a_deploy_project(), verdict, "x"))
+                self.assertEqual((code, deploy_of(said)["status"]), (2, "could-not-run"))
+                self.assertEqual([item["subject"] for item in said["unchecked"]], ["deploy"])
+                self.assertIn("sim/runs/board/%s.log cannot be read" % LOG_NAME, said["unchecked"][0]["sentence"])
+
+    def test_nothing_private_or_foreign_reaches_the_answer(self):
+        project = a_deploy_project()
+        (project / "sim" / "runs" / "board").mkdir(parents=True)
+        shutil.copy(ROOT / "tests" / "data" / "board_log" / ("%s.log" % LOG_NAME), project / "sim" / "runs" / "board")
+        a_board_log(project, "ready unknown", "mpremote could not start the firmware: MARK-TOOL TransportError /dev/cu.x",
+                    name="2026-11-23T15-00-00", port="MARK-PORT", facts_line="facts file: not written: MARK-FACTS",
+                    heard="MARK-HEARD what the console printed\n")
+        said, _ = show(project)
+        shown = json.dumps([said["data"]["phases"], said["data"]["guide"], said["data"]["deploy"]]) + "\n".join(lines_of(project))
+        for mark in ("MARK-PORT", "MARK-FACTS", "MARK-HEARD", "MARK-TOOL", "TransportError", "/dev/", str(project)):
+            with self.subTest(mark=mark):
+                self.assertNotIn(mark, shown)
+
+    def test_an_old_log_of_the_c6_sequence_says_nothing_false(self):
+        # the review of #1579: a log from before the reason line. A read again may follow a first read that read the files,
+        # so its "could not read the board's files" gives no cause; a lost board after ready keeps its own words
+        project = a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE,
+                              heard="the first read: ready unknown: mpremote could not start the firmware: x\nread again\n")
+        said, _ = show(project)
+        self.assertEqual(deploy_of(said)["says"], [logged("written by the flasher, start not confirmed", "Cause not recorded.")])
+        self.assertEqual((said["data"]["deploy"]["cause"], said["data"]["deploy"]["read_back"]), (None, None))
+        said, _ = show(a_board_log(a_deploy_project(), "ready unknown", LOST_SENTENCE))
+        self.assertEqual((said["data"]["deploy"]["cause"], said["data"]["deploy"]["read_back"]), ("board_lost", True))
+        self.assertNotIn("start not", deploy_of(said)["says"][0])
+
+    def test_ready_not_seen_read_the_files_back_whatever_its_cause(self):
+        # the review of #1579: only a read of the files gives ready not seen, so read_back agrees with the says line
+        said, _ = show(a_board_log(a_deploy_project(), "ready not seen", "the board's /main.py is not the files of the image"))
+        self.assertEqual((said["data"]["deploy"]["cause"], said["data"]["deploy"]["read_back"]), (None, True))
+        self.assertIn("files read back", deploy_of(said)["says"][0])
+
+    def test_a_log_that_lands_between_the_reads_of_one_run_changes_nothing_of_it(self):
+        # the review of #1579: the phase, the guide and data.deploy take one DeployState, read once per run
+        from spark.flow.phase_readers import READERS, IdeaReader
+
+        class Lander(IdeaReader):
+            PHASE = "lander"
+
+            def read(self, project):
+                (project / "sim" / "runs" / "board" / "2026-11-23T23-00-00.log").write_text("not a board log\n")
+                return self.phase(None, ["landed"])
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, image=b"another image")
+        result = ShowFlow(readers=READERS + (Lander(),)).run(project, outside=None)
+        self.assertEqual((deploy_of({"data": result.data})["status"], result.data["deploy"]["fact"]), ("stale", "image-differs"))
+        self.assertTrue(result.data["guide"]["now"]["says"].startswith("The last deploy wrote a different image"))
+
+    def test_the_deploy_data_holds_the_six_fields_of_the_newest_log(self):
+        said, _ = show(a_board_log(a_deploy_project(), "ready unknown", NOT_STARTED_SENTENCE))
+        self.assertEqual(said["data"]["deploy"], {"at": "2026-11-23T14:09:49+01:00", "image": hashlib.sha256(b"an image").hexdigest(),
+                                                  "verdict": "ready unknown", "cause": "firmware_not_started",
+                                                  "fact": "current", "read_back": True})
+
+
+#: The guide's line when no phase is open (P1043).
+NOTHING_WAITS = ("Nothing is waiting on you: the last deploy started the image this project holds now. Tell Claude what to "
+                 "change next.")
+NO_START_NOW = ("Spark could not confirm that the firmware started after the last deploy. Ask Claude to look at the board with "
+                "you. If the look asks for it, run the deploy again in your terminal.")
+
+
+class TheDeployNowTest(FlowTest):
+    """P1043: who acts on an open deploy, and the one sentence when nothing is open. Each NOW says the job in words, never
+    what the board does now; a lost board after ready says what spark saw and never that the start was not seen."""
+
+    def now(self, said):
+        return said["data"]["guide"]["now"]
+
+    def test_a_deploy_that_saw_ready_leaves_nothing_open_and_one_sentence_says_so(self):
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
+        said, _ = show(project)
+        self.assertEqual((self.now(said), said["data"]["guide"]["no_open_phase"]), (None, NOTHING_WAITS))
+        self.assertEqual(lines_of(project)[-1], "  " + NOTHING_WAITS)
+
+    def test_each_open_deploy_has_its_own_now(self):
+        lost = "Spark saw ready after the last deploy, then lost the board, and cannot tell from here whether the firmware still runs. "
+        for name, verdict, sentence, reason, now in (
+                ("no read-back", "ready unknown", FILES_UNREAD_SENTENCE, None, NO_START_NOW),
+                ("not started", "ready unknown", NOT_STARTED_SENTENCE, None, NO_START_NOW),
+                ("lost", "ready unknown", LOST_SENTENCE, "board_lost",
+                 lost + "If your gadget works, nothing is wrong. Else ask Claude to look at the board with you."),
+                ("port gone", "ready unknown", "the board's port is gone: x", "port_gone",
+                 "After the last deploy, the board's port was gone. Ask Claude to look at the board with you."),
+                ("download mode", "ready unknown", "x", "download_mode_stayed",
+                 "After the last deploy, the board stayed in download mode. Ask Claude to look at the board with you."),
+                ("not recorded", "ready unknown", "the board said something new: x", None,
+                 "The log does not say whether the firmware started after the last deploy. Ask Claude to look at the board with you."),
+                ("firmware error", "ready not seen", "the firmware stopped with an error: Traceback ...", None,
+                 "After the last deploy, the firmware stopped with an error. Ask Claude to go through the board log with you."),
+                ("old files differ", "ready not seen", "the board's /main.py is not the files of the image", None,
+                 "After the last deploy, spark did not see ready. Ask Claude to go through the board log with you.")):
+            with self.subTest(name=name):
+                said, _ = show(a_board_log(a_deploy_project(), verdict, sentence, reason=reason))
+                self.assertEqual(self.now(said), {"phase": "deploy", "by": ["your terminal"], "says": now, "offer": None,
+                                                  "needs": [], "steps": None, "with_wiring": True})
+                self.assertEqual([step["op"] for step in said["next"]], ["look"])
+                self.assertIsNone(said["data"]["guide"]["no_open_phase"])
+
+    def test_a_lost_board_never_says_spark_did_not_see_the_firmware_start(self):
+        project = a_board_log(a_deploy_project(), "ready unknown", LOST_SENTENCE, reason="board_lost")
+        self.assertNotIn("did not see the firmware start", json.dumps(show(project)[0]) + "\n".join(lines_of(project)))
+
+    def test_a_stale_deploy_names_who_acts_by_its_fact(self):
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, image=b"another image")
+        self.assertEqual((self.now(show(project)[0])["by"], self.now(show(project)[0])["says"]), (["your terminal"],
+                         "The last deploy wrote a different image from the one this project has now. Ask Claude to look at "
+                         "the board, then run the deploy line in your terminal."))
+        # with no image, a project with a Wokwi model has the simulate first: a board with none reaches the deploy
+        project = a_board_log(an_image(a_firmware(a_project_built_with_no_simulation())), "ready seen", SEEN_SENTENCE)
+        (project / "sim" / "image.bin").unlink()
+        self.assertEqual((self.now(show(project)[0])["by"], self.now(show(project)[0])["says"]), (["claude"],
+                         "This project has no image now. Ask Claude to make the image and to look at the board. Then run "
+                         "the deploy line in your terminal."))
+
+    def test_firmware_newer_than_the_deployed_image_is_claude_s_first_with_no_tick(self):
+        # test 8, P1043-D4: on a board Wokwi has no model of, the simulate is counted as done, so the deploy is now
+        for verdict, sentence in (("ready seen", SEEN_SENTENCE), ("ready unknown", FILES_UNREAD_SENTENCE)):
+            with self.subTest(verdict=verdict):
+                project = a_board_log(an_image(a_firmware(a_project_built_with_no_simulation())), verdict, sentence)
+                os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+                said, _ = show(project)
+                self.assertEqual((deploy_of(said)["status"], deploy_of(said)["mark"]), ("stale", "↻"))
+                self.assertEqual((self.now(said)["phase"], self.now(said)["by"], self.now(said)["says"]), ("deploy", ["claude"],
+                                 "Your firmware changed after the image that the last deploy wrote. Ask Claude to make the "
+                                 "image again and to look at the board. Then run the deploy line in your terminal."))
+                self.assertNotIn("deploy", said["data"]["guide"]["done"])
+
+    def test_with_a_model_the_simulate_s_image_older_comes_first(self):
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
+        os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        said, _ = show(project)
+        self.assertEqual((self.now(said)["phase"], deploy_of(said)["status"]), ("simulate", "stale"))
+        self.assertEqual(self.now(said)["says"], "Your firmware changed after the image. Ask Claude to make the image again, then run the scenario.")
+
+    def test_no_open_phase_is_null_whenever_now_is_set_and_with_other_readers(self):
+        # test 14: a phase list a test swaps in, whose now is None, gets no sentence: only an ok deploy says nothing waits
+        from spark.flow.phase_readers import IdeaReader
+        project = Path(tempfile.mkdtemp())
+
+        class Done(IdeaReader):
+            def read(self, project):
+                return self.phase(OK, ["done"])
+        phases, guide = flow_and_guide(project, (Done(),))
+        self.assertEqual((guide["now"], guide["no_open_phase"]), (None, None))
+        for each in (a_deploy_project(), a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE)):
+            with self.subTest(project=each):
+                self.assertIsNone(show(each)[0]["data"]["guide"]["no_open_phase"])
+
+
+#: The bench's sentence in a board log of a flash that did not finish (P1092), and the flow's words for it.
+NOT_FINISHED_SENTENCE = "a flash command failed, so the board may be erased and not written"
+FLASH_NOT_FINISHED_WORDS = "flash not finished, nothing read back, the board may be erased"
+NOT_FINISHED_NOW = ("The last flash did not finish, so the board may be erased. The board log says what failed. Ask Claude "
+                    "to look at the board with you, then run the deploy again in your terminal.")
+
+
+def a_not_finished_log(project, reason="flash_failed", **kw):
+    """A board log of a flash that did not finish after the yes (P1092), in the layout the bench writes."""
+    return a_board_log(project, "flash not finished", NOT_FINISHED_SENTENCE, reason=reason,
+                       facts_line="facts file: not written: the flash did not finish", **kw)
+
+
+class TheFlashNotFinishedTest(FlowTest):
+    """P1092 tests 6 to 8: a board log of a flash that did not finish after the yes is problems: the board may be erased.
+    It wins over a stale image, because each stale opener speaks of the image that the last deploy wrote, and nothing was
+    read back. The newest log wins, either way."""
+
+    def test_a_flash_not_finished_is_problems_and_says_the_board_may_be_erased(self):
+        for reason, words in (("flash_failed", "a flash command failed"), ("grant_ended", "your yes ended before the erase's retry")):
+            with self.subTest(reason=reason):
+                said, code = show(a_not_finished_log(a_deploy_project(), reason))
+                self.assertEqual((code, deploy_of(said)["status"], deploy_of(said)["mark"]), (1, "problems", "✗"))
+                self.assertEqual(deploy_of(said)["says"], [logged(FLASH_NOT_FINISHED_WORDS, "Cause in the log: %s." % words)])
+                self.assertEqual(said["data"]["deploy"], {"at": "2026-11-23T14:09:49+01:00", "image": hashlib.sha256(b"an image").hexdigest(),
+                                                          "verdict": "flash not finished", "cause": reason, "fact": "current",
+                                                          "read_back": False})
+                self.assertEqual((said["data"]["guide"]["now"]["by"], said["data"]["guide"]["now"]["says"]),
+                                 (["your terminal"], NOT_FINISHED_NOW))
+
+    def test_a_crash_and_a_ctrl_c_in_the_flash_have_their_own_words(self):
+        # P1096 test 6: the two new causes of a flash that did not finish
+        for reason, words in (("crash", "spark crashed during the deploy"), ("interrupted", "a Ctrl-C interrupted the deploy")):
+            with self.subTest(reason=reason):
+                said, _ = show(a_not_finished_log(a_deploy_project(), reason))
+                self.assertEqual(deploy_of(said)["says"], [logged(FLASH_NOT_FINISHED_WORDS, "Cause in the log: %s." % words)])
+                self.assertIs(said["data"]["deploy"]["read_back"], False)
+
+    def test_a_verify_that_did_not_finish_is_partial_and_says_the_start_was_not_confirmed(self):
+        # P1110 test 5: the flash finished, so the board log says ready unknown, and nothing claims a read-back either way
+        from spark.flow.flow_codes import DEPLOY_NO_START_NOW, UNSURE_WORDS
+        for reason, words in (("crash", "spark crashed during the deploy"), ("interrupted", "a Ctrl-C interrupted the deploy")):
+            with self.subTest(reason=reason):
+                said, _ = show(a_board_log(a_deploy_project(), "ready unknown", "spark crashed while it read the board after the flash",
+                                           reason=reason, facts_line="facts file: not known: the read after the flash did not finish"))
+                self.assertEqual((deploy_of(said)["status"], said["data"]["deploy"]["read_back"]), ("partial", None))
+                self.assertEqual(deploy_of(said)["says"], [logged(UNSURE_WORDS, "Cause in the log: %s." % words)])
+                self.assertEqual(said["data"]["guide"]["now"]["says"], DEPLOY_NO_START_NOW)
+
+    def test_it_wins_over_a_stale_image_and_the_fact_is_still_said_in_the_data(self):
+        other = a_not_finished_log(a_deploy_project(), image=b"another image")
+        # on a board Wokwi has no model of, the simulate is counted as done, so the deploy's NOW is the guide's
+        newer = a_not_finished_log(an_image(a_firmware(a_project_built_with_no_simulation())))
+        os.utime(newer / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        none = a_not_finished_log(an_image(a_firmware(a_project_built_with_no_simulation())))
+        (none / "sim" / "image.bin").unlink()
+        for project, fact, image in ((other, "image-differs", b"another image"), (newer, "firmware-newer", b"an image"),
+                                     (none, "no-image", b"an image")):
+            with self.subTest(fact=fact):
+                said, _ = show(project)
+                self.assertEqual((deploy_of(said)["status"], said["data"]["deploy"]["fact"]), ("problems", fact))
+                self.assertEqual(deploy_of(said)["says"], [logged(FLASH_NOT_FINISHED_WORDS, "Cause in the log: a flash command failed.", image=image)])
+                self.assertEqual(said["data"]["guide"]["now"]["says"], NOT_FINISHED_NOW)
+
+    def test_the_newest_log_wins_both_ways(self):
+        older, newer = "2026-11-23T14-00-00", "2026-11-23T15-00-00"
+        said, _ = show(a_not_finished_log(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, name=older), name=newer))
+        self.assertEqual(deploy_of(said)["status"], "problems")
+        self.assertTrue(deploy_of(said)["says"][-1].endswith("2 deploys logged."), deploy_of(said)["says"])
+        said, _ = show(a_board_log(a_not_finished_log(a_deploy_project(), name=older), "ready seen", SEEN_SENTENCE, name=newer))
+        self.assertEqual(deploy_of(said)["status"], "ok")
+
+
+def with_secrets(project, text):
+    """`project` with firmware/wifi_secrets.py holding `text`."""
+    (project / "firmware").mkdir(parents=True, exist_ok=True)
+    (project / "firmware" / "wifi_secrets.py").write_text(text, encoding="utf-8")
+    return project
+
+
+class TheSecretMaskTest(FlowTest):
+    """P1060 (#1558): `show` masks the values of the project's secrets file as `***`. A file that cannot be read or parsed
+    does not stop `show` (D5: `show` fails open): it masks what it can and says in a note that the mask is off for it."""
+
+    def test_a_secret_value_in_a_phase_sentence_is_masked(self):
+        project = with_secrets(with_needs(Path(tempfile.mkdtemp()) / "plant", [{"id": SECRET, "does": "sense", "what": "soil-moisture"}]),
+                               'WIFI_PASSWORD = "%s"\n' % SECRET)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            flow.main(["show", "--project", str(project), "--json"])
+        self.assertNotIn(SECRET, out.getvalue())
+        self.assertIn("1 need(s): ***", says(json.loads(out.getvalue()), "needs"))
+        self.assertNotIn(SECRET, "\n".join(lines_of(project)))
+
+    def test_a_secret_in_the_project_s_path_is_masked_in_next_s_argv_too_the_known_risk(self):
+        # A11: a raw place keeps its paths and loses its tokens, so a project whose path holds a secret gets a `next`
+        # argv that no longer runs. The plan names this risk and takes it: the mask comes first.
+        project = self.user_home / SECRET / "xiao"
+        shutil.copytree(BUILT, project)  # never built: `next` is the build, whose argv holds the project's path
+        with_secrets(project, 'WIFI_PASSWORD = "%s"\n' % SECRET)
+        envelope, _code = show(project)
+        argv = [part for step in envelope["next"] for part in step["argv"]]
+        self.assertTrue(argv)
+        self.assertNotIn(SECRET, json.dumps(envelope))
+        self.assertTrue(any("/***/" in part for part in argv), argv)
+
+    def test_a_secrets_file_that_does_not_parse_adds_a_note_and_shows_none_of_its_text(self):
+        from spark.flow.show_flow import MASK_OFF
+        project = with_secrets(with_needs(Path(tempfile.mkdtemp()) / "plant", [{"id": "soil", "does": "sense", "what": "soil-moisture"}]),
+                               'WIFI_PASSWORD = "%s\n' % HALF_TYPED)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = flow.main(["show", "--project", str(project), "--json"])
+        envelope = json.loads(out.getvalue())
+        self.assertEqual((code, envelope["status"]), (0, OK))
+        self.assertEqual(envelope["notes"], [{"subject": "firmware/wifi_secrets.py", "sentence": MASK_OFF % "firmware/wifi_secrets.py"}])
+        self.assertEqual(MASK_OFF % "firmware/", "the mask is off for firmware/: it cannot be read or parsed, so spark cannot mask "
+                                                 "its values. Repair or remove it")  # the lens of #1610: no firmware/firmware
+        self.assertNotIn(HALF_TYPED, out.getvalue() + err.getvalue())
+        text = "\n".join(lines_of(project))
+        self.assertIn(MASK_OFF % "firmware/wifi_secrets.py", text)
+        self.assertNotIn(HALF_TYPED, text)
+
+
+def in_prague(test):
+    """Pin the zone of `test` to Europe/Prague for its run, so a time said in words is known."""
+    import time
+    patcher = mock.patch.dict(os.environ, {"TZ": "Europe/Prague"})
+    patcher.start()
+    test.addCleanup(time.tzset)
+    test.addCleanup(patcher.stop)
+    time.tzset()
+
+
+class TheDeployedLineTest(unittest.TestCase):
+    """P1062 (test 9): ON THE BOARD's sentence on the page, from `data.deploy`: a readable time in the machine's zone, the
+    verdict's words, the cause unless ready was seen, and a stale fact's opener first, by the one rule of deployed_says."""
+
+    AT = "2026-11-23T13:09:41+00:00"
+
+    def setUp(self):
+        in_prague(self)
+
+    def line(self, verdict, cause=None, fact="current"):
+        from spark.flow.deploy_reading import deployed_line
+        return deployed_line({"at": self.AT, "image": "ab" * 32, "verdict": verdict, "cause": cause, "fact": fact, "read_back": None})
+
+    def test_ready_unknown_with_a_known_cause_says_the_verdict_and_the_cause(self):
+        self.assertEqual(self.line("ready unknown", "files_unread"),
+                         "Last deploy 23 Nov 2026, 14:09. Written by the flasher, nothing read back, start not seen. "
+                         "Cause in the log: spark did not reach the board to read its files.")
+
+    def test_ready_unknown_with_no_cause_says_the_cause_is_not_recorded(self):
+        self.assertEqual(self.line("ready unknown"),
+                         "Last deploy 23 Nov 2026, 14:09. Written by the flasher, start not confirmed. Cause not recorded.")
+
+    def test_ready_seen_has_no_cause_sentence(self):
+        self.assertEqual(self.line("ready seen"), "Last deploy 23 Nov 2026, 14:09. Written by the flasher, files read back, ready seen.")
+
+    def test_a_stale_fact_with_ready_seen_opens_with_its_sentence_so_it_never_reads_as_a_pass(self):
+        self.assertEqual(self.line("ready seen", fact="firmware-newer"),
+                         "Your firmware changed after the image that the last deploy wrote. Last deploy 23 Nov 2026, 14:09. "
+                         "Written by the flasher, files read back, ready seen.")
+
+    def test_a_flash_not_finished_has_no_stale_opener(self):
+        # P1092 test 11: each opener speaks of the image the last deploy wrote, and this one wrote none
+        self.assertEqual(self.line("flash not finished", "flash_failed", fact="image-differs"),
+                         "Last deploy 23 Nov 2026, 14:09. Flash not finished, nothing read back, the board may be erased. "
+                         "Cause in the log: a flash command failed.")
+
+    def test_no_deploy_gives_none_and_a_line_holds_no_iso_time_and_no_image(self):
+        from spark.flow.deploy_reading import deployed_line
+        self.assertIsNone(deployed_line(None))
+        said = self.line("ready not seen", "no_ready_line")
+        self.assertNotIn(self.AT, said)
+        self.assertNotIn("abab", said)
+        self.assertIn("Cause in the log: the firmware printed no ready line.", said)
+
+    def test_the_day_and_time_of_a_stored_time_is_the_machine_s_and_one_that_does_not_parse_stays(self):
+        self.assertEqual(zone_time.day_and_time("2026-11-02T23:30:05+00:00"), "3 Nov 2026, 00:30")
+        self.assertEqual(zone_time.day_and_time("not a time"), "not a time")
+        self.assertEqual(zone_time.day_and_time("2026-01-15T12:00:00+00:00"), "15 Jan 2026, 13:00")
+
+
+class TheWiringWithNowTest(unittest.TestCase):
+    """The review of #1619 (E16 as a fact): `now.with_wiring` says whether the job now holds the wiring: the two jobs beside a
+    current sheet, or the deploy beside a current sheet. The page opens its wiring fold by it and decides nothing."""
+
+    def now(self, phases, sheet=True):
+        from spark.flow.phase_readers import Phase
+        project = Path(tempfile.mkdtemp())
+        if sheet:
+            (project / "breadboard.md").write_text("# a sheet\n")
+        return guide_of(project, [Phase(*each, "you", ["said"], []) for each in phases], steps=lambda _project: 3)["now"]
+
+    def test_the_deploy_beside_a_current_sheet_holds_the_wiring(self):
+        self.assertIs(self.now([("breadboard", None, "·"), ("deploy", "not-started", "○")])["with_wiring"], True)
+
+    def test_the_deploy_with_no_kept_sheet_or_a_sheet_not_current_does_not(self):
+        self.assertIs(self.now([("breadboard", None, "·"), ("deploy", "not-started", "○")], sheet=False)["with_wiring"], False)
+        self.assertIs(self.now([("breadboard", "stale", "↻"), ("deploy", "not-started", "○")])["with_wiring"], False)
+
+    def test_the_two_jobs_hold_it_and_another_now_does_not(self):
+        two = self.now([("breadboard", None, "·"), ("firmware", "not-started", "○")])
+        self.assertEqual((two["steps"], two["with_wiring"]), (3, True))
+        self.assertIs(self.now([("build", "not-started", "○"), ("breadboard", None, "·")])["with_wiring"], False)
 
 
 if __name__ == "__main__":

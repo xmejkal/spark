@@ -73,16 +73,22 @@ It is the PO's bench tool for P251. Claude's live try, behind a grant and with a
 With --cure-first it opens the port with DTR and RTS off before the only try: the bench's cold arm. With two or more boards on USB, --port is needed.
 
 Before the line runs, reach.py asks the board question (P892). It lists the boards with `mpremote devs`, also for a
---port, and a /dev/tty. port is its /dev/cu. port. On the board that spark keeps for the project, known by its USB
+--port, and a /dev/tty. port is its /dev/cu. port. A --port that the list does not hold stops with port_not_listed
+before the question, and nothing ran on the board. On the board that spark keeps for the project, known by its USB
 serial, it asks nothing. Another board, told apart by its USB serial, stops with other_board, and a board with a USB
 serial in a project that keeps no board stops with no_known_board. Both name look.py, and nothing ran on the board. A
 board that spark cannot tell by its USB serial is asked on every run, in your terminal, or by --replies with your own
-file that holds {"replies": {"reach.run_on_board.<id>": true}}: a board with no serial, a --port that the list does
-not hold, and, while the kept board's record trusts no USB serial (it showed none, or one that its firmware set), a
-board on Espressif's own USB whose serial does not start with the kept MAC. One yes or one no is for one run. A no is
-answered_no, and nothing ran on the board. With --json an open question prints one line: reached false, port,
-product, open and known_board. Every other stop prints nothing on stdout. For other_board, no_known_board and
-answered_no, the last line on stderr is the stop's fix, after its sentence.
+file that holds {"replies": {"reach.run_on_board.<id>": true}}: a board with no serial and, while the kept board's
+record trusts no USB serial (it showed none, or one that its firmware set), a board on Espressif's own USB whose
+serial does not start with the kept MAC. One yes or one no is for one run. A no is answered_no, and nothing ran on the
+board. With --json an open question prints one line: reached false, port, product, open and known_board. Every other
+stop prints nothing on stdout. For other_board, no_known_board and answered_no, the last line on stderr is the stop's
+fix, after its sentence.
+
+If no board is on USB, or the port you named is not, and firmware/ calls deepsleep, the stop's last line, the fix,
+says that the board can be in deep sleep, as look.py's does (P1057). Its first step puts the board in download mode.
+There it runs no firmware, so reach.py cannot reach its REPL: use download mode for look.py or a deploy, then press
+RESET with BOOT not held. To reach the REPL, wait until the firmware wakes. --json carries no fix yet (P1055).
 
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
@@ -91,13 +97,13 @@ and one next step for your hands, as the last line. Its look at the console can 
 
 class ReachBoard(Operation):
     """
-    Operation: the reach. It lists the boards and finds the one on USB, or the row of `--port` (P892: None when the list does
-    not hold it). After its refusal of `--cure-first` with no probe it asks the board question by the REACH touch (`known`
-    is the KnownBoardStore, None: the store's own), runs `board_reach.reach` and, when mpremote never got in, asks the
-    board doctor. `platform_for(project, find_tool)` builds the FirmwarePlatform (default: MicroPythonPlatform). A board
-    that answered is no Finding; one that did not, a cure that cannot run, a tool problem, a look that stopped and a stop
-    of the board question are one unchecked Finding each. The data of a stop is None (nothing on stdout), but for an open
-    board question.
+    Operation: the reach. It lists the boards and finds the one on USB, or the row of `--port`. A port that the list does
+    not hold stops with port_not_listed before the board question (P1056). After its refusal of `--cure-first` with no probe
+    it asks the board question by the REACH touch (`known` is the KnownBoardStore, None: the store's own), runs
+    `board_reach.reach` and, when mpremote never got in, asks the board doctor. `platform_for(project, find_tool)` builds
+    the FirmwarePlatform (default: MicroPythonPlatform). A board that answered is no Finding; one that did not, a cure that
+    cannot run, a tool problem, a look that stopped and a stop of the board question are one unchecked Finding each. The
+    data of a stop is None (nothing on stdout), but for an open board question.
     """
 
     name = "reach"
@@ -119,11 +125,12 @@ class ReachBoard(Operation):
         platform = self.platform_for(project, outside.find_tool)
         try:
             finder = platform.make_port_finder(outside.run)
-            row = finder.find_listed(SCRIPT, port)  # P892: a named port is listed too, and one the list does not hold is asked
+            row = finder.require_one_board(SCRIPT, port)  # P892, P1056: a named port the list does not hold stops with port_not_listed
             named, port = port, port or row.device
             probe = platform.make_console_probe(port, outside.run)
         except (tool_finder.ToolError, board_look.LookStopError) as cannot:
-            return stop_result(cannot, SCRIPT, project, port)
+            # P1057: a LookStopError comes only from require_one_board, before spark picks a port, so `port` is the named one or None
+            return stop_result(cannot, SCRIPT, project, port, stops.undoctored(SCRIPT))
         if cure_first and probe is None:
             return OperationResult(None, [Finding(outcomes.COULD_NOT_RUN, None, board_codes.NO_PROBE, board_reach.NO_PROBE_MESSAGE, "")],
                                    diagnostics=["%s: %s" % (SCRIPT, board_reach.NO_PROBE_MESSAGE)])

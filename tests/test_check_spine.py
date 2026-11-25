@@ -37,6 +37,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
 ROOT = Path(__file__).resolve().parent.parent
+#: How a kept entry ends for spark's pin map that a refused file leaves in place (P1109), a literal as the card says it.
+PIN_MAP_EARLIER = "; the pin map is from the earlier requirements, so it is an earlier build's"
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.design import pin_assigner  # noqa: E402
@@ -541,7 +543,8 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
                 one = drawing.NotWritten(Path("breadboard.svg"), sheet.DRAWING_RENDERERS[0], code, "x", "why")
                 self.assertFalse(kept_files.not_written_entry(one)["expected"])
 
-    def test_a_drawing_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
+    def test_a_drawing_from_an_earlier_build_is_left_alone_and_named_when_a_build_does_not_finish(self):
+        # P1093: it describes the earlier dist/ that stays, so it is named as an earlier build's
         import argparse
         import contextlib
         import io
@@ -551,8 +554,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
             run_build_board([Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)], args, self.workdir())
-        self.assertFalse((into / "breadboard.json").exists())
-        self.assertIn("no drawn breadboard: the build did not finish in this run; removed", err.getvalue())
+        self.assertEqual((into / "breadboard.json").read_text(), "{}")
+        self.assertIn("left alone: %s (the build did not finish in this run, so it is an earlier build's)" % (into / "breadboard.json"),
+                      err.getvalue())
 
     def test_a_breadboard_json_that_holds_parts_is_left_when_a_build_does_not_finish(self):
         # P273: it may hold the person's moves, and a typo in requirements.json must not wipe them.
@@ -570,7 +574,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             run_build_board([Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)], args, self.workdir())
         self.assertEqual((into / "breadboard.json").read_text(), earlier)
         self.assertIn("left alone: %s (it may hold your moves" % (into / "breadboard.json"), err.getvalue())
-        self.assertFalse((into / "breadboard.svg").exists())
+        self.assertTrue((into / "breadboard.svg").is_file())  # P1093: the earlier build's picture stays, named
+        self.assertIn("left alone: %s (the build did not finish in this run, so it is an earlier build's)" % (into / "breadboard.svg"),
+                      err.getvalue())
 
     def test_a_build_that_did_not_finish_writes_no_sheet_and_says_why(self):
         # P191's council: a failed build wrote a sheet from the earlier dist/, wiring parts the requirements had dropped.
@@ -585,8 +591,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertFalse((into / "breadboard.md").exists())
         self.assertIn("no breadboard sheet: the build did not finish", err.getvalue())
 
-    def test_a_sheet_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
-        # The refuter: it described another board, and sat beside the new requirements.
+    def test_a_sheet_from_an_earlier_build_is_left_alone_and_named_when_a_build_does_not_finish(self):
+        # P191's refuter: it described another board, and sat beside the new requirements. P1093: it is the witness that
+        # the board can be wired (P1044), so it stays, named as an earlier build's.
         import argparse
         import contextlib
         import io
@@ -596,8 +603,10 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
             run_build_board([Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)], args, self.workdir())
-        self.assertFalse((into / "breadboard.md").exists())
-        self.assertIn("removed", err.getvalue())
+        self.assertEqual((into / "breadboard.md").read_text(), "# an earlier build's sheet")
+        self.assertIn("left alone: %s (the build did not finish in this run, so it is an earlier build's)" % (into / "breadboard.md"),
+                      err.getvalue())
+        self.assertNotIn("removed", err.getvalue())
 
     def keep_with_pins(self, into, requirements=None, stages=None):
         """`report` keeping into `into` with --json: what --json printed under `kept`, and what stderr said."""
@@ -669,6 +678,21 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertEqual([entry["did"] for entry in kept if entry["file"].endswith("pins.py")], ["removed"])
         self.assertIn("no pin map: ", err)
         self.assertIn("no-such-part", err)
+
+    def test_a_pin_map_from_an_earlier_design_stays_when_the_pins_cannot_be_placed_and_no_build_finished(self):
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        broken = Path(tempfile.mkdtemp()) / "requirements.json"
+        broken.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["no-such-part"]}))
+        into = Path(tempfile.mkdtemp()) / "project"
+        (into / "firmware").mkdir(parents=True)
+        earlier = self.emitted_pins(fixture / "requirements.json")
+        (into / "firmware" / "pins.py").write_text(earlier)
+        stages = [Stage("build", check_spine.COULD_NOT_RUN, "no tsci", build_codes.TOOL_MISSING)]
+        kept, err = self.keep_with_pins(into, requirements=broken, stages=stages)
+        self.assertEqual((into / "firmware" / "pins.py").read_text(), earlier)
+        entry = [each for each in kept if each["file"].endswith("pins.py")]
+        self.assertEqual([each["did"] for each in entry], ["left alone"])
+        self.assertIn("the pin map is from the earlier requirements", entry[0]["why"])
 
     def test_the_one_command_keeps_the_simulation_project_too(self):
         # JB1: `--keep .` kept the board, dist/ and the sheet, but the Wokwi diagram only with `--sim-dir sim`.
@@ -1172,25 +1196,31 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         self.assertEqual((waiting.read_text(), self.board.read_text()), (self.BOARD_A, self.BOARD_B))
 
     def build_with_dist(self, text, stages=None):
-        """One build run whose work folder holds a `dist/blocked/x.json` too; every kept entry, as {file name: its first entry}."""
+        """One build run whose work folder holds its `dist/board/circuit.json` and a `dist/blocked/x.json` too (a link to
+        nothing after `block_dist`); every kept entry, as {file name: its first entry}."""
         work = Path(tempfile.mkdtemp())
         (work / "board.tsx").write_text(text)
         (work / "dist" / "blocked").mkdir(parents=True)
-        (work / "dist" / "blocked" / "x.json").write_text("{}")
+        (work / "dist" / "board").mkdir()
+        (work / "dist" / "board" / "circuit.json").write_text("[]")
+        if getattr(self, "blocked", False):
+            (work / "dist" / "blocked" / "x.json").symlink_to("no-such-file")
+        else:
+            (work / "dist" / "blocked" / "x.json").write_text("{}")
         args = argparse.Namespace(json=True, keep=self.project, requirements=str(self.project / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
             run_build_board(stages or [Stage("build", check_spine.OK, "fine")], args, work)
         return {Path(entry["file"]).name: entry for entry in reversed(json.loads(out.getvalue())["kept"])}  # the first entry of a file wins
 
     def block_dist(self):
-        """A file where the folder `dist/blocked` goes: the copy of the work folder's `dist/` cannot be finished."""
-        (self.project / "dist" / "blocked").write_text("a file where the folder goes")
+        """A link to nothing at the work folder's `dist/blocked/x.json` (P1088): the copy of its `dist/` cannot be finished."""
+        self.blocked = True
 
     def test_a_board_replaced_before_a_dist_copy_that_fails_is_unchanged_then_replaced_by_the_next_builds(self):
         self.build(self.BOARD_A)
         self.block_dist()
         self.build_with_dist(self.BOARD_B)
-        (self.project / "dist" / "blocked").unlink()
+        self.blocked = False
         self.assertEqual(self.build_with_dist(self.BOARD_B)["board.tsx"]["did"], "unchanged")
         self.assertEqual(self.build_with_dist(self.BOARD_C)["board.tsx"]["did"], "replaced")
         self.assertEqual(self.board.read_text(), self.BOARD_C)
@@ -1210,7 +1240,7 @@ class TheBuildReplacesItsOwnBoardTest(unittest.TestCase):
         entries = self.build_with_dist(self.BOARD_A)
         self.assertEqual((entries["board.tsx"]["did"], entries["dist"]["did"]), ("wrote", "not kept"))
         self.assertEqual(self.record()["written_sha256"], {"board.tsx": self.sha256(self.BOARD_A)})
-        (self.project / "dist" / "blocked").unlink()
+        self.blocked = False
         self.assertEqual(self.build_with_dist(self.BOARD_B)["board.tsx"]["did"], "replaced")
 
     def test_an_unfinished_build_whose_dist_copy_fails_replaces_nothing_and_keeps_the_sha256(self):
@@ -1321,7 +1351,7 @@ class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
             self.skipTest("root reads a file whatever its mode")
         board = Path(tempfile.mkdtemp()) / "board.tsx"; board.write_text(self.BUILT); board.chmod(0)
         work = Path(tempfile.mkdtemp()); (work / "board.tsx").write_text(self.BUILT)
-        (work / "dist").mkdir()
+        (work / "dist" / "board").mkdir(parents=True); (work / "dist" / "board" / "circuit.json").write_text("[]")
         try:
             kept = kept_files.kept_into(work, board.parent)
         finally:
@@ -1675,8 +1705,11 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
             self.assertNotIn(stage_run, out, "nothing was emitted, nothing built")
 
     # P280 (#318): a refused file kept nothing and cleaned nothing, so an earlier build's sheet and page stayed beside a
-    # requirements file that no longer builds, describing another board.
+    # requirements file that no longer builds, describing another board. P1093: the sheet and its drawings stay, each
+    # named as an earlier build's (the sheet is P1044's witness); the page is removed. P1109: so does spark's pin map,
+    # which the firmware imports, named as from the earlier requirements.
     EARLIER_BUILD = ("breadboard.md", "breadboard.json", "breadboard.svg", "page.html")
+    EARLIER_SHEET = ("breadboard.md", "breadboard.json", "breadboard.svg")
 
     @staticmethod
     def _main_with_stderr(argv):
@@ -1695,28 +1728,59 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
             (project / "requirements.json").write_text(requirements_text)
         return project
 
-    def test_a_refused_file_removes_the_earlier_build_s_sheet_drawings_page_and_pin_map(self):
+    def test_a_refused_file_leaves_the_earlier_sheet_drawings_and_pin_map_and_removes_the_page(self):
         project = self._an_earlier_build()
+        pins = (project / "firmware" / "pins.py").read_bytes()
         code, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
         self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
-        for name in self.EARLIER_BUILD + ("firmware/pins.py",):
-            self.assertFalse((project / name).exists(), name)
-        self.assertIn("no breadboard sheet: ", err)
+        for name in self.EARLIER_SHEET:
+            self.assertEqual((project / name).read_text(), "from an earlier build", name)
+        self.assertFalse((project / "page.html").exists())
+        self.assertEqual((project / "firmware" / "pins.py").read_bytes(), pins)
         self.assertIn("not JSON", err)
-        self.assertIn("; removed %s" % (project / "breadboard.md"), err)
+        sheet_line = next(line for line in err.splitlines() if line.strip().startswith("left alone: %s (" % (project / "breadboard.md")))
+        self.assertIn("not JSON", sheet_line)
+        self.assertTrue(sheet_line.endswith(", so it is an earlier build's)"), sheet_line)
 
-    def test_with_json_each_removed_file_is_a_kept_entry_with_the_reason(self):
+    def test_with_json_each_earlier_file_is_a_kept_entry_with_the_reason(self):
         project = self._an_earlier_build()
         _, out, _ = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project), "--json"])
         said = json.loads(out)
         detail = said["stages"][0]["detail"]
         by_file = {Path(entry["file"]).name: entry for entry in said["kept"]}
         self.assertEqual(sorted(by_file), sorted(self.EARLIER_BUILD + ("pins.py",)))
-        for name in self.EARLIER_BUILD:
-            self.assertEqual(by_file[name]["did"], "removed")
-            self.assertEqual(by_file[name]["why"], detail + ", and it described an earlier build")
-        self.assertEqual(by_file["pins.py"]["did"], "removed")
+        for name in self.EARLIER_SHEET:
+            self.assertEqual(by_file[name]["did"], "left alone")
+            self.assertEqual(by_file[name]["why"], detail + ", so it is an earlier build's")
+        self.assertEqual(by_file["page.html"]["did"], "removed")
+        self.assertEqual(by_file["page.html"]["why"], detail + ", and it described an earlier build")
+        self.assertEqual(by_file["pins.py"]["did"], "left alone")
         self.assertIn("is not JSON", by_file["pins.py"]["why"])
+        self.assertTrue(by_file["pins.py"]["why"].endswith(PIN_MAP_EARLIER), by_file["pins.py"]["why"])
+
+    def test_a_refused_file_keeps_spark_s_pin_map_and_says_it_is_from_the_earlier_requirements(self):
+        # P1109 (#1633): main.py imports pins from firmware/, so the earlier pin map stays in place, named (D6)
+        project = self._an_earlier_build()
+        pins = (project / "firmware" / "pins.py").read_bytes()
+        code, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
+        self.assertEqual((project / "firmware" / "pins.py").read_bytes(), pins)
+        line = next(line.strip() for line in err.splitlines() if "%s (" % (project / "firmware" / "pins.py") in line)
+        self.assertTrue(line.startswith("left alone: %s (" % (project / "firmware" / "pins.py")), line)
+        self.assertIn("not JSON", line)
+        self.assertTrue(line.endswith(PIN_MAP_EARLIER + ")"), line)
+
+    def test_a_refused_board_only_file_leaves_the_earlier_dist_sheet_and_pin_map_and_removes_the_page(self):
+        # P1109's council, decision 4: a board-only file can be refused, and then nothing is removed but the page
+        project = self._an_earlier_build(json.dumps({"board": "firebeetle2-esp32s3", "board_only": True, "signals": "nope"}))
+        (project / "dist" / "board").mkdir(parents=True)
+        (project / "dist" / "board" / "circuit.json").write_text("[]")
+        code, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
+        self.assertIn("signals is", err)
+        for name in self.EARLIER_SHEET + ("firmware/pins.py", "dist/board/circuit.json"):
+            self.assertTrue((project / name).exists(), name)
+        self.assertFalse((project / "page.html").exists())
 
     def test_a_file_that_reads_but_is_refused_gives_its_own_reason(self):
         project = self._an_earlier_build(json.dumps({"board": "firebeetle2-esp32s3",
@@ -1724,7 +1788,7 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
                                                                {"part": "tactile-button", "name": "Openlid"}]}))
         _, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
         self.assertFalse((project / "page.html").exists())
-        self.assertFalse((project / "firmware" / "pins.py").exists())
+        self.assertTrue((project / "firmware" / "pins.py").exists())
         page_line = next(line for line in err.splitlines() if "no page: " in line)
         self.assertIn("parts[0] is called OpenLid and parts[1] Openlid", page_line)
 
@@ -2268,6 +2332,17 @@ class TheBoardAloneTest(unittest.TestCase):
                                                              "no drawn breadboard: board only: nothing to wire",
                                                              "no breadboard picture: board only: nothing to wire"])
 
+    def test_a_board_only_build_removes_an_earlier_sheet(self):
+        # P1093: only a board-only build removes an earlier sheet and its drawings (P236): it has nothing to wire
+        workdir, stages = self.run_alone()
+        earlier = {"breadboard.md": "# an earlier build's sheet", "breadboard.json": "{}", "breadboard.svg": "<svg/>"}
+        for name, text in earlier.items():
+            (workdir / name).write_text(text)
+        kept = kept_files.keep_breadboard(workdir / "requirements.json", workdir, stages)
+        for name in earlier:
+            self.assertEqual([entry["did"] for entry in kept if entry["file"] == str(workdir / name)], ["removed"], name)
+            self.assertFalse((workdir / name).exists(), name)
+
     def test_the_store_is_never_told_a_board_alone_was_built(self):
         _, stages = self.run_alone()
         self.assertFalse(build_service.vouches_for_a_build(stages))
@@ -2280,6 +2355,24 @@ class TheBoardAloneTest(unittest.TestCase):
         self.assertEqual([entry["did"] for entry in kept], ["removed"])
         self.assertFalse((workdir / "dist").exists())
         self.assertEqual(kept_files.drop_an_older_build(workdir, [Stage("build", check_spine.OK)]), [])
+
+    def test_an_earlier_dist_is_named_only_by_a_record_that_says_so(self):
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        self.assertIsNone(build_record.earlier_dist(project))  # no record
+        record = project / ".spark" / "build.json"
+        record.write_text(json.dumps({"schema": 1, "at": "2026-11-24T00:38:12+01:00"}))
+        (project / "dist").mkdir()
+        self.assertIsNone(build_record.earlier_dist(project))  # a record before the key
+        record.write_text(json.dumps({"schema": 1, "dist_written": True, "at": "2026-11-24T00:38:12+01:00"}))
+        self.assertIsNone(build_record.earlier_dist(project))  # this build wrote it
+        record.write_text(json.dumps({"schema": 1, "dist_written": False, "at": "2026-11-24T00:38:12+01:00"}))
+        self.assertEqual(build_record.earlier_dist(project), "the last build, 2026-11-24T00:38:12+01:00, did not write dist/: build again with check_spine.py --keep before you rely on this circuit")
+        (project / "dist").rmdir()
+        self.assertIsNone(build_record.earlier_dist(project))  # nothing there to name
+        (project / "dist").mkdir()
+        record.write_text("{not json")
+        self.assertIsNone(build_record.earlier_dist(project))  # a record it cannot read
 
     def test_a_string_true_is_not_board_only(self):
         _, stages = self.run_alone(board_only="true")
@@ -3374,6 +3467,7 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
         "stage_timed_out", "converter_lacks_part", "no_diagram",
         "board_unusable", "board_only_with_parts", "no_parts", "broken.code", "refused.code", "stage_crashed",
         "schematic_refused", "schematic_noted", "disagreement.code", "stage_crashed", "tool_missing",
+        "file_refused", "tools_list_broken",  # P1058: a tools file the engine lookup cannot read, or no tools list
         "tool_cannot_build", "design_not_built", "stage_timed_out", "part_stranded", "design_not_built", "not_routed",
         "simulation_fact_missing", "diagram_unwired", "every_part_skipped", "chip_not_compiled",
         "board_not_in_wokwi", "board_only", "simulation_fact_missing",  # P977: the board with no Wokwi part has its own code
@@ -3403,6 +3497,23 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
             last = build_stages(requirements, workdir)[-1]
             self.assertEqual((last.name, last.code), wanted, requirements)
         self.assertIsNone(build_stages({"board": "firebeetle2-esp32s3"}, workdir)[0].code)  # the board stage, ok
+
+    def test_a_store_tools_file_that_is_not_json_ends_the_build_with_its_own_code(self):
+        # P1058 (#1555): the real path, no patch. The engine lookup reads the store's tools file before it looks for tsci,
+        # so this holds with tsci on PATH or without it (the council's H)
+        home, workdir = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (home / "tools.json").write_text('{"tools": ')
+        (workdir / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [
+            "l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}))
+        done = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_spine.py"), str(workdir / "requirements.json"),
+                               "--json"], capture_output=True, text=True, env=dict(os.environ, SPARK_HOME=str(home)),
+                              cwd=str(workdir), timeout=120)
+        self.assertNotIn("Traceback", done.stderr)
+        build = json.loads(done.stdout)["stages"][-1]
+        self.assertEqual((done.returncode, build["name"], build["status"], build["code"]),
+                         (2, "build", "could-not-run", "tools_list_broken"), done.stderr)
+        self.assertIn("is not JSON", build["detail"])
+        self.assertNotIn("/spark:setup", build["detail"])
 
     def test_a_sheet_not_written_carries_its_code_into_the_json(self):
         project = Path(tempfile.mkdtemp())
@@ -3511,12 +3622,14 @@ class TheKeepRecordsTheBuildTest(unittest.TestCase):
         self.assertFalse((project / ".spark").exists())
         self.assertNotIn("build.json", kept)
 
-    def test_a_run_with_no_requirements_file_writes_no_record(self):
+    def test_a_run_with_no_requirements_file_records_the_reference_design(self):  # P1095: was "writes no record"
         project, workdir = self.a_project(), Path(tempfile.mkdtemp())
         args = argparse.Namespace(json=True, keep=project, requirements=None)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             run_build_board([Stage("build", check_spine.OK, "fine")], args, workdir)
-        self.assertFalse((project / ".spark" / "build.json").exists())
+        record = json.loads((project / ".spark" / "build.json").read_text())
+        self.assertIsNone(record["requirements"])
+        self.assertIsNone(record["requirements_sha256"])
 
     def test_a_record_that_cannot_be_written_is_not_kept_and_says_why(self):
         project = self.a_project()

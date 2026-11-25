@@ -16,7 +16,7 @@ ROW_LINE = "  %s %s (%s)%s"
 #: What --list prints, the paragraph of `boards.py --list --help` after its arguments, before the CLI's --json (P855).
 DETAILS = """--list marks the project's board with * (requirements.json's board, else boards/active.json's) and says which board
 stops the chain at the footprint stage (P121): its file lacks what the footprint is drawn from, and it is still a choice
-for pin-map work. A requirements.json that cannot be read marks no board, and the list says why."""
+for pin-map work. A requirements.json or a boards/active.json that cannot be read marks no board, and the list says why."""
 
 
 class ListBoards(Operation):
@@ -36,7 +36,7 @@ class ListBoards(Operation):
 
     def run(self, project, *, outside, list=True):
         project = project.resolve() if project else board_records.project_or_library()
-        current, note = board_records.marked_board(project)  # None: nothing chosen, or requirements.json cannot be read
+        current, note = board_records.marked_board(project)  # None: nothing chosen, or requirements.json or the selection is broken
         rows, lines = [], []
         for board_id, (layer, path) in sorted(board_records.records(project).items()):
             try:

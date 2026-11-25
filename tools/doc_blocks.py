@@ -9,10 +9,10 @@ at the root, and the pages in commands/, agents/, skills/ and docs/guide/ (`PAGE
     python3 tools/doc_blocks.py    # writes every stale block; tests/test_doc_blocks.py fails while one is stale
 
 It exits 0 when every block was written or already current, and 1 when it refused a page, which it then leaves as it
-is: a start without its end, an end without its start, naming another Operation or of another kind, a name no table
-holds, an Operation with nothing for its kind to show (a summary, stages), or a line that starts `<!--` and holds a
-marker word (`spark:operation`, `spark:stages`) but is no marker (a typo, a space at its end, a Windows line end). The
-sentence names the page and the line.
+is: a start without its end, an end without its start, naming another Operation or of another kind, a name the
+Operation catalogue does not hold, an Operation with nothing for its kind to show (a summary, stages), or a line that
+starts `<!--` and holds a marker word (`spark:operation`, `spark:stages`) but is no marker (a typo, a space at its end,
+a Windows line end). The sentence names the page and the line.
 """
 
 import re
@@ -40,11 +40,10 @@ WROTE_MESSAGE = "wrote %s"
 
 
 def block_operations():
-    """The Operations a block may name: the bench's table and the build's, imported only here, so that `import
-    doc_blocks` for its markers (tools/check_docs.py reads END, P855) loads no spark module."""
-    from spark.bench import OPERATIONS
-    from spark.build.build_operations import OPERATIONS as BUILD_OPERATIONS
-    return {**OPERATIONS, **BUILD_OPERATIONS}
+    """The Operations a block may name: every Operation of the Operation catalogue (P1077), imported only here, so that
+    `import doc_blocks` for its markers (tools/check_docs.py reads END, P855) loads no spark module."""
+    from spark import operation_catalogue
+    return operation_catalogue.CATALOGUE
 
 
 def _operation_help(operation):

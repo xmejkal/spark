@@ -2,9 +2,10 @@
 The flow's follow-up (P1035, piece 3 of P793): after an ok run that wrote to a project, the core adds the steps that
 `flow.py show` names now, after the Operation's own, with one line each. `parts.py --pick` and `check_spine.py --keep` hand
 it to the core first. A step can hold a placeholder that Claude fills before the line runs: `<name>` of a scenario run,
-`<answers.json>` of the brief step. PR 2 (the PO's D16): after an ok run that wrote to a project with a page.html, it
-writes the page again on disk (`write_flow_page.write_page`). It never publishes it and makes no GitHub call (D23): Claude
-republishes the page at the next /spark:page.
+`<answers.json>` of the brief step. PR 2 (the PO's D16): after a run that wrote to a project with a page.html, at any
+status but a crash (P1069), and after `deploy.py` too (`PageFollowUp`), it writes the page again on disk
+(`write_flow_page.write_page`). It never publishes it and makes no GitHub call (D23): Claude republishes the page at the
+next /spark:page.
 """
 
 import os
@@ -20,7 +21,8 @@ from spark.records import store
 
 # --- MVP ---
 #: The script of a step whose op is not its script's name; every other op runs `<op>.py`, as `board_envelope.next_text`
-#: and flow.md name it (`look`, `run_scenario`, `init_project`). Piece 4's catalogue replaces this map.
+#: and flow.md name it (`look`, `run_scenario`, `init_project`). Which script runs an op is the frontend's fact, which the
+#: Operation catalogue does not hold (P1077); P1081 #1585 moves it to one place.
 STEP_SCRIPTS = {"pick": "parts.py", "requirements": "parts.py", "needs-drop": "parts.py", "build-board": "check_spine.py"}
 #: The folder of the scripts a step runs.
 SCRIPTS = Path(__file__).resolve().parents[2]
@@ -70,4 +72,17 @@ class FlowFollowUp(FollowUp):
         script = SCRIPTS / STEP_SCRIPTS.get(step.op, "%s.py" % step.op)
         mark = NEEDS_YOU if needs_you(step) else ""
         return printable(STEP_LINE % (store.format_rerun_line(script, step.argv) + mark, step.why))
+
+
+class PageFollowUp(FollowUp):
+    """Strategy: the follow-up of a run that adds no flow step, `deploy.py` (P1069): its refresh is FlowFollowUp's, which
+    writes page.html again, and its steps are the base's, none. `renderer` and `store` are what a test swaps."""
+
+    refreshes = FlowHtmlPage.FILE_NAME
+
+    def __init__(self, renderer=None, store=None):
+        self.flow = FlowFollowUp(renderer, store)
+
+    def refresh(self, project, result):
+        return self.flow.refresh(project, result)
 # --- end MVP ---

@@ -192,7 +192,7 @@ def board_build(project):
     requirements = Path(project) / "requirements.json"
     if not requirements.is_file():
         return None
-    try:
+    try:  # its own read (P1024): no board in requirements.json gets the firmware-image default (scripts.md), never the selection's
         board = json.loads(requirements.read_text()).get("board")
     except (OSError, ValueError, AttributeError) as cannot:
         raise tool_finder.ToolError("%s cannot be read, so its board's MicroPython build is not known: %s",

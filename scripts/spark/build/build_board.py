@@ -105,7 +105,7 @@ class BuildBoard(Operation):
                                                    "build, then the step that flow.py show names now, P1035)"),
                  Argument(("--keep",), "keep", Path,
                           "write the built board into DIR: board.tsx, its footprint and "
-                          "dist/, where every check already looks. After a build whose build stage ended ok, a board.tsx that spark wrote and nobody changed is `replaced` "
+                          "dist/, where every check already looks; after a build that left no dist/board/circuit.json, an earlier dist/ stays and is named as an earlier build's here, and check_all says the last build did not write it (P816); a build that left it replaces dist/ whole (P1088). After a build whose build stage ended ok, a board.tsx that spark wrote and nobody changed is `replaced` "
                           "(its previous version is .spark/previous/board.tsx.txt), or `unchanged` when this build made the "
                           "same board. Other .tsx files are left alone and named, and so is one when the build did not finish or the replace failed; "
                                                     "`traces differ` names the traces that differ from this build's; with --json, each file is listed under kept. With a requirements "
@@ -116,7 +116,8 @@ class BuildBoard(Operation):
                           "breadboard.svg, that drawing as a picture, "
                           "a rebuild also lists what to change on the bench (one `changed` entry for each line), page.html, in a project the flow's phases "
                           "with their status words and the breadboard, schematic and PCB, else the three in tabs, to open in a browser, firmware/pins.py, the pins the firmware imports, with one "
-                          "`missing_facts` item for each fact the board record lacks, and in a project .spark/build.json, which flow.py reads. "
+                          "`missing_facts` item for each fact the board record lacks; a refused requirements file leaves the earlier one, named (P1109). In a project it writes .spark/build.json, which flow.py reads, "
+                          "the reference design's too, with `requirements` null (P1095). A reference-design build names only an earlier breadboard.md and its drawings as an earlier build's (P1114). "
                           "The simulation project goes to DIR/sim", metavar="DIR"),
                  Argument(("--sim-dir",), "sim_dir", Path, "keep the simulation project here instead of DIR/sim: diagram.json, "
                           "wokwi.toml, the chips", metavar="DIR"),

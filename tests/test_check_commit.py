@@ -9,7 +9,9 @@ tree, and the file it imported was staged one commit later (sprint-4 close audit
 
 import contextlib
 import io
+import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -164,6 +166,218 @@ class TheGateNeedsNodeForThePageScriptTest(unittest.TestCase):
         self.assertIsNone(check_commit.node_refusal(self.story("test_flow_script"), lambda _name: "/usr/bin/node"))
         self.assertIsNone(check_commit.node_refusal(self.story("test_flow_page"), lambda _name: None))
         self.assertIsNone(check_commit.node_refusal(None, lambda _name: None), "the full run")
+
+
+#: The page script's four files (P1061), each from the root, and what a tree holds of them in the tests below.
+FLOW = "scripts/spark/flow/"
+PAGE_TS = {FLOW + "page_script.ts": "const a: number = 1;\n", FLOW + "page_script.js": "const a = 1;\n"}
+
+
+#: Where the swapped `which` finds tsc.
+TSC = "/usr/local/bin/tsc"
+
+
+def tsc_7_0(writes="const a = 1;\n", exit_code=0, said=""):
+    """
+    A swapped `subprocess.run` for tsc 7.0.2: `--version` says so, and a compile writes `writes` into its --outDir. Its
+    `compilers` lists the program each compile ran.
+    """
+    def run(argv, **_kwargs):
+        if "--version" in argv:
+            return subprocess.CompletedProcess(argv, 0, "Version 7.0.2\n", "")
+        run.compilers.append(argv[0])
+        if writes is not None:
+            (Path(argv[argv.index("--outDir") + 1]) / "page_script.js").write_text(writes)
+        return subprocess.CompletedProcess(argv, exit_code, said, "")
+    run.compilers = []
+    return run
+
+
+def tsc_on_path(_name):
+    return TSC
+
+
+class TheGateCompilesThePageScriptTest(unittest.TestCase):
+    """
+    P1061: page_script.ts is the source, and the committed page_script.js must be tsc 7.0's compiled output of it. A
+    missing tsc, or another version, is a refusal (could not run); a compiled output that differs, or a tsc that says
+    errors, is a drift (problems). Every tool is swapped: no real tsc runs.
+    """
+
+    @staticmethod
+    def tree(files):
+        tree = Path(tempfile.mkdtemp())
+        for name, text in files.items():
+            (tree / name).parent.mkdir(parents=True, exist_ok=True)
+            (tree / name).write_text(text)
+        return tree
+
+    def test_a_missing_tsc_refuses_and_names_the_install(self):
+        self.assertEqual(check_commit.tsc_refusal(lambda _name: None, tsc_7_0()),
+                         "could not run: the gate compiles the page script's TypeScript with tsc 7.0 (P1061), and no tsc "
+                         "is on this PATH; install it for the node this PATH finds: npm install -g typescript@7.0")
+
+    def test_another_version_refuses_and_names_the_one_found(self):
+        for found in ("Version 6.0.3", "Version 7.1.0", ""):
+            def run(argv, **_kwargs):
+                return subprocess.CompletedProcess(argv, 0, found + "\n", "")
+            self.assertEqual(check_commit.tsc_refusal(tsc_on_path, run),
+                             "could not run: the gate compiles the page script's TypeScript with tsc 7.0 (P1061), and the "
+                             "tsc on this PATH says %r; install 7.0 for the node this PATH finds: npm install -g "
+                             "typescript@7.0" % found, found)
+
+    def test_tsc_7_0_with_any_patch_is_no_refusal(self):
+        self.assertIsNone(check_commit.tsc_refusal(tsc_on_path, tsc_7_0()))
+
+        def run(argv, **_kwargs):
+            return subprocess.CompletedProcess(argv, 0, "Version 7.0.9\n", "")
+        self.assertIsNone(check_commit.tsc_refusal(tsc_on_path, run))
+
+    def test_the_same_bytes_are_no_drift(self):
+        run = tsc_7_0()
+        self.assertIsNone(check_commit.script_drift(self.tree(PAGE_TS), TSC, run))
+        self.assertEqual(run.compilers, [TSC], "the compile runs the tsc whose version was read")
+
+    def test_other_bytes_are_a_drift_that_names_the_fix(self):
+        self.assertEqual(check_commit.script_drift(self.tree(PAGE_TS), TSC, tsc_7_0(writes="const a = 2;\n")),
+                         "page script: the committed scripts/spark/flow/page_script.js is not tsc's compiled output of "
+                         "page_script.ts (P1061); fix it with tsc -p scripts/spark/flow, then commit both files")
+
+    def test_a_tsc_that_says_errors_is_a_drift_with_its_first_error_line(self):
+        for exit_code in (1, 2):  # tsc's own exit 1 or 2 is a drift, never a refusal (C14)
+            said = "page_script.ts(3,5): error TS2339: Property 'x' does not exist on type 'Y'.\nmore\n"
+            self.assertEqual(check_commit.script_drift(self.tree(PAGE_TS), TSC, tsc_7_0(writes=None, exit_code=exit_code,
+                                                                                             said=said)),
+                             "page script: tsc -p scripts/spark/flow says page_script.ts(3,5): error TS2339: Property 'x' "
+                             "does not exist on type 'Y'. (P1061); fix the .ts, then run it again and commit both files",
+                             exit_code)
+
+    def test_a_change_of_one_of_the_four_files_a_doubt_or_the_full_run_needs_tsc(self):
+        tree = self.tree(PAGE_TS)
+        self.assertTrue(check_commit.needs_tsc(tree, ["scripts/spark/flow/tsconfig.json"]))
+        self.assertTrue(check_commit.needs_tsc(tree, ["docs/x.md", "scripts/spark/flow/artifact_runtime.d.ts"]))
+        self.assertTrue(check_commit.needs_tsc(tree, None), "git could not tell what changed: a doubt runs more")
+        self.assertTrue(check_commit.needs_tsc(tree, [], full=True))
+        self.assertFalse(check_commit.needs_tsc(tree, ["scripts/spark/flow/flow_page.py"]))
+        self.assertFalse(check_commit.needs_tsc(tree, []))
+
+    def test_a_tree_without_the_page_script_s_source_needs_no_tsc(self):
+        # a commit before P1061, or a test's tree: there is nothing to compile
+        tree = self.tree({FLOW + "page_script.js": "const a = 1;\n"})
+        self.assertFalse(check_commit.needs_tsc(tree, None))
+        self.assertFalse(check_commit.needs_tsc(tree, [], full=True))
+
+    def test_a_branch_that_deleted_the_source_still_needs_tsc(self):
+        # the review of #1606: a deleted page_script.ts beside an edited page_script.js must not turn the check off
+        deleted = FLOW + "page_script.ts"
+        self.assertTrue(check_commit.needs_tsc(self.tree({FLOW + "page_script.js": "const a = 2;\n"}), [deleted]))
+        self.assertFalse(check_commit.needs_tsc(self.tree({}), [deleted]), "a test's empty archive holds none of the four")
+        root = repo_with(PAGE_TS)
+        subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=str(root), check=True, env=own_env())
+        for command in (["git", "rm", "-q", deleted], ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "two"]):
+            subprocess.run(command, cwd=str(root), check=True, capture_output=True, env=own_env())
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            code = check_commit.gate(root, "HEAD", Path(tempfile.mkdtemp()), which=lambda _name: None, run=tsc_7_0())
+        self.assertEqual(code, check_commit.EXIT_COULD_NOT_RUN, said.getvalue())
+        self.assertIn("and no tsc is on this PATH", said.getvalue())
+
+    def full_gate(self, which, run):
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            code = check_commit.gate(repo_with(PAGE_TS), "HEAD", Path(tempfile.mkdtemp()), full=True, which=which, run=run)
+        return code, said.getvalue()
+
+    def test_the_full_run_refuses_without_tsc_and_runs_no_suite(self):
+        code, said = self.full_gate(lambda _name: None, tsc_7_0())
+        self.assertEqual(code, check_commit.EXIT_COULD_NOT_RUN, said)
+        self.assertIn("and no tsc is on this PATH", said)
+        self.assertNotIn("as committed", said, "a refusal runs no suite")
+
+    def test_the_full_run_compiles_the_script_and_a_drift_runs_no_suite(self):
+        run = tsc_7_0(writes="const a = 2;\n")
+        code, said = self.full_gate(tsc_on_path, run)
+        self.assertEqual(code, check_commit.EXIT_PROBLEMS, said)
+        self.assertEqual(run.compilers, [TSC], "the gate compiles with the tsc that `which` found")
+        self.assertIn("page script: the committed scripts/spark/flow/page_script.js is not tsc's compiled output", said)
+        self.assertNotIn("as committed", said, "a drift runs no suite")
+
+
+class TheGateChecksTheMutationRowsTest(unittest.TestCase):
+    """P897: every row's anchor at every push, and the mutants of the changed files' and tables' rows."""
+    GOOD = {"file": "m.py", "name": "add becomes sub", "find": "return a + b", "replace": "return a - b"}
+    TABLE = "tests/mutations/t.json"
+
+    def tree(self, rows, text="def add(a, b):\n    return a + b\n", table=None):
+        files = {"m.py": text, "other.py": "x = 1\n", self.TABLE: table if table is not None else json.dumps(rows)}
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root, True)
+        for name, body in files.items():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(body)
+        return root
+
+    def test_a_row_whose_find_is_gone_stops_the_gate_before_the_suite(self):
+        root = repo_with({"m.py": "def add(a, b):\n    return a * b\n", self.TABLE: json.dumps([self.GOOD])})
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            code = check_commit.gate(root, "HEAD", Path(tempfile.mkdtemp()), which=lambda _name: None)
+        self.assertEqual(code, check_commit.EXIT_PROBLEMS, said.getvalue())
+        self.assertIn("t.json[0] add becomes sub", said.getvalue())
+        self.assertIn("re-anchor each refused row", said.getvalue())
+        self.assertNotIn("as committed", said.getvalue(), "a refused row runs no suite")
+
+    def test_a_find_that_occurs_twice_is_refused_too(self):
+        lines = check_commit.refused_rows(self.tree([self.GOOD], "return a + b\nreturn a + b\n"), [])[0]
+        self.assertEqual(len(lines), 1, lines)
+        self.assertIn("occurs 2 time(s)", lines[0])
+
+    def test_a_stale_row_on_a_file_the_branch_did_not_change_is_still_refused(self):
+        lines = check_commit.refused_rows(self.tree([self.GOOD], "def add(a, b):\n    return a * b\n"), ["other.py"])[0]
+        self.assertEqual(len(lines), 1, "the anchor half covers every row, changed or not")
+        self.assertIn("t.json[0]", lines[0])
+
+    def test_a_mutant_that_does_not_compile_is_refused_only_when_its_file_or_table_changed(self):
+        broken = dict(self.GOOD, replace="return (a")
+        root = self.tree([broken])
+        for changed, count in ((["m.py"], 1), ([self.TABLE], 1), (["x.py"], 0), ([], 0), (None, 1)):
+            lines = check_commit.refused_rows(root, changed)[0]
+            self.assertEqual(len(lines), count, (changed, lines))
+        self.assertIn("does not compile", check_commit.refused_rows(root, None)[0][0])
+
+    def test_a_clean_run_says_the_rows_line_and_runs_the_suite(self):
+        root = repo_with({"scripts/spark/core/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
+                          "m.py": "def add(a, b):\n    return a + b\n", "notes.md": "x\n",
+                          "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
+                                             "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n",
+                          self.TABLE: json.dumps([self.GOOD, dict(self.GOOD, file="notes.md", find="x", replace="y")])})
+        said = io.StringIO()
+        with a_good_board(), contextlib.redirect_stdout(said):
+            code = check_commit.gate(root, "HEAD", Path(tempfile.mkdtemp()), which=lambda _name: None)
+        self.assertEqual(code, check_commit.EXIT_OK, said.getvalue())
+        self.assertIn("as committed", said.getvalue())
+        self.assertIn("rows: every anchor of 2 rows in 1 tables occurs once, and the mutants of the 1 rows checked compile", said.getvalue())
+
+    def test_a_row_with_a_missing_or_not_string_key_is_a_refusal_line_not_a_crash(self):
+        rows = [{"find": "a", "replace": "b"}, dict(self.GOOD, file=None), dict(self.GOOD, replace=3), "text", self.GOOD]
+        lines = check_commit.refused_rows(self.tree(rows), None)[0]
+        self.assertEqual(len(lines), 4, lines)
+        self.assertIn("t.json[0]", lines[0])
+
+    def test_a_file_that_is_not_text_is_a_refusal_not_a_crash(self):
+        root = self.tree([self.GOOD])
+        (root / "m.py").write_bytes(b"\xff\xfe\x00")
+        lines = check_commit.refused_rows(root, None)[0]
+        self.assertEqual(len(lines), 1, lines)
+        self.assertIn("occurs 0 time(s)", lines[0])
+
+    def test_a_table_that_is_not_json_is_a_refusal_line(self):
+        lines = check_commit.refused_rows(self.tree(None, table="[{"), [])[0]
+        self.assertEqual(len(lines), 1, lines)
+        self.assertIn("t.json", lines[0])
+
+    def test_a_tree_with_no_tables_refuses_nothing(self):
+        self.assertEqual(check_commit.refused_rows(Path(tempfile.mkdtemp()), None), ([], 0, 0, 0))
 
 
 #: A test that passes and leaves a folder in the temp folder behind it — the shape of 1,888 of the 2,291 entries.

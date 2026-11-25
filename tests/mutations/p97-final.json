@@ -146,7 +146,7 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "a shelf copy follows any project's record of its id (final 4)",
-  "find": "    return path, named if named and shelved_from(shelf / path.name) == named else None",
+  "find": "    return path, named if named and named in (shelved_from(shelf / path.name), orphan_home(shelf / path.name, kind)) else None",
   "replace": "    return path, named"
  },
  {
@@ -176,8 +176,8 @@
  {
   "file": "scripts/spark/sourcing/record_home.py",
   "name": "a dry run refreshes the shelf copy (final 4)",
-  "find": "    if dry_run:\n        return \"would refresh the shelf copy\"",
-  "replace": "    if False:\n        return \"would refresh the shelf copy\""
+  "find": "    if dry_run:\n        return WOULD_REFRESH",
+  "replace": "    if False:\n        return WOULD_REFRESH"
  },
  {
   "file": "scripts/spark/sourcing/record_home.py",

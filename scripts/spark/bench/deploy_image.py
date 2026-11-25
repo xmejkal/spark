@@ -23,7 +23,7 @@ from spark.records import store
 from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
 from spark.bench.deploy_stages import DEPLOY_STAGES, PHASE_WHY, DeployPhase
-from spark.bench.deploy_service import DeployService, FlashError
+from spark.bench.deploy_service import DeployService, ended_after_the_yes
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, SIMULATION_NONE, evidence_for
 from spark.firmware.project_image import DeployError
@@ -61,6 +61,20 @@ REPLIES_HELP = ('a file of your own with the person\'s yes to the deploy\'s boar
 LOOK_WHY = {board_codes.OTHER_BOARD: "the board on USB is not this project's kept board: the look asks the person before it reads it",
             board_codes.NO_KNOWN_BOARD: "spark keeps no board for this project yet: the look asks the person once and keeps it"}
 LOOK_WHY_AFTER_READ = "the board read is not this project's kept board: plug in the kept board, or read this one with the look"
+#: The board log line after a flash that did not finish (P1092, the review of #1632): the log, the fact and the next step;
+#: or why no log was written, and what that leaves flow.py show saying.
+NOT_FINISHED_LOG_LINE = ("board log: %s: flash not finished, the board may be erased. Look at the board with Claude, then run "
+                         "the deploy again.")
+NOT_FINISHED_UNLOGGED_LINE = ("board log: not written: %s, so flow.py show may still name an older deploy. The flash did not "
+                              "finish, so the board may be erased.")
+#: The same two lines after a verify that did not finish (P1110): the flash finished, so the fix is CRASH_STATES' verify fix.
+VERIFY_NOT_FINISHED_LOG_LINE = ("board log: %s: ready unknown: the flash finished, and spark did not finish reading the board. "
+                                "Read the board with look.py; do not deploy again.")
+VERIFY_NOT_FINISHED_UNLOGGED_LINE = ("board log: not written: %s, so flow.py show may still name an older deploy. The board is "
+                                     "flashed, not verified.")
+#: The (logged, not logged) lines of a stage that did not finish after the yes, by the stage.
+NOT_FINISHED_LINES = {DeployPhase.FLASH: (NOT_FINISHED_LOG_LINE, NOT_FINISHED_UNLOGGED_LINE),
+                      DeployPhase.VERIFY: (VERIFY_NOT_FINISHED_LOG_LINE, VERIFY_NOT_FINISHED_UNLOGGED_LINE)}
 #: The refusals from the look to the flash that one handler says (P354, P892).
 REFUSALS = (board_look.LookStopError, DeployError, tool_finder.ToolError, SparkError)
 
@@ -89,7 +103,8 @@ def grant_hint(project, port, evidence):
 
 def who_said_yes(consent):
     """Whose yes it was, as a phrase, read once. getpass can find no user (OSError since Python 3.13, KeyError before
-    it), and then the phrase says so; the store record names the error itself."""
+    it), and then the phrase says so. After a verify the store record is not written then and names the error itself;
+    a flash that did not finish keeps its entry with this phrase (P1097)."""
     try:
         return consent.who
     except (OSError, KeyError) as cannot:
@@ -232,10 +247,12 @@ class DeployFlowService:
     def refuse_at_look(self, cannot):
         """The exit code of a refusal at the look or after it, said on stderr: a LookStopError with the doctor's lines (P354), a
         SparkError (the kept record, the replies file) as one Finding with its own code and fix (P892), any other as
-        `deploy.py: <why>`. A FlashError keeps the yes that ran it."""
+        `deploy.py: <why>`. A FlashError keeps the yes that ran it, and names its board log (P1092): any refusal that the
+        flash loop's handler logged does (P1096, G11)."""
         reached = self._reached
-        if isinstance(cannot, FlashError):
+        if ended_after_the_yes(cannot):
             self.keep_yes()
+            self.say_not_finished(cannot)
         reached.update(refusal=str(cannot), reason=cannot.code if isinstance(cannot, SparkError) else reason_of(cannot))
         if isinstance(cannot, SparkError):
             reached["findings"] = [Finding(cannot.status, self.tracker.stage, cannot.code, str(cannot), cannot.fix)]
@@ -249,6 +266,33 @@ class DeployFlowService:
                 reached["asleep_next"] = board_envelope.asleep_next(fix, reached["project"], reached["evidence"])  # P1048
         self.outside.add_diagnostics(lines)
         return EXIT_COULD_NOT_RUN
+
+    def say_not_finished(self, failed):
+        """The board log of `failed`, what ended the flash or the verify after the yes (a FlashError, P1092; a crash or a
+        Ctrl-C, P1096, P1110), in that stage: its path, as `data.board_log` with the image it names, or why it was not
+        written. Then the store record of a flash that did not finish (P1097); a verify keeps none (D3)."""
+        stage = self.tracker.stage
+        logged_line, unlogged_line = NOT_FINISHED_LINES[stage]
+        if failed.log_path is None:
+            self.say(stage, unlogged_line % failed.log_error)
+        else:
+            self._reached.update(board_log=str(failed.log_path), image_sha256=failed.image_sha256)
+            self.say(stage, logged_line % failed.log_path, raw=True)  # P677: a file a person opens, as data.board_log
+        if stage == DeployPhase.FLASH:
+            self.keep_record(lambda: self.service.record_not_finished(self.look, failed.image_sha256, failed.moment, self._reached["who"]))
+
+    def keep_record(self, write):
+        """The store record that `write()` writes, said in the current stage: its path as `data.store_record`, or why it was
+        not written, as `store_record_error` and a note. A DeployError is the image that a flash that did not finish
+        cannot read now (P1097)."""
+        reached, stage = self._reached, self.tracker.stage
+        try:
+            reached["store_record"] = str(write())
+            self.say(stage, "store record: %s" % reached["store_record"])
+        except (OSError, KeyError, store.StoreError, DeployError) as cannot:  # KeyError: getpass before Python 3.13
+            reached["store_record_error"] = str(cannot)
+            reached["notes"] = ["the store record was not written: %s" % cannot]
+            self.say(stage, "store record: not written: %s" % cannot)
 
     def look_and_flash(self):
         """The read and its lines, the check that the board read is the kept board (P892), the yes, the gate, then the flash. A
@@ -304,13 +348,7 @@ class DeployFlowService:
         for line in (result.facts_line, DEPLOYED_LINE % (result.image_sha256, reached["who"]), "%s: %s" % (ready.verdict, ready.sentence)):
             self.say(DeployPhase.VERIFY, line)
         self.say(DeployPhase.VERIFY, "board log: %s" % result.log_path, raw=True)  # P677: a file a person opens, as data.board_log
-        try:
-            reached["store_record"] = str(self.service.record(result, self.consent))
-            self.say(DeployPhase.VERIFY, "store record: %s" % reached["store_record"])
-        except (OSError, KeyError, store.StoreError) as cannot:  # KeyError: getpass before Python 3.13
-            reached["store_record_error"] = str(cannot)
-            reached["notes"] = ["the store record was not written: %s" % cannot]
-            self.say(DeployPhase.VERIFY, "store record: not written: %s" % cannot)
+        self.keep_record(lambda: self.service.record(result, self.consent))
         if ready.verdict == ready_probe.UNKNOWN:
             if reached["reason"] == board_codes.READY_UNKNOWN:  # P1022: what spark knows, what it did not do, what to try
                 places = board_records.ButtonPlaces.of_project(self.service.project)
@@ -370,10 +408,14 @@ the grant. The grant covers any passed image of any project on that board. The s
 
 After the flash it copies spark.json to the board: spark's version, the project, the board type, the MAC, the image's
 sha256, each file's sha256 and `simulation` (passed or none). The board log names the file's sha256 and the simulation,
-and the store's boards/<MAC>.json adds this deploy with its verdict, its simulation and whose yes it was. Then it reads
+and the store's boards/<MAC>.json adds this deploy with its verdict, its simulation and whose yes it was, and a flash
+that did not finish too (verdict `flash not finished`, P1097). Then it reads
 the board: ready seen means the board's files match the evidence's sha256s and the firmware printed a line that
 starts with the word `ready` within %d s.
-The board's log goes to sim/runs/board/. A firmware that stops with an error is not seen. If mpremote cannot reach the
+The board's log goes to sim/runs/board/, also after a flash that did not finish (a failed command, a crash or a Ctrl-C,
+with the verdict `flash not finished`), and after a crash or a Ctrl-C in the read after the flash, with the verdict
+ready unknown (P1110). Its fourth line names the cause's code, when ready was not seen (reason: files_unread,
+for example; P1043), and flow.py show reads it. A firmware that stops with an error is not seen. If mpremote cannot reach the
 board, for example because its port changed after the flash, or the passed run's log is from before P215 and names no
 files, ready is unknown, never seen. The write restarts the chip with esptool's `--after watchdog-reset` (esptool's troubleshooting
 page says the ESP32-S3 then leaves download mode; not yet run on a board that was entered with BOOT; the C6 and the classic ESP32 fall
@@ -452,6 +494,10 @@ class DeployImage(Operation):
             return self.effects
         return (READS, RUNS) if values["no_simulation"] else (READS,)
 
+    def written_project(self, values):
+        """The project a deploy writes to (P1069): the core writes its page.html again after a run that did not crash."""
+        return Path(values["project"])
+
     def run(self, project, port, token, dry_run, replies=None, *, outside, **evidence):
         """`evidence` holds the two flags of EVIDENCE_GROUP, `ignore_older_runs` and `no_simulation`."""
         picked = evidence_for(project, evidence["no_simulation"], evidence["ignore_older_runs"], find_tool=outside.find_tool, run=outside.run)
@@ -471,13 +517,20 @@ class DeployImage(Operation):
             if flow.tracker.stage not in CRASH_STATES:
                 raise
             return self._crashed(flow, crashed)
+        except KeyboardInterrupt as interrupted:  # P1096: a Ctrl-C in the flash says its board log line first
+            if ended_after_the_yes(interrupted):
+                flow.keep_yes()
+                flow.say_not_finished(interrupted)
+            raise  # P1096: a Ctrl-C still ends the run
         return board_envelope.deploy_result(flow.reached(), code)
 
     def _crashed(self, flow, crashed):
         """The result of a crash after the gate passed: one unchecked Finding with code `crash` that names the board's state,
         the data reached with the yes and `board_state`, the look as the next step, the traceback in the diagnostics, and
-        the headline that names the board's state (P478)."""
+        the headline that names the board's state (P478). A crash in the flash loop also names the board log it wrote (P1096)."""
         flow.keep_yes()  # a crash in the flash loop still says whose yes it was
+        if ended_after_the_yes(crashed):
+            flow.say_not_finished(crashed)
         reached, name = flow.reached(), type(crashed).__name__
         state = CRASH_STATES[reached["stage"]]
         data = dict(board_envelope.deploy_data(reached), board_state=state.board_state)

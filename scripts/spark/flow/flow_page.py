@@ -1,7 +1,9 @@
 """
 The page of a project (P827, #1185): the flow's phases as one plain HTML file, `page.html`, each with a status word and a
-mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it. The page
-adds no tick of its own: a phase whose status is not ok never shows one (`shown_phase`). It loads nothing from the web and is
+mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it, in the
+slice 1 order (P1062): the freshness line, the NOW box, the Parts, Wiring and Pictures folds, the bench note, and the
+developer fold, always closed. The page adds no tick of its own: a phase whose status is not ok never shows one
+(`shown_phase`). It loads nothing from the web and is
 the same bytes for the same flow. Its one script (P829 PR 3) does nothing from disk: `page_words` writes every word it
 shows. The breadboard stands in it as plain shapes (`SvgInliner`, P949),
 with its keys for a player and a legend of its pads; every other picture is an <img>.
@@ -19,8 +21,9 @@ from spark.breadboard.svg_diagram import PAD_MARKS
 from spark.breadboard.tabbed_page import token_styles
 from spark.flow import flow_codes, request_codes
 from spark.flow.fingerprint import SHORT
-from spark.flow.phase_readers import MARKS
+from spark.flow.phase_readers import MARKS, pick_need
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
+from spark.core.zone_time import MONTHS, day_and_time
 
 # --- MVP ---
 #: Value: one picture of the project: its title, its SVG text or None, and why there is none. The page keeps no renderer's
@@ -38,8 +41,9 @@ PageWiring = namedtuple("PageWiring", "steps before_power records why_missing")
 #: is masked before it is rendered.
 #: `guide` is the flow's guide (`guide.guide_of`, P977), a dict, or None for a page from a caller that has none: then the page
 #: says where the project stands in one line.
-FlowPage = namedtuple("FlowPage", "title phases stands_at pictures notes wiring fingerprint written guide",
-                      defaults=(None, None, None, None))
+#: `deployed` is ON THE BOARD's sentence (`deploy_reading.deployed_line`, P1062), or None before any deploy.
+FlowPage = namedtuple("FlowPage", "title phases stands_at pictures notes wiring fingerprint written guide deployed",
+                      defaults=(None, None, None, None, None))
 
 TICK = MARKS[OK][1]
 #: The page's one script (P829 PR 3): it adds the buttons only in a published page with the Artifact database, and does
@@ -82,19 +86,21 @@ def _makes_stale(offer):
 
 def sendable_now(page):
     """The offer dict the guide's now names (`now.offer`, P1030) when it is sendable, from any phase, else None: the NOW
-    line then carries its key, and the script puts its button there too. The CLI's `next` holds the same offer's step."""
+    box's NEXT line then carries its key, and the script puts its button there, and nowhere else (P1062). The CLI's `next`
+    holds the same offer's step."""
     now = (page.guide or {}).get("now")
     offers = [offer for phase in page.phases for offer in phase["offers"] if now and offer["key"] == now.get("offer") and is_sendable(offer)]
     return offers[0] if offers else None
 
 
-def page_words(phases, wiring_first=False):
+def page_words(phases):
     """
     Every word the page's script shows (P829 PR 3, the plan's section 9), as one dict: per sendable offer its label (the
     button and the confirm's title) and the confirm's lines (its effect, the phases it may make out of date, the wait),
     the fixed words of the buttons and the status line, and the words of each answer. A refusal's words are keyed by
     its code's meaning, the `line` that `flow.py run-request` answers. The script fills in a time, a label or a line.
-    `intro` is the published page's intro, with the wiring line when the wiring comes first (`wiring_first`).
+    `intro` is the published page's intro, `last_request` the line of the last request, `months` the month words of its
+    time, and `request_kinds` and `request_other` its words when its offer left the page (P1062).
     """
     offers = {}
     for offer in (offer for phase in phases for offer in phase["offers"] if is_sendable(offer)):
@@ -105,9 +111,10 @@ def page_words(phases, wiring_first=False):
     return {"offers": offers, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY,
             "withdraw": flow_codes.WITHDRAW, "command": flow_codes.PAGE_COMMAND, "waiting": flow_codes.WAITING_SAYS,
             "now_button": flow_codes.NOW_BUTTON,
-            "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "page_from": flow_codes.PAGE_FROM,
+            "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "last_request": flow_codes.LAST_REQUEST_SAYS,
             "not_sent": flow_codes.NOT_SENT_SAYS, "not_withdrawn": flow_codes.NOT_WITHDRAWN_SAYS,
-            "intro": " ".join([flow_codes.PUBLISHED_INTRO] + ([flow_codes.WIRING_FIRST] if wiring_first else [])),
+            "intro": flow_codes.PUBLISHED_INTRO, "months": list(MONTHS),
+            "request_kinds": dict(flow_codes.LAST_REQUEST_KINDS), "request_other": flow_codes.LAST_REQUEST_OTHER,
             "ok": dict(flow_codes.RAN_OK_SAYS), "ran": flow_codes.RAN_OTHER_SAYS, "note": flow_codes.RAN_NOTE_SAYS, "problems": flow_codes.RAN_PROBLEMS_SAYS,
             "could_not_run": flow_codes.COULD_NOT_RUN_SAYS,
             "refused": {meanings[name]: said for name, said in flow_codes.REFUSED_SAYS.items()},
@@ -133,8 +140,9 @@ class WiringHtmlSection:
         self.before_power = before_power.BeforePowerHtmlList()
 
     def text(self, wiring, with_picture):
-        """The section: its heading, then the reason there is nothing to show, or the sentence, the lines and the steps."""
-        lines = ['<section id="wiring">', "<h2>%s</h2>" % _text(flow_codes.WIRING_HEADING)]
+        """The section: the reason there is nothing to show, or the sentence, the lines and the steps. Its heading is its
+        fold's (P1062)."""
+        lines = ['<section id="wiring">']
         if wiring.why_missing:
             return "\n".join(lines + ["<p>%s</p>" % _text(wiring.why_missing), "</section>"])
         intro = flow_codes.WIRING_INTRO + (" " + flow_codes.WIRING_PICTURE_INTRO if with_picture else "")
@@ -145,8 +153,7 @@ class WiringHtmlSection:
     def _before_power(self, wiring):
         if not wiring.before_power:
             return []
-        return (["<h3>%s</h3>" % _text(before_power.HEADING), "<ul>"] + self.before_power.items(wiring.before_power) + ["</ul>"]
-                + [self.before_power.records_line(wiring.records)])
+        return ["<h3>%s</h3>" % _text(before_power.HEADING), "<ul>"] + self.before_power.items(wiring.before_power) + ["</ul>"]
 
     def _steps(self, steps, with_picture):
         if not steps:
@@ -229,8 +236,8 @@ def _local(name):
 
 class FlowHtmlPage:
     """
-    Renderer: a FlowPage as one HTML document, the same bytes for the same page. It loops over the page's phases and holds
-    no phase name and no count. The colors are the praised page's tokens (P949), light and dark, with the system's fonts,
+    Renderer: a FlowPage as one HTML document, the same bytes for the same page. It loops over the page's phases, and
+    names only the parts phase, for its fold (P1062), and no count. The colors are the praised page's tokens (P949), light and dark, with the system's fonts,
     and no color says a status: the mark and the word do. Under an inline breadboard a legend names each pad state its
     dots draw, and only those.
     """
@@ -249,11 +256,12 @@ class FlowHtmlPage:
     STYLE = ("body{max-width:1180px;margin:0 auto;padding:12px 16px;font:16px/1.55 var(--body);background:var(--bg);"
              "color:var(--ink)}"
              "h1,h2{font-family:var(--display);line-height:1.2}"
-             "nav ol{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:0;padding:0}"
              "a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}"
              "#guide{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}"
              "#guide p{margin:6px 0}"
-             ".phase{border-top:1px solid var(--line);padding:4px 0}"
+             ".now{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}.next{font-size:1.4em}"
+             ".muted,#request{color:var(--muted)}"
+             ".fold,.phase{border-top:1px solid var(--line);padding:4px 0}"
              "summary{cursor:pointer}summary h2{display:inline}"
              "p,li{overflow-wrap:anywhere}"
              "img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}"
@@ -266,36 +274,37 @@ class FlowHtmlPage:
     INLINER = SvgInliner()
 
     def text(self, page):
-        head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._intro(page), self._guide(page), self._rail(page), self._stands_at(page)]
+        head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._fresh(page), self._intro(), self._guide(page), self._stands_at(page)]
         return "\n".join([part for part in head if part] + [part for part in self._body(page) if part]
                          + [self._script(page), "</body>", "</html>"]) + "\n"
 
     def _script(self, page):
         """The page's words (`page_words`) as an inert JSON block, then its one script (P829 PR 3), as one block before
         `</body>`: without it the page is the page with no script, byte for byte, but the script's hooks (`data-makes-stale` on
-        a sendable offer, and `data-key` with it on the NOW line, `sendable_now`).
+        a sendable offer, and `data-key` with it on the NOW box's NEXT line, `sendable_now`).
         A `<` in the words is written `\\u003c`, so no text closes the block."""
-        words = json.dumps(page_words(page.phases, self._wiring_first(page)), ensure_ascii=False, sort_keys=True).replace("<", "\\u003c")
+        words = json.dumps(page_words(page.phases), ensure_ascii=False, sort_keys=True).replace("<", "\\u003c")
         return '<script type="application/json" id="%s">%s</script>\n<script>%s</script>' % (
             WORDS_ID, words, PAGE_SCRIPT.read_text(encoding="utf-8"))
 
     @staticmethod
-    def _wiring_first(page):
-        """True when the page holds wiring steps to follow, so the wiring comes first and the phases are folded."""
-        return bool(page.wiring) and not page.wiring.why_missing
+    def _fresh(page):
+        """The freshness line (P1062): the newest change of the project's files, read in the machine's zone, or the line of
+        a page that knows no time. `data-written` keeps the stored time with its zone."""
+        said = flow_codes.FRESH_LINE % day_and_time(page.written) if page.written else flow_codes.FRESH_NONE
+        return '<p class="fresh">%s</p>' % _text(said)
 
-    def _intro(self, page):
-        """What the page is and how to act on it, and, with a sheet, that the wiring comes first (P828 step 2)."""
-        said = [flow_codes.PAGE_INTRO] + ([flow_codes.WIRING_FIRST] if self._wiring_first(page) else [])
-        return '<p class="intro">%s</p>' % _text(" ".join(said))
+    @staticmethod
+    def _intro():
+        """What the page is and how to act on it (P828 step 2). The script puts the owner's sentence in its place."""
+        return '<p class="intro">%s</p>' % _text(flow_codes.PAGE_INTRO)
 
     def _body(self, page):
-        """With wiring steps, the wiring, its pictures and the marks come first and the phases after them, folded (P828
-        step 2): the person at the bench finds step 1 at once. Else the phases come first and open, as before."""
-        first = self._wiring_first(page)
-        phases = [self._phase(phase, folded=first) for phase in page.phases]
-        shown = [self._wiring(page), self._pictures(page.pictures), self._legend()]
-        return (shown + phases if first else phases + shown) + [self._notes(page.notes)]
+        """Under the guide (P1062): the parts, the wiring and the pictures, each a fold open only while its job is NOW, then
+        the bench note, then the developer fold, always closed, last."""
+        wiring_open = self._wiring_open(page)
+        return [self._parts(page), self._wiring(page, wiring_open), self._pictures(page.pictures, wiring_open),
+                self._notes(page.notes), self._developer(page)]
 
     def _open(self, page):
         style = token_styles(self.TOKENS_LIGHT, self.TOKENS_DARK) + self.STYLE + (self.WIRING.STYLE if page.wiring else "")
@@ -306,31 +315,50 @@ class FlowHtmlPage:
                               _text(page.stands_at or "none"), _text((page.fingerprint or "none")[:SHORT]), _text(page.written or "none"))])
 
     def _guide(self, page):
-        """The guide (P977 PR 2) in `<section id="guide">`, under the intro: NOW with its sentence (and, when the guide's now
-        holds the wiring and the page holds steps, a link to the first), then DONE, LATER (with the line on why there is no
-        simulation) and SET ASIDE. A list with no item draws no line. Nothing with no guide, or a guide with no line."""
+        """The guide (P977 PR 2, P1062) in `<section id="guide">`, under the intro: the NOW box, then, muted, DONE, LATER (with
+        the line on why there is no simulation) and SET ASIDE. A list with no item draws no line. Nothing with no guide, or a
+        guide with no line. The script puts its panel last in it."""
         guide = page.guide
         if guide is None:
             return ""
-        now = guide["now"]
-        link = ""
-        if now and now.get("steps") and self._wiring_first(page) and page.wiring.steps:
-            first = page.wiring.steps[0][0]
-            link = ' <a href="#step-%d">%s</a>' % (first, _text(flow_codes.ONE_AT_A_TIME % first))
-        lines = [self._guide_line(flow_codes.GUIDE_NOW % now["phase"], [now["says"]], link, sendable_now(page)) if now else "",
-                 self._guide_line(flow_codes.GUIDE_DONE, guide["done"], ""),
-                 self._guide_line(flow_codes.GUIDE_LATER, guide["later"], ""),
-                 "<p>%s</p>" % _text(guide["no_simulation"]) if guide["no_simulation"] else "",
-                 self._guide_line(flow_codes.GUIDE_SET_ASIDE, guide["set_aside"], "")]
+        lines = [self._now(page),
+                 self._muted(flow_codes.GUIDE_DONE, guide["done"]),
+                 self._muted(flow_codes.GUIDE_LATER, guide["later"]),
+                 '<p class="muted">%s</p>' % _text(guide["no_simulation"]) if guide["no_simulation"] else "",
+                 self._muted(flow_codes.GUIDE_SET_ASIDE, guide["set_aside"])]
         lines = [line for line in lines if line]
         return "\n".join(['<section id="guide">'] + lines + ["</section>"]) if lines else ""
 
-    @staticmethod
-    def _guide_line(label, items, link, offer=None):
-        """One line of the guide: its label in `<strong>` and its items, comma apart, or nothing when there is none. A line
-        with the sendable `offer` of its phase carries its key and `data-makes-stale`, so the script puts its button there."""
+    def _now(self, page):
+        """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), and NEXT, the
+        guide's sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`). With no now,
+        the line that says nothing is open (P1043, read with `.get`), or nothing."""
+        now = page.guide["now"]
+        if not now:
+            said = page.guide.get("no_open_phase")
+            return '<div class="now">\n<p>%s</p>\n</div>' % _text(said) if said else ""
+        lines = ["<p><strong>%s</strong></p>" % _text(flow_codes.NOW_BY % (now["phase"], flow_codes.NOW_BY_JOIN.join(now["by"])))]
+        if page.deployed:
+            lines.append('<p class="board"><strong>%s</strong> %s</p>' % (_text(flow_codes.ON_BOARD_LABEL), _text(page.deployed)))
+        offer = sendable_now(page)
         hooks = ' data-key="%s"%s' % (_text(offer["key"]), _makes_stale(offer)) if offer else ""
-        return "<p%s><strong>%s</strong> %s%s</p>" % (hooks, _text(label), _text(", ".join(items)), link) if items else ""
+        lines.append('<p class="next"%s><strong>%s</strong> %s%s</p>' % (
+            hooks, _text(flow_codes.NEXT_ACT_LABEL), _text(now["says"]), self._step_link(page)))
+        return "\n".join(['<div class="now">'] + lines + ["</div>"])
+
+    @staticmethod
+    def _step_link(page):
+        """The link to the first wiring step, when the guide's now holds the wiring and the page holds steps."""
+        now, wiring = page.guide["now"], page.wiring
+        if now.get("steps") and wiring and not wiring.why_missing and wiring.steps:
+            first = wiring.steps[0][0]
+            return ' <a href="#step-%d">%s</a>' % (first, _text(flow_codes.ONE_AT_A_TIME % first))
+        return ""
+
+    @staticmethod
+    def _muted(label, items):
+        """One muted line under the NOW box: its label in `<strong>` and its items, comma apart, or nothing with none."""
+        return '<p class="muted"><strong>%s</strong> %s</p>' % (_text(label), _text(", ".join(items))) if items else ""
 
     @staticmethod
     def _stands_at(page):
@@ -342,40 +370,79 @@ class FlowHtmlPage:
     def _data(phase):
         return 'data-phase="%s" data-status="%s"' % (_text(phase["phase"]), _text("none" if phase["status"] is None else phase["status"]))
 
-    def _rail(self, page):
-        entries = []
-        for phase in page.phases:
-            shown = shown_phase(phase)
-            entries.append('<li %s><a href="#phase-%s">%s %s <span>%s</span></a></li>' % (
-                self._data(phase), _text(phase["phase"]), _mark(shown), _text(phase["phase"]), _text(shown.word)))
-        links = ['<a href="#wiring">%s</a>' % _text(flow_codes.WIRING_HEADING)] if page.wiring else []
-        links += ['<a href="#pictures">Pictures</a>'] if page.pictures else []
-        if self._wiring_first(page):  # the rail follows the page: the wiring and its pictures first (P828 step 2)
-            return '<nav aria-label="Phases">%s<ol>\n%s\n</ol></nav>' % (" ".join(links), "\n".join(entries))
-        return '<nav aria-label="Phases"><ol>\n%s\n</ol>%s</nav>' % ("\n".join(entries), " ".join(links))
+    @staticmethod
+    def _fold(name, summary, body, is_open):
+        """One fold (P1062): a `<details>` whose one-line summary holds the heading `summary` (markup), open when `is_open`."""
+        return "\n".join(['<details class="fold" data-fold="%s"%s><summary><h2>%s</h2></summary>' % (
+            name, " open" if is_open else "", summary)] + body + ["</details>"])
 
-    def _phase(self, phase, folded=False):
-        """A phase's section: its heading in a `<summary>`, its text in a `<div>` that holds the rail's target, so a rail
-        link opens a folded phase (a fragment inside a closed `<details>` opens it, with no script)."""
+    def _parts(self, page):
+        """The parts fold (P1062): the parts phase's says in order (P1044's wired line first), one row per need with its
+        picks in the reading's order (`pick_need`), then the other sendable offers, the parts list and the build. Each is a
+        hooked row, but the one on the NOW line. Open while the parts are NOW. Nothing with no parts phase and no row."""
+        phase = next((each for each in page.phases if each["phase"] == flow_codes.PARTS), None)
+        on_now = (sendable_now(page) or {}).get("key")
+        needs = {}
+        for offer in (offer for each in page.phases for offer in each["offers"] if is_sendable(offer) and offer["key"] != on_now):
+            needs.setdefault(pick_need(offer["key"]), []).append(offer)
+        if phase is None and not needs:
+            return ""
+        rows = ['<li class="need"><strong>%s</strong><ul>%s</ul></li>' % (_text(need), "".join(self._hooked(offer) for offer in offers))
+                for need, offers in needs.items() if need is not None]
+        rows += [self._hooked(offer) for offer in needs.get(None, [])]
+        said = list(dict.fromkeys(phase["says"])) if phase else []  # a line the phase says for every need stands once
+        body = ["<p>%s</p>" % _text(line) for line in said] + (["<ul>%s</ul>" % "\n".join(rows)] if rows else [])
+        summary = _text(flow_codes.PARTS_HEADING)
+        if phase:
+            shown = shown_phase(phase)
+            summary = "%s %s <span>%s</span>" % (_mark(shown), summary, _text(shown.word))
+        return self._fold("parts", summary, body, ((page.guide or {}).get("now") or {}).get("phase") == flow_codes.PARTS)
+
+    @staticmethod
+    def _hooked(offer):
+        """A sendable offer's row: its key and `data-makes-stale` for the script, its label and its effect."""
+        return '<li data-key="%s"%s>%s: %s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(offer["label"]), _text(offer["effect"]))
+
+    @staticmethod
+    def _wiring_open(page):
+        """True when the guide's now holds the wiring (`now.with_wiring`, `guide.with_wiring`): the page reads the fact."""
+        return bool((((page.guide or {}).get("now")) or {}).get("with_wiring"))
+
+    def _developer(self, page):
+        """The developer fold (P1062), always closed and last: each phase, closed, with its offers' keys and effects and no
+        hook, the marks, and the line that names each record whole."""
+        body = ['<section id="developer">'] + [self._phase(phase) for phase in page.phases] + [self._legend()]
+        if page.wiring and page.wiring.before_power:
+            body.append(self.WIRING.before_power.records_line(page.wiring.records))
+        return self._fold("developer", _text(flow_codes.DEVELOPER_HEADING), body + ["</section>"], False)
+
+    def _phase(self, phase):
+        """A phase's section in the developer fold: its heading in a `<summary>`, its text in a `<div>`, always closed. An offer
+        shows its key in `<code>`, its label and its effect, with no hook: the page's buttons stand on NOW and in the folds."""
         shown = shown_phase(phase)
         lines = ['<section class="phase" %s>' % self._data(phase),
-                 "<details%s><summary><h2>%s %s <span>%s</span></h2></summary>" % (
-                     "" if folded else " open", _mark(shown), _text(phase["phase"]), _text(shown.word)),
+                 "<details><summary><h2>%s %s <span>%s</span></h2></summary>" % (_mark(shown), _text(phase["phase"]), _text(shown.word)),
                  '<div id="phase-%s">' % _text(phase["phase"]), "<p>Done by: %s</p>" % _text(phase["by"])]
         lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
-        offers = ['<li data-key="%s"%s>%s: %s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(offer["label"]), _text(offer["effect"]))
+        offers = ["<li><code>%s</code> %s: %s</li>" % (_text(offer["key"]), _text(offer["label"]), _text(offer["effect"]))
                   for offer in phase["offers"]]
         return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</div>", "</details>", "</section>"])
 
-    def _wiring(self, page):
+    def _wiring(self, page, is_open):
+        """The wiring fold: its summary counts the steps, and it holds the wiring section."""
+        if not page.wiring:
+            return ""
         drawn = any(each.title == flow_codes.BREADBOARD_TITLE and each.svg for each in page.pictures)
-        return self.WIRING.text(page.wiring, drawn) if page.wiring else ""
+        steps = [] if page.wiring.why_missing else page.wiring.steps
+        summary = flow_codes.WIRING_STEPS[len(steps) != 1] % len(steps) if steps else flow_codes.WIRING_HEADING
+        return self._fold("wiring", _text(summary), [self.WIRING.text(page.wiring, drawn)], is_open)
 
-    def _pictures(self, pictures):
-        """All the pictures in one section, in the order the page was given them, or nothing when there are none."""
+    def _pictures(self, pictures, is_open):
+        """All the pictures in one fold, in the order the page was given them, or nothing when there are none."""
         if not pictures:
             return ""
-        return '<section id="pictures"><h2>Pictures</h2>\n%s\n</section>' % "\n".join(self._picture(each) for each in pictures)
+        return self._fold("pictures", _text(flow_codes.PICTURES_HEADING),
+                          ['<section id="pictures">\n%s\n</section>' % "\n".join(self._picture(each) for each in pictures)], is_open)
 
     def _picture(self, picture):
         """The breadboard stands in the page when the inliner takes it, so a player finds its keys. Any other picture, and

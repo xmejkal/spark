@@ -33,6 +33,7 @@ class DropNeed(Operation):
     """
 
     name = "needs-drop"
+    summary = "Drop a need and its pick from .spark/needs.json, and release only the holds of the dropped pick."
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder with .spark/needs.json (default: here)"),
                  Argument(("--need",), "need", str, "the id of the need to drop"),
                  Argument(("--dry-run",), "dry_run", bool, "say what would be dropped and released, and write nothing"),

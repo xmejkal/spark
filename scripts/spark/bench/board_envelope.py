@@ -348,8 +348,8 @@ def deploy_data(reached):
         "yes": {"kind": reached["yes_kind"], "who": reached["who"]} if consent else None,
         "ready": {"verdict": ready.verdict, "sentence": ready.sentence, "lost_board": ready.lost_board} if ready else None,
         "facts_line": result.facts_line if result else None,
-        "image_sha256": result.image_sha256 if result else None,
-        "board_log": str(result.log_path) if result else None,
+        "image_sha256": result.image_sha256 if result else reached.get("image_sha256"),
+        "board_log": str(result.log_path) if result else reached.get("board_log"),  # P1092: a flash that did not finish
         "repl_command": list(result.repl_command) if result and not (result.start and result.start.port is None) else None,
         "store_record": reached.get("store_record"), "store_record_error": reached.get("store_record_error"),
         "board_state": MAY_BE_ERASED if stage == DeployPhase.FLASH else None,

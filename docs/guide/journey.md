@@ -11,14 +11,14 @@ today. Each step has a page of its own. On Miro, [the journey frame](https://mir
 
 ```mermaid
 flowchart LR
-    drawer["Drawer — partly"] --> idea["Idea — partly"] --> research["Research — partly"]
-    research --> build["Build — partly"] --> checks["Checks — works"] --> firmware["Firmware — partly"]
+    drawer["Drawer — partly"] --> idea["Idea — works"] --> research["Research — partly"]
+    research --> build["Build — works"] --> checks["Checks — works"] --> firmware["Firmware — partly"]
     firmware --> simulate["Simulate — works"] --> bench["Bench — partly"]
 ```
 
 What the three words mean:
 
-- **works**: it ran end to end for these docs.
+- **works**: it ran end to end for these docs or in a walk.
 - **partly**: it stops before its goal, or part of it was not run here (agents, a conversation, or a paid simulation
   run). The step's page says which.
 - **not yet**: nothing does it yet. The linked issue plans it.

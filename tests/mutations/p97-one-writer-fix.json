@@ -1,11 +1,11 @@
 [
- {"file": "scripts/spark/records/store.py", "name": "a lock inside a lock waits for itself", "find": "    if holder in _HELD:", "replace": "    if False:"},
+ {"file": "scripts/spark/records/store.py", "name": "a lock inside a lock waits for itself", "find": "    if holder in _HELD or not fcntl:", "replace": "    if not fcntl:"},
  {"file": "scripts/spark/records/store.py", "name": "another thread passes through a store this one holds",
-  "find": "    holder = (threading.get_ident(), lock_file)", "replace": "    holder = (0, lock_file)"},
- {"file": "scripts/spark/records/store.py", "name": "a store let go of is never taken again", "find": "            _HELD.discard(holder)",
-  "replace": "            pass"},
+  "find": "    holder = (threading.get_ident(), str(home().resolve()))", "replace": "    holder = (0, str(home().resolve()))"},
+ {"file": "scripts/spark/records/store.py", "name": "a store let go of is never taken again", "find": "        _HELD.discard(holder)\n",
+  "replace": "        pass\n"},
  {"file": "scripts/spark/records/store.py", "name": "a failed write leaves its .part behind",
   "find": "        part.unlink(missing_ok=True)\n        raise\n\n\ndef write_json(", "replace": "        raise\n\n\ndef write_json("},
  {"file": "scripts/spark/records/store.py", "name": "an old .part is written into with the mode it had",
-  "find": "            part.unlink(missing_ok=True)\n            os.close(", "replace": "            os.close("}
+  "find": "        os.unlink(part)\n", "replace": "        pass\n"}
 ]

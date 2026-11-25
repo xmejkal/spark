@@ -87,6 +87,12 @@ project: grant.py gives no live grant to a board with no serial. One yes or one 
 answered_no, and nothing ran on the board. A --port that the list does not hold stops with port_not_listed, and a
 /dev/tty. port is its /dev/cu. port.
 
+If no board is on USB, or the port you named is not, and firmware/ calls deepsleep, the stop's last line, the fix,
+says that the board can be in deep sleep, as look.py's does (P1057). Its first step puts the board in download mode.
+There it runs no firmware, so live.py cannot reach its REPL: use download mode for look.py or a deploy, then press
+RESET with BOOT not held. To run code, wait until the firmware wakes. If spark picked the port and the board then
+leaves USB, the stop names that port and gives no deep-sleep advice. --json carries no fix yet (P1055).
+
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
 and one next step for your hands, as the last line. Its look at the console can restart the board. --json carries it as doctor.""" % board_grant.GRANT_COMMAND
@@ -123,11 +129,11 @@ class RunLiveCode(Operation):
 
     def run(self, code, project, port, replies=None, *, outside):
         platform = self.platform_for(project, outside.find_tool)
-        empty = dict.fromkeys(board_live.LiveTryResult._fields)
+        empty, named = dict.fromkeys(board_live.LiveTryResult._fields), port
         try:
             finder = platform.make_port_finder(outside.run)
             row = finder.require_one_board(SCRIPT, port)  # P892: the row the board question judges
-            named, port = port, port or row.device
+            port = port or row.device
             probe = platform.make_console_probe(port, outside.run)
             service = board_live.LiveTryService(board_grant.GrantService(finder, now=outside.clock.now),
                                                 platform.make_connection(platform.make_shell_command(), port, outside.run, row.usb), probe,
@@ -142,8 +148,9 @@ class RunLiveCode(Operation):
             return stops.stop_result(unreadable, SCRIPT, project, port)._replace(
                 data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(unreadable), port=port, **board_live.pin_facts(code, service.board)))
         except (tool_finder.ToolError, board_look.LookStopError, board_records.BoardError, BrokenRecordError) as cannot:
-            return stops.stop_result(cannot, SCRIPT, project, port)._replace(
-                data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(cannot), port=port))
+            # P1057: the asleep fix says "the port you named" only of the person's own port, so `named`, never the picked one
+            stopped = stops.stop_result(cannot, SCRIPT, project, named, stops.undoctored(SCRIPT))
+            return stopped._replace(data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=stopped.findings[0].sentence, port=port))
         places = board_records.ButtonPlaces.of_project(project)
         return OperationResult(data_of(port, result), self._findings(result, places), lines=describe(result, places))
 

@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_connection  # noqa: E402
+from spark.bench import board_log  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
@@ -25,10 +26,11 @@ from spark.firmware import image_builder  # noqa: E402
 from spark.bench import flasher  # noqa: E402
 from spark.firmware import project_image  # noqa: E402
 from spark.bench import ready_probe  # noqa: E402
+from spark.records import deploy_record_store  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld, FakeToolFinder  # noqa: E402
+from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld, FakeToolFinder  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event  # noqa: E402
 from spark.bench.deploy_image import StageTrackingReporter, WhyLineReporter  # noqa: E402
 from spark.bench.deploy_stages import DEPLOY_STAGES, PHASE_WHY, DeployPhase  # noqa: E402
@@ -38,8 +40,8 @@ from spark.core import outcomes  # noqa: E402
 from spark.core.result import MARK_OK, MARK_STOP, MARK_UNCHECKED, Finding  # noqa: E402
 from spark.core.renderers import StatusLine  # noqa: E402
 from spark.build.stage_help_table import StageMarkdownTable  # noqa: E402
-from test_board_look import FOUND  # noqa: E402
-from test_deploy_gate import GateCase  # noqa: E402
+from test_board_look import FOUND, INTERPRETER_WITH_BANNER  # noqa: E402
+from test_deploy_gate import C6_CONSOLE, SETTLE_STDERR, GateCase  # noqa: E402
 
 PORT = "/dev/cu.usbmodem101"
 
@@ -130,6 +132,294 @@ class TheFlashTest(ServiceCase):
         with self.assertRaises(project_image.DeployError):
             self.service().deploy(report, report.token(), Ended(True))
         self.assertEqual(self.commands, [])
+
+
+class TheFlashNotFinishedTest(ServiceCase):
+    """P1092 tests 1 to 4: a flash that does not finish after the yes writes a board log with the verdict `flash not
+    finished` and the FlashError's reason, then raises the same FlashError. A log that cannot be written never hides it.
+    P1096 tests 1 to 3: a crash and a Ctrl-C in the flash loop write the same log, with the reason crash or interrupted,
+    and go on unchanged. A refusal before the flash and an erase that its retry passes write no such log."""
+
+    #: The write fails after a good erase (F5), as GateCase's `write_fails`.
+    write_fails = False
+    #: What the erase raises in place of running, a crash or a Ctrl-C (P1096), or None. A fake: it patches nothing.
+    ends_with = None
+
+    def fake_run(self, command, **kwargs):
+        if self.ends_with is not None and "erase-flash" in command:
+            self.commands.append(command)
+            raise self.ends_with
+        if self.write_fails and "write-flash" in command:
+            self.commands.append(command)
+            raise subprocess.CalledProcessError(1, command)
+        return super().fake_run(command, **kwargs)
+
+    def logs(self):
+        return sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+
+    def service_with(self, write_log=None):
+        """The service, with the board log's writer `write_log` when given (no mock.patch, rule T2)."""
+        service = self.service()
+        if write_log:
+            service.write_log = write_log
+        return service
+
+    def not_finished(self, consent=None, write_log=None):
+        """The FlashError of a deploy whose flash does not finish."""
+        report = self.look()
+        with self.assertRaises(deploy_service.FlashError) as failed:
+            self.service_with(write_log).deploy(report, report.token(), consent or FakeConsent(True))
+        return failed.exception
+
+    def assert_logged(self, failed, reason):
+        """The FlashError's log is the one board log, and it reads back as a flash not finished with `reason`."""
+        sha256 = project_image.ProjectImage(self.project).sha256
+        self.assertEqual((failed.reason, failed.log_path, failed.log_error), (reason, self.logs()[0], None))
+        self.assertEqual(board_log.newest_logged_deploy(self.project),
+                         (1, board_log.LoggedDeploy(self.clock.now().isoformat(timespec="seconds"), sha256, "flash not finished", reason)))
+        self.assertFalse([line for line in failed.log_path.read_text(encoding="utf-8").splitlines() if line.startswith("ready ")])
+
+    @needs_littlefs
+    def test_an_erase_that_fails_twice_writes_a_board_log_and_raises_the_same_error(self):
+        self.fails = True
+        failed = self.not_finished()
+        self.assertTrue(str(failed).startswith("`") and "erase-flash" in str(failed), str(failed))
+        self.assert_logged(failed, "flash_failed")
+        self.assertIn("a flash command failed, so the board may be erased and not written", failed.log_path.read_text(encoding="utf-8"))
+
+    @needs_littlefs
+    def test_a_write_that_fails_after_a_good_erase_writes_a_board_log_and_raises_the_same_error(self):
+        self.write_fails = True
+        failed = self.not_finished()
+        self.assertTrue(str(failed).startswith("`") and "write-flash" in str(failed), str(failed))
+        self.assertEqual(len(self.commands), 2)  # the erase ran, then the write failed
+        self.assert_logged(failed, "flash_failed")
+
+    @needs_littlefs
+    def test_a_yes_that_ends_in_the_retry_wait_logs_grant_ended(self):
+        self.fails = True
+        case = self
+
+        class EndsDuringTheWait(FakeConsent):
+            def require_ready(self):
+                if case.slept:
+                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.", reason="grant_ended")
+
+        failed = self.not_finished(EndsDuringTheWait(True))
+        self.assertIn("and its retry did not run: the deploy grant ended", str(failed))
+        self.assert_logged(failed, "grant_ended")
+        self.assertIn("flash not finished: the yes ended before the erase's retry\n", failed.log_path.read_text(encoding="utf-8"))
+
+    @needs_littlefs
+    def test_a_flash_error_of_another_reason_logs_its_own_sentence(self):
+        # the `.get` of the sentence (F2): a reason with no sentence of its own, as no_terminal at the retry, keeps the error's
+        self.fails = True
+        case = self
+
+        class NoTerminalAtTheRetry(FakeConsent):
+            def require_ready(self):
+                if case.slept:
+                    raise deploy_gate.GateClosedError("no terminal", reason="no_terminal")
+
+        failed = self.not_finished(NoTerminalAtTheRetry(True))
+        self.assertIn("flash not finished: %s\n" % failed, failed.log_path.read_text(encoding="utf-8"))
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1][2:], ("flash not finished", None))
+
+    @needs_littlefs
+    def test_a_log_that_cannot_be_written_keeps_the_flash_s_error(self):
+        self.fails = True
+        (self.project / "sim" / "runs" / "board").write_text("a file where the folder goes")
+        failed = self.not_finished()
+        self.assertEqual((failed.reason, failed.log_path), ("flash_failed", None))
+        self.assertIn("sim/runs/board", failed.log_error)
+
+    @needs_littlefs
+    def test_a_log_writer_that_raises_a_value_error_keeps_the_flash_s_error(self):
+        def refuses(project, log):
+            raise ValueError("surrogates not allowed")
+
+        self.write_fails = True
+        failed = self.not_finished(write_log=refuses)
+        self.assertEqual((failed.reason, failed.log_path, failed.log_error), ("flash_failed", None, "surrogates not allowed"))
+        self.assertEqual(self.logs(), [])
+
+    @needs_littlefs
+    def test_a_bug_in_the_log_write_replaces_the_flash_s_error_and_keeps_it(self):
+        # F13, on purpose: a TypeError or a KeyError is a bug, so it fails loudly, and the FlashError stays its __context__
+        for bug in (TypeError, KeyError):
+            with self.subTest(bug=bug.__name__):
+                def broken(project, log):
+                    raise bug("a bug")
+
+                self.write_fails = True
+                report = self.look()
+                with self.assertRaises(bug) as raised:
+                    self.service_with(broken).deploy(report, report.token(), FakeConsent(True))
+                self.assertIsInstance(raised.exception.__context__, deploy_service.FlashError)
+
+    @needs_littlefs
+    def test_a_refusal_before_the_flash_writes_no_board_log(self):
+        report = self.look()
+        with self.assertRaises(deploy_gate.GateClosedError):
+            self.service().deploy(report, "aaaa-bbbb", FakeConsent(True))
+        self.assertEqual(self.logs(), [])
+
+    def ended(self, kind, write_log=None):
+        """What ended the flash of a deploy, raised as `kind` (P1096)."""
+        report = self.look()
+        with self.assertRaises(kind) as raised:
+            self.service_with(write_log).deploy(report, report.token(), FakeConsent(True))
+        return raised.exception
+
+    @needs_littlefs
+    def test_a_crash_in_the_flash_loop_writes_a_board_log_and_is_raised_unchanged(self):
+        # P1096 test 1, in place of P1092's test_a_crash_in_the_flash_loop_writes_no_board_log, which pinned the gap. D5:
+        # the log keeps the class name only, as a message can hold a home path
+        self.ends_with = RuntimeError("usb fell off at /Users/" + "someone")  # split, so test_orphans finds no home path
+        ended = self.ended(RuntimeError)
+        sha256 = project_image.ProjectImage(self.project).sha256
+        self.assertIs(ended, self.ends_with)
+        self.assertEqual((ended.log_path, ended.image_sha256), (self.logs()[0], sha256))
+        self.assertEqual(board_log.newest_logged_deploy(self.project),
+                         (1, board_log.LoggedDeploy(self.clock.now().isoformat(timespec="seconds"), sha256, "flash not finished", "crash")))
+        text = ended.log_path.read_text(encoding="utf-8")
+        self.assertIn("flash not finished: spark crashed during the flash, so the board may be erased and not written\n", text)
+        self.assertIn("RuntimeError", text)
+        self.assertNotIn("usb fell off", text)
+        self.assertNotIn("/Users/", text)
+
+    @needs_littlefs
+    def test_a_ctrl_c_in_the_flash_loop_writes_a_board_log_and_the_ctrl_c_goes_on(self):
+        # P1096 test 2: the KeyboardInterrupt itself goes on, so the run still stops
+        self.ends_with = KeyboardInterrupt()
+        ended = self.ended(KeyboardInterrupt)
+        self.assertIs(ended, self.ends_with)
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1].cause, "interrupted")
+        self.assertIn("flash not finished: a Ctrl-C interrupted the flash, so the board may be erased and not written\n",
+                      ended.log_path.read_text(encoding="utf-8"))
+        self.assertEqual(len(self.commands), 1)  # the write never ran
+
+    @needs_littlefs
+    def test_a_log_that_cannot_be_written_keeps_what_ended_the_flash(self):
+        # P1096 test 3
+        for ends_with in (RuntimeError("usb fell off"), KeyboardInterrupt()):
+            with self.subTest(ended=type(ends_with).__name__):
+                (self.project / "sim" / "runs" / "board").write_text("a file where the folder goes")
+                self.ends_with = ends_with
+                ended = self.ended(type(ends_with))
+                self.assertIs(ended, ends_with)
+                self.assertIsNone(ended.log_path)
+                self.assertIn("sim/runs/board", ended.log_error)
+
+    @needs_littlefs
+    def test_a_bug_in_the_log_write_leaves_no_mark_of_an_ended_flash(self):
+        # P1096 test 11 (G12, G20): a TypeError replaces what ended the flash (F13), and neither carries the marker
+        def broken(project, log):
+            raise TypeError("a bug")
+
+        self.ends_with = RuntimeError("usb fell off")
+        raised = self.ended(TypeError, write_log=broken)
+        self.assertIs(raised.__context__, self.ends_with)
+        self.assertEqual((deploy_service.ended_after_the_yes(raised), deploy_service.ended_after_the_yes(self.ends_with)), (False, False))
+
+    @needs_littlefs
+    def test_an_erase_that_its_retry_passes_writes_only_the_verify_s_log(self):
+        code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1)
+        log, = self.logs()
+        self.assertEqual((code, board_log.newest_logged_deploy(self.project)[1].verdict), (0, "ready seen"))
+
+
+class TheVerifyNotFinishedTest(ServiceCase):
+    """P1110 tests 1 to 3: a crash or a Ctrl-C in the verify, before its board log, writes a board log with the verdict
+    `ready unknown` and the reason crash or interrupted, then goes on unchanged. The flash finished, so the board is not
+    said to be erased. A log that cannot be written never hides what ended the verify."""
+
+    #: What the first command after the two flash commands raises, a crash or a Ctrl-C, or None. A fake: it patches nothing.
+    ends_with = None
+
+    def fake_run(self, command, **kwargs):
+        if self.ends_with is not None and len(self.commands) >= 2:  # the erase and the write ran: this is the verify's
+            self.commands.append(command)
+            raise self.ends_with
+        return super().fake_run(command, **kwargs)
+
+    def logs(self):
+        return sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
+
+    def ended(self, kind):
+        """What ended the verify after a good flash, raised as `kind`."""
+        report = self.look()
+        service = self.service()
+        planned = service.deploy(report, report.token(), FakeConsent(True))
+        with self.assertRaises(kind) as raised:
+            service.verify(report, planned)
+        return raised.exception
+
+    @needs_littlefs
+    def test_a_crash_in_the_verify_writes_a_ready_unknown_board_log_and_is_raised_unchanged(self):
+        self.ends_with = RuntimeError("usb fell off at /Users/" + "someone")  # split, so test_orphans finds no home path
+        ended = self.ended(RuntimeError)
+        sha256 = project_image.ProjectImage(self.project).sha256
+        self.assertIs(ended, self.ends_with)
+        self.assertTrue(deploy_service.ended_after_the_yes(ended))
+        self.assertEqual((ended.log_path, ended.image_sha256), (self.logs()[0], sha256))
+        self.assertEqual(board_log.newest_logged_deploy(self.project),
+                         (1, board_log.LoggedDeploy(self.clock.now().isoformat(timespec="seconds"), sha256, "ready unknown", "crash")))
+        text = ended.log_path.read_text(encoding="utf-8")
+        self.assertIn("ready unknown: spark crashed while it read the board after the flash, so ready is not known\n", text)
+        self.assertIn("facts file: not known: the read after the flash did not finish\n", text)
+        self.assertIn("RuntimeError", text)
+        for unsaid in ("usb fell off", "/Users/", "flash not finished"):
+            self.assertNotIn(unsaid, text)
+
+    @needs_littlefs
+    def test_a_ctrl_c_in_the_verify_writes_the_board_log_and_the_ctrl_c_goes_on(self):
+        self.ends_with = KeyboardInterrupt()
+        ended = self.ended(KeyboardInterrupt)
+        self.assertIs(ended, self.ends_with)
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1][2:], ("ready unknown", "interrupted"))
+        self.assertIn("ready unknown: a Ctrl-C interrupted the read of the board after the flash, so ready is not known\n",
+                      ended.log_path.read_text(encoding="utf-8"))
+
+    @needs_littlefs
+    def test_a_verify_log_that_cannot_be_written_keeps_what_ended_the_verify(self):
+        for ends_with in (RuntimeError("usb fell off"), KeyboardInterrupt()):
+            with self.subTest(ended=type(ends_with).__name__):
+                (self.project / "sim" / "runs" / "board").write_text("a file where the folder goes")
+                self.commands, self.ends_with = [], ends_with
+                ended = self.ended(type(ends_with))
+                self.assertIs(ended, ends_with)
+                self.assertIsNone(ended.log_path)
+                self.assertIn("sim/runs/board", ended.log_error)
+
+
+    @needs_littlefs
+    def test_a_verify_with_a_plan_from_plan_writes_its_log_with_the_image_it_reads(self):
+        # the review of #1640 (lens 8): plan() gives image_sha256 None, which only the handler reads; the log names the image
+        report = self.look()
+        service = self.service()
+        planned = service.plan(report.port)
+        self.assertIsNone(planned.image_sha256)
+        result = service.verify(report, planned)
+        self.assertEqual(self.logs(), [result.log_path])
+        self.assertEqual(board_log.newest_logged_deploy(self.project)[1].image, project_image.ProjectImage(self.project).sha256)
+
+
+class TheStoreRecordOfAFlashNotFinishedTest(ServiceCase):
+    """The review of #1635 (lens 3, refuter 6): record_not_finished writes through the records seam, with the image the
+    flash was given and no banner."""
+
+    @needs_littlefs
+    def test_it_goes_through_the_records_seam_with_the_flash_s_image_and_no_banner(self):
+        report = self.look()
+        self.image.write_bytes(INTERPRETER_WITH_BANNER)  # the image holds a banner now, which never reached the board
+        records = FakeDeployRecordStore()
+        path = self.service(records=records).record_not_finished(report, "ab" * 32, self.clock.now(), "a test")
+        (facts, verdict, who), = records.written
+        self.assertEqual((path, verdict, who), (records.path, "flash not finished", "a test"))
+        self.assertEqual((facts["image_sha256"], facts["micropython_banner"], facts["deployed"]),
+                         ("ab" * 32, None, self.clock.now().isoformat(timespec="seconds")))
+        self.assertFalse(deploy_record_store.DeployRecordStore().find_path(report.reading.mac).exists())
 
 
 class TheLookTest(ServiceCase):
@@ -279,6 +569,43 @@ class TheVerifyTest(ServiceCase):
         self.assertIn("uid not found", envelope["data"]["store_record_error"])
 
 
+@needs_littlefs
+class TheBoardLogReasonTest(GateCase):
+    """P1043 (test 20): the board log's line 4 is `reason: <code>`, the start's code before the ready probe's, so the
+    deploy reader takes the cause from spark's own code and never from a tool's text."""
+
+    def flash(self, probe=None, devs_text=None):
+        self.run_the_scenario()
+        return self.deploy("--token", self.token(), consent=FakeConsent(True), probe=probe, devs_text=devs_text)
+
+    def line_4(self):
+        return next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text().splitlines()[3]
+
+    def test_a_board_whose_files_cannot_be_read_writes_files_unread(self):
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"])
+        self.flash()
+        self.assertEqual(self.line_4(), "reason: files_unread")
+
+    def test_a_port_not_listed_after_the_flash_writes_port_gone(self):
+        self.flash(FakeConsoleProbe("waiting for download\n"), [self.LISTED, self.GONE])
+        self.assertEqual(self.line_4(), "reason: port_gone")
+
+    def test_ready_seen_writes_no_reason_line(self):
+        self.flash()
+        self.assertTrue(self.line_4().startswith("facts file spark.json sha256: "), self.line_4())
+
+    def test_a_read_again_that_cannot_read_the_files_keeps_the_first_read_s_code(self):
+        # P1043 Round 2 (C): the first read hashed the files and could not start the firmware, the read again could not
+        # read the files. The files were read, so the cause is the first read's, never files_unread
+        self.prints = subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        refused = subprocess.CalledProcessError(1, ["mpremote"], "b''\n", SETTLE_STDERR)
+
+        def refuse_the_hashes():
+            self.unread = refused
+        self.flash(FakeConsoleProbe(C6_CONSOLE, on_console=refuse_the_hashes))
+        self.assertEqual(self.line_4(), "reason: firmware_not_started")
+
+
 class ThePlanTest(ServiceCase):
     @needs_littlefs
     def test_plan_checks_the_image_before_the_tools(self):
@@ -323,6 +650,29 @@ class TheFirmwarePlatformTest(ServiceCase):
         with self.assertRaises(project_image.DeployError):
             self.platform().make_flasher()
         self.assertEqual(self.finder.asked, [])
+
+    def test_the_platform_reads_the_projects_board_and_refuses_a_project_with_no_requirements_json(self):
+        # P1024: board_of and record_of read the project's board (D35); no requirements.json stays chip_unknown, never
+        # the selection's chip
+        (self.project / "boards").mkdir(exist_ok=True)
+        (self.project / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "firebeetle2-esp32s3"}))
+        (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        self.assertEqual(self.platform().board_of(), "xiao-esp32-c6")
+        self.assertEqual(firmware_platform.record_of(self.project)["chip"], "esp32c6")
+        (self.project / "requirements.json").unlink()
+        with self.assertRaises(project_image.DeployError) as refused:
+            self.platform().make_flasher()
+        self.assertEqual(refused.exception.reason, "chip_unknown")
+        self.assertEqual(self.finder.asked, [])
+        with self.subTest(requirements="a folder"):  # C3 (the review's R2): a folder is no file, so chip_unknown too
+            (self.project / "requirements.json").mkdir()
+            with self.assertRaises(project_image.DeployError) as refused:
+                self.platform().make_flasher()
+            self.assertEqual(refused.exception.reason, "chip_unknown")
+            (self.project / "requirements.json").rmdir()
+        with self.subTest(requirements="{}"):  # D35 (the review's R3): no board named gives the selection's record
+            (self.project / "requirements.json").write_text("{}")
+            self.assertEqual(firmware_platform.record_of(self.project)["chip"], "esp32s3")
 
 
 class TheWhyLineTest(unittest.TestCase):

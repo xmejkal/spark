@@ -49,6 +49,8 @@ MAY_READ = {
                           + ": with storage.OUTSIDE, against store.PLACES, so a new place fails until it is classified (P1036)",
     "storage.OUTSIDE": AGREEMENT + ": with storage.NAMESPACES, against store.PLACES, the store's own places (P1036)",
     "store.PLACES": AGREEMENT + ": the second source that storage.NAMESPACES and storage.OUTSIDE together must equal (P1036)",
+    "flow_codes.SENDABLE": AGREEMENT + ": with run_request.IN_CHAT, against design_basis.OFFER_STEPS, the tool's own map of each offer kind to its step (P1102)",
+    "run_request.IN_CHAT": AGREEMENT + ": the kinds asked in the chat, the other half of design_basis.OFFER_STEPS' keys (P1102)",
     "store.PLAIN": STRUCTURE + ": the key rule each served namespace's name is checked against, not an expectation (P1036)",
     "storage.UNREADABLE": STRUCTURE + ": the fixture a test plants for an entry that cannot be read, an input (P1036)",
     "board_emitter.SCHEMATIC_STAGE": "the stage a refused input names, looked up in the build's table: the code under test (P852)",
@@ -154,10 +156,20 @@ MAY_READ = {
     "records_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the two it shares with other tables (P716)",
     "sourcing_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and no code it shares (P717)",
     "idea_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and no code it shares (P853)",
+    "board_log.CAUSES": AGREEMENT + ": its codes against the codes whose sentences the bench's own probe and download mode "
+                        "make, each start checked by running them (P1043)",
+    "flow_codes.CAUSE_WORDS": AGREEMENT + ": its codes against board_log.REASONS, the bench's table of the same codes (P1043-D1, P1092)",
+    "board_log.REASONS": AGREEMENT + ": its codes against flow_codes.CAUSE_WORDS, so every reason a board log can hold has the "
+                         "flow's words (P1092)",
     "part_pictures.PICTOGRAMS": STRUCTURE,
     "wiring_steps.THE_BOARD": "the name a component has, used to find the board among the parts: vocabulary, not a value",
     "part_pictures.FALLBACK": "the name of the fallback pictogram, compared with itself: sameness, not a value",
     "tool_finder.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
+    "operation_catalogue.CATALOGUE": STRUCTURE + " (P1077: the registry the Operation catalogue's tests walk, each entry checked against its table)",
+    "operation_catalogue.TABLES": STRUCTURE + " (P1077: the area tables the Operation catalogue's tests walk; their packages are a literal)",
+    "operation_catalogue.NETWORK": PINNED + " (P1077: the four network ops as a literal tuple); the agents' page and the routes' guard walk it",
+    "run_request.STEP_OPERATIONS": SAMENESS + " (P1077: each op the page may run is the Operation catalogue's own class)",
+    "research_part.SCRIPT": STRUCTURE + " (P1077: the script a frontend names research-part by, where the page and the guard look)",
     "parts.OPERATIONS": "the --describe row of audit is compared with AuditRecords' own help and effects: two sources that must agree, "
                         "neither the expectation (P707, until P726 deletes the row)",
 }

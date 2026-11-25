@@ -9,7 +9,8 @@ site names its code in `reason`, and `CODES` says in one sentence what each code
     the look's findings    a Stop's code, and the code of a warning or an unchecked item of a LookReport
     the gate's refusals    a GateClosedError's `reason`: the deploy gate stays shut
     the grant's refusals   a GrantRefusedError's `reason`, from its WHY_ word (board_grant.CODE_FOR_WHY)
-    deploy's own           a DeployError's `reason`, and what deploy.py reports when the flash or the board's start fails
+    deploy's own           a DeployError's `reason`, and what deploy.py reports when the flash or the board's start fails;
+                           INTERRUPTED is only a board log's reason (P1096)
 
 The codes every Operation can write (`bad_argument`, `crash`) are the core's, in `spark.core.codes` (P442).
 NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE, LOG_UNREADABLE and TOOL_MISSING are also firmware_codes', as equal literals in two
@@ -30,8 +31,9 @@ CHIP_DIFFERS, FLASH_TOO_SMALL = "chip_differs", "flash_too_small"
 #: The code of a warning, and of the unchecked items of a look.
 FLASH_DIFFERS, FIELD_UNKNOWN = "flash_differs", "field_unknown"
 LAST_DEPLOY_NOT_CHECKED = "last_deploy_not_checked"
-#: Why a look gave no token (the `no_token_reason`), when the stop is already a problem of its own, the MAC was not read, or
-#: the evidence refuses the image (TOOL_MISSING when a tool its check needs is missing, P436). The same codes are a gate's reason (EVIDENCE_REFUSES is also a DeployError's).
+#: Why a look gave no token (the `no_token_reason`), when the stop is already a problem of its own, the MAC was not read,
+#: the evidence refuses the image (TOOL_MISSING when a tool its check needs is missing, P436), or the image file is gone
+#: since the look (NO_IMAGE, P1111). The same codes are a gate's reason (EVIDENCE_REFUSES is also a DeployError's).
 STOP_FOUND, NO_MAC = "stop_found", "no_mac"
 #: A GateClosedError's reason: the deploy gate stays shut.
 NO_TERMINAL, TOKEN_MISSING, TOKEN_STALE = "no_terminal", "token_missing", "token_stale"
@@ -44,6 +46,8 @@ LOG_UNREADABLE, CHIP_UNKNOWN = "log_unreadable", "chip_unknown"
 EVIDENCE_REFUSES, IMAGE_CHANGED = "evidence_refuses", "image_changed"
 #: What deploy.py reports on its own: the flash and the board's start.
 FLASH_FAILED = "flash_failed"
+#: The board log's reason of a flash that a Ctrl-C ended (P1096). It reaches no envelope: the Ctrl-C goes on.
+INTERRUPTED = "interrupted"
 READY_NOT_SEEN = "ready_not_seen"
 #: P1022: after a write that passed esptool's hash check, ready was not confirmed. Its fix is a template that only
 #: board_envelope.ready_unknown_fix fills (never codes.fix_of): what spark knows, what it did not do and what to try, in
@@ -77,6 +81,12 @@ READY_UNKNOWN_LOST = Code(READY_UNKNOWN, READY_UNKNOWN.meaning,
                           "Do not deploy again for this.")
 #: Why the board did not start after the write (P462): it still waits in download mode, or its port is gone.
 DOWNLOAD_MODE_STAYED, PORT_GONE = "download_mode_stayed", "port_gone"
+#: P1043: the cause of a deploy's verdict, which the board log's reason line holds (a ReadyResult's `code`) beside
+#: DOWNLOAD_MODE_STAYED and PORT_GONE. None is a Finding of a deploy: the flow's deploy reader says them in its own words.
+FILES_UNREAD, FIRMWARE_NOT_STARTED, NO_FILES_NAMED = "files_unread", "firmware_not_started", "no_files_named"
+BOARD_LOST, FILES_DIFFER, FIRMWARE_ERROR, NO_READY_LINE = "board_lost", "files_differ", "firmware_error", "no_ready_line"
+#: P1043: a board log in sim/runs/board/ misses its moment, image or verdict line, or cannot be decoded.
+BOARD_LOG_UNREADABLE = "board_log_unreadable"
 #: A stage needs a fact the record lacks (P464): the item of `missing_facts`, in the build's `kept` pin-map entry.
 MISSING_FACT = "missing_fact"
 #: Not in the look or deploy envelope: the reasons of grant.py's refusals (board_grant.CODE_FOR_WHY).
@@ -130,10 +140,20 @@ CODES = {
     EVIDENCE_REFUSES: "the evidence refuses the image: no passed run names it, or another check failed",
     IMAGE_CHANGED: "the image changed after the person's yes",
     FLASH_FAILED: "a flash command failed, so the board may be erased and not written",
+    # the flash log's own sentence names the flash on purpose; flow_codes.CAUSE_WORDS say "during the deploy" (P1110)
+    INTERRUPTED: "a Ctrl-C interrupted the flash, so the board may be erased and not written",
     READY_NOT_SEEN: "the board's files differ from the image, the firmware stopped with an error, or it printed no ready",
     READY_UNKNOWN: READY_UNKNOWN.meaning,
     DOWNLOAD_MODE_STAYED: "the board still waits in download mode after the flash, and the person's RESET press did not start it",
     PORT_GONE: "the board's port was not listed after the flash, or went and did not come back",
+    FILES_UNREAD: "after the flash, mpremote could not read the board's files",
+    FIRMWARE_NOT_STARTED: "after the flash, the board's files were read and mpremote could not start the firmware",
+    NO_FILES_NAMED: "the passed run's log names no files, so spark had none to read back after the flash",
+    BOARD_LOST: "the firmware printed ready, then mpremote lost the board, and firmware/ calls no deepsleep",
+    FILES_DIFFER: "after the flash, the board's files are not the files of the image",
+    FIRMWARE_ERROR: "after the flash, the firmware stopped with an error",
+    NO_READY_LINE: "after the flash, the firmware printed no ready line in the wait",
+    BOARD_LOG_UNREADABLE: "a board log in sim/runs/board/ misses its moment, image or verdict line, or cannot be decoded",
     MISSING_FACT: "a stage needs a fact the record lacks, so it stopped short of guessing it",
     NOT_A_GRANT: "the store's grant file for the board is not a grant for it",
     BAD_MINUTES: "--minutes is not a whole number from 1 to 1440",

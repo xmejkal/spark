@@ -34,8 +34,8 @@ from spark.records.board_records import (BoardError, _read_json, project_board_i
 def _validate_all(project: Path, for_fab: bool) -> int:
     """Check every board file, not just the project's, and say what is wrong with each."""
     failed = False
-    # P989 review: a folder where no file names a board marks none, and every file is still checked. P988: a broken
-    # requirements.json is said once.
+    # P989 review: a folder where no file names a board marks none, and every file is still checked. P988, P1098: a broken
+    # requirements.json or selection is said once.
     active, note = board_records.marked_board(project)
     if note:
         print("  " + board_records.NOT_MARKED % note)

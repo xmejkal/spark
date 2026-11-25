@@ -114,6 +114,38 @@ class AStopOfAFirmwareThatSleepsSaysTheAsleepFixTest(unittest.TestCase):
                 self.assertEqual(stop_result(self.no_port, "grant.py", self.project, None, stops.undoctored("grant.py")).next, [])
 
 
+class AToolsFileStopKeepsItsCodeTest(unittest.TestCase):
+    """P1058 (#1555): a tools file spark cannot read, or one that is no tools list, keeps its own code and that records
+    Code's fix on the Finding, and stderr keeps its one line. Every other ToolError stays tool_missing with no fix (D1)."""
+
+    def setUp(self):
+        self.project = Path(tempfile.mkdtemp())
+
+    def said(self, cannot):
+        stopped = stop_result(cannot, "bench.py", self.project, None)
+        (found,) = stopped.findings
+        return found, stopped.diagnostics
+
+    def test_a_tools_file_that_is_no_tools_list_or_cannot_be_read_keeps_its_code_and_fix(self):
+        for code, sentence, fix in (
+                ("tools_list_broken", "<store>/tools.json is not JSON (Expecting value) — fix it or delete it",
+                 "fix the tools file the sentence names, or delete it"),
+                ("file_refused", "<store>/tools.json cannot be read (Permission denied) — fix it or its permissions",
+                 "fix the file the sentence names, or its permissions, then run again")):
+            with self.subTest(code=code):
+                found, lines = self.said(tool_finder.ToolError(sentence, code=code))  # a plain str, as a test raises it
+                self.assertEqual((found.severity, found.code, found.sentence, found.fix), ("could-not-run", code, sentence, fix))
+                self.assertEqual(lines, ["bench.py: %s" % sentence])
+
+    def test_a_missing_or_turned_off_tool_stays_tool_missing_with_no_fix(self):
+        for cannot in (tool_finder.ToolMissingError("mpremote is not installed", code="tool_missing"),
+                       tool_finder.ToolError("mpremote is turned off", code="tool_off")):
+            with self.subTest(code=cannot.code):
+                found, lines = self.said(cannot)
+                self.assertEqual((found.code, found.fix), ("tool_missing", ""))
+                self.assertEqual(lines, ["bench.py: %s" % cannot])
+
+
 class AStopsDataIsItsOwnTest(unittest.TestCase):
     """A frontend may add to a result's data, and the next stop's data stays as it was."""
 

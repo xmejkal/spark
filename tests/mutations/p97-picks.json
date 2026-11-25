@@ -50,8 +50,8 @@
  {
   "file": "scripts/spark/design/pick_parts.py",
   "name": "a refused pick is written",
-  "find": "        if not problems and not dry_run:\n            store.add_project(target)",
-  "replace": "        if not dry_run:\n            store.add_project(target)"
+  "find": "        if not problems and not dry_run:\n            drawer.apply(changes)",
+  "replace": "        if not dry_run:\n            drawer.apply(changes)"
  },
  {
   "file": "scripts/spark/sourcing/write_answers.py",
@@ -135,7 +135,7 @@
  {
   "file": "scripts/spark/design/pick_parts.py",
   "name": "the project's own file is written before the store",
-  "find": "            store.add_project(target)\n            drawer.apply(changes)\n",
-  "replace": "            store.add_project(target)\n            needs.write(target, after)\n            drawer.apply(changes)\n"
+  "find": "        if not problems and not dry_run:\n            drawer.apply(changes)\n",
+  "replace": "        if not problems and not dry_run:\n            needs.write(target, after)\n            drawer.apply(changes)\n"
  }
 ]

@@ -1,0 +1,26 @@
+# P1057 slice 1: live.py and reach.py give the asleep fix on a no-board stop: rows
+
+Card: [P1057 #1554](https://github.com/xmejkal/spark/issues/1554). The plan was written on main 0a249b31 and split the
+card in two PRs (D1). This is PR 1. PR 2 is P1057 slice 2 with [P1055 #1552](https://github.com/xmejkal/spark/issues/1552),
+after the held PRs that touch `json.md`, `scripts.md` and `board_envelope.py`. The plan check on PR 1 was the refuter
+(Opus). The review of PR #1596 was one lens (Sonnet) and the refuter (Opus). A "row" in the last column is a row of `tests/mutations/p1057-asleep-live-reach.json`, counted from 1.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | live.py and reach.py give the cable advice on a no-board stop when firmware/ calls deepsleep | the card | acted | both pass `stops.undoctored(SCRIPT)` to `stop_result`, as grant.py and bench.py record do. `ASleepingBoardTest` in test_live and test_reach. Rows 1, 5 |
+| 2 | A port that spark picked must never get "the port you named" | the card | acted | live.py passes the port the person named (`named`), never the picked one. reach.py's LookStopError comes only from `require_one_board`, before spark picks a port. `test_a_picked_port_that_left_usb_keeps_its_own_words`. Rows 2, 3 |
+| 3 | live's `--json` stop line keeps the cable sentence as `why` while `next[0].why` points to "the fix" | plan check A | acted | `why` is the stop Finding's sentence, `no board found.` beside the asleep fix and unchanged without it. Row 4 |
+| 4 | reach's comment "port is still the named one or None" is false after a ToolError from `make_console_probe` | plan check B | acted | the comment says that a LookStopError comes only from `require_one_board` |
+| 5 | The test's firmware writes `import machine` first, so the call is at main.py:2 | plan check C | acted | both `ASleepingBoardTest.setUp`s |
+| 6 | A new test class that subclasses LiveScriptTest or ReachScriptTest runs every old test again with a deepsleep firmware, and two old stop tests then see the fix as a second line | the build | acted | the helpers move to `LiveCase` and `ReachCase`, and the old test classes subclass them. No assertion changed |
+| 7 | A picked port that leaves USB (live's grant check, or the doctor after a failed exec) gets no asleep fix; it needs its own opening in `board_envelope.py` (D2, D3) | plan | raised | destination: P1057 #1554 (slice 2) |
+| 8 | live.py's own doctor inside `LiveTryService` keeps its plug_in step (P1049 row 12) | plan | raised | destination: P1057 #1554 (slice 2) |
+| 9 | `json.md` rows 336 and 337 and `scripts.md` line 131 still say that live.py and reach.py give no asleep fix; live's `next` look step names "the fix", which its line does not hold yet (D9) | plan | raised | destination: P1055 #1552. Both pages are in held PRs, so this PR does not touch them |
+| 10 | The stop's list of the ports that mpremote sees, and a Linux `/dev/serial/by-id` path (P1056 rows 4 and 5) | plan D7 | raised | destination: P1087 #1597. They change `board_look.require_one_board`, which every bench script shares, and are not about deep sleep |
+| 11 | reach.py's no-board stop prints no stdout line under `--json` | plan D4 | rejected | its other stops work the same way (replies.md); the fix is its last stderr line. `test_no_board_gives_no_board_found_and_the_asleep_fix_and_no_json_line` pins the empty stdout |
+| 12 | The lens approves after fixes; the refuter says merge after fixes (379 tests OK, 120 cases of which 10 differ from main as expected, the moved test bodies identical) | the review of #1596 | acted | the fixes below, in one commit after the merge of origin/main |
+| 13 | reach.py's help says "To run its line, wait until the firmware wakes", which does not say what waits | the review of #1596, lens | acted | "To reach the REPL, wait until the firmware wakes." |
+| 14 | live.py's help uses internal words ("the grant check", "keeps its own words") for a picked port that leaves USB | the review of #1596, lens | acted | "If spark picked the port and the board then leaves USB, the stop names that port and gives no deep-sleep advice." |
+| 15 | Nothing pins a named port that leaves USB before the grant check: it gets "the port you named" and the asleep fix | the review of #1596, refuter | acted | `test_a_named_port_that_leaves_usb_before_the_grant_check_opens_the_fix_with_that_port`. It also catches rows 1 and 3 |
+| 16 | `stop_result` now gets `named` as its port, which also feeds `guard_sentence`, so a stop after a pick no longer flattens the picked port | the review of #1596, lens | rejected | nothing changed. A scratch run of 12 stops after a pick (the picked port gone, with a bidi character in its name too, and a missing board-shell; each with and without a deepsleep call, with and without `--json`) gave the same stderr and `why` on main's and this branch's `run_live_code.py`. A LookStopError's message holds the port flat already (P444), and a ToolError's or a BoardError's message holds no port |
+| 17 | stops.py's docstring still says "live.py and reach.py not yet (P1057)" | the review of #1596 | raised | destination: P1058 #1555 (PR #1594), which corrects the line after this PR merges. This PR does not touch stops.py |

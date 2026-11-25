@@ -698,8 +698,8 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.assertIn("(firmware/main.py:2, firmware/main.py:3).", self.unchecked(devs="mpremote-devs-none.txt")["fix"])
 
     def test_a_named_port_that_is_not_on_usb_opens_with_that_port_never_with_no_board(self):
-        # look.py and deploy.py read a --port the list does not hold, and reach.py asks the board question for it (P892),
-        # so only grant.py, live.py and bench.py record stop with port_not_listed: the fix is asked for that code directly
+        # look.py and deploy.py read a --port the list does not hold (P892), so only grant.py, live.py, reach.py (P1056) and
+        # bench.py record stop with port_not_listed: the fix is asked for that code directly
         self.sleeper("import machine\nmachine.deepsleep(1)\n")
         places = board_records.ButtonPlaces.of_project(self.project)
         fix = board_envelope.asleep_fix(self.project, "port_not_listed", places)
@@ -982,9 +982,10 @@ class ACrashTest(LookScriptCase):
 
     def test_the_bench_lists_the_look_for_the_frontends(self):
         from spark import bench
-        self.assertEqual(sorted(bench.OPERATIONS), ["check-grant", "deploy", "issue-grant", "live", "look", "reach", "record-deploy",
-                                                    "register-project", "show-bench"])
+        self.assertEqual(sorted(bench.OPERATIONS), ["check-grant", "deploy", "disallow-direct-flashing", "issue-grant", "live", "look", "reach",
+                                                    "record-deploy", "register-project", "show-bench"])
         self.assertIs(bench.OPERATIONS["look"], bench.look_at_board.LookAtBoard)
+        self.assertIs(bench.OPERATIONS["disallow-direct-flashing"], bench.direct_flashing.DisallowDirectFlashing)  # P1077: grant.py's third mode
         self.assertIs(bench.OPERATIONS["deploy"], bench.deploy_image.DeployImage)
 
     def test_look_imports_no_area_module_but_spark_bench(self):

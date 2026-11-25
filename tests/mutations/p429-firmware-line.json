@@ -92,7 +92,7 @@
  {
   "file": "scripts/spark/firmware/project_image.py",
   "name": "P429: the look and the deploy take an image outside sim/",
-  "find": "        if outside:\n            raise DeployError(outside, reason=firmware_codes.FIRMWARE_LINE_BAD)\n",
-  "replace": "        if False:\n            raise DeployError(outside, reason=firmware_codes.FIRMWARE_LINE_BAD)\n"
+  "find": "            if outside:\n                raise DeployError(outside, reason=firmware_codes.FIRMWARE_LINE_BAD)\n",
+  "replace": "            if False:\n                raise DeployError(outside, reason=firmware_codes.FIRMWARE_LINE_BAD)\n"
  }
 ]

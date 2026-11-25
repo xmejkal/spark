@@ -110,14 +110,14 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the breadboard never shows in done (P977 review 7)",
-  "find": "            done += [flow_codes.SHEET_UNSEEN] if wired else []",
+  "find": "            done += [flow_codes.SHEET_UNSEEN] if sheet_done else []",
   "replace": "            pass"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the breadboard shows in done while the wiring is part of now (P977 review 7)",
-  "find": "    wired = is_sheet_current(project, by_name) and not two_jobs",
-  "replace": "    wired = is_sheet_current(project, by_name)"
+  "find": "    sheet_done = is_sheet_current(project, by_name) and not two_jobs",
+  "replace": "    sheet_done = is_sheet_current(project, by_name)"
  },
  {
   "file": "scripts/spark/flow/guide.py",

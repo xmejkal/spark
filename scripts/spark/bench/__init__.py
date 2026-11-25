@@ -2,13 +2,14 @@
 The bench area: the Operations on a board on USB, and the outside they reach. `look` is the first on the core (P442,
 W3-3), `deploy` the second (P655, W4-2), the grant, live and reach Operations (`issue-grant`, `check-grant`, `live`, `reach`) the next (P657), `show-bench`,
 the bench's show (P919), and `register-project` and `record-deploy`, which let a project that is not spark's record its
-deploys, the last (P920). `OPERATIONS` maps each printed `op` to its class, for the frontends.
+deploys (P920), and `disallow-direct-flashing`, grant.py's third mode (P1029). `OPERATIONS` maps each printed `op` to its class, for the frontends.
 """
 
 from spark.bench import deploy_gate
 from spark.records.tool_finder import ToolFinder
 from spark.bench.deploy_image import DeployImage
 from spark.bench.check_grant import CheckGrant
+from spark.bench.direct_flashing import DisallowDirectFlashing
 from spark.bench.issue_grant import IssueGrant
 from spark.bench.look_at_board import LookAtBoard
 from spark.bench.reach_board import ReachBoard
@@ -22,7 +23,7 @@ from spark.core.replies import Terminal, reply_strategy_for
 
 # --- MVP ---
 OPERATIONS = {operation.name: operation for operation in (LookAtBoard, DeployImage, IssueGrant, CheckGrant, RunLiveCode, ReachBoard,
-                                                            ShowBench, RegisterProject, RecordDeploy)}
+                                                            ShowBench, RegisterProject, RecordDeploy, DisallowDirectFlashing)}
 
 
 def build_project_outside_world(project, effects, reporter, values=None):

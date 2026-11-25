@@ -2,6 +2,9 @@
 `--describe` as an Operation (P726 PR 3): what a CLI with several Operations offers, read off the Operation classes
 themselves (reflection over the core contract), so what an agent reads cannot drift from what runs (§6.4.3). The registry is
 given to the constructor (op name -> class, in the order the CLI lists them); `describe_operations` is not an area's table.
+parts.py gives its slice of the Operation catalogue (`operation_catalogue.CATALOGUE`, P1077). The core never imports it,
+because it imports the areas. `flag` is the Operation's own `--<op>` argument, or None: piece 7 gives each frontend's own,
+and `dry_run` says whether the Operation has a `dry_run` argument.
 """
 
 from spark.core import outcomes
@@ -15,6 +18,8 @@ from spark.core.result import OperationResult
 EFFECT_WORDS = ((FETCHES, "network"), (WRITES, "writes"), (DELETES, "deletes"))
 #: One text line per Operation: the flag, the summary, the effects when it has any.
 OPERATION_LINE = "  %-18s %s%s"
+#: The dest of the Argument that makes an Operation's run a dry run: `dry_run` says whether the Operation has one (P1077).
+DRY_RUN_DEST = "dry_run"
 
 
 def summary_of(operation):
@@ -67,10 +72,12 @@ class DescribeOperations(Operation):
                 elif argument.dest in properties:
                     properties[argument.dest].update({key: value for key, value in (("metavar", argument.metavar), ("nargs", argument.nargs)) if value is not None})
             words = effect_words_of(cls)
-            operations.append({"op": op, "flag": "--" + op, "summary": summary_of(cls), "effects": words, "dry_run": bool(words),
+            own = any("--" + op in argument.flags for argument in cls.arguments)
+            operations.append({"op": op, "flag": ("--" + op) if own else None, "summary": summary_of(cls), "effects": words,
+                               "dry_run": any(argument.dest == DRY_RUN_DEST for argument in cls.arguments),
                                "arguments": properties, "data": list(cls.data_keys)})
         exits = {str(code): status for status, code in outcomes.EXIT_FOR.items()}
-        lines = [OPERATION_LINE % (one["flag"], one["summary"], "  [%s]" % ", ".join(one["effects"]) if one["effects"] else "") for one in operations]
+        lines = [OPERATION_LINE % (one["flag"] or one["op"], one["summary"], "  [%s]" % ", ".join(one["effects"]) if one["effects"] else "") for one in operations]
         return OperationResult({"operations": operations, "options": [{"flag": flag, "summary": help} for flag, help in options_of(self.registry).items()],
                                 "exits": exits}, lines=lines)
 # --- end MVP ---

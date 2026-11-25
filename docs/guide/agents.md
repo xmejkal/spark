@@ -68,13 +68,13 @@ The person types a `/spark:` command, and you follow that command's page in [`co
 (`part-finder`, `datasheet-reader`, `parts-researcher`, `design-reviewer`) are launched by the commands and skills that
 name them.
 
-A command page's `allowed-tools` lists the operations Claude Code lets you run without asking. `parts.py --fetch` and
-`--sources`, `tools.py --install` and `--on`, and `check_vendor_pins.py` without `--offline` reach the network and are
-on no command's or skill's list, so Claude Code asks the person before any of them runs, and their answer is the yes.
-Their own settings can answer first: an allow rule of theirs, or auto mode, can let it run without asking, which is a
-yes given in advance, and auto mode can also refuse it. You do not work around either. `parts.py --describe --json`
-marks the network operations of `parts.py`. A new project starts with `/spark:init`, then `/spark:setup`. The
-[journey guide](journey.md) shows each step on real runs.
+A command page's `allowed-tools` lists the operations Claude Code lets you run without asking. `parts.py --fetch`,
+`--sources` and `--find-documents`, `research.py`, `tools.py --install` and `--on`, and `check_vendor_pins.py` without
+`--offline` reach the network and are on no command's or skill's list, so Claude Code asks the person first, and their
+answer is the yes. Their settings can answer first: an allow rule of theirs, or auto mode, can let it run, a yes given
+in advance, and auto mode can also refuse it. You do not work around either. The ones on the core declare `fetches`:
+[`NETWORK` on the map](map.md#registries) lists them from the code. A new project starts with `/spark:init`, then
+`/spark:setup`. The [journey guide](journey.md) shows each step on real runs.
 
 Outside Claude Code, the command pages and skills are plain Markdown, but their agents are Claude Code agent
 definitions (`agents/*.md`: a model and a tool list). The scripts their steps call run anywhere; following a command
@@ -107,11 +107,11 @@ not the same as one that could not look. More in the glossary:
    `CLAUDE_PLUGIN_ROOT` unset, Python never starts the script, so even that prints nothing. A bad command line is not a
    check that could not look, so with `--json`, parse stdout before trusting the code.
 4. **`init_project.py`'s exits.**
-   - Without `--board`, it exits 1 when every file exists ("nothing to do").
-   - With `--board`, it exits 0 even when it wrote nothing.
+   - It exits 1 without `--board` when every file exists ("nothing to do"), and 0 with `--board` even when it wrote
+     nothing. A crash also exits 1, so look for the nothing-to-do line on stdout before you read exit 1 that way.
    - It exits 2 after writing everything when two built designs left the rails unseeded.
-
-   1 is also what a crash returns, so check stdout for the nothing-to-do line before reading exit 1 that way.
+   - It exits 2 and writes nothing when it refuses before it starts: no folder, or a tools file, a brief or a
+     boards/active.json that cannot be opened ([P1099](https://github.com/xmejkal/spark/issues/1617)).
 5. `parts.py` given an id it does not know ("no part called …") exits 1, and so does `--show` of a record with a
    CONFLICT on verified facts (`data.record` is set then, `null` for an unknown id).
 
@@ -127,7 +127,7 @@ the diagnostics go to stderr, as text for a person. Decide on stdout only: read 
   ([P131](https://github.com/xmejkal/spark/issues/65)). So exit 1 with an empty stdout is a crash, not problems.
   check_all reports each crash as could-not-run.
 - `look.py` and `deploy.py` are the exceptions: a crash exits 2 and `--json` prints an envelope. After a flash it holds
-  `data.board_state`, `may_be_erased` or `flashed_not_verified` ([its envelope](agents/json.md#lookpy-and-deploypys-envelope)). `grant.py`, `live.py`, `reach.py` (P657), `check_spine.py` and `check_all.py` (P804) exit 2 too, with no `--json` line.
+  `data.board_state`, `may_be_erased` or `flashed_not_verified` ([its envelope](agents/json.md#lookpy-and-deploypys-envelope)), and after a crash in the flash or the verify, `data.board_log` too (P1096, P1110). `grant.py`, `live.py`, `reach.py` (P657), `check_spine.py` and `check_all.py` (P804) exit 2 too, with no `--json` line.
 - `compare_design.py`, `assign_pins.py` and `check_spine.py` answer 2 instead of crashing
   ([check_spine.py's refusals](agents/json.md#check_spinepy)).
 - These inputs crash a script:

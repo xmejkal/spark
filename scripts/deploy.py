@@ -38,6 +38,7 @@ from spark.bench import build_project_outside_world
 from spark.bench.deploy_image import DeployImage
 from spark.core.cli import HelpText, run_cli
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK  # noqa: F401  (the tests read deploy's exit codes here)
+from spark.flow.now_follow_up import PageFollowUp
 
 #: The CLI's own text in `--help`, after DeployImage's details (P855): its --json and its exit codes.
 EPILOG = """--json prints one envelope on stdout (docs/guide/agents/json.md): the token, the look, the stage the run reached, the
@@ -45,7 +46,8 @@ yes, the board log and the store record in `data`, and in `next` the step that w
 line above then goes to stderr, and so does the flash tool's own output. Exit codes do not change; the envelope's status
 is the exit code's. Every `problems` and `unchecked` item has a `code` (scripts/spark/bench/board_codes.py). A bad flag
 with --json prints an envelope (status could-not-run, code bad_argument, exit 2); without --json it prints the usage and
-the error on stderr and exits 2.
+the error on stderr and exits 2. A deploy that is not a dry run and did not crash writes the project's page.html again
+when it has one, at any status, and says so in a line and a note (P1069); /spark:page publishes it.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, the board question waits for a reply (needs_reply), the board is not the
@@ -55,7 +57,7 @@ kept one (other_board) or none is kept (no_known_board), there was no terminal, 
 def main(argv=None, outside=None, operation=None):
     """Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `outside` is the OutsideWorld
     a test gives (a run builds the project's), `operation` the DeployImage a test gives with its Fakes. Returns the exit code."""
-    return run_cli(HelpText("deploy.py", epilog=EPILOG), operation or DeployImage(), argv,
+    return run_cli(HelpText("deploy.py", epilog=EPILOG, follow_up=PageFollowUp()), operation or DeployImage(), argv,
                    outside_builder=build_project_outside_world, outside=outside)
 
 

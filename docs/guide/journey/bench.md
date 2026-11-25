@@ -90,7 +90,7 @@ mode: press the board's RESET (R, top left, beside the USB-C) once`. Press R onc
 and for mpremote to answer, and then reads the board again. A restart that leaves the board in download mode is printed and not
 counted ([P462](https://github.com/xmejkal/spark/issues/630); [P243](https://github.com/xmejkal/spark/issues/252),
 [the bench log](../../observations/2026-10-14-p243-bench.md)). The XIAO's R and B buttons are the small parts at the two top
-corners, beside the USB plug.
+corners, beside the USB plug. After a deploy, `flow.py show` and the page say what the newest board log says, with a tick only for a ready line on the image the project holds now ([P1043](https://github.com/xmejkal/spark/issues/1533)).
 
 ### The button-and-LED firmware on the board
 
@@ -193,6 +193,5 @@ The `spark-reverse-engineer` skill writes a bench protocol, but for a board reve
   ([the log](../../observations/2026-10-17-p282-p247-bench.md)).
 
 `look.py --json` and `deploy.py --json` print one envelope for Claude. It holds the token, the stops, the stage, the
-yes and the next step for you ([P213](https://github.com/xmejkal/spark/issues/192)). No breadboard wired from its
-sheet has run on a bench yet. spark's own hardware step is [P79](https://github.com/xmejkal/spark/issues/16). Its first
-walk is the button-and-LED project, flashed and wired from its sheet ([the plan for v0.10](../../../scrum/VISION.md#versions)).
+yes and the next step for you ([P213](https://github.com/xmejkal/spark/issues/192)). On 2026-11-22 a breadboard wired from
+its sheet ran an e-paper clock, with no simulation ([P934](https://github.com/xmejkal/spark/issues/1323)). spark's hardware step is [P79](https://github.com/xmejkal/spark/issues/16).

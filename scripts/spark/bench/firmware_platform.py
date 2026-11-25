@@ -6,8 +6,6 @@ test gives a Fake (tests/fakes.py) in its place. The five bench CLIs and `deploy
 so a test swaps the board tools without a patch.
 """
 
-import json
-
 from spark.bench import board_connection
 from spark.bench import board_console
 from spark.bench import board_look
@@ -20,15 +18,18 @@ from spark.firmware.project_image import DeployError
 
 
 def board_of(project):
-    """The project's board type, requirements.json's `board` (D35)."""
-    return json.loads((project / "requirements.json").read_text()).get("board")
+    """The project's board type (D35): requirements.json's `board`, else the selection. The deploy never reaches the
+    selection here: its look stops first with no_board_named when requirements.json names no board."""
+    return board_records.project_board_id(project)
 
 
 def record_of(project):
-    """The board record requirements.json names (P192: no chip table). DeployError says why it cannot be read."""
+    """The record of the project's board (D35; P192: no chip table). DeployError says why it cannot be read."""
     requirements = project / "requirements.json"
     try:
-        return board_records.load(project, board_of(project))
+        if not requirements.is_file():  # its own check (P1024): no requirements.json is chip_unknown, never the selection's chip
+            raise OSError("it is not a file")
+        return board_records.load(project)
     except (OSError, ValueError, AttributeError, board_records.BoardError) as cannot:
         raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot), reason=board_codes.CHIP_UNKNOWN)
 
@@ -76,7 +77,7 @@ class FirmwarePlatform:
         raise NotImplementedError
 
     def board_of(self):
-        """The project's board type, requirements.json's `board` (D35)."""
+        """The project's board type (D35): requirements.json's `board`, else the selection."""
         return board_of(self.project)
 
 

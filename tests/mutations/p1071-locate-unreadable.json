@@ -1,0 +1,9 @@
+[
+ {"file": "scripts/spark/records/tool_finder.py", "name": "a refused place ends the search, though the tool is on PATH", "find": "        refused.append(str(refusal))\n        return False", "replace": "        raise refusal"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "no place finds the tool and the refused place is not said", "find": "\"\".join(\"; \" + line for line in refused)", "replace": "\"\""},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "find does not give locate its list", "find": "    command = locate(entry, project, refused)", "replace": "    command = locate(entry, project)"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "a caller that gives locate no list gets a refusal for a place spark cannot read (the plan check, A)", "find": "    refused = [] if refused is None else refused\n    kind =", "replace": "    kind ="},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "the bundled file is looked up without the guard", "find": "        return [str(path)] if _file_here(path, refused) else None", "replace": "        return [str(path)] if path.is_file() else None"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "the node_modules walk is looked up without the guard", "find": "            if _file_here(local, refused):", "replace": "            if local.is_file():"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "an also path is looked up without the guard", "find": "    for also in entry.get(\"also\") or []:\n        path = Path(also).expanduser()\n        if _file_here(path, refused):", "replace": "    for also in entry.get(\"also\") or []:\n        path = Path(also).expanduser()\n        if path.is_file():"}
+]

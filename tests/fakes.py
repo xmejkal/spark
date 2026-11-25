@@ -360,7 +360,8 @@ def fake_tsci(root, builds_when, circuit=(), binary=None):
     """
     A `tsci` (at `binary`, or root/fake-tsci) that answers `--version` and builds — writes a circuit.json holding the
     elements of `circuit`, or the file FAKE_TSCI_CIRCUIT names — only when `builds_when` (a shell test on the working
-    directory) holds. Any other command (`export`) fails. Instant, so the build stage can be driven without tscircuit
+    directory) holds. With FAKE_TSCI_DANGLING set it also leaves a link to nothing in dist/board, which no copy of dist/ can
+    copy (P1088). Any other command (`export`) fails. Instant, so the build stage can be driven without tscircuit
     installed. It calls /bin/mkdir and /bin/cp by their absolute paths, so it builds on a PATH that names neither (P699).
     """
     binary = binary or root / "fake-tsci"
@@ -370,7 +371,8 @@ def fake_tsci(root, builds_when, circuit=(), binary=None):
                       "[ \"$1\" = \"--version\" ] && { echo 0.0.0-fake; exit 0; }\n"
                       "[ \"$1\" = build ] || { echo \"fake tsci: only --version and build\" >&2; exit 1; }\n"
                       "circuit=${FAKE_TSCI_CIRCUIT:-%s}\n"
-                      "if %s; then /bin/mkdir -p dist/board; /bin/cp \"$circuit\" dist/board/circuit.json; exit 0; fi\n"
+                      "if %s; then /bin/mkdir -p dist/board; /bin/cp \"$circuit\" dist/board/circuit.json; "
+                      "[ -z \"$FAKE_TSCI_DANGLING\" ] || /bin/ln -s no-such-file dist/board/dangling; exit 0; fi\n"
                       "echo \"Cannot find package 'react'\" >&2\n"
                       "exit 1\n" % (shlex.quote(str(root / "canned-circuit.json")), builds_when))
     binary.chmod(0o755)

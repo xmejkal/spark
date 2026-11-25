@@ -1,6 +1,6 @@
 ---
 description: From a requirements file — a board and a list of parts — to a board that builds, with a Wokwi diagram and a breadboard sheet (the parts and how to wire them) generated from it, or the stage that stopped it. Deterministic, seconds, no agents.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show *)
 ---
 
 # spark:build
@@ -119,6 +119,19 @@ and from nowhere: a file inside no project is built from the plugin's own librar
 and every command says so. `/spark:init` in a directory makes it a project, which is where a
 design's own parts, boards and rules live.
 
+## Before a rebuild: a board that can be wired
+
+A new build can move pins. When the project was built before, run this first ([P1044](https://github.com/xmejkal/spark/issues/1534)):
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show --project . --json
+```
+
+If `data.guide.wired` is not `null`, a wiring sheet or a board log is in the project, so the person may have wired the
+board. Tell them the wired line of the parts phase as it is: its first line, or its last when the parts phase holds
+problems or could not run. Then ask before the build. `null` means that spark saw no witness, never that the board is
+not wired. A board-only project has no wired line, because it has no part to wire: build it.
+
 ## The one command
 
 It needs the board engine — tscircuit, in the project (`/spark:init` writes the package file) — and
@@ -169,19 +182,20 @@ again after a build. The build also keeps tscircuit's schematic and PCB as `dist
 schematic and PCB of the kept `dist/board/circuit.json` ([P271](https://github.com/xmejkal/spark/issues/307)). Since
 2026-11-17, in a project folder, it is the project's flow page instead ([P827](https://github.com/xmejkal/spark/issues/1185)):
 each phase of [`flow.py`](../docs/guide/agents/flow.md) with its status word and a mark, then the wiring (the lines before power, then the steps, one at a time or all at once), then the same three pictures. It adds no
-tick: a phase that is not ok never shows one. It does not know whether the board is wired or flashed. A folder that is no
+tick: a phase that is not ok never shows one. It reads the project's files and its board logs, and cannot see your wiring or what the board shows now. A folder that is no
 project keeps the three tabs. Open it in a browser. It loads nothing from the web. Its one script does nothing from disk; in a published page with the Artifact database it adds the buttons of a pick, the parts list and the build ([P829](https://github.com/xmejkal/spark/issues/1187), docs/guide/agents/flow.md). Its colors are tokens with a dark mode, and its title has two to
 four words (P272), so it also follows the Artifact page rules. Only `/spark:page` publishes it and republishes it, on the person's yes (P829). A tab that could not be drawn, for example when `tsci export`
-fails, says why. `dist/` is still replaced with a build of the freshly generated board, not of
+fails, says why. A build whose tsci left no `dist/board/circuit.json` copies nothing, so an earlier `dist/` stays, named as an
+earlier build's, and `check_all` says the last build did not write it (P816, P1088). The copy is staged at `dist.new`, and the earlier one is set aside at `dist.old`; a file of yours at either name, or a `dist/` that is a link, stops the copy and is named. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`. After a `traces differ` line, that command builds the old pins into `dist/`.
 
 The one command also writes `firmware/pins.py`, the pin map that the firmware imports. It is the file that
 `assign_pins.py requirements.json --emit-pins firmware/pins.py` writes. It comes from the requirements alone, so it
 does not need a finished build ([P196](https://github.com/xmejkal/spark/issues/155)). The build writes it again each time. If a
-`pins.py` that spark did not write is there, the build leaves it alone and names it. If the pins cannot be placed, the
-build removes the `pins.py` that it wrote earlier, because that file describes another design. If spark refuses the
-requirements file, the build removes the earlier sheet, drawings, `page.html`, the kept schematic and PCB files and the `pins.py` that it wrote, and
+`pins.py` that spark did not write is there, the build leaves it alone and names it. If the pins cannot be placed after a build that finished, the
+build removes the `pins.py` that it wrote earlier, because that file describes another design; when no build finished, it stays, named as from the earlier requirements, because the firmware imports it (P1109). If spark refuses the
+requirements file, the build removes the earlier `page.html` and the kept schematic and PCB files; the sheet, drawings and the `pins.py` that it wrote stay, named as an earlier build's (P1093, P1109), and
 says why. If the requirements file is missing, it removes nothing. The one command also keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml` and the chips. `--sim-dir DIR` keeps it in DIR. A rebuild merges into the kept `sim/diagram.json` (P482): the part positions by id, the wire routes whose two ends are still generated, and the parts marked `"handAdded": "true"` in `attrs` with the wires that touch them stay. A hand-added part of a type Wokwi knows passes the converter's lint, and one with no wire yet is a warning in the build output, not a stop; a part type the converter does not know still stops (`unknown-part-type`) ([P497](https://github.com/xmejkal/spark/issues/681)). A hand-drawn wire between two generated parts does not stay, a generated part that the person deleted comes back, and a position whose generated id changed is lost. The verdict's simulation stage says `kept from your diagram: ...` when it kept anything.
 A rebuild keeps the flash image that `sim/wokwi.toml` already names, unless `--firmware` names another. Spark reads that line only as `firmware = "name.bin"` (a JSON string); a line in another form (indented, `firmware="x.bin"`, a number, an empty name) is not kept, and the build says so on stderr: the rebuild then names no image.
 
@@ -220,7 +234,7 @@ says so. A chain that could not be exercised has not been proven; the difference
 point. A big board can take many minutes to build. The build stops after 15 minutes, and then the stage is
 could-not-run, not a pass.
 
-A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once). `--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before it runs (unless the person's own settings already let it run: an allow rule of theirs, or auto mode), and the person's answer there is the yes. If the project has no `package.json`, run `/spark:init` first: without one, npm installs into the nearest parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)).
+A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once). `--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before it runs (unless the person's own settings already let it run: an allow rule of theirs, or auto mode), and the person's answer there is the yes. If the project has no `package.json`, run `/spark:init` first: without one, npm installs into the nearest parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)). When the line ends with `; <path> cannot be read (…) — fix it or its permissions`, the person fixes that folder's permissions first: spark could not look there, and an install into a folder you cannot read fails too ([P1071](https://github.com/xmejkal/spark/issues/1571)).
 
 ## The steps, when one is wanted on its own
 

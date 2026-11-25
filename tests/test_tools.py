@@ -4,6 +4,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -311,6 +312,80 @@ class FindingAToolTest(unittest.TestCase):
             found = tool_finder.find("tscircuit", root, personal)
         self.assertEqual(found.command, [str(root / "node_modules" / ".bin" / "tsci")])
 
+
+@unittest.skipIf(os.geteuid() == 0, "root reads a folder of mode 0")
+class ALookupSparkCannotReadTest(unittest.TestCase):
+    """P1071 (#1571): the bundled file, a project's node_modules/.bin and the paths in `also` were each a PermissionError
+    when a folder on the way had mode 0. Each is now "not here": the next place is asked, and only a tool that no place
+    finds names the place spark could not read. The real data/tools.json and real modes; nothing is patched (T2)."""
+
+    def setUp(self):
+        self.nobody = Path(tempfile.mkdtemp()) / "absent.json"
+        self.refused = "cannot be read (Permission denied) — fix it or its permissions"
+
+    def locked(self, folder):
+        """`folder`, made and given mode 0 until the test ends."""
+        folder.mkdir(exist_ok=True)
+        self.addCleanup(os.chmod, folder, 0o700)
+        os.chmod(folder, 0)
+        return folder
+
+    def npm_project(self, exe):
+        """A project whose tools file has an npm tool `t1071` run by `exe`, and whose node_modules spark cannot read."""
+        project = project_with({"roles": {"board-engine": "t1071"}, "t1071": {"kind": "npm", "exe": exe}})
+        self.locked(project / "node_modules")
+        return project
+
+    def missing(self, project):
+        with self.assertRaises(tool_finder.ToolMissingError) as missing:
+            tool_finder.find("t1071", project, self.nobody)
+        said = str(missing.exception)
+        self.assertEqual(missing.exception.code, "tool_missing")
+        self.assertEqual(len(said.splitlines()), 1, said)
+        self.assertIn(self.refused, said)
+        return said
+
+    def test_an_npm_tool_on_path_is_found_past_a_node_modules_spark_cannot_read(self):
+        project = self.npm_project("sh")
+        self.assertEqual(tool_finder.find("t1071", project, self.nobody).command, [shutil.which("sh")])
+        self.assertNotIn("t1071", tool_finder.to_install(project, self.nobody))  # the plan check, B
+
+    def test_an_npm_tool_no_place_finds_names_the_node_modules_spark_cannot_read(self):
+        project = self.npm_project("no-such-program-p1071")
+        said = self.missing(project)
+        self.assertIn("%s cannot" % (project / "node_modules" / ".bin" / "no-such-program-p1071"), said)
+
+    def test_a_bundled_file_in_a_folder_spark_cannot_read_is_missing_with_its_path(self):
+        locked = self.locked(Path(tempfile.mkdtemp()) / "locked")
+        project = project_with({"t1071": {"kind": "bundled", "file": str(locked / "x.mjs")}})
+        self.assertIn("%s cannot" % (locked / "x.mjs"), self.missing(project))
+
+    def test_an_also_path_spark_cannot_read_is_passed_over_for_a_later_one(self):
+        locked = self.locked(Path(tempfile.mkdtemp()) / "locked")
+        project = project_with({"t1071": {"kind": "path", "exe": "no-such-program-p1071",
+                                          "also": [str(locked / "tool"), sys.executable]}})
+        self.assertEqual(tool_finder.find("t1071", project, self.nobody).command, [sys.executable])
+
+    def test_an_also_path_spark_cannot_read_is_named_when_no_place_finds_the_tool(self):
+        locked = self.locked(Path(tempfile.mkdtemp()) / "locked")
+        project = project_with({"t1071": {"kind": "path", "exe": "no-such-program-p1071", "also": [str(locked / "tool")]}})
+        self.assertIn("%s cannot" % (locked / "tool"), self.missing(project))
+
+    def test_status_with_a_node_modules_spark_cannot_read_names_it_in_the_row(self):
+        # a child with no PATH, as P1041's test of downloads; bun is this Python, so the row is tsci's own, not its need's
+        project = project_with({"bun": {"exe": sys.executable}})
+        self.locked(project / "node_modules")
+        env = golden_bench.child_env(Path(tempfile.mkdtemp()), "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
+        env["PATH"] = ""
+        done = golden_bench.run_child("tools.py", ["--status", "--project", str(project)], project, env)
+        self.assertEqual(done.returncode, tools.EXIT_COULD_NOT_RUN, done.stderr)
+        self.assertNotIn("Traceback", done.stdout + done.stderr)
+        self.assertEqual(done.stderr, "")
+        row = [line for line in done.stdout.splitlines() if "] board-engine " in line]
+        self.assertEqual(len(row), 1, done.stdout)
+        self.assertIn("node_modules/.bin/tsci " + self.refused, row[0])
+        self.assertIn("to install:", done.stdout)
+        self.assertIn("tscircuit", done.stdout.split("to install:")[1])
 
 
 def which_all_but(*absent):

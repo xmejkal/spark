@@ -52,6 +52,8 @@ REQUIREMENTS_STALE_MESSAGE = "requirements.json differs from what the picks give
 NO_BUILD_MESSAGE = "no build recorded yet"
 BUILT_MESSAGE = "the last build, %s: %s"
 BUILD_STALE_MESSAGE = "%s changed after the build"
+#: A record with `requirements: null` (P1095): the last build was the reference design, built from no requirements file.
+REFERENCE_BUILD_MESSAGE = "the last build was spark's reference design, not %s"
 MISSING_FACTS_MESSAGE = "%d fact(s) the board record lacks, named in firmware/pins.py"
 #: A build on the board alone (P878): its four skipped stages are final, so the build and the sheet say so and have no status.
 BOARD_ONLY_BUILD_MESSAGE = "board only: nothing to wire, no board was built"
@@ -72,6 +74,50 @@ NO_SIM_MESSAGE = "No simulation files yet (sim/wokwi.toml). Ask Claude to build 
 NO_IMAGE_MESSAGE = "No firmware image yet. The scenario run makes one. To skip the simulation, ask Claude to deploy firmware/ untested."
 IMAGE_UNTESTED_MESSAGE = "No run tested this image yet. To skip the simulation, ask Claude to deploy firmware/ untested."
 DEPLOY_HINT = "Claude then gives you the deploy line. Run it in your terminal and type yes, unless you gave Claude a standing yes for this board."
+#: The deploy phase after a deploy (P1043): what the newest board log in sim/runs/board/ says. Its time as written, the
+#: image's first 12 hex digits, and the words of its verdict; then its cause, and last how many logs there are.
+DEPLOYED_MESSAGE = "Last deploy %s, image %s: %s."
+DEPLOYS_LOGGED = ("%d deploy logged.", "%d deploys logged.")
+#: ON THE BOARD on the page (P1062, `deploy_reading.deployed_line`): the time read in the machine's zone and the verdict's words.
+DEPLOYED_LINE = "Last deploy %s. %s."
+#: The words of a verdict: ready seen and ready not seen read the files back; ready unknown by its cause's read-back.
+#: NO_READ_BACK_WORDS are brief D10's words, exactly (the PO, 2026-11-23).
+SEEN_WORDS = "written by the flasher, files read back, ready seen"
+NOT_SEEN_WORDS = "written by the flasher, files read back, ready not seen"
+NO_READ_BACK_WORDS = "written by the flasher, nothing read back, start not seen"
+READ_BACK_WORDS = "written by the flasher, files read back, start not seen"
+LOST_WORDS = "written by the flasher, files read back, ready printed, then the board was lost"
+UNSURE_WORDS = "written by the flasher, start not confirmed"
+#: The words of a flash that did not finish after the yes (P1092): an erase that did not connect leaves the board as it
+#: was, so they say "may be erased", never "erased".
+FLASH_NOT_FINISHED_WORDS = "flash not finished, nothing read back, the board may be erased"
+CAUSE_MESSAGE, NO_CAUSE_MESSAGE = "Cause in the log: %s.", "Cause not recorded."
+#: The cause of a deploy that did not see ready, or of a flash that did not finish (P1092, P1096), by its code in the board
+#: log's reason line (the bench's board_codes and the core's crash, as equal literals: this module imports nothing of spark): spark's words
+#: for it, and whether spark read the board's files back (True, False, or None: the log cannot tell). A code not here
+#: reads as not recorded. A crash and a Ctrl-C end a flash or a verify (P1110), so their words name no stage, and their
+#: read-back is None: a flash not finished takes False from its verdict, and a verify's ready unknown cannot tell.
+CAUSE_WORDS = {"files_unread": ("spark did not reach the board to read its files", False),
+               "firmware_not_started": ("the command that starts the firmware failed", True),
+               "no_files_named": ("the passed run's log names no files, so spark had none to read back", False),
+               "board_lost": ("spark found no deepsleep call in firmware/, so it does not count the ready", True),
+               "port_gone": ("the board's port was gone", None),
+               "download_mode_stayed": ("the board stayed in download mode", None),
+               "files_differ": ("the board's files are not the image's", True),
+               "firmware_error": ("the firmware stopped with an error", True),
+               "no_ready_line": ("the firmware printed no ready line", True),
+               "flash_failed": ("a flash command failed", False),
+               "grant_ended": ("your yes ended before the erase's retry", False),
+               "crash": ("spark crashed during the deploy", None),
+               "interrupted": ("a Ctrl-C interrupted the deploy", None)}
+#: What the image the project holds now says of the last deploy (`deploy_reading.deploy_fact`): the image it wrote, a
+#: different image, firmware/ changed after the image, or no image now. Any but the first makes the deploy stale.
+DEPLOY_CURRENT, IMAGE_DIFFERS, FIRMWARE_NEWER, DEPLOY_NO_IMAGE = "current", "image-differs", "firmware-newer", "no-image"
+FIRMWARE_NEWER_MESSAGE = "Your firmware changed after the image that the last deploy wrote."
+OTHER_IMAGE_MESSAGE = "The last deploy wrote a different image from the one this project has now."
+NO_IMAGE_NOW_MESSAGE = "This project has no image now."
+#: The says line that opens a stale deploy, by its fact.
+STALE_DEPLOY_SAYS = {FIRMWARE_NEWER: FIRMWARE_NEWER_MESSAGE, IMAGE_DIFFERS: OTHER_IMAGE_MESSAGE, DEPLOY_NO_IMAGE: NO_IMAGE_NOW_MESSAGE}
 
 #: The phases each kind of offer can make out of date (P829). An offer names one only when the phase holds something now
 #: (`phase_readers.makes_stale`). The build makes none: the simulation's own staleness is P880's.
@@ -138,16 +184,38 @@ BUILD_MESSAGE = ("Saves its files in this project: the board file and its footpr
                  "simulation files, the build record in .spark/build.json and this page.")
 REPLACE_MESSAGE = ("A board file spark wrote is replaced, and the old one is kept in .spark/previous. A board file you "
                    "changed is left alone.")
-BUILD_REFUSED_MESSAGE = "If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted."
-#: A build whose board tool (tscircuit) is not installed does not finish: kept_files removes what described an earlier build.
-NO_TOOL_MESSAGE = ("If the board tool is not installed, the board is not built, and the old wiring sheet, drawings and this "
-                   "page are deleted.")
+#: A refused parts list builds nothing: kept_files keeps the earlier sheet, drawings (P1093) and pin map (P1109).
+BUILD_REFUSED_MESSAGE = ("If spark refuses the parts list, the old wiring sheet, drawings and pin map stay as an earlier "
+                         "build's, and this page is deleted.")
+#: The same for a board-only parts list, whose build deletes dist/ and the sheet (P236), and a refused one neither (P1109).
+BOARD_ONLY_REFUSED_MESSAGE = ("If spark refuses the parts list, the old dist folder, wiring sheet, drawings and pin map stay "
+                              "as an earlier build's, and this page is deleted.")
+#: A build whose board tool (tscircuit) is not installed does not finish: kept_files keeps the earlier sheet and drawings,
+#: named as an earlier build's (P1093), and removes the page.
+NO_TOOL_MESSAGE = ("If the board tool is not installed, the board is not built, the old wiring sheet and drawings stay as an "
+                   "earlier build's, and this page is deleted.")
 #: A parts list that says board_only and names no part: the build skips every stage but the board and the simulation.
 BOARD_ONLY_BUILD_EFFECT = ("This board needs no parts, so nothing is built or wired. Saves the pin map your firmware "
                            "imports, the simulation files and the build record in .spark/build.json.")
 DIST_REMOVED_MESSAGE = "This board needs no wiring, so the old dist folder is deleted."
 BUILT_HISTORY_MESSAGE = "Notes the build in your history."
 NO_SIMULATION_MESSAGE = "Runs no simulation and costs nothing."
+#: P1044: the witnesses that the person's breadboard can be wired, each with its day ("22 Nov 2026", `wired_board.day_of`).
+#: The kept sheet's day is its file's last change, so the line says "dated", never "written", and what spark cannot see.
+WIRED_SHEET_MESSAGE = "A wiring sheet dated %s is in the project. Spark cannot see whether you wired from it."
+#: The newest board log's day: a log of ready not seen is still a board on the bench, so no word says the firmware ran.
+WIRED_DEPLOY_MESSAGE = "Spark logged a deploy to a board on %s."
+#: The step after the witnesses, in the parts phase's line: a condition for the person, never a claim that it is wired.
+WIRED_STEP_MESSAGE = ("If you wired the board: a new pick needs a new build, and a new build can move pins. Compare the new "
+                      "sheet with your wiring before power, and rewire what differs.")
+#: The fixed sentences that open a pick's and a build's effect on a board that can be wired. They hold no date, so a newer
+#: sheet or log never changes the fingerprint; only a witness that appears or goes away does.
+WIRED_PICK_MESSAGE = ("If you wired the board, this pick needs a new build, and a new build can move pins: compare the new "
+                      "sheet with your wiring before power, and rewire what differs.")
+WIRED_BUILD_MESSAGE = ("If you wired the board, this build can move pins: compare the new sheet with your wiring before "
+                       "power, and rewire what differs.")
+#: The fixed sentence of each kind of offer that can move a pin.
+WIRED_EFFECT = {PICK: WIRED_PICK_MESSAGE, BUILD_BOARD: WIRED_BUILD_MESSAGE}
 
 #: The page's script (P829 PR 3): the kinds of offer the page sends from its buttons (a drop is asked in the chat, P883),
 #: and every word the script shows. Python writes them into the page's inert words block; the script fills in only a
@@ -166,7 +234,11 @@ NOT_WITHDRAWN_SAYS = "Could not withdraw. The request still waits."
 #: The intro of the published page, for its owner: the script puts it in place of PAGE_INTRO.
 PUBLISHED_INTRO = "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page."
 WAITING_FOR = "Waiting for Claude: %s."
-PAGE_FROM = "Page from %s."
+#: The last request under the NOW box (P1062): its time in the browser's zone and its label, then what the page says of it.
+LAST_REQUEST_SAYS = "Your last request, %s: %s."
+#: The last request's words when its offer is no longer on the page (the review of #1619): by its kind, else one sentence.
+LAST_REQUEST_KINDS = {PICK: "a pick", WRITE_REQUIREMENTS: "the parts list", BUILD_BOARD: "the build"}
+LAST_REQUEST_OTHER = "a step this page no longer offers"
 NEW_STATE = "Reload to see the new state."
 #: What the page says when a step ran ok, by its kind: what it did and what is not done yet.
 RAN_OK_SAYS = {PICK: "Saved as the pick. Nothing is built yet. " + NEW_STATE,
@@ -192,17 +264,30 @@ PAGE_NOT_WRITTEN = "page_not_written"
 OK_WORD = "ok"
 NOT_CHECKED_WORD = "not checked by spark"
 NOT_CHECKED_LEGEND = "spark does not judge this phase, so no mark says it is done"
-BENCH_NOTE = "This page reads the project's files. It does not know whether the board is wired or flashed."
+#: The design's meaning (P1043-D10) in words that name no phase (the review of #1579).
+BENCH_NOTE = "This page reads the project's files and its board logs. It cannot see your wiring or what the board shows now."
 STANDS_AT_LINE = "The project stands at: %s."
 #: The line under the page's title (P828 step 2, the PO, 2026-11-21: "it just doesn't guide a person"): what the page
 #: is and how to act on it. From disk every action is a message to Claude.
 PAGE_INTRO = "Where this project stands. This page only shows it. To change anything, tell Claude in the chat."
-#: Said under the intro when the page holds wiring steps, so the wiring comes first and the phases are folded below it.
-WIRING_FIRST = "Below: the wiring and its pictures, then each phase, folded: click one to read it."
+#: The freshness line under the title (P1062, the P1038 design): the newest change of the fingerprint's files, read in the
+#: machine's zone (`zone_time.day_and_time`), or the line for a page that knows no time.
+FRESH_LINE = ("This page shows the project as its files last changed, %s. If you changed or deployed something after that, "
+              "type /spark:page in the chat.")
+FRESH_NONE = ("This page does not know when the project last changed. If you changed or deployed something, type "
+              "/spark:page in the chat.")
 NOTHING_OPEN_LINE = "No phase is open."
-#: The guide on the page (P977 PR 2): the label of each line (NOW also names its phase, to tie it to the rail). The link to the
-#: first wiring step is the wiring section's own (ONE_AT_A_TIME), drawn when the guide's now holds the wiring (`now.steps`).
+#: The guide on the page (P977 PR 2, P1062): the NOW box's heading (its phase and who acts, `now.by` joined by NOW_BY_JOIN),
+#: ON THE BOARD and NEXT, then the muted lines' labels. The link to the first wiring step is the wiring section's own
+#: (ONE_AT_A_TIME), drawn on NEXT when the guide's now holds the wiring (`now.steps`).
+NOW_BY, NOW_BY_JOIN, ON_BOARD_LABEL, NEXT_ACT_LABEL = "NOW (%s), by %s", " and ", "ON THE BOARD", "NEXT"
+#: GUIDE_NOW is the CLI's NOW line (`show_flow`).
 GUIDE_NOW, GUIDE_DONE, GUIDE_LATER, GUIDE_SET_ASIDE = "NOW (%s)", "DONE", "LATER", "SET ASIDE"
+#: The folds' headings (P1062): the parts, the wiring with its count of steps, the pictures, and the developer fold, always
+#: closed, which holds the phases, each offer's key and effect, the marks and the record ids.
+PARTS_HEADING, PICTURES_HEADING = "Parts", "Pictures"
+WIRING_STEPS = ("Wiring: %d step", "Wiring: %d steps")
+DEVELOPER_HEADING = "For developers: the phases, each offer's key and effect, the marks, the record ids"
 NOT_DRAWN_HERE = "Not drawn here. The build draws it: run /spark:build --keep."
 NO_PICTURE_FILE = "Not drawn: %s is not in the project yet. The build with --keep writes it."
 UNREADABLE_PICTURE = "Not drawn: %s cannot be read."
@@ -257,6 +342,32 @@ SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal
 SCENARIO_HINT = SIMULATE_NOW
 DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then run the deploy "
               "in your terminal.")
+#: The NOW of an open deploy after a deploy (P1043): the job in words, by the status and the cause of the newest board
+#: log (`deploy_reading.deploy_now`). No sentence claims what the board does now, and none names a path or a command.
+DEPLOY_NO_START_NOW = ("Spark could not confirm that the firmware started after the last deploy. Ask Claude to look at "
+                       "the board with you. If the look asks for it, run the deploy again in your terminal.")
+DEPLOY_LOST_NOW = ("Spark saw ready after the last deploy, then lost the board, and cannot tell from here whether the "
+                   "firmware still runs. If your gadget works, nothing is wrong. Else ask Claude to look at the board with you.")
+DEPLOY_AWAY_NOW = "After the last deploy, %s. Ask Claude to look at the board with you."
+DEPLOY_UNKNOWN_NOW = ("The log does not say whether the firmware started after the last deploy. Ask Claude to look at the "
+                      "board with you.")
+DEPLOY_PROBLEMS_NOW = "After the last deploy, %s. Ask Claude to go through the board log with you."
+#: The NOW of a flash that did not finish (P1092): it wins over a stale image.
+DEPLOY_NOT_FINISHED_NOW = ("The last flash did not finish, so the board may be erased. The board log says what failed. Ask "
+                           "Claude to look at the board with you, then run the deploy again in your terminal.")
+#: DEPLOY_PROBLEMS_NOW's words when the log records no cause (an old log whose files differed may have printed ready).
+NO_READY_SEEN_WORDS = "spark did not see ready"
+#: A stale deploy (P1043-D4): who acts first and the sentence, by its fact. Claude makes the image for firmware newer than
+#: the image and for no image; the person runs the deploy of the image the project has now.
+STALE_DEPLOY_NOW = {FIRMWARE_NEWER: ([BY_CLAUDE], FIRMWARE_NEWER_MESSAGE + " Ask Claude to make the image again and to look "
+                                                  "at the board. Then run the deploy line in your terminal."),
+                    DEPLOY_NO_IMAGE: ([BY_CLAUDE], NO_IMAGE_NOW_MESSAGE + " Ask Claude to make the image and to look at "
+                                                   "the board. Then run the deploy line in your terminal."),
+                    IMAGE_DIFFERS: ([BY_TERMINAL], OTHER_IMAGE_MESSAGE + " Ask Claude to look at the board, then run the "
+                                                   "deploy line in your terminal.")}
+#: The guide's one line when no phase is open: the deploy is ok (P1043, `guide.no_open_phase`).
+NO_OPEN_PHASE_NOW = ("Nothing is waiting on you: the last deploy started the image this project holds now. Tell Claude what "
+                     "to change next.")
 NEEDS_STALE_NOW = ("Your goal or must lines changed after the needs were written. "
                    "Ask Claude to go through the needs and the must lines with you.")
 #: The idea phase after a need was dropped (P1027, slice 2): the ids, then what Claude asks and how it is taken back. No

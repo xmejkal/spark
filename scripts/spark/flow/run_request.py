@@ -22,6 +22,7 @@ from spark.flow.fingerprint import SHORT, fingerprint_of
 from spark.flow.guide import NO_MODEL_CODES, stops_only_for_no_model
 from spark.flow.phase_readers import MARKS
 from spark.flow.show_flow import phases_of, privacy_for
+from spark.firmware.project_secrets import ProjectSecrets
 
 # --- MVP ---
 #: The request file, in the project: one request, which `/spark:page` writes and this Operation deletes.
@@ -38,7 +39,8 @@ PageRequest = namedtuple("PageRequest", "id key seen")
 RAN_LINE = "ran %s: %s"
 
 
-#: The Operations the page may run, by op: today's three (P829). Piece 4's catalogue of ops replaces this table (P793).
+#: The Operations the page may run, by op: today's three (P829). The page's allow-list, a subset of the Operation catalogue
+#: (P1077 pins it); RunRequest runs the offer's step (P1030). Its end is P1082 #1587's.
 STEP_OPERATIONS = {operation.name: operation for operation in (PickParts, WriteRequirements, BuildBoard)}
 
 
@@ -120,12 +122,13 @@ def answer_of(kind, result):
     return status, None
 
 
-def refused_answer(request, offer, fingerprint, refused):
+def refused_answer(request, offer, fingerprint, refused, subject=None):
     """The answer of a request refused with `refused`: nothing ran. It names the key and the label only of an offer spark
-    holds now, so a request's own text, any length, never reaches the answer."""
+    holds now, so a request's own text, any length, never reaches the answer. `subject` is the Finding's: the files of a
+    secrets refusal (P1060)."""
     data = {"for": id_of(request), "key": offer.key if offer else None, "label": offer.label if offer else None, "ran": False,
             "status": COULD_NOT_RUN, "mark": MARKS[COULD_NOT_RUN][1], "line": refused.meaning, "note": None, "fingerprint": fingerprint}
-    return OperationResult(data, [Finding.of(COULD_NOT_RUN, None, refused, refused.meaning)], lines=[refused.meaning])
+    return OperationResult(data, [Finding.of(COULD_NOT_RUN, subject, refused, refused.meaning)], lines=[refused.meaning])
 
 
 class RunRequest(Operation):
@@ -133,8 +136,8 @@ class RunRequest(Operation):
     Operation: run the step the page asked for. It reads the request and deletes it (`read_request`), reads the flow, and
     refuses with one could-not-run Finding of `request_codes` (`refusal_of`), or runs the kind's Operation through
     `run_operation` with the values of spark's offer: its step, parsed by the Operation of the step's op (`values_of`). A
-    step whose argv does not parse is refused too. Its data says for which request, what ran and how it ended, and the
-    fingerprint after the run. A step's Findings and diagnostics are its own. `readers` and `operations` ({op: Operation})
+    step whose argv does not parse is refused too, and so is any request while a secrets file cannot be read (P1060 D5),
+    with no key or label. Its data says for which request, what ran and how it ended, and the fingerprint after the run. A step's Findings and diagnostics are its own. `readers` and `operations` ({op: Operation})
     are what a test swaps (None: the real ones).
     """
 
@@ -154,6 +157,9 @@ class RunRequest(Operation):
         phases = phases_of(project, self.readers)
         fingerprint = fingerprint_of(project, phases)
         offers = {offer.key: offer for phase in phases for offer in phase.offers}
+        unreadable = ProjectSecrets.read(project).unreadable  # D5 first: the answer is published, and the mask has a hole
+        if unreadable:  # no offer: its key and label can hold a value of the file that could not be read (#1610 review)
+            return refused_answer(request, None, fingerprint, request_codes.REQUEST_SECRETS_UNREADABLE, ", ".join(unreadable))
         refused = refusal_of(request, offers, fingerprint)
         offer = offers.get(key_of(request))
         if refused:

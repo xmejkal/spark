@@ -2,19 +2,19 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "the step link shows without steps in now (P977 PR 2)",
-  "find": "        if now and now.get(\"steps\") and self._wiring_first(page) and page.wiring.steps:",
-  "replace": "        if now and self._wiring_first(page) and page.wiring.steps:"
+  "find": "        if now.get(\"steps\") and wiring and not wiring.why_missing and wiring.steps:",
+  "replace": "        if wiring and not wiring.why_missing and wiring.steps:"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "the step link shows with no wiring steps on the page (P977 PR 2)",
-  "find": "        if now and now.get(\"steps\") and self._wiring_first(page) and page.wiring.steps:",
-  "replace": "        if now and now.get(\"steps\"):"
+  "find": "        if now.get(\"steps\") and wiring and not wiring.why_missing and wiring.steps:",
+  "replace": "        if now.get(\"steps\"):"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "the step link goes to step 1 whatever the first step's number (P977 PR 2)",
-  "find": "            first = page.wiring.steps[0][0]",
+  "find": "            first = wiring.steps[0][0]",
   "replace": "            first = 1"
  },
  {
@@ -32,13 +32,13 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "an empty list still draws its line (P977 PR 2)",
-  "find": "_text(\", \".join(items)), link) if items else \"\"",
-  "replace": "_text(\", \".join(items)), link) if True else \"\""
+  "find": "_text(\", \".join(items))) if items else \"\"",
+  "replace": "_text(\", \".join(items))) if True else \"\""
  },
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "the no-simulation line is never drawn (P977 PR 2)",
-  "find": "\"<p>%s</p>\" % _text(guide[\"no_simulation\"]) if guide[\"no_simulation\"] else \"\"",
+  "find": "'<p class=\"muted\">%s</p>' % _text(guide[\"no_simulation\"]) if guide[\"no_simulation\"] else \"\"",
   "replace": "\"\""
  },
  {
@@ -50,32 +50,26 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "the guide's items are not escaped (P977 PR 2)",
-  "find": "_text(label), _text(\", \".join(items)), link)",
-  "replace": "_text(label), \", \".join(items), link)"
- },
- {
-  "file": "scripts/spark/flow/flow_page.py",
-  "name": "the guide stands below the rail (P977 PR 2)",
-  "find": "self._intro(page), self._guide(page), self._rail(page), self._stands_at(page)]",
-  "replace": "self._intro(page), self._rail(page), self._guide(page), self._stands_at(page)]"
+  "find": "(_text(label), _text(\", \".join(items)))",
+  "replace": "(_text(label), \", \".join(items))"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "a null now still draws a NOW line (P977 PR 2)",
-  "find": "[now[\"says\"]], link, sendable_now(page)) if now else \"\"",
-  "replace": "[now[\"says\"] if now else \"\"], link, sendable_now(page)) if True else \"\""
+  "find": "        if not now:\n            said = page.guide.get(\"no_open_phase\")",
+  "replace": "        if False:\n            said = page.guide.get(\"no_open_phase\")"
  },
  {
   "file": "scripts/spark/flow/write_flow_page.py",
   "name": "the page is built with no guide (P977 PR 2)",
-  "find": "newest_change(project), guide)",
-  "replace": "newest_change(project), None)"
+  "find": "reading.stamp[\"newest\"], reading.guide,",
+  "replace": "reading.stamp[\"newest\"], None,"
  },
  {
   "file": "scripts/spark/flow/write_flow_page.py",
   "name": "the masked page drops its guide's mask (P977 PR 2)",
-  "find": "page.fingerprint, page.written, masked(page.guide))",
-  "replace": "page.fingerprint, page.written, page.guide)"
+  "find": "page.fingerprint, page.written, masked(page.guide), masked(page.deployed))",
+  "replace": "page.fingerprint, page.written, page.guide, masked(page.deployed))"
  },
  {
   "file": "scripts/spark/flow/write_flow_page.py",
@@ -110,8 +104,8 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "NOW names no phase (P977 PR 2 review)",
-  "find": "flow_codes.GUIDE_NOW % now[\"phase\"]",
-  "replace": "flow_codes.GUIDE_NOW % \"\""
+  "find": "flow_codes.NOW_BY % (now[\"phase\"],",
+  "replace": "flow_codes.NOW_BY % (\"\","
  },
  {
   "file": "scripts/spark/flow/guide.py",

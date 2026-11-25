@@ -499,10 +499,44 @@ class AnUnreadableStoreTest(StoreCase):
         self.assertIn("Not registered.", done.stderr)
 
     def test_show_names_the_tools_file_it_cannot_read_and_exits_2(self):
-        # D4: the bench gives every ToolError the code tool_missing today, so this pins it
+        # P1058 (#1555): a tools file the bench cannot read keeps its own code and the records fix, not tool_missing
         done, said = self.run_bench("show", "--json")
-        self.assertEqual((done.returncode, said["unchecked"][0]["code"]), (2, "tool_missing"), done.stderr)
+        self.assertEqual((done.returncode, said["unchecked"][0]["code"], said["unchecked"][0]["fix"]),
+                         (2, "file_refused", "fix the file the sentence names, or its permissions, then run again"), done.stderr)
         self.assertIn("cannot be read", said["unchecked"][0]["sentence"])
+
+
+class ABrokenToolsFileTest(StoreCase):
+    """P1058 (#1555): a store's tools file that is not JSON is tools_list_broken in the bench, with the records fix, in a
+    child that reads it as it starts, and bench.py record keeps the fix that names its next command (the council's A)."""
+
+    def setUp(self):
+        super().setUp()
+        (self.home / "tools.json").write_text('{"tools": ')
+
+    def run_bench(self, *argv):
+        env = golden_bench.child_env(self.home, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
+        done = golden_bench.run_child("bench.py", list(argv), tempfile.mkdtemp(), env)
+        self.assertNotIn("Traceback", done.stdout + done.stderr)
+        return done, json.loads(done.stdout)
+
+    def test_show_says_the_tools_file_is_no_tools_list_and_exits_2(self):
+        done, said = self.run_bench("show", "--json")
+        (item,) = said["unchecked"]
+        self.assertEqual((done.returncode, item["code"], item["fix"]),
+                         (2, "tools_list_broken", "fix the tools file the sentence names, or delete it"), done.stderr)
+        self.assertIn("is not JSON", item["sentence"])
+        self.assertEqual(done.stderr.splitlines(), ["bench.py: %s" % item["sentence"]])
+
+    def test_record_keeps_its_again_fix_for_a_tools_file_stop(self):
+        # the council's A (P1058): record's fix names its next command for a tools-file stop too, as bench.md says
+        RegisteredProjectStore().register("pixel-games", ORIGIN, "box.py", REGISTERED_AT)
+        done, said = self.run_bench("record", "pixel-games", "--json")
+        (item,) = said["unchecked"]
+        self.assertEqual((done.returncode, item["code"]), (2, "tools_list_broken"), done.stderr)
+        self.assertTrue(item["fix"].startswith("fix what the line above says, then run bench.py record pixel-games again"), item["fix"])
+        self.assertEqual(done.stderr.splitlines(), ["bench.py: %s" % item["sentence"], "bench.py: Nothing was written. %s" % item["fix"]])
+        self.assertFalse(store.place("boards").exists())
 
 
 class TheFixRoundTest(RecordCase):

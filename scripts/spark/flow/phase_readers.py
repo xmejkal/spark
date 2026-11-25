@@ -9,13 +9,13 @@ import json
 from collections import namedtuple
 from pathlib import Path
 
-from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, sha256_of
+from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, earlier_dist, sha256_of
 from spark.build.stages import BUILD, SIMULATION
 from spark.breadboard import sheet
 from spark.design import need_requirements, needs, needs_basis
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
-from spark.flow import flow_codes, offer_steps
+from spark.flow import deploy_reading, flow_codes, offer_steps
 from spark.records import record_kind, records_codes, store
 from spark.records.brief import Brief
 from spark.core.errors import CodedMessageError
@@ -317,6 +317,13 @@ def pick_offer(project, need, candidate, listed, notes):
                  offer_steps.pick_step(project, need, pick_id, candidate_label(candidate)))
 
 
+def pick_need(key):
+    """The need of a pick offer's key, as `pick_offer` makes it (`pick:<need>:<pick id>`), else None (P1062): the page
+    puts each pick in its need's row, and the key's format keeps this one owner."""
+    kind, _, rest = key.partition(":")
+    return rest.split(":", 1)[0] if kind == flow_codes.PICK and ":" in rest else None
+
+
 def counted(listed):
     """The needs that count for the parts (P977): each with a pick, and each the person did not set aside. `listed` are
     needs as `needs.read` or `needs.match` gives them; the guide reads the same rule."""
@@ -432,7 +439,9 @@ class RequirementsReader(PhaseReader):
 
 
 def why_build_stale(project, record):
-    """The sentence that says the requirements file changed after the build `record` was made, or None when it did not."""
+    """The sentence that says the requirements file changed after the build `record`, or that it was the reference design's (P1095), or None."""
+    if "requirements" in record and record["requirements"] is None:  # P1095: the reference design's build, from no file
+        return flow_codes.REFERENCE_BUILD_MESSAGE % REQUIREMENTS_FILE
     named = Path(record.get("requirements") or REQUIREMENTS_FILE)
     path = named if named.is_absolute() else Path(project) / named
     if not path.is_file() or sha256_of(path) != record.get("requirements_sha256"):
@@ -454,7 +463,7 @@ def build_effect(project):
     """The effect of the build offer in `project`: what it saves, what it replaces or deletes, the history note of a
     project on the person's list, and that it runs no simulation. A board-only parts list saves less and deletes dist/."""
     if is_board_only(project):
-        said = [flow_codes.BOARD_ONLY_BUILD_EFFECT, flow_codes.BUILD_REFUSED_MESSAGE]
+        said = [flow_codes.BOARD_ONLY_BUILD_EFFECT, flow_codes.BOARD_ONLY_REFUSED_MESSAGE]
         said += [flow_codes.DIST_REMOVED_MESSAGE] if (Path(project) / "dist").is_dir() else []
     else:
         said = [flow_codes.BUILD_MESSAGE, flow_codes.REPLACE_MESSAGE, flow_codes.BUILD_REFUSED_MESSAGE, flow_codes.NO_TOOL_MESSAGE]
@@ -484,6 +493,7 @@ class BuildReader(PhaseReader):
         says = [flow_codes.BUILT_MESSAGE % (record.get("at") or flow_codes.UNKNOWN, record.get("status") or flow_codes.UNKNOWN)]
         says += ["%s: %s" % (stage.get("name"), stage.get("status")) for stage in record.get("stages") or [] if stage.get("status") != OK]
         says += [flow_codes.MISSING_FACTS_MESSAGE % len(record["missing_facts"])] if record.get("missing_facts") else []
+        says += [line for line in [earlier_dist(project)] if line]  # P1088: a dist/ the last build did not write (P816)
         stale = why_build_stale(project, record)
         if stale:
             return self.phase(flow_codes.STALE, [stale] + says, offers)
@@ -561,12 +571,23 @@ class SimulateReader(PhaseReader):
 
 
 class DeployReader(PhaseReader):
-    """Strategy: the deploy is done in the person's terminal, after Claude looked at the board, so it is not started here."""
+    """Strategy: the deploy is done in the person's terminal, after Claude looked at the board. It reads the newest board
+    log in sim/runs/board/ (P1043, `deploy_reading`): its time, image, verdict and cause, never its port, facts line,
+    console or a tool's text. With no log it is not started. Only ready seen on the image the project holds now is ok; a
+    log that cannot be read is could-not-run."""
 
     PHASE, BY = flow_codes.DEPLOY, flow_codes.BY_TERMINAL
 
+    def __init__(self, state=None):
+        self.state = state  # the DeployState of one run (the review of #1579), or None to read it here
+
     def read(self, project):
-        return self.phase(flow_codes.NOT_STARTED, [flow_codes.LOOK_FIRST_MESSAGE, flow_codes.DEPLOY_HINT])
+        state = self.state or deploy_reading.read_deploy(project)
+        if state.error:
+            raise state.error
+        if state.logged is None:
+            return self.phase(flow_codes.NOT_STARTED, [flow_codes.LOOK_FIRST_MESSAGE, flow_codes.DEPLOY_HINT])
+        return self.phase(state.status, deploy_reading.deployed_says(state.count, state.logged, state.fact))
 
 
 #: The readers of the nine phases, in the order of `flow_codes.PHASES`.

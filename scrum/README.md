@@ -38,7 +38,7 @@ Two repositories, one team, a board for each (the PO orders both):
 ## The people
 
 Three roles: **the Product Owner** (Petr), **Claude** (developer and orchestrator) and **the agents** Claude launches;
-the tech lead and the PO assistant (the PO, 2026-10-06) are roles a council's lenses play. What each decides, proposes,
+the tech lead and the PO assistant (the PO, 2026-10-06) are roles that the [`tech-lead`](../.claude/agents/tech-lead.md) agent and a council's lenses play. What each decides, proposes,
 does and may not is on their role cards in [`TEAM.md`](TEAM.md).
 
 Petr is the Product Owner and that is not decorative. Proposals for ordering come to him ranked with reasons; the
@@ -253,9 +253,10 @@ that merges a design or closes an epic takes the full council even when it is on
   it?"* His later words set the table below: 2026-11-12 (*"for designs and planning and architecture, lets try to use
   the best model"*), 2026-11-18 (*"Please don't use Fable for the refutersr unless its a bigger refactoringg or so"*)
   and 2026-11-19 (Opus as the session's model in spark, and Opus for the lenses of a design or epic council). The
-  table is Claude's reading of those words, his to change. Four parts of it stand on no words of his: Fable for a
-  research finding and for the final review of a release, Opus for a builder, and Fable for the refuter of a design
-  or an epic (he named "a bigger refactoring"). His yes of 2026-11-19 put the synthesis "on Fable in the main
+  table is Claude's reading of those words, his to change. Five parts of it stand on no words of his: Fable for a
+  research finding and for the final review of a release, Opus for a builder, Fable for the refuter of a design
+  or an epic (he named "a bigger refactoring"), and Opus for the `tech-lead` seat (his words of 2026-11-17 put the
+  council that answers in his place on Fable). His yes of 2026-11-19 put the synthesis "on Fable in the main
   session". The main session runs on Opus since that day, so the `architect` agent carries it. Fable, the most
   capable model, runs only on the rows that name it, whatever a skill says about the model (superpowers' plans and
   reviews ask for the most capable one).
@@ -263,14 +264,19 @@ that merges a design or closes an epic takes the full council even when it is on
   | the job | who runs it | model |
   | --- | --- | --- |
   | a story's plan, the judgment of results, the PO's questions | the main session | Opus |
+  | a story's plan, written for the main session | the [`plan-writer`](../.claude/agents/plan-writer.md) agent | Opus |
   | the final review of a story | a fresh agent | Opus |
   | a design, an epic's plan, a refactoring's stage split, the synthesis of a discovery or a council, a research finding that a decision rests on, the final review of a design, an epic or a release | the [`architect`](../.claude/agents/architect.md) agent | Fable |
   | the architecture lens of any council, and every lens of a design or epic council | an agent | Opus |
-  | the lens of a pull request or of a small plan, and the docs, wording and names lenses | an agent | Sonnet |
+  | the lens of a pull request or of a small plan, and the docs, wording and names lenses | the [`lens`](../.claude/agents/lens.md) agent | Sonnet |
+  | the tech lead's seat in a council | the [`tech-lead`](../.claude/agents/tech-lead.md) agent | Opus |
   | the refuter | the [`refuter`](../.claude/agents/refuter.md) agent | Opus, and Fable for a bigger refactoring, a design or an epic |
-  | a builder of new logic | an agent | Opus |
-  | a builder of a code move that the tests pin or of docs, searching and reading sources, the Miro batch, a wrap-up, the day close, a mutation sweep | an agent | Sonnet |
+  | a builder of new logic | the `builder` agent with the model raised in the launch | Opus |
+  | a builder of a code move that the tests pin or of docs (the [`builder`](../.claude/agents/builder.md) agent), searching and reading sources, the Miro batch, a wrap-up, the day close, a mutation sweep | an agent | Sonnet |
   | spark's own agents (`agents/*.md`) | each | the model its file names |
+
+  The `lens` and `builder` files name Sonnet. A launch that needs Opus (the architecture lens, a builder of new logic)
+  raises the model in the launch. The PO assistant's seat has no agent file yet: its model is not in this table.
 
   No lens runs on Fable, because a council's lenses run at once. The main session cannot change its own model: a
   session that is a discovery or a design from its first message starts on Fable by the PO's `/model`, and in every

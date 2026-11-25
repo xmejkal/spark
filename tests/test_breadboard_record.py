@@ -373,9 +373,9 @@ class CheckSpineTest(unittest.TestCase):
 
     def test_a_build_that_did_not_finish_keeps_the_record(self):
         project = self.rebuilt()
-        earlier = (project / bench_changes.WiringLog.FILE_NAME).read_text()
+        earlier, sheet = (project / bench_changes.WiringLog.FILE_NAME).read_text(), (project / "breadboard.md").read_text()
         self.keep(project, FULL, [Stage("build", check_spine.PROBLEMS, "1 error", build_codes.DESIGN_NOT_BUILT)])
-        self.assertFalse((project / "breadboard.md").exists())
+        self.assertEqual((project / "breadboard.md").read_text(), sheet)  # P1093: was "removed"; the earlier sheet stays (D6)
         self.assertEqual((project / bench_changes.WiringLog.FILE_NAME).read_text(), earlier)
 
     def test_a_build_that_did_not_finish_keeps_the_list_for_the_next_build(self):

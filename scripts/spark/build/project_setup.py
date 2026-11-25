@@ -24,12 +24,13 @@ consequence against — a finding is only "bad" relative to something the projec
 """
 
 import json
+import os
 from pathlib import Path
 
 from spark.records import board_records
 from spark.design import footprint_emitter
 from spark.build import build_codes
-from spark.records import project_commit, tool_finder
+from spark.records import project_commit, records_codes, tool_finder
 from spark.design.loader import CIRCUIT_PATHS, one_board_message
 
 from spark.core.result import Refusal
@@ -517,15 +518,40 @@ NOTHING_TO_DO = Refusal("\nnothing to do — everything already exists. --force 
 
 
 def why_project_refused(project):
-    """Value: why `project` cannot be set up, said before anything is written: no folder, or a tools file that cannot be
-    read. A Refusal, or None when it can."""
+    """Value: why `project` cannot be set up, said before anything is written: no folder, a tools file that cannot be read,
+    or a selection that cannot be opened (P1099). A Refusal, or None when it can."""
     if not project.is_dir():
         return Refusal("no directory at %s" % project, build_codes.NO_PROJECT_FOLDER)
     try:
         tool_finder.merged(project)
     except tool_finder.ToolError as broken:
         return Refusal("init_project.py: %s" % broken, build_codes.TOOLS_FILE_UNREADABLE)
+    selection = board_records.selection_file(project)
+    try:  # P1099: one that cannot be opened, a folder or a dangling link crashed the listing and the write
+        if os.path.lexists(selection):  # F2: exists() is False for a dangling link
+            selection.read_bytes()
+    except OSError as broken:
+        return Refusal("init_project.py: %s cannot be read: %s" % (selection, broken.strerror or broken), records_codes.RECORD_FILE_BROKEN)
     return None
+
+
+#: What init says when the two files name different boards (P1024): requirements.json's board wins (D35).
+BOARD_DIFFERS = ("requirements.json names %s, so %s stays the project's board: the selection in boards/active.json, %s, is "
+                 "read only when requirements.json names no board (D35)")
+
+
+def board_differs(project):
+    """[the note] when requirements.json and boards/active.json name different boards (P1024), else []. A requirements.json
+    that cannot be read is said too. A selection that cannot be read is not compared."""
+    try:
+        named = board_records.requirements_board(project)
+    except board_records.BoardError as broken:  # the review's R1: a file that cannot be opened is one too (P1099)
+        return ["the project's board is not known: %s" % broken]
+    try:
+        selected = board_records.active_id(project)
+    except board_records.BoardError:  # a selection that cannot be read is not compared
+        return []
+    return [BOARD_DIFFERS % (named, named, selected)] if named and named != selected else []
 
 
 def why_board_refused(board, project):

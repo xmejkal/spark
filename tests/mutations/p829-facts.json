@@ -38,7 +38,7 @@
  {
   "file": "scripts/spark/flow/flow_codes.py",
   "name": "the build offer does not say what a refused parts list deletes (P829)",
-  "find": "BUILD_REFUSED_MESSAGE = \"If the parts list has a problem, the old wiring sheet, drawings, this page and the pin map are deleted.\"",
+  "find": "BUILD_REFUSED_MESSAGE = (\"If spark refuses the parts list, the old wiring sheet, drawings and pin map stay as an earlier \"\n                         \"build's, and this page is deleted.\")",
   "replace": "BUILD_REFUSED_MESSAGE = \"\""
  },
  {

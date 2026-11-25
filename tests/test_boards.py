@@ -230,6 +230,26 @@ class ButtonPlacesTest(unittest.TestCase):
         (root / "requirements.json").write_text(json.dumps({}))
         self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button")
 
+    def test_of_project_reads_the_projects_board_the_selection_when_requirements_names_none(self):
+        # P1024 (D35): the places come from the record of the project's board, as the flasher's do
+        mine = definition("mine", physical={"footprint_module": "X", "footprint_export": "X", "buttons": BUTTONS})
+        for text in (None, "{}", json.dumps({"board": None})):
+            with self.subTest(requirements=text):
+                root = project(active="mine", own={"mine": mine})
+                if text is not None:
+                    (root / "requirements.json").write_text(text)
+                self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button (B, top right)")
+        root = project(active="mine", own={"mine": mine})
+        (root / "requirements.json").write_text(json.dumps({"board": LIBRARY_BOARD}))
+        self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button")
+        root = project(own={"mine": mine})  # the review's R4: a selection that holds no JSON object gives the plain words
+        (root / "boards" / "active.json").write_text("[1]")
+        (root / "requirements.json").write_text("{}")
+        self.assertIs(board_records.ButtonPlaces.of_project(root), board_records.ButtonPlaces.EMPTY)
+        root = project(active="mine", own={"mine": [1]})  # a record of no JSON object: load's AttributeError, so EMPTY
+        (root / "requirements.json").write_text("{}")
+        self.assertIs(board_records.ButtonPlaces.of_project(root), board_records.ButtonPlaces.EMPTY)
+
 
 # --- MVP --- (P512, #708) the one reader of physical.pad_aliases
 class BoardPadsTest(unittest.TestCase):
@@ -1064,6 +1084,89 @@ class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
         self.assertEqual(valid.count("is not valid JSON"), 1, valid)
         self.assertEqual(self._run("--id")[0], 1, "--id refuses: it never prints the selection in place of the requirements' board")
 
+    def test_a_broken_selection_is_said_once_by_list_and_validate(self):
+        # P1098 (#1616): a boards/active.json that cannot be read (record_file_broken) is said once, as a broken
+        # requirements.json is (P988). P1099 (#1617): a folder (F4), a dangling link (the lens's L1) or one with no read
+        # permission is said, never a crash.
+        selection = self.project / "boards" / "active.json"
+        for case, sentence in (("{x", "active.json is not valid JSON"), ("[1]", "active.json is not a JSON object"),
+                               ("folder", "active.json cannot be read: "), ("dangling link", "active.json cannot be read: "),
+                               ("no read permission", "active.json cannot be read: ")):
+            with self.subTest(case=case):
+                if selection.is_dir() and not selection.is_symlink():
+                    selection.rmdir()
+                else:
+                    selection.unlink(missing_ok=True)
+                if case == "folder":
+                    selection.mkdir()
+                elif case == "dangling link":
+                    try:
+                        os.symlink(self.project / "boards" / "gone.json", selection)
+                    except (OSError, NotImplementedError):
+                        self.skipTest("no symlinks here")
+                elif case == "no read permission":  # the last case, so the cleanup finds the file
+                    if os.geteuid() == 0:
+                        self.skipTest("root reads a file with no read permission")
+                    selection.write_text(json.dumps({"schema": 1, "board": self.BOARD}))
+                    selection.chmod(0)
+                    self.addCleanup(selection.chmod, 0o644)
+                else:
+                    selection.write_text(case)
+                code, listed, err = self._run("--list")
+                self.assertEqual((code, listed.count("no board is marked: "), listed.count(sentence)), (0, 1, 1), listed + err)
+                self.assertNotIn("*", listed)
+                code, listed, _ = self._run("--list", "--json")
+                notes = json.loads(listed).get("notes", [])
+                self.assertEqual((code, len(notes)), (0, 1), listed)
+                self.assertIn(sentence, notes[0])
+                code, valid, _ = self._run("--validate")
+                self.assertEqual((code, valid.count(sentence)), (0, 1), valid)
+                code, _, err = self._run("--id")
+                self.assertEqual((code, sentence in err), (1, True), err)
+
+    def test_a_missing_selection_or_one_naming_no_board_says_nothing(self):
+        # P1098: a selection that names no board (no_board_selected) or none at all (board_file_missing) marks no board
+        # in silence. A guard: green before P1098 by design, so the note stays for a broken file only.
+        selection = self.project / "boards" / "active.json"
+        for case in ('{"schema": 1}', "no file"):
+            with self.subTest(case=case):
+                if case == "no file":
+                    selection.unlink()
+                else:
+                    selection.write_text(case)
+                code, listed, _ = self._run("--list", "--json")
+                self.assertEqual(code, 0)
+                self.assertNotIn("notes", json.loads(listed))
+                _, valid, _ = self._run("--validate")
+                self.assertNotIn("no board is marked", valid)
+
+    def test_a_requirements_json_that_is_a_folder_or_a_dangling_link_is_said_never_the_selection(self):
+        # the PR review's RF1: requirements_board's own is_file() gate read a folder or a dangling link as no
+        # requirements.json, so --id printed the selection's board and --list marked it: a quiet fall back (D35)
+        requirements = self.project / "requirements.json"
+        for case in ("folder", "dangling link"):
+            with self.subTest(case=case):
+                if requirements.is_symlink():
+                    requirements.unlink()
+                elif requirements.is_dir():
+                    requirements.rmdir()
+                if case == "folder":
+                    requirements.mkdir()
+                else:
+                    try:
+                        os.symlink(self.project / "gone.json", requirements)
+                    except (OSError, NotImplementedError):
+                        self.skipTest("no symlinks here")
+                with self.assertRaises(board_records.BoardError) as refused:
+                    board_records.project_board_id(self.project)
+                self.assertEqual(refused.exception.code, "record_file_broken")
+                code, _, err = self._run("--id")
+                self.assertEqual((code, "requirements.json cannot be read: " in err), (1, True), err)
+                code, listed, _ = self._run("--list")
+                said = (code, listed.count("no board is marked: "), listed.count("requirements.json cannot be read: "))
+                self.assertEqual(said, (0, 1, 1), listed)
+                self.assertNotIn("*", listed)
+
 
 class TheProjectsBoardIsTheRequirementsBoardTest(unittest.TestCase):
     """P988 (D35): requirements.json's `board` names the project's board. The selection, boards/active.json, is read as the
@@ -1109,6 +1212,18 @@ class TheProjectsBoardIsTheRequirementsBoardTest(unittest.TestCase):
         with self.assertRaises(board_records.BoardError) as refused:
             board_records.load(root)
         self.assertEqual(refused.exception.code, "no_board_definition")
+
+    def test_a_selection_that_is_no_json_object_is_record_file_broken(self):
+        # P1094 (#1612, folded into P1024): active_id called .get on it, and init crashed with an AttributeError
+        for text in ("[1]", '"x"', "3"):
+            with self.subTest(selection=text):
+                root = self.apart("{}")
+                (root / "boards" / "active.json").write_text(text)
+                for read in (board_records.active_id, board_records.project_board_id):
+                    with self.assertRaises(board_records.BoardError) as refused:
+                        read(root)
+                    self.assertEqual(refused.exception.code, "record_file_broken")
+                    self.assertIn("active.json is not a JSON object", str(refused.exception))
 
 
 class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):

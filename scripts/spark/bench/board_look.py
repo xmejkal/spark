@@ -26,6 +26,7 @@ from collections import namedtuple
 from dataclasses import dataclass
 
 from spark.bench import board_codes
+from spark.bench import board_log
 from spark.records import board_records
 from spark.records import brief
 from spark.records import deploy_record_store
@@ -98,6 +99,9 @@ class LookStopError(ValueMessageError):
 Stop = namedtuple("Stop", "code sentence")
 #: Value. Why the look gave no token: a board_codes code and the sentence a person reads.
 NoToken = namedtuple("NoToken", "code sentence")
+#: Why there is no token when the image file is gone or unreadable since the look found it (P1111), with the same
+#: reason, no_image, as the deploy gate gives.
+IMAGE_GONE_REASON = "the image file is gone or unreadable since the look found it"
 # --- end MVP ---
 
 
@@ -374,7 +378,11 @@ class LookReport:
             return NoToken(board_codes.STOP_FOUND, "the look found a stop")
         if not self.reading.mac:
             return NoToken(board_codes.NO_MAC, "the board's MAC could not be read")
-        return NoToken(self.image_code, self.image_why) if self.image_why else None
+        if self.image_why:
+            return NoToken(self.image_code, self.image_why)
+        if self.image and not os.access(self.image, os.R_OK):  # P1111: token() reads the file, and the answer keeps its data
+            return NoToken(board_codes.NO_IMAGE, IMAGE_GONE_REASON)
+        return None
 
     @functools.cached_property
     def micropython_banner(self):
@@ -410,6 +418,8 @@ class LookReport:
 # --- MVP ---
 #: The look's words for a board with no deploy in its store record, and what the record keeps (P920).
 NONE_RECORDED_NOTE = "none in its store record (it keeps its own deploys and those that a registered project recorded)"
+#: The look's words for a last deploy whose flash did not finish after the yes (P1097): its project and its time.
+NOT_FINISHED_NOTE = "a flash of %s that did not finish, %s: the board may be erased (its store record, not read from the board)"
 
 
 def say_last_deploy(last):
@@ -418,6 +428,8 @@ def say_last_deploy(last):
     if last.state == outcomes.RECORDED and last.made_by:  # P920: a registered project recorded it, and spark read nothing
         said = printable("%s, made by %s and not by spark, %s (its store record, not read from the board)" % (
             last.project, last.made_by, last.time_said()))
+    elif last.state == outcomes.RECORDED and last.verdict == board_log.FLASH_NOT_FINISHED:
+        said = printable(NOT_FINISHED_NOTE % (last.project, last.time_said()))
     elif last.state == outcomes.RECORDED:
         said = printable("%s, %s, %s%s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said(),
                                                                                        last.banner_said()))
@@ -534,7 +546,7 @@ class LookService:
     @staticmethod
     def record_of(project):
         """The board record requirements.json names, or a LookStopError pointing to P230 (D36: two records only)."""
-        try:
+        try:  # its own read (P1024): no board in requirements.json stops the look, no_board_named, never the selection
             name = json.loads((project / "requirements.json").read_text()).get("board")
         except (OSError, ValueError, AttributeError):
             name = None

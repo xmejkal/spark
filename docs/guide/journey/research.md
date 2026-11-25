@@ -34,7 +34,7 @@ A real gap goes to [`/spark:research`](../../../commands/research.md), which wor
 
 Either way the result is a record in the project's `parts/`, with every fact cited and every unconfirmed fact marked.
 Another project finds it once `parts.py --promote <id> --project .` copies it into spark's library, or once a drawer
-entry links it, which puts a copy on your shelf. That part runs as agents in a conversation and was not run for this
-page.
+entry links it, which puts a copy on your shelf. That part runs as agents. They did not run for this page, but the
+parts-researcher ran in walk 4, 2026-11-01, and in `/spark:identify` in the P934 walk, 2026-11-19.
 
 A module you already own can start from a photo instead: [`/spark:identify`](../../../commands/identify.md).

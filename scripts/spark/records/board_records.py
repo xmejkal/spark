@@ -126,12 +126,14 @@ def project_or_library(start: Path = None) -> Path:
 
 
 def _read_json(path: Path, what: str) -> dict:
-    if not path.is_file():
+    if not (path.exists() or path.is_symlink()):  # P1099: a folder or a dangling link is broken, not missing (was is_file())
         raise BoardError("no %s at %s", what, path, code=records_codes.BOARD_FILE_MISSING)
     try:
         return json.loads(path.read_text())
     except ValueError as broken:
         raise BoardError("%s is not valid JSON: %s", path, broken, code=records_codes.RECORD_FILE_BROKEN) from broken
+    except OSError as broken:  # P1099: a file that cannot be opened is broken too, never a traceback
+        raise BoardError("%s cannot be read: %s", path, broken.strerror or broken, code=records_codes.RECORD_FILE_BROKEN) from broken
 
 
 def selection_file(project: Path) -> Path:
@@ -154,6 +156,8 @@ def active_id(project: Path) -> str:
     marking the active board — an absent character as the only signal that the file is nonsense.
     """
     selection = _read_json(selection_file(project), "board selection")
+    if not isinstance(selection, dict):  # P1094: .get on a list crashed init
+        raise BoardError("%s is not a JSON object", selection_file(project), code=records_codes.RECORD_FILE_BROKEN)
     board_id = selection.get("board")
     if not board_id:
         raise BoardError('%s names no board (expected a "board" key holding a board id)', selection_file(project), code=records_codes.NO_BOARD_SELECTED)
@@ -174,7 +178,7 @@ def requirements_board(project: Path):
     """requirements.json's `board` (D35, P988), or None for no requirements.json, no key, `null` or `""`. A file that
     cannot be read, is no JSON object or holds any other value that is no string is a BoardError (RECORD_FILE_BROKEN)."""
     requirements = Path(project) / REQUIREMENTS_NAME
-    if not requirements.is_file():
+    if not (requirements.exists() or requirements.is_symlink()):  # RF1: a folder or a dangling link is broken, not absent
         return None
     wanted = _read_json(requirements, "requirements file")
     if not isinstance(wanted, dict):
@@ -192,16 +196,13 @@ def project_board_id(project: Path) -> str:
 
 
 def marked_board(project: Path):
-    """(the project's board id, None) for `--list` and `--validate` (P988). A broken requirements.json gives (None, its
-    sentence). No file that names a board (the library, a folder with no selection, P989) gives (None, None)."""
+    """(the project's board id, None) for `--list` and `--validate` (P988). A requirements.json or a selection that is broken
+    (record_file_broken, P1098) gives (None, its sentence). No file that names a board (the library, a folder with no
+    selection or one that names none, P989) gives (None, None)."""
     try:
-        named = requirements_board(project)
+        return project_board_id(project), None
     except BoardError as broken:
-        return None, str(broken)
-    try:
-        return named or active_id(project), None
-    except BoardError:
-        return None, None
+        return None, (str(broken) if broken.code == records_codes.RECORD_FILE_BROKEN else None)
 
 
 def records(project=None):
@@ -265,10 +266,9 @@ class ButtonPlaces:
 
     @classmethod
     def of_project(cls, project):
-        """The places in the record requirements.json names, or EMPTY when that record cannot be read."""
+        """The places in the record of the project's board (D35), or EMPTY when that record cannot be read."""
         try:
-            name = json.loads((Path(project) / "requirements.json").read_text()).get("board")
-            return cls.from_record(load(project, name)) if name else cls.EMPTY
+            return cls.from_record(load(project))
         except (OSError, ValueError, AttributeError, BoardError):
             return cls.EMPTY
 

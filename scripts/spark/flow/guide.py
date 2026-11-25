@@ -1,5 +1,5 @@
 """
-The guide of a project (P977, #1407): from the Phases `show_flow.read_flow` gives, the phase the person acts on now, who
+The guide of a project (P977, #1407): from the Phases `show_flow.reading_of` reads, the phase the person acts on now, who
 acts and one sentence for it, the phases done and later, the needs set aside, and why there is no simulation. It reads
 and never writes. `flow.py show` and `flow.py page` answer it as `data.guide`.
 """
@@ -14,7 +14,7 @@ from spark.build.stages import SIMULATION
 from spark.design import needs
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
-from spark.flow import flow_codes
+from spark.flow import deploy_reading, flow_codes, wired_board
 from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, set_aside
 from spark.core.errors import CodedMessageError
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS, SKIPPED
@@ -83,8 +83,8 @@ def is_open(phase, fact):
 
 def now_phase(phases, no_model, fact, all_aside=False):
     """The phase to act on now: the first open one not counted as done, or the idea while no need is written, or the parts
-    while every need is set aside (P980: there is no pick to write the parts list from). The deploy is never done here, so
-    there is one; None only in a flow of other readers, which a test gives."""
+    while every need is set aside (P980: there is no pick to write the parts list from). None when no phase is open: a
+    deploy that saw ready on the image now (P1043), or a flow of other readers, which a test gives."""
     now = next((phase for phase in phases if phase.phase not in no_model and is_open(phase, fact)), None)
     if now and now.phase == flow_codes.REQUIREMENTS and now.status != COULD_NOT_RUN and all_aside:  # a broken file is not hidden
         return next((phase for phase in phases if phase.phase == flow_codes.PARTS), now)
@@ -135,6 +135,21 @@ def who_and_sentence(now, open_needs, fact, written=True):
     return [now.by], said or (flow_codes.PROBLEMS_NOW if now.status == PROBLEMS else flow_codes.COULD_NOT_RUN_NOW) % now.phase
 
 
+def with_deploy_now(project, said, now, deploy=None):
+    """`said` with who acts and the sentence of an open deploy after a deploy (P1043, `deploy_reading.deploy_now`), from
+    `deploy`, the DeployState the run read its deploy phase from (None: read it here, as `image_fact` reads the image: a
+    fact on every Phase would change the phases' JSON). Else `said` as it is."""
+    told = deploy_reading.deploy_now(deploy or deploy_reading.read_deploy(project)) if now and now.phase == flow_codes.DEPLOY else None
+    return dict(said, by=told[0], says=told[1]) if told else said
+
+
+def no_open_phase(said, by_name):
+    """The guide's sentence when nothing is open: NO_OPEN_PHASE_NOW when there is no now and the deploy is ok (P1043), else
+    None, so a flow of other readers gets none."""
+    deploy = by_name.get(flow_codes.DEPLOY)
+    return flow_codes.NO_OPEN_PHASE_NOW if said is None and deploy is not None and deploy.status == OK else None
+
+
 def job_offer(now):
     """The key of the offer that does the job of the phase to act on now: its one offer of a kind the page sends, or None
     when it holds none or more than one (P1030: one rule, so the CLI's `next` and the page's NOW button name one offer). A
@@ -167,9 +182,9 @@ def has_no_picks(by_name):
     return needs_phase is not None and needs_phase.status is None
 
 
-def done_of(phases, at, no_model, wired, no_picks=False):
+def done_of(phases, at, no_model, sheet_done, no_picks=False):
     """The names of the phases before `at`: a simulate with no model is later, and the breadboard is there only when
-    `wired` (a current sheet once the wiring is no longer part of now), with what spark cannot see. With `no_picks`
+    `sheet_done` (a current sheet once the wiring is no longer part of now), with what spark cannot see. With `no_picks`
     the needs and parts are left out (nobody did them) and the requirements say so (P980)."""
     done = []
     for phase in phases[:at]:
@@ -178,10 +193,16 @@ def done_of(phases, at, no_model, wired, no_picks=False):
         if no_picks and phase.phase == flow_codes.REQUIREMENTS:
             done.append(flow_codes.REQUIREMENTS_NO_PICKS)
         elif phase.phase == flow_codes.BREADBOARD:
-            done += [flow_codes.SHEET_UNSEEN] if wired else []
+            done += [flow_codes.SHEET_UNSEEN] if sheet_done else []
         elif not (phase.phase == flow_codes.SIMULATE and phase.phase in no_model):
             done.append(label(phase, no_model))
     return done
+
+
+def with_wiring(project, now, by_name, count):
+    """True when the job now holds the wiring (P1062, the review of #1619): the two jobs beside a current sheet (`count`),
+    or the deploy beside a current sheet. The page opens its wiring fold by it. Spark never says the board is wired."""
+    return count is not None or (now.phase == flow_codes.DEPLOY and is_sheet_current(project, by_name))
 
 
 def stands_at_of(guide):
@@ -190,11 +211,13 @@ def stands_at_of(guide):
     return guide["now"]["phase"] if guide["now"] else None
 
 
-def guide_of(project, phases, steps=count_steps):
+def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     """
     What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, needs, steps}, "done", "later", "set_aside", "no_simulation"}`. `steps` counts the wiring
-    sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`).
+    `{"now": {phase, by, says, offer, needs, steps, with_wiring}, "done", "later", "set_aside", "no_simulation", "no_open_phase", "wired"}`. `steps` counts the wiring
+    sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
+    run's DeployState (P1043), None to read it here. `board` is the run's WiredBoard (P1044), None to read it here:
+    `wired` is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, or None when spark saw none.
     """
     by_name, listed = {phase.phase: phase for phase in phases}, readable(lambda: needs.read(project), [])
     no_model = no_model_phases(project, by_name)
@@ -209,11 +232,15 @@ def guide_of(project, phases, steps=count_steps):
     count = steps(project) if beside_sheet else None
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
     written = not (now and now.phase == flow_codes.SIMULATE) or bool(scenario_names(project))
-    said = now_of(now, open_needs, fact, count, written) if now else None
-    wired = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
+    said = with_deploy_now(project, now_of(now, open_needs, fact, count, written), now, deploy) if now else None
+    said = dict(said, with_wiring=with_wiring(project, now, by_name, count)) if said else None
+    sheet_done = is_sheet_current(project, by_name) and not two_jobs  # beside the firmware, the wiring is part of now
     later = [label(phase, no_model) + (flow_codes.LATER_BUT_DONE if index > at and phase.status == OK else "")
              for index, phase in enumerate(phases) if index > at or (phase.phase == flow_codes.SIMULATE and phase.phase in no_model)]
-    return {"now": said, "done": done_of(phases, at, no_model, wired, has_no_picks(by_name)), "later": later,
+    if board is None:
+        board = wired_board.read_wired(project, deploy if deploy is not None else deploy_reading.read_deploy(project))
+    return {"now": said, "done": done_of(phases, at, no_model, sheet_done, has_no_picks(by_name)), "later": later,
             "set_aside": [need["id"] for need in set_aside(listed)],
-            "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None}
+            "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None,
+            "no_open_phase": no_open_phase(said, by_name), "wired": wired_board.wired_data(board)}
 # --- end MVP ---

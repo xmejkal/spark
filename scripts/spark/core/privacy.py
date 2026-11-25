@@ -21,6 +21,8 @@ from spark.core.events import ReporterDecorator
 #: What the project folder and a path under the store become. `<store>` is SPARK_HOME, as `docs/guide/agents.md` says.
 PROJECT_PLACEHOLDER, STORE_PLACEHOLDER = "<project>", "<store>"
 SECRET_MASK = "***"
+#: A secret shorter than this is not masked: it would mask the same characters wherever they stand, in every line.
+MIN_SECRET = 8
 #: After a path: the next character is no part of a name, so the rule of `/a/b` leaves `/a/bc` and `/a/b.bak` alone,
 #: and masks `/a/b.` at the end of a sentence.
 PATH_END = r"(?![\w-]|\.\w)"

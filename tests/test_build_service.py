@@ -20,7 +20,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from fakes import FakeBuildService, FakeTscircuitEngine, FakeTscircuitExport  # noqa: E402
+from fakes import FakeBuildService, FakeToolFinder, FakeTscircuitEngine, FakeTscircuitExport  # noqa: E402
 from golden_design import fed_circuit  # noqa: E402
 from spark.build import board_engine, build_codes, kept_files  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
@@ -56,12 +56,13 @@ class ARecordingEmitter(board_emitter.BoardEmitter):
         return super().emit(inputs)
 
 
-def a_build(requirements=REFERENCE, engine=None, emitter=None, runner=None, **inputs):
+def a_build(requirements=REFERENCE, engine=None, emitter=None, runner=None, find_tool=None, **inputs):
     """The stages of one build in a fresh work folder, with the requirements file written as `main` writes it; `runner`
-    runs the converter's command, as BuildService's."""
+    runs the converter's command and `find_tool` finds a tool, as BuildService's."""
     workdir = Path(tempfile.mkdtemp())
     (workdir / "requirements.json").write_text(json.dumps(requirements))
-    service = BuildService(engine or FakeTscircuitEngine(), emitter or board_emitter.BoardEmitter(assume_missing_sizes=True), runner=runner)
+    service = BuildService(engine or FakeTscircuitEngine(), emitter or board_emitter.BoardEmitter(assume_missing_sizes=True),
+                           find_tool=find_tool, runner=runner)
     return workdir, service.build(BuildInputs(requirements, workdir, **inputs))
 
 
@@ -81,6 +82,17 @@ class TheStopRuleTest(unittest.TestCase):
         self.assertEqual([stage.name for stage in stages], ["board", "schematic", "footprint", "build"])
         self.assertEqual(engine.looked_from, [ROOT])  # the project, resolved: never the work folder
         self.assertTrue((workdir / "board.tsx").is_file())
+
+    def test_a_tools_file_the_engine_lookup_cannot_read_ends_with_its_own_code(self):
+        # P1058 (#1555): no install fixes a tools file spark cannot read or that is no tools list, so no /spark:setup tail
+        for code, sentence in (("file_refused", "<store>/tools.json cannot be read (Permission denied) — fix it or its permissions"),
+                               ("tools_list_broken", "<store>/tools.json is not JSON (Expecting value) — fix it or delete it")):
+            with self.subTest(code=code):
+                finder = FakeToolFinder({"board-engine": tool_finder.ToolError(sentence, code=code)})
+                _, stages = a_build(engine=FakeTscircuitEngine(found=False), find_tool=finder.find)
+                self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].code), ("build", COULD_NOT_RUN, code))
+                self.assertTrue(stages[-1].detail.startswith(sentence), stages[-1].detail)
+                self.assertNotIn("/spark:setup", stages[-1].detail)
 
     def test_a_tool_that_built_nothing_is_probed_and_named_with_its_version(self):
         engine = FakeTscircuitEngine(circuit=None, version="1.2.3-fake", probe=(False, "Cannot find package 'react'"))

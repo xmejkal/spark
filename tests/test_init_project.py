@@ -278,6 +278,142 @@ class AShelfBoardIsOfferedTest(unittest.TestCase):
         self.assertIn("x-board", builds.split(", "), refused)
 
 
+class TheSelectionThatIsNotTheProjectsBoardIsSaidTest(unittest.TestCase):
+    """P1024 (P988's row 26): after `--board`, init says when requirements.json and boards/active.json name different
+    boards: requirements.json's board stays the project's board (D35). It reads the two files, not the flag (C1)."""
+
+    C6, S3 = "xiao-esp32-c6", "firebeetle2-esp32s3"
+    NOTE = ("  requirements.json names xiao-esp32-c6, so xiao-esp32-c6 stays the project's board: the selection in "
+            "boards/active.json, %s, is read only when requirements.json names no board (D35)\n")
+
+    def init(self, root, board, *flags):
+        """(exit code, what init printed) for `--board board` in `root`."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = init_project.main(["--project", str(root), "--board", board, *flags])
+        return code, out.getvalue()
+
+    def a_project_naming(self, requirements, selection=None):
+        """A project whose requirements.json is `requirements` (None: no file) and whose boards/active.json holds
+        `selection` (None: no file)."""
+        root = a_project()
+        if requirements is not None:
+            (root / "requirements.json").write_text(requirements)
+        if selection is not None:
+            (root / "boards").mkdir()
+            (root / "boards" / "active.json").write_text(json.dumps(selection))
+        return root
+
+    def selected(self, root):
+        return json.loads((root / "boards" / "active.json").read_text())["board"]
+
+    def test_a_board_other_than_the_requirements_board_is_written_and_said(self):
+        root = self.a_project_naming(json.dumps({"board": self.C6}))
+        for flags in ((), ("--force",)):
+            with self.subTest(flags=flags):
+                code, said = self.init(root, self.S3, *flags)
+                self.assertEqual((code, self.selected(root)), (init_project.EXIT_OK, self.S3))
+                self.assertIn(self.NOTE % self.S3, said)
+
+    def test_the_note_reads_the_files_not_the_flag(self):
+        # C1: the files agree, and a --board that was left alone changes neither, so init says nothing
+        root = self.a_project_naming(json.dumps({"board": self.C6}), {"schema": 1, "board": self.C6})
+        code, said = self.init(root, self.S3)
+        self.assertEqual((code, self.selected(root)), (init_project.EXIT_OK, self.C6))
+        self.assertIn("  active.json already exists, left alone\n", said)
+        self.assertNotIn("stays the project's board", said)
+        code, said = self.init(root, self.S3, "--force")
+        self.assertEqual((code, self.selected(root)), (init_project.EXIT_OK, self.S3))
+        self.assertIn(self.NOTE % self.S3, said)
+
+    def test_the_same_board_or_none_named_says_nothing_and_a_broken_file_is_said(self):
+        for requirements in (json.dumps({"board": self.C6}), "{}", None):
+            with self.subTest(requirements=requirements):
+                code, said = self.init(self.a_project_naming(requirements), self.C6)
+                self.assertEqual(code, init_project.EXIT_OK)
+                self.assertNotIn("stays the project's board", said)
+                self.assertNotIn("is not known", said)
+        code, said = self.init(self.a_project_naming(json.dumps({"board": 3})), self.C6)
+        self.assertEqual(code, init_project.EXIT_OK)
+        self.assertIn("  the project's board is not known: ", said)
+        # C10: a selection that holds no JSON object is not compared, and init does not crash on it
+        root = self.a_project_naming(json.dumps({"board": self.C6}), [1])
+        code, said = self.init(root, self.S3)
+        self.assertEqual(code, init_project.EXIT_OK)
+        self.assertIn("  active.json already exists, left alone\n", said)
+        self.assertNotIn("stays the project's board", said)
+
+    def test_a_selection_of_no_json_object_and_no_board_named_is_no_crash(self):
+        # P1094 (#1612): requirements.json names no board, active.json holds no JSON object: a traceback in loader.py,
+        # with or without --force. The loader reads the BoardError (record_file_broken) as no board, as for a selection
+        # that names none; --force writes the selection.
+        for argv in ((), ("--board", self.S3), ("--board", self.S3, "--force")):
+            with self.subTest(argv=argv):
+                root = self.a_project_naming("{}", [1])
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                    code = init_project.main(["--project", str(root), *argv])
+                self.assertEqual(code, init_project.EXIT_OK)
+                self.assertNotIn("stays the project's board", out.getvalue())
+        self.assertEqual(self.selected(root), self.S3)
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads a file with no read permission")
+    def test_a_requirements_json_that_cannot_be_opened_is_said_not_a_crash(self):
+        # the review's R1: an OSError from requirements.json crashed init after active.json was written
+        root = self.a_project_naming(json.dumps({"board": self.C6}))
+        (root / "requirements.json").chmod(0)
+        self.addCleanup((root / "requirements.json").chmod, 0o644)
+        code, said = self.init(root, self.S3)
+        self.assertEqual((code, self.selected(root)), (init_project.EXIT_OK, self.S3))
+        self.assertIn("  the project's board is not known: ", said)
+
+
+class ASelectionThatCannotBeOpenedStopsInitTest(unittest.TestCase):
+    """P1099 (#1617): a boards/active.json that cannot be opened, is a folder or is a dangling link crashed init with a
+    traceback, exit 1: in the projects list, in board_differs and in the write. Init refuses it now, before anything is
+    written: record_file_broken, exit 2, the project not listed."""
+
+    S3 = "firebeetle2-esp32s3"
+
+    def a_broken_selection(self, case):
+        """A project, resolved as init resolves --project, whose boards/active.json is `case`."""
+        root = a_project().resolve()
+        selection = root / "boards" / "active.json"
+        selection.parent.mkdir()
+        if case == "folder":
+            selection.mkdir()
+        elif case == "dangling link":  # F2: exists() is False for it
+            try:
+                os.symlink(root / "boards" / "gone.json", selection)
+            except (OSError, NotImplementedError):
+                self.skipTest("no symlinks here")
+        else:
+            if os.geteuid() == 0:
+                self.skipTest("root reads a file with no read permission")
+            selection.write_text(json.dumps({"schema": 1, "board": self.S3}))
+            selection.chmod(0)
+            self.addCleanup(selection.chmod, 0o644)
+        return root
+
+    def test_a_selection_that_cannot_be_opened_or_is_a_folder_stops_init_with_record_file_broken(self):
+        for case in ("folder", "dangling link", "no read permission"):
+            for argv in ((), ("--board", self.S3), ("--board", self.S3, "--force")):
+                with self.subTest(case=case, argv=argv):
+                    root = self.a_broken_selection(case)
+                    before = sorted(root.rglob("*"))
+                    refused = project_setup.why_project_refused(root)
+                    self.assertEqual(refused.code, "record_file_broken")
+                    self.assertTrue(refused.startswith("init_project.py: %s cannot be read: " % (root / "boards" / "active.json")), refused)
+                    home, err = Path(tempfile.mkdtemp()), io.StringIO()
+                    with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}), contextlib.redirect_stdout(io.StringIO()), \
+                            contextlib.redirect_stderr(err):
+                        code = init_project.main(["--project", str(root), *argv])
+                        listed = store.projects()
+                    self.assertEqual((code, err.getvalue()), (init_project.EXIT_COULD_NOT_RUN, refused + "\n"))
+                    self.assertEqual(listed, {}, "a refused run puts the project on no list")
+                    self.assertEqual(sorted(root.rglob("*")), before, "a refused run writes nothing (the lens's L3)")
+
+
 class ForceMustNotEatWhatSomebodyMeasuredTest(unittest.TestCase):
     """
     P53. `--force` REPLACED the rules file, and the documents tell people to use it: *"no built
