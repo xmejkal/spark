@@ -280,5 +280,38 @@ class TheHooksGitDirTest(Isolated):
         self.assertEqual(git(other, "rev-parse", "HEAD"), before)
 
 
+class WhatGitTracksTest(Isolated):
+    """P1150: two read-only reads of git's index, for `build/ignore_list.IgnoreList`."""
+
+    def test_tracks_gives_true_false_and_none_outside_a_repository(self):
+        root, _ = a_repository()
+        with_brief(root)
+        (root / "other.txt").write_text("x")
+        committer = ProjectCommit(root)
+        self.assertIs(committer.tracks(BRIEF), True)
+        self.assertIs(committer.tracks("other.txt"), False)
+        self.assertIsNone(ProjectCommit(Path(tempfile.mkdtemp())).tracks(BRIEF))
+
+    def test_tracks_gives_none_with_no_git_on_the_path(self):
+        root, _ = a_repository()
+        with mock.patch.dict(os.environ, {"PATH": str(Path(tempfile.mkdtemp()))}):
+            self.assertIsNone(ProjectCommit(root).tracks(BRIEF))
+
+    def test_tracked_files_gives_paths_from_a_subfolder_project_and_skips_a_deeper_bin(self):
+        root, _ = a_repository()
+        project = root / "boards" / "clock"
+        for name in ("CLAUDE.local.md", "sim/a.bin", "sim/x/y.bin", "sim/runs/a.log", "sim/runs/board/b.log", "keep.txt"):
+            (project / name).parent.mkdir(parents=True, exist_ok=True)
+            (project / name).write_text("x")
+        (root / "sim").mkdir()
+        (root / "sim" / "top.bin").write_text("x")
+        git(root, "add", "-A")
+        found = ProjectCommit(project).tracked_files(["CLAUDE.local.md", "sim/*.bin", "sim/runs/"])
+        self.assertEqual(sorted(found), ["CLAUDE.local.md", "sim/a.bin", "sim/runs/a.log", "sim/runs/board/b.log"])
+
+    def test_tracked_files_gives_nothing_outside_a_repository(self):
+        self.assertEqual(ProjectCommit(Path(tempfile.mkdtemp())).tracked_files(["sim/runs/"]), [])
+
+
 if __name__ == "__main__":
     unittest.main()
