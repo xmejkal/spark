@@ -152,14 +152,18 @@ class RunLiveCode(Operation):
             stopped = stops.stop_result(cannot, SCRIPT, project, named, stops.undoctored(SCRIPT))
             return stopped._replace(data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=stopped.findings[0].sentence, port=port))
         places = board_records.ButtonPlaces.of_project(project)
-        return OperationResult(data_of(port, result), self._findings(result, places), lines=describe(result, places))
+        # P1057 PR 2: after the doctor's plug_in step, the asleep fix of the port the person named or spark found, and the look
+        said, fix = board_envelope.doctor_said(describe(result, places), result.doctor, named, project, places)
+        return OperationResult(data_of(port, result), self._findings(result, fix), board_envelope.asleep_next(fix, project.resolve()),
+                               lines=[printable(line) for line in said])
 
     @staticmethod
-    def _findings(result, places):
-        """No Finding for a clean run; else one of the status of the exit code, coded by the answer or `reset_failed`."""
+    def _findings(result, fix):
+        """No Finding for a clean run; else one of the status of the exit code, coded by the answer or `reset_failed`, with
+        `fix`, which board_envelope.doctor_said gave."""
         status = outcomes.STATUS_FOR[board_live.exit_code(result)]
         if status == outcomes.OK:
             return []
         code = board_codes.RESET_FAILED if result.reset == board_live.RESET_FAILED_STATE else result.answer
-        return [Finding(status, None, code, result.why or result.answer, board_envelope.doctor_fix(result.doctor, places))]
+        return [Finding(status, None, code, result.why or result.answer, fix)]
 # --- end MVP ---

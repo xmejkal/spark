@@ -7,6 +7,7 @@ an open board question (P892), whose line holds `reached` false, the port, the p
 
 from spark.bench import board_codes
 from spark.bench import board_doctor
+from spark.bench import board_envelope
 from spark.bench import board_look
 from spark.bench import board_reach
 from spark.bench import known_board
@@ -150,9 +151,11 @@ class ReachBoard(Operation):
             doctor = None
         places = board_records.ButtonPlaces.of_project(project)
         lines = describe(port, result) + (["  " + line for line in board_doctor.describe(doctor, places)] if doctor else [])
-        fix = board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
+        # P1057 PR 2: after the doctor's plug_in step, the asleep fix of the port the person named or spark found, and the look
+        lines, fix = board_envelope.doctor_said(lines, doctor, named, project, places)
         findings = [] if result.reached else [Finding(outcomes.COULD_NOT_RUN, None, board_codes.NOT_REACHED, result.why, fix)]
         # P430: the port, the cure's read and the board's reply are data, each line shown guarded
         return OperationResult(data_of(port, result, cure_first, doctor, outside.clock.now().strftime(AT_FORMAT)), findings,
+                               next=board_envelope.asleep_next(fix, project.resolve()),
                                lines=[printable(line) for line in lines], diagnostics=diagnostics)
 # --- end MVP ---

@@ -281,8 +281,8 @@ class LiveScriptTest(LiveCase):
 
 class ASleepingBoardTest(LiveCase):
     """P1057: with no board on USB, or a port the person named that is not, and a firmware/ that calls deepsleep, live.py
-    says the asleep fix on stderr, as look.py and grant.py do, and not the cable advice. A port that spark picked and that
-    left USB before the grant check keeps its own words: the fix never says "the port you named" of it."""
+    says the asleep fix on stderr, as look.py and grant.py do, and not the cable advice. A port that spark found and that
+    left USB before the grant check gets the fix with its own opening (P1057 PR 2): it never says "the port you named"."""
 
     def setUp(self):
         super().setUp()
@@ -310,11 +310,55 @@ class ASleepingBoardTest(LiveCase):
         self.assertEqual((code, lines[0], len(lines)), (2, "live.py: no board on %s: mpremote devs does not list it." % C6_PORT, 2))
         self.assertTrue(lines[1].startswith("What spark knows: the port you named is not on USB, and the project's firmware"), lines[1])
 
-    def test_a_picked_port_that_left_usb_keeps_its_own_words(self):
-        # the grant check lists the boards a second time, and the board spark picked is gone (D2 of the plan: PR 2)
+    def test_an_unnamed_port_that_left_usb_gets_the_fix_with_its_own_opening(self):
+        # the grant check lists the boards a second time, and the board spark found is gone (D2 of the plan: PR 2)
         code, _, problems, _ = self.go("--code", "print(1)", devs=("mpremote-devs-one.txt", "mpremote-devs-none.txt"))
-        self.assertEqual((code, problems.splitlines()), (2, ["live.py: no board on %s: mpremote devs does not list it." % C6_PORT]))
+        lines = problems.splitlines()
+        self.assertEqual((code, lines[0], len(lines)), (2, "live.py: no board on %s: mpremote devs does not list it." % C6_PORT, 2))
+        self.assertTrue(lines[1].startswith("What spark knows: the port that spark found on USB is not on USB any more, and the "
+                                            "project's firmware calls deepsleep (firmware/main.py:2)."), lines[1])
         self.assertNotIn("the port you named", problems)
+
+    #: The lists of a board that leaves USB at the exec: the first list and the grant check's hold it, the doctor's does not.
+    GONE_AT_THE_EXEC = ("mpremote-devs-one.txt", "mpremote-devs-one.txt", "mpremote-devs-none.txt")
+    REFUSED = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+
+    def doctor_road(self, *argv):
+        """(exit code, stdout, stderr) of live.py whose exec is refused twice, the board gone from USB from the exec on."""
+        code, said, problems, _ = self.go("--code", "print(1)", *argv, answers=(self.REFUSED, self.REFUSED), devs=self.GONE_AT_THE_EXEC)
+        return code, said, problems
+
+    def test_after_the_doctor_an_unnamed_port_gets_the_fix_with_its_own_opening_in_place_of_the_cable_step(self):
+        # P1057 PR 2 (D3, R3): the doctor said plug_in; the asleep fix takes the next line's place, as in look.py
+        code, said, _ = self.doctor_road()
+        nexts = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
+        self.assertEqual(code, 2)
+        self.assertEqual(len(nexts), 1)
+        self.assertIn("next    What spark knows: the port that spark found on USB is not on USB any more, and the project's", nexts[0])
+        self.assertNotIn("plug the board straight", said)
+
+    def test_after_the_doctor_a_named_port_gets_the_fix_with_the_named_opening(self):
+        code, said, _ = self.doctor_road("--port", C6_PORT)
+        self.assertEqual(code, 2)
+        self.assertIn("next    What spark knows: the port you named is not on USB, and the project's firmware", said)
+        self.assertNotIn("plug the board straight", said)
+
+    def test_after_the_doctor_the_json_line_ends_with_the_look_and_keeps_what_the_doctor_saw(self):
+        # R3: the look that needs the person; L4: mpremote never got in; L2: doctor.next_step stays the doctor's own
+        code, said, _ = self.doctor_road("--json")
+        line = json.loads(said)
+        self.assertEqual((code, line["answer"], line["doctor"]["next_step"]), (2, "not_reached", "plug_in"))
+        self.assertEqual((line["next"][0]["op"], line["next"][0]["needs_person"]), ("look", True))
+        self.assertIsNone(line["reset"], "mpremote never got in, so live.py read no board and reset none")
+
+    def test_after_the_doctor_a_firmware_with_no_deepsleep_call_keeps_the_cable_step(self):
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.lightsleep(1)\n")
+        code, said, _ = self.doctor_road()
+        self.assertEqual(code, 2)
+        self.assertIn("next    plug the board straight into the computer", said)
+        self.assertNotIn("What spark knows", said)
+        code, said, _ = self.doctor_road("--json")
+        self.assertNotIn("next", json.loads(said))
 
     def test_the_json_line_says_the_finding_s_sentence_and_ends_with_the_look_that_needs_the_person(self):
         code, said, _, _ = self.go("--code", "print(1)", "--json", devs="mpremote-devs-none.txt")
