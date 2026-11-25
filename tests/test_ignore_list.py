@@ -8,7 +8,6 @@ tracks that the section covers is said, never untracked by spark.
 """
 
 import os
-import subprocess
 import sys
 import tempfile
 import unittest
