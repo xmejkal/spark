@@ -1,7 +1,7 @@
 """
 The reach as an Operation on the core (P657, W4-3): run one line on the board on USB, cure it once when its USB output died at
-power-on, and say whether the board answered. reach.py is its CLI, and its `--json` line is the flat one the bench log reads
-(`FlatJsonLine`), so no golden changed. The time of `at` is the outside's clock, and a stop has no data, so no line, but
+power-on, and say whether the board answered. reach.py is its CLI, and its `--json` line is the flat one the bench log reads,
+with `fix` (`FlatJsonLineWithFix`, P1055). The time of `at` is the outside's clock, and a stop has no data, so no line, but
 an open board question (P892), whose line holds `reached` false, the port, the product, `open` and `known_board`.
 """
 
@@ -86,10 +86,12 @@ board. With --json an open question prints one line: reached false, port, produc
 stop prints nothing on stdout. For other_board, no_known_board and answered_no, the last line on stderr is the stop's
 fix, after its sentence.
 
-If no board is on USB, or the port you named is not, and firmware/ calls deepsleep, the stop's last line, the fix,
-says that the board can be in deep sleep, as look.py's does (P1057). Its first step puts the board in download mode.
-There it runs no firmware, so reach.py cannot reach its REPL: use download mode for look.py or a deploy, then press
-RESET with BOOT not held. To reach the REPL, wait until the firmware wakes. --json carries no fix yet (P1055).
+If no board is on USB, or the port is not (the one you named, or the one spark found, after the doctor too), and
+firmware/ calls deepsleep, the stop's last line, the fix, says that the board can be in deep sleep, as look.py's does
+(P1057). Its first step puts the board in download mode. There it runs no firmware, so reach.py cannot reach its REPL:
+use download mode for look.py or a deploy, then press RESET with BOOT not held. To reach the REPL, wait until the
+firmware wakes. After the doctor, --json carries the fix as `fix` (P1055) and `next` holds the look step; the no-board
+stop prints no line, and its fix is the last stderr line.
 
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,

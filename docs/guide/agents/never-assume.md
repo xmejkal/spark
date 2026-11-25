@@ -37,7 +37,7 @@ which is never in `unchecked` ([when and how](json.md#check_spinepy)). Say what 
 
 ## 2. A `null` is unknown, never a value to fill in
 
-`/spark:init` leaves every value it cannot know as `null` and lists them. Ask the person, or leave it.
+`/spark:init` leaves every value it cannot know as `null` and lists them. Ask the person, or leave it. A null `fix` on the line of grant.py, live.py or reach.py means that spark has no fix, not that nothing is wrong: never fill it in (P1055).
 
 How physics treats each null today:
 - A null `max_current_a` becomes a `?` line in `unmeasured` and leaves physics `ok`

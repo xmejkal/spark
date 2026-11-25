@@ -1,7 +1,7 @@
 """
 The live try as an Operation on the core (P657, W4-3): run a short piece of code on the running board inside a grant, say
-whether the board ran it, and reset it. live.py is its CLI, and its `--json` line is the flat one (`FlatJsonLine`): every field of
-the LiveTryResult and the port, so no golden changed. The status comes from `board_live.exit_code`, so a failed reset
+whether the board ran it, and reset it. live.py is its CLI, and its `--json` line is the flat one with `fix` (`FlatJsonLineWithFix`):
+every field of the LiveTryResult, the port and the fix (P1055). The status comes from `board_live.exit_code`, so a failed reset
 stays exit 2 whatever the answer was; a stop has the same fields, empty, with the answer `could-not-run`.
 """
 
@@ -87,11 +87,11 @@ project: grant.py gives no live grant to a board with no serial. One yes or one 
 answered_no, and nothing ran on the board. A --port that the list does not hold stops with port_not_listed, and a
 /dev/tty. port is its /dev/cu. port.
 
-If no board is on USB, or the port you named is not, and firmware/ calls deepsleep, the stop's last line, the fix,
-says that the board can be in deep sleep, as look.py's does (P1057). Its first step puts the board in download mode.
-There it runs no firmware, so live.py cannot reach its REPL: use download mode for look.py or a deploy, then press
-RESET with BOOT not held. To run code, wait until the firmware wakes. If spark picked the port and the board then
-leaves USB, the stop names that port and gives no deep-sleep advice. --json carries no fix yet (P1055).
+If no board is on USB, or the port is not (the one you named, or the one spark found, after the doctor too), and
+firmware/ calls deepsleep, the stop's last line, the fix, says that the board can be in deep sleep, as look.py's does
+(P1057). Its first step puts the board in download mode. There it runs no firmware, so live.py cannot reach its REPL:
+use download mode for look.py or a deploy, then press RESET with BOOT not held. To run code, wait until the firmware
+wakes. --json carries the fix as `fix` (P1055), and `next` then holds the look step, which needs the person.
 
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,

@@ -113,8 +113,8 @@ and one next step for your hands, as the last line. Its look at the console can 
 When no board is on USB and the project's firmware calls deepsleep (read from firmware/, not from the board), the stop
 line is `no board found.` and the last line, the fix, says that the board can be in deep sleep (P1022). It names the
 calls, and says what to try in order: download mode with BOOT, a wait for the wake, then the cable. A firmware file
-that does not parse is named. With --port, the board doctor can find the named port not on USB. If firmware/ then
-calls deepsleep, the doctor's next line is the same fix, and it opens with the named port (P1049). With --json, `next`
+that does not parse is named. The board doctor can find the port not on USB, named or found by spark. If firmware/
+then calls deepsleep, the doctor's next line is the same fix, opened by the named port or the found one (P1049, P1057). With --json, `next`
 then holds the look step, which needs the person: the same look, run once after the person did step 1 or 2 (P1048)."""
 
 
@@ -263,7 +263,7 @@ class LookAtBoard(Operation):
         """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics, and
         after the asleep fix the look step with `picked`'s flags (P1048)."""
         answer = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
-        # P1022, P1049: a firmware that deep-sleeps gets the asleep fix, also as the doctor's next step on the --port port
+        # P1022, P1049, P1057: a firmware that deep-sleeps gets the asleep fix, also as the doctor's next step, named port or not
         lines, sentence, fix = board_envelope.stop_said(SCRIPT, stop, answer, port, platform.project)
         places, doctor = board_records.ButtonPlaces.of_project(platform.project), answer[1]
         # the port and the button words, each on one line (P430); a tool problem's path is flat already (P444)

@@ -132,8 +132,8 @@ list of the boards that fails stops all three, with no question. A
 `/dev/tty.` port is its `/dev/cu.` port. Reach and live take `--replies`: ask the person in this conversation, name the port and
 that the firmware stops, write `{"replies": {"reach.run_on_board.1a2b": true}}` to a file of your own after their yes, and run the
 same command again with `--replies` and that file. `reach.py --json` prints one line for an open question only: `reached` false,
-`port`, `product`, `open` and `known_board`. Its other stops print nothing on stdout. `live.py --json` adds `open`, `product`
-and `known_board` to its stop line for a stop of the board question only. Live's stop line has `answer` `could-not-run` and
+`port`, `product`, `open`, `known_board` and `fix`. Its other stops print nothing on stdout. `live.py --json` adds `open`, `product`
+and `known_board` to its stop line for a stop of the board question only. Both lines hold `fix`, the question's fix (P1055). Live's stop line has `answer` `could-not-run` and
 no `code`, so read the code from `known_board.state` and `open`:
 
 | `known_board.state` | `open` | the code | the next command |

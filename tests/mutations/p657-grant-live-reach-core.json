@@ -1,5 +1,5 @@
 [
- {"file": "scripts/spark/bench/check_grant.py", "name": "CheckGrant prints the envelope under --json again", "find": "json_renderer = FlatJsonLine", "replace": "json_renderer = None"},
+ {"file": "scripts/spark/bench/check_grant.py", "name": "CheckGrant prints the envelope under --json again", "find": "json_renderer = FlatJsonLineWithFix", "replace": "json_renderer = None"},
  {"file": "scripts/spark/core/renderers.py", "name": "a flat Operation's bad argument gets the envelope", "find": "    def render_bad_argument(result, tool, op):\n        return None", "replace": "    def render_bad_argument(result, tool, op):\n        return JsonEnvelope.render(result, tool, op)"},
  {"file": "scripts/spark/core/outside.py", "name": "consent is given whatever the effects", "find": "ASKS in effects and make_consent", "replace": "True and make_consent"},
  {"file": "scripts/spark/bench/issue_grant.py", "name": "IssueGrant does not declare ASKS", "find": "effects = (READS, RUNS, BOARD, ASKS)", "replace": "effects = (READS, RUNS, BOARD)"},

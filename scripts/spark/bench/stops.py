@@ -73,8 +73,8 @@ def _tools_file_code(cannot):
 
 
 def undoctored(script):
-    """The `doctor_for` of a stop_result whose script runs no doctor (bench.py record): the answer that
-    board_doctor.stop_answer gives a stop with no port, so the stop is said as look.py says it (P1049)."""
+    """The `doctor_for` of a stop_result whose script runs no doctor on such a stop (bench.py record, live.py, reach.py):
+    the answer that board_doctor.stop_answer gives a stop with no port, so the stop is said as look.py says it (P1049)."""
     return lambda stop: (["%s: %s" % (script, stop)], None)
 
 

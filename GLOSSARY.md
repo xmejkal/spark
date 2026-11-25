@@ -47,6 +47,11 @@ the look says the image's on its `micropython` line and the record's in its last
 board, never what the board holds now. A **build** is the download the tools list names by `micropython_port`, a claim
 about the image; the banner is what the file holds (P779).
 
+The **named port** is the port the person gave with `--port`. The **unnamed port** is the one spark found on USB when
+no `--port` was given. When a port is gone from USB and the firmware calls deepsleep, the fix opens with "the port you
+named" only for a named port, and with "the port that spark found on USB is not on USB any more" for an unnamed one
+(P1049, P1057). "Pick" is a part's word (a pick for a need), never a port's.
+
 ### gate and the yes — `deploy_gate.py`
 
 The **gate** is the part of `deploy.py` that refuses to erase until its own look finds no stop and the token matches
