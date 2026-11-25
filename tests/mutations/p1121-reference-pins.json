@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/build/kept_files.py",
+  "name": "P1121: the reference design names no earlier pin map (test_a_reference_design_build_names_spark_s_earlier_pin_map_as_an_earlier_builds)",
+  "find": "    if requirements is None:  # P1121",
+  "replace": "    if False:  # P1121"
+ },
+ {
+  "file": "scripts/spark/build/kept_files.py",
+  "name": "P1121: a reference build removes spark's earlier pin map (test_a_reference_design_build_names_spark_s_earlier_pin_map_as_an_earlier_builds)",
+  "find": "\"spark's reference design has no pin map\", False)",
+  "replace": "\"spark's reference design has no pin map\", True)"
+ },
+ {
+  "file": "scripts/spark/build/kept_files.py",
+  "name": "P1121: a reference build names a pin map that is not spark's, or none (test_a_reference_design_build_names_no_pin_map_that_is_not_spark_s)",
+  "find": "False) if ours else None",
+  "replace": "False) if True else None"
+ },
+ {
+  "file": "scripts/spark/build/kept_files.py",
+  "name": "P1121: a reference build writes no pin map entry again (test_a_reference_design_build_names_spark_s_earlier_pin_map_as_an_earlier_builds)",
+  "find": "[entry for entry in [_kept_pins(Path(requirements_file) if requirements_file else None, Path(keep), _built(stages))] if entry]",
+  "replace": "[_kept_pins(Path(requirements_file), Path(keep), _built(stages))] if requirements_file else []"
+ },
+ {
+  "file": "scripts/spark/build/kept_files.py",
+  "name": "P1121: a reference build crashes on a pin map it has none of, a None among the kept entries (test_a_reference_design_build_names_no_pin_map_that_is_not_spark_s); rows 4 and 5 share a line (B6)",
+  "find": "_built(stages))] if entry]",
+  "replace": "_built(stages))]]"
+ }
+]
