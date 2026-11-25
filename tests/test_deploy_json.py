@@ -772,6 +772,63 @@ class ReadyUnknownFixTest(unittest.TestCase):
         self.assertEqual(self.fix(self.unknown(files={})), test_deploy_gate.NO_FILES_FIX)
 
 
+#: The why lines of the look and the verify stage, and the two waits' lines (P478 slice 2): literals, never the constants.
+LOOK_WHY = "why: spark reads the chip and flash size, so another chip or too little flash for the image is stopped"
+VERIFY_WHY = "why: a written image is not yet a running one, so spark checks its files on the board and waits for ready"
+READING, RESTARTING = "reading the board", "waiting for the board to restart"
+
+
+@needs_littlefs
+class TheWaitsTest(GateCase):
+    """P478 slice 2, tests 14 to 16: deploy reports a WAIT before each silent wait, in the order a person reads it."""
+
+    unread = subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+
+    def events(self, **kw):
+        """(kind, code, text) of every Event of a deploy with a yes; `kw` goes to `deploy`."""
+        self.run_the_scenario()
+        reporter = FakeReporter()
+        self.deploy("--token", self.token(), consent=FakeConsent(True), reporter=reporter, **kw)
+        return [(event.kind, event.code, event.text) for event in reporter.events]
+
+    def after(self, events, event):
+        """The events after the first `event`."""
+        return events[events.index(event) + 1:]
+
+    def answers(self):
+        self.unread = self.uncopied = None
+
+    def test_a_deploy_that_reaches_ready_waits_after_the_look_s_why_and_the_verify_s_why_and_never_in_the_flash(self):
+        self.unread = None
+        events = self.events()
+        look_wait, verify_wait = ("wait", "look", READING), ("wait", "verify", READING)
+        self.assertEqual(events[events.index(look_wait) - 1], ("line", "look", LOOK_WHY))
+        self.assertEqual(self.after(events, look_wait)[0][:2], ("line", "look"))
+        self.assertEqual(events[events.index(verify_wait) - 1], ("line", "verify", VERIFY_WHY))
+        gate = events.index(("begin", "gate", None))
+        last_running = max(index for index, event in enumerate(events) if (event[2] or "").startswith("running: "))
+        self.assertEqual([event for event in events[gate:last_running] if event[0] == "wait"], [])
+        self.assertEqual([event for event in events if event[0] == "wait"], [look_wait, verify_wait])
+
+    def test_the_reset_wait_follows_the_press_line_and_comes_back_after_a_restart_that_did_not_count(self):
+        events = self.events(probe=FakeConsoleProbe("waiting for download\n"), devs_text=[self.LISTED] * 3 + [self.GONE, self.LISTED])
+        press = next(event for event in events if (event[2] or "").startswith("the board waits in download mode"))
+        not_counted = ("the board restarted and still waits in download mode: press its RESET (R, top left, beside the USB-C) once. "
+                       "Left and right as seen with the metal shield facing you, USB-C at the top")
+        reset_wait = ("wait", "verify", RESTARTING)
+        self.assertEqual(self.after(events, press)[:3], [reset_wait, ("line", "verify", not_counted), reset_wait])
+        self.assertTrue(self.after(events, press)[3][2].startswith("facts file"), events)  # the reads in the wait said nothing
+
+    def test_the_read_again_after_a_console_that_heard_ready_adds_no_event(self):
+        # P245's path: the WAIT after the verify's BEGIN is still open while the board is read again
+        self.uncopied = self.unread
+        probe = FakeConsoleProbe("mode:DIO, clock div:2\nentry 0x4086b910\nready\n", on_console=self.answers)
+        events = self.events(probe=probe)
+        self.assertEqual(probe.asked, ["console"])
+        self.assertTrue(self.after(events, ("wait", "verify", READING))[0][2].startswith("facts file spark.json sha256"), events)
+        self.assertIn("read again\n", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+
+
 class DeployPageTest(JsonCase, GateCase):
     """P1069 (story 0c of P793): a deploy that is no dry run writes the project's page.html again at every status but a
     crash, so the page names the same stand as `flow.py show`. The refresh adds a note and no flow step. The project

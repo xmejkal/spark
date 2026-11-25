@@ -11,7 +11,7 @@ restart left that board in download mode, with the port gone and back as for a r
 import collections
 
 from spark.bench import board_codes
-from spark.bench.deploy_stages import DeployPhase
+from spark.bench.deploy_stages import RESET_WAIT_MESSAGE, DeployPhase
 from spark.bench import board_look
 from spark.bench import download_mode
 from spark.bench.known_board import comparable_key as _key  # the name this module's mutation rows anchor on
@@ -96,10 +96,11 @@ class BoardStartService:
 
     def wait_for_start(self, port, read, report, timeout_s=download_mode.RESET_WAIT_S, usb=None):
         """Wait at most `timeout_s` for the port to go and come back, and call `read(port)` each time it does: it says
-        whether mpremote answered. A restart after which it does not answer is reported to the person as an Event (`report`, E2) and the
-        wait goes on. A row whose USB id is not `usb` (the id the port had) counts as a restart too, for a poll can miss
+        whether mpremote answered. The wait is reported as a WAIT (P478), and a restart after which it does not answer as a
+        LINE (`report`, E2), then the WAIT again: the wait goes on. A row whose USB id is not `usb` (the id the port had) counts as a restart too, for a poll can miss
         the gap. A failed list is never a gone port. A BoardStartResult."""
         end, gone = self.clock.monotonic() + timeout_s, False
+        report(Event.wait(DeployPhase.VERIFY, RESET_WAIT_MESSAGE))  # P478: the polls and reads below say nothing
         while self.clock.monotonic() < end:
             row = self._listed(port)
             if row is None:
@@ -111,6 +112,7 @@ class BoardStartService:
                     return BoardStartResult(None, port, "")
                 self.note(NOT_COUNTED_LOG)
                 report(Event.line(DeployPhase.VERIFY, download_mode.not_counted(self.places)))
+                report(Event.wait(DeployPhase.VERIFY, RESET_WAIT_MESSAGE))  # the wait goes on after the line
             usb = row.usb if row else usb
             self.clock.sleep(POLL_S)
         row = self._listed(port)

@@ -29,3 +29,7 @@ DEPLOY_STAGES = (
 )
 #: The sentence a person reads when a stage starts: why spark does it (P476), made from the rows.
 PHASE_WHY = {stage.name: "why: " + stage.summary for stage in DEPLOY_STAGES}
+#: The lines of deploy's silent waits (P478 slice 2), each an Event of kind WAIT: the look's read and the verify stage's
+#: read, and the wait for the board to restart after the person pressed RESET. Only reported, never compared.
+READ_WAIT_MESSAGE = "reading the board"
+RESET_WAIT_MESSAGE = "waiting for the board to restart"

@@ -3,6 +3,7 @@
 
 [2/5] look
   why: spark reads the chip and flash size, so another chip or too little flash for the image is stopped
+  reading the board
   the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
   port   /dev/cu.usbmodem101
   mac    dc:da:0c:xx:xx:xx

@@ -22,7 +22,7 @@ from spark.records import board_records
 from spark.records import store
 from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
-from spark.bench.deploy_stages import DEPLOY_STAGES, PHASE_WHY, DeployPhase
+from spark.bench.deploy_stages import DEPLOY_STAGES, PHASE_WHY, READ_WAIT_MESSAGE, DeployPhase
 from spark.bench.deploy_service import DeployService, ended_after_the_yes
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, SIMULATION_NONE, evidence_for
@@ -299,6 +299,7 @@ class DeployFlowService:
         refusal is said on stderr; a failed read gets the doctor (P354); a closed gate gives the line to run in the terminal."""
         reached, token = self._reached, self.asked.token
         try:
+            self.report(Event.wait(DeployPhase.LOOK, READ_WAIT_MESSAGE))  # P478: the read is silent until its lines
             look = self.look = reached["report"] = self.service.look(self.asked.port, listed=self.judged.row)
             for line in board_look.report_lines(look, token=False, indent=""):
                 self.say(DeployPhase.LOOK, line)
@@ -340,6 +341,7 @@ class DeployFlowService:
         """The board after the flash: the facts, ready, the board log, the store record, and the REPL line when ready is unknown."""
         reached = self._reached
         self.report(Event.begin(DeployPhase.VERIFY))
+        self.report(Event.wait(DeployPhase.VERIFY, READ_WAIT_MESSAGE))  # P478: the port, the facts and ready are silent
         result = reached["result"] = self.service.verify(self.look, self.planned)
         ready = result.ready
         if ready.verdict != ready_probe.SEEN:
