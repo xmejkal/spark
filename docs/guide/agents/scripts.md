@@ -167,7 +167,7 @@ it refuses code that writes a number of the board's USB or flash pins (P254): an
 question](replies.md#the-question-of-the-grant-reach-and-live): a stop of it is exit 2, and its `--json` line adds
 `open`, `product` and `known_board`. `--json` gives `answer` (`ran`, `raised`, `not_reached`, `refused_no_grant`,
 `refused_pin`, `refused_no_parse`, or `could-not-run`), `grant_why`, `why`, `output`, `cure`, `reset` (`done`, `failed`
-or null), `pins_checked`, `gpio_numbers_in_code`, `port` and `fix` (P1055). Exit 0 the board ran the code, 1 refused or the code
+or null), `pins_checked`, `gpio_numbers_in_code`, `port` and `fix` (the fix line's words, or null: no fix, P1055). Exit 0 the board ran the code, 1 refused or the code
 raised, 2 the board did not answer, the reset failed, or it could not run. An empty `output` still counts as `ran`. A
 `reset` of `failed` means the firmware may be stopped: tell the person to press R or replug. `reset` is null only after
 a refusal, or after a `not_reached` where mpremote could not open the port or enter the raw REPL, so the code never ran.

@@ -16,9 +16,9 @@ rejected findings only. The PR review's rows follow the councils' in the same ta
 | 6 | R6: two re-anchored p1049 rows keep names that D3 makes false | council round 1, refuter | acted | the re-anchored rows of `p1049-asleep-stops.json` name `doctor_said` and the renamed test |
 | 7 | R7: an open question of other_board could take the asleep fix (Risk 6) | council round 1, refuter | rejected | GRANT, REACH and LIVE ask only `CANNOT_TELL` (known_board.py:154-166), so other_board stops with no question. Risk 6 dropped |
 | 8 | R8: a test_lint failure on the refuter's copy | council round 1, refuter | acted | each module imports only what it uses; `tests.test_lint` ran before each commit |
-| 9 | A1: the "first Finding with a fix" rule belongs on the result, not in a Renderer | council round 1, architecture lens | acted | `OperationResult.first_fix()` beside `status()`; `FlatJsonLineWithFix` only calls it. Rows 7 and 8 |
+| 9 | A1: the "first Finding with a fix" rule belongs on the result, not in a Renderer | council round 1, architecture lens | acted | `OperationResult.first_fix()` beside `status()`; `FixFlatJsonLine` only calls it. Rows 7 and 8 |
 | 10 | A2: O3's reason and Risk 3 were wrong about masking | council round 1, architecture lens | acted | run_cli masks `data` and each Finding with the same kept texts before the renderer (cli.py:68, privacy.py:129-135); the plan says so |
-| 11 | A4: the renderer's docs | council round 1, architecture lens | acted | renderers.py's docstring and patterns-and-names.md lines 23 and 29 name `FlatJsonLineWithFix` |
+| 11 | A4: the renderer's docs | council round 1, architecture lens | acted | renderers.py's docstring and patterns-and-names.md lines 23 and 29 name `FixFlatJsonLine` |
 | 12 | A6: `doctor_said` built ButtonPlaces again | council round 1, architecture lens | acted | it takes `places` (5 parameters, the R3 limit) |
 | 13 | A7: pin what happens to a `fix` key in `data` (with L3) | council round 1, architecture and everyday lens | acted | a test_core test pins that the result's fix overwrites it |
 | 14 | L1: null has two meanings | council round 1, everyday lens | acted | json.md, live's EPILOG, grant's help and never-assume.md say that null means spark has no fix, not that nothing is wrong |
@@ -34,5 +34,20 @@ rejected findings only. The PR review's rows follow the councils' in the same ta
 | 24 | the p1049 row "stop_said gives a port_not_listed stop the asleep fix with no named port" | the plan's mutation rows | acted | retired: D2 makes it the behaviour |
 | 25 | PR 1's rows 7 and 8: a port spark found that leaves USB gets no asleep fix, and live's doctor keeps its plug_in step | `p1057-asleep-live-reach.md` | acted | fixed in this PR: `ASLEEP_UNNAMED_PORT_OPENING` and `doctor_said` |
 | 26 | PR 1's row 9: json.md and scripts.md say live and reach give no asleep fix, and live's line holds no fix | `p1057-asleep-live-reach.md` | acted | fixed in this PR: the pages and `fix` on the line (P1055) |
-| 27 | a script-level test of an unnamed port for deploy.py | the plan, Step 1 | raised | not written: deploy's fakes take one devs fixture. look.py's script test and the `stop_said` unit tests cover the road; destination: the PR review |
-| 28 | A3 and A5: the round-1 report is not kept and the plan's table has no line for them, so their fate is unknown | council round 1, architecture lens | raised | not guessed; destination: the PR review |
+| 27 | a script-level test of an unnamed port for deploy.py | the plan, Step 1 | raised | not written: deploy's fakes take one devs fixture. look.py's script test and the `stop_said` unit tests cover the road; destination: the PR review, which filed it as E5 (row 33) |
+| 28 | A3 and A5: the round-1 report is not kept and the plan's table has no line for them, so their fate is unknown | council round 1, architecture lens | closed | both were confirmations with no fix, and the PR review's refuter checked both on the built code |
+| 29 | E1: `port_not_listed`'s sentence in board_codes.py says only "the port that --port names", untrue for a port that spark found | the PR review, E1 | acted | fixed: "the port that --port names, or that spark found, is not in the list of boards on USB" |
+| 30 | E2: test_board_questions pins only the key `fix` on the question lines of reach and live, not its value | the PR review, E2 | acted | fixed: both tests assert that `fix` is stderr's fix line; reach's holds the JSON to paste, live's other_board fix names look.py |
+| 31 | E3: the no-deepsleep doctor-road tests pin no `fix` value; live's pins none at all | the PR review, E3 | acted | fixed: live and reach assert that `fix` is the doctor's plug_in sentence, the text's next line |
+| 32 | E4: scripts.md's key list of live gives `fix` without its null meaning, which grant's entry gives | the PR review, E4 | acted | fixed on the same line: "the fix line's words, or null: no fix" |
+| 33 | E5: no script-level test of an unnamed port for deploy.py (row 27) | the PR review, E5 | raised | destination: card P???? |
+| 34 | A-1: `asleep_next`'s docstring names only stop_said's fix, and live and reach ask it of doctor_said's | the PR review, A-1 | acted | fixed: "stop_said's or doctor_said's fix" |
+| 35 | A-2: the PR review's finding A-2 | the PR review, A-2 | raised | destination: card P????, filed by spark-main |
+| 36 | A-3: the PR review's finding A-3 | the PR review, A-3 | raised | destination: card P????, filed by spark-main |
+| 37 | A-4: `FlatJsonLineWithFix` breaks patterns-and-names.md's rule: what varies, then the base's whole name | the PR review, A-4 | acted | renamed `FixFlatJsonLine` in the code, the docs, this file and the mutation rows; `tools/mutate.py --anchors` passes |
+| 38 | A-4's older half: `JsonDocument` breaks the same rule | the PR review, A-4 | raised | destination: card P???? |
+| 39 | A-5: the PR review's finding A-5 | the PR review, A-5 | raised | destination: card P????, filed by spark-main |
+| 40 | A-6: GLOSSARY.md does not say that "found by spark" is the person's word for the unnamed port | the PR review, A-6 | acted | fixed: one sentence in the port entry |
+| 41 | A-7: the PR body | the PR review, A-7 | acted | the PR body was corrected before the refuter read it |
+| 42 | reach.py's --help says the open-question line holds reached, port, product, open and known_board, without `fix` | the PR review, refuter | acted | fixed in ReachBoard's DETAILS; reach.py's EPILOG lists no keys |
+| 43 | the refuter's point on where the `fix` of grant's two_boards and refused_no_grant stops comes from | the PR review, refuter | raised | destination: card P???? |

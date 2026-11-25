@@ -1,6 +1,6 @@
 """
 The live try as an Operation on the core (P657, W4-3): run a short piece of code on the running board inside a grant, say
-whether the board ran it, and reset it. live.py is its CLI, and its `--json` line is the flat one with `fix` (`FlatJsonLineWithFix`):
+whether the board ran it, and reset it. live.py is its CLI, and its `--json` line is the flat one with `fix` (`FixFlatJsonLine`):
 every field of the LiveTryResult, the port and the fix (P1055). The status comes from `board_live.exit_code`, so a failed reset
 stays exit 2 whatever the answer was; a stop has the same fields, empty, with the answer `could-not-run`.
 """
@@ -20,7 +20,7 @@ from spark.bench import bench_privacy
 from spark.bench import stops
 from spark.core import outcomes
 from spark.core.errors import SparkError
-from spark.core.renderers import FlatJsonLineWithFix
+from spark.core.renderers import FixFlatJsonLine
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
@@ -121,7 +121,7 @@ class RunLiveCode(Operation):
                  COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP))
     effects = (READS, RUNS, BOARD, ASKS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
-    json_renderer = FlatJsonLineWithFix
+    json_renderer = FixFlatJsonLine
 
     def __init__(self, platform_for=None, known=None):
         self.platform_for = platform_for or MicroPythonPlatform

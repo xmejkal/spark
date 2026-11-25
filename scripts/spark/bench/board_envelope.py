@@ -202,9 +202,9 @@ ASLEEP_LOOK_WHY = ("first the person does step 1 or 2 of the fix: the board in d
 
 
 def asleep_next(fix, project, evidence=None):
-    """The `next` of a stop whose `fix`, as stop_said gave it, is the asleep fix (P1048): the look with no --port (the fix
-    says: use the port it names), with `evidence`'s flags, which needs the person; [] for any other fix. Ask it only of
-    stop_said's fix: a ready_unknown fix opens with the same words."""
+    """The `next` of a stop whose `fix`, as stop_said or doctor_said gave it, is the asleep fix (P1048): the look with no
+    --port (the fix says: use the port it names), with `evidence`'s flags, which needs the person; [] for any other fix.
+    Ask it only of stop_said's or doctor_said's fix: a ready_unknown fix opens with the same words."""
     if not fix.startswith(ASLEEP_KNOWS):
         return []
     return [NextStep(**look_step(project, None, evidence, ASLEEP_LOOK_WHY, needs_person=True))]

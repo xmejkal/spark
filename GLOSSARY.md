@@ -50,7 +50,8 @@ about the image; the banner is what the file holds (P779).
 The **named port** is the port the person gave with `--port`. The **unnamed port** is the one spark found on USB when
 no `--port` was given. When a port is gone from USB and the firmware calls deepsleep, the fix opens with "the port you
 named" only for a named port, and with "the port that spark found on USB is not on USB any more" for an unnamed one
-(P1049, P1057). "Pick" is a part's word (a pick for a need), never a port's.
+(P1049, P1057). "Found by spark" is the person-facing wording of the unnamed port. "Pick" is a part's word (a pick
+for a need), never a port's.
 
 ### gate and the yes — `deploy_gate.py`
 

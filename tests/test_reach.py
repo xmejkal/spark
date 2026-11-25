@@ -311,7 +311,10 @@ class ASleepingBoardTest(ReachCase):
         self.assertEqual(code, 2)
         self.assertIn("next    plug the board straight into the computer", said)
         self.assertNotIn("What spark knows", said)
-        self.assertNotIn("next", json.loads(self.doctor_road("--json")[1]))
+        (step,) = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
+        line = json.loads(self.doctor_road("--json")[1])
+        self.assertNotIn("next", line)
+        self.assertEqual(line["fix"], step.lstrip()[len("next    "):])  # P1055: the doctor's plug_in sentence, the text's next line
 
     def test_without_a_deepsleep_call_the_stop_is_as_before(self):
         (self.project / "firmware" / "main.py").write_text("import machine\nmachine.lightsleep(1)\n")

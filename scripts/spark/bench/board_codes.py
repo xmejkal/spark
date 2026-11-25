@@ -111,7 +111,7 @@ CODES = {
     LIST_FAILED: "mpremote could not list the boards on USB",
     LIST_TIMEOUT: "mpremote took too long to list the boards on USB",
     NO_PORT: "no board is on USB",
-    PORT_NOT_LISTED: "the port that --port names is not in the list of boards on USB",
+    PORT_NOT_LISTED: "the port that --port names, or that spark found, is not in the list of boards on USB",
     TWO_BOARDS: "two or more boards are on USB and no --port says which",
     FLASHER_NOT_ESPTOOL: "the look reads a board with esptool only, and the project's flasher is another tool",
     BOARD_NOT_READ: "esptool could not read the board",

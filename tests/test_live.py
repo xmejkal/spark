@@ -357,8 +357,11 @@ class ASleepingBoardTest(LiveCase):
         self.assertEqual(code, 2)
         self.assertIn("next    plug the board straight into the computer", said)
         self.assertNotIn("What spark knows", said)
+        (step,) = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
         code, said, _ = self.doctor_road("--json")
-        self.assertNotIn("next", json.loads(said))
+        line = json.loads(said)
+        self.assertNotIn("next", line)
+        self.assertEqual(line["fix"], step.lstrip()[len("next    "):])  # P1055: the doctor's plug_in sentence, the text's next line
 
     def test_the_json_line_says_the_finding_s_sentence_and_ends_with_the_look_that_needs_the_person(self):
         code, said, _, _ = self.go("--code", "print(1)", "--json", devs="mpremote-devs-none.txt")
