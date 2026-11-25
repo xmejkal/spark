@@ -1657,6 +1657,9 @@ class TheGuideSectionTest(unittest.TestCase):
             self.assertNotIn(raw, text)
         for escaped in ("&lt;b&gt;go&lt;/b&gt; &amp; wait", "&lt;i&gt;idea&lt;/i&gt;", "a&amp;b", "&lt;u&gt;x&lt;/u&gt;", "&lt;s&gt;none&lt;/s&gt;"):
             self.assertIn(escaped, text)
+        # the PR review (lens 4): DONE and LATER stand in the developer fold, escaped there too
+        self.assertIn("<strong>DONE</strong> &lt;i&gt;idea&lt;/i&gt;</p>", developer(text))
+        self.assertIn("<strong>LATER</strong> a&amp;b</p>", developer(text))
 
     def test_a_chat_offer_in_now_draws_its_block_under_next_with_the_head_and_the_tell(self):
         # P1122 (D7): the head is bold text and the tell a code box, with the key for the owner's Copy and no hook that sends
