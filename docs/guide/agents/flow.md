@@ -360,7 +360,11 @@ The envelope has `op` `run-request`. Its `data` holds:
   with code `board_not_in_wokwi`, built the board, the sheet and the pin map
   ([P1008](https://github.com/xmejkal/spark/issues/1467)). Its `status` is then `ok`, its `line` is `ran <label>: ok`,
   and `note` is the meaning of that code. The guide counts such a build as done, too. The envelope keeps the build's
-  own `unchecked` item, so its `status` stays `could-not-run` and the exit stays 2. Decide on `data.status`.
+  own `unchecked` item, so its `status` stays `could-not-run` and the exit stays 2. Decide on `data.status`. A
+  parts-list write that ended ok has its own notes as `note`, joined by `; `
+  ([P1139](https://github.com/xmejkal/spark/issues/1674)). Examples are the entries it kept that no pick explains,
+  each entry spark wrote for a pick that is gone, and a note on `.spark/requirements-origin.json`. A parts-list write
+  that did not end ok has no `note`, so `line` keeps its reason. A pick's notes never reach `note`.
 - `fingerprint`: the fingerprint after the run, the whole sha256.
 
 The text output starts with `ran <label>: <status word>`, the word of `data.status`. A step's own `problems` and `unchecked` items are the
