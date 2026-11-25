@@ -3,7 +3,8 @@ One git commit of one file spark changed in a person's project (P1027, slice 2),
 change back. Before its write, the writer asks `held_as_is`: git must hold the file as it is on disk, staged and committed,
 with HEAD on a branch. After the write it calls `commit`, which commits that file alone (`--only`), never with a guessed
 author, and runs the person's hooks. Spark never stages with `git add`, never runs `revert`, `reset` or `push`, and never
-skips a hook. A file git does not hold, a person's own edits or a HEAD off a branch give a reason and no commit.
+skips a hook. A file git does not hold, a person's own edits or a HEAD off a branch give a reason and no commit. It also
+reads which files git tracks, and changes nothing by it.
 """
 
 import os
@@ -76,6 +77,20 @@ class ProjectCommit:
         if self._git("hash-object", "--", name)[1] != head or self._git("rev-parse", "--verify", "-q", ":./" + name)[1] != head:
             return UNCOMMITTED
         return None
+
+    def tracks(self, name):
+        """Whether git's index holds `name` (P1150): True or False, and None when git cannot say: no git, no repository, a
+        folder git refuses, or a timeout. The index, not HEAD: a file added and not yet committed is tracked."""
+        code = self._git("ls-files", "--error-unmatch", "--", "./" + name)[0]
+        return {0: True, 1: False}.get(code)
+
+    def tracked_files(self, patterns):
+        """The files in git's index under the project that `patterns` cover, as paths from the project folder; [] when git
+        cannot say. A pattern is a glob where `*` stays inside one folder, as in a `.gitignore`; one that ends in `/` covers
+        everything below that folder."""
+        specs = [":(glob)./" + (pattern + "**" if pattern.endswith("/") else pattern) for pattern in patterns]
+        code, out, _ = self._git("ls-files", "-c", "-z", "--", *specs)
+        return [name for name in out.split("\0") if name] if code == 0 else []
 
     def commit(self, name, message):
         """Commit `name` alone with `message`: (the short sha, None), or (None, git's first line, else its exit code) when git
