@@ -1,7 +1,7 @@
 # P1002 council: the user
 
 The lens: the user's journey. Read on 2026-11-23, 14:50 to 15:25 Prague time. A path that starts with `store/` is
-under `~/.local/share/spark/`. "The diary" is /Users/petr/Development/spark-walks/p934-display2/diary.md.
+under `~/.local/share/spark/`. "The diary" is ~/Development/spark-walks/p934-display2/diary.md.
 
 ## Who
 
@@ -95,7 +95,7 @@ Where a kept fact misleads:
   wiring the reset can work, and U2a skips a path that works (H).
 - M6. A project with its own copy sees nothing new. A project's own board file wins over the shared one · E ·
   scripts/spark/records/board_records.py:35-38 · supports: p934-epaper still reads `deep_sleep: null` from its own
-  copy (E, a read of /Users/petr/Development/spark-walks/p934-epaper/boards/firebeetle2-esp32c6.json).
+  copy (E, a read of ~/Development/spark-walks/p934-epaper/boards/firebeetle2-esp32c6.json).
 
 Where U2a meets the fact: nowhere in spark today. No script reads a board's `deep_sleep` · E · `grep -rn deep_sleep
 scripts/` · supports: U2a sees the fact only through Claude's read of the JSON file.

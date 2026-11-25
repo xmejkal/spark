@@ -19,7 +19,7 @@ time. A path that starts with `store/` is under `~/.local/share/spark/`.
 
 - PO-1 · The job is real and recent. On 2026-11-22 the PO asked twice, with no prompt, whether bench findings get
   kept. His first words: "do they get to be stored about them? like now that we found out which driver works.." ·
-  E · /Users/petr/Development/spark-walks/p934-display2/diary.md:275-276 and 418 · supports only: one person, one
+  E · ~/Development/spark-walks/p934-display2/diary.md:275-276 and 418 · supports only: one person, one
   walk, two days.
 - PO-2 · In the diary lines I read, the session never offered first. Each keeping started from the PO's question.
   Then came a dry run, then his yes · E · diary.md:275-286, 418-428 · supports only: that walk. I did not read all

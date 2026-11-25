@@ -2,7 +2,7 @@
 
 The lens: Feasibility, the fit with spark's technical direction, and electronics-firmware:physics. Read on
 2026-11-23, 14:50 to 15:30 Prague time. A path that starts with `store/` is under `~/.local/share/spark/`. A path
-that starts with `scripts/` is in /Users/petr/Development/spark.
+that starts with `scripts/` is in ~/Development/spark.
 
 ## Jobs it sees
 
@@ -29,7 +29,7 @@ that starts with `scripts/` is in /Users/petr/Development/spark.
   only by hand. The rule exists in `provenance.fact_problems` (scripts/spark/records/provenance.py:44-60). Nothing
   calls it on these keys.
 - TL-4 · Two copies of one record, and the facts sit in the wrong one. The board's shelf copy says `based_on`
-  p934-epaper. Its home, /Users/petr/Development/spark-walks/p934-epaper/boards/firebeetle2-esp32c6.json, still has
+  p934-epaper. Its home, ~/Development/spark-walks/p934-epaper/boards/firebeetle2-esp32c6.json, still has
   `deep_sleep: null` (dated 2026-11-21). The two differ only in `deep_sleep` and `//deep_sleep` · E · a Python
   compare of both files, 2026-11-23 · supports: see TL-5.
 - TL-5 · The next shelving erases those facts. `shelve` builds the copy from the home record and writes it whole ·
@@ -71,7 +71,7 @@ that starts with `scripts/` is in /Users/petr/Development/spark.
   supports: a settings file is the tools.json shape again, with a new place name.
 - TL-15 · Two shapes for one key. The library boards keep `deep_sleep` as bare values (`wake_api`,
   `single_polarity_for_all_pins`). The shelf copy keeps {value, verified, source} entries · E ·
-  /Users/petr/Development/spark/boards/xiao-esp32-c6.json:204, store/shelf/boards/firebeetle2-esp32c6.json:865 ·
+  ~/Development/spark/boards/xiao-esp32-c6.json:204, store/shelf/boards/firebeetle2-esp32c6.json:865 ·
   supports: `provenance.read_value` reads both (provenance.py:16-24). A writer that merges into a bare block needs a
   rule.
 
