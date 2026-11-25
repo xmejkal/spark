@@ -2171,6 +2171,13 @@ class TheMoveHoldTest(unittest.TestCase):
         said = self.refused("chime=speaker", None)
         self.assertIn("held by other-gadget", said["problems"][0]["sentence"])
 
+    def test_a_part_the_other_project_already_picks_while_this_one_holds_it_is_refused_as_already_picked(self):
+        run(["--drawer-set", a_file([{"entry": "speaker", "count": 2}])])
+        run(["--pick", str(self.other), "chime=speaker"])
+        self.assertEqual(self.entry("speaker")["used_in"], {"plant-alarm": 1, "door-bell": 1})
+        said = self.refused("chime=speaker", "move_already_picked")
+        self.assertEqual(said["problems"][0]["sentence"], "door-bell already picks speaker for chime, and plant-alarm holds it too")
+
     def test_a_second_move_of_the_same_hold_is_refused(self):
         self.move("chime=speaker", "--apply")
         self.refused("chime=speaker", "move_not_picked")

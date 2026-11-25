@@ -66,6 +66,7 @@ SAME_FOLDER_SENTENCE = "%s and %s are one folder: a move takes a part from one p
 SAME_NAME_SENTENCE = ("%s and %s are two folders whose holds would go under one name, %s: put one on your projects with "
                       "/spark:init first, so it keeps its own name")
 NOT_PICKED_SENTENCE = "no need of %s picks %s, so %s holds no %s to move"
+ALREADY_PICKED_SENTENCE = "%s already picks %s for %s, and %s holds it too"
 PART_OF_COUNT_SENTENCE = "%s would let go %d of %s and %s would take %d: a move of part of a count is not there yet"
 PAIR_SENTENCE = "--move-hold takes FROM, TO and NEED=ID, the need of TO and the part: button=tactile-6mm"
 STOPPED_SENTENCE = "%s's pick did not finish, so %s still picks %s: run the same move again once its problem is fixed"
@@ -192,15 +193,19 @@ class MoveHold(Operation):
                  MoveSide(names[1], target, unpicked(before, picked), needs.released_holds(changes, names[1]), out_of_date(target)))
         listed = store.find_listed_name(target) is not None
         adopted = [] if problems else record_home.list_project(target, True)[1]
-        found = self._refusals(held, pick_id, release, sides, (changes, problems))
+        already = any(needs.as_record(pick, held.known, held.entries) == wanted for one in before if one["id"] == need
+                      for pick in one.get("pick") or [])
+        found = self._refusals(held, pick_id, release, sides, (changes, problems, need if already else None))
         gone = next(iter(wanted.values())) if wanted else pick_id
         return MovePlan(sides[0], sides[1], need, wanted, release, picked, changes, events, listed, adopted, notes,
                         losing(held.current, release.after, gone), found)
 
     def _refusals(self, held, pick_id, release, sides, planned):
-        """The Findings that refuse a move: a part FROM does not pick, TO's pick's own problems, then a part of a count.
-        `held` is FROM's PickPlan, `planned` TO's pick as (drawer changes, problems)."""
-        (changes, problems), wanted = planned, held.resolve(pick_id)
+        """The Findings that refuse a move: a part FROM does not pick, TO's pick's own problems, a part TO's need already
+        picks while FROM still holds it, then a part of a count. `held` is FROM's PickPlan, `planned` TO's pick as (drawer
+        changes, problems, the need when TO's need already picks the part, else None). A retry whose FROM holds nothing
+        any more lets go nothing, so it is never refused as already picked."""
+        (changes, problems, already), wanted = planned, held.resolve(pick_id)
         if release.after == held.current:
             return [Finding.of(outcomes.PROBLEMS, pick_id, idea_codes.MOVE_NOT_PICKED,
                                NOT_PICKED_SENTENCE % (sides[0].name, pick_id, sides[0].name, pick_id))]
@@ -209,6 +214,9 @@ class MoveHold(Operation):
         stock = {key for key in held.entries if needs.as_record({"entry": key}, held.known, held.entries) == wanted}
         let_go = sum(hold["was"] - hold["now"] for hold in release.released if hold["entry"] in stock)
         takes = taken(changes, sides[1].name, stock)
+        if already and let_go > 0:
+            return [Finding.of(outcomes.PROBLEMS, pick_id, idea_codes.MOVE_ALREADY_PICKED,
+                               ALREADY_PICKED_SENTENCE % (sides[1].name, pick_id, already, sides[0].name))]
         if let_go > takes:
             return [Finding.of(outcomes.PROBLEMS, pick_id, idea_codes.MOVE_PART_OF_COUNT,
                                PART_OF_COUNT_SENTENCE % (sides[0].name, let_go, pick_id, sides[1].name, takes))]
