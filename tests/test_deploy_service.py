@@ -280,6 +280,7 @@ class TheFlashNotFinishedTest(ServiceCase):
         sha256 = project_image.ProjectImage(self.project).sha256
         self.assertIs(ended, self.ends_with)
         self.assertEqual((ended.log_path, ended.image_sha256), (self.logs()[0], sha256))
+        self.assertEqual(ended.verdict, "flash not finished")  # P1112: the handler hands its log's verdict on
         self.assertEqual(board_log.newest_logged_deploy(self.project),
                          (1, board_log.LoggedDeploy(self.clock.now().isoformat(timespec="seconds"), sha256, "flash not finished", "crash")))
         text = ended.log_path.read_text(encoding="utf-8")
@@ -363,6 +364,7 @@ class TheVerifyNotFinishedTest(ServiceCase):
         self.assertIs(ended, self.ends_with)
         self.assertTrue(deploy_service.ended_after_the_yes(ended))
         self.assertEqual((ended.log_path, ended.image_sha256), (self.logs()[0], sha256))
+        self.assertEqual(ended.verdict, "ready unknown")  # P1112: the verify's store entry says the same
         self.assertEqual(board_log.newest_logged_deploy(self.project),
                          (1, board_log.LoggedDeploy(self.clock.now().isoformat(timespec="seconds"), sha256, "ready unknown", "crash")))
         text = ended.log_path.read_text(encoding="utf-8")
@@ -414,7 +416,7 @@ class TheStoreRecordOfAFlashNotFinishedTest(ServiceCase):
         report = self.look()
         self.image.write_bytes(INTERPRETER_WITH_BANNER)  # the image holds a banner now, which never reached the board
         records = FakeDeployRecordStore()
-        path = self.service(records=records).record_not_finished(report, "ab" * 32, self.clock.now(), "a test")
+        path = self.service(records=records).record_not_finished(report, "ab" * 32, self.clock.now(), "a test", "flash not finished")
         (facts, verdict, who), = records.written
         self.assertEqual((path, verdict, who), (records.path, "flash not finished", "a test"))
         self.assertEqual((facts["image_sha256"], facts["micropython_banner"], facts["deployed"]),

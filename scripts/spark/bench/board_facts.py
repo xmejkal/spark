@@ -26,9 +26,14 @@ def facts(project, board, mac, image, files, moment, simulation):
     "passed" or "none": what tested the image (ImageEvidence.simulation). The image's sha256 and its MicroPython banner
     (image_builder.banner_in, None when it holds none, P779) are read from one read of the image file."""
     data = Path(image).read_bytes()
+    return facts_of(project, board, mac, hashlib.sha256(data).hexdigest(), image_builder.banner_in(data), files, moment, simulation)
+
+
+def facts_of(project, board, mac, image_sha256, banner, files, moment, simulation):
+    """The facts of `facts`, given the image's sha256 and banner, when the image file is not read (P1112)."""
     return {"spark": json.loads(PLUGIN_JSON.read_text())["version"], "project": Path(project).resolve().name,
-            "board": board, "mac": mac, "image_sha256": hashlib.sha256(data).hexdigest(),
-            "micropython_banner": image_builder.banner_in(data),
+            "board": board, "mac": mac, "image_sha256": image_sha256,
+            "micropython_banner": banner,
             "files": files, "simulation": simulation, "deployed": moment.isoformat(timespec="seconds")}
 
 

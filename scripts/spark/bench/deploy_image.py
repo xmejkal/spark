@@ -104,7 +104,7 @@ def grant_hint(project, port, evidence):
 def who_said_yes(consent):
     """Whose yes it was, as a phrase, read once. getpass can find no user (OSError since Python 3.13, KeyError before
     it), and then the phrase says so. After a verify the store record is not written then and names the error itself;
-    a flash that did not finish keeps its entry with this phrase (P1097)."""
+    a flash or a verify that did not finish keeps its entry with this phrase (P1097, P1112)."""
     try:
         return consent.who
     except (OSError, KeyError) as cannot:
@@ -270,7 +270,8 @@ class DeployFlowService:
     def say_not_finished(self, failed):
         """The board log of `failed`, what ended the flash or the verify after the yes (a FlashError, P1092; a crash or a
         Ctrl-C, P1096, P1110), in that stage: its path, as `data.board_log` with the image it names, or why it was not
-        written. Then the store record of a flash that did not finish (P1097); a verify keeps none (D3)."""
+        written. Then the store record of the stage that did not finish, with the board log's verdict: a flash (P1097) and a
+        verify (P1112) each keep their entry."""
         stage = self.tracker.stage
         logged_line, unlogged_line = NOT_FINISHED_LINES[stage]
         if failed.log_path is None:
@@ -278,8 +279,7 @@ class DeployFlowService:
         else:
             self._reached.update(board_log=str(failed.log_path), image_sha256=failed.image_sha256)
             self.say(stage, logged_line % failed.log_path, raw=True)  # P677: a file a person opens, as data.board_log
-        if stage == DeployPhase.FLASH:
-            self.keep_record(lambda: self.service.record_not_finished(self.look, failed.image_sha256, failed.moment, self._reached["who"]))
+        self.keep_record(lambda: self.service.record_not_finished(self.look, failed.image_sha256, failed.moment, self._reached["who"], failed.verdict))
 
     def keep_record(self, write):
         """The store record that `write()` writes, said in the current stage: its path as `data.store_record`, or why it was
