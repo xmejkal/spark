@@ -33,6 +33,7 @@ import golden_design  # noqa: E402
 from spark.build.build_record import replace_whole  # noqa: E402
 from golden_design import Case  # noqa: E402
 from golden_firmware import STDERR_MARK  # noqa: E402
+from spark.flow.now_follow_up import REFRESHED  # noqa: E402
 from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE  # noqa: E402
 from spark.flow.wired_board import day_of  # noqa: E402
 
@@ -408,7 +409,65 @@ class UnfinishedBuildDistTest(unittest.TestCase):
         code, project, report = self.run_build(env=REFERENCE_ENV, before=no_sheet, args=REFERENCE)
         self.assertEqual(code, 2)
         self.assertEqual([entry for entry in report["kept"] if entry["file"].startswith("breadboard.")], [])
-    # --- end P1093, P1095, P1114 ---
+    # P1121 (#1650): a reference build writes no pin map either, so spark's earlier one stays, named as an earlier build's
+    SPARK_PINS = "# The pin map: written by spark's assign_pins.py\nLED = 5\n"  # the header spark writes, planted as an earlier file
+    PINS_WHY = "spark's reference design has no pin map, so it is an earlier build's"
+
+    def test_a_reference_design_build_names_spark_s_earlier_pin_map_as_an_earlier_builds(self):
+        for label, env in (("finished", REFERENCE_ENV), ("partial", PARTIAL)):
+            def earlier(project):
+                (project / "firmware").mkdir(exist_ok=True)
+                (project / "firmware" / "pins.py").write_text(self.SPARK_PINS)
+                for picture in ("schematic.svg", "pcb.svg"):  # inside dist/, which the dist entry covers (D2)
+                    (project / "dist" / "board" / picture).write_text("<svg>earlier</svg>")
+            with self.subTest(label):
+                code, project, report = self.run_build(env=env, before=earlier, args=REFERENCE)
+                self.assertEqual(code, 2)  # the real exit code of both: the simulation cannot run (no node)
+                self.assertEqual((project / "firmware" / "pins.py").read_text(), self.SPARK_PINS)
+                entry = self.entry_of(report, "firmware/pins.py")
+                self.assertEqual((entry["did"], entry["why"]), ("left alone", self.PINS_WHY))
+                if label == "partial":
+                    self.assertEqual([entry["did"] for entry in self.dist_entries(report)], ["left alone"])
+                    for picture in ("schematic.svg", "pcb.svg"):
+                        self.assertEqual((project / "dist" / "board" / picture).read_text(), "<svg>earlier</svg>")
+
+    def test_a_reference_design_build_names_no_pin_map_that_is_not_spark_s(self):
+        mine = "LED = 5  # mine\n"
+        def person_wrote_it(project):
+            (project / "firmware").mkdir(exist_ok=True)
+            (project / "firmware" / "pins.py").write_text(mine)
+        for label, before in (("no file", None), ("a person's file", person_wrote_it)):
+            with self.subTest(label):
+                code, project, report = self.run_build(env=REFERENCE_ENV, before=before, args=REFERENCE)
+                self.assertEqual([entry for entry in report["kept"] if entry["file"] == "firmware/pins.py"], [])
+                if before:
+                    self.assertEqual((project / "firmware" / "pins.py").read_text(), mine)
+
+    def test_an_unreadable_pin_map_after_a_reference_design_build_is_named_not_written(self):  # B2
+        def unreadable(project):
+            (project / "firmware").mkdir(exist_ok=True)
+            pins = project / "firmware" / "pins.py"
+            pins.write_text(self.SPARK_PINS)
+            pins.chmod(0)
+        if os.geteuid() == 0:
+            self.skipTest("root reads a file with no mode")
+        code, project, report = self.run_build(env=REFERENCE_ENV, before=unreadable, args=REFERENCE)
+        pins = project / "firmware" / "pins.py"
+        pins.chmod(0o644)
+        entry = self.entry_of(report, "firmware/pins.py")
+        self.assertEqual(entry["did"], "not written")
+        self.assertIn("Permission denied", entry["why"])
+        self.assertEqual(pins.read_text(), self.SPARK_PINS)  # the file stays
+
+    def test_a_reference_design_build_writes_the_page_again_and_names_it_not(self):
+        def earlier(project):
+            (project / "page.html").write_text("<html>earlier</html>")
+        code, project, report = self.run_build(env=REFERENCE_ENV, before=earlier, args=REFERENCE)
+        self.assertEqual([entry for entry in report["kept"] if entry["file"] == "page.html"], [])
+        self.assertNotEqual((project / "page.html").read_text(), "<html>earlier</html>")
+        code, project, text = self.run_build(env=REFERENCE_ENV, before=earlier, args=REFERENCE, json_out=False)
+        self.assertIn(REFRESHED, text)
+    # --- end P1093, P1095, P1114, P1121 ---
 
 
 class ReplaceWholeTest(unittest.TestCase):
