@@ -17,7 +17,8 @@ simulation runs unless you run one. [What works today](README.md#what-works-toda
 
 The rules under what never to assume apply to any work in this repository. To change spark itself, read
 [`docs/guide/developing.md`](docs/guide/developing.md). Its patterns, names table and role words are in
-[`docs/guide/patterns-and-names.md`](docs/guide/patterns-and-names.md).
+[`docs/guide/patterns-and-names.md`](docs/guide/patterns-and-names.md), and the words of one area in
+[`docs/guide/words.md`](docs/guide/words.md).
 
 ## What spark is and where its code is
 

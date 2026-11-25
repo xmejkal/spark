@@ -479,7 +479,18 @@ on your list that built end to end, with a digest of some of the facts the build
 needs, power, unused pins, pin order, footprint and host parts, and the board's pins, power pads and
 `physical`. A part's size, simulation stand-in and other facts, and the board's pin roles and GPIO
 capabilities, are not in it, so changing them leaves the digest as it was). It is there so that a
-project shows what it cost and what came from reuse ([the tally](#tally)).
+project shows what it cost and what came from reuse ([the tally](#tally)). The history is not the project timeline
+(the next entry).
+
+### Project timeline, kept step and take-back
+
+The **project timeline** is the exchangeable Strategy that makes a project's folder and repository and keeps each
+decision of the person as one **kept step**: the records of that decision with their stamps. A **take-back** returns
+a kept step's records to their earlier content, after a preview and the person's yes. Git fills the timeline first.
+**The failure behind the words:** the discovery of 2026-11-25 found that "history", "commit", "revision" and "change"
+each named something else already. A `step` was already a spine step in your history. The names are in
+[words.md](docs/guide/words.md) ([P1157](https://github.com/xmejkal/spark/issues/1693)). The epic [P1152](https://github.com/xmejkal/spark/issues/1688)
+builds them.
 
 ### Tally
 

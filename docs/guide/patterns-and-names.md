@@ -213,7 +213,8 @@ The PO agreed these rules on 2026-10-21 ([P381](https://github.com/xmejkal/spark
 to the rules we set". New code follows them now. Today's names change in the names pass
 ([P382](https://github.com/xmejkal/spark/issues/489)) and the v0.13 area moves, so an old name is no example.
 
-1. One word has one meaning in the code, the docs, the JSON and Miro. The P323 glossary holds the words.
+1. One word has one meaning in the code, the docs, the JSON and Miro. The P323 glossary holds the words, and
+   [words.md](words.md) holds the tables of words for one area.
 2. A name says what the thing is for, not which tool does it. Only the adapter that wraps a tool carries the tool's
    name: `BoardReader` is the role, and `EsptoolBoardReader` fills it with esptool.
 3. Each level has one responsibility. You can say it in one sentence without "and".
@@ -235,14 +236,6 @@ to the rules we set". New code follows them now. Today's names change in the nam
 
 The role table above still applies. Its role words end a name, and `Fake` starts one. A Service, a Store or an
 Adapter from that table is a helper with its role word, and an Operation calls it.
-
-Words for a rules file (P454, #615): a *rule* is one `fabrication` entry of a project's `.spark/rules.json`.
-
-| Word | Means | Where |
-|---|---|---|
-| `lowest` | the table of limits, one per process key | `data/fabrication.json`, `fab.DATA["lowest"]` |
-| `above`, `at_least` | the two kinds of limit: the value must be greater, or may equal it | the entries of `lowest` |
-| `TOO_LOW`, `NOT_A_NUMBER`, `NOT_AN_OBJECT` | the reason `fab.fabrication_problem` returns beside the field | `scripts/spark/design/fab.py` |
 
 These rules name a class, a function or a constant:
 

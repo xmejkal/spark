@@ -55,7 +55,7 @@ BUDGETS = {
     "docs/guide/agents/never-assume.md": 227,
     "docs/guide/agents/scripts.md": 308,
     "docs/guide/developing.md": 379,
-    "docs/guide/patterns-and-names.md": 279,
+    "docs/guide/patterns-and-names.md": 272,
     "docs/guide/commands.md": 284,
     "docs/guide/how-it-works.md": 277,
 }
