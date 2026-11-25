@@ -1983,7 +1983,7 @@ class ThePageScriptTest(unittest.TestCase):
             "the request names a step that spark does not offer now, so nothing ran":
                 "Nothing ran. This button is no longer offered. Reload the page.",
             "the request names a step that is asked in the chat, never from the page, so nothing ran":
-                "Nothing ran. A need is dropped in the chat: tell Claude which one.",
+                "Nothing ran. This step is asked in the chat: tell Claude.",
             "the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or "
             "could not be deleted, so nothing ran": "Nothing ran. The request could not be read. Reload the page and click again."})
         self.assertEqual(words["marks"], {"ok": "✓", "problems": "✗", "could-not-run": "?", "not-run": "–"})

@@ -34,6 +34,7 @@ from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import SimulateReader  # noqa: E402
+from spark.flow import flow_codes  # noqa: E402
 from spark.flow.guide import guide_of  # noqa: E402
 from spark.flow.show_flow import ShowFlow, flow_and_guide, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
@@ -689,7 +690,8 @@ class TheGuideTest(FlowTest):
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (2, "could-not-run", "firmware"))  # P1030: the guide's now
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "needs": [], "steps": 10, "with_wiring": True,
+            "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "chat_offer": "write-firmware", "needs": [], "steps": 10,
+                    "with_wiring": True,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
@@ -718,7 +720,8 @@ class TheGuideTest(FlowTest):
         project = a_firmware(a_project_built_with_no_simulation())
         said, _ = show(project)
         self.assertEqual(said["data"]["guide"], {
-            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "needs": [], "steps": None, "with_wiring": True,
+            "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "chat_offer": "look-at-board", "needs": [], "steps": None,
+                    "with_wiring": True,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
@@ -807,7 +810,7 @@ class TheGuideTest(FlowTest):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         self.assertEqual(show(project)[0]["data"]["guide"], {
-            "now": {"phase": "idea", "by": ["you"], "offer": None, "needs": [], "steps": None, "with_wiring": False,
+            "now": {"phase": "idea", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None})  # P1044: no sheet and no board log
@@ -873,7 +876,7 @@ class TheGuideTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual(guide["now"], {
-            "phase": "parts", "by": ["you"], "offer": None, "needs": [], "steps": None, "with_wiring": False,
+            "phase": "parts", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False,
             "says": "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, "
                     "then pick a part."})
         self.assertEqual((guide["done"], guide["later"], guide["set_aside"]), (
@@ -1619,7 +1622,7 @@ class TheNextOnlyStepTest(FlowTest):
         said, _ = show(project)
         whole = str(project.absolute())
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "simulate", "by": ["claude"], "says": SIM_FILES_NOW, "offer": None,
-                                                        "needs": [], "steps": None, "with_wiring": False})
+                                                        "chat_offer": None, "needs": [], "steps": None, "with_wiring": False})
         self.assertEqual(said["next"], [{"op": "build-board", "argv": [str(project.absolute() / "requirements.json"), "--keep", whole],
                                          "why": "Build the board", "effects": ["reads", "runs", "writes"], "needs_yes": False,
                                          "env": self.env()}])
@@ -2326,25 +2329,27 @@ class TheDeployNowTest(FlowTest):
 
     def test_each_open_deploy_has_its_own_now(self):
         lost = "Spark saw ready after the last deploy, then lost the board, and cannot tell from here whether the firmware still runs. "
-        for name, verdict, sentence, reason, now in (
-                ("no read-back", "ready unknown", FILES_UNREAD_SENTENCE, None, NO_START_NOW),
-                ("not started", "ready unknown", NOT_STARTED_SENTENCE, None, NO_START_NOW),
+        # P1122: a partial deploy's sentence asks Claude to look at the board; a deploy with problems asks for the log
+        look, log = "look-at-board", None
+        for name, verdict, sentence, reason, now, chat in (
+                ("no read-back", "ready unknown", FILES_UNREAD_SENTENCE, None, NO_START_NOW, look),
+                ("not started", "ready unknown", NOT_STARTED_SENTENCE, None, NO_START_NOW, look),
                 ("lost", "ready unknown", LOST_SENTENCE, "board_lost",
-                 lost + "If your gadget works, nothing is wrong. Else ask Claude to look at the board with you."),
+                 lost + "If your gadget works, nothing is wrong. Else ask Claude to look at the board with you.", look),
                 ("port gone", "ready unknown", "the board's port is gone: x", "port_gone",
-                 "After the last deploy, the board's port was gone. Ask Claude to look at the board with you."),
+                 "After the last deploy, the board's port was gone. Ask Claude to look at the board with you.", look),
                 ("download mode", "ready unknown", "x", "download_mode_stayed",
-                 "After the last deploy, the board stayed in download mode. Ask Claude to look at the board with you."),
+                 "After the last deploy, the board stayed in download mode. Ask Claude to look at the board with you.", look),
                 ("not recorded", "ready unknown", "the board said something new: x", None,
-                 "The log does not say whether the firmware started after the last deploy. Ask Claude to look at the board with you."),
+                 "The log does not say whether the firmware started after the last deploy. Ask Claude to look at the board with you.", look),
                 ("firmware error", "ready not seen", "the firmware stopped with an error: Traceback ...", None,
-                 "After the last deploy, the firmware stopped with an error. Ask Claude to go through the board log with you."),
+                 "After the last deploy, the firmware stopped with an error. Ask Claude to go through the board log with you.", log),
                 ("old files differ", "ready not seen", "the board's /main.py is not the files of the image", None,
-                 "After the last deploy, spark did not see ready. Ask Claude to go through the board log with you.")):
+                 "After the last deploy, spark did not see ready. Ask Claude to go through the board log with you.", log)):
             with self.subTest(name=name):
                 said, _ = show(a_board_log(a_deploy_project(), verdict, sentence, reason=reason))
                 self.assertEqual(self.now(said), {"phase": "deploy", "by": ["your terminal"], "says": now, "offer": None,
-                                                  "needs": [], "steps": None, "with_wiring": True})
+                                                  "chat_offer": chat, "needs": [], "steps": None, "with_wiring": True})
                 self.assertEqual([step["op"] for step in said["next"]], ["look"])
                 self.assertIsNone(said["data"]["guide"]["no_open_phase"])
 
@@ -2477,6 +2482,122 @@ def with_secrets(project, text):
     (project / "firmware").mkdir(parents=True, exist_ok=True)
     (project / "firmware" / "wifi_secrets.py").write_text(text, encoding="utf-8")
     return project
+
+
+def chat_offer(project):
+    """The guide's `now.chat_offer` of `project` (P1122)."""
+    return show(project)[0]["data"]["guide"]["now"]["chat_offer"]
+
+
+class TheChatOfferTest(FlowTest):
+    """P1122, D3: the guide's now names the chat offer whose job its NOW sentence asks Claude for, one row of the plan's
+    table per test, and None beside any sentence that asks for something else. The keys are literals here."""
+
+    def test_a_firmware_not_started_asks_claude_to_write_the_firmware_with_two_jobs_or_one(self):
+        for project in (a_project_built_with_no_simulation(), a_built_project()):
+            with self.subTest(project=project):
+                self.assertEqual(chat_offer(project), "write-firmware")
+
+    def test_a_simulate_with_no_sim_files_asks_for_the_build_so_it_names_none(self):
+        project = a_firmware(a_built_project())
+        self.assertEqual((show(project)[0]["data"]["guide"]["now"]["phase"], chat_offer(project)), ("simulate", None))
+
+    def test_a_simulate_not_started_asks_to_run_the_simulation_with_a_scenario_or_none(self):
+        for scenario in ((), ("a.scenario.yaml",)):
+            with self.subTest(scenario=scenario):
+                project = a_firmware(a_built_project())
+                (project / "sim").mkdir()
+                (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "image.bin"\n')
+                for name in scenario:
+                    (project / "sim" / "scenarios").mkdir()
+                    (project / "sim" / "scenarios" / name).write_text("name: a\n")
+                self.assertEqual((statuses(show(project)[0])["simulate"], chat_offer(project)), ("not-started", "run-simulation"))
+
+    def test_an_image_no_run_tested_asks_to_run_the_simulation_with_a_scenario_or_none(self):
+        for scenario in ((), ("a.scenario.yaml",)):
+            with self.subTest(scenario=scenario):
+                project = a_simulate_now(a_built_project(), *scenario)
+                self.assertEqual((statuses(show(project)[0])["simulate"], chat_offer(project)), (None, "run-simulation"))
+
+    def test_a_failed_run_or_an_image_older_than_the_firmware_names_none(self):
+        failed = a_run(an_image(a_firmware(a_built_project())), "failed")
+        older = a_run(an_image(a_firmware(a_built_project())), "passed")
+        os.utime(older / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        for project in (failed, older):
+            with self.subTest(project=project):
+                self.assertEqual((show(project)[0]["data"]["guide"]["now"]["phase"], chat_offer(project)), ("simulate", None))
+
+    def test_a_simulate_with_problems_names_none(self):
+        project = a_firmware(a_project_built_with_no_simulation())
+        (project / "sim").mkdir()
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = 42\n')
+        self.assertEqual((statuses(show(project)[0])["simulate"], chat_offer(project)), ("problems", None))
+
+    def test_a_deploy_not_started_asks_claude_to_look_at_the_board_and_next_is_still_the_look(self):
+        said = show(a_deploy_project())[0]
+        self.assertEqual((said["data"]["guide"]["now"]["chat_offer"], said["data"]["guide"]["now"]["offer"]), ("look-at-board", None))
+        self.assertEqual([step["op"] for step in said["next"]], ["look"])
+
+    def test_a_flash_that_did_not_finish_asks_to_look_at_the_board_even_on_another_image(self):
+        for image in (b"an image", b"another image"):
+            with self.subTest(image=image):
+                project = a_not_finished_log(a_deploy_project(), image=image)
+                self.assertEqual((deploy_of(show(project)[0])["status"], chat_offer(project)), ("problems", "look-at-board"))
+
+    def test_a_deploy_of_another_image_asks_to_look_at_the_board(self):
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, image=b"another image")
+        self.assertEqual((deploy_of(show(project)[0])["status"], chat_offer(project)), ("stale", "look-at-board"))
+
+    def test_a_stale_deploy_that_needs_the_image_made_first_names_none(self):
+        # making the image is no chat offer yet (the plan's Q2), so no block shows beside "make the image again"
+        newer = a_board_log(an_image(a_firmware(a_project_built_with_no_simulation())), "ready seen", SEEN_SENTENCE)
+        os.utime(newer / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        none = a_board_log(an_image(a_firmware(a_project_built_with_no_simulation())), "ready seen", SEEN_SENTENCE)
+        (none / "sim" / "image.bin").unlink()
+        for project, fact in ((newer, "firmware-newer"), (none, "no-image")):
+            with self.subTest(fact=fact):
+                said = show(project)[0]
+                self.assertEqual((said["data"]["deploy"]["fact"], said["data"]["guide"]["now"]["chat_offer"]), (fact, None))
+
+    def test_a_deploy_log_that_cannot_be_read_names_none(self):
+        project = a_board_log(a_deploy_project(), "ready not read", "x")
+        self.assertEqual((deploy_of(show(project)[0])["status"], chat_offer(project)), ("could-not-run", None))
+
+    def test_any_other_phase_names_none_and_a_build_now_keeps_its_offer(self):
+        idea = Path(tempfile.mkdtemp()) / "plant-alarm"
+        idea.mkdir()
+        build = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"board": "xiao-esp32-c6"}]}])
+        (build / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": [], "board_only": True}))
+        self.assertIsNone(chat_offer(idea))
+        now = show(build)[0]["data"]["guide"]["now"]
+        self.assertEqual((now["phase"], now["offer"], now["chat_offer"]), ("build", "build", None))
+
+
+class TheOfferKindsTableTest(unittest.TestCase):
+    """P1115, P1122: the rules of the one table of offer kinds. The kinds, the keys and the words are literals here."""
+
+    def test_the_table_holds_the_seven_kinds_in_order(self):
+        self.assertEqual(list(flow_codes.OFFER_KINDS),
+                         ["pick", "requirements", "build", "needs-drop", "write-firmware", "run-simulation", "look-at-board"])
+
+    def test_a_kind_with_a_tell_is_never_sent_from_the_page_and_a_sent_kind_has_no_tell(self):
+        for kind, row in flow_codes.OFFER_KINDS.items():
+            with self.subTest(kind=kind):
+                self.assertFalse(row.tell and row.from_page)
+
+    def test_a_tell_names_the_job_never_the_how(self):
+        tells = [row.tell for row in flow_codes.OFFER_KINDS.values() if row.tell]
+        self.assertEqual(len(tells), 3)
+        for tell in tells:
+            with self.subTest(tell=tell):
+                self.assertFalse([part for part in ("/spark:", ".py", "--", "/") if part in tell])
+                self.assertTrue(tell.endswith("."))
+
+    def test_every_chat_offer_the_guide_names_has_a_tell(self):
+        named = set(flow_codes.CHAT_NOW.values())
+        self.assertEqual(named, {"write-firmware", "run-simulation", "look-at-board"})
+        self.assertEqual([kind for kind in named if not flow_codes.OFFER_KINDS[kind].tell], [])
 
 
 class TheSecretMaskTest(FlowTest):

@@ -147,6 +147,33 @@
    "tell": null
   },
   {
+   "key": "offer:write-firmware",
+   "kind": "write-firmware",
+   "phase": "firmware",
+   "label": "Write the firmware",
+   "op": null,
+   "from_page": false,
+   "tell": "Write the firmware for this project's board."
+  },
+  {
+   "key": "offer:run-simulation",
+   "kind": "run-simulation",
+   "phase": "simulate",
+   "label": "Run the simulation",
+   "op": null,
+   "from_page": false,
+   "tell": "Help me run the simulation of this project."
+  },
+  {
+   "key": "offer:look-at-board",
+   "kind": "look-at-board",
+   "phase": "deploy",
+   "label": "Look at the board",
+   "op": null,
+   "from_page": false,
+   "tell": "Look at this project's board with me."
+  },
+  {
    "key": "op:needs-drop",
    "op": "needs-drop",
    "area": "idea",

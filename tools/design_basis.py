@@ -39,6 +39,8 @@ UNBUILT = (
 )
 NOT_BUILT = "not built"
 NO_WORD = "(the mark alone)"
+#: The Op cell of a chat offer, which has no step of spark's: Claude does its job in the chat (P1122).
+NO_OP = "none"
 INTRO = """How to read this page:
 
 - The moment of each phase and the unbuilt steps are hand-written, last on %s.
@@ -50,6 +52,7 @@ INTRO = """How to read this page:
 - This page does not list which statuses each phase can show. Each phase reader decides that from the project's files.
 - An offer key names a kind of offer, not one project's offer. Its label keeps its `%%s` places.
 - "From the page" says whether a click on the project page can send the offer. If it says no, you ask Claude in the chat.
+- A tell is one sentence for Claude that names a job only Claude does. An offer with a tell is a chat offer, with no op.
 - A status with no word is shown by its mark alone.
 - The summary of an Operation is the one that `--describe` prints.""" % HAND_WRITTEN
 
@@ -131,8 +134,9 @@ class DesignBasis:
         lines += ["", "## Statuses", "", "| Key | Word | Mark |", "|---|---|---|"]
         lines += ["| `%s` | %s | %s |" % (one["key"], one["word"] or NO_WORD, one["mark"]) for one in self.of_group("status")]
         lines += ["", "## Actors", ""] + ["- `%(key)s`: %(name)s" % one for one in self.of_group("by")]
-        lines += ["", "## Offers", "", "| Key | Phase | Label | Op | From the page |", "|---|---|---|---|---|"]
-        lines += ["| `%s` | %s | `%s` | %s | %s |" % (one["key"], one["phase"], one["label"], one["op"], "yes" if one["from_page"] else "no")
+        lines += ["", "## Offers", "", "| Key | Phase | Label | Op | From the page | Tell |", "|---|---|---|---|---|---|"]
+        lines += ["| `%s` | %s | `%s` | %s | %s | %s |" % (one["key"], one["phase"], one["label"], one["op"] or NO_OP,
+                                                        "yes" if one["from_page"] else "no", one["tell"] or "")
                   for one in self.of_group("offer")]
         lines += ["", "## Operations"]
         for area in dict.fromkeys(one["area"] for one in self.of_group("op")):
