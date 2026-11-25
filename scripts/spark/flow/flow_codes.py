@@ -4,6 +4,8 @@ phase, the keys of its offers and its fixed sentences. A leaf: it imports nothin
 envelope's `status`, which stays ok, problems or could-not-run.
 """
 
+from collections import namedtuple
+
 # --- MVP ---
 #: The nine phases of a project, in the order the person goes through them.
 PHASES = ("idea", "needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy")
@@ -131,6 +133,18 @@ PICK_WHY = "The person's choice: “%s” for the %s need"
 DROP_LABEL = "Drop the %s need"
 REQUIREMENTS_LABEL = "Write the parts list"
 BUILD_LABEL = "Build the board"
+#: Value: one kind of offer (P1115): the phase whose reader offers it, its label (the name of its button), whether the page
+#: sends it from a button (`from_page`), and `tell`, one sentence for Claude that names the job, never the how, or None.
+OfferKind = namedtuple("OfferKind", "phase label from_page tell")
+#: The kinds of offer, in the order the design basis lists them (P1115): the one place a kind is spelled. A drop is asked in
+#: the chat (P883), so the page never sends it.
+OFFER_KINDS = {PICK: OfferKind(PARTS, PICK_LABEL, True, None),
+               WRITE_REQUIREMENTS: OfferKind(REQUIREMENTS, REQUIREMENTS_LABEL, True, None),
+               BUILD_BOARD: OfferKind(BUILD, BUILD_LABEL, True, None),
+               NEEDS_DROP: OfferKind(NEEDS, DROP_LABEL, False, None)}
+#: The kinds the page sends from its buttons, and the kinds asked in the chat, never from the page (`run_request`).
+SENDABLE = tuple(kind for kind, row in OFFER_KINDS.items() if row.from_page)
+IN_CHAT = tuple(kind for kind, row in OFFER_KINDS.items() if not row.from_page)
 #: The effect of each offer: plain sentences that name every write (P829, the PO, 2026-11-21). The real run on a copy of
 #: button-light showed each one (docs/observations/rows/p829-run-request.md).
 PICK_MESSAGE = "Saves “%s” as the pick for the %s need in this project."
@@ -217,10 +231,9 @@ WIRED_BUILD_MESSAGE = ("If you wired the board, this build can move pins: compar
 #: The fixed sentence of each kind of offer that can move a pin.
 WIRED_EFFECT = {PICK: WIRED_PICK_MESSAGE, BUILD_BOARD: WIRED_BUILD_MESSAGE}
 
-#: The page's script (P829 PR 3): the kinds of offer the page sends from its buttons (a drop is asked in the chat, P883),
-#: and every word the script shows. Python writes them into the page's inert words block; the script fills in only a
-#: time, an offer's label or spark's own line. No word says "done" alone.
-SENDABLE = (PICK, WRITE_REQUIREMENTS, BUILD_BOARD)
+#: The page's script (P829 PR 3): every word the script shows, for the kinds of offer the page sends (`SENDABLE`). Python
+#: writes them into the page's inert words block; the script fills in only a time, an offer's label or spark's own line.
+#: No word says "done" alone.
 CONFIRM_STALE = "These steps may be marked out of date: %s."
 SEND, CANCEL, COPY, WITHDRAW = "Send", "Cancel", "Copy", "Withdraw"
 #: What Copy puts on the clipboard: the command that carries the request to spark.

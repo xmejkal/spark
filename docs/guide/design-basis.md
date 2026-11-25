@@ -6,7 +6,7 @@ How to read this page:
 
 - The moment of each phase and the unbuilt steps are hand-written, last on 2026-11-24.
 - The phases, statuses, actors and Operations are read from the code.
-- The offer kinds, their labels and their phases are written in the tool. A test checks them against the code.
+- The offer kinds, their phases, labels and tells are read from `flow_codes.OFFER_KINDS`. Only each step is written in the tool.
 - A key is `<group>:<name>`, and the group makes it unique.
 - A phase reader is the code that reads one phase of a project. The usual actor of a phase is the one its reader names.
   In some states the guide names another actor, and `guide.now.by` holds the actual one.

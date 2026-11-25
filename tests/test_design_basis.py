@@ -92,9 +92,8 @@ class TheOperationsTest(unittest.TestCase):
 
 
 class TheOffersTest(unittest.TestCase):
-    def test_t6_the_offer_kinds_are_the_codes_and_from_page_needs_both_lists(self):  # T6
-        kinds = tuple(flow_codes.SENDABLE) + tuple(run_request.IN_CHAT)
-        self.assertEqual(set(design_basis.OFFER_STEPS), set(kinds))
+    def test_t6_the_offer_kinds_are_the_table_and_from_page_needs_the_row_and_the_allow_list(self):  # T6 (P1115)
+        self.assertEqual([one["kind"] for one in group("offer")], list(flow_codes.OFFER_KINDS))
         self.assertEqual([(one["key"], one["phase"]) for one in group("offer")],
                          [("offer:pick", "parts"), ("offer:requirements", "requirements"), ("offer:build", "build"),
                           ("offer:needs-drop", "needs")])
@@ -103,9 +102,10 @@ class TheOffersTest(unittest.TestCase):
                           "offer:needs-drop": "needs-drop"})
         self.assertEqual({one["key"]: one["from_page"] for one in group("offer")},
                          {"offer:pick": True, "offer:requirements": True, "offer:build": True, "offer:needs-drop": False})
-        with swapped(flow_codes, "SENDABLE", ("pick", "requirements")):
-            self.assertFalse(item("offer:build", design_basis.DesignBasis.of())["from_page"])
-        with swapped(run_request, "IN_CHAT", ("needs-drop", "build")):
+        self.assertEqual({one["key"]: one["tell"] for one in group("offer")},
+                         {"offer:pick": None, "offer:requirements": None, "offer:build": None, "offer:needs-drop": None})
+        build = flow_codes.OFFER_KINDS["build"]._replace(from_page=False)
+        with swapped(flow_codes, "OFFER_KINDS", dict(flow_codes.OFFER_KINDS, build=build)):
             self.assertFalse(item("offer:build", design_basis.DesignBasis.of())["from_page"])
         with swapped(run_request, "STEP_OPERATIONS", {op: one for op, one in run_request.STEP_OPERATIONS.items() if op != "build-board"}):
             self.assertFalse(item("offer:build", design_basis.DesignBasis.of())["from_page"])

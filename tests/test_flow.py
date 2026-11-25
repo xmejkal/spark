@@ -931,6 +931,23 @@ class MakesStaleTest(FlowTest):
         self.assertEqual(offer_of(said, "needs-drop:soil")["makes_stale"], [])
 
 
+class TheOfferKindsTest(FlowTest):
+    """P1115's done-when: every offer the readers give is of a kind of the one table, here a literal set."""
+
+    def test_every_offer_of_the_fixture_projects_is_of_a_known_kind(self):
+        idea = Path(tempfile.mkdtemp()) / "plant-alarm"
+        idea.mkdir()
+        picked = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture"}])
+        listed = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"board": "xiao-esp32-c6"}]}])
+        (listed / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": []}))
+        kinds = {offer["key"].split(":", 1)[0] for project in (idea, picked, listed, a_built_project(), a_built_project("could-not-run"))
+                 for phase in show(project)[0]["data"]["phases"] for offer in phase["offers"]}
+        self.assertEqual(kinds, {"pick", "needs-drop", "requirements", "build"})
+
+
 class TheBuildOfferTest(FlowTest):
     """P829: the build offer names what the build writes, from the real run on a copy of button-light."""
 

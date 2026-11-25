@@ -43,9 +43,9 @@
  },
  {
   "file": "scripts/spark/flow/flow_codes.py",
-  "name": "a need's drop gets a button on the page (P829, P883)",
-  "find": "SENDABLE = (PICK, WRITE_REQUIREMENTS, BUILD_BOARD)",
-  "replace": "SENDABLE = (PICK, WRITE_REQUIREMENTS, BUILD_BOARD, NEEDS_DROP)"
+  "name": "a need's drop gets a button on the page (P829, P883; P1115: its row in OFFER_KINDS)",
+  "find": "NEEDS_DROP: OfferKind(NEEDS, DROP_LABEL, False, None)",
+  "replace": "NEEDS_DROP: OfferKind(NEEDS, DROP_LABEL, True, None)"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",
