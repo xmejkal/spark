@@ -399,13 +399,15 @@ class DeployJsonTest(JsonCase, GateCase):
                 self.assertEqual(newest["image_sha256"], hashlib.sha256(self.image.read_bytes()).hexdigest())
                 self.assertNotEqual(newest["deployed"], "2026-10-19T09:24:50+02:00")
                 line = board_look.say_last_deploy(self.look().last_deploy)
+                self.assertIn("%s, written by the flasher, start not confirmed, " % name, line)
                 self.assertNotIn("ready seen", line)
                 if ending == "crash":
                     stored = "<store>/boards/%s" % record.name
                     self.assertEqual(self.one(code, said, "deploy", "deploy")["data"]["store_record"], stored)
                 consent = FakeConsent(True)
                 self.go("--token", self.token(), consent=consent)  # the next yes
-                self.assertIn(name, consent.asked[0])
+                self.assertIn("%s as its last deploy here" % name, consent.asked[0])
+                self.assertIn("written by the flasher, start not confirmed", consent.asked[0])
                 self.assertNotIn("ready seen", consent.asked[0])
 
     @needs_littlefs
@@ -429,7 +431,7 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertTrue(data["store_record"].startswith("<store>/boards/"))
         newest = self.newest_stored()
         self.assertEqual((newest["verdict"], newest["image_sha256"]), ("ready unknown", sha256))
-        self.assertNotIn("ready seen", board_look.say_last_deploy(self.look().last_deploy))
+        self.assertIn("written by the flasher, start not confirmed", board_look.say_last_deploy(self.look().last_deploy))
 
     def newest_stored(self):
         """The newest entry of the store record of the C6 the fake tools show."""

@@ -154,7 +154,8 @@ def say_last_deploy_in_question(last):
         return printable("spark's store record names a flash of %s that did not finish here, %s, so the board may be erased" % (
             last.project, last.time_said()))
     if last.state == outcomes.RECORDED:
-        return printable("spark's store record names %s as its last deploy here, %s, %s%s" % (last.project, last.time_said(), last.verdict,
+        return printable("spark's store record names %s as its last deploy here, %s, %s%s" % (last.project, last.time_said(),
+                                                                                         board_log.STORE_VERDICT_WORDS.get(last.verdict, last.verdict),
                                                                                          last.banner_said()))
     if last.state == outcomes.NONE_RECORDED:
         return "spark's store record names no deploy here"

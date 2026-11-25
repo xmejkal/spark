@@ -1278,6 +1278,12 @@ class SayLastDeployInQuestionTest(unittest.TestCase):
         self.assertIn("last deploy here, last tuesday, ready seen",
                       deploy_gate.say_last_deploy_in_question(self.recorded("last tuesday")))
 
+    def test_a_verify_that_did_not_finish_says_the_start_was_not_confirmed(self):
+        # P1112 test 4
+        self.assertEqual(deploy_gate.say_last_deploy_in_question(self.recorded("2026-10-19T09:24:50+02:00", verdict="ready unknown")),
+                         "spark's store record names blink-c6 as its last deploy here, 2026-10-19T09:24:50+02:00, "
+                         "written by the flasher, start not confirmed")
+
     def test_a_flash_that_did_not_finish_says_the_board_may_be_erased(self):
         # P1097 test 7
         self.assertEqual(deploy_gate.say_last_deploy_in_question(self.recorded("2026-10-19T09:24:50+02:00", verdict="flash not finished")),
