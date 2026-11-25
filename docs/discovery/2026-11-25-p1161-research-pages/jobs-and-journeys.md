@@ -6,12 +6,12 @@ Pointers: `council/<lens>.md` is a lens report in this folder, `canvas:<file>:<l
 
 ## Who
 <!-- One line per persona: who · evidence status (E pointer | H source). -->
-- The PO, the one user (n = 1): a maker in Prague who builds ESP32 gadgets from modules, with 114 drawer entries, 19 of them linked to a record. He works in Claude Code and on a project page (a Claude Artifact) · E `council/user.md` USER-12, a count over `<store>/drawer/*.json` on 2026-11-25
+- The PO, the one user (n = 1): a maker in Prague who builds ESP32 gadgets from modules, with 114 drawer entries, 19 of them linked to a record. He works in Claude Code and on a project page (a Claude Artifact) · E `council/user.md` USER-12, a count over `<store>/drawer/*.json` on 2026-11-25 <!-- REQUIRED:who -->
 - Claude, the second reader of every screen: it reads the offer's sentence and spark's JSON, and calls spark's Operations · D the PO, 2026-10-18 (every interface for a person and for Claude) · E `council/ux-ai-ux.md` UX-12 to UX-14
 
 ## Jobs
 <!-- One job story per line, each clause tagged: When …, I want to …, so I can …. -->
-- Job a, correct or settle a fact: When a fact of a part record is wrong or not checked [E `canvas:StorePart.dc.html:33`, 9 facts by `parts.py --unverified dfr0664-tft-2in`, `council/user.md` USER-3], I want to tell spark what I saw, measured or read, with where it came from [E `<walks>/p934-display2/diary.md:268-287`, USER-1, USER-17], so I can wire and write firmware from a fact I trust, in this project and the next [E USER-5, `<walks>/p934-display2/diary.md:190-201`]
+- Job a, correct or settle a fact: When a fact of a part record is wrong or not checked [E `canvas:StorePart.dc.html:33`, 9 facts by `parts.py --unverified dfr0664-tft-2in`, `council/user.md` USER-3], I want to tell spark what I saw, measured or read, with where it came from [E `<walks>/p934-display2/diary.md:268-287`, USER-1, USER-17], so I can wire and write firmware from a fact I trust, in this project and the next [E USER-5, `<walks>/p934-display2/diary.md:190-201`] <!-- REQUIRED:jobs -->
 - Job b, research a named part: When I own a part that spark does not know, by its name or part number [E 95 of 114 drawer entries have no record, 90 of the 95 carry a DFRobot part number, USER-12], I want spark to look it up and write its record [E `<walks>/walk4/walk4-diary.md:24-25`, "research it and lets update our records"], so I can pick it for a need [H the PO's words on #1697]
 - Job c, identify from photos: When I hold a module whose marking I do not know [E 4 of 114 entries keep a photo, USER-13], I want to give spark photos and have it say what the module is [E `commands/identify.md`, the PO's words on #1697: "based on photos"], so I can add it to my store and use it [E P992 #1445: "I can still have it and want to add it"]
 - Job d, find by criteria: When a need has no part I own, or a picked part cannot do the job [E `<walks>/p934-epaper/diary.md:196-205`, USER-9], I want to set what it must do and its limits and get candidates online [E the PO's words on #1697: "finding online a part/board/module that could do what we need, setting up criteria"], so I can choose one before I buy [H, from USER-9: his words "ask if I want it to search for alternatives online"]
@@ -19,7 +19,7 @@ Pointers: `council/<lens>.md` is a lens report in this folder, `canvas:<file>:<l
 
 ## Today they…
 <!-- Per job: what they do instead today (a competitor, a workaround or nothing), tagged. -->
-- Job a · Claude writes `parts.py --fact-set <id> <file>` with a `write` key and a `source`, after his yes. One field once had no key and was fixed by hand. A bench trial, not research, settled the one wrong fact seen · E USER-1, USER-4, `<walks>/p934-display2/diary.md:280-281`
+- Job a · Claude writes `parts.py --fact-set <id> <file>` with a `write` key and a `source`, after his yes. One field once had no key and was fixed by hand. A bench trial, not research, settled the one wrong fact seen · E USER-1, USER-4, `<walks>/p934-display2/diary.md:280-281` <!-- REQUIRED:today -->
 - Job b · `/spark:research` in Claude Code, inside a project. A run takes 3 to 6 minutes, with no cost number shown · E USER-11, USER-15
 - Job c · `/spark:identify` in Claude Code with photos sent in the chat. The one end-to-end walk broke in four places · E USER-14
 - Job d · nothing. A need's words only order the parts already in the store. `part-finder` is for commodity parts and returns at most two. `parts-researcher` stops at the first vendor that fits · E USER-7, `council/ux-ai-ux.md` UX-4
@@ -55,7 +55,7 @@ flowchart LR
 ## Journeys
 <!-- One ### per actor and scenario: the table, then a Mermaid flowchart of the same steps. -->
 
-### The PO — job a, a fact is wrong or not checked
+### The PO — job a, a fact is wrong or not checked <!-- REQUIRED:journey -->
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
 | 1 | sees a doubtful fact on a sheet, a page or the bench | E `<walks>/p934-display2/diary.md:186`, `:280` | the sheet named the wrong driver, with no mark that it was a guess | partly | — |
