@@ -31,6 +31,7 @@ from spark.core.operation import Operation  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
 from spark.core.result import Finding, OperationResult  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER  # noqa: E402
+from spark.design.entry_origin import EntryOriginStore, WrittenEntry  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.result import NextStep  # noqa: E402
@@ -271,6 +272,16 @@ class ThePartsListSaysWhatItKeptTest(RunRequestTest):
         envelope, code = self.run_request()
         self.assertEqual((code, envelope["data"]["status"], envelope["data"]["note"]), (0, "ok", self.KEPT))
         self.assertEqual(json.loads((self.project / ".spark" / "requirements-origin.json").read_text())["written"], [])
+
+    def test_a_kept_entry_and_an_entry_written_for_a_pick_that_is_gone_are_one_note(self):
+        """The record says spark wrote led-red-5mm for the light need, which no pick holds now; tactile-button is the person's."""
+        self.board_picked()
+        EntryOriginStore(self.project).save(["tactile-button", "led-red-5mm"], [WrittenEntry("light", "led-red-5mm")])
+        self.steps["requirements"] = WriteRequirements()
+        self.ask("requirements")
+        envelope, code = self.run_request()
+        self.assertEqual((code, envelope["data"]["note"]),
+                         (0, "kept, not from a pick: tactile-button; written for a pick that is gone: led-red-5mm (need light)"))
 
     def test_a_refused_parts_list_write_keeps_its_sentence_and_answers_no_note(self):
         """No needs: no board is picked, so the write is refused; a broken record still gives the run a note."""

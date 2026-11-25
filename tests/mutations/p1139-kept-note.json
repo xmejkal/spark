@@ -2,14 +2,14 @@
  {
   "file": "scripts/spark/design/write_requirements.py",
   "name": "P1139: the kept entries are no note (test_needs walk test, test_run_request walk test)",
-  "find": "    kept = [KEPT_LINE.strip() % \", \".join(need_requirements.entry_label(entry) for entry in unexplained.persons)] if unexplained.persons else []",
-  "replace": "    kept = []"
+  "find": "    return [{\"subject\": None, \"sentence\": sentence} for sentence in kept + gone]",
+  "replace": "    return [{\"subject\": None, \"sentence\": sentence} for sentence in gone]"
  },
  {
   "file": "scripts/spark/design/write_requirements.py",
   "name": "P1139: an entry written for a pick that is gone is no note (test_needs gone-note test)",
-  "find": "    gone = [GONE_LINE.strip() % (need_requirements.entry_label(each.shown), each.row.need) for each in unexplained.removable]",
-  "replace": "    gone = []"
+  "find": "    return [{\"subject\": None, \"sentence\": sentence} for sentence in kept + gone]",
+  "replace": "    return [{\"subject\": None, \"sentence\": sentence} for sentence in kept]"
  },
  {
   "file": "scripts/spark/design/write_requirements.py",

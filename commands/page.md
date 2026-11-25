@@ -95,7 +95,8 @@ Each time below that says "republish":
    5. Call `db_write` with one `set` at `answers/<id>`, its data `run-request`'s `data` unchanged.
    6. Tell the person in one line. When the step ran: "Ran <label>: <status word>. Reload the page to see the new state
       and the next button." When `data.note` is not null, add it. It says that a build built while its simulation
-      could not run, or it names the parts a parts-list write kept that no pick explains. When nothing ran: the fix of the refusal's code, in plain words.
+      could not run, or it holds a parts-list write's notes, such as the parts it kept that no pick explains or an
+      entry written for a pick that is gone. When nothing ran: the fix of the refusal's code, in plain words.
    7. When `ran` is false, go on to the next request. When `ran` is true and `data.status` is not `ok`, tell the person
       `data.line` and the fix of its finding, and stop: carry no other request in this turn.
 

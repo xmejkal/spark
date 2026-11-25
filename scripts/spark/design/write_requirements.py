@@ -19,10 +19,10 @@ from spark.sourcing.write_answers import names_your_entries, write_lines
 from spark.design import board_components, entry_origin, footprint_emitter, need_requirements
 
 # --- MVP ---
-#: The line of an entry spark wrote for a pick that is gone (P877): the entry and the need it was written for.
-GONE_LINE = "  written for a pick that is gone: %s (need %s)"
-#: The line of the entries the file keeps that no pick explains and spark did not write.
-KEPT_LINE = "  kept, not from a pick: %s"
+#: What is said of an entry spark wrote for a pick that is gone (P877): the entry and the need it was written for.
+GONE_SENTENCE = "written for a pick that is gone: %s (need %s)"
+#: What is said of the entries the file keeps that no pick explains and spark did not write.
+KEPT_SENTENCE = "kept, not from a pick: %s"
 #: What a person at a terminal can do instead of the yes, after the entries are named.
 BY_HAND_LINE = "  to remove one, delete it from requirements.json by hand, or answer yes (see next)"
 #: The line of a no, and of a yes whose previous version could not be kept (so nothing was removed and the yes is spent).
@@ -108,8 +108,7 @@ class WriteRequirements(AnswerOperation):
         said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
         said += [] if problems else _owed_lines(placeholder, unsimulated)
         said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
-        said += [KEPT_LINE % ", ".join(need_requirements.entry_label(entry) for entry in unexplained.persons)
-                 ] if unexplained.persons and not problems else []
+        said += [] if problems else ["  %s" % sentence for sentence in _unexplained_sentences(unexplained)[0]]
         said += [] if problems else _gone_lines(unexplained)
         said += _gap_lines(problems, no_supply, no_receiver, no_driver)
         said += ["  not on the board: %s — %s" % (item["need"], need_requirements.NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
@@ -133,18 +132,24 @@ def _owed_lines(placeholder, unsimulated):
                "simulation tested — %s" % (part_id, how) for part_id, how in unsimulated])
 
 
+def _unexplained_sentences(unexplained):
+    """(kept, gone): what is said of the entries the file keeps that no pick explains. `kept` is one sentence for the person's
+    entries, or none; `gone` one sentence per entry spark wrote for a pick that is gone. The text's lines and the notes say them."""
+    kept = [KEPT_SENTENCE % ", ".join(need_requirements.entry_label(entry) for entry in unexplained.persons)] if unexplained.persons else []
+    gone = [GONE_SENTENCE % (need_requirements.entry_label(each.shown), each.row.need) for each in unexplained.removable]
+    return kept, gone
+
+
 def _kept_notes(unexplained):
-    """The notes of the entries the file keeps that no pick explains (P1139): the person's in one note, and one note per entry
-    spark wrote for a pick that is gone, each with no subject and the words of its line, so the text says it once and the
-    page says it beside its answer."""
-    kept = [KEPT_LINE.strip() % ", ".join(need_requirements.entry_label(entry) for entry in unexplained.persons)] if unexplained.persons else []
-    gone = [GONE_LINE.strip() % (need_requirements.entry_label(each.shown), each.row.need) for each in unexplained.removable]
+    """The notes of the entries the file keeps that no pick explains (P1139), each with no subject and the words of its line,
+    so the text says it once and the page says it beside its answer."""
+    kept, gone = _unexplained_sentences(unexplained)
     return [{"subject": None, "sentence": sentence} for sentence in kept + gone]
 
 
 def _gone_lines(unexplained):
     """One line per entry spark wrote for a pick that is gone (P877): `  written for a pick that is gone: led-red-5mm (need light)`."""
-    said = [GONE_LINE % (need_requirements.entry_label(each.shown), each.row.need) for each in unexplained.removable]
+    said = ["  %s" % sentence for sentence in _unexplained_sentences(unexplained)[1]]
     return said + [BY_HAND_LINE] if said else said
 
 
