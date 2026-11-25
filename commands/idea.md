@@ -74,7 +74,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    - If they change it, show the old must list and the new one, then ask for their yes. Before the write, say the old
      must list in the chat, so that it is in the conversation even without git. On the yes, write the whole `must` list
      to the answers file and run `init_project.py --answers <file>`, the brief step. Quote its `committed as …` or
-     `not committed: …` line to the person, as it prints it: it names the commit and the way back. Then run the review.
+     `not committed: …` line to the person, as it prints it: it names the commit and its take-back. Then run the review.
    - When the person says "undo that", offer to run `git revert --no-edit <sha>` in the project folder, and run it only
      after their yes. Spark's own code never runs it. Go back newest first: a revert of an older brief commit after a
      later one conflicts. A revert changes the must lines, so the needs phase then says that the must lines changed: go
