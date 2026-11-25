@@ -22,3 +22,5 @@ findings only. 2026-11-25.
 | 13 | page.md said only the kept parts, while the note can also hold a gone entry and the origin record's notes | PR lens (Sonnet) and PR refuter (Opus) | acted | fixed |
 | 14 | no test joined a kept and a gone note through `RunRequest` | PR lens (Sonnet) | acted | a test with the real write and a record that names a gone entry |
 | 15 | after a `false` reply, the notes leave out the entries the person kept, and only the `kept as yours` line names them | PR refuter (Opus) | acted | json.md says so. The page sends no replies, so the page is not affected |
+| 16 | the second push stopped after 623 s on `test_map`: map.md was stale after the new test imported `entry_origin` | the hook | acted | map.md written again with `tools/map.py --write` |
+| 17 | flow.md's shorter `note` bullet no longer said that a parts-list write that did not end ok has no note | fix-commit refuter (Opus) | acted | the clause "only when ok" is back |

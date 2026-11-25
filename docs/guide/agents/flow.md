@@ -359,7 +359,7 @@ The envelope has `op` `run-request`. Its `data` holds:
 - `note`: `null`, or one sentence beside an ok answer. A build that could not run only its simulation, for
   `board_not_in_wokwi`, built the board, sheet and pin map, and the guide counts it done ([P1008](https://github.com/xmejkal/spark/issues/1467)).
   Its `status` is `ok`, `line` is `ran <label>: ok` and `note` is that code's meaning. The envelope keeps the `unchecked`
-  item (exit 2), so decide on `data.status`. An ok parts-list write's `note` is its notes joined by `; `, such as the
+  item (exit 2), so decide on `data.status`. A parts-list write's `note` is its notes joined by `; `, only when ok, such as the
   entries it kept that no pick explains ([P1139](https://github.com/xmejkal/spark/issues/1674)). A pick's notes never reach it.
 - `fingerprint`: the fingerprint after the run, the whole sha256.
 
