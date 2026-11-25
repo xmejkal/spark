@@ -949,6 +949,14 @@ class EventTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             Event.line("toy", None)
 
+    def test_a_wait_holds_its_text_and_refuses_one_that_is_not_a_string_by_its_kind(self):
+        # P478 slice 2 test 1: one guard for both kinds, and its message names the kind
+        self.assertEqual(Event.wait("verify", "x"), Event("wait", "verify", "x", False))
+        with self.assertRaisesRegex(TypeError, "^a WAIT needs its text as a string, not NoneType$"):
+            Event.wait("verify", None)
+        with self.assertRaisesRegex(TypeError, "^a LINE needs its text as a string, not int$"):
+            Event.line("verify", 3)
+
 
 class ReporterContract:
     """P507: what every Reporter owes: it takes a LINE, a BEGIN and a kind it does not know, and raises on none."""
@@ -975,6 +983,13 @@ class TerminalReporterTest(ReporterContract, unittest.TestCase):
         self.assertEqual(stream.getvalue(), "")
         reporter.report(Event.line("toy", "said \x1b[2J now"))
         self.assertEqual(stream.getvalue(), "  said ?[2J now\n")
+
+    def test_a_wait_prints_nothing_so_json_keeps_its_bytes(self):
+        # P478 slice 2 test 2: --json's events stay LINEs on stderr
+        import io
+        stream = io.StringIO()
+        TerminalReporter(stream).report(Event.wait("verify", "reading the board"))
+        self.assertEqual(stream.getvalue(), "")
 
     def test_each_line_of_a_text_with_a_newline_keeps_its_indent(self):
         import io

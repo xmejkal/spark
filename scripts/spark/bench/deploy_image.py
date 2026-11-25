@@ -22,7 +22,7 @@ from spark.records import board_records
 from spark.records import store
 from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
-from spark.bench.deploy_stages import DEPLOY_STAGES, PHASE_WHY, DeployPhase
+from spark.bench.deploy_stages import DEPLOY_STAGES, PHASE_WHY, READ_WAIT_MESSAGE, DeployPhase
 from spark.bench.deploy_service import DeployService, ended_after_the_yes
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, SIMULATION_NONE, evidence_for
@@ -299,6 +299,7 @@ class DeployFlowService:
         refusal is said on stderr; a failed read gets the doctor (P354); a closed gate gives the line to run in the terminal."""
         reached, token = self._reached, self.asked.token
         try:
+            self.report(Event.wait(DeployPhase.LOOK, READ_WAIT_MESSAGE))  # P478: the read is silent until its lines
             look = self.look = reached["report"] = self.service.look(self.asked.port, listed=self.judged.row)
             for line in board_look.report_lines(look, token=False, indent=""):
                 self.say(DeployPhase.LOOK, line)
@@ -340,6 +341,7 @@ class DeployFlowService:
         """The board after the flash: the facts, ready, the board log, the store record, and the REPL line when ready is unknown."""
         reached = self._reached
         self.report(Event.begin(DeployPhase.VERIFY))
+        self.report(Event.wait(DeployPhase.VERIFY, READ_WAIT_MESSAGE))  # P478: the port, the facts and ready are silent
         result = reached["result"] = self.service.verify(self.look, self.planned)
         ready = result.ready
         if ready.verdict != ready_probe.SEEN:
@@ -446,7 +448,9 @@ download mode entered with BOOT outlasts esptool's restart: press RESET.
 
 Without --json each stage starts with a heading, `[n/5] <stage>`, and the run ends with one status line, bold on a
 terminal, its mark in colour: `✓ deploy: ok. Flashed, and the board printed ready.` With --json there is no heading
-and no status line: stdout holds the envelope, and stderr the other lines as before (P478).
+and no status line: stdout holds the envelope, and stderr the other lines as before (P478). A slow wait prints its line,
+such as `reading the board`, and on a terminal a spinner with the seconds under it, erased before the next line.
+TERM=dumb or a pipe gives a still screen, and --json prints neither.
 Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)
 

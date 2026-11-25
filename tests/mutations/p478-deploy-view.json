@@ -154,5 +154,119 @@
   "name": "P478: deploy's result has no headline (test_deploy_service.TheDeployViewTest, the deploy text goldens)",
   "find": ",\n                           headline=deploy_headline(reached, code, found))",
   "replace": ")"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P478 slice 2: a pipe gets the terminal spinner (test_view_reporter.TheSpinnerChoiceTest)",
+  "find": "if style.motion else NO_SPINNER",
+  "replace": "if True else NO_SPINNER"
+ },
+ {
+  "file": "scripts/spark/core/view_reporter.py",
+  "name": "P478 slice 2: a wait's line is not printed (test_view_reporter.TheWaitTest, the deploy text goldens)",
+  "find": "event.kind in (LINE, WAIT)",
+  "replace": "event.kind == LINE"
+ },
+ {
+  "file": "scripts/spark/core/view_reporter.py",
+  "name": "P478 slice 2: the spinner never starts (test_view_reporter.TheWaitTest)",
+  "find": "        if event.kind == WAIT:\n            self.spinner.start()",
+  "replace": "        if event.kind == WAIT:\n            pass"
+ },
+ {
+  "file": "scripts/spark/core/view_reporter.py",
+  "name": "P478 slice 2: the next line does not erase the row (test_view_reporter.TheWaitTest)",
+  "find": "self.spinner.stop()  # the row goes before anything else prints",
+  "replace": "pass  # the row goes before anything else prints"
+ },
+ {
+  "file": "scripts/spark/core/view_reporter.py",
+  "name": "P478 slice 2: finish leaves the row and the thread (test_view_reporter.TheWaitTest, TheCtrlCTest)",
+  "find": "self.spinner.stop()  # the run is over",
+  "replace": "pass  # the run is over"
+ },
+ {
+  "file": "scripts/spark/core/spinner.py",
+  "name": "P478 slice 2: the row shows at once (test_spinner.TheTerminalSpinnerTest)",
+  "find": "if seconds < SHOW_AFTER_S or self.broken:",
+  "replace": "if seconds < 0 or self.broken:"
+ },
+ {
+  "file": "scripts/spark/core/spinner.py",
+  "name": "P478 slice 2: the cursor stays hidden (test_spinner.TheTerminalSpinnerTest, test_view_reporter.TheCtrlCTest)",
+  "find": "print(ERASE + SHOW_CURSOR, end=",
+  "replace": "print(ERASE, end="
+ },
+ {
+  "file": "scripts/spark/core/spinner.py",
+  "name": "P478 slice 2: stop leaves the row (test_spinner.TheTerminalSpinnerTest, test_view_reporter.TheWaitTest)",
+  "find": "            print(ERASE + SHOW_CURSOR, end=\"\", flush=True, file=self.stream)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/core/spinner.py",
+  "name": "P478 slice 2: no ASCII frames (test_spinner.TheTerminalSpinnerTest.test_a_stream_that_cannot_encode_the_marks_gets_the_ascii_frames)",
+  "find": "FRAMES if style.symbols else ASCII_FRAMES",
+  "replace": "FRAMES"
+ },
+ {
+  "file": "scripts/spark/core/spinner.py",
+  "name": "P478 slice 2: a closed stream raises in the thread (test_spinner.TheTerminalSpinnerTest.test_a_closed_stream_ends_the_drawing_with_no_exception)",
+  "find": "except (OSError, ValueError):",
+  "replace": "except ValueError:"
+ },
+ {
+  "file": "scripts/spark/core/spinner.py",
+  "name": "P478 slice 2: the seconds go on from the last wait (test_spinner.TheTerminalSpinnerTest.test_a_start_while_a_row_is_open_stops_the_old_ticker_and_counts_from_zero)",
+  "find": "        self.began, self.drawn = self.clock.monotonic(), 0",
+  "replace": "        pass"
+ },
+ {
+  "file": "scripts/spark/core/spinner.py",
+  "name": "P478 slice 2: an interrupted stop is never joined again (test_spinner.TheThreadTickerTest.test_a_stop_after_one_that_a_ctrl_c_cut_before_its_join_still_waits_for_the_tick)",
+  "find": "if self.thread is None:",
+  "replace": "if self.thread is None or self.stopped.is_set():"
+ },
+ {
+  "file": "scripts/spark/core/spinner.py",
+  "name": "P478 slice 2: the spinner guards its stop with its own flag, so a stop that a Ctrl-C cut is never stopped again (test_spinner.TheTerminalSpinnerTest.test_a_stop_that_a_ctrl_c_cut_stops_the_ticker_again_and_erases_only_then)",
+  "find": "        self.ticker.stop()\n        if self.drawn:\n",
+  "replace": "        drawn, self.drawn = self.drawn, 0\n        if drawn:\n            self.ticker.stop()\n"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P478 slice 2: no WAIT before the look's read (test_deploy_json.TheWaitsTest, the deploy text goldens)",
+  "find": "            self.report(Event.wait(DeployPhase.LOOK, READ_WAIT_MESSAGE))",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "P478 slice 2: no WAIT in the verify stage (test_deploy_json.TheWaitsTest, the deploy text goldens)",
+  "find": "        self.report(Event.wait(DeployPhase.VERIFY, READ_WAIT_MESSAGE))",
+  "replace": "        pass"
+ },
+ {
+  "file": "scripts/spark/bench/board_start.py",
+  "name": "P478 slice 2: no WAIT at the RESET wait's start (test_deploy_json.TheWaitsTest, test_board_start)",
+  "find": "        report(Event.wait(DeployPhase.VERIFY, RESET_WAIT_MESSAGE))  # P478: the polls and reads below say nothing",
+  "replace": "        pass"
+ },
+ {
+  "file": "scripts/spark/bench/board_start.py",
+  "name": "P478 slice 2: the RESET wait does not come back after a not-counted line (test_deploy_json.TheWaitsTest, test_board_start)",
+  "find": "                report(Event.wait(DeployPhase.VERIFY, RESET_WAIT_MESSAGE))  # the wait goes on after the line",
+  "replace": "                pass"
+ },
+ {
+  "file": "scripts/spark/core/spinner.py",
+  "name": "P478 slice 2: the row counts as erased before its erase is written, so a Ctrl-C in the write leaves the cursor hidden (test_spinner.TheTerminalSpinnerTest.test_a_ctrl_c_during_the_erase_leaves_the_next_stop_to_erase_and_show_the_cursor)",
+  "find": "            print(ERASE + SHOW_CURSOR, end=\"\", flush=True, file=self.stream)\n            self.drawn = 0",
+  "replace": "            self.drawn = 0\n            print(ERASE + SHOW_CURSOR, end=\"\", flush=True, file=self.stream)"
+ },
+ {
+  "file": "scripts/spark/core/spinner.py",
+  "name": "P478 slice 2: a second start leaves the first thread running (test_spinner.TheThreadTickerTest.test_a_second_start_stops_the_first_thread)",
+  "find": "        self.stop()  # a reused ticker leaves no thread running\n",
+  "replace": ""
  }
 ]

@@ -20,6 +20,7 @@ from spark.core.privacy import MaskingReporter, Privacy
 from spark.core.renderers import PlainPainter, TextReport, import_rich, painter_for  # noqa: F401  (test_core reads TextReport here)
 from spark.core.replies import Terminal
 from spark.core.result import Finding, OperationResult
+from spark.core.spinner import NO_SPINNER, TerminalSpinner, ThreadTicker
 from spark.core.text_guards import guard_lines, printable
 from spark.core.text_style import PLAIN
 from spark.core.view_reporter import TextViewReporter
@@ -251,13 +252,15 @@ def view_for(operation, as_json, streams, environ=None, importer=import_rich):
     given. `streams` is (stdout, stderr), `environ` the environment (None: the process's, which `Terminal` reads) and
     `importer` gives rich. With --json: PLAIN, the events on stderr through TerminalReporter, which prints no heading, and
     the Operation's `json_renderer`, so both streams keep their bytes. Without: the style of stdout, its painter chosen
-    once, a TextViewReporter over the Operation's `stages`, and its `text_renderer` with the same painter."""
+    once, a TextViewReporter over the Operation's `stages` with a TerminalSpinner when the style has motion, else
+    NO_SPINNER (slice 2), and its `text_renderer` with the same painter."""
     stdout, stderr = streams
     if as_json:
         return View(PLAIN, PlainPainter, TerminalReporter(stderr), lambda result, tool: operation.json_renderer.render(result, tool, operation.name))
     style = Terminal(stdout=stdout).text_style(environ)
     painter = painter_for(style, importer)
-    return View(style, painter, TextViewReporter(stdout, painter, operation.stages),
+    spinner = TerminalSpinner(stdout, painter, style, SystemClock(), ThreadTicker()) if style.motion else NO_SPINNER
+    return View(style, painter, TextViewReporter(stdout, painter, operation.stages, spinner),
                 lambda result, tool: operation.text_renderer.render(result, style, tool, painter))
 
 

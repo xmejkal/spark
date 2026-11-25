@@ -80,6 +80,27 @@ class Stream(io.StringIO):
         return super().readline(*size)
 
 
+class FakeTicker:
+    """A fake ticker of a TerminalSpinner (P478): `tick()` calls the spinner's tick by hand, and `started` and `stopped`
+    count the calls. A test that sets `interrupt` makes the next `stop` raise KeyboardInterrupt, as a Ctrl-C during a
+    thread's join."""
+
+    def __init__(self):
+        self.started, self.stopped, self.interrupt, self.ticks = 0, 0, False, None
+
+    def start(self, tick):
+        self.started, self.ticks = self.started + 1, tick
+
+    def stop(self):
+        self.stopped += 1
+        if self.interrupt:
+            self.interrupt = False
+            raise KeyboardInterrupt
+
+    def tick(self):
+        self.ticks()
+
+
 class FakeConsent:
     """A fake ConsentStrategy: answers `answer` and keeps each question. A test that must act while the question
     waits subclasses it and overrides `ask`."""

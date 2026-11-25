@@ -3,6 +3,7 @@
 
 [2/5] look
   why: spark reads the chip and flash size, so another chip or too little flash for the image is stopped
+  reading the board
   the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
   port   /dev/cu.usbmodem101
   mac    dc:da:0c:xx:xx:xx
@@ -29,6 +30,7 @@ fake esptool: write-flash done
 
 [5/5] verify
   why: a written image is not yet a running one, so spark checks its files on the board and waits for ready
+  reading the board
   facts file spark.json sha256: <facts-sha256>
   image sha256: <image-sha256>, yes: standing yes typed by tester at <time>, until <time>
   ready seen: the firmware printed 'ready' and the board's 1 files match the image

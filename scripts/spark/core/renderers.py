@@ -86,10 +86,11 @@ SCRIPTS = Path(__file__).resolve().parents[2]
 MARK_SYMBOLS = {MARK_OK: "✓", MARK_STOP: "✗", MARK_WARNING: "!", MARK_UNCHECKED: "?"}
 #: The ASCII word of each mark, for a stream whose encoding cannot encode the symbols (D8).
 MARK_WORDS = {MARK_OK: "OK", MARK_STOP: "STOP", MARK_WARNING: "WARN", MARK_UNCHECKED: "?"}
-#: The rich style of each role of a span (D6): the mark's colour, bold headings and command, dim fixes and Note.
+#: The rich style of each role of a span (D6): the mark's colour, bold headings and command, dim fixes and Note, and the
+#: spinner's cyan frame (P478).
 STYLES = {"mark-" + MARK_OK: "bold green", "mark-" + MARK_STOP: "bold red", "mark-" + MARK_WARNING: "bold yellow",
           "mark-" + MARK_UNCHECKED: "bold magenta", "status": "bold", "heading": "bold", "quiet": "dim", "command": "bold",
-          "fact": None}
+          "fact": None, "spinner": "cyan"}
 #: The section headings of the findings, in their order, by severity.
 SECTIONS = ((outcomes.PROBLEMS, "Problems"), (outcomes.COULD_NOT_RUN, "Not checked"))
 #: The Next section's line when there is no step: it points to the first item that says why.

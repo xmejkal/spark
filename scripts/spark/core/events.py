@@ -10,8 +10,8 @@ from collections import namedtuple
 from spark.core.text_guards import guard_lines
 
 # --- MVP ---
-#: The kinds of an Event: a sentence the person reads now, and a phase that begins now.
-LINE, BEGIN = "line", "begin"
+#: The kinds of an Event: a sentence the person reads now, a phase that begins now, and a wait that begins now.
+LINE, BEGIN, WAIT = "line", "begin", "wait"
 #: The indent of an event line on a terminal. It is presentation, so the terminal adds it, not the Event.
 INDENT = "  "
 #: The file descriptor of stderr, where a child's output goes under --json.
@@ -19,18 +19,30 @@ STDERR_FD = 2
 
 
 class Event(namedtuple("Event", "kind code text raw", defaults=(False,))):
-    """Value: one event of a run. `kind` is LINE or BEGIN, `code` the snake_case code of the phase it is about, `text` for a
-    LINE one line of words with no newline and no indent, None for a BEGIN. A BEGIN has no end: the next one or the result ends it.
-    `raw` is True for a LINE that carries a line a person pastes, which Privacy leaves as it is (P677)."""
+    """Value: one event of a run. `kind` is LINE, BEGIN or WAIT, `code` the snake_case code of the phase it is about, `text`
+    for a LINE or a WAIT one line of words with no newline and no indent, None for a BEGIN. A BEGIN has no end: the next one
+    or the result ends it. An Event of kind WAIT (P478) says that spark now waits on work whose children are captured, so
+    nothing else writes to the terminal until the next event, which ends it. `raw` is True for a LINE that carries a line a
+    person pastes, which Privacy leaves as it is (P677)."""
 
     __slots__ = ()
 
     @staticmethod
     def line(code, text, raw=False):
         """A LINE of `text`; a text that is not a string is a defect of the caller, refused here, never at the Reporter."""
+        return Event._with_text(LINE, code, text, raw)
+
+    @staticmethod
+    def wait(code, text):
+        """A WAIT whose `text` says what spark waits on (P478), refused as a LINE's is."""
+        return Event._with_text(WAIT, code, text, False)
+
+    @staticmethod
+    def _with_text(kind, code, text, raw):
+        """The Event of `kind` with `text`, or a TypeError that names the kind when `text` is not a string."""
         if not isinstance(text, str):
-            raise TypeError("a LINE needs its text as a string, not %s" % type(text).__name__)
-        return Event(LINE, code, text, raw)
+            raise TypeError("a %s needs its text as a string, not %s" % (kind.upper(), type(text).__name__))
+        return Event(kind, code, text, raw)
 
     @staticmethod
     def begin(code):
