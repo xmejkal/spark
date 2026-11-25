@@ -2600,6 +2600,8 @@ class TheRequirementsFileTest(unittest.TestCase):
     # --- P877: an entry spark wrote for a pick that is gone is named, and removed on the person's yes ---
     GONE_LINE = "  written for a pick that is gone: led-red-5mm (need light)\n"
     GONE = {"part": "led-red-5mm", "name": None, "need": "light", "code": "entry_pick_gone"}
+    #: P1139: the gone entry's note, which comes before the record's and a reply's notes.
+    GONE_NOTE = {"subject": None, "sentence": "written for a pick that is gone: led-red-5mm (need light)"}
     PREVIOUS = ".spark/previous/requirements.json.txt"
     NOTE_CHANGED = ("requirements-origin.json does not fit the parts of requirements.json as spark wrote them, "
                     "so every entry is read as yours")
@@ -2709,8 +2711,8 @@ class TheRequirementsFileTest(unittest.TestCase):
         said, code = run(["--requirements", str(project), "--replies", str(replies)])
         self.assertEqual((code, self.written(project)["parts"], said["data"]["previous"], json.loads(replies.read_text())),
                          (0, ["led-red-5mm", "x-led"], None, {"replies": {other: True}}))
-        self.assertEqual(said["notes"], [{"subject": "replies", "sentence": "the replies file holds an answer for other entries or other bytes, "
-                                          "so nothing was removed: the answer for these entries is %s" % key}])
+        self.assertEqual(said["notes"], [self.GONE_NOTE, {"subject": "replies", "sentence": "the replies file holds an answer for other entries or other bytes, "
+                                                          "so nothing was removed: the answer for these entries is %s" % key}])
 
     def test_the_dry_run_leaves_a_yes_in_the_replies_file_and_changes_no_byte(self):
         project = self.repicked()
@@ -2749,14 +2751,14 @@ class TheRequirementsFileTest(unittest.TestCase):
         said, code = run(["--requirements", str(project), "--dry-run"])
         self.assertEqual((code, said["data"]["unexplained"], said["data"]["remove_key"], said["data"]["kept"],
                           [note["sentence"] for note in said["notes"]]),
-                         (0, [], None, [{"part": "led-red-5mm", "name": "Lamp"}], [self.NOTE_CHANGED]))
+                         (0, [], None, [{"part": "led-red-5mm", "name": "Lamp"}], ["kept, not from a pick: led-red-5mm (Lamp)", self.NOTE_CHANGED]))
 
     def test_a_reformat_or_a_key_of_its_own_keeps_the_rows_trusted(self):
         project = self.repicked()
         run(["--requirements", str(project)])
         (project / "requirements.json").write_text(json.dumps(dict(self.written(project), signals=[]), indent=4) + "\r\n")
         said, _ = run(["--requirements", str(project), "--dry-run"])
-        self.assertEqual((said["data"]["unexplained"], said["notes"]), ([self.GONE], []))
+        self.assertEqual((said["data"]["unexplained"], said["notes"]), ([self.GONE], [self.GONE_NOTE]))
 
     def test_an_entry_of_a_file_written_before_the_record_is_the_person_s_and_stays(self):
         _, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])
@@ -2765,6 +2767,29 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertEqual((code, self.written(project)["parts"], said["data"]["kept"]),
                          (0, ["led-red-5mm", "x-led"], [{"part": "led-red-5mm", "name": None}]))
         self.assertIn("  kept, not from a pick: led-red-5mm\n", self.text(["--requirements", str(project), "--dry-run"]))
+
+    # --- P1139: the kept entries are notes too, so the page can say them, and the record is written when spark wrote none ---
+    KEPT = {"subject": None, "sentence": "kept, not from a pick: tactile-button, led-red-5mm"}
+
+    def test_the_walk_entries_no_pick_explains_are_a_note_and_the_record_is_written_with_no_row(self):
+        import hashlib
+        _, project = self.project([self.BOARD, ("button", [{"board": "firebeetle2-esp32s3"}]), ("light", [{"board": "firebeetle2-esp32s3"}])])
+        (project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button", "led-red-5mm"]}))
+        record = project / ".spark" / "requirements-origin.json"
+        dry, _ = run(["--requirements", str(project), "--dry-run"])
+        self.assertEqual((dry["notes"], record.exists()), ([self.KEPT], False))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["status"], said["notes"]), (0, "ok", [self.KEPT]))
+        parts = json.dumps(["tactile-button", "led-red-5mm"], separators=(",", ":"))
+        self.assertEqual(json.loads(record.read_text()),
+                         {"schema": 1, "parts_sha256": hashlib.sha256(parts.encode()).hexdigest(), "written": []})
+        self.assertEqual(self.text(["--requirements", str(project), "--dry-run"]).count("kept, not from a pick"), 1)
+
+    def test_an_entry_written_for_a_pick_that_is_gone_is_a_note_said_once(self):
+        project = self.repicked()
+        said, _ = run(["--requirements", str(project), "--dry-run"])
+        self.assertEqual(said["notes"], [self.GONE_NOTE])
+        self.assertEqual(self.text(["--requirements", str(project), "--dry-run"]).count(self.GONE_LINE), 1)
 
     def test_the_record_beside_the_file_holds_a_row_per_entry_spark_wrote_and_the_hash_of_the_parts(self):
         import hashlib
@@ -2781,7 +2806,8 @@ class TheRequirementsFileTest(unittest.TestCase):
         record.write_text("{not json")
         said, code = run(["--requirements", str(project)])
         self.assertEqual((code, said["data"]["unexplained"], [note["sentence"] for note in said["notes"]]),
-                         (0, [], ["requirements-origin.json cannot be read as spark writes it, so every entry is read as yours"]))
+                         (0, [], ["kept, not from a pick: led-red-5mm",
+                                  "requirements-origin.json cannot be read as spark writes it, so every entry is read as yours"]))
         self.assertEqual(json.loads(record.read_text())["written"], [{"need": "light", "entry": "x-led"}])
 
     def test_a_previous_version_that_cannot_be_staged_leaves_the_entry_and_the_row_and_the_next_run_names_it_again(self):
