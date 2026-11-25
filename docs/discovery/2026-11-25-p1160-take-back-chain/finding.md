@@ -97,11 +97,14 @@ close links 3 and 4. The other links stay open and are named below.
 
 The take-back then runs in this order:
 
-1. The preview: each file with its content after (D14), and each hold that will change, from `needs.plan_holds` on the
-   needs as they will be. That function writes nothing (`design/needs.py:355-393`).
+1. The preview: each file with its content after (D14), and each hold that will change. The holds come from the
+   difference of two `needs.plan_holds` results, on the needs before and after, as `dropped_holds` does
+   (`design/needs.py:400-423`). `plan_holds` writes nothing (`design/needs.py:355-393`). A hold that another project
+   took is named in the preview as "not held".
 2. The person's yes through the core (D7, D14).
-3. Spark applies the holds with `drawer.apply`, as a pick does (`design/pick_parts.py:82`). The project's own files
-   come last, as in a pick (`design/pick_parts.py:84-87`).
+3. Spark applies that difference with `drawer.apply` (`design/pick_parts.py:82`). It moves no hold that no kept step
+   made, so a hold set by hand stays (council Q6). A plain `plan_holds` rebuild, as a pick does, releases such a hold
+   (`design/needs.py:396-403`). The project's own files come last, as in a pick (`design/pick_parts.py:84-87`).
 4. The strategy takes the step back. Spark reads each record again with its own reader. A record that does not read
    undoes the take-back, and spark refuses in plain words. A failure between steps 3 and 4 leaves holds that differ
    from the picks, and change 1 names them.
@@ -126,8 +129,9 @@ On a conflict, spark refuses, changes nothing (A2) and offers the other take-bac
 
 1. Before the take-back slice. The store's hold is never compared with the picks → one small class over
    `needs.plan_holds` names each hold that differs. The parts phase says it, and P1152's preview reuses it. It must
-   say how it treats a hold that the person set by hand: today a pick releases one and a drop keeps one
-   (`design/needs.py:406-410`, the refuter's experiment).
+   name a hold that the person set by hand as "held by hand", never as a fault (council Q6). Today a pick releases
+   one and a drop keeps one (`design/needs.py:406-410`, the refuter's experiment). The class computes the difference
+   of two plans in both directions, and the take-back's preview shares it.
 2. Before the take-back slice. The flow reads a parts list as current while it lists a part whose pick is gone →
    the requirements phase reads `unexplained.removable` and says out of date, with the entries named.
 3. A line in P1152's kept-step slice. A stamp can go back without its record → a kept step holds needs.json with
@@ -156,6 +160,8 @@ Link 2 gets no card now. It exists without any take-back, and no check asks for 
 
 ## Risks and open questions for the PO
 
+The PO delegated these questions to a council of three on Fable on 2026-11-25. Their answers are in the next section.
+
 1. A hold cannot come back because another project holds the part now. Recommended: take back and say "not held".
 2. Is D8's "the board" the file board.tsx? A taken-back board.tsx then reads as the person's file, and every build
    leaves it alone (`build/kept_files.py:111-114`).
@@ -165,6 +171,34 @@ Link 2 gets no card now. It exists without any take-back, and no check asks for 
 6. Risk: a clean merge gives valid JSON with a wrong meaning. Step 3 catches only a record that does not read.
 7. Risk: links 2, 8 and 14 stay with no check after these changes.
 8. A hold that the person set by hand: does a take-back keep it, or does it follow the picks like a pick does?
+
+## Council answers
+
+Delegated by the PO, 2026-11-25 about 20:55 CET, and the PO's to change. Seats on Fable: the PO assistant, the
+architect and the tech lead, one written brief, the majority decides. No seat marked a question as one for the PO
+himself.
+
+| Question | Answer | Votes |
+| --- | --- | --- |
+| 1. Another project holds the part now | Take back the records, and the preview and the answer say "not held: <project> holds it". Spark never takes a part from another project | 3 of 3 |
+| 2. D8's "the board" | The `board` key of requirements.json (`build/build_service.py:234`, `design/loader.py:307`). board.tsx stays a build output, not a kept step | 3 of 3 |
+| 3. A conflict in "only this step" | Refuse with a code from the core, change nothing, and offer the other take-back. No merge by Claude, because the CLI, MCP and a server have no Claude (D12) | 3 of 3 |
+| 4. The person's own commits between spark's steps | Spark takes back only its own steps and leaves the person's commits. The preview names them as left alone. Spark refuses when one of them changed a file that a kept step holds | 2 of 3 (the PO assistant chose to refuse every such range) |
+| 5. The store's history | One new "taken back" event, no event removed. It needs a row in `EVENT_KEYS` with the step's id in its key (`records/store.py:463-465, 500-503`) | 3 of 3 |
+| 6. A hold set by hand | A take-back never moves a hold that no kept step made. It keeps the hold and names it "held by hand" | 3 of 3 |
+
+Remarks the seats raised, for the cards:
+
+- Q4 rests on telling spark's commits apart. Today the only mark is the message prefix "spark: "
+  (`build/project_setup.py:400`). The kept-step slice needs a firmer mark, for example the step ids spark records.
+  The core's contract speaks of kept steps and kept files only, because a human or server strategy has no commits.
+- Q4, the architect's scratch test (n = 1): a revert of spark's two steps around a firmware commit was clean and left
+  main.py alone. The same revert conflicted in needs.json after a hand edit of it.
+- Q3 needs a dry merge to change nothing, for example `git merge-tree --write-tree` (git 2.38 or newer). Not tested.
+- Q5: the tally counts only picks that exist now (`design/tally_cost.py:37-38`). Which other readers of the history
+  must read the new event is not checked.
+- Changes 1 and 2 serve the MVP bar without any take-back, because a wrong hold or a stale parts list misleads a real
+  walk. Changes 5 to 7 can pause (the tech lead).
 
 ## Checked and not checked
 
