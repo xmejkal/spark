@@ -30,7 +30,6 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import golden_design  # noqa: E402
-from spark.design import pin_assigner  # noqa: E402
 from spark.build.build_record import replace_whole  # noqa: E402
 from golden_design import Case  # noqa: E402
 from golden_firmware import STDERR_MARK  # noqa: E402
@@ -411,7 +410,7 @@ class UnfinishedBuildDistTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertEqual([entry for entry in report["kept"] if entry["file"].startswith("breadboard.")], [])
     # P1121 (#1650): a reference build writes no pin map either, so spark's earlier one stays, named as an earlier build's
-    SPARK_PINS = pin_assigner.PIN_MODULE_HEADER + "\nLED = 5\n"
+    SPARK_PINS = "# The pin map: written by spark's assign_pins.py\nLED = 5\n"  # the header spark writes, planted as an earlier file
     PINS_WHY = "spark's reference design has no pin map, so it is an earlier build's"
 
     def test_a_reference_design_build_names_spark_s_earlier_pin_map_as_an_earlier_builds(self):
