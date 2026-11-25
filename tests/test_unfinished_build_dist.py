@@ -452,8 +452,12 @@ class UnfinishedBuildDistTest(unittest.TestCase):
         if os.geteuid() == 0:
             self.skipTest("root reads a file with no mode")
         code, project, report = self.run_build(env=REFERENCE_ENV, before=unreadable, args=REFERENCE)
-        (project / "firmware" / "pins.py").chmod(0o644)
-        self.assertEqual(self.entry_of(report, "firmware/pins.py")["did"], "not written")
+        pins = project / "firmware" / "pins.py"
+        pins.chmod(0o644)
+        entry = self.entry_of(report, "firmware/pins.py")
+        self.assertEqual(entry["did"], "not written")
+        self.assertIn("Permission denied", entry["why"])
+        self.assertEqual(pins.read_text(), self.SPARK_PINS)  # the file stays
 
     def test_a_reference_design_build_writes_the_page_again_and_names_it_not(self):
         def earlier(project):

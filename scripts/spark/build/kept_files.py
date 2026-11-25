@@ -124,7 +124,7 @@ def kept_into(workdir, destination, written=None, finished=True):
 
 
 def _left_alone(target, why):
-    """The kept entry for a .tsx that is not touched."""
+    """The kept entry for a file that is not touched."""
     return {"file": str(target), "did": LEFT_ALONE, "why": why, "line": "%s: %s (%s)" % (LEFT_ALONE, target, why)}
 
 
