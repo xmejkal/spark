@@ -1048,9 +1048,11 @@ class SayLastDeployTest(unittest.TestCase):
 
     def test_the_store_s_words_of_ready_unknown_are_the_page_s(self):
         # P1112 (A3): one wording of a verdict the store keeps without its cause: flow_codes' UNSURE_WORDS, copied
-        from spark.bench import board_log
-        from spark.flow import flow_codes
-        self.assertEqual(board_log.STORE_VERDICT_WORDS, {"ready unknown": flow_codes.UNSURE_WORDS})
+        from spark.flow.flow_codes import UNSURE_WORDS
+        from spark.bench.deploy_gate import say_last_deploy_in_question
+        last = self.recorded("2026-10-19T09:24:50+02:00", verdict="ready unknown")
+        self.assertIn(", %s, " % UNSURE_WORDS, board_look.say_last_deploy(last))
+        self.assertIn(", %s" % UNSURE_WORDS, say_last_deploy_in_question(last))
 
     def test_a_time_in_another_zone_is_said_in_the_machine_s_zone(self):
         self.assertIn(", 2026-10-19T09:24:50+02:00 (", board_look.say_last_deploy(self.recorded("2026-10-19T07:24:50+00:00")))
