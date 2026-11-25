@@ -2196,9 +2196,12 @@ class TheMoveHoldTest(unittest.TestCase):
         self.assertIn("the move is refused, and nothing was written", shown)
         self.assertIn("no need of plant-alarm picks speaker, so plant-alarm holds no speaker to move", shown)
 
-    def test_a_bad_need_and_id_exits_2(self):
-        said, code = self.move("chime")
-        self.assertEqual((said["status"], code, said["unchecked"][0]["code"]), ("could-not-run", 2, "bad_argument"))
+    def test_a_bad_need_and_id_exits_2_and_writes_nothing(self):
+        before = self.digest()
+        for given in ("chime", "=speaker", "chime="):
+            with self.subTest(given=given):
+                said, code = self.move(given, "--apply")
+                self.assertEqual((said["status"], code, said["unchecked"][0]["code"], self.digest()), ("could-not-run", 2, "bad_argument", before))
 
     def test_a_pick_that_did_not_finish_stops_the_move_and_the_same_move_again_finishes_it(self):
         from spark.design.pick_parts import PickParts
