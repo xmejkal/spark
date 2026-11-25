@@ -447,17 +447,18 @@ def _left_from_earlier(path, what, why, remove=True):
 
 
 def keep_pins(requirements, destination, finished):
-    """
-    The pin map the firmware imports, beside the kept board (P196, #155), as one kept entry {file, did, why, line}: what
+    """The pin map the firmware imports, beside the kept board (P196, #155), as one kept entry {file, did, why, line}: what
     `assign_pins.py requirements.json --emit-pins` writes, from the same code, and from the requirements alone, so it
     needs no finished build. One spark wrote is rewritten, since it says not to edit it. When the pins cannot be placed it
     stays, named as from the earlier requirements (P1109), unless a build `finished`. Not spark's: left alone, as `board.tsx` is.
+    With no `requirements` (the reference design) spark's stays, named as an earlier build's, and any other gives None (P1121).
     """
     target = Path(destination) / PIN_MODULE
     ours = target.is_file() and target.read_bytes().startswith(pin_assigner.PIN_MODULE_HEADER.encode())
+    if requirements is None:  # P1121: the reference design has no pin map; spark's earlier one stays for main.py, named (D6)
+        return _left_from_earlier(target, "pin map", "spark's reference design has no pin map", False) if ours else None
     if target.exists() and not ours:
-        why = "spark did not write it; delete it to have it written"
-        return {"file": str(target), "did": LEFT_ALONE, "why": why, "line": "%s: %s (%s)" % (LEFT_ALONE, target, why)}
+        return _left_alone(target, "spark did not write it; delete it to have it written")
     try:
         module = pin_assigner.pin_module_for(str(requirements))
     except PIN_MAP_REFUSALS as stopped:
@@ -553,9 +554,8 @@ KeepAsked = namedtuple("KeepAsked", "requirements_file keep sim_dir")
 
 
 def keep_all(stages, workdir, asked, exporter, flow_page=None):
-    """
-    What a build run keeps (P804), as kept entries {file, did, why, line}: the built board in `asked.keep` (`_kept`); the
-    breadboard sheet (the reference design names an earlier one, P1114); with a requirements file the pin map; the build record (P1095); the simulation project in
+    """What a build run keeps (P804), as kept entries {file, did, why, line}: the built board in `asked.keep` (`_kept`); the
+    breadboard sheet (the reference design names an earlier one, P1114); the pin map (the reference design names spark's earlier one, P1121); the build record (P1095); the simulation project in
     `simulation_dir`; and last the page (its tabs drawn by `exporter`; in a project the flow page `flow_page` writes, P827),
     since the flow page reads what the others kept. None when --keep was not given, or was given with no work
     folder and no requirements file that is there. Even then, a kept simulation project is one entry. With no work folder, a refused
@@ -567,7 +567,7 @@ def keep_all(stages, workdir, asked, exporter, flow_page=None):
     kept = (_kept(workdir, keep, bool(requirements_file), _built(stages)) if workdir is not None else []) if keeps else None
     if kept is not None:  # P1095: the reference design (no requirements file) names an earlier dist/ and records its build too
         kept += keep_breadboard(Path(requirements_file) if requirements_file else None, Path(keep), stages, kept) + drop_an_older_build(Path(keep), stages, kept)
-        kept += [_kept_pins(Path(requirements_file), Path(keep), _built(stages))] if requirements_file else []
+        kept += [entry for entry in [_kept_pins(Path(requirements_file) if requirements_file else None, Path(keep), _built(stages))] if entry]
         kept += keep_build_record(Path(keep), Path(requirements_file) if requirements_file else None, stages, kept)  # P825: what flow.py reads
     simulation_folder = simulation_dir(asked.sim_dir, keep)
     simulation = keep_simulation(workdir, simulation_folder, stages) if workdir is not None and simulation_folder else None
