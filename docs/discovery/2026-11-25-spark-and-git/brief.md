@@ -66,6 +66,8 @@ A yes covers only the actions and choices it names. A standing yes names its kin
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
 - D1 · the frame: the five decisions D-q1 to D-q5, the website as a check on the seams only · the PO · 2026-11-25 · AskUserQuestion in this session · options: this frame, without the website, only D-q1, D-q2 and D-q4
 - D2 · depth FULL: PO assistant, user, tech lead, architecture on Opus, UX and AI-UX, one researcher (Anthropic's and tool-neutral advice, at most 10 searches), then the refuter; the architect writes the synthesis · the PO · 2026-11-25 · AskUserQuestion · options: full council, trio and research
+- D3 · D-q1, the team's rules: the team's process (board, lanes, PRs, hook, councils) moves to spark's scrum/ in git; a project that runs the team process names it in one line of its own AGENTS.md; a gadget session loads no team rule · the PO · 2026-11-25 · AskUserQuestion (synthesis Q1) · options: this, one pruned file as today, no project gets them
+- D4 · D-q1, the PO's own lines (about him, not about spark): a file of his own in spark's scrum/, public, in git, changed by PR; the store's rules.md links to it, so the 29 links keep working · the PO · 2026-11-25 · AskUserQuestion (synthesis Q2, recommendation changed after the refuter's ★C11 verdict) · options: this, a private repository, the store only
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
