@@ -32,7 +32,7 @@ it (P1058).
 
 A grant row's state says `not_checked`, with an underscore. `last_deploy.state` says `not-checked`, with a hyphen, as in
 the look's envelope. `deploys_from` counts a flash that did not finish too, and its `last_deploy.verdict` is `flash not
-finished` (P1097).
+finished` (P1097). A verify that did not finish counts too, with the verdict `ready unknown` (P1112).
 
 `deploys_from[].last` is the stored text. The text view prints the date of `last` as the last-deploy line says it: in
 the machine's zone when the stored time has a zone, and as stored when it has none or does not parse

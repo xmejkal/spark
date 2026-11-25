@@ -79,9 +79,10 @@ class FlashError(DeployError):
     """Error: a flash command failed, so the board may be erased and not written. Its `reason` is flash_failed, or the
     gate's grant_ended when the yes ended before the retry. `log_path` is the board log that DeployService.deploy wrote
     for it (P1092), or None with `log_error` saying why none was written; `image_sha256` is the image the flash was given,
-    and `moment` the board log's. The handler sets the same on a crash and a Ctrl-C in the flash loop (P1096) and the verify (P1110)."""
+    and `moment` the board log's, `verdict` its verdict (P1112). The handler sets the same on a crash and a Ctrl-C in the flash
+    loop (P1096) and the verify (P1110)."""
 
-    log_path = log_error = image_sha256 = moment = None
+    log_path = log_error = image_sha256 = moment = verdict = None
 
 
 def not_finished_reason(ended):
@@ -185,13 +186,14 @@ class DeployService:
     @contextlib.contextmanager
     def logs_what_ends(self, look, image_sha256, logged):
         """The one handler of a stage after the yes (P1096, P1110): what ends the block, a crash, a Ctrl-C or an error, gets
-        the board log `logged` (a NotFinishedLog) of the image `image_sha256`, with `log_path`, `image_sha256` and `moment`
-        set on it, then goes on unchanged."""
+        the board log `logged` (a NotFinishedLog) of the image `image_sha256`, with `log_path`, `image_sha256`, `moment` and
+        `verdict` (the log's, which the store entry says too, P1112) set on it, then goes on unchanged."""
         try:
             yield
         except (Exception, KeyboardInterrupt) as ended:  # P1092, P1096: the newest board log must not name the deploy before
             now = self.clock.now()  # once: the board log and the store record share it
             ended.log_path, ended.image_sha256, ended.moment = self.log_not_finished(look, image_sha256, ended, now, logged), image_sha256, now
+            ended.verdict = logged.verdict  # P1112: one source for the board log's verdict and the store entry's
             raise  # P1096, P1110: what ended the flash or the verify goes on
 
     def log_not_finished(self, look, image_sha256, failed, moment, logged):
@@ -303,16 +305,24 @@ class DeployService:
         why it was not written. Whose yes it was is read here, as the old main read it."""
         return self.records.write_deploy(result.facts, result.ready.verdict, consent.who)
 
-    def record_not_finished(self, look, image_sha256, moment, who):
-        """Keep a flash that did not finish after the yes in the store's record of the board, with the verdict
-        FLASH_NOT_FINISHED (P1097), so the look and the erase question say that the board may be erased. Returns its
-        path. `moment` is the board log's, `who` the phrase for whose yes it was: "not known (...)" when the login could
-        not be read, because the erase is a fact to keep (the review of #1635). OSError and store.StoreError say why it
-        was not written, and a DeployError when the image cannot be read now."""
-        image = image_evidence.image_of(self.project, self.evidence)
+    def record_not_finished(self, look, image_sha256, moment, who, verdict):
+        """Keep a flash or a verify that did not finish after the yes in the store's record of the board, with the board
+        log's `verdict`: FLASH_NOT_FINISHED (P1097), so the look and the erase question say that the board may be
+        erased, or ready unknown for a verify (P1112); any other verdict is a bug and raises ValueError. Returns its
+        path. A verify's entry does not read the image file, so a file deleted since the flash does not hide it.
+        `moment` is the board log's, `who` the phrase for whose yes it was: "not known (...)" when the login could not
+        be read, because the erase is a fact to keep (the review of #1635). OSError and store.StoreError say why it was
+        not written, and a DeployError when a flash's image cannot be read now."""
         # the image the flash was given, and no banner: none was written to the board (P1096, G4)
-        facts = dict(self._facts_of(image, look, (), moment), image_sha256=image_sha256, micropython_banner=None)
-        return self.records.write_deploy(facts, board_log.FLASH_NOT_FINISHED, who)
+        if verdict == board_log.FLASH_NOT_FINISHED:  # P1111: a flash that did not finish still says an image it cannot read
+            facts = dict(self._facts_of(image_evidence.image_of(self.project, self.evidence), look, (), moment),
+                         image_sha256=image_sha256, micropython_banner=None)
+        elif verdict == ready_probe.UNKNOWN:  # P1112: a verify's entry needs no read of the file, which may be gone by now
+            facts = dict(board_facts.facts_without_image(self.project, self.platform.board_of(), look.reading.mac, moment,
+                                                         self.evidence.simulation), image_sha256=image_sha256)
+        else:
+            raise ValueError("no store entry for the verdict %r of a stage that did not finish" % verdict)
+        return self.records.write_deploy(facts, verdict, who)
 
     def _read_board(self, image, report, connection, expected, moment):
         """(the facts, the facts line, a ReadyResult) of the board on `connection` after a flash: the facts, then ready. With

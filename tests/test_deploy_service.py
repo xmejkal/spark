@@ -280,6 +280,7 @@ class TheFlashNotFinishedTest(ServiceCase):
         sha256 = project_image.ProjectImage(self.project).sha256
         self.assertIs(ended, self.ends_with)
         self.assertEqual((ended.log_path, ended.image_sha256), (self.logs()[0], sha256))
+        self.assertEqual(ended.verdict, "flash not finished")  # P1112: the handler hands its log's verdict on
         self.assertEqual(board_log.newest_logged_deploy(self.project),
                          (1, board_log.LoggedDeploy(self.clock.now().isoformat(timespec="seconds"), sha256, "flash not finished", "crash")))
         text = ended.log_path.read_text(encoding="utf-8")
@@ -363,6 +364,7 @@ class TheVerifyNotFinishedTest(ServiceCase):
         self.assertIs(ended, self.ends_with)
         self.assertTrue(deploy_service.ended_after_the_yes(ended))
         self.assertEqual((ended.log_path, ended.image_sha256), (self.logs()[0], sha256))
+        self.assertEqual(ended.verdict, "ready unknown")  # P1112: the verify's store entry says the same
         self.assertEqual(board_log.newest_logged_deploy(self.project),
                          (1, board_log.LoggedDeploy(self.clock.now().isoformat(timespec="seconds"), sha256, "ready unknown", "crash")))
         text = ended.log_path.read_text(encoding="utf-8")
@@ -414,12 +416,31 @@ class TheStoreRecordOfAFlashNotFinishedTest(ServiceCase):
         report = self.look()
         self.image.write_bytes(INTERPRETER_WITH_BANNER)  # the image holds a banner now, which never reached the board
         records = FakeDeployRecordStore()
-        path = self.service(records=records).record_not_finished(report, "ab" * 32, self.clock.now(), "a test")
+        path = self.service(records=records).record_not_finished(report, "ab" * 32, self.clock.now(), "a test", "flash not finished")
         (facts, verdict, who), = records.written
         self.assertEqual((path, verdict, who), (records.path, "flash not finished", "a test"))
         self.assertEqual((facts["image_sha256"], facts["micropython_banner"], facts["deployed"]),
                          ("ab" * 32, None, self.clock.now().isoformat(timespec="seconds")))
         self.assertFalse(deploy_record_store.DeployRecordStore().find_path(report.reading.mac).exists())
+
+    @needs_littlefs
+    def test_a_verify_entry_keeps_the_stance_the_board_the_image_and_no_files(self):
+        # P1112 review (refuter 3, lens 3): a --no-simulation deploy's entry says `none`, not `passed`
+        for evidence, stance in ((image_evidence.PassedRunEvidence(), "passed"), (image_evidence.NoSimulationEvidence(self.project), "none")):
+            with self.subTest(stance=stance):
+                records = FakeDeployRecordStore()
+                service = deploy_service.DeployService(self.project, self.platform(), evidence, self.service_outside(), records=records)
+                report = self.look(evidence=evidence)
+                self.image.unlink(missing_ok=True)  # a verify's entry reads no image: it may be gone by then
+                service.record_not_finished(report, "ab" * 32, self.clock.now(), "a test", "ready unknown")
+                (facts, verdict, who), = records.written
+                self.assertEqual((verdict, facts["simulation"], facts["board"], facts["files"]), ("ready unknown", stance, "xiao-esp32-c6", ()))
+                self.assertEqual((facts["image_sha256"], facts["micropython_banner"], facts["mac"]), ("ab" * 32, None, "8c:bf:ea:xx:xx:xx"))
+
+    @needs_littlefs
+    def test_a_verdict_that_no_stage_gives_is_refused(self):
+        with self.assertRaises(ValueError):
+            self.service(records=FakeDeployRecordStore()).record_not_finished(self.look(), "ab" * 32, self.clock.now(), "a test", "ready seen")
 
 
 class TheLookTest(ServiceCase):

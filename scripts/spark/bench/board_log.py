@@ -29,6 +29,10 @@ REASON_AT = 3
 FLASH_NOT_FINISHED = "flash not finished"
 #: The verdicts a board log holds: ready_probe's three, and FLASH_NOT_FINISHED. A registered project's `ready not read` is never in a log.
 VERDICTS = (ready_probe.SEEN, ready_probe.NOT_SEEN, ready_probe.UNKNOWN, FLASH_NOT_FINISHED)
+#: What the look's line and the erase sentence say for a verdict that the store keeps with no cause (P1112). The store keeps
+#: no cause, so the read-back is unknown: these are `flow_codes.UNSURE_WORDS`, copied (no bench module imports spark.flow;
+#: a test pins them equal). `flow.py show` words the same verdict by its cause: `deploy_reading.verdict_words`.
+STORE_VERDICT_WORDS = {ready_probe.UNKNOWN: "written by the flasher, start not confirmed"}
 #: The verdict line: a verdict, VERDICT_SEP, then spark's sentence. ready_probe's verdict words start with VERDICT_START.
 VERDICT_START, VERDICT_SEP = "ready ", ": "
 #: What a verdict line starts with: a ready verdict's word, or FLASH_NOT_FINISHED and VERDICT_SEP.

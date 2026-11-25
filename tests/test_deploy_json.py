@@ -377,6 +377,62 @@ class DeployJsonTest(JsonCase, GateCase):
                 self.assertIn("names a flash of %s that did not finish here" % name, consent.asked[0])
                 self.assertIn("so the board may be erased", consent.asked[0])
 
+    @needs_littlefs
+    def test_a_verify_that_did_not_finish_is_the_look_s_last_deploy_and_the_next_yes_names_it(self):
+        # P1112 test 1, the card's: a crash and a Ctrl-C in the verify each add a store entry `ready unknown`
+        from spark.bench import board_log
+
+        self.run_the_scenario()
+        name = self.project.resolve().name
+        for ending, unread in (("crash", RuntimeError("usb fell off")), ("ctrl-c", KeyboardInterrupt())):
+            with self.subTest(ending=ending):
+                self.unread = None  # the older deploy and the next yes read the board whole (the refuter's T1 trap)
+                self.record_a_deploy()  # the deploy before: finished, ready seen
+                self.unread = unread
+                if ending == "ctrl-c":
+                    with self.assertRaises(KeyboardInterrupt):
+                        self.go("--token", self.token(), consent=FakeConsent(True))
+                else:
+                    code, said, err = self.go("--token", self.token(), consent=FakeConsent(True))
+                self.unread = None
+                record = deploy_record_store.DeployRecordStore().find_path(C6_MAC)
+                newest = self.newest_stored()
+                self.assertEqual((newest["verdict"], newest["project"], newest["micropython_banner"]), ("ready unknown", name, None))
+                self.assertEqual(newest["image_sha256"], hashlib.sha256(self.image.read_bytes()).hexdigest())
+                logged = board_log.newest_logged_deploy(self.project)[1]
+                self.assertEqual((newest["deployed"], newest["simulation"]), (logged.at, "passed"))  # the newest board log's moment
+                line = board_look.say_last_deploy(self.look().last_deploy)
+                self.assertIn("%s, written by the flasher, start not confirmed, " % name, line)
+                self.assertNotIn("ready seen", line)
+                if ending == "crash":  # a Ctrl-C ends the run with 130 and no envelope, so only the crash's answer names the record
+                    stored = "<store>/boards/%s" % record.name
+                    self.assertEqual(self.one(code, said, "deploy", "deploy")["data"]["store_record"], stored)
+                consent = FakeConsent(True)
+                self.go("--token", self.token(), consent=consent)  # the next yes
+                self.assertIn("%s as its last deploy here" % name, consent.asked[0])
+                self.assertIn("written by the flasher, start not confirmed", consent.asked[0])
+                self.assertNotIn("ready seen", consent.asked[0])
+
+    @needs_littlefs
+    def test_a_verify_that_did_not_finish_keeps_its_entry_when_the_image_is_gone_by_then(self):
+        # P1112 test 2 (the refuter's finding 4): the entry is built without reading the image, so it is not the older deploy
+        self.run_the_scenario()
+        sha256 = hashlib.sha256(self.image.read_bytes()).hexdigest()
+        self.record_a_deploy()
+
+        def crashes_and_deletes_the_image(command):  # the fake board's exec: the verify's first read
+            self.image.unlink(missing_ok=True)
+            raise RuntimeError("usb fell off")
+        self.on_board = crashes_and_deletes_the_image
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True))
+        del self.on_board
+        data = self.one(code, said, "deploy", "deploy")["data"]
+        self.assertIsNone(data.get("store_record_error"))
+        self.assertTrue(data["store_record"].startswith("<store>/boards/"))
+        newest = self.newest_stored()
+        self.assertEqual((newest["verdict"], newest["image_sha256"]), ("ready unknown", sha256))
+        self.assertIn("written by the flasher, start not confirmed", board_look.say_last_deploy(self.look().last_deploy))
+
     def newest_stored(self):
         """The newest entry of the store record of the C6 the fake tools show."""
         return json.loads(deploy_record_store.DeployRecordStore().find_path(C6_MAC).read_text(encoding="utf-8"))["deploys"][-1]
@@ -944,7 +1000,7 @@ class DeployPageTest(JsonCase, GateCase):
 
     @needs_littlefs
     def test_a_crash_in_the_verify_logs_it_and_show_says_the_start_was_not_confirmed(self):
-        # P1110 test 4 (a), the card's: the deploy before, ready seen, stands no more. No store record (D3, P1112)
+        # P1110 test 4 (a), the card's: the deploy before, ready seen, stands no more. A store record since P1112 (D3 reversed)
         self.an_older_ready_seen_log()
         self.unread = RuntimeError("usb fell off")
         code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True))
@@ -952,7 +1008,8 @@ class DeployPageTest(JsonCase, GateCase):
         item, = said["unchecked"]
         self.assertEqual((code, item["code"], item["subject"], said["data"]["board_state"]), (2, "crash", "verify", "flashed_not_verified"))
         older, newer = sorted((self.project / "sim" / "runs" / "board").glob("*.log"))
-        self.assertEqual((said["data"]["board_log"], said["data"]["store_record"]), (str(newer), None))
+        stored = "<store>/boards/%s" % deploy_record_store.DeployRecordStore().find_path(C6_MAC).name
+        self.assertEqual((said["data"]["board_log"], said["data"]["store_record"]), (str(newer), stored))
         self.assert_show_and_the_next_page_say_the_start_was_not_confirmed("spark crashed during the deploy")
 
     @needs_littlefs

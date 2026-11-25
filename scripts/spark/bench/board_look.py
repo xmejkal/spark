@@ -431,8 +431,8 @@ def say_last_deploy(last):
     elif last.state == outcomes.RECORDED and last.verdict == board_log.FLASH_NOT_FINISHED:
         said = printable(NOT_FINISHED_NOTE % (last.project, last.time_said()))
     elif last.state == outcomes.RECORDED:
-        said = printable("%s, %s, %s%s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said(),
-                                                                                       last.banner_said()))
+        said = printable("%s, %s, %s%s (its store record, not read from the board)" % (
+            last.project, board_log.STORE_VERDICT_WORDS.get(last.verdict, last.verdict), last.time_said(), last.banner_said()))
     elif last.state == outcomes.NONE_RECORDED:
         said = NONE_RECORDED_NOTE
     else:
