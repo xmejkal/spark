@@ -194,6 +194,12 @@ def _data(phase):
     return 'data-phase="%s" data-status="%s"' % (_text(phase["phase"]), _text("none" if phase["status"] is None else phase["status"]))
 
 
+def _muted_line(label, items):
+    """One muted line: its label in `<strong>` and its items, comma apart, or nothing with none. The guide's SET ASIDE and
+    the developer fold's DONE and LATER use it."""
+    return '<p class="muted"><strong>%s</strong> %s</p>' % (_text(label), _text(", ".join(items))) if items else ""
+
+
 def _fold(name, summary, body, is_open):
     """One fold (P1062): a `<details>` whose one-line summary holds the heading `summary` (markup), open when `is_open`."""
     return "\n".join(['<details class="fold" data-fold="%s"%s><summary><h2>%s</h2></summary>' % (
@@ -308,7 +314,7 @@ class GuideHtmlSection:
             return ""
         lines = [self._now(page),
                  '<p class="muted">%s</p>' % _text(guide["no_simulation"]) if guide["no_simulation"] else "",
-                 self._muted(flow_codes.GUIDE_SET_ASIDE, guide["set_aside"])]
+                 _muted_line(flow_codes.GUIDE_SET_ASIDE, guide["set_aside"])]
         lines = [line for line in lines if line]
         return "\n".join(['<section id="guide">'] + lines + ["</section>"]) if lines else ""
 
@@ -351,10 +357,6 @@ class GuideHtmlSection:
             return ' <a href="#step-%d">%s</a>' % (first, _text(flow_codes.ONE_AT_A_TIME % first))
         return ""
 
-    @staticmethod
-    def _muted(label, items):
-        """One muted line under the NOW box: its label in `<strong>` and its items, comma apart, or nothing with none."""
-        return '<p class="muted"><strong>%s</strong> %s</p>' % (_text(label), _text(", ".join(items))) if items else ""
 
 
 class StandsAtHtmlLine:
@@ -473,9 +475,9 @@ class DeveloperHtmlFold:
     KEYS = ("phase:*", "status:*", "by:*", "offer:*")
 
     def text(self, page):
-        """The developer fold (P1062), always closed and last: the guide's DONE and LATER lines as the page wrote them before
-        the station line (P1119, the PO's choice for D22: every label `flow.py show` answers stands in the page's text), each
-        phase, closed, with its offers' keys and effects and no hook, the marks, and the line that names each record whole."""
+        """The developer fold (P1062), always closed and last: the guide's DONE and LATER lines (P1119, D22: every label
+        `flow.py show` answers stands in the page's text), each phase, closed, with its offers' keys and effects and no hook,
+        the marks, and the line that names each record whole."""
         body = ['<section id="developer">'] + [self._phase(phase) for phase in page.phases] + [self._legend()]
         body[1:1] = self._guide_lines(page.guide)  # before the phases
         if page.wiring and page.wiring.before_power:
@@ -484,12 +486,12 @@ class DeveloperHtmlFold:
 
     @staticmethod
     def _guide_lines(guide):
-        """DONE and LATER, muted, each with its items comma apart (`GuideHtmlSection._muted`); nothing for an empty list, or
-        with no guide."""
+        """DONE and LATER, muted, each with its items comma apart (`_muted_line`); nothing for an empty list, or with no
+        guide."""
         if guide is None:
             return []
-        lines = [GuideHtmlSection._muted(flow_codes.GUIDE_DONE, guide["done"]),
-                 GuideHtmlSection._muted(flow_codes.GUIDE_LATER, guide["later"])]
+        lines = [_muted_line(flow_codes.GUIDE_DONE, guide["done"]),
+                 _muted_line(flow_codes.GUIDE_LATER, guide["later"])]
         return [line for line in lines if line]
 
     def _phase(self, phase):
