@@ -37,7 +37,8 @@ from spark.breadboard.tabbed_page import SvgExportResult  # noqa: E402
 from spark.build.stages import Stage  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, OK, SKIPPED  # noqa: E402
 from spark.breadboard import before_power, sheet  # noqa: E402
-from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, TICK, page_words, shown_phase, word_of  # noqa: E402
+from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, page_words  # noqa: E402
+from spark.flow.page_sections import TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.offer_steps import build_step  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
@@ -1653,6 +1654,22 @@ class TheGuideSectionTest(unittest.TestCase):
         for escaped in ("&lt;b&gt;go&lt;/b&gt; &amp; wait", "&lt;i&gt;idea&lt;/i&gt;", "a&amp;b", "&lt;u&gt;x&lt;/u&gt;", "&lt;s&gt;none&lt;/s&gt;"):
             self.assertIn(escaped, text)
 
+    def test_a_chat_offer_in_now_draws_its_block_under_next_with_the_head_and_the_tell(self):
+        # P1122 (D7): the head is bold text and the tell a code box, with the key for the owner's Copy and no hook that sends
+        now = dict(a_guide()["now"], phase="deploy", offer=None, chat_offer="look-at-board")
+        section = guide_lines(guide_page(a_guide(now=now)))[1]
+        block = '<div class="ask" data-key="look-at-board"><strong>Ask Claude</strong> <code>Look at this project&#x27;s board with me.</code></div>'
+        self.assertEqual(section.count('class="ask"'), 1)
+        self.assertIn(block, section)
+        self.assertLess(section.index('<p class="next"'), section.index(block))
+        self.assertLess(section.index(block), section.index("</div>", section.index(block) + len(block)))
+        self.assertNotIn("data-makes-stale", section)
+
+    def test_no_chat_offer_or_no_key_for_it_draws_no_block(self):
+        for now in (a_guide()["now"], dict(a_guide()["now"], chat_offer=None), dict(a_guide()["now"], chat_offer="needs-drop")):
+            with self.subTest(now=now.get("chat_offer", "no key")):
+                self.assertNotIn('class="ask"', guide_page(a_guide(now=now)))
+
     def test_the_guide_adds_no_script_and_loads_only_the_font(self):
         assert_spark_s_script_only(self, guide_page(a_guide(), PageWiring([(1, "x")], [], [], None)))
 
@@ -1962,6 +1979,7 @@ class ThePageScriptTest(unittest.TestCase):
             "The parts list changed since the last build. Ask Claude to build again.":
                 "The parts list changed since the last build. Build the board again. Use the button."})
         self.assertEqual(words["waiting"], "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.")
+        self.assertEqual((words["copy"], words["copied"]), ("Copy", "Copied: paste it in Claude Code."))  # P1122: a chat offer's Copy
         self.assertEqual(words["ok"], {
             "pick": "Saved as the pick. Nothing is built yet. Reload to see the new state.",
             "requirements": "The parts list is written. Nothing is built yet. Reload to see the new state.",
@@ -1982,7 +2000,7 @@ class ThePageScriptTest(unittest.TestCase):
             "the request names a step that spark does not offer now, so nothing ran":
                 "Nothing ran. This button is no longer offered. Reload the page.",
             "the request names a step that is asked in the chat, never from the page, so nothing ran":
-                "Nothing ran. A need is dropped in the chat: tell Claude which one.",
+                "Nothing ran. This step is asked in the chat: tell Claude.",
             "the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or "
             "could not be deleted, so nothing ran": "Nothing ran. The request could not be read. Reload the page and click again."})
         self.assertEqual(words["marks"], {"ok": "✓", "problems": "✗", "could-not-run": "?", "not-run": "–"})

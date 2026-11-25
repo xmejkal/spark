@@ -1,60 +1,60 @@
 [
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "the step link shows without steps in now (P977 PR 2)",
   "find": "        if now.get(\"steps\") and wiring and not wiring.why_missing and wiring.steps:",
   "replace": "        if wiring and not wiring.why_missing and wiring.steps:"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "the step link shows with no wiring steps on the page (P977 PR 2)",
   "find": "        if now.get(\"steps\") and wiring and not wiring.why_missing and wiring.steps:",
   "replace": "        if now.get(\"steps\"):"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "the step link goes to step 1 whatever the first step's number (P977 PR 2)",
   "find": "            first = wiring.steps[0][0]",
   "replace": "            first = 1"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "a page with a guide keeps the stands-at line (P977 PR 2)",
   "find": "        if page.guide is not None:  # the guide says where the project stands (P977)",
   "replace": "        if False:  # the guide says where the project stands (P977)"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "a page with no guide draws a guide section (P977 PR 2)",
   "find": "        if guide is None:\n            return \"\"",
   "replace": "        if guide is None:\n            guide = {\"now\": None, \"done\": [\"x\"], \"later\": [], \"set_aside\": [], \"no_simulation\": None}"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "an empty list still draws its line (P977 PR 2)",
   "find": "_text(\", \".join(items))) if items else \"\"",
   "replace": "_text(\", \".join(items))) if True else \"\""
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "the no-simulation line is never drawn (P977 PR 2)",
   "find": "'<p class=\"muted\">%s</p>' % _text(guide[\"no_simulation\"]) if guide[\"no_simulation\"] else \"\"",
   "replace": "\"\""
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "a guide's items are joined with no comma (P977 PR 2)",
   "find": "_text(\", \".join(items))",
   "replace": "_text(\" \".join(items))"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "the guide's items are not escaped (P977 PR 2)",
   "find": "(_text(label), _text(\", \".join(items)))",
   "replace": "(_text(label), \", \".join(items))"
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "a null now still draws a NOW line (P977 PR 2)",
   "find": "        if not now:\n            said = page.guide.get(\"no_open_phase\")",
   "replace": "        if False:\n            said = page.guide.get(\"no_open_phase\")"
@@ -102,7 +102,7 @@
   "replace": "flow_codes.LATER_BUT_DONE if index > at else \"\""
  },
  {
-  "file": "scripts/spark/flow/flow_page.py",
+  "file": "scripts/spark/flow/page_sections.py",
   "name": "NOW names no phase (P977 PR 2 review)",
   "find": "flow_codes.NOW_BY % (now[\"phase\"],",
   "replace": "flow_codes.NOW_BY % (\"\","

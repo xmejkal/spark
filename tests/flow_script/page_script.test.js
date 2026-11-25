@@ -16,7 +16,7 @@ const script = require(path.join(__dirname, "..", "..", "scripts", "spark", "flo
 const WORDS = {
   offers: { build: { label: "Build the board", says: ["Saves its files in this project."] },
             "pick:light:led-red-5mm": { label: "Pick “Red LED” for light", says: ["Saves “Red LED” as the pick."] } },
-  send: "Send", cancel: "Cancel", copy: "Copy", withdraw: "Withdraw", command: "/spark:page",
+  send: "Send", cancel: "Cancel", copy: "Copy", copied: "Copied: paste it in Claude Code.", withdraw: "Withdraw", command: "/spark:page",
   intro: "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.",
   waiting: "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
   withdrawn: "Withdrawn. If Claude had already started it, its answer shows here.",
@@ -62,13 +62,15 @@ class FakeElement {
     return child;
   }
   remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter((each) => each !== this); }
+  querySelector(tag) { return this.children.find((each) => each.tag === tag) || null; }
   click() { return this.listeners.click(); }
 }
 
 /** Fake: a page with an intro, one sendable offer and the guide's NOW line of it, and a window whose claude.use gives `db`
  * and a user who is the owner unless `owner` is false (null: no user capability). With `guide`, the page holds the guide's
- * section (P1062), whose NOW box holds the NOW line. */
-function fakeWindow(db, owner = true, nowKey = "build", guide = true) {
+ * section (P1062), whose NOW box holds the NOW line. With `ask`, the NOW box also holds a chat offer's block with that tell
+ * (P1122), and the window's clipboard keeps what is written to it. */
+function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null) {
   const body = new FakeElement("body", { "data-fingerprint": "0123456789ab", "data-written": "2026-11-21T15:40:00+01:00" });
   const intro = body.appendChild(new FakeElement("p", { class: "intro" }));
   const section = guide ? new FakeElement("section", { id: "guide" }) : null;
@@ -76,6 +78,11 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true) {
   const now = body.appendChild(new FakeElement("p", { "data-key": nowKey, "data-makes-stale": "" }));
   now.appendChild(new FakeElement("#text")).textContent = nowKey === "build" ? " " + BUILD_NOW : " Tell Claude a pick for each.";
   const offer = body.appendChild(new FakeElement("li", { "data-key": "build", "data-makes-stale": "" }));
+  const block = ask === null ? null : body.appendChild(new FakeElement("div", { class: "ask", "data-key": "look-at-board" }));
+  if (block) {
+    block.appendChild(new FakeElement("strong")).textContent = "Ask Claude";
+    block.appendChild(new FakeElement("code")).textContent = ask;
+  }
   const words = new FakeElement("script", { id: "spark-words" });
   words.textContent = JSON.stringify(WORDS);
   const made = [];
@@ -85,13 +92,15 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true) {
     createTextNode: (text) => ({ text }),
     getElementById: (id) => (id === "spark-words" ? words : null),
     querySelector: (selector) => ({ ".intro": intro, "#guide": section }[selector] || null),
-    querySelectorAll: (selector) => (selector === "[data-makes-stale]" ? [now, offer] : []),
+    querySelectorAll: (selector) => ({ "[data-makes-stale]": [now, offer], ".ask[data-key]": block ? [block] : [] }[selector] || []),
   };
   const user = owner === null ? null : { isOwner: async () => owner };
   const uses = { db, user };
-  const win = { document, crypto: globalThis.crypto, claude: { use: async (name) => (name in uses ? uses[name] : null) } };
+  const clipboard = { written: [], writeText: async (text) => { clipboard.written.push(text); } };
+  const win = { document, crypto: globalThis.crypto, navigator: { clipboard },
+                claude: { use: async (name) => (name in uses ? uses[name] : null) } };
   if (section) body.appendChild(section);
-  return { win, made, offer, now, body, intro, section };
+  return { win, made, offer, now, body, intro, section, block, clipboard };
 }
 
 /** Fake: the Artifact database, in memory: the rows written and deleted, and the watches. `refuse` names a verb that rejects. */
@@ -349,6 +358,40 @@ test("the panel stands last in the guide, under the NOW box, or after the intro 
   await script.start(plain.win);
   const alone = plain.made.find((element) => element.tag === "section");
   assert.equal(plain.body.children[1], alone);
+});
+
+const TELL = "Look at this project's board with me.";
+
+test("P1122: the owner gets one Copy in a chat offer's block, which copies the tell and never sends", async () => {
+  const db = fakeDb();
+  const { win, made, block, clipboard } = fakeWindow(db, true, "build", true, TELL);
+  await script.start(win);
+  assert.deepEqual(buttons(made).map((made) => made.textContent), ["Copy", "Withdraw", "Build the board", "Build the board", "Copy"]);
+  const copy = block.children.filter((child) => child.tag === "button");
+  assert.equal(copy.length, 1);
+  assert.equal(block.children[3], copy[0], "after the head and the tell");
+  await copy[0].click();
+  assert.deepEqual(clipboard.written, [TELL]);
+  assert.equal(copy[0].textContent, "Copied: paste it in Claude Code.");
+  assert.equal(db.rows.size, 0, "nothing is sent");
+});
+
+test("P1122: a waiting request leaves the Copy of a chat offer as it is", async () => {
+  const { win, made, block } = fakeWindow(fakeDb(), true, "build", true, TELL);
+  const asked = await script.start(win);
+  await asked.send("build");
+  const copy = block.children.find((child) => child.tag === "button");
+  assert.deepEqual([copy.disabled, copy.title], [false, undefined]);
+  assert.equal(buttons(made).filter((made) => made.disabled).length, 2, "only the two buttons of the build wait");
+});
+
+test("P1122: from disk or for a viewer a chat offer's block gets no Copy, and its tell stays to select", async () => {
+  for (const [db, owner] of [[null, true], [fakeDb(), false]]) {
+    const { win, made, block } = fakeWindow(db, owner, "build", true, TELL);
+    assert.equal(await script.start(win), null);
+    assert.deepEqual(made, []);
+    assert.deepEqual(block.children.map((child) => child.textContent), ["Ask Claude", TELL]);
+  }
 });
 
 test("the script's text holds no markup of a control, no web address and no closing tag", () => {

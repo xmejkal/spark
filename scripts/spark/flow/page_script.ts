@@ -4,7 +4,8 @@
  * offer the page may send (a pick, the parts list, the build), asks the person to confirm with the offer's own words, and
  * writes one request row {id, key, seen, at}. One request waits at a time, with Copy and Withdraw; the panel stands last
  * in the guide, under the NOW box (P1062), and says the last request with its date, in the browser's zone, and its label,
- * then the answer row that /spark:page writes. Python writes every word in the inert block "spark-words"; this script
+ * then the answer row that /spark:page writes. Beside each chat offer's tell (P1122) it adds a Copy that only copies the
+ * tell and never sends. Python writes every word in the inert block "spark-words"; this script
  * fills in only a time, an offer's label or spark's own line. It never shows the key or the fingerprint, and never "done"
  * alone. Rows from the database are data: set as text only.
  */
@@ -30,6 +31,7 @@ interface Words {
   send: string;
   cancel: string;
   copy: string;
+  copied: string;
   withdraw: string;
   command: string;
   intro: string;
@@ -305,7 +307,7 @@ function labelOf(words: Words, key: string): string {
  * View: the intro, the status panel, the buttons and the confirm, made with createElement and addEventListener, every
  * text set as text. The panel stands last in the guide, under the NOW box (P1062), or under the intro on a page with no
  * guide; a button stands on each element that carries `data-makes-stale` (a sendable offer, and the NOW box's NEXT line
- * when the guide's now names one sendable offer).
+ * when the guide's now names one sendable offer), and a Copy in each chat offer's block (`.ask[data-key]`, P1122).
  */
 class PageView {
   declare win: Window;
@@ -340,6 +342,7 @@ class PageView {
   draw() {
     this.drawPanel();
     this.drawButtons();
+    this.drawAsks();
     this.requests.listen(() => this.render());
     this.render();
   }
@@ -371,6 +374,29 @@ class PageView {
       item.appendChild(made);
       this.buttons.push(made);
     });
+  }
+
+  /**
+   * P1122: one Copy in each chat offer's block, after its tell. A click writes the tell, the block's `code` text, to the
+   * clipboard and then says `copied`. It never sends and never touches the channel, and it is not among `buttons`, so a
+   * waiting request leaves it as it is.
+   */
+  drawAsks() {
+    this.doc.querySelectorAll(".ask[data-key]").forEach((block) => {
+      const tell = block.querySelector("code");
+      if (!tell) return;
+      const made: HTMLButtonElement = this.button(this.words.copy, () => this.copyTell(tell.textContent!, made));
+      block.appendChild(this.doc.createTextNode(" "));
+      block.appendChild(made);
+    });
+  }
+
+  copyTell(tell: string, made: HTMLButtonElement) {
+    const clipboard = this.win.navigator && this.win.navigator.clipboard;
+    if (!clipboard) return Promise.resolve();
+    return clipboard.writeText(tell).then(() => {
+      made.textContent = this.words.copied;
+    }, () => {});
   }
 
   confirm(item: Element, key: string, offer: Offer) {

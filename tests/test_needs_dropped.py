@@ -170,7 +170,7 @@ class ADroppedNeedTest(WithNeedsInGit):
         self.assertEqual(idea["says"], [DROPPED_LINE % "wifi", MUST_ASK])
         self.assertEqual(phase_of(said, "needs")["status"], "ok")
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "idea", "by": ["you"], "says": IDEA_STALE_NOW, "offer": None,
-                                                        "needs": [], "steps": None, "with_wiring": False})
+                                                        "chat_offer": None, "needs": [], "steps": None, "with_wiring": False})
         self.assertEqual(said["next"], [self.brief_step(project)])
         self.assertTrue(now_line(project).endswith(" [next: init_project, needs you]"), now_line(project))  # P1035 review: needs_yes too
 

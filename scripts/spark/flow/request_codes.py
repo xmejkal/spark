@@ -16,7 +16,8 @@ REQUEST_MALFORMED = Code("request_malformed",
                          "read, or could not be deleted, so nothing ran",
                          "write the page's request to .spark/page-request.json as the page sent it. If it was written that way, ask "
                          "the person to click again")
-#: The request names a step that is asked in the chat, never from the page: a need's drop.
+#: The request names a step that is asked in the chat, never from the page: a need's drop, or a chat offer, a job only
+#: Claude does (P1122).
 REQUEST_IN_CHAT = Code("request_in_chat", "the request names a step that is asked in the chat, never from the page, so nothing ran",
                        "tell Claude in the chat, for example: drop the light need")
 #: The page's fingerprint is not the project's now: the project changed after the page was read.

@@ -35,7 +35,7 @@ from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.result import NextStep  # noqa: E402
 from spark.flow import offer_steps  # noqa: E402
 from spark.flow.phase_readers import Offer, Phase  # noqa: E402
-from spark.flow.run_request import RunRequest  # noqa: E402
+from spark.flow.run_request import PageRequest, RunRequest, read_request  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
 
 #: A hand-written project: requirements.json and no needs, never built.
@@ -260,6 +260,20 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
     def test_a_drop_is_asked_in_the_chat_and_runs_nothing(self):
         envelope = self.refused("needs-drop:light", "request_in_chat")
         self.assertEqual(envelope["data"]["line"], "the request names a step that is asked in the chat, never from the page, so nothing ran")
+
+    def test_a_chat_offer_is_asked_in_the_chat_and_runs_nothing_even_when_offered(self):
+        # P1122: Claude's jobs are chat offers, never sent from the page
+        for keys in (OFFERED, OFFERED + ("write-firmware", "run-simulation", "look-at-board")):
+            self.readers = [FakeReader(keys)]
+            for key in ("write-firmware", "run-simulation", "look-at-board"):
+                with self.subTest(key=key, offered=len(keys)):
+                    self.refused(key, "request_in_chat")
+
+    def test_no_channel_carries_text_a_request_is_its_id_its_key_and_its_seen(self):
+        # P1122's done-when: a text or an argv beside the three fields is never read
+        self.assertEqual(PageRequest._fields, ("id", "key", "seen"))
+        self.ask("build", text="Write the firmware for this project's board.", argv=["--deploy"])
+        self.assertEqual(read_request(self.project), PageRequest(ID, "build", self.seen()))
 
     def test_a_page_read_before_the_project_changed_is_stale_and_runs_nothing(self):
         self.refused("build", "request_stale", seen="0123456789ab")

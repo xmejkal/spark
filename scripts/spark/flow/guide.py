@@ -135,12 +135,38 @@ def who_and_sentence(now, open_needs, fact, written=True):
     return [now.by], said or (flow_codes.PROBLEMS_NOW if now.status == PROBLEMS else flow_codes.COULD_NOT_RUN_NOW) % now.phase
 
 
+def chat_offer_of(now, fact):
+    """The key of the chat offer whose job the NOW sentence of `now` asks Claude for (P1122, `flow_codes.CHAT_NOW`), or
+    None, in `who_and_sentence`'s order: none for a simulate with no sim/wokwi.toml (the build's own step), a simulate with
+    no status by its ImageFact `fact`, else by the phase's status. An open deploy after a deploy is `deploy_chat_offer`'s."""
+    if now.phase == flow_codes.SIMULATE and fact.fact == flow_codes.NO_SIM_FILES:
+        return None
+    value = fact.fact if now.phase == flow_codes.SIMULATE and now.status is None else now.status
+    return flow_codes.CHAT_NOW.get((now.phase, value))
+
+
+def deploy_chat_offer(state):
+    """The key of the chat offer of an open deploy after a deploy (P1122), or None, by the value `deploy_reading.deploy_now`
+    picks its sentence by in the DeployState `state`: a stale deploy's fact, the verdict of a flash that did not finish,
+    else the status."""
+    if state.status == flow_codes.STALE:
+        value = state.fact
+    elif deploy_reading.not_finished(state.logged):
+        value = state.logged.verdict
+    else:
+        value = state.status
+    return flow_codes.CHAT_NOW.get((flow_codes.DEPLOY, value))
+
+
 def with_deploy_now(project, said, now, deploy=None):
-    """`said` with who acts and the sentence of an open deploy after a deploy (P1043, `deploy_reading.deploy_now`), from
-    `deploy`, the DeployState the run read its deploy phase from (None: read it here, as `image_fact` reads the image: a
-    fact on every Phase would change the phases' JSON). Else `said` as it is."""
-    told = deploy_reading.deploy_now(deploy or deploy_reading.read_deploy(project)) if now and now.phase == flow_codes.DEPLOY else None
-    return dict(said, by=told[0], says=told[1]) if told else said
+    """`said` with who acts, the sentence and the chat offer of an open deploy after a deploy (P1043, P1122,
+    `deploy_reading.deploy_now`), from `deploy`, the DeployState the run read its deploy phase from (None: read it here, as
+    `image_fact` reads the image: a fact on every Phase would change the phases' JSON). Else `said` as it is."""
+    if not (now and now.phase == flow_codes.DEPLOY):
+        return said
+    state = deploy or deploy_reading.read_deploy(project)
+    told = deploy_reading.deploy_now(state)
+    return dict(said, by=told[0], says=told[1], chat_offer=deploy_chat_offer(state)) if told else said
 
 
 def no_open_phase(said, by_name):
@@ -159,12 +185,13 @@ def job_offer(now):
 
 
 def now_of(now, open_needs, fact, count, written=True):
-    """`{phase, by, says, offer, needs, steps}` of the phase to act on now. With `count`, the steps of a current wiring
-    sheet beside firmware not started, it is two jobs, the person's and Claude's, and `steps` is that count (else None).
-    `written` is false while a simulate now has no scenario."""
+    """`{phase, by, says, offer, chat_offer, needs, steps}` of the phase to act on now. With `count`, the steps of a current
+    wiring sheet beside firmware not started, it is two jobs, the person's and Claude's, and `steps` is that count (else
+    None). `written` is false while a simulate now has no scenario. `chat_offer` is the key of the chat offer the sentence
+    asks Claude for, or None (P1122, `chat_offer_of`)."""
     by, says = ([flow_codes.BY_YOU, flow_codes.BY_CLAUDE], flow_codes.TWO_JOBS_NOW % count) if count is not None else \
         who_and_sentence(now, open_needs, fact, written)
-    return {"phase": now.phase, "by": by, "says": says, "offer": job_offer(now),
+    return {"phase": now.phase, "by": by, "says": says, "offer": job_offer(now), "chat_offer": chat_offer_of(now, fact),
             "needs": open_needs if now.phase == flow_codes.PARTS else [], "steps": count}
 
 
@@ -214,7 +241,7 @@ def stands_at_of(guide):
 def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     """
     What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, needs, steps, with_wiring}, "done", "later", "set_aside", "no_simulation", "no_open_phase", "wired"}`. `steps` counts the wiring
+    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring}, "done", "later", "set_aside", "no_simulation", "no_open_phase", "wired"}`. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
     run's DeployState (P1043), None to read it here. `board` is the run's WiredBoard (P1044), None to read it here:
     `wired` is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, or None when spark saw none.

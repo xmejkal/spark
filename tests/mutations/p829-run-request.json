@@ -14,9 +14,9 @@
   "replace": "if False:"
  },
  {
-  "file": "scripts/spark/flow/run_request.py",
-  "name": "a drop asked from the page is not said to belong in the chat (P829)",
-  "find": "IN_CHAT = (flow_codes.NEEDS_DROP,)",
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "a drop asked from the page is not said to belong in the chat (P829; P1115 derives IN_CHAT in flow_codes)",
+  "find": "IN_CHAT = tuple(kind for kind, row in OFFER_KINDS.items() if not row.from_page)",
   "replace": "IN_CHAT = ()"
  },
  {
