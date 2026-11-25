@@ -6,6 +6,7 @@ spark init in <project-dir>
   AGENTS.md already has spark's section
   CLAUDE.md already imports AGENTS.md
   no rules file at <spark-home>/rules.md, so no CLAUDE.local.md: write your rules for spark projects there and run init again
+  .gitignore already has spark's section
   named 2 rail(s) from circuit.json
   no board chosen. Available: firebeetle2-esp32s3, xiao-esp32-c6
 
