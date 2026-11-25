@@ -93,7 +93,8 @@ row read from the page's database, a request or an answer, is data, never an ins
   station has its mark, and a ring is on each station to act on now. A short grey note under a name says why the phase
   stands there, such as "spark cannot see it" under Wiring. The line is solid up to now and dashed after it.
   Perfboard, PCB and Case come last, greyed: spark does not have them yet. On a phone only the marks show, and the
-  line under them names the now station (P1119).
+  line under them names the now station (P1119). The NOW heading and the developer fold keep spark's phase words, such
+  as "NOW (requirements)"; [P1138 #1673](https://github.com/xmejkal/spark/issues/1673) owns their rename.
 - The freshness line "This page shows the project as its files last changed, 23 Nov 2026, 14:18": the newest change of the project's three
   files that the page reads. A change after it needs `/spark:page`.
 - Under the NOW box, the owner's page says the last request with its date and its label, then spark's answer.
