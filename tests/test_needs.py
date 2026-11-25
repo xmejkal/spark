@@ -2174,6 +2174,9 @@ class TheMoveHoldTest(unittest.TestCase):
     def test_a_second_move_of_the_same_hold_is_refused(self):
         self.move("chime=speaker", "--apply")
         self.refused("chime=speaker", "move_not_picked")
+        shown = self.text(["--move-hold", str(self.project), str(self.other), "chime=speaker"])
+        self.assertIn("the move is refused, and nothing was written", shown)
+        self.assertIn("no need of plant-alarm picks speaker, so plant-alarm holds no speaker to move", shown)
 
     def test_a_bad_need_and_id_exits_2(self):
         said, code = self.move("chime")

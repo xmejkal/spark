@@ -13,7 +13,7 @@ from spark.core import outcomes
 from spark.core.cli import run_operation
 from spark.core.errors import SparkError
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument, Operation
-from spark.core.result import Finding, NextStep, OperationResult
+from spark.core.result import Finding, Headline, NextStep, OperationResult
 from spark.design import needs
 from spark.design.need_requirements import REQUIREMENTS
 from spark.design.pick_parts import NO_PASSED_OVER, PickParts
@@ -55,6 +55,11 @@ LIST_LINE = "    %s %s on your projects"
 STALE_LINE = "    out of date: %s. Run parts.py --requirements %s, then build."
 #: The why of the next step without `--apply`.
 NEXT_WHY = "the person says yes to this plan first: the move writes the drawer, the history and both projects' needs.json"
+#: The text view's status line: a plan, a move done, a refusal, and a move that stopped (P1032).
+PLAN_HEADLINE = "a plan, nothing written: the person says yes, then the same move runs with --apply"
+MOVED_HEADLINE = "the hold moved, and the first project kept its need with no pick"
+REFUSED_HEADLINE = "the move is refused, and nothing was written"
+STOPPED_HEADLINE = "the move stopped before the first project's needs.json was written: the same move again finishes it"
 #: The refusals.
 SAME_FOLDER_SENTENCE = "%s and %s are one folder: a move takes a part from one project to another"
 SAME_NAME_SENTENCE = ("%s and %s are two folders whose holds would go under one name, %s: put one on your projects with "
@@ -216,7 +221,8 @@ class MoveHold(Operation):
         if result.status() != outcomes.OK:
             stopped = Finding.of(outcomes.COULD_NOT_RUN, None, idea_codes.MOVE_UNWRITTEN,
                                  STOPPED_SENTENCE % (plan.target.name, plan.source.name, given.partition("=")[2]))
-            return OperationResult(self._data(plan, False), list(result.findings) + [stopped], lines=list(result.lines))
+            return OperationResult(self._data(plan, False), list(result.findings) + [stopped], lines=list(result.lines),
+                                   headline=Headline(STOPPED_HEADLINE, Headline.of_status(outcomes.COULD_NOT_RUN)))
         self.needs.write(plan.source.folder, plan.release.after)
         return None
 
@@ -230,11 +236,13 @@ class MoveHold(Operation):
     def _result(self, plan, pick_id, move, written):
         """The OperationResult of a move: its lines, and without `--apply` the same move with it as the next step."""
         if plan.findings:
-            return OperationResult(self._data(plan, False), list(plan.findings))
+            return OperationResult(self._data(plan, False), list(plan.findings),
+                                   headline=Headline(REFUSED_HEADLINE, Headline.of_status(outcomes.PROBLEMS)))
         steps = [] if written else [NextStep(self.name, ["--move-hold"] + list(move) + ["--apply"], NEXT_WHY, [WRITES],
                                              needs_person=True, env=store.read_given_env())]
         return OperationResult(self._data(plan, written), lines=move_lines(plan, pick_id, written), next=steps,
-                               notes=[{"subject": None, "sentence": note} for note in plan.notes] or None)
+                               notes=[{"subject": None, "sentence": note} for note in plan.notes] or None,
+                               headline=Headline(MOVED_HEADLINE if written else PLAN_HEADLINE, Headline.of_status(outcomes.OK)))
 
 
 def move_lines(plan, pick_id, written):
