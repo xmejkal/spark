@@ -33,9 +33,9 @@ import flow  # noqa: E402
 from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
-from spark.flow.phase_readers import SimulateReader  # noqa: E402
+from spark.flow.phase_readers import Phase, SimulateReader  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
-from spark.flow.guide import guide_of  # noqa: E402
+from spark.flow.guide import chat_offer_of, guide_of  # noqa: E402
 from spark.flow.show_flow import ShowFlow, flow_and_guide, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
@@ -2526,6 +2526,12 @@ class TheChatOfferTest(FlowTest):
         for project in (failed, older):
             with self.subTest(project=project):
                 self.assertEqual((show(project)[0]["data"]["guide"]["now"]["phase"], chat_offer(project)), ("simulate", None))
+
+    def test_a_firmware_with_problems_or_that_could_not_run_names_none(self):
+        # FirmwareReader gives only not-started or no status, so D3's last firmware row is reached with a Phase value
+        for status in ("problems", "could-not-run"):
+            with self.subTest(status=status):
+                self.assertIsNone(chat_offer_of(Phase("firmware", status, "?", "Claude", ["said"], []), None))
 
     def test_a_simulate_with_problems_names_none(self):
         project = a_firmware(a_project_built_with_no_simulation())
