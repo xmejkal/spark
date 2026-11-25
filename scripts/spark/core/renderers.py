@@ -69,6 +69,17 @@ class FlatJsonLine:
         return None
 
 
+class FlatJsonLineWithFix(FlatJsonLine):
+    """Renderer: FlatJsonLine with `fix`, the result's `first_fix()`, after `data`'s keys and before `next` (P1055).
+    grant.py --check, live.py and reach.py print it. A `data` that is no dict is printed as FlatJsonLine prints it."""
+
+    @staticmethod
+    def render(result, tool, op):
+        if not isinstance(result.data, dict):
+            return FlatJsonLine.render(result, tool, op)
+        return FlatJsonLine.render(result._replace(data=dict(result.data, fix=result.first_fix())), tool, op)
+
+
 class JsonDocument(FlatJsonLine):
     """Renderer: FlatJsonLine's indented sibling (P804): an OperationResult's `data` as one JSON document over several
     lines, as `json.dumps(data, indent=2)` writes it, which check_all prints with --json. An empty text when `data` is

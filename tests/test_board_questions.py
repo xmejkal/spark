@@ -384,7 +384,7 @@ class TheStopsTest(BoardQuestionCase):
         self.cannot_tell(REACH)
         code, said, _ = self.main(REACH, "--json")
         line = json.loads(said)
-        self.assertEqual((code, sorted(line), line["reached"], line["port"]), (2, ["known_board", "open", "port", "product", "reached"], False, C6_PORT))
+        self.assertEqual((code, sorted(line), line["reached"], line["port"]), (2, ["fix", "known_board", "open", "port", "product", "reached"], False, C6_PORT))
         self.answer(False)
         self.assertEqual(self.main(REACH, "--json")[1], "")
         self.yes_file.unlink()

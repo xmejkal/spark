@@ -87,7 +87,7 @@ class LiveScriptTest(LiveCase):
         self.assertEqual((line["answer"], line["output"], line["reset"], line["port"]), ("ran", "1\n", "done", C6_PORT))
         self.assertEqual([command[command.index("connect"):] for command in ran if "devs" not in command],
                          [["connect", C6_PORT, "exec", "print(1)"], ["connect", C6_PORT, "reset"]])
-        self.assertEqual(sorted(line), ["answer", "cure", "doctor", "gpio_numbers_in_code", "grant_why", "output", "pins_checked",
+        self.assertEqual(sorted(line), ["answer", "cure", "doctor", "fix", "gpio_numbers_in_code", "grant_why", "output", "pins_checked",
                                         "port", "reset", "why"])
 
     def test_an_ended_grant_exits_1_with_its_code_and_runs_nothing_on_the_board(self):
@@ -124,7 +124,7 @@ class LiveScriptTest(LiveCase):
 
     def test_could_not_run_json_holds_every_field(self):
         code, said, _, _ = self.go("--code", "print(1)", "--json", devs="mpremote-devs-two.txt")
-        self.assertEqual(sorted(json.loads(said)), ["answer", "cure", "doctor", "gpio_numbers_in_code", "grant_why", "output",
+        self.assertEqual(sorted(json.loads(said)), ["answer", "cure", "doctor", "fix", "gpio_numbers_in_code", "grant_why", "output",
                                                     "pins_checked", "port", "reset", "why"])
 
     def test_a_broken_record_exits_2(self):
@@ -366,6 +366,19 @@ class ASleepingBoardTest(LiveCase):
         (step,) = line["next"]
         self.assertEqual((code, line["answer"], line["why"]), (2, "could-not-run", "no board found."))
         self.assertEqual((step["op"], step["argv"], step["needs_person"]), ("look", ["--project", str(self.project.resolve())], True))
+
+    def test_the_json_line_s_fix_is_the_fix_line_on_stderr(self):
+        # P1055: the stop's fix, word for word, on the one line, before `next`
+        _, _, problems, _ = self.go("--code", "print(1)", devs="mpremote-devs-none.txt")
+        _, said, _, _ = self.go("--code", "print(1)", "--json", devs="mpremote-devs-none.txt")
+        line = json.loads(said)
+        self.assertEqual((line["fix"], list(line)[-2:]), (problems.splitlines()[-1], ["fix", "next"]))
+
+    def test_after_the_doctor_the_json_line_s_fix_is_the_text_s_next_line(self):
+        # P1055 on the doctor road: the asleep fix, not the doctor's plug_in sentence, which doctor.next_step still names
+        _, said, _ = self.doctor_road()
+        (step,) = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
+        self.assertEqual(json.loads(self.doctor_road("--json")[1])["fix"], step.lstrip()[len("next    "):])
 
     def test_without_a_deepsleep_call_the_stop_is_as_before(self):
         for main in ("import machine\nmachine.lightsleep(1)\n", "import machine\nmachine.deepsleep(\n"):

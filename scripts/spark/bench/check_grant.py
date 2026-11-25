@@ -14,7 +14,7 @@ from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes
-from spark.core.renderers import FlatJsonLine
+from spark.core.renderers import FlatJsonLineWithFix
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines
@@ -52,7 +52,7 @@ class CheckGrant(Operation):
                  COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON: granted, why and the grant"))
     effects = (READS, RUNS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
-    json_renderer = FlatJsonLine
+    json_renderer = FlatJsonLineWithFix
 
     def __init__(self, platform_for=None):
         self.platform_for = platform_for or MicroPythonPlatform

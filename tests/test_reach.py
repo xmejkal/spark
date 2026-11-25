@@ -94,7 +94,8 @@ class ReachScriptTest(ReachCase):
         code, said, _, _ = self.go("--json", answers=(REFUSED, "reached\n"))
         line = json.loads(said)
         self.assertEqual(code, 0)
-        self.assertEqual(sorted(line), ["at", "cure", "cure_first", "doctor", "entered", "first_try_failed", "output", "port", "reached", "why"])
+        self.assertEqual(sorted(line), ["at", "cure", "cure_first", "doctor", "entered", "first_try_failed", "fix", "output", "port", "reached",
+                                        "why"])
         self.assertEqual(line["at"], "2026-10-17T09:00:00+0000", "the time is the outside's clock")
         self.assertEqual(line["cure"], {"heard": RESTART.heard, "why": None, "restart_heard": True, "port_back": True, "boot_heard": False})
         self.assertFalse(line["cure_first"])
@@ -296,6 +297,13 @@ class ASleepingBoardTest(ReachCase):
         line = json.loads(said)
         self.assertEqual((code, line["reached"], line["entered"], line["doctor"]["next_step"]), (2, False, False, "plug_in"))
         self.assertEqual((line["next"][0]["op"], line["next"][0]["needs_person"]), ("look", True))
+
+    def test_after_the_doctor_the_json_line_s_fix_is_the_text_s_next_line(self):
+        # P1055 on the doctor road: the asleep fix, before `next`, where doctor.next_step still says plug_in
+        _, said, _ = self.doctor_road()
+        (step,) = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
+        line = json.loads(self.doctor_road("--json")[1])
+        self.assertEqual((line["fix"], list(line)[-2:]), (step.lstrip()[len("next    "):], ["fix", "next"]))
 
     def test_after_the_doctor_a_firmware_with_no_deepsleep_call_keeps_the_cable_step(self):
         (self.project / "firmware" / "main.py").write_text("import machine\nmachine.lightsleep(1)\n")

@@ -255,7 +255,7 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         devs = "/dev/cu.usbmodem101 8c:bf:ea:xx:xx:xx 303a:1001 Espressif USB JTAG/serial debug unit\n"
         outside = FakeOutsideWorld(run=lambda argv, **kw: subprocess.CompletedProcess(argv, 0, devs, ""), find_tool=found)
         with mock.patch.dict("os.environ", {"SPARK_HOME": tempfile.mkdtemp()}):
-            self._check("grant", lambda: grant.main(["--check", "--json"], outside=outside), ["granted", "grant", "why"],
+            self._check("grant", lambda: grant.main(["--check", "--json"], outside=outside), ["granted", "grant", "why", "fix"],
                         status_expected=False)
 
     def test_the_flag_is_honoured_wherever_it_is_offered(self):

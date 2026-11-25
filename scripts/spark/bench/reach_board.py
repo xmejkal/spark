@@ -19,7 +19,7 @@ from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import codes, outcomes
 from spark.core.errors import SparkError
-from spark.core.renderers import FlatJsonLine
+from spark.core.renderers import FlatJsonLineWithFix
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
@@ -116,7 +116,7 @@ class ReachBoard(Operation):
                  COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP))
     effects = (READS, RUNS, BOARD, ASKS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
-    json_renderer = FlatJsonLine
+    json_renderer = FlatJsonLineWithFix
 
     def __init__(self, platform_for=None, known=None):
         self.platform_for = platform_for or MicroPythonPlatform

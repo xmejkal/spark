@@ -20,7 +20,7 @@ from spark.core import codes, outcomes  # noqa: E402
 from spark.core.codes import Code  # noqa: E402
 from spark.core.cli import (DEFAULT_RUN, FOLLOW_FAILED_MESSAGE, REFRESH_FAILED_MESSAGE, HelpText, RunOptions, TextReport,  # noqa: E402
                              refreshes, run_cli, run_operation)
-from spark.core.renderers import FlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
+from spark.core.renderers import FlatJsonLine, FlatJsonLineWithFix, FullEnvelope, JsonEnvelope  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
 from spark.core.view_reporter import TextViewReporter  # noqa: E402
@@ -95,6 +95,12 @@ class OperationResultTest(unittest.TestCase):
         self.assertEqual(envelope["next"][0], outcomes.step("deploy", ["--project", "p", "--token", "t"], "erases the flash", ["deletes", "writes"], True))
         self.assertNotIn("needs_person", envelope["next"][0])
         self.assertTrue(envelope["next"][1]["needs_person"])
+
+    def test_the_first_fix_is_the_fix_of_the_first_finding_that_has_one(self):
+        # P1055 (O2): no Finding, or only an empty fix, gives None, never ""
+        self.assertIsNone(OperationResult(None).first_fix())
+        self.assertIsNone(OperationResult(None, [UNCHECKED._replace(fix="")]).first_fix())
+        self.assertEqual(OperationResult(None, [UNCHECKED._replace(fix=""), PROBLEM, UNCHECKED]).first_fix(), PROBLEM.fix)
 
     def test_notes_are_a_key_only_when_given(self):
         self.assertEqual(OperationResult(None, notes=["said"]).to_envelope("deploy", "deploy")["notes"], ["said"])
@@ -1197,6 +1203,16 @@ class TheFollowUpTest(unittest.TestCase):
         line = json.loads(FlatJsonLine.render(OperationResult({"next": [own], "kept": []}, next=[THEN]), "t", "o"))
         self.assertEqual((line["next"], list(line)[-1]), ([own] + said, "next"))
         self.assertEqual(FlatJsonLine.render(OperationResult([1, 2], next=[THEN]), "t", "o"), "[1, 2]")
+
+    def test_the_flat_line_with_fix_holds_the_first_fix_before_next(self):
+        # P1055: the result says the fix (first_fix), and the Renderer only prints it; a `fix` in `data` gives way (A7)
+        said = OperationResult(None, next=[THEN]).to_envelope("t", "o")["next"]
+        line = json.loads(FlatJsonLineWithFix.render(OperationResult({"a": 1}, [UNCHECKED._replace(fix=""), PROBLEM], next=[THEN]), "t", "o"))
+        self.assertEqual((line, list(line)), ({"a": 1, "fix": PROBLEM.fix, "next": said}, ["a", "fix", "next"]))
+        self.assertEqual(json.loads(FlatJsonLineWithFix.render(OperationResult({"a": 1}), "t", "o")), {"a": 1, "fix": None})
+        self.assertEqual(FlatJsonLineWithFix.render(OperationResult(None, [PROBLEM], next=[THEN]), "t", "o"), "")
+        self.assertEqual(json.loads(FlatJsonLineWithFix.render(OperationResult({"fix": "its own"}, [PROBLEM]), "t", "o")), {"fix": PROBLEM.fix})
+        self.assertIsNone(FlatJsonLineWithFix.render_bad_argument(OperationResult(None), "t", "o"))
 
     def test_an_ok_run_that_writes_refreshes_after_its_steps_with_a_line_and_a_note(self):
         # P1035 PR 2 (D16): the refresh comes after the steps and their lines, and its sentence is a line and a note
