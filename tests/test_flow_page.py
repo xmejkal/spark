@@ -1095,7 +1095,8 @@ def token_block(pattern, style):
 
 #: The page's colour tokens (P1120), by name: each stands in light and in dark. The tests check rules, never the values.
 COLOUR_TOKENS = {"--bg", "--surface", "--ink", "--muted", "--line", "--accent", "--accent-hover", "--on-accent", "--accent-edge",
-                 "--focus", "--now-bg", "--now-ink", "--now-halo", "--backdrop"}
+                 "--focus", "--now-bg", "--now-ink", "--now-halo", "--amber-ink", "--amber-plane", "--red-ink", "--red-plane",
+                 "--backdrop"}
 #: The shape and font tokens, in light's :root only: they do not change with the scheme.
 SHAPE_TOKENS = {"--radius-button", "--radius-frame", "--button-height", "--size-text", "--size-heading", "--size-title",
                 "--space-s", "--space-m", "--space-l", "--body"}
@@ -1116,7 +1117,8 @@ TEAL_ROLES = {(selector, prop) for selector in ("[data-makes-stale]>button:not(:
 #: (text, ground) pairs that a person reads: 4.5:1 in both themes. The outline button and the confirm box are ink on the
 #: surface, the disabled label is muted on the line, and the Now link is the Now ink on the Now plane.
 TEXT_PAIRS = [("--ink", "--bg"), ("--ink", "--surface"), ("--muted", "--bg"), ("--muted", "--surface"), ("--muted", "--line"),
-              ("--on-accent", "--accent"), ("--on-accent", "--accent-hover"), ("--now-ink", "--now-bg")]
+              ("--on-accent", "--accent"), ("--on-accent", "--accent-hover"), ("--now-ink", "--now-bg"),
+              ("--amber-ink", "--amber-plane"), ("--red-ink", "--red-plane")]
 #: (edge, ground) pairs of a control or a ring: 3:1 in both themes. The kind-1 fill and Send on a frame or the ground, the
 #: outline, the focus ring on each ground it can stand on, the Now dot and the Now button's edge, and the confirm frame.
 EDGE_PAIRS = [("--accent", "--surface"), ("--accent", "--bg"), ("--ink", "--surface"), ("--focus", "--bg"), ("--focus", "--surface"),
@@ -1258,6 +1260,21 @@ class TheLookTest(unittest.TestCase):
                                       ("[role=group]", "background", "var(--surface)"),
                                       (".now [data-makes-stale]>button", "border-color", "var(--now-halo)")):
             self.assertEqual(rule.get((selector, prop)), value, selector)
+
+    def test_a_stale_or_problems_word_stands_on_its_plane_and_no_other_status_has_one(self):
+        hues = {"stale": "amber", "problems": "red"}  # by hue, so the style names no status code
+        rule = {(selector, prop): value for selector, prop, value in declarations(self.style)}
+        for hue in hues.values():
+            self.assertEqual((rule[(".plane-%s" % hue, "color")], rule[(".plane-%s" % hue, "background")]),
+                             ("var(--%s-ink)" % hue, "var(--%s-plane)" % hue))
+        for status in MARKS.keys() | {UNKNOWN_CODE}:
+            with self.subTest(status=status):
+                text = page_of(a_phase("parts", status))
+                word = html.escape(word_of(status))
+                spans = re.findall(r'<span(?: class="plane-([a-z]+)")?>%s</span>' % re.escape(word), text)
+                self.assertEqual(spans, [hues.get(status, "")] * 2)  # the parts fold's summary and the developer fold's heading
+                self.assertEqual(text.count('class="plane-'), 2 if status in hues else 0)
+                self.assertIn('<span aria-hidden="true">%s</span>' % html.escape(shown_phase(a_phase("parts", status).to_dict()).mark), text)
 
     def test_the_orange_signal_is_gone(self):
         self.assertNotIn("--signal", self.page)

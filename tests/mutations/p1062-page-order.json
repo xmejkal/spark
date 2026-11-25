@@ -20,8 +20,8 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "P1062: a phase inside the developer fold opens (test 4)",
-  "find": "\"<details><summary><h2>%s %s <span>%s</span></h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])",
-  "replace": "\"<details open><summary><h2>%s %s <span>%s</span></h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])"
+  "find": "\"<details><summary><h2>%s %s %s</h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])",
+  "replace": "\"<details open><summary><h2>%s %s %s</h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",
