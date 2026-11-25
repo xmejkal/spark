@@ -110,14 +110,14 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the breadboard never shows in done (P977 review 7)",
-  "find": "        return flow_codes.UNSEEN_NOTE if wiring == flow_codes.DONE_PLACE else flow_codes.NO_SHEET_NOTE",
+  "find": "        return flow_codes.UNSEEN_NOTE if breadboard_place == flow_codes.DONE_PLACE else flow_codes.NO_SHEET_NOTE",
   "replace": "        return flow_codes.NO_SHEET_NOTE"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the breadboard shows in done while the wiring is part of now (P977 review 7)",
-  "find": "    wiring = flow_codes.NOW_PLACE if two_jobs else flow_codes.DONE_PLACE",
-  "replace": "    wiring = flow_codes.DONE_PLACE"
+  "find": "    breadboard_place = flow_codes.NOW_PLACE if two_jobs else flow_codes.DONE_PLACE",
+  "replace": "    breadboard_place = flow_codes.DONE_PLACE"
  },
  {
   "file": "scripts/spark/flow/guide.py",
