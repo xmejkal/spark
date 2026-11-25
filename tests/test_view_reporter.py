@@ -1,6 +1,6 @@
 """P478 (#656): the text view of a run's events. `TextViewReporter` prints a LINE as `TerminalReporter` does and a heading
 `[n/N] name` for a BEGIN of one of the Operation's stages, `view_for` decides terminal, pipe or --json once per run, and
-`run_cli` finishes the Reporter after every run."""
+`run_cli` finishes the Reporter after every run. Slice 2: a WAIT prints its line, and on a terminal the spinner under it."""
 
 import contextlib
 import io
@@ -19,13 +19,14 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from fakes import FakeOutsideWorld, Stream  # noqa: E402
+from fakes import FakeClock, FakeOutsideWorld, FakeTicker, Stream  # noqa: E402
 from spark.core.cli import HelpText, run_cli, view_for  # noqa: E402
 from spark.core.events import Event, Reporter, TerminalReporter  # noqa: E402
 from spark.core.operation import COMMON_ARGUMENTS, READS, Argument, Operation  # noqa: E402
 from spark.core.privacy import MaskingReporter, Privacy  # noqa: E402
 from spark.core.renderers import JsonEnvelope, PlainPainter, RichPainter, StatusLine, TextReport, import_rich, painter_for  # noqa: E402
 from spark.core.result import MARK_OK, Headline, OperationResult  # noqa: E402
+from spark.core.spinner import NO_SPINNER, TerminalSpinner  # noqa: E402
 from spark.core.text_style import PLAIN, TextStyle, text_style_of  # noqa: E402
 from spark.core.view_reporter import TextViewReporter  # noqa: E402
 from suite_runs import needs_rich  # noqa: E402
@@ -71,7 +72,7 @@ class TheHeadingsTest(unittest.TestCase):
         self.assertEqual(shown(TextViewReporter(io.StringIO(), PlainPainter, ()), [Event.begin("plan"), Event.begin("look")]), "")
 
     def test_a_kind_it_does_not_know_prints_nothing(self):
-        self.assertEqual(shown(TextViewReporter(io.StringIO(), PlainPainter, PLAN_LOOK), [Event("wait", "plan", "x")]), "")
+        self.assertEqual(shown(TextViewReporter(io.StringIO(), PlainPainter, PLAN_LOOK), [Event("other", "plan", "x")]), "")
 
     def test_a_stage_name_with_an_escape_code_shows_it_as_a_question_mark(self):
         said = shown(TextViewReporter(io.StringIO(), PlainPainter, (Row("a\x1b[2Jb", ""),)), [Event.begin("a\x1b[2Jb")])
@@ -212,6 +213,113 @@ class TheStatusLineTest(unittest.TestCase):
         result = OperationResult({}, headline=Headline("All done.", MARK_OK))
         painter = RichPainter(types.SimpleNamespace(Console=console, Text=object))
         self.assertEqual(StatusLine.render(result, COLOUR, "deploy", painter), StatusLine.render(result, PLAIN, "deploy"))
+
+
+class TheWaitTest(unittest.TestCase):
+    """Slice 2, tests 10 and 11: a WAIT prints its line and starts the spinner; any next event stops it first."""
+
+    def setUp(self):
+        self.stream, self.clock, self.ticker = Stream(tty=True), FakeClock(), FakeTicker()
+        spinner = TerminalSpinner(self.stream, PlainPainter, COLOUR, self.clock, self.ticker)
+        self.reporter = TextViewReporter(self.stream, PlainPainter, PLAN_LOOK, spinner)
+
+    def drawn(self):
+        """A WAIT, then six seconds and one tick: the spinner's row is drawn."""
+        self.reporter.report(Event.wait("look", "reading the board"))
+        self.clock.advance(seconds=6)
+        self.ticker.tick()
+
+    def test_a_wait_prints_its_line_and_starts_the_spinner(self):
+        self.reporter.report(Event.wait("look", "reading the board"))
+        self.assertEqual((self.stream.getvalue(), self.ticker.started), ("  reading the board\n", 1))
+
+    def test_the_next_line_erases_the_row_and_shows_the_cursor_before_its_own_bytes(self):
+        self.drawn()
+        before = self.stream.getvalue()
+        self.reporter.report(Event.line("look", "next"))
+        self.assertEqual(self.stream.getvalue()[len(before):], "\r\x1b[2K\x1b[?25h  next\n")
+        self.assertIn("\x1b[?25l  ⠋ 6 s", before)
+
+    def test_a_begin_stops_the_ticker_too(self):
+        self.reporter.report(Event.wait("plan", "reading the board"))
+        stopped = self.ticker.stopped
+        self.reporter.report(Event.begin("look"))
+        self.assertEqual((self.ticker.stopped, self.stream.getvalue()), (stopped + 1, "  reading the board\n[2/2] look\n"))
+
+    def test_finish_stops_the_ticker_and_erases_a_drawn_row(self):
+        self.drawn()
+        stopped = self.ticker.stopped
+        self.reporter.finish()
+        self.assertEqual(self.ticker.stopped, stopped + 1)
+        self.assertTrue(self.stream.getvalue().endswith("\r\x1b[2K\x1b[?25h"))
+
+    def test_with_no_spinner_a_wait_prints_the_bytes_of_a_line_of_the_same_text(self):
+        wait, line = Event.wait("look", "reading the board"), Event.line("look", "reading the board")
+        self.assertEqual(shown(TextViewReporter(io.StringIO(), PlainPainter, PLAN_LOOK), [wait]),
+                         shown(TextViewReporter(io.StringIO(), PlainPainter, PLAN_LOOK), [line]))
+
+
+class TheSpinnerChoiceTest(unittest.TestCase):
+    """Slice 2, test 12: `view_for` gives the terminal spinner only with motion, and builds no thread before a WAIT."""
+
+    def reporter(self, out, environ, as_json=False):
+        return view_for(Staged(), as_json, (out, io.StringIO()), environ, lambda: types.SimpleNamespace(Console=None, Text=None)).reporter
+
+    def test_a_terminal_gets_the_terminal_spinner_and_no_thread_before_a_wait(self):
+        spinner = self.reporter(Stream(tty=True), {"TERM": "xterm"}).spinner
+        self.assertEqual((type(spinner), spinner.ticker.thread), (TerminalSpinner, None))
+
+    def test_a_pipe_dumb_term_and_force_colour_on_a_pipe_get_no_spinner_and_no_escape_code(self):
+        for out, environ in ((Stream(tty=False), {"TERM": "xterm"}), (Stream(tty=True), {"TERM": "dumb"}),
+                             (Stream(tty=False), {"TERM": "xterm", "FORCE_COLOR": "1"})):
+            with self.subTest(environ=environ, tty=out.tty):
+                reporter = self.reporter(out, environ)
+                self.assertIs(reporter.spinner, NO_SPINNER)
+                shown(reporter, [Event.wait("look", "reading the board"), Event.line("look", "next")])
+                reporter.finish()
+                self.assertNotIn("\r", out.getvalue())
+                self.assertNotIn("\x1b[?25", out.getvalue())
+
+    def test_json_gets_the_terminal_reporter(self):
+        self.assertIs(type(self.reporter(Stream(tty=True), {"TERM": "xterm"}, as_json=True)), TerminalReporter)
+
+    def test_q2_no_color_on_a_terminal_keeps_the_motion_uncoloured(self):
+        # Q2, decided by the auto-mode council (delegated, the PO's to change): a "no" changes this one assert
+        spinner = self.reporter(Stream(tty=True), {"TERM": "xterm", "NO_COLOR": "1"}).spinner
+        self.assertEqual((type(spinner), spinner.painter), (TerminalSpinner, PlainPainter))
+
+
+class Waits(Operation):
+    """Operation: one that reports a WAIT, lets the spinner draw, then gets a Ctrl-C."""
+
+    name = "waits"
+    arguments = (COMMON_ARGUMENTS["json"],)
+    effects = (READS,)
+
+    def __init__(self, clock, ticker):
+        self.clock, self.ticker = clock, ticker
+
+    def run(self, *, outside):
+        outside.report(Event.wait("waits", "reading the board"))
+        self.clock.advance(seconds=6)
+        self.ticker.tick()
+        raise KeyboardInterrupt
+
+
+class TheCtrlCTest(unittest.TestCase):
+    """Slice 2, test 13: a Ctrl-C during a wait still erases the row and shows the cursor, through run_cli's finish."""
+
+    def test_the_cursor_is_shown_again_after_a_ctrl_c_and_the_interrupt_goes_on(self):
+        terminal, clock, ticker = Stream(tty=True), FakeClock(), FakeTicker()
+
+        def builder(project, effects, reporter, values):
+            reporter.spinner = TerminalSpinner(terminal, PlainPainter, COLOUR, clock, ticker)  # an attribute, no patch
+            return FakeOutsideWorld(reporter=reporter)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(KeyboardInterrupt):
+                run_cli(HelpText("waits.py"), Waits(clock, ticker), [], outside_builder=builder)
+        self.assertIn("\x1b[?25l  ⠋ 6 s", terminal.getvalue())
+        self.assertTrue(terminal.getvalue().endswith("\r\x1b[2K\x1b[?25h"))
 
 
 #: A CLI whose result has a headline and a diagnostics line, run as a child with stdout and stderr on one pipe.

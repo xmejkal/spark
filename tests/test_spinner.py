@@ -26,8 +26,6 @@ from suite_runs import needs_rich  # noqa: E402
 SGR = re.compile(r"\x1b\[[0-9;]*m")
 #: The style of a terminal, with the marks' symbols and without them.
 SYMBOLS, NO_SYMBOLS = TextStyle(True, True, True), TextStyle(True, True, False)
-#: Back to the row's start and erase it, then hide the cursor, and show it again.
-ERASED, HIDDEN, SHOWN = "\r\x1b[2K", "\x1b[?25l", "\x1b[?25h"
 
 
 class BrokenStream(Stream):
