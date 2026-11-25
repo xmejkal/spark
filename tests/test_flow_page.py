@@ -1694,6 +1694,15 @@ class TheSliceOneOrderTest(unittest.TestCase):
             self.assertIsNone(pick_need(key), key)
 
 
+class TheSectionsTest(unittest.TestCase):
+    """P1123: page.html is an ordered table of small Renderers, so that a later part of the page is one more section."""
+
+    def test_the_page_s_sections_stand_in_this_order(self):
+        # a literal list, the slice 1 order (P1062): a section that moves or goes fails here, whatever SECTIONS holds
+        self.assertEqual([section.NAME for section in FlowHtmlPage.SECTIONS],
+                         ["title", "fresh", "intro", "guide", "stands-at", "parts", "wiring", "pictures", "notes", "developer"])
+
+
 def sample_page():
     """The FlowPage of tests/data/flow-page/sample-page.json: an offer of each kind, a guide, wiring and two pictures."""
     sample = json.loads((SAMPLE / "sample-page.json").read_text(encoding="utf-8"))
