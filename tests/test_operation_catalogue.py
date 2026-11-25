@@ -35,6 +35,7 @@ from spark import operation_catalogue  # noqa: E402
 from spark.core.describe_operations import DescribeOperations, summary_of  # noqa: E402
 from spark.core.operation import Operation  # noqa: E402
 from spark.flow import run_request  # noqa: E402
+from spark.idea.move_hold import MoveHold  # noqa: E402
 from spark.sourcing.research import research_part  # noqa: E402
 
 # --- MVP ---
@@ -145,6 +146,14 @@ class TheOperationCatalogueTest(unittest.TestCase):
         self.assertEqual((by_op["look"]["flag"], by_op["look"]["dry_run"]), (None, False))
         self.assertEqual(by_op["fetch"]["flag"], "--fetch")
         self.assertEqual([by_op[op]["dry_run"] for op in ("build-board", "research-part", "deploy", "pick")], [False, False, True, True])
+
+    def test_describe_says_that_the_move_writes_only_with_apply_and_that_a_run_without_it_writes_nothing(self):
+        """P1124: `apply` is true only for an Operation with an `--apply` argument, whose run without it is a dry run."""
+        rows = {row["op"]: row for row in DescribeOperations({"move-hold": MoveHold, "pick": operation_catalogue.CATALOGUE["pick"]})
+                .run(outside=FakeOutsideWorld()).data["operations"]}
+        self.assertEqual([(rows[op]["effects"], rows[op]["dry_run"], rows[op]["apply"]) for op in ("move-hold", "pick")],
+                         [(["writes"], True, True), (["writes"], True, False)])
+        self.assertEqual(rows["move-hold"]["flag"], "--move-hold")
 
     def test_the_operations_with_no_data_keys_only_get_fewer(self):
         empty = {op for op, cls in operation_catalogue.CATALOGUE.items() if not cls.data_keys}

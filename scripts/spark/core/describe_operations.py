@@ -4,7 +4,8 @@ themselves (reflection over the core contract), so what an agent reads cannot dr
 given to the constructor (op name -> class, in the order the CLI lists them); `describe_operations` is not an area's table.
 parts.py gives its slice of the Operation catalogue (`operation_catalogue.CATALOGUE`, P1077). The core never imports it,
 because it imports the areas. `flag` is the Operation's own `--<op>` argument, or None: piece 7 gives each frontend's own,
-and `dry_run` says whether the Operation has a `dry_run` argument.
+`dry_run` says whether a run of the Operation can write nothing (a `dry_run` argument, or an `apply` one: P1124), and
+`apply` whether it writes only when `--apply` is given.
 """
 
 from spark.core import outcomes
@@ -20,6 +21,9 @@ EFFECT_WORDS = ((FETCHES, "network"), (WRITES, "writes"), (DELETES, "deletes"))
 OPERATION_LINE = "  %-18s %s%s"
 #: The dest of the Argument that makes an Operation's run a dry run: `dry_run` says whether the Operation has one (P1077).
 DRY_RUN_DEST = "dry_run"
+#: The dest of the Argument without which an Operation writes nothing (P1124, the plan-first shape): it plans, then writes
+#: with `--apply` after the person's yes. `apply` says whether the Operation has one, and such a run is a dry run too.
+APPLY_DEST = "apply"
 
 
 def summary_of(operation):
@@ -74,7 +78,8 @@ class DescribeOperations(Operation):
             words = effect_words_of(cls)
             own = any("--" + op in argument.flags for argument in cls.arguments)
             operations.append({"op": op, "flag": ("--" + op) if own else None, "summary": summary_of(cls), "effects": words,
-                               "dry_run": any(argument.dest == DRY_RUN_DEST for argument in cls.arguments),
+                               "dry_run": any(argument.dest in (DRY_RUN_DEST, APPLY_DEST) for argument in cls.arguments),
+                               "apply": any(argument.dest == APPLY_DEST for argument in cls.arguments),
                                "arguments": properties, "data": list(cls.data_keys)})
         exits = {str(code): status for status, code in outcomes.EXIT_FOR.items()}
         lines = [OPERATION_LINE % (one["flag"] or one["op"], one["summary"], "  [%s]" % ", ".join(one["effects"]) if one["effects"] else "") for one in operations]
