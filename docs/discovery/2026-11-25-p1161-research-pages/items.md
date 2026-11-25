@@ -7,8 +7,8 @@ The cards come from the architect's synthesis (`council/synthesis.md` part 6) an
 - type: story <!-- REQUIRED:item-type -->
 - needed by: the PO, 2026-11-25, #1697: "We should also have pages for editing records and possibly for researching when adding new parts"; and at the P934 walk, #1445: "what if it's not in the store ? I can still have it and want to add it" <!-- REQUIRED:needed-by -->
 - value proven by: a walk row on the DFR0928 (in the drawer, count 1, no record): `flow.py show --json` lists the offer's key and its sentence for the need; after the research and `/spark:page` the part is a pick, and the board builds; `scripts/cost.py` counts the run on the main session's and the research agent's transcripts, summed,, because no command writes a research step that `run_cost.py` reads (★C9); the walk diary holds the A1 rows (D2, D3). The trigger also covers a pick that is a drawer entry with no record <!-- REQUIRED:value-proven-by -->
-- depends on: the research run's token cost named and asked first (D13); a test that the sentence carries only the chosen part's maker and part number (A9, D6); the drawer rule's new words read to the PO (D6). Filed as P992 #1445 refined in place, no new number (D5, D14) <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- depends on: the research run names its model and expected tokens before it starts, with no ask (D16); a test that the sentence carries only the chosen part's maker and part number (A9, D6); the drawer rule's new words read to the PO (D6). Filed as P992 #1445 refined in place, no new number (D5, D14) <!-- REQUIRED:depends-on -->
+- status: filed D14, P992 #1445 (refined in place) <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1161 #1697 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors <!-- REQUIRED:spark-process:slice -->
@@ -18,7 +18,7 @@ The cards come from the architect's synthesis (`council/synthesis.md` part 6) an
 - needed by: the PO, 2026-11-25, #1697: "When I want to edit a record and change something there"; and 2026-11-22, #1461: "lets make it so that its always offering the new findings to be stored to the store in general" <!-- REQUIRED:needed-by -->
 - value proven by: `parts.py --unverified dfr0664-tft-2in` prints 9 before and fewer after; each new fact holds a source that names who, when and how <!-- REQUIRED:value-proven-by -->
 - depends on: the slice 0 story (the same flow change) and the stale stamp story (D9); its walk runs in the DFR0664's home project (D7); `SetFacts` names the project it wrote, so the page is written again; P1002 #1461 stays open and linked (D5) <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D14, P1168 #1707 <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1161 #1697 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors <!-- REQUIRED:spark-process:slice -->
@@ -28,7 +28,7 @@ The cards come from the architect's synthesis (`council/synthesis.md` part 6) an
 - needed by: the PO, 2026-11-25, #1696: "Somwe files might need to be regenerated, etc."; and #1700: "what changes influence in later steps" <!-- REQUIRED:needed-by -->
 - value proven by: a row from a real run: change one fact with `--fact-set`, and `flow.py show` names the build as out of date; build again, and it reads current <!-- REQUIRED:value-proven-by -->
 - depends on: — (change 6 of the P1160 #1696 finding). It merges before slice 1's offer ships (D9). Its plan names which copy of a record the build reads (A4), and what a build record written before the stamp reads as (the refuter) <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D14, P1169 #1708 <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1161 #1697 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): spark-main chooses: build and core work does not fit "Views and editors" (D14) <!-- REQUIRED:spark-process:slice -->
@@ -38,7 +38,7 @@ The cards come from the architect's synthesis (`council/synthesis.md` part 6) an
 - needed by: the PO, 2026-11-25, #1697: "researching when adding new parts, based on photos" <!-- REQUIRED:needed-by -->
 - value proven by: a walk row on one module with no known marking: the record passes `--validate` on the first try, with a size from a ruler shot (USER-14 names the four breaks to watch) <!-- REQUIRED:value-proven-by -->
 - depends on: the slice 0 story. Filed in Idea, unrefined (D14) <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D14, P1170 #1709 <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1161 #1697 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors <!-- REQUIRED:spark-process:slice -->
@@ -47,8 +47,8 @@ The cards come from the architect's synthesis (`council/synthesis.md` part 6) an
 - type: spike <!-- REQUIRED:item-type -->
 - needed by: the PO, 2026-11-25, #1697: "just finding online a part/board/module that could do what we need, setting up criteria" <!-- REQUIRED:needed-by -->
 - value proven by: a finding with each way's candidates, their fits and lacks lines, and `scripts/cost.py`'s count for each run's transcript <!-- REQUIRED:value-proven-by -->
-- depends on: D11, D12; filed in Idea (D14); its run waits on the PO's money answer and its token cost is named and asked first (D13) <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- depends on: D11, D12; filed in Idea (D14); its run names its model and expected tokens before it starts, with no ask (D16) <!-- REQUIRED:depends-on -->
+- status: filed D14, P1171 #1710 <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1161 #1697 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors <!-- REQUIRED:spark-process:slice -->
@@ -58,7 +58,7 @@ The cards come from the architect's synthesis (`council/synthesis.md` part 6) an
 - needed by: the coordinator's rule (rules.md, "Suggest cards for found bugs"): a bug a review finds outside the scope becomes a proposed card; the code: scripts/spark/sourcing/part_facts.py:154-177 against commands/research.md:111-112 <!-- REQUIRED:needed-by -->
 - value proven by: a test: `--promote` of a record with an unverified fact is refused or names it, and `parts.py --validate` on spark's library still passes <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D14, P1172 #1711 <!-- REQUIRED:item-status -->
 - label (the repository's type label): bug <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — (a bug outside P1161) <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): spark-main chooses (D14) <!-- REQUIRED:spark-process:slice -->

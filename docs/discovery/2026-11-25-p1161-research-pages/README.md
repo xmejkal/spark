@@ -1,8 +1,8 @@
 # P1161: research and record editing from the page
 
 > Every research and record edit starts on the page as an "Ask Claude" sentence that spark fills from its own records.
-> Nothing new travels from the page. The first slice researches the DFR0928 for a need with no part. Three things wait
-> only on the PO: whether tokens on his plan count as money, two misfits in the core, and his go to design.
+> Nothing new travels from the page. The first slice researches the DFR0928 for a need with no part. The PO answered the rest:
+> tokens are named with no ask, the two misfits become cards, and design comes after the MVP cards.
 
 The discovery of epic P1161 #1697 ran on 2026-11-25. Five lenses on Opus read the code, the canvas, the store and the
 walk diaries. The architect wrote the synthesis, and the refuter on Opus checked every claim. The PO was away, so a
@@ -81,18 +81,17 @@ More sketches: [council/synthesis.md](council/synthesis.md) part 4, [council/ux-
 - D8: the chat alone writes `verified: true`, and its source names who, when and how. A one-click mark is a no-go.
 - D9: the build goes out of date after a record it read changes, before slice 1's offer ships.
 - D12, D13: find by criteria starts with a spike. The page says "not measured yet" until a run is measured.
-- D2: the riskiest assumption is A1, that he starts a job from the page's sentence. Its test is a walk's diary. When it runs is Q13, his.
-- D14: six cards to file, listed in [items.md](items.md).
+- D2, D15: the riskiest assumption is A1, that he starts a job from the page's sentence. It is tested in the slice 0 walk's diary (D15, the PO's).
+- D16 (the PO's): tokens are not money. Each run names its model and expected tokens, then runs with no question.
+- D17 (the PO's): the misfits M1 and M3 are filed as cards.
+- D18 (the PO's): design comes after the MVP cards. P1161 waits in Discovery.
+- D14: six cards filed by spark-main: P992 #1445 (refined), P1168 #1707, P1169 #1708, P1170 #1709, P1171 #1710, P1172 #1711. See [items.md](items.md).
 
 ## What waits on the PO
 
-1. When A1 is tested: before any build, or in the slice 0 walk (Q13, no majority).
-1. Whether tokens on his plan count as money under his rule D-g, and his ceiling for the first research run.
-2. The misfits M1 (agents write whole records outside any Operation) and M3 (the shelf and the catalog sit outside
-   the Storage seam).
-3. The drawer rule's new words (D6), read to him before the slice 0 PR merges.
-4. His go to design, and the Ready order.
-5. Any delegated answer he wants to change.
+1. The drawer rule's new words (D6), read to him before the slice 0 PR merges.
+2. Design, after the MVP cards (D18).
+3. Any delegated answer he wants to change.
 
 ## Files
 
