@@ -68,6 +68,10 @@ PAGE_SCRIPT = (ROOT / "scripts" / "spark" / "flow" / "page_script.js").read_text
 SCRIPT_BLOCK = re.compile(r'<script type="application/json" id="spark-words">.*?</script>\n<script>.*?</script>\n', re.S)
 #: A page with an offer of each kind and today's page of it, written by the renderer before the script (P829 PR 3).
 SAMPLE = ROOT / "tests" / "data" / "flow-page"
+#: The one web address the page loads (P1120): the font's stylesheet, written here, never imported from the code.
+FONT_URL = "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&display=swap"
+#: The system's fonts, last in the page's font stack: the page's fonts with no network.
+SYSTEM_FONTS = 'system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif'
 
 
 def without_script(text):
@@ -83,15 +87,25 @@ def scripts_of(text):
             for attributes, body in re.findall(r"<script([^>]*)>(.*?)</script>", text, re.S)]
 
 
+def assert_only_the_font_is_loaded(test, text):
+    """The page loads one thing from the web (P1120): the font's stylesheet, by one `<link>` in `<head>` to the literal
+    FONT_URL. With that link gone, no web address is left."""
+    link = '<link rel="stylesheet" href="%s">' % html.escape(FONT_URL)
+    test.assertEqual((text[:text.index("</head>")].count(link), text.count(link)), (1, 1))
+    test.assertNotIn("http", text.replace(link, "").lower())
+
+
 def assert_spark_s_script_only(test, text):
     """The page runs spark's script only (P829 PR 3, D7): one script with no src and no type, whose text is page_script.js,
-    beside the inert words block, and no frame, web address, control in the markup or handler."""
+    beside the inert words block, and no frame, control in the markup or handler. Its one web address is the font's
+    stylesheet (P1120)."""
     scripts = scripts_of(text)
     test.assertEqual([attributes for attributes, _body in scripts], [{"type": "application/json", "id": "spark-words"}, {}])
     test.assertEqual(scripts[1][1], PAGE_SCRIPT)
     test.assertEqual(text.lower().count("<script"), 2)
-    for word in ("<iframe", "http", "<button", "<input", "onclick"):
+    for word in ("<iframe", "<button", "<input", "onclick"):
         test.assertNotIn(word, text.lower())
+    assert_only_the_font_is_loaded(test, text)
 
 
 class FakeReader:
@@ -288,7 +302,7 @@ class TheDocumentTest(unittest.TestCase):
         for (attrs, _said), status in zip(self.parsed.sections, MARKS):
             self.assertEqual(attrs["data-status"], "none" if status is None else status)
 
-    def test_the_page_runs_nothing_and_loads_nothing(self):
+    def test_the_page_runs_nothing_and_loads_only_the_font(self):
         for text in (self.text, page_of(a_phase("one"), pictures=[Picture("Breadboard", "<svg/>", None)])):
             assert_spark_s_script_only(self, text)
 
@@ -900,7 +914,7 @@ class TheWiringWordsTest(unittest.TestCase):
             self.assertNotIn(word, wiring_section(text).lower())
             self.assertNotIn(word, summary.lower())
 
-    def test_the_page_still_runs_nothing_and_loads_nothing_with_wiring_and_three_pictures(self):
+    def test_the_page_still_runs_nothing_and_loads_only_the_font_with_wiring_and_three_pictures(self):
         assert_spark_s_script_only(self, page_of_wiring(PageWiring(THREE, self.ITEMS, ["rec"], None), THREE_PICTURES))
 
     def test_a_record_s_marks_and_signs_come_out_as_text_in_a_line_before_power(self):
@@ -961,8 +975,9 @@ class TheInlinePictureTest(unittest.TestCase):
         figure = text.split(FIGURE, 1)[1].split("</figure>", 1)[0]
         self.assertIn("<svg ", figure)
         self.assertIn('data-step="5"', figure)
-        for word in ("xmlns", "ns0:", "http"):
+        for word in ("xmlns", "ns0:"):
             self.assertNotIn(word, text.lower())
+        assert_only_the_font_is_loaded(self, text)  # P1120: no web address but the font's link, so no namespace's either
         order = [text.index(mark) for mark in ("<h3>Breadboard</h3>", FIGURE, "</figure>", "<h3>Schematic</h3>")]
         self.assertEqual(order, sorted(order))
 
@@ -1090,12 +1105,85 @@ def pad_legend(text):
 
 
 def token_block(pattern, style):
-    return dict(re.findall(r"(--[a-z]+):([^;]+)", re.search(pattern, style).group(1)))
+    return dict(re.findall(r"(--[a-z-]+):([^;]+)", re.search(pattern, style).group(1)))
+
+
+#: The page's colour tokens (P1120), by name: each stands in light and in dark. The tests check rules, never the values.
+COLOUR_TOKENS = {"--bg", "--surface", "--ink", "--muted", "--line", "--accent", "--accent-hover", "--on-accent", "--accent-edge",
+                 "--focus", "--now-bg", "--now-ink", "--now-halo", "--amber-ink", "--amber-plane", "--red-ink", "--red-plane",
+                 "--backdrop"}
+#: The shape and font tokens, in light's :root only: they do not change with the scheme.
+SHAPE_TOKENS = {"--radius-button", "--radius-frame", "--button-height", "--size-text", "--size-heading", "--size-title",
+                "--space-s", "--space-m", "--space-l", "--body"}
+#: Teal (the P1113 council's accent) and the tokens of its family, by name.
+TEAL = "#0f766e"
+TEAL_FAMILY = {"--accent", "--accent-hover", "--accent-edge", "--focus", "--now-halo"}
+#: Where a teal token may stand, as (selector, property): a kind-1 button's fill and edge (the offer's own button and Send),
+#: the confirm frame's edge, the focus ring, and the Now plane's halo (its dot and the edge of its offer button). Never a
+#: text colour, a fill or a stroke.
+TEAL_ROLES = {(selector, prop) for selector in ("[data-makes-stale]>button:not(:disabled)",
+                                                "[data-makes-stale] [role=group]>button:first-of-type:not(:disabled)",
+                                                "[data-makes-stale]>button:hover:not(:disabled)",
+                                                "[data-makes-stale] [role=group]>button:first-of-type:hover:not(:disabled)")
+              for prop in ("background", "border-color")} | {
+    ("[data-makes-stale] [role=group]", "border-color"), ("a:focus-visible", "outline"), ("button:focus-visible", "outline"),
+    ("summary:focus-visible", "outline"), (".now [data-makes-stale]>button", "border-color"),
+    (".now [data-makes-stale]>button:hover", "border-color"), (".now>p:first-child::before", "border")}
+#: (text, ground) pairs that a person reads: 4.5:1 in both themes. The outline button and the confirm box are ink on the
+#: surface, the disabled label is muted on the line, and the Now link is the Now ink on the Now plane.
+TEXT_PAIRS = [("--ink", "--bg"), ("--ink", "--surface"), ("--muted", "--bg"), ("--muted", "--surface"), ("--muted", "--line"),
+              ("--on-accent", "--accent"), ("--on-accent", "--accent-hover"), ("--now-ink", "--now-bg"),
+              ("--amber-ink", "--amber-plane"), ("--red-ink", "--red-plane")]
+#: (edge, ground) pairs of a control or a ring: 3:1 in both themes. The kind-1 fill and Send on a frame or the ground, the
+#: outline, the focus ring on each ground it can stand on, the Now dot and the Now button's edge, and the confirm frame.
+EDGE_PAIRS = [("--accent", "--surface"), ("--accent", "--bg"), ("--ink", "--surface"), ("--focus", "--bg"), ("--focus", "--surface"),
+              ("--focus", "--now-bg"), ("--now-halo", "--now-bg"), ("--accent-edge", "--surface"), ("--accent-edge", "--now-bg")]
+
+
+def page_style(page):
+    return re.search(r"<style>(.*?)</style>", page, re.S).group(1)
+
+
+def themes(style):
+    """The light tokens, and the dark ones: the light :root with the dark block over it, as a browser reads them."""
+    light = token_block(r"^:root\{([^}]*)\}", style)
+    return light, dict(light, **token_block(r':root\[data-theme="dark"\]\{([^}]*)\}', style))
+
+
+def declarations(style):
+    """(selector, property, value) of each declaration of the style outside the token blocks, once per selector of a list."""
+    found = []
+    for selectors, body in re.findall(r"([^{}]+)\{([^{}]*)\}", style):
+        if selectors.startswith(":root"):
+            continue
+        for declaration in filter(None, body.split(";")):
+            prop, _colon, value = declaration.partition(":")
+            found += [(selector.strip(), prop.strip(), value.strip()) for selector in selectors.split(",")]
+    return found
+
+
+def luminance(colour):
+    """The WCAG 2 relative luminance of a #rgb or #rrggbb colour."""
+    value = colour.strip().lstrip("#")
+    value = "".join(each * 2 for each in value) if len(value) == 3 else value
+    channels = [int(value[at:at + 2], 16) / 255 for at in (0, 2, 4)]
+    red, green, blue = [each / 12.92 if each <= 0.04045 else ((each + 0.055) / 1.055) ** 2.4 for each in channels]
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+
+def contrast(one, other):
+    high, low = sorted((luminance(one), luminance(other)), reverse=True)
+    return (high + 0.05) / (low + 0.05)
 
 
 class TheLookTest(unittest.TestCase):
-    """P949: the praised page's colours, light and dark, with system fonts and nothing loaded, and a legend of the pads
-    under the breadboard that says only what the picture draws."""
+    """P949, P1120: the page's tokens, light and dark, with teal only on a button's fill, a frame's edge or a ring, no shadow,
+    radii from their tokens, every pair readable, the linked font then the system's, nothing loaded by the style, and a
+    legend of the pads under the breadboard that says only what the picture draws."""
+
+    def setUp(self):
+        self.page = page_of_wiring(PageWiring(THREE, [], ["rec"], None), THREE_PICTURES)
+        self.style = page_style(self.page)
 
     def test_the_pad_legend_follows_an_inline_breadboard_only(self):
         svg = (a_drawn_project() / "breadboard.svg").read_text()
@@ -1113,26 +1201,143 @@ class TheLookTest(unittest.TestCase):
                 self.assertNotIn('class="pads"', page_of(a_phase("one"), pictures=pictures))
 
     def test_every_token_is_defined_light_and_dark_and_the_style_uses_only_them(self):
-        page = page_of_wiring(PageWiring(THREE, [], ["rec"], None), THREE_PICTURES)
-        style = re.search(r"<style>(.*?)</style>", page, re.S).group(1)
+        page, style = self.page, self.style
         light = token_block(r"^:root\{([^}]*)\}", style)
         dark = token_block(r'@media \(prefers-color-scheme: dark\)\{:root:not\(\[data-theme="light"\]\)\{([^}]*)\}\}', style)
         self.assertEqual(dark, token_block(r':root\[data-theme="dark"\]\{([^}]*)\}', style))
-        colours = {"--bg", "--ink", "--muted", "--line", "--signal", "--backdrop"}
-        self.assertEqual((set(light), set(dark)), (colours | {"--display", "--body"}, colours))
-        for name in colours - {"--backdrop"}:
+        self.assertEqual((set(light), set(dark)), (COLOUR_TOKENS | SHAPE_TOKENS, COLOUR_TOKENS))
+        self.assertIn("--radius-button", light)  # a name with a hyphen is read whole
+        for name in ("--bg", "--surface", "--ink", "--muted", "--line"):
             self.assertNotEqual(light[name], dark[name], name)
-        # the praised page's ground, and a white ground under the pictures in both, which are drawn for a light one
-        self.assertEqual((light["--bg"], dark["--bg"], light["--backdrop"], dark["--backdrop"]),
-                         ("#eef1f3", "#141b21", "#fff", "#fff"))
-        self.assertEqual(set(re.findall(r"var\((--[a-z]+)\)", style)), set(light))
-        self.assertTrue(light["--body"].startswith("system-ui"), light["--body"])
+        # the dark ground is the darker one, and a white ground under the pictures in both, which are drawn for a light one
+        self.assertLess(luminance(dark["--bg"]), luminance(light["--bg"]))
+        self.assertEqual((light["--backdrop"], dark["--backdrop"]), ("#fff", "#fff"))
+        self.assertEqual(set(re.findall(r"var\((--[a-z-]+)\)", style)), set(light))
         outside = re.sub(r"\{[^{}]*--bg:[^{}]*\}", "{}", style)
         self.assertEqual(style.count("--bg:"), 3)
         self.assertNotRegex(outside, r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
         self.assertNotRegex(outside, r"(?:color|background|border-color):\s*(?!var\(|transparent|inherit)[a-z]+")
         for word in ("url(", "@import", "@font-face"):
             self.assertNotIn(word, page)
+
+    def test_teal_is_only_a_button_fill_a_frame_edge_or_a_focus_ring(self):
+        light, dark = themes(self.style)
+        teal = TEAL_FAMILY | {name for theme in (light, dark) for name, value in theme.items() if value.strip().lower() == TEAL}
+        self.assertEqual(teal, TEAL_FAMILY)  # a token that holds teal is one of the family, whatever its name
+        used = [(selector, prop, value) for selector, prop, value in declarations(self.style)
+                if any("var(%s)" % name in value for name in teal)]
+        self.assertTrue(used)
+        for selector, prop, value in used:
+            self.assertNotIn(prop, ("color", "fill", "stroke"), selector)
+            self.assertIn((selector, prop), TEAL_ROLES, "%s{%s:%s}" % (selector, prop, value))
+            self.assertEqual(prop == "outline", "var(--focus)" in value, selector)  # the ring is --focus, and --focus only a ring
+
+    def test_no_accent_fill_reaches_a_disabled_button_or_cancel(self):
+        found = declarations(self.style)
+        fills = [selector for selector, prop, value in found if prop == "background" and "var(--accent" in value]
+        self.assertTrue(fills)
+        for selector in fills:
+            self.assertIn(":not(:disabled)", selector)
+            if "[role=group]" in selector:  # Send is the confirm's first button; Cancel, the second, keeps the outline
+                self.assertIn(">button:first-of-type", selector)
+        rule = {(selector, prop): value for selector, prop, value in found}
+        self.assertEqual((rule[("button:disabled", "background")], rule[("button:disabled", "color")]), ("var(--line)", "var(--muted)"))
+        # while the confirm shows, the offer's own button is an outline again, so Send is the one teal button
+        fallback = ("[data-makes-stale]:has(>[role=group])>button:not(:disabled)",
+                    "[data-makes-stale]:has(>[role=group])>button:hover:not(:disabled)")
+        for selector in fallback:
+            self.assertEqual(rule[(selector, "background")], "var(--surface)", selector)
+        self.assertEqual(rule[("button", "background")], "var(--surface)")
+
+    def test_the_confirm_open_outline_never_styles_a_disabled_offer_and_stands_after_the_teal_rule(self):
+        style = self.style
+        found = declarations(style)
+        # a disabled offer keeps the grey fill, whether or not the confirm is open: the fallback is for a button that can send
+        for selector, prop, value in found:
+            if ":has(" in selector and prop in ("background", "border-color", "color"):
+                self.assertIn(":not(:disabled)", selector, selector)
+        # the fill is the disabled rule's, and no Now rule paints a fill over it (the Now edge stays: see the style's comment)
+        self.assertEqual([selector for selector, prop, _value in found if prop == "background" and ".now" in selector], [".now"])
+        # the fallback outranks the teal rule by its place as well as by its weight, so the offer stays an outline
+        self.assertGreater(style.index("[data-makes-stale]:has(>[role=group])>button:not(:disabled)"),
+                           style.index("[data-makes-stale]>button:not(:disabled)"))
+        self.assertGreater(style.index("[data-makes-stale]:has(>[role=group])>button:hover:not(:disabled)"),
+                           style.index("[data-makes-stale]>button:hover:not(:disabled)"))
+        rule = {(selector, prop): value for selector, prop, value in found}
+        self.assertEqual((rule[("[role=group]", "color")], rule[("[role=group]", "background")]), ("var(--ink)", "var(--surface)"))
+
+    def test_no_shadow_no_gradient_and_each_radius_is_a_token(self):
+        found = declarations(self.style)
+        for word in ("shadow", "gradient"):  # in a property or a value: box-shadow, filter:drop-shadow(...), a gradient
+            self.assertEqual([(selector, prop) for selector, prop, value in found if word in prop or word in value], [])
+        radii = [value for _selector, prop, value in found if "radius" in prop]
+        self.assertTrue(radii)
+        self.assertEqual({prop for _selector, prop, _value in found if "radius" in prop}, {"border-radius"})
+        for value in radii:
+            self.assertIn(value, ("var(--radius-button)", "var(--radius-frame)", "50%"))
+        button = {prop: value for selector, prop, value in found if selector == "button"}
+        self.assertEqual((button["border-radius"], button["min-height"]), ("var(--radius-button)", "var(--button-height)"))
+        light, _dark = themes(self.style)
+        self.assertGreaterEqual(int(light["--button-height"].rstrip("px")), 44)  # a finger's target
+        self.assertLess(int(light["--radius-button"].rstrip("px")), int(light["--radius-frame"].rstrip("px")))
+
+    def test_each_text_pair_meets_its_contrast_in_both_themes(self):
+        for name, theme in zip(("light", "dark"), themes(self.style)):
+            for pairs, floor in ((TEXT_PAIRS, 4.5), (EDGE_PAIRS, 3.0)):
+                for one, other in pairs:
+                    with self.subTest(theme=name, pair=(one, other)):
+                        self.assertGreaterEqual(contrast(theme[one], theme[other]), floor)
+        # the rules that set those pairs: the Now plane and its link, the confirm box, the Now button's edge
+        rule = {(selector, prop): value for selector, prop, value in declarations(self.style)}
+        for selector, prop, value in ((".now", "background", "var(--now-bg)"), (".now", "color", "var(--now-ink)"),
+                                      (".now a", "color", "var(--now-ink)"), ("[role=group]", "color", "var(--ink)"),
+                                      ("[role=group]", "background", "var(--surface)"),
+                                      (".now [data-makes-stale]>button", "border-color", "var(--now-halo)")):
+            self.assertEqual(rule.get((selector, prop)), value, selector)
+
+    def test_nothing_inside_the_now_plane_is_muted_or_off_its_ink(self):
+        box = re.search(r'<div class="now">(.*?)</div>', guide_page(a_guide()), re.S).group(1)
+        inside = set(re.findall(r'class="([^"]+)"', box)) | {"now"}  # the classes the plane holds, and its own
+        self.assertIn("next", inside)
+        for selector, prop, value in declarations(self.style):
+            if set(re.findall(r"\.([a-z-]+)", selector)) & inside:
+                self.assertNotIn("var(--muted)", value, selector)  # --muted is for a light ground: 2.9:1 on the Now plane
+                if prop == "color":
+                    self.assertEqual(value, "var(--now-ink)", selector)
+
+    def test_a_stale_or_problems_word_stands_on_its_plane_and_no_other_status_has_one(self):
+        hues = {"stale": "amber", "problems": "red"}  # by hue, so the style names no status code
+        rule = {(selector, prop): value for selector, prop, value in declarations(self.style)}
+        for hue in hues.values():
+            self.assertEqual((rule[(".plane-%s" % hue, "color")], rule[(".plane-%s" % hue, "background")]),
+                             ("var(--%s-ink)" % hue, "var(--%s-plane)" % hue))
+        for status in MARKS.keys() | {UNKNOWN_CODE}:
+            with self.subTest(status=status):
+                text = page_of(a_phase("parts", status))
+                word = html.escape(word_of(status))
+                spans = re.findall(r'<span(?: class="plane-([a-z]+)")?>%s</span>' % re.escape(word), text)
+                self.assertEqual(spans, [hues.get(status, "")] * 2)  # the parts fold's summary and the developer fold's heading
+                self.assertEqual(text.count('class="plane-'), 2 if status in hues else 0)
+                self.assertIn('<span aria-hidden="true">%s</span>' % html.escape(shown_phase(a_phase("parts", status).to_dict()).mark), text)
+
+    def test_the_confirm_reads_at_the_text_size_wherever_it_stands(self):
+        # the confirm opens inside its offer's element, and on the NOW box's NEXT line it would take the line's larger size
+        rule = {(selector, prop): value for selector, prop, value in declarations(self.style)}
+        self.assertEqual(rule[(".next", "font-size")], "var(--size-heading)")
+        self.assertEqual(rule[("[role=group]", "font-size")], "var(--size-text)")
+
+    def test_the_font_is_the_linked_family_then_the_system_s(self):
+        light, _dark = themes(self.style)
+        family = re.search(r"family=([^:&]+)", FONT_URL).group(1).replace("+", " ")
+        self.assertEqual(light["--body"], '"%s",%s' % (family, SYSTEM_FONTS))
+        self.assertIn("display=swap", FONT_URL)  # with no network the system's fonts show at once
+        self.assertEqual(self.page.count(html.escape(FONT_URL)), 1)
+        rule = {(selector, prop): value for selector, prop, value in declarations(self.style)}
+        self.assertEqual(rule[("strong", "font-weight")], "600")  # a weight the link loads, so none is made up
+
+    def test_the_orange_signal_is_gone(self):
+        self.assertNotIn("--signal", self.page)
+        self.assertNotIn("#c8500f", self.page.lower())
 
 
 class TheBudgetTest(unittest.TestCase):
@@ -1189,7 +1394,7 @@ class TheKeepStepTest(unittest.TestCase):
         # the schematic and the PCB are <img>s, and the breadboard stands in the page with no namespace (P949)
         self.assertEqual(2, text.count("data:image/svg+xml;base64,"))
         self.assertEqual(text.count(FIGURE), 1)
-        self.assertNotIn("http", text.lower())
+        assert_only_the_font_is_loaded(self, text)
         self.assertEqual(len(Parsed(text).sections), 9)
 
     def test_a_flow_page_that_raises_is_one_no_page_entry(self):
@@ -1448,7 +1653,7 @@ class TheGuideSectionTest(unittest.TestCase):
         for escaped in ("&lt;b&gt;go&lt;/b&gt; &amp; wait", "&lt;i&gt;idea&lt;/i&gt;", "a&amp;b", "&lt;u&gt;x&lt;/u&gt;", "&lt;s&gt;none&lt;/s&gt;"):
             self.assertIn(escaped, text)
 
-    def test_the_guide_adds_no_script_and_loads_nothing(self):
+    def test_the_guide_adds_no_script_and_loads_only_the_font(self):
         assert_spark_s_script_only(self, guide_page(a_guide(), PageWiring([(1, "x")], [], [], None)))
 
 
@@ -1692,6 +1897,15 @@ class TheSliceOneOrderTest(unittest.TestCase):
         self.assertEqual(pick_need("pick:light:drawer:7"), "light")
         for key in ("build", "needs-drop:light", "requirements", "pick"):
             self.assertIsNone(pick_need(key), key)
+
+
+class TheSectionsTest(unittest.TestCase):
+    """P1123: page.html is an ordered table of small Renderers, so that a later part of the page is one more section."""
+
+    def test_the_page_s_sections_stand_in_this_order(self):
+        # a literal list, the slice 1 order (P1062): a section that moves or goes fails here, whatever SECTIONS holds
+        self.assertEqual([section.NAME for section in FlowHtmlPage.SECTIONS],
+                         ["title", "fresh", "intro", "guide", "stands-at", "parts", "wiring", "pictures", "notes", "developer"])
 
 
 def sample_page():

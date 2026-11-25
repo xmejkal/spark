@@ -47,7 +47,10 @@ the viewer is the owner, so the buttons show only to the owner.
 
 ## 5. What the page never does
 
-- It loads nothing from the web: no frame, no web address, no script but spark's own.
+- It loads one thing from the web: the font's stylesheet from fonts.googleapis.com, which then loads the font files from
+  fonts.gstatic.com. Google gets each visitor's IP address and browser string (User-Agent), and from a published page its
+  origin ([P1120](https://github.com/xmejkal/spark/issues/1649)). With no network the page uses the system fonts. No
+  frame, no other web address, no script but spark's own.
 - It holds no path of your machine: the project's path, the store's and the home folder's are masked, and so is
   each value of the project's secrets files ([section 10](#10-secrets)).
 - It decides nothing. A button writes one request row. Nothing runs until the person types `/spark:page`, and then

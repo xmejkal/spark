@@ -2,14 +2,14 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "P1062: the freshness line stands after the NOW box (test_flow_page.TheSliceOneOrderTest, test 1)",
-  "find": "self._fresh(page), self._intro(), self._guide(page), self._stands_at(page)]",
-  "replace": "self._intro(), self._guide(page), self._fresh(page), self._stands_at(page)]"
+  "find": "FreshHtmlLine(), IntroHtmlLine(), GuideHtmlSection()",
+  "replace": "IntroHtmlLine(), GuideHtmlSection(), FreshHtmlLine()"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "P1062: the developer fold stands before the parts fold (test 1)",
-  "find": "        return [self._parts(page), self._wiring(page, wiring_open), self._pictures(page.pictures, wiring_open),\n                self._notes(page.notes), self._developer(page)]",
-  "replace": "        return [self._developer(page), self._parts(page), self._wiring(page, wiring_open), self._pictures(page.pictures, wiring_open),\n                self._notes(page.notes)]"
+  "find": "PartsHtmlFold(), WiringHtmlFold(), PicturesHtmlFold(), NotesHtmlSection(), DeveloperHtmlFold())",
+  "replace": "DeveloperHtmlFold(), PartsHtmlFold(), WiringHtmlFold(), PicturesHtmlFold(), NotesHtmlSection())"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",
@@ -20,8 +20,8 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "P1062: a phase inside the developer fold opens (test 4)",
-  "find": "\"<details><summary><h2>%s %s <span>%s</span></h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])",
-  "replace": "\"<details open><summary><h2>%s %s <span>%s</span></h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])"
+  "find": "\"<details><summary><h2>%s %s %s</h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])",
+  "replace": "\"<details open><summary><h2>%s %s %s</h2></summary>\" % (_mark(shown), _text(phase[\"phase\"])"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",
@@ -116,8 +116,8 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "P1062: the page opens the wiring fold whatever now.with_wiring says (test_flow_page, test 6)",
-  "find": "        return bool((((page.guide or {}).get(\"now\")) or {}).get(\"with_wiring\"))",
-  "replace": "        return False"
+  "find": "    return bool((((page.guide or {}).get(\"now\")) or {}).get(\"with_wiring\"))",
+  "replace": "    return False"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",

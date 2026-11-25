@@ -1,12 +1,13 @@
 """
 The page of a project (P827, #1185): the flow's phases as one plain HTML file, `page.html`, each with a status word and a
-mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it, in the
-slice 1 order (P1062): the freshness line, the NOW box, the Parts, Wiring and Pictures folds, the bench note, and the
-developer fold, always closed. The page adds no tick of its own: a phase whose status is not ok never shows one
-(`shown_phase`). It loads nothing from the web and is
-the same bytes for the same flow. Its one script (P829 PR 3) does nothing from disk: `page_words` writes every word it
-shows. The breadboard stands in it as plain shapes (`SvgInliner`, P949),
-with its keys for a player and a legend of its pads; every other picture is an <img>.
+mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it, as an
+ordered table of sections (`SECTIONS`, P1123) in the slice 1 order (P1062): the freshness line, the NOW box, the Parts,
+Wiring and Pictures folds, the bench note, and the developer fold, always closed. The page adds no tick of its own: a
+phase whose status is not ok never shows one (`shown_phase`). It writes the same bytes for the same flow. It loads the font's
+stylesheet from fonts.googleapis.com (P1120), which then loads the font files from fonts.gstatic.com; Google gets each
+visitor's IP address and browser string (User-Agent), and from a published page its origin. With no network the page uses the
+system fonts. Its one script (P829 PR 3) does nothing from disk; `page_words` writes its words. The breadboard stands in it as
+plain shapes (`SvgInliner`, P949) with its keys for a player and a legend of its pads; every other picture is an <img>.
 """
 
 import base64
@@ -50,6 +51,9 @@ TICK = MARKS[OK][1]
 #: nothing from disk. Its words stand beside it in an inert JSON block with WORDS_ID.
 PAGE_SCRIPT = Path(__file__).resolve().with_name("page_script.js")
 WORDS_ID = "spark-words"
+#: The page's font (P1120, the PO's choice): Instrument Sans, the canvas's, in its two weights. `display=swap` shows the
+#: system's fonts at once and with no network. The address holds nothing of the project.
+FONT_STYLESHEET = "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&display=swap"
 
 
 def word_of(status):
@@ -123,6 +127,17 @@ def page_words(phases):
 
 def _mark(shown):
     return '<span aria-hidden="true">%s</span>' % _text(shown.mark)
+
+
+#: The state planes (P1120): the hue of the plane a status word stands on. The mark and the word stay, so the color is never
+#: the only cue; the names are hues, so the style names no status code.
+PLANES = {flow_codes.STALE: "amber", PROBLEMS: "red"}
+
+
+def _word(status, word):
+    """A status word in its `<span>`, on its plane when the status has one (`PLANES`)."""
+    plane = ' class="plane-%s"' % PLANES.get(status) if status in PLANES else ""
+    return "<span%s>%s</span>" % (plane, _text(word))
 
 
 class WiringHtmlSection:
@@ -234,87 +249,68 @@ def _local(name):
     return name.rsplit("}", 1)[-1]
 
 
-class FlowHtmlPage:
-    """
-    Renderer: a FlowPage as one HTML document, the same bytes for the same page. It loops over the page's phases, and
-    names only the parts phase, for its fold (P1062), and no count. The colors are the praised page's tokens (P949), light and dark, with the system's fonts,
-    and no color says a status: the mark and the word do. Under an inline breadboard a legend names each pad state its
-    dots draw, and only those.
-    """
+def _data(phase):
+    return 'data-phase="%s" data-status="%s"' % (_text(phase["phase"]), _text("none" if phase["status"] is None else phase["status"]))
 
-    FILE_NAME = "page.html"
-    NOUN = "page"
-    PURPOSE_MESSAGE = "where the project stands, phase by phase, with its pictures: open it in a browser"
 
-    #: The praised page's colors by token, light and dark. The picture ground stays white in both, as the tabbed page's:
-    #: the pictures are drawn for a light ground. The fonts are the system's, so the page loads nothing.
-    TOKENS_LIGHT = {"--bg": "#eef1f3", "--ink": "#1c262e", "--muted": "#566570", "--line": "#c3ccd3", "--signal": "#c8500f",
-                    "--backdrop": "#fff", "--display": "ui-serif,Georgia,serif",
-                    "--body": 'system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif'}
-    TOKENS_DARK = {"--bg": "#141b21", "--ink": "#e4eaee", "--muted": "#9aa9b4", "--line": "#3a4955", "--signal": "#f08a48",
-                   "--backdrop": "#fff"}
-    STYLE = ("body{max-width:1180px;margin:0 auto;padding:12px 16px;font:16px/1.55 var(--body);background:var(--bg);"
-             "color:var(--ink)}"
-             "h1,h2{font-family:var(--display);line-height:1.2}"
-             "a{color:var(--ink)}a:focus-visible{outline:2px solid var(--signal)}"
-             "#guide{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}"
-             "#guide p{margin:6px 0}"
-             ".now{border:1px solid var(--line);border-radius:6px;padding:2px 12px;margin:8px 0}.next{font-size:1.4em}"
-             ".muted,#request{color:var(--muted)}"
-             ".fold,.phase{border-top:1px solid var(--line);padding:4px 0}"
-             "summary{cursor:pointer}summary h2{display:inline}"
-             "p,li{overflow-wrap:anywhere}"
-             "img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;background:var(--backdrop)}"
-             ".fig{margin:0;overflow-x:auto;background:var(--backdrop);border:1px solid var(--line);border-radius:6px}"
-             ".fig svg{display:block;width:100%;height:auto}"
-             ".pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;color:var(--muted)}"
-             ".sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;vertical-align:-2px;"
-             "border:1px solid var(--line)}")
-    WIRING = WiringHtmlSection()
-    INLINER = SvgInliner()
+def _fold(name, summary, body, is_open):
+    """One fold (P1062): a `<details>` whose one-line summary holds the heading `summary` (markup), open when `is_open`."""
+    return "\n".join(['<details class="fold" data-fold="%s"%s><summary><h2>%s</h2></summary>' % (
+        name, " open" if is_open else "", summary)] + body + ["</details>"])
+
+
+def _wiring_open(page):
+    """True when the guide's now holds the wiring (`now.with_wiring`, `guide.with_wiring`): the page reads the fact."""
+    return bool((((page.guide or {}).get("now")) or {}).get("with_wiring"))
+
+
+#: The one wiring Renderer: the page's style, the wiring fold and the developer fold's records line use it.
+WIRING = WiringHtmlSection()
+#: The design-basis keys of the offers the page sends from a button (`flow_codes.SENDABLE`).
+SENDABLE_KEYS = tuple("offer:" + kind for kind in flow_codes.SENDABLE)
+
+
+class TitleHtmlHeading:
+    """Renderer: the page's title as its one `<h1>`."""
+
+    NAME = "title"
+    KEYS = ()
 
     def text(self, page):
-        head = [self._open(page), "<h1>%s</h1>" % _text(page.title), self._fresh(page), self._intro(), self._guide(page), self._stands_at(page)]
-        return "\n".join([part for part in head if part] + [part for part in self._body(page) if part]
-                         + [self._script(page), "</body>", "</html>"]) + "\n"
+        return "<h1>%s</h1>" % _text(page.title)
 
-    def _script(self, page):
-        """The page's words (`page_words`) as an inert JSON block, then its one script (P829 PR 3), as one block before
-        `</body>`: without it the page is the page with no script, byte for byte, but the script's hooks (`data-makes-stale` on
-        a sendable offer, and `data-key` with it on the NOW box's NEXT line, `sendable_now`).
-        A `<` in the words is written `\\u003c`, so no text closes the block."""
-        words = json.dumps(page_words(page.phases), ensure_ascii=False, sort_keys=True).replace("<", "\\u003c")
-        return '<script type="application/json" id="%s">%s</script>\n<script>%s</script>' % (
-            WORDS_ID, words, PAGE_SCRIPT.read_text(encoding="utf-8"))
 
-    @staticmethod
-    def _fresh(page):
+class FreshHtmlLine:
+    """Renderer: the freshness line (P1062) as one `<p>`."""
+
+    NAME = "fresh"
+    KEYS = ()
+
+    def text(self, page):
         """The freshness line (P1062): the newest change of the project's files, read in the machine's zone, or the line of
         a page that knows no time. `data-written` keeps the stored time with its zone."""
         said = flow_codes.FRESH_LINE % day_and_time(page.written) if page.written else flow_codes.FRESH_NONE
         return '<p class="fresh">%s</p>' % _text(said)
 
-    @staticmethod
-    def _intro():
+
+class IntroHtmlLine:
+    """Renderer: what the page is and how to act on it, as one `<p>`."""
+
+    NAME = "intro"
+    KEYS = ()
+
+    def text(self, page):
         """What the page is and how to act on it (P828 step 2). The script puts the owner's sentence in its place."""
         return '<p class="intro">%s</p>' % _text(flow_codes.PAGE_INTRO)
 
-    def _body(self, page):
-        """Under the guide (P1062): the parts, the wiring and the pictures, each a fold open only while its job is NOW, then
-        the bench note, then the developer fold, always closed, last."""
-        wiring_open = self._wiring_open(page)
-        return [self._parts(page), self._wiring(page, wiring_open), self._pictures(page.pictures, wiring_open),
-                self._notes(page.notes), self._developer(page)]
 
-    def _open(self, page):
-        style = token_styles(self.TOKENS_LIGHT, self.TOKENS_DARK) + self.STYLE + (self.WIRING.STYLE if page.wiring else "")
-        return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
-                          '<meta name="viewport" content="width=device-width, initial-scale=1">',
-                          '<title>%s</title>' % _text(page.title), '<style>%s</style>' % style, '</head>',
-                          '<body data-stands-at="%s" data-fingerprint="%s" data-written="%s">' % (
-                              _text(page.stands_at or "none"), _text((page.fingerprint or "none")[:SHORT]), _text(page.written or "none"))])
+class GuideHtmlSection:
+    """Renderer: the guide (P977, P1062) as one `<section id="guide">`: the NOW box and the muted lines under it."""
 
-    def _guide(self, page):
+    NAME = "guide"
+    KEYS = ("phase:*", "by:*") + SENDABLE_KEYS
+
+    def text(self, page):
         """The guide (P977 PR 2, P1062) in `<section id="guide">`, under the intro: the NOW box, then, muted, DONE, LATER (with
         the line on why there is no simulation) and SET ASIDE. A list with no item draws no line. Nothing with no guide, or a
         guide with no line. The script puts its panel last in it."""
@@ -360,23 +356,26 @@ class FlowHtmlPage:
         """One muted line under the NOW box: its label in `<strong>` and its items, comma apart, or nothing with none."""
         return '<p class="muted"><strong>%s</strong> %s</p>' % (_text(label), _text(", ".join(items))) if items else ""
 
-    @staticmethod
-    def _stands_at(page):
+
+class StandsAtHtmlLine:
+    """Renderer: where the project stands, as one `<p>`, for a page with no guide."""
+
+    NAME = "stands-at"
+    KEYS = ("phase:*",)
+
+    def text(self, page):
         if page.guide is not None:  # the guide says where the project stands (P977)
             return ""
         return "<p>%s</p>" % _text(flow_codes.STANDS_AT_LINE % page.stands_at if page.stands_at else flow_codes.NOTHING_OPEN_LINE)
 
-    @staticmethod
-    def _data(phase):
-        return 'data-phase="%s" data-status="%s"' % (_text(phase["phase"]), _text("none" if phase["status"] is None else phase["status"]))
 
-    @staticmethod
-    def _fold(name, summary, body, is_open):
-        """One fold (P1062): a `<details>` whose one-line summary holds the heading `summary` (markup), open when `is_open`."""
-        return "\n".join(['<details class="fold" data-fold="%s"%s><summary><h2>%s</h2></summary>' % (
-            name, " open" if is_open else "", summary)] + body + ["</details>"])
+class PartsHtmlFold:
+    """Renderer: the parts fold (P1062) as one `<details>`: the parts phase's lines and a row per sendable offer."""
 
-    def _parts(self, page):
+    NAME = "parts"
+    KEYS = ("phase:parts", "status:*") + SENDABLE_KEYS
+
+    def text(self, page):
         """The parts fold (P1062): the parts phase's says in order (P1044's wired line first), one row per need with its
         picks in the reading's order (`pick_need`), then the other sendable offers, the parts list and the build. Each is a
         hooked row, but the one on the NOW line. Open while the parts are NOW. Nothing with no parts phase and no row."""
@@ -395,54 +394,44 @@ class FlowHtmlPage:
         summary = _text(flow_codes.PARTS_HEADING)
         if phase:
             shown = shown_phase(phase)
-            summary = "%s %s <span>%s</span>" % (_mark(shown), summary, _text(shown.word))
-        return self._fold("parts", summary, body, ((page.guide or {}).get("now") or {}).get("phase") == flow_codes.PARTS)
+            summary = "%s %s %s" % (_mark(shown), summary, _word(phase["status"], shown.word))
+        return _fold("parts", summary, body, ((page.guide or {}).get("now") or {}).get("phase") == flow_codes.PARTS)
 
     @staticmethod
     def _hooked(offer):
         """A sendable offer's row: its key and `data-makes-stale` for the script, its label and its effect."""
         return '<li data-key="%s"%s>%s: %s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(offer["label"]), _text(offer["effect"]))
 
-    @staticmethod
-    def _wiring_open(page):
-        """True when the guide's now holds the wiring (`now.with_wiring`, `guide.with_wiring`): the page reads the fact."""
-        return bool((((page.guide or {}).get("now")) or {}).get("with_wiring"))
 
-    def _developer(self, page):
-        """The developer fold (P1062), always closed and last: each phase, closed, with its offers' keys and effects and no
-        hook, the marks, and the line that names each record whole."""
-        body = ['<section id="developer">'] + [self._phase(phase) for phase in page.phases] + [self._legend()]
-        if page.wiring and page.wiring.before_power:
-            body.append(self.WIRING.before_power.records_line(page.wiring.records))
-        return self._fold("developer", _text(flow_codes.DEVELOPER_HEADING), body + ["</section>"], False)
+class WiringHtmlFold:
+    """Renderer: the wiring fold as one `<details>` that holds the wiring's `<section>` (`WiringHtmlSection`)."""
 
-    def _phase(self, phase):
-        """A phase's section in the developer fold: its heading in a `<summary>`, its text in a `<div>`, always closed. An offer
-        shows its key in `<code>`, its label and its effect, with no hook: the page's buttons stand on NOW and in the folds."""
-        shown = shown_phase(phase)
-        lines = ['<section class="phase" %s>' % self._data(phase),
-                 "<details><summary><h2>%s %s <span>%s</span></h2></summary>" % (_mark(shown), _text(phase["phase"]), _text(shown.word)),
-                 '<div id="phase-%s">' % _text(phase["phase"]), "<p>Done by: %s</p>" % _text(phase["by"])]
-        lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
-        offers = ["<li><code>%s</code> %s: %s</li>" % (_text(offer["key"]), _text(offer["label"]), _text(offer["effect"]))
-                  for offer in phase["offers"]]
-        return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</div>", "</details>", "</section>"])
+    NAME = "wiring"
+    KEYS = ("phase:breadboard",)
 
-    def _wiring(self, page, is_open):
+    def text(self, page):
         """The wiring fold: its summary counts the steps, and it holds the wiring section."""
         if not page.wiring:
             return ""
         drawn = any(each.title == flow_codes.BREADBOARD_TITLE and each.svg for each in page.pictures)
         steps = [] if page.wiring.why_missing else page.wiring.steps
         summary = flow_codes.WIRING_STEPS[len(steps) != 1] % len(steps) if steps else flow_codes.WIRING_HEADING
-        return self._fold("wiring", _text(summary), [self.WIRING.text(page.wiring, drawn)], is_open)
+        return _fold("wiring", _text(summary), [WIRING.text(page.wiring, drawn)], _wiring_open(page))
 
-    def _pictures(self, pictures, is_open):
+
+class PicturesHtmlFold:
+    """Renderer: the pictures fold as one `<details>`: every picture of the page, in the order it was given them."""
+
+    NAME = "pictures"
+    KEYS = ()
+    INLINER = SvgInliner()
+
+    def text(self, page):
         """All the pictures in one fold, in the order the page was given them, or nothing when there are none."""
-        if not pictures:
+        if not page.pictures:
             return ""
-        return self._fold("pictures", _text(flow_codes.PICTURES_HEADING),
-                          ['<section id="pictures">\n%s\n</section>' % "\n".join(self._picture(each) for each in pictures)], is_open)
+        body = ['<section id="pictures">\n%s\n</section>' % "\n".join(self._picture(each) for each in page.pictures)]
+        return _fold("pictures", _text(flow_codes.PICTURES_HEADING), body, _wiring_open(page))
 
     def _picture(self, picture):
         """The breadboard stands in the page when the inliner takes it, so a player finds its keys. Any other picture, and
@@ -466,6 +455,43 @@ class FlowHtmlPage:
         return '<ul class="pads">%s</ul>' % "".join('<li><span class="sw" style="background:%s"></span>%s</li>' % (
             PAD_MARKS[state].fill, _text(PAD_MARKS[state].words)) for state in pads)
 
+
+class NotesHtmlSection:
+    """Renderer: the page's fixed notes, the bench note among them, as one `<section class="notes">`."""
+
+    NAME = "notes"
+    KEYS = ()
+
+    def text(self, page):
+        return '<section class="notes"><h2>Notes</h2>%s</section>' % "".join("<p>%s</p>" % _text(note) for note in page.notes)
+
+
+class DeveloperHtmlFold:
+    """Renderer: the developer fold (P1062) as one `<details>`, always closed and last: each phase, the marks and the records."""
+
+    NAME = "developer"
+    KEYS = ("phase:*", "status:*", "by:*", "offer:*")
+
+    def text(self, page):
+        """The developer fold (P1062), always closed and last: each phase, closed, with its offers' keys and effects and no
+        hook, the marks, and the line that names each record whole."""
+        body = ['<section id="developer">'] + [self._phase(phase) for phase in page.phases] + [self._legend()]
+        if page.wiring and page.wiring.before_power:
+            body.append(WIRING.before_power.records_line(page.wiring.records))
+        return _fold("developer", _text(flow_codes.DEVELOPER_HEADING), body + ["</section>"], False)
+
+    def _phase(self, phase):
+        """A phase's section in the developer fold: its heading in a `<summary>`, its text in a `<div>`, always closed. An offer
+        shows its key in `<code>`, its label and its effect, with no hook: the page's buttons stand on NOW and in the folds."""
+        shown = shown_phase(phase)
+        lines = ['<section class="phase" %s>' % _data(phase),
+                 "<details><summary><h2>%s %s %s</h2></summary>" % (_mark(shown), _text(phase["phase"]), _word(phase["status"], shown.word)),
+                 '<div id="phase-%s">' % _text(phase["phase"]), "<p>Done by: %s</p>" % _text(phase["by"])]
+        lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
+        offers = ["<li><code>%s</code> %s: %s</li>" % (_text(offer["key"]), _text(offer["label"]), _text(offer["effect"]))
+                  for offer in phase["offers"]]
+        return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</div>", "</details>", "</section>"])
+
     @staticmethod
     def _legend():
         items = []
@@ -474,7 +500,101 @@ class FlowHtmlPage:
             items.append("<li>%s %s%s</li>" % (_mark(ShownPhase(glyph, word_of(status))), _text(word_of(status)), _text(more)))
         return '<section class="legend"><h2>Marks</h2><ul>%s</ul></section>' % "".join(items)
 
-    @staticmethod
-    def _notes(notes):
-        return '<section class="notes"><h2>Notes</h2>%s</section>' % "".join("<p>%s</p>" % _text(note) for note in notes)
+
+class FlowHtmlPage:
+    """
+    Renderer: a FlowPage as one HTML document, the same bytes for the same page. Between its head and its script it writes
+    its `SECTIONS` in order (P1123), each a small Renderer with a `NAME`, the design-basis `KEYS` it shows and `text(page)`;
+    a section with nothing to show writes nothing. It names only the parts phase, for its fold (P1062), and no count. Its
+    colors are tokens (P1120), light and dark, with the linked font then the system's. Teal is only a button's fill, the confirm frame's
+    edge or the focus ring. The Now box is an ink plane whose dot's halo is a `::before` border, as the page has no shadow.
+    No color says a status: the mark and the word do. Under an inline breadboard a legend names each pad state its dots
+    draw, and only those.
+    """
+
+    FILE_NAME = "page.html"
+    NOUN = "page"
+    PURPOSE_MESSAGE = "where the project stands, phase by phase, with its pictures: open it in a browser"
+
+    #: The colors by token, light and dark (P1120: the P1113 council's light set, the PO's dark set of 2026-11-25); the shape
+    #: and font tokens are light's only. The picture ground stays white in both, as the tabbed page's: the pictures are drawn
+    #: for a light ground. The font is the linked one (`FONT_STYLESHEET`), then the system's, which draw it with no network.
+    TOKENS_LIGHT = {"--bg": "#f6f5f1", "--surface": "#ffffff", "--ink": "#15181d", "--muted": "#5b6270", "--line": "#e4e1d8",
+                    "--accent": "#0f766e", "--accent-hover": "#0b5c56", "--on-accent": "#ffffff", "--accent-edge": "#0f766e",
+                    "--focus": "#0f766e", "--now-bg": "#15181d", "--now-ink": "#f6f5f1", "--now-halo": "#5eead4",
+                    "--amber-ink": "#92400e", "--amber-plane": "#fef3c7", "--red-ink": "#b42318", "--red-plane": "#fee4e2",
+                    "--backdrop": "#fff", "--radius-button": "8px", "--radius-frame": "12px", "--button-height": "44px",
+                    "--size-text": "16px", "--size-heading": "20px", "--size-title": "40px", "--space-s": "8px",
+                    "--space-m": "12px", "--space-l": "16px",
+                    "--body": '"Instrument Sans",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif'}
+    TOKENS_DARK = {"--bg": "#121417", "--surface": "#1b1e24", "--ink": "#eceae4", "--muted": "#a3a9b5", "--line": "#2e333b",
+                   "--accent": "#0f766e", "--accent-hover": "#0b5c56", "--on-accent": "#ffffff", "--accent-edge": "#5eead4",
+                   "--focus": "#5eead4", "--now-bg": "#23272f", "--now-ink": "#eceae4", "--now-halo": "#5eead4",
+                   "--amber-ink": "#fcd34d", "--amber-plane": "#3a2a0b", "--red-ink": "#fca5a5", "--red-plane": "#3b1214",
+                   "--backdrop": "#fff"}
+    #: Kind 1, teal, is spark's step: a sendable offer's button and Send (the confirm's first), never a disabled one; kind 2, an
+    #: outline, is every other. Until P1115 the selectors read where the script puts a button. While the confirm shows, the
+    #: offer's own button is an outline again, so Send is the one teal button. A disabled offer on the Now plane keeps its halo
+    #: edge, since without it the dark edge is 1.18:1 against the plane; the grey fill still says disabled.
+    STYLE = ("body{max-width:1180px;margin:0 auto;padding:var(--space-m) var(--space-l);"
+             "font:var(--size-text)/1.55 var(--body);background:var(--bg);color:var(--ink)}h1,h2{font-weight:600;"
+             "line-height:1.2;letter-spacing:-0.02em}h1{font-size:var(--size-title);line-height:1.1}"
+             "h2{font-size:var(--size-heading)}strong{font-weight:600}a{color:var(--ink)}.now a{color:var(--now-ink)}a:focus-visible,"
+             "button:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}"
+             "button{min-height:var(--button-height);padding:0 var(--space-l);border:1px solid var(--ink);"
+             "border-radius:var(--radius-button);background:var(--surface);color:var(--ink);"
+             "font:600 var(--size-text)/1 var(--body);cursor:pointer}button+button{margin-left:var(--space-s)}"
+             "[data-makes-stale]>button:not(:disabled),"
+             "[data-makes-stale] [role=group]>button:first-of-type:not(:disabled){background:var(--accent);"
+             "border-color:var(--accent);color:var(--on-accent)}[data-makes-stale]>button:hover:not(:disabled),"
+             "[data-makes-stale] [role=group]>button:first-of-type:hover:not(:disabled){background:var(--accent-hover);"
+             "border-color:var(--accent-hover)}[data-makes-stale]:has(>[role=group])>button:not(:disabled),"
+             "[data-makes-stale]:has(>[role=group])>button:hover:not(:disabled){background:var(--surface);border-color:var(--ink);"
+             "color:var(--ink)}.now [data-makes-stale]>button,"
+             ".now [data-makes-stale]>button:hover{border-color:var(--now-halo)}"
+             "button:disabled{background:var(--line);border-color:var(--line);color:var(--muted);cursor:not-allowed}"
+             "#guide,.fold,[role=group]{border:1px solid var(--line);border-radius:var(--radius-frame);"
+             "background:var(--surface);padding:var(--space-s) var(--space-l);margin:var(--space-s) 0}"
+             "[role=group]{color:var(--ink);font-size:var(--size-text)}"
+             "[data-makes-stale] [role=group]{border-color:var(--accent-edge)}"
+             "#guide p{margin:var(--space-s) 0}.now{background:var(--now-bg);color:var(--now-ink);"
+             "border-radius:var(--radius-frame);padding:var(--space-s) var(--space-l);margin:var(--space-s) 0}"
+             ".now>p:first-child::before{content:\"\";display:inline-block;width:8px;height:8px;"
+             "margin-right:var(--space-s);border:2px solid var(--now-halo);border-radius:50%;vertical-align:1px}"
+             ".next{font-size:var(--size-heading)}.muted,#request{color:var(--muted)}"
+             ".plane-amber{color:var(--amber-ink);background:var(--amber-plane);"
+             "border-left:3px solid var(--amber-ink);padding:0 var(--space-s)}.plane-red{color:var(--red-ink);"
+             "background:var(--red-plane);border-left:3px solid var(--red-ink);padding:0 var(--space-s)}"
+             ".phase{border-top:1px solid var(--line);padding:4px 0}summary{cursor:pointer}summary h2{display:inline}"
+             "p,li{overflow-wrap:anywhere}img{width:100%;max-width:100%;height:auto;max-height:88vh;"
+             "object-fit:contain;background:var(--backdrop)}.fig{margin:0;overflow-x:auto;background:var(--backdrop);"
+             "border:1px solid var(--line);border-radius:var(--radius-frame)}.fig svg{display:block;width:100%;"
+             "height:auto}.pads{display:flex;flex-wrap:wrap;gap:4px 18px;list-style:none;padding:0;"
+             "color:var(--muted)}.sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:7px;"
+             "vertical-align:-2px;border:1px solid var(--line)}")
+    #: The page's sections, in the order it stands (P1062, P1123): a new part of the page is one more entry here.
+    SECTIONS = (TitleHtmlHeading(), FreshHtmlLine(), IntroHtmlLine(), GuideHtmlSection(), StandsAtHtmlLine(),
+                PartsHtmlFold(), WiringHtmlFold(), PicturesHtmlFold(), NotesHtmlSection(), DeveloperHtmlFold())
+
+    def text(self, page):
+        shown = [part for part in (section.text(page) for section in self.SECTIONS) if part]
+        return "\n".join([self._open(page)] + shown + [self._script(page), "</body>", "</html>"]) + "\n"
+
+    def _script(self, page):
+        """The page's words (`page_words`) as an inert JSON block, then its one script (P829 PR 3), as one block before
+        `</body>`: without it the page is the page with no script, byte for byte, but the script's hooks (`data-makes-stale` on
+        a sendable offer, and `data-key` with it on the NOW box's NEXT line, `sendable_now`).
+        A `<` in the words is written `\\u003c`, so no text closes the block."""
+        words = json.dumps(page_words(page.phases), ensure_ascii=False, sort_keys=True).replace("<", "\\u003c")
+        return '<script type="application/json" id="%s">%s</script>\n<script>%s</script>' % (
+            WORDS_ID, words, PAGE_SCRIPT.read_text(encoding="utf-8"))
+
+    def _open(self, page):
+        style = token_styles(self.TOKENS_LIGHT, self.TOKENS_DARK) + self.STYLE + (WIRING.STYLE if page.wiring else "")
+        return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
+                          '<meta name="viewport" content="width=device-width, initial-scale=1">',
+                          '<title>%s</title>' % _text(page.title), '<link rel="stylesheet" href="%s">' % _text(FONT_STYLESHEET),
+                          '<style>%s</style>' % style, '</head>',
+                          '<body data-stands-at="%s" data-fingerprint="%s" data-written="%s">' % (
+                              _text(page.stands_at or "none"), _text((page.fingerprint or "none")[:SHORT]), _text(page.written or "none"))])
 # --- end MVP ---

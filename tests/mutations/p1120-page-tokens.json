@@ -1,0 +1,128 @@
+[
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: links are teal (test_flow_page.TheLookTest, the teal role test)",
+  "find": "a{color:var(--ink)}.now a",
+  "replace": "a{color:var(--accent)}.now a"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: a box-shadow on every button (TheLookTest, the no-shadow test)",
+  "find": "\"button{min-height:var(--button-height);",
+  "replace": "\"button{box-shadow:0 1px 2px var(--line);min-height:var(--button-height);"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: a button's radius is a 6px literal (TheLookTest, the radius test)",
+  "find": "border-radius:var(--radius-button);background:var(--surface)",
+  "replace": "border-radius:6px;background:var(--surface)"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the dark muted text is too dark to read (TheLookTest, the contrast test)",
+  "find": "\"--muted\": \"#a3a9b5\"",
+  "replace": "\"--muted\": \"#3a4048\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: dark has no --surface (TheLookTest, the token test)",
+  "find": "TOKENS_DARK = {\"--bg\": \"#121417\", \"--surface\": \"#1b1e24\", ",
+  "replace": "TOKENS_DARK = {\"--bg\": \"#121417\", "
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the kind-1 fill goes on every button (TheLookTest, the teal role test)",
+  "find": "\"[data-makes-stale]>button:not(:disabled),\"",
+  "replace": "\"button:not(:disabled),\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the dark focus ring stands at 1.11:1 on the dark ground (TheLookTest, the contrast test)",
+  "find": "\"--focus\": \"#5eead4\", \"--now-bg\": \"#23272f\"",
+  "replace": "\"--focus\": \"#1b1e24\", \"--now-bg\": \"#23272f\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: a disabled offer button stays teal (Round 2 #4; TheLookTest, the disabled test)",
+  "find": "\"[data-makes-stale]>button:not(:disabled),\"",
+  "replace": "\"[data-makes-stale]>button,\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the Now link is ink on the ink plane (Round 2 #3; TheLookTest, the contrast test's rules)",
+  "find": ".now a{color:var(--now-ink)}",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the hues of the two planes are swapped (TheLookTest, the plane test)",
+  "find": "PLANES = {flow_codes.STALE: \"amber\", PROBLEMS: \"red\"}",
+  "replace": "PLANES = {flow_codes.STALE: \"red\", PROBLEMS: \"amber\"}"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: every status word stands on a plane (TheLookTest, the plane test)",
+  "find": "PLANES.get(status) if status in PLANES else",
+  "replace": "PLANES.get(status) if True else"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the confirm on the NEXT line takes the line's larger size (TheLookTest, the confirm size test)",
+  "find": "[role=group]{color:var(--ink);font-size:var(--size-text)}",
+  "replace": "[role=group]{color:var(--ink)}"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the font stack loses the system's fonts (TheLookTest, the font test)",
+  "find": "'\"Instrument Sans\",system-ui,-apple-system,\"Segoe UI\",Helvetica,Arial,sans-serif'",
+  "replace": "'\"Instrument Sans\"'"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the font's stylesheet loads over http (assert_only_the_font_is_loaded)",
+  "find": "FONT_STYLESHEET = \"https://fonts",
+  "replace": "FONT_STYLESHEET = \"http://fonts"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the font blocks the text until it loads (TheLookTest, the font test)",
+  "find": "&display=swap\"",
+  "replace": "&display=block\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the confirm-open fallback stands before the teal rule, so the offer stays teal (TheLookTest, the confirm-open test)",
+  "find": "\"[data-makes-stale]>button:not(:disabled),\"",
+  "replace": "\"[data-makes-stale]:has(>[role=group])>button:not(:disabled){background:var(--surface);border-color:var(--ink);color:var(--ink)}\"\n             \"[data-makes-stale]>button:not(:disabled),\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the confirm-open fallback styles a disabled offer too (TheLookTest, the confirm-open test)",
+  "find": "[data-makes-stale]:has(>[role=group])>button:not(:disabled),\"",
+  "replace": "[data-makes-stale]:has(>[role=group])>button,\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the confirm's label has no ink, white on white (TheLookTest, the confirm-open test)",
+  "find": "[role=group]{color:var(--ink);font-size",
+  "replace": "[role=group]{font-size"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: a drop-shadow filter on every button (TheLookTest, the no-shadow test)",
+  "find": "\"button{min-height:var(--button-height);",
+  "replace": "\"button{filter:drop-shadow(0 1px 2px var(--line));min-height:var(--button-height);"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: a button's top-left radius is a 2px literal (TheLookTest, the radius test)",
+  "find": "\"button{min-height:var(--button-height);",
+  "replace": "\"button{border-top-left-radius:2px;min-height:var(--button-height);"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the NEXT line in the Now plane is muted, 2.9:1 on the light plane (TheLookTest, the Now plane test)",
+  "find": ".next{font-size:var(--size-heading)}",
+  "replace": ".next{font-size:var(--size-heading);color:var(--muted)}"
+ }
+]

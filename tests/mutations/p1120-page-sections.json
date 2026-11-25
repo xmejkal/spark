@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1123: the notes section drops out of the page's table (test_flow_page.TheSectionsTest)",
+  "find": "PicturesHtmlFold(), NotesHtmlSection(), DeveloperHtmlFold())",
+  "replace": "PicturesHtmlFold(), DeveloperHtmlFold())"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1123: the parts fold names a key the design basis does not hold (test_design_basis T14)",
+  "find": "KEYS = (\"phase:parts\", \"status:*\")",
+  "replace": "KEYS = (\"phase:part\", \"status:*\")"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1123: a section with nothing to show writes an empty line (test_flow_page.ThePageScriptTest, the golden)",
+  "find": "for section in self.SECTIONS) if part]",
+  "replace": "for section in self.SECTIONS) if True]"
+ }
+]

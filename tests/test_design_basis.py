@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import design_basis  # noqa: E402
 from spark import operation_catalogue  # noqa: E402
 from spark.core import describe_operations  # noqa: E402
-from spark.flow import flow_codes, run_request  # noqa: E402
+from spark.flow import flow_codes, flow_page, run_request  # noqa: E402
 
 STALE = "docs/guide/design-basis.json and .md are stale: run python3 tools/design_basis.py --write"
 BASIS = design_basis.DesignBasis.of()
@@ -165,6 +165,17 @@ class TheShapeTest(unittest.TestCase):
                     self.assertLessEqual(len(cell), 300, cell[:60])
         text = BASIS.json_text()
         self.assertEqual(json.dumps(json.loads(text), indent=1, ensure_ascii=False) + "\n", text)
+
+
+class ThePageSectionsTest(unittest.TestCase):
+    def test_t14_each_page_section_names_basis_keys_or_a_whole_group(self):  # T14 (P1123)
+        keys = {one["key"] for one in BASIS.items}
+        groups = {key.partition(":")[0] for key in keys}
+        named = [(section.NAME, key) for section in flow_page.FlowHtmlPage.SECTIONS for key in section.KEYS]
+        self.assertTrue(named)
+        for name, key in named:
+            head, _colon, rest = key.partition(":")
+            self.assertTrue(key in keys or (rest == "*" and head in groups), "%s names %s, no key of the design basis" % (name, key))
 
 
 if __name__ == "__main__":
