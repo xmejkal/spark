@@ -438,8 +438,8 @@ the same text, and `next` holds the look, live and watch steps. The board log ke
 failed facts copy.
 
 A firmware that deep-sleeps (P1022 slice 3): when the deploy's look finds no board and firmware/ calls deepsleep, it
-says what look.py says. With --port, the board doctor can find the named port not on USB. If firmware/ then calls
-deepsleep, the doctor's next line is the same fix, and it opens with the named port (P1049). With --json, `next` then
+says what look.py says. The board doctor can find the port not on USB, named or found by spark. If firmware/ then calls
+deepsleep, the doctor's next line is the same fix, opened by the named port or the found one (P1049, P1057). With --json, `next` then
 holds the look step, which needs the person: the same look, run once after the person did step 1 or 2 (P1048). A
 `ready` line that the firmware printed before mpremote lost the board counts as ready seen when the board's files match
 and firmware/ calls deepsleep; --json says `data.ready.lost_board`. Without a call it is ready unknown, and a file that differs is not

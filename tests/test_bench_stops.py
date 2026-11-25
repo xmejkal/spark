@@ -90,7 +90,7 @@ class AStopOfAFirmwareThatSleepsSaysTheAsleepFixTest(unittest.TestCase):
                          ("port_not_listed", "no board on /dev/cu.usbmodem9: mpremote devs does not list it.", said.diagnostics[1]))
 
     def test_without_a_deepsleep_call_and_without_doctor_for_the_stop_is_as_before(self):
-        # live.py and reach.py give no doctor_for: their stops keep today's words until P1057
+        # a script that gives no doctor_for (bench.py show, init) keeps today's words
         said = stop_result(self.no_port, "live.py", self.project, None)
         self.assertEqual((said.diagnostics, said.findings[0].sentence, said.findings[0].fix), (["live.py: " + NO_BOARD], NO_BOARD, ""))
         (self.project / "firmware" / "main.py").write_text("import machine\nmachine.lightsleep(1)\n")
@@ -107,7 +107,7 @@ class AStopOfAFirmwareThatSleepsSaysTheAsleepFixTest(unittest.TestCase):
         # P1048: the fix's step 1 names look.py, so `next` names it, for the person to run after their hands
         (step,) = stop_result(self.no_port, "grant.py", self.project, None, stops.undoctored("grant.py")).next
         self.assertEqual((step.op, step.argv, step.needs_person, step.needs_yes), ("look", ["--project", str(self.project.resolve())], True, False))
-        self.assertEqual(stop_result(self.no_port, "live.py", self.project, None).next, [])  # no doctor_for (P1057)
+        self.assertEqual(stop_result(self.no_port, "live.py", self.project, None).next, [])  # a script that gives no doctor_for (bench.py show, init)
         for main in ("import machine\nmachine.lightsleep(1)\n", "import machine\nmachine.deepsleep(1\n"):
             with self.subTest(main=main):
                 (self.project / "firmware" / "main.py").write_text(main)

@@ -42,12 +42,13 @@ class ReachCase(unittest.TestCase):
         know_the_board(Path("."), C6_MAC, known_board.comparable_key(C6_MAC))
 
     def world(self, answers=("reached\n",), devs="mpremote-devs-one.txt", devs_text=None):
-        """A FakeOutsideWorld whose `run` answers mpremote devs from a fixture and the exec of each of `answers` in turn."""
-        answers = list(answers)
+        """A FakeOutsideWorld whose `run` answers mpremote devs from a fixture and the exec of each of `answers` in turn.
+        `devs` is one fixture, or a tuple of fixtures, one for each list in turn, the last for every list after it (P1057)."""
+        answers, lists = list(answers), [devs] if isinstance(devs, str) else list(devs)
 
         def run(command, **kw):
             if "devs" in command:
-                return done(data(devs) if devs_text is None else devs_text)
+                return done(data(lists.pop(0) if len(lists) > 1 else lists[0]) if devs_text is None else devs_text)
             answer = answers.pop(0)
             if isinstance(answer, Exception):
                 raise answer
@@ -93,7 +94,8 @@ class ReachScriptTest(ReachCase):
         code, said, _, _ = self.go("--json", answers=(REFUSED, "reached\n"))
         line = json.loads(said)
         self.assertEqual(code, 0)
-        self.assertEqual(sorted(line), ["at", "cure", "cure_first", "doctor", "entered", "first_try_failed", "output", "port", "reached", "why"])
+        self.assertEqual(sorted(line), ["at", "cure", "cure_first", "doctor", "entered", "first_try_failed", "fix", "output", "port", "reached",
+                                        "why"])
         self.assertEqual(line["at"], "2026-10-17T09:00:00+0000", "the time is the outside's clock")
         self.assertEqual(line["cure"], {"heard": RESTART.heard, "why": None, "restart_heard": True, "port_back": True, "boot_heard": False})
         self.assertFalse(line["cure_first"])
@@ -267,6 +269,52 @@ class ASleepingBoardTest(ReachCase):
         lines = problems.splitlines()
         self.assertEqual((code, lines[0]), (2, "reach.py: no board on /dev/cu.usbmodem9: mpremote devs does not list it."))
         self.assertTrue(lines[1].startswith("What spark knows: the port you named is not on USB, and the project's firmware"), lines[1])
+
+    def doctor_road(self, *argv):
+        """(exit code, stdout, stderr) of reach.py whose exec is refused twice, the board gone from USB from the exec on."""
+        know_the_board(self.project, C6_MAC, known_board.comparable_key(C6_MAC))  # P892: no question on the kept board
+        code, said, problems, _ = self.go("--project", str(self.project), *argv, answers=(REFUSED, REFUSED),
+                                          devs=("mpremote-devs-one.txt", "mpremote-devs-none.txt"))
+        return code, said, problems
+
+    def test_after_the_doctor_an_unnamed_port_gets_the_fix_with_its_own_opening_in_place_of_the_cable_step(self):
+        # P1057 PR 2 (D3, R3): the doctor said plug_in; the asleep fix takes the next line's place, as in look.py
+        code, said, _ = self.doctor_road()
+        nexts = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
+        self.assertEqual((code, len(nexts)), (2, 1))
+        self.assertIn("next    What spark knows: the port that spark found on USB is not on USB any more, and the project's", nexts[0])
+        self.assertNotIn("plug the board straight", said)
+
+    def test_after_the_doctor_a_named_port_gets_the_fix_with_the_named_opening(self):
+        code, said, _ = self.doctor_road("--port", C6_PORT)
+        self.assertEqual(code, 2)
+        self.assertIn("next    What spark knows: the port you named is not on USB, and the project's firmware", said)
+        self.assertNotIn("plug the board straight", said)
+
+    def test_after_the_doctor_the_json_line_ends_with_the_look_and_keeps_what_the_doctor_saw(self):
+        # R3: the look that needs the person; L4: mpremote never got in; L2: doctor.next_step stays the doctor's own
+        code, said, _ = self.doctor_road("--json")
+        line = json.loads(said)
+        self.assertEqual((code, line["reached"], line["entered"], line["doctor"]["next_step"]), (2, False, False, "plug_in"))
+        self.assertEqual((line["next"][0]["op"], line["next"][0]["needs_person"]), ("look", True))
+
+    def test_after_the_doctor_the_json_line_s_fix_is_the_text_s_next_line(self):
+        # P1055 on the doctor road: the asleep fix, before `next`, where doctor.next_step still says plug_in
+        _, said, _ = self.doctor_road()
+        (step,) = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
+        line = json.loads(self.doctor_road("--json")[1])
+        self.assertEqual((line["fix"], list(line)[-2:]), (step.lstrip()[len("next    "):], ["fix", "next"]))
+
+    def test_after_the_doctor_a_firmware_with_no_deepsleep_call_keeps_the_cable_step(self):
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.lightsleep(1)\n")
+        code, said, _ = self.doctor_road()
+        self.assertEqual(code, 2)
+        self.assertIn("next    plug the board straight into the computer", said)
+        self.assertNotIn("What spark knows", said)
+        (step,) = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
+        line = json.loads(self.doctor_road("--json")[1])
+        self.assertNotIn("next", line)
+        self.assertEqual(line["fix"], step.lstrip()[len("next    "):])  # P1055: the doctor's plug_in sentence, the text's next line
 
     def test_without_a_deepsleep_call_the_stop_is_as_before(self):
         (self.project / "firmware" / "main.py").write_text("import machine\nmachine.lightsleep(1)\n")

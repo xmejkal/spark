@@ -680,10 +680,16 @@ class WhatStopsTheLookTest(LookScriptCase):
             with self.subTest(main=main, argv=argv):
                 self.sleeper(main)
                 self.assertEqual(self.next_of(*argv, devs="mpremote-devs-none.txt", **kw), [])
+
+    def test_an_unnamed_port_not_listed_now_gets_the_asleep_fix_and_the_look_step(self):
+        # P1057 PR 2 (D3, the council's S4): the port spark found and that left USB gets the fix with its own opening,
+        # so it gets the look step too, where P1049's D2 gave it none
         self.sleeper("import machine\nmachine.deepsleep(1)\n")
         stop = board_look.LookStopError("no board on %s: mpremote devs does not list it.", "/dev/x", reason="port_not_listed")
         _, _, fix = board_envelope.stop_said("look.py", stop, (["look.py: " + str(stop)], None), None, self.project)
-        self.assertEqual(board_envelope.asleep_next(fix, self.project), [])  # a port_not_listed the person did not name
+        self.assertTrue(fix.startswith("What spark knows: the port that spark found on USB is not on USB any more, and"), fix)
+        (step,) = board_envelope.asleep_next(fix, self.project)
+        self.assertEqual((step.op, step.needs_person), ("look", True))
 
     def test_a_board_whose_usb_may_be_a_bridge_gets_the_words_with_a_condition(self):
         self.board("firebeetle2-esp32s3")
@@ -702,15 +708,22 @@ class WhatStopsTheLookTest(LookScriptCase):
         # bench.py record stop with port_not_listed: the fix is asked for that code directly
         self.sleeper("import machine\nmachine.deepsleep(1)\n")
         places = board_records.ButtonPlaces.of_project(self.project)
-        fix = board_envelope.asleep_fix(self.project, "port_not_listed", places)
+        fix = board_envelope.asleep_fix(self.project, "port_not_listed", places, "/dev/x")
         self.assertTrue(fix.startswith("What spark knows: the port you named is not on USB, and"), fix)
         self.assertNotIn("no board is on USB", fix)
         stop = board_look.LookStopError("no board on %s: mpremote devs does not list it.", "/dev/x", reason="port_not_listed")
-        self.assertEqual(board_envelope.asleep_stop(stop, self.project, places), ("no board on /dev/x: mpremote devs does not list it.", fix))
-        self.assertEqual(board_envelope.asleep_fix(self.project, "two_boards", places), "")
+        self.assertEqual(board_envelope.asleep_stop(stop, "/dev/x", self.project, places), ("no board on /dev/x: mpremote devs does not list it.", fix))
+        self.assertEqual(board_envelope.asleep_fix(self.project, "two_boards", places, "/dev/x"), "")
+        # P1057 PR 2 (D2): a port that the person did not name gets the unnamed opening, and no_port keeps its own
+        unnamed = board_envelope.asleep_fix(self.project, "port_not_listed", places, None)
+        self.assertTrue(unnamed.startswith("What spark knows: the port that spark found on USB is not on USB any more, and"), unnamed)
+        self.assertNotIn("the port you named", unnamed)
+        self.assertTrue(board_envelope.asleep_fix(self.project, "no_port", places, None).startswith(
+            "What spark knows: no board is on USB, and"))
 
-    def test_after_the_doctor_only_a_plug_in_step_on_a_named_port_with_a_deepsleep_call_gets_the_asleep_fix(self):
-        # P1049, D2 and D3: a port spark picked, another step, no doctor, no call and a file that does not parse give ""
+    def test_after_the_doctor_only_a_plug_in_step_with_a_deepsleep_call_gets_the_asleep_fix_named_or_not(self):
+        # P1049's D3: another step, no doctor, no call and a file that does not parse give ""; P1057 PR 2 (D3) reverses
+        # P1049's D2: a port that spark found gets the fix too, with its own opening
         places = board_records.ButtonPlaces.of_project(self.project)
         plug_in, close_other = (board_doctor.DoctorProbeResult((), None, step, None) for step in ("plug_in", "close_other"))
         self.assertEqual(board_envelope.asleep_after_doctor(plug_in, "/dev/cu.usbmodem101", self.project, places), "")
@@ -720,7 +733,9 @@ class WhatStopsTheLookTest(LookScriptCase):
         fix = board_envelope.asleep_after_doctor(plug_in, "/dev/cu.usbmodem101", self.project, places)
         self.assertTrue(fix.startswith("What spark knows: the port you named is not on USB, and the project's firmware calls "
                                        "deepsleep (firmware/main.py:2)."), fix)
-        self.assertEqual(board_envelope.asleep_after_doctor(plug_in, None, self.project, places), "")
+        unnamed = board_envelope.asleep_after_doctor(plug_in, None, self.project, places)
+        self.assertTrue(unnamed.startswith("What spark knows: the port that spark found on USB is not on USB any more, and the "
+                                           "project's firmware calls deepsleep (firmware/main.py:2)."), unnamed)
         self.assertEqual(board_envelope.asleep_after_doctor(close_other, "/dev/cu.usbmodem101", self.project, places), "")
         self.assertEqual(board_envelope.asleep_after_doctor(None, "/dev/cu.usbmodem101", self.project, places), "")
 
@@ -749,6 +764,22 @@ class WhatStopsTheLookTest(LookScriptCase):
         code, said, _ = self.go("--json", "--port", "/dev/cu.usbmodem101", devs="mpremote-devs-none.txt", fail=True)
         self.assertEqual(json.loads(said[-1])["data"]["doctor"]["next_step"], "plug_in", "D4: the data is what the doctor saw")
 
+    def test_an_unnamed_port_off_usb_after_the_read_gets_the_asleep_fix_with_its_own_opening(self):
+        # P1057 PR 2 (D3, the plan's unchecked item): look.py with no --port lists the board, esptool's read fails, and the
+        # doctor's list holds it no more: the port that spark found gets the fix, never "the port you named"
+        self.sleeper("import machine\nmachine.deepsleep(1)\n")
+        lists = ["mpremote-devs-one.txt"]
+
+        def run(command, **kw):
+            self.ran.append(command)
+            return done(data(lists.pop(0) if lists else "mpremote-devs-none.txt")) if "devs" in command else done(data("c6-flash-id.txt"), 1)
+        code, _, problems = self.go_with(FakeOutsideWorld(run=RealChildRun(run), find_tool=found))
+        lines = problems.splitlines()
+        self.assertEqual(code, 2)
+        self.assertTrue(lines[-1].startswith("  next    What spark knows: the port that spark found on USB is not on USB any more, "
+                                             "and the project's firmware calls deepsleep (firmware/main.py:2)."), lines[-1])
+        self.assertNotIn("the port you named", problems)
+
     def test_a_named_port_off_usb_without_a_deepsleep_call_keeps_the_doctor_s_step(self):
         self.sleeper("import machine\nmachine.lightsleep(1)\n")
         problems, unchecked = self.named_not_listed()
@@ -763,11 +794,15 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.assertEqual(unchecked["fix"], self.NAMED_NOT_LISTED[2][len("  next    "):])
 
     def test_a_port_not_listed_that_the_person_did_not_name_never_gets_the_port_you_named(self):
-        # P1049 (Round 1 C, Round 2 H): stop_said says "the port you named" only of the port the person named
+        # P1049 (Round 1 C, Round 2 H): stop_said says "the port you named" only of the port the person named; P1057 PR 2
+        # (D2): the port spark found gets the fix with its own opening
         self.sleeper("import machine\nmachine.deepsleep(1)\n")
         stop = board_look.LookStopError("no board on %s: mpremote devs does not list it.", "/dev/x", reason="port_not_listed")
         answer = (["look.py: no board on /dev/x: mpremote devs does not list it."], None)
-        self.assertEqual(board_envelope.stop_said("look.py", stop, answer, None, self.project), (answer[0], str(stop), ""))
+        lines, sentence, fix = board_envelope.stop_said("look.py", stop, answer, None, self.project)
+        self.assertTrue(fix.startswith("What spark knows: the port that spark found on USB is not on USB any more"), fix)
+        self.assertNotIn("the port you named", fix)
+        self.assertEqual((lines, sentence), (["look.py: " + str(stop), fix], str(stop)))
         lines, sentence, fix = board_envelope.stop_said("look.py", stop, answer, "/dev/x", self.project)
         self.assertTrue(fix.startswith("What spark knows: the port you named is not on USB"), fix)
         self.assertEqual((lines, sentence), (["look.py: " + str(stop), fix], str(stop)))

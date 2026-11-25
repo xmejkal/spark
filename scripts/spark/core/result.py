@@ -104,6 +104,10 @@ class OperationResult(namedtuple("OperationResult", "data findings next lines di
         """The one outcome, `outcomes.status_of` over the findings: `ok` is unreachable while one of them is unchecked."""
         return outcomes.status_of(self._of(outcomes.PROBLEMS), self._of(outcomes.COULD_NOT_RUN))
 
+    def first_fix(self):
+        """The fix of the first Finding that has one, else None: what a flat line carries as `fix` (P1055)."""
+        return next((found.fix for found in self.findings if found.fix), None)
+
     def to_envelope(self, tool, op):
         """The `outcomes.envelope` of this result, each item made by `envelope_item`."""
         problems = [envelope_item(found) for found in self._of(outcomes.PROBLEMS)]

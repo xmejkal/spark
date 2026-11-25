@@ -1,7 +1,7 @@
 """
 The grant check as an Operation on the core (P657, W4-3): say whether the board on USB has a live grant now, with
-`mpremote devs` only. grant.py --check is its CLI, and its `--json` line is the flat one (`FlatJsonLine`): granted, why
-(a WHY_ word or null) and the grant's fields or null, so no golden changed. A grant that is not there is one problem; a run that
+`mpremote devs` only. grant.py --check is its CLI, and its `--json` line is the flat one with `fix` (`FixFlatJsonLine`):
+granted, why (a WHY_ word or null), the grant's fields or null, and the fix or null (P1055). A grant that is not there is one problem; a run that
 could not look is one unchecked item, with `why` "could not run" in the data.
 """
 
@@ -14,7 +14,7 @@ from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes
-from spark.core.renderers import FlatJsonLine
+from spark.core.renderers import FixFlatJsonLine
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines
@@ -49,10 +49,10 @@ class CheckGrant(Operation):
     summary = "Say whether the board on USB has a live grant now: the check a later call makes (P253)."
     arguments = (Argument(("--check",), "check", bool, "say whether the board on USB has a live grant now"),
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote (default: here)"),
-                 COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON: granted, why and the grant"))
+                 COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON: granted, why, the grant and the fix"))
     effects = (READS, RUNS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
-    json_renderer = FlatJsonLine
+    json_renderer = FixFlatJsonLine
 
     def __init__(self, platform_for=None):
         self.platform_for = platform_for or MicroPythonPlatform

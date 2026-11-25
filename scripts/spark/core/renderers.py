@@ -1,9 +1,10 @@
 """
 The Renderers of an OperationResult (P657): `JsonEnvelope`, the default of `Operation.json_renderer`, `FlatJsonLine`,
-which the bench scripts keep, `JsonDocument`, its indented sibling, which check_all keeps (P804), and `FullEnvelope`,
-parts.py's envelope with every key (P707), each a `--json` line; and `TextReport`, the text view a person reads (P1032):
-a result with a headline as a status line, the facts, the findings with their fix, a Note and the next step, painted
-plain or, through rich when it imports, in colour, and `StatusLine`, the status line alone (P478).
+which the bench scripts keep, `FixFlatJsonLine`, which adds `fix` for grant, live and reach (P1055), `JsonDocument`,
+FlatJsonLine's indented sibling, which check_all keeps (P804), and `FullEnvelope`, parts.py's envelope with every key
+(P707), each a `--json` line; and `TextReport`, the text view a person reads (P1032): a result with a headline as a
+status line, the facts, the findings with their fix, a Note and the next step, painted plain or, through rich when it
+imports, in colour, and `StatusLine`, the status line alone (P478).
 """
 
 import io
@@ -67,6 +68,17 @@ class FlatJsonLine:
     @staticmethod
     def render_bad_argument(result, tool, op):
         return None
+
+
+class FixFlatJsonLine(FlatJsonLine):
+    """Renderer: FlatJsonLine with `fix`, the result's `first_fix()`, after `data`'s keys and before `next` (P1055).
+    grant.py --check, live.py and reach.py print it. A `data` that is no dict is printed as FlatJsonLine prints it."""
+
+    @staticmethod
+    def render(result, tool, op):
+        if not isinstance(result.data, dict):
+            return FlatJsonLine.render(result, tool, op)
+        return FlatJsonLine.render(result._replace(data=dict(result.data, fix=result.first_fix())), tool, op)
 
 
 class JsonDocument(FlatJsonLine):

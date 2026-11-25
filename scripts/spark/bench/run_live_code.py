@@ -1,7 +1,7 @@
 """
 The live try as an Operation on the core (P657, W4-3): run a short piece of code on the running board inside a grant, say
-whether the board ran it, and reset it. live.py is its CLI, and its `--json` line is the flat one (`FlatJsonLine`): every field of
-the LiveTryResult and the port, so no golden changed. The status comes from `board_live.exit_code`, so a failed reset
+whether the board ran it, and reset it. live.py is its CLI, and its `--json` line is the flat one with `fix` (`FixFlatJsonLine`):
+every field of the LiveTryResult, the port and the fix (P1055). The status comes from `board_live.exit_code`, so a failed reset
 stays exit 2 whatever the answer was; a stop has the same fields, empty, with the answer `could-not-run`.
 """
 
@@ -20,7 +20,7 @@ from spark.bench import bench_privacy
 from spark.bench import stops
 from spark.core import outcomes
 from spark.core.errors import SparkError
-from spark.core.renderers import FlatJsonLine
+from spark.core.renderers import FixFlatJsonLine
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
@@ -87,11 +87,11 @@ project: grant.py gives no live grant to a board with no serial. One yes or one 
 answered_no, and nothing ran on the board. A --port that the list does not hold stops with port_not_listed, and a
 /dev/tty. port is its /dev/cu. port.
 
-If no board is on USB, or the port you named is not, and firmware/ calls deepsleep, the stop's last line, the fix,
-says that the board can be in deep sleep, as look.py's does (P1057). Its first step puts the board in download mode.
-There it runs no firmware, so live.py cannot reach its REPL: use download mode for look.py or a deploy, then press
-RESET with BOOT not held. To run code, wait until the firmware wakes. If spark picked the port and the board then
-leaves USB, the stop names that port and gives no deep-sleep advice. --json carries no fix yet (P1055).
+If no board is on USB, or the port is not (the one you named, or the one spark found, after the doctor too), and
+firmware/ calls deepsleep, the stop's last line, the fix, says that the board can be in deep sleep, as look.py's does
+(P1057). Its first step puts the board in download mode. There it runs no firmware, so live.py cannot reach its REPL:
+use download mode for look.py or a deploy, then press RESET with BOOT not held. To run code, wait until the firmware
+wakes. --json carries the fix as `fix` (P1055), and `next` then holds the look step, which needs the person.
 
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
@@ -121,7 +121,7 @@ class RunLiveCode(Operation):
                  COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP))
     effects = (READS, RUNS, BOARD, ASKS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
-    json_renderer = FlatJsonLine
+    json_renderer = FixFlatJsonLine
 
     def __init__(self, platform_for=None, known=None):
         self.platform_for = platform_for or MicroPythonPlatform
@@ -152,14 +152,18 @@ class RunLiveCode(Operation):
             stopped = stops.stop_result(cannot, SCRIPT, project, named, stops.undoctored(SCRIPT))
             return stopped._replace(data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=stopped.findings[0].sentence, port=port))
         places = board_records.ButtonPlaces.of_project(project)
-        return OperationResult(data_of(port, result), self._findings(result, places), lines=describe(result, places))
+        # P1057 PR 2: after the doctor's plug_in step, the asleep fix of the port the person named or spark found, and the look
+        said, fix = board_envelope.doctor_said(describe(result, places), result.doctor, named, project, places)
+        return OperationResult(data_of(port, result), self._findings(result, fix), board_envelope.asleep_next(fix, project.resolve()),
+                               lines=[printable(line) for line in said])
 
     @staticmethod
-    def _findings(result, places):
-        """No Finding for a clean run; else one of the status of the exit code, coded by the answer or `reset_failed`."""
+    def _findings(result, fix):
+        """No Finding for a clean run; else one of the status of the exit code, coded by the answer or `reset_failed`, with
+        `fix`, which board_envelope.doctor_said gave."""
         status = outcomes.STATUS_FOR[board_live.exit_code(result)]
         if status == outcomes.OK:
             return []
         code = board_codes.RESET_FAILED if result.reset == board_live.RESET_FAILED_STATE else result.answer
-        return [Finding(status, None, code, result.why or result.answer, board_envelope.doctor_fix(result.doctor, places))]
+        return [Finding(status, None, code, result.why or result.answer, fix)]
 # --- end MVP ---

@@ -113,6 +113,8 @@ def ready_unknown_fix(result, places, sleeps=sleep_calls.SleepCalls((), ())):
 #: 101-107); a board behind a USB bridge chip stays on USB, so without the record's `usb` pin role the words are a
 #: condition. In download mode the chip runs no program from flash (esptool v5.5.0 boot-mode-selection.rst line 64).
 ASLEEP_OPENING = {board_codes.NO_PORT: "no board is on USB", board_codes.PORT_NOT_LISTED: "the port you named is not on USB"}
+#: The opening of a port that spark found on USB with no --port and that is gone (P1057 PR 2): never "the port you named".
+ASLEEP_UNNAMED_PORT_OPENING = "the port that spark found on USB is not on USB any more"
 ASLEEP_KNOWS = "What spark knows: "
 ASLEEP_FIX = (ASLEEP_KNOWS + "%(opening)s, and the project's firmware calls deepsleep (%(calls)s). %(usb)s What spark did "
               "not do: it read no board and wrote nothing. What to try, in order: 1. Hold the board's %(boot)s, press and "
@@ -135,48 +137,60 @@ KEEPS_BOOT_ENTRY_WORDS = ("If the board was put in download mode with BOOT for t
                           "of RESET does. Press RESET now (step 2 below), before you wait, with BOOT not held. ")
 
 
-def asleep_fix(project, reason, places):
+def asleep_fix(project, reason, places, named):
     """The fix of a no_port or port_not_listed stop when the project's firmware calls deepsleep: ASLEEP_FIX, its buttons
-    named as `places` (a ButtonPlaces) does; UNPARSED when no call was found and a file did not parse; else ''."""
+    named as `places` (a ButtonPlaces) does; UNPARSED when no call was found and a file did not parse; else ''. A
+    port_not_listed stop opens with "the port you named" only when the person `named` it, else with
+    ASLEEP_UNNAMED_PORT_OPENING (P1057 PR 2)."""
     if reason not in ASLEEP_OPENING:
         return ""
     found = sleep_calls.deep_sleep_calls(project)
     if not found.places:
         return UNPARSED % ", ".join(found.unparsed) if found.unparsed else ""
-    return ASLEEP_FIX % {"opening": ASLEEP_OPENING[reason], "calls": ", ".join(found.places[:2]), "boot": places.boot,
+    opening = ASLEEP_OPENING[reason] if named or reason == board_codes.NO_PORT else ASLEEP_UNNAMED_PORT_OPENING
+    return ASLEEP_FIX % {"opening": opening, "calls": ", ".join(found.places[:2]), "boot": places.boot,
                          "usb": OWN_USB_SLEEP if download_mode.own_usb_of(project) else MAYBE_OWN_USB_SLEEP,
                          "reset": places.reset, "orientation": places.orientation}
 
 
-def asleep_stop(stop, project, places):
-    """(the sentence, the fix) of a LookStopError that no doctor answered: the asleep fix, and beside it on a no_port stop
-    only NO_BOARD, because the fix holds the cable check as its last step. Else the stop's own sentence."""
-    fix = asleep_fix(project, stop.reason, places)
+def asleep_stop(stop, named, project, places):
+    """(the sentence, the fix) of a LookStopError that no doctor answered: the asleep fix (`named` the port the person
+    named or None), and beside it on a no_port stop only NO_BOARD, because the fix holds the cable check as its last
+    step. Else the stop's own sentence."""
+    fix = asleep_fix(project, stop.reason, places, named)
     no_board = stop.reason == board_codes.NO_PORT and fix.startswith(ASLEEP_KNOWS)
     return (board_look.NO_BOARD if no_board else str(stop)), fix
 
 
 def asleep_after_doctor(doctor, named, project, places):
-    """The asleep fix that takes the place of the doctor's plug_in step on the port the person `named` (P1049): '' for a
-    port spark picked (D2), for another step or no doctor, and for UNPARSED (D3), so only a deepsleep call replaces the
-    cable step."""
-    if not (named and doctor and doctor.next_step == board_doctor.NEXT_PLUG_IN):
+    """The asleep fix that takes the place of the doctor's plug_in step (P1049), with the opening of the port the person
+    `named`, or the unnamed one when spark found the port (P1057 PR 2, D3): '' for another step or no doctor, and for
+    UNPARSED (P1049's D3), so only a deepsleep call replaces the cable step."""
+    if not (doctor and doctor.next_step == board_doctor.NEXT_PLUG_IN):
         return ""
-    fix = asleep_fix(project, board_codes.PORT_NOT_LISTED, places)
+    fix = asleep_fix(project, board_codes.PORT_NOT_LISTED, places, named)
     return fix if fix.startswith(ASLEEP_KNOWS) else ""
+
+
+def doctor_said(lines, doctor, named, project, places):
+    """(the lines, the fix) after the doctor answered: with an asleep fix (asleep_after_doctor), the lines with it as
+    their next line and the asleep fix; else the lines as they were and the doctor's step as the fix (doctor_fix). Look,
+    deploy, grant, live and reach say it alike (P1057 PR 2)."""
+    asleep = asleep_after_doctor(doctor, named, project, places)
+    return (board_doctor.with_step(lines, asleep), asleep) if asleep else (lines, doctor_fix(doctor, places))
 
 
 def stop_said(script, stop, answer, named, project):
     """(the lines on stderr, the sentence, the fix) of a LookStopError `stop`, `answer` being board_doctor.stop_answer's
     (lines, DoctorProbeResult or None) and `named` the port the person named or None (P1049). With no doctor, slice 3's
-    asleep fix with its sentence (a port_not_listed stop only when `named`); after the doctor, its lines with the asleep fix
-    as their next step, else the doctor's step as the fix."""
+    asleep fix with its sentence, the unnamed opening on a port_not_listed stop that the person did not name (P1057 PR
+    2); after the doctor, doctor_said's lines and fix."""
     (lines, doctor), places = answer, board_records.ButtonPlaces.of_project(project)
     if doctor:
-        asleep = asleep_after_doctor(doctor, named, project, places)
-        return (board_doctor.with_step(lines, asleep), str(stop), asleep) if asleep else (lines, str(stop), doctor_fix(doctor, places))
-    sentence, fix = asleep_stop(stop, project, places)
-    if fix and (named or stop.reason != board_codes.PORT_NOT_LISTED):
+        said, fix = doctor_said(lines, doctor, named, project, places)
+        return said, str(stop), fix
+    sentence, fix = asleep_stop(stop, named, project, places)
+    if fix:
         return ["%s: %s" % (script, sentence), fix], sentence, fix
     return lines, str(stop), ""
 
@@ -188,9 +202,9 @@ ASLEEP_LOOK_WHY = ("first the person does step 1 or 2 of the fix: the board in d
 
 
 def asleep_next(fix, project, evidence=None):
-    """The `next` of a stop whose `fix`, as stop_said gave it, is the asleep fix (P1048): the look with no --port (the fix
-    says: use the port it names), with `evidence`'s flags, which needs the person; [] for any other fix. Ask it only of
-    stop_said's fix: a ready_unknown fix opens with the same words."""
+    """The `next` of a stop whose `fix`, as stop_said or doctor_said gave it, is the asleep fix (P1048): the look with no
+    --port (the fix says: use the port it names), with `evidence`'s flags, which needs the person; [] for any other fix.
+    Ask it only of stop_said's or doctor_said's fix: a ready_unknown fix opens with the same words."""
     if not fix.startswith(ASLEEP_KNOWS):
         return []
     return [NextStep(**look_step(project, None, evidence, ASLEEP_LOOK_WHY, needs_person=True))]

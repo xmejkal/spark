@@ -151,7 +151,7 @@ class DoctorTest(GrantCase):
 
 class ASleepingBoardTest(GrantCase):
     """P1049: with no board on USB, or a named port that is not, and a firmware/ that calls deepsleep, grant.py says slice
-    3's asleep fix on stderr, as look.py does, and not the cable advice first. Its --json carries no fix yet (P1055)."""
+    3's asleep fix on stderr, as look.py does, and not the cable advice first."""
 
     def setUp(self):
         super().setUp()
@@ -185,6 +185,14 @@ class ASleepingBoardTest(GrantCase):
         self.assertEqual((code, list(said)[-1]), (2, "next"))
         self.assertEqual((step["op"], step["argv"], step["needs_person"], step["needs_yes"]),
                          ("look", ["--project", str(self.project.resolve())], True, False))
+
+    def test_the_check_s_json_fix_is_the_fix_line_on_stderr(self):
+        # P1055: the stop's fix, word for word, before `next`
+        self.devs = data("mpremote-devs-none.txt")
+        code, out, err = self.grant("--check", "--json", "--project", str(self.project), consent=FakeConsent(True))
+        said = json.loads(out)
+        self.assertEqual((code, said["fix"], list(said)[-2:]), (2, err.splitlines()[-1], ["fix", "next"]))
+        self.assertTrue(said["fix"].startswith("What spark knows: no board is on USB"), said["fix"])
 
     def test_a_named_port_not_on_usb_opens_the_fix_with_that_port(self):
         lines = self.stderr("--minutes", "10", "--port", "/dev/cu.usbmodem9")
@@ -384,11 +392,11 @@ class CheckTest(GrantCase):
 
     def test_the_grant_ends_at_its_limit(self):
         self.now = START + datetime.timedelta(minutes=30)
-        self.assertEqual(self.check(), (1, {"granted": False, "why": "expired", "grant": self.kept()}))
+        self.assertEqual(self.check(), (1, {"granted": False, "why": "expired", "grant": self.kept(), "fix": None}))
 
     def test_another_board_has_no_grant(self):
         self.devs = OTHER
-        self.assertEqual(self.check(), (1, {"granted": False, "why": "no grant", "grant": None}))
+        self.assertEqual(self.check(), (1, {"granted": False, "why": "no grant", "grant": None, "fix": None}))
 
     def test_no_grant_at_all(self):
         (self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").unlink()
@@ -412,7 +420,7 @@ class CheckTest(GrantCase):
 
     def test_a_file_that_is_no_grant_is_not_trusted(self):
         (self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").write_text("{}")
-        self.assertEqual(self.check(), (1, {"granted": False, "why": "not a grant", "grant": None}))
+        self.assertEqual(self.check(), (1, {"granted": False, "why": "not a grant", "grant": None, "fix": None}))
 
     def test_another_boards_grant_copied_under_this_name_is_not_trusted(self):
         path = self.home / "grants" / "8c-bf-ea-xx-xx-xx.json"
@@ -428,7 +436,7 @@ class CheckTest(GrantCase):
 
     def test_no_board_still_gives_json(self):
         self.devs = ""
-        self.assertEqual(self.check(), (2, {"granted": False, "why": "could not run", "grant": None}))
+        self.assertEqual(self.check(), (2, {"granted": False, "why": "could not run", "grant": None, "fix": None}))
 
     def test_an_empty_serial_never_reads_a_stray_file(self):
         (self.home / "grants" / "entry.json").write_text(json.dumps(dict(self.kept(), mac="")))

@@ -87,7 +87,7 @@ class LiveScriptTest(LiveCase):
         self.assertEqual((line["answer"], line["output"], line["reset"], line["port"]), ("ran", "1\n", "done", C6_PORT))
         self.assertEqual([command[command.index("connect"):] for command in ran if "devs" not in command],
                          [["connect", C6_PORT, "exec", "print(1)"], ["connect", C6_PORT, "reset"]])
-        self.assertEqual(sorted(line), ["answer", "cure", "doctor", "gpio_numbers_in_code", "grant_why", "output", "pins_checked",
+        self.assertEqual(sorted(line), ["answer", "cure", "doctor", "fix", "gpio_numbers_in_code", "grant_why", "output", "pins_checked",
                                         "port", "reset", "why"])
 
     def test_an_ended_grant_exits_1_with_its_code_and_runs_nothing_on_the_board(self):
@@ -124,7 +124,7 @@ class LiveScriptTest(LiveCase):
 
     def test_could_not_run_json_holds_every_field(self):
         code, said, _, _ = self.go("--code", "print(1)", "--json", devs="mpremote-devs-two.txt")
-        self.assertEqual(sorted(json.loads(said)), ["answer", "cure", "doctor", "gpio_numbers_in_code", "grant_why", "output",
+        self.assertEqual(sorted(json.loads(said)), ["answer", "cure", "doctor", "fix", "gpio_numbers_in_code", "grant_why", "output",
                                                     "pins_checked", "port", "reset", "why"])
 
     def test_a_broken_record_exits_2(self):
@@ -281,8 +281,8 @@ class LiveScriptTest(LiveCase):
 
 class ASleepingBoardTest(LiveCase):
     """P1057: with no board on USB, or a port the person named that is not, and a firmware/ that calls deepsleep, live.py
-    says the asleep fix on stderr, as look.py and grant.py do, and not the cable advice. A port that spark picked and that
-    left USB before the grant check keeps its own words: the fix never says "the port you named" of it."""
+    says the asleep fix on stderr, as look.py and grant.py do, and not the cable advice. A port that spark found and that
+    left USB before the grant check gets the fix with its own opening (P1057 PR 2): it never says "the port you named"."""
 
     def setUp(self):
         super().setUp()
@@ -310,11 +310,58 @@ class ASleepingBoardTest(LiveCase):
         self.assertEqual((code, lines[0], len(lines)), (2, "live.py: no board on %s: mpremote devs does not list it." % C6_PORT, 2))
         self.assertTrue(lines[1].startswith("What spark knows: the port you named is not on USB, and the project's firmware"), lines[1])
 
-    def test_a_picked_port_that_left_usb_keeps_its_own_words(self):
-        # the grant check lists the boards a second time, and the board spark picked is gone (D2 of the plan: PR 2)
+    def test_an_unnamed_port_that_left_usb_gets_the_fix_with_its_own_opening(self):
+        # the grant check lists the boards a second time, and the board spark found is gone (D2 of the plan: PR 2)
         code, _, problems, _ = self.go("--code", "print(1)", devs=("mpremote-devs-one.txt", "mpremote-devs-none.txt"))
-        self.assertEqual((code, problems.splitlines()), (2, ["live.py: no board on %s: mpremote devs does not list it." % C6_PORT]))
+        lines = problems.splitlines()
+        self.assertEqual((code, lines[0], len(lines)), (2, "live.py: no board on %s: mpremote devs does not list it." % C6_PORT, 2))
+        self.assertTrue(lines[1].startswith("What spark knows: the port that spark found on USB is not on USB any more, and the "
+                                            "project's firmware calls deepsleep (firmware/main.py:2)."), lines[1])
         self.assertNotIn("the port you named", problems)
+
+    #: The lists of a board that leaves USB at the exec: the first list and the grant check's hold it, the doctor's does not.
+    GONE_AT_THE_EXEC = ("mpremote-devs-one.txt", "mpremote-devs-one.txt", "mpremote-devs-none.txt")
+    REFUSED = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+
+    def doctor_road(self, *argv):
+        """(exit code, stdout, stderr) of live.py whose exec is refused twice, the board gone from USB from the exec on."""
+        code, said, problems, _ = self.go("--code", "print(1)", *argv, answers=(self.REFUSED, self.REFUSED), devs=self.GONE_AT_THE_EXEC)
+        return code, said, problems
+
+    def test_after_the_doctor_an_unnamed_port_gets_the_fix_with_its_own_opening_in_place_of_the_cable_step(self):
+        # P1057 PR 2 (D3, R3): the doctor said plug_in; the asleep fix takes the next line's place, as in look.py
+        code, said, _ = self.doctor_road()
+        nexts = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
+        self.assertEqual(code, 2)
+        self.assertEqual(len(nexts), 1)
+        self.assertIn("next    What spark knows: the port that spark found on USB is not on USB any more, and the project's", nexts[0])
+        self.assertNotIn("plug the board straight", said)
+
+    def test_after_the_doctor_a_named_port_gets_the_fix_with_the_named_opening(self):
+        code, said, _ = self.doctor_road("--port", C6_PORT)
+        self.assertEqual(code, 2)
+        self.assertIn("next    What spark knows: the port you named is not on USB, and the project's firmware", said)
+        self.assertNotIn("plug the board straight", said)
+
+    def test_after_the_doctor_the_json_line_ends_with_the_look_and_keeps_what_the_doctor_saw(self):
+        # R3: the look that needs the person; L4: mpremote never got in; L2: doctor.next_step stays the doctor's own
+        code, said, _ = self.doctor_road("--json")
+        line = json.loads(said)
+        self.assertEqual((code, line["answer"], line["doctor"]["next_step"]), (2, "not_reached", "plug_in"))
+        self.assertEqual((line["next"][0]["op"], line["next"][0]["needs_person"]), ("look", True))
+        self.assertIsNone(line["reset"], "mpremote never got in, so live.py read no board and reset none")
+
+    def test_after_the_doctor_a_firmware_with_no_deepsleep_call_keeps_the_cable_step(self):
+        (self.project / "firmware" / "main.py").write_text("import machine\nmachine.lightsleep(1)\n")
+        code, said, _ = self.doctor_road()
+        self.assertEqual(code, 2)
+        self.assertIn("next    plug the board straight into the computer", said)
+        self.assertNotIn("What spark knows", said)
+        (step,) = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
+        code, said, _ = self.doctor_road("--json")
+        line = json.loads(said)
+        self.assertNotIn("next", line)
+        self.assertEqual(line["fix"], step.lstrip()[len("next    "):])  # P1055: the doctor's plug_in sentence, the text's next line
 
     def test_the_json_line_says_the_finding_s_sentence_and_ends_with_the_look_that_needs_the_person(self):
         code, said, _, _ = self.go("--code", "print(1)", "--json", devs="mpremote-devs-none.txt")
@@ -322,6 +369,19 @@ class ASleepingBoardTest(LiveCase):
         (step,) = line["next"]
         self.assertEqual((code, line["answer"], line["why"]), (2, "could-not-run", "no board found."))
         self.assertEqual((step["op"], step["argv"], step["needs_person"]), ("look", ["--project", str(self.project.resolve())], True))
+
+    def test_the_json_line_s_fix_is_the_fix_line_on_stderr(self):
+        # P1055: the stop's fix, word for word, on the one line, before `next`
+        _, _, problems, _ = self.go("--code", "print(1)", devs="mpremote-devs-none.txt")
+        _, said, _, _ = self.go("--code", "print(1)", "--json", devs="mpremote-devs-none.txt")
+        line = json.loads(said)
+        self.assertEqual((line["fix"], list(line)[-2:]), (problems.splitlines()[-1], ["fix", "next"]))
+
+    def test_after_the_doctor_the_json_line_s_fix_is_the_text_s_next_line(self):
+        # P1055 on the doctor road: the asleep fix, not the doctor's plug_in sentence, which doctor.next_step still names
+        _, said, _ = self.doctor_road()
+        (step,) = [line for line in said.splitlines() if line.lstrip().startswith("next    ")]
+        self.assertEqual(json.loads(self.doctor_road("--json")[1])["fix"], step.lstrip()[len("next    "):])
 
     def test_without_a_deepsleep_call_the_stop_is_as_before(self):
         for main in ("import machine\nmachine.lightsleep(1)\n", "import machine\nmachine.deepsleep(\n"):

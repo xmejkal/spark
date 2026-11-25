@@ -1,12 +1,13 @@
 """
 The reach as an Operation on the core (P657, W4-3): run one line on the board on USB, cure it once when its USB output died at
-power-on, and say whether the board answered. reach.py is its CLI, and its `--json` line is the flat one the bench log reads
-(`FlatJsonLine`), so no golden changed. The time of `at` is the outside's clock, and a stop has no data, so no line, but
+power-on, and say whether the board answered. reach.py is its CLI, and its `--json` line is the flat one the bench log reads,
+with `fix` (`FixFlatJsonLine`, P1055). The time of `at` is the outside's clock, and a stop has no data, so no line, but
 an open board question (P892), whose line holds `reached` false, the port, the product, `open` and `known_board`.
 """
 
 from spark.bench import board_codes
 from spark.bench import board_doctor
+from spark.bench import board_envelope
 from spark.bench import board_look
 from spark.bench import board_reach
 from spark.bench import known_board
@@ -18,7 +19,7 @@ from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import codes, outcomes
 from spark.core.errors import SparkError
-from spark.core.renderers import FlatJsonLine
+from spark.core.renderers import FixFlatJsonLine
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
@@ -81,14 +82,16 @@ board that spark cannot tell by its USB serial is asked on every run, in your te
 file that holds {"replies": {"reach.run_on_board.<id>": true}}: a board with no serial and, while the kept board's
 record trusts no USB serial (it showed none, or one that its firmware set), a board on Espressif's own USB whose
 serial does not start with the kept MAC. One yes or one no is for one run. A no is answered_no, and nothing ran on the
-board. With --json an open question prints one line: reached false, port, product, open and known_board. Every other
+board. With --json an open question prints one line: reached false, port, product, open, known_board and fix. Every other
 stop prints nothing on stdout. For other_board, no_known_board and answered_no, the last line on stderr is the stop's
 fix, after its sentence.
 
-If no board is on USB, or the port you named is not, and firmware/ calls deepsleep, the stop's last line, the fix,
-says that the board can be in deep sleep, as look.py's does (P1057). Its first step puts the board in download mode.
-There it runs no firmware, so reach.py cannot reach its REPL: use download mode for look.py or a deploy, then press
-RESET with BOOT not held. To reach the REPL, wait until the firmware wakes. --json carries no fix yet (P1055).
+If no board is on USB, or the port is not (the one you named, or the one spark found, after the doctor too), and
+firmware/ calls deepsleep, the stop's last line, the fix, says that the board can be in deep sleep, as look.py's does
+(P1057). Its first step puts the board in download mode. There it runs no firmware, so reach.py cannot reach its REPL:
+use download mode for look.py or a deploy, then press RESET with BOOT not held. To reach the REPL, wait until the
+firmware wakes. After the doctor, --json carries the fix as `fix` (P1055) and `next` holds the look step; the no-board
+stop prints no line, and its fix is the last stderr line.
 
 When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
@@ -115,7 +118,7 @@ class ReachBoard(Operation):
                  COMMON_ARGUMENTS["replies"]._replace(help=REPLIES_HELP))
     effects = (READS, RUNS, BOARD, ASKS)
     privacy_for = staticmethod(bench_privacy.privacy_for)
-    json_renderer = FlatJsonLine
+    json_renderer = FixFlatJsonLine
 
     def __init__(self, platform_for=None, known=None):
         self.platform_for = platform_for or MicroPythonPlatform
@@ -150,9 +153,11 @@ class ReachBoard(Operation):
             doctor = None
         places = board_records.ButtonPlaces.of_project(project)
         lines = describe(port, result) + (["  " + line for line in board_doctor.describe(doctor, places)] if doctor else [])
-        fix = board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
+        # P1057 PR 2: after the doctor's plug_in step, the asleep fix of the port the person named or spark found, and the look
+        lines, fix = board_envelope.doctor_said(lines, doctor, named, project, places)
         findings = [] if result.reached else [Finding(outcomes.COULD_NOT_RUN, None, board_codes.NOT_REACHED, result.why, fix)]
         # P430: the port, the cure's read and the board's reply are data, each line shown guarded
         return OperationResult(data_of(port, result, cure_first, doctor, outside.clock.now().strftime(AT_FORMAT)), findings,
+                               next=board_envelope.asleep_next(fix, project.resolve()),
                                lines=[printable(line) for line in lines], diagnostics=diagnostics)
 # --- end MVP ---

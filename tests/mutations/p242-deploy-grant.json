@@ -192,7 +192,7 @@
  {
   "file": "scripts/spark/bench/check_grant.py",
   "name": "check-takes-a-scope",
-  "find": "COMMON_ARGUMENTS[\"port\"], COMMON_ARGUMENTS[\"json\"]._replace(help=\"print one line of JSON: granted, why and the grant\"))",
+  "find": "COMMON_ARGUMENTS[\"port\"], COMMON_ARGUMENTS[\"json\"]._replace(help=\"print one line of JSON: granted, why, the grant and the fix\"))",
   "replace": "COMMON_ARGUMENTS[\"port\"], Argument((\"--scope\",), \"scope\", str, \"x\", \"live\"), COMMON_ARGUMENTS[\"json\"])"
  },
  {

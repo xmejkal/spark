@@ -382,9 +382,12 @@ class TheStopsTest(BoardQuestionCase):
 
     def test_16_reach_json_prints_its_line_for_an_open_question_only_and_live_names_the_question_in_its_stop_line(self):
         self.cannot_tell(REACH)
-        code, said, _ = self.main(REACH, "--json")
+        code, said, err = self.main(REACH, "--json")
         line = json.loads(said)
-        self.assertEqual((code, sorted(line), line["reached"], line["port"]), (2, ["known_board", "open", "port", "product", "reached"], False, C6_PORT))
+        self.assertEqual((code, sorted(line), line["reached"], line["port"]), (2, ["fix", "known_board", "open", "port", "product", "reached"], False, C6_PORT))
+        # P1055: `fix` is the question's fix, the words of stderr's fix line, with the JSON to paste
+        self.assertIn("reach.py: " + line["fix"], err.splitlines())
+        self.assertIn('{"replies": {"%s": true}}' % self.replies.asked[-1].key, line["fix"])
         self.answer(False)
         self.assertEqual(self.main(REACH, "--json")[1], "")
         self.yes_file.unlink()
@@ -398,9 +401,13 @@ class TheStopsTest(BoardQuestionCase):
         self.keep(C6_MAC, known_board.comparable_key(C6_MAC))
         self.devs = OTHER_ROW
         self.give_live_grant(OTHER_MAC)
-        line = json.loads(self.main(LIVE, "--json")[1])
+        _, said, err = self.main(LIVE, "--json")
+        line = json.loads(said)
         self.assertEqual((line["answer"], line["open"], line["product"], line["known_board"]),
                          ("could-not-run", [], "Espressif USB JTAG/serial debug unit", {"state": "other", "mac_ends": "xx:xx"}))
+        # P1055: `fix` is the other_board stop's fix, the words of stderr's fix line, which names look.py
+        self.assertIn("live.py: " + line["fix"], err.splitlines())
+        self.assertIn("look.py", line["fix"])
         self.assertEqual((line["pins_checked"], line["gpio_numbers_in_code"]), (True, [1]))  # the pin check ran before the question
         self.devs = data("mpremote-devs-two.txt")
         line = json.loads(self.main(LIVE, "--json")[1])
