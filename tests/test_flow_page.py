@@ -68,6 +68,10 @@ PAGE_SCRIPT = (ROOT / "scripts" / "spark" / "flow" / "page_script.js").read_text
 SCRIPT_BLOCK = re.compile(r'<script type="application/json" id="spark-words">.*?</script>\n<script>.*?</script>\n', re.S)
 #: A page with an offer of each kind and today's page of it, written by the renderer before the script (P829 PR 3).
 SAMPLE = ROOT / "tests" / "data" / "flow-page"
+#: The one web address the page loads (P1120): the font's stylesheet, written here, never imported from the code.
+FONT_URL = "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&display=swap"
+#: The system's fonts, last in the page's font stack: the page's fonts with no network.
+SYSTEM_FONTS = 'system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif'
 
 
 def without_script(text):
@@ -83,15 +87,25 @@ def scripts_of(text):
             for attributes, body in re.findall(r"<script([^>]*)>(.*?)</script>", text, re.S)]
 
 
+def assert_only_the_font_is_loaded(test, text):
+    """The page loads one thing from the web (P1120): the font's stylesheet, by one `<link>` in `<head>` to the literal
+    FONT_URL. With that link gone, no web address is left."""
+    link = '<link rel="stylesheet" href="%s">' % html.escape(FONT_URL)
+    test.assertEqual((text[:text.index("</head>")].count(link), text.count(link)), (1, 1))
+    test.assertNotIn("http", text.replace(link, "").lower())
+
+
 def assert_spark_s_script_only(test, text):
     """The page runs spark's script only (P829 PR 3, D7): one script with no src and no type, whose text is page_script.js,
-    beside the inert words block, and no frame, web address, control in the markup or handler."""
+    beside the inert words block, and no frame, control in the markup or handler. Its one web address is the font's
+    stylesheet (P1120)."""
     scripts = scripts_of(text)
     test.assertEqual([attributes for attributes, _body in scripts], [{"type": "application/json", "id": "spark-words"}, {}])
     test.assertEqual(scripts[1][1], PAGE_SCRIPT)
     test.assertEqual(text.lower().count("<script"), 2)
-    for word in ("<iframe", "http", "<button", "<input", "onclick"):
+    for word in ("<iframe", "<button", "<input", "onclick"):
         test.assertNotIn(word, text.lower())
+    assert_only_the_font_is_loaded(test, text)
 
 
 class FakeReader:
@@ -288,7 +302,7 @@ class TheDocumentTest(unittest.TestCase):
         for (attrs, _said), status in zip(self.parsed.sections, MARKS):
             self.assertEqual(attrs["data-status"], "none" if status is None else status)
 
-    def test_the_page_runs_nothing_and_loads_nothing(self):
+    def test_the_page_runs_nothing_and_loads_only_the_font(self):
         for text in (self.text, page_of(a_phase("one"), pictures=[Picture("Breadboard", "<svg/>", None)])):
             assert_spark_s_script_only(self, text)
 
@@ -900,7 +914,7 @@ class TheWiringWordsTest(unittest.TestCase):
             self.assertNotIn(word, wiring_section(text).lower())
             self.assertNotIn(word, summary.lower())
 
-    def test_the_page_still_runs_nothing_and_loads_nothing_with_wiring_and_three_pictures(self):
+    def test_the_page_still_runs_nothing_and_loads_only_the_font_with_wiring_and_three_pictures(self):
         assert_spark_s_script_only(self, page_of_wiring(PageWiring(THREE, self.ITEMS, ["rec"], None), THREE_PICTURES))
 
     def test_a_record_s_marks_and_signs_come_out_as_text_in_a_line_before_power(self):
@@ -961,8 +975,9 @@ class TheInlinePictureTest(unittest.TestCase):
         figure = text.split(FIGURE, 1)[1].split("</figure>", 1)[0]
         self.assertIn("<svg ", figure)
         self.assertIn('data-step="5"', figure)
-        for word in ("xmlns", "ns0:", "http"):
+        for word in ("xmlns", "ns0:"):
             self.assertNotIn(word, text.lower())
+        assert_only_the_font_is_loaded(self, text)  # P1120: no web address but the font's link, so no namespace's either
         order = [text.index(mark) for mark in ("<h3>Breadboard</h3>", FIGURE, "</figure>", "<h3>Schematic</h3>")]
         self.assertEqual(order, sorted(order))
 
@@ -1163,8 +1178,8 @@ def contrast(one, other):
 
 class TheLookTest(unittest.TestCase):
     """P949, P1120: the page's tokens, light and dark, with teal only on a button's fill, a frame's edge or a ring, no shadow,
-    radii from their tokens, every pair readable, nothing loaded, and a legend of the pads under the breadboard that says
-    only what the picture draws."""
+    radii from their tokens, every pair readable, the linked font then the system's, nothing loaded by the style, and a
+    legend of the pads under the breadboard that says only what the picture draws."""
 
     def setUp(self):
         self.page = page_of_wiring(PageWiring(THREE, [], ["rec"], None), THREE_PICTURES)
@@ -1198,7 +1213,6 @@ class TheLookTest(unittest.TestCase):
         self.assertLess(luminance(dark["--bg"]), luminance(light["--bg"]))
         self.assertEqual((light["--backdrop"], dark["--backdrop"]), ("#fff", "#fff"))
         self.assertEqual(set(re.findall(r"var\((--[a-z-]+)\)", style)), set(light))
-        self.assertTrue(light["--body"].startswith("system-ui"), light["--body"])
         outside = re.sub(r"\{[^{}]*--bg:[^{}]*\}", "{}", style)
         self.assertEqual(style.count("--bg:"), 3)
         self.assertNotRegex(outside, r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
@@ -1282,6 +1296,15 @@ class TheLookTest(unittest.TestCase):
         self.assertEqual(rule[(".next", "font-size")], "var(--size-heading)")
         self.assertEqual(rule[("[role=group]", "font-size")], "var(--size-text)")
 
+    def test_the_font_is_the_linked_family_then_the_system_s(self):
+        light, _dark = themes(self.style)
+        family = re.search(r"family=([^:&]+)", FONT_URL).group(1).replace("+", " ")
+        self.assertEqual(light["--body"], '"%s",%s' % (family, SYSTEM_FONTS))
+        self.assertIn("display=swap", FONT_URL)  # with no network the system's fonts show at once
+        self.assertEqual(self.page.count(html.escape(FONT_URL)), 1)
+        rule = {(selector, prop): value for selector, prop, value in declarations(self.style)}
+        self.assertEqual(rule[("strong", "font-weight")], "600")  # a weight the link loads, so none is made up
+
     def test_the_orange_signal_is_gone(self):
         self.assertNotIn("--signal", self.page)
         self.assertNotIn("#c8500f", self.page.lower())
@@ -1341,7 +1364,7 @@ class TheKeepStepTest(unittest.TestCase):
         # the schematic and the PCB are <img>s, and the breadboard stands in the page with no namespace (P949)
         self.assertEqual(2, text.count("data:image/svg+xml;base64,"))
         self.assertEqual(text.count(FIGURE), 1)
-        self.assertNotIn("http", text.lower())
+        assert_only_the_font_is_loaded(self, text)
         self.assertEqual(len(Parsed(text).sections), 9)
 
     def test_a_flow_page_that_raises_is_one_no_page_entry(self):
@@ -1600,7 +1623,7 @@ class TheGuideSectionTest(unittest.TestCase):
         for escaped in ("&lt;b&gt;go&lt;/b&gt; &amp; wait", "&lt;i&gt;idea&lt;/i&gt;", "a&amp;b", "&lt;u&gt;x&lt;/u&gt;", "&lt;s&gt;none&lt;/s&gt;"):
             self.assertIn(escaped, text)
 
-    def test_the_guide_adds_no_script_and_loads_nothing(self):
+    def test_the_guide_adds_no_script_and_loads_only_the_font(self):
         assert_spark_s_script_only(self, guide_page(a_guide(), PageWiring([(1, "x")], [], [], None)))
 
 

@@ -3,8 +3,9 @@ The page of a project (P827, #1185): the flow's phases as one plain HTML file, `
 mark, readable from disk. `FlowPage` is the Value a renderer takes; `FlowHtmlPage` is the Renderer that draws it, as an
 ordered table of sections (`SECTIONS`, P1123) in the slice 1 order (P1062): the freshness line, the NOW box, the Parts,
 Wiring and Pictures folds, the bench note, and the developer fold, always closed. The page adds no tick of its own: a
-phase whose status is not ok never shows one (`shown_phase`). It loads nothing from the web and is the same bytes for the
-same flow. Its one script (P829 PR 3) does nothing from disk: `page_words` writes every word it
+phase whose status is not ok never shows one (`shown_phase`). It is the same bytes for the same flow, and loads one thing
+from the web, the font's stylesheet from Google Fonts (P1120), which sends Google each visitor's IP address; with no
+network it uses the system's fonts. Its one script (P829 PR 3) does nothing from disk: `page_words` writes every word it
 shows. The breadboard stands in it as plain shapes (`SvgInliner`, P949),
 with its keys for a player and a legend of its pads; every other picture is an <img>.
 """
@@ -50,6 +51,9 @@ TICK = MARKS[OK][1]
 #: nothing from disk. Its words stand beside it in an inert JSON block with WORDS_ID.
 PAGE_SCRIPT = Path(__file__).resolve().with_name("page_script.js")
 WORDS_ID = "spark-words"
+#: The page's font (P1120, the PO's choice): Instrument Sans, the canvas's, in its two weights. `display=swap` shows the
+#: system's fonts at once and with no network. The address holds nothing of the project.
+FONT_STYLESHEET = "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&display=swap"
 
 
 def word_of(status):
@@ -502,7 +506,7 @@ class FlowHtmlPage:
     Renderer: a FlowPage as one HTML document, the same bytes for the same page. Between its head and its script it writes
     its `SECTIONS` in order (P1123), each a small Renderer with a `NAME`, the design-basis `KEYS` it shows and `text(page)`;
     a section with nothing to show writes nothing. It names only the parts phase, for its fold (P1062), and no count. Its
-    colors are tokens (P1120), light and dark, with the system's fonts. Teal is only a button's fill, the confirm frame's
+    colors are tokens (P1120), light and dark, with the linked font then the system's. Teal is only a button's fill, the confirm frame's
     edge or the focus ring. The Now box is an ink plane whose dot's halo is a `::before` border, as the page has no shadow.
     No color says a status: the mark and the word do. Under an inline breadboard a legend names each pad state its dots
     draw, and only those.
@@ -514,7 +518,7 @@ class FlowHtmlPage:
 
     #: The colors by token, light and dark (P1120: the P1113 council's light set, the PO's dark set of 2026-11-25); the shape
     #: and font tokens are light's only. The picture ground stays white in both, as the tabbed page's: the pictures are drawn
-    #: for a light ground. The fonts are the system's, so the page loads nothing.
+    #: for a light ground. The font is the linked one (`FONT_STYLESHEET`), then the system's, which draw it with no network.
     TOKENS_LIGHT = {"--bg": "#f6f5f1", "--surface": "#ffffff", "--ink": "#15181d", "--muted": "#5b6270", "--line": "#e4e1d8",
                     "--accent": "#0f766e", "--accent-hover": "#0b5c56", "--on-accent": "#ffffff", "--accent-edge": "#0f766e",
                     "--focus": "#0f766e", "--now-bg": "#15181d", "--now-ink": "#f6f5f1", "--now-halo": "#5eead4",
@@ -522,7 +526,7 @@ class FlowHtmlPage:
                     "--backdrop": "#fff", "--radius-button": "8px", "--radius-frame": "12px", "--button-height": "44px",
                     "--size-text": "16px", "--size-heading": "20px", "--size-title": "40px", "--space-s": "8px",
                     "--space-m": "12px", "--space-l": "16px",
-                    "--body": 'system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif'}
+                    "--body": '"Instrument Sans",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif'}
     TOKENS_DARK = {"--bg": "#121417", "--surface": "#1b1e24", "--ink": "#eceae4", "--muted": "#a3a9b5", "--line": "#2e333b",
                    "--accent": "#0f766e", "--accent-hover": "#0b5c56", "--on-accent": "#ffffff", "--accent-edge": "#5eead4",
                    "--focus": "#5eead4", "--now-bg": "#23272f", "--now-ink": "#eceae4", "--now-halo": "#5eead4",
@@ -534,7 +538,7 @@ class FlowHtmlPage:
     STYLE = ("body{max-width:1180px;margin:0 auto;padding:var(--space-m) var(--space-l);"
              "font:var(--size-text)/1.55 var(--body);background:var(--bg);color:var(--ink)}h1,h2{font-weight:600;"
              "line-height:1.2;letter-spacing:-0.02em}h1{font-size:var(--size-title);line-height:1.1}"
-             "h2{font-size:var(--size-heading)}a{color:var(--ink)}.now a{color:var(--now-ink)}a:focus-visible,"
+             "h2{font-size:var(--size-heading)}strong{font-weight:600}a{color:var(--ink)}.now a{color:var(--now-ink)}a:focus-visible,"
              "button:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}"
              "button{min-height:var(--button-height);padding:0 var(--space-l);border:1px solid var(--ink);"
              "border-radius:var(--radius-button);background:var(--surface);color:var(--ink);"
@@ -588,7 +592,8 @@ class FlowHtmlPage:
         style = token_styles(self.TOKENS_LIGHT, self.TOKENS_DARK) + self.STYLE + (WIRING.STYLE if page.wiring else "")
         return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
                           '<meta name="viewport" content="width=device-width, initial-scale=1">',
-                          '<title>%s</title>' % _text(page.title), '<style>%s</style>' % style, '</head>',
+                          '<title>%s</title>' % _text(page.title), '<link rel="stylesheet" href="%s">' % _text(FONT_STYLESHEET),
+                          '<style>%s</style>' % style, '</head>',
                           '<body data-stands-at="%s" data-fingerprint="%s" data-written="%s">' % (
                               _text(page.stands_at or "none"), _text((page.fingerprint or "none")[:SHORT]), _text(page.written or "none"))])
 # --- end MVP ---

@@ -202,8 +202,8 @@ inside a `title`. Else the page shows it as an `<img>`, as
 it shows the schematic and the PCB, so a script in a hand-edited `breadboard.svg` never runs, and nothing loads. The
 dot on each pin is yellow when its row joins a wire or another part and gold when it is free. Under the picture a
 legend names the states that the dots draw: "pad in use" and "pad free". "Pad held: do not use" shows only when a pad
-is held, and spark draws none yet ([P950](https://github.com/xmejkal/spark/issues/1354)). Its colours are tokens, light and dark, with the system's fonts
-([P1120](https://github.com/xmejkal/spark/issues/1649)): teal only fills a button that runs spark's step, edges the confirm and rings the focus, and a step out of date or with problems stands on an amber or a red plane beside its mark and word. It loads nothing.
+is held, and spark draws none yet ([P950](https://github.com/xmejkal/spark/issues/1354)). Its colours are tokens, light and dark
+([P1120](https://github.com/xmejkal/spark/issues/1649)): teal only fills a button that runs spark's step, edges the confirm and rings the focus, and a step out of date or with problems stands on an amber or a red plane beside its mark and word. It loads one thing from the web, the font's stylesheet from Google Fonts (Instrument Sans), which sends Google each visitor's IP address; with no network it uses the system's fonts.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" page --project . --json

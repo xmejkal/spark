@@ -70,5 +70,23 @@
   "name": "P1120: the confirm on the NEXT line takes the line's larger size (TheLookTest, the confirm size test)",
   "find": "[role=group]{color:var(--ink);font-size:var(--size-text)}",
   "replace": "[role=group]{color:var(--ink)}"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the font stack loses the system's fonts (TheLookTest, the font test)",
+  "find": "'\"Instrument Sans\",system-ui,-apple-system,\"Segoe UI\",Helvetica,Arial,sans-serif'",
+  "replace": "'\"Instrument Sans\"'"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the font's stylesheet loads over http (assert_only_the_font_is_loaded)",
+  "find": "FONT_STYLESHEET = \"https://fonts",
+  "replace": "FONT_STYLESHEET = \"http://fonts"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1120: the font blocks the text until it loads (TheLookTest, the font test)",
+  "find": "&display=swap\"",
+  "replace": "&display=block\""
  }
 ]
