@@ -35,7 +35,7 @@ from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecor
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import Phase, SimulateReader  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
-from spark.flow.guide import chat_offer_of, guide_of  # noqa: E402
+from spark.flow.guide import chat_offer_of, guide_of, names_at, stations_of  # noqa: E402
 from spark.flow.show_flow import ShowFlow, flow_and_guide, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
@@ -681,6 +681,11 @@ def an_image(project, image=b"an image"):
     return project
 
 
+def stations(*rows):
+    """The guide's `stations` (P1119) from (phase, place, note) rows."""
+    return [{"phase": phase, "place": place, "note": note} for phase, place, note in rows]
+
+
 class TheGuideTest(FlowTest):
     """P977: `data.guide` says what to do now, what is done, what comes later and what the person set aside."""
 
@@ -696,7 +701,11 @@ class TheGuideTest(FlowTest):
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL,
-            "no_open_phase": None, "wired": {"sheet_at": sheet_at(project), "deploy_at": None}})  # P1044: the fixture keeps a sheet
+            "no_open_phase": None, "wired": {"sheet_at": sheet_at(project), "deploy_at": None},  # P1044: the fixture keeps a sheet
+            # P1119: the two jobs: the breadboard is now beside the firmware, so it is in no list
+            "stations": stations(("idea", "done", None), ("needs", "done", "not-done"), ("parts", "done", "not-done"),
+                                 ("requirements", "done", "no-picks"), ("build", "done", "no-model"), ("breadboard", "now", None),
+                                 ("firmware", "now", None), ("simulate", "later", "no-model"), ("deploy", "later", None))})
 
     def test_the_project_stands_where_the_guide_says_now(self):
         """P1030: one rule says where a project stands, the guide's now phase, in data.stands_at too."""
@@ -726,7 +735,11 @@ class TheGuideTest(FlowTest):
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
             "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL, "no_open_phase": None,
-            "wired": {"sheet_at": sheet_at(project), "deploy_at": None}})  # P1044: the fixture keeps a sheet
+            "wired": {"sheet_at": sheet_at(project), "deploy_at": None},  # P1044: the fixture keeps a sheet
+            # P1119: a simulate with no model is later, though it stands before the deploy now
+            "stations": stations(("idea", "done", None), ("needs", "done", "not-done"), ("parts", "done", "not-done"),
+                                 ("requirements", "done", "no-picks"), ("build", "done", "no-model"), ("breadboard", "done", "unseen"),
+                                 ("firmware", "done", None), ("simulate", "later", "no-model"), ("deploy", "now", None))})
 
     def test_any_other_cause_of_a_simulation_that_could_not_run_stops_at_the_build(self):
         for code in ("simulation_fact_missing", "converter_lacks_part", None):
@@ -813,7 +826,8 @@ class TheGuideTest(FlowTest):
             "now": {"phase": "idea", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
-            "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None})  # P1044: no sheet and no board log
+            "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None,  # P1044: no sheet and no board log
+            "stations": stations(("idea", "now", None), *[(phase, "later", None) for phase in PHASES[1:]])})  # P1119
 
     def test_needs_set_aside_do_not_count_and_a_picked_one_counts_as_picked(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -890,6 +904,68 @@ class TheGuideTest(FlowTest):
                                      [Stage("board", "ok"), Stage("simulation", "could-not-run", "/a/detail", "board_not_in_wokwi")], [])
         self.assertEqual(BuildRecordStore(project).read()["stages"], [
             {"name": "board", "status": "ok"}, {"name": "simulation", "status": "could-not-run", "code": "board_not_in_wokwi"}])
+
+
+def phases_of(*rows):
+    """Phases from (phase, status) rows, with no offers."""
+    return [Phase(phase, status, None, "you", [], []) for phase, status in rows]
+
+
+#: Nine phases whose every status is ok, which a guide with no now gives (P1119).
+ALL_OK = phases_of(*[(phase, OK) for phase in PHASES])
+
+
+class TheStationsTest(unittest.TestCase):
+    """P1119: `stations` places each phase the guide is given beside the now, with at most one note, and DONE and LATER are
+    built from it: a phase with a note of `LEFT_OUT_NOTES` is in no list."""
+
+    def lists(self, rows):
+        return names_at(rows, "done"), names_at(rows, "later")
+
+    def test_with_no_now_every_phase_is_done_but_a_simulate_with_no_model(self):
+        rows = stations_of(ALL_OK, len(ALL_OK), {"simulate"}, None)
+        self.assertEqual([(row["place"], row["note"]) for row in rows],
+                         [("done", None)] * 5 + [("done", "no-sheet"), ("done", None), ("later", "no-model"), ("done", None)])
+        self.assertEqual(self.lists(rows), (["idea", "needs", "parts", "requirements", "build", "firmware", "deploy"],
+                                            ["simulate (no Wokwi model of this board)"]))
+
+    def test_a_simulate_with_no_model_before_a_deploy_now_is_later(self):
+        rows = stations_of(ALL_OK, PHASES.index("deploy"), {"build", "simulate"}, "done")
+        self.assertEqual(rows[4:], stations(("build", "done", "no-model"), ("breadboard", "done", "unseen"), ("firmware", "done", None),
+                                            ("simulate", "later", "no-model"), ("deploy", "now", None)))
+        self.assertEqual(self.lists(rows), (["idea", "needs", "parts", "requirements", "build (no simulation)",
+                                             "breadboard (spark cannot see it)", "firmware"],
+                                            ["simulate (no Wokwi model of this board)"]))
+
+    def test_the_two_jobs_make_the_breadboard_now_beside_the_firmware_with_no_note(self):
+        rows = stations_of(ALL_OK, PHASES.index("firmware"), set(), "now")
+        self.assertEqual(rows[5:7], stations(("breadboard", "now", None), ("firmware", "now", None)))
+        done, later = self.lists(rows)
+        self.assertEqual(done, ["idea", "needs", "parts", "requirements", "build"])
+        self.assertNotIn("breadboard", " ".join(done + later))
+
+    def test_a_breadboard_before_now_with_no_current_sheet_is_in_no_list(self):
+        rows = stations_of(ALL_OK, PHASES.index("firmware"), set(), None)
+        self.assertEqual(rows[5], {"phase": "breadboard", "place": "done", "note": "no-sheet"})
+        self.assertNotIn("breadboard", self.lists(rows)[0])
+
+    def test_no_picks_is_given_only_before_now(self):
+        before = stations_of(ALL_OK, PHASES.index("build"), set(), None, no_picks=True)
+        self.assertEqual(before[1:4], stations(("needs", "done", "not-done"), ("parts", "done", "not-done"),
+                                               ("requirements", "done", "no-picks")))
+        self.assertEqual(self.lists(before)[0], ["idea", "requirements (no needs or picks behind it)"])
+        after = stations_of(phases_of(*[(phase, None) for phase in PHASES]), 0, set(), None, no_picks=True)
+        self.assertEqual({row["note"] for row in after}, {None})
+        self.assertEqual(self.lists(after)[1], PHASES[1:])
+
+    def test_a_later_phase_that_is_ok_may_change_and_one_not_ok_has_no_note(self):
+        rows = stations_of(phases_of(("one", "not-started"), ("two", OK), ("three", "not-started")), 0, set(), None)
+        self.assertEqual(rows, stations(("one", "now", None), ("two", "later", "may-change"), ("three", "later", None)))
+        self.assertEqual(self.lists(rows), ([], ["two (done, may change)", "three"]))
+
+    def test_the_stations_follow_the_phases_the_guide_is_given_in_their_order(self):
+        rows = stations_of(phases_of(("b", OK), ("a", None)), 2, set(), None)
+        self.assertEqual(rows, stations(("b", "done", None), ("a", "done", None)))
 
 
 def offer_of(envelope, key):

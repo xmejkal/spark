@@ -340,13 +340,9 @@ BACK_LABEL, NEXT_LABEL = "Back to step %d", "Next: step %d"
 IDEA_NOW = "Tell Claude your goal in the chat, in your own words."
 PARTS_NOW = "%s no part yet: %s. Tell Claude a pick for each, or to set it aside."
 ONE_NEED_HAS, MANY_NEEDS_HAVE = "1 need has", "%d needs have"
-#: A phase in `later` whose status is ok: it is done now, and a change before it can make it stale (the PO's lens, PR 2 review).
-LATER_BUT_DONE = " (done, may change)"
 REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your picks."
 #: Every need set aside (P980): the parts phase is ok, but the parts list has no pick to be written from.
 ALL_ASIDE_NOW = "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, then pick a part."
-#: What `done` says of a requirements file with no needs or picks behind it (P980). Not "hand-written" only: a project whose last need was dropped is the same.
-REQUIREMENTS_NO_PICKS = "requirements (no needs or picks behind it)"
 REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
 BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
 BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
@@ -440,12 +436,37 @@ SCENARIO_FIRST_WHY = "Claude first writes the scenario from the person's words, 
 #: Why the look is the deploy's step (P1034): the person wires and plugs the board in first.
 LOOK_WHY = ("The person wires the breadboard and plugs the board into USB first. The look reads the board, and the board "
             "restarts while it is read.")
-#: A build whose only stop is a board Wokwi has no model of is counted as done (the PO, 2026-11-21), and these say why.
+#: A build whose only stop is a board Wokwi has no model of is counted as done (the PO, 2026-11-21), and this says why.
 NO_SIMULATION_NOW = "No simulation: Wokwi has no model of this board. You test it on the real board."
-BUILT_NO_SIMULATION = "build (no simulation)"
-SIMULATE_NO_MODEL = "simulate (no Wokwi model of this board)"
-#: The breadboard in done, once the wiring is no longer part of now: the sheet is current, and spark cannot see the wires.
-SHEET_UNSEEN = "breadboard (spark cannot see it)"
+#: The station line (P1119): where a phase stands beside the phase to act on now, as the guide's `stations` gives it.
+DONE_PLACE, NOW_PLACE, LATER_PLACE = "done", "now", "later"
+#: A station's one note (P1119), or None: a requirements file with no needs or picks behind it (P980) and the needs and parts
+#: nobody did then, a build or simulate counted as done because Wokwi has no model of the board, a breadboard before now with
+#: a current sheet (spark cannot see the wires) or with none, and a later phase whose status is ok (a change before it can
+#: make it stale, the PO's lens, P977 PR 2 review).
+NO_PICKS_NOTE, NOT_DONE_NOTE, NO_MODEL_NOTE, UNSEEN_NOTE, NO_SHEET_NOTE, MAY_CHANGE_NOTE = (
+    "no-picks", "not-done", "no-model", "unseen", "no-sheet", "may-change")
+#: The notes that leave a phase out of DONE and LATER: nobody did it, or there is no current sheet to wire from.
+LEFT_OUT_NOTES = frozenset((NOT_DONE_NOTE, NO_SHEET_NOTE))
+#: The words of each other note, which DONE and LATER put after the phase (NOTED_PHASE): "requirements (no needs or picks
+#: behind it)". The no-model note of the simulate has its own words (STATION_NOTES_BY_PHASE).
+STATION_NOTES = {NO_PICKS_NOTE: "no needs or picks behind it", NO_MODEL_NOTE: "no simulation",
+                 UNSEEN_NOTE: "spark cannot see it", MAY_CHANGE_NOTE: "done, may change"}
+STATION_NOTES_BY_PHASE = {(NO_MODEL_NOTE, SIMULATE): "no Wokwi model of this board"}
+NOTED_PHASE = "%s (%s)"
+#: The plain name of each phase on the page's station line (P1119, the canvas of 2026-11-25). A phase not here shows its word.
+PHASE_NAMES = {IDEA: "Idea", NEEDS: "Needs", PARTS: "Parts", REQUIREMENTS: "Parts list", BUILD: "Board files",
+               BREADBOARD: "Wiring", FIRMWARE: "Firmware", SIMULATE: "Simulation", DEPLOY: "On the board"}
+#: The steps spark does not have yet (P1102, P1119, the PO's "Nine plus three greyed"): (key, name, the person's moment,
+#: hand-written). The station line greys them after the nine, and the design basis lists them.
+UNBUILT_STEPS = (
+    ("perfboard", "Perfboard", "At the bench with a soldering iron: the same circuit, soldered to last. Optional."),
+    ("pcb", "PCB", "At the desk: a board to order, once the breadboard works."),
+    ("case", "Case", "At the printer: a case for the board."),
+)
+NOT_BUILT = "not built"
+#: The station line's name for a screen reader (P1119).
+STATIONS_LABEL = "Where the project stands"
 #: The chat offer whose job the NOW sentence asks Claude for (P1122), by (the now phase, the value the guide picked that
 #: sentence by): a status, a simulate's image fact (IMAGE_NOW's keys), a stale deploy's fact or the verdict of a flash that
 #: did not finish. Any other is None, so no tell stands beside a sentence that asks for something else: a failed run, an
