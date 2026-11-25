@@ -35,3 +35,4 @@ rejected findings only. The PR review's rows follow the councils' in the same ta
 | 25 | PR 1's rows 7 and 8: a port spark found that leaves USB gets no asleep fix, and live's doctor keeps its plug_in step | `p1057-asleep-live-reach.md` | acted | fixed in this PR: `ASLEEP_UNNAMED_PORT_OPENING` and `doctor_said` |
 | 26 | PR 1's row 9: json.md and scripts.md say live and reach give no asleep fix, and live's line holds no fix | `p1057-asleep-live-reach.md` | acted | fixed in this PR: the pages and `fix` on the line (P1055) |
 | 27 | a script-level test of an unnamed port for deploy.py | the plan, Step 1 | raised | not written: deploy's fakes take one devs fixture. look.py's script test and the `stop_said` unit tests cover the road; destination: the PR review |
+| 28 | A3 and A5: the round-1 report is not kept and the plan's table has no line for them, so their fate is unknown | council round 1, architecture lens | raised | not guessed; destination: the PR review |
