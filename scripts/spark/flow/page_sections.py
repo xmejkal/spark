@@ -473,8 +473,8 @@ class DeveloperHtmlFold:
         """The developer fold (P1062), always closed and last: the guide's DONE and LATER lines as the page wrote them before
         the station line (P1119, the PO's choice for D22: every label `flow.py show` answers stands in the page's text), each
         phase, closed, with its offers' keys and effects and no hook, the marks, and the line that names each record whole."""
-        body = (['<section id="developer">'] + self._guide_lines(page.guide) + [self._phase(phase) for phase in page.phases]
-                + [self._legend()])
+        body = ['<section id="developer">'] + [self._phase(phase) for phase in page.phases] + [self._legend()]
+        body[1:1] = self._guide_lines(page.guide)  # before the phases
         if page.wiring and page.wiring.before_power:
             body.append(WIRING.before_power.records_line(page.wiring.records))
         return _fold("developer", _text(flow_codes.DEVELOPER_HEADING), body + ["</section>"], False)
