@@ -83,7 +83,7 @@ More sketches: [council/synthesis.md](council/synthesis.md) part 4, [council/ux-
 - D12, D13: find by criteria starts with a spike. The page says "not measured yet" until a run is measured.
 - D2, D15: the riskiest assumption is A1, that he starts a job from the page's sentence. It is tested in the slice 0 walk's diary (D15, the PO's).
 - D16 (the PO's): tokens are not money. Each run names its model and expected tokens, then runs with no question.
-- D17 (the PO's): the misfits M1 and M3 are filed as cards.
+- D17 (the PO's): the misfits are filed as cards: P1173 #1713 (M1) and P1174 #1714 (M3).
 - D18 (the PO's): design comes after the MVP cards. P1161 waits in Discovery.
 - D14: six cards filed by spark-main: P992 #1445 (refined), P1168 #1707, P1169 #1708, P1170 #1709, P1171 #1710, P1172 #1711. See [items.md](items.md).
 

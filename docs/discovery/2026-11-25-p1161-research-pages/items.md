@@ -70,7 +70,7 @@ The cards come from the architect's synthesis (`council/synthesis.md` part 6) an
 - Slice 4, a staged edit that the page confirms by its key, with a check of the value it read. Only if the PO wants more than D4 (D14).
 - Slice 5, the store pages get a home (StorePart's "Not known yet", a drawer entry's edit, research with no project), after the decider's Q4 answer.
 - Paused: board record edits (after P230 #218), pins on a picture (P276 #312), a numeric filter over records, a source-kind field per fact, a photo upload.
-- To the PO, as a misfit (his rule of 2026-11-25): the research agents write whole records and catalog records with the Write tool, outside any Operation (synthesis M1). The architect seat asks for a card of its own, a record-write Operation; the other two seats keep it in the find line. Also the misfit M3: the shelf and the catalog sit outside the Storage seam.
+- Filed by the PO's D17 as P1173 #1713 and P1174 #1714: the research agents write whole records and catalog records with the Write tool, outside any Operation (synthesis M1). The architect seat asks for a card of its own, a record-write Operation; the other two seats keep it in the find line. Also the misfit M3: the shelf and the catalog sit outside the Storage seam.
 - A chore when a slice touches the prompt: rules repeated across prompts (brief C20).
 - Canvas fixes for the next canvas edit: StoreAdd's "every fact marked not checked", and StorePart's NOW card that sends two "not published" facts to a datasheet (brief C21, ★C16).
 
