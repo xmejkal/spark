@@ -1650,7 +1650,9 @@ class TheGuideSectionTest(unittest.TestCase):
 
     def test_a_text_with_an_angle_bracket_or_an_ampersand_is_escaped(self):
         now = dict(a_guide()["now"], says="<b>go</b> & wait")
-        text = guide_page(a_guide(now=now, done=["<i>idea</i>"], later=["a&b"], set_aside=["<u>x</u>"], no_simulation="<s>none</s>"))
+        # P1119: the page draws done and later as the station line, so the two words stand there as phases
+        text = guide_page(a_guide(now=now, done=["<i>idea</i>"], later=["a&b"], set_aside=["<u>x</u>"], no_simulation="<s>none</s>",
+                                  stations=stations(("<i>idea</i>", "done", None), ("a&b", "later", None))))
         for raw in ("<b>go", "<i>idea", "<u>x", "<s>none", "a&b"):
             self.assertNotIn(raw, text)
         for escaped in ("&lt;b&gt;go&lt;/b&gt; &amp; wait", "&lt;i&gt;idea&lt;/i&gt;", "a&amp;b", "&lt;u&gt;x&lt;/u&gt;", "&lt;s&gt;none&lt;/s&gt;"):
