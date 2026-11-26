@@ -2,7 +2,7 @@
 
 Spike for [#1600](https://github.com/xmejkal/spark/issues/1600), under P203 [#163](https://github.com/xmejkal/spark/issues/163).
 Date: 2026-11-26. The evidence is in [notes.md](notes.md) and three pictures in this folder. The architect wrote this
-text from the notes. The kicad-spike session added two explanations to section 9 and made the card titles shorter.
+text from the notes. The kicad-spike session added two explanations to section 9 and made the card titles shorter. The refuter's corrections are in sections 1.3, 1.4, 2.2, 3, 4, 5 and 9.
 
 > In short: the "weird PCBs" are mostly tscircuit's automatic pour, which spark turns on in one line of the board file.
 > The rest is spark's own: big empty boards, modules with no body, 0.15 mm traces and nets named by pin.
@@ -62,22 +62,26 @@ The counts come from the notes' survey of 13 `dist/board/circuit.json` files. Th
 | F7 | The schematic names nets by pin, and some labels overlap the MCU's pins. | The names: spark writes each signal from pin to pin and keeps its name in a comment (`board_sections.py:289` to 290). The overlap: tscircuit's schematic layout. Exact cause not found. | spark, and tscircuit |
 | F8 | Silkscreen text is 0.7 mm high, under KiCad's default of 0.8 mm. | tscircuit's default text size. | tscircuit |
 | F9 | The footprint file says "NOT the None mm on the vendor drawing". | `footprint_emitter.py:287` to 288 prints a `drill_mm` that the record holds as null. | spark |
-| F10 | The project's footprint file is older than the one its last build used. `tsci dev` then shows another board than `dist/`. | `--keep` leaves every other `.tsx` alone and names it (`build_board.py:109`). | spark |
+| F10 | The project's footprint file is older than the one its last build used. `tsci dev` then shows another board than `dist/`. | `--keep` leaves every other `.tsx` alone and names it (`build_board.py:110`). | spark |
 | F11 | Two old `dist/` folders have `source_trace_not_connected_error` for MOSI and MISO. | spark. P512 fixed it. The folders are older than the fix. | spark, fixed |
 
 ### 1.3 Measured, and not a fault
 
 - Routing is short. On every board the longest trace is at most 1.4 times the straight line.
 - Routing repeats. Two fresh builds of one `board.tsx` gave the same routes.
-- The routes are clean in KiCad. With one KiCad GND zone per layer, `kicad-cli pcb drc` gives 11 findings: 9 text
-  heights, 2 library warnings, 0 errors and 0 unconnected items.
+- The routes are clean in KiCad at the export's own clearance of 0.1 mm. With one KiCad GND zone per layer,
+  `kicad-cli pcb drc` gives 11 findings: 9 text heights, 2 library warnings, 0 errors and 0 unconnected items.
+- At a clearance of 0.2 mm, the same check gives 6 clearance errors. The closest is 0.11 mm, a V33 via to a GND
+  track. The refuter found this. spark's `data/fabrication.json` states no clearance of its own.
+- Every net is joined by traces. With every zone removed, KiCad still reports 0 unconnected items.
 - Build time is not measured. One build alone took 6 to 7 s. The notes make no claim on speed.
 
 ### 1.4 The cheapest fix inside tscircuit, tried
 
 The spike removed `automaticPoursEnabled` and added one `<copperpour connectsTo="net.GND" />` per layer. `tsci build`
-gave 0 errors, 3 GND pour pieces, 10 traces and 4 vias. 3V3 then reaches the e-paper by a trace. KiCad's DRC on that
-export gave 212 findings, and after `--refill-zones` it gave the same 11 as above.
+gave 0 errors, 3 GND pour pieces, 10 traces and 4 vias. The 3V3 traces stay as they were, because 2 of
+the 10 traces carry V33 in every build. The routes change. KiCad's DRC on that export gave 212 findings, and after
+`--refill-zones` it gave 11, of the same kinds as above.
 
 ![The same board with one GND pour per layer](pcb-one-gnd-pour.png)
 
@@ -114,7 +118,8 @@ kicad-cli 10.0.6 ran from a script on the output of `tsci export board.tsx -f ki
 | Tried | Yes. | No server was installed. |
 
 Reading: kicad-cli is the tool. An MCP server gives nothing that the export path needs. For routing, each server
-calls Freerouting, which spark can call direct.
+calls Freerouting, which spark can call direct. tsci itself exports `specctra-dsn`, so Freerouting can route a
+tscircuit board with no KiCad at all.
 
 `docs/mcp.md:44` to 47 already says `KiCad — not offered`, for an older package. The reason changes, the answer stays.
 
@@ -130,7 +135,7 @@ calls Freerouting, which spark can call direct.
 
 Fusion's personal-use limit: the licence limits electronics to 2 sheets, 2 layers and 80 cm² of board
 (https://www.autodesk.com/products/fusion-360/personal.html, read through a search summary). The e-paper board is
-126.4 x 72 mm, which is 91 cm². So F5 blocks the KiCad import on a personal licence. Fusion imports a STEP file as
+126.4 x 72 mm, which is 91 cm². So F5 puts the import on a personal licence at risk. No one checked this against Autodesk's page. Fusion imports a STEP file as
 bodies. The spike did not check whether the limit applies to a STEP import.
 
 ## 3. How KiCad sits in the stack
@@ -156,7 +161,7 @@ It exists already:
 
 It is missing:
 
-1. No selection point. `for_toolchain` builds `TscircuitEngine` by name (`build_service.py:210`), and so does
+1. No selection point. `for_toolchain` builds `TscircuitEngine` by name (`build_service.py:211`), and so does
    `found_from` (`board_engine.py:129`). The role gives a path to `tsci` only (`board_engine.py:39`).
 2. No base class. No Strategy says what an engine must supply. The Fake copies the Adapter's four methods.
 3. The board file is tscircuit's language. `BuildService` writes `board.tsx` and the footprint's `.tsx`
@@ -197,17 +202,19 @@ Reused, so that spark writes nothing twice:
 
 | Shared part | Where it is today |
 |---|---|
-| The requirements, and the part and board records | `loader`, `board_records` (`build_service.py:231`, 262) |
+| The requirements, and the part and board records | `loader`, `board_records` (`build_service.py:234`, 260) |
 | The pin of each signal, and the pin map `firmware/pins.py` | the assignments in `BoardInputs` (`board_emitter.py:49`, 131) |
 | The power connections | `power_rails.power_connections`, `mcu_power_nets`, `supply_inputs` |
 | The placement and the board size | `board_components.place` (`board_components.py:143`), called before the writer (`board_emitter.py:130`) |
 | The trace widths | `copper.width_to_emit_mm` through `trace_width_mm` (`board_sections.py:66` to 90) |
 | The fab numbers | `data/fabrication.json`, read into the via and thickness constants (`board_sections.py:24`) |
 | The footprint's hole and pad sizes | `hole_diameter_mm`, `pad_diameter_mm` (`footprint_emitter.py:278` to 279) |
+| The pad of each pin label | `board_pads.BoardPads`, which reads `pad_aliases` (`scripts/spark/records/board_pads.py`) |
+| The toolchain's install and pin | the tools list's `install` and `version` per tool (`data/tools.json`), the store's toolchain folder |
 | The checks after the build | `islands_in` and the five checks, as long as the engine gives `circuit.json` |
 
 Each engine adds only its own parts. These are the board file in its language, its run, its version and its probe.
-They also include the reading of its errors (`pour_contact.py` reads tscircuit's phrase) and its views.
+They also include the reading of its errors (`pour_contact.py` parses the words of tscircuit's error) and its views.
 
 The arguments of `emit` are already that neutral plan, apart from the connections (`board_sections.py:478`). So gap 4
 is the one real piece of new design.
@@ -246,7 +253,7 @@ record that spark holds. The findings are KiCad's, and spark names the tool and 
 | A. tscircuit only | One GND pour per layer, and the spark faults as cards. | small | The DRC, the render and the STEP stay a doc recipe. |
 | B. A, and KiCad as an export after the build (recommended) | A, then the Operation of section 3.3 through kicad-cli. | small, then medium | Nothing. A person without KiCad sees `could-not-run`. |
 | C. KiCad as the board engine now | spark writes `kicad_pcb`, a router routes, kicad-cli fills. Every reader needs a new input. | very large | "KiCad stays optional". 1.4 GB becomes a must. |
-| D. A KiCad MCP server | A server over KiCad places and routes. | large | The CLI-first rule. Headless use waits for KiCad 11. |
+| D. A KiCad MCP server | A server over KiCad places and routes. | large | The CLI-first rule and two runtimes. Its SWIG path runs headless today. Its IPC path waits for KiCad 11. |
 
 Recommendation: B. Three facts decide it.
 
@@ -272,7 +279,7 @@ guess at the second reader's needs. Both come with the second engine.
 
 Each line is a title for spark-main to file, in the form "problem → change".
 
-- P?: the automatic pour cuts both layers into V33 and GND pieces (F1, F2) → one GND pour per layer, 3V3 by a trace
+- P?: the automatic pour cuts both layers into V33 and GND pieces (F1, F2) → one GND pour per layer
 - P?: KiCad's DRC, render and STEP exist only as a doc recipe → an Operation `export-board` over `tsci export` and kicad-cli
 - P?: the `board-engine` role chooses a path, not an engine → a Strategy base `BoardEngine` with one selection table
 - P?: a module has no body on the PCB and in 3D (F4) → a box from the record's `body_mm`, with a height fact
@@ -290,8 +297,9 @@ No card: F3 (P958 holds it, and the pour card removes its cause to test), F8 (se
 F5, the placement, is out of scope for a card now. The board file says that the placement is a first draft, and a
 better one is a design job, not a bug. It stays one line under P203, with one measure: the e-paper board under 80 cm².
 
-Two risks to put on the cards. The pour card changes a comment's truth in `build_service.py:369` to 372, which says
-that V33 is poured. The F7 card changes what `netlist.Netlist` sees, because today a signal has no named net
+Three risks to put on the cards. The comment in `build_service.py:369` to 372 says that V33 is poured. It is already
+untrue on this board, because V33 has traces today, and the pour card corrects it. The pour card's DRC holds at
+0.1 mm clearance only, and spark states no clearance of its own. The F7 card changes what `netlist.Netlist` sees, because today a signal has no named net
 (`netlist.py`, the module's docstring).
 
 ## 6. Choices for the council
@@ -332,11 +340,11 @@ Each answer is "delegated, the PO's to change". The recommended option is first.
 | No stated current gives no width | `board_sections.py:54` to 58, 66 to 90 |
 | The placement is a column, margin 6 mm, gap 4 mm | `scripts/spark/design/board_components.py:15` to 16, 143 to 180 |
 | The footprint's comment prints a null `drill_mm` | `scripts/spark/design/footprint_emitter.py:287` to 288 |
-| `--keep` leaves other `.tsx` files alone | `scripts/spark/build/build_board.py:109` |
+| `--keep` leaves other `.tsx` files alone | `scripts/spark/build/build_board.py:110` |
 | The role, the contract and the tool's `meets` | `data/tools.json:6`, 22, 80 to 98 |
 | `find` and `use` hold a role to its contract | `scripts/spark/records/tool_finder.py:300` to 302, 531 to 538 |
 | The Adapter and its four methods | `scripts/spark/build/board_engine.py:112` to 162 |
-| The build names `TscircuitEngine`, `board.tsx` and `circuit.json` | `build_service.py:210`, 284, 305, and `board_engine.py:129`, 133 to 135 |
+| The build names `TscircuitEngine`, `board.tsx` and `circuit.json` | `build_service.py:211`, 284, 305, and `board_engine.py:129`, 133 to 135 |
 | The build counts errors by the element's type | `build_service.py:70` to 74 |
 | The netlist reads the built circuit | `build_service.py:112`, `scripts/spark/design/netlist.py:41` |
 | The writer takes the placement as an argument | `scripts/spark/design/board_emitter.py:130` to 132, `board_sections.py:478` |
@@ -368,4 +376,5 @@ tool and opened no picture.
 - Does a build note already name a rail with no current, beside the comment in the file?
 - The size on disk of tscircuit's 298 packages, and KiCad's licence text.
 - `tsci export -f step` and `-f glb` did not run.
-- Does Fusion's 80 cm² limit apply to an imported STEP file?
+- Does Fusion's 80 cm² limit apply to an imported STEP file? Autodesk's page returned HTTP 403 to the refuter.
+- No DRC ran at a fab's real clearance. JLCPCB's minimum spacing was not read.

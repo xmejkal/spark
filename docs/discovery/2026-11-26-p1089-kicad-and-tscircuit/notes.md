@@ -2,7 +2,7 @@
 
 The raw evidence for the finding, written by the kicad-spike session on 2026-11-26, 06:57 to 07:35 CET. Every run
 was in a scratch copy under the session's job folder. Nothing in a project folder or in the store changed. The
-architect writes `finding.md` from these notes.
+architect wrote `finding.md` from these notes.
 
 ## Setup
 
@@ -55,8 +55,9 @@ The test removed `automaticPoursEnabled` from `board.tsx` and added `<copperpour
 and the same line for `bottom`. `tsci build` gave 0 errors, 3 GND pour pieces (1 top, 2 bottom), 10 traces and 4
 vias. Picture: `pcb-one-gnd-pour.png`. KiCad on its export gave 212 findings: 199 isolated copper, 2 copper to edge,
 9 text heights and 2 library warnings. After `kicad-cli pcb drc --refill-zones` it gave the same 11 as above. So
-tscircuit's own fill still leaves what KiCad calls isolated copper, and KiCad's refill removes it. 3V3 then reaches
-the e-paper by a trace.
+tscircuit's own fill still leaves what KiCad calls isolated copper, and KiCad's refill removes it. 3V3 reaches the
+e-paper by a trace in every build, with or without this change. The refuter found that the export's netclass
+clearance is 0.1 mm, and that at 0.2 mm both boards give 6 clearance errors.
 
 ## Question 2: KiCad
 

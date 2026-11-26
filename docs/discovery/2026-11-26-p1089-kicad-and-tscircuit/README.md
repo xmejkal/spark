@@ -10,12 +10,13 @@ The raw evidence, with every command and count, is [notes.md](notes.md).
 - One ground pour per layer, two lines in the board file, gives a clean board. The picture below shows both.
 - The other faults are spark's own board file. The modules have no body, the boards are large and empty, every trace
   is 0.15 mm, and the schematic names nets by pin.
-- The autorouter is not at fault. Its routes are short, they repeat, and KiCad finds no error in them.
+- The autorouter is not at fault. Its routes are short and they repeat. KiCad finds no error in them at the
+  export's own 0.1 mm clearance, and 6 clearance errors at 0.2 mm.
 - kicad-cli 10.0.6 runs headless on tscircuit's own KiCad export. It fills zones, checks the board, renders it and
   writes STEP. It cannot place or route.
 - The recommendation is tscircuit with one ground pour, then kicad-cli as an optional export after the build. A
   KiCad MCP server waits. A Strategy seam keeps the board engine exchangeable.
-- The recommendation is the PO's to decide.
+- The PO decides on the recommendation.
 
 ## Before and after
 
