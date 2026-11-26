@@ -154,7 +154,8 @@ def with_deploy_now(project, said, now, deploy=None):
     it here, as `image_fact` reads the image: a fact on every Phase would change the phases' JSON). Else `said` as it is."""
     if not (now and now.phase == flow_codes.DEPLOY):
         return said
-    told = deploy_reading.deploy_now(deploy or deploy_reading.read_deploy(project))
+    state = deploy or deploy_reading.read_deploy(project)
+    told = deploy_reading.deploy_now(state)
     return dict(said, by=told.by, says=told.says, chat_offer=chat_offer_of(told)) if told else said
 
 

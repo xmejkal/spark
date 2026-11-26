@@ -98,14 +98,14 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the firmware beside a current sheet loses the wiring job (P977)",
-  "find": "flow_codes.TWO_JOBS_NOW % count) if count is not None else",
-  "replace": "flow_codes.FIRMWARE_NOW) if count is not None else"
+  "find": "flow_codes.TWO_JOBS_NOW % count, (now.phase, now.status))",
+  "replace": "flow_codes.FIRMWARE_NOW, (now.phase, now.status))"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the two jobs name Claude alone (P977 review 6)",
-  "find": "    by, says = ([flow_codes.BY_YOU, flow_codes.BY_CLAUDE],",
-  "replace": "    by, says = ([flow_codes.BY_CLAUDE],"
+  "find": "    sentence = flow_codes.NowSentence([flow_codes.BY_YOU, flow_codes.BY_CLAUDE],",
+  "replace": "    sentence = flow_codes.NowSentence([flow_codes.BY_CLAUDE],"
  },
  {
   "file": "scripts/spark/flow/guide.py",
