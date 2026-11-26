@@ -53,6 +53,29 @@ class BriefTest(unittest.TestCase):
         (folder / ".spark" / "project.json").mkdir(parents=True)
         self.assertIsNone(Brief.from_project(folder).problem)
 
+    def test_read_gives_the_brief_and_why_it_cannot_be_read(self):
+        """P1142: `Brief.read` is (the brief, None), (the empty brief, the problem word) or (the empty brief, the error's text)."""
+        folder = Path(tempfile.mkdtemp())
+        (folder / ".spark").mkdir()
+        brief_file = folder / ".spark" / "project.json"
+        brief_file.write_text('{"goal": "a lamp"}')
+        self.assertEqual(Brief.read(folder), (Brief(goal="a lamp"), None))
+        brief_file.write_text("{not json")
+        self.assertEqual(Brief.read(folder), (Brief(problem="bad-json"), "bad-json"))
+        if os.geteuid() != 0:  # root reads any file
+            brief_file.chmod(0)
+            try:
+                brief, why = Brief.read(folder)
+            finally:
+                brief_file.chmod(0o600)
+            self.assertEqual(brief, Brief())
+            self.assertIn("Permission denied", why)
+
+    def test_has_goal_is_true_for_a_text_with_a_character_other_than_white_space(self):
+        """P1142: the idea's rule for a goal."""
+        self.assertEqual([Brief(goal=goal).has_goal for goal in (None, "", "  ", "\n", "a lamp", " a lamp ")],
+                         [False, False, False, False, True, True])
+
     def test_a_wrong_must_leaves_prefer_and_sellers_as_they_were_read(self):
         brief = brief_of('{"must": "A", "prefer": ["Seeed"], "sellers": ["GME"]}')
         self.assertEqual((brief.must, brief.prefer, brief.sellers), ((), ("seeed",), ("gme",)))

@@ -28,7 +28,10 @@ PHASE_PROBLEMS, PHASE_COULD_NOT_RUN = "phase_problems", "phase_could_not_run"
 
 #: What a phase says when nobody recorded a value.
 UNKNOWN = "unknown"
-IDEA_MESSAGE = "Tell Claude your goal in the chat"
+#: The idea phase (P1142): the brief's goal as the person wrote it, or the fact that the brief holds none. The instruction to
+#: tell Claude the goal is IDEA_NOW's, the guide's NOW, and only while the idea is now.
+GOAL_MESSAGE = "your goal is “%s”"
+NO_GOAL_MESSAGE = "the brief holds no goal"
 NEEDS_MESSAGE = "%d need(s): %s"
 NO_NEEDS_MESSAGE = "no needs yet: Claude writes them from your goal"
 #: The needs phase when the goal or the must lines changed after the needs were written (P1027): what changed, by
@@ -407,6 +410,8 @@ STALE_DEPLOY_NOW = {FIRMWARE_NEWER: ([BY_CLAUDE], FIRMWARE_NEWER_MESSAGE + " Ask
 #: The guide's one line when no phase is open: the deploy is ok (P1043, `guide.no_open_phase`).
 NO_OPEN_PHASE_NOW = ("Nothing is waiting on you: the last deploy started the image this project holds now. Tell Claude what "
                      "to change next.")
+#: The goal is in the brief and no need is written (P1142).
+NEEDS_NOW = "Ask Claude in the chat to write the needs from your goal."
 NEEDS_STALE_NOW = ("Your goal or must lines changed after the needs were written. "
                    "Ask Claude to go through the needs and the must lines with you.")
 #: The idea phase after a need was dropped (P1027, slice 2): the ids, then what Claude asks and how it is taken back. No
@@ -424,6 +429,7 @@ PROBLEMS_NOW = "The %s phase has problems. Ask Claude to go through them with yo
 COULD_NOT_RUN_NOW = "The %s phase could not run. Ask Claude to read you why."
 NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (IDEA, STALE): IDEA_STALE_NOW,
                  (NEEDS, STALE): NEEDS_STALE_NOW,
+                 (NEEDS, NOT_STARTED): NEEDS_NOW,
                  (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW, (PARTS, OK_WORD): ALL_ASIDE_NOW,
                  (REQUIREMENTS, NOT_STARTED): REQUIREMENTS_NOW,
                  (BUILD, NOT_STARTED): BUILD_NOW, (BUILD, STALE): BUILD_STALE_NOW, (BUILD, PARTIAL): BUILD_PARTIAL_NOW,
