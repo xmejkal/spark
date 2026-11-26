@@ -6,7 +6,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 
 From council/synthesis.md part 6. Comments on open cards come first, and a new card only where no card owns the job
 (council/po-assistant.md PA-6). N1 to N4 are working names. spark-main reads the next free P-number just before it
-files each one. Items 4, 5 and 9 wait on the PO's answer to Q4, and item 10 on Q5. The question numbers are the brief's. Before the MVP nothing here is code.
+files each one. Items 4, 5 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answered both, each with option (a). The question numbers are the brief's. Before the MVP nothing here is code.
 
 ## 1. A comment on P1199 #1747: the first evidence is Q1's answer and the 14-day log
 - type: comment on an open card (no change of scope) <!-- REQUIRED:item-type -->
