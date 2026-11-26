@@ -5,8 +5,8 @@ status: proposed, or filed D<n>.
 e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)` -->
 
 From council/synthesis.md part 6. Comments on open cards come first, and a new card only where no card owns the job
-(council/po-assistant.md PA-6). N1 to N4 are working names. spark-main reads the next free P-number just before it
-files each one. Items 4, 5 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answered both, each with option (a). The question numbers are the brief's. Before the MVP nothing here is code.
+(council/po-assistant.md PA-6). N1 to N4 were working names. This session read the next free P-number just before it
+filed each one, on spark-main's word (D10). Items 4, 5, 7 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answered both, each with option (a). The question numbers are the brief's. Before the MVP nothing here is code.
 
 ## 1. A comment on P1199 #1747: the first evidence is Q1's answer and the 14-day log
 - type: comment on an open card (no change of scope) <!-- REQUIRED:item-type -->
@@ -60,7 +60,7 @@ files each one. Items 4, 5 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answ
 
 ## 6. N1: the words for layout, layout edit, join and footprint, and the three op names (after the MVP)
 - type: chore
-- needed by: "one seam per strategy, chosen by a setting, behind an Operation, interfaces thin, nothing twice" (the PO, 2026-11-26, #1747)
+- needed by: "the architecture needs to be well made so that we can change these srtrategies and tools and its reusable, dry, etc etc" (the PO, 2026-11-26, his standing line for every brief, in the store's spark-main handover note)
 - value proven by: docs/guide/words.md holds the four rows and says which "layout" is which (BreadboardLayout against PillLayout)
 - depends on: —
 - status: filed D10: P1236 #1789, a sub-issue of #1747, Idea, Views and editors
@@ -71,7 +71,7 @@ files each one. Items 4, 5 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answ
 ## 7. N2: the walking skeleton of the layout core on the breadboard (after the MVP)
 - type: story
 - needed by: "Can we refactor out some protocole or omdule or class or whatever to reuse for these common problems?" (the PO, 2026-11-26, #1747)
-- value proven by: `layout.py edit --part ... --hole ... --dry-run` names a refusal before any write, a part edit stays after a rebuild on the FireBeetle full board, and tests.test_golden_breadboard keeps 9 of 9. The edit's key reuses bench_changes' step key
+- value proven by: `layout.py edit --part ... --hole ... --dry-run` names a refusal before any write, a part edit stays after a rebuild on the FireBeetle full board, and tests.test_golden_breadboard keeps 8 of 9, with the rebuild golden's diff read and accepted (D13). The edit's key reuses bench_changes' step key
 - depends on: N1, D3 (after the MVP), D4, D6, and #94's breadboard PR (council/tech-lead.md cost table)
 - status: filed D10: P1237 #1790, a sub-issue of #1747, Idea, Views and editors
 - label (the repository's type label): story
