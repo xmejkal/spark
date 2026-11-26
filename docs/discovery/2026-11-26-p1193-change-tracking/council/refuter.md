@@ -97,7 +97,7 @@ Five verdicts that matter most:
 - **★C20 · holds.**
   - `//` keys: 28 of 28 records.
   - `based_on.project`: 7 of 28 records.
-  - 2 fact sources name him and "~/Development/spark-walks/p934-display2/…".
+  - 2 fact sources name him and "<walks>/p934-display2/…" (the main session replaced a home path here).
 - **★C21 · holds.** Reproduced in my scratch store, as described under "Check first".
 - **★C22 · holds.** tool_finder.py:531: "def use(role, tool_name, project=None, personal=None):". tools.json has 14 roles and no git entry. Note that `use` checks a contract only when the role has one (:535).
 - **★C23 · holds, but the claim is weaker than it looks.**

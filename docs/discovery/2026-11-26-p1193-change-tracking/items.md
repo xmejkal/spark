@@ -121,7 +121,7 @@ PO's yes to this list.
 
 ## N3 — the store has no shared side → the shared records Service on the same seam: a receive as a read-only layer first, then the filter and the share (story map slices 7 to 10)
 - type: epic <!-- REQUIRED:item-type -->
-- needed by: "definitely pushing and pulling things to some central repo, like the parts maybe and probably more things, the learned facts about parts, svg pictures" (the PO, 2026-11-26, #1738), D2 to D4 <!-- REQUIRED:needed-by -->
+- needed by: "definitely pushing and pulling things to some central repo, like the parts maybe and probably more things, the learned facts about parts, svg pictures" (the PO, 2026-11-26, #1738), and the discovery's D2 to D4, D7 to D12 <!-- REQUIRED:needed-by -->
 - value proven by: outcome (4) of brief.md's Frame, then the public repository's first commit, which the PO reads before and after <!-- REQUIRED:value-proven-by -->
 - depends on: slice 0's seam (P1151 with P1152's first slice), the PO's answers P4 and P5, and the settings of brief.md's "Settings this epic names", which move into P1194 #1740 when it exists <!-- REQUIRED:depends-on -->
 - status: filed D19 as P1203 #1752 <!-- REQUIRED:item-status -->
