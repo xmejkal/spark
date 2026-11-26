@@ -167,9 +167,9 @@ The sizes XS to L are the architect's estimates, with no measured base (H, counc
 ## Board actions <!-- REQUIRED:spark-process:board-actions -->
 - move #1745 to Discovery · taken by spark-main by 15:02 CET 2026-11-26, before this session started
 - set Waiting on: the PO and Waiting since on #1745 while round 1 waits · pending, spark-main's to take
-- list the eight overlapping cards of C28 on #1745, and add one line each for the later slices (a kept body file, the viewer, the `cad-tool` entry, a case for a spark board with its fit check, the perfboard's filler, the P1198 jig) · pending, needs the PO's yes
-- a comment on #1745 that links this brief · pending, at the close
-- file the items of items.md · pending, needs the PO's yes to the list
+- list the eight overlapping cards of C28 on #1745, and add one line each for the later slices · taken D16, 2026-11-26, in a comment on #1745
+- a comment on #1745 that links this brief · taken D16, 2026-11-26, the same comment
+- file the items of items.md · taken D16, 2026-11-26: P1247 #1804, P1248 #1805, P1249 #1806, P1250 #1807, and the edits of #1729 and #1727
 
 ## Hand-off
 not yet: the frame, the jobs, a direction and the remaining risk are unconfirmed <!-- REQUIRED:handoff -->
