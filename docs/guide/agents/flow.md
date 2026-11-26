@@ -300,8 +300,7 @@ words on purpose:
 | `build` | `build-board` | `check_spine.py` |
 | `needs-drop:<need>` | `needs-drop` | `parts.py` |
 
-A pick is the person's choice. Its step has `needs_person: true`, and `why` names the part and the need: ask the person
-first. The offers in `data.phases` keep their four keys and no step. A phase's own step adds no offer:
+A pick is the person's choice. Its step has `needs_person: true`, and `why` names the part and the need: ask the person first. The offers in `data.phases` keep their four keys and no step. A phase's own step adds no offer:
 
 | now phase | when | op (script) | `needs_person` |
 | --- | --- | --- | --- |
@@ -309,6 +308,7 @@ first. The offers in `data.phases` keep their four keys and no step. A phase's o
 | simulate | no image, an image no run tested, or one older than `firmware/` | `run_scenario` (`run_scenario.py`), one per `sim/scenarios/*.scenario.yaml`. While none is written, it names `sim/scenarios/<name>.scenario.yaml`, and Claude writes that scenario first | true |
 | deploy | `not-started`, `partial`, `problems` or `stale` | `look` (`look.py`), with `--no-simulation` when `data.guide.no_simulation` is set | true |
 | idea | `stale` (a need was dropped) | `init_project` (`init_project.py`), the brief step, with `needs_yes: true` and `--answers <answers.json>` | no key |
+| parts | `not-started` or `partial`, and no one pick offer ([P1141](https://github.com/xmejkal/spark/issues/1676)) | `pick` (`parts.py`), one step with `<need>=<part>` for each need in `data.guide.now.needs`. Claude fills each `<part>` with the person's choice | true |
 
 `run-request` runs the build step from the page's button, and refuses `run_scenario` and `look`. An op named like a
 script is `scripts/<op>.py`, not on the core yet (piece 5 of [P793](https://github.com/xmejkal/spark/issues/1105)). With
@@ -316,10 +316,10 @@ script is `scripts/<op>.py`, not on the core yet (piece 5 of [P793](https://gith
 before each run. Before a look, they plug the wired board into USB. After a deploy, the deploy phase reads the newest
 board log (P1043). Ready seen on the image the project holds now is `ok`, and nothing is open. Ready unknown is `partial`, ready not seen is `problems`, and so is a flash that did not finish, which wins over `stale` (the board may be erased). Firmware newer than that image, another image or no image is `stale`, which wins over ready not seen; the says line keeps the verdict. Claude acts first on firmware newer than the image and on no image (`by` `["claude"]`), the person's terminal on another image. The cause's words are spark's own, by the code: the log's own sentence, port and console stay in the file. `sim/runs/` is in spark's section of the project's `.gitignore`, so a clone has no board log and shows the deploy `not-started`. The text's NOW line ends with `[<offer key>]`, `[next: <op>]` or `[next: <op>, needs you]`. The text starts with the guide's lines (NOW, or the line that says nothing is open, then DONE, LATER, the no-simulation line and SET ASIDE), then one line per phase, so its first line is the next step ([P1142](https://github.com/xmejkal/spark/issues/1677)). With neither NOW nor that line (only a test's swapped readers), the first line is DONE.
 
-After an ok run that writes to a project, `parts.py --pick` and `check_spine.py --keep` end `next` with the same steps
+After an ok run that writes to a project, `parts.py --pick`, `parts.py --move-hold --apply` and `check_spine.py --keep` end `next` with the same steps
 ([P1035](https://github.com/xmejkal/spark/issues/1518)), after the command's own, and their text with one `next:` line each,
 with `, needs you` after the command for a step with `needs_person` or `needs_yes`, as on the NOW line. A run that is not `ok`, a dry run, a build without
-`--keep` and a step that runs the same again get none. Claude fills a `<name>` or an `<answers.json>` before the line runs. A follow-up that fails adds `follow-up: <class> raised, the result stands` on stderr. Then, after a run that writes and did not crash, at any status, and after `deploy.py` too ([P1069](https://github.com/xmejkal/spark/issues/1567), not `--dry-run`, and with no step added), when the project already has `page.html` as a regular file (no folder, FIFO or link), spark writes it again on disk, whole or not at all, and never publishes it (the PO's D16): the text ends with `wrote page.html again: /spark:page publishes it`, and `--json` holds that sentence as a note with `subject` `page.html` (the build's flat `--json` holds no note). A build with `--keep` that kept files writes its own page; one that stopped before it kept anything gets the page written again. A write that fails adds `refresh: <class> raised, page.html not written again, the result stands` on stderr; the old page and the run's status, items, `next`, `data` and text stand.
+`--keep` and a step that runs the same again get none. Claude fills a `<name>`, an `<answers.json>` or a `<part>` before the line runs. A follow-up that fails adds `follow-up: <class> raised, the result stands` on stderr. Then, after a run that writes and did not crash, at any status, and after `deploy.py` too ([P1069](https://github.com/xmejkal/spark/issues/1567), not `--dry-run`, and with no step added), when the project already has `page.html` as a regular file (no folder, FIFO or link), spark writes it again on disk, whole or not at all, and never publishes it (the PO's D16): the text ends with `wrote page.html again: /spark:page publishes it`, and `--json` holds that sentence as a note with `subject` `page.html` (the build's flat `--json` holds no note). A build with `--keep` that kept files writes its own page; one that stopped before it kept anything gets the page written again. A write that fails adds `refresh: <class> raised, page.html not written again, the result stands` on stderr; the old page and the run's status, items, `next`, `data` and text stand.
 
 ## A page request
 

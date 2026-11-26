@@ -897,6 +897,12 @@ class TheHoldersTest(unittest.TestCase):
         held = [{"used_in": {"alarm": 1, "alarm-2": 1, "Alarm": 1}}, {"count": 1}, {"used_in": None}]
         self.assertEqual(drawer.holders_of(held, "alarm"), ["Alarm", "alarm-2"])
 
+    def test_the_pieces_this_project_holds_add_up_over_its_entries_and_a_missing_hold_is_none(self):
+        # P1141: --match says how many pieces the asking project holds, beside the other holders
+        held = [{"used_in": {"alarm": 1, "zebra": 2}}, {"count": "many", "used_in": {"alarm": 2}}, {"count": 1}, {"used_in": None}]
+        self.assertEqual((drawer.held_here(held, "alarm"), drawer.held_here(held, "zebra"), drawer.held_here(held, "other")), (3, 2, 0))
+        self.assertEqual(drawer.held_here([], "alarm"), 0)
+
     def test_the_listing_gives_each_entry_its_holders(self):
         self.keep("xiao", "XIAO", {"reaction-game": 1, "alarm": 1})
         self.keep("wire", "a wire")

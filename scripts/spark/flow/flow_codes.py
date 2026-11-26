@@ -138,6 +138,8 @@ MAKES_STALE = {PICK: (REQUIREMENTS,), WRITE_REQUIREMENTS: (BUILD, BREADBOARD), B
 PICK_LABEL = "Pick “%s” for %s"
 #: The why of a pick's step (P1030): a pick is the person's choice, so the step names the part and the need.
 PICK_WHY = "The person's choice: “%s” for the %s need"
+#: The why of the parts phase's own step (P1141), a pick for each open need while no one offer does the job.
+PICK_OPEN_WHY = "The person's choice for each need: Claude fills each <part> with an id from parts.py --match, or the need is set aside."
 DROP_LABEL = "Drop the %s need"
 REQUIREMENTS_LABEL = "Write the parts list"
 BUILD_LABEL = "Build the board"

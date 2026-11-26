@@ -380,6 +380,12 @@ def holders_of(entries, mine):
     return sorted({who for entry in entries for who in entry.get("used_in") or {} if who != mine})
 
 
+def held_here(entries, mine):
+    """The pieces of these drawer entries that the asking project `mine` holds (P1141): its `used_in` count in each, added
+    up; 0 when it holds none. `holders_of` names the other projects."""
+    return sum((entry.get("used_in") or {}).get(mine, 0) for entry in entries)
+
+
 def listing():
     """Every entry as the drawer shows it (§8 D4): its key, label, count, what it is and where that lives, unsure, skip, holders."""
     known, shown = linkable(), []

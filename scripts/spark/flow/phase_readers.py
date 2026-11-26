@@ -347,15 +347,10 @@ def owed_facts(plan, key):
     return [fact for fact in record_kind.owes(record) if fact not in passed] if isinstance(record, dict) else []
 
 
-def needs_holding(plan, key):
-    """The ids of the needs whose picks are the record `key`, a pick of its drawer entry too (`needs.as_record`)."""
-    return [need["id"] for need in plan.current
-            if any(key in needs.as_record(pick, plan.known, plan.entries).values() for pick in need.get("pick") or [])]
-
-
 def named_pick(plan, key):
-    """A part pick as a person reads it: “<name>” for <needs>, or “<name>” when no need's pick is that record."""
-    named, by = "“%s”" % plan.name_of(key), ", ".join(needs_holding(plan, key))
+    """A part pick as a person reads it: “<name>” for <needs>, or “<name>” when no need's pick is that record. `key` is a
+    part record's id (the parts list's part picks), so only the needs that pick that part count (P1141)."""
+    named, by = "“%s”" % plan.name_of(key), ", ".join(plan.picked_for(key, "part"))
     return flow_codes.PICKED_BY % (named, by) if by else named
 
 

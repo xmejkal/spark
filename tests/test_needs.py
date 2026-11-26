@@ -284,6 +284,132 @@ def a_store_with_a_drawer():
     return home
 
 
+class TheMatchReadsThePicksTest(unittest.TestCase):
+    """P1141 (#1676), the PO's P829 walk: after a pick, --match says how many pieces the project holds and which needs pick
+    each candidate, and --needs says each need's pick. `free` keeps its meaning: free to this project (P403)."""
+
+    def setUp(self):
+        self.home, self.project = a_store_with_a_drawer(), Path(tempfile.mkdtemp()) / "plant-alarm"
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def with_needs(self, needs):
+        (self.project / ".spark").mkdir(parents=True, exist_ok=True)
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": needs}))
+
+    def candidates(self):
+        """{need: {id or entry and kind: candidate}} of --match, every page."""
+        said, code = run(["--match", str(self.project)])
+        self.assertEqual(code, 0, said)
+        matched = list(said["data"]["needs"])
+        while said["truncated"] and said["truncated"]["next"]:
+            said, _ = run(["--match", str(self.project), "--from", str(len(matched))])
+            matched += said["data"]["needs"]
+        return {need["need"]: {(c["id"] or c["entry"], c["kind"]): c for c in need["candidates"]} for need in matched}
+
+    def text(self, flag):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            parts.main([flag, str(self.project)])
+        return out.getvalue().splitlines()
+
+    def test_a_picked_record_says_the_pieces_held_here_and_the_needs_that_pick_it(self):
+        self.with_needs([{"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "wet", "does": "sense", "what": "soil-moisture"},
+                         {"id": "alarm", "does": "sound", "what": "speaker"}])
+        run(["--pick", str(self.project), "soil=x-soil", "wet=x-soil", "alarm=speaker"])
+        found = self.candidates()
+        soil, speaker = found["soil"][("x-soil", "part")], found["alarm"][("speaker", None)]
+        self.assertEqual((soil["owned"], soil["free"], soil["held_here"], soil["picked_for"]), (8, 8, 2, ["soil", "wet"]))
+        self.assertEqual((speaker["held_here"], speaker["picked_for"]), (1, ["alarm"]))
+        line = next(line for line in self.text("--match") if "x-soil (catalog)" in line)
+        self.assertIn("  free 8 (2 held by this project)  owes ", line)
+        self.assertTrue(line.endswith("  [picked for soil, wet]"), line)
+
+    def test_one_board_for_three_needs_is_one_piece_held_and_each_need_is_named(self):
+        # the walk: board, button and light each picked the T-Display, and --match said only "free 1"
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}}))
+        self.with_needs([{"id": "board", "does": "compute", "what": "microcontroller"}, {"id": "light", "does": "indicate", "what": "light"},
+                         {"id": "blink", "does": "indicate", "what": "light"}])
+        run(["--pick", str(self.project), "board=xiao-esp32-c6", "light=xiao-esp32-c6", "blink=xiao-esp32-c6"])
+        xiao = self.candidates()["light"][("xiao-esp32-c6", "board")]
+        self.assertEqual((xiao["owned"], xiao["free"], xiao["held_by"], xiao["held_here"], xiao["picked_for"]),
+                         (1, 1, [], 1, ["board", "light", "blink"]))
+        line = next(line for line in self.text("--match") if "xiao-esp32-c6 (library)" in line)
+        self.assertIn("free 1 (1 held by this project)  [picked for board, light, blink]", line)
+
+    def test_the_pieces_held_here_come_before_the_other_holders(self):
+        # the PR lens: "free 3, held by alarm2 (1 held by this project)" read as the other project's hold
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 3, "is": {"board": "xiao-esp32-c6"},
+                                                                    "used_in": {"door-bell": 1}}))
+        self.with_needs([{"id": "board", "does": "compute", "what": "microcontroller"}])
+        run(["--pick", str(self.project), "board=xiao-esp32-c6"])
+        line = next(line for line in self.text("--match") if "xiao-esp32-c6 (library)" in line)
+        self.assertIn("free 2 (1 held by this project), held by door-bell  [picked for board]", line)
+
+    def test_a_many_count_a_hold_with_no_pick_and_a_part_nobody_holds(self):
+        (self.home / "drawer" / "buttons.json").write_text(json.dumps({"schema": 1, "label": "a bag of buttons", "count": "many",
+                                                                        "is": {"part": "tactile-button"}, "used_in": {"plant-alarm": 1}}))
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
+        self.with_needs([{"id": "input", "does": "input", "what": "button"}, {"id": "soil", "does": "sense", "what": "soil-moisture"}])
+        found = self.candidates()
+        button, soil = found["input"][("tactile-button", "part")], found["soil"][("x-soil", "part")]
+        self.assertEqual((button["free"], button["held_here"], "picked_for" in button), ("many", 1, False))
+        self.assertFalse({"held_here", "picked_for"} & set(soil), "a key only when this project holds or picks it")
+        lines = self.text("--match")
+        self.assertTrue(next(line for line in lines if "tactile-button (" in line).endswith("free many (1 held by this project)"))
+        soil_line = next(line for line in lines if "x-soil (catalog)" in line)
+        self.assertIn("  free 8  owes ", soil_line)
+        self.assertNotIn("this project", soil_line)
+        self.assertNotIn("[picked", soil_line)
+
+    def test_a_record_and_a_drawer_entry_of_one_key_are_two_candidates_and_only_the_picked_one_is_marked(self):
+        # the refuter's R2-2: a pick names a kind, so an entry "led" is not the record "led"
+        self.catalog_led()
+        (self.home / "drawer" / "led.json").write_text(json.dumps({"schema": 1, "label": "loose LEDs", "count": 5,
+                                                                    "function": [{"does": "indicate", "what": "light"}]}))
+        self.with_needs([{"id": "light", "does": "indicate", "what": "light", "pick": [{"entry": "led"}]}])
+        found = self.candidates()["light"]
+        self.assertEqual((found[("led", None)]["picked_for"], found[("led", "part")].get("picked_for")), (["light"], None))
+
+    def catalog_led(self):
+        (self.home / "catalog" / "led.json").write_text(json.dumps({"schema": 1, "id": "led", "name": "A red LED", "kind": "led",
+                                                                    "function": [{"does": "indicate", "what": "light"}]}))
+
+    def test_a_pick_of_a_record_s_drawer_entry_and_a_need_set_aside_with_its_pick_are_named(self):
+        self.with_needs([{"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"entry": "probe"}]},
+                         {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True, "pick": [{"part": "x-soil"}]}])
+        self.assertEqual(self.candidates()["soil"][("x-soil", "part")]["picked_for"], ["soil", "wet"])
+        plan = needs.PickPlan(self.project)
+        self.assertEqual((plan.picked_for("x-soil"), plan.picked_for("x-soil", "part"), plan.picked_for("x-soil", "entry"),
+                          plan.picked_for("probe", "entry")), (["soil", "wet"], ["soil", "wet"], [], []))
+        self.assertEqual(plan.needs_picking("x-soil", "wet"), ["soil"])  # C1: one rule; an old entry pick of a record counts
+        # the PR refuter: a refused hold names the stored key, here the entry, so a pick with no kind matches it too
+        self.assertEqual((plan.picked_for("probe"), plan.needs_picking("probe", "wet")), (["soil"], ["soil"]))
+
+    def test_a_part_named_for_the_parts_list_counts_only_the_needs_that_pick_that_part(self):
+        # the fix refuter: a record id equal to another record's drawer entry key named the entry's need too
+        from spark.flow.phase_readers import named_pick
+        (self.home / "catalog" / "probe.json").write_text(json.dumps({"schema": 1, "id": "probe", "name": "A pH probe", "kind": "sensor",
+                                                                      "function": [{"does": "sense", "what": "acidity"}]}))
+        self.with_needs([{"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"entry": "probe"}]},
+                         {"id": "acid", "does": "sense", "what": "acidity", "pick": [{"part": "probe"}]}])
+        plan = needs.PickPlan(self.project)
+        self.assertEqual((named_pick(plan, "probe"), named_pick(plan, "x-soil")),
+                         ("“A pH probe” for acid", "“Capacitive soil moisture sensor” for soil"))
+
+    def test_the_needs_text_says_each_pick_before_the_aside_tag(self):
+        self.with_needs([{"id": "soil", "does": "sense", "what": "soil-moisture", "mark": "have", "pick": [{"part": "x-soil"}]},
+                         {"id": "alarm", "does": "sound", "what": "speaker", "pick": [{"entry": "speaker"}, {"entry": "mp3"}]},
+                         {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True, "pick": [{"part": "x-soil"}]},
+                         {"id": "dry", "does": "sense", "what": "soil-moisture"}])
+        lines = {line.split()[0]: line for line in self.text("--needs")}
+        self.assertTrue(lines["soil"].endswith("[have]  picked: x-soil"), lines["soil"])
+        self.assertTrue(lines["alarm"].endswith("  picked: speaker, mp3"), lines["alarm"])
+        self.assertTrue(lines["wet"].endswith("  picked: x-soil  [aside]"), lines["wet"])
+        self.assertNotIn("picked", lines["dry"])
+
+
 class TheConditionOrdersTest(unittest.TestCase):
     """P1015: a need's condition orders its candidates and leaves every score as it is (the walk p934-display's screen)."""
 
@@ -544,7 +670,7 @@ class TheMatcherTest(unittest.TestCase):
     def test_a_match_names_who_holds_a_board_and_the_asking_project_is_left_out(self):
         self.hold_the_xiao("reaction-game", "plant-alarm", "plant-alarm-2")
         self.assertEqual(self.xiao()["held_by"], ["plant-alarm-2", "reaction-game"])
-        self.assertIn("free 0, held by plant-alarm-2, reaction-game", self.board_text())
+        self.assertIn("free 0 (1 held by this project), held by plant-alarm-2, reaction-game", self.board_text())  # P1141
 
     def test_a_candidate_nobody_holds_says_no_holder(self):
         self.assertEqual(self.xiao()["held_by"], [])
@@ -557,7 +683,8 @@ class TheMatcherTest(unittest.TestCase):
         (self.home / "drawer" / "xiao.json").write_text(json.dumps({
             "schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}, "used_in": {own: 1}}))
         self.assertEqual(self.xiao()["held_by"], [])
-        self.assertNotIn("held by", self.board_text())
+        self.assertNotIn(", held by", self.board_text())  # P1141: the line says the project's own piece in its own words
+        self.assertIn("free 1 (1 held by this project)", self.board_text())
 
     def test_a_holder_name_with_a_newline_shows_a_question_mark_in_the_match_text(self):
         self.hold_the_xiao("reaction\ngame")
@@ -901,6 +1028,14 @@ class ThePicksTest(unittest.TestCase):
             parts.main(argv)
         return out.getvalue()
 
+    def next_line(self):
+        """The next: line a pick that wrote ends with (P1141): the flow's parts step for the needs it leaves open."""
+        from spark.flow.now_follow_up import FlowFollowUp
+        from spark.flow.show_flow import flow_and_guide, now_steps
+        step = now_steps(self.project, *flow_and_guide(self.project))[0]
+        self.assertTrue(step.op == "pick" and all(pair.endswith("=<part>") for pair in step.argv[2:]), step)
+        return FlowFollowUp().line(step)
+
     def test_the_bin_s_only_board_is_refused_naming_who_holds_it(self):
         said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])
         self.assertEqual((said["status"], code), ("problems", 1))
@@ -1157,7 +1292,7 @@ class ThePicksTest(unittest.TestCase):
             "  mp3: maybe owned — check the drawer first",
             "  listed plant-alarm on your projects",
             "  wrote to your history: 2 reused",
-            "  needs.json names your drawer entry mp3 — a key made from your label, in the project's own file", ""]))
+            "  needs.json names your drawer entry mp3 — a key made from your label, in the project's own file", self.next_line(), ""]))
 
     def test_a_refused_pick_says_its_notes_between_what_it_would_have_changed_and_what_it_refused(self):
         self.assertEqual(self.text(["--pick", str(self.project), "alarm=mp3", "board=firebeetle2-esp32s3"]), "\n".join([
@@ -1281,7 +1416,7 @@ class ThePicksTest(unittest.TestCase):
             "  probe: the drawer entry of x-soil — picked as that record",
             "  listed plant-alarm on your projects",
             "  wrote to your history: 2 reused",
-            "  needs.json names your drawer entry old-amp — a key made from your label, in the project's own file", ""]))
+            "  needs.json names your drawer entry old-amp — a key made from your label, in the project's own file", self.next_line(), ""]))
 
     def test_a_drawer_entry_of_a_board_picked_by_its_key_is_a_pick_of_that_board(self):
         run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
@@ -1299,7 +1434,7 @@ class ThePicksTest(unittest.TestCase):
             "  beetle-c6: a board needs a board file — a record in boards/ — before spark can build with it",
             "  listed plant-alarm on your projects",
             "  wrote to your history: 2 reused",
-            "  needs.json names your drawer entries beetle-c6, speaker — a key made from your label, in the project's own file", ""]))
+            "  needs.json names your drawer entries beetle-c6, speaker — a key made from your label, in the project's own file", self.next_line(), ""]))
 
     def a_needs_file_from_before(self, need_id, pick):
         """The needs file as one written before a pick of an entry key became its record's — or edited by hand: `need_id`
@@ -2116,6 +2251,13 @@ class TheMoveHoldTest(unittest.TestCase):
         self.assertEqual(self.picks(self.other)["chime"], [{"entry": "speaker"}])
         self.assertEqual(said["data"]["projects"][1]["released"], [{"entry": "buzzer", "was": 1, "now": 0}])
         self.assertNotIn("move-hold", [step["op"] for step in said["next"]])
+
+    def test_a_move_into_a_parts_now_with_open_needs_ends_with_its_pick_step(self):
+        # P1141: the follow-up names the parts phase's own step after a move too (move_hold.py's written project is TO)
+        said, code = self.move("chime=speaker", "--apply")
+        self.assertEqual((said["status"], code), ("ok", 0))
+        self.assertEqual([(step["op"], step["argv"]) for step in said["next"]],
+                         [("pick", ["--pick", str(self.other.absolute()), "moist=<part>", "brain=<part>"])])
 
     def test_a_pick_by_its_drawer_entry_and_by_its_record_id_moves_the_one_stock(self):
         for given in ("moist=probe", "moist=x-soil"):

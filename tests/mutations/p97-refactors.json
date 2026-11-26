@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/design/needs.py",
   "name": "a candidate's free count is lost",
-  "find": "free=free, unsure=unsure)",
-  "replace": "free=0, unsure=unsure)"
+  "find": "free=free, unsure=unsure, **",
+  "replace": "free=0, unsure=unsure, **"
  },
  {
   "file": "scripts/spark/sourcing/write_answers.py",

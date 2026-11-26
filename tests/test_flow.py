@@ -1725,6 +1725,48 @@ class TheNextOnlyStepTest(FlowTest):
                 self.assertEqual((said["data"]["guide"]["now"]["phase"], [step["argv"] for step in said["next"]]),
                                  ("deploy", [["--project", str(project.absolute()), "--no-simulation"]]))
 
+    def open_needs(self, *ids):
+        return with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": one, "does": "sense", "what": "soil-moisture"} for one in ids])
+
+    def test_a_parts_now_with_open_needs_and_no_one_offer_names_one_pick_with_a_part_per_need(self):
+        # P1141: two open needs give two pick offers, so the now names no offer (`job_offer`) and the parts phase its own step
+        from spark.core.cli import values_of
+        from spark.design.pick_parts import PickParts
+        from spark.flow.flow_codes import PICK_OPEN_WHY
+        from spark.flow.phase_steps import PART_PLACEHOLDER
+        project = self.open_needs("soil", "wet")
+        said, _ = show(project)
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["offer"]), ("parts", None))
+        self.assertEqual(said["next"], [{"op": "pick", "argv": ["--pick", str(project.absolute()), "soil=<part>", "wet=<part>"],
+                                         "why": PICK_OPEN_WHY, "effects": ["reads", "writes"], "needs_yes": False, "needs_person": True,
+                                         "env": self.env()}])
+        self.assertEqual(PART_PLACEHOLDER, "<part>")
+        self.assertEqual(values_of(PickParts(), said["next"][0]["argv"])[0]["project_and_picks"][1:], ["soil=<part>", "wet=<part>"])
+        self.assertTrue(now_line(project).endswith(" [next: pick, needs you]"), now_line(project))
+
+    def test_a_parts_now_names_only_the_open_needs_and_none_when_every_need_is_aside_or_the_phase_has_problems(self):
+        partial = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "wet", "does": "sense", "what": "soil-moisture"},
+            {"id": "dry", "does": "sense", "what": "soil-moisture", "aside": True},
+            {"id": "pump", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]}])
+        self.assertEqual([step["argv"][2:] for step in show(partial)[0]["next"]], [["soil=<part>", "wet=<part>"]])
+        aside = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "dry", "does": "sense", "what": "soil-moisture", "aside": True}])
+        said = show(aside)[0]
+        self.assertEqual((statuses(said)["parts"], said["data"]["guide"]["now"]["phase"], said["next"]), ("ok", "parts", []))
+        problems = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "soil", "does": "sense", "what": "soil-moisture"},
+                                                                        {"id": "wet", "what": "soil-moisture"}])
+        said = show(problems)[0]
+        self.assertEqual((statuses(said)["parts"], said["data"]["guide"]["now"]["phase"], said["next"]), ("problems", "parts", []))
+
+    def test_the_idea_names_its_brief_step_only_when_it_is_stale(self):
+        from spark.flow import phase_steps
+        project = self.open_needs("soil")
+        guide = {"now": {"phase": "idea"}, "no_simulation": None}
+        stale, fresh = Phase("idea", STALE, None, [], [], []), Phase("idea", "ok", None, [], [], [])
+        self.assertEqual([step.op for step in phase_steps.steps_of(project, [stale], guide)], ["init_project"])
+        self.assertEqual(phase_steps.steps_of(project, [fresh], guide), [])
+        self.assertEqual(phase_steps.steps_of(project, [fresh], {"now": None, "no_simulation": None}), [])
+
     def test_no_next_only_op_is_one_the_page_runs(self):
         from spark.flow.run_request import STEP_OPERATIONS
         from spark.flow.write_flow_page import FlowPageStore, write_page
@@ -1808,6 +1850,23 @@ class TheFollowUpTest(FlowTest):
         self.assertEqual((code, lines[-1]), (0, FlowFollowUp().line(step)))
         self.assertTrue(lines[-1].startswith("  next: "), lines[-1])
         self.assertIn("/parts.py --pick %s wet=x-many%s — " % (other.absolute(), NEEDS_YOU), lines[-1])  # the review: the mark before the why
+
+    def test_a_first_pick_that_leaves_several_open_needs_ends_with_the_parts_step(self):
+        # P1141, the PO's P829 walk: the first pick (board) left two needs open and printed no next: line
+        import parts
+        from spark.flow.now_follow_up import FlowFollowUp
+        from spark.flow.show_flow import NEEDS_YOU, flow_and_guide, now_steps
+        project = self.open_needs("board", "button", "light")
+        lines, code = run_main(parts.main, ["--pick", str(project), "board=x-many", "--json"])
+        said = json.loads(lines[0])
+        self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertEqual([(step["op"], step["argv"][2:], step["needs_person"]) for step in said["next"]],
+                         [("pick", ["button=<part>", "light=<part>"], True)])
+        other = self.open_needs("board", "button", "light")
+        lines, code = run_main(parts.main, ["--pick", str(other), "board=x-many"])
+        step = now_steps(other, *flow_and_guide(other))[0]
+        self.assertEqual((code, lines[-1]), (0, FlowFollowUp().line(step)))
+        self.assertIn("/parts.py --pick %s 'button=<part>' 'light=<part>'%s — " % (other.absolute(), NEEDS_YOU), lines[-1])
 
     def test_a_dry_run_pick_names_no_flow_step(self):
         import parts
@@ -1901,7 +1960,8 @@ class TheFollowUpTest(FlowTest):
         from spark.flow.now_follow_up import STEP_SCRIPTS
         project = a_firmware(a_built_project())
         given = {"project": project, "need": "soil", "pick_id": "x-many", "name": "A soil probe", "no_simulation": False,
-                 "phase": types.SimpleNamespace(status=NS)}
+                 "phase": types.SimpleNamespace(status=NS), "pairs": ["soil=x-many"], "why": "the why",
+                 "guide": {"now": {"needs": ["soil"]}, "no_simulation": False}}
         ops = set()
         for module in (offer_steps, phase_steps):
             for name, builder in inspect.getmembers(module, inspect.isfunction):

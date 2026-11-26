@@ -200,7 +200,8 @@ class ADroppedNeedTest(WithNeedsInGit):
         needs_set(project, [])
         said = show(project)[0]
         self.assertEqual((phase_of(said, "idea")["status"], phase_of(said, "idea")["says"]), ("ok", [GOAL_LINE]))
-        self.assertEqual(said["next"], [])
+        # the brief step goes; the now is the parts phase, which names its own pick for the open needs (P1141)
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], [step["op"] for step in said["next"]]), ("parts", ["pick"]))
 
     def test_a_needs_file_that_cannot_be_read_leaves_the_idea_as_it_was(self):
         project = self.reviewed_project()

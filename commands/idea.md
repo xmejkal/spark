@@ -97,7 +97,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match <project>
 
 Owned candidates come first, each with how many are owned and **free** (a part another project holds is not free,
 and the line says `free N, held by <project>`, the other projects that hold any of it; `held_by` in `--json` has them raw;
-when the person wants that part here, offer `parts.py --move-hold <that project> <project> <need>=<id>`, plan first),
+when the person wants that part here, offer `parts.py --move-hold <that project> <project> <need>=<id>`, plan first;
+what this project already holds and picks reads `(M held by this project)` and `[picked for <needs>]`, P1141),
 "maybe owned" when the person was not sure, what it does, and what it **owes**: a pick owing a `footprint`, a
 `pin_order`, its `pin_order_proof` or a `simulation` stance (a Wokwi stand-in, or `{"skip": "why"}`) is taken, but
 `--requirements` writes nothing until that is filled (C, below); one owing only its outline (`body_mm`) is written and
@@ -184,7 +185,8 @@ before the real run, each "would release: …": a hold of this project that no p
 pick lets go. For each candidate the person passed over, write their reason **in their words** to a JSON file
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
 `--passed-over <file>`: the reason goes to the history in your store, never to the project.
-After a pick that wrote, `next` ends with the step `flow.py show` names now (P1035), and the text with its `next:` line. A `page.html` the project has is written again on disk; `/spark:page` republishes it.
+After a pick that wrote, `next` ends with the step `flow.py show` names now (P1035), and the text with its `next:` line.
+While needs are still open, that step is one pick with `<need>=<part>` for each (P1141): ask the person, then fill each `<part>`. A `page.html` the project has is written again on disk; `/spark:page` republishes it.
 Relay it. A step with `needs_person` waits for the person. When that step is the build, first run
 `${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show --project . --json`: a new build can move pins. If `data.guide.wired` is not
 `null`, tell the person the wired line of the parts phase as it is (its first line, or its last when the parts phase

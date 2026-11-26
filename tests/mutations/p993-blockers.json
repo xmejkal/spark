@@ -42,10 +42,10 @@
   "replace": "Object.values(this.words.now_button)[0]"
  },
  {
-  "file": "scripts/spark/flow/phase_readers.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "P993 review: a pick stored as its drawer entry is named with no need (test_flow.TheBlockersTest)",
-  "find": "if any(key in needs.as_record(pick, plan.known, plan.entries).values()",
-  "replace": "if any(key in pick.values()"
+  "find": "            said = as_record(pick, self.known, self.entries)",
+  "replace": "            said = pick"
  },
  {
   "file": "scripts/spark/flow/flow_page.py",
