@@ -11,7 +11,7 @@
 <!-- One job story per line, each clause tagged: When …, I want to …, so I can …. -->
 - J1 · When Claude changed the firmware and I am about to deploy [E council/user-ux.md, UX-2, UX-3], I want to read what main.py and pins.py hold [H the PO's words on #1748, "display of the generated code"], so I can check it before the flash [H] <!-- REQUIRED:jobs -->
 - J2 · When I saw something wrong at the board, such as a flipped picture or a slow refresh [E UX-2, p934-display2 diary], I want to change one value myself [H #1748, "on the page editing", with no observed case, PO-2], so the next deploy carries it without a round through the chat [H UX-17]
-- J3 · When a deploy ends [E UX-15: 10 of 28 deploys of 22 and 23 November ended "ready unknown", and in each the read-back failed (brief.md ★C12)], I want to see what the board runs now [H], so I know whether my change is on it [H P1038 D10, a read-back in plain words]
+- J3 · When a deploy ends [E brief.md ★C12: 10 of 28 deploys of 22 and 23 November ended "ready unknown", one project], I want to see what the board runs now [H], so I know whether my change is on it [H P1038 D10, a read-back in plain words]
 - J4 · When I deploy [E UX-3: 24 of 28 deploys had a yes typed in the terminal], I want to give the look and the yes where I already am, with no long line to copy [E UX-4, bench-2026-11-25 notes 1, 6, 9, 14, 17], so the loop is shorter [H]
 - J5 · When the person changed main.py outside its turn [H UX-19], Claude wants to learn of it at its next turn [E UX-9, a FileChanged hook gives Claude no context], so it does not undo the change by a whole-file write [H UX-19]
 
@@ -33,7 +33,7 @@
 | 3 | Claude edits main.py and rebuilds the image | E UX-10, commands/deploy.md:111-113 | a change that misses the rebuild looks deployed but is not | works | — |
 | 4 | switches to his terminal, runs the look and types yes | E UX-3, UX-4 | long lines cut on paste, one-line yes prompt, esptool's raw output | partly | QA8 |
 | 5 | erase, write (about 109 s for 4 MB) and read-back | E PO-13, bench-2026-11-25 note 20 | the board must be at hand for RESET and BOOT (UX-14) | works | — |
-| 6 | finds out what the board runs | E UX-15 | 10 of 28 deploys ended "ready unknown", each a failed read-back (★C12) | partly | QA6 |
+| 6 | finds out what the board runs | E UX-15 | 10 of 28 deploys ended "ready unknown", in 9 spark could not read the files (★C12, one project) | partly | QA6 |
 | 7 | opens the page | E UX-5, P1038 brief.md:45 | the page shows nothing of the firmware and says deploy "not started" beside 27 deploys | not yet | QA3 |
 
 ```mermaid

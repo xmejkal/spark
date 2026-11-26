@@ -102,3 +102,56 @@ Claims without a ★:
 - WebFetch https://serial.spec.whatwg.org/ · served ★C1 and C19 · used: the default allowlist in 6.1, requestPort steps 2 and 3 in 3.1, and SerialOptions and open() in 4.4.
 - WebFetch https://registry.npmjs.org/esptool-js · served ★C14 · used: the licence, the latest version and the time of 0.7.1.
 - none beyond the two fetches above: no web search.
+
+
+## The second pass
+
+Read at 781055a4. I wrote nothing in the tree and made no scratch folder. Each point below rests on a line I opened or a command I ran.
+
+### 2. The changed lines against their sources
+
+1. **★C24 is refuted, and so is my first-pass point 2.** I ran `git log -- firmware` in p934-display2. 18 commits touch `firmware/`. 15 of them touch main.py, and 9 touch main.py and no other firmware file. The counts in ★C24 (6, 5, 3, 1) are file touches, not commits. Only 9 distinct commits touch any other file. "Mostly outside main.py" is false. Q2's new opinion, D-q1's caveat "(a) misses them" and the verification split all rest on it. Fix: "15 of 18 firmware commits touch main.py, and 9 also touch quotes, the font or the schedule."
+2. **★C12's "In all 10, the read-back failed" is wrong for 1 of 10, and so was my first pass.** board_codes.py:150 says FIRMWARE_NOT_STARTED means "the board's files were read and mpremote could not start the firmware". That is the 13:58 deploy. D-q1 (b), jobs-and-journeys J3 and A3 repeat the error. Two of the 10 are a vanished port ("Device not configured"), not a refused raw REPL. "A page read-back fails the same way" is a guess (H) written as a fact.
+3. **★C8's "only a small facts file" is stronger than the code.** ready_probe.py:4-5: `ReadyProbe` "runs code on the board twice", once to hash each file and once to `import main`, both over mpremote.
+4. **★C2 drops a branch.** hosts.md:42-43 adds "or one written by an owner Anthropic approved". So "only" is stronger than its source.
+5. **Smaller drops.**
+   - ★C14 gives "HTTPS or localhost" as E, but research.md:132 tags localhost H. "Asks for a bundler" is stronger than research.md:16, which says "ships as ES modules".
+   - ★C11 dropped "the first day of p934-display2 cannot be be seen". The repo starts at 19:05 on 11-22, and 6 deploys come before it.
+   - ★C17's D6 quote is at P1193 brief.md:117, not :18, :46 or :76. That folder is only on origin/main, not on this branch.
+   - The standing line says "as quoted on the card #1748". The card paraphrases it, with the spelling fixed and words added. Only the handover's line 29 has the verbatim text.
+   - J3 cites UX-15 for 10 of 28. UX-15 says 11.
+6. **Corrections that did not land as I asked.**
+   - D-q3's opinion still says "b if he reopens D9", but its own caveat says (b) does not reopen D9.
+   - Q2 gives the synthesis the opinion "every file". synthesis.md:453 still says "`main.py` and `pins.py`".
+   - C20 still lacks PO-10's caveat.
+   - ★C11 still has no period for irrigation or blink-c6.
+   - The others landed.
+
+### 3. Strongest rival explanation
+
+The 10 "ready unknown" deploys may come from the firmware and the port, not from the read-back. 4 come from the first day, before the repo existed. 2 lost the USB port, and battery and deep-sleep work landed on 11-23. A page that reads the board at another moment might succeed. Nothing in the changed lines rules this out.
+
+### 4. Numbers without unit, population, period or provenance
+
+- S, M and L: the brief now says "no unit", but it gives no reference size.
+- ★C24: file touches are counted as if they were commits.
+- ★C11: "28 registered" has no date or registry named.
+- The verification row for ★C10 gives the time as "16:0x CET".
+- "6 agents, 499 calls, about 90M": still no link.
+- "Corrected by 16:11 CET" on Q2, Q4 and Q5: these were asked at 15:59. Nothing says whether the PO saw the old wording or the corrected one.
+
+### Verification.md
+
+- ★C1 and ★C2 are marked "reproduced", but the cited reads (15:08 and 15:06) are hosts.md's own source reads, not repeats.
+- ★C17's "reproduced how" describes an edit to the brief, not a check.
+- ★C9 re-read only :184-185.
+- The Agree row "gets no serial port" states as fact what ★C1 now tags H.
+- ★C12: I reproduced 28 logs and 10 unknowns, with the causes corrected as in point 2.
+- ★C24: I reproduced it, and it fails (point 1).
+
+What I could not check: the Artifact frame and describe_capabilities (no browser session and no artifacts tool), and what the PO saw at 15:59.
+
+### Searches
+
+- `gh issue view 1748` · the standing line's source · used.
+- No web searches or fetches.
