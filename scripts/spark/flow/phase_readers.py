@@ -126,9 +126,10 @@ def without_needs(project, phase):
 
 
 class IdeaReader(PhaseReader):
-    """Strategy: the idea is said in the chat, so the phase has no status and one sentence. A need dropped after the must
-    lines were last gone through makes it out of date (P1027, slice 2), with the dropped ids and what Claude asks. A needs
-    file that cannot be read is the needs phase's to say, so it reads as no drop here."""
+    """Strategy: the idea is the brief's goal. A need dropped after the must lines were last gone through makes it out of date
+    (P1027, slice 2), with the dropped ids and what Claude asks. A needs file that cannot be read is the needs phase's to say,
+    so it reads as no drop here. Else a goal makes it ok and says the goal, whatever the rest of the brief holds (P1142). With
+    no goal it has no status: it says why the brief cannot be read, or that the brief holds none."""
 
     PHASE, BY = flow_codes.IDEA, flow_codes.BY_YOU
 
@@ -140,7 +141,10 @@ class IdeaReader(PhaseReader):
         if ids:
             return self.phase(flow_codes.STALE, [flow_codes.NEEDS_DROPPED_MESSAGE % ", ".join(ids),
                                                  flow_codes.MUST_ASK_MESSAGE])
-        return self.phase(None, [flow_codes.IDEA_MESSAGE])
+        brief, why = Brief.read(project)
+        if brief.has_goal:
+            return self.phase(OK, [flow_codes.GOAL_MESSAGE % brief.goal])
+        return self.phase(None, [flow_codes.BRIEF_UNREADABLE % why if why else flow_codes.NO_GOAL_MESSAGE])
 
 
 class NeedsReader(PhaseReader):

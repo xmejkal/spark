@@ -28,7 +28,10 @@ PHASE_PROBLEMS, PHASE_COULD_NOT_RUN = "phase_problems", "phase_could_not_run"
 
 #: What a phase says when nobody recorded a value.
 UNKNOWN = "unknown"
-IDEA_MESSAGE = "Tell Claude your goal in the chat"
+#: The idea phase (P1142): the brief's goal as the person wrote it, or the fact that the brief holds none. The instruction to
+#: tell Claude the goal is IDEA_NOW's, the guide's NOW, and only while the idea is now.
+GOAL_MESSAGE = "your goal is “%s”"
+NO_GOAL_MESSAGE = "the brief holds no goal"
 NEEDS_MESSAGE = "%d need(s): %s"
 NO_NEEDS_MESSAGE = "no needs yet: Claude writes them from your goal"
 #: The needs phase when the goal or the must lines changed after the needs were written (P1027): what changed, by

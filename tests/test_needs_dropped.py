@@ -120,7 +120,7 @@ class AnOlderRecordTest(WithNeeds):
 
 
 #: The idea phase's lines and the guide's sentence after a drop, as the card names them: literals, not the code's own.
-IDEA_LINE = "Tell Claude your goal in the chat"
+GOAL_LINE = "your goal is “A clock that shows the date on a press”"
 DROPPED_LINE = "needs dropped after the must lines were last gone through: %s"
 MUST_ASK = ("Claude asks you about each must line a dropped need served, and on your yes changes it in the brief: git keeps "
             "each change, so it can be taken back. If the must lines still hold, Claude runs the review: parts.py --needs-set "
@@ -177,7 +177,7 @@ class ADroppedNeedTest(WithNeedsInGit):
     def test_an_out_of_date_idea_does_not_ask_for_the_goal_that_is_set(self):
         project = self.reviewed_project()
         drop(project, "wifi")
-        self.assertNotIn(IDEA_LINE, phase_of(show(project)[0], "idea")["says"])
+        self.assertFalse([said for said in phase_of(show(project)[0], "idea")["says"] if "Tell Claude your goal" in said])
 
     def test_two_dropped_needs_are_named_in_order(self):
         project = self.reviewed_project()
@@ -192,7 +192,7 @@ class ADroppedNeedTest(WithNeedsInGit):
         self.assertEqual(phase_of(show(project)[0], "idea")["status"], "stale")
         needs_set(project, [])
         said = show(project)[0]
-        self.assertEqual((phase_of(said, "idea")["status"], phase_of(said, "idea")["says"]), (None, [IDEA_LINE]))
+        self.assertEqual((phase_of(said, "idea")["status"], phase_of(said, "idea")["says"]), ("ok", [GOAL_LINE]))
         self.assertEqual(said["next"], [])
 
     def test_a_needs_file_that_cannot_be_read_leaves_the_idea_as_it_was(self):
@@ -200,7 +200,7 @@ class ADroppedNeedTest(WithNeedsInGit):
         drop(project, "wifi")
         (project / ".spark" / "needs.json").write_text("{not json")
         said, code = show(project)
-        self.assertEqual((phase_of(said, "idea")["status"], phase_of(said, "idea")["says"]), (None, [IDEA_LINE]))
+        self.assertEqual((phase_of(said, "idea")["status"], phase_of(said, "idea")["says"]), ("ok", [GOAL_LINE]))
         self.assertEqual(phase_of(said, "needs")["status"], "could-not-run")
 
     def test_the_read_and_the_page_write_nothing_after_a_drop(self):
@@ -247,7 +247,7 @@ class TheBriefStepTest(WithNeedsInGit):
         self.assertEqual(phase_of(show(project)[0], "needs")["status"], "stale")  # slice 1: the must lines changed
         needs_set(project, [])
         said = show(project)[0]
-        self.assertEqual((phase_of(said, "idea")["status"], phase_of(said, "needs")["status"]), (None, "ok"))
+        self.assertEqual((phase_of(said, "idea")["status"], phase_of(said, "needs")["status"]), ("ok", "ok"))
         git(root, "revert", "--no-edit", sha.group(1))
         self.assertEqual(json.loads((project / ".spark" / "project.json").read_text())["must"], MUST)
         needs = phase_of(show(project)[0], "needs")

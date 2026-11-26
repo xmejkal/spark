@@ -185,7 +185,7 @@ class ThePhasesTest(FlowTest):
                                        "build": (NS, []), "breadboard": (NS, []), "firmware": (NS, []), "simulate": (NS, []),
                                        "deploy": (NS, [])})
         self.assertEqual(said["data"]["stands_at"], "idea")  # P1030: the guide's now, the one rule
-        self.assertEqual(says(said, "idea"), ["Tell Claude your goal in the chat"])
+        self.assertEqual(says(said, "idea"), ["the brief holds no goal"])
         # P979: the hints name the command and who acts, with no placeholder and no path
         self.assertEqual(says(said, "firmware"), ["No firmware/main.py yet. Ask Claude to write it in the chat."])
         self.assertEqual(says(said, "simulate"), ["No simulation files yet (sim/wokwi.toml). Ask Claude to build the board."])
@@ -2806,6 +2806,59 @@ class TheWiringWithNowTest(unittest.TestCase):
         two = self.now([("breadboard", None, "·"), ("firmware", "not-started", "○")])
         self.assertEqual((two["steps"], two["with_wiring"]), (3, True))
         self.assertIs(self.now([("build", "not-started", "○"), ("breadboard", None, "·")])["with_wiring"], False)
+
+
+GOAL = "a button switches a light on and off"
+GOAL_LINE = "your goal is “%s”" % GOAL
+NO_GOAL_LINE = "the brief holds no goal"
+
+
+def with_brief(project, text):
+    """`project` with `.spark/project.json` holding `text` as it is."""
+    (project / ".spark").mkdir(parents=True, exist_ok=True)
+    (project / ".spark" / "project.json").write_text(text)
+    return project
+
+
+def a_project_with_a_brief(text):
+    project = Path(tempfile.mkdtemp()) / "plant-alarm"
+    project.mkdir()
+    return with_brief(project, text)
+
+
+def idea_of(said):
+    idea = next(each for each in said["data"]["phases"] if each["phase"] == "idea")
+    return idea["status"], idea["mark"], idea["says"]
+
+
+class TheIdeaGoalTest(FlowTest):
+    """P1142: the idea phase reads the brief's goal, and show's first line is the guide's NOW."""
+
+    def test_a_brief_with_a_goal_makes_the_idea_ok_and_says_the_goal(self):
+        said, _ = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
+        self.assertEqual(idea_of(said), ("ok", "✓", [GOAL_LINE]))
+
+    def test_a_goal_is_said_whatever_must_holds(self):
+        said, code = show(a_project_with_a_brief(json.dumps({"goal": "a lamp", "must": "x"})))
+        self.assertEqual((idea_of(said), code), (("ok", "✓", ["your goal is “a lamp”"]), 0))
+
+    def test_no_goal_a_null_goal_or_a_blank_goal_says_so_with_no_status(self):
+        empty = Path(tempfile.mkdtemp()) / "plant-alarm"
+        empty.mkdir()
+        for project in (empty, a_project_with_a_brief('{"goal": null}'), a_project_with_a_brief('{"goal": "  "}'),
+                        a_project_with_a_brief('{"goal": 7}')):
+            with self.subTest(project=project.name, brief=(project / ".spark").exists()):
+                self.assertEqual(idea_of(show(project)[0]), (None, "·", [NO_GOAL_LINE]))
+
+    def test_a_brief_that_cannot_be_read_says_why_with_no_status(self):
+        said, code = show(a_project_with_a_brief("{not json"))
+        self.assertEqual((idea_of(said), code), ((None, "·", ["the brief cannot be read (bad-json)"]), 0))
+        status, _, lines = idea_of(show(a_project_with_a_brief("[" * 100000))[0])
+        self.assertEqual((status, len(lines), lines[0].startswith("the brief cannot be read (")), (None, 1, True))
+
+    def test_an_idea_with_a_goal_is_no_finding_and_keeps_the_exit(self):
+        said, code = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
+        self.assertEqual((code, said["status"], said["problems"]), (0, "ok", []))
 
 
 if __name__ == "__main__":

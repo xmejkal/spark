@@ -183,6 +183,12 @@ class TheWriterTest(WithAStore):
                 self.assertEqual((code, said["data"]["basis_noted"], self.basis_bytes(project)), (0, False, None))
                 self.assertNotIn(WOULD_NOTE, text)
 
+    def test_a_blank_goal_gives_no_record_and_no_line(self):
+        project = a_project({"goal": "  ", "must": MUST})
+        said, code, text = needs_set(project, [BOARD])
+        self.assertEqual((code, said["data"]["basis_noted"], self.basis_bytes(project)), (0, False, None))
+        self.assertNotIn(WOULD_NOTE, text)
+
     @unittest.skipIf(os.geteuid() == 0, "root reads any file")
     def test_a_brief_that_cannot_be_read_never_fails_the_write(self):
         project = a_project(brief_of())
