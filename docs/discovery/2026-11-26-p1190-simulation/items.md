@@ -93,6 +93,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
 - the tied card: replaces P410 #536
+- the setting (the PO's rule of 2026-11-26, P1194 #1740): the role `simulator`. Default: `wokwi-cli` (Wokwi), and "off" as a no-simulator entry (D5). Layers as the tools list has them today (`data/tools.json:2`): global (spark's `data/tools.json`), user (the person's `tools.json` in the store), project (`.spark/tools.json`, which wins). The free checks have no setting: they always run. The seam reads the setting through P1194's settings seam once that exists
 
 ## 9. The cost and the time cap before the yes for a paid run
 - type: story <!-- REQUIRED:item-type -->
