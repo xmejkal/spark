@@ -2923,8 +2923,11 @@ class TheRequirementsFileTest(unittest.TestCase):
         said, code = run(["--requirements", str(project)])
         self.assertEqual((code, said["status"], said["notes"]), (0, "ok", [self.KEPT]))
         parts = json.dumps(["tactile-button", "led-red-5mm"], separators=(",", ":"))
+        # content_sha256 is the hash of the canonical JSON of requirements.json read back, not of the file's bytes (P1140)
+        whole = json.dumps(json.loads((project / "requirements.json").read_text()), sort_keys=True, separators=(",", ":"))
         self.assertEqual(json.loads(record.read_text()),
-                         {"schema": 1, "parts_sha256": hashlib.sha256(parts.encode()).hexdigest(), "written": []})
+                         {"schema": 1, "parts_sha256": hashlib.sha256(parts.encode()).hexdigest(),
+                          "content_sha256": hashlib.sha256(whole.encode()).hexdigest(), "written": []})
         self.assertEqual(self.text(["--requirements", str(project), "--dry-run"]).count("kept, not from a pick"), 1)
 
     def test_an_entry_written_for_a_pick_that_is_gone_is_a_note_said_once(self):
@@ -2938,8 +2941,11 @@ class TheRequirementsFileTest(unittest.TestCase):
         _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
         run(["--requirements", str(project)])
         parts = json.dumps(["led-red-5mm"], separators=(",", ":"))
+        # content_sha256 is the hash of the canonical JSON of requirements.json read back, not of the file's bytes (P1140)
+        whole = json.dumps(json.loads((project / "requirements.json").read_text()), sort_keys=True, separators=(",", ":"))
         self.assertEqual(json.loads((project / ".spark" / "requirements-origin.json").read_text()),
                          {"schema": 1, "parts_sha256": hashlib.sha256(parts.encode()).hexdigest(),
+                          "content_sha256": hashlib.sha256(whole.encode()).hexdigest(),
                           "written": [{"need": "light", "entry": "led-red-5mm"}]})
 
     def test_a_record_that_is_no_json_reads_as_no_rows_and_is_written_again(self):

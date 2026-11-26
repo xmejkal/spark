@@ -38,7 +38,7 @@
  {
   "file": "scripts/spark/design/entry_origin.py",
   "name": "P1139: a save with no rows writes no record (test_entry_origin no-rows test, test_needs walk test)",
-  "find": "        self.path.parent.mkdir(parents=True, exist_ok=True)\n        record = {\"schema\": SCHEMA, PARTS_SHA256: parts_sha256(parts), WRITTEN: [row._asdict() for row in rows]}",
-  "replace": "        if not (rows or self.path.is_file()):\n            return\n        self.path.parent.mkdir(parents=True, exist_ok=True)\n        record = {\"schema\": SCHEMA, PARTS_SHA256: parts_sha256(parts), WRITTEN: [row._asdict() for row in rows]}"
+  "find": "        self.path.parent.mkdir(parents=True, exist_ok=True)\n        # parts_sha256 hashes the canonical JSON of any value: here the parts, and here the whole file",
+  "replace": "        if not (rows or self.path.is_file()):\n            return\n        self.path.parent.mkdir(parents=True, exist_ok=True)\n        # parts_sha256 hashes the canonical JSON of any value: here the parts, and here the whole file"
  }
 ]
