@@ -27,10 +27,10 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: story · needed by: "we will also make the ui for it later, or you can already start the epic of config and analyze etc and create the ux/ui" (the PO, 2026-11-26) · value proven by: A1's walk on the built page · depends on: I1, I3 · status: proposed · label: story · parent: P1194 #1740 · slice: 10 The store
 
 ## I6 — bug: a brief value spark cannot read falls back to the default in silence
-- type: bug · needed by: F2 and ★C4 (smartbin-local's `prefer`) · value proven by: a run on smartbin-local names the dropped value · depends on: Q5 · status: proposed · label: bug · parent: — · slice: 10 The store
+- type: bug · needed by: F2 and ★C4 (smartbin-local's `prefer`, reached only by a hand edit) · value proven by: a run on smartbin-local names the dropped value · depends on: Q5 · status: proposed · label: bug · parent: — · slice: 10 The store
 
 ## I7 — bug: a project's tools file can redirect a role and blank account_env
-- type: bug · needed by: F1 and ★C5 · value proven by: a scratch project's redirect is refused or named before use · depends on: Q3 · status: proposed · label: bug · parent: — · slice: 10 The store
+- type: bug · needed by: F1 and ★C5 · value proven by: a scratch project's redirect is named before use (a refusal would break the documented `--use … --project .`) · depends on: Q3, Q6 · status: proposed · label: bug · parent: — · slice: 10 The store
 
 ## I8 — chore: the tools list's choices as Operations
 - type: chore · needed by: D8 and D9, "everything must be accessible at least from CLI, later it will be MCP" (the PO, 2026-11-26) · value proven by: the catalogue lists the tools list's choices · depends on: — · status: proposed · label: chore · parent: #94 · slice: ask the decider

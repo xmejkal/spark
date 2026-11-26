@@ -20,11 +20,11 @@ e.g. `- When I assign a task in a meeting [E tickets.csv:6], I want the assignee
 ## Today they…
 <!-- Per job: what they do instead today (a competitor, a workaround or nothing), tagged.
 e.g. `- Job 1 · paste each task into Slack by hand · E tickets.csv:7` -->
-- J1 · /spark:init asks the brief per project; the tools list sits in the store and /spark:setup edits it · E commands/setup.md, records/tool_finder.py:92 <!-- REQUIRED:today -->
+- J1 · /spark:init asks the brief per project; the tools list sits in the store and /spark:setup edits it · E commands/setup.md, records/tool_finder.py:42 <!-- REQUIRED:today -->
 - J2 · only the tools list has a project layer (.spark/tools.json); the vendor order lives in each project's brief; the firmware check of P410 is a flag, run by run · E records/tool_finder.py:44, sourcing/brief_choices.py:15, bench/board_grant.py:16
 - J3 · only the tools list can say who set a value (setter_of) · E records/tool_finder.py:266
 - J4 · nothing: the store is one folder per machine · E records/store.py:59-65
-- J5 · Claude reads the tools list through tool_finder; other choices are flags or code · E the inventory in council/ (to come)
+- J5 · Claude reads the tools list through tool_finder; other choices are flags or code · E council/inventory.md
 
 ## Journeys
 <!-- One ### per actor and scenario: the table, then a Mermaid flowchart of the same steps. Never a Mermaid
