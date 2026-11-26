@@ -5,7 +5,7 @@ must carry (phrases separated by ;), or none; keep comes last on the line.
 e.g. `- ★C3 · STATUS.md:84 · refuter: partly — "Shown on the C6, assumed for the S3" · reproduced how: re-read STATUS.md:84 · result: reproduced · keep: assumed for the S3` -->
 
 The refuter on Opus read HEAD b9e95a68 on 2026-11-26. The main session reproduced each claim between 09:36 and 09:44
-CET by the command or the read named. The claims marked partly or refuted were rewritten in brief.md after the pass.
+CET, while the first refuter pass ran and before its report came, by the command or the read named. The claims marked partly or refuted were rewritten in brief.md after the pass.
 
 - ★C1 · scripts/spark/build/ignore_list.py:31 · refuter: holds — "ProjectCommit Adapter answers both and is the default until P1151 hands in the project timeline (`GitProjectTimeline`" · reproduced how: `grep -rn -E "ProjectTimeline|KeptStep|TakeBack" scripts` gave 1 line · result: reproduced · keep: none
 - ★C2 · scripts/spark/records/project_commit.py:5, 28-29 · refuter: holds — "Spark never stages with `git add`, never runs `revert`, `reset` or `push`, and never skips a hook." · reproduced how: `grep -rn '"git"' scripts/spark` gave project_commit.py:42 alone · result: reproduced · keep: none
@@ -29,7 +29,7 @@ CET by the command or the read named. The claims marked partly or refuted were r
 - ★C20 · the store's shelf and catalog · refuter: holds — `//` keys in 28 of 28, `based_on.project` in 7 of 28 · reproduced how: a python count, 2026-11-26 09:36 CET: 28 records, 28 with a top-level `//` key, 7 with `based_on.project` · result: reproduced · keep: none
 - ★C21 · council/tech-lead.md (TL-2) · refuter: holds — reproduced in its own scratch store · reproduced how: a scratch SPARK_HOME with a repository at `<home>/shared`: `store.write_json('shelf', …)` gave True and `inside_git` gave None, 2026-11-26 09:36 CET, removed after · result: reproduced · keep: none
 - ★C22 · scripts/spark/records/tool_finder.py:531, 535 · refuter: holds — "def use(role, tool_name, project=None, personal=None):" · reproduced how: a python read of data/tools.json: 14 roles, no git tool · result: reproduced · keep: none
-- ★C23 · council/synthesis.md (part 3) · refuter: holds, but weaker than it looks — the ref is safe from gc because it is a ref, a fresh clone and a default fetch did not carry it, and `git restore` overwrote an uncommitted edit · reproduced how: a scratch repository, a local `git merge --squash`, a branch delete, `git gc --prune=now`, `git restore --source=<ref>`, 2026-11-26 09:36 CET, removed after · result: reproduced · keep: tests nothing at risk <!-- REQUIRED:claims -->
+- ★C23 · council/synthesis.md (part 3) · refuter: holds, but weaker than it looks — the ref is safe from gc because it is a ref, a fresh clone and a default fetch did not carry it, and `git restore` overwrote an uncommitted edit · reproduced how: a scratch repository, a local `git merge --squash`, a branch delete, `git gc --prune=now`, `git restore --source=<ref>`, 2026-11-26 09:36 CET, removed after. It did not try a clone, a fetch or an uncommitted edit, which rest on the refuter alone · result: reproduced · keep: tests nothing at risk <!-- REQUIRED:claims -->
 
 ## Agree / split
 <!-- Where the lenses and the refuter agree, and where they split; each split becomes a question.

@@ -25,7 +25,7 @@ e.g. `- When I assign a task in a meeting [E tickets.csv:6], I want the assignee
 e.g. `- Job 1 · paste each task into Slack by hand · E tickets.csv:7` -->
 - J1 · spark commits the brief only, one file, in a repository that holds it already. The maker or Claude commits the rest by hand, in the 9 of 23 existing project folders that have a repository · E brief ★C2, E P1148 ★C1
 - J1 · a build replaces dist/ whole and leaves the maker's own board.tsx alone, so a layout edit stays but is kept by no step · E brief ★C3
-- J2 · each phase reader compares sha256 stamps and says "out of date", but names no author and has no check on five links · E brief ★C5
+- J2 · the needs and build readers compare sha256 stamps, the requirements and breadboard readers compute their content again, and the firmware reader shows a file time. They say "out of date", but names no author and has no check on five links · E brief ★C5
 - J3 · nothing in spark. A maker with git can tag by hand · H, no tag seen; not counted
 - J4 · nothing in spark. `compare_design.py` compares written rules with a built design, not two versions · E scripts/compare_design.py:1-8
 - J5 · nothing in spark. A git merge by hand, which P1160 found can give a record that nobody decided · E P1160 finding, "The two cases"

@@ -1,6 +1,6 @@
 # P1193 change tracking: the council's synthesis
 
-Note by the main session, after the refuter (council/refuter.md): this file stays as the architect wrote it. Three of its statements are corrected in brief.md. The "24 hand commits" are 22 of 24 co-authored by Claude (★C16). The A2 pass line's "the named point survives the squash" cannot fail and was revised (brief.md, Test). The narrowing of C11 to "a transport that merges" is the architect's reading, while the source says "any transport".
+Note by the main session, after the refuter (council/refuter.md): this file stays as the architect wrote it. Its statements below are corrected in brief.md. The "24 hand commits" at lines 152 and 320 are 22 of 24 co-authored by Claude (★C16). "The digest that `based_on` holds already" at line 241 holds only for a shelf copy shelved from a project, and the P158 proposal says two `based_on` shapes exist (★C13). The A2 pass line's "the named point survives the squash" cannot fail and was revised (brief.md, Test). The narrowing of C11 to "a transport that merges" is the architect's reading, while the source says "any transport".
 
 The architect on Fable, 2026-11-26. Read at 8ad5c005 on branch p1193-change-tracking. Tags: E is a pointer I or a lens read, H names its source. "brief D2" to "brief D5" are this discovery's decisions, so they are not mixed up with P1148's D5. No file I read asked me to run or change anything.
 
