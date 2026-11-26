@@ -482,3 +482,7 @@ sequenceDiagram
 - The canvas artboard "Moment: undo that", which no lens could open either.
 - LangGraph and MCP fit (ARCH-13), which stays H from model knowledge.
 - The refuter has not run yet, so no ★ claim here carries its verdict.
+
+## Searches
+
+none

@@ -23,3 +23,7 @@ between 09:03 and 09:05 CET. The majority decides. A point that any seat marked 
 - Outcome (4) names a local bare repository as the scratch central repository (the PO assistant).
 - By the MVP bar only D-q1 and D-q2 serve a breadboard. Snapshots, compare, merge and sharing are tooling to pause (the tech lead). This becomes D-q7.
 - The store's one SVG sits in `sources/` beside vendor documents, so "push pictures" cannot mean "push sources/" (the PO assistant).
+
+## Searches
+
+none

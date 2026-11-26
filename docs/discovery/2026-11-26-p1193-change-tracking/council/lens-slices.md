@@ -56,3 +56,7 @@ show a layout change (the drawing, or text)? What does Claude read to know that 
 which words tell it what to offer next? How does an interface with no Claude (the CLI, a server) show each moment?
 Read the design canvas's "Moment: undo that, take a step back" as #1688's comment of 2026-11-25 describes it. Use
 only files in the repository and the store's councils folder.
+
+## Searches
+
+none

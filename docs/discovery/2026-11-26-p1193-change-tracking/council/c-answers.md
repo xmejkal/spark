@@ -26,3 +26,7 @@ not a vote.
 | C16 | `kept_step.id` stays the member's id, the Service lists the ids it made, and a named point is a ref of spark's own | The architect: the id is opaque above the seam, and the member's `points` answers which steps spark made, with no second id file. The PO assistant: the preview says that a named point stays on one machine. The tech lead: P1155's spike confirms it against a host's squash | none |
 | C17 | `GitRunner` moves onto `outside.run` later | The architect: before the first `send` slice, and until then `GitRunner` takes its process starter through its constructor, and a test pins that each Operation that builds the git member declares `runs`. The PO assistant: file it as a card | none |
 | C18 | D12 does not forbid a hosted repository: a git host is an outside tool, not spark's server | — | none |
+
+## Searches
+
+none

@@ -24,3 +24,7 @@
 PO q8 is settled: the brief's scope line now reads "A git host account is in scope since D3" [E brief.md:20].
 
 ### (b) For the PO only
+
+## Searches
+
+none

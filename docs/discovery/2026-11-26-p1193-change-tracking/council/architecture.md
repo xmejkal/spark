@@ -131,7 +131,11 @@ classDiagram
 
 ## Searches
 
-No web searches. Local reads that served a decision:
+none. No web searches.
+
+## Local reads that served a decision
+
+The lens listed these under Searches. The main session moved them under this heading, word for word, because they are local reads, not web searches.
 
 - `grep -rn "ProjectCommit\|project_commit" scripts tests` · where git is built and who reuses it · used (ARCH-4)
 - `grep -rn "\.git\b\|\"git\"" scripts/spark` · which places know git · used (ARCH-4, ARCH-8)
