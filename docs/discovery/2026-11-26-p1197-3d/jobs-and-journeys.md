@@ -22,10 +22,10 @@ e.g. `- When I assign a task in a meeting [E tickets.csv:6], I want the assignee
 ## Today they…
 <!-- Per job: what they do instead today (a competitor, a workaround or nothing), tagged.
 e.g. `- Job 1 · paste each task into Slack by hand · E tickets.csv:7` -->
-- J1 · nothing: no record holds a model, and 1 of 30 records holds a height · E brief ★C1
-- J2 · tscircuit's 3D tab and KiCad's render show pads and a box, or a header body only · E P1089 finding section 2.3, brief ★C2
+- J1 · nothing in spark: no record holds a model, and 3 of 43 records hold a body's overall height · E brief ★C1. Outside spark, the PO gave his bin project's modules bodies by hand through `cadModel` · E brief ★C18
+- J2 · tscircuit's 3D tab and KiCad's render show pads and a box, or a header body only · E P1089 finding section 2.3, brief ★C2. His bin project exports `board.glb` and shows it in an offline one-page viewer, rebuilt with each build after it went stale once · E brief ★C18, council/user.md US-1
 - J3 · an agent can type `tsci export -f step` from the doc recipe. The STEP has no module bodies. No one opened it in Fusion · E docs/guide/agents.md:170-176, P1089 finding section 2.3
-- J4 · nothing in spark. tscircuit's case element is installed but spark does not write it · E brief ★C5 · H that the PO models a case by hand in Fusion (an account question)
+- J4 · nothing in spark. tscircuit's case element is installed but spark does not write it · E brief ★C5. For the FireBeetle alone, the PO owns two bought DFRobot FIT0725 boxes · E brief ★C23 · H that he models a case by hand in Fusion (asked as Q3)
 - J5 · nothing in spark. tscircuit's 3MF export fails in the installed CLI · E brief ★C6
 - J6 · the tools list maps a role to a tool, and `ShapeSource` chooses a 2D drawing. Nothing does this for 3D · E brief ★C14
 - J7 · Claude reads the records and finds no height, no holes and no openings for most parts · E brief ★C1, pre-analysis section 1 <!-- REQUIRED:today -->
