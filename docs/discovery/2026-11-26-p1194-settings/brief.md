@@ -7,9 +7,9 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 → the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
-**Ready for:** collecting evidence: A1's walk of the Settings artboard, and his confirmation of the jobs and the direction (D11 to D24) <!-- REQUIRED:ready -->
+**Ready for:** design, after the MVP cards: the PO confirmed the frame (D5), the jobs, the direction and the remaining risk (D26) <!-- REQUIRED:ready -->
 **Stands on:** 7 H, 2 of which would change the decision (A1, A6, D10; A7 retired by D20) <!-- REQUIRED:debt -->
-**Decision needed:** confirm the jobs and the direction D11 to D24; walk the Settings artboard for A1; say yes to items.md. Note D22: he asked Claude, which leans to show-settings in the chat before the page <!-- REQUIRED:decision-needed -->
+**Decision needed:** none now; A1's walk runs when the page slice is planned (D26) <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked): the PO, 2026-11-26, answering P1193 #1738's P2, on #1740: "git identity, but configurable and asks until configured (like the other configs for it) for new projects, spark should have a settings /config feature per multiple layer like global/per project/per account logged in etc. for now just remember it for all configurable streategies and things like this, create a card for it, we will move the config there and also tell all new features to keep that in mind, we will also make the ui for it later, or you can already start the epic of config and analyze etc and create the ux/ui. I think some general settings and some per user settings, per project, maybe by per other thing, to be refined". And on 2026-11-26 in spark-artifact's question dialog, his choice "Settings page (Recommended)" for the next piece of the page design. <!-- REQUIRED:request -->
@@ -140,6 +140,9 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D22 · Q13: account, n = 1: the last time he wanted to know why spark did something, he asked Claude · the PO · 2026-11-26, about 13:50 to 14:05 CET · spark-artifact's question dialog · options considered: asked Claude, the page, the files or output
 - D23 · Q14: two Operations are the whole surface, show-settings and set-setting; asking is not an Operation of its own · the PO · 2026-11-26, about 13:50 to 14:05 CET · spark-artifact's question dialog · options considered: two Operations, add an explain Operation
 - D24 · Q15: a project's settings move out of its brief into a settings file of their own (`.spark/settings.json`); the brief keeps the goal and the musts; his own default fills in where a project names none, and each run says so; not asked: today's `prefer` and `sellers` in 4 briefs move with a line that names the old field, and the brief also keeps `decided` · the PO · 2026-11-26, about 13:50 to 14:05 CET · spark-artifact's question dialog · options considered: the brief keeps them, move to a settings file, his default never fills in
+- D25 · the paid-run policy (P1221 #1770): his user layer sets it; a project may only narrow it (never, or ask, for this project), never widen it; the important-version mark stays the project's · the PO · 2026-11-26, about 14:10 CET · spark-artifact's question dialog · options considered: project may only narrow, his alone, user and project as #1770 says
+- D26 · confirms the jobs J1 to J5, the direction D11 to D25 and the remaining risk: A1 (the page's value) stays untested, and its walk of the Settings artboard runs when the page slice is planned; the design starts after the MVP cards · the PO · 2026-11-26, about 14:10 CET · spark-artifact's question dialog · options considered: confirm all, walk A1 first
+- D27 · yes to items.md: file I1, I3 to I9, link I2 (P1214 #1763) under P1194, comment I10 on P1221 #1770 with D19, D12 and D25, and file N1 as its own later epic; all in Idea with no Ready order · the PO · 2026-11-26, about 14:10 CET · spark-artifact's question dialog · options considered: file them all, only the two bugs, not yet
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
@@ -159,7 +162,14 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the jobs, a direction and the remaining risk are unconfirmed <!-- REQUIRED:handoff -->
+Outcome: a person sees each spark choice with its value, its default and whose word it is, and changes it with one sentence to Claude, one command, or later the page; Claude reads the same through `--json` and never guesses (J1 to J5, D26).
+Who: the maker (n = 1, E), the hobbyist (H), Claude at the keyboard (E).
+Success and its proof: `show-settings --json` lists the vendor order with its layer, and a test adds a fake fourth layer with no caller change (I1); P1214 #1763's deploy line names the check and whose word it is (I2).
+Constraints (D): global is spark's defaults, then user, then project, the account later with GitHub first (D11, D18); each setting lists the layers that may set it, and a setting that shares his data or spends money is his alone, a project may only narrow the paid-run policy (D12, D25); two kinds of setting (D13); an unreadable value uses the default and says so (D14); the tools list stays behind its merge first (D15); the vendor order goes first, then #1763 (D16); the page sends sentences now, buttons later (D17); a paid-run setting may be his standing yes (D19); P1151 goes now (D20); two Operations, show-settings and set-setting (D23); a project's settings move to `.spark/settings.json`, the brief keeps the goal, the musts and `decided` (D24); every feature from the CLI first, later MCP and code, for agents and people (D8, D9); no account code now (D6, D7).
+What he said (D) against what we assume (H): the layers, trust rule and Operations are his (D11 to D25); that the page earns its place is H (A1, rated high, untested; D22 leans to the chat first).
+Links: [jobs and journeys](jobs-and-journeys.md), [story map](story-map.md), the Settings artboard on the design canvas.
+Riskiest assumptions and their tests: A1, the walk of the Settings artboard (3 of 3, D10); A6, a scratch project's share setting is refused (risks-and-tests.md).
+Options considered: in Options, Q2 to Q11, and D11 to D25. A note for his rules: CLAUDE.local.md says "Never: Run a paid simulation", which D19 will meet when P1221 is built; that file is his. <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/

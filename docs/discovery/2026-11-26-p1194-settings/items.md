@@ -36,13 +36,13 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: story · needed by: D24 (the PO, 2026-11-26, Q15) · value proven by: `prefer` and `sellers` read from `.spark/settings.json`; the 4 briefs that hold them today (irrigation, spark-quickstart, reaction-game, smartbin-local) move with a first line that names the old field (D14); the brief keeps the goal, the musts and `decided`; `init_project.py --answers` and the spark-review skill still work; his default fills in where a project names none and each run says so · depends on: I1 · status: proposed · label: story · parent: P1194 #1740 · slice: 10 The store
 
 ## I10 — not a new card: a comment on P1221 #1770 (the paid-run policy, filed from P1190) with D19 and D12
-- type: comment on an existing card · the comment raises one conflict for the PO: #1770 gives `paid_runs` and its threshold the layers user and project, while D12 makes a setting that spends money his alone · needed by: D19 and P1190's D13, "a threshold for example when it should warn and not run the payed ones by default … only running it … for the important releases" (the PO, 2026-11-26) · value proven by: a run inside his rule's limits starts with no per-run yes and names the rule; a run outside it asks; only his own layer may set the rule (D12) · depends on: I3, P1078 (the paid run as an Operation) · status: proposed · label: story · parent: P1194 #1740 · slice: 10 The store
+- type: comment on an existing card · the comment records D19 and D25: his user layer sets `paid_runs` and the threshold, a project may only narrow them (never, or ask), and the important-version mark stays the project's · needed by: D19 and P1190's D13, "a threshold for example when it should warn and not run the payed ones by default … only running it … for the important releases" (the PO, 2026-11-26) · value proven by: a run inside his rule's limits starts with no per-run yes and names the rule; a run outside it asks; only his own layer may set the rule (D12) · depends on: I3, P1078 (the paid run as an Operation) · status: proposed · label: story · parent: P1194 #1740 · slice: 10 The store
 
 ## I8 — chore: the tools list's choices as Operations
 - type: chore · needed by: D8 and D9, "everything must be accessible at least from CLI, later it will be MCP" (the PO, 2026-11-26) · value proven by: the catalogue lists the tools list's choices · depends on: — · status: proposed · label: chore · parent: #94 · slice: ask the decider
 
 ## Board actions
-- file I1, I3 to I9, link I2 (#1763) as a sub-issue, comment I10 on #1770 · pending, needs his yes to this list <!-- REQUIRED:board-actions -->
+- file I1, I3 to I9, link I2 (#1763) as a sub-issue, comment I10 on #1770, file N1 · approved D27, filing asked of spark-main 2026-11-26 <!-- REQUIRED:board-actions -->
 
 ## Proposed from the PO's words during the discovery
 
