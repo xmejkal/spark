@@ -11,7 +11,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: a test fixture board with no Wokwi part builds with the simulation stage `skipped` and its reason, and a build record written before the change still counts as done <!-- REQUIRED:value-proven-by -->
 - depends on: item 6. The PO approved it on 2026-11-26 (D11). Old records keep counting as done through `NO_MODEL_CODES`, and the PR names the exit code change (2 becomes 0) in `docs/guide/agents/flow.md` <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1207 #1756, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -22,7 +22,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: `check-firmware --json` on the clock gives the import count and "35 of 35" for its tests <!-- REQUIRED:value-proven-by -->
 - depends on: the core's Operation pattern (P1078 #1582 is its next user, not a blocker). The dry run joins it as the strategy's `problem` in item 6. A failed own test blocks no deploy until the PO decides <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1208 #1757, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -33,7 +33,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: the clock's page names what can run and the free checks' result, in grey where nothing more runs <!-- REQUIRED:value-proven-by -->
 - depends on: item 2. It reads the build record's simulation stage as it is today, so it does not wait on item 1 <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1209 #1758, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): the page epic, linked to P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -44,7 +44,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: a deploy with no run prints one line, "no simulation tested this image", and no list <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1210 #1759, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -55,7 +55,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: a finding with the commands run and their output, token unset <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1211 #1760, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -66,7 +66,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: the goldens hold, and one table names the Adapter <!-- REQUIRED:value-proven-by -->
 - depends on: P1078 #1582 <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1212 #1761, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -77,7 +77,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: a log header names the simulator, its version and the grade <!-- REQUIRED:value-proven-by -->
 - depends on: item 6 <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1213 #1762, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -88,7 +88,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: a project with the role off runs the free checks and says that no paid run happens <!-- REQUIRED:value-proven-by -->
 - depends on: item 6 <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1214 #1763, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -100,7 +100,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: the question before a run names the minutes this month by spark on this machine and the free plan's 50 <!-- REQUIRED:value-proven-by -->
 - depends on: item 6, P413 #539 <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1215 #1764, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -111,7 +111,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: the PO, 2026-11-26, verbatim: "Well, basically what wokwi has, pease research what all wokwi allows to set for the simulation and we should also allow it, so yes, a temperature or values in general, but really also to set up how its simulated the chip or part, maybe even the steps" <!-- REQUIRED:needed-by -->
 - value proven by: on the VL6180X project's page, the editor shows the distance with its range, the board's CPU setting, the model that stands for each part, and the scenario's steps as sentences. A change asked of Claude lands in the project's files, and the next run uses it <!-- REQUIRED:value-proven-by -->
 - depends on: item 6. The editor reads and writes spark's own words through the `Simulator` seam, and `WokwiSimulator` turns them into Wokwi's `attrs`, chip attributes and scenario steps, so a second simulator reuses the same editor <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1216 #1765, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -124,7 +124,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: walk2's run reads "passed, but it tested only the start" <!-- REQUIRED:value-proven-by -->
 - depends on: item 7 <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1217 #1766, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -135,7 +135,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: one free run with a chip named by `github:` reference, its licence read, and the rule written <!-- REQUIRED:value-proven-by -->
 - depends on: the PO's yes for the run's minutes <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1218 #1767, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -146,7 +146,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: a finding: how a spark project opens in Wokwi's editor with its controls, or why it cannot <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1219 #1768, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -157,7 +157,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: a finding: whether the loop runs 10 simulated seconds with no edit to firmware/ <!-- REQUIRED:value-proven-by -->
 - depends on: A1's test result, and the PO's reading of the non-goals (Q3) <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: not filed: replaced by item 19 (D15) <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -168,7 +168,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: the "On the board" card shows the row, and gate A stays shut while the current image has a failed run, which costs no minutes <!-- REQUIRED:value-proven-by -->
 - depends on: item 7. The deploy's reader of a failed run exists (`scripts/spark/bench/image_evidence.py:433`) <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1220 #1769, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P79 #16 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -179,7 +179,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: the PO, 2026-11-26, verbatim: "generally it should as all things like that be configurable, if we run the pyd minutes and like a threshold for example when it should warn and not run the payed ones by default, and it would also be great to have the option of somehiow only running it even though its payed only for the important releases or version or something like that, or it can always ask, lets try to have some reasonable conditions like that and figure out how we could work with such limits, like how do we mark a version/deployment as important or risky enough to actually use the sim even thouhg its payed.." <!-- REQUIRED:needed-by -->
 - value proven by: a project with the policy "only for a version marked important" runs the free checks and asks no paid run on an unmarked version. It names the policy when it skips the run, and it warns once the minutes spent this month pass the threshold <!-- REQUIRED:value-proven-by -->
 - depends on: item 8 (the role), item 9 and P413 #539 (the minutes count), P1194 #1740 (the settings seam with layers) <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1221 #1770, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -191,7 +191,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: the PO's yes to Q10 on 2026-11-26 (D12): "skipped, with the reason, and the free checks passed" is enough for v0.10 <!-- REQUIRED:needed-by -->
 - value proven by: `scrum/VISION.md`'s v0.10 line and D-c agree <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1222 #1771, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): chore <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
@@ -202,7 +202,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: the PO, 2026-11-26, verbatim: "Actually, I would like to spike and create an epic for re-implementing the simulator and seeing how difficult or possible it would be for us to actually re-implement the simulator. Obviously, not from scratch, but maybe there are some available resources or code that would be useful for us. Let's actually create the cards for it and just do some pre-analysis now." <!-- REQUIRED:needed-by -->
 - value proven by: a spike's finding (item 19) that the PO reads and picks from, then, if he picks a way, one walk project whose firmware runs on spark's own simulator for a board that Wokwi lacks <!-- REQUIRED:value-proven-by -->
 - depends on: item 6 (the `Simulator` seam), so an own simulator is one more Adapter and no screen changes <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1223 #1772, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): epic <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one, or after v0.10 as P492 #671 was <!-- REQUIRED:spark-process:slice -->
@@ -213,7 +213,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: the PO, 2026-11-26 (item 18's words) <!-- REQUIRED:needed-by -->
 - value proven by: a finding with sources (URL, version, date, licence) that sizes each way the pre-analysis names and recommends one, run on one walk project's firmware with no paid minutes. Its first steps test A10 and run before item 6's plan (D17) <!-- REQUIRED:value-proven-by -->
 - depends on: the pre-analysis <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1224 #1773, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): item 18 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): as item 18 <!-- REQUIRED:spark-process:slice -->
@@ -224,12 +224,12 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - needed by: AGENTS.md:64, "Never commit a vendor file, because installing spark copies the whole repository", and brief C26 <!-- REQUIRED:needed-by -->
 - value proven by: the header's licence is read from Wokwi's own terms and cited beside it, or the build fetches it and the repository no longer holds it <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D18 · P1225 #1774, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): chore <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
 - the tied card: — . Found on the way by the pre-analysis (D15)
 
 ## Board actions
-- file items 1 to 20 (item 14 replaced by 19, so 19 cards) · pending, the PO's yes to this list · through spark-main <!-- REQUIRED:board-actions -->
-- close P995 #1452 as answered, P409 #535 and P410 #536 as replaced, P308 #374 as absorbed · pending, the PO's yes · through spark-main
+- filed items 1 to 13, 15 to 17 and 20 in the slice v0.10 The basic journey, and items 18 and 19 in parked, after v0.10, all in stage Idea, as sub-issues of their parents · taken, D18, by the simulation session on spark-main's word, 2026-11-26 <!-- REQUIRED:board-actions -->
+- closed P995 #1452 (answered), P409 #535 and P410 #536 (replaced), P308 #374 (absorbed), each with a comment that names what answers, replaces or absorbs it, and moved them to Done · taken, D18, 2026-11-26

@@ -7,7 +7,7 @@
 > one strategy seam that a spark setting chooses, and three ways to simulate a part. Nothing here is decided until the PO or the delegated
 > council says so.
 
-**Ready for:** collecting evidence <!-- REQUIRED:ready -->
+**Ready for:** collecting evidence. The PO filed the v0.10 cards (D18) and confirmed the understanding (D19), but no D row names the frame, the jobs, a direction and the remaining risk in his words, and A1 collects its evidence on the next walks <!-- REQUIRED:ready -->
 **Stands on:** 12 H, 3 of which would change the decision. The H are the assumptions A1 to A12 in risks-and-tests.md, and the three are A1, A8 and A10, rated high in D17 (delegated) <!-- REQUIRED:debt -->
 **Decision needed:** the PO picks a direction for the simulation step (the substeps, the strategy seam and the first
 slice), and says whether a simulation verdict ever gates the permanent build (gate A). <!-- REQUIRED:decision-needed -->
@@ -120,6 +120,8 @@ slice), and says whether a simulation verdict ever gates the permanent build (ga
 - D15 · Q3: the PO reverses the delegated "not now" (D4) and the non-goal reading. His words, verbatim: "Actually, I would like to spike and create an epic for re-implementing the simulator and seeing how difficult or possible it would be for us to actually re-implement the simulator. Obviously, not from scratch, but maybe there are some available resources or code that would be useful for us. Let's actually create the cards for it and just do some pre-analysis now." So an epic for spark's own simulator, reuse first, with a spike under it, and a pre-analysis now · the PO, 2026-11-26 by 12:32 CET, relayed by spark-main · items.md items 18 and 19, the pre-analysis in the store's preanalysis/2026-11-26-own-simulator.md
 - D16 · Q6: the editor's scope is Wokwi's full set of simulation settings. His words, verbatim: "Well, basically what wokwi has, pease research what all wokwi allows to set for the simulation and we should also allow it, so yes, a temperature or values in general, but really also to set up how its simulated the chip or part, maybe even the steps" So the editor sets values (a part's attrs, such as a temperature, and a chip's attributes), how a chip or part is simulated (the board's attrs such as `cpuFrequency`, a button's bounce, which model stands for a part), and the steps (the ten step kinds) · the PO, 2026-11-26 by 12:37 CET, relayed by spark-main · research-wokwi-settings.md, items.md item 10
 - D17 · Q1: the council proposes again, as the PO asked ("Council proposes again"). High: A1, A8, A10. Low: A2 to A7, A9, A11, A12. A1 stays the riskiest, with the split pass line and three additions (in Test). Item 19's first steps run before item 6's plan, and item 6 says "selectable, not exchangeable" · the delegated council, round 2, 2026-11-26, council/council-answers.md "Round 2" · delegated, the PO's to change
+- D18 · items.md: "MVP part now". File the v0.10 items now, and the epic of item 18 with its spike in the slice "After v0.10", with no Ready order · the PO, 2026-11-26 by 12:50 CET, relayed by spark-main · items.md (the card numbers), Board actions
+- D19 · the understanding: "Yes, that is it" · the PO, 2026-11-26 by 12:50 CET, to spark-main's question, relayed by spark-main. It confirms the understanding as spark-main summed it up to him. This file does not hold spark-main's wording
 - D9 · Q12: the existing tiers and P308's "grade", no new rungs · the delegated council, 3 of 3, 2026-11-26 · delegated, the PO's to change
 
 ## Found on the way <!-- CLAIMS -->
@@ -129,10 +131,12 @@ slice), and says whether a simulation verdict ever gates the permanent build (ga
 - [C24] Spark pins wokwi-cli 0.28.0, and the latest release is v0.29.1 (2026-10-23) · E `council/po-assistant.md:25`, `gh api repos/wokwi/wokwi-cli/releases/latest` · caveat: no change in the new release was read
 
 ## Board actions <!-- REQUIRED:spark-process:board-actions -->
-- none taken. Every board move, filing and push goes through spark-main (its brief, 2026-11-26).
+- taken, D18: 19 cards filed, P1207 #1756 to P1225 #1774 (items.md has each number), in stage Idea, as sub-issues of P1190 #1735, P1038 #1521 (item 3), P79 #16 (item 15) and P1223 #1772 (item 19). Slices: v0.10 The basic journey, and parked, after v0.10 for items 18 and 19. Filed by the simulation session on spark-main's word, 2026-11-26
+- taken, D18: P995 #1452, P409 #535, P410 #536 and P308 #374 closed with a comment each, and moved to Done
+- the pushes went through spark-main's slots
 
 ## Hand-off
-not yet: the frame, the jobs, a direction and the remaining risk are unconfirmed <!-- REQUIRED:handoff -->
+Outcome: a person sees the simulation as one step on the page: the free checks, then a run by the chosen simulator, and a board that no simulator covers reads `skipped` with its reason, not as a failure (the card's Done when). Who: the PO as the hobbyist (n = 1), and Claude reading `--json`. Success and its proof: the outcome line in the Frame, on a fixture board and the clock (D2). Constraints the PO confirmed: no paid run without his yes, cost named (D-a). Gate A has one free condition (D10). `skipped` replaces the 2026-11-21 rule, exit 0 (D11). v0.10's line (D12). A paid-run policy with settings (D13). Another author's chip by reference only, permissive licences (D14). Spark's own simulator is an epic after v0.10 (D15, D18). The editor sets values, how a part is simulated and the steps (D16). What the delegated council chose, his to change: the order (D3), one setting (D5), the slider's first home (D6), the own tests (D8), the words (D9), the ratings (D17). The riskiest assumption, A1, with its forward test (Test). The journeys and the map: jobs-and-journeys.md, story-map.md. The options considered: Options. The cards: P1207 #1756 to P1225 #1774 <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · [Research: Wokwi](research-wokwi.md) · [Research: the alternatives](research-alternatives.md) · council/

@@ -29,9 +29,11 @@ author's Wokwi chip by reference, permissive licences only, after the spike (D14
 spark's own simulator, reuse first, with a pre-analysis now (D15, items 18 and 19). Q6: the editor sets what Wokwi
 lets a person set: the values, how a part or the chip is simulated, and the steps (D16, item 10).
 
-## What waits on the PO
+## The cards
 
-His yes to items.md. The council proposed Q1 again, as he asked (D17, delegated, his to change). The questions are in [brief.md](brief.md).
+Filed on 2026-11-26 on the PO's "MVP part now" (D18), all in stage Idea: P1207 #1756 to P1222 #1771 and P1225 #1774
+in the slice v0.10 The basic journey, and the epic P1223 #1772 with its spike P1224 #1773 in parked, after v0.10.
+items.md maps each item to its card.
 
 ## The main points
 
