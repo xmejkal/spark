@@ -123,7 +123,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - a comment on #1748 with D1 to D9 and the filed cards · taken, D6 (https://github.com/xmejkal/spark/issues/1748#issuecomment-7196774814)
 - Waiting on and Waiting since on #1748 · pending, spark-main sets the board fields
-- filing items.md · taken, D6: P1242 #1799, P1243 #1800, P1244 #1802, P1245 #1803, and eleven comments
+- filing items.md · taken, D6: P1242 #1799, P1243 #1800, P1246 #1802, P1245 #1803, and eleven comments
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off

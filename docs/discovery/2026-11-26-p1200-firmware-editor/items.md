@@ -128,7 +128,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. All 
 - needed by: P218 D19 of 2026-10-13 <!-- REQUIRED:needed-by -->
 - value proven by: the guide line and the decision's note <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: filed D6, P1244 #1802 <!-- REQUIRED:item-status -->
+- status: filed D6, P1246 #1802 <!-- REQUIRED:item-status -->
 - label (the repository's type label): chore <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): spark-main's choice <!-- REQUIRED:spark-process:slice -->
@@ -162,4 +162,4 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. All 
 - item 17: 17. An edit of main.py has no path from an interface without file tools · dropped because D3: A2 missed its pass line, so `save-firmware` stays a named seam
 
 ## Board actions
-- filed items 1, 18, 19 and 20 as P1242 #1799, P1243 #1800, P1244 #1802 and P1245 #1803, and posted the comments 2, 3, 4, 5, 7, 8, 11, 12, 13, 14 and 21 · taken, D6 <!-- REQUIRED:board-actions -->
+- filed items 1, 18, 19 and 20 as P1242 #1799, P1243 #1800, P1246 #1802 and P1245 #1803, and posted the comments 2, 3, 4, 5, 7, 8, 11, 12, 13, 14 and 21 · taken, D6 <!-- REQUIRED:board-actions -->
