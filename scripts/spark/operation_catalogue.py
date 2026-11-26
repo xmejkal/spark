@@ -17,6 +17,7 @@ from spark.build.build_operations import OPERATIONS as BUILD
 from spark.checks.checks_operations import OPERATIONS as CHECKS
 from spark.core.operation import FETCHES
 from spark.design.design_operations import OPERATIONS as DESIGN
+from spark.firmware.firmware_operations import OPERATIONS as FIRMWARE
 from spark.flow.flow_operations import OPERATIONS as FLOW
 from spark.idea import OPERATIONS as IDEA
 from spark.sourcing.research.research_operations import OPERATIONS as RESEARCH
@@ -25,7 +26,7 @@ from spark.sourcing.sourcing_operations import OPERATIONS as SOURCING
 # --- MVP ---
 #: Each table by the package under spark that holds it, in the journey's order (AGENTS.md).
 TABLES = (("idea", IDEA), ("sourcing", SOURCING), ("sourcing.research", RESEARCH), ("design", DESIGN),
-          ("build", BUILD), ("checks", CHECKS), ("bench", BENCH), ("flow", FLOW))
+          ("build", BUILD), ("checks", CHECKS), ("firmware", FIRMWARE), ("bench", BENCH), ("flow", FLOW))
 #: Every Operation on the core, by the op it prints. A name in two tables keeps only the later one, so the test counts.
 CATALOGUE = {op: operation for _, table in TABLES for op, operation in table.items()}
 #: The ops whose declared effects hold `fetches` (S2): they reach the network. parts.py --describe says `network`.

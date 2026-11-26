@@ -104,7 +104,7 @@ class TheOperationCatalogueTest(unittest.TestCase):
     def test_every_table_s_operations_are_in_the_catalogue_once(self):
         tables = operation_catalogue.TABLES
         self.assertEqual([package for package, _ in tables],
-                         ["idea", "sourcing", "sourcing.research", "design", "build", "checks", "bench", "flow"])
+                         ["idea", "sourcing", "sourcing.research", "design", "build", "checks", "firmware", "bench", "flow"])
         for package, table in tables:
             for op, cls in table.items():
                 self.assertIs(operation_catalogue.CATALOGUE.get(op), cls, (package, op))
