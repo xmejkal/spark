@@ -501,11 +501,12 @@ class PickPlan:
     def picked_for(self, key, kind=None):
         """The ids of the needs whose picks are the part `key` (P1141), a pick of a record's drawer entry as that record
         (`as_record`). With `kind` ("part", "board", or "entry" for a drawer entry with no record) a pick must be that kind
-        too, so a record and a drawer entry of one key are two parts; with none, any kind of that key. The one rule of
-        which needs pick a part: --match's marks, the flow's part names and `needs_picking` read it."""
+        too, so a record and a drawer entry of one key are two parts; with none, any kind of that key, as stored or as its
+        record (a refused hold names the stored key, `plan_holds`). The one rule of which needs pick a part: --match's
+        marks, the flow's part names and `needs_picking` read it."""
         def names(pick):
             said = as_record(pick, self.known, self.entries)
-            return said == {kind: key} if kind else key in said.values()
+            return said == {kind: key} if kind else key in said.values() or key in pick.values()
         return [need["id"] for need in self.current if any(names(pick) for pick in need.get("pick") or [])]
 
     def needs_picking(self, key, but):

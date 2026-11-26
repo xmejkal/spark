@@ -382,8 +382,10 @@ class TheMatchReadsThePicksTest(unittest.TestCase):
         self.assertEqual(self.candidates()["soil"][("x-soil", "part")]["picked_for"], ["soil", "wet"])
         plan = needs.PickPlan(self.project)
         self.assertEqual((plan.picked_for("x-soil"), plan.picked_for("x-soil", "part"), plan.picked_for("x-soil", "entry"),
-                          plan.picked_for("probe")), (["soil", "wet"], ["soil", "wet"], [], []))
+                          plan.picked_for("probe", "entry")), (["soil", "wet"], ["soil", "wet"], [], []))
         self.assertEqual(plan.needs_picking("x-soil", "wet"), ["soil"])  # C1: one rule; an old entry pick of a record counts
+        # the PR refuter: a refused hold names the stored key, here the entry, so a pick with no kind matches it too
+        self.assertEqual((plan.picked_for("probe"), plan.needs_picking("probe", "wet")), (["soil"], ["soil"]))
 
     def test_the_needs_text_says_each_pick_before_the_aside_tag(self):
         self.with_needs([{"id": "soil", "does": "sense", "what": "soil-moisture", "mark": "have", "pick": [{"part": "x-soil"}]},
@@ -657,7 +659,7 @@ class TheMatcherTest(unittest.TestCase):
     def test_a_match_names_who_holds_a_board_and_the_asking_project_is_left_out(self):
         self.hold_the_xiao("reaction-game", "plant-alarm", "plant-alarm-2")
         self.assertEqual(self.xiao()["held_by"], ["plant-alarm-2", "reaction-game"])
-        self.assertIn("free 0, held by plant-alarm-2, reaction-game", self.board_text())
+        self.assertIn("free 0 (1 held by this project), held by plant-alarm-2, reaction-game", self.board_text())  # P1141
 
     def test_a_candidate_nobody_holds_says_no_holder(self):
         self.assertEqual(self.xiao()["held_by"], [])
