@@ -128,6 +128,7 @@ class FromShowToThePageTest(FlowTest):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
             {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]},
             {"id": "wet", "does": "sense", "what": "soil-moisture"}])
+        (project / ".spark" / "project.json").write_text(json.dumps({"goal": "a soil alarm"}))  # P1142: the goal line reaches the page
         data = self.assert_the_page_shows(project)
         self.assertTrue([at for at, _text in counted(data) if ".offers[" in at], "the fixture counts the offers' sentences")
 
