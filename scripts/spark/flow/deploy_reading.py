@@ -133,25 +133,28 @@ def deployed_line(deploy):
 
 
 def deploy_now(state):
-    """(who acts, the sentence) of an open deploy after a deploy (P1043), by its DeployState: a stale one by its fact
-    (STALE_DEPLOY_NOW, P1043-D4), a flash that did not finish (P1092), problems with its cause's words, a partial one by its cause's group: a lost board after
-    ready, a port gone or download mode, a start not confirmed, or a cause not recorded. None for any other status, which
-    keeps its own sentence."""
+    """The NowSentence (who acts, the sentence, the (DEPLOY, value) it was chosen by, P1133) of an open deploy after a deploy
+    (P1043), by its DeployState: a stale one by its fact (STALE_DEPLOY_NOW, P1043-D4), a flash that did not finish (P1092), problems
+    with its cause's words, a partial one by its cause's group: a lost board after ready, a port gone or download mode, a
+    start not confirmed, or a cause not recorded. None for any other status, which keeps its own sentence."""
     status, logged = state.status, state.logged
     if status not in (flow_codes.STALE, flow_codes.PARTIAL, PROBLEMS):
         return None
     if status == flow_codes.STALE:
-        return flow_codes.STALE_DEPLOY_NOW[state.fact]
+        return flow_codes.NowSentence(*flow_codes.STALE_DEPLOY_NOW[state.fact], (flow_codes.DEPLOY, state.fact))
     if not_finished(logged):  # P1092: look at the board, then deploy again
-        return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_NOT_FINISHED_NOW
+        return flow_codes.NowSentence([flow_codes.BY_TERMINAL], flow_codes.DEPLOY_NOT_FINISHED_NOW,
+                                      (flow_codes.DEPLOY, flow_codes.FLASH_NOT_FINISHED))
     words = flow_codes.CAUSE_WORDS.get(logged.cause, (None, None))[0]
     if status == PROBLEMS:
-        return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_PROBLEMS_NOW % (words or flow_codes.NO_READY_SEEN_WORDS)
+        return flow_codes.NowSentence([flow_codes.BY_TERMINAL], flow_codes.DEPLOY_PROBLEMS_NOW % (words or flow_codes.NO_READY_SEEN_WORDS),
+                                      (flow_codes.DEPLOY, status))
     if logged.cause == board_codes.BOARD_LOST:
-        return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_LOST_NOW
+        return flow_codes.NowSentence([flow_codes.BY_TERMINAL], flow_codes.DEPLOY_LOST_NOW, (flow_codes.DEPLOY, status))
     if logged.cause in (board_codes.PORT_GONE, board_codes.DOWNLOAD_MODE_STAYED):
-        return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_AWAY_NOW % words
-    return [flow_codes.BY_TERMINAL], flow_codes.DEPLOY_NO_START_NOW if words else flow_codes.DEPLOY_UNKNOWN_NOW
+        return flow_codes.NowSentence([flow_codes.BY_TERMINAL], flow_codes.DEPLOY_AWAY_NOW % words, (flow_codes.DEPLOY, status))
+    return flow_codes.NowSentence([flow_codes.BY_TERMINAL], flow_codes.DEPLOY_NO_START_NOW if words else flow_codes.DEPLOY_UNKNOWN_NOW,
+                                  (flow_codes.DEPLOY, status))
 
 
 def deploy_data(state):

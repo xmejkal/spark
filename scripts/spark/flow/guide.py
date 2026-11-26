@@ -120,64 +120,59 @@ def scenario_names(project):
 
 
 def who_and_sentence(now, open_needs, fact, written=True):
-    """(who acts, the sentence) of the phase to act on now: a simulate with no sim/wokwi.toml by Claude (P1034), a
-    simulate that opens a scenario run while no scenario is `written` (P1034), a simulate with no status by its ImageFact
-    `fact` (flow_codes.IMAGE_NOW), else the phase's own `by` and its sentence by (phase, status) in
-    flow_codes.NOW_SENTENCES, else the problems or could-not-run line."""
+    """The NowSentence of the phase to act on now (P1133): a simulate with no sim/wokwi.toml by Claude (P1034), a simulate
+    that opens a scenario run while no scenario is `written` (P1034), a simulate with no status by its ImageFact `fact`
+    (flow_codes.IMAGE_NOW), else the phase's own `by` and its sentence by (phase, status) in flow_codes.NOW_SENTENCES,
+    else the problems or could-not-run line. Its `chosen_by` is the (phase, value) the branch chose the sentence by."""
     if now.phase == flow_codes.SIMULATE and fact.fact == flow_codes.NO_SIM_FILES:
-        return [flow_codes.BY_CLAUDE], flow_codes.SIM_FILES_NOW
+        return flow_codes.NowSentence([flow_codes.BY_CLAUDE], flow_codes.SIM_FILES_NOW, (flow_codes.SIMULATE, flow_codes.NO_SIM_FILES))
     if now.phase == flow_codes.SIMULATE and not written and (now.status == flow_codes.NOT_STARTED or fact.fact == flow_codes.IMAGE_UNTESTED):
-        return [flow_codes.BY_TERMINAL], flow_codes.SCENARIO_FIRST_NOW
+        return flow_codes.NowSentence([flow_codes.BY_TERMINAL], flow_codes.SCENARIO_FIRST_NOW, (flow_codes.SIMULATE, flow_codes.NO_SCENARIO))
     if now.phase == flow_codes.SIMULATE and now.status is None:
         by, said = flow_codes.IMAGE_NOW[fact.fact]
-        return by, said % fact.log if fact.fact == flow_codes.RUN_FAILED else said
+        return flow_codes.NowSentence(by, said % fact.log if fact.fact == flow_codes.RUN_FAILED else said, (flow_codes.SIMULATE, fact.fact))
     said = flow_codes.NOW_SENTENCES.get((now.phase, now.status))
     if said == flow_codes.PARTS_NOW:
-        return [now.by], said % (flow_codes.ONE_NEED_HAS if len(open_needs) == 1 else flow_codes.MANY_NEEDS_HAVE % len(open_needs), ", ".join(open_needs))
-    return [now.by], said or (flow_codes.PROBLEMS_NOW if now.status == PROBLEMS else flow_codes.COULD_NOT_RUN_NOW) % now.phase
+        return flow_codes.NowSentence([now.by], said % (flow_codes.ONE_NEED_HAS if len(open_needs) == 1 else flow_codes.MANY_NEEDS_HAVE % len(open_needs), ", ".join(open_needs)),
+                                      (now.phase, now.status))
+    if said:
+        return flow_codes.NowSentence([now.by], said, (now.phase, now.status))
+    if now.status == PROBLEMS:
+        return flow_codes.NowSentence([now.by], flow_codes.PROBLEMS_NOW % now.phase, (now.phase, PROBLEMS))
+    return flow_codes.NowSentence([now.by], flow_codes.COULD_NOT_RUN_NOW % now.phase, (now.phase, COULD_NOT_RUN))
 
 
-def chat_offer_of(now, fact):
-    """The key of the chat offer whose job the NOW sentence of `now` asks Claude for (P1122, `flow_codes.CHAT_NOW`), or
-    None, in `who_and_sentence`'s order: none for a simulate with no sim/wokwi.toml (the build's own step), a simulate with
-    no status by its ImageFact `fact`, else by the phase's status. An open deploy after a deploy is `deploy_chat_offer`'s."""
-    if now.phase == flow_codes.SIMULATE and fact.fact == flow_codes.NO_SIM_FILES:
-        return None
-    value = fact.fact if now.phase == flow_codes.SIMULATE and now.status is None else now.status
-    return flow_codes.CHAT_NOW.get((now.phase, value))
-
-
-def deploy_chat_offer(state):
-    """The key of the chat offer of an open deploy after a deploy (P1122), or None, by the value `deploy_reading.deploy_now`
-    picks its sentence by in the DeployState `state`: a stale deploy's fact, the verdict of a flash that did not finish,
-    else the status."""
-    if state.status == flow_codes.STALE:
-        value = state.fact
-    elif deploy_reading.not_finished(state.logged):
-        value = state.logged.verdict
-    else:
-        value = state.status
-    return flow_codes.CHAT_NOW.get((flow_codes.DEPLOY, value))
+def chat_offer_of(sentence):
+    """The key of the chat offer whose job the NowSentence `sentence` asks Claude for (P1122, P1133): the one lookup of its
+    `chosen_by` in `flow_codes.CHAT_NOW`, or None."""
+    return flow_codes.CHAT_NOW.get(sentence.chosen_by)
 
 
 def with_deploy_now(project, said, now, deploy=None):
     """`said` with who acts, the sentence and the chat offer of an open deploy after a deploy (P1043, P1122,
-    `deploy_reading.deploy_now`), from `deploy`, the DeployState the run read its deploy phase from (None: read it here, as
-    `image_fact` reads the image: a fact on every Phase would change the phases' JSON). Else `said` as it is."""
+    `deploy_reading.deploy_now`, a NowSentence), from `deploy`, the DeployState the run read its deploy phase from (None: read
+    it here, as `image_fact` reads the image: a fact on every Phase would change the phases' JSON). Else `said` as it is."""
     if not (now and now.phase == flow_codes.DEPLOY):
         return said
-    state = deploy or deploy_reading.read_deploy(project)
-    told = deploy_reading.deploy_now(state)
-    return dict(said, by=told[0], says=told[1], chat_offer=deploy_chat_offer(state)) if told else said
+    told = deploy_reading.deploy_now(deploy or deploy_reading.read_deploy(project))
+    return dict(said, by=told.by, says=told.says, chat_offer=chat_offer_of(told)) if told else said
+
+
+def requirements_now(by, written):
+    """The NowSentence of a stale parts list (P1140): `by` acts, the sentence of STALE_REQUIREMENTS by `written` (whether the
+    file is as spark last wrote it), chosen by (REQUIREMENTS, STALE), a pair that has no chat offer."""
+    return flow_codes.NowSentence(by, flow_codes.STALE_REQUIREMENTS[written][1], (flow_codes.REQUIREMENTS, flow_codes.STALE))
 
 
 def with_requirements_now(project, said, now):
-    """`said` with the sentence of a stale parts list by whether the file is as spark last wrote it (P1140,
-    `flow_codes.STALE_REQUIREMENTS`, the table the phase line reads too), read here as `with_deploy_now` reads the deploy. Else `said`."""
+    """`said` with the sentence and the chat offer of a stale parts list by whether the file is as spark last wrote it (P1140,
+    `requirements_now`, `flow_codes.STALE_REQUIREMENTS`, the table the phase line reads too), read here as `with_deploy_now`
+    reads the deploy. Else `said`. The chat offer is read from the last NowSentence."""
     if not (now and now.phase == flow_codes.REQUIREMENTS and now.status == flow_codes.STALE):
         return said
     written = readable(lambda: entry_origin.EntryOriginStore(project).is_as_written(read_requirements(project)), None)
-    return dict(said, says=flow_codes.STALE_REQUIREMENTS[written][1])
+    told = requirements_now(said["by"], written)
+    return dict(said, says=told.says, chat_offer=chat_offer_of(told))
 
 
 def no_open_phase(said, by_name):
@@ -199,10 +194,10 @@ def now_of(now, open_needs, fact, count, written=True):
     """`{phase, by, says, offer, chat_offer, needs, steps}` of the phase to act on now. With `count`, the steps of a current
     wiring sheet beside firmware not started, it is two jobs, the person's and Claude's, and `steps` is that count (else
     None). `written` is false while a simulate now has no scenario. `chat_offer` is the key of the chat offer the sentence
-    asks Claude for, or None (P1122, `chat_offer_of`)."""
-    by, says = ([flow_codes.BY_YOU, flow_codes.BY_CLAUDE], flow_codes.TWO_JOBS_NOW % count) if count is not None else \
-        who_and_sentence(now, open_needs, fact, written)
-    return {"phase": now.phase, "by": by, "says": says, "offer": job_offer(now), "chat_offer": chat_offer_of(now, fact),
+    asks Claude for, or None (P1122, P1133: `chat_offer_of` of the sentence's `chosen_by`)."""
+    sentence = flow_codes.NowSentence([flow_codes.BY_YOU, flow_codes.BY_CLAUDE], flow_codes.TWO_JOBS_NOW % count, (now.phase, now.status)) \
+        if count is not None else who_and_sentence(now, open_needs, fact, written)
+    return {"phase": now.phase, "by": sentence.by, "says": sentence.says, "offer": job_offer(now), "chat_offer": chat_offer_of(sentence),
             "needs": open_needs if now.phase == flow_codes.PARTS else [], "steps": count}
 
 

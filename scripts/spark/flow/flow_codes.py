@@ -467,6 +467,8 @@ IMAGE_NOW = {RUN_FAILED: ([BY_CLAUDE], RUN_FAILED_NOW), IMAGE_OLDER: ([BY_CLAUDE
 #: SIMULATE_NOW while no scenario is written (P1034): Claude writes one first, and the terminal still runs it.
 SCENARIO_FIRST_NOW = ("No scenario is written yet, so ask Claude to write one first. Then ask for the scenario command, and "
                       "run it in your terminal. It uses Wokwi CI minutes.")
+#: The value a simulate's SCENARIO_FIRST_NOW is chosen by (P1133): no scenario is written. Its one CHAT_NOW row keeps the tell.
+NO_SCENARIO = "no-scenario"
 #: A simulate not started with no sim/wokwi.toml (P1034): the build writes it, so the sentence asks for the build.
 NO_SIM_FILES = "no-sim-files"
 SIM_FILES_NOW = "No simulation files yet (sim/wokwi.toml). Ask Claude to build the board again. It takes seconds and costs nothing."
@@ -511,12 +513,18 @@ NOT_BUILT = "not built"
 #: status word, comma apart ("Wiring: now, not started"), since its mark is hidden from it.
 STATIONS_LABEL = "Where the project stands"
 STATION_SAID = ": %s"
-#: The chat offer whose job the NOW sentence asks Claude for (P1122), by (the now phase, the value the guide picked that
-#: sentence by): a status, a simulate's image fact (IMAGE_NOW's keys), a stale deploy's fact or the verdict of a flash that
-#: did not finish. Any other is None, so no tell stands beside a sentence that asks for something else: a failed run, an
-#: image to make again, problems or a run that could not run.
+#: The chat offer whose job the NOW sentence asks Claude for (P1122), by a NowSentence's `chosen_by` (P1133): (the now phase,
+#: the value its picker chose the sentence by): a status, a simulate's image fact (IMAGE_NOW's keys), NO_SCENARIO, a stale
+#: deploy's fact, the verdict of a flash that did not finish, or PROBLEMS or COULD_NOT_RUN for the sentences of those. Any
+#: other is None, so no tell stands beside a sentence that asks for something else: a failed run, an image to make again,
+#: problems or a run that could not run.
 CHAT_NOW = {(FIRMWARE, NOT_STARTED): WRITE_FIRMWARE,
             (SIMULATE, NOT_STARTED): RUN_SIMULATION, (SIMULATE, IMAGE_UNTESTED): RUN_SIMULATION,
+            (SIMULATE, NO_SCENARIO): RUN_SIMULATION,
             (DEPLOY, NOT_STARTED): LOOK_AT_BOARD, (DEPLOY, PARTIAL): LOOK_AT_BOARD, (DEPLOY, FLASH_NOT_FINISHED): LOOK_AT_BOARD,
             (DEPLOY, IMAGE_DIFFERS): LOOK_AT_BOARD}
+#: Value: the NOW sentence a picker chose (P1133, `guide.who_and_sentence`, `deploy_reading.deploy_now`): who acts (`by`), the
+#: sentence (`says`), and `chosen_by`, the (phase, value) pair it chose the sentence by, never an actor, which
+#: `guide.chat_offer_of` looks up in CHAT_NOW.
+NowSentence = namedtuple("NowSentence", "by says chosen_by")
 # --- end MVP ---

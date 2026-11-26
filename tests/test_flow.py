@@ -2840,7 +2840,7 @@ class TheNowSentenceTest(unittest.TestCase):
                 (Phase("simulate", None, "?", "you", ["said"], []), ImageFact("run-failed", "a.log"), True,
                  ("simulate", "run-failed"), "A run failed on this image (a.log)"),
                 (Phase("firmware", "not-started", "?", "Claude", ["said"], []), NO_IMAGE_FACT, True,
-                 ("firmware", "not-started"), "No firmware"),
+                 ("firmware", "not-started"), "Ask Claude in the chat to write the firmware"),
                 (Phase("firmware", "problems", "?", "Claude", ["said"], []), NO_IMAGE_FACT, True,
                  ("firmware", "problems"), "The firmware phase has problems"),
                 (Phase("deploy", "partial", "?", "you", ["said"], []), NO_IMAGE_FACT, True,
