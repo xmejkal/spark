@@ -71,3 +71,10 @@ Proteus is paid, and Tinkercad has no ESP32. Both lines come from the agent's ge
    open until QEMU drives its pins.
 5. Before any plan rests on Velxio: confirm that it loads a MicroPython image, and what an ST7789 or an e-paper part
    needs there.
+
+## Added at noon, 2026-11-26
+
+The pre-analysis for spark's own simulator (the PO's D15) found two emulators that this note missed: Espressif's
+`esp-emulator` (https://github.com/espressif/esp-emulator, v1.2.0, 2026-11-20, C6 and S3 with GPIO, I2C, SPI, ADC
+and virtual parts) and `esp32sim` (https://github.com/mikroverk/esp32sim, MIT, the C6 a draft). Line 1 of the five
+lines above is wrong for them. The details are in the store's preanalysis/2026-11-26-own-simulator.md.

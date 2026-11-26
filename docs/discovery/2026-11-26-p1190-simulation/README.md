@@ -42,8 +42,9 @@ Q1 (the assumptions' ratings and the pass line), Q6's "the editor", and his yes 
    clock has 35 such tests, and they pass in under a second (★C18).
 4. The PO's three ways to simulate a part are two models and a skip in the part record. A "setting with sliders" is
    a list of controls that either model carries (★C7, ★C8, ★C20).
-5. No open simulator drives the pins of an ESP32-C6 today. QEMU names initial C6 support with no GPIO for any
-   chip. Velxio has no C6 yet and is AGPL (★C12, [research-alternatives.md](research-alternatives.md)).
+5. Two free local emulators run the ESP32-C6 and S3 with GPIO, I2C and SPI: Espressif's `esp-emulator` (binaries,
+   Apache-2.0 repository) and `esp32sim` (MIT, the C6 a draft). Nothing was run, and MicroPython on the C6 is not
+   shown on either. QEMU and Velxio do not drive the C6's pins (★C12, [research-alternatives.md](research-alternatives.md)).
 6. P999 puts the only board that Wokwi lacks on a stand-in. The stand-in lacks GPIO14, and the clock uses it, so
    the clock may stay uncovered (★C25, not run).
 7. The seam follows the P1089 engine pattern: a role in the tools list, a contract word, a table to an Adapter, a
