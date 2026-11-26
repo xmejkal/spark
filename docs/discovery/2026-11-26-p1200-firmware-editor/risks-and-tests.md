@@ -30,7 +30,7 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 | id | belief | type | evidence now | importance | cheapest test | pass line, dated | result that would change the decision | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | A1 <!-- REQUIRED:assumptions --> | He wants to read main.py and pins.py on the page, not in the chat or an editor | value | H: a wish on record twice (council/user-ux.md, UX-18), no account of a moment | — (decider) | account question Q2 and SQ21 | he names one moment he wanted to read the firmware himself and where he looked, set 2026-11-26 | no moment: the show slice waits | open |
-| A2 | He wants to change firmware with his own hands on a page, and telling Claude is not enough | value | H, against it E ★C11 | — (decider) | account question Q3 | he names at least one moment when he wanted to type a value himself and telling Claude was not enough, set 2026-11-26 | no moment: D-q2 (a), the sentence for the chat | open |
+| A2 | He wants to change firmware with his own hands on a page, and telling Claude is not enough | value | H, against it E ★C11. E against it: D3 | — (decider) | account question Q3 | he names at least one moment when he wanted to type a value himself and telling Claude was not enough, set 2026-11-26 | no moment: D-q2 (a), the sentence for the chat | retired 2026-11-26, Results row 1 |
 | A3 | After a deploy his open question is what the board runs, and a read-back on the page answers it | value | H from E ★C12 (10 of 28 ended "ready unknown"). Rival: in 9 of 10 spark could not read the files, and the cause may be the firmware or the port (★C12, one project) | — (decider) | account question SQ13 | he names how he found out what the board ran, and that the page was not where he looked, set 2026-11-26 | he found it at once in the terminal: D-q1 (b) waits | open |
 | A4 | The deploy's friction is the words and the copying, not the terminal itself | usability | H from E: the store's bench-2026-11-25 notes (UX-4) | — (decider) | account question SQ14 | he picks "a short line that copies whole" over "a button", set 2026-11-26 | he picks the button: D-q3 (b) stays a candidate | open |
 | A5 | A person who saves an edit understands that the board still runs the old image | usability | H, E for the mechanism (project_image.py:121-125) | — (decider) | a paper sketch of the fold's "what comes next" line, read by him | he says what comes next without help, set 2026-11-26 | he does not: the fold needs the line before any edit | open |
@@ -55,6 +55,7 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 with its pointer), the pass line met or missed, what it changes. -->
 | date | source and pointer | what was seen | pass line met or missed | what it changes |
 | --- | --- | --- | --- | --- |
+| 2026-11-26 | Q3, an account question to the PO through spark-main, brief.md D3 | "Telling Claude was enough." He named no moment when he wanted to type a value himself | missed: the proposed pass line asked for one moment | D-q2 (a): a sentence for the chat. The edit on the page stays a named seam, not built (D5) |
 
 ## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
 <!-- Energy per mode · peaks per rail against the source · dissipation per part, each number with its provenance and

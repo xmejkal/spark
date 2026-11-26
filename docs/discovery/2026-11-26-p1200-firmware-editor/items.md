@@ -1,9 +1,9 @@
 # Proposed items
 <!-- Filing needs the decider's yes to this list: a D in brief.md that names items.md. -->
 
-From council/synthesis.md, section 8. None is filed. spark-main files them on the PO's yes. Comments widen an existing card instead of filing a new one.
+From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None is filed. spark-main files them on the PO's yes. Comments widen an existing card instead of filing a new one.
 
-## 1. The page shows the firmware as one file time → `show-firmware` and one fold with main.py and pins.py as masked, read-only text
+## 1. The page shows the firmware as one file time → after the MVP walk, `show-firmware` and one fold with main.py and pins.py as masked, read-only text (D2, D5)
 - type: story (new) <!-- REQUIRED:item-type -->
 - needed by: "it might also be nice to offer some on the page editing and display of the generated code and maybe even deploy directly rfom the broswer" (the PO, 2026-11-26, #1748) <!-- REQUIRED:needed-by -->
 - value proven by: `show-firmware --json` and the fold on a scratch project show main.py and pins.py, with who writes each and when, and a secrets file shows as "not shown" <!-- REQUIRED:value-proven-by -->
@@ -33,7 +33,7 @@ From council/synthesis.md, section 8. None is filed. spark-main files them on th
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors, as today <!-- REQUIRED:spark-process:slice -->
 
-## 4. Comment on P1217 #1766, with P1106 #1626: widen to the read-back in plain words, per file "matches", "differs" or "not read"
+## 4. Comment on P1217 #1766, with P1106 #1626: the page shows the last read-back beside the deploy step and the line to type (D4), per file "matches", "differs" or "not read"
 - type: comment <!-- REQUIRED:item-type -->
 - needed by: the user lens's UX-15, an inference from one walk, and Q2 of round 1 <!-- REQUIRED:needed-by -->
 - value proven by: the comment, and A3's account question <!-- REQUIRED:value-proven-by -->
@@ -43,7 +43,7 @@ From council/synthesis.md, section 8. None is filed. spark-main files them on th
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as today <!-- REQUIRED:spark-process:slice -->
 
-## 5. Comment on P1132 #1666: one more chat offer, "Change a value in the firmware" (D-q2 a)
+## 5. Comment on P1132 #1666: one more chat offer, "Change a value in the firmware" (D-q2 a, chosen by D3)
 - type: comment <!-- REQUIRED:item-type -->
 - needed by: "it might also be nice to offer some on the page editing and display of the generated code and maybe even deploy directly rfom the broswer" (the PO, 2026-11-26, #1748) <!-- REQUIRED:needed-by -->
 - value proven by: the sentence pasted into the chat changes the value <!-- REQUIRED:value-proven-by -->
@@ -52,16 +52,6 @@ From council/synthesis.md, section 8. None is filed. spark-main files them on th
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as today <!-- REQUIRED:spark-process:slice -->
-
-## 6. Comment on P494 #674: widen the spike with desk tests that need no board (the serial test page in Chrome and in the desktop app, childProcess running `flow.py show`, whether the app's pty reports a tty and takes the page's input)
-- type: comment <!-- REQUIRED:item-type -->
-- needed by: the PO's words on #1748: "maybe some of these functionalities are available but only for a version of the page running on our server or local server" <!-- REQUIRED:needed-by -->
-- value proven by: the spike's finding picks the second host <!-- REQUIRED:value-proven-by -->
-- depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
-- label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
-- parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors, as today <!-- REQUIRED:spark-process:slice -->
 
 ## 7. Comment on P834 #1196: P1200's table of features by host is this card's input, as a guide page with a date on each cell
 - type: comment <!-- REQUIRED:item-type -->
@@ -83,26 +73,6 @@ From council/synthesis.md, section 8. None is filed. spark-main files them on th
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Project timeline, as today <!-- REQUIRED:spark-process:slice -->
 
-## 9. Comment on P793 #1105: the `flash_image` line is the `build-image` Operation that any page deploy needs first
-- type: comment <!-- REQUIRED:item-type -->
-- needed by: the tech lead's TL-10 <!-- REQUIRED:needed-by -->
-- value proven by: the comment <!-- REQUIRED:value-proven-by -->
-- depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
-- label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
-- parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): 10 The store, as today <!-- REQUIRED:spark-process:slice -->
-
-## 10. Comment on P1082 #1587: a step that carries text needs a second guard of its own
-- type: comment <!-- REQUIRED:item-type -->
-- needed by: the architecture lens's AR-2 <!-- REQUIRED:needed-by -->
-- value proven by: the comment <!-- REQUIRED:value-proven-by -->
-- depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
-- label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
-- parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as today <!-- REQUIRED:spark-process:slice -->
-
 ## 11. Comment on P1144 #1679: the notes of 2026-11-25 say lines that copy whole may remove the friction a page deploy was meant to remove
 - type: comment <!-- REQUIRED:item-type -->
 - needed by: the store's bench-2026-11-25 notes (UX-4) <!-- REQUIRED:needed-by -->
@@ -113,7 +83,7 @@ From council/synthesis.md, section 8. None is filed. spark-main files them on th
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as today <!-- REQUIRED:spark-process:slice -->
 
-## 12. Comment on P1194 #1740: the settings rows of council/synthesis.md, section 5, as proposals
+## 12. Comment on P1194 #1740: two settings rows as proposals, the firmware view on the page (off or text, default text, user layer) and the firmware on a shared copy (hidden or shown with the mask, default hidden, user layer only)
 - type: comment <!-- REQUIRED:item-type -->
 - needed by: "every configurable choice names its setting, its default and its layer" (the PO, 2026-11-26, P1193 D8) <!-- REQUIRED:needed-by -->
 - value proven by: the comment <!-- REQUIRED:value-proven-by -->
@@ -142,36 +112,6 @@ From council/synthesis.md, section 8. None is filed. spark-main files them on th
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): 5 A real stranger (ask the decider: the card has no slice today) <!-- REQUIRED:spark-process:slice -->
-
-## 15. Comment on P836 #1198: the Allow dialog returns after each republish, and a click waits for `/spark:page`
-- type: comment <!-- REQUIRED:item-type -->
-- needed by: the user lens's UX-7 and UX-17 <!-- REQUIRED:needed-by -->
-- value proven by: the comment <!-- REQUIRED:value-proven-by -->
-- depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
-- label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
-- parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors, as today <!-- REQUIRED:spark-process:slice -->
-
-## 16. Comment on P1235 #1787: a server of spark's own implies accounts, and nothing is built for it
-- type: comment <!-- REQUIRED:item-type -->
-- needed by: the git discovery's D12 <!-- REQUIRED:needed-by -->
-- value proven by: the comment <!-- REQUIRED:value-proven-by -->
-- depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
-- label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
-- parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): as today <!-- REQUIRED:spark-process:slice -->
-
-## 17. An edit of main.py has no path from an interface without file tools → `save-firmware` with a listed file, the sha256 of the text shown, a size cap, a compile check and a kept step (parked until SQ5)
-- type: story (new, parked) <!-- REQUIRED:item-type -->
-- needed by: "it might also be nice to offer some on the page editing and display of the generated code and maybe even deploy directly rfom the broswer" (the PO, 2026-11-26, #1748) <!-- REQUIRED:needed-by -->
-- value proven by: a save refused after Claude changed the file, from the CLI <!-- REQUIRED:value-proven-by -->
-- depends on: P1152 #1688, and SQ5's answer <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
-- label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
-- parent (the epic, as a sub-issue): P1200 #1748 <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors <!-- REQUIRED:spark-process:slice -->
 
 ## 18. A yes that a program writes into a pseudo-terminal counts as typed and opens the erase → the guides say what a typed yes proves, a rule test keeps spark's own interfaces from driving a terminal for a step that asks, and the PO decides whether the gate does more (out of scope)
 - type: story (new) <!-- REQUIRED:item-type -->
@@ -213,5 +153,13 @@ From council/synthesis.md, section 8. None is filed. spark-main files them on th
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as today <!-- REQUIRED:spark-process:slice -->
 
+## Dropped after D3 to D5
+- item 6: 6. Comment on P494 #674: widen the spike with desk tests that need no board (the serial test page in Chrome an · dropped because D4: no deploy and no edit start from the page, so no feature needs a second host now
+- item 9: 9. Comment on P793 #1105: the `flash_image` line is the `build-image` Operation that any page deploy needs fir · dropped because D4: no page deploy, so `build-image` on the core is not needed for this epic
+- item 10: 10. Comment on P1082 #1587: a step that carries text needs a second guard of its own · dropped because D3: no request carries text
+- item 15: 15. Comment on P836 #1198: the Allow dialog returns after each republish, and a click waits for `/spark:page` · dropped because D4: the Allow dialog matters only for a desktop host, and no feature needs one now
+- item 16: 16. Comment on P1235 #1787: a server of spark's own implies accounts, and nothing is built for it · dropped because D4: no feature needs a server
+- item 17: 17. An edit of main.py has no path from an interface without file tools · dropped because D3: A2 missed its pass line, so `save-firmware` stays a named seam
+
 ## Board actions
-- file items 1, 17 to 20 and post the comments 2 to 16 and 21 · pending, needs the PO's yes to this list <!-- REQUIRED:board-actions -->
+- file items 1, 18, 19 and 20, and post the comments 2, 3, 4, 5, 7, 8, 11, 12, 13, 14 and 21 · pending, needs the PO's yes to this list <!-- REQUIRED:board-actions -->
