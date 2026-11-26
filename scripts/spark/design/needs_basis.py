@@ -36,8 +36,9 @@ NOTED_LINE = "  %s the goal and the must lines these needs were written from (.s
 
 def stamp_of(brief):
     """{goal_sha256, must_sha256} of a Brief: the goal's UTF-8 bytes as they are, the must lines sorted, so their order is no
-    change. None for a brief with a problem, with no goal or with a blank goal."""
-    if brief.problem or not brief.has_goal:
+    change. None for a brief with a problem or with no goal. A blank goal is stamped: the stamp sees every change of the goal's
+    text, so a goal blanked after the needs makes them out of date (the review of P1142). `Brief.has_goal` is the idea's rule."""
+    if brief.problem or brief.goal is None:
         return None
     return {GOAL_SHA256: hashlib.sha256(brief.goal.encode("utf-8")).hexdigest(), MUST_SHA256: parts_sha256(sorted(brief.must))}
 

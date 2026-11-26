@@ -183,12 +183,6 @@ class TheWriterTest(WithAStore):
                 self.assertEqual((code, said["data"]["basis_noted"], self.basis_bytes(project)), (0, False, None))
                 self.assertNotIn(WOULD_NOTE, text)
 
-    def test_a_blank_goal_gives_no_record_and_no_line(self):
-        project = a_project({"goal": "  ", "must": MUST})
-        said, code, text = needs_set(project, [BOARD])
-        self.assertEqual((code, said["data"]["basis_noted"], self.basis_bytes(project)), (0, False, None))
-        self.assertNotIn(WOULD_NOTE, text)
-
     @unittest.skipIf(os.geteuid() == 0, "root reads any file")
     def test_a_brief_that_cannot_be_read_never_fails_the_write(self):
         project = a_project(brief_of())
@@ -310,6 +304,15 @@ class TheReaderTest(WithAStore):
         self.assertEqual(said["data"]["stands_at"], "needs")
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "needs", "by": ["claude"], "says": STALE_NOW, "offer": None,
                                                         "chat_offer": None, "needs": [], "steps": None, "with_wiring": False})
+
+    def test_a_goal_blanked_after_the_needs_makes_them_out_of_date(self):
+        """The review of P1142: a blank goal is still a change of the goal's text, so the stamp sees it."""
+        project = self.written_project()
+        set_brief(project, goal="  ")
+        said, code = show(project)
+        phase = needs_phase(said)
+        self.assertEqual((code, phase["status"]), (0, "stale"))
+        self.assertEqual(phase["says"], [NEEDS_LINE, "the goal changed after the needs were written", REVIEW])
 
     def test_the_text_line_says_out_of_date_and_what_changed(self):
         project = self.written_project()
