@@ -93,13 +93,15 @@ each:
 - `AGENTS.md`: spark's section, between two marker lines. Each run rewrites only that section.
 - `CLAUDE.md`: the line `@AGENTS.md`, only when no `CLAUDE.md` is here. A person's own `CLAUDE.md` is left alone,
   and the note names the line to add.
-- `CLAUDE.local.md`: a link to `rules.md` in the person's store, kept out of git by spark's section of `.gitignore`.
+- `CLAUDE.local.md`: a link to `rules.md` in the person's store, kept out of git by spark's section of `.gitignore`,
+  and in a repository also by `.git/info/exclude`, which holds it when init leaves a tracked `.gitignore` alone.
   No `rules.md` means no link, and the note says where to write one. A person's own file is left alone.
 - `.gitignore`: spark's section, between two `# spark:` marker lines, with `CLAUDE.local.md`, `sim/*.bin` (the flash image
   and the MicroPython interpreter) and `sim/runs/` (the run and board logs). It is written with or without a git
   repository, so a later `git init` and `git add -A` commit none of them. Each run rewrites only that section, and
-  the person's lines stay. When git tracks `.gitignore`, init leaves it alone and the note names the lines to add (the
-  card [P1175](https://github.com/xmejkal/spark/issues/1716) decides whether init adds them). When git already tracks a
+  the person's lines stay. When git tracks `.gitignore`, or git cannot say inside a repository, init leaves it alone.
+  The note then names the lines to add. The card [P1175](https://github.com/xmejkal/spark/issues/1716) decides
+  whether init adds them. When git already tracks a
   file that the section covers, the note names it: `git rm --cached <file>` stops git tracking it and keeps your copy,
   and earlier commits still hold it, so change a password that was in one. Spark never runs `git rm`.
 
