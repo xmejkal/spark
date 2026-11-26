@@ -826,10 +826,38 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
         self.assertEqual(sorted(module_named(answer, "broken")), ["code", "detail", "module", "status"])
 
     def test_nothing_to_import_and_no_folder_have_their_codes_in_the_library(self):
-        problems = import_probe.look(a_project(main="while True:\n    pass\n"), 5)[1]
+        problems = import_probe.look(a_project(main="while True:\n    pass\n"), 5, subprocess.run)[1]
         self.assertEqual([problem.code for problem in problems], ["nothing_to_import"])
-        unchecked = import_probe.look(Path(tempfile.mkdtemp()), 5)[2]
+        unchecked = import_probe.look(Path(tempfile.mkdtemp()), 5, subprocess.run)[2]
         self.assertEqual([gap.code for gap in unchecked], ["no_firmware_folder"])
+
+
+class LookRunsThroughTheGivenRunTest(unittest.TestCase):
+    """P1208: the import check starts each child through the `run` it is given, so the outside world is the caller's."""
+
+    def test_each_module_runs_through_run(self):
+        project = a_project(light="x = 1\n", pins="BUTTON = 4\n")
+        calls = []
+
+        def recording_run(command, **options):
+            calls.append((command, options))
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        modules, problems, unchecked = import_probe.look(project, 5, recording_run)
+        self.assertEqual([(entry["module"], entry["status"]) for entry in modules], [("light", "imported"), ("pins", "imported")])
+        self.assertEqual((problems, unchecked), ([], []))
+        self.assertEqual(len(calls), 2)
+        for command, options in calls:
+            self.assertEqual(command[1:3], ["-I", "-B"])
+            self.assertEqual(options["cwd"], str((project / "firmware").resolve()))
+
+    def test_a_run_that_times_out_is_a_timed_out_module(self):
+        def too_slow(command, **options):
+            raise subprocess.TimeoutExpired(command, options["timeout"])
+
+        modules, problems, _ = import_probe.look(a_project(light="x = 1\n"), 0.25, too_slow)
+        self.assertEqual(modules[0]["status"], "timed out")
+        self.assertEqual([problem.code for problem in problems], ["import_timeout"])
 
 
 def with_package(project, name, init="x = 1\n"):

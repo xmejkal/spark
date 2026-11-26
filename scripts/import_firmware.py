@@ -44,6 +44,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from spark.core.outside import ProgramRunner  # noqa: E402
 from spark.firmware.import_probe import look  # noqa: E402
 from spark.core.outcomes import EXIT_FOR, answer  # noqa: E402
 
@@ -67,7 +68,7 @@ def main(argv=None):
                         help="how long one module may take to import (default: %g)" % DEFAULT_TIMEOUT_S)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
-    modules, problems, unchecked = look(Path(args.project), args.timeout)
+    modules, problems, unchecked = look(Path(args.project), args.timeout, ProgramRunner().run)
     result = dict(answer(problems, unchecked), tool="import_firmware", modules=modules)
     print(json.dumps(result, indent=2) if args.json else render(result))
     return EXIT_FOR[result["status"]]
