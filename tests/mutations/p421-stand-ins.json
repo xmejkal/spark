@@ -60,10 +60,10 @@
   "replace": "have = list(n for"
  },
  {
-  "file": "scripts/import_firmware.py",
+  "file": "scripts/spark/firmware/firmware_check.py",
   "name": "P421: the help keeps saying the stand-ins have nothing else",
-  "find": "`micropython` and `framebuf`. A driver",
-  "replace": "`micropython` and `framebuf`, nothing else. A driver"
+  "find": "`micropython` and `framebuf`.",
+  "replace": "`micropython` and `framebuf`, nothing else."
  },
  {
   "file": "scripts/spark/firmware/stand_in/fallback/micropython.py",
@@ -98,8 +98,8 @@
  {
   "file": "scripts/spark/firmware/import_probe.py",
   "name": "P421: the stand-in framebuf comes before the firmware's own",
-  "find": "str(STAND_IN), str(firmware), str(firmware / \"lib\"), str(FALLBACK)]",
-  "replace": "str(STAND_IN), str(FALLBACK), str(firmware), str(firmware / \"lib\")]"
+  "find": "[name, STAND_IN, firmware, firmware / \"lib\", FALLBACK]",
+  "replace": "[name, STAND_IN, FALLBACK, firmware, firmware / \"lib\"]"
  },
  {
   "file": "scripts/spark/firmware/stand_in/machine.py",

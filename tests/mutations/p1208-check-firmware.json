@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1208: a failed own test is no problem",
+  "find": "for test_id in tests.failed or ()]",
+  "replace": "for test_id in []]"
+ },
+ {
+  "file": "scripts/spark/firmware/own_tests.py",
+  "name": "P1208: passed counts the failed tests",
+  "find": "count[\"total\"] - len(failed) - count[\"skipped\"]",
+  "replace": "count[\"total\"] - count[\"skipped\"]"
+ },
+ {
+  "file": "scripts/spark/firmware/own_tests.py",
+  "name": "P1208: a timeout reads as recorded",
+  "find": "return not_checked(\"the tests did not finish within %g s: a test loops or waits\" % self.timeout_s)",
+  "replace": "return OwnTests(RECORDED, 0, 0, [], 0)"
+ },
+ {
+  "file": "scripts/spark/firmware/own_tests.py",
+  "name": "P1208: the parser reads the first line, not the last",
+  "find": "splitlines()[-1:]",
+  "replace": "splitlines()[:1]"
+ },
+ {
+  "file": "scripts/spark/firmware/own_tests_child.py",
+  "name": "P1208: a test that raised is not counted as failed",
+  "find": "list(result.failures) + list(result.errors) + ",
+  "replace": "list(result.failures) + "
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1208: no tests/ folder is a problem",
+  "find": "self.own_test_findings(tests)\n",
+  "replace": "self.own_test_findings(tests) + (\n            [Finding.of(PROBLEMS, None, firmware_codes.OWN_TESTS_NOT_RUN, NO_TESTS_NOTE, \"x\")] if tests.state == NONE_RECORDED else [])\n"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1208: a missing firmware/ skips the own tests",
+  "find": "        tests = self.reader.read(project, outside.run)\n",
+  "replace": "        tests = self.reader.read(project if modules else project / \"nowhere\", outside.run)\n"
+ },
+ {
+  "file": "scripts/spark/firmware/import_probe.py",
+  "name": "P1208: the import child runs without the given run",
+  "find": "IsolatedPython(run).call(",
+  "replace": "IsolatedPython(lambda *a, **k: __import__(\"subprocess\").run(*a, **k)).call("
+ }
+]
