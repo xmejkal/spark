@@ -106,16 +106,17 @@ def line_of(label, result):
 
 
 def answer_of(kind, result):
-    """(status, note) of the answer of a step of `kind` that ran: a build that could not run only because Wokwi has no
-    model of the board answers ok, with its code's meaning as the note (never a record's field name), as the guide counts it done (P1008). It
-    asks the guide's rule of the run's own Findings, one per stopped stage, never .spark/build.json: a crashed build
-    leaves an older record there. A parts-list write that ran ok answers its own notes' sentences, joined by NOTES_JOIN,
-    such as the entries it kept that no pick explains (P1139); with none, or not ok, no note, so a refusal's sentence stays
-    the line. Any other run answers its own status and no note."""
+    """(status, note) of the answer of a step of `kind` that ran: an ok build whose simulation stage was skipped only
+    because Wokwi has no model of the board (P1207) answers ok, with its code's meaning as the note (never a record's
+    field name), as the guide counts it done (P1008). It asks the guide's rule of the run's own stages, `result.data`,
+    never .spark/build.json: a crashed build leaves an older record there. A refused or crashed build has no data and is
+    never ok, so the status is asked first. A parts-list write that ran ok answers its own notes' sentences, joined by
+    NOTES_JOIN, such as the entries it kept that no pick explains (P1139); with none, or not ok, no note, so a refusal's
+    sentence stays the line. Any other run answers its own status and no note."""
     status = result.status()
-    stopped = {"stages": [{"name": finding.subject, "status": finding.severity, "code": finding.code} for finding in result.findings]}
-    if kind == flow_codes.BUILD_BOARD and status == COULD_NOT_RUN and stops_only_for_no_model(stopped):
-        return OK, next(code.meaning for code in NO_MODEL_CODES if code == result.findings[0].code)
+    if kind == flow_codes.BUILD_BOARD and status == OK and stops_only_for_no_model(result.data):
+        stages = result.data.get("stages") or []
+        return OK, next(code.meaning for code in NO_MODEL_CODES for stage in stages if stage.get("code") == code)
     if kind == flow_codes.WRITE_REQUIREMENTS and status == OK and result.notes:
         return status, NOTES_JOIN.join(note["sentence"] for note in result.notes)
     return status, None
