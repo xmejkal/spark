@@ -80,8 +80,8 @@
  {
   "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: the NOW offer's button stands in the parts fold too (E17, test 8)",
-  "find": "is_sendable(offer) and offer[\"key\"] != on_now)",
-  "replace": "is_sendable(offer))"
+  "find": "flow_codes.is_sendable(offer[\"key\"]) and offer[\"key\"] != on_now)",
+  "replace": "flow_codes.is_sendable(offer[\"key\"]))"
  },
  {
   "file": "scripts/spark/flow/page_sections.py",

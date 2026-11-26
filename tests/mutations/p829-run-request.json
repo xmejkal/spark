@@ -3,8 +3,8 @@
   "file": "scripts/spark/flow/run_request.py",
   "name": "a key spark does not offer now runs (P829)",
   "tier": "critical",
-  "find": "if key not in offered or kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS:",
-  "replace": "if key in offered and (kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS):"
+  "find": "if key not in offered or not flow_codes.is_sendable(key) or offered[key].step.op not in STEP_OPERATIONS:",
+  "replace": "if key in offered and (not flow_codes.is_sendable(key) or offered[key].step.op not in STEP_OPERATIONS):"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
@@ -15,9 +15,9 @@
  },
  {
   "file": "scripts/spark/flow/flow_codes.py",
-  "name": "a drop asked from the page is not said to belong in the chat (P829; P1115 derives IN_CHAT in flow_codes)",
-  "find": "IN_CHAT = tuple(kind for kind, row in OFFER_KINDS.items() if not row.from_page)",
-  "replace": "IN_CHAT = ()"
+  "name": "a drop asked from the page is not said to belong in the chat (P829; P1134: in_chat in flow_codes)",
+  "find": "return kind_of(key) in OFFER_KINDS and not is_sendable(key)",
+  "replace": "return False"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
@@ -65,8 +65,8 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "a second click on a pick is not offered, not stale (P829 review)",
-  "find": "    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n    if key not in offered or kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS:\n        return request_codes.REQUEST_NOT_OFFERED\n",
-  "replace": "    if key not in offered or kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS:\n        return request_codes.REQUEST_NOT_OFFERED\n    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n"
+  "find": "    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n    if key not in offered or not flow_codes.is_sendable(key) or offered[key].step.op not in STEP_OPERATIONS:\n        return request_codes.REQUEST_NOT_OFFERED\n",
+  "replace": "    if key not in offered or not flow_codes.is_sendable(key) or offered[key].step.op not in STEP_OPERATIONS:\n        return request_codes.REQUEST_NOT_OFFERED\n    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
@@ -89,7 +89,7 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "a kind the page never runs is run (P829)",
-  "find": "if key not in offered or kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS:",
+  "find": "if key not in offered or not flow_codes.is_sendable(key) or offered[key].step.op not in STEP_OPERATIONS:",
   "replace": "if key not in offered:"
  }
 ]
