@@ -8,8 +8,8 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
 **Ready for:** collecting evidence <!-- REQUIRED:ready -->
-**Stands on:** 8 H, — of which would change the decision (unrated until Q1) <!-- REQUIRED:debt -->
-**Decision needed:** Q1, the importance of A1 to A8 and the pass line of the riskiest test; then Q2 to Q11 settle the model <!-- REQUIRED:decision-needed -->
+**Stands on:** 8 H, 2 of which would change the decision (A1, A6, D10) <!-- REQUIRED:debt -->
+**Decision needed:** Q2 to Q15 settle the model; A1's walk of the Settings artboard tests the page <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked): the PO, 2026-11-26, answering P1193 #1738's P2, on #1740: "git identity, but configurable and asks until configured (like the other configs for it) for new projects, spark should have a settings /config feature per multiple layer like global/per project/per account logged in etc. for now just remember it for all configurable streategies and things like this, create a card for it, we will move the config there and also tell all new features to keep that in mind, we will also make the ui for it later, or you can already start the epic of config and analyze etc and create the ux/ui. I think some general settings and some per user settings, per project, maybe by per other thing, to be refined". And on 2026-11-26 in spark-artifact's question dialog, his choice "Settings page (Recommended)" for the next piece of the page design. <!-- REQUIRED:request -->
@@ -87,8 +87,8 @@ and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether 
 - Proposed no-gos and rabbit holes (proposals until the decider confirms): no account code, no sign-in and no new service now (D6); no setting that answers a yes to spend money or write a board; goal, must, needs and the rules stay records, not settings (PO-12); the meaning of "global" is the PO's (Q2), so no word is dropped before he answers; the page never shows a token's value or a path on the person's computer; the tools list is not rewritten in the first slice. Rabbit holes: syncing settings between machines before a second machine exists; Claude Code's `userConfig` as the store (★C14) · H the three lenses, D6 · caveat: proposals until he confirms <!-- REQUIRED:nogos -->
 
 ## Riskiest assumption and its test
-- Riskiest: A1, that a person looks on a page for why spark did something and whose word a value is, rather than asking Claude in the chat · proposed — the facilitator's opinion, from the PO assistant's pre-mortem (PO-17), pending Q1 <!-- REQUIRED:riskiest -->
-- Test · kind · pass line, dated before any result · proposed: a prototype walk of the Settings artboard by the PO (n = 1) with three tasks: say which check runs before the board in the clock and whose word it is; say whose word smartbin-local's vendor order is, and what spark did with its sentence; say how to set his shops for all projects · prototype · pass line: 3 of 3 found on the artboard without help, set 2026-11-26 · proposed — the facilitator's opinion, pending Q1 <!-- REQUIRED:test -->
+- Riskiest: A1, that a person looks on a page for why spark did something and whose word a value is, rather than asking Claude in the chat · D10 <!-- REQUIRED:riskiest -->
+- Test · kind · pass line, dated before any result · proposed: a prototype walk of the Settings artboard by the PO (n = 1) with three tasks: say which check runs before the board in the clock and whose word it is; say whose word smartbin-local's vendor order is, and what spark did with its sentence; say how to set his shops for all projects · prototype · pass line: 3 of 3 found on the artboard without help, set 2026-11-26 · D10 <!-- REQUIRED:test -->
 
 ## Questions
 <!-- A queue; the first open question is asked alone. Each: Q<n> · question · decides: … · options · unblocks ·
@@ -96,7 +96,7 @@ opinion (whose) · kind: decision | account (a past-tense question about the dec
 account, n = 1) · status: queued | asked <date> | answered D<n>.
 If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D5 <!-- REQUIRED:q0 -->
-- Q1 · How important is each assumption (A1 to A8), and what pass line must the riskiest test meet? · decides: importance and pass lines · status: queued <!-- REQUIRED:q1 -->
+- Q1 · How important is each assumption (A1 to A8), and what pass line must the riskiest test meet? · decides: importance and pass lines · status: answered D10 <!-- REQUIRED:q1 -->
 - Q2 · Which layers, and which word for each? · decides: the layer names and count · options in Options · opinion (the user lens and the PO assistant): (a) · kind: decision · status: queued
 - Q3 · May a project's file set every setting, or does each setting list the layers that may set it? · decides: the trust rule for the project layer · opinion (all three lenses): (a) · kind: decision · status: queued
 - Q4 · When a setting has no value, is its default used and said, or does spark ask once and keep the answer? · decides: the two kinds of setting · opinion (the tech lead, the user lens): (a) · kind: decision · status: queued
@@ -125,6 +125,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D7 · users, permissions and groups come later, with the accounts of D6 · the PO · 2026-11-26, about 12:50 CET · in spark-artifact's chat, verbatim: "And like users and permissions and groups, etc later" · options considered: —
 - D8 · every feature is independent of its interface and reachable from the other interfaces, unless it depends on one interface and makes no sense without it; for this item, reading and changing a setting is an Operation that the CLI, Claude and the page reach alike · the PO · 2026-11-26, about 13:00 CET · in spark-artifact's chat, verbatim: "And as always, make sure the fatures are always independent of the interface, the functinality  should aslo be accesssible from other interfaces, that's a general rule, unless its something dependent on the interface and wouldn't make sense without it" · options considered: — (a standing rule, beside AGENTS.md's "one core, many interfaces")
 - D9 · widens D8: every feature is reachable at least from the CLI now, later from MCP and from code (LangGraph and the like), and always for both agents and people · the PO · 2026-11-26, about 13:15 CET · in spark-artifact's chat, verbatim: "yeah evevrything must be accessible at least from CLI, later it will be MCP, in a code, like Langgraph, etc, and always for both agents and humans." · options considered: —
+- D10 · Q1: A1 and A6 are high, A2 to A5, A7 and A8 low; A1's test and its pass line (3 of 3) stand · the PO · 2026-11-26, about 13:45 CET · spark-artifact's question dialog · options considered: A1 and A6 high, the council proposes, all eight high
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
