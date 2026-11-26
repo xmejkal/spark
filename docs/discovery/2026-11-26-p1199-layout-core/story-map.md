@@ -11,8 +11,8 @@ Plan the layout → Read it → Change it (the person or Claude) → Rebuild and
 <!-- Walking skeleton first: the thinnest slice that runs end to end. One row per story. job: a job in
 jobs-and-journeys.md. tag: as in the brief. proof: something the decider can read.
 e.g. `| 0 | Notice | the assignee gets one daily digest | job 1 | H ★C2 | the digest log for one team |` -->
-All slices come after the MVP (council/synthesis.md S1, D-a, D-i), and the order is the PO's (Q2). Before the MVP
-only the evidence runs: Q1 and the 14-day log.
+All slices come after the MVP (council/synthesis.md S1, D-a, D-i), and the order is the PO's (Q3). Before the MVP
+only the evidence runs: Q2 and the 14-day log. The question numbers are the brief's.
 
 | slice | activity | story | job | tag | proof |
 | --- | --- | --- | --- | --- | --- |

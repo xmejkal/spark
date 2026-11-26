@@ -93,7 +93,10 @@ Could not check:
 
 ## Searches
 
-1. https://github.com/KeckuJp/perfwire
-2. https://www.dfrobot.com/product-1214.html. This was the wrong product (FIT0400), so the fetch was wasted.
-3. https://www.dfrobot.com/search-FIT0193.html
-4. https://www.dfrobot.com/product-824.html
+The decision each served was added by the main session, from the refuter's verdicts on ★C15 and ★C17.
+
+
+1. https://github.com/KeckuJp/perfwire · decision: ★C17 and D-q6, what perfwire does · used
+2. https://www.dfrobot.com/product-1214.html · decision: ★C15 and Q8 · not used: this was the wrong product (FIT0400), so the fetch was wasted.
+3. https://www.dfrobot.com/search-FIT0193.html · decision: ★C15 and Q8, the FIT0193's facts · used
+4. https://www.dfrobot.com/product-824.html · decision: ★C15 and Q8, the FIT0193's facts · used
