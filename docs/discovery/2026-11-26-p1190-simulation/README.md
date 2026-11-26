@@ -3,11 +3,25 @@
 The discovery of [P1190 #1735](https://github.com/xmejkal/spark/issues/1735), 2026-11-26. Nothing here is decided.
 Each choice waits on the PO, or on the delegated council of three, recorded "delegated, the PO's to change".
 
-> TL;DR. Today the simulation is one build stage and one paid command, both written for Wokwi. The proposed
-> direction does the cheap, honest half first. A board that no simulator covers reads "skipped" with its reason, and
-> not `could-not-run`. One free check runs on every board, and it counts the project's own tests. Then one
-> `Simulator` seam makes Wokwi one strategy among others, with no change in behaviour. The simulation is evidence at
-> gate A and never a lock.
+> TL;DR. Today the simulation is one build stage and one paid command, both written for Wokwi. The direction, as the
+> delegated council set it (D3 to D9, the PO's to change): P999 puts the FireBeetle 2 C6 on a Wokwi stand-in first.
+> One free Operation, `check-firmware`, then runs on every board and counts the project's own tests. A `Simulator`
+> seam makes Wokwi one strategy, with no change in behaviour. Last, a board that no simulator covers reads `skipped`
+> with its reason, once the PO says yes. The simulation is evidence at gate A and never a lock (his to decide).
+
+## The order to build
+
+1. P999 #1455 (the C6 stand-in) and item 4 (the limits list only after a run).
+2. Item 2: `check-firmware`, the import check moved onto the core, with the project's own tests.
+3. P1078 #1582: the scenario run as an Operation, the paid run a yes with its cost named.
+4. Item 6: the `Simulator` seam, with no change in behaviour.
+5. Item 1: the flip to `skipped`, after the PO's yes to Q11.
+
+## What waits on the PO
+
+Q1 (the assumptions' ratings and the pass line), Q3's reading of the non-goals, Q5 (gate A), Q6's "the editor",
+Q7's dependency on another author's chip, Q9 (what stopped a paid run), Q10 (the vision's v0.10 line) and Q11 (the
+code of his decision D-c). The questions are in [brief.md](brief.md).
 
 ## The main points
 
@@ -112,11 +126,12 @@ The numbers in the sketches are examples. Spark keeps no count of minutes today 
 
 ## The files
 
-- [brief.md](brief.md): the frame, the findings ★C1 to ★C21, the options, the riskiest assumption and the questions.
+- [brief.md](brief.md): the frame, the findings ★C1 to ★C25, the decisions D1 to D9, the options, the riskiest assumption and the questions.
 - [jobs-and-journeys.md](jobs-and-journeys.md): seven jobs and three journeys.
 - [story-map.md](story-map.md): the backbone and the slices, the walking skeleton first.
 - [risks-and-tests.md](risks-and-tests.md): the risks, nine assumptions and the collection plan.
 - [items.md](items.md): fifteen proposed cards. Nothing is filed.
 - [research-wokwi.md](research-wokwi.md) and [research-alternatives.md](research-alternatives.md): the sources.
-- council/: the PO assistant, the user, the tech lead, the architect's synthesis and the refuter.
+- council/: the PO assistant, the user, the tech lead, the architect's synthesis, the refuter, and the delegated
+  council's answers ([council-answers.md](council/council-answers.md)).
 - [verification.md](verification.md): each ★ claim, reproduced or not.
