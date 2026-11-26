@@ -436,7 +436,8 @@ class TheBreadboardAreaTest(unittest.TestCase):
 # --- MVP ---
 class TheChecksAreaTest(unittest.TestCase):
     """W6-C3 (P695): the checks' modules live in `scripts/spark/checks/`, its `__init__.py` imports nothing, and each
-    module imports alone. `scripts/` keeps the six CLIs and `check_spine.py`, and each CLI defines `main` only."""
+    module imports alone. `scripts/` keeps the six CLIs, `check_spine.py` (the build's) and `check_firmware.py` (the firmware's,
+    P1208), and each CLI defines `main` only."""
     CHECKS = ROOT / "scripts" / "spark" / "checks"
     #: The modules of the area, by the names of its page (`areas/checks.md`).
     MODULES = ["build_check", "check", "check_codes", "check_design", "checks_operations", "order_check", "physics_board", "physics_check", "rules_check", "vendor_pins_check"]
@@ -447,7 +448,7 @@ class TheChecksAreaTest(unittest.TestCase):
         self.assertEqual(sorted(path.stem for path in self.CHECKS.glob("*.py") if path.name != "__init__.py"), self.MODULES)
         scripts = ROOT / "scripts"
         self.assertEqual(sorted(path.name for path in [*scripts.glob("check_*.py"), *scripts.glob("compare_design.py")]),
-                         sorted(self.CLIS + ["check_spine.py"]))
+                         sorted(self.CLIS + ["check_spine.py", "check_firmware.py"]))
         self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in scripts.glob("*.py")}), [])
         for cli in self.CLIS:
             with self.subTest(cli=cli):
