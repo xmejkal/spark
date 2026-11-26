@@ -123,7 +123,7 @@ PO's yes to this list.
 - type: epic <!-- REQUIRED:item-type -->
 - needed by: "definitely pushing and pulling things to some central repo, like the parts maybe and probably more things, the learned facts about parts, svg pictures" (the PO, 2026-11-26, #1738), D2 to D4 <!-- REQUIRED:needed-by -->
 - value proven by: outcome (4) of brief.md's Frame, then the public repository's first commit, which the PO reads before and after <!-- REQUIRED:value-proven-by -->
-- depends on: slice 0's seam (P1151 with P1152's first slice), and the PO's answers P1 to P5 <!-- REQUIRED:depends-on -->
+- depends on: slice 0's seam (P1151 with P1152's first slice), the PO's answers P4 and P5, and the settings of brief.md's "Settings this epic names", which move into P1194 #1740 when it exists <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): epic <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): #123 <!-- REQUIRED:spark-process:parent -->
@@ -134,7 +134,7 @@ PO's yes to this list.
 - type: spike <!-- REQUIRED:item-type -->
 - needed by: D3 and D4 (the PO, 2026-11-26), and P1 <!-- REQUIRED:needed-by -->
 - value proven by: the count per field and per record, with 0 strings of the three kinds in what would go <!-- REQUIRED:value-proven-by -->
-- depends on: the PO's answer to P1 <!-- REQUIRED:depends-on -->
+- depends on: D7 (the PO's answer to P1: none of these texts by default) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): N3 <!-- REQUIRED:spark-process:parent -->
