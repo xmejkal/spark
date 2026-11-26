@@ -74,7 +74,10 @@ changes when an offer or one of these files changes. No other file of the projec
 
 The build phase reads .spark/build.json, which check_spine.py --keep writes when its folder is a project. It is stale when
 requirements.json changed after that build. The needs phase is stale when the goal or the must lines of the brief changed
-after parts.py --needs-set wrote the needs (.spark/needs-basis.json). Spark changes neither. A need dropped after the
+after parts.py --needs-set wrote the needs (.spark/needs-basis.json). Spark changes neither. The requirements phase reads
+.spark/requirements-origin.json, which parts.py --requirements writes (P1140): when requirements.json differs from what
+the picks give and is not as spark last wrote it, the phase and NOW say it was changed by hand. With no record, or one
+spark cannot read, they name no cause. A need dropped after the
 must lines were last gone through makes the idea phase out of date, and its next step is init_project.py --answers, on the
 person's yes. After an ok run that writes to a project, the command ends its next with the step flow.py show names now (P1035):
 parts.py --pick and check_spine.py --keep. At any status but a crash, they and deploy.py (not --dry-run, P1069) also write

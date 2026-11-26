@@ -41,6 +41,7 @@ from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.outcomes import OK, PROBLEMS  # noqa: E402
 from spark.design import needs  # noqa: E402
+from spark.design.entry_origin import EntryOriginStore  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import LOOK_WHY, SCENARIO_FIRST_WHY, SCENARIO_WHY, SIM_FILES_NOW, STALE  # noqa: E402
@@ -1499,6 +1500,101 @@ class TheRunOnButtonLightTest(unittest.TestCase):
         turned, named = self.turned_stale(WriteRequirements(), {"project": str(self.project), "dry_run": False, "replies": None}, "requirements")
         self.assertEqual(turned, {"build", "breadboard"})
         self.assertLessEqual(turned, named)
+
+
+class TheHandEditTest(unittest.TestCase):
+    """P1140: after a hand edit of requirements.json, the phase and the guide's now say the file changed by hand, not that the
+    picks changed. A file as spark wrote it says the picks changed; a file with no record, or one that cannot be read, names no cause."""
+
+    PICKS = "requirements.json differs from what the picks give"
+    EDITED = "requirements.json was changed by hand after spark last wrote it, and differs from what the picks give"
+    PICKS_NOW = "Your picks changed. Ask Claude to write the parts list again."
+    EDITED_NOW = ("The parts list was changed by hand. Writing it again keeps its parts and puts back what your picks give. "
+                  "Ask Claude to write it again, or to change your picks first.")
+    DIFFERS_NOW = "The parts list differs from what your picks give. Ask Claude to write it from your picks."
+
+    def setUp(self):
+        home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.project = Path(tempfile.mkdtemp()) / "bl"
+        shutil.copytree(ROOT / "tests" / "data" / "breadboard" / "button-light", self.project)
+        with_needs(self.project, [{"id": "brain", "does": "compute", "what": "control"},
+                                  {"id": "button", "does": "input", "what": "button"},
+                                  {"id": "light", "does": "indicate", "what": "light"}])
+        self.pick("brain=xiao-esp32-c6", "button=tactile-button", "light=led-red-5mm")
+        self.write()
+        self.assertEqual(statuses(show(self.project)[0])["requirements"], "ok")
+
+    def pick(self, *picks):
+        result = run_operation(PickParts(), {"project_and_picks": [str(self.project), *picks], "passed_over": NO_PASSED_OVER, "dry_run": False},
+                               FakeOutsideWorld(clock=FakeClock()))
+        self.assertEqual(result.status(), OK, result.lines)
+
+    def write(self):
+        result = run_operation(WriteRequirements(), {"project": str(self.project), "dry_run": False, "replies": None}, FakeOutsideWorld(clock=FakeClock()))
+        self.assertEqual(result.status(), OK, result.lines)
+
+    def edit(self, **changes):
+        file = self.project / "requirements.json"
+        file.write_text(json.dumps(dict(json.loads(file.read_text()), **changes), indent=2))
+
+    def said(self):
+        envelope = show(self.project)[0]
+        return says(envelope, "requirements")[0], statuses(envelope)["requirements"], envelope["data"]["guide"]["now"]
+
+    def test_a_part_taken_out_by_hand_says_the_file_was_changed_by_hand(self):
+        self.edit(parts=["tactile-button"])
+        said = show(self.project)[0]
+        self.assertEqual((table(said)["requirements"], marks(said)["requirements"], says(said, "requirements")[0]), (("stale", ["requirements"]), "↻", self.EDITED))
+
+    def test_a_board_changed_by_hand_says_so_too(self):
+        self.edit(board="firebeetle2-esp32s3")
+        self.assertEqual(self.said()[:2], (self.EDITED, "stale"))
+
+    def test_a_new_pick_after_the_parts_list_keeps_the_picks_line(self):
+        self.pick("brain=firebeetle2-esp32s3")
+        self.assertEqual(self.said()[:2], (self.PICKS, "stale"))
+
+    def test_with_no_record_the_line_names_no_cause(self):
+        self.edit(parts=["tactile-button"])
+        (self.project / ".spark" / "requirements-origin.json").unlink()
+        self.assertEqual(self.said()[:2], (self.PICKS, "stale"))
+
+    def test_the_walk_s_hand_edit_says_so_in_now_and_never_that_the_picks_changed(self):
+        self.edit(parts=["tactile-button"])
+        envelope = show(self.project)[0]
+        now = envelope["data"]["guide"]["now"]
+        self.assertEqual((now["phase"], now["by"], now["says"], now["offer"]), ("requirements", ["claude"], self.EDITED_NOW, "requirements"))
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            flow.main(["show", "--project", str(self.project)])
+        self.assertIn("The parts list was changed by hand", out.getvalue())
+        self.assertNotIn("Your picks changed", out.getvalue())
+
+    def test_writing_again_after_the_hand_edit_puts_back_the_pick_and_is_ok(self):
+        self.edit(parts=["tactile-button"])
+        self.write()
+        self.assertEqual(self.said()[1], "ok")
+        self.assertEqual(json.loads((self.project / "requirements.json").read_text())["parts"], ["tactile-button", "led-red-5mm"])
+        self.assertIs(EntryOriginStore(self.project).is_as_written(json.loads((self.project / "requirements.json").read_text())), True)
+
+    def test_a_new_pick_says_the_picks_changed(self):
+        self.pick("brain=firebeetle2-esp32s3")
+        said = self.said()
+        self.assertEqual((said[1], said[2]["says"]), ("stale", self.PICKS_NOW))
+
+    def test_no_record_or_one_that_cannot_be_read_says_no_cause(self):
+        self.edit(parts=["tactile-button"])
+        record = self.project / ".spark" / "requirements-origin.json"
+        before = show(self.project)[1]
+        record.unlink()
+        for text in (None, "{not json"):
+            with self.subTest(record=text):
+                if text:
+                    record.write_text(text)
+                envelope, code = show(self.project)
+                self.assertEqual((envelope["data"]["guide"]["now"]["says"], code), (self.DIFFERS_NOW, before))
 
 
 class TheOfferStepTest(FlowTest):

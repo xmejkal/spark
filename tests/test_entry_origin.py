@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.core.errors import SparkError  # noqa: E402
-from spark.design.entry_origin import EntryOriginStore, EntryRemoval, UnexplainedEntries, WrittenEntry, rows_present  # noqa: E402
+from spark.design.entry_origin import EntryOriginStore, EntryRemoval, UnexplainedEntries, WrittenEntry, parts_sha256, rows_present  # noqa: E402
 
 #: What `need_requirements._merge_parts` gives `find`: the indexes a pick explains, `kept` for the rest, the rows it adds.
 Merged = namedtuple("Merged", "explained kept written")
@@ -109,17 +109,17 @@ class TheRecordTest(unittest.TestCase):
         self.record.path.write_text(text)
 
     def test_what_is_saved_is_read_back_when_the_parts_are_the_same(self):
-        self.record.save([LED], [WrittenEntry("light", LED)])
+        self.record.save({"parts": [LED]}, [WrittenEntry("light", LED)])
         self.assertEqual(self.record.rows_of([LED]), ([WrittenEntry("light", LED)], None))
 
     def test_other_parts_read_no_rows_and_say_so_when_there_were_rows(self):
-        self.record.save([LED], [WrittenEntry("light", LED)])
+        self.record.save({"parts": [LED]}, [WrittenEntry("light", LED)])
         rows, note = self.record.rows_of([LED, "extra"])
         self.assertEqual((rows, note is not None), ([], True))
 
     def test_other_parts_with_no_rows_say_nothing(self):
-        self.record.save([LED], [WrittenEntry("light", LED)])
-        self.record.save([LED], [])
+        self.record.save({"parts": [LED]}, [WrittenEntry("light", LED)])
+        self.record.save({"parts": [LED]}, [])
         self.assertEqual(self.record.rows_of(["extra"]), ([], None))
 
     def test_no_record_reads_no_rows_and_no_note(self):
@@ -127,12 +127,13 @@ class TheRecordTest(unittest.TestCase):
 
     def test_a_save_with_no_rows_writes_a_record_that_reads_no_rows(self):
         # P1139: the record says "spark wrote no entry of these parts", so a later run can tell a hand edit (P1140)
-        self.record.save([LED], [])
+        self.record.save({"parts": [LED]}, [])
         self.assertEqual((self.record.path.exists(), self.record.rows_of([LED]), self.record.rows_of(["extra"])),
                          (True, ([], None), ([], None)))
 
     def test_a_record_of_any_other_shape_reads_no_rows_with_a_note_and_never_raises(self):
-        for text in ("{not json", "[]", '{"written": 5}', '{"written": ["x"], "parts_sha256": "y"}', '{"written": [{"need": "a"}]}', ""):
+        for text in ("{not json", "[]", '{"written": 5}', '{"written": ["x"], "parts_sha256": "y"}', '{"written": [{"need": "a"}]}', "",
+                     "[" * 100000):  # the review of P1140: deep nesting raised RecursionError and crashed flow.py show
             with self.subTest(text=text):
                 self.record.path.unlink(missing_ok=True)
                 self.write(text)
@@ -146,9 +147,33 @@ class TheRecordTest(unittest.TestCase):
         self.assertEqual(rows_present(rows, [LED, "other"]), [WrittenEntry("a", LED)])
 
     def test_the_record_holds_the_schema_the_hash_and_the_rows(self):
-        self.record.save([LED], [WrittenEntry("light", LED)])
+        self.record.save({"parts": [LED]}, [WrittenEntry("light", LED)])
         held = json.loads(self.record.path.read_text())
         self.assertEqual((held["schema"], held["written"], len(held["parts_sha256"])), (1, [{"need": "light", "entry": LED}], 64))
+
+    def test_the_record_holds_the_hash_of_the_whole_file_as_written(self):
+        import hashlib
+        content = {"board": "b", "parts": [LED]}
+        self.record.save(content, [])
+        held = json.loads(self.record.path.read_text())
+        whole = json.dumps(content, sort_keys=True, separators=(",", ":")).encode()
+        self.assertEqual((held["content_sha256"], held["parts_sha256"]), (hashlib.sha256(whole).hexdigest(), parts_sha256([LED])))
+
+    def test_the_file_as_saved_is_as_written_and_a_changed_board_or_part_is_not(self):
+        self.record.save({"board": "b", "parts": [LED, "extra"]}, [])
+        self.assertEqual([self.record.is_as_written(held) for held in ({"board": "b", "parts": [LED, "extra"]}, {"parts": [LED, "extra"], "board": "b"},
+                                                                       {"board": "c", "parts": [LED, "extra"]}, {"board": "b", "parts": [LED]})],
+                         [True, True, False, False])
+
+    def test_spark_cannot_tell_with_no_record_an_older_record_or_one_that_cannot_be_read(self):
+        held = {"board": "b", "parts": [LED]}
+        self.assertIsNone(self.record.is_as_written(held))
+        for text in ('{"schema": 1, "parts_sha256": "abc", "written": []}', "{not json", "[]", '""', '{"content_sha256": 5}', "[" * 100000):
+            with self.subTest(text=text[:30]):
+                self.record.path.unlink(missing_ok=True)
+                self.record.path.parent.mkdir(exist_ok=True)
+                self.record.path.write_text(text)
+                self.assertIsNone(self.record.is_as_written(held))
 
 
 class TheRepliesFileThatCannotBeReadTest(unittest.TestCase):

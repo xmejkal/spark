@@ -10,7 +10,7 @@
  {"file": "scripts/spark/design/entry_origin.py", "name": "P877: a refused run reads the replies", "find": "None if found.problems or dry_run else", "replace": "None if dry_run else"},
  {"file": "scripts/spark/design/entry_origin.py", "name": "P877: a dry run reads the replies", "find": "None if found.problems or dry_run else", "replace": "None if found.problems else"},
  {"file": "scripts/spark/design/entry_origin.py", "name": "P877: a no leaves the rows in the record", "find": "return self._replace(removable=(), rows=tuple(self.rows_left()))", "replace": "return self._replace(removable=())"},
- {"file": "scripts/spark/design/entry_origin.py", "name": "P877: a record that cannot be read raises", "find": "except (OSError, ValueError, KeyError, TypeError):", "replace": "except OSError:"},
+ {"file": "scripts/spark/design/entry_origin.py", "name": "P877: a record that cannot be read raises", "find": "except (OSError, ValueError, KeyError, TypeError, RecursionError):", "replace": "except OSError:"},
  {"file": "scripts/spark/design/entry_origin.py", "name": "P877: rows are read though the parts changed", "find": "return (rows, None) if fits else ([], NOTE_CHANGED if rows else None)", "replace": "return rows, None"},
  {"file": "scripts/spark/design/entry_origin.py", "name": "P877: a stage that cannot be made is not said", "find": "self.left = STAGE_IN_THE_WAY % where if isinstance(refused, StageTakenError) else KEEP_FAILED % (refused.strerror, where)", "replace": "self.left = None"},
  {"file": "scripts/spark/design/entry_origin.py", "name": "P877: a yes removes the entries the person wrote", "find": "if number not in gone], self.rows_left()", "replace": "if number in gone], self.rows_left()"},

@@ -276,7 +276,7 @@ class ThePartsListSaysWhatItKeptTest(RunRequestTest):
     def test_a_kept_entry_and_an_entry_written_for_a_pick_that_is_gone_are_one_note(self):
         """The record says spark wrote led-red-5mm for the light need, which no pick holds now; tactile-button is the person's."""
         self.board_picked()
-        EntryOriginStore(self.project).save(["tactile-button", "led-red-5mm"], [WrittenEntry("light", "led-red-5mm")])
+        EntryOriginStore(self.project).save(json.loads((self.project / "requirements.json").read_text()), [WrittenEntry("light", "led-red-5mm")])
         self.steps["requirements"] = WriteRequirements()
         self.ask("requirements")
         envelope, code = self.run_request()

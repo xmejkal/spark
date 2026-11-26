@@ -56,6 +56,7 @@ ASIDE_MESSAGE = "set aside: %s"
 NO_REQUIREMENTS_MESSAGE = "no requirements.json yet"
 NOTHING_TO_COMPARE_MESSAGE = "requirements.json, with no needs to compare it with, so spark did not judge it"
 REQUIREMENTS_STALE_MESSAGE = "requirements.json differs from what the picks give"
+REQUIREMENTS_EDITED_MESSAGE = "requirements.json was changed by hand after spark last wrote it, and differs from what the picks give"
 NO_BUILD_MESSAGE = "no build recorded yet"
 BUILT_MESSAGE = "the last build, %s: %s"
 BUILD_STALE_MESSAGE = "%s changed after the build"
@@ -342,7 +343,8 @@ BACK, NEXT, ALL_STEPS, PICTURE = "Back", "Next", "All steps", "Picture"
 BACK_LABEL, NEXT_LABEL = "Back to step %d", "Next: step %d"
 
 #: The guide (P977, the PO, 2026-11-21: "nothing says what to do now"): one sentence for the phase to act on now, keyed by
-#: (phase, status). Each names who acts. A phase and status with none here gets PROBLEMS_NOW or COULD_NOT_RUN_NOW.
+#: (phase, status). Each names who acts. A phase and status with none here gets PROBLEMS_NOW or COULD_NOT_RUN_NOW. A stale parts list is
+#: `STALE_REQUIREMENTS`'s (P1140).
 IDEA_NOW = "Tell Claude your goal in the chat, in your own words."
 PARTS_NOW = "%s no part yet: %s. Tell Claude a pick for each, or to set it aside."
 ONE_NEED_HAS, MANY_NEEDS_HAVE = "1 need has", "%d needs have"
@@ -350,6 +352,14 @@ REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your pic
 #: Every need set aside (P980): the parts phase is ok, but the parts list has no pick to be written from.
 ALL_ASIDE_NOW = "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, then pick a part."
 REQUIREMENTS_STALE_NOW = "Your picks changed. Ask Claude to write the parts list again."
+REQUIREMENTS_EDITED_NOW = ("The parts list was changed by hand. Writing it again keeps its parts and puts back what your picks give. "
+                           "Ask Claude to write it again, or to change your picks first.")
+REQUIREMENTS_DIFFERS_NOW = "The parts list differs from what your picks give. Ask Claude to write it from your picks."
+#: A stale parts list (P1140): (the phase line, the guide's sentence) by whether the file is as spark last wrote it
+#: (`EntryOriginStore.is_as_written`): True the picks changed, False a hand edit, None spark cannot tell, so no cause.
+STALE_REQUIREMENTS = {True: (REQUIREMENTS_STALE_MESSAGE, REQUIREMENTS_STALE_NOW),
+                      False: (REQUIREMENTS_EDITED_MESSAGE, REQUIREMENTS_EDITED_NOW),
+                      None: (REQUIREMENTS_STALE_MESSAGE, REQUIREMENTS_DIFFERS_NOW)}
 BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
 BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
 #: The NOW sentences that can carry the page's button (`page_sections.sendable_now`), each with what the published page says
@@ -357,6 +367,9 @@ BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to bu
 #: who is not the owner and `flow.py show` keep the sentence that names Claude.
 NOW_BUTTON = {REQUIREMENTS_NOW: "Write the parts list from your picks. Use the button.",
               REQUIREMENTS_STALE_NOW: "Your picks changed. Write the parts list again. Use the button.",
+              REQUIREMENTS_EDITED_NOW: ("The parts list was changed by hand. Writing it again keeps its parts and puts back what your "
+                                        "picks give. Use the button."),
+              REQUIREMENTS_DIFFERS_NOW: "The parts list differs from what your picks give. Write it from your picks. Use the button.",
               BUILD_NOW: "Build the board. It takes seconds and costs nothing. Use the button.",
               BUILD_STALE_NOW: "The parts list changed since the last build. Build the board again. Use the button."}
 BUILD_PARTIAL_NOW = "The build stopped. Ask Claude what stopped it and what to do."
@@ -418,7 +431,7 @@ NOW_SENTENCES = {(IDEA, None): IDEA_NOW, (IDEA, STALE): IDEA_STALE_NOW,
                  (NEEDS, STALE): NEEDS_STALE_NOW,
                  (NEEDS, NOT_STARTED): NEEDS_NOW,
                  (PARTS, NOT_STARTED): PARTS_NOW, (PARTS, PARTIAL): PARTS_NOW, (PARTS, OK_WORD): ALL_ASIDE_NOW,
-                 (REQUIREMENTS, NOT_STARTED): REQUIREMENTS_NOW, (REQUIREMENTS, STALE): REQUIREMENTS_STALE_NOW,
+                 (REQUIREMENTS, NOT_STARTED): REQUIREMENTS_NOW,
                  (BUILD, NOT_STARTED): BUILD_NOW, (BUILD, STALE): BUILD_STALE_NOW, (BUILD, PARTIAL): BUILD_PARTIAL_NOW,
                  (BREADBOARD, NOT_STARTED): SHEET_NOW, (BREADBOARD, STALE): SHEET_STALE_NOW, (FIRMWARE, NOT_STARTED): FIRMWARE_NOW,
                  (SIMULATE, NOT_STARTED): SIMULATE_NOW, (DEPLOY, NOT_STARTED): DEPLOY_NOW}

@@ -114,7 +114,7 @@ spends Wokwi CI minutes"*. The build's own simulation stage writes the diagram a
 A `board.tsx` that spark wrote and nobody changed is replaced by the next build whose build stage ended ok; the old one is `.spark/previous/board.tsx.txt`. `--keep .` also replaces `dist/`, which every check reads, with a build of the freshly generated board
 ([P110](https://github.com/xmejkal/spark/issues/44)). So after you edit `board.tsx` or change `requirements.json`,
 the two describe different boards. When the traces of your board.tsx differ from the board this build made, the build names each one in a `traces differ` entry
-(P660). It does not stop the build, so read `kept` after `status`. The same holds for `requirements.json`: an entry that has no row in `.spark/requirements-origin.json`, or that sits in a `parts` list changed since spark wrote it, is the person's. `--requirements` never names it as written for a pick that is gone, and a yes removes only the entries it named.
+(P660). It does not stop the build, so read `kept` after `status`. The same holds for `requirements.json`: an entry that has no row in `.spark/requirements-origin.json`, or that sits in a `parts` list changed since spark wrote it, is the person's. `--requirements` never names it as written for a pick that is gone, and a yes removes only the entries it named. The record also holds the sha256 of the whole file as spark last wrote it (P1140). `flow.py show` says the file was changed by hand only when that hash differs, and names no cause without it.
 
 check_all reads the last build in `dist/`; it neither rebuilds nor compares that build with `board.tsx` or
 `requirements.json`. To check `board.tsx` as it stands, build it with the project's own tscircuit:

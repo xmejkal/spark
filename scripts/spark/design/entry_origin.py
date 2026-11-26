@@ -3,7 +3,8 @@ Which entries of a project's requirements.json spark wrote for a pick (P877). A 
 holds a row for each entry spark added and the sha256 of the `parts` list as spark last wrote it. An entry is spark's only when a row
 holds it and the record still fits the file's `parts`; every other entry is the person's. `need_requirements.requirements` reads it,
 and `parts.py --requirements` (`write_requirements`) names the entries written for a pick that is gone and removes them on the
-person's yes, which it reads from the replies file of the run. Nothing here guesses: what spark cannot prove it wrote is the person's.
+person's yes, which it reads from the replies file of the run. The record also holds the sha256 of the whole file as spark wrote it, so that
+`is_as_written` tells a file changed by hand after (P1140). Nothing here guesses: what spark cannot prove it wrote is the person's.
 """
 
 import collections
@@ -20,7 +21,7 @@ from spark.records import store
 # --- MVP ---
 #: The record beside the requirements file, from the project's folder, and the keys it holds.
 ORIGIN_FILE = Path(".spark") / "requirements-origin.json"
-SCHEMA, PARTS_SHA256, WRITTEN = 1, "parts_sha256", "written"
+SCHEMA, PARTS_SHA256, CONTENT_SHA256, WRITTEN = 1, "parts_sha256", "content_sha256", "written"
 #: Every reply key of this Operation starts with the first; the key of a removal starts with the second and ends in 8 hex digits.
 KEY_PREFIX = "requirements."
 REMOVE_KEY = KEY_PREFIX + "remove_entries."
@@ -131,15 +132,26 @@ class EntryOriginStore:
         try:
             held = json.loads(self.path.read_text(encoding="utf-8"))
             rows, fits = [WrittenEntry(row["need"], row["entry"]) for row in held[WRITTEN]], held[PARTS_SHA256] == parts_sha256(existing)
-        except (OSError, ValueError, KeyError, TypeError):
+        except (OSError, ValueError, KeyError, TypeError, RecursionError):
             return [], NOTE_BROKEN
         return (rows, None) if fits else ([], NOTE_CHANGED if rows else None)
 
-    def save(self, parts, rows):
-        """Write the record of `parts` and its `rows`, with no rows too (P1139): then it says spark wrote no entry of these
-        parts, and its hash tells a later hand edit. OSError when it cannot."""
+    def is_as_written(self, held):
+        """True when `held`, requirements.json as JSON, is the file spark last wrote (P1140). False when it changed after.
+        None when spark cannot tell: no record, one with no CONTENT_SHA256 (written before P1140), or one that cannot be read."""
+        try:
+            written = json.loads(self.path.read_text(encoding="utf-8")).get(CONTENT_SHA256)
+            return written == parts_sha256(held) if isinstance(written, str) else None
+        except (OSError, ValueError, AttributeError, RecursionError):
+            return None
+
+    def save(self, content, rows):
+        """Write the record of `content`, requirements.json as JSON, and its `rows`, with no rows too (P1139): then it says spark wrote
+        no entry of these parts, and its hashes tell a later hand edit (P1140). OSError when it cannot."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        record = {"schema": SCHEMA, PARTS_SHA256: parts_sha256(parts), WRITTEN: [row._asdict() for row in rows]}
+        # parts_sha256 hashes the canonical JSON of any value: here the parts, and here the whole file
+        record = {"schema": SCHEMA, PARTS_SHA256: parts_sha256(content["parts"]), CONTENT_SHA256: parts_sha256(content),
+                  WRITTEN: [row._asdict() for row in rows]}
         store.write_file(self.path, json.dumps(record, indent=1, ensure_ascii=False) + "\n")
 
 
@@ -202,7 +214,7 @@ class EntryRemoval:
             self.previous = str(Path(kept).relative_to(self.path.parent))
         now = found.unexplained
         try:
-            EntryOriginStore(self.path.parent).save(found.content["parts"], rows_present(list(now.rows) + list(now.written), found.content["parts"]))
+            EntryOriginStore(self.path.parent).save(found.content, rows_present(list(now.rows) + list(now.written), found.content["parts"]))
         except (OSError, ValueError):  # the record never fails the run: the file is written, and the entries read as the person's
             self.unwritten = True
 
