@@ -29,6 +29,8 @@ on this Mac could reach, at 16:20 to 16:32 CET on 2026-11-26, in a scratch folde
 - ★C25 · council/user.md US-6 · refuter: partly — "generalises one late-evening walk" · reproduced how: not re-run · result: not reproduced after correction · keep: n = 1
 - ★C33 · council/refuter.md:18 · refuter: CONFIRMED by the refuter — "With a JSCAD body on the same module, that line is gone" · reproduced how: `tsci export jplan.tsx -f kicad_zip`: only `pinrow4.step`. The plain board holds `pinrow10.step` and `pinrow4.step` · result: reproduced (the KiCad half; the STEP's pin tails not counted again) · keep: one probe board
 - ★C34 · council/po-assistant.md PA-29 · refuter: not judged as a claim — the refuter raised it as a dropped caveat (council/refuter.md:180) · reproduced how: re-read AGENTS.md's bar and scrum/VISION.md:67 · result: reproduced · keep: after the MVP
+- ★C35 · ~/.local/share/spark/t1-step-2026-11-26/README.md:19 · refuter: not judged, found after the refuter's pass · reproduced how: `grep -n NaN` on the file, and occt-import-js on the board without bodies, which reports the same 8 fails · result: reproduced · keep: one board
+- ★C36 · ~/.local/share/spark/t1-step-2026-11-26/README.md:12 · refuter: not judged, found after the refuter's pass · reproduced how: the STEP's NEXT_ASSEMBLY_USAGE_OCCURRENCE names, read with grep · result: reproduced · keep: one board
 
 ## Agree / split
 - Agree: every lens and the refuter say that no file ran in Fusion, no case was printed, and the z facts are too few and named two ways · none <!-- REQUIRED:agree-split -->
