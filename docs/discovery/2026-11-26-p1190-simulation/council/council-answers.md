@@ -44,3 +44,43 @@ licences only.
 ## Searches
 
 none. This file made no web search.
+
+# Round 2: Q1 after the PO's answers D10 to D15
+
+The PO, 2026-11-26 by 12:37 CET: "Council proposes again". The three seats on Fable answered
+[delegated-brief-q1.md](delegated-brief-q1.md): [the PO assistant](delegated-q1-po-assistant.md),
+[the architect](delegated-q1-architect.md), [the tech lead](delegated-q1-tech-lead.md). Delegated, the PO's to change.
+
+| id | PO assistant | architect | tech lead | the majority |
+| --- | --- | --- | --- | --- |
+| A1 | high | high | high | high, 3 of 3 |
+| A2 | low | low | low | low, 3 of 3 |
+| A3 | high | low | low | low, 2 of 3 |
+| A4 | low | high | low | low, 2 of 3 |
+| A5 | high | low | low | low, 2 of 3 |
+| A6 | low | low | low | low, 3 of 3 |
+| A7 | low | low | low | low, 3 of 3 |
+| A8 | high | high | high | high, 3 of 3 |
+| A9 | low | high | low | low, 2 of 3 |
+
+New assumptions:
+- A10, feasibility, 3 of 3: a free local emulator (esp-emulator or esp32sim) boots spark's own MicroPython C6 image
+  unedited, and a host can drive it. Pass line, dated 2026-11-26: the image spark built for a C6 walk project prints
+  `ready` within 120 s of wall clock (the tech lead said 60 s), and one press sent by the host changes a pin that the
+  host reads back. Start with the button light, because the clock imports `network` and `ntptime`. High, because the
+  epic's first way rests on it.
+- A11, value, 2 of 3 (the PO assistant, the tech lead): a person marks some versions important, and a paid run
+  follows. Pass line, dated 2026-11-26: over the next 3 walks, at least 1 version marked and followed by a paid run,
+  and at least 1 left unmarked. A deploy with the PO away gives no information. Low until item 16's design.
+- A12, feasibility, 1 of 3 (the architect), kept because it decides whether the threshold has a number: spark can
+  count the simulated minutes a run used. Pass line, dated 2026-11-26: one source names the simulated time of one
+  run. A miss makes the count an upper bound, said as "at most". Low.
+
+The riskiest: A1, 3 of 3. The split line holds, with three additions. Use counts for the person only when the page's
+offer or his word starts the checks (the PO assistant). A fault that the project's own tests find is logged apart
+from one the import check finds (the tech lead). A fault that a free emulator run finds is logged apart and is not
+`check-firmware`'s yield (the architect).
+
+Order, 2 of 3 (the architect, the tech lead): item 19's first steps run before item 6's plan fixes the seam's
+contract. They are free and run beside P999 and P1078. Item 6 says "selectable, not exchangeable" until a second
+Adapter speaks its own contract (the architect).

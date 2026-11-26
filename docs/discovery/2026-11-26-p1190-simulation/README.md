@@ -15,7 +15,8 @@ Each choice waits on the PO, or on the delegated council of three, recorded "del
 1. P999 #1455 (the C6 stand-in) and item 4 (the limits list only after a run).
 2. Items 2 and 3: `check-firmware`, the import check moved onto the core, with the project's own tests, and its
    line on the page.
-3. P1078 #1582: the scenario run as an Operation, the paid run a yes with its cost named.
+3. P1078 #1582: the scenario run as an Operation, the paid run a yes with its cost named. Beside steps 1 to 3, the
+   free first steps of the own-simulator spike (item 19), before the seam's plan.
 4. Item 6: the `Simulator` seam, with no change in behaviour.
 5. Item 1: the flip to `skipped` (the PO approved it, D11).
 
@@ -30,7 +31,7 @@ lets a person set: the values, how a part or the chip is simulated, and the step
 
 ## What waits on the PO
 
-Q1 (the council proposes the ratings again, after D15), and his yes to items.md. The questions are in [brief.md](brief.md).
+His yes to items.md. The council proposed Q1 again, as he asked (D17, delegated, his to change). The questions are in [brief.md](brief.md).
 
 ## The main points
 

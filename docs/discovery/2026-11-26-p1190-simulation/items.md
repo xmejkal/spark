@@ -3,7 +3,7 @@
 block for more. needed by: the decider's words, quoted. value proven by: a proof the decider can read.
 status: proposed, or filed D<n>. -->
 
-The architect's list (council/architect.md §11), changed by the refuter and the delegated council (D3 to D8). The order to build: P999 #1455 and item 4, then items 2 and 3, then P1078 #1582, then item 6, then item 1 (approved, D11). P999 may not cover the clock, because its stand-in lacks GPIO14 and the clock uses it (brief ★C25). Nothing is filed. spark-main files on the PO's yes.
+The architect's list (council/architect.md §11), changed by the refuter and the delegated council (D3 to D8). The order to build: P999 #1455 and item 4, then items 2 and 3, then P1078 #1582, then item 6, then item 1 (approved, D11). Item 19's first steps run beside P999 and P1078, before item 6's plan (D17). P999 may not cover the clock, because its stand-in lacks GPIO14 and the clock uses it (brief ★C25). Nothing is filed. spark-main files on the PO's yes.
 Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read of the e-paper controller), P1078 #1582 (a prerequisite of item 6), P413 #539 (feeds item 9).
 
 ## 1. The flip: a board that no simulator covers ends the simulation stage `skipped` with a reason, in one small PR after the seam and after the PO's yes to Q11
@@ -61,7 +61,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
 - the tied card: absorbs Q1 of P492 #671, and leaves its Q3
 
-## 6. The `Simulator` seam with no behaviour change: the base, `WokwiSimulator`, the Fake, one generic lookup from a role's contract to an Adapter (shared with the P1089 engine seam), at every selection site of council/architect.md §3. The guard moves into `coverage` and keeps its ending
+## 6. The `Simulator` seam with no behaviour change: the base, `WokwiSimulator`, the Fake, one generic lookup from a role's contract to an Adapter (shared with the P1089 engine seam), at every selection site of council/architect.md §3. The guard moves into `coverage` and keeps its ending. It gives "selectable, not exchangeable" until a second Adapter speaks its own contract, and its plan waits for item 19's first steps (D17)
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: the goldens hold, and one table names the Adapter <!-- REQUIRED:value-proven-by -->
@@ -183,7 +183,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
-- the settings it names (the PO's rule, P1194 #1740), each a proposal for its plan: the policy `paid_runs`, one of `never`, `ask`, `important-only` and `always`, with the default `ask` or `never` to be chosen in the plan (the PO's words name both "not run the payed ones by default" and "it can always ask"), layers user and project. The threshold `paid_minutes_warn_at`, in simulated minutes per 30 days, default to be set in the plan against the free plan's 50 (brief ★C10), layers user and project. The mark: a version or deploy marked important or risky, kept with the image's sha256 in the project, layer project. How a person marks it (a word to Claude, an offer on the page, a release tag) is an open question for its design
+- the settings it names (the PO's rule, P1194 #1740), each a proposal for its plan: the policy `paid_runs`, one of `never`, `ask`, `important-only` and `always`, with the default `ask` or `never` to be chosen in the plan (the PO's words name both "not run the payed ones by default" and "it can always ask"), layers user and project. The threshold `paid_minutes_warn_at`, in simulated minutes per 30 days, default to be set in the plan against the free plan's 50 (brief ★C10), layers user and project. The mark: a version or deploy marked important or risky, kept with the image's sha256 in the project, layer project. So a mark ends at the next firmware edit, and a choice that outlives edits is the project's `paid_runs` (the architect, D17). How a person marks it (a word to Claude, an offer on the page, a release tag) is an open question for its design
 - the tied card: P410 #536 (replaced by item 8) held the first words of this choice. P413 #539 feeds its threshold
 
 ## 17. The vision's v0.10 line says "firmware that passes the simulation where a simulator covers the board"
@@ -211,7 +211,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 ## 19. Spike: how hard is spark's own simulator, and which free code does it build on, with licences
 - type: spike <!-- REQUIRED:item-type -->
 - needed by: the PO, 2026-11-26 (item 18's words) <!-- REQUIRED:needed-by -->
-- value proven by: a finding with sources (URL, version, date, licence) that sizes each way the pre-analysis names and recommends one, run on one walk project's firmware with no paid minutes <!-- REQUIRED:value-proven-by -->
+- value proven by: a finding with sources (URL, version, date, licence) that sizes each way the pre-analysis names and recommends one, run on one walk project's firmware with no paid minutes. Its first steps test A10 and run before item 6's plan (D17) <!-- REQUIRED:value-proven-by -->
 - depends on: the pre-analysis <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
