@@ -21,6 +21,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
@@ -33,9 +34,10 @@ import flow  # noqa: E402
 from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
-from spark.flow.phase_readers import Phase, SimulateReader  # noqa: E402
+from spark.flow.phase_readers import Offer, Phase, SimulateReader  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
-from spark.flow.guide import chat_offer_of, guide_of, names_at, stations_of  # noqa: E402
+from spark.flow import flow_page, run_request  # noqa: E402
+from spark.flow.guide import chat_offer_of, guide_of, job_offer, names_at, stations_of  # noqa: E402
 from spark.flow.show_flow import ShowFlow, flow_and_guide, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
@@ -2838,6 +2840,48 @@ class TheOfferKindsTableTest(unittest.TestCase):
         named = set(flow_codes.CHAT_NOW.values())
         self.assertEqual(named, {"write-firmware", "run-simulation", "look-at-board"})
         self.assertEqual([kind for kind in named if not flow_codes.OFFER_KINDS[kind].tell], [])
+
+    def test_kind_of_is_the_word_before_the_first_colon(self):
+        self.assertEqual(flow_codes.kind_of("pick:light:led-red-5mm"), "pick")
+        self.assertEqual(flow_codes.kind_of("needs-drop:light"), "needs-drop")
+        self.assertEqual(flow_codes.kind_of("build"), "build")
+
+    def test_only_a_pick_the_parts_list_and_the_build_are_sendable(self):
+        for key in ("pick:light:led-red-5mm", "pick", "requirements", "build"):
+            with self.subTest(key=key):
+                self.assertTrue(flow_codes.is_sendable(key))
+                self.assertFalse(flow_codes.in_chat(key))
+        for key in ("needs-drop:light", "write-firmware", "run-simulation", "look-at-board"):
+            with self.subTest(key=key):
+                self.assertFalse(flow_codes.is_sendable(key))
+                self.assertTrue(flow_codes.in_chat(key))
+        for key in ("deploy", "simulate:main", ""):
+            with self.subTest(key=key):
+                self.assertFalse(flow_codes.is_sendable(key))
+                self.assertFalse(flow_codes.in_chat(key))  # a kind spark does not know is in no chat either
+        self.assertEqual(flow_codes.SENDABLE, ("pick", "requirements", "build"))
+
+    def test_one_row_s_from_page_turns_the_button_off_for_the_guide_the_page_and_the_run(self):
+        build_offer = {"key": "build", "label": "Build the board", "effect": "e", "makes_stale": []}
+        now = SimpleNamespace(offers=[Offer("build", "Build the board", "e", [], NextStep("build-board", [], "w"))])
+        offered = {"build": now.offers[0]}
+        request = run_request.PageRequest("00000000-0000-0000-0000-000000000000", "build", "0" * 12)
+        self.assertEqual(job_offer(now), "build")
+        self.assertEqual(list(flow_page.page_words([{"offers": [build_offer]}])["offers"]), ["build"])
+        self.assertIsNone(run_request.refusal_of(request, offered, "0" * 64))
+        on = flow_codes.OFFER_KINDS
+        off = dict(flow_codes.OFFER_KINDS, build=flow_codes.OFFER_KINDS["build"]._replace(from_page=False))
+        flow_codes.OFFER_KINDS = off  # no mock.patch (T2): put back below, whatever the asserts say
+        try:
+            self.assertIsNone(job_offer(now))
+            self.assertEqual(flow_page.page_words([{"offers": [build_offer]}])["offers"], {})
+            self.assertEqual(str(run_request.refusal_of(request, offered, "0" * 64)), "request_in_chat")
+        finally:
+            flow_codes.OFFER_KINDS = on
+
+    def test_the_words_of_a_request_whose_offer_left_the_page_are_those_of_the_sendable_kinds(self):
+        self.assertEqual(set(flow_codes.LAST_REQUEST_KINDS), set(flow_codes.SENDABLE))
+        self.assertEqual(set(flow_codes.RAN_OK_SAYS), set(flow_codes.SENDABLE))
 
 
 class TheSecretMaskTest(FlowTest):

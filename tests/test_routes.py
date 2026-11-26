@@ -343,7 +343,7 @@ class ThePageCommandTest(unittest.TestCase):
             self.assertNotIn(script, front)
 
     def test_the_command_restates_no_kind_of_offer(self):
-        # the kinds and what the page may send are spark's (run_request.py), never the command's words
+        # the kinds and what the page may send are spark's (`flow_codes.is_sendable`), never the command's words
         text = self.PAGE.read_text()
         for word in ("pick:", "needs-drop", "deploy", "simulate"):
             self.assertNotIn(word, text)

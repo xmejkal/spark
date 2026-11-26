@@ -1,7 +1,7 @@
 """
 The sections of a project's page (P1128, #1659): the small Renderers that `flow_page.FlowHtmlPage` writes in order (its
 `SECTIONS`, P1123), each with a `NAME`, the design-basis `KEYS` it shows and `text(page)`, and the helpers they read: a
-phase's mark and status word (`shown_phase`, which holds the tick guard), whether the page sends an offer (`is_sendable`)
+phase's mark and status word (`shown_phase`, which holds the tick guard), whether the page sends an offer (`flow_codes.is_sendable`)
 and the sendable offer the NOW box carries (`sendable_now`). Each decides nothing again: the page is given its values.
 """
 
@@ -46,15 +46,10 @@ def _text(value):
     return html.escape(str(value))
 
 
-def is_sendable(offer):
-    """True when the page sends the offer dict `offer` from a button (P829): a pick, the parts list or the build."""
-    return offer["key"].split(":", 1)[0] in flow_codes.SENDABLE
-
-
 def _makes_stale(offer):
     """The attribute a sendable offer carries for the script and an agent: the phases it can make out of date, space
     apart. Nothing for an offer the page does not send."""
-    return ' data-makes-stale="%s"' % _text(" ".join(offer["makes_stale"])) if is_sendable(offer) else ""
+    return ' data-makes-stale="%s"' % _text(" ".join(offer["makes_stale"])) if flow_codes.is_sendable(offer["key"]) else ""
 
 
 def sendable_now(page):
@@ -62,7 +57,7 @@ def sendable_now(page):
     box's NEXT line then carries its key, and the script puts its button there, and nowhere else (P1062). The CLI's `next`
     holds the same offer's step."""
     now = (page.guide or {}).get("now")
-    offers = [offer for phase in page.phases for offer in phase["offers"] if now and offer["key"] == now.get("offer") and is_sendable(offer)]
+    offers = [offer for phase in page.phases for offer in phase["offers"] if now and offer["key"] == now.get("offer") and flow_codes.is_sendable(offer["key"])]
     return offers[0] if offers else None
 
 
@@ -384,7 +379,7 @@ class PartsHtmlFold:
         phase = next((each for each in page.phases if each["phase"] == flow_codes.PARTS), None)
         on_now = (sendable_now(page) or {}).get("key")
         needs = {}
-        for offer in (offer for each in page.phases for offer in each["offers"] if is_sendable(offer) and offer["key"] != on_now):
+        for offer in (offer for each in page.phases for offer in each["offers"] if flow_codes.is_sendable(offer["key"]) and offer["key"] != on_now):
             needs.setdefault(pick_need(offer["key"]), []).append(offer)
         if phase is None and not needs:
             return ""

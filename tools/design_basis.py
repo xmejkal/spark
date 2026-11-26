@@ -103,7 +103,7 @@ class DesignBasis:
         for kind, row in flow_codes.OFFER_KINDS.items():
             op = STEPS[kind]().op if kind in STEPS else None
             items.append({"key": "offer:" + kind, "kind": kind, "phase": row.phase, "label": row.label, "op": op,
-                          "from_page": row.from_page and op in run_request.STEP_OPERATIONS, "tell": row.tell})
+                          "from_page": flow_codes.is_sendable(kind) and op in run_request.STEP_OPERATIONS, "tell": row.tell})
         for op, operation in catalogue.CATALOGUE.items():
             area = next(name for name, table in catalogue.TABLES if table.get(op) is operation)
             items.append({"key": "op:" + op, "op": op, "area": area, "summary": " ".join(describe.summary_of(operation).split()),

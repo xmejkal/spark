@@ -51,7 +51,7 @@ def wired_text(board):
 
 def wired_offer(offer):
     """`offer` with its kind's fixed sentence first in its effect: a pick or a build."""
-    kind = offer.key.split(":", 1)[0]
+    kind = flow_codes.kind_of(offer.key)
     if kind not in flow_codes.WIRED_EFFECT:
         return offer
     return offer._replace(effect=" ".join((flow_codes.WIRED_EFFECT[kind], offer.effect)))

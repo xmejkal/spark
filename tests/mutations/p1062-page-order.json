@@ -68,8 +68,8 @@
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "P1062: pick_need gives the pick id, so a pick stands under another row (tests 7, 10)",
-  "find": "    return rest.split(\":\", 1)[0] if kind == flow_codes.PICK and \":\" in rest else None",
-  "replace": "    return rest.split(\":\", 1)[-1] if kind == flow_codes.PICK and \":\" in rest else None"
+  "find": "    return rest.split(\":\", 1)[0] if flow_codes.kind_of(key) == flow_codes.PICK and \":\" in rest else None",
+  "replace": "    return rest.split(\":\", 1)[-1] if flow_codes.kind_of(key) == flow_codes.PICK and \":\" in rest else None"
  },
  {
   "file": "scripts/spark/flow/page_sections.py",
@@ -80,8 +80,8 @@
  {
   "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: the NOW offer's button stands in the parts fold too (E17, test 8)",
-  "find": "is_sendable(offer) and offer[\"key\"] != on_now)",
-  "replace": "is_sendable(offer))"
+  "find": "flow_codes.is_sendable(offer[\"key\"]) and offer[\"key\"] != on_now)",
+  "replace": "flow_codes.is_sendable(offer[\"key\"]))"
  },
  {
   "file": "scripts/spark/flow/page_sections.py",

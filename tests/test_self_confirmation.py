@@ -49,6 +49,9 @@ MAY_READ = {
                           + ": with storage.OUTSIDE, against store.PLACES, so a new place fails until it is classified (P1036)",
     "storage.OUTSIDE": AGREEMENT + ": with storage.NAMESPACES, against store.PLACES, the store's own places (P1036)",
     "store.PLACES": AGREEMENT + ": the second source that storage.NAMESPACES and storage.OUTSIDE together must equal (P1036)",
+    "flow_codes.SENDABLE": PINNED + " (P1134: compared with a literal tuple); and " + AGREEMENT + ": the keys of the two tables of words",
+    "flow_codes.LAST_REQUEST_KINDS": AGREEMENT + " (P1134): its keys against SENDABLE, which the page's words are for",
+    "flow_codes.RAN_OK_SAYS": AGREEMENT + " (P1134): its keys against SENDABLE, which the page's words are for",
     "flow_codes.OFFER_KINDS": AGREEMENT + ": its kinds against the design basis's offers, in order, and one row swapped to show the "
                               "basis reads it when it is called; each phase, label, op, from_page and tell is a literal (P1115). "
                               "The flow's table test pins its kinds to a literal list and walks its rows for the rules of a tell (P1122)",
