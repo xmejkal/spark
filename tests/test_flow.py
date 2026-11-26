@@ -2856,6 +2856,14 @@ class TheIdeaGoalTest(FlowTest):
         status, _, lines = idea_of(show(a_project_with_a_brief("[" * 100000))[0])
         self.assertEqual((status, len(lines), lines[0].startswith("the brief cannot be read (")), (None, 1, True))
 
+    def test_a_goal_with_no_needs_stands_at_the_needs(self):
+        said, _ = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
+        guide = said["data"]["guide"]
+        self.assertEqual(guide["now"], {"phase": "needs", "by": ["claude"], "says": "Ask Claude in the chat to write the needs from your goal.",
+                                        "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False})
+        self.assertEqual(([each["place"] for each in guide["stations"] if each["phase"] == "idea"], said["next"], said["data"]["stands_at"]),
+                         (["done"], [], "needs"))
+
     def test_an_idea_with_a_goal_is_no_finding_and_keeps_the_exit(self):
         said, code = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
         self.assertEqual((code, said["status"], said["problems"]), (0, "ok", []))

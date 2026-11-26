@@ -174,6 +174,13 @@ class ADroppedNeedTest(WithNeedsInGit):
         self.assertEqual(said["next"], [self.brief_step(project)])
         self.assertTrue(now_line(project).endswith(" [next: init_project, needs you]"), now_line(project))  # P1035 review: needs_yes too
 
+    def test_a_stale_idea_with_a_goal_and_no_need_left_is_still_now(self):
+        project = self.reviewed_project(NEEDS[:1])  # P1142: only an ok idea gives way to the needs
+        drop(project, "board")
+        said, _ = show(project)
+        self.assertEqual((phase_of(said, "idea")["status"], phase_of(said, "needs")["status"]), ("stale", "not-started"))
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["says"]), ("idea", IDEA_STALE_NOW))
+
     def test_an_out_of_date_idea_does_not_ask_for_the_goal_that_is_set(self):
         project = self.reviewed_project()
         drop(project, "wifi")
