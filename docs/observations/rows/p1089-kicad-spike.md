@@ -18,3 +18,7 @@ the refuter on Opus checked it on 2026-11-26. This file holds the acted, raised 
 | 10 | the refill hides unrouted nets | refuter (Opus), its own test | rejected | with every zone removed, KiCad reports 0 unconnected items |
 | 11 | the 199 isolated copper areas have one count on both exports | architect, refuter (Opus) | raised | cause not found. It goes to the pour card, P1182 [#1726](https://github.com/xmejkal/spark/issues/1726) |
 | 12 | Freerouting 2.6.0 was not run: the permission check refused the downloaded binary | the session | acted | the PO said yes in the kicad-spike window, and it ran. finding.md section 2.4 |
+| 13 | the router comparison was unfair: only Freerouting got the 0.2 mm rule, and under the same 0.1 mm rules tscircuit gave fewer errors (6 against 9) | refuter (Opus), round 2 | acted | a fair row: tscircuit with 0.2 mm stated gives 0 errors. finding.md section 2.4, notes.md, README.md |
+| 14 | "a router strategy that needs no KiCad" went past the evidence: pcbnew wrote the DSN and read the routes back | refuter (Opus), round 2 | acted | finding.md section 2.4 says what ran and what did not |
+| 15 | 10 connections are 8 nets, and run 2 has no kept log for its time | refuter (Opus), round 2 | acted | notes.md |
+| 16 | spark states no clearance and no track width to the router (F12) | the session, from the fair row | raised | a card for spark-main to file. finding.md section 5 |

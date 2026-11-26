@@ -3,7 +3,7 @@
 Spike for [#1600](https://github.com/xmejkal/spark/issues/1600), under P203 [#163](https://github.com/xmejkal/spark/issues/163).
 Date: 2026-11-26. The evidence is in [notes.md](notes.md) and three pictures in this folder. The architect wrote this
 text from the notes. The kicad-spike session added two explanations to section 9 and made the card titles shorter. The refuter's corrections are in sections 1.3, 1.4, 2.2, 3, 4, 5 and 9. The council's
-findings are in sections 1.4, 2.3, 3.1 and 4. Section 5 holds the numbers of the filed cards. Section 2.4 holds the Freerouting run.
+findings are in sections 1.4, 2.3, 3.1 and 4. Section 5 holds the numbers of the filed cards. Section 2.4 holds the Freerouting run and a fair comparison of the two routers. Section 1.2 adds F12.
 
 > In short: the "weird PCBs" are mostly tscircuit's automatic pour, which spark turns on in one line of the board file.
 > The rest is spark's own: big empty boards, modules with no body, 0.15 mm traces and nets named by pin.
@@ -66,6 +66,7 @@ The counts come from the notes' survey of 13 `dist/board/circuit.json` files. Th
 | F9 | The footprint file says "NOT the None mm on the vendor drawing". | `footprint_emitter.py:287` to 288 prints a `drill_mm` that the record holds as null. | spark |
 | F10 | The project's footprint file is older than the one its last build used. `tsci dev` then shows another board than `dist/`. | `--keep` leaves every other `.tsx` alone and names it (`build_board.py:110`). | spark |
 | F11 | Two old `dist/` folders have `source_trace_not_connected_error` for MOSI and MISO. | spark. P512 fixed it. The folders are older than the fix. | spark, fixed |
+| F12 | spark states no clearance and no track width to the router. tscircuit then routes at 0.1 mm, and KiCad finds 6 errors at 0.2 mm. | `<board>` gets no `minTraceToPadEdgeClearance` or `minTraceWidth` (`board_sections.py:135` to 138). Found after the Freerouting run, section 2.4. | spark |
 
 ### 1.3 Measured, and not a fault
 
@@ -151,23 +152,32 @@ bodies. The spike did not check whether the limit applies to a STEP import.
 ### 2.4 Freerouting, run on the PO's yes
 
 The PO said "yes, run Freerouting" in the kicad-spike window. Freerouting 2.6.0 is one free file (GPL-3.0) with no
-Java to install. It routed the e-paper board from a DSN that pcbnew wrote, and pcbnew read the routes back.
+Java to install. pcbnew wrote the DSN of the e-paper board with the older footprint (F10). Freerouting routed it, and
+pcbnew read the routes back and filled one GND zone per layer. Every row below was checked by KiCad at 0.2 mm.
 
-| Router, same board | Rules | Track | Vias | KiCad errors at 0.2 mm |
+| Router, same board | Rules the router got | Track | Vias | KiCad errors at 0.2 mm |
 |---|---|---|---|---|
-| tscircuit's autorouter | its own, 0.15 mm tracks | 563.6 mm | 4 | 6 clearance |
-| Freerouting, run 1 | the export's: 0.1 mm clearance and tracks | 568.7 mm | 3 | 9 clearance, 1 thermal |
-| Freerouting, run 2 | set first: 0.2 mm clearance, 0.25 mm tracks | 561.8 mm | 0 | 0 |
+| tscircuit, as spark builds today | none from spark: 0.1 mm clearance, 0.15 mm tracks | 563.6 mm | 4 | 6 clearance |
+| Freerouting, run 1 | the export's: 0.1 mm clearance, 0.1 mm tracks | 568.7 mm | 3 | 9 clearance, 1 thermal |
+| tscircuit, rules stated | 0.2 mm clearance, 0.25 mm tracks, set on `<board>` | 567.3 mm | 5 | 0 |
+| Freerouting, run 2 | 0.2 mm clearance, 0.25 mm tracks, set in the project | 561.8 mm | 0 | 0 |
 
-Each run took about 0.2 s. Freerouting follows the rules that it gets. So the clearance and the track width are
-spark's facts to state, and the router only obeys them. With stated rules, Freerouting gave a clean board with wider
-tracks and no vias. Its help also lists an output of "Autodesk Fusion script (.scr)", which P203 can test.
+Each board has 10 connections on 8 nets, and each has 0 unconnected items. Under the same loose rules, tscircuit's
+routes gave fewer errors than Freerouting's (6 against 9). With the same strict rules, both gave 0 errors.
+Freerouting then used no vias, and tscircuit used 5.
+
+So on this board, each router followed the rules that it got. The 6 errors of today's boards come from spark, which
+states no clearance and no track width. tscircuit's `<board>` takes `minTraceToPadEdgeClearance`, `minTraceWidth` and
+`nominalTraceWidth` (`@tscircuit/props`, `RoutingTolerances`). This is a fault of spark's board file, F12 in the
+notes.
+
+Freerouting's help also lists an output of "Autodesk Fusion script (.scr)". The spike did not try it.
 
 ![Freerouting's routes on the e-paper board, KiCad's render](freerouting-top.png)
 
-This changes the router's place in the seam (section 3.1, item 7), not option B. Freerouting reads a DSN, and tsci
-exports `specctra-dsn` itself. So Freerouting is a router strategy that needs no KiCad. KiCad is needed only to read
-the routes back into a `kicad_pcb`.
+This changes the router's place in the seam (section 3.1, item 7), not option B. Freerouting reads a DSN. Here pcbnew
+wrote the DSN and read the routes back. tsci's own `specctra-dsn` export did not go into Freerouting. No path takes
+a SES file back to `circuit.json` yet.
 
 ## 3. How KiCad sits in the stack
 
@@ -297,7 +307,7 @@ record that spark holds. The findings are KiCad's, and spark names the tool and 
 Recommendation: B. Three facts decide it.
 
 1. The routing is not the fault, and the pour has a two-line fix inside tscircuit.
-2. kicad-cli cannot place or route. So a KiCad engine needs `pcbnew` and a router that the spike did not run.
+2. kicad-cli cannot place or route. A KiCad engine needs `pcbnew` and Freerouting, which ran once on one board (section 2.4).
 3. Seven of the eleven faults sit in spark's shared parts. A KiCad engine inherits each of them.
 
 So spark does not move to KiCad. It adds KiCad after the build, by kicad-cli. The engine swap stays one epic line.
@@ -328,6 +338,7 @@ change". One comment on [#163](https://github.com/xmejkal/spark/issues/163) hold
 - P1187 [#1731](https://github.com/xmejkal/spark/issues/1731): the schematic names each signal's net by pin (F7) → each signal goes on a net with its own name
 - P1188 [#1732](https://github.com/xmejkal/spark/issues/1732), with F10 below: the footprint file prints "None mm" for a null `drill_mm` (F9) → it says that the drawing states no drill
 - P1188 [#1732](https://github.com/xmejkal/spark/issues/1732), with F9 above: `--keep` keeps an old footprint file that spark wrote (F10) → spark replaces it by `board.tsx`'s rule
+- P? (not filed yet): spark states no clearance and no track width to the router (F12) → `<board>` gets both from `data/fabrication.json`
 - Later epic line under P203: KiCad as a second board engine behind the seam. Done: one real board builds through the engine
   that the `board-engine` role chose, and every check reads its result.
 

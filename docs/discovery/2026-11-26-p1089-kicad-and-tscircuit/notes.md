@@ -104,13 +104,19 @@ today, with today's footprint (14-pin row on the left). `spkgnd/` is the same bo
 - The board: tsci's KiCad export of the walk's e-paper board, with the older footprint (F10). pcbnew removed its tracks
   and zones and wrote the DSN. After the route, `pcbnew.ImportSpecctraSES` read the session back. A second process
   added one GND zone per layer and filled it, because the binding refused zones in the same process.
-- Run 1, the export's own rules (0.1 mm clearance, 0.1 mm tracks): 10 nets routed in 0.23 s, 0 unrouted, 0
-  violations, 3 vias, 568.7 mm of track at 0.1 mm. KiCad at 0.1 mm: 1 error (`starved_thermal`). At 0.2 mm: 9
-  clearance errors. So Freerouting follows the rules that the DSN states.
-- Run 2, stricter rules set in the project first (0.2 mm clearance, 0.25 mm tracks): 10 nets routed in 0.22 s, 0
-  unrouted, 0 vias, 561.8 mm of track at 0.25 mm. KiCad at 0.2 mm: 0 errors, 0 unconnected, 9 text heights and 2
+- Run 1, the export's own rules (0.1 mm clearance, 0.1 mm tracks): 10 connections on 8 nets routed in 0.23 s, 0
+  unrouted, 0 violations, 3 vias, 568.7 mm of track at 0.1 mm. KiCad at 0.1 mm: 1 error (`starved_thermal`). At 0.2 mm: 9
+  clearance errors. On this board, Freerouting followed the rules that the DSN stated.
+- Run 2, stricter rules set in the project first (0.2 mm clearance, 0.25 mm tracks): 10 connections routed. The log was not kept, and
+  the time was about 0.2 s. 0 unrouted, 0 vias, 561.8 mm of track at 0.25 mm. KiCad at 0.2 mm: 0 errors, 0 unconnected, 9 text heights and 2
   library warnings. Picture: `freerouting-top.png`.
 - tscircuit's routes on the same board: 563.6 mm, 4 vias, 0.15 mm tracks. KiCad at 0.2 mm: 6 clearance errors.
+  tscircuit routed under 0.1 mm clearance, because spark states none. The refuter found that this pair was unfair.
+- tscircuit with the rules stated (`tsc02/`): `<board>` got `minTraceToPadEdgeClearance="0.2mm"`,
+  `minTraceWidth="0.25mm"` and `nominalTraceWidth="0.25mm"`. `tsci build` took 8 s with 0 errors. KiCad checked its
+  export the same way as run 2: 567.3 mm, 5 vias, 0.25 mm tracks, 0 errors and 0 unconnected at 0.2 mm.
+- F12 is a new fault of spark's board file: spark states no clearance and no track width to the router. So tscircuit
+  routes at 0.1 mm clearance and 0.15 mm tracks.
 - Total time for a script run of DSN, route, import and fill: a few seconds.
 
 ### Facts from sources
