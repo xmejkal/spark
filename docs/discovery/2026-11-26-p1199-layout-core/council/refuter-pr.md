@@ -11,7 +11,7 @@ Verdict: not ready to merge. Points 1, 4 and 5 block it. The rest are small fixe
 4. Blocks. Four places still say all 9 goldens stay the same, against D13's 8 of 9: items.md:74, story-map.md:19, brief.md:70 and outcome (1) at brief.md:17.
 5. Blocks. items.md:63 and the Needed by of #1789 quote "one seam per strategy, … nothing twice" as the PO's words. That is spark-main's gloss. His own words are "…its reusable, dry, etc etc".
 6. Stale text: brief.md:12 lists Q1 to Q8 as open. risks-and-tests.md:22, :35 and :51 still offer the seller's page, which Q8 dropped. The hand-off lists the unconfirmed no-gos as constraints. items.md:8 says spark-main files the items, but this session did. items.md:9 leaves out item 7 under Q4.
-7. Holds: D1 to D6 and D8 to D11 match the relays. Every A row matches D11. The four cards have the right parent, Status Idea, the Slice Views and editors, and unused P-numbers. The nine comments match items.md and quote the PO word for word. The code citations hold. No /Users/ path, no secret, no vendor file in the diff.
+7. Holds: D1 to D6 and D8 to D11 match the relays. Every A row matches D11. The four cards have the right parent, Status Idea, the Slice Views and editors, and unused P-numbers. The nine comments match items.md and quote the PO word for word. The code citations hold. No home path, no secret, no vendor file in the diff.
 
 Could not check: spark-main's "about 13:15" and "about 14:20".
 
