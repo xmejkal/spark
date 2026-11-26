@@ -94,7 +94,8 @@ each:
 - `CLAUDE.md`: the line `@AGENTS.md`, only when no `CLAUDE.md` is here. A person's own `CLAUDE.md` is left alone,
   and the note names the line to add.
 - `CLAUDE.local.md`: a link to `rules.md` in the person's store, kept out of git by spark's section of `.gitignore`,
-  and in a repository also by `.git/info/exclude`, which holds it when init leaves a tracked `.gitignore` alone.
+  and in a repository whose `.git` is a folder also by `.git/info/exclude`. That line keeps it out when init leaves a
+  tracked `.gitignore` alone. A worktree or a submodule has no such folder, and the note asks the person to add it.
   No `rules.md` means no link, and the note says where to write one. A person's own file is left alone.
 - `.gitignore`: spark's section, between two `# spark:` marker lines, with `CLAUDE.local.md`, `sim/*.bin` (the flash image
   and the MicroPython interpreter) and `sim/runs/` (the run and board logs). It is written with or without a git

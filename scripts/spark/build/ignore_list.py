@@ -29,7 +29,7 @@ class IgnoreList:
     already tracks that the section covers. `git` is handed in and answers two reads: `tracks(name)` gives True, False or
     None (git cannot say), and `tracked_files(patterns)` gives the paths in git's index that the patterns cover. The
     ProjectCommit Adapter answers both and is the default until P1151 hands in the project timeline (`GitProjectTimeline`
-    then passes both to ProjectCommit, and a timeline with no git gives None and [])."""
+    then passes both to ProjectCommit). None means that git failed, so a timeline with no git answers False and []."""
 
     def __init__(self, project, git=None):
         self.project = Path(project)
