@@ -12,7 +12,7 @@ files each one. Items 4, 5 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answ
 - type: comment on an open card (no change of scope) <!-- REQUIRED:item-type -->
 - needed by: "being also able for humans to edit the connections and move the parts around ?" (the PO, 2026-11-26, #1747) <!-- REQUIRED:needed-by -->
 - value proven by: the log's lines in the store's bench file, read against A1's pass line <!-- REQUIRED:value-proven-by -->
-- depends on: Q1 sets the pass line <!-- REQUIRED:depends-on -->
+- depends on: D9 set the pass line (at least 3 log lines in 14 days, set 2026-11-26) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): — (a comment) <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
@@ -38,21 +38,21 @@ files each one. Items 4, 5 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answ
 - parent (the epic, as a sub-issue): —
 - slice (one Slice option of the board, or "ask the decider for a new one"): 10 The store
 
-## 4. A comment on P1152 #1688, after Q4: the layout's kept row is the edits record, at slice 2
+## 4. A comment on P1152 #1688 (D4): the layout's kept row is the edits record, at slice 2
 - type: comment on an open card
 - needed by: "This time its regarding the  breadboard layoutand wiring, the PCB, the perfobard ayout etc" (the PO, 2026-11-26, #1738)
 - value proven by: #1688's slice 2 lists the layout row, and slice 5 keeps board.tsx alone
-- depends on: Q4 (a)
+- depends on: D4 (answered, option a)
 - status: proposed
 - label (the repository's type label): — (a comment)
 - parent (the epic, as a sub-issue): —
 - slice (one Slice option of the board, or "ask the decider for a new one"): Project timeline
 
-## 5. A comment on P1202 #1751, after Q4: the build records a digest of breadboard.json to notice a hand edit
+## 5. A comment on P1202 #1751 (D4): the build records a digest of breadboard.json to notice a hand edit
 - type: comment on an open card
 - needed by: "be able to see if things changed from the outside" (the PO, 2026-11-26, #1738)
 - value proven by: #1751 names breadboard.json's digest and the offer to import a hand edit, with no kept-step row for the file
-- depends on: Q4 (a)
+- depends on: D4 (answered, option a)
 - status: proposed
 - label (the repository's type label): — (a comment)
 - parent (the epic, as a sub-issue): —
@@ -72,7 +72,7 @@ files each one. Items 4, 5 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answ
 - type: story
 - needed by: "Can we refactor out some protocole or omdule or class or whatever to reuse for these common problems?" (the PO, 2026-11-26, #1747)
 - value proven by: `layout.py edit --part ... --hole ... --dry-run` names a refusal before any write, a part edit stays after a rebuild on the FireBeetle full board, and tests.test_golden_breadboard keeps 9 of 9. The edit's key reuses bench_changes' step key
-- depends on: N1, Q3, Q4, Q6, and #94's breadboard PR (council/tech-lead.md cost table)
+- depends on: N1, D3 (after the MVP), D4, D6, and #94's breadboard PR (council/tech-lead.md cost table)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P1199 #1747
@@ -92,17 +92,17 @@ files each one. Items 4, 5 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answ
 - type: comment on an open card
 - needed by: "I would like to just kind of tell Claude, and he would do it for me on the board" (the PO, 2026-10-18, #352)
 - value proven by: #352 names `edit-layout` for the place and the design area for "Connect it to pin number 20"
-- depends on: Q4
+- depends on: D4
 - status: proposed
 - label (the repository's type label): — (a comment)
 - parent (the epic, as a sub-issue): —
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors
 
-## 10. A comment on P1163 #1699, after Q5: the page's move is one request to `edit-layout`
+## 10. A comment on P1163 #1699 (D5): the page's move is one request to `edit-layout`
 - type: comment on an open card
 - needed by: "I'd also lke to be able to change the position of elements and wiring etc on the breadboard (later also on perfboard)" (the PO, 2026-11-25, #1699)
-- value proven by: #1699 names `edit-layout` as the page's one call, with its findings and P1202's `changed` list as the effects
-- depends on: Q5
+- value proven by: #1699 names `edit-layout` as the page's one call, with its findings and P1202's `changed` list as the effects, and run-request carrying a drag's values for an allow-listed Operation (D5, a change P1082 #1587 owns)
+- depends on: D5
 - status: proposed
 - label (the repository's type label): — (a comment)
 - parent (the epic, as a sub-issue): —
@@ -132,7 +132,7 @@ files each one. Items 4, 5 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answ
 - type: spike
 - needed by: "we probably want to be able to set what sizes of perfboards the user has available" (the PO, 2026-11-26, #311)
 - value proven by: the drawer record holds pitch, pad kind, holes across and holes down, each with its origin
-- depends on: Q8
+- depends on: D8 (he measures it with calipers when the perfboard card is pulled)
 - status: proposed
 - label (the repository's type label): spike
 - parent (the epic, as a sub-issue): P275 #311
@@ -141,7 +141,7 @@ files each one. Items 4, 5 and 9 waited on Q4, and item 10 on Q5. D4 and D5 answ
 ## 14. N4: a spike, a pad-lattice router with an insulated-jumper fallback (under #311)
 - type: spike
 - needed by: "using good algorithm to offer the best options of routing" (the PO, 2026-11-26, #1747)
-- value proven by: on button-light and one motor circuit, every net joined or named, the jumper count and the seconds written down, against a pass line set before the run. perfwire's solver and stripboard-py's router spec read first (D-q6)
+- value proven by: on button-light and one motor circuit, with the roomy goal by default (D7), every net joined or named, the jumper count and the seconds written down, against a pass line set before the run. perfwire's solver and stripboard-py's router spec read first (D-q6)
 - depends on: N3
 - status: proposed
 - label (the repository's type label): spike
