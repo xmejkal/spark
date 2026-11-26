@@ -901,6 +901,14 @@ class ThePicksTest(unittest.TestCase):
             parts.main(argv)
         return out.getvalue()
 
+    def next_line(self):
+        """The next: line a pick that wrote ends with (P1141): the flow's parts step for the needs it leaves open."""
+        from spark.flow.now_follow_up import FlowFollowUp
+        from spark.flow.show_flow import flow_and_guide, now_steps
+        step = now_steps(self.project, *flow_and_guide(self.project))[0]
+        self.assertTrue(step.op == "pick" and all(pair.endswith("=<part>") for pair in step.argv[2:]), step)
+        return FlowFollowUp().line(step)
+
     def test_the_bin_s_only_board_is_refused_naming_who_holds_it(self):
         said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])
         self.assertEqual((said["status"], code), ("problems", 1))
@@ -1157,7 +1165,7 @@ class ThePicksTest(unittest.TestCase):
             "  mp3: maybe owned — check the drawer first",
             "  listed plant-alarm on your projects",
             "  wrote to your history: 2 reused",
-            "  needs.json names your drawer entry mp3 — a key made from your label, in the project's own file", ""]))
+            "  needs.json names your drawer entry mp3 — a key made from your label, in the project's own file", self.next_line(), ""]))
 
     def test_a_refused_pick_says_its_notes_between_what_it_would_have_changed_and_what_it_refused(self):
         self.assertEqual(self.text(["--pick", str(self.project), "alarm=mp3", "board=firebeetle2-esp32s3"]), "\n".join([
@@ -1281,7 +1289,7 @@ class ThePicksTest(unittest.TestCase):
             "  probe: the drawer entry of x-soil — picked as that record",
             "  listed plant-alarm on your projects",
             "  wrote to your history: 2 reused",
-            "  needs.json names your drawer entry old-amp — a key made from your label, in the project's own file", ""]))
+            "  needs.json names your drawer entry old-amp — a key made from your label, in the project's own file", self.next_line(), ""]))
 
     def test_a_drawer_entry_of_a_board_picked_by_its_key_is_a_pick_of_that_board(self):
         run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
@@ -1299,7 +1307,7 @@ class ThePicksTest(unittest.TestCase):
             "  beetle-c6: a board needs a board file — a record in boards/ — before spark can build with it",
             "  listed plant-alarm on your projects",
             "  wrote to your history: 2 reused",
-            "  needs.json names your drawer entries beetle-c6, speaker — a key made from your label, in the project's own file", ""]))
+            "  needs.json names your drawer entries beetle-c6, speaker — a key made from your label, in the project's own file", self.next_line(), ""]))
 
     def a_needs_file_from_before(self, need_id, pick):
         """The needs file as one written before a pick of an entry key became its record's — or edited by hand: `need_id`
@@ -2116,6 +2124,13 @@ class TheMoveHoldTest(unittest.TestCase):
         self.assertEqual(self.picks(self.other)["chime"], [{"entry": "speaker"}])
         self.assertEqual(said["data"]["projects"][1]["released"], [{"entry": "buzzer", "was": 1, "now": 0}])
         self.assertNotIn("move-hold", [step["op"] for step in said["next"]])
+
+    def test_a_move_into_a_parts_now_with_open_needs_ends_with_its_pick_step(self):
+        # P1141: the follow-up names the parts phase's own step after a move too (move_hold.py's written project is TO)
+        said, code = self.move("chime=speaker", "--apply")
+        self.assertEqual((said["status"], code), ("ok", 0))
+        self.assertEqual([(step["op"], step["argv"]) for step in said["next"]],
+                         [("pick", ["--pick", str(self.other.absolute()), "moist=<part>", "brain=<part>"])])
 
     def test_a_pick_by_its_drawer_entry_and_by_its_record_id_moves_the_one_stock(self):
         for given in ("moist=probe", "moist=x-soil"):
