@@ -3,20 +3,20 @@
 the line it read, verbatim. result: reproduced · not reproduced · rejected. keep: the words any summary of the claim
 must carry (phrases separated by ;), or none; keep comes last on the line. -->
 The refuter on Opus read the brief at commit a08a4eb5 (council/refuter.md). The facilitator reproduced what a command
-on this Mac could reach, at 16:20 to 16:32 CET on 2026-11-26, in a scratch folder that is deleted at the end.
+on this Mac could reach, at 16:20 to 16:32 CET on 2026-11-26 (★C35 and ★C36 at 17:20 to 17:22 CET, the union file at 18:04 CET), in a scratch folder that is deleted at the end.
 
-- ★C1 · pre-analysis.md:15 · refuter: partly — "So the population is 40 part and board records ... 34 of 40 hold an outline" · reproduced how: re-ran the key scan without `*.chip.json`: 40 records, 34 with an outline (2026-11-26) · result: reproduced after correction · keep: 3 of 40 <!-- REQUIRED:claims -->
+- ★C1 · pre-analysis.md:16 · refuter: partly — "So the population is 40 part and board records ... 34 of 40 hold an outline" · reproduced how: re-ran the key scan without `*.chip.json`: 40 records, 34 with an outline (2026-11-26) · result: reproduced after correction · keep: 3 of 40 <!-- REQUIRED:claims -->
 - ★C2 · scripts/spark/design/board_sections.py:258-259 · refuter: partly — "The footprint is not always `pinrowN`" · reproduced how: re-read the lines · result: reproduced after correction · keep: none
-- ★C3 · pre-analysis.md:86 · refuter: partly — "the GLB fault belongs to the probe's STL file" · reproduced how: `tsci export abs.tsx -f glb` with an absolute STL path: exit 0. With `./clean.stl`: "RangeError: Out of bounds access" · result: reproduced after correction · keep: one probe board
+- ★C3 · pre-analysis.md:87 · refuter: partly — "the GLB fault belongs to the probe's STL file" · reproduced how: `tsci export abs.tsx -f glb` with an absolute STL path: exit 0. With `./clean.stl`: "RangeError: Out of bounds access" · result: reproduced after correction · keep: one probe board
 - ★C4 · council/tech-lead.md:23 · refuter: holds — "In tscircuit's STEP, a part with a STEP body loses its reference name." · reproduced how: my first probe: the merged body's solid had the name '' and its shape `./body.step` · result: reproduced · keep: Whether Fusion shows them is not run
-- ★C5 · pre-analysis.md:84 · refuter: partly — "Change about 54 x 42 x 15 mm to 56 x 42 x 15.4 mm" · reproduced how: occt-import-js on my `encl.step`: 56.00 x 42.00 x 15.40 mm · result: reproduced after correction · keep: version 0.0.4
-- ★C6 · pre-analysis.md:90 · refuter: holds — "ENOENT: no such file or directory, open .../manifold.wasm" · reproduced how: my first probe log · result: reproduced · keep: none
+- ★C5 · pre-analysis.md:85 · refuter: partly — "Change about 54 x 42 x 15 mm to 56 x 42 x 15.4 mm" · reproduced how: occt-import-js on my `encl.step`: 56.00 x 42.00 x 15.40 mm · result: reproduced after correction · keep: version 0.0.4
+- ★C6 · pre-analysis.md:91 · refuter: holds — "ENOENT: no such file or directory, open .../manifold.wasm" · reproduced how: my first probe log · result: reproduced · keep: none
 - ★C7 · research.md:21 · refuter: partly — "Change except Adafruit's (MIT) to except Adafruit's and tscircuit's jscad-electronics" · reproduced how: re-read research.md:21 and :26 · result: reproduced after correction · keep: never commits a vendor file
 - ★C8 · research.md:19 · refuter: partly — "KiCad holds modules and two other dev boards ... the PO has downloaded two" · reproduced how: re-read research.md:19 · result: reproduced after correction · keep: vendor downloads
 - ★C9 · research.md:29 · refuter: partly — "62.5 MB is one wheel's download size, for Python 3.11" · reproduced how: not re-run: the refuter read PyPI · result: not reproduced · keep: to download
 - ★C10 · research.md:67 · refuter: could not open — autodesk.com returned HTTP 403 · reproduced how: not reproduced: Autodesk pages are not reachable from here · result: not reproduced · keep: the pages disagree
 - ★C11 · research.md section 3 · refuter: could not open — the help page answered "Page Not Found" · reproduced how: not reproduced; the refuter read the setting's string in the installed build · result: not reproduced · keep: not turned on or run
-- ★C12 · pre-analysis.md:72-73 · refuter: holds — "kicad-cli version prints 10.0.6" · reproduced how: `kicad-cli version` printed 10.0.6 in my probe · result: reproduced · keep: installed is not used
+- ★C12 · pre-analysis.md:73-74 · refuter: holds — "kicad-cli version prints 10.0.6" · reproduced how: `kicad-cli version` printed 10.0.6 in my probe · result: reproduced · keep: installed is not used
 - ★C13 · research.md section 4 · refuter: holds, not run — "Its LICENSE.txt begins MIT License" · reproduced how: not re-run · result: not reproduced · keep: not run
 - ★C14 · scripts/spark/breadboard/picture_makers.py:23-58 · refuter: holds — "class PartPictureMaker:" · reproduced how: re-read picture_makers.py:1-60 · result: reproduced · keep: none
 - ★C18 · ~/Development/smartbin-local Makefile:198 · refuter: holds — "@tsci export -f glb board.tsx -o $@" · reproduced how: re-read the Makefile, LICENSE and the clearance check's header · result: reproduced · keep: a sibling project
@@ -45,4 +45,5 @@ on this Mac could reach, at 16:20 to 16:32 CET on 2026-11-26, in a scratch folde
 - Split: the viewer: reuse the bin project's now (PA-1, US-1) or wait (AR-15) · Q11
 - Split: an unknown height: refuse and ask, or a named default (US-26) · Q9
 - Split: who owns the facts: P735, P446, #1729 or this epic (PA-16) · Q12
-- Split: the refuter's rival: he may not need spark to make a case at all (two bought boxes, D3) · Q5 options d and e, Q8
+- Split: the refuter's rival: he may not need spark to make a case at all (two bought boxes, D3) · Q5 options d and e were not shown to him (D5). Option (d) equals what D5 and D8 build first
+- Note: the tech lead's 27.7 mm "matches PHY-2" (council/delegated-tech-lead.md) used PHY-2's own 18.1 mm headroom, so the match is circular · none

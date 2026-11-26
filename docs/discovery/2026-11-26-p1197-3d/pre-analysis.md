@@ -4,7 +4,7 @@ Card P1197 [#1745](https://github.com/xmejkal/spark/issues/1745). Read on 2026-1
 p1197-3d, and in the person's store (`~/.local/share/spark`). The probe ran in a scratch folder at 15:14 CET. No
 probe file is kept in the repository.
 
-> In short: spark holds a 2D outline for 30 of 43 records and a body's overall height for 3. No record holds a 3D model.
+> In short: spark holds a 2D outline for 34 of 40 records and a body's height above the board for 3, as a field. No record holds a 3D model.
 > spark already installs tscircuit 0.0.2600. It takes a body per part and exports STEP and GLB. A body it generates
 > keeps the part's reference as its name, and a STEP body does not. It also draws a two-part printed case
 > (`enclosure.fdm.box`).
@@ -82,7 +82,7 @@ toolchain's `node_modules`, as spark's build does (`scripts/spark/build/board_en
 | Variant | GLB | STEP | What the STEP holds (read with `occt-import-js` and grep) |
 |---|---|---|---|
 | plain, no model | 254 KB, ran | 1054 KB, ran | one product "PCB", with solids named `PCB`, `U1`, `U2` (the generic header bodies) |
-| with `<enclosure.fdm.box>` | 263 KB, ran | 1142 KB, ran | as plain, plus two solids `unnamed_enclosure_fdm_box_1`, about 54 x 42 x 15 mm |
+| with `<enclosure.fdm.box>` | 263 KB, ran | 1142 KB, ran | as plain, plus two solids `unnamed_enclosure_fdm_box_1`, 56 x 42 x 15.4 mm (brief ★C5) |
 | module with a local `stepUrl` | 198 KB, ran | 318 KB, ran | the local STEP body is merged as a solid on the board top (z from 1.4 mm) |
 | module with a local `stlUrl` | failed: "RangeError: Out of bounds access". A later run with an absolute path ran (brief ★C3) | 315 KB, ran | the STL lands as loose faces, z from -5.3 to 0.7 mm: through the board, not on it |
 

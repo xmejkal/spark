@@ -10,13 +10,13 @@ are taken at filing time, after reading the highest one (P1239 on 2026-11-26).
 ## P1247: nobody opened a spark STEP in Fusion or printed a case from record facts, so every 3D choice rests on a guess → two tests in a scratch folder with dated pass lines
 - type: spike <!-- REQUIRED:item-type -->
 - needed by: "the whole thing openable in fusion and the user or ai could use it  and create the cover or other parts" (the PO, 2026-11-26, #1745) <!-- REQUIRED:needed-by -->
-- value proven by: a finding file with his screenshot of Fusion's browser tree for each of three files, and a photo of his FireBeetle in the printed case with a calliper reading, each against its pass line <!-- REQUIRED:value-proven-by -->
+- value proven by: a finding file with his screenshot of Fusion's browser tree for each T1 file (three, in the store's t1-step-2026-11-26/ with its README, none from spark's own STEP writer, which does not exist), and a photo of his FireBeetle in the printed case with a calliper reading, each against its pass line <!-- REQUIRED:value-proven-by -->
 - depends on: two sittings of the PO. He said yes to both tests and has callipers (D6). T1 runs first, on his Personal licence (D2) <!-- REQUIRED:depends-on -->
 - status: filed D16, P1247 #1804 (2026-11-26) <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1197 #1745 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): 9 An enclosure <!-- REQUIRED:spark-process:slice -->
-- touches: #1745's cycle. It gives P277 #313 its first run ("open in Fusion 360 as a 3D model"). It decides Q13, Q16 and Q17
+- touches: #1745's cycle. It gives P277 #313 its first run ("open in Fusion 360 as a 3D model"). Its results confirm or turn the delegated answers to Q13, Q16 and Q17 (D13)
 
 ## P1248: "height" and "thickness" each mean two things in the records, and the z facts sit under seven keys → one word for each z fact in words.md, one rule in `record_kind`, and one question each in `fact-needs.json`
 - type: chore <!-- REQUIRED:item-type -->
@@ -27,7 +27,7 @@ are taken at filing time, after reading the highest one (P1239 on 2026-11-26).
 - label (the repository's type label): chore <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1197 #1745 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): 9 An enclosure <!-- REQUIRED:spark-process:slice -->
-- touches: #1729 (it takes the naming of "a height fact" out of that card, and can be its first PR if the PO wants fewer cards). P735 #1010 writes the same facts (C28). The store's records are his: the card names the keys to move and moves none
+- touches: #1729 (it takes the naming of "a height fact" out of that card, and can be its first PR if the PO wants fewer cards). This epic writes only the height facts it needs, and P735 #1010 writes the size, hole and opening facts (D11). The store's records are his: the card names the keys to move and moves none
 
 ## Extend P1185 #1729 (no new card): a box from `body_mm`, with a height fact → the box comes from a `PartBodyMaker` chain with `BoxBodyMaker`, for each module and the Mcu
 - type: story (as today) <!-- REQUIRED:item-type -->

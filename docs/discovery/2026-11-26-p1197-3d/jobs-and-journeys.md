@@ -22,7 +22,7 @@ e.g. `- When I assign a task in a meeting [E tickets.csv:6], I want the assignee
 ## Today they…
 <!-- Per job: what they do instead today (a competitor, a workaround or nothing), tagged.
 e.g. `- Job 1 · paste each task into Slack by hand · E tickets.csv:7` -->
-- J1 · nothing in spark: no record holds a model, and 3 of 43 records hold a body's overall height · E brief ★C1. Outside spark, the PO gave his bin project's modules bodies by hand through `cadModel` · E brief ★C18
+- J1 · nothing in spark: no record holds a model, and 3 of 40 records hold a body's height above the board as a field · E brief ★C1. Outside spark, the PO gave his bin project's modules bodies by hand through `cadModel` · E brief ★C18
 - J2 · tscircuit's 3D tab and KiCad's render show pads and a box, or a header body only · E P1089 finding section 2.3, brief ★C2. His bin project exports `board.glb` and shows it in an offline one-page viewer, rebuilt with each build after it went stale once · E brief ★C18, council/user.md US-1
 - J3 · no doc gives a STEP recipe: docs/guide/agents.md:170-176 exports `kicad_pcb` and runs a DRC. An agent can type `tsci export -f step` by itself. The STEP has no module bodies. No one opened it in Fusion · E docs/guide/agents.md:170-176, P1089 finding section 2.3, council/architecture.md AR-24
 - J4 · nothing in spark. tscircuit's case element is installed but spark does not write it · E brief ★C5. For the FireBeetle alone, the PO owns two bought DFRobot FIT0725 boxes · E brief ★C23 · H that he models a case by hand in Fusion (asked as Q3)
