@@ -185,7 +185,7 @@ class ThePhasesTest(FlowTest):
                                        "build": (NS, []), "breadboard": (NS, []), "firmware": (NS, []), "simulate": (NS, []),
                                        "deploy": (NS, [])})
         self.assertEqual(said["data"]["stands_at"], "idea")  # P1030: the guide's now, the one rule
-        self.assertEqual(says(said, "idea"), ["Tell Claude your goal in the chat"])
+        self.assertEqual(says(said, "idea"), ["the brief holds no goal"])
         # P979: the hints name the command and who acts, with no placeholder and no path
         self.assertEqual(says(said, "firmware"), ["No firmware/main.py yet. Ask Claude to write it in the chat."])
         self.assertEqual(says(said, "simulate"), ["No simulation files yet (sim/wokwi.toml). Ask Claude to build the board."])
@@ -1589,9 +1589,9 @@ class TheOfferStepTest(FlowTest):
         said, _ = show(empty)
         self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"]), ("idea", []))
 
-    def test_show_s_text_ends_with_the_guide_s_lines_and_no_stands_at_line(self):
+    def test_show_s_text_starts_with_the_guide_s_lines_and_no_stands_at_line(self):
         lines = lines_of(self.a_hand_written_project())
-        self.assertEqual(lines[-3:], ["  NOW (build): Ask Claude in the chat to build the board. It takes seconds and costs nothing. [build]",
+        self.assertEqual(lines[:3], ["  NOW (build): Ask Claude in the chat to build the board. It takes seconds and costs nothing. [build]",
                                       "  DONE: idea, requirements (no needs or picks behind it)",
                                       "  LATER: breadboard, firmware, simulate, deploy"])
         self.assertFalse([line for line in lines if "stands at" in line])
@@ -1600,7 +1600,9 @@ class TheOfferStepTest(FlowTest):
         project = a_project_built_with_no_simulation()
         with_needs(project, [{"id": "soil", "does": "sense", "what": "soil-moisture", "aside": True}])
         lines = lines_of(project)
-        self.assertEqual(lines[-2:], ["  " + NO_MODEL, "  SET ASIDE: soil"])  # the page's order
+        at = lines.index("  " + NO_MODEL)  # the page's order, then the first phase line
+        self.assertEqual(lines[at:at + 3][:2], ["  " + NO_MODEL, "  SET ASIDE: soil"])
+        self.assertIn("idea:", lines[at + 2])
 
     def test_the_offers_in_data_keep_their_four_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))
@@ -2461,7 +2463,7 @@ class TheDeployNowTest(FlowTest):
         project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
         said, _ = show(project)
         self.assertEqual((self.now(said), said["data"]["guide"]["no_open_phase"]), (None, NOTHING_WAITS))
-        self.assertEqual(lines_of(project)[-1], "  " + NOTHING_WAITS)
+        self.assertEqual(lines_of(project)[0], "  " + NOTHING_WAITS)
 
     def test_each_open_deploy_has_its_own_now(self):
         lost = "Spark saw ready after the last deploy, then lost the board, and cannot tell from here whether the firmware still runs. "
@@ -2866,6 +2868,80 @@ class TheWiringWithNowTest(unittest.TestCase):
         two = self.now([("breadboard", None, "·"), ("firmware", "not-started", "○")])
         self.assertEqual((two["steps"], two["with_wiring"]), (3, True))
         self.assertIs(self.now([("build", "not-started", "○"), ("breadboard", None, "·")])["with_wiring"], False)
+
+
+GOAL = "a button switches a light on and off"
+GOAL_LINE = "your goal is “%s”" % GOAL
+NO_GOAL_LINE = "the brief holds no goal"
+
+
+def with_brief(project, text):
+    """`project` with `.spark/project.json` holding `text` as it is."""
+    (project / ".spark").mkdir(parents=True, exist_ok=True)
+    (project / ".spark" / "project.json").write_text(text)
+    return project
+
+
+def a_project_with_a_brief(text):
+    project = Path(tempfile.mkdtemp()) / "plant-alarm"
+    project.mkdir()
+    return with_brief(project, text)
+
+
+def idea_of(said):
+    idea = next(each for each in said["data"]["phases"] if each["phase"] == "idea")
+    return idea["status"], idea["mark"], idea["says"]
+
+
+class TheIdeaGoalTest(FlowTest):
+    """P1142: the idea phase reads the brief's goal, and show's first line is the guide's NOW."""
+
+    def test_a_brief_with_a_goal_makes_the_idea_ok_and_says_the_goal(self):
+        said, _ = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
+        self.assertEqual(idea_of(said), ("ok", "✓", [GOAL_LINE]))
+
+    def test_a_goal_is_said_whatever_must_holds(self):
+        said, code = show(a_project_with_a_brief(json.dumps({"goal": "a lamp", "must": "x"})))
+        self.assertEqual((idea_of(said), code), (("ok", "✓", ["your goal is “a lamp”"]), 0))
+
+    def test_no_goal_a_null_goal_or_a_blank_goal_says_so_with_no_status(self):
+        empty = Path(tempfile.mkdtemp()) / "plant-alarm"
+        empty.mkdir()
+        for project in (empty, a_project_with_a_brief('{"goal": null}'), a_project_with_a_brief('{"goal": "  "}'),
+                        a_project_with_a_brief('{"goal": 7}')):
+            with self.subTest(project=project.name, brief=(project / ".spark").exists()):
+                self.assertEqual(idea_of(show(project)[0]), (None, "·", [NO_GOAL_LINE]))
+
+    def test_a_brief_that_cannot_be_read_says_why_with_no_status(self):
+        said, code = show(a_project_with_a_brief("{not json"))
+        self.assertEqual((idea_of(said), code), ((None, "·", ["the brief cannot be read (bad-json)"]), 0))
+        status, _, lines = idea_of(show(a_project_with_a_brief("[" * 100000))[0])
+        self.assertEqual((status, len(lines), lines[0].startswith("the brief cannot be read (")), (None, 1, True))
+
+    def test_a_goal_with_no_needs_stands_at_the_needs(self):
+        said, _ = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
+        guide = said["data"]["guide"]
+        self.assertEqual(guide["now"], {"phase": "needs", "by": ["claude"], "says": "Ask Claude in the chat to write the needs from your goal.",
+                                        "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False})
+        self.assertEqual(([each["place"] for each in guide["stations"] if each["phase"] == "idea"], said["next"], said["data"]["stands_at"]),
+                         (["done"], [], "needs"))
+
+    def test_the_walk_s_project_starts_with_now_and_its_done_idea_says_the_goal(self):
+        project = with_needs(a_project_with_a_brief(json.dumps({"goal": GOAL, "must": ["one line"]})), [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]}])
+        lines = lines_of(project)
+        self.assertTrue(lines[0].startswith("  NOW ("), lines[0])
+        self.assertIn("  ✓ idea: %s (you)" % GOAL_LINE, lines)
+        self.assertFalse([line for line in lines if "Tell Claude your goal" in line])
+
+    def test_a_goal_with_no_needs_starts_with_the_needs_and_not_the_goal_question(self):
+        lines = lines_of(a_project_with_a_brief(json.dumps({"goal": "a lamp", "must": "x"})))
+        self.assertEqual(lines[0], "  NOW (needs): Ask Claude in the chat to write the needs from your goal.")
+        self.assertFalse([line for line in lines if "Tell Claude your goal" in line])
+
+    def test_an_idea_with_a_goal_is_no_finding_and_keeps_the_exit(self):
+        said, code = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
+        self.assertEqual((code, said["status"], said["problems"]), (0, "ok", []))
 
 
 if __name__ == "__main__":

@@ -23,16 +23,18 @@ DEFAULT_VERB = "show"
 EPILOG = """flow.py show reads the project's files and the store, and writes nothing. It says each phase in order: idea,
 needs, parts, requirements, build, breadboard, firmware, simulate and deploy. Each phase has a status (ok, problems,
 could-not-run, not-started, partial or stale, or none), who does it (you, claude or your terminal), what it says and its
-offers. The idea has no status. A hand-written project (requirements.json and no needs) has none for its needs and
-parts, and so has a project whose last need was dropped, which says so. Written firmware and a simulated image have none, because what their sentences say is for you to judge. An offer
-is a key, such as pick:soil:x-led, with a label (the words of its button, such as Build the board), its effect (plain
-sentences that name every write it makes) and makes_stale (the phases it can make out of date, only those that hold
-something now). flow.py show runs no offer. The guide (P977) ends the text: NOW, the phase to act on now, its sentence
-and the key of its offer, or next: and the op of the step of a now phase that holds no offer, with needs you for a
-step the person takes (P1034), then DONE and LATER. With --json, next holds the step of that offer, raw (P1030), or
-the step of the simulate or the deploy (P1034), and an empty next means: read data.guide.now. A build that stopped
-only because Wokwi has no model of its board (board_not_in_wokwi) is counted as done there, and the guide says there
-is no simulation.
+offers. With a goal in the brief (.spark/project.json), the idea is ok and says the goal. With no goal, or with a brief
+that cannot be read, it has none and says so. A hand-written project (requirements.json and no needs) has none for its
+needs and parts, and so has a project whose last need was dropped, which says so. Written firmware and a simulated image
+have none, because what their sentences say is for you to judge. An offer is a key, such as pick:soil:x-led, with a
+label (the words of its button, such as Build the board), its effect (plain sentences that name every write it makes)
+and makes_stale (the phases it can make out of date, only those that hold something now). flow.py show runs no offer.
+The guide (P977) starts the text: NOW, the phase to act on now, its sentence and the key of its offer, or next: and the
+op of the step of a now phase that holds no offer, with needs you for a step the person takes (P1034), then DONE and
+LATER (with nothing open, the line that says so stands in place of NOW). One line per phase comes after it. With --json,
+next holds the step of that offer, raw (P1030), or the step of the simulate or the deploy (P1034), and an empty next
+means: read data.guide.now. A build that stopped only because Wokwi has no model of its board (board_not_in_wokwi) is
+counted as done there, and the guide says there is no simulation.
 
 The deploy phase reads the newest board log in sim/runs/board/: its time, image, verdict and cause, never its port or
 console text (P1043). Only ready seen on the image the project holds now is ok. Ready unknown is partial, and ready not

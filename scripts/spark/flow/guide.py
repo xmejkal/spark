@@ -84,12 +84,13 @@ def is_open(phase, fact):
 
 def now_phase(phases, no_model, fact, all_aside=False):
     """The phase to act on now: the first open one not counted as done, or the idea while no need is written, or the parts
-    while every need is set aside (P980: there is no pick to write the parts list from). None when no phase is open: a
+    while every need is set aside (P980: there is no pick to write the parts list from). An idea that is ok (the brief holds a goal,
+    P1142) gives way to the needs, and a stale one does not. None when no phase is open: a
     deploy that saw ready on the image now (P1043), or a flow of other readers, which a test gives."""
     now = next((phase for phase in phases if phase.phase not in no_model and is_open(phase, fact)), None)
     if now and now.phase == flow_codes.REQUIREMENTS and now.status != COULD_NOT_RUN and all_aside:  # a broken file is not hidden
         return next((phase for phase in phases if phase.phase == flow_codes.PARTS), now)
-    if now and now.phase == flow_codes.NEEDS and now.status == flow_codes.NOT_STARTED:
+    if now and now.phase == flow_codes.NEEDS and now.status == flow_codes.NOT_STARTED and phases[0].status != OK:
         return phases[0]
     return now
 
