@@ -1,7 +1,7 @@
 # P1190: the simulation as a step of its own
 
 The discovery of [P1190 #1735](https://github.com/xmejkal/spark/issues/1735), 2026-11-26. The PO's decisions
-are D10 to D16 and D18 to D20. The discovery is ready for design (D20). The delegated council of three made D1 to D9 and D17, each "delegated, the PO's to change".
+are D10 to D16, D18 to D20 and D22. The discovery is ready for design (D20). The delegated council of three made D1 to D9 and D17, each "delegated, the PO's to change".
 
 > TL;DR. Today the simulation is one build stage and one paid command, both written for Wokwi. The direction, as the
 > delegated council set it (D3 to D9, the PO's to change): P999 puts the FireBeetle 2 C6 on a Wokwi stand-in first.
@@ -16,7 +16,7 @@ are D10 to D16 and D18 to D20. The discovery is ready for design (D20). The dele
 2. Items 2 and 3: `check-firmware`, the import check moved onto the core, with the project's own tests, and its
    line on the page.
 3. P1078 #1582: the scenario run as an Operation, the paid run a yes with its cost named. Beside steps 1 to 3, the
-   free first steps of the own-simulator spike (item 19), before the seam's plan.
+   own-simulator spike P1224 #1773, free and in v0.10, before the seam's plan (D22).
 4. Item 6: the `Simulator` seam, with no change in behaviour.
 5. Item 1: the flip to `skipped` (the PO approved it, D11).
 

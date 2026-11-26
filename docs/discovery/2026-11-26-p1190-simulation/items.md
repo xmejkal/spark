@@ -3,7 +3,7 @@
 block for more. needed by: the decider's words, quoted. value proven by: a proof the decider can read.
 status: proposed, or filed D<n>. -->
 
-The architect's list (council/architect.md §11), changed by the refuter and the delegated council (D3 to D8). The order to build: P999 #1455 and item 4, then items 2 and 3, then P1078 #1582, then item 6, then item 1 (approved, D11). Item 19's first steps run beside P999 and P1078, before item 6's plan (D17). P999 may not cover the clock, because its stand-in lacks GPIO14 and the clock uses it (brief ★C25). Filed on the PO's yes (D18): each item's status names its card. Item 19 sits in parked, after v0.10, so whether its first steps run before item 6's plan is the PO's (P1212 #1761 says so).
+The architect's list (council/architect.md §11), changed by the refuter and the delegated council (D3 to D8). The order to build: P999 #1455 and item 4, then items 2 and 3, then P1078 #1582, then item 6, then item 1 (approved, D11). Item 19's first steps run beside P999 and P1078, before item 6's plan (D17). P999 may not cover the clock, because its stand-in lacks GPIO14 and the clock uses it (brief ★C25). Filed on the PO's yes (D18): each item's status names its card. Item 19 runs in v0.10 before item 6's plan, and its epic stays parked (D22).
 Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read of the e-paper controller), P1078 #1582 (a prerequisite of item 6), P413 #539 (feeds item 9).
 
 ## 1. The flip: a board that no simulator covers ends the simulation stage `skipped` with a reason, in one small PR after the seam and after the PO's yes to Q11
@@ -216,7 +216,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - status: filed D18 · P1224 #1773, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): item 18 <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): as item 18 <!-- REQUIRED:spark-process:slice -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey (D22: "Before the seam's plan"), while its epic stays parked <!-- REQUIRED:spark-process:slice -->
 - the tied card: replaces item 14
 
 ## 20. `chips/wokwi-api.h` carries no licence line and comes from Wokwi

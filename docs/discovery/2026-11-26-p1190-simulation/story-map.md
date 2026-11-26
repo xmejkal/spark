@@ -29,7 +29,7 @@ The slices follow the architect's proposal (council/architect.md §10), in the o
 | 3 models | Know what can run | A community chip by reference in wokwi-cli, and its licence rule (item 12, replaces P409 #535) | J5 | E ★C20 | one free run of a referenced chip |
 | 3 models | Write the scenario | A live value in Wokwi's editor for a spark project (item 13) | J4 | H | a spike finding |
 | after v0.10 | Run | Spark's own simulator, reuse first (item 18, P1223 #1772, D15, D18) | J1, J2, J7 | D15 | the spike's finding, then one walk project on it |
-| after v0.10 | Check free | The spike: do esp-emulator or esp32sim boot spark's MicroPython C6 image, and can a host drive it (item 19, P1224 #1773, replaces item 14) | J1, J2 | ★C12, A10 | a finding with sources |
+| 1 the seam | Check free | The spike, before the seam's plan (D22): do esp-emulator or esp32sim boot spark's MicroPython C6 image, and can a host drive it (item 19, P1224 #1773, replaces item 14) | J1, J2 | ★C12, A10 | a finding with sources |
 | 2 the paid run made visible | Run | A paid-run policy: never, ask, only for a version marked important, or always, and a threshold that warns (item 16, D13) | J3 | D13 | an unmarked version gets no paid run, and the policy is named |
 | 1 the seam | Hand over | Gate A: the free condition "no failed run on the current image" and the evidence row (item 15, under P79 #16, D10) | J1 | E ★C14, D10 | the "On the board" card |
 

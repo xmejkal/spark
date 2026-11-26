@@ -20,7 +20,7 @@ raised and rejected findings only.
 | 11 | `tests.test_suite_runs` fails under Homebrew's Python 3.13 on this shell's PATH | the session, the first push | rejected | spark-main: the project's interpreter is pyenv's 3.10, a known retro item. The push with it passed |
 | 12 | #1772 and #1773 named #1773 for item 14 | PR refuter (Opus) | acted | both bodies fixed |
 | 13 | P308 #374's deploy rule was lost when it closed as absorbed | PR refuter (Opus) | acted | written in P1213 #1762's Notes, and a comment on #374 |
-| 14 | D17 wants item 19's first steps before item 6's plan, but #1773 is parked after v0.10 | PR refuter (Opus) | raised | P1212 #1761's Notes say its plan waits on them, and the order is the PO's, sent through spark-main |
+| 14 | D17 wants item 19's first steps before item 6's plan, but #1773 is parked after v0.10 | PR refuter (Opus) | acted | the PO, 2026-11-26: "Before the seam's plan" (brief.md D22). P1224 #1773 moved to the slice v0.10, its epic P1223 #1772 stays parked, and P1212 #1761's Notes say so |
 | 15 | D15 read as a reversal of the non-goal, which the PO's words do not say | PR refuter (Opus) | acted | brief.md D15, P1223 #1772's Notes |
 | 16 | D16 and D18 mixed his words with the reading | PR refuter (Opus) | acted | brief.md D16, D18 |
 | 17 | stale lines in brief.md, items.md, README.md, story-map.md and risks-and-tests.md | PR refuter (Opus) | acted | each line fixed |
