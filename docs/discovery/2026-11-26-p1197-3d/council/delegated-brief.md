@@ -42,3 +42,7 @@ The seven questions, each with its options as the brief holds them:
 Also read: brief.md (the claims, above all ★C3, ★C4, ★C19, ★C20, ★C21, ★C22 and ★C33, the regression that a JSCAD
 body removes the header's own body), council/synthesis.md (the seams and the decisions), council/refuter.md, and
 verification.md.
+
+## Searches
+
+none

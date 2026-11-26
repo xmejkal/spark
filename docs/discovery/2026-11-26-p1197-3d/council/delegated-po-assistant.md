@@ -19,3 +19,7 @@ Q17 · choice: (a) STEP straight into PrusaSlicer, with one change: T2 carries a
 Q18 · choice: (a) #1729 first · reason: D5 names #1729 and #1727 as the first built slice (E brief.md:137), and A3 needs a STEP with bodies, which today's chip line does not give (E `scripts/spark/design/board_sections.py:258-259`, ★C2). #1728 has no second engine yet, so (b) makes his Fusion file wait for a seam with one user. · condition or caveat: The body arrives as a resolved Value on the part, one function turns it into tscircuit's form, and `emit` gets no eighth parameter (E `scripts/spark/design/board_sections.py:478`, 7 parameters today, and brief.md:70, C27). His words on #1729 say he may move to KiCad later, so that one function holds the only tscircuit body text and moves whole when #1728 lands.
 
 Splits I expect: Q17, because the tech lead holds (b) from TL-7: his STL ran, and the STEP import into the slicer did not. Q13, because a seat may take (b) outright from TL-16 and ★C33, where I take (a) until T1 answers. Q14, because the architecture lens proposed (a) for the plain word (AR-5), and the tech lead's PHY-3 asks for a rule that moves the old keys, which leans to (c). Q18, because the architecture lens wanted the seam first (AR-9). I expect no split on Q9, Q15 and Q16.
+
+## Searches
+
+none
