@@ -136,11 +136,11 @@ class EntryOriginStore:
         return (rows, None) if fits else ([], NOTE_CHANGED if rows else None)
 
     def save(self, parts, rows):
-        """Write the record of `parts` and its `rows`, when there are rows or a record is already there. OSError when it cannot."""
-        if rows or self.path.is_file():
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            record = {"schema": SCHEMA, PARTS_SHA256: parts_sha256(parts), WRITTEN: [row._asdict() for row in rows]}
-            store.write_file(self.path, json.dumps(record, indent=1, ensure_ascii=False) + "\n")
+        """Write the record of `parts` and its `rows`, with no rows too (P1139): then it says spark wrote no entry of these
+        parts, and its hash tells a later hand edit. OSError when it cannot."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        record = {"schema": SCHEMA, PARTS_SHA256: parts_sha256(parts), WRITTEN: [row._asdict() for row in rows]}
+        store.write_file(self.path, json.dumps(record, indent=1, ensure_ascii=False) + "\n")
 
 
 class EntryRemoval:

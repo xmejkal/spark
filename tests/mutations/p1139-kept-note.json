@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/spark/design/write_requirements.py",
+  "name": "P1139: the kept entries are no note (test_needs walk test, test_run_request walk test)",
+  "find": "    return [{\"subject\": None, \"sentence\": sentence} for sentence in kept + gone]",
+  "replace": "    return [{\"subject\": None, \"sentence\": sentence} for sentence in gone]"
+ },
+ {
+  "file": "scripts/spark/design/write_requirements.py",
+  "name": "P1139: an entry written for a pick that is gone is no note (test_needs gone-note test)",
+  "find": "    return [{\"subject\": None, \"sentence\": sentence} for sentence in kept + gone]",
+  "replace": "    return [{\"subject\": None, \"sentence\": sentence} for sentence in kept]"
+ },
+ {
+  "file": "scripts/spark/design/write_requirements.py",
+  "name": "P1139: the note keeps the line's indent, so the page reads two spaces (test_needs walk test)",
+  "find": "    return [{\"subject\": None, \"sentence\": sentence} for sentence in kept + gone]",
+  "replace": "    return [{\"subject\": None, \"sentence\": \"  \" + sentence} for sentence in kept + gone]"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1139: an ok parts-list write answers no note (test_run_request notes-in-order and walk tests)",
+  "find": "    if kind == flow_codes.WRITE_REQUIREMENTS and status == OK and result.notes:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1139: a refused parts-list write answers its notes, and the line loses the refusal's sentence (test_run_request refused-write test)",
+  "find": "    if kind == flow_codes.WRITE_REQUIREMENTS and status == OK and result.notes:",
+  "replace": "    if kind == flow_codes.WRITE_REQUIREMENTS and result.notes:"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1139: a pick's notes reach the page (test_run_request pick-notes test)",
+  "find": "    if kind == flow_codes.WRITE_REQUIREMENTS and status == OK and result.notes:",
+  "replace": "    if status == OK and result.notes:"
+ },
+ {
+  "file": "scripts/spark/design/entry_origin.py",
+  "name": "P1139: a save with no rows writes no record (test_entry_origin no-rows test, test_needs walk test)",
+  "find": "        self.path.parent.mkdir(parents=True, exist_ok=True)\n        record = {\"schema\": SCHEMA, PARTS_SHA256: parts_sha256(parts), WRITTEN: [row._asdict() for row in rows]}",
+  "replace": "        if not (rows or self.path.is_file()):\n            return\n        self.path.parent.mkdir(parents=True, exist_ok=True)\n        record = {\"schema\": SCHEMA, PARTS_SHA256: parts_sha256(parts), WRITTEN: [row._asdict() for row in rows]}"
+ }
+]

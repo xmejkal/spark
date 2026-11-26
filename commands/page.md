@@ -94,8 +94,9 @@ Each time below that says "republish":
       When it refused with `request_secrets_unreadable`, write no page: do step 5, tell the person its fix, and stop.
    5. Call `db_write` with one `set` at `answers/<id>`, its data `run-request`'s `data` unchanged.
    6. Tell the person in one line. When the step ran: "Ran <label>: <status word>. Reload the page to see the new state
-      and the next button." When `data.note` is not null, add it: a build that built while its simulation could not
-      run. When nothing ran: the fix of the refusal's code, in plain words.
+      and the next button." When `data.note` is not null, add it. It says that a build built while its simulation
+      could not run, or it holds a parts-list write's notes: the parts it kept that no pick explains, an entry written
+      for a pick that is gone, or why `.spark/requirements-origin.json` was not read or written. When nothing ran: the fix of the refusal's code, in plain words.
    7. When `ran` is false, go on to the next request. When `ran` is true and `data.status` is not `ok`, tell the person
       `data.line` and the fix of its finding, and stop: carry no other request in this turn.
 

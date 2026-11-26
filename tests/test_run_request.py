@@ -31,6 +31,8 @@ from spark.core.operation import Operation  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
 from spark.core.result import Finding, OperationResult  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER  # noqa: E402
+from spark.design.entry_origin import EntryOriginStore, WrittenEntry  # noqa: E402
+from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.result import NextStep  # noqa: E402
 from spark.flow import offer_steps  # noqa: E402
@@ -230,6 +232,67 @@ class EachKindRunsItsStepTest(RunRequestTest):
         envelope, _ = self.run_request()
         self.assertNotEqual(envelope["data"]["fingerprint"], before)
         self.assertEqual(envelope["data"]["fingerprint"], self.fingerprint())
+
+
+class ThePartsListSaysWhatItKeptTest(RunRequestTest):
+    """P1139: the page's answer to a parts-list write says the entries no pick explains, as the chat does, only when it
+    ran ok, so a refusal's sentence stays its line."""
+
+    KEPT = "kept, not from a pick: tactile-button, led-red-5mm"
+
+    def notes(self, *sentences):
+        return OperationResult({}, lines=["the step said this"], notes=[{"subject": None, "sentence": each} for each in sentences])
+
+    def board_picked(self):
+        """The walk's project: the board need picks the board, and requirements.json keeps two parts no pick explains."""
+        (self.project / ".spark").mkdir(exist_ok=True)
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"board": "firebeetle2-esp32s3"}]}]}))
+
+    def test_an_ok_parts_list_write_answers_its_notes_in_order(self):
+        self.steps["requirements"] = FakeStep("requirements", self.notes(self.KEPT, "requirements-origin.json could not be written"))
+        self.ask("requirements")
+        envelope, code = self.run_request()
+        self.assertEqual((code, envelope["data"]["line"], envelope["data"]["note"]),
+                         (0, "ran label of requirements: ok", self.KEPT + "; requirements-origin.json could not be written"))
+
+    def test_an_ok_parts_list_write_with_no_notes_answers_no_note(self):
+        self.ask("requirements")
+        self.assertIsNone(self.run_request()[0]["data"]["note"])
+
+    def test_a_pick_s_notes_stay_off_the_page(self):
+        self.steps["pick"] = FakeStep("pick", self.notes("led-red-5mm: to get — known, not owned"))
+        self.ask("pick:light:led-red-5mm")
+        self.assertIsNone(self.run_request()[0]["data"]["note"])
+
+    def test_the_walk_the_real_parts_list_write_names_the_kept_parts_and_writes_the_record(self):
+        self.board_picked()
+        self.steps["requirements"] = WriteRequirements()
+        self.ask("requirements")
+        envelope, code = self.run_request()
+        self.assertEqual((code, envelope["data"]["status"], envelope["data"]["note"]), (0, "ok", self.KEPT))
+        self.assertEqual(json.loads((self.project / ".spark" / "requirements-origin.json").read_text())["written"], [])
+
+    def test_a_kept_entry_and_an_entry_written_for_a_pick_that_is_gone_are_one_note(self):
+        """The record says spark wrote led-red-5mm for the light need, which no pick holds now; tactile-button is the person's."""
+        self.board_picked()
+        EntryOriginStore(self.project).save(["tactile-button", "led-red-5mm"], [WrittenEntry("light", "led-red-5mm")])
+        self.steps["requirements"] = WriteRequirements()
+        self.ask("requirements")
+        envelope, code = self.run_request()
+        self.assertEqual((code, envelope["data"]["note"]),
+                         (0, "kept, not from a pick: tactile-button; written for a pick that is gone: led-red-5mm (need light)"))
+
+    def test_a_refused_parts_list_write_keeps_its_sentence_and_answers_no_note(self):
+        """No needs: no board is picked, so the write is refused; a broken record still gives the run a note."""
+        (self.project / ".spark").mkdir(exist_ok=True)
+        (self.project / ".spark" / "requirements-origin.json").write_text("{not json")
+        self.steps["requirements"] = WriteRequirements()
+        self.ask("requirements")
+        envelope, code = self.run_request()
+        self.assertEqual((code, envelope["data"]["status"], envelope["data"]["note"]), (1, "problems", None))
+        self.assertEqual(envelope["data"]["line"], envelope["problems"][0]["sentence"])
+        self.assertIn("pick one board", envelope["data"]["line"])
 
 
 class OnlyWhatSparkOffersRunsTest(RunRequestTest):

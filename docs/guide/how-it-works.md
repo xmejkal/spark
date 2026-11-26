@@ -49,7 +49,7 @@ The files that join the steps:
 
 | file | written by | read by |
 | --- | --- | --- |
-| `requirements.json` | you, `parts.py --requirements` from your picks (it keeps a row for each entry it wrote in `.spark/requirements-origin.json`, to name an entry written for a pick that is gone), or the `spark-design` skill with you | the chain, `assign_pins.py`, and `check_all.py` for buildability and physics |
+| `requirements.json` | you, `parts.py --requirements` from your picks (it keeps a row for each entry it wrote in `.spark/requirements-origin.json`, to name an entry written for a pick that is gone; every real write writes that record, with no row when it wrote no entry), or the `spark-design` skill with you | the chain, `assign_pins.py`, and `check_all.py` for buildability and physics |
 | `board.tsx`, and the dev board's footprint beside it | the schematic and footprint stages, kept with `--keep .` | tscircuit |
 | `dist/board/circuit.json`, the built netlist | tscircuit's build, kept by `--keep` only when it built (else an earlier one stays, named, P1088) | every check, `init_project.py` (to name the rails), and the Wokwi converter |
 | `sim/diagram.json`, `sim/wokwi.toml` and the chips | the simulation stage, kept with `--keep` or `--sim-dir` | `wokwi-cli`, and Wokwi for VS Code |
