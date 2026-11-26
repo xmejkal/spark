@@ -42,7 +42,7 @@ exports on this Mac) and [research.md](research.md) (reuse first, with licences)
 - Appetite (the decider's, asked only when heading for design) | —: — <!-- REQUIRED:appetite -->
 
 ## What we found <!-- CLAIMS -->
-- [★C1] No record holds a 3D model. 1 of 30 records holds a height above the board. 20 of 30 hold an outline in the board plane · E pre-analysis.md section 1 (survey of the repository and the store) · caveat: 30 records on 2026-11-26, the repository and one store
+- [★C1] No record holds a 3D model. 30 of 43 records hold an outline in the board plane, and 3 of 43 hold a body's overall height above the board. Height facts sit under six keys, and `thickness_mm` means the bare board in two records and the overall height in two others · E pre-analysis.md section 1 (key scan of the repository and the store, shelf included) · caveat: 43 records on 2026-11-26, one store. A first count missed the shelf (council/architecture.md AR-3, council/po-assistant.md PA-3)
 - [★C2] A module goes to the board with no body: `<chip footprint="pinrowN">` and no `cadModel` · E scripts/spark/design/board_sections.py:259 · caveat: none
 - [★C3] tscircuit 0.0.2600, installed today, merges a local STEP body into its STEP export and its GLB. An STL body lands through the board in the STEP and breaks the GLB export · E pre-analysis.md section 4 (probe, 2026-11-26) · caveat: one run per variant on one probe board
 - [★C4] tscircuit's STEP names each solid by reference (`PCB`, `U1`, `U2`) in one flat product. kicad-cli's STEP is an assembly. It names an instance by reference (`U2`), but only for a part with a model · E pre-analysis.md section 4 · caveat: names in the file. Whether Fusion shows them is not run
@@ -55,9 +55,10 @@ exports on this Mac) and [research.md](research.md) (reuse first, with licences)
 - [★C11] Fusion has a built-in MCP server that runs on the person's Mac while Fusion is open. Its page names no licence tier · E research.md section 3 (help.autodesk.com) · caveat: not turned on or run
 - [★C12] Fusion 360, KiCad 10.0.6 and PrusaSlicer are installed on the PO's Mac. FreeCAD and OpenSCAD are not · E pre-analysis.md section 3 · caveat: installed is not used. How he uses them is an account question
 - [★C13] TurboCase (MIT) makes an OpenSCAD case from a `.kicad_pcb`: posts at mounting holes, cut-outs from each part's box and a height property · E research.md section 4 · caveat: not run
-- [★C14] The 2D part drawing is already a Strategy family (`ShapeSource` and three sources), and the tools list maps a role to a tool. No 3D role and no 3D Operation exist · E scripts/spark/breadboard/part_shape.py:61-263, data/tools.json `roles`, scripts/spark/operation_catalogue.py · caveat: none
+- [★C14] A part's picture already comes from a chain of exchangeable makers (`PartPictureMaker`, each with `MakerUses` and a `Decline`), and the 2D drawing from a Strategy family (`ShapeSource`). The tools list maps a role to a tool. No 3D role and no 3D Operation exist · E scripts/spark/breadboard/picture_makers.py:1-60, scripts/spark/breadboard/part_shape.py:61-263, data/tools.json `roles`, scripts/spark/operation_catalogue.py · caveat: none
 - [C15] kicad-cli writes GLB (109 KB on the probe) and a raytraced PNG · E pre-analysis.md section 4, P1089 finding section 2.1 · caveat: KiCad is optional for a person
 - [C16] No perfboard layout or drawing exists, so a perfboard has no 3D start · E scripts/spark/flow/flow_codes.py:479, P1199 pre-analysis · caveat: none
+- [★C18] The PO's own bin project already holds early pieces of this epic: module bodies through `cadModel` in `board.tsx`, a `board.glb` that its Makefile exports with `tsci export -f glb`, an offline one-page viewer (`tools/viewer-3d.js`, `tools/build-viewer.py`), and a check that reads each body from the GLB for overlaps (`tools/check-module-clearance.py`). It is MIT, by the PO, last commit 2026-10-12 · E ~/Development/smartbin-local (board.tsx:67-115, Makefile:198, tools/) · caveat: a sibling project, not spark code. Its viewer went stale once and was rebuilt to regenerate with each build (council/user.md US-1)
 - [C17] One-image AI models give no metric scale, and photogrammetry handles thin shiny boards badly. A box with the photo as its top face gives the exact size from measurements · H research.md section 1 (the agent's judgement) · caveat: untested here
 - ⟨fill after the council⟩ <!-- REQUIRED:findings -->
 
@@ -70,8 +71,11 @@ exports on this Mac) and [research.md](research.md) (reuse first, with licences)
 - Test · kind · pass line, dated before any result · proposed: ⟨fill⟩ <!-- REQUIRED:test -->
 
 ## Questions
-- Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: queued <!-- REQUIRED:q0 -->
+- Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: asked 2026-11-26 15:40 CET, through spark-main (round 1) <!-- REQUIRED:q0 -->
 - Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: queued <!-- REQUIRED:q1 -->
+- Q2 · Which Fusion 360 licence does the PO use on this Mac? · decides: whether Fusion is the first export target · options: Personal, Startup or Education, paid commercial, not sure · unblocks: the export's first Adapter · opinion (the facilitator) · kind: account · status: asked 2026-11-26 15:40 CET, round 1
+- Q3 · How did the PO make the last case or cover he printed? · decides: a file to model on in Fusion first, or a case ready to print first · options: drew it in Fusion, changed someone's model, no case printed yet, other · unblocks: the first slice · opinion (the facilitator) · kind: account · status: asked 2026-11-26 15:40 CET, round 1
+- Q4 · Which 3D printer does the PO print on? · decides: whether print files are in the first slice, and the default clearance and wall · options: a Prusa (model), another FDM printer, a print service, none yet · unblocks: the case defaults · opinion (the facilitator) · kind: account · status: asked 2026-11-26 15:40 CET, round 1
 
 ## Decisions
 

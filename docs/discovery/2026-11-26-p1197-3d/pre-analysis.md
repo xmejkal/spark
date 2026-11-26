@@ -4,7 +4,7 @@ Card P1197 [#1745](https://github.com/xmejkal/spark/issues/1745). Read on 2026-1
 p1197-3d, and in the person's store (`~/.local/share/spark`). The probe ran in a scratch folder at 15:14 CET. No
 probe file is kept in the repository.
 
-> In short: spark holds a 2D outline for 20 of 30 records and a z-height for 1. No record holds a 3D model.
+> In short: spark holds a 2D outline for 30 of 43 records and a body's overall height for 3. No record holds a 3D model.
 > spark already installs tscircuit 0.0.2600. It takes a local STEP body per part and exports STEP with each solid
 > named by reference. It also draws a two-part printed case (`enclosure.fdm.box`).
 > The gaps are spark's: no height fact, no model per record, no place to keep a fetched model, and no Operation for
@@ -13,17 +13,18 @@ probe file is kept in the repository.
 ## 1. The records
 
 The count covers every record with pins, a kind or a `physical` block: 12 in the repository (`parts/`, `boards/`,
-`chips/`) and the store's `catalog/`, `boards/` and `known-boards/`. Drawer rows (what a person owns) are not part
-records and are not counted.
+`chips/`), and 31 in the store's `catalog/`, `boards/`, `known-boards/` and `shelf/`. 13 of the 31 are on the shelf.
+Drawer rows (what a person owns) are not part records and are not counted. The first count missed the shelf. The
+architecture lens found it (council/architecture.md, AR-3), and this table is the recount.
 
 | Fact | Records | Pointer |
 |---|---|---|
-| An outline, `body_mm.width` and `body_mm.height` (both in the board plane) | 20 of 30 | survey script, E |
-| A z-height or a thickness | 1 of 30: `thickness_mm: 1.6` of the FireBeetle 2 board | `boards/firebeetle2-esp32s3.json` |
-| Mounting holes as numbers | 1 of 30: the FireBeetle 2 (4 holes, 2.0 mm, inset 1.7 mm) | same file |
-| A mention of mounting holes in text | 7 of 30 | grep, E |
-| A `physical.header` block (the pin row's place) | 3 of 30 | survey, E |
-| A 3D model, a model URL or a photo field | 0 of 30 | survey, E |
+| An outline, `body_mm.width` and `body_mm.height` (both in the board plane) | 30 of 43 | survey script, E |
+| A z number, under six different keys | 8 of 43. The board's thickness (`physical.thickness_mm` 1.6 in both FireBeetle 2 boards, `facts.pcb_thickness_mm` 1.0), a body's overall height (`facts.thickness_mm` 20 in DFR0205 and 5.5 in DFR0831, `facts.height_mm` 17.3 in the MKDS terminal) and a jack's axis height (`facts.barrel_axis_height_mm` 6.5, twice) | key scan, E |
+| A body's overall height above the board | 3 of 43 (DFR0205, DFR0831, MKDS). `thickness_mm` means the bare board in two records and the overall height in two others. `physical.height_mm` is a plane size (60 mm for the FireBeetle's length) | key scan, E, and council/user.md US-15 |
+| A `mounting_holes` block | 8 of 43, for example the FireBeetle 2 S3 (4 holes, 2.0 mm, inset 1.7 mm) | survey, E |
+| A `physical.header` block (the pin row's place) | 3 of 43 | survey, E |
+| A 3D model, a model URL or a photo field | 0 of 43 | survey, E |
 
 The word "height" in `body_mm` is the second plane dimension, not the height above the board. The DFR0534 record
 says so in its note: "Thickness and component height are NOT published by DFRobot ... measure them before designing
@@ -39,8 +40,10 @@ drawings by file name (for example `DFR1025_Dim_02.jpg`). There is one photo of 
 - A module goes to the board as `<chip footprint="pinrowN">` with no `cadModel`
   (`scripts/spark/design/board_sections.py:259`). This is F4 of the P1089 finding, card P1185 #1729.
 - The 2D drawing of a part is a Strategy family: `ShapeSource` with `WokwiGeometryShapeSource`, `RecordShapeSource`
-  and `ModuleShapeSource` (`scripts/spark/breadboard/part_shape.py:61` to 263). A 3D body source can be a sibling
-  family with the same shape.
+  and `ModuleShapeSource` (`scripts/spark/breadboard/part_shape.py:61` to 263).
+- A part's picture comes from a chain of exchangeable makers, `PartPictureMaker` (P946). Each maker says what it uses
+  (`MakerUses`: tools, inputs, a cost, whether it asks first) and gives a candidate or a `Decline`
+  (`scripts/spark/breadboard/picture_makers.py:1-60`). This is the closest template for a 3D body source.
 - The tools list maps a role to a tool (`data/tools.json`, `roles`): 14 roles today, among them `board-engine` →
   `tscircuit`. No role exists for a 3D job.
 - The Operation catalogue (`scripts/spark/operation_catalogue.py`) lists 8 area tables. No Operation exports or shows
