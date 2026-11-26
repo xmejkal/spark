@@ -147,7 +147,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - The epic P1199 #1747 · taken: filed by spark-main and moved to Discovery, 2026-11-26 12:58 CET (spark-main's actions, not recorded as a D here)
 - A comment on #1747 linking this brief · pending, spark-main's
-- Filing items.md's 14 items · D10, taken by this session on spark-main's word (the card numbers below)
+- Filing items.md's 14 items · D10, taken 2026-11-26 by this session on spark-main's word: P1236 #1789, P1237 #1790 (sub-issues of #1747), P1238 #1791, P1239 #1792 (sub-issues of #311), each in Idea with the Slice Views and editors, and nine comments on #1747, #304, #1740, #1688, #1751, #352, #1699, #1698, #311
 
 ## Settings this epic names
 <!-- The PO, P1193 D8: every configurable strategy names its setting, its default and its layer, so it moves into P1194 #1740 later. -->
