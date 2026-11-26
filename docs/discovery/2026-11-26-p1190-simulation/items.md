@@ -3,14 +3,14 @@
 block for more. needed by: the decider's words, quoted. value proven by: a proof the decider can read.
 status: proposed, or filed D<n>. -->
 
-The architect's list (council/architect.md §11), changed by the refuter and the delegated council (D3 to D8). The order to build: P999 #1455 and item 4, then items 2 and 3, then P1078 #1582, then item 6, then item 1 after Q11. P999 may not cover the clock, because its stand-in lacks GPIO14 and the clock uses it (brief ★C25). Nothing is filed. spark-main files on the PO's yes.
+The architect's list (council/architect.md §11), changed by the refuter and the delegated council (D3 to D8). The order to build: P999 #1455 and item 4, then items 2 and 3, then P1078 #1582, then item 6, then item 1 (approved, D11). P999 may not cover the clock, because its stand-in lacks GPIO14 and the clock uses it (brief ★C25). Nothing is filed. spark-main files on the PO's yes.
 Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read of the e-paper controller), P1078 #1582 (a prerequisite of item 6), P413 #539 (feeds item 9).
 
 ## 1. The flip: a board that no simulator covers ends the simulation stage `skipped` with a reason, in one small PR after the seam and after the PO's yes to Q11
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: a test fixture board with no Wokwi part builds with the simulation stage `skipped` and its reason, and a build record written before the change still counts as done <!-- REQUIRED:value-proven-by -->
-- depends on: item 6, and the PO's yes to Q11 (it replaces the code of his D-c). Old records keep counting as done through `NO_MODEL_CODES`, and the PR names the exit code change (2 becomes 0) in `docs/guide/agents/flow.md` <!-- REQUIRED:depends-on -->
+- depends on: item 6. The PO approved it on 2026-11-26 (D11). Old records keep counting as done through `NO_MODEL_CODES`, and the PR names the exit code change (2 becomes 0) in `docs/guide/agents/flow.md` <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
@@ -161,17 +161,40 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
 - the tied card: —
 
-## 15. Gate A's evidence row: "Tested before the board", with the highest tier reached
+## 15. Gate A: one free condition, "no failed run on the current image", and the evidence row "Tested before the board", with the highest tier reached (D10)
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
-- value proven by: the "On the board" card shows the row and never locks on it <!-- REQUIRED:value-proven-by -->
-- depends on: item 7, and the PO's answer to Q5 <!-- REQUIRED:depends-on -->
+- value proven by: the "On the board" card shows the row, and gate A stays shut while the current image has a failed run, which costs no minutes <!-- REQUIRED:value-proven-by -->
+- depends on: item 7. The deploy's reader of a failed run exists (`scripts/spark/bench/image_evidence.py:433`) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P79 #16 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
 - the tied card: —
 
+## 16. A paid-run policy: when a paid simulation runs, warns or asks, and how a person marks a version important or risky
+- type: story <!-- REQUIRED:item-type -->
+- needed by: the PO, 2026-11-26, verbatim: "generally it should as all things like that be configurable, if we run the pyd minutes and like a threshold for example when it should warn and not run the payed ones by default, and it would also be great to have the option of somehiow only running it even though its payed only for the important releases or version or something like that, or it can always ask, lets try to have some reasonable conditions like that and figure out how we could work with such limits, like how do we mark a version/deployment as important or risky enough to actually use the sim even thouhg its payed.." <!-- REQUIRED:needed-by -->
+- value proven by: a project with the policy "only for a version marked important" runs the free checks and asks no paid run on an unmarked version. It names the policy when it skips the run, and it warns once the minutes spent this month pass the threshold <!-- REQUIRED:value-proven-by -->
+- depends on: item 8 (the role), item 9 and P413 #539 (the minutes count), P1194 #1740 (the settings seam with layers) <!-- REQUIRED:depends-on -->
+- status: proposed <!-- REQUIRED:item-status -->
+- label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
+- parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
+- the settings it names (the PO's rule, P1194 #1740), each a proposal for its plan: the policy `paid_runs`, one of `never`, `ask`, `important-only` and `always`, with the default `ask` or `never` to be chosen in the plan (the PO's words name both "not run the payed ones by default" and "it can always ask"), layers user and project. The threshold `paid_minutes_warn_at`, in simulated minutes per 30 days, default to be set in the plan against the free plan's 50 (brief ★C10), layers user and project. The mark: a version or deploy marked important or risky, kept with the image's sha256 in the project, layer project. How a person marks it (a word to Claude, an offer on the page, a release tag) is an open question for its design
+- the tied card: P410 #536 (replaced by item 8) held the first words of this choice. P413 #539 feeds its threshold
+
+## 17. The vision's v0.10 line says "firmware that passes the simulation where a simulator covers the board"
+- type: chore <!-- REQUIRED:item-type -->
+- needed by: the PO's yes to Q10 on 2026-11-26 (D12): "skipped, with the reason, and the free checks passed" is enough for v0.10 <!-- REQUIRED:needed-by -->
+- value proven by: `scrum/VISION.md`'s v0.10 line and D-c agree <!-- REQUIRED:value-proven-by -->
+- depends on: — <!-- REQUIRED:depends-on -->
+- status: proposed <!-- REQUIRED:item-status -->
+- label (the repository's type label): chore <!-- REQUIRED:spark-process:label -->
+- parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
+- the tied card: the vision is the PO's file. The change is his to merge, and this discovery edits it nowhere
+
 ## Board actions
-- file items 1 to 15 · pending, the PO's yes to this list · through spark-main <!-- REQUIRED:board-actions -->
+- file items 1 to 17 · pending, the PO's yes to this list · through spark-main <!-- REQUIRED:board-actions -->
 - close P995 #1452 as answered, P409 #535 and P410 #536 as replaced, P308 #374 as absorbed · pending, the PO's yes · through spark-main

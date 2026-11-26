@@ -26,7 +26,8 @@ The slices follow the architect's proposal (council/architect.md §10), in the o
 | 3 models | Know what can run | A community chip by reference in wokwi-cli, and its licence rule (item 12, replaces P409 #535) | J5 | E ★C20 | one free run of a referenced chip |
 | 3 models | Write the scenario | A live value in Wokwi's editor for a spark project (item 13) | J4 | H | a spike finding |
 | later | Check free | The clock's `main.py` loop on the stand-in with a virtual clock (item 14, parked until A1's test) | J1, J2 | E ★C19 | a spike finding |
-| later | Hand over | Gate A's evidence row (item 15, under P79 #16) | J1 | E ★C14 | the "On the board" card |
+| 2 the paid run made visible | Run | A paid-run policy: never, ask, only for a version marked important, or always, and a threshold that warns (item 16, D13) | J3 | D13 | an unmarked version gets no paid run, and the policy is named |
+| later | Hand over | Gate A: the free condition "no failed run on the current image" and the evidence row (item 15, under P79 #16, D10) | J1 | E ★C14, D10 | the "On the board" card |
 
 ## Delta to the product's map <!-- REQUIRED:spark-process:map-delta -->
 Proposed, not applied. `scrum/STORY_MAP.md` journey step 8 reads `| 8 | Simulate | check_spine → Wokwi (paid minutes) | — |`.
