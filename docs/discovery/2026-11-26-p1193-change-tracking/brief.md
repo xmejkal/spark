@@ -127,6 +127,8 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D16 · P9, the test: the A2 pass line as written in the Test line (four cases, 3 of 3 clones), set before any result · the PO · 2026-11-26, by 12:15 CET · through spark-main's question dialog, recorded on #1738 (https://github.com/xmejkal/spark/issues/1738#issuecomment-7190541090) · options: accept, change it
 - D17 · Q1, the importance of A1 to A11: the council of three proposes the ratings, recorded as delegated and his to change · the PO · 2026-11-26, by 12:15 CET · through spark-main's question dialog, recorded on #1738 (https://github.com/xmejkal/spark/issues/1738#issuecomment-7190541090) · options: he rates them, the council proposes
 - D18 · the importance of A1 to A11: high for A1, A2, A4 (2 of 3), A6 and A9, low for the others, and A10 retired by D13. A2 stays the riskiest, 3 of 3 · the council of three on Fable (the PO assistant, the architect, the tech lead), delegated by D17, the PO's to change · 2026-11-26, after 12:17 CET · council/ratings-answers.md · options: high or low per assumption
+- D19 · items.md: all 14 items, filed or widened by this session on spark-main's word: P1201 #1750, P1202 #1751, P1203 #1752, P1204 #1753, P1205 #1754, P1206 #1755, and comments on #1688, #1687, #1691, #1689, #1699, #123, #437, #505 · the PO · 2026-11-26, received 12:31 CET by `date` · through spark-main's question dialog, relayed by spark-main · options: all 14, only some, change the list
+- D20 · the understanding: "Yes, that is it" to this summary: spark keeps every decided step of a project, notices outside changes, names points and goes back to them after a preview and his yes, with git first behind one exchangeable seam. The store then shares records and drawn pictures with a new public repository that spark makes, filtered so nothing private leaves by default. Every such choice names its setting for P1194. The first test is the A2 spike on clones of three of his repositories · the PO · 2026-11-26, received 12:31 CET by `date` · through spark-main's question dialog, relayed by spark-main · options: yes, something is off
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
@@ -154,14 +156,15 @@ Today the tools list's roles hold the first two (D6, C2). They move into P1194's
 <!-- Each action on the board or the issue (stage, waiting flag, comment, filing): taken, with its D, or pending.
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - The epic P1193 #1738 · taken: filed by spark-main and moved to Discovery, 2026-11-26 (spark-main's actions, not recorded as a D here)
-- A comment on P1193 #1738 linking this brief · pending, asked of spark-main
+- A comment on P1193 #1738 linking this brief · pending, spark-main's
+- Filing N1 to N6 and the eight widening comments · taken 2026-11-26 12:33 to 12:35 CET on D19, by this session on spark-main's word: P1201 #1750, P1202 #1751, P1203 #1752, P1204 #1753, P1205 #1754, P1206 #1755, each in Idea with its Slice and its parent
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the frame, the jobs and a direction are unconfirmed <!-- REQUIRED:handoff -->
+Confirmed by D20 (2026-11-26). Outcome: a person's project keeps every decided step, notices an outside change, names a point and goes back to it after a preview and the person's yes, and the store shares filtered records and drawn pictures with a public repository, all through one exchangeable seam with git first (D6, D20). Who: spark-main runs the cards, and the PO orders Ready. Success and its proof: the A2 spike's pass line (D16), then the outcome lines (1) to (4) in the Frame. Constraints: nothing private leaves the store by default (D7). His git identity signs, asked until set (D8). Spark makes the public repository, and its first push needs a dry run and a yes (D9). Only drawings, never a photo (D4, D10, D11). Only he sends for now (D12). Kept steps on the checked-out branch, and a named point as a spark ref (D13). A file spark commits is one named file after a yes, and an ignored `.spark/` is refused (D14). Merge waits (D15). Every configurable choice names its setting, default and layer for P1194 #1740 (D8). Proposed no-gos, not confirmed: see Options. What he said is in D2 to D5 and D7 to D20, and D1, D6, D18 are delegated. Riskiest: A2, then A6 and A9 for the second epic (D18). Journeys and map: jobs-and-journeys.md, story-map.md. Options considered: brief.md Options and council/synthesis.md. <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
