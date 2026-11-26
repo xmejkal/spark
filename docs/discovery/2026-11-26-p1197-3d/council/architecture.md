@@ -356,7 +356,7 @@ Every name, setting and area below is a proposal (H, this lens) unless a pointer
 - The licence terms of each library finder named in AR-7. research.md section 6 lists those it did not read.
 - Whether the shelf's FireBeetle 2 C6 record and the e-paper module's record differ from the walk folder's copies in a
   fact the 3D slice reads. `cmp` shows that the e-paper files differ at line 473. I did not read the difference.
-- Whether the proposed `mechanical` area passes a cycle check between areas. No test enforces area imports today
+- Whether the proposed area passes a cycle check between areas. No test enforces area imports today
   (P1199 ARCH-15), so I only read the imports.
 
 ## Questions for the decider

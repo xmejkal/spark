@@ -273,4 +273,4 @@ it says so.
 
 - "PrusaSlicer STEP file import supported version" · The decision it served: whether the first slice needs an STL or
   3MF export, given that tscircuit's 3MF fails. · Used: PA-6.
-- No second web search. The `npm view` calls to the npm registry (PA-8, PA-10) are registry reads, not web searches.
+No second web search. The `npm view` calls to the npm registry (PA-8, PA-10) are registry reads, not web searches.
