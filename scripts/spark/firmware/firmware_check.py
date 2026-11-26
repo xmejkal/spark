@@ -22,15 +22,40 @@ NO_TESTS_LINE, TESTS_NOT_CHECKED_LINE = "tests: none (no %s/ folder)", "tests: n
 FIRMWARE_SUBJECT = "firmware"
 
 #: What `--help` says after the arguments (P481).
-DETAILS = """It imports each PROJECT/firmware/*.py and each package there (a folder holding __init__.py) except the boot files, main.py
-and boot.py, on this machine and each in a process of its own, with spark's machine stand-in first on sys.path, and runs
-the project's own tests: PROJECT/tests, with unittest, in a process of its own, %g s at most. The tests' code runs on this
-machine too, in the project folder, and can write files there: spark writes nothing. Each import is cut off after %g s. It
-needs no sim/, no board and no token.
+DETAILS = """It needs no sim/, no board and no token, and it writes nothing.
 
-An `imported` proves that the names exist and the module-level calls ran. It does not prove that their arguments are right (the
-stand-ins take any), that a pin, a wire, a rate or a driver works, or that a device answers. A passing own test proves what the
-test asserts of the firmware's code on this machine, never the wiring.""" % (OWN_TESTS_TIMEOUT_S, IMPORT_TIMEOUT_S)
+The import check imports each PROJECT/firmware/*.py and each package there (a folder holding __init__.py) except the boot
+files, main.py and boot.py. PROJECT defaults to `.`. Each import is a process of its own, with spark's machine stand-in first
+on sys.path, then firmware/ and firmware/lib, where MicroPython looks for drivers. The stand-ins are in
+scripts/spark/firmware/stand_in/: `machine` (a Pin that remembers its level, a PWM that keeps its last frequency and duty, and an
+ADC, SPI, SoftSPI, I2C, SoftI2C and I2S that keep their arguments and return fixed values), `micropython` and `framebuf`. A
+driver that ships its own `framebuf.py` or `micropython.py` in firmware/ or firmware/lib gets its own, because those two stand-ins
+come last on sys.path. Per module the answer is one of:
+  - imported;
+  - raised: the exception's last line, which names the stand-in and the first name it lacks, for example UART;
+  - timed out: it did not return within %g s. Something at module level loops or waits.
+    Put it in a function that main.py calls.
+
+An `imported` proves that the names exist and the module-level calls ran. It does not prove that their arguments are
+right (the stand-ins take any), that a pin, a wire, a rate or a driver works, or that a device answers: a bus finds no
+device, so a module-level `assert 0x3C in i2c.scan()` fails here. Keep such a check in a function that main.py calls.
+A name a stand-in lacks is an AttributeError, so a driver's `hasattr(machine, "X")` probe is False. `from machine import X`
+is an ImportError with the stand-in file and the action, because the child gives the stand-in's words back (P443).
+A driver that sleeps in its constructor imports, because the child gives `time` MicroPython's sleep_ms, sleep_us, ticks_ms,
+ticks_us, ticks_add and ticks_diff with fixed values (P443, see import_child.py). A sleep never waits, and ticks_ms() is
+always 0, so a driver's wait loop on it times out here.
+
+The boot files are left unrun on purpose: main.py starts the loop, so a two-line main.py over an importable module is
+the shape that can be tested. When firmware/ holds nothing to import but the boot files and pins.py, that is a
+problem, not a pass: the firmware cannot be imported without running main.py, so move the code out of main.py into a
+module that main.py calls. No firmware/ folder is could-not-run.
+
+The own tests are PROJECT/tests, run with unittest in a process of their own (`own_tests_child.py`), %g s at most.
+The tests' code runs on this machine too, in the project folder, and can write files there: spark writes nothing. The
+answer's `data.tests` holds `passed` of `total` and the ids of the tests that failed. A failed or raising test is a problem
+(`own_test_failed`). A run that timed out, gave no count or ran no test is could-not-run (`own_tests_not_run`), never ok. No
+tests/ folder is a note and `data.tests.state` `none-recorded`. A test that passes proves what it asserts, on this machine,
+and never the wiring.""" % (IMPORT_TIMEOUT_S, OWN_TESTS_TIMEOUT_S)
 
 
 class CheckFirmware(Operation):

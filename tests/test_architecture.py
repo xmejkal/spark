@@ -382,7 +382,7 @@ class TheFirmwareAreaTest(unittest.TestCase):
 
     #: Each CLI's own top-level functions: `main` and what only it uses to parse and print. A library function back in a
     #: CLI, under any name, fails the check.
-    CLIS = {"flash_image.py": ["main", "project_here"], "import_firmware.py": ["main", "render"], "run_scenario.py": ["main"]}
+    CLIS = {"flash_image.py": ["main", "project_here"], "check_firmware.py": ["main"], "run_scenario.py": ["main"]}
 
     def test_scripts_holds_the_three_clis_and_no_firmware_library_module(self):
         names = {path.stem for path in self.FIRMWARE.glob("*.py") if path.name != "__init__.py"}

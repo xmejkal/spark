@@ -60,7 +60,7 @@ import emit_footprint  # noqa: E402
 from spark.firmware import firmware_codes  # noqa: E402
 from spark.flow import request_codes  # noqa: E402
 import grant  # noqa: E402
-import import_firmware  # noqa: E402
+import check_firmware  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 import test_deploy_gate  # noqa: E402
@@ -156,20 +156,20 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
             ["--project", str(self.project), "--circuit", self.circuit, "--json"]),
             ["project", "resolved", "results", "status", "tool", "unmeasured"])
 
-    def test_import_firmware(self):
-        # P59: this project holds no firmware/ folder, so the shape is the could-not-run one, with its `modules` empty.
-        self._check("import_firmware", lambda: import_firmware.main([str(self.project), "--json"]),
-                    ["modules", "problems", "status", "tool", "unchecked"])
+    def test_check_firmware(self):
+        # P59, P1208: this project holds no firmware/ folder, so the shape is the could-not-run one, with its `modules` empty.
+        self._check("check_firmware", lambda: check_firmware.main(["--project", str(self.project), "--json"]),
+                    ["data", "envelope", "next", "notes", "op", "problems", "status", "tool", "truncated", "unchecked"])
 
-    def test_import_firmware_a_module_not_imported(self):
+    def test_check_firmware_a_module_not_imported(self):
         # P684 (W6-F2): such an entry gains `code`; an imported one keeps its three keys
         firmware = Path(tempfile.mkdtemp()) / "firmware"
         firmware.mkdir()
         (firmware / "broken.py").write_text("raise KeyError('k')\n")
-        payload = self._check("import_firmware", lambda: import_firmware.main([str(firmware.parent), "--json"]),
-                              ["modules", "problems", "status", "tool", "unchecked"])
-        self.assertEqual(sorted(payload["modules"][0]), ["code", "detail", "module", "status"])
-        self.assertEqual(payload["modules"][0]["code"], "import_failed")
+        payload = self._check("check_firmware", lambda: check_firmware.main(["--project", str(firmware.parent), "--json"]),
+                              ["data", "envelope", "next", "notes", "op", "problems", "status", "tool", "truncated", "unchecked"])
+        self.assertEqual(sorted(payload["data"]["modules"][0]), ["code", "detail", "module", "status"])
+        self.assertEqual(payload["data"]["modules"][0]["code"], "import_failed")
 
     def test_check_vendor_pins(self):
         # A BARE LIST, not an envelope: no tool, no overall status, and each entry's status word
