@@ -1,7 +1,7 @@
 # UX and AI-UX lens: change tracking (P1193), with the user's journey
 
 The UX and AI-UX lens on Opus, 2026-11-26. Its role is read-only, so the main session wrote this file from its
-returned report, word for word.
+returned report, word for word. The times in this report are the lens's own, not read from a clock by the main session, and some are later than the commit that first held the file (council/refuter.md, "Home paths and times"). The sketches' times are examples.
 
 Read on 2026-11-26, about 09:10 to 09:35 CET, on branch p1193-change-tracking at c0b914e2. I read the repository, the store's councils folder and part records, and two walk projects, all read-only. I used GIT_OPTIONAL_LOCKS=0 for every git read. I took the PO's decisions D2 to D5 (2026-11-26, 09:08 CET, relayed by the coordinator) as D: the shared side starts now, the central repository is a new public repository under his account, only pictures that spark or the person drew are shared, and the project timeline comes first.
 

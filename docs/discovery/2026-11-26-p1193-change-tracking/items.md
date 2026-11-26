@@ -6,7 +6,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 
 From the architect's synthesis, part 7 (council/synthesis.md). Existing cards widen first. Four new cards follow,
 each only where no card covers the work. A new card's P-number is the next free one when spark-main files it (the
-highest on 2026-11-26 at 09:40 CET was P1193). Filing, comments and every board move are spark-main's, after the
+highest on 2026-11-26, read between 09:31 and 09:34 CET, was P1193). Filing, comments and every board move are spark-main's, after the
 PO's yes to this list.
 
 ## P1152 #1688 (widened) — the project timeline keeps only what D8 named, and has no named point, no outside change and no compare → the epic gains slices 1 to 6 of the story map, the area-declared kept records, and a Service over the one lower Strategy

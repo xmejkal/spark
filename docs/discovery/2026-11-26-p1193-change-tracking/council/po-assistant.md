@@ -1,7 +1,7 @@
 # PO assistant lens: Existing first, and Risks and assumptions
 
 The PO assistant lens on Opus, 2026-11-26. Its role is read-only, so the main session wrote this file from its
-returned report, word for word.
+returned report, word for word. The times in this report are the lens's own, not read from a clock by the main session, and some are later than the commit that first held the file (council/refuter.md, "Home paths and times"). The sketches' times are examples.
 
 Read 2026-11-26, about 09:05 to 09:25 CET. D1 to D5 in brief.md:88-92 are taken as D.
 

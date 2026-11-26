@@ -23,7 +23,7 @@ e.g. `- When I assign a task in a meeting [E tickets.csv:6], I want the assignee
 ## Today they…
 <!-- Per job: what they do instead today (a competitor, a workaround or nothing), tagged.
 e.g. `- Job 1 · paste each task into Slack by hand · E tickets.csv:7` -->
-- J1 · spark commits the brief only, one file, in a repository that holds it already. The maker or Claude commits the rest by hand, in 9 of 22 project folders that have a repository · E brief ★C2, E P1148 ★C1
+- J1 · spark commits the brief only, one file, in a repository that holds it already. The maker or Claude commits the rest by hand, in the 9 of 23 existing project folders that have a repository · E brief ★C2, E P1148 ★C1
 - J1 · a build replaces dist/ whole and leaves the maker's own board.tsx alone, so a layout edit stays but is kept by no step · E brief ★C3
 - J2 · each phase reader compares sha256 stamps and says "out of date", but names no author and has no check on five links · E brief ★C5
 - J3 · nothing in spark. A maker with git can tag by hand · H, no tag seen; not counted
