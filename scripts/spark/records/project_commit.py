@@ -86,9 +86,9 @@ class ProjectCommit:
 
     def tracked_files(self, patterns):
         """The files in git's index under the project that `patterns` cover, as paths from the project folder; [] when git
-        cannot say. A pattern is a glob where `*` stays inside one folder, as in a `.gitignore`; one that ends in `/` covers
-        everything below that folder."""
-        specs = [":(glob)./" + (pattern + "**" if pattern.endswith("/") else pattern) for pattern in patterns]
+        cannot say. A pattern is a glob where `*` stays inside one folder, as in a `.gitignore`; git reads one that ends
+        in `/` as everything below that folder."""
+        specs = [":(glob)./" + pattern for pattern in patterns]
         code, out, _ = self._git("ls-files", "-c", "-z", "--", *specs)
         return [name for name in out.split("\0") if name] if code == 0 else []
 

@@ -26,12 +26,12 @@ class SparkSection:
 
     def placed(self, text, body):
         """(the text with the section, None), or (None, why not). No begin marker adds the block at the end after one blank
-        line. A begin marker with no end marker below it gives a reason. Else the text from the begin marker to the end
-        marker is replaced and the rest stays byte for byte."""
+        line (an empty text gets two newlines first, as AGENTS.md always did). A begin marker with no end marker below it
+        gives a reason. Else the text from the begin marker to the end marker is replaced and the rest stays byte for byte."""
         block = self.block(body)
         begin = self.begin_at.search(text)
         if begin is None:
-            return text + ("\n" if text and not text.endswith("\n") else "") + "\n" + block, None
+            return text + ("" if text.endswith("\n") else "\n") + "\n" + block, None
         end = self.end_at.search(text, begin.end())
         if end is None:
             return None, "has spark's begin marker but no end marker"

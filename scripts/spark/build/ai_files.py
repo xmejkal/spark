@@ -19,7 +19,7 @@ from spark.records import store
 BEGIN = "<!-- spark:begin"
 BEGIN_LINE = BEGIN + ". /spark:init writes this section and rewrites it on each run. Edit outside the markers. -->"
 END = "<!-- spark:end -->"
-SECTION_MARKS = SparkSection(BEGIN, BEGIN_LINE, END)
+MARKERS = SparkSection(BEGIN, BEGIN_LINE, END)
 SECTION = (Path(__file__).resolve().parents[3] / "data" / "agents-section.md").read_text()
 IMPORT = "@AGENTS.md"
 CLAUDE_MD = "<!-- /spark:init wrote this file. It is yours now: spark never rewrites it. -->\n%s\n" % IMPORT
@@ -39,7 +39,7 @@ class AiFiles:
 
     def agents_md(self):
         path = self.project / "AGENTS.md"
-        block = SECTION_MARKS.block(SECTION)
+        block = MARKERS.block(SECTION)
         if path.is_symlink():  # a link to a file in the project, such as CLAUDE.md, is followed
             path = path.resolve()
             if not path.is_file() or self.project.resolve() not in path.parents:
@@ -50,11 +50,11 @@ class AiFiles:
         text = read(path)
         if text is None:
             return False, "AGENTS.md is not UTF-8 text, so it is left alone"
-        new, why = SECTION_MARKS.placed(text, SECTION)
+        new, why = MARKERS.placed(text, SECTION)
         if new is None:
             return False, "AGENTS.md %s, so it is left alone: fix the markers" % why
         if store.write_file(path, new):
-            return True, ("rewrote spark's section of AGENTS.md" if SECTION_MARKS.found(text)
+            return True, ("rewrote spark's section of AGENTS.md" if MARKERS.found(text)
                           else "added spark's section to the end of your AGENTS.md")
         return False, "AGENTS.md already has spark's section"
 

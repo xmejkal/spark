@@ -56,6 +56,7 @@ class TheWriteTest(IgnoreListCase):
         self.assertTrue(did)
         self.assertEqual(notes, ["wrote .gitignore with spark's section"])
         text = self.gitignore()
+        self.assertTrue(text.startswith(BEGIN) and text.endswith(END + "\n"), repr(text))  # no blank line around it
         self.assertIn(BEGIN, text)
         self.assertIn(END, text)
         for line in LINES:
@@ -139,10 +140,21 @@ class ATrackedGitignoreTest(IgnoreListCase):
         self.assertTrue(did)
         self.assertIn(BEGIN, self.gitignore(root))
 
-    def test_no_git_on_the_path_counts_as_untracked_and_the_file_is_written(self):
+    def test_no_git_on_the_path_outside_a_repository_writes_the_file(self):
         with mock.patch.dict(os.environ, {"PATH": str(Path(tempfile.mkdtemp()))}):
             did, _ = self.write()
         self.assertTrue(did)
+
+    def test_no_git_on_the_path_inside_a_repository_leaves_a_tracked_gitignore_alone(self):
+        root, _ = a_repository()
+        (root / ".gitignore").write_bytes(b"mine\n")
+        git(root, "add", ".gitignore")
+        with mock.patch.dict(os.environ, {"PATH": str(Path(tempfile.mkdtemp()))}):
+            did, notes = self.write(root)
+        self.assertFalse(did)
+        self.assertEqual((root / ".gitignore").read_bytes(), b"mine\n")
+        self.assertEqual(notes, ["git could not say whether it tracks your .gitignore, so spark leaves it alone: add "
+                                 "spark's section, or these lines: CLAUDE.local.md, sim/*.bin, sim/runs/"])
 
 
 class AlreadyTrackedTest(IgnoreListCase):

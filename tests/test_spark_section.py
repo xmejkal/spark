@@ -28,8 +28,8 @@ class ThePlacementTest(unittest.TestCase):
     def test_a_text_with_no_trailing_newline_gets_one_before_the_blank_line(self):
         self.assertEqual(SECTION.placed("mine", "A\nB\n"), ("mine\n\n" + BLOCK, None))
 
-    def test_an_empty_text_gets_the_block_after_one_blank_line(self):
-        self.assertEqual(SECTION.placed("", "A\nB\n"), ("\n" + BLOCK, None))
+    def test_an_empty_text_gets_the_block_after_two_newlines_as_agents_md_always_did(self):
+        self.assertEqual(SECTION.placed("", "A\nB\n"), ("\n\n" + BLOCK, None))
 
     def test_an_old_section_is_replaced_between_the_markers_only(self):
         old = "top\n# begin. spark writes this\nold\n# end\nbottom\n"

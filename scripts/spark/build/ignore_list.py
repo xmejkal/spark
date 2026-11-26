@@ -20,11 +20,16 @@ MARKERS = SparkSection("# spark:begin",
                        "# spark:begin. /spark:init writes this section and rewrites it on each run. Edit outside the markers.",
                        "# spark:end")
 BODY = "".join(line + "\n" for line in LINES)
+#: Why a .gitignore in a repository is left alone: git tracks it, or git cannot say (no git, a timeout, a folder it refuses).
+TRACKED, UNKNOWN = "git tracks", "git could not say whether it tracks"
 
 
 class IgnoreList:
     """Service: spark's section of a project's `.gitignore`, written with or without a repository, and the files git
-    already tracks that the section covers. Git is read only through the ProjectCommit Adapter, handed in for tests."""
+    already tracks that the section covers. `git` is handed in and answers two reads: `tracks(name)` gives True, False or
+    None (git cannot say), and `tracked_files(patterns)` gives the paths in git's index that the patterns cover. The
+    ProjectCommit Adapter answers both and is the default until P1151 hands in the project timeline (`GitProjectTimeline`
+    then passes both to ProjectCommit, and a timeline with no git gives None and [])."""
 
     def __init__(self, project, git=None):
         self.project = Path(project)
@@ -54,9 +59,10 @@ class IgnoreList:
             return False, "%s %s, so it is left alone: fix the markers" % (NAME, why)
         if new == text:
             return False, "%s already has spark's section" % NAME
-        if self.git.tracks(NAME):  # Q15, the card P1175: a change the person commits is theirs to make
-            return False, ("git tracks your %s, so spark leaves it alone: add spark's section, or these lines: %s"
-                           % (NAME, ", ".join(LINES)))
+        tracked = self.git.tracks(NAME)
+        if tracked or (tracked is None and store.inside_git(self.project)):  # Q15, P1175: the person's commit to make
+            return False, ("%s your %s, so spark leaves it alone: add spark's section, or these lines: %s"
+                           % (TRACKED if tracked else UNKNOWN, NAME, ", ".join(LINES)))
         store.write_file(path, new)
         if not existed:
             return True, "wrote %s with spark's section" % NAME
