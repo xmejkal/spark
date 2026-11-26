@@ -63,6 +63,21 @@ class Brief:
             problem=PROBLEM_MUST_NOT_LIST if "must" in data and not isinstance(must, list) else None,
         )
 
+    @classmethod
+    def read(cls, project):
+        """(the brief, why it cannot be read) of this project folder (P1142). `why` is None, the `problem` word, or the text of
+        an OSError or a RecursionError that `from_project` raises. The brief is the empty one when it cannot be read."""
+        try:
+            brief = cls.from_project(project)
+        except (OSError, RecursionError) as unread:
+            return cls(), str(unread)
+        return brief, brief.problem
+
+    @property
+    def has_goal(self):
+        """True when the goal is a text with a character other than white space (P1142)."""
+        return bool(self.goal and self.goal.strip())
+
 
 # --- MVP ---
 @dataclass(frozen=True)

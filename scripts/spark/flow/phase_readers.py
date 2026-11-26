@@ -170,12 +170,9 @@ def basis_says(project):
         return False, []
     if held == needs_basis.BROKEN:
         return False, [flow_codes.BASIS_UNKNOWN_MESSAGE % flow_codes.BASIS_BROKEN]
-    try:
-        brief = Brief.from_project(project)
-    except (OSError, RecursionError) as unread:
-        return False, [flow_codes.BASIS_UNKNOWN_MESSAGE % (flow_codes.BRIEF_UNREADABLE % unread)]
-    if brief.problem:
-        return False, [flow_codes.BASIS_UNKNOWN_MESSAGE % (flow_codes.BRIEF_UNREADABLE % brief.problem)]
+    brief, why = Brief.read(project)
+    if why:
+        return False, [flow_codes.BASIS_UNKNOWN_MESSAGE % (flow_codes.BRIEF_UNREADABLE % why)]
     now = needs_basis.stamp_of(brief)
     parts = needs_basis.changed(held, now) if now else []
     if not parts:
