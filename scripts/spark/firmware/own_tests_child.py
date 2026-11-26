@@ -3,9 +3,9 @@
 The child process of check_firmware.py's own-tests run (P1208): it runs a project's tests/ with unittest and prints the
 count as one line of JSON, last on stdout.
 
-    python3 -I -B own_tests_child.py PROJECT
+    python3 -I -B own_tests_child.py PROJECT TESTS_FOLDER
 
-PROJECT is the folder that holds tests/. The child puts it first on sys.path, so a test imports from firmware/ as the project
+PROJECT is the folder that holds the tests, TESTS_FOLDER the name of it (own_tests.py writes the name once, and passes it). The child puts it first on sys.path, so a test imports from firmware/ as the project
 wrote it, and discovers the tests: a tests/ with an __init__.py is a package (the start folder is `tests`, the top folder
 PROJECT, so relative and package imports work), else tests/ is the top folder, as `python3 -m unittest discover -s tests`
 does. The tests' prints go to stderr, because the count is the one thing on stdout: the child points sys.stdout at stderr
@@ -13,20 +13,20 @@ while they run, then writes a newline and the line. check_firmware.py runs it wi
 folder stay off sys.path, and it imports nothing of spark (the twin of import_child.py).
 
 The line: `total` (the tests run, a failing test once), `failed` (a list of {"id", "line"}: the id of each test that failed,
-raised or succeeded when it was expected to fail, and the last line of its traceback) and `skipped`.
+raised or succeeded when it was expected to fail, and the last line of its traceback) and `skipped` (a test with three skipped
+subtests once). Right after the count the child ends with os._exit, so nothing a test registered with atexit runs after it.
 """
 
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
 
-TESTS_FOLDER = "tests"
 
-
-def discover(project):
-    """The TestSuite of PROJECT/tests: a package from the project's folder, else a folder of modules."""
-    tests = project / TESTS_FOLDER
+def discover(project, folder):
+    """The TestSuite of PROJECT/FOLDER: a package from the project's folder, else a folder of modules."""
+    tests = project / folder
     loader = unittest.defaultTestLoader
     if (tests / "__init__.py").is_file():
         return loader.discover(str(tests), top_level_dir=str(project))
@@ -51,13 +51,18 @@ def failures_of(result):
     return failed
 
 
-def count_tests(project):
-    """The dict of the run of PROJECT/tests: {"total", "failed", "skipped"}. A test that raised outside any test (setUpClass)
+def skipped_of(result):
+    """The count of the tests of RESULT that were skipped, each test once: a test with three skipped subtests is one."""
+    return len({getattr(test, "test_case", test).id() for test, _ in result.skipped})
+
+
+def count_tests(project, folder):
+    """The dict of the run of PROJECT/FOLDER: {"total", "failed", "skipped"}. A test that raised outside any test (setUpClass)
     has no count of its own, so it is added to the total."""
-    result = unittest.TextTestRunner(verbosity=0).run(discover(project))  # the runner's stream is stderr
+    result = unittest.TextTestRunner(verbosity=0).run(discover(project, folder))  # the runner's stream is stderr
     failed = failures_of(result)
     outside = sum(1 for test, _ in result.errors + result.failures if not isinstance(getattr(test, "test_case", test), unittest.TestCase))
-    return {"total": result.testsRun + outside, "failed": failed, "skipped": len(result.skipped)}
+    return {"total": result.testsRun + outside, "failed": failed, "skipped": skipped_of(result)}
 
 
 class CountRenderer:
@@ -72,16 +77,19 @@ class CountRenderer:
             sys.stdout = real
 
     def render(self, count):
-        """A newline, then COUNT as one line of JSON: a test's own text with no newline cannot join the line."""
+        """A newline, then COUNT as one line of JSON: a test's own text with no newline cannot join the line. Then the child
+        ends at once: what a test registered with atexit cannot write another line after the count."""
         sys.stdout.write("\n" + json.dumps(count) + "\n")
         sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(0)
 
 
 def say_count(argv):
-    project = Path(argv[0]).resolve()
+    project, folder = Path(argv[0]).resolve(), argv[1]
     sys.path.insert(0, str(project))
     renderer = CountRenderer()
-    renderer.render(renderer.quietly(lambda: count_tests(project)))
+    renderer.render(renderer.quietly(lambda: count_tests(project, folder)))
 
 
 if __name__ == "__main__":

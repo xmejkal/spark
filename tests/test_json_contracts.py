@@ -426,12 +426,17 @@ CODED_ERRORS = {"SparkError", "CodedMessageError", "StoreError", "DesignError"}
 CODE_AT = {"Refusal": 1, "ImpossibleError": 1, "RefusedInputError": 2, "CouldNotKeepError": 1, "PackageError": 1, "could_not_run": 1}
 #: P935 PR 4b: each code passed on from a site the scan reads, by the site (the file in its area, the class.method or function) and
 #: the code's source text.
+#: P1208 review A2: the codes check_firmware's import findings pass on from the import check's entries and refusals, each a Code of
+#: firmware_codes (import_probe names them, and the test of the six codes reads the Operation's file with them).
+FIRMWARE_FORWARDED = {("firmware_check.py", "CheckFirmware.import_findings", "entry['code']"),
+                      ("firmware_check.py", "CheckFirmware.import_findings", "problem.code"),
+                      ("firmware_check.py", "CheckFirmware.import_findings", "gap.code")}
 FORWARDED_CODES = {("check.py", "VendorPinsCheck.call", "result['reason'].code"),  # vendor_pins_check.check_board's Refusal
                    ("rules_check.py", "could_not_run", "code"),  # the helper's parameter: each call of it is scanned
                    ("board_emitter.py", "read_inputs", "no_footprint.code"),  # why_no_footprint's or why_wrong_kind's Refusal
                    ("board_emitter.py", "board_file", "code"),  # PART_GAPS: a test pins each code
                    # P935 PR 5: each Stage's code is its ending's Code of build_codes (test_stages pins by identity) or a design error's (the design scan)
-                   ("build_service.py", "findings_of", "stage.code")}
+                   ("build_service.py", "findings_of", "stage.code")} | FIRMWARE_FORWARDED
 
 
 def dotted(node):
@@ -772,6 +777,20 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         self.assertEqual({str(code): code.fix for code in build_codes.CODES}, self.BUILD_FIXES)
         self.assertEqual(len(build_codes.CODES), 28)
 
+    def test_the_six_codes_check_firmware_answers_are_codes_with_a_fix_and_its_findings_name_them_and_give_none(self):
+        # P1208 review A2: firmware_codes keeps plain words for the other steps, so the area is not in AREAS_WITH_FIXES; its
+        # check_firmware codes are Codes read through fix_of, and the scan reads the Operation's file as an area's
+        six = ("NO_FIRMWARE_FOLDER", "NOTHING_TO_IMPORT", "IMPORT_FAILED", "IMPORT_TIMEOUT", "OWN_TEST_FAILED", "OWN_TESTS_NOT_RUN")
+        for name in six:
+            held = getattr(firmware_codes, name)
+            self.assertEqual((type(held), held.meaning, firmware_codes.CODES[held]), (Code, firmware_codes.CODES[held], held.meaning), name)
+            self.assertTrue(held.fix.strip(), name)
+        self.assertFalse(hasattr(firmware_codes, "FIXES"))
+        path = ROOT / "scripts" / "spark" / "firmware" / "firmware_check.py"
+        used = set()
+        calls, broken = calls_off_the_table({"firmware_check.py": path.read_text()}, firmware_codes, (), used, None)
+        self.assertEqual((calls > 0, broken, used), (True, [], FIRMWARE_FORWARDED))
+
     def test_each_code_constant_of_the_table_is_a_word_of_codes_with_that_word_s_meaning(self):
         # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word;
         # an area's variant of the core's word (core's BAD_ARGUMENT_REPLIES_UNREADABLE) has the core's meaning
@@ -833,7 +852,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         # P935 PR 2's review: each site CAUGHT_FIXES names is a file the scan read, so a stale entry or a narrower read fails
         self.assertEqual([site for site in CAUGHT_FIXES if site[0] not in scanned], [])
         # P935 PR 4b: each allowance FORWARDED_CODES names is used by a site the scan read, so a stale entry fails (stricter than CAUGHT_FIXES)
-        self.assertEqual(sorted(FORWARDED_CODES - used), [])
+        self.assertEqual(sorted(FORWARDED_CODES - FIRMWARE_FORWARDED - used), [])
 
     def test_each_part_gap_names_a_code_of_design_codes(self):
         # P935 PR 4b: board_emitter.board_file passes each gap's `code` on (FORWARDED_CODES); the table's own codes are the ones it may name

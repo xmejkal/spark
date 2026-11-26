@@ -24,7 +24,8 @@ from spark.firmware.firmware_check import CheckFirmware  # noqa: E402
 
 #: The CLI's own text in `--help`, after the Operation's details: its exit codes.
 EPILOG = """Exit codes: 0 every module imported and every test passed, or the project has no tests/; 1 a module did not import, there is
-nothing to import, or a test failed or raised; 2 there is no firmware/ folder, or the tests gave no count."""
+nothing to import, or a test failed or raised; 2 there is no firmware/ folder, or the tests gave no count or ran no test
+(an empty tests/, or every test skipped)."""
 
 
 def main(argv=None, outside=None, operation=None):

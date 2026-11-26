@@ -61,7 +61,7 @@ and never the wiring.""" % (IMPORT_TIMEOUT_S, OWN_TESTS_TIMEOUT_S)
 class CheckFirmware(Operation):
     """
     Operation: the free checks of a project's firmware, the import check and the project's own tests, in one answer. Its data
-    is `project`, `imports` ({"imported", "total"}, or {} when firmware/ is not there), `modules` (what `import_probe.look`
+    is `project`, `imports` ({"imported", "total"}, or {"state": "not-checked"} when firmware/ is not there), `modules` (what `import_probe.look`
     gives: `module`, `status`, `detail`, and `code` for one not imported) and `tests` (the OwnTests: `state`, and `passed`,
     `total`, `failed` and `skipped` only when recorded). A module not imported and a failed own test are problems; a firmware/
     that is not there and a run of tests that gave no count are could-not-run, never ok; a project with no tests/ is a note.
@@ -76,42 +76,49 @@ class CheckFirmware(Operation):
     effects = (READS, RUNS)
     data_keys = ("project", "imports", "modules", "tests")
 
-    def __init__(self, import_timeout_s=IMPORT_TIMEOUT_S, tests_timeout_s=OWN_TESTS_TIMEOUT_S, own_tests_reader=None):
+    def __init__(self, import_timeout_s=IMPORT_TIMEOUT_S, tests_timeout_s=None, own_tests_reader=None):
         """The timeouts are constants of the firmware area, no setting; a test gives a shorter one. `own_tests_reader` is the
-        Strategy that reads the own tests (`read(project, run)`): unittest's, until a second runner exists."""
+        Strategy that reads the own tests (`read(project, outside)`): unittest's, until a second runner exists. The tests'
+        timeout belongs to the reader: `tests_timeout_s` builds the default UnittestReader with it, and a reader given
+        together with it is refused (ValueError), never silently left without it."""
+        if own_tests_reader is not None and tests_timeout_s is not None:
+            raise ValueError("tests_timeout_s is the default reader's: give it to your own_tests_reader instead")
         self.import_timeout_s = import_timeout_s
-        self.reader = own_tests_reader or UnittestReader(tests_timeout_s)
+        self.reader = own_tests_reader or UnittestReader(OWN_TESTS_TIMEOUT_S if tests_timeout_s is None else tests_timeout_s)
 
     def run(self, project, *, outside):
         """The imports and the own tests of PROJECT, each child started through `outside.run`."""
         modules, import_problems, unchecked = look(project, self.import_timeout_s, outside.run)
-        tests = self.reader.read(project, outside.run)
+        tests = self.reader.read(project, outside)
         findings = self.import_findings(modules, import_problems, unchecked) + self.own_test_findings(tests)
-        data = {"project": str(project), "imports": self.imports_of(modules, unchecked), "modules": modules, "tests": self.tests_data(tests)}
+        imports = self.imports_of(modules, unchecked)
+        data = {"project": str(project), "imports": imports, "modules": modules, "tests": self.tests_data(tests)}
         notes = [NO_TESTS_NOTE] if tests.state == NONE_RECORDED else None
-        return OperationResult(data, findings, lines=self.lines_of(modules, unchecked, tests), notes=notes)
+        return OperationResult(data, findings, lines=self.lines_of(modules, imports, tests), notes=notes)
 
     @staticmethod
     def import_findings(modules, problems, unchecked):
-        """A Finding for each import problem, named by its module when it has one, and one for each unchecked item."""
-        not_imported = [entry["module"] for entry in modules if entry["status"] != IMPORTED]
-        found = [Finding.of(PROBLEMS, not_imported[at] if at < len(not_imported) else FIRMWARE_SUBJECT, problem.code, str(problem),
-                            firmware_codes.FIXES[problem.code]) for at, problem in enumerate(problems)]
-        return found + [Finding.of(COULD_NOT_RUN, None, gap.code, str(gap), firmware_codes.FIXES[gap.code]) for gap in unchecked]
+        """A Finding for each module that did not import, built from its entry (`module`, `code`, `detail`), one for the problem
+        that names no module (nothing to import), and one for each unchecked item."""
+        found = [Finding.of(PROBLEMS, entry["module"], entry["code"], "%s %s: %s" % (entry["module"], entry["status"], entry["detail"]))
+                 for entry in modules if entry["status"] != IMPORTED]
+        found += [Finding.of(PROBLEMS, FIRMWARE_SUBJECT, problem.code, str(problem)) for problem in problems
+                  if problem.code == firmware_codes.NOTHING_TO_IMPORT]
+        return found + [Finding.of(COULD_NOT_RUN, None, gap.code, str(gap)) for gap in unchecked]
 
     @staticmethod
     def own_test_findings(tests):
         """A problem for each failed test, with the last line of its traceback, or one could-not-run when the tests gave no count."""
         if tests.state == NOT_CHECKED:
-            return [Finding.of(COULD_NOT_RUN, None, firmware_codes.OWN_TESTS_NOT_RUN, tests.why,
-                               firmware_codes.FIXES[firmware_codes.OWN_TESTS_NOT_RUN])]
-        return [Finding.of(PROBLEMS, test_id, firmware_codes.OWN_TEST_FAILED, "%s failed: %s" % (test_id, tests.reasons[test_id]),
-                           firmware_codes.FIXES[firmware_codes.OWN_TEST_FAILED]) for test_id in tests.failed or ()]
+            return [Finding.of(COULD_NOT_RUN, None, firmware_codes.OWN_TESTS_NOT_RUN, tests.why)]
+        return [Finding.of(PROBLEMS, test_id, firmware_codes.OWN_TEST_FAILED, "%s failed: %s" % (test_id, tests.reasons[test_id]))
+                for test_id in tests.failed or ()]
 
     @staticmethod
     def imports_of(modules, unchecked):
-        """The import count, or {} when firmware/ was not there: a number nobody took is no number."""
-        return {} if unchecked else {"imported": sum(entry["status"] == IMPORTED for entry in modules), "total": len(modules)}
+        """The import count, or {"state": "not-checked"} when firmware/ was not there, as `tests` says it: a number nobody took
+        is no number."""
+        return {"state": NOT_CHECKED} if unchecked else {"imported": sum(entry["status"] == IMPORTED for entry in modules), "total": len(modules)}
 
     @staticmethod
     def tests_data(tests):
@@ -121,10 +128,10 @@ class CheckFirmware(Operation):
         return {"state": tests.state, "passed": tests.passed, "total": tests.total, "failed": tests.failed, "skipped": tests.skipped}
 
     @staticmethod
-    def lines_of(modules, unchecked, tests):
-        """The text: a line per module, then the imports line and the tests line."""
+    def lines_of(modules, imports, tests):
+        """The text: a line per module, then the imports line (from IMPORTS, `imports_of`'s count) and the tests line."""
         lines = ["%-9s %s%s" % (entry["status"], entry["module"], "  " + entry["detail"] if entry["detail"] else "") for entry in modules]
-        lines.append(IMPORTS_NOT_CHECKED_LINE if unchecked else IMPORTS_LINE % (sum(entry["status"] == IMPORTED for entry in modules), len(modules)))
+        lines.append(IMPORTS_NOT_CHECKED_LINE if imports.get("state") == NOT_CHECKED else IMPORTS_LINE % (imports["imported"], imports["total"]))
         if tests.state == NONE_RECORDED:
             return lines + [NO_TESTS_LINE % TESTS_FOLDER]
         if tests.state == NOT_CHECKED:

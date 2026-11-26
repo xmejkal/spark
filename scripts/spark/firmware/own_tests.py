@@ -2,7 +2,8 @@
 The project's own tests, counted (P1208): the tests in PROJECT/tests that the conversation wrote for the firmware, run with
 CPython's unittest in a child of their own (`own_tests_child.py`). They run on this machine and are not the sim: no
 `sim/`, no board, no token. A reader of one thing that may be absent (the rule of `outcomes`): it never raises, and its
-Value says RECORDED, NONE_RECORDED (no tests/ folder) or NOT_CHECKED (it could not count, and says why).
+Value says RECORDED, NONE_RECORDED (no tests/ folder) or NOT_CHECKED (it could not count, or no test ran or passed: an empty
+tests/ or every test skipped, and says why).
 """
 
 import json
@@ -52,12 +53,13 @@ class UnittestReader:
     def __init__(self, timeout_s=OWN_TESTS_TIMEOUT_S):
         self.timeout_s = timeout_s
 
-    def read(self, project, run):
-        """The OwnTests of PROJECT, its child started through `run` (`OutsideWorld.run`)."""
+    def read(self, project, outside):
+        """The OwnTests of PROJECT, its child started through `outside.run`. The reader takes the whole OutsideWorld, so a
+        runner of another kind (a MicroPython host runner) can find its tool with `outside.find_tool`."""
         project = Path(project).resolve()
         if not (project / TESTS_FOLDER).is_dir():
             return OwnTests(NONE_RECORDED)
-        done = IsolatedPython(run).call(CHILD, [project], project, self.timeout_s)
+        done = IsolatedPython(outside.run).call(CHILD, [project, TESTS_FOLDER], project, self.timeout_s)
         if done.timed_out:
             return not_checked("the tests did not finish within %g s: a test loops or waits" % self.timeout_s)
         count = count_of(done.stdout)
@@ -65,6 +67,8 @@ class UnittestReader:
             return not_checked("the tests gave no count (the run exited with code %s)" % done.returncode)
         if count["total"] == 0:
             return not_checked("%s/ holds no test: nothing ran, so there is no count" % TESTS_FOLDER)
+        if count["total"] <= count["skipped"]:
+            return not_checked("every test in %s/ was skipped: nothing passed and nothing failed, so there is no count" % TESTS_FOLDER)
         failed = [each["id"] for each in count["failed"]]
         return OwnTests(RECORDED, max(count["total"] - len(failed) - count["skipped"], 0), count["total"], failed,
                         count["skipped"], reasons={each["id"]: each["line"] for each in count["failed"]})

@@ -20,6 +20,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from fakes import FakeOutsideWorld  # noqa: E402
 from spark.firmware import own_tests  # noqa: E402
 from spark.firmware.isolated_python import IsolatedPython  # noqa: E402
 
@@ -39,7 +40,7 @@ def a_project(**tests):
 
 
 def read(project, timeout_s=30):
-    return own_tests.UnittestReader(timeout_s).read(project, subprocess.run)
+    return own_tests.UnittestReader(timeout_s).read(project, FakeOutsideWorld(run=subprocess.run))
 
 
 class CountingTest(unittest.TestCase):
@@ -66,6 +67,19 @@ class CountingTest(unittest.TestCase):
             "import unittest\n\nclass A(unittest.TestCase):\n    def test_many(self):\n        for n in range(3):\n"
             "            with self.subTest(n=n):\n                self.fail('n')\n\n    def test_fine(self):\n        pass\n")))
         self.assertEqual((found.passed, found.total, found.failed), (1, 2, ["test_a.A.test_many"]))
+
+    def test_a_test_with_three_skipped_subtests_is_one_skipped_test(self):
+        # P1208 review R1: skipped is counted by test, as the failures are, so passed is never below the tests that passed
+        found = read(a_project(test_a=(
+            "import unittest\n\nclass A(unittest.TestCase):\n    def test_many(self):\n        for n in range(3):\n"
+            "            with self.subTest(n=n):\n                self.skipTest('later')\n\n    def test_fine(self):\n        pass\n")))
+        self.assertEqual((found.state, found.passed, found.total, found.failed, found.skipped), ("recorded", 1, 2, [], 1))
+
+    def test_an_expected_failure_that_fails_as_expected_counts_as_passed(self):
+        found = read(a_project(test_a=(
+            "import unittest\n\nclass A(unittest.TestCase):\n    @unittest.expectedFailure\n    def test_known(self):\n        self.fail('known')\n\n"
+            "    def test_fine(self):\n        pass\n")))
+        self.assertEqual((found.state, found.passed, found.total, found.failed, found.skipped), ("recorded", 2, 2, [], 0))
 
     def test_an_unexpected_success_is_a_failed_test(self):
         found = read(a_project(test_a=(
@@ -100,6 +114,13 @@ class WhenThereIsNothingToCountTest(unittest.TestCase):
         self.assertIn("no test", found.why)
         self.assertEqual((found.passed, found.total), (None, None))
 
+    def test_a_run_where_every_test_is_skipped_is_not_checked_never_ok(self):
+        # P1208 review R3 (delegated: the council decided in the PO's night auto mode, his to change): nothing passed, nothing failed
+        found = read(a_project(test_a="import unittest\n\nclass A(unittest.TestCase):\n    @unittest.skip('later')\n    def test_a(self):\n        pass\n"))
+        self.assertEqual(found.state, "not-checked")
+        self.assertIn("was skipped: nothing passed", found.why)
+        self.assertEqual((found.passed, found.total), (None, None))
+
     def test_a_run_past_the_timeout_is_not_checked(self):
         found = read(a_project(test_a="import unittest\n\nclass A(unittest.TestCase):\n    def test_loops(self):\n        while True:\n            pass\n"),
                      timeout_s=0.5)
@@ -111,7 +132,7 @@ class WhenThereIsNothingToCountTest(unittest.TestCase):
         def silent(command, **options):
             return subprocess.CompletedProcess(command, 3, "", "")
 
-        found = own_tests.UnittestReader(5).read(a_project(test_a=TWO_PASSING), silent)
+        found = own_tests.UnittestReader(5).read(a_project(test_a=TWO_PASSING), FakeOutsideWorld(run=silent))
         self.assertEqual(found.state, "not-checked")
         self.assertIn("no count", found.why)
 
@@ -119,7 +140,7 @@ class WhenThereIsNothingToCountTest(unittest.TestCase):
         def odd(command, **options):
             return subprocess.CompletedProcess(command, 0, "\n[1, 2]\n", "")
 
-        self.assertEqual(own_tests.UnittestReader(5).read(a_project(test_a=TWO_PASSING), odd).state, "not-checked")
+        self.assertEqual(own_tests.UnittestReader(5).read(a_project(test_a=TWO_PASSING), FakeOutsideWorld(run=odd)).state, "not-checked")
 
     def test_the_reader_never_raises_for_a_tests_that_is_a_file(self):
         project = a_project()
@@ -139,10 +160,17 @@ class WhatTheTestsDoDoesNotBreakTheCountTest(unittest.TestCase):
     def test_a_test_that_prints_with_no_newline_at_the_end_still_counts(self):
         done = subprocess.run([sys.executable, "-I", "-B", str(CHILD), str(a_project(test_a=(
             "import sys, unittest\n\nclass A(unittest.TestCase):\n    def test_a(self):\n        sys.stdout.write('partial')\n"
-            "        sys.stdout.flush()\n"))) ], capture_output=True, text=True)
+            "        sys.stdout.flush()\n"))), "tests"], capture_output=True, text=True)
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertNotIn("partial", done.stdout)
         self.assertEqual(done.stdout.strip().splitlines()[-1], '{"total": 1, "failed": [], "skipped": 0}')
+
+    def test_a_test_file_s_atexit_that_writes_a_line_cannot_replace_the_count(self):
+        # P1208 review R4: the child ends right after its count, so nothing registered by a test runs after it
+        found = read(a_project(test_a=(
+            "import atexit, os, unittest\n\natexit.register(lambda: os.write(1, b'{\"total\": 99, \"failed\": [], \"skipped\": 0}\\n'))\n\n"
+            "class A(unittest.TestCase):\n    def test_a(self):\n        pass\n")))
+        self.assertEqual((found.state, found.passed, found.total), ("recorded", 1, 1))
 
     def test_tests_in_a_package_import_relative_and_from_the_firmware_folder(self):
         project = a_project(__init__="", helper="VALUE = 41\n", test_a=(

@@ -25,6 +25,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import check_firmware  # noqa: E402
 from fakes import FakeOutsideWorld  # noqa: E402
 from spark.core import outcomes  # noqa: E402
+from spark.core.codes import Code  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
 from spark.core.operation import READS, RUNS  # noqa: E402
 from spark.firmware import own_tests  # noqa: E402
 from spark.firmware.firmware_check import CheckFirmware  # noqa: E402
@@ -95,7 +97,7 @@ class TheFreeChecksTogetherTest(unittest.TestCase):
         self.assertEqual([(found.severity, found.code) for found in result.findings],
                          [(outcomes.COULD_NOT_RUN, "no_firmware_folder")])
         self.assertEqual(result.data["tests"]["state"], "recorded")
-        self.assertEqual(result.data["imports"], {})
+        self.assertEqual(result.data["imports"], {"state": "not-checked"})
         self.assertIn("imports: not checked (no firmware/ folder)", result.lines)
 
     def test_a_test_run_that_cannot_count_is_could_not_run_never_ok(self):
@@ -114,11 +116,50 @@ class TheFreeChecksTogetherTest(unittest.TestCase):
 
     def test_a_runner_given_to_the_operation_is_the_one_that_reads(self):
         class GivenReader:
-            def read(self, project, run):
+            def read(self, project, outside):
                 return own_tests.OwnTests("recorded", 5, 5, [], 0)
 
         result = check(a_project({"light": LIGHT}), own_tests_reader=GivenReader())
         self.assertEqual(result.data["tests"]["total"], 5)
+
+    def test_the_reader_gets_the_whole_outside_world_so_a_runner_can_find_its_tool(self):
+        # P1208 review A4: `read(project, outside)`, so a MicroPython host runner can use outside.find_tool
+        given = []
+
+        class GivenReader:
+            def read(self, project, outside):
+                given.append(outside)
+                return own_tests.OwnTests("none-recorded")
+
+        outside = FakeOutsideWorld(run=subprocess.run)
+        CheckFirmware(own_tests_reader=GivenReader()).run(a_project({"light": LIGHT}), outside=outside)
+        self.assertEqual(given, [outside])
+
+    def test_the_tests_timeout_goes_to_the_default_reader_and_a_reader_with_it_is_refused(self):
+        self.assertEqual(CheckFirmware(tests_timeout_s=7).reader.timeout_s, 7)
+        with self.assertRaises(ValueError):
+            CheckFirmware(tests_timeout_s=7, own_tests_reader=object())
+
+    def test_every_test_skipped_is_could_not_run_never_ok(self):
+        # P1208 review R3 (delegated: the council decided in the PO's night auto mode, his to change)
+        result = check(a_project({"light": LIGHT}, {"test_a": "import unittest\n\nclass A(unittest.TestCase):\n    @unittest.skip('x')\n    def test_a(self):\n        pass\n"}))
+        self.assertEqual(result.status(), outcomes.COULD_NOT_RUN)
+        self.assertEqual([found.code for found in result.findings], ["own_tests_not_run"])
+
+    def test_an_import_finding_is_built_from_its_module_entry_whatever_the_list_of_problems(self):
+        # P1208 review A3: no pairing by position: the entry holds its module, code and detail
+        entries = [{"module": "a", "status": "imported", "detail": ""},
+                   {"module": "b", "status": "raised", "detail": "KeyError: 'k'", "code": Code("import_failed", "m", "fix one")},
+                   {"module": "c", "status": "timed out", "detail": "5 s", "code": Code("import_timeout", "m", "fix two")}]
+        found = CheckFirmware.import_findings(entries, [], [])
+        self.assertEqual([(each.subject, each.code, each.sentence) for each in found],
+                         [("b", "import_failed", "b raised: KeyError: 'k'"), ("c", "import_timeout", "c timed out: 5 s")])
+        self.assertTrue(all(each.fix for each in found))
+
+    def test_a_problem_with_no_module_is_one_finding_named_firmware(self):
+        nothing = Refusal("nothing to import", Code("nothing_to_import", "m", "fix three"))
+        found = CheckFirmware.import_findings([{"module": "pins", "status": "imported", "detail": ""}], [nothing], [])
+        self.assertEqual([(each.subject, each.code) for each in found], [("firmware", "nothing_to_import")])
 
 
 class WhatItDeclaresTest(unittest.TestCase):
