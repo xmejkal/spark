@@ -141,6 +141,28 @@ PO's yes to this list.
 - slice (one Slice option of the board, or "ask the decider for a new one"): 10 The store <!-- REQUIRED:spark-process:slice -->
 <!-- EXTEND:item-fields -->
 
+## N5 — `GitRunner` starts git with its own process, so the core's effects gate never sees a keep, a send or a receive → before the first send slice, `GitRunner` moves onto `outside.run`, and `ProgramRunner` gains the group stop that `ProjectCommit._stop` has
+- type: story <!-- REQUIRED:item-type -->
+- needed by: "the architecture needs to be well made so that we can change these srtrategies and tools and its reusable, dry" (the PO, 2026-11-26, #1738), and the council's C17 (D6): later, with a card filed <!-- REQUIRED:needed-by -->
+- value proven by: a test that pins every Operation that keeps or sends declares its effects, and a hook that ignores SIGTERM is still stopped through `outside.run` <!-- REQUIRED:value-proven-by -->
+- depends on: slice 0 (P1151 with P1152's first slice). It comes before slice 9 <!-- REQUIRED:depends-on -->
+- status: proposed <!-- REQUIRED:item-status -->
+- label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
+- parent (the epic, as a sub-issue): P1152 #1688 <!-- REQUIRED:spark-process:parent -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): Project history <!-- REQUIRED:spark-process:slice -->
+<!-- EXTEND:item-fields -->
+
+## N6 — another maker cannot offer a record to the public repository → "send for review" by a fork and a PR, with a waiting state ("sent, waits for review")
+- type: story <!-- REQUIRED:item-type -->
+- needed by: D12 (the PO, 2026-11-26: "Fork with PR is a later card"), and #123's "people could use spark and share whatever good modules and parts and boards" (the PO, 2026-10-09) <!-- REQUIRED:needed-by -->
+- value proven by: a second scratch account's record reaches the scratch central repository as a PR, and the person's list says it waits for review <!-- REQUIRED:value-proven-by -->
+- depends on: slice 9 (the owner's share) <!-- REQUIRED:depends-on -->
+- status: proposed <!-- REQUIRED:item-status -->
+- label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
+- parent (the epic, as a sub-issue): N3 <!-- REQUIRED:spark-process:parent -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): 10 The store <!-- REQUIRED:spark-process:slice -->
+<!-- EXTEND:item-fields -->
+
 ## Board actions
 <!-- Each action, taken or pending, with its D. e.g. `- move the item to Discovery · pending` -->
-- Filing N1 to N4, and the comments and body changes on #1688, #1687, #1691, #1689, #1699, #123, #437, #505 · pending, needs the PO's yes to this list, then spark-main files <!-- REQUIRED:board-actions -->
+- Filing N1 to N6, and the comments and body changes on #1688, #1687, #1691, #1689, #1699, #123, #437, #505 · pending, needs the PO's yes to this list, then spark-main files <!-- REQUIRED:board-actions -->
