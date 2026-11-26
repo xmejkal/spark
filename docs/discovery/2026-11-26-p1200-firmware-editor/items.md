@@ -3,12 +3,12 @@
 
 From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None is filed. spark-main files them on the PO's yes. Comments widen an existing card instead of filing a new one.
 
-## 1. The page shows the firmware as one file time → after the MVP walk, `show-firmware` and one fold with main.py and pins.py as masked, read-only text (D2, D5)
+## 1. The page shows the firmware as one file time → after the MVP walk and once secrets live in the store (P1004), `show-firmware` and one fold with main.py and pins.py as masked, read-only text (D2, D5, D8)
 - type: story (new) <!-- REQUIRED:item-type -->
 - needed by: "it might also be nice to offer some on the page editing and display of the generated code and maybe even deploy directly rfom the broswer" (the PO, 2026-11-26, #1748) <!-- REQUIRED:needed-by -->
 - value proven by: `show-firmware --json` and the fold on a scratch project show main.py and pins.py, with who writes each and when, and a secrets file shows as "not shown" <!-- REQUIRED:value-proven-by -->
-- depends on: P1208 #1757 (the firmware area's table), and the secrets rule (item 13) <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- depends on: P1004 #1463, secrets in the store (D8: no firmware text on any page before it), and P1208 #1757 (the firmware area's table) <!-- REQUIRED:depends-on -->
+- status: filed D6, P1242 #1799 <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1200 #1748 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors <!-- REQUIRED:spark-process:slice -->
@@ -18,7 +18,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: "it might also be nice to offer some on the page editing and display of the generated code and maybe even deploy directly rfom the broswer" (the PO, 2026-11-26, #1748) <!-- REQUIRED:needed-by -->
 - value proven by: the comment on #1259 links the brief <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors, as today <!-- REQUIRED:spark-process:slice -->
@@ -28,7 +28,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: "it might also be nice to offer some on the page editing and display of the generated code and maybe even deploy directly rfom the broswer" (the PO, 2026-11-26, #1748) <!-- REQUIRED:needed-by -->
 - value proven by: the comment on #1250 <!-- REQUIRED:value-proven-by -->
 - depends on: item 1 <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors, as today <!-- REQUIRED:spark-process:slice -->
@@ -38,7 +38,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: the user lens's UX-15, an inference from one walk, and Q2 of round 1 <!-- REQUIRED:needed-by -->
 - value proven by: the comment, and A3's account question <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as today <!-- REQUIRED:spark-process:slice -->
@@ -48,7 +48,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: "it might also be nice to offer some on the page editing and display of the generated code and maybe even deploy directly rfom the broswer" (the PO, 2026-11-26, #1748) <!-- REQUIRED:needed-by -->
 - value proven by: the sentence pasted into the chat changes the value <!-- REQUIRED:value-proven-by -->
 - depends on: Q3's answer <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as today <!-- REQUIRED:spark-process:slice -->
@@ -58,7 +58,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: the same words of #1748 <!-- REQUIRED:needed-by -->
 - value proven by: the comment <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors, as today <!-- REQUIRED:spark-process:slice -->
@@ -68,7 +68,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: P1193's D-q1 and P1200's SQ8 <!-- REQUIRED:needed-by -->
 - value proven by: the comment <!-- REQUIRED:value-proven-by -->
 - depends on: SQ8's answer <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Project timeline, as today <!-- REQUIRED:spark-process:slice -->
@@ -78,17 +78,17 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: the store's bench-2026-11-25 notes (UX-4) <!-- REQUIRED:needed-by -->
 - value proven by: the comment <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as today <!-- REQUIRED:spark-process:slice -->
 
-## 12. Comment on P1194 #1740: two settings rows as proposals, the firmware view on the page (off or text, default text, user layer) and the firmware on a shared copy (hidden or shown with the mask, default hidden, user layer only)
+## 12. Comment on P1194 #1740: two settings rows as proposals, the firmware view on the page (off or text, default text, user layer) and, once P1004 lands, the firmware on a shared copy (hidden or shown with the mask, default hidden, user layer only). Until P1004 no page shows firmware text (D8)
 - type: comment <!-- REQUIRED:item-type -->
 - needed by: "every configurable choice names its setting, its default and its layer" (the PO, 2026-11-26, P1193 D8) <!-- REQUIRED:needed-by -->
 - value proven by: the comment <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): as today <!-- REQUIRED:spark-process:slice -->
@@ -98,7 +98,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: the PO assistant's PO-9 and the tech lead's TL-7 <!-- REQUIRED:needed-by -->
 - value proven by: the comment <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as today <!-- REQUIRED:spark-process:slice -->
@@ -108,7 +108,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: P218 D11's no-go: "revisit only for a first install by a person with no Python" <!-- REQUIRED:needed-by -->
 - value proven by: the comment <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): 5 A real stranger (ask the decider: the card has no slice today) <!-- REQUIRED:spark-process:slice -->
@@ -118,7 +118,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: the PO's P675: a yes that another program collected never opens the erase <!-- REQUIRED:needed-by -->
 - value proven by: a rule test that fails when a spark interface drives a terminal for an Operation whose effects hold `asks` <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, P1243 #1800 <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.11 Change it and put it on again (or spark-main's choice) <!-- REQUIRED:spark-process:slice -->
@@ -128,7 +128,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: P218 D19 of 2026-10-13 <!-- REQUIRED:needed-by -->
 - value proven by: the guide line and the decision's note <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, P1244 #1802 <!-- REQUIRED:item-status -->
 - label (the repository's type label): chore <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): spark-main's choice <!-- REQUIRED:spark-process:slice -->
@@ -138,7 +138,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: P472's finding, docs/discovery/2026-10-31-p472-no-hands/finding.md:5-9 <!-- REQUIRED:needed-by -->
 - value proven by: an S3 deploy with no BOOT press, on the bench <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, P1245 #1803 <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.11 Change it and put it on again <!-- REQUIRED:spark-process:slice -->
@@ -148,7 +148,7 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - needed by: the store's bench-2026-11-25, note 20 <!-- REQUIRED:needed-by -->
 - value proven by: the comment <!-- REQUIRED:value-proven-by -->
 - depends on: — <!-- REQUIRED:depends-on -->
-- status: proposed <!-- REQUIRED:item-status -->
+- status: filed D6, a comment, posted <!-- REQUIRED:item-status -->
 - label (the repository's type label): — <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): — <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as today <!-- REQUIRED:spark-process:slice -->
@@ -162,4 +162,4 @@ From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None
 - item 17: 17. An edit of main.py has no path from an interface without file tools · dropped because D3: A2 missed its pass line, so `save-firmware` stays a named seam
 
 ## Board actions
-- file items 1, 18, 19 and 20, and post the comments 2, 3, 4, 5, 7, 8, 11, 12, 13, 14 and 21 · pending, needs the PO's yes to this list <!-- REQUIRED:board-actions -->
+- filed items 1, 18, 19 and 20 as P1242 #1799, P1243 #1800, P1244 #1802 and P1245 #1803, and posted the comments 2, 3, 4, 5, 7, 8, 11, 12, 13, 14 and 21 · taken, D6 <!-- REQUIRED:board-actions -->
