@@ -196,6 +196,12 @@ How to read this page:
   - Effects: none, it only reads. Data keys: tool, status, unmeasured, resolved, results, project.
   - Summary: Run every deterministic check and answer once.
 
+### firmware
+
+- `op:check-firmware`
+  - Effects: none, it only reads. Data keys: project, imports, modules, tests.
+  - Summary: Check the firmware for free: its imports and the project's own tests, with no sim/ and no board.
+
 ### bench
 
 - `op:look`
