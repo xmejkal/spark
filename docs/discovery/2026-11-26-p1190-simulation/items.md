@@ -3,7 +3,7 @@
 block for more. needed by: the decider's words, quoted. value proven by: a proof the decider can read.
 status: proposed, or filed D<n>. -->
 
-The architect's list (council/architect.md §11), changed by the refuter and the delegated council (D3 to D8). The order to build: P999 #1455 and item 4, then items 2 and 3, then P1078 #1582, then item 6, then item 1 (approved, D11). Item 19's first steps run beside P999 and P1078, before item 6's plan (D17). P999 may not cover the clock, because its stand-in lacks GPIO14 and the clock uses it (brief ★C25). Nothing is filed. spark-main files on the PO's yes.
+The architect's list (council/architect.md §11), changed by the refuter and the delegated council (D3 to D8). The order to build: P999 #1455 and item 4, then items 2 and 3, then P1078 #1582, then item 6, then item 1 (approved, D11). Item 19's first steps run beside P999 and P1078, before item 6's plan (D17). P999 may not cover the clock, because its stand-in lacks GPIO14 and the clock uses it (brief ★C25). Filed on the PO's yes (D18): each item's status names its card. Item 19 sits in parked, after v0.10, so whether its first steps run before item 6's plan is the PO's (P1212 #1761 says so).
 Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read of the e-paper controller), P1078 #1582 (a prerequisite of item 6), P413 #539 (feeds item 9).
 
 ## 1. The flip: a board that no simulator covers ends the simulation stage `skipped` with a reason, in one small PR after the seam and after the PO's yes to Q11
@@ -75,7 +75,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 ## 7. The run record names its simulator and its grade
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
-- value proven by: a log header names the simulator, its version and the grade <!-- REQUIRED:value-proven-by -->
+- value proven by: a log header names the simulator, its version and the grade. From P308 #374: "a stand-in pass opens deploy only when the project says so, and deploy says 'tested on the stand-in simulator only'" <!-- REQUIRED:value-proven-by -->
 - depends on: item 6 <!-- REQUIRED:depends-on -->
 - status: filed D18 · P1213 #1762, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
@@ -205,7 +205,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - status: filed D18 · P1223 #1772, stage Idea <!-- REQUIRED:item-status -->
 - label (the repository's type label): epic <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
-- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one, or after v0.10 as P492 #671 was <!-- REQUIRED:spark-process:slice -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): parked, after v0.10 (D18) <!-- REQUIRED:spark-process:slice -->
 - the tied card: takes over item 14 (the stand-in runner spike) and P492 #671's question 2. The pre-analysis is in the store's preanalysis/2026-11-26-own-simulator.md. Its setting (P1194): the `simulator` role points at it, with its default left at Wokwi
 
 ## 19. Spike: how hard is spark's own simulator, and which free code does it build on, with licences
