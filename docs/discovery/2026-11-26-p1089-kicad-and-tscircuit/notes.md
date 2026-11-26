@@ -59,6 +59,19 @@ tscircuit's own fill still leaves what KiCad calls isolated copper, and KiCad's 
 e-paper by a trace in every build, with or without this change. The refuter found that the export's netclass
 clearance is 0.1 mm, and that at 0.2 mm both boards give 6 clearance errors.
 
+### The fair pair, after the council (07:45 to 07:48 CET, read from the clock)
+
+The council's PO assistant found that the first two pictures used two footprints. `spk/` is spark's own build of
+today, with today's footprint (14-pin row on the left). `spkgnd/` is the same board with one GND pour per layer.
+
+- spk: 1 V33 and 37 GND pieces on top, 2 V33 and 25 GND on the bottom, 0 errors, 10 traces, 3 vias.
+- spkgnd: 1 GND piece per layer, 0 errors, 10 traces, 2 vias. `tsci build` took 4.5 s.
+- p711-sound-demo with its own `board.tsx`: the automatic pour gives 61 V33 and 165 GND pieces. One GND pour per layer
+  gives 1 piece per layer. Both have 0 errors, 25 traces and 24 vias.
+- `tsci export -f step` on spkgnd ran in about 2 s with no KiCad. It wrote 618 KB with one product named "PCB" and no
+  module bodies.
+- The two pictures in this folder are now spk and spkgnd.
+
 ## Question 2: KiCad
 
 ### What ran

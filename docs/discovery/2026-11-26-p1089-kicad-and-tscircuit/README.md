@@ -20,6 +20,8 @@ The raw evidence, with every command and count, is [notes.md](notes.md).
 
 ## Before and after
 
+Both pictures show spark's e-paper board of today, with the same footprint. The pour is the only change.
+
 | Today: the automatic pour | One ground pour per layer |
 |---|---|
 | ![today](pcb-today-automatic-pour.png) | ![one ground pour](pcb-one-gnd-pour.png) |

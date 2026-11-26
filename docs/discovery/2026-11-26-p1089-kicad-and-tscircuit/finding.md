@@ -2,7 +2,8 @@
 
 Spike for [#1600](https://github.com/xmejkal/spark/issues/1600), under P203 [#163](https://github.com/xmejkal/spark/issues/163).
 Date: 2026-11-26. The evidence is in [notes.md](notes.md) and three pictures in this folder. The architect wrote this
-text from the notes. The kicad-spike session added two explanations to section 9 and made the card titles shorter. The refuter's corrections are in sections 1.3, 1.4, 2.2, 3, 4, 5 and 9.
+text from the notes. The kicad-spike session added two explanations to section 9 and made the card titles shorter. The refuter's corrections are in sections 1.3, 1.4, 2.2, 3, 4, 5 and 9. The council's
+findings are in sections 1.4, 2.3, 3.1 and 4.
 
 > In short: the "weird PCBs" are mostly tscircuit's automatic pour, which spark turns on in one line of the board file.
 > The rest is spark's own: big empty boards, modules with no body, 0.15 mm traces and nets named by pin.
@@ -42,7 +43,8 @@ The PO did not say which fault he sees ("I'm not sure why"). This order is the a
    Both come from spark's board file.
 4. Small faults (F8 to F11). One tscircuit default, two spark bugs and one fault that P512 fixed.
 
-The autorouter is the cause of no fault. The pinned version is a possible cause of F3 only.
+The autorouter is the cause of no fault at the export's 0.1 mm clearance. At 0.2 mm, its closest gap is 0.11 mm, a
+via to a track (section 1.3). The pinned version is a possible cause of F3 only.
 
 ![Today's board with the automatic pour](pcb-today-automatic-pour.png)
 
@@ -85,8 +87,16 @@ the 10 traces carry V33 in every build. The routes change. KiCad's DRC on that e
 
 ![The same board with one GND pour per layer](pcb-one-gnd-pour.png)
 
-Two things follow. This change removes F1 and most of F2 with two lines of the board file. It also lets kicad-cli
-alone finish the board, with no pcbnew script.
+The first pair of pictures was not like for like, as the council's PO assistant found. The session then built a fair
+pair from spark's own board of today, with today's footprint. Only the pour differs between the two builds.
+
+| Board, built 2026-11-26 | Automatic pour | One GND pour per layer |
+|---|---|---|
+| e-paper, spark's board of today | 1 V33 and 37 GND pieces on top, 2 V33 and 25 GND on the bottom, 0 errors | 1 GND piece per layer, 0 errors, 10 traces |
+| p711-sound-demo, five parts | 61 V33 and 165 GND pieces, 0 errors, 25 traces, 24 vias | 1 GND piece per layer, 0 errors, 25 traces, 24 vias |
+
+The two pictures in this folder are the e-paper pair. Two things follow. This change removes F1 and most of F2 with
+two lines of the board file. It also lets kicad-cli alone finish the board, with no pcbnew script.
 
 ## 2. KiCad
 
@@ -129,7 +139,7 @@ tscircuit board with no KiCad at all.
 |---|---|---|---|
 | The PCB and its routing | Short routes that repeat. The pour is the fault. | No routing by kicad-cli. Its refill and DRC run on tscircuit's routes. | KiCad adds the fill and the check, not the routes. |
 | The 3D model with the parts | The 3D tab shows pads and a box. | The render and the STEP show a body for the header only. | The same gap in both. It is F4, spark's. |
-| The export for Fusion 360 | `tsci export --help` lists `step` and `glb`. The spike did not run them. | STEP in 0.5 s. Fusion's KiCad importer needs "KiCad v7 files or higher". | No import into Fusion ran. |
+| The export for Fusion 360 | `tsci export -f step` ran in about 2 s without KiCad: 618 KB, one product named "PCB", no module bodies. | STEP in 0.5 s. Fusion's KiCad importer needs "KiCad v7 files or higher". | No import into Fusion ran. |
 | The install weight | 298 npm packages in a scratch project. | macOS download 1.4 GB, 4.8 GB installed. Windows download 969 MB. KiCad asks for up to 10 GB. | KiCad stays optional for a person. |
 | A headless run from a script | `tsci build` runs from `BuildService`. | Every kicad-cli command ran headless. | Both fit. |
 
@@ -168,11 +178,19 @@ It is missing:
    (`build_service.py:284`, 305). The engine builds the file named `board.tsx` (`board_engine.py:133`).
 4. The connections are never one value. `signal_lines`, `mcu_power_lines` and `module_power_lines` write them direct
    into TSX text (`board_sections.py:266`, 306, 389). The netlist exists only after the build: `netlist.Netlist`
-   reads the built `circuit.json` (`build_service.py:112`, `netlist.py:41`).
+   reads the built `circuit.json` (`build_service.py:112`, `netlist.py:41`). One case is different. For a board
+   alone, `board_alone_input` writes `netlist.json` before the build, and the converter reads it
+   (`build_service.py:478`). A later neutral plan reuses that shape.
 5. Every reader after the build reads `circuit.json`. 26 Python files under `scripts/` name it, and so does the Wokwi
    converter. The contract's name is `tscircuit-board` (`data/tools.json:22`).
 6. The engine's choices sit in text. The router, the pour and the via sizes are attributes of the `<board>` line
    (`board_sections.py:135` to 138).
+7. The router is a strategy too, as spark-main relayed. tscircuit's autorouter routes today. Freerouting, from the
+   Specctra DSN that tsci or pcbnew writes, or a KiCad engine, can route later. With the second engine, the seam also keeps
+   the router apart from the board writer.
+
+The council's architect seat named more selection sites and the contract's promise. See
+[council-answers.md](council-answers.md).
 
 ```mermaid
 flowchart TD
@@ -265,7 +283,8 @@ So spark does not move to KiCad. It adds KiCad after the build, by kicad-cli. Th
 
 The steps, each testable alone:
 
-1. The pour card. The fixture is the e-paper board: 0 errors and at most one GND pour piece per region.
+1. The pour card. The fixtures are the e-paper board and p711-sound-demo. `tsci build` gives 0 errors and one GND
+   pour piece per layer. KiCad's check names the clearance it used, from `min_trace_to_pad_edge_clearance`.
 2. The spark fault cards F9, F10, F6, F7 and F4, in that order of size.
 3. The seam card. A base `BoardEngine` and one selection point. No behaviour changes. A test points the role at a fake
    second engine.
@@ -304,7 +323,8 @@ untrue on this board, because V33 has traces today, and the pour card corrects i
 
 ## 6. Choices for the council
 
-Each answer is "delegated, the PO's to change". The recommended option is first.
+Each answer is "delegated, the PO's to change". The recommended option is first. The council's answers are in
+[council-answers.md](council-answers.md).
 
 1. Does spark move its board engine to KiCad now? (a) No, KiCad comes after the build as an export. (b) Yes, as an epic now. (c) No KiCad at all.
 2. Which pour does a generated board ask for? (a) One GND pour per layer. (b) The automatic pour, as today. (c) No pour.
@@ -321,7 +341,7 @@ Each answer is "delegated, the PO's to change". The recommended option is first.
 
 | Decision | Reason | Rejected |
 |---|---|---|
-| KiCad is an export after the build. | kicad-cli has no place or route command. The routes are clean. | KiCad as the engine now: very large, and it makes 1.4 GB a must. |
+| KiCad is an export after the build. | kicad-cli has no place or route command. The routes are clean at 0.1 mm. | KiCad as the engine now: very large, and it makes 1.4 GB a must. |
 | kicad-cli, no MCP server. | It ran headless today. AGENTS.md puts a local CLI first. | An MCP server: two more runtimes, and the IPC API needs the GUI. |
 | The pour fix is inside tscircuit. | Two lines, tried, 0 errors. | A KiCad fill in the build: the build then needs KiCad. |
 | The export is its own Operation. | The build must run without KiCad. Every frontend gets the chain. | A `--keep` flag: `BuildBoard` already holds a long argument list. |
@@ -369,12 +389,12 @@ tool and opened no picture.
   routed again on 2026-11-26 and gave 127 pieces, as the fresh builds did (notes, F10). So the two numbers describe
   two routes.
 - Does a newer tscircuit change the implicit pour or F3? The spike read one version.
-- Does the one-GND-pour change hold on the other 12 boards? The spike tried the e-paper board.
+- Does the one-GND-pour change hold on the other 11 boards? The spike tried the e-paper board and p711-sound-demo.
 - Does a named net per signal (F7) build? Does the Wokwi converter still read it? No one tried.
 - Does a tool exist that turns a KiCad board into `circuit.json`? No one looked.
 - Does a person's or a project's tools file name the contract `tscircuit-board`?
 - Does a build note already name a rail with no current, beside the comment in the file?
 - The size on disk of tscircuit's 298 packages, and KiCad's licence text.
-- `tsci export -f step` and `-f glb` did not run.
+- `tsci export -f glb` did not run.
 - Does Fusion's 80 cm² limit apply to an imported STEP file? Autodesk's page returned HTTP 403 to the refuter.
 - No DRC ran at a fab's real clearance. JLCPCB's minimum spacing was not read.
