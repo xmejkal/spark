@@ -38,13 +38,43 @@
  {
   "file": "scripts/spark/firmware/firmware_check.py",
   "name": "P1208: a missing firmware/ skips the own tests",
-  "find": "        tests = self.reader.read(project, outside.run)\n",
-  "replace": "        tests = self.reader.read(project if modules else project / \"nowhere\", outside.run)\n"
+  "find": "        tests = self.reader.read(project, outside)\n",
+  "replace": "        tests = self.reader.read(project if modules else project / \"nowhere\", outside)\n"
  },
  {
   "file": "scripts/spark/firmware/import_probe.py",
   "name": "P1208: the import child runs without the given run",
   "find": "IsolatedPython(run).call(",
   "replace": "IsolatedPython(lambda *a, **k: __import__(\"subprocess\").run(*a, **k)).call("
+ },
+ {
+  "file": "scripts/spark/firmware/own_tests_child.py",
+  "name": "P1208: skipped subtests are counted one each, not once per test",
+  "find": "len({getattr(test, \"test_case\", test).id() for test, _ in result.skipped})",
+  "replace": "len(result.skipped)"
+ },
+ {
+  "file": "scripts/spark/firmware/own_tests.py",
+  "name": "P1208: a run where every test was skipped reads as recorded",
+  "find": "if count[\"total\"] <= count[\"skipped\"]:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/spark/firmware/own_tests_child.py",
+  "name": "P1208: the child lets a test's atexit run after the count",
+  "find": "        os._exit(0)\n",
+  "replace": "        pass\n"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1208: an import finding takes its module by list position",
+  "find": "Finding.of(PROBLEMS, entry[\"module\"], entry[\"code\"],",
+  "replace": "Finding.of(PROBLEMS, FIRMWARE_SUBJECT, entry[\"code\"],"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1208: no firmware/ gives the empty imports of old",
+  "find": "return {\"state\": NOT_CHECKED} if unchecked else",
+  "replace": "return {} if unchecked else"
  }
 ]
