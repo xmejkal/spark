@@ -448,7 +448,7 @@ class BuildService:
 
 
 def no_wokwi_part(board):
-    """The could-not-run simulation stage of a board whose record names no Wokwi part, or None: one guard for the full
+    """The skipped simulation stage of a board whose record names no Wokwi part (P1207), or None: one guard for the full
     build and the board-only build (P955). It speaks before the converter, whose lint crashed on the null type, and before
     a missing converter or an unmapped part, so a person who adds the board's Wokwi part sees the next cause next."""
     if not board.get("wokwi_part_type"):

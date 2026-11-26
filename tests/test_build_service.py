@@ -27,7 +27,7 @@ from spark.records import tool_finder  # noqa: E402
 from spark.build.build_service import BuildInputs, BuildService, board_alone  # noqa: E402
 from spark.build.requirements_build import RequirementsBuildService  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
-from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS, SKIPPED  # noqa: E402
+from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, OK, PROBLEMS, SKIPPED  # noqa: E402
 from spark.build.build_service import every_part_skipped, findings_of, verdict, vouches_for_a_build  # noqa: E402
 
 REFERENCE = {"board": "firebeetle2-esp32s3", "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
@@ -322,23 +322,23 @@ class AStandInBoardsOwnPartsInTheFullBuildTest(TheSimulationStageOfASkippedDesig
 
 class ABoardWithNoWokwiPartInTheFullBuildTest(unittest.TestCase):
     """P955: a board whose record names no Wokwi part (the walk's FireBeetle 2 ESP32-C6) builds, and its simulation stage
-    could not run with the reason the board-only build gives, before the converter, whose lint crashed on the null type."""
+    is skipped (P1207, D11) with the reason the board-only build gives, before the converter, whose lint crashed on the null type."""
 
     BOARD = "xiao-with-no-wokwi-part"
     FEEDS = TheSimulationStageOfASkippedDesignTest.FEEDS
     stages = TheSimulationStageOfASkippedDesignTest.stages  # the helper alone: a subclass would run the parent's tests twice
 
-    def test_the_simulation_could_not_run_names_the_missing_part_type_and_the_converter_is_not_run(self):
+    def test_the_simulation_is_skipped_names_the_missing_part_type_and_the_converter_is_not_run(self):
         board = dict(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()), id=self.BOARD, wokwi_part_type=None)
         stages = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}], boards=[(self.BOARD, board)])
-        self.assertEqual([(stage.name, stage.status) for stage in stages][-2:], [("build", OK), ("simulation", COULD_NOT_RUN)])
+        self.assertEqual([(stage.name, stage.status) for stage in stages][-2:], [("build", OK), ("simulation", SKIPPED)])
         # P977: the board's own code, board_not_in_wokwi, which the flow's guide passes
         self.assertEqual((stages[-1].code, stages[-1].detail), ("board_not_in_wokwi", "the board record names no wokwi_part_type"))
         self.assertFalse((self.project / SHIM_ARGS).exists())  # the converter never ran
-        self.assertEqual((verdict(stages), vouches_for_a_build(stages)), (EXIT_COULD_NOT_RUN, False))
+        self.assertEqual((verdict(stages), vouches_for_a_build(stages)), (EXIT_OK, False))  # P1207: exit 0, still no vouch
 
     def test_the_full_path_still_keeps_the_sheet_the_pin_map_and_the_page_and_tries_the_picture(self):
-        # The review of PR #1364: the could-not-run simulation stops no kept file. The picture is refused here for the display's
+        # The review of PR #1364: the skipped simulation stops no kept file. The picture is refused here for the display's
         # own missing drawing fact, a part with no Wokwi part and no physical block; the walk's C6 drew it (the PR's manual check).
         board = dict(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()), id=self.BOARD, wokwi_part_type=None)
         board["physical"] = dict(board["physical"], header=dict(board["physical"]["header"], doubtful_pads=[]))
@@ -416,7 +416,7 @@ class EachEndingSaysItsDetailTest(unittest.TestCase):
         stages = board_alone({"name": "x"}, Path(tempfile.mkdtemp()))
         self.assertEqual([(stage.name, stage.status, stage.detail, stage.code) for stage in stages],
                          [(name, SKIPPED, "board only: nothing to wire", "board_only") for name in ("parts", "schematic", "footprint", "build")]
-                         + [("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type", "board_not_in_wokwi")])  # P977
+                         + [("simulation", SKIPPED, "the board record names no wokwi_part_type", "board_not_in_wokwi")])  # P977, P1207
 
     def test_a_crash_no_stage_caught(self):
         built = RequirementsBuildService(FakeBuildService(crashes)).build()
