@@ -132,7 +132,8 @@ class TheRecordTest(unittest.TestCase):
                          (True, ([], None), ([], None)))
 
     def test_a_record_of_any_other_shape_reads_no_rows_with_a_note_and_never_raises(self):
-        for text in ("{not json", "[]", '{"written": 5}', '{"written": ["x"], "parts_sha256": "y"}', '{"written": [{"need": "a"}]}', ""):
+        for text in ("{not json", "[]", '{"written": 5}', '{"written": ["x"], "parts_sha256": "y"}', '{"written": [{"need": "a"}]}', "",
+                     "[" * 100000):  # the review of P1140: deep nesting raised RecursionError and crashed flow.py show
             with self.subTest(text=text):
                 self.record.path.unlink(missing_ok=True)
                 self.write(text)

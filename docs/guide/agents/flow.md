@@ -152,7 +152,7 @@ the breadboard phase too when the sheet exists ([P886](https://github.com/xmejka
 
 The needs phase and the idea phase read `.spark/needs-basis.json` ([P1027](https://github.com/xmejkal/spark/issues/1506)):
 the needs are `stale` when the goal or the must lines changed after them, and the idea is `stale` when a need was
-dropped after the must lines were last gone through. [What the needs were written from](needs-basis.md) says how. The requirements phase reads `.spark/requirements-origin.json` ([P1140](https://github.com/xmejkal/spark/issues/1675)): when requirements.json differs from what the picks give and the file changed after spark last wrote it, the phase and `now.says` say it was changed by hand. With no record, or one from before P1140, they name no cause, and `stale` stays the status.
+dropped after the must lines were last gone through. [What the needs were written from](needs-basis.md) says how. The requirements phase reads `.spark/requirements-origin.json` ([P1140](https://github.com/xmejkal/spark/issues/1675)): when requirements.json differs from what the picks give and the file is not as spark last wrote it, the phase and `now.says` say it was changed by hand. With no record, or one from before P1140, they name no cause, and `stale` stays the status.
 
 ## The page
 

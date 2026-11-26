@@ -132,7 +132,7 @@ class EntryOriginStore:
         try:
             held = json.loads(self.path.read_text(encoding="utf-8"))
             rows, fits = [WrittenEntry(row["need"], row["entry"]) for row in held[WRITTEN]], held[PARTS_SHA256] == parts_sha256(existing)
-        except (OSError, ValueError, KeyError, TypeError):
+        except (OSError, ValueError, KeyError, TypeError, RecursionError):
             return [], NOTE_BROKEN
         return (rows, None) if fits else ([], NOTE_CHANGED if rows else None)
 
