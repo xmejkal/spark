@@ -122,7 +122,8 @@ A research agent read these on 2026-11-26.
 - spark already owns what every engine shares:
   - the requirements, and the part and board records with pads and bodies
   - the pin assignment (`assign_pins`) and the power rails (`power_rails.py`)
-  - the netlist and the placement (`board_components.place`)
+  - the placement (`board_components.place`). The netlist is not shared yet: `netlist.Netlist` reads the built
+    `circuit.json` (`netlist.py:41`), as the architect found.
   - the trace widths (`copper.py`) and the fab numbers (`data/fabrication.json`)
 - These are tscircuit's alone today: the board file's language (`board.tsx`, written by `board_sections.py`), the
   autorouter, the pour, the schematic layout, the views (`tsci dev`, circuit-to-svg) and `circuit.json`. The Wokwi
