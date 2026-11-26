@@ -3,7 +3,7 @@
 the line it read, verbatim. result: reproduced · not reproduced · rejected. keep: the words any summary of the claim
 must carry (phrases separated by ;), or none; keep comes last on the line. -->
 The refuter on Opus read the brief at commit a08a4eb5 (council/refuter.md). The facilitator reproduced what a command
-on this Mac could reach, at 16:30 to 16:45 CET on 2026-11-26, in a scratch folder that is deleted at the end.
+on this Mac could reach, at 16:20 to 16:32 CET on 2026-11-26, in a scratch folder that is deleted at the end.
 
 - ★C1 · pre-analysis.md:15 · refuter: partly — "So the population is 40 part and board records ... 34 of 40 hold an outline" · reproduced how: re-ran the key scan without `*.chip.json`: 40 records, 34 with an outline (2026-11-26) · result: reproduced after correction · keep: 3 of 40 <!-- REQUIRED:claims -->
 - ★C2 · scripts/spark/design/board_sections.py:258-259 · refuter: partly — "The footprint is not always `pinrowN`" · reproduced how: re-read the lines · result: reproduced after correction · keep: none
