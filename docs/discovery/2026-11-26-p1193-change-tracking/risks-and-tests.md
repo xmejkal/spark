@@ -11,15 +11,15 @@ e.g. `| usability | H no test yet (A2) | a five-person prototype test | open |` 
 | feasibility <!-- REQUIRED:risk-feasibility --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
 | viability <!-- REQUIRED:risk-viability --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
 | ethics and safety <!-- REQUIRED:risk-ethics --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
-| power and battery <!-- REQUIRED:electronics-firmware:power --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
-| current and stall <!-- REQUIRED:electronics-firmware:stall --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
-| thermal <!-- REQUIRED:electronics-firmware:thermal --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
-| EMC and ESD <!-- REQUIRED:electronics-firmware:emc-esd --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
-| sensor drift and calibration <!-- REQUIRED:electronics-firmware:sensor-drift --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
-| brown-out <!-- REQUIRED:electronics-firmware:brown-out --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
-| wake and low power <!-- REQUIRED:electronics-firmware:wake --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
-| the firmware–hardware contract <!-- REQUIRED:electronics-firmware:contract --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
-| supply and documents <!-- REQUIRED:electronics-firmware:supply --> | ⟨fill⟩ | ⟨fill⟩ | ⟨fill⟩ |
+| power and battery <!-- REQUIRED:electronics-firmware:power --> | n/a | n/a | n/a because D1 turned the electronics-firmware extension off: this epic keeps files and reads no part, pin or power fact |
+| current and stall <!-- REQUIRED:electronics-firmware:stall --> | n/a | n/a | n/a because D1 turned the electronics-firmware extension off: this epic keeps files and reads no part, pin or power fact |
+| thermal <!-- REQUIRED:electronics-firmware:thermal --> | n/a | n/a | n/a because D1 turned the electronics-firmware extension off: this epic keeps files and reads no part, pin or power fact |
+| EMC and ESD <!-- REQUIRED:electronics-firmware:emc-esd --> | n/a | n/a | n/a because D1 turned the electronics-firmware extension off: this epic keeps files and reads no part, pin or power fact |
+| sensor drift and calibration <!-- REQUIRED:electronics-firmware:sensor-drift --> | n/a | n/a | n/a because D1 turned the electronics-firmware extension off: this epic keeps files and reads no part, pin or power fact |
+| brown-out <!-- REQUIRED:electronics-firmware:brown-out --> | n/a | n/a | n/a because D1 turned the electronics-firmware extension off: this epic keeps files and reads no part, pin or power fact |
+| wake and low power <!-- REQUIRED:electronics-firmware:wake --> | n/a | n/a | n/a because D1 turned the electronics-firmware extension off: this epic keeps files and reads no part, pin or power fact |
+| the firmware–hardware contract <!-- REQUIRED:electronics-firmware:contract --> | n/a | n/a | n/a because D1 turned the electronics-firmware extension off: this epic keeps files and reads no part, pin or power fact |
+| supply and documents <!-- REQUIRED:electronics-firmware:supply --> | n/a | n/a | n/a because D1 turned the electronics-firmware extension off: this epic keeps files and reads no part, pin or power fact |
 <!-- EXTEND:risk-rows --><!-- EXTEND:pair-rows -->
 
 ## Assumptions
@@ -46,5 +46,5 @@ with its pointer), the pass line met or missed, what it changes. -->
 ## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
 <!-- Energy per mode · peaks per rail against the source · dissipation per part, each number with its provenance and
 the rung that would settle it (electronics-firmware:R<n>). "n/a — no battery, motor, radio or regulator" is allowed. -->
-⟨fill⟩
+n/a — no battery, motor, radio or regulator: the epic keeps files, and D1 turned the extension off
 <!-- EXTEND:risks-sections -->
