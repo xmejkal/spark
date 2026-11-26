@@ -7,12 +7,14 @@ Each choice waits on the PO, or on the delegated council of three, recorded "del
 > delegated council set it (D3 to D9, the PO's to change): P999 puts the FireBeetle 2 C6 on a Wokwi stand-in first.
 > One free Operation, `check-firmware`, then runs on every board and counts the project's own tests. A `Simulator`
 > seam makes Wokwi one strategy, with no change in behaviour. Last, a board that no simulator covers reads `skipped`
-> with its reason, once the PO says yes. The simulation is evidence at gate A and never a lock (his to decide).
+> with its reason, once the PO says yes. At gate A the council recommends the simulation as evidence. Whether it ever
+> locks the gate is his (Q5).
 
 ## The order to build
 
 1. P999 #1455 (the C6 stand-in) and item 4 (the limits list only after a run).
-2. Item 2: `check-firmware`, the import check moved onto the core, with the project's own tests.
+2. Items 2 and 3: `check-firmware`, the import check moved onto the core, with the project's own tests, and its
+   line on the page.
 3. P1078 #1582: the scenario run as an Operation, the paid run a yes with its cost named.
 4. Item 6: the `Simulator` seam, with no change in behaviour.
 5. Item 1: the flip to `skipped`, after the PO's yes to Q11.
@@ -36,8 +38,8 @@ code of his decision D-c). The questions are in [brief.md](brief.md).
    a list of controls that either model carries (★C7, ★C8, ★C20).
 5. No open simulator drives the pins of an ESP32-C6 today. QEMU names initial C6 support with no GPIO for any
    chip. Velxio has no C6 yet and is AGPL (★C12, [research-alternatives.md](research-alternatives.md)).
-6. P999 (the FireBeetle 2 C6 on a Wokwi stand-in) covers the only board that Wokwi lacks today, so the clock
-   then reads `skipped` from its e-paper alone (★C25, not run).
+6. P999 puts the only board that Wokwi lacks on a stand-in. The stand-in lacks GPIO14, and the clock uses it, so
+   the clock may stay uncovered (★C25, not run).
 7. The seam follows the P1089 engine pattern: a role in the tools list, a contract word, a table to an Adapter, a
    base class, and a Fake. The two seams share the lookup code, not a base class.
 

@@ -3,8 +3,8 @@
 block for more. needed by: the decider's words, quoted. value proven by: a proof the decider can read.
 status: proposed, or filed D<n>. -->
 
-The architect's list (council/architect.md §11), changed by the refuter and the delegated council (D3 to D8). The order to build: P999 #1455 and item 4, then item 2, then P1078 #1582, then item 6, then item 1 after Q11. Nothing is filed. spark-main files on the PO's yes.
-Cards left alone: P999 #1455 (do it beside slice 0), P1000 #1456 (waits on the bench read of the e-paper controller), P1078 #1582 (a prerequisite of item 6), P413 #539 (feeds item 9).
+The architect's list (council/architect.md §11), changed by the refuter and the delegated council (D3 to D8). The order to build: P999 #1455 and item 4, then items 2 and 3, then P1078 #1582, then item 6, then item 1 after Q11. P999 may not cover the clock, because its stand-in lacks GPIO14 and the clock uses it (brief ★C25). Nothing is filed. spark-main files on the PO's yes.
+Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read of the e-paper controller), P1078 #1582 (a prerequisite of item 6), P413 #539 (feeds item 9).
 
 ## 1. The flip: a board that no simulator covers ends the simulation stage `skipped` with a reason, in one small PR after the seam and after the PO's yes to Q11
 - type: story <!-- REQUIRED:item-type -->
@@ -32,7 +32,7 @@ Cards left alone: P999 #1455 (do it beside slice 0), P1000 #1456 (waits on the b
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: the clock's page names what can run and the free checks' result, in grey where nothing more runs <!-- REQUIRED:value-proven-by -->
-- depends on: items 1 and 2 <!-- REQUIRED:depends-on -->
+- depends on: item 2. It reads the build record's simulation stage as it is today, so it does not wait on item 1 <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): the page epic, linked to P1190 #1735 <!-- REQUIRED:spark-process:parent -->

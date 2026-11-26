@@ -99,3 +99,52 @@ Tags: holds, partly, refuted, could not open. "Partly" means the source says som
 ## Searches
 
 none. Page reads: https://docs.wokwi.com/chips-api/getting-started, https://wokwi.com/pricing, https://docs.wokwi.com/wokwi-ci/getting-started, https://github.com/espressif/esp-toolchain-docs/blob/main/qemu/README.md, https://developer.espressif.com/blog/2026/07/velxio-browser-based-esp32-simulation/, and the GitHub API for espressif/qemu releases, wokwi/wokwi-boards and wokwi/wokwi-cli releases.
+
+## Second pass, 2026-11-26
+
+Read on branch p1190-simulation at f4fea35e, with README.md as later committed in f33b1763. Only the sections the session changed. Nothing written but this section. No paid run. One free run: `scripts/import_firmware.py --json` on a temporary copy of the clock's firmware/ and tests/, removed after.
+
+### D rows and the PO's own choices
+
+- D1 to D9 each end "delegated, the PO's to change". Holds.
+- Q1, Q5, Q9, Q10, Q11, Q3's non-goal reading, Q6's "the editor" and Q7's dependency are marked queued, the PO's alone. Three places decide them anyway.
+  - D2 writes "a free check's record never blocks a deploy" into "must not get worse", a standing rule. Its sources say the opposite of standing: delegated-architect.md decision 6, "Whether a failed own test should stop a deploy is a gate choice, and it is the PO's", and delegated-po-assistant.md Q8, "the PO's, with Q5". D8 itself says "until the PO decides". Smallest fix: "never blocks a deploy until the PO answers Q5".
+  - README.md TL;DR: "The simulation is evidence at gate A and never a lock (his to decide)." That states Q5's answer as the direction. All three seats advise evidence plus the free condition "no failed run on the current image" (council-answers.md, advice), which is a lock on a failed run. Smallest fix: "Gate A is his (Q5). The council advises evidence, and a failed run on the current image still stops the deploy."
+  - items.md item 12, value proven by: "its licence read, and the rule written". The licence rule for another author's chip is Q7's dependency, the PO's alone.
+
+### 2. The changed sections against their detail
+
+- **D3 "3 of 3" is stronger than the tally for the order.** The tech lead puts P1078 before `check-firmware` (delegated-tech-lead.md, short version). council-answers.md row Q2: "The session takes the two". The PO assistant orders A1's forward test before P1078 and the seam, and puts `check-firmware` "on P1078's envelope". D3 drops the test from the order. So (d) as separate PRs is 3 of 3, and the order is the session's pick.
+- **items.md item 2 against the brief.** Item 2: "P1078 #1582 is its next user, not a blocker". Brief Q2 (a): "It depends on the P1078 pattern too (items.md item 2)". The PO assistant seat: "on P1078's envelope". One of the two lines is wrong. Also P1078's body keeps "flash_image with import_firmware" as one line on #1105. Item 2 takes half of it.
+- **D5 drops two conditions.** The architect's: "off" must not be the tool's `on` flag, because the same tool compiles chips for free. The PO assistant's: "The mapping goes to the PO before P410 closes as replaced, because P410 holds his own words." D5 also moves a `TOOL_OFF` could-not-run (exit 2) to `skipped` (exit 0) with no question like Q11.
+- **The Test line.** "3 of 3 on the split" overstates the PO assistant's line, whose pass needs a run and a failed check together. Dropped from it: "judged after the fact by the session that wants the result. It needs a rule", and its bar, a fault "that would stop `ready` or break a must line". The brief's yield bar is only "a firmware change".
+- **Q11** says the flip "also counts as done" and does not name the exit code an agent reads (2 becomes 0), which item 1 and correction 5 name.
+- **★C21's new caveat** says the record "says Wokwi simulates" the timer wake. The record's field is `deep_sleep.simulated_by_wokwi: false` (`boards/xiao-esp32-c6.json`). Only its note says a timer wakes, by an experiment on the XIAO C6 part, not on the DevKitC-1 stand-in that P999 uses.
+- **README main point 6** drops "most likely" from ★C25 and the tech lead's "★C25 can end there instead" (earlier stops at `build_service.py:403-416`).
+- **The frame** still says "Q0 to Q8", although council-answers.md tallies the tech lead's fix. D9 answers Q12, which is in neither Questions nor Options.
+- **items.md item 12** still proves value by "one free run", which the tech lead flagged ("it says free and also needs minutes") and D7 contradicts.
+
+### 3. Rivals the folder does not rule out
+
+- **P999 first, and ★C25.** The clock's firmware uses GPIO14: the walk project p934-display2's `firmware/pins.py:6`, `EPD_CS = 14`. P999 says GPIO14 is missing on the stand-in. A3's "result that would change the decision" is "the stand-in lacks a pin the clock uses". Both seats listed GPIO14 as unchecked. Rival: P999 needs a pin move on the clock, or ends at an earlier stop. Before `every_part_skipped` the stage can end `tool_missing`, `simulation_fact_missing` (the board's own parts, P792) or `chip_not_compiled`, all could-not-run (`build_service.py:403-416`, `stages.py:110-114`). The e-paper skips, so its pin may not reach the diagram. Not run.
+- **`check-firmware` before P1078.** Rival: it writes an Operation envelope before P1078 sets the scenario run's pattern, which is the redone work D3 meant to avoid. The tech lead's order avoids it.
+- **P1078 waits on nothing.** Holds. `gh issue view 1581`: CLOSED, COMPLETED, 2026-11-24 02:14 Prague time.
+- **The seam with no behaviour change.** Rival: with one Adapter and the flip held on Q11, the seam changes nothing a person sees. If Q11 is no, the card proves only that the goldens hold. A9 is rated high on a judgement with no test.
+- **The flip.** Rival: after P999 no real board reaches it. Its only proof is a fixture (item 1). A8's test "on the clock after slice 0" then tests P999's `every_part_skipped`, not the flip, and "slice 0" no longer exists in D3's order (risks-and-tests.md, usability row and A8, collection plan).
+- **The split pass line.** Rival: in D3's order the use half cannot test A1. A1 is "once on the page". Item 3 (the page line) depends on item 1, the last PR, which waits on Q11. Until then the log can only read "the session unasked", which tests Claude's habit, not the page.
+
+### 4. Numbers without unit, population, period or provenance
+
+- "3 of 3" (D3): the order is 2 of 3 at most.
+- "over the next 3 walks": no period, and no split between walks with the PO present and away. Three walks with no fault anywhere give "no information" and reach neither the pass nor the "below the line" branch.
+- "at least 1 fault": no judge and no bar for "fault".
+- "costs under a second" (`check-firmware`): measured on one project only. Tests 0.006 s to 0.031 s (three runs), and my import check on a copy of the clock, 0.21 s wall, 2026-11-26. No machine named.
+- "none after 2026-11-01" (README point 1, risks-and-tests value row): a floor of overwritten logs cannot bound the last run. The brief no longer names the population (how many walk folders).
+- "S", "M" in Q2 (d): still no unit.
+- D1: the PO's delegation of 2026-11-17 and 2026-11-20 is cited to "the session's memory", which no repository file holds.
+
+### What I could not check
+
+- P999's build on the clock, so ★C25 and the GPIO14 rival stay H.
+- Whether a skipped stage changes the flow's exit, as against the build's. I read `verdict` (`build_service.py:506-510`), not `scripts/flow.py`'s mapping.
+- The page's code.

@@ -4,7 +4,7 @@
 | risk | evidence now | cheapest way to retire it | status |
 | --- | --- | --- | --- |
 | value <!-- REQUIRED:risk-value --> | E ★C16: at least 3 paid runs in the walks, none after 2026-11-01, and friction explains it as well as low value. H the PO's words on P1190 want the step (A1) | Q9 to the PO, and a forward use log on the next walk | open |
-| usability <!-- REQUIRED:risk-usability --> | E council/user.md USER-5: the page's "No simulation" line and the build's "Could not run" read as a failure. H A8 | a walk on the clock after slice 0, with the PO's diary line | open |
+| usability <!-- REQUIRED:risk-usability --> | E council/user.md USER-5: the page's "No simulation" line and the build's "Could not run" read as a failure. H A8 | a walk on the clock after item 3, with the PO's diary line | open |
 | feasibility <!-- REQUIRED:risk-feasibility --> | E ★C5, ★C15, council/tech-lead.md TL-4: the seam's selection sites are known. H A2, A4, A7 | the seam card's plan reads each site. Two free spikes (items 5 and 12) | open |
 | viability <!-- REQUIRED:risk-viability --> | E ★C10: 50 simulated minutes per rolling 30 days on the free plan. A paid run is the PO's yes each time (D-a) | P413's count over one month (A6) | open |
 | ethics and safety <!-- REQUIRED:risk-ethics --> | E council/po-assistant.md PO-23, PO-24: a model the conversation wrote can pass firmware that fails on the real part | the result names "a model the conversation wrote" (A5) | open |
@@ -23,20 +23,20 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | A1 <!-- REQUIRED:assumptions --> | The free checks, once on the page, get run before the first deploy and catch a fault that otherwise costs a bench round | value | H the architect. E against the wider belief: ★C16 | — (decider) | Q9, and a forward use log on the next walk | use: the free checks run before the first deploy of the next walk. Yield: over 3 walks, at least 1 fault with a firmware fix found before the first deploy. Proposed 2026-11-26 by the delegated council (the replay test is dropped, council/refuter.md part 3) | no run before the deploy, or no fault in 3 walks while the bench finds one of a kind the checks claim: only the honest words ship | open |
 | A2 | A logic-level run of the person's own `main.py` on the stand-in works with no edit to firmware/ | feasibility | E ★C19: no irq, fixed bus values. H the tech lead (L) | — (decider) | item 14's spike on the clock | the loop runs 10 simulated seconds with no edit, proposed 2026-11-26 | it needs an edit per firmware | open |
-| A3 | A stand-in board by chip (Wokwi's ESP32-C6 DevKitC-1) covers the clock's GPIO and serial | feasibility | E ★C11, P999 #1455 | — (decider) | P999's build | the clock builds with a stand-in and names GPIO14, proposed 2026-11-26 | the stand-in lacks a pin the clock uses | open |
+| A3 | A stand-in board by chip (Wokwi's ESP32-C6 DevKitC-1) covers the clock's GPIO and serial | feasibility | E ★C11, P999 #1455. E against it: the clock uses GPIO14, which the stand-in lacks (★C25) | — (decider) | P999's build | the clock builds with a stand-in and names GPIO14, proposed 2026-11-26 | the stand-in lacks a pin the clock uses | open |
 | A4 | One record field carries the controls for every strategy | feasibility | H council/tech-lead.md TL-9, the architect's decision 8 | — (decider) | item 10's plan | one reader serves the chip's JSON and a built-in part, proposed 2026-11-26 | two sources of one control | open |
 | A5 | A result that says "a model the conversation wrote" keeps the person's trust after a false pass | ethics | H the PO assistant's pre-mortem 3 | — (decider) | an account question after the first such pass | the PO says he still trusts a pass that names the model, proposed 2026-11-26 | the person stops trusting "passed" | open |
 | A6 | The free Wokwi plan's 50 minutes per 30 days is enough for the PO's projects with the free checks first | viability | E ★C10, ★C16 | — (decider) | P413's count over one month | under 50 simulated minutes in 30 days, proposed 2026-11-26 | the minutes run out in a month | open |
 | A7 | A community chip loads in wokwi-cli by reference with no file copied | feasibility | E ★C20 for Wokwi's own board. Not tried in wokwi-cli | — (decider) | item 12's free spike | one free run with a referenced chip, proposed 2026-11-26 | it needs the source copied | open |
-| A8 | "Skipped, with the reason" in grey reads as no failure to the person | usability | E council/user.md USER-5 against today's words | — (decider) | the PO's diary line on the clock after slice 0 | no diary line calls the grey state a failure, proposed 2026-11-26 | he reads grey as broken | open |
+| A8 | "Skipped, with the reason" in grey reads as no failure to the person | usability | E council/user.md USER-5 against today's words | — (decider) | the PO's diary line on the clock after item 3 | no diary line calls the grey state a failure, proposed 2026-11-26 | he reads grey as broken | open |
 | A9 | The seam with one Adapter is worth one card before a second simulator exists | viability | E the P1089 council chose the same for the engine (council-answers.md:19). D-g | — (decider) | none, a judgement | the PO or the council says yes to the seam card, proposed 2026-11-26 | the PO says wait for a second strategy | open |
 
 ## Collection plan
 | question | decision it blocks | who can answer | how | when |
 | --- | --- | --- | --- | --- |
 | Why were the three built simulations never run? <!-- REQUIRED:collection --> | Q2, A1 | the PO | Q9, relayed by spark-main | at his next message |
-| Do the free checks, offered before the first deploy, run and find a fault? | A1 | the session on the next walk | a use log, no paid run | the next walk after slice 0 |
-| Do `wokwi-cli lint` and `chip compile` run with no token? | the free checks' scope | a free spike (item 5) | run with the token unset | in slice 0 or 1 |
+| Do the free checks, offered before the first deploy, run and find a fault? | A1 | the session on the next walk | a use log, no paid run | the next walk after items 2 and 3 |
+| Do `wokwi-cli lint` and `chip compile` run with no token? | the free checks' scope | a free spike (item 5) | run with the token unset | beside items 2 and 3 |
 | Does a community chip load by reference in wokwi-cli? | Q7, A7 | a free spike (item 12) | one run on the free plan, after the PO's yes for its minutes | slice 3 |
 | How many minutes does a month of the PO's use spend? | A6 | P413 #539 | the count per run | after P413 |
 
