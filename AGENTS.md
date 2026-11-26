@@ -53,8 +53,15 @@ These are the PO's standing rules for work on spark itself. Where a decision is 
 - Spark exports facts, never behaviour. It writes only what it derives from a record it holds, and never thresholds,
   timings, state tables or drivers. The conversation writes the firmware ([the firmware decision](docs/archive/2026-10-01-firmware-and-tests.md)).
 - One core, many interfaces. New code is a small class with one job in a library module, and `main()` only parses
-  arguments and prints. The CLI (with `--json`), the agents and MCP call that code. An agent prompt never repeats
-  its logic. When a fix touches a script, take the small refactor toward this shape if it makes the code simpler
+  arguments and prints. The core takes plain data in and gives plain data out. Every interface is a thin adapter over
+  it. Today these are the CLI for people and for agents (with `--json`), the page, and spark's skills, commands and
+  agents. Later come an MCP server, a local web server or app, a website, an API and code callers. An agent prompt
+  never repeats its logic. Each PR keeps every interface current. A page feature with no CLI path is not done. The
+  `--help`, the docs and spark's skills name the new command and its next step. Help text is written once and reused
+  by each interface.
+  Build no layer for an interface that does not exist yet
+  ([P1254](https://github.com/xmejkal/spark/issues/1812), the PO, 2026-11-26). When a fix touches a script, take
+  the small refactor toward this shape if it makes the code simpler
   ([v0.13, #94](https://github.com/xmejkal/spark/issues/94) moves each area onto the core, one PR per area).
 - Records grow by need. A property enters when a check, a stage or the PO needs it, with its origin. Prefer checks
   that read facts in records to logic written per part ([P94](https://github.com/xmejkal/spark/issues/17)).
