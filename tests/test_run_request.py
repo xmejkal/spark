@@ -87,6 +87,13 @@ class FakeReader:
         return Phase("parts", None, "·", "you", [], [Offer(key, "label of " + key, "effect of " + key, (), step_of(project, key)) for key in self.keys])
 
 
+class BuildStepReader(FakeReader):
+    """Fake PhaseReader: one phase that offers `keys`, each with the build's step, whose op the page runs."""
+
+    def answer(self, project):
+        return Phase("parts", None, "·", "you", [], [Offer(key, "label of " + key, "effect of " + key, (), offer_steps.build_step(project)) for key in self.keys])
+
+
 class RunRequestTest(unittest.TestCase):
     def setUp(self):
         home = Path(tempfile.mkdtemp())
@@ -319,6 +326,11 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
         for key in ("deploy", "simulate:main"):
             with self.subTest(key=key):
                 self.refused(key, "request_not_offered")
+
+    def test_an_offered_key_of_a_kind_spark_does_not_know_runs_nothing_even_with_an_op_the_page_runs(self):
+        """The review of P1134: the kind rule (`flow_codes.is_sendable`) refuses it, not the op allow-list."""
+        self.readers = [BuildStepReader(("deploy",))]
+        self.refused("deploy", "request_not_offered")
 
     def test_a_drop_is_asked_in_the_chat_and_runs_nothing(self):
         envelope = self.refused("needs-drop:light", "request_in_chat")
