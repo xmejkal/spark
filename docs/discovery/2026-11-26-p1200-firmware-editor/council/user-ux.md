@@ -60,4 +60,4 @@ Decision questions:
 
 ## Searches
 
-- No WebSearch. One fetch, made twice: `https://code.claude.com/docs/en/hooks.md`. It served D-q2, how Claude learns of an edit made on the page. Used (UX-9). Each copy was put in a temporary folder that was removed after the read.
+- One fetch, made twice: `https://code.claude.com/docs/en/hooks.md` · served D-q2 · It served D-q2, how Claude learns of an edit made on the page. Used (UX-9). Each copy was put in a temporary folder that was removed after the read.

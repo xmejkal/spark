@@ -294,6 +294,6 @@ Three web queries, made with `curl` from a temporary folder that was removed aft
 - `repo:espressif/esptool-js is:issue S3 OR C6 OR C3 reset` (GitHub issue search API, 44 results) · served: the same
   decision, and whether esptool-js resets a board as Python esptool does · used: the bodies of #279, #97, #150 and #277
   were read as results of this search (PH-3, PH-6, PH-9). #210 and #255 were read by title only.
-- A fetch of `https://raw.githubusercontent.com/WICG/serial/main/index.bs`, searched for DTR, RTS, `setSignals` and
+- A fetch of `https://raw.githubusercontent.com/WICG/serial/main/index.bs` · served PH-5, the signals at open · searched for DTR, RTS, `setSignals` and
   `open` · served: whether a page can open the C6's port with DTR and RTS off, as P1007's quiet connection does · used
   (PH-5).
