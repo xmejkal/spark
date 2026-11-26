@@ -83,8 +83,8 @@
  {
   "file": "scripts/spark/flow/offer_steps.py",
   "name": "a pick from the page is a dry run (P829)",
-  "find": "[\"--pick\", str(whole(project)), \"%s=%s\" % (need, pick_id)]",
-  "replace": "[\"--pick\", str(whole(project)), \"%s=%s\" % (need, pick_id), \"--dry-run\"]"
+  "find": "picks_step(project, [\"%s=%s\" % (need, pick_id)],",
+  "replace": "picks_step(project, [\"%s=%s\" % (need, pick_id), \"--dry-run\"],"
  },
  {
   "file": "scripts/spark/flow/run_request.py",

@@ -2,7 +2,7 @@
 The flow's follow-up (P1035, piece 3 of P793): after an ok run that wrote to a project, the core adds the steps that
 `flow.py show` names now, after the Operation's own, with one line each. `parts.py --pick` and `check_spine.py --keep` hand
 it to the core first. A step can hold a placeholder that Claude fills before the line runs: `<name>` of a scenario run,
-`<answers.json>` of the brief step. PR 2 (the PO's D16): after a run that wrote to a project with a page.html, at any
+`<answers.json>` of the brief step, `<part>` of the parts step (P1141). PR 2 (the PO's D16): after a run that wrote to a project with a page.html, at any
 status but a crash (P1069), and after `deploy.py` too (`PageFollowUp`), it writes the page again on disk
 (`write_flow_page.write_page`). It never publishes it and makes no GitHub call (D23): Claude republishes the page at the
 next /spark:page.
