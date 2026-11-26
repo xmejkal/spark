@@ -22,7 +22,7 @@ are taken at filing time, after reading the highest one (P1239 on 2026-11-26).
 - type: chore <!-- REQUIRED:item-type -->
 - needed by: "it would just be the best if every record had its 3d shape" (the PO, 2026-11-26, #1745) <!-- REQUIRED:needed-by -->
 - value proven by: the words.md rows, and `parts.py --validate` naming the two store records whose `facts.thickness_mm` holds an overall height (DFR0205 and DFR0831) <!-- REQUIRED:value-proven-by -->
-- depends on: Q14 <!-- REQUIRED:depends-on -->
+- depends on: nothing. The words are `z_max_mm` and `z_min_mm`, with z 0 at the top face of the part's own board (D13, delegated) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): chore <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1197 #1745 <!-- REQUIRED:spark-process:parent -->
@@ -38,7 +38,7 @@ are taken at filing time, after reading the highest one (P1239 on 2026-11-26).
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): its parent stays P203 #163 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): 7 Perfboard to PCB (unchanged) <!-- REQUIRED:spark-process:slice -->
-- what it adds: the body arrives resolved on each part, so `emit` gets no eighth parameter (C27). It never reads `body_of`'s 16 x 12 mm default (AR-18). `MakerUses` and `Decline` move to a neutral module first, with the old names kept as imports for one step (AR-2)
+- what it adds: the body arrives resolved on each part, so `emit` gets no eighth parameter (C27). It never reads `body_of`'s 16 x 12 mm default (AR-18). `MakerUses` and `Decline` move to a neutral module first, with the old names kept as imports for one step (AR-2). The JSCAD plan is a union of the record's box and its pin row, and one function writes `cadModel` (D13, delegated). KiCad still loses the header body (★C33)
 
 ## Extend P1183 #1727 (no new card): `export-board` writes a DRC report, a render and a STEP → it also takes the forms `step` and `glb` from `tsci`, and checks every body first
 - type: story (as today) <!-- REQUIRED:item-type -->
@@ -49,7 +49,7 @@ are taken at filing time, after reading the highest one (P1239 on 2026-11-26).
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): its parent stays P203 #163 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): 7 Perfboard to PCB (unchanged) <!-- REQUIRED:spark-process:slice -->
-- what it adds: it widens `TscircuitExport`, with no third wrapper of `tsci` (AR-10). A body file is a local absolute path from the store, and a URL is refused, so the export declares no `fetches` (★C22, TL-9). The 3D outputs go into spark's `.gitignore` section (AR-19). `kept_files.py` is at its 600-line limit, so the keep is split first (AR-20)
+- what it adds: it widens `TscircuitExport`, with no third wrapper of `tsci` (AR-10). A body file is a local absolute path from the store, and a URL is refused, so the export declares no `fetches` (★C22, TL-9). The 3D outputs go into spark's `.gitignore` section (AR-19). The answer names each part that has a body in one form and none in the other, and each part with no z fact (D13, delegated). `kept_files.py` is at its 600-line limit, so the keep is split first (AR-20)
 
 ## P?: a board's mechanical facts are spread over its record, each part's record and the placements, so Claude guesses a number for a case → one Value `BoardMechanics` and the Operation `show-board-mechanics`, with each missing number named and asked
 - type: story <!-- REQUIRED:item-type -->
@@ -66,7 +66,7 @@ are taken at filing time, after reading the highest one (P1239 on 2026-11-26).
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "some basic cover would be created" and "allow for prining and exporting the 3d printer files for like verysimple cases" (the PO, 2026-11-26, #1745) <!-- REQUIRED:needed-by -->
 - value proven by: the printed case for his FireBeetle fits (a photo and a calliper reading), and `FakeCaseMaker` runs through the same Operation in the tests <!-- REQUIRED:value-proven-by -->
-- depends on: T2 passing, which the PO set as the condition (D8), the mechanics card, and Q16 <!-- REQUIRED:depends-on -->
+- depends on: T2 passing, which the PO set as the condition (D8), and the mechanics card. Its first member is tscircuit's solver called direct, and its print form is one manifold STL per printed part (D13, delegated) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1197 #1745 <!-- REQUIRED:spark-process:parent -->
