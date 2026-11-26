@@ -3,7 +3,7 @@
 Spike for [#1600](https://github.com/xmejkal/spark/issues/1600), under P203 [#163](https://github.com/xmejkal/spark/issues/163).
 Date: 2026-11-26. The evidence is in [notes.md](notes.md) and three pictures in this folder. The architect wrote this
 text from the notes. The kicad-spike session added two explanations to section 9 and made the card titles shorter. The refuter's corrections are in sections 1.3, 1.4, 2.2, 3, 4, 5 and 9. The council's
-findings are in sections 1.4, 2.3, 3.1 and 4. Section 5 holds the numbers of the filed cards. Section 2.4 holds the Freerouting run and a fair comparison of the two routers. Section 1.2 adds F12.
+findings are in sections 1.4, 2.3, 3.1 and 4. Section 5 holds the numbers of the filed cards. Section 2.4 holds the Freerouting run and a fair comparison of the two routers. Section 1.2 adds F12. P1191 [#1736](https://github.com/xmejkal/spark/issues/1736) names these cards as the faults.
 
 > In short: the "weird PCBs" are mostly tscircuit's automatic pour, which spark turns on in one line of the board file.
 > The rest is spark's own: big empty boards, modules with no body, 0.15 mm traces and nets named by pin.
@@ -338,7 +338,7 @@ change". One comment on [#163](https://github.com/xmejkal/spark/issues/163) hold
 - P1187 [#1731](https://github.com/xmejkal/spark/issues/1731): the schematic names each signal's net by pin (F7) → each signal goes on a net with its own name
 - P1188 [#1732](https://github.com/xmejkal/spark/issues/1732), with F10 below: the footprint file prints "None mm" for a null `drill_mm` (F9) → it says that the drawing states no drill
 - P1188 [#1732](https://github.com/xmejkal/spark/issues/1732), with F9 above: `--keep` keeps an old footprint file that spark wrote (F10) → spark replaces it by `board.tsx`'s rule
-- P? (not filed yet): spark states no clearance and no track width to the router (F12) → `<board>` gets both from `data/fabrication.json`
+- P1189 [#1734](https://github.com/xmejkal/spark/issues/1734): spark states no clearance and no track width to the router (F12) → `<board>` gets both from `data/fabrication.json`
 - Later epic line under P203: KiCad as a second board engine behind the seam. Done: one real board builds through the engine
   that the `board-engine` role chose, and every check reads its result.
 

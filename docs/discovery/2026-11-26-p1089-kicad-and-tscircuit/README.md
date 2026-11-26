@@ -20,7 +20,8 @@ The raw evidence, with every command and count, is [notes.md](notes.md).
   tscircuit routed the e-paper board with 0 errors. Freerouting used no vias, and tscircuit used 5.
 - Today spark states no clearance, so tscircuit routes at 0.1 mm and KiCad finds 6 errors at 0.2 mm. The notes call this fault F12.
 - The PO decides on the recommendation.
-- The cards are P1182 to P1188 (#1726 to #1732), under P203. P1182 is the one ground pour per layer.
+- The cards are P1182 to P1189 (#1726 to #1732 and #1734), under P203. P1191 #1736 makes the PCB tab say "draft,
+  not checked for ordering". P1182 is the one ground pour per layer.
 
 ## Before and after
 
