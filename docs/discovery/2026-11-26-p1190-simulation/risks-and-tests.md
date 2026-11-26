@@ -3,7 +3,7 @@
 ## Risks
 | risk | evidence now | cheapest way to retire it | status |
 | --- | --- | --- | --- |
-| value <!-- REQUIRED:risk-value --> | E ★C16: 3 paid runs in 15 walk folders, none since 2026-11-01. H the PO's words on P1190 want the step (A1) | Q9 to the PO, and the replay test on the clock | open |
+| value <!-- REQUIRED:risk-value --> | E ★C16: at least 3 paid runs in the walks, none after 2026-11-01, and friction explains it as well as low value. H the PO's words on P1190 want the step (A1) | Q9 to the PO, and a forward use log on the next walk | open |
 | usability <!-- REQUIRED:risk-usability --> | E council/user.md USER-5: the page's "No simulation" line and the build's "Could not run" read as a failure. H A8 | a walk on the clock after slice 0, with the PO's diary line | open |
 | feasibility <!-- REQUIRED:risk-feasibility --> | E ★C5, ★C15, council/tech-lead.md TL-4: the seam's selection sites are known. H A2, A4, A7 | the seam card's plan reads each site. Two free spikes (items 5 and 12) | open |
 | viability <!-- REQUIRED:risk-viability --> | E ★C10: 50 simulated minutes per rolling 30 days on the free plan. A paid run is the PO's yes each time (D-a) | P413's count over one month (A6) | open |
@@ -21,7 +21,7 @@
 ## Assumptions
 | id | belief | type | evidence now | importance | cheapest test | pass line, dated | result that would change the decision | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A1 <!-- REQUIRED:assumptions --> | The free checks, once on the page, get run before the first deploy and catch a fault that otherwise costs a bench round | value | H the architect. E against the wider belief: ★C16 | — (decider) | Q9, and the replay of the clock's commits before its fixes | at least 2 faults caught by the replay, and the free checks run before the first deploy of the next walk, proposed 2026-11-26 | fewer than 2 faults, or the next walk skips them: only the honest words ship | open |
+| A1 <!-- REQUIRED:assumptions --> | The free checks, once on the page, get run before the first deploy and catch a fault that otherwise costs a bench round | value | H the architect. E against the wider belief: ★C16 | — (decider) | Q9, and a forward use log on the next walk | the free checks run before the first deploy and find at least 1 fault that the bench would otherwise have found, proposed 2026-11-26 (the replay test is dropped, council/refuter.md part 3) | no run before the deploy, or no fault found: only the honest words ship | open |
 | A2 | A logic-level run of the person's own `main.py` on the stand-in works with no edit to firmware/ | feasibility | E ★C19: no irq, fixed bus values. H the tech lead (L) | — (decider) | item 14's spike on the clock | the loop runs 10 simulated seconds with no edit, proposed 2026-11-26 | it needs an edit per firmware | open |
 | A3 | A stand-in board by chip (Wokwi's ESP32-C6 DevKitC-1) covers the clock's GPIO and serial | feasibility | E ★C11, P999 #1455 | — (decider) | P999's build | the clock builds with a stand-in and names GPIO14, proposed 2026-11-26 | the stand-in lacks a pin the clock uses | open |
 | A4 | One record field carries the controls for every strategy | feasibility | H council/tech-lead.md TL-9, the architect's decision 8 | — (decider) | item 10's plan | one reader serves the chip's JSON and a built-in part, proposed 2026-11-26 | two sources of one control | open |
@@ -35,7 +35,7 @@
 | question | decision it blocks | who can answer | how | when |
 | --- | --- | --- | --- | --- |
 | Why were the three built simulations never run? <!-- REQUIRED:collection --> | Q2, A1 | the PO | Q9, relayed by spark-main | at his next message |
-| Does the replay of the clock's commits catch faults that reached the bench? | A1 | the session, in a temporary copy | the import check and `tests/` per commit, no paid run | once the PO or the council says yes to the test |
+| Do the free checks, offered before the first deploy, run and find a fault? | A1 | the session on the next walk | a use log, no paid run | the next walk after slice 0 |
 | Do `wokwi-cli lint` and `chip compile` run with no token? | the free checks' scope | a free spike (item 5) | run with the token unset | in slice 0 or 1 |
 | Does a community chip load by reference in wokwi-cli? | Q7, A7 | a free spike (item 12) | one run on the free plan, after the PO's yes for its minutes | slice 3 |
 | How many minutes does a month of the PO's use spend? | A6 | P413 #539 | the count per run | after P413 |

@@ -11,17 +11,20 @@ Each choice waits on the PO, or on the delegated council of three, recorded "del
 
 ## The main points
 
-1. The paid run is rare. The PO's 15 walk folders hold 3 distinct paid runs, and none after 2026-11-01. In three
-   walks the simulation was built and nobody ran it (brief ★C16).
+1. Paid runs are few: at least 3 in the PO's walks, none after 2026-11-01. In one walk the free checks ran and the
+   paid run waited, because nobody knew the minutes left. So friction explains the rarity as well as low value
+   (brief ★C16).
 2. On a board that Wokwi lacks, even the free checks do not run today. The dry run needs `sim/` files that the build
    does not write there (★C17).
 3. Free checks exist that spark does not show: the import check, and the host tests that the conversation wrote. The
    clock has 35 such tests, and they pass in under a second (★C18).
 4. The PO's three ways to simulate a part are two models and a skip in the part record. A "setting with sliders" is
    a list of controls that either model carries (★C7, ★C8, ★C20).
-5. No open simulator drives the pins of an ESP32-C6 today. QEMU boots the C6 without GPIO. Velxio has no C6 and is
-   AGPL (★C12, [research-alternatives.md](research-alternatives.md)).
-6. The seam follows the P1089 engine pattern: a role in the tools list, a contract word, a table to an Adapter, a
+5. No open simulator drives the pins of an ESP32-C6 today. QEMU names initial C6 support with no GPIO for any
+   chip. Velxio has no C6 yet and is AGPL (★C12, [research-alternatives.md](research-alternatives.md)).
+6. P999 (the FireBeetle 2 C6 on a Wokwi stand-in) covers the only board that Wokwi lacks today, so the clock
+   then reads `skipped` from its e-paper alone (★C25, not run).
+7. The seam follows the P1089 engine pattern: a role in the tools list, a contract word, a table to an Adapter, a
    base class, and a Fake. The two seams share the lookup code, not a base class.
 
 ## The step, in six substeps
