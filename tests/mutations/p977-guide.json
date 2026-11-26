@@ -104,8 +104,8 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the two jobs name Claude alone (P977 review 6)",
-  "find": "    sentence = flow_codes.NowSentence([flow_codes.BY_YOU, flow_codes.BY_CLAUDE],",
-  "replace": "    sentence = flow_codes.NowSentence([flow_codes.BY_CLAUDE],"
+  "find": "        return flow_codes.NowSentence([flow_codes.BY_YOU, flow_codes.BY_CLAUDE],",
+  "replace": "        return flow_codes.NowSentence([flow_codes.BY_CLAUDE],"
  },
  {
   "file": "scripts/spark/flow/guide.py",

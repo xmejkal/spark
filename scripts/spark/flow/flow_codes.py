@@ -523,8 +523,8 @@ CHAT_NOW = {(FIRMWARE, NOT_STARTED): WRITE_FIRMWARE,
             (SIMULATE, NO_SCENARIO): RUN_SIMULATION,
             (DEPLOY, NOT_STARTED): LOOK_AT_BOARD, (DEPLOY, PARTIAL): LOOK_AT_BOARD, (DEPLOY, FLASH_NOT_FINISHED): LOOK_AT_BOARD,
             (DEPLOY, IMAGE_DIFFERS): LOOK_AT_BOARD}
-#: Value: the NOW sentence a picker chose (P1133, `guide.who_and_sentence`, `deploy_reading.deploy_now`): who acts (`by`), the
+#: Value: the NOW sentence a picker chose (P1133, `guide.who_and_sentence`, `deploy_reading.deploy_now`, `guide.requirements_now`): who acts (`by`), the
 #: sentence (`says`), and `chosen_by`, the (phase, value) pair it chose the sentence by, never an actor, which
-#: `guide.chat_offer_of` looks up in CHAT_NOW.
+#: `guide.chat_offer_of` looks up in CHAT_NOW once, on the last sentence (`guide.now_of`).
 NowSentence = namedtuple("NowSentence", "by says chosen_by")
 # --- end MVP ---

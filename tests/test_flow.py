@@ -2874,7 +2874,7 @@ class TheNowSentenceTest(unittest.TestCase):
                 self.assertEqual((told.chosen_by, chat_offer_of(told)), (("requirements", "stale"), None))
 
     def test_every_key_of_the_chat_offer_table_is_a_value_some_picker_returns(self):
-        # one entry per branch of the pickers (who_and_sentence, deploy_now, the two jobs, the stale parts list)
+        # the pairs the pickers return for the phases that have a chat offer, and the stale parts list (the plan's table)
         returned = {("simulate", "no-sim-files"), ("simulate", "no-scenario"), ("simulate", "run-failed"),
                     ("simulate", "image-older"), ("simulate", "image-untested"), ("simulate", "not-started"),
                     ("firmware", "not-started"), ("firmware", "problems"), ("firmware", "could-not-run"),
