@@ -52,7 +52,7 @@ def look_first_step(project, no_simulation):
                                 needs_person=True))
 
 
-def simulate_steps(project, phase):
+def simulate_steps(project, phase, guide=None):
     """The simulate's steps: the build while sim/wokwi.toml is no file, the scenario runs while no run tested the image
     or the firmware changed after it, else none (a failed run, problems, a phase that could not run)."""
     fact = image_fact(project).fact if phase.status in (flow_codes.NOT_STARTED, None) else None
@@ -84,7 +84,7 @@ def deploy_steps(project, phase, guide):
 #: The step function of each phase that names one when it holds no offer, each `(project, phase, guide)`: a phase's
 #: step changes in its one entry. The needs and the breadboard name none, and the firmware is written in the chat.
 PHASE_STEPS = {flow_codes.IDEA: idea_steps, flow_codes.PARTS: parts_steps,
-               flow_codes.SIMULATE: lambda project, phase, guide: simulate_steps(project, phase), flow_codes.DEPLOY: deploy_steps}
+               flow_codes.SIMULATE: simulate_steps, flow_codes.DEPLOY: deploy_steps}
 
 
 def steps_of(project, phases, guide):

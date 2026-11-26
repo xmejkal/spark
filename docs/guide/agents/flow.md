@@ -308,7 +308,7 @@ A pick is the person's choice. Its step has `needs_person: true`, and `why` name
 | simulate | no image, an image no run tested, or one older than `firmware/` | `run_scenario` (`run_scenario.py`), one per `sim/scenarios/*.scenario.yaml`. While none is written, it names `sim/scenarios/<name>.scenario.yaml`, and Claude writes that scenario first | true |
 | deploy | `not-started`, `partial`, `problems` or `stale` | `look` (`look.py`), with `--no-simulation` when `data.guide.no_simulation` is set | true |
 | idea | `stale` (a need was dropped) | `init_project` (`init_project.py`), the brief step, with `needs_yes: true` and `--answers <answers.json>` | no key |
-| parts | `not-started` or `partial`, and more than one pick offer ([P1141](https://github.com/xmejkal/spark/issues/1676)) | `pick` (`parts.py`), one step with `<need>=<part>` for each need in `data.guide.now.needs`. Claude fills each `<part>` with the person's choice | true |
+| parts | `not-started` or `partial`, and no one pick offer ([P1141](https://github.com/xmejkal/spark/issues/1676)) | `pick` (`parts.py`), one step with `<need>=<part>` for each need in `data.guide.now.needs`. Claude fills each `<part>` with the person's choice | true |
 
 `run-request` runs the build step from the page's button, and refuses `run_scenario` and `look`. An op named like a
 script is `scripts/<op>.py`, not on the core yet (piece 5 of [P793](https://github.com/xmejkal/spark/issues/1105)). With

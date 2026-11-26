@@ -338,6 +338,15 @@ class TheMatchReadsThePicksTest(unittest.TestCase):
         line = next(line for line in self.text("--match") if "xiao-esp32-c6 (library)" in line)
         self.assertIn("free 1 (1 held by this project)  [picked for board, light, blink]", line)
 
+    def test_the_pieces_held_here_come_before_the_other_holders(self):
+        # the PR lens: "free 3, held by alarm2 (1 held by this project)" read as the other project's hold
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 3, "is": {"board": "xiao-esp32-c6"},
+                                                                    "used_in": {"door-bell": 1}}))
+        self.with_needs([{"id": "board", "does": "compute", "what": "microcontroller"}])
+        run(["--pick", str(self.project), "board=xiao-esp32-c6"])
+        line = next(line for line in self.text("--match") if "xiao-esp32-c6 (library)" in line)
+        self.assertIn("free 2 (1 held by this project), held by door-bell  [picked for board]", line)
+
     def test_a_many_count_a_hold_with_no_pick_and_a_part_nobody_holds(self):
         (self.home / "drawer" / "buttons.json").write_text(json.dumps({"schema": 1, "label": "a bag of buttons", "count": "many",
                                                                         "is": {"part": "tactile-button"}, "used_in": {"plant-alarm": 1}}))

@@ -19,3 +19,9 @@ acted, raised and rejected findings only. 2026-11-26.
 | 10 | three pick texts in `ThePicksTest` pin the text with no `next:` line | the build | acted | each now ends with the flow's parts step line, the line the card asks for |
 | 11 | `test_an_unlisted_project_is_not_named_as_holding_its_own_board` read "held by" anywhere in the line | the build | acted | it reads `, held by` (a list of holders) and asserts `(1 held by this project)` |
 | 12 | `test_a_review_right_after_the_drop_clears_the_idea_and_a_defining_write_does_not` pins `next == []` after the review, while its now is a parts phase with open needs | the build | acted | it asserts that the brief step goes and that the now's step is the parts pick |
+| 13 | `free 3, held by alarm2 (1 held by this project)` reads as the other project's hold | PR lens (Sonnet) | acted | the own pieces come right after the free count, before `held by`; a test with both |
+| 14 | flow.md's parts row says "more than one pick offer", but the step comes whenever the now names no offer, zero offers too | PR lens (Sonnet) | acted | "no one pick offer" |
+| 15 | flow.md's paragraph above the table is one long line | PR lens (Sonnet) | rejected | flow.md is at its 400-line budget, and the new table row needs that line |
+| 16 | `PHASE_STEPS` wraps `simulate_steps` in a lambda | PR lens (Sonnet) | acted | `simulate_steps(project, phase, guide=None)` takes the table's signature |
+| 17 | `list_needs.picked_words` reads a pick's key itself | PR lens (Sonnet) | rejected | it is one line that only formats, and `needs.py` reads the same shape the same way in several places |
+| 18 | `match` turns a candidate's kind None into "entry" before `picked_for` | PR lens (Sonnet) | rejected | in `picked_for` a kind of None means "any kind", the rule of `named_pick` and `needs_picking`; two meanings of None would be worse |

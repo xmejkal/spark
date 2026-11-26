@@ -18,7 +18,8 @@ from spark.design.find_offers import MATCHER_HELP
 # --- MVP ---
 #: The sentence of a project with no needs yet.
 NO_NEEDS_SENTENCE = "%s has no needs yet — /spark:idea writes them"
-#: What a candidate's line says of this project (P1141): the pieces it holds, after the free count, and the needs that pick it.
+#: What a candidate's line says of this project (P1141): the pieces it holds, right after the free count and before the
+#: other holders, and the needs that pick it.
 HELD_HERE, PICKED_FOR = " (%s held by this project)", "[picked for %s]"
 
 
@@ -61,7 +62,7 @@ class MatchNeeds(AnswerOperation):
                 held_here, picked_for = own_words(c)
                 lines.append("      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
                                                       "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
-                                                                              ("free %s%s%s" % (c["free"], ", held by " + ", ".join(map(printable, c["held_by"])) if c["held_by"] else "", held_here)) if c["owned"] else "",
+                                                                              ("free %s%s%s" % (c["free"], held_here, ", held by " + ", ".join(map(printable, c["held_by"])) if c["held_by"] else "")) if c["owned"] else "",
                                                                               "owes " + ", ".join(c["owes"]) if c["owes"] else "",
                                                                               c.get("stop_line") or "", picked_for])))
                              + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else ""))
