@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from fakes import FakeBuildService, FakeToolFinder, FakeTscircuitEngine, FakeTscircuitExport  # noqa: E402
 from golden_design import fed_circuit  # noqa: E402
-from spark.build import board_engine, build_codes, kept_files  # noqa: E402
+from spark.build import board_engine, build_board, build_codes, kept_files  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.build.build_service import BuildInputs, BuildService, board_alone  # noqa: E402
 from spark.build.requirements_build import RequirementsBuildService  # noqa: E402
@@ -336,6 +336,13 @@ class ABoardWithNoWokwiPartInTheFullBuildTest(unittest.TestCase):
         self.assertEqual((stages[-1].code, stages[-1].detail), ("board_not_in_wokwi", "the board record names no wokwi_part_type"))
         self.assertFalse((self.project / SHIM_ARGS).exists())  # the converter never ran
         self.assertEqual((verdict(stages), vouches_for_a_build(stages)), (EXIT_OK, False))  # P1207: exit 0, still no vouch
+
+    def test_the_closing_line_names_the_missing_wokwi_part_in_its_codes_words(self):
+        # P1207: the line is the code's own meaning, not the every-part-skipped line
+        board = dict(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()), id=self.BOARD, wokwi_part_type=None)
+        stages = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}], boards=[(self.BOARD, board)])
+        self.assertEqual(build_board.render(stages, verdict(stages)).splitlines()[-1],
+                         "  the chain runs end to end; " + build_codes.BOARD_NOT_IN_WOKWI.meaning)
 
     def test_the_full_path_still_keeps_the_sheet_the_pin_map_and_the_page_and_tries_the_picture(self):
         # The review of PR #1364: the skipped simulation stops no kept file. The picture is refused here for the display's
