@@ -2839,6 +2839,30 @@ class TheOfferKindsTableTest(unittest.TestCase):
         self.assertEqual(named, {"write-firmware", "run-simulation", "look-at-board"})
         self.assertEqual([kind for kind in named if not flow_codes.OFFER_KINDS[kind].tell], [])
 
+    def test_kind_of_is_the_word_before_the_first_colon(self):
+        self.assertEqual(flow_codes.kind_of("pick:light:led-red-5mm"), "pick")
+        self.assertEqual(flow_codes.kind_of("needs-drop:light"), "needs-drop")
+        self.assertEqual(flow_codes.kind_of("build"), "build")
+
+    def test_only_a_pick_the_parts_list_and_the_build_are_sendable(self):
+        for key in ("pick:light:led-red-5mm", "pick", "requirements", "build"):
+            with self.subTest(key=key):
+                self.assertTrue(flow_codes.is_sendable(key))
+                self.assertFalse(flow_codes.in_chat(key))
+        for key in ("needs-drop:light", "write-firmware", "run-simulation", "look-at-board"):
+            with self.subTest(key=key):
+                self.assertFalse(flow_codes.is_sendable(key))
+                self.assertTrue(flow_codes.in_chat(key))
+        for key in ("deploy", "simulate:main", ""):
+            with self.subTest(key=key):
+                self.assertFalse(flow_codes.is_sendable(key))
+                self.assertFalse(flow_codes.in_chat(key))  # a kind spark does not know is in no chat either
+        self.assertEqual(flow_codes.SENDABLE, ("pick", "requirements", "build"))
+
+    def test_the_words_of_a_request_whose_offer_left_the_page_are_those_of_the_sendable_kinds(self):
+        self.assertEqual(set(flow_codes.LAST_REQUEST_KINDS), set(flow_codes.SENDABLE))
+        self.assertEqual(set(flow_codes.RAN_OK_SAYS), set(flow_codes.SENDABLE))
+
 
 class TheSecretMaskTest(FlowTest):
     """P1060 (#1558): `show` masks the values of the project's secrets file as `***`. A file that cannot be read or parsed

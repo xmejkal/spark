@@ -158,9 +158,29 @@ OFFER_KINDS = {PICK: OfferKind(PARTS, PICK_LABEL, True, None),
                WRITE_FIRMWARE: OfferKind(FIRMWARE, WRITE_FIRMWARE_LABEL, False, "Write the firmware for this project's board."),
                RUN_SIMULATION: OfferKind(SIMULATE, RUN_SIMULATION_LABEL, False, "Help me run the simulation of this project."),
                LOOK_AT_BOARD: OfferKind(DEPLOY, LOOK_AT_BOARD_LABEL, False, "Look at this project's board with me.")}
-#: The kinds the page sends from its buttons, and the kinds asked in the chat, never from the page (`run_request`).
-SENDABLE = tuple(kind for kind, row in OFFER_KINDS.items() if row.from_page)
-IN_CHAT = tuple(kind for kind, row in OFFER_KINDS.items() if not row.from_page)
+
+
+def kind_of(key):
+    """The kind of an offer's key (P1134): the word before its first colon. A kind alone is a key with no colon."""
+    return key.split(":", 1)[0]
+
+
+def is_sendable(key):
+    """True when the page sends the offer of `key` from a button (P1134): its kind's row in OFFER_KINDS says `from_page`.
+    False for a drop, a chat offer and a kind spark does not know. The one rule of "can the page send it": the guide, the
+    page, run_request and the design basis read it, and the last two add the page's allow-list of ops (STEP_OPERATIONS)."""
+    kind = kind_of(key)
+    return kind in OFFER_KINDS and OFFER_KINDS[kind].from_page
+
+
+def in_chat(key):
+    """True when `key` is of a kind spark knows and the page never sends (P1134): asked in the chat, never from the page."""
+    return kind_of(key) in OFFER_KINDS and not is_sendable(key)
+
+
+#: The kinds the page sends from its buttons (`is_sendable`).
+SENDABLE = tuple(kind for kind in OFFER_KINDS if is_sendable(kind))
+
 #: The effect of each offer: plain sentences that name every write (P829, the PO, 2026-11-21). The real run on a copy of
 #: button-light showed each one (docs/observations/rows/p829-run-request.md).
 PICK_MESSAGE = "Saves “%s” as the pick for the %s need in this project."
