@@ -3,7 +3,7 @@
 Spike for [#1600](https://github.com/xmejkal/spark/issues/1600), under P203 [#163](https://github.com/xmejkal/spark/issues/163).
 Date: 2026-11-26. The evidence is in [notes.md](notes.md) and three pictures in this folder. The architect wrote this
 text from the notes. The kicad-spike session added two explanations to section 9 and made the card titles shorter. The refuter's corrections are in sections 1.3, 1.4, 2.2, 3, 4, 5 and 9. The council's
-findings are in sections 1.4, 2.3, 3.1 and 4.
+findings are in sections 1.4, 2.3, 3.1 and 4. Section 5 holds the numbers of the filed cards.
 
 > In short: the "weird PCBs" are mostly tscircuit's automatic pour, which spark turns on in one line of the board file.
 > The rest is spark's own: big empty boards, modules with no body, 0.15 mm traces and nets named by pin.
@@ -296,16 +296,17 @@ guess at the second reader's needs. Both come with the second engine.
 
 ## 5. Candidate cards, for spark-main to file
 
-Each line is a title for spark-main to file, in the form "problem → change".
+spark-main filed these cards on 2026-11-26 under P203, in Idea, slice 7 Perfboard to PCB. Each line reads "problem →
+change". One comment on [#163](https://github.com/xmejkal/spark/issues/163) holds the epic line and F5.
 
-- P?: the automatic pour cuts both layers into V33 and GND pieces (F1, F2) → one GND pour per layer
-- P?: KiCad's DRC, render and STEP exist only as a doc recipe → an Operation `export-board` over `tsci export` and kicad-cli
-- P?: the `board-engine` role chooses a path, not an engine → a Strategy base `BoardEngine` with one selection table
-- P?: a module has no body on the PCB and in 3D (F4) → a box from the record's `body_mm`, with a height fact
-- P?: a rail with no stated current gets 0.15 mm silently (F6) → the build names the rail as a missing fact
-- P?: the schematic names each signal's net by pin (F7) → each signal goes on a net with its own name
-- P?: the footprint file prints "None mm" for a null `drill_mm` (F9) → it says that the drawing states no drill
-- P?: `--keep` keeps an old footprint file that spark wrote (F10) → spark replaces it by `board.tsx`'s rule
+- P1182 [#1726](https://github.com/xmejkal/spark/issues/1726): the automatic pour cuts both layers into V33 and GND pieces (F1, F2) → one GND pour per layer
+- P1183 [#1727](https://github.com/xmejkal/spark/issues/1727): KiCad's DRC, render and STEP exist only as a doc recipe → an Operation `export-board` over `tsci export` and kicad-cli
+- P1184 [#1728](https://github.com/xmejkal/spark/issues/1728): the `board-engine` role chooses a path, not an engine → a Strategy base `BoardEngine` with one selection table
+- P1185 [#1729](https://github.com/xmejkal/spark/issues/1729): a module has no body (F4) → a box from `body_mm`, with a height fact
+- P1186 [#1730](https://github.com/xmejkal/spark/issues/1730): a rail with no stated current gets 0.15 mm silently (F6) → the build names the rail as a missing fact
+- P1187 [#1731](https://github.com/xmejkal/spark/issues/1731): the schematic names each signal's net by pin (F7) → each signal goes on a net with its own name
+- P1188 [#1732](https://github.com/xmejkal/spark/issues/1732), with F10 below: the footprint file prints "None mm" for a null `drill_mm` (F9) → it says that the drawing states no drill
+- P1188 [#1732](https://github.com/xmejkal/spark/issues/1732), with F9 above: `--keep` keeps an old footprint file that spark wrote (F10) → spark replaces it by `board.tsx`'s rule
 - Later epic line under P203: KiCad as a second board engine behind the seam. Done: one real board builds through the engine
   that the `board-engine` role chose, and every check reads its result.
 
