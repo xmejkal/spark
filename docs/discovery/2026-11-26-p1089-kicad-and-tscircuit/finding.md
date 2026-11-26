@@ -3,7 +3,7 @@
 Spike for [#1600](https://github.com/xmejkal/spark/issues/1600), under P203 [#163](https://github.com/xmejkal/spark/issues/163).
 Date: 2026-11-26. The evidence is in [notes.md](notes.md) and three pictures in this folder. The architect wrote this
 text from the notes. The kicad-spike session added two explanations to section 9 and made the card titles shorter. The refuter's corrections are in sections 1.3, 1.4, 2.2, 3, 4, 5 and 9. The council's
-findings are in sections 1.4, 2.3, 3.1 and 4. Section 5 holds the numbers of the filed cards.
+findings are in sections 1.4, 2.3, 3.1 and 4. Section 5 holds the numbers of the filed cards. Section 2.4 holds the Freerouting run.
 
 > In short: the "weird PCBs" are mostly tscircuit's automatic pour, which spark turns on in one line of the board file.
 > The rest is spark's own: big empty boards, modules with no body, 0.15 mm traces and nets named by pin.
@@ -147,6 +147,27 @@ Fusion's personal-use limit: the licence limits electronics to 2 sheets, 2 layer
 (https://www.autodesk.com/products/fusion-360/personal.html, read through a search summary). The e-paper board is
 126.4 x 72 mm, which is 91 cm². So F5 puts the import on a personal licence at risk. No one checked this against Autodesk's page. Fusion imports a STEP file as
 bodies. The spike did not check whether the limit applies to a STEP import.
+
+### 2.4 Freerouting, run on the PO's yes
+
+The PO said "yes, run Freerouting" in the kicad-spike window. Freerouting 2.6.0 is one free file (GPL-3.0) with no
+Java to install. It routed the e-paper board from a DSN that pcbnew wrote, and pcbnew read the routes back.
+
+| Router, same board | Rules | Track | Vias | KiCad errors at 0.2 mm |
+|---|---|---|---|---|
+| tscircuit's autorouter | its own, 0.15 mm tracks | 563.6 mm | 4 | 6 clearance |
+| Freerouting, run 1 | the export's: 0.1 mm clearance and tracks | 568.7 mm | 3 | 9 clearance, 1 thermal |
+| Freerouting, run 2 | set first: 0.2 mm clearance, 0.25 mm tracks | 561.8 mm | 0 | 0 |
+
+Each run took about 0.2 s. Freerouting follows the rules that it gets. So the clearance and the track width are
+spark's facts to state, and the router only obeys them. With stated rules, Freerouting gave a clean board with wider
+tracks and no vias. Its help also lists an output of "Autodesk Fusion script (.scr)", which P203 can test.
+
+![Freerouting's routes on the e-paper board, KiCad's render](freerouting-top.png)
+
+This changes the router's place in the seam (section 3.1, item 7), not option B. Freerouting reads a DSN, and tsci
+exports `specctra-dsn` itself. So Freerouting is a router strategy that needs no KiCad. KiCad is needed only to read
+the routes back into a `kicad_pcb`.
 
 ## 3. How KiCad sits in the stack
 
@@ -333,7 +354,7 @@ Each answer is "delegated, the PO's to change". The recommended option is first.
 4. Does the export card go to Ready now? (a) Yes, after the pour card, because kicad-cli alone then finishes the board. (b) Before it, with a pcbnew script for the zones. (c) Not now.
 5. How does the export enter? (a) A new Operation `export-board` with a role for kicad-cli. (b) A flag of `build-board --keep`. (c) The doc recipe stays.
 6. When does the seam card run? (a) Now, as a small card with no behaviour change. (b) With the second engine. (c) Now, with the neutral plan too.
-7. Does the spike run Freerouting? (a) No, the routing is not the fault. (b) Ask the PO for his yes, then run one trial on the ready DSN. The council cannot give that yes. Only the PO can allow a run of the downloaded binary.
+7. Does the spike run Freerouting? (The PO answered yes, and section 2.4 holds the run.) (a) No, the routing is not the fault. (b) Ask the PO for his yes, then run one trial on the ready DSN. The council cannot give that yes. Only the PO can allow a run of the downloaded binary.
 8. Is F5, the placement, in scope? (a) No, one line under P203 with the 80 cm² measure. (b) A card now for a tighter first draft. (c) Inside P1074 #1575.
 9. Does F8, the 0.7 mm silkscreen, get a card? (a) No, until a fab's rule with a source says that 0.7 mm fails. (b) Yes, a text size from `data/fabrication.json`.
 10. Which body does F4 use? (a) A box from the record, with the height as a new fact. (b) A vendor STEP model per part. AGENTS.md forbids a committed vendor file. (c) Wait.
@@ -349,7 +370,7 @@ Each answer is "delegated, the PO's to change". The recommended option is first.
 | The seam card is a base class and one selection point. | Both gaps are real today, and the card is small. | The neutral plan now: one reader only. |
 | The contract keeps its name `tscircuit-board` for now. | It says truly what the role's tool must build today. | A rename now: a person's own tools file can name it. |
 | F5 gets no card now. | The placement is a stated first draft. A better one is a design job. | A layout card now: no measure of "better" exists yet. |
-| Freerouting stays untried. | The routing is not the fault. The run needs the PO's yes. | A run without his yes. |
+| Freerouting ran on the PO's yes. | He asked for the routing test. | A run without his yes. |
 
 ## 8. Claims checked in the code
 
@@ -380,7 +401,7 @@ tool and opened no picture.
 
 ## 9. Not checked
 
-- No one ran Freerouting. The 2.6.0 binary is in scratch with a matching sha256, and it waits on the PO's yes.
+- Freerouting ran on one board only, with the older footprint. Its Fusion script output (`.scr`) did not run.
 - No one installed a KiCad MCP server.
 - No one imported a file into Fusion. The two Fusion sources came through a search summary, not the pages.
 - KiCad reports 199 isolated copper areas on both exports. With the automatic pour they are in 124 GND top zones, 73

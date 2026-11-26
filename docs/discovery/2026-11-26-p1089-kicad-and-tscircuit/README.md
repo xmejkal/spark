@@ -16,6 +16,8 @@ The raw evidence, with every command and count, is [notes.md](notes.md).
   writes STEP. It cannot place or route.
 - The recommendation is tscircuit with one ground pour, then kicad-cli as an optional export after the build. A
   KiCad MCP server waits. A Strategy seam keeps the board engine exchangeable.
+- Freerouting ran after the PO said yes. With 0.2 mm clearance and 0.25 mm tracks stated first, it routed the e-paper
+  board in 0.22 s with no vias, and KiCad found 0 errors. tscircuit's routes give 6 errors at 0.2 mm.
 - The PO decides on the recommendation.
 - The cards are P1182 to P1188 (#1726 to #1732), under P203. P1182 is the one ground pour per layer.
 

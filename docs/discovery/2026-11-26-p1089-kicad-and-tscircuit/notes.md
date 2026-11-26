@@ -91,11 +91,27 @@ today, with today's footprint (14-pin row on the left). `spkgnd/` is the same bo
 
 ### What did not run
 
-- Freerouting 2.6.0 (released 2026-11-25, GPL-3.0). Its macOS arm64 CLI build,
-  `freerouting-cli-2.6.0-macos-arm64.tar.gz`, is 22,967,212 bytes. It was downloaded to scratch, and its sha256
-  (3ddca951…f5e) matches the release's checksum file. The session's permission check refused to run the downloaded
-  binary. It waits on the PO's yes. The DSN to route is ready.
 - No KiCad MCP server was installed.
+
+### Freerouting, run on the PO's yes (07:57 to 07:59 CET, read from the clock)
+
+- The tool: Freerouting 2.6.0 (released 2026-11-25, GPL-3.0). Its macOS arm64 CLI build,
+  `freerouting-cli-2.6.0-macos-arm64.tar.gz`, is 22,967,212 bytes. Its sha256 (3ddca951…f5e) matches the release's
+  checksum file. The session's permission check refused the first run. The PO said "yes, run Freerouting" in the
+  kicad-spike window, and it then ran in scratch.
+- It is one file with no Java to install. `--help` lists `-de` for the DSN, `-do` for the output (`.ses`, `.dsn` or
+  "Autodesk Fusion script (.scr)"), and `-mp` for the passes, which it calls deprecated.
+- The board: tsci's KiCad export of the walk's e-paper board, with the older footprint (F10). pcbnew removed its tracks
+  and zones and wrote the DSN. After the route, `pcbnew.ImportSpecctraSES` read the session back. A second process
+  added one GND zone per layer and filled it, because the binding refused zones in the same process.
+- Run 1, the export's own rules (0.1 mm clearance, 0.1 mm tracks): 10 nets routed in 0.23 s, 0 unrouted, 0
+  violations, 3 vias, 568.7 mm of track at 0.1 mm. KiCad at 0.1 mm: 1 error (`starved_thermal`). At 0.2 mm: 9
+  clearance errors. So Freerouting follows the rules that the DSN states.
+- Run 2, stricter rules set in the project first (0.2 mm clearance, 0.25 mm tracks): 10 nets routed in 0.22 s, 0
+  unrouted, 0 vias, 561.8 mm of track at 0.25 mm. KiCad at 0.2 mm: 0 errors, 0 unconnected, 9 text heights and 2
+  library warnings. Picture: `freerouting-top.png`.
+- tscircuit's routes on the same board: 563.6 mm, 4 vias, 0.15 mm tracks. KiCad at 0.2 mm: 6 clearance errors.
+- Total time for a script run of DSN, route, import and fill: a few seconds.
 
 ### Facts from sources
 

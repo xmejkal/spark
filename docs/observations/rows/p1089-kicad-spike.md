@@ -16,5 +16,5 @@ the refuter on Opus checked it on 2026-11-26. This file holds the acted, raised 
 | 8 | "F5 blocks the Fusion import" claims more than one search summary supports | refuter (Opus) | acted | finding.md section 2.3 says "at risk", and section 9 names the HTTP 403 |
 | 9 | six cited line numbers had slipped | refuter (Opus) | acted | finding.md sections 3 and 8 |
 | 10 | the refill hides unrouted nets | refuter (Opus), its own test | rejected | with every zone removed, KiCad reports 0 unconnected items |
-| 11 | the 199 isolated copper areas have one count on both exports | architect, refuter (Opus) | raised | cause not found. finding.md section 9 keeps it for the pour card |
-| 12 | Freerouting 2.6.0 was not run: the permission check refused the downloaded binary | the session | raised | waits on the PO's yes. finding.md section 6, question 7 |
+| 11 | the 199 isolated copper areas have one count on both exports | architect, refuter (Opus) | raised | cause not found. It goes to the pour card, P1182 [#1726](https://github.com/xmejkal/spark/issues/1726) |
+| 12 | Freerouting 2.6.0 was not run: the permission check refused the downloaded binary | the session | acted | the PO said yes in the kicad-spike window, and it ran. finding.md section 2.4 |
