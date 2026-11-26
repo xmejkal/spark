@@ -18,6 +18,16 @@ from spark.design.find_offers import MATCHER_HELP
 # --- MVP ---
 #: The sentence of a project with no needs yet.
 NO_NEEDS_SENTENCE = "%s has no needs yet — /spark:idea writes them"
+#: What a candidate's line says of this project (P1141): the pieces it holds, right after the free count and before the
+#: other holders, and the needs that pick it.
+HELD_HERE, PICKED_FOR = " (%s held by this project)", "[picked for %s]"
+
+
+def own_words(candidate):
+    """(the words after the free count, the tag at the line's end): the pieces this project holds of `candidate` and the
+    needs whose picks are it (`held_here`, `picked_for`: keys only when there is one), each empty when there is none."""
+    return (HELD_HERE % candidate["held_here"] if candidate.get("held_here") else "",
+            PICKED_FOR % ", ".join(candidate["picked_for"]) if candidate.get("picked_for") else "")
 
 
 class MatchNeeds(AnswerOperation):
@@ -49,11 +59,12 @@ class MatchNeeds(AnswerOperation):
             lines.append("  %s — %s / %s%s%s" % (need["need"], need["does"], need["what"], "  (%s)" % need["condition"] if need["condition"] else "",
                                                 "  [%s]" % need["mark"] if need["mark"] else "") + ("  [aside]" if need["aside"] else ""))
             for c in need["candidates"]:
+                held_here, picked_for = own_words(c)
                 lines.append("      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
                                                       "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
-                                                                              ("free %s%s" % (c["free"], ", held by " + ", ".join(map(printable, c["held_by"])) if c["held_by"] else "")) if c["owned"] else "",
+                                                                              ("free %s%s%s" % (c["free"], held_here, ", held by " + ", ".join(map(printable, c["held_by"])) if c["held_by"] else "")) if c["owned"] else "",
                                                                               "owes " + ", ".join(c["owes"]) if c["owes"] else "",
-                                                                              c.get("stop_line") or ""])))
+                                                                              c.get("stop_line") or "", picked_for])))
                              + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else ""))
                 lines += ["          " + c["about"]] if c["about"] else []
                 lines += ["          " + sentence for sentence in c["limits"]]  # P397: the JSON keeps them as data

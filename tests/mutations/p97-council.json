@@ -110,8 +110,8 @@
  {
   "file": "scripts/spark/design/match_needs.py",
   "name": "C-7: --match's text drops the footprint stage",
-  "find": "c.get(\"stop_line\") or \"\"]",
-  "replace": "\"\"]"
+  "find": "c.get(\"stop_line\") or \"\", picked_for]",
+  "replace": "\"\", picked_for]"
  },
  {
   "file": "scripts/spark/design/audit_records.py",

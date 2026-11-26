@@ -597,7 +597,7 @@
    "key": "op:needs",
    "op": "needs",
    "area": "design",
-   "summary": "a project's needs: what each does, its condition, its mark",
+   "summary": "a project's needs: what each does, its condition, its mark, its picks",
    "effects": [],
    "data_keys": [
     "needs"

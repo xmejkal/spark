@@ -22,11 +22,15 @@ def whole(project):
     return Path(project).absolute()
 
 
+def picks_step(project, pairs, why):
+    """The step of a pick of each `NEED=ID` in `pairs`, the one shape of a pick's step (P1141): the offer's pick and the
+    parts phase's own step build through it. A pick is the person's choice, so the step needs the person."""
+    return NextStep("pick", ["--pick", str(whole(project))] + list(pairs), why, (READS, WRITES), False, True, store.read_given_env())
+
+
 def pick_step(project, need, pick_id, name):
-    """The step of the offer to pick `pick_id` (the part `name`) for `need`. A pick is the person's choice, so the step
-    needs the person, and `why` names the part and the need."""
-    return NextStep("pick", ["--pick", str(whole(project)), "%s=%s" % (need, pick_id)], flow_codes.PICK_WHY % (name, need),
-                    (READS, WRITES), False, True, store.read_given_env())
+    """The step of the offer to pick `pick_id` (the part `name`) for `need`: `why` names the part and the need."""
+    return picks_step(project, ["%s=%s" % (need, pick_id)], flow_codes.PICK_WHY % (name, need))
 
 
 def requirements_step(project):
