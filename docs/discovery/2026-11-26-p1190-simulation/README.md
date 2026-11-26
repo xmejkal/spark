@@ -23,12 +23,13 @@ Each choice waits on the PO, or on the delegated council of three, recorded "del
 
 Q5: gate A has one free condition, "no failed run on the current image" (D10). Q11: a `skipped` stage replaces the
 rule of 2026-11-21, and the build exits 0 (D11). Q10: "skipped, with the reason, and the free checks passed" is
-enough for v0.10 (D12). Q9: a paid-run policy with settings enters the scope (D13, items.md item 16).
+enough for v0.10 (D12). Q9: a paid-run policy with settings enters the scope (D13, items.md item 16). Q7: records may depend on another
+author's Wokwi chip by reference, permissive licences only, after the spike (D14). Q3: an epic and a spike for
+spark's own simulator, reuse first, with a pre-analysis now (D15, items 18 and 19).
 
 ## What waits on the PO
 
-Q1 (the assumptions' ratings and the pass line), Q3's reading of the non-goals, Q6's "the editor", Q7's dependency
-on another author's chip, and his yes to items.md. The questions are in [brief.md](brief.md).
+Q1 (the assumptions' ratings and the pass line), Q6's "the editor", and his yes to items.md. The questions are in [brief.md](brief.md).
 
 ## The main points
 
@@ -137,7 +138,7 @@ The numbers in the sketches are examples. Spark keeps no count of minutes today 
 - [jobs-and-journeys.md](jobs-and-journeys.md): seven jobs and three journeys.
 - [story-map.md](story-map.md): the backbone and the slices, the walking skeleton first.
 - [risks-and-tests.md](risks-and-tests.md): the risks, nine assumptions and the collection plan.
-- [items.md](items.md): seventeen proposed cards. Nothing is filed.
+- [items.md](items.md): nineteen proposed cards. Nothing is filed.
 - [research-wokwi.md](research-wokwi.md) and [research-alternatives.md](research-alternatives.md): the sources.
 - council/: the PO assistant, the user, the tech lead, the architect's synthesis, the refuter, and the delegated
   council's answers ([council-answers.md](council/council-answers.md)).

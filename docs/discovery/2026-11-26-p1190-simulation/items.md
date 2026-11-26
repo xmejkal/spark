@@ -150,7 +150,7 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
 - the tied card: —
 
-## 14. Spike, free: the clock's `main.py` loop on the stand-in with a virtual clock, with no device model
+## 14. Spike, free: the clock's `main.py` loop on the stand-in with a virtual clock, with no device model (replaced by item 19, D15)
 - type: spike <!-- REQUIRED:item-type -->
 - needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
 - value proven by: a finding: whether the loop runs 10 simulated seconds with no edit to firmware/ <!-- REQUIRED:value-proven-by -->
@@ -195,6 +195,28 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
 - the tied card: the vision is the PO's file. The change is his to merge, and this discovery edits it nowhere
 
+## 18. Spark's own simulator, reuse first (epic)
+- type: epic <!-- REQUIRED:item-type -->
+- needed by: the PO, 2026-11-26, verbatim: "Actually, I would like to spike and create an epic for re-implementing the simulator and seeing how difficult or possible it would be for us to actually re-implement the simulator. Obviously, not from scratch, but maybe there are some available resources or code that would be useful for us. Let's actually create the cards for it and just do some pre-analysis now." <!-- REQUIRED:needed-by -->
+- value proven by: a spike's finding (item 19) that the PO reads and picks from, then, if he picks a way, one walk project whose firmware runs on spark's own simulator for a board that Wokwi lacks <!-- REQUIRED:value-proven-by -->
+- depends on: item 6 (the `Simulator` seam), so an own simulator is one more Adapter and no screen changes <!-- REQUIRED:depends-on -->
+- status: proposed <!-- REQUIRED:item-status -->
+- label (the repository's type label): epic <!-- REQUIRED:spark-process:label -->
+- parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one, or after v0.10 as P492 #671 was <!-- REQUIRED:spark-process:slice -->
+- the tied card: takes over item 14 (the stand-in runner spike) and P492 #671's question 2. The pre-analysis is in the store's preanalysis/2026-11-26-own-simulator.md. Its setting (P1194): the `simulator` role points at it, with its default left at Wokwi
+
+## 19. Spike: how hard is spark's own simulator, and which free code does it build on, with licences
+- type: spike <!-- REQUIRED:item-type -->
+- needed by: the PO, 2026-11-26 (item 18's words) <!-- REQUIRED:needed-by -->
+- value proven by: a finding with sources (URL, version, date, licence) that sizes each way the pre-analysis names and recommends one, run on one walk project's firmware with no paid minutes <!-- REQUIRED:value-proven-by -->
+- depends on: the pre-analysis <!-- REQUIRED:depends-on -->
+- status: proposed <!-- REQUIRED:item-status -->
+- label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
+- parent (the epic, as a sub-issue): item 18 <!-- REQUIRED:spark-process:parent -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): as item 18 <!-- REQUIRED:spark-process:slice -->
+- the tied card: replaces item 14
+
 ## Board actions
-- file items 1 to 17 · pending, the PO's yes to this list · through spark-main <!-- REQUIRED:board-actions -->
+- file items 1 to 19 (item 14 replaced by 19) · pending, the PO's yes to this list · through spark-main <!-- REQUIRED:board-actions -->
 - close P995 #1452 as answered, P409 #535 and P410 #536 as replaced, P308 #374 as absorbed · pending, the PO's yes · through spark-main
