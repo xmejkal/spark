@@ -35,7 +35,7 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 | A4 | A new small class beside the tools list, one Storage per layer, holds every candidate setting with no change to the tools list's callers | feasibility | H TL-3, TL-6 | low D10 | the plan's spike reads storage.py's fit | 0 callers of tool_finder change in slice 0, set 2026-11-26 | a caller must change: Q6 again | open |
 | A5 | An account layer can be added later as one list item, with no caller change | feasibility | H TL-21 | low D10 | a test in slice 0 adds a fake fourth layer | the test passes with 0 caller edits, set 2026-11-26 | callers name a layer: the seam's shape changes | open |
 | A6 | Allowed layers per setting stop a cloned project from widening sharing or spending | ethics | E ★C5 ★C12 | high D10 | a scratch project sets a share setting | refused, with a sentence naming the file, set 2026-11-26 | accepted: the trust rule is wrong | open |
-| A7 | The seam is worth building after the MVP and before P1193's roles land in the tools list | viability | H TL-18, E ★C2 | low D10 | Q11 to the PO | he chooses (a) or (b) of Q11, set 2026-11-26 | P1151 goes first: the two roles move twice | open |
+| A7 | The seam is worth building after the MVP and before P1193's roles land in the tools list | viability | H TL-18, E ★C2 | low D10 | Q11 to the PO | he chooses (a) or (b) of Q11, set 2026-11-26 | P1151 goes first: the two roles move twice | retired 2026-11-26 |
 | A8 | Asking once at the first need, with "use spark's default" kept, does not nag | usability | H USER-14, ★C6 | low D10 | the walk of the author question, once sharing exists (P1203) | he answers once and is not asked again in 3 runs, set 2026-11-26 | asked again: the ask is wrong | open |
 
 ## Collection plan
@@ -52,8 +52,10 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 with its pointer), the pass line met or missed, what it changes. -->
 | date | source and pointer | what was seen | pass line met or missed | what it changes |
 | --- | --- | --- | --- | --- |
-| 2026-11-26 | Q13, D22 (an account, n = 1) | the last time he wanted to know why spark did something, he asked Claude | not a test of A1; A1's walk is still to run | leans to show-settings in the chat first, the page after (A1's "result that would change") |
+| 2026-11-26 | Q13, D22 (an account, n = 1) | the last time he wanted to know why spark did something, he asked Claude | not a test of A1; A1's walk is still to run | leans to show-settings in the chat first, the page after; rival: he asked Claude because no settings page exists, so it does not settle A1 |
 | 2026-11-26 | Q12, D21 (an account, n = 1) | only this Mac in the last 30 days | not a test of A5 | the account slot stays empty for long |
+| 2026-11-26 | Q11, D20 (a decision) | P1151 goes now | — (a decision) | A7 retired: the seam does not come before P1193's roles; they move with the tools list's slice (story map slice 7) |
+| 2026-11-26 | Q1, D10 | A2 rated low | its pass line stands as set and is not tested | none |
 
 ## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
 <!-- Energy per mode · peaks per rail against the source · dissipation per part, each number with its provenance and

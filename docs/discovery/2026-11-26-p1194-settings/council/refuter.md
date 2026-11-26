@@ -310,3 +310,104 @@ and the change.
 ## Searches
 
 none
+
+## Second pass, 2026-11-26
+
+The refuter, on Opus, read-only. Read: `git diff 1f57256e..HEAD` of this folder (commits 4c3526be, 636538d1,
+085a6b88), the artboard Settings.dc.html (modified 13:59), origin/main's P1190 brief and items, and issue #1770. I
+could not see the question dialog itself, so each D is checked against its own "options considered" and the
+Questions list, not against the words he was shown.
+
+### 2. Summaries
+
+- D19 is wider than his choice. Q10's second half asked only "may a paid-run setting only narrow when spark asks?".
+  The option he took, as the facilitator relays it, is about paid runs: "paid runs allowed for releases, up to 5
+  minutes". D19 opens with "a setting may say yes" and then "a paid-run rule such as". "Such as" leaves room for any
+  setting to answer a yes. Change to: "a paid-run setting may say yes: …". Also "Not asked" is not quite right: Q10's
+  text asked about grants and the switch, but no option answered it. Say "asked, not answered by the options".
+- D19 contradicts a line it left. The proposed no-gos (brief.md:87) still say "no setting that answers a yes to spend
+  money or write a board". D19 is a setting that answers a yes to spend money. Change to "no setting that answers a
+  yes to write a board; a paid-run setting may (D19)".
+- I10 repeats a card that exists, and the two disagree. P1190's item 16 is filed as P1221 #1770 ("a paid-run policy
+  (never, ask, important-only, always), a warning threshold, and a mark for an important version"). Its settings are
+  proposed for "layers user and project". I10 and the artboard say "only his own layer may set the rule (D12)" and
+  "never a project". Fold I10 into P1221 as a comment that carries D12 and D19, and file no new card.
+- D12 may join two options. Its options were "each setting lists its layers, the project wins but named, the project
+  may only narrow". D12 holds the first and adds "today's tools-list overrides of a project stay allowed and are
+  named before use", which is the second. That fits D15, but only the dialog can show that he chose both. Name the
+  addition as the facilitator's reconciliation with D15, or quote the option's text.
+- I7 is stronger than D12. I7's proof now adds "an empty `account_env` from a project is refused (D12)". D12 says
+  today's tools-list overrides of a project stay allowed and are named. `account_env` is a tools-list field, and D15
+  keeps the tools list's merge as it is. My first-pass fix ("only 'named before use' fits") did not land as written.
+- D24 may say more than he chose, and it drops a field. Q15 asked two things: where the fields live, and whether his
+  default fills in. The third option ("his default never fills in") answers only the second. If he picked "move to a
+  settings file", the fill-in half holds only if that option's text carried it. Also "the brief keeps the goal and
+  the musts" leaves out `decided` (project_setup.py:220). Change to "the goal, the musts and `decided`".
+- I9 does not say what happens to today's values. 4 of the 24 briefs found under ~/Development at depth 4 hold a
+  `prefer` or `sellers` value: irrigation (a list and sellers), spark-quickstart and spark-walks/reaction-game
+  (sellers), smartbin-local (a sentence). When `prefer` and `sellers` are read only from `.spark/settings.json`,
+  these are dropped without a word, which is ★C4's harm again. Add to I9's proof: "a brief that still holds `prefer`
+  or `sellers` gets the run's first line naming the field and its new home (D14)".
+- D15 has no slice. D15 says the tools list "moves into the seam in a later slice of its own", and D20 hangs P1193's
+  two roles on that slice. The story map has no such row and items.md no such item. The map's delta line still says
+  "slice 0 to 5", and there are now 0 to 6.
+- A7's result is in, and nothing records it. A7's "result that would change the decision" is "P1151 goes first: the
+  two roles move twice". D20 chose exactly that. A7 is still "open", with no Results row.
+- A2's pass line was not fixed. The row now says "so the decider sets it anew at Q1". D10 answered Q1 and set no new
+  line for A2. The line still passes by construction.
+- Stale after D11: ★C7 still says the meaning of "global" "is not known", and the no-gos still say "the meaning of
+  'global' is the PO's (Q2)". D11 settled it.
+- verification.md's last split cites "Q7, Q16". There is no Q16.
+- First-pass fixes that landed as I wrote them: ★C1, ★C3, ★C4, ★C5, ★C6, ★C9, ★C10, ★C14, ★C15, D1, D2, the
+  outcome's PO-16 line, the option attributions of Q2, Q3, Q4, Q6, Q7, Q9 and Q11, the "global" no-go, the riskiest
+  test's task 2, J1, J5, F1, F2, Q14 and Q15. ★C11's caveat landed shorter (it drops "the project's replies file is
+  research's"), which is fine.
+
+### 3. Rival explanations
+
+- D22's Results row ("leans to show-settings in the chat first"). Rival: he asked Claude because no settings page
+  exists. An answer given where only the chat exists says nothing about whether he would open a page. It does not
+  lean either way, and A1's walk is the only test.
+- D21's row ("the account slot stays empty for long"). Rival: D6 gives the account other jobs (create projects, reach
+  the parts, suggest edits). A second computer is one reason among four. 30 days on one Mac does not say "for long".
+  Change to "no second computer in the last 30 days".
+- D19 as "any setting may say yes". Rival: he answered a question about paid runs only (see part 2).
+- D24's fill-in half. Rival: he chose where the fields live, and the fill-in rule is the facilitator's from the
+  question's second half.
+- D18's "git identity is the author's fallback". Rival: P1193's D8 makes the git identity the author "by default",
+  and the artboard (line 172) calls it "the suggestion". Three words name one role. Pick one.
+
+### 4. Numbers
+
+- "8 H" (Stands on): it counts the eight open assumptions. A2 (E ★C3) and A6 (E ★C5 ★C12) are not H.
+- "up to N minutes" (D19), "up to 5 minutes" (the shown option): no period and no kind of minute. P1221 uses
+  simulated minutes per 30 days. Is the limit per run, per release or per month?
+- "3 of the 24 briefs found" (the artboard, line 158): no place, depth or share of walks. My first-pass fix ("14 of
+  them walks") did not land on the artboard.
+- "the last 30 days" (D21) and "the last time" (D22): n = 1, one answer each. They are labelled as accounts. That is
+  fine.
+- "about 13:50 to 14:05 CET": a fifteen-minute window for fourteen answers. That is fine as the dialog's time.
+
+### 5. The artboard
+
+- Line 145: "Paid simulation minutes", spark's default "Ask before every paid run", shown as a value. No D sets that
+  default. P1221 leaves it to the plan, between `ask` and `never`. Mark it "an example; default to decide (P1221)".
+- Line 146: "Only you can set it, never a project". This follows D12, but P1221 proposes the project layer too. Raise
+  the conflict on P1221 before either design is drawn as settled.
+- Line 173: "you only: it names you". D12's rule is "shares his data or spends money". "Names you" is a third reason,
+  and no D gives it. Either D12 says so, or the row says "you only: it shares your name".
+- Line 43: "Your answer goes to your own word, never into a project." The second half is TL-13's layer rule, and no D
+  decides it. Mark it a proposal.
+- Line 99: the fold shows "Put it on the board: no simulator covers it" with no "an example". The row at line 139
+  carries the mark, but the fold does not.
+- Line 158: see part 4.
+- Line 177: "It moves onto this page in a later slice of its own (Q6)". D15 supports this. The story map has no such
+  slice (part 2).
+- First-pass artboard fixes that landed: the "examples" line (123), the clock's project (205), the direct-flashing
+  value and note (181-182), the pictures row (166-168), the vendor order's meaning (153), "this computer" replaced on
+  the fixed rows, the Q14 line and the stale council line. Q2, Q3, Q4, Q8 and Q9 now show his answers, not open
+  questions. No decided question is shown as open.
+
+### Searches
+
+none

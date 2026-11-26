@@ -30,4 +30,4 @@ e.g. `- Split: Feasibility says a day, Risks says a week · Q4` -->
 - Split: the first setting. The tech lead says the vendor order, then P410; the user lens and the bar point at P410 · Q7
 - Split: where a choice with no layer named is written. Today the person's file (USER-1); the user lens asks whether it should be this project · Q2
 - Split, settled: the shops count, 2 of 23 (USER-3) against 3 of 23 (PO-2). The facilitator counted 3 of 24 briefs with `find ~/Development -maxdepth 4 -path '*/.spark/project.json'` and a `sellers` test, spark-quickstart included; the refuter repeated it 
-- Split: the refuter reads the evidence as three small defects (★C16), the lenses as a missing layered model; the basis is the PO's D1 · Q7, Q16 <!-- REQUIRED:agree-split -->
+- Split: the refuter reads the evidence as three small defects (★C16), the lenses as a missing layered model; the basis is the PO's D1 · Q7, Q15 <!-- REQUIRED:agree-split -->
