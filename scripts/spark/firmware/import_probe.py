@@ -1,5 +1,5 @@
 """
-The import check of a project's firmware on the computer, one module per child Python (moved from import_firmware.py,
+The import check of a project's firmware on the computer, one module per child Python (moved from import_firmware.py, now check_firmware.py,
 P685). The stand-ins and import_child.py sit beside this file, so the paths below stay.
 """
 

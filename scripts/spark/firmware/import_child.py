@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-The child process of import_firmware.py (P59, P443): it imports one firmware module and says how that went.
+The child process of check_firmware.py (P59, P443): it imports one firmware module and says how that went.
 
     python3 -I -B import_child.py MODULE FOLDER...
 
-MODULE is imported with the FOLDERs first on sys.path, in that order. import_firmware.py runs it with -I, so the
+MODULE is imported with the FOLDERs first on sys.path, in that order. check_firmware.py runs it with -I, so the
 child's own folder and the current folder stay off sys.path, and a firmware cannot import this file.
 
 Before the import, the child gives CPython's `time` the names MicroPython's has, so a display driver that sleeps in its

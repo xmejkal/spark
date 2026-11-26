@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.firmware import own_tests  # noqa: E402
+from spark.firmware.isolated_python import IsolatedPython  # noqa: E402
 
 CHILD = ROOT / "scripts" / "spark" / "firmware" / "own_tests_child.py"
 TWO_PASSING = "import unittest\n\nclass A(unittest.TestCase):\n    def test_one(self):\n        pass\n\n    def test_two(self):\n        self.assertTrue(True)\n"
@@ -167,6 +168,30 @@ class TheChildIsAFileOfItsOwnTest(unittest.TestCase):
         names += [node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
         self.assertTrue(names)
         self.assertEqual([name for name in names if name.split(".")[0] == "spark"], [])
+
+
+class TheIsolatedChildTest(unittest.TestCase):
+    """P1208: the one Adapter that starts the import check's children and the own tests' child."""
+
+    def test_the_child_starts_isolated_with_no_bytecode_and_its_cwd(self):
+        calls = []
+
+        def recording_run(command, **options):
+            calls.append((command, options))
+            return subprocess.CompletedProcess(command, 7, "out", "err")
+
+        done = IsolatedPython(recording_run).call("child.py", ["a", 1], Path("/somewhere"), 3)
+        self.assertEqual((done.timed_out, done.returncode, done.stdout, done.stderr), (False, 7, "out", "err"))
+        command, options = calls[0]
+        self.assertEqual(command, [sys.executable, "-I", "-B", "child.py", "a", "1"])
+        self.assertEqual((options["cwd"], options["timeout"], options["stdin"]), ("/somewhere", 3, subprocess.DEVNULL))
+
+    def test_a_child_past_its_time_is_timed_out_with_no_output(self):
+        def too_slow(command, **options):
+            raise subprocess.TimeoutExpired(command, options["timeout"])
+
+        done = IsolatedPython(too_slow).call("child.py", [], Path("."), 1)
+        self.assertEqual((done.timed_out, done.returncode, done.stdout, done.stderr), (True, None, "", ""))
 
 
 if __name__ == "__main__":

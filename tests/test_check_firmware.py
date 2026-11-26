@@ -7,6 +7,9 @@ and no board. `spark.firmware.firmware_check.CheckFirmware` is the Operation, an
 Each test builds a small project in the suite's temp folder and runs real children, because the counts are what is tested.
 """
 
+import contextlib
+import io
+import json
 import subprocess
 import sys
 import tempfile
@@ -19,6 +22,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import check_firmware  # noqa: E402
 from fakes import FakeOutsideWorld  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.operation import READS, RUNS  # noqa: E402
@@ -135,6 +139,35 @@ class WhatItDeclaresTest(unittest.TestCase):
     def test_it_has_a_summary_and_the_op_named_for_the_script(self):
         self.assertEqual(CheckFirmware.name, "check-firmware")
         self.assertIn("own tests", CheckFirmware.summary)
+
+
+class TheCommandTest(unittest.TestCase):
+    """The CLI, `scripts/check_firmware.py`: one run_cli call over the Operation."""
+
+    def run_main(self, *argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = check_firmware.main([str(each) for each in argv])
+        return code, out.getvalue()
+
+    def test_the_text_says_n_of_m(self):
+        code, out = self.run_main("--project", a_project({"light": LIGHT}, {"test_a": TWO_PASSING}))
+        self.assertEqual(code, outcomes.EXIT_OK, out)
+        self.assertIn("imports: 1 of 1 imported", out)
+        self.assertIn("tests: 2 of 2 passed", out)
+
+    def test_a_failed_own_test_exits_1_and_the_json_names_its_code(self):
+        code, out = self.run_main("--project", a_project({"light": LIGHT}, {"test_a": ONE_FAILING}), "--json")
+        said = json.loads(out)
+        self.assertEqual((code, said["status"], said["problems"][0]["code"]), (outcomes.EXIT_PROBLEMS, "problems", "own_test_failed"))
+        self.assertEqual(said["data"]["tests"]["failed"], ["test_a.A.test_bad"])
+
+    def test_tests_that_gave_no_count_exit_2(self):
+        project = a_project({"light": LIGHT}, {"test_a": "import unittest\n\nclass A(unittest.TestCase):\n    def test_loops(self):\n        while True:\n            pass\n"})
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = check_firmware.main(["--project", str(project), "--json"], operation=CheckFirmware(tests_timeout_s=0.5))
+        self.assertEqual((code, json.loads(out.getvalue())["unchecked"][0]["code"]), (outcomes.EXIT_COULD_NOT_RUN, "own_tests_not_run"))
 
 
 if __name__ == "__main__":

@@ -1,10 +1,10 @@
 """
 The reasons a firmware step stops, each a code with one sentence (P684, W6-F2): run_scenario.py, flash_image.py,
-import_firmware.py and the image a deploy reads (project_image.py).
+check_firmware.py and the image a deploy reads (project_image.py).
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
 sentence (no magic strings, P260). A refusal that raises gives its exception a `code`; one that returns a sentence returns
-a Refusal (`spark.core.result`). `import_firmware.py --json` writes the code of each module not imported. The two text CLIs print the sentence
+a Refusal (`spark.core.result`). `check_firmware.py --json` writes the code of each problem and unchecked item, with its fix (P1208). The two text CLIs print the sentence
 alone, and their codes wait in the library for the Operation that comes later.
 
 Five codes are also board_codes' (NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE, LOG_UNREADABLE, TOOL_MISSING), as equal
@@ -26,7 +26,7 @@ STEP_TIMEOUT, STEP_FAILED = "step_timeout", "step_failed"
 #: flash_image.py.
 NO_INTERPRETER, INTERPRETER_UNUSABLE = "no_interpreter", "interpreter_unusable"
 FILES_NOT_FOLDER, CONFIG_NOT_JSON, FILES_NOT_WRITTEN = "files_not_folder", "config_not_json", "files_not_written"
-#: import_firmware.py.
+#: check_firmware.py, the import check.
 NO_FIRMWARE_FOLDER, NOTHING_TO_IMPORT = "no_firmware_folder", "nothing_to_import"
 IMPORT_FAILED, IMPORT_TIMEOUT = "import_failed", "import_timeout"
 #: check_firmware.py: the project's own tests (P1208).
