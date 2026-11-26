@@ -347,8 +347,9 @@ def owed_facts(plan, key):
 
 
 def named_pick(plan, key):
-    """A part pick as a person reads it: “<name>” for <needs>, or “<name>” when no need's pick is that record."""
-    named, by = "“%s”" % plan.name_of(key), ", ".join(plan.picked_for(key))
+    """A part pick as a person reads it: “<name>” for <needs>, or “<name>” when no need's pick is that record. `key` is a
+    part record's id (the parts list's part picks), so only the needs that pick that part count (P1141)."""
+    named, by = "“%s”" % plan.name_of(key), ", ".join(plan.picked_for(key, "part"))
     return flow_codes.PICKED_BY % (named, by) if by else named
 
 

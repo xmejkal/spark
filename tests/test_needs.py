@@ -387,6 +387,17 @@ class TheMatchReadsThePicksTest(unittest.TestCase):
         # the PR refuter: a refused hold names the stored key, here the entry, so a pick with no kind matches it too
         self.assertEqual((plan.picked_for("probe"), plan.needs_picking("probe", "wet")), (["soil"], ["soil"]))
 
+    def test_a_part_named_for_the_parts_list_counts_only_the_needs_that_pick_that_part(self):
+        # the fix refuter: a record id equal to another record's drawer entry key named the entry's need too
+        from spark.flow.phase_readers import named_pick
+        (self.home / "catalog" / "probe.json").write_text(json.dumps({"schema": 1, "id": "probe", "name": "A pH probe", "kind": "sensor",
+                                                                      "function": [{"does": "sense", "what": "acidity"}]}))
+        self.with_needs([{"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"entry": "probe"}]},
+                         {"id": "acid", "does": "sense", "what": "acidity", "pick": [{"part": "probe"}]}])
+        plan = needs.PickPlan(self.project)
+        self.assertEqual((named_pick(plan, "probe"), named_pick(plan, "x-soil")),
+                         ("“A pH probe” for acid", "“Capacitive soil moisture sensor” for soil"))
+
     def test_the_needs_text_says_each_pick_before_the_aside_tag(self):
         self.with_needs([{"id": "soil", "does": "sense", "what": "soil-moisture", "mark": "have", "pick": [{"part": "x-soil"}]},
                          {"id": "alarm", "does": "sound", "what": "speaker", "pick": [{"entry": "speaker"}, {"entry": "mp3"}]},
