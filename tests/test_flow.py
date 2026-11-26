@@ -37,7 +37,11 @@ from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import Offer, Phase, SimulateReader  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
 from spark.flow import flow_page, run_request  # noqa: E402
-from spark.flow.guide import chat_offer_of, guide_of, job_offer, names_at, stations_of  # noqa: E402
+from spark.flow import deploy_reading  # noqa: E402
+from spark.bench import board_log  # noqa: E402
+from spark.flow.deploy_reading import DeployState  # noqa: E402
+from spark.flow.guide import NO_IMAGE_FACT, ImageFact, chat_offer_of, guide_of, job_offer, names_at, requirements_now  # noqa: E402
+from spark.flow.guide import stations_of, who_and_sentence  # noqa: E402
 from spark.flow.show_flow import ShowFlow, flow_and_guide, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
@@ -2767,7 +2771,7 @@ class TheChatOfferTest(FlowTest):
         # FirmwareReader gives only not-started or no status, so D3's last firmware row is reached with a Phase value
         for status in ("problems", "could-not-run"):
             with self.subTest(status=status):
-                self.assertIsNone(chat_offer_of(Phase("firmware", status, "?", "Claude", ["said"], []), None))
+                self.assertIsNone(chat_offer_of(who_and_sentence(Phase("firmware", status, "?", "Claude", ["said"], []), [], NO_IMAGE_FACT)))
 
     def test_a_simulate_with_problems_names_none(self):
         project = a_firmware(a_project_built_with_no_simulation())
@@ -2805,6 +2809,13 @@ class TheChatOfferTest(FlowTest):
         project = a_board_log(a_deploy_project(), "ready not read", "x")
         self.assertEqual((deploy_of(show(project)[0])["status"], chat_offer(project)), ("could-not-run", None))
 
+    def test_a_deploy_phase_that_is_partial_with_no_board_log_says_could_not_run_and_names_none(self):
+        # P1133: a phase list the guide's own deploy read does not match (a swapped list) used to name the look's tell
+        # beside "could not run"; the sentence's value, could-not-run, has no chat offer
+        project = Path(tempfile.mkdtemp())
+        now = guide_of(project, [Phase("deploy", "partial", "?", "you", ["said"], [])], steps=lambda _project: None)["now"]
+        self.assertEqual((now["says"], now["chat_offer"]), ("The deploy phase could not run. Ask Claude to read you why.", None))
+
     def test_any_other_phase_names_none_and_a_build_now_keeps_its_offer(self):
         idea = Path(tempfile.mkdtemp()) / "plant-alarm"
         idea.mkdir()
@@ -2814,6 +2825,67 @@ class TheChatOfferTest(FlowTest):
         self.assertIsNone(chat_offer(idea))
         now = show(build)[0]["data"]["guide"]["now"]
         self.assertEqual((now["phase"], now["offer"], now["chat_offer"]), ("build", "build", None))
+
+
+class TheNowSentenceTest(unittest.TestCase):
+    """P1133: each NOW sentence picker returns a NowSentence, whose `chosen_by` is the (phase, value) it chose the sentence by,
+    and `chat_offer_of` is the one lookup of that pair in CHAT_NOW. The pairs and the words are literals here."""
+
+    def test_each_guide_sentence_carries_the_value_it_was_chosen_by(self):
+        for phase, fact, written, chosen_by, starts in (
+                (Phase("simulate", "not-started", "?", "you", ["said"], []), ImageFact("no-sim-files", None), True,
+                 ("simulate", "no-sim-files"), "No simulation files yet"),
+                (Phase("simulate", "not-started", "?", "you", ["said"], []), NO_IMAGE_FACT, False,
+                 ("simulate", "no-scenario"), "No scenario is written yet"),
+                (Phase("simulate", None, "?", "you", ["said"], []), ImageFact("run-failed", "a.log"), True,
+                 ("simulate", "run-failed"), "A run failed on this image (a.log)"),
+                (Phase("firmware", "not-started", "?", "Claude", ["said"], []), NO_IMAGE_FACT, True,
+                 ("firmware", "not-started"), "Ask Claude in the chat to write the firmware"),
+                (Phase("firmware", "problems", "?", "Claude", ["said"], []), NO_IMAGE_FACT, True,
+                 ("firmware", "problems"), "The firmware phase has problems"),
+                (Phase("deploy", "partial", "?", "you", ["said"], []), NO_IMAGE_FACT, True,
+                 ("deploy", "could-not-run"), "The deploy phase could not run")):
+            with self.subTest(chosen_by=chosen_by):
+                told = who_and_sentence(phase, [], fact, written)
+                self.assertEqual(told.chosen_by, chosen_by)
+                self.assertTrue(told.says.startswith(starts), told.says)
+
+    def test_each_open_deploy_sentence_carries_the_value_it_was_chosen_by(self):
+        logged = board_log.LoggedDeploy("2026-11-26T10:00:00+01:00", "abc", "ready unknown", "board_lost")
+        not_finished = board_log.LoggedDeploy("2026-11-26T10:00:00+01:00", "abc", "flash not finished", None)
+        for state, chosen_by in (
+                (DeployState(1, logged, "image-differs", "stale", None), ("deploy", "image-differs")),
+                (DeployState(1, not_finished, "current", "problems", None), ("deploy", "flash not finished")),
+                (DeployState(1, logged._replace(verdict="ready not seen"), "current", "problems", None), ("deploy", "problems")),
+                (DeployState(1, logged, "current", "partial", None), ("deploy", "partial"))):
+            with self.subTest(chosen_by=chosen_by):
+                self.assertEqual(deploy_reading.deploy_now(state).chosen_by, chosen_by)
+
+    def test_the_chat_offer_is_one_lookup_of_that_value(self):
+        for chosen_by, offer in ((("deploy", "flash not finished"), "look-at-board"), (("simulate", "no-scenario"), "run-simulation"),
+                                 (("deploy", "problems"), None), (("deploy", "could-not-run"), None)):
+            with self.subTest(chosen_by=chosen_by):
+                self.assertEqual(chat_offer_of(flow_codes.NowSentence(["claude"], "x", chosen_by)), offer)
+
+    def test_a_stale_parts_list_is_a_picker_too_and_names_no_chat_offer(self):
+        for written in (True, False, None):
+            with self.subTest(written=written):
+                told = requirements_now(["Claude"], written)
+                self.assertEqual((told.chosen_by, chat_offer_of(told)), (("requirements", "stale"), None))
+
+    def test_every_key_of_the_chat_offer_table_is_a_value_some_picker_returns(self):
+        # the pairs the pickers return for the phases that have a chat offer, and the stale parts list (the plan's table)
+        returned = {("simulate", "no-sim-files"), ("simulate", "no-scenario"), ("simulate", "run-failed"),
+                    ("simulate", "image-older"), ("simulate", "image-untested"), ("simulate", "not-started"),
+                    ("firmware", "not-started"), ("firmware", "problems"), ("firmware", "could-not-run"),
+                    ("simulate", "problems"), ("simulate", "could-not-run"),
+                    ("deploy", "not-started"), ("deploy", "problems"), ("deploy", "could-not-run"), ("deploy", "partial"),
+                    ("deploy", "firmware-newer"), ("deploy", "no-image"), ("deploy", "image-differs"),
+                    ("deploy", "flash not finished"), ("requirements", "stale")}
+        self.assertLessEqual(set(flow_codes.CHAT_NOW), returned)
+        for key, offer in flow_codes.CHAT_NOW.items():
+            with self.subTest(key=key):
+                self.assertTrue(flow_codes.OFFER_KINDS[offer].tell)
 
 
 class TheOfferKindsTableTest(unittest.TestCase):

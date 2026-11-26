@@ -56,7 +56,7 @@ MAY_READ = {
                               "basis reads it when it is called; each phase, label, op, from_page and tell is a literal (P1115). "
                               "The flow's table test pins its kinds to a literal list and walks its rows for the rules of a tell (P1122)",
     "flow_codes.CHAT_NOW": STRUCTURE + ": the test walks its values to check each has a tell in OFFER_KINDS; the set of keys is a "
-                           "literal, and each (phase, state) row is a guide test with a literal key (P1122)",
+                           "literal, and each (phase, value) row is a guide test with a literal key (P1122)",
     "store.PLAIN": STRUCTURE + ": the key rule each served namespace's name is checked against, not an expectation (P1036)",
     "storage.UNREADABLE": STRUCTURE + ": the fixture a test plants for an entry that cannot be read, an input (P1036)",
     "board_emitter.SCHEMATIC_STAGE": "the stage a refused input names, looked up in the build's table: the code under test (P852)",
