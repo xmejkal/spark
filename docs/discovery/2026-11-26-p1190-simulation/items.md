@@ -106,16 +106,18 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
 - the tied card: P413 #539 stays and feeds it
 
-## 10. `SimulationControls`, and the scenario shown as sentences with the values and ranges it sets
+## 10. The simulation editor: the values, how each part and the chip are simulated, and the steps (D16)
 - type: story <!-- REQUIRED:item-type -->
-- needed by: "we need to analyze and design how it should actually work, what  steps it takes, cause I knw there are some free steps we can do, but then the payd part" (the PO, 2026-11-26, P1190 #1735) <!-- REQUIRED:needed-by -->
-- value proven by: the VL6180X project's scenario reads "Set the distance to 80 mm" with the range 0 to 255 <!-- REQUIRED:value-proven-by -->
-- depends on: item 6 <!-- REQUIRED:depends-on -->
+- needed by: the PO, 2026-11-26, verbatim: "Well, basically what wokwi has, pease research what all wokwi allows to set for the simulation and we should also allow it, so yes, a temperature or values in general, but really also to set up how its simulated the chip or part, maybe even the steps" <!-- REQUIRED:needed-by -->
+- value proven by: on the VL6180X project's page, the editor shows the distance with its range, the board's CPU setting, the model that stands for each part, and the scenario's steps as sentences. A change asked of Claude lands in the project's files, and the next run uses it <!-- REQUIRED:value-proven-by -->
+- depends on: item 6. The editor reads and writes spark's own words through the `Simulator` seam, and `WokwiSimulator` turns them into Wokwi's `attrs`, chip attributes and scenario steps, so a second simulator reuses the same editor <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
-- the tied card: —
+- what it sets, from research-wokwi-settings.md: (A) values: a part's `attrs` (a DHT22's temperature and humidity, a potentiometer's level, a photoresistor's lux), a custom chip's attributes and its controls' ranges, and the run's timeout. (B) how a part or the chip is simulated: the board's attrs (`cpuFrequency`, `flashSize`, `psramType`, `serialInterface`), a button's `bounce`, and which model stands for a part (a Wokwi part, a chip, or a skip). (C) the steps: `delay`, `wait-serial`, `write-serial`, `set-control`, `expect-pin`, `take-screenshot` and the four touch steps. One table of control names per part, kept with the part's record, because Wokwi documents them per part page
+- the settings it names (P1194 #1740): a part's values and the steps live in the project (layer project). How a part is simulated has its default in the part's record (global, the library), and a project can override it (layer project). The board's attrs have their defaults in the board record and a project override
+- slices: first the values and the steps, drawn and changed through Claude (D6). Then how each part and the chip are simulated
 
 ## 11. The result on the page, the caveat in the verdict's line
 - type: story <!-- REQUIRED:item-type -->
@@ -217,6 +219,17 @@ Cards left alone: P999 #1455 (do it first), P1000 #1456 (waits on the bench read
 - slice (one Slice option of the board, or "ask the decider for a new one"): as item 18 <!-- REQUIRED:spark-process:slice -->
 - the tied card: replaces item 14
 
+## 20. `chips/wokwi-api.h` carries no licence line and comes from Wokwi
+- type: chore <!-- REQUIRED:item-type -->
+- needed by: AGENTS.md:64, "Never commit a vendor file, because installing spark copies the whole repository", and brief C26 <!-- REQUIRED:needed-by -->
+- value proven by: the header's licence is read from Wokwi's own terms and cited beside it, or the build fetches it and the repository no longer holds it <!-- REQUIRED:value-proven-by -->
+- depends on: — <!-- REQUIRED:depends-on -->
+- status: proposed <!-- REQUIRED:item-status -->
+- label (the repository's type label): chore <!-- REQUIRED:spark-process:label -->
+- parent (the epic, as a sub-issue): P1190 #1735 <!-- REQUIRED:spark-process:parent -->
+- slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, as P1190 <!-- REQUIRED:spark-process:slice -->
+- the tied card: — . Found on the way by the pre-analysis (D15)
+
 ## Board actions
-- file items 1 to 19 (item 14 replaced by 19) · pending, the PO's yes to this list · through spark-main <!-- REQUIRED:board-actions -->
+- file items 1 to 20 (item 14 replaced by 19, so 19 cards) · pending, the PO's yes to this list · through spark-main <!-- REQUIRED:board-actions -->
 - close P995 #1452 as answered, P409 #535 and P410 #536 as replaced, P308 #374 as absorbed · pending, the PO's yes · through spark-main

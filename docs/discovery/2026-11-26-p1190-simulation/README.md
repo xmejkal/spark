@@ -25,11 +25,12 @@ Q5: gate A has one free condition, "no failed run on the current image" (D10). Q
 rule of 2026-11-21, and the build exits 0 (D11). Q10: "skipped, with the reason, and the free checks passed" is
 enough for v0.10 (D12). Q9: a paid-run policy with settings enters the scope (D13, items.md item 16). Q7: records may depend on another
 author's Wokwi chip by reference, permissive licences only, after the spike (D14). Q3: an epic and a spike for
-spark's own simulator, reuse first, with a pre-analysis now (D15, items 18 and 19).
+spark's own simulator, reuse first, with a pre-analysis now (D15, items 18 and 19). Q6: the editor sets what Wokwi
+lets a person set: the values, how a part or the chip is simulated, and the steps (D16, item 10).
 
 ## What waits on the PO
 
-Q1 (the assumptions' ratings and the pass line), Q6's "the editor", and his yes to items.md. The questions are in [brief.md](brief.md).
+Q1 (the council proposes the ratings again, after D15), and his yes to items.md. The questions are in [brief.md](brief.md).
 
 ## The main points
 
@@ -139,8 +140,9 @@ The numbers in the sketches are examples. Spark keeps no count of minutes today 
 - [jobs-and-journeys.md](jobs-and-journeys.md): seven jobs and three journeys.
 - [story-map.md](story-map.md): the backbone and the slices, the walking skeleton first.
 - [risks-and-tests.md](risks-and-tests.md): the risks, nine assumptions and the collection plan.
-- [items.md](items.md): nineteen proposed cards. Nothing is filed.
-- [research-wokwi.md](research-wokwi.md) and [research-alternatives.md](research-alternatives.md): the sources.
+- [items.md](items.md): twenty proposed items (nineteen cards, item 14 replaced). Nothing is filed.
+- [research-wokwi.md](research-wokwi.md), [research-alternatives.md](research-alternatives.md) and
+  [research-wokwi-settings.md](research-wokwi-settings.md): the sources.
 - council/: the PO assistant, the user, the tech lead, the architect's synthesis, the refuter, and the delegated
   council's answers ([council-answers.md](council/council-answers.md)).
 - [verification.md](verification.md): each ★ claim, reproduced or not.

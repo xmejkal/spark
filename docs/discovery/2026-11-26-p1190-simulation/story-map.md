@@ -21,7 +21,7 @@ The slices follow the architect's proposal (council/architect.md §10), in the o
 | 1 the seam | Know what can run | The flip: a board that no simulator covers ends the stage `skipped` with a reason, after the PO's yes to Q11 (item 1) | J2 | E ★C1 ★C2, D3 | a fixture board's build record, and an old record still counted as done |
 | 2 the paid run made visible | Run | The `simulator` role, on or off, as the one setting (item 8, replaces P410 #536) | J3 | E `tool_finder.py:274-307` | the command says the setting |
 | 2 the paid run made visible | Run | The cost and the time cap before the yes (item 9, with P413 #539) | J3 | E ★C10 | the question before a run |
-| 2 the paid run made visible | Write the scenario | `SimulationControls`, and the scenario shown as sentences with the values and ranges it sets (item 10) | J4 | E ★C8 | the page for the VL6180X project |
+| 2 the paid run made visible | Write the scenario | The simulation editor: the values, how each part and the chip are simulated, and the steps, in spark's words that each simulator turns into its own (item 10, D16) | J4, J7 | E ★C8, D16, research-wokwi-settings.md | the page for the VL6180X project |
 | 2 the paid run made visible | Read the result | The result on the page, the caveat in the verdict's line (item 11) | J1, J6 | E council/user.md USER-8 | walk2's "only the start" reads so |
 | 3 models | Know what can run | A community chip by reference in wokwi-cli, and its licence rule (item 12, replaces P409 #535) | J5 | E ★C20 | one free run of a referenced chip |
 | 3 models | Write the scenario | A live value in Wokwi's editor for a spark project (item 13) | J4 | H | a spike finding |
