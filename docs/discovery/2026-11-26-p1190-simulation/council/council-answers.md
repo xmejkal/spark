@@ -1,0 +1,86 @@
+# The delegated council's answers, tallied
+
+Three seats on Fable answered [delegated-brief.md](delegated-brief.md) on 2026-11-26: the PO assistant
+([delegated-po-assistant.md](delegated-po-assistant.md)), the architect ([delegated-architect.md](delegated-architect.md))
+and the tech lead ([delegated-tech-lead.md](delegated-tech-lead.md)). The session acts on the majority. Every row is
+delegated, the PO's to change, and is never quoted as his word.
+
+| Q | The majority | Votes | What differs between the seats |
+| --- | --- | --- | --- |
+| Q0 the frame | yes, with fixes: the outcome's proof adds a fixture board with no Wokwi part (the clock proves "grey, with a reason" after P999). "Must not get worse" names old build records, the exit codes, and a free check that never blocks a deploy. The brief says that a part simulated by a script off Wokwi is in no slice. The README's claim range is fixed | 3 of 3 | the tech lead also fixed the questions' range in the frame |
+| Q2 the first slice | (d), split into separate PRs: P999 and item 4 first, then `check-firmware` (the import check and the project's own tests only), then P1078, then the seam with no behaviour change (the guard moves into `coverage` and keeps its ending), then one small PR that flips the ending to `skipped` after the PO's Q11 | 3 of 3 for (d) | the architect and the PO assistant put `check-firmware` before P1078, the tech lead after it. So that part of the order is 2 of 3, the session's pick |
+| Q3 the runner | not now. Item 14 stays parked until A1's result and the PO's reading of the non-goals | 3 of 3 | none |
+| Q4 the setting | (a) one setting, the `simulator` role. "Off" reads `skipped` with "you turned it off", never `could-not-run` | 3 of 3 | the architect proposes "off" as a Null Object Adapter behind the role, because the tool's `on` flag also stops the free chip compile. An H for the seam's plan |
+| Q6 the slider | (a) a value in a scenario step, drawn on the page with its range. The PO is told that the bar does not move | 3 of 3 | none |
+| Q7 the chip spike | yes, in slice 3, in two halves: the free half (the licence, and whether wokwi-cli resolves a `github:` chip) and the run, which waits on the PO's yes for its minutes | 3 of 3 | none |
+| Q8 the project's own tests | yes: run and count, claim nothing of their cover. The record lives under `.spark/`, never in `sim/runs/`, and has a timeout. A failed own test blocks no deploy until the PO decides | 3 of 3 | a project with no `tests/`: no row (the architect), `skipped` (the tech lead), a plain fact (the PO assistant). The plan picks, and it never reads as a pass or a fault |
+| Q12 the words | the existing tiers and P308's "grade", added to `docs/guide/words.md` by the first card that prints them. The page shows plain words, never "T3" | 3 of 3 | none |
+| Q1 ratings (a proposal to the PO) | high: A1, A3, A8, A9. Low: A2, A4, A5, A6, A7 | A1, A3, A8: 3 of 3. A9: 2 of 3. A5: 1 of 3 high | the PO assistant rates A5 high and A9 low |
+| Q1 the pass line (a proposal to the PO) | split use from yield. Use: on the next walk the free checks run before the first deploy, and the log says who started them. Yield: over the next 3 walks, at least 1 fault whose fix is a firmware change is found by `check-firmware` before the first deploy. A walk with no fault anywhere gives no information. A false alarm counts against. The test gates the screens of slices 2 and 3, not `check-firmware` itself | 3 of 3 on the split | the wording follows the architect and the PO assistant |
+
+## Corrections to the synthesis that the council made
+
+1. `check-firmware` is the move of `scripts/import_firmware.py` onto the core, not a second command beside it. It
+   absorbs that line of #1105 (the architect seat).
+2. Its first version calls no strategy. The dry run joins it as the strategy's `problem` in the seam card (the
+   architect seat).
+3. One generic lookup from a role's contract to an Adapter class, written by whichever seam card runs first. Each
+   seam keeps its own table as data. No shared base class (the architect seat).
+4. Coverage is computed once, by the build stage, and kept in the build record. The flow and `check-firmware` read
+   it (the architect seat).
+5. After the flip, a build with a skipped stage exits 0, and the store does not vouch for it as built
+   (`scripts/spark/build/build_service.py:506-521`). The flip PR says both in `docs/guide/agents/flow.md`, and
+   `NO_MODEL_CODES` stays as a reader of old records (the architect and PO assistant seats).
+
+## Advice to the PO on his own questions
+
+All three seats advise: gate A shows the simulation as evidence, and can use the free condition that already exists
+(no failed run on the current image). Q9 is asked about one concrete walk (p711, where the agent held the run).
+Q10 and Q11: yes, with old records still counting as done. Q3's non-goal reading: a runner of the person's own
+`main.py` on the generic fake is the T1 test rig, and a device model per part is "writes behaviour". "The editor"
+edits the scenario's steps and values, through Claude. Another author's chip: by reference only, permissive
+licences only.
+
+## Searches
+
+none. This file made no web search.
+
+# Round 2: Q1 after the PO's answers D10 to D15
+
+The PO, 2026-11-26 by 12:37 CET: "Council proposes again". The three seats on Fable answered
+[delegated-brief-q1.md](delegated-brief-q1.md): [the PO assistant](delegated-q1-po-assistant.md),
+[the architect](delegated-q1-architect.md), [the tech lead](delegated-q1-tech-lead.md). Delegated, the PO's to change.
+
+| id | PO assistant | architect | tech lead | the majority |
+| --- | --- | --- | --- | --- |
+| A1 | high | high | high | high, 3 of 3 |
+| A2 | low | low | low | low, 3 of 3 |
+| A3 | high | low | low | low, 2 of 3 |
+| A4 | low | high | low | low, 2 of 3 |
+| A5 | high | low | low | low, 2 of 3 |
+| A6 | low | low | low | low, 3 of 3 |
+| A7 | low | low | low | low, 3 of 3 |
+| A8 | high | high | high | high, 3 of 3 |
+| A9 | low | high | low | low, 2 of 3 |
+
+New assumptions:
+- A10, feasibility, 3 of 3: a free local emulator (esp-emulator or esp32sim) boots spark's own MicroPython C6 image
+  unedited, and a host can drive it. Pass line, dated 2026-11-26: the image spark built for a C6 walk project prints
+  `ready` within 120 s of wall clock (the tech lead said 60 s), and one press sent by the host changes a pin that the
+  host reads back. Start with the button light, because the clock imports `network` and `ntptime`. High, because the
+  epic's first way rests on it.
+- A11, value, 2 of 3 (the PO assistant, the tech lead): a person marks some versions important, and a paid run
+  follows. Pass line, dated 2026-11-26: over the next 3 walks, at least 1 version marked and followed by a paid run,
+  and at least 1 left unmarked. A deploy with the PO away gives no information. Low until item 16's design.
+- A12, feasibility, 1 of 3 (the architect), kept because it decides whether the threshold has a number: spark can
+  count the simulated minutes a run used. Pass line, dated 2026-11-26: one source names the simulated time of one
+  run. A miss makes the count an upper bound, said as "at most". Low.
+
+The riskiest: A1, 3 of 3. The split line holds, with three additions. Use counts for the person only when the page's
+offer or his word starts the checks (the PO assistant). A fault that the project's own tests find is logged apart
+from one the import check finds (the tech lead). A fault that a free emulator run finds is logged apart and is not
+`check-firmware`'s yield (the architect).
+
+Order, 2 of 3 (the architect, the tech lead): item 19's first steps run before item 6's plan fixes the seam's
+contract. They are free and run beside P999 and P1078. Item 6 says "selectable, not exchangeable" until a second
+Adapter speaks its own contract (the architect).
