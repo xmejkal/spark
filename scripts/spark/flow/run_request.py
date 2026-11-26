@@ -19,7 +19,7 @@ from spark.design.pick_parts import PickParts
 from spark.design.write_requirements import WriteRequirements
 from spark.flow import flow_codes, request_codes
 from spark.flow.fingerprint import SHORT, fingerprint_of
-from spark.flow.guide import NO_MODEL_CODES, stops_only_for_no_model
+from spark.flow.phase_readers import NO_MODEL_CODES, stops_only_for_no_model
 from spark.flow.phase_readers import MARKS
 from spark.flow.show_flow import phases_of, privacy_for
 from spark.firmware.project_secrets import ProjectSecrets

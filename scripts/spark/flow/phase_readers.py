@@ -9,6 +9,7 @@ import json
 from collections import namedtuple
 from pathlib import Path
 
+from spark.build import build_codes
 from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, earlier_dist, sha256_of
 from spark.build.stages import BUILD, SIMULATION
 from spark.breadboard import sheet
@@ -474,6 +475,19 @@ def skipped_stages(record):
     return [stage.get("name") for stage in record.get("stages") or [] if stage.get("status") == SKIPPED]
 
 
+#: The codes of a simulation stage whose build counts as done (the PO, 2026-11-21): Wokwi has no model of the board.
+NO_MODEL_CODES = (build_codes.BOARD_NOT_IN_WOKWI,)
+
+
+def stops_only_for_no_model(record):
+    """True when the build `record`'s one stopped stage is the simulation, with a code of NO_MODEL_CODES. A stage is
+    stopped when it ended neither ok nor skipped (an old record, could-not-run), or when its code is in NO_MODEL_CODES (a
+    new record, skipped since P1207). An old record with no code is never counted as done."""
+    stopped = [stage for stage in (record or {}).get("stages") or []
+               if stage.get("status") not in (OK, SKIPPED) or stage.get("code") in NO_MODEL_CODES]
+    return [stage.get("name") for stage in stopped] == [SIMULATION.name] and stopped[0].get("code") in NO_MODEL_CODES
+
+
 class BuildReader(PhaseReader):
     """Strategy: the record of the last build (`.spark/build.json`): its status, or stale when the requirements file it was
     built from changed after it. A skipped stage is no pass (P878): an ok build on the board alone, or one whose simulation
@@ -498,6 +512,8 @@ class BuildReader(PhaseReader):
         skipped = skipped_stages(record) if record.get("status") == OK else []
         if BUILD.name in skipped:
             return self.phase(None, [flow_codes.BOARD_ONLY_BUILD_MESSAGE])  # no offer: a rebuild skips the same stages
+        if skipped == [SIMULATION.name] and stops_only_for_no_model(record):
+            return self.phase(None, says + [flow_codes.NO_SIMULATION_NOW], offers)  # P1207: Wokwi has no model of the board
         if skipped == [SIMULATION.name]:
             return self.phase(None, says + [flow_codes.SIMULATION_SKIPPED_MESSAGE], offers)
         if skipped:
