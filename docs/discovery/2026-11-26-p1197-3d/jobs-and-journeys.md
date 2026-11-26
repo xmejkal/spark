@@ -24,7 +24,7 @@ e.g. `- When I assign a task in a meeting [E tickets.csv:6], I want the assignee
 e.g. `- Job 1 · paste each task into Slack by hand · E tickets.csv:7` -->
 - J1 · nothing in spark: no record holds a model, and 3 of 43 records hold a body's overall height · E brief ★C1. Outside spark, the PO gave his bin project's modules bodies by hand through `cadModel` · E brief ★C18
 - J2 · tscircuit's 3D tab and KiCad's render show pads and a box, or a header body only · E P1089 finding section 2.3, brief ★C2. His bin project exports `board.glb` and shows it in an offline one-page viewer, rebuilt with each build after it went stale once · E brief ★C18, council/user.md US-1
-- J3 · an agent can type `tsci export -f step` from the doc recipe. The STEP has no module bodies. No one opened it in Fusion · E docs/guide/agents.md:170-176, P1089 finding section 2.3
+- J3 · no doc gives a STEP recipe: docs/guide/agents.md:170-176 exports `kicad_pcb` and runs a DRC. An agent can type `tsci export -f step` by itself. The STEP has no module bodies. No one opened it in Fusion · E docs/guide/agents.md:170-176, P1089 finding section 2.3, council/architecture.md AR-24
 - J4 · nothing in spark. tscircuit's case element is installed but spark does not write it · E brief ★C5. For the FireBeetle alone, the PO owns two bought DFRobot FIT0725 boxes · E brief ★C23 · H that he models a case by hand in Fusion (asked as Q3)
 - J5 · nothing in spark. tscircuit's 3MF export fails in the installed CLI · E brief ★C6
 - J6 · the tools list maps a role to a tool, and `ShapeSource` chooses a 2D drawing. Nothing does this for 3D · E brief ★C14
@@ -38,7 +38,7 @@ journey block: it forces a score on every task. "n/a — a one-step job" may rep
 | --- | --- | --- | --- | --- | --- |
 | 1 | builds the board with `/spark:build` | E BuildService, P1089 finding section 3.3 | none | works | — |
 | 2 | looks at the board in tscircuit's 3D tab | E P1089 finding section 2.3 | each module is pads and a box, not its size | partly | Does the PO look at the 3D tab today? (account question) |
-| 3 | exports a STEP file by the doc recipe | E docs/guide/agents.md:170-176 | a command to type, no module bodies | partly | — |
+| 3 | exports a STEP file with a command he types | E P1089 finding section 2.3 · no doc recipe (council/po-assistant.md PA-18) | a command to type, no module bodies | partly | — |
 | 4 | opens the STEP in Fusion 360 | — not run | unknown: names, units, the licence | — | Which Fusion licence does the PO use? (account question) |
 | 5 | measures each module with callipers and models it | H the facilitator | slow, and a wrong height gives a case that does not close | — | How did the PO make his last case? (account question) |
 | 6 | draws the case around the board | H the facilitator | by hand | — | — |
@@ -52,7 +52,7 @@ flowchart LR
 ### Claude — asked "make a case for my board", today
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
-| 1 | reads the records for sizes | E brief ★C1 | no height for 29 of 30 records, holes as numbers for 1 | partly | — |
+| 1 | reads the records for sizes | E brief ★C1 | a height as a field for 3 of 40 records, holes as a block for 8 | partly | — |
 | 2 | looks for an Operation that exports 3D or makes a case | E scripts/spark/operation_catalogue.py | none | not yet | — |
 | 3 | adds `<enclosure.fdm.box>` to board.tsx by hand | E brief ★C5 | the build writes board.tsx again, so the edit does not stay | partly | — |
 | 4 | tries to drive Fusion through its MCP server | E brief ★C11 | Fusion must be open and its server turned on by the PO | not yet | Does the PO want the server on? (decision question) |

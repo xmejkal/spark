@@ -5,8 +5,9 @@ p1197-3d, and in the person's store (`~/.local/share/spark`). The probe ran in a
 probe file is kept in the repository.
 
 > In short: spark holds a 2D outline for 30 of 43 records and a body's overall height for 3. No record holds a 3D model.
-> spark already installs tscircuit 0.0.2600. It takes a local STEP body per part and exports STEP with each solid
-> named by reference. It also draws a two-part printed case (`enclosure.fdm.box`).
+> spark already installs tscircuit 0.0.2600. It takes a body per part and exports STEP and GLB. A body it generates
+> keeps the part's reference as its name, and a STEP body does not. It also draws a two-part printed case
+> (`enclosure.fdm.box`).
 > The gaps are spark's: no height fact, no model per record, no place to keep a fetched model, and no Operation for
 > 3D. Nothing ran in Fusion yet.
 
@@ -83,7 +84,7 @@ toolchain's `node_modules`, as spark's build does (`scripts/spark/build/board_en
 | plain, no model | 254 KB, ran | 1054 KB, ran | one product "PCB", with solids named `PCB`, `U1`, `U2` (the generic header bodies) |
 | with `<enclosure.fdm.box>` | 263 KB, ran | 1142 KB, ran | as plain, plus two solids `unnamed_enclosure_fdm_box_1`, about 54 x 42 x 15 mm |
 | module with a local `stepUrl` | 198 KB, ran | 318 KB, ran | the local STEP body is merged as a solid on the board top (z from 1.4 mm) |
-| module with a local `stlUrl` | failed: "RangeError: Out of bounds access" | 315 KB, ran | the STL lands as loose faces, z from -5.3 to 0.7 mm: through the board, not on it |
+| module with a local `stlUrl` | failed: "RangeError: Out of bounds access". A later run with an absolute path ran (brief ★C3) | 315 KB, ran | the STL lands as loose faces, z from -5.3 to 0.7 mm: through the board, not on it |
 
 Other results:
 
@@ -94,8 +95,9 @@ Other results:
   model is named `U2`, its product is named after the model (`pinrow4`), and the board is `board_PCB`.
 - `kicad-cli pcb export glb` ran: 109 KB.
 
-So a part's body reaches both engines today through one fact, a STEP file. A STEP body is the safe input. An STL body
-is not. These are single runs on one probe board: they show that a path works, not how often it works.
+So a STEP body reaches both engines today. It loses the part's reference in tscircuit's STEP (council/tech-lead.md
+TL-2), and a JSCAD body keeps the name but replaces the header's own body (brief ★C33). These are single runs on one
+probe board: they show that a path works, not how often it works.
 
 ## 5. What did not run
 
