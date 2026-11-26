@@ -296,6 +296,4 @@ rung cannot show.
 
 ## 4. Searches
 
-- No web search was made.
-- One page was fetched, not searched: https://docs.wokwi.com/guides/esp32 · it served the physics limits of R3 and R4
-  (PHYS-1 to PHYS-9) · used.
+- no web search. One page fetch: `https://docs.wokwi.com/guides/esp32` · the decision it served: which limits each rung has (PHYS-1 to PHYS-9) · used

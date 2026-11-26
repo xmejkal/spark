@@ -2,12 +2,12 @@
 <!-- Tags as in the brief: E with a pointer, H with its source, D with who and when; an unknown is —. -->
 
 ## Who
-- The PO as a hobbyist who builds his own gadgets with spark (n = 1) · E the walks P829, P934 and the bench notes in the store (bench-2026-11-20.md, bench-2026-11-25.md), scrum/VISION.md's hobbyist persona
+- The PO as a hobbyist who builds his own gadgets with spark (n = 1) · E the walks P829, P934 and the bench notes in the store (bench-2026-11-20.md, bench-2026-11-25.md), scrum/VISION.md's hobbyist persona <!-- REQUIRED:who -->
 - Claude, the agent that runs spark for the person in the conversation and reads each answer as JSON · E AGENTS.md ("One core, many interfaces"), the PO's lens of 2026-10-18 (design every interface for a person and for Claude)
 - A later hobbyist who did not write spark and pays for no Wokwi plan · H the vision's persona, nobody asked
 
 ## Jobs
-- J1. When my firmware is written [E flow_codes.py:11, the firmware phase before simulate], I want to know whether it does what I asked before I wire and flash [E the PO's words on P1190: "it doesn't always pass or can run at all even though its actually working in real life"], so I can avoid a bench round on a fault that a free check finds [H the session, from P410's words].
+- J1. When my firmware is written [E flow_codes.py:11, the firmware phase before simulate], I want to know whether it does what I asked before I wire and flash [E the PO's words on P1190: "it doesn't always pass or can run at all even though its actually working in real life"], so I can avoid a bench round on a fault that a free check finds [H the session, from P410's words]. <!-- REQUIRED:jobs -->
 - J2. When my board or a part is not in Wokwi [E ★C1, ★C2], I want spark to say what it can still test, and how [E the PO's words on P1190: "we need to analyze and design how it should actually work"], so I do not read a working gadget as a failure [E the PO's words on P1190].
 - J3. When a run costs Wokwi minutes [E ★C10], I want the free checks first and the cost named before I say yes [E the PO on P1190: "there are some free steps we can do, but then the payd part", D-a], so I spend minutes only on a run that can pass [E P410 #536, P413 #539].
 - J4. When a part measures something, such as a distance or a temperature [E ★C8, research-wokwi.md §4], I want to set the measured value with a slider and see what the firmware does [E the PO on P1190: "adding sliders etc to set the measured value"], so I can test the behaviour at the edges without the real world [H the session].
@@ -16,7 +16,7 @@
 - J7. When I change the simulator or a tool [E the PO's rule D-g], I want the change in one place, so the screens, the checks and the scenarios keep working [E D-g "reusable, dry"].
 
 ## Today they…
-- J1 · run `run_scenario.py` in the terminal (paid), or nothing: the import check (`import_firmware.py`) imports modules and never runs `main.py` · E ★C3, ★C13
+- J1 · run `run_scenario.py` in the terminal (paid), or nothing: the import check (`import_firmware.py`) imports modules and never runs `main.py` · E ★C3, ★C13 <!-- REQUIRED:today -->
 - J2 · the build ends its simulation stage as `could-not-run, board_not_in_wokwi`. The page counts the build as done and says there is no simulation. The person deploys untested after a typed yes · E ★C1, ★C2, `scripts/spark/flow/flow_codes.py:79`
 - J3 · `run_scenario.py --dry-run` makes the free checks, and the paid command makes them again before it asks. Nobody counts the minutes spent · E ★C4, P413 #539
 - J4 · the Wokwi web editor shows a part's popup slider (the DHT22) or a chip's controls (the VL6180X). A scenario sets a value with `set-control`. Spark has no slider of its own · E ★C8, research-wokwi.md §4, `scripts/spark/firmware/scenario_steps.py:17`
@@ -26,7 +26,7 @@
 
 ## Journeys
 
-### The PO — the e-paper clock on the FireBeetle 2 C6 (no Wokwi board)
+### The PO — the e-paper clock on the FireBeetle 2 C6 (no Wokwi board) <!-- REQUIRED:journey -->
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
 | 1 | builds the board from the parts list | E the walk project p934-display2's `.spark/build.json` | the simulation stage ends `could-not-run` | partly | does the person read this as a failure? |
