@@ -164,7 +164,7 @@ How to read this page:
   - Summary: what you own and what spark knows for a need, before researching: the words against what each record (parts and boards, every layer) or drawer entry does, its tags, names and text, owned first (word-overlap); --matcher name-contains for the names alone
 - `op:needs`
   - Effects: none, it only reads. Data keys: needs.
-  - Summary: a project's needs: what each does, its condition, its mark
+  - Summary: a project's needs: what each does, its condition, its mark, its picks
 - `op:match`
   - Effects: none, it only reads. Data keys: needs.
   - Summary: each of a project's needs with the store's candidates: owned first, what each owes, each with its score and why; --matcher picks the matcher that ranks them; a board that serves a need through its own LED, button or display has `limits`, the sentences for what a passed run does not test of it, and so has a part whose record skips the simulation or names a stand-in
