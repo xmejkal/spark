@@ -1,7 +1,7 @@
 # P1190: the simulation as a step of its own
 
 The discovery of [P1190 #1735](https://github.com/xmejkal/spark/issues/1735), 2026-11-26. The PO's decisions
-are D10 to D19. The delegated council of three made D1 to D9 and D17, each "delegated, the PO's to change".
+are D10 to D16 and D18 to D20. The discovery is ready for design (D20). The delegated council of three made D1 to D9 and D17, each "delegated, the PO's to change".
 
 > TL;DR. Today the simulation is one build stage and one paid command, both written for Wokwi. The direction, as the
 > delegated council set it (D3 to D9, the PO's to change): P999 puts the FireBeetle 2 C6 on a Wokwi stand-in first.
@@ -139,7 +139,7 @@ The numbers in the sketches are examples. Spark keeps no count of minutes today 
 
 ## The files
 
-- [brief.md](brief.md): the frame, the findings ★C1 to ★C25, the decisions D1 to D19, the options, the riskiest assumption and the questions.
+- [brief.md](brief.md): the frame, the findings ★C1 to ★C25, the decisions D1 to D20, the options, the riskiest assumption and the questions.
 - [jobs-and-journeys.md](jobs-and-journeys.md): seven jobs and three journeys.
 - [story-map.md](story-map.md): the backbone and the slices, the walking skeleton first.
 - [risks-and-tests.md](risks-and-tests.md): the risks, twelve assumptions and the collection plan.
