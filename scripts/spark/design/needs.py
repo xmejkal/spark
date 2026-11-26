@@ -198,7 +198,8 @@ def _candidate(need, fit, context, mine=None):
     said = dict({"kind": None, "owes": [], "broken": False, "proof": [], "limits": []}, **said,
                 what=sorted({board_records.shown_what(f) for f in offer.functions if f.get("does") == need["does"]}),
                 what_matches=fit.exact, about=offer.about, held_by=drawer.holders_of(context["holding"], mine))
-    return dict(offers.row(fit, context, said, mine), free=free, unsure=unsure)
+    held_here = drawer.held_here(context["holding"], mine)  # P1141: a key only when this project holds a piece, as `stops_why`
+    return dict(offers.row(fit, context, said, mine), free=free, unsure=unsure, **({"held_here": held_here} if held_here else {}))
 
 
 def _rank(need, built, mine=None, matcher=None):
@@ -239,19 +240,24 @@ def candidates(need, known, entries, mine=None, matcher=None, definitions=None):
 
 def match(project, matcher=None):
     """Each need with its candidates (§6.2), and a problem for each need with no verb — it cannot be matched. `matcher` is
-    MATCHER's unless one is given (P211)."""
+    MATCHER's unless one is given (P211). A candidate that this project holds or picks says the pieces it holds
+    (`held_here`) and the needs whose picks are it (`picked_for`, P1141); either key is absent when there is none."""
     # the name a pick holds under, as plan_pick takes it: an unlisted project still holds as its folder (P403 refuter)
-    known, entries, matched, problems, mine = (drawer.linkable(project), drawer.entries(), [], [], store.plan_listed_name(project))
+    plan, matched, problems = PickPlan(project), [], []
+    known, entries, mine = plan.rows, plan.entries, plan.name
     definitions = {}  # P397: each board's Wokwi definition, read once for every need
-    for need in read(project):
+    for need in plan.current:
         if need.get("does") not in VERBS:
             problems.append(_problem(need.get("id"), "a need with no `does` cannot be matched — set it with --needs-set"))
             continue
         if not need.get("what"):
             problems.append(_problem(need["id"], "a need with no `what` cannot be matched — set it with --needs-set"))
             continue
-        matched.append(dict({key: need.get(key) for key in NEED_FIELDS}, need=need["id"],
-                            candidates=candidates(need, known, entries, mine, matcher, definitions)))
+        found = candidates(need, known, entries, mine, matcher, definitions)
+        for one in found:  # a key only when a need picks it: each key weighs on the 4 KB page of every candidate
+            picked_for = plan.picked_for(one["id"] or one["entry"], one["kind"] or "entry")
+            one.update({"picked_for": picked_for} if picked_for else {})
+        matched.append(dict({key: need.get(key) for key in NEED_FIELDS}, need=need["id"], candidates=found))
     return matched, problems
 
 
@@ -453,8 +459,8 @@ class PickPlan:
 
     def __init__(self, project):
         self.name, self.current, self.entries = store.plan_listed_name(project), read(project), drawer.entries()
-        rows = drawer.linkable(project)
-        self.known, self.paths = {row[:2]: row[2] for row in rows}, {row[:2]: row[3] for row in rows}
+        self.rows = drawer.linkable(project)
+        self.known, self.paths = {row[:2]: row[2] for row in self.rows}, {row[:2]: row[3] for row in self.rows}
 
     def name_of(self, key):
         """The name a person reads for the part `key` (a record id or a drawer entry key, as `plan_holds`' problems name
@@ -492,9 +498,19 @@ class PickPlan:
         return wanted is not None and any(as_record(pick, self.known, self.entries) == wanted
                                           for need in self.current if need["id"] == need_id for pick in need.get("pick") or [])
 
+    def picked_for(self, key, kind=None):
+        """The ids of the needs whose picks are the part `key` (P1141), a pick of a record's drawer entry as that record
+        (`as_record`). With `kind` ("part", "board", or "entry" for a drawer entry with no record) a pick must be that kind
+        too, so a record and a drawer entry of one key are two parts; with none, any kind of that key. The one rule of
+        which needs pick a part: --match's marks, the flow's part names and `needs_picking` read it."""
+        def names(pick):
+            said = as_record(pick, self.known, self.entries)
+            return said == {kind: key} if kind else key in said.values()
+        return [need["id"] for need in self.current if any(names(pick) for pick in need.get("pick") or [])]
+
     def needs_picking(self, key, but):
-        """The ids of the needs other than `but` whose picks name `key`."""
-        return [need["id"] for need in self.current if need["id"] != but and any(key in pick.values() for pick in need.get("pick") or [])]
+        """The ids of the needs other than `but` whose picks name `key` (`picked_for`)."""
+        return [need_id for need_id in self.picked_for(key) if need_id != but]
 
     def freed(self, changes, need_id):
         """(the holds `changes` let go that the need's old pick held, the other holds they let go): a hold is the old
