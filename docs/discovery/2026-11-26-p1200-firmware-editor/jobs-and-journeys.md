@@ -17,7 +17,7 @@
 
 ## Today they…
 <!-- Per job: what they do instead today (a competitor, a workaround or nothing), tagged. -->
-- J1 · asks Claude what the firmware does, or opens the file in an editor. Thonny, VS Code and Cursor are on his Mac, use for firmware unknown · E council/po-assistant.md, PO-2 · the page shows only the file time of main.py (preanalysis.md, section 4) <!-- REQUIRED:today -->
+- J1 · asks Claude what the firmware does, or opens the file in an editor. editors are installed, use for firmware unknown · E council/po-assistant.md, PO-2 · the page shows only the file time of main.py (preanalysis.md, section 4) <!-- REQUIRED:today -->
 - J2 · tells Claude in the chat, and Claude edits the file. 17 of 18 commits of main.py, three projects · E UX-1. His one hand edit was a Wi-Fi value in a gitignored secrets file · E UX-1, UX-16
 - J3 · reads the deploy's output in the terminal, or asks spark-main · E UX-4, UX-15
 - J4 · types yes in his own terminal, or types a 60-minute standing yes once (P1028) · E UX-3, UX-5

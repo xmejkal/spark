@@ -6,7 +6,7 @@ Read on 2026-11-26 in the worktree of branch p1200-firmware-editor. Tags: E (poi
 
 - PO-1 · Nobody is blocked without this epic now. In every walk diary I read, the conversation wrote `firmware/main.py`. The PO deployed in his own terminal and got `ready seen` on 2026-11-22 (P934) and on 2026-11-25 (T-Display). He wrote 22 notes on 11-25, and all of them are about the CLI's text: the next step was unclear, the output was a wall of text, a command was too long to copy, the yes prompt was one long line. None asks for an editor or a browser path. The README marks Firmware "partly" (the import check proves names only) and Bench "partly". · E the spark-walks folder beside the repository: p711-walk4-button-led/diary.md:18, p711-sound-demo/diary.md:31, p934-display2/diary.md:14 · E the store's bench-2026-11-25.md:1-94 · E README.md, What works today, rows Firmware and Bench · supports only: measured against the MVP bar, the epic moves no basic project closer to a breadboard with working firmware today. This matches the PO's own "not an MVP thing" (#1748, D-i).
 
-- PO-2 · The PO does not type firmware. VISION's maker "directs Claude rather than typing commands". No walk diary line has him reading or changing main.py himself. His Mac has Thonny, VS Code, Cursor and Arduino IDE installed. Thonny's configuration was last written 2026-11-21 17:43 (the Mac's local time, CET), with the local CPython back end (`run.backend_name = LocalCPython`), not a MicroPython board. · E scrum/VISION.md, "Who it is for" · E `ls /Applications` · E Thonny's configuration file in the PO's Library folder, its time and its back-end line · caveat: installed and opened is not the same as used for firmware. Who opened Thonny is unknown. n = 1 · supports only: the edit half (D-q2) has no observed user. The show half (D-q1) has a thinner but real case: reading what Claude wrote.
+- PO-2 · The PO does not type firmware. VISION's maker "directs Claude rather than typing commands". No walk diary line has him reading or changing main.py himself. Code editors are installed on his computer, and their use for firmware is unknown (redacted by the main session after the PR review: details of the PO's own computer stay out of a public file). · E scrum/VISION.md, "Who it is for" · caveat: installed is not the same as used for firmware. n = 1 · supports only: the edit half (D-q2) has no observed user. The show half (D-q1) has a thinner but real case: reading what Claude wrote.
 
 - PO-3 · P218 D11's revisit condition has not fired, and it cannot fire while spark needs Python. The condition is "revisit only for a first install by a person with no Python". VISION says no person outside the project has installed spark. Every spark step is a Python script, and `/spark:setup` installs esptool and mpremote with pip. · E docs/discovery/2026-10-13-p218-deploy-and-board/brief.md:97, :153 · E scrum/VISION.md, the hobbyist row · E data/tools.json:131-150 · supports only: D11's reason still holds for the PO's known board and for Claude ("a browser flasher adds nothing for the known board or for Claude"). The 11-26 request is a new wish from the PO, not the revisit condition. The condition's home is the card "Later: a stranger's first install" (#159, Idea), and P217 #199 (spark from Claude chat, with no Python on the person's side).
 
@@ -47,7 +47,7 @@ Read on 2026-11-26 in the worktree of branch p1200-firmware-editor. Tags: E (poi
   - Wokwi's editor: a browser editor and simulator. Upload to a physical board is an open feature request from 2023 (wokwi-features #454, "Upload code from Wokwi to a physical Arduino board"). The wokwi-features repository has no licence. wokwi-elements and wokwi-cli are MIT (`gh api`, 2026-11-26). — the editor's own terms (not read).
   - Arduino Lab for MicroPython: a desktop Electron app, not a browser page. AGPL-3.0 (research.md:29).
   - pico-pipette: a browser editor for the Pico only, 10 days old. MIT (research.md:30).
-  - The PO's own Mac: Thonny (MIT, a desktop MicroPython editor with a REPL and file transfer), VS Code and Cursor are installed (PO-2).
+  - Desktop editors such as Thonny (MIT, a desktop MicroPython editor with a REPL and file transfer) exist. Which ones the PO has is redacted by the main session after the PR review: details of the PO's own computer stay out of a public file.
 
   · E as cited · supports only: Thonny and ViperIDE already do "see and edit main.py on the board". What no tool has is spark's gate and records.
 
@@ -96,7 +96,7 @@ Pre-mortem, "six months after it shipped, it failed. Why?":
 
 - origin/restore-after-1775 did not exist after `git fetch`. I read the P1193 brief from the local branch restore-after-1775 (commit 1fb154e2). Whether it matches what returns to main: —.
 - Web Serial in an Artifact, and `childProcess` or `pty` in the desktop app. I ran no test page and installed no artifact.
-- Whether the PO ever used Thonny for MicroPython. I read only the configuration's time and back-end line.
+- Whether the PO ever used a desktop editor for MicroPython.
 - The terms of Wokwi's web editor. I fetched no terms page.
 - Whether a page-hosted pty passes `isatty`. I read the code and ran nothing.
 - The council folders of P235, P820 and P1038 beyond the lines cited. The store's councils folder: not read.

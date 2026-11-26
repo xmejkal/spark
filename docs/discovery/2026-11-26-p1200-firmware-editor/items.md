@@ -1,7 +1,7 @@
 # Proposed items
 <!-- Filing needs the decider's yes to this list: a D in brief.md that names items.md. -->
 
-From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. None is filed. spark-main files them on the PO's yes. Comments widen an existing card instead of filing a new one.
+From council/synthesis.md, section 8, trimmed to the PO's answers D2 to D5. All 15 are filed or posted (D6). spark-main files them on the PO's yes. Comments widen an existing card instead of filing a new one.
 
 ## 1. The page shows the firmware as one file time → after the MVP walk and once secrets live in the store (P1004), `show-firmware` and one fold with main.py and pins.py as masked, read-only text (D2, D5, D8)
 - type: story (new) <!-- REQUIRED:item-type -->

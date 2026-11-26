@@ -542,7 +542,7 @@ These are my choices in writing this text. They are not decisions of the PO.
 - Whether the desktop app's own `pty` reports a tty and takes input from the page's script. My run used Python's `pty` module, not the app.
 - Whether a `.bin` can sit among an artifact's own files (research.md:85). The documentation lists only `.html`, `.htm` and `.md` as published file types, which suggests no. I did not test it.
 - The git history of the three projects behind UX-1 (17 of 18 commits). I did not open those repositories.
-- The Thonny configuration and the list of installed programs behind PO-2.
+- The details of his computer behind PO-2.
 - The bench notes of 2026-11-25 other than note 20, and the walk diaries.
 - The esptool-js issues #97, #277 and #279, and the WebKit, Firefox and Android rows of research.md.
 - esptool 5.5.0's `loader.py:455`. The `python3` on the path holds esptool 3.3, where the same call is at `esptool.py:320`.

@@ -6,9 +6,9 @@ status: open · retired · n/a because ….
 e.g. `| usability | H no test yet (A2) | a five-person prototype test | open |` -->
 | risk | evidence now | cheapest way to retire it | status |
 | --- | --- | --- | --- |
-| value <!-- REQUIRED:risk-value --> | H, against it: ★C11 (17 of 18 commits of main.py made with Claude), no observed moment (A1, A2) | the account question Q3, with its pass line | open |
-| usability <!-- REQUIRED:risk-usability --> | H: the friction of 2026-11-25 was the words and the copying (A4). E: a saved edit does not reach the board without a new image (A5, project_image.py:121-125) | the account questions SQ13, SQ14 (council/synthesis.md, section 10) | open |
-| feasibility <!-- REQUIRED:risk-feasibility --> | E ★C1: the Artifact cannot open a port. E ★C7, ★C8: one Python pipeline. H ★C2: the desktop app can run a program, not run | the desk spike on P494 #674 (items.md, item 6), no board | open |
+| value <!-- REQUIRED:risk-value --> | H for A1 and A3. A2 retired by D3 (★C11, counted by co-author line) | the account question SQ21 for A1, before P1242 #1799 is ordered | open |
+| usability <!-- REQUIRED:risk-usability --> | H: the friction of 2026-11-25 was the words and the copying (A4, rated high by D10) | the account question SQ14, before P1242 #1799 is ordered | open |
+| feasibility <!-- REQUIRED:risk-feasibility --> | E ★C1 (nobody tried a port there), ★C7, ★C8. D4 builds no host feature, so no feasibility test is needed now | none now | retired for this epic by D4 and D5 |
 | viability <!-- REQUIRED:risk-viability --> | H: the epic is after the MVP and nobody is blocked (council/po-assistant.md, PO-1). H: the Artifact contract moved twice in six days (A10) | read the contract version at each republish for two weeks | open |
 | ethics and safety <!-- REQUIRED:risk-ethics --> | E ★C9, ★C10: a page yes is relayed, and a program can type a yes into a pseudo-terminal. E ★C13: a literal secret in main.py is masked nowhere (A8, A9) | the no-gos in brief.md, and a scratch page with a fake literal once the fold exists | open |
 | power and battery <!-- REQUIRED:electronics-firmware:power --> | n/a because the epic changes how firmware reaches the board, not the board's power | — | n/a |
@@ -18,7 +18,7 @@ e.g. `| usability | H no test yet (A2) | a five-person prototype test | open |` 
 | sensor drift and calibration <!-- REQUIRED:electronics-firmware:sensor-drift --> | n/a because no sensor is involved | — | n/a |
 | brown-out <!-- REQUIRED:electronics-firmware:brown-out --> | n/a because the flash path keeps today's USB power | — | n/a |
 | wake and low power <!-- REQUIRED:electronics-firmware:wake --> | n/a because no sleep mode changes | — | n/a |
-| the firmware–hardware contract <!-- REQUIRED:electronics-firmware:contract --> | E C19: the S3 under MicroPython cannot be reset into its bootloader by DTR and RTS (measured for the Python esptool, P472). E: Web Serial's open() takes no signal option, which the C6's quiet open needs. H for esptool-js (PH-3 to PH-7) | a bench run with a localhost page that does no flash, only if Q4 opens a browser path | open, matters only for D-q3 (c) |
+| the firmware–hardware contract <!-- REQUIRED:electronics-firmware:contract --> | E C19, for a browser flash only | n/a after D4: no browser flash | n/a, D4 |
 | supply and documents <!-- REQUIRED:electronics-firmware:supply --> | n/a because no part is bought | — | n/a |
 <!-- EXTEND:risk-rows --><!-- EXTEND:pair-rows -->
 
@@ -32,7 +32,7 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 | A1 <!-- REQUIRED:assumptions --> | He wants to read main.py and pins.py on the page, not in the chat or an editor | value | H: a wish on record twice (council/user-ux.md, UX-18), no account of a moment | high D10 | account question Q2 and SQ21 | he names one moment he wanted to read the firmware himself and where he looked, set 2026-11-26 | no moment: the show slice waits | open |
 | A2 | He wants to change firmware with his own hands on a page, and telling Claude is not enough | value | H, against it E ★C11. E against it: D3 | — (retired by D3) | account question Q3 | he names at least one moment when he wanted to type a value himself and telling Claude was not enough, set 2026-11-26 | no moment: D-q2 (a), the sentence for the chat | retired 2026-11-26, Results row 1 |
 | A3 | After a deploy his open question is what the board runs, and a read-back on the page answers it | value | H from E ★C12 (10 of 28 ended "ready unknown"). Rival: in 9 of 10 spark could not read the files, and the cause may be the firmware or the port (★C12, one project) | high D10 | account question SQ13 | he names how he found out what the board ran, and that the page was not where he looked, set 2026-11-26 | he found it at once in the terminal: D-q1 (b) waits | open |
-| A4 | The deploy's friction is the words and the copying, not the terminal itself | usability | H from E: the store's bench-2026-11-25 notes (UX-4) | high D10 | account question SQ14 | he picks "a short line that copies whole" over "a button", set 2026-11-26 | he picks the button: D-q3 (b) stays a candidate | open |
+| A4 | The deploy's friction is the words and the copying, not the terminal itself | usability | H from E: the store's bench-2026-11-25 notes (UX-4) | high D10 | account question SQ14, queued before P1242 #1799 is ordered | he picks "a short line that copies whole" over "a button", set 2026-11-26 | he picks the button: D-q3 (b) stays a candidate | open |
 | A5 | A person who saves an edit understands that the board still runs the old image | usability | H, E for the mechanism (project_image.py:121-125) | low D10 | a paper sketch of the fold's "what comes next" line, read by him | he says what comes next without help, set 2026-11-26 | he does not: the fold needs the line before any edit | open |
 | A6 | The Artifact in a browser cannot open a serial port | feasibility | E ★C1 for the attribute and the standard, H for the result | low D10 | the one-button test page of research.md, section 8, no board | requestPort() rejects with SecurityError, set 2026-11-26 | it opens a chooser: the host table changes | open |
 | A7 | The desktop-app host can run spark's Python for his own artifact, and he uses that host | feasibility | H from E ★C2, not run. His use: — | low D10 | account question SQ7, then the desk spike on P494 #674 | childProcess runs `flow.py show` after one Allow, set 2026-11-26 | it fails, or he does not use the app: no desktop column | open |
@@ -44,11 +44,11 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 <!-- One row per gap. e.g. `| Do assignees open new tasks? | Q2 | Lena, from analytics | one query | this week |` -->
 | question | decision it blocks | who can answer | how | when |
 | --- | --- | --- | --- | --- |
-| Which files did "the generated code" mean? <!-- REQUIRED:collection --> | D-q1, D-q2 | the PO | Q2, through spark-main | round 1, asked 2026-11-26 |
-| Did he want to change a firmware value himself? | D-q2, A2 | the PO | Q3, an account question | round 1, asked 2026-11-26 |
-| May a deploy start from the page? | D-q3 | the PO | Q4 | round 1, asked 2026-11-26 |
-| When does it reach code? | D-q5 | the PO | Q5 | round 1, asked 2026-11-26 |
-| Can the desktop app run spark's Python, and does its pty pass isatty? | D-q4, A7, A8 | spark-main files the comment on P494 #674 on his yes | a desk spike, no board | after the MVP |
+| Which files did "the generated code" mean? <!-- REQUIRED:collection --> | D-q1, D-q2 | the PO | Q2, through spark-main | answered D2 |
+| Did he want to change a firmware value himself? | D-q2, A2 | the PO | Q3, an account question | answered D3 |
+| May a deploy start from the page? | D-q3 | the PO | Q4 | answered D4 |
+| When does it reach code? | D-q5 | the PO | Q5 | answered D5 |
+| Does he want to read the firmware on the page (A1), and was the deploy's friction the words (A4)? | the order of P1242 #1799 | the PO | SQ21 and SQ14, account questions through spark-main | before P1242 #1799 is ordered, after the MVP walk |
 
 ## Results
 <!-- Filled on a return; may stay empty until then. One row per result: what was tested, what was seen (verbatim,
