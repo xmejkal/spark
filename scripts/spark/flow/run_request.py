@@ -80,24 +80,19 @@ def key_of(request):
     return request.key if request and isinstance(request.key, str) and request.key else None
 
 
-def kind_of(key):
-    """The kind of an offer's key: the word before its first colon."""
-    return key.split(":", 2)[0]
-
-
 def refusal_of(request, offered, fingerprint):
     """The code that refuses `request`, or None when it may run: it cannot be read, its kind is asked in the chat, its `seen`
-    is not `fingerprint` now, or its key is not among the keys spark `offered` now, its kind is none the page runs or its
+    is not `fingerprint` now, or its key is not among the keys spark `offered` now, it is not sendable (`flow_codes.is_sendable`) or its
     step's op is none of STEP_OPERATIONS. The page comes before the offers, so a second click on a pick, which is no offer
     once it ran, is stale."""
     key = key_of(request)
     if id_of(request) is None or key is None or not (isinstance(request.seen, str) and SEEN_PATTERN.fullmatch(request.seen)):
         return request_codes.REQUEST_MALFORMED
-    if kind_of(key) in flow_codes.IN_CHAT:
+    if flow_codes.in_chat(key):
         return request_codes.REQUEST_IN_CHAT
     if request.seen != fingerprint[:SHORT]:
         return request_codes.REQUEST_STALE
-    if key not in offered or kind_of(key) not in flow_codes.SENDABLE or offered[key].step.op not in STEP_OPERATIONS:
+    if key not in offered or not flow_codes.is_sendable(key) or offered[key].step.op not in STEP_OPERATIONS:
         return request_codes.REQUEST_NOT_OFFERED
     return None
 
@@ -175,7 +170,7 @@ class RunRequest(Operation):
             return refused_answer(request, offer, fingerprint, request_codes.REQUEST_NOT_OFFERED)
         result = run_operation(self.operations.get(step.op) or STEP_OPERATIONS[step.op](), values, outside=outside)
         after = fingerprint_of(project, phases_of(project, self.readers))
-        status, note = answer_of(kind_of(offer.key), result)
+        status, note = answer_of(flow_codes.kind_of(offer.key), result)
         line = RAN_LINE % (offer.label, MARKS[status][0] or OK) if note else line_of(offer.label, result)
         data = {"for": request.id, "key": offer.key, "label": offer.label, "ran": True, "status": status, "mark": MARKS[status][1],
                 "line": line, "note": note, "fingerprint": after}

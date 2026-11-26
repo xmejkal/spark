@@ -20,7 +20,7 @@ from spark.flow import flow_codes, request_codes
 from spark.flow.fingerprint import SHORT
 from spark.flow.page_sections import (WIRING, DeveloperHtmlFold, FreshHtmlLine, GuideHtmlSection, IntroHtmlLine, NotesHtmlSection,
                                       PartsHtmlFold, PicturesHtmlFold, StandsAtHtmlLine, StationsHtmlLine, TitleHtmlHeading,
-                                      WiringHtmlFold, _text, is_sendable)
+                                      WiringHtmlFold, _text)
 from spark.flow.phase_readers import MARKS
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import MONTHS
@@ -63,7 +63,7 @@ def page_words(phases):
     once it copied a chat offer's tell (P1122).
     """
     offers = {}
-    for offer in (offer for phase in phases for offer in phase["offers"] if is_sendable(offer)):
+    for offer in (offer for phase in phases for offer in phase["offers"] if flow_codes.is_sendable(offer["key"])):
         stale = [flow_codes.CONFIRM_STALE % ", ".join(offer["makes_stale"])] if offer["makes_stale"] else []
         offers[offer["key"]] = {"label": offer["label"], "says": [offer["effect"]] + stale}
     meanings = {str(code): meaning for code, meaning in request_codes.CODES.items()}

@@ -191,7 +191,7 @@ def job_offer(now):
     """The key of the offer that does the job of the phase to act on now: its one offer of a kind the page sends, or None
     when it holds none or more than one (P1030: one rule, so the CLI's `next` and the page's NOW button name one offer). A
     breadboard now names none: the build's offer is in the build phase, until a NOW sentence names its button (piece 6)."""
-    own = [offer.key for offer in now.offers if offer.key.split(":", 1)[0] in flow_codes.SENDABLE]
+    own = [offer.key for offer in now.offers if flow_codes.is_sendable(offer.key)]
     return own[0] if len(own) == 1 else None
 
 
