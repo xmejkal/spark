@@ -29,6 +29,8 @@ FILES_NOT_FOLDER, CONFIG_NOT_JSON, FILES_NOT_WRITTEN = "files_not_folder", "conf
 #: import_firmware.py.
 NO_FIRMWARE_FOLDER, NOTHING_TO_IMPORT = "no_firmware_folder", "nothing_to_import"
 IMPORT_FAILED, IMPORT_TIMEOUT = "import_failed", "import_timeout"
+#: check_firmware.py: the project's own tests (P1208).
+OWN_TEST_FAILED, OWN_TESTS_NOT_RUN = "own_test_failed", "own_tests_not_run"
 
 #: Each code and the one sentence that says what it means.
 CODES = {
@@ -61,5 +63,17 @@ CODES = {
     NOTHING_TO_IMPORT: "firmware/ holds nothing to import but the boot files and the pin map",
     IMPORT_FAILED: "a firmware module raised when it was imported",
     IMPORT_TIMEOUT: "a firmware module did not finish its import within the timeout",
+    OWN_TEST_FAILED: "a test in the project's tests/ failed or raised",
+    OWN_TESTS_NOT_RUN: "the project's tests did not finish within the timeout, or gave no count",
+}
+
+#: What to do about each code that check_firmware.py answers with: the `fix` of its Finding (P1208).
+FIXES = {
+    NO_FIRMWARE_FOLDER: "write the firmware in a firmware/ folder of the project, or name the project with --project",
+    NOTHING_TO_IMPORT: "move the code out of main.py into a module that main.py calls",
+    IMPORT_FAILED: "fix the error on the module's last line, then run check_firmware.py again",
+    IMPORT_TIMEOUT: "move what loops or waits at module level into a function that main.py calls",
+    OWN_TEST_FAILED: "fix the test, or the code it tests, then run check_firmware.py again",
+    OWN_TESTS_NOT_RUN: "run `python3 -m unittest discover -s tests` in the project to see why, then run check_firmware.py again",
 }
 # --- end MVP ---
