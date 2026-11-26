@@ -52,8 +52,8 @@ Sets up a project for spark. It writes:
 - a `package.json`, which tscircuit installs into
 - spark's section of `AGENTS.md`, between two marker lines
 - a `CLAUDE.md` with `@AGENTS.md`, only when the project has none
-- `CLAUDE.local.md`, a link to `rules.md` in your store, kept out of git. If your store holds no `rules.md`, init
-  writes no link and says why
+- `CLAUDE.local.md`, a link to `rules.md` in your store. If your store holds no `rules.md`, init writes no link
+- spark's section of `.gitignore`, which keeps that link, `sim/*.bin` and `sim/runs/` out of git
 
 It also adds the project to your projects list in your store. It leaves a file that you wrote alone, and says what to
 add.

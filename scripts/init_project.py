@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Everything a project needs before any check can run.
+Everything a project needs before any check can run, among it spark's section of the project's `.gitignore` (P1150).
 
     init_project.py                        # here
     init_project.py --project ../thing --board firebeetle2-esp32s3
@@ -16,7 +16,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
-from spark.build import ai_files  # noqa: E402
+from spark.build import ai_files, ignore_list  # noqa: E402
 from spark.design import footprint_emitter  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.sourcing import record_home  # noqa: E402
@@ -87,8 +87,8 @@ def main(argv=None):
     notes.extend(unstated)
     unanswered, unread = unanswered_fields(project)
     notes.extend(unread)
-    ai_did, ai_notes = ai_files.AiFiles(project).write()
-    notes.extend(ai_notes)
+    (ai_did, ai_notes), (ignore_did, ignore_notes) = ai_files.AiFiles(project).write(), ignore_list.IgnoreList(project).write()
+    notes.extend(ai_notes + ignore_notes)
 
     if args.board:
         if (refused := why_board_refused(args.board, project)):
@@ -111,7 +111,7 @@ def main(argv=None):
         for name, field in unanswered:
             print("  %s  %s" % (name, field))
 
-    if not written and not args.board and not ai_did and answers is None:  # with --answers the brief says it: done
+    if not written and not args.board and not ai_did and not ignore_did and answers is None:  # with --answers the brief says it: done
         print(NOTHING_TO_DO)
         return EXIT_NOTHING_TO_DO
     # Part of the job could not be done, and W1 applies to this tool as much as to a check: the

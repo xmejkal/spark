@@ -804,6 +804,17 @@ class WhatIsStillOpenTest(unittest.TestCase):
             self.assertIn("  %s\n" % line, text)
         self.assertTrue(text.rstrip().endswith("keeps your answers."), text)
 
+    def test_a_run_that_wrote_only_the_gitignore_exits_0_and_a_second_one_is_nothing_to_do(self):
+        """P1150: spark's section of .gitignore is a write that counts, so the run is not "nothing to do"."""
+        root = Path(tempfile.mkdtemp())
+        self._init(root)
+        (root / ".gitignore").unlink()
+        code, text = self._init(root)
+        self.assertEqual(code, init_project.EXIT_OK)
+        self.assertIn("wrote .gitignore with spark's section", text)
+        self.assertNotIn("nothing to do", text)
+        self.assertEqual(self._init(root)[0], 1, "nothing to do")
+
     def test_force_lists_the_brief_fields_still_null_and_not_the_answered_goal(self):
         root = Path(tempfile.mkdtemp())
         self._init(root)

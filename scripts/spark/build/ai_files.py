@@ -10,18 +10,16 @@ The files that AI tools read in a project that uses spark (P216 step 6), written
 """
 
 import os
-import re
 from pathlib import Path
 
+from spark.build.spark_section import SparkSection
 from spark.records import store
 
 #: The markers in a person's AGENTS.md are a contract: an old section is found by these, whatever its first line says.
 BEGIN = "<!-- spark:begin"
 BEGIN_LINE = BEGIN + ". /spark:init writes this section and rewrites it on each run. Edit outside the markers. -->"
 END = "<!-- spark:end -->"
-#: A marker counts only at the start of a line, never named inside a sentence.
-BEGIN_AT = re.compile("^" + re.escape(BEGIN), re.M)
-END_AT = re.compile("^" + re.escape(END), re.M)
+MARKERS = SparkSection(BEGIN, BEGIN_LINE, END)
 SECTION = (Path(__file__).resolve().parents[3] / "data" / "agents-section.md").read_text()
 IMPORT = "@AGENTS.md"
 CLAUDE_MD = "<!-- /spark:init wrote this file. It is yours now: spark never rewrites it. -->\n%s\n" % IMPORT
@@ -41,7 +39,7 @@ class AiFiles:
 
     def agents_md(self):
         path = self.project / "AGENTS.md"
-        block = "%s\n%s%s\n" % (BEGIN_LINE, SECTION, END)
+        block = MARKERS.block(SECTION)
         if path.is_symlink():  # a link to a file in the project, such as CLAUDE.md, is followed
             path = path.resolve()
             if not path.is_file() or self.project.resolve() not in path.parents:
@@ -52,15 +50,12 @@ class AiFiles:
         text = read(path)
         if text is None:
             return False, "AGENTS.md is not UTF-8 text, so it is left alone"
-        begin = BEGIN_AT.search(text)
-        if begin is None:
-            store.write_file(path, text + ("" if text.endswith("\n") else "\n") + "\n" + block)
-            return True, "added spark's section to the end of your AGENTS.md"
-        end = END_AT.search(text, begin.end())
-        if end is None:
-            return False, "AGENTS.md has spark's begin marker but no end marker, so it is left alone: fix the markers"
-        if store.write_file(path, text[:begin.start()] + block.rstrip("\n") + text[end.end():]):
-            return True, "rewrote spark's section of AGENTS.md"
+        new, why = MARKERS.placed(text, SECTION)
+        if new is None:
+            return False, "AGENTS.md %s, so it is left alone: fix the markers" % why
+        if store.write_file(path, new):
+            return True, ("rewrote spark's section of AGENTS.md" if MARKERS.found(text)
+                          else "added spark's section to the end of your AGENTS.md")
         return False, "AGENTS.md already has spark's section"
 
     def claude_md(self):
@@ -102,7 +97,7 @@ class AiFiles:
         if top is None:
             return did, note
         if not (top / ".git").is_dir():
-            return did, note + ". Add %s to your git ignore list: %s/.git is not a folder" % (LOCAL, top)
+            return did, note + ". Add %s to your .gitignore: %s/.git is not a folder" % (LOCAL, top)
         exclude = top / ".git" / "info" / "exclude"
         lines = exclude.read_text().splitlines() if exclude.exists() else []
         if LOCAL in lines:

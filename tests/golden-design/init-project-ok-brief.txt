@@ -7,6 +7,7 @@ spark init in <project-dir>
   wrote AGENTS.md with spark's section
   wrote CLAUDE.md: @AGENTS.md
   no rules file at <spark-home>/rules.md, so no CLAUDE.local.md: write your rules for spark projects there and run init again
+  wrote .gitignore with spark's section
   named 2 rail(s) from circuit.json
   no board chosen. Available: firebeetle2-esp32s3, xiao-esp32-c6
 

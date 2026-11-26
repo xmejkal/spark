@@ -144,7 +144,7 @@ class AiFilesTest(unittest.TestCase):
         project = Path(tempfile.mkdtemp())
         (project / ".git").write_text("gitdir: /elsewhere\n")
         did, notes = ai_files.AiFiles(project, self.store).write()
-        self.assertTrue(any("ignore list" in note for note in notes), notes)
+        self.assertTrue(any(".gitignore" in note for note in notes), notes)
 
     def test_a_link_to_an_old_store_is_named_and_left_alone(self):
         (self.project / "CLAUDE.local.md").symlink_to(self.store / "old" / "rules.md")
