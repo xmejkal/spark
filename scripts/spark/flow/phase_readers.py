@@ -12,7 +12,7 @@ from pathlib import Path
 from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, earlier_dist, sha256_of
 from spark.build.stages import BUILD, SIMULATION
 from spark.breadboard import sheet
-from spark.design import need_requirements, needs, needs_basis
+from spark.design import entry_origin, need_requirements, needs, needs_basis
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import deploy_reading, flow_codes, offer_steps
@@ -409,7 +409,8 @@ class RequirementsReader(PhaseReader):
     """Strategy: requirements.json against what the picks give (`need_requirements.requirements`): stale when they differ,
     problems when the picks cannot give one. A file with no needs beside it was written by hand: nothing is compared, so
     it has no status (P878). P993: the parts list is offered only when its own rule refuses nothing; before a file, a
-    refusal is problems once every need that counts has a pick, else the parts phase holds the blocker (not started)."""
+    refusal is problems once every need that counts has a pick, else the parts phase holds the blocker (not started). A file
+    changed after spark last wrote it says so (P1140)."""
 
     PHASE, BY = flow_codes.REQUIREMENTS, flow_codes.BY_CLAUDE
 
@@ -430,7 +431,8 @@ class RequirementsReader(PhaseReader):
         if held is None:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_REQUIREMENTS_MESSAGE] + warned, offers)
         if given.content != held:
-            return self.phase(flow_codes.STALE, [flow_codes.REQUIREMENTS_STALE_MESSAGE] + warned, offers)
+            said = flow_codes.STALE_REQUIREMENTS[entry_origin.EntryOriginStore(project).is_as_written(held)][0]
+            return self.phase(flow_codes.STALE, [said] + warned, offers)
         return self.phase(OK, [REQUIREMENTS_FILE] + warned, offers)
 
 

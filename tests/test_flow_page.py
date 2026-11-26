@@ -2177,6 +2177,11 @@ class ThePageScriptTest(unittest.TestCase):
         self.assertEqual(page_words([])["now_button"], {
             "Ask Claude in the chat to write the parts list from your picks.": "Write the parts list from your picks. Use the button.",
             "Your picks changed. Ask Claude to write the parts list again.": "Your picks changed. Write the parts list again. Use the button.",
+            "The parts list was changed by hand. Writing it again keeps its parts and puts back what your picks give. "
+            "Ask Claude to write it again, or to change your picks first.":
+                "The parts list was changed by hand. Writing it again keeps its parts and puts back what your picks give. Use the button.",
+            "The parts list differs from what your picks give. Ask Claude to write it from your picks.":
+                "The parts list differs from what your picks give. Write it from your picks. Use the button.",
             "Ask Claude in the chat to build the board. It takes seconds and costs nothing.":
                 "Build the board. It takes seconds and costs nothing. Use the button.",
             "The parts list changed since the last build. Ask Claude to build again.":

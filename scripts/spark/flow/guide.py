@@ -12,11 +12,11 @@ from spark.breadboard import sheet
 from spark.build import build_codes
 from spark.build.build_record import BuildRecordStore
 from spark.build.stages import SIMULATION
-from spark.design import needs
+from spark.design import entry_origin, needs
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import deploy_reading, flow_codes, wired_board
-from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, set_aside
+from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, read_requirements, set_aside
 from spark.core.errors import CodedMessageError
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS, SKIPPED
 
@@ -171,6 +171,15 @@ def with_deploy_now(project, said, now, deploy=None):
     return dict(said, by=told[0], says=told[1], chat_offer=deploy_chat_offer(state)) if told else said
 
 
+def with_requirements_now(project, said, now):
+    """`said` with the sentence of a stale parts list by whether the file is as spark last wrote it (P1140,
+    `flow_codes.STALE_REQUIREMENTS`, the table the phase line reads too), read here as `with_deploy_now` reads the deploy. Else `said`."""
+    if not (now and now.phase == flow_codes.REQUIREMENTS and now.status == flow_codes.STALE):
+        return said
+    written = readable(lambda: entry_origin.EntryOriginStore(project).is_as_written(read_requirements(project)), None)
+    return dict(said, says=flow_codes.STALE_REQUIREMENTS[written][1])
+
+
 def no_open_phase(said, by_name):
     """The guide's sentence when nothing is open: NO_OPEN_PHASE_NOW when there is no now and the deploy is ok (P1043), else
     None, so a flow of other readers gets none."""
@@ -303,6 +312,7 @@ def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
     written = not (now and now.phase == flow_codes.SIMULATE) or bool(scenario_names(project))
     said = with_deploy_now(project, now_of(now, open_needs, fact, count, written), now, deploy) if now else None
+    said = with_requirements_now(project, said, now) if said else None
     said = dict(said, with_wiring=with_wiring(project, now, by_name, count)) if said else None
     # beside the firmware, the wiring is part of now
     breadboard_place = flow_codes.NOW_PLACE if two_jobs else flow_codes.DONE_PLACE if is_sheet_current(project, by_name) else None
