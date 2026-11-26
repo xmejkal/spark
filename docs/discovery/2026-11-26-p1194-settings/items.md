@@ -8,7 +8,7 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "spark should have a settings /config feature per multiple layer like global/per project/per account logged in" (the PO, 2026-11-26, #1740) <!-- REQUIRED:needed-by -->
 - value proven by: `show-settings --json` lists the vendor order with its value, default and layer; a test adds a fake fourth layer with no caller change <!-- REQUIRED:value-proven-by -->
-- depends on: the PO's answers to Q2 to Q7 <!-- REQUIRED:depends-on -->
+- depends on: D11 to D16, D23 (answered 2026-11-26) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1194 #1740 <!-- REQUIRED:spark-process:parent -->
@@ -27,16 +27,22 @@ e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)
 - type: story · needed by: "we will also make the ui for it later, or you can already start the epic of config and analyze etc and create the ux/ui" (the PO, 2026-11-26) · value proven by: A1's walk on the built page · depends on: I1, I3 · status: proposed · label: story · parent: P1194 #1740 · slice: 10 The store
 
 ## I6 — bug: a brief value spark cannot read falls back to the default in silence
-- type: bug · needed by: F2 and ★C4 (smartbin-local's `prefer`, reached only by a hand edit) · value proven by: a run on smartbin-local names the dropped value · depends on: Q5 · status: proposed · label: bug · parent: — · slice: 10 The store
+- type: bug · needed by: F2 and ★C4 (smartbin-local's `prefer`, reached only by a hand edit) · value proven by: a run on smartbin-local uses spark's default and its first line names the value it could not read (D14) · depends on: — · status: proposed · label: bug · parent: — · slice: 10 The store
 
 ## I7 — bug: a project's tools file can redirect a role and blank account_env
-- type: bug · needed by: F1 and ★C5 · value proven by: a scratch project's redirect is named before use (a refusal would break the documented `--use … --project .`) · depends on: Q3, Q6 · status: proposed · label: bug · parent: — · slice: 10 The store
+- type: bug · needed by: F1 and ★C5 · value proven by: a scratch project's redirect is named before use, and an empty `account_env` from a project is refused (D12) · depends on: — · status: proposed · label: bug · parent: — · slice: 10 The store
+
+## I9 — a project's settings move from its brief to its own settings file (D24)
+- type: story · needed by: D24 (the PO, 2026-11-26, Q15) · value proven by: `prefer` and `sellers` read from `.spark/settings.json`; the brief keeps the goal and the musts; `init_project.py --answers` and the spark-review skill still work; his default fills in where a project names none and each run says so · depends on: I1 · status: proposed · label: story · parent: P1194 #1740 · slice: 10 The store
+
+## I10 — a paid-run rule as a standing yes (D19)
+- type: story · needed by: D19 and P1190's D13, "a threshold for example when it should warn and not run the payed ones by default … only running it … for the important releases" (the PO, 2026-11-26) · value proven by: a run inside his rule's limits starts with no per-run yes and names the rule; a run outside it asks; only his own layer may set the rule (D12) · depends on: I3, P1078 (the paid run as an Operation) · status: proposed · label: story · parent: P1194 #1740 · slice: 10 The store
 
 ## I8 — chore: the tools list's choices as Operations
 - type: chore · needed by: D8 and D9, "everything must be accessible at least from CLI, later it will be MCP" (the PO, 2026-11-26) · value proven by: the catalogue lists the tools list's choices · depends on: — · status: proposed · label: chore · parent: #94 · slice: ask the decider
 
 ## Board actions
-- file I1, I3 to I8 and refine I2 in place · pending, needs his yes to this list <!-- REQUIRED:board-actions -->
+- file I1, I3 to I10 and refine I2 in place · pending, needs his yes to this list <!-- REQUIRED:board-actions -->
 
 ## Proposed from the PO's words during the discovery
 

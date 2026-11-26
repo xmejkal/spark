@@ -52,6 +52,8 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 with its pointer), the pass line met or missed, what it changes. -->
 | date | source and pointer | what was seen | pass line met or missed | what it changes |
 | --- | --- | --- | --- | --- |
+| 2026-11-26 | Q13, D22 (an account, n = 1) | the last time he wanted to know why spark did something, he asked Claude | not a test of A1; A1's walk is still to run | leans to show-settings in the chat first, the page after (A1's "result that would change") |
+| 2026-11-26 | Q12, D21 (an account, n = 1) | only this Mac in the last 30 days | not a test of A5 | the account slot stays empty for long |
 
 ## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
 <!-- Energy per mode · peaks per rail against the source · dissipation per part, each number with its provenance and

@@ -18,7 +18,8 @@ e.g. `| 0 | Notice | the assignee gets one daily digest | job 1 | H ★C2 | the 
 | 2 | Change it at a layer | set-setting with the layers each setting allows, and a refusal that names the file | J2, J3 | E ★C5 | the refusal test of A6 |
 | 3 | Meet a choice | a setting with no value asks once, with "use spark's default" kept; first for P1193's author | J1, J5 | E ★C6 ★C11 | the walk of A8 |
 | 4 | See whose word it is | the page: the settings list and each step's fold, changes as sentences to Claude | J3 | H A1 | the prototype walk of A1 on the built page |
-| 5 | Meet a choice | the shops and the vendor order as personal defaults; the tools list shown read-only | J1 | E ★C3 | the count of A2 falls to 0 repeats |
+| 5 | Meet a choice | a project's settings move from its brief to `.spark/settings.json` (D24); his shops and vendor order become his defaults and fill in where a project names none, said in each run | J1 | E ★C3, D24 | the count of A2 falls to 0 repeats |
+| 6 | Spark uses it and says so | a paid-run rule as his standing yes within its limits (D19) | J2, J5 | D19 | a run inside the rule starts with no per-run yes and names the rule |
 | later | It follows you | the account layer with a GitHub sign-in (N1) | J4 | D6, D7 | — |
 
 ## Delta to the product's map <!-- REQUIRED:spark-process:map-delta -->
