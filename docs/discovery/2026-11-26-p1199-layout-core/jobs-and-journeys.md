@@ -13,7 +13,7 @@ e.g. `- When I assign a task in a meeting [E tickets.csv:6], I want the assignee
 - J1 · When spark plans my breadboard or perfboard [E #1747], I want to choose a goal, the smallest board or the whole board used [E #1747 "options to go for the smallest size or to take up the whole perfobard and use the space"], so I can fit the board I own or have room to solder [H the facilitator]
 - J2 · When my circuit goes onto a perfboard [E #311], I want spark to route each connection as a solder bridge, a bare wire or an insulated jumper, with few jumpers [E #311 note 3], so I can solder it from the plan [E #311 Done when, "a button-light perfboard layout that the circuit check accepts"]
 - J3 · When I or Claude move a part or a wire [E #1747 "being also able for humans to edit the connections and move the parts around"], I want the move to stay after a rebuild, or spark to say why not [D P269 D11, 2026-10-16], so I do not redo my work [H the facilitator]
-- J4 · When I ask Claude to change the layout, for example "put the buzzer there and connect it to pin 20" [E #352], I want Claude to do it through spark [E #311 note 1 "Spark plans, Claude changes"], so the change is checked and kept like my own [D P1193 D-e on #1699]
+- J4 · When I ask Claude to change the layout, for example a diode swapped for a buzzer and "Connect it to pin number 20 and the ground" [E #352, his words of 2026-10-18], I want Claude to do it through spark [E #311 note 1 "Spark plans, Claude changes"], so the change is checked and kept like my own [D P1193 D-e on #1699]
 - J5 · When a layout change went wrong [H the facilitator], I want to go back to an earlier layout [E #1747 "Does it also support the steps reverting"], so I can try again from a layout that worked [H the facilitator]
 - J6 · When I look at my breadboard or perfboard on the project's page [E #1747 "What about the webeditors for them?"], I want to move parts and wires there by hand [E #1699, E #1698], so I can fix a detail faster than I can say it [H the facilitator]
 - J7 · When spark gains a new surface, such as the perfboard, the PCB's placement draft or a circuit sculpture [E #1747 scope], I want it to reuse the one layout core and its strategies [E #1747 "Can we refactor out some protocole or omdule or class"], so nothing is built twice and a strategy can change in one place [E #1747, his standing rule]
@@ -36,6 +36,8 @@ e.g. `- Job 1 · paste each task into Slack by hand · E tickets.csv:7` -->
 journey block: it forces a score on every task. "n/a — a one-step job" may replace both.
 e.g. `| 2 | opens the app | E analytics, 90 days | never sees the task | not yet | Do they read email? |` -->
 ### The maker — moves a part on the breadboard, today <!-- REQUIRED:journey -->
+This path works only for a board that Wokwi draws. A board drawn from its own record on spark's 63-column board, such as the FireBeetle the PO wired on the bench, gets breadboard.svg alone, so steps 2 to 5 cannot happen (council/user.md US-1, council/po-assistant.md PA-2).
+
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
 | 1 | builds, and gets breadboard.json and breadboard.svg | E sheet.py:290-325 | none | works | — |
@@ -54,14 +56,14 @@ flowchart LR
 ### Claude — asked to move a part and connect it, today
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
-| 1 | hears "move the LED two columns right" | E #352 (his example of a spoken change) | none | works | — |
+| 1 | hears a change in words. His example: "I noticed this diode is here. Let's add a buzzer instead ... Connect it to pin number 20 and the ground" | E #352 (2026-10-18) | the sentence chains a part pick, a pin change and a place. Only the place is a layout edit (council/user.md US-4) | works | — |
 | 2 | looks for an Operation that moves a part | E operation_catalogue.py | none exists, and `--describe` lists none | not yet | — |
 | 3 | edits breadboard.json as text, in Wokwi's px | H, not observed | Claude must compute px from holes. A wrong number puts a pin off a hole | partly | Does Claude edit breadboard.json today, in any project log? |
 | 4 | rebuilds and reads what was not kept | E kept_moves.py:233-255 | the reason comes after the edit, never before | works | — |
 
 ```mermaid
 flowchart LR
-  c1["hears the change"] --> c2["no Operation"] --> c3["edits px by hand"] --> c4["rebuild says kept or not"]
+  c1["hears a change in words"] --> c2["no Operation"] --> c3["edits px by hand"] --> c4["rebuild says kept or not"]
 ```
 
 ### The maker — puts the circuit on a perfboard, today

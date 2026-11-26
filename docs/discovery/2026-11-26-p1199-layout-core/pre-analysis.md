@@ -7,9 +7,10 @@ Step 1 of the PO's cycle for [P1199 #1747](https://github.com/xmejkal/spark/issu
 > pure, they refuse with codes, they break ties by rank and not by float, and 181 tests pin them. They are not yet a
 > core. Three layout engines exist and share no code: the breadboard planner (px), the PCB's first-draft placement
 > (mm, a fixed column) and tscircuit's autorouter. The perfboard has none. The parts a mm core reuses as they are:
-> the hole group, the ledger, the body box, the turn, the three strategy interfaces and the A* track search. The parts
-> that need a change: the unit, the Surface's breadboard words, the placement's single strategy with no goal, keep
-> moves as a subclass, and the missing Operation and setting.
+> the hole group, the ledger, the body box and the turn. The parts that need a change: the unit, the Surface's breadboard
+> words, the placement's interface (one part at a time, so no goal fits), the router (picture rules, so a perfboard needs
+> a join router inside the plan), keep moves as a subclass, and the missing Operation and setting. Two rows were
+> corrected after the architecture lens (§4).
 
 ## 1. What exists today
 
@@ -94,16 +95,21 @@ and names changed.
 | `Surface`'s constructor | split | one maker per surface kind: breadboard from data/breadboards.json, perfboard from a drawer record (holes across and down, pitch, the PO's note 2 on #311), later a stripboard |
 | `HoleLedger` | keep | the taken holes of one plan |
 | `BodyBox`, `rotate` | keep, in mm | a body as it lies |
-| `PartPlacement`, `JumperPlacement`, `JumperRouter` | keep as interfaces | one seam per strategy, chosen by a setting |
+| `PartPlacement`, `JumperPlacement`, `JumperRouter` | keep the idea, change the shape | one seam per strategy, chosen by a setting. Corrected after the architecture lens (council/architecture.md ARCH-3): `place(part_id, drawn, ledger, after, pinned)` places one part at a time and is already at the limit of 5 parameters (tools/measure.py:245, R3), so no goal fits it. A goal needs the whole set of parts at once. |
 | `FirstFitPartPlacement` | keep as one strategy | beside a goal strategy (the smallest board, a spread) |
 | the step order and the resistor pass in `BreadboardPlanner` | stays with the breadboard | the breadboard's own planner over the core |
-| `TrackGrid`, `TrackRouting` (A*) | keep, with its costs as parameters | the router of every surface. Already in pitch units (the step is half a pitch), so only `_round_px` ties it to px |
+| `TrackGrid`, `TrackRouting` (A*) | keep for the breadboard picture, reuse its search idea only | corrected after the architecture lens (ARCH-1, ARCH-2): it follows picture rules. A hole is a blocked cell (wire_routing.py:141), a wire leaves along its hole's column, and its clearance is in px (wire_routing.py:203-205). It runs in the scene maker, after the same-pins check (breadboard_scene.py:186-194). A perfboard's routes are its joins, so they need a join router inside the plan, which the check reads. |
 | `KeepMoves...` | change | a decorator around any placement, fed by the kept moves of P1193's project timeline, not by a diff of Wokwi's file |
 | `DrawnNets` (P279) | widen | the same-pins check over a layout's joined groups, which on a perfboard include the routes |
 | the Wokwi and SVG renderers | stay at the edge | the only place px appears: px = mm × 96 / 25.4 |
 | `board_components.place` | later, a client of the core | the PCB's placement draft as one more surface (the card's scope says "later") |
 
-## 5. What this pre-analysis did not check
+## 5. A limit the first change meets
+
+drawing.py has 599 lines, and a module may have 600 (tools/measure.py:242, R1). So the first change to it must split
+it (council/architecture.md ARCH-18).
+
+## 6. What this pre-analysis did not check
 
 - How often a jumper falls back to a dashed way or to no way, over real projects. Not measured.
 - Whether the router is fast enough for a perfboard of 30 × 70 holes. The budget is 60,000 states per search
