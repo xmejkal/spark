@@ -11,7 +11,7 @@ are taken at filing time, after reading the highest one (P1239 on 2026-11-26).
 - type: spike <!-- REQUIRED:item-type -->
 - needed by: "the whole thing openable in fusion and the user or ai could use it  and create the cover or other parts" (the PO, 2026-11-26, #1745) <!-- REQUIRED:needed-by -->
 - value proven by: a finding file with his screenshot of Fusion's browser tree for each of three files, and a photo of his FireBeetle in the printed case with a calliper reading, each against its pass line <!-- REQUIRED:value-proven-by -->
-- depends on: the answers to Q2, Q3 and Q4, Q6 (callipers), and two sittings of the PO <!-- REQUIRED:depends-on -->
+- depends on: two sittings of the PO. He said yes to both tests and has callipers (D6). T1 runs first, on his Personal licence (D2) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): spike <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1197 #1745 <!-- REQUIRED:spark-process:parent -->
@@ -55,7 +55,7 @@ are taken at filing time, after reading the highest one (P1239 on 2026-11-26).
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "the user or ai could use it  and create the cover or other parts" (the PO, 2026-11-26, #1745), and "do you have all the details in the record?" (the PO, 2026-11-20, P934 diary, quoted in US-6) <!-- REQUIRED:needed-by -->
 - value proven by: the JSON for his FireBeetle with each number's source, and one cold Claude run that asks for the missing fact and invents none (A9) <!-- REQUIRED:value-proven-by -->
-- depends on: the words chore, the spike's T2, Q9 <!-- REQUIRED:depends-on -->
+- depends on: the words chore, the spike's T2, Q9. "How a module sits" (in sockets, D7) is one of its facts <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1197 #1745 <!-- REQUIRED:spark-process:parent -->
@@ -66,7 +66,7 @@ are taken at filing time, after reading the highest one (P1239 on 2026-11-26).
 - type: story <!-- REQUIRED:item-type -->
 - needed by: "some basic cover would be created" and "allow for prining and exporting the 3d printer files for like verysimple cases" (the PO, 2026-11-26, #1745) <!-- REQUIRED:needed-by -->
 - value proven by: the printed case for his FireBeetle fits (a photo and a calliper reading), and `FakeCaseMaker` runs through the same Operation in the tests <!-- REQUIRED:value-proven-by -->
-- depends on: T2 passing, the mechanics card, Q8 and Q16 <!-- REQUIRED:depends-on -->
+- depends on: T2 passing, which the PO set as the condition (D8), the mechanics card, and Q16 <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1197 #1745 <!-- REQUIRED:spark-process:parent -->
