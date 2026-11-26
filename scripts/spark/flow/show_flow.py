@@ -78,15 +78,15 @@ def now_tag(now, steps):
 def guide_lines(guide, steps=()):
     """The guide as a person reads it in a terminal (P1030): NOW with the key of its offer or the op of its next-only step
     (`now_tag`), DONE, LATER, why there is no simulation, SET ASIDE. A list with no item draws no line. The page draws its
-    station line in place of DONE and LATER (P1119); the CLI keeps them. The line that says nothing is open (P1043,
-    `guide.get`, as the page reads it) stands where NOW would, right after it: the two never both hold (P1142)."""
+    station line in place of DONE and LATER (P1119); the CLI keeps them. Last, the line that says nothing is open (P1043):
+    `guide.get`, as the page reads it."""
     now = guide["now"]
     lines = [GUIDE_LINE % (flow_codes.GUIDE_NOW % now["phase"], now["says"] + now_tag(now, steps))] if now else []
-    lines += ["  " + guide["no_open_phase"]] if guide.get("no_open_phase") else []
     lines += [GUIDE_LINE % (flow_codes.GUIDE_DONE, ", ".join(guide["done"]))] if guide["done"] else []
     lines += [GUIDE_LINE % (flow_codes.GUIDE_LATER, ", ".join(guide["later"]))] if guide["later"] else []
     lines += ["  " + guide["no_simulation"]] if guide["no_simulation"] else []
     lines += [GUIDE_LINE % (flow_codes.GUIDE_SET_ASIDE, ", ".join(guide["set_aside"]))] if guide["set_aside"] else []
+    lines += ["  " + guide["no_open_phase"]] if guide.get("no_open_phase") else []
     return [printable(line) for line in lines]
 
 
@@ -151,7 +151,7 @@ class ShowFlow(Operation):
     Operation: where a project stands. Its data is the FlowReading of `reading_of` (P1060): `data.phases` (each Phase as a
     dict), `data.stands_at`, the guide's now phase (`stands_at_of`, P1030), `data.fingerprint` (`fingerprint_of`, P829),
     `data.guide` (`guide_of`, P977), `data.deploy`, the newest board log (`deploy_reading.deploy_data`, P1043), then
-    `data.name`, `data.title` (the page's), `data.stamp` and `data.artifact`. Its lines start with the guide's, and `next`
+    `data.name`, `data.title` (the page's), `data.stamp` and `data.artifact`. Its lines end with the guide's, and `next`
     holds the now offer's step (P1030), else the now phase's next-only step (P1034). A phase
     that holds problems or could not run adds one Finding of that status, so the exit says so; every phase still answers.
     `readers` are the PhaseReaders a test swaps (None: `READERS`).
@@ -174,8 +174,8 @@ class ShowFlow(Operation):
                             PHASE_SENTENCE % (phase.phase, phase.says[0]), PHASE_FIX)
                     for phase in phases if phase.status in (PROBLEMS, COULD_NOT_RUN)]
         steps = now_steps(project, phases, guide)
-        lines = guide_lines(guide, steps)
-        lines += [line for phase in phases for line in phase_line(phase)]
+        lines = [line for phase in phases for line in phase_line(phase)]
+        lines += guide_lines(guide, steps)
         data = reading.to_dict()
         notes = [{"subject": name, "sentence": MASK_OFF % name} for name in ProjectSecrets.read(project).unreadable]
         lines += [printable("  " + note["sentence"]) for note in notes]  # show has no headline, so its text holds its lines only
