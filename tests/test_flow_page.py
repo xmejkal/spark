@@ -2266,6 +2266,23 @@ class TheLessTextTest(unittest.TestCase):
         self.assertEqual(page_words([a_need_phase()])["keep"], {})
 
 
+class TheBoardsOwnPartOnThePageTest(unittest.TestCase):
+    """P1136 (finding 9 of the p829 walk): a board's pick row for a need that does not compute names the board's own part
+    after the board's name, then what you have of it; a row whose `own_part` is null keeps its part's name alone."""
+
+    def test_a_board_s_row_names_its_own_part_and_a_part_s_row_its_name_alone(self):
+        in_prague(self)
+        phase = a_picked_phase()
+        phase["offers"].append(dict(phase["offers"][2], key="pick:button:t-display", part="T-Display", own_part="onboard button",
+                                    label="Pick “T-Display, its onboard button” for button"))
+        phase["offers"][0] = dict(phase["offers"][0], own_part=None)
+        parts = parts_fold(order_page(phases=[phase]))
+        self.assertIn('<li data-key="pick:button:t-display" data-makes-stale="requirements">T-Display, its onboard button '
+                      '(to get)</li>', parts)
+        self.assertIn('<li data-key="pick:button:tact-12mm" data-makes-stale="requirements">Tactile 12 mm (in your drawer)</li>',
+                      parts)
+
+
 class ThePickNotesOnThePageTest(unittest.TestCase):
     """P1180 (council P1251: "page and show render pick_notes from one place"): a pick's notes stand muted in its row, after
     its own lines in its Send box and after its effect in the developer fold, and the fingerprint reads them."""

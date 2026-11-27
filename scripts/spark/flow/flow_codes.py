@@ -215,8 +215,10 @@ FREES_MESSAGE = "Frees what the old pick held."
 FREES_UNPICKED_MESSAGE = "Frees a part this project held without a pick."
 LIST_PROJECT_MESSAGE = "Adds this project to your list of projects."
 PICK_HISTORY_MESSAGE = "May note the choice in your history."
-#: A pick's notes (P1180, `pick_notes`), at most 8 words each, in order: no board file (P991; the parts list's sentence starts
-#: with `need_requirements.NO_BOARD_FILE`), a fact owed, a broken record, no simulation (% THIS_PART), an unsure entry.
+#: A pick's notes (P1180, `pick_notes`), at most 8 words each, in order: the board picked has it (P1136), no board file (P991;
+#: the parts list's sentence starts with `need_requirements.NO_BOARD_FILE`), a fact owed, a broken record, no simulation
+#: (% THIS_PART), an unsure entry. A board's pick names its own part after its name (`pick_notes.part_words`, P1136).
+ONBOARD_NOTE, OWN_PART = "The board you picked has one.", ", its %s"
 NO_BOARD_FILE_MESSAGE, OWED_NOTE = "Spark cannot build from it: no board file.", "Spark needs more facts about it: ask Claude."
 BROKEN_NOTE, UNSURE_NOTE = "Its record is broken: ask Claude.", "You may not have it: check your drawer."
 NO_STANCE_NOTE, THIS_PART = "Spark cannot simulate %s yet.", "this part"

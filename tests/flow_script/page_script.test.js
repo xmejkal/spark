@@ -83,6 +83,7 @@ class FakeElement {
     return child;
   }
   remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter((each) => each !== this); }
+  scrollIntoView(options) { (this.scrolled = this.scrolled || []).push(options); }  // P1136: records each scroll's options
   closest(selector) {  // only "[name]", which is all the script asks
     for (let at = this; at; at = at.parentNode) if (at.getAttribute && at.getAttribute(selector.slice(1, -1)) !== null) return at;
     return null;
@@ -235,6 +236,13 @@ test("a click opens the confirm with the offer's words, and Send writes the row 
     assert.equal(button.disabled, true);
     assert.equal(button.title, "Waiting for Claude: Build the board.");
   }
+});
+
+test("P1136: the confirm box scrolls into view once, to the nearest edge, so Send and Cancel open where a person reads", async () => {
+  const { win, offer } = fakeWindow(fakeDb());
+  await script.start(win);
+  offer.children[1].click();
+  assert.deepEqual(offer.children[2].scrolled, [{ block: "nearest" }]);
 });
 
 test("a send the database refuses puts the state back and says nothing ran", async () => {
