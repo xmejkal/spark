@@ -110,7 +110,7 @@
  {
   "file": "scripts/spark/flow/flow_codes.py",
   "name": "P1135 review: a pick's Send box puts the wired sentence after the pick's own (test_flow.ThePartsNeedsTest.test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_the_wired_one_first, test_flow_page.TheLessTextTest.test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part)",
-  "find": "    return first + [own.strip()] + shared[len(first):]",
+  "find": "    return shared[:1] + [own.strip()] + shared[1:] if WIRED_PICK_MESSAGE in shared else [own.strip()] + shared",
   "replace": "    return [own.strip()] + shared"
  }
 ]

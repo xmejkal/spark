@@ -226,13 +226,8 @@ OWED_MESSAGE = "%s still lacks what spark needs: %s. Ask Claude how to fill it i
 NO_STANCE_MESSAGE = ("Spark cannot simulate %s yet. The parts list and the build go on, and a deploy asks your yes for "
                      "firmware that no simulation tested.")
 PICKED_BY = "%s for %s"
-#: The line of a picked need (P991, P1135): each pick's name in quotes (“…”), ", " between two. The page and `show` put the
-#: tick of an ok status before it. KEEP_PICK is the first radio of a picked need on the page, its picks the same way.
-PICKED_SAID = "picked %s."
-KEEP_PICK = "keep %s"
-#: A pick's row in the page's parts fold (P1135): its part and what you have of it, in the sheet's have words, in
-#: parentheses as `show` and the developer fold write it, so a part's name with a colon reads right.
-PICK_ROW = "%s (%s)"
+#: A picked need's line after the ok tick, its first radio, and a pick's row with its have in parentheses (P991, P1135).
+PICKED_SAID, KEEP_PICK, PICK_ROW = "picked %s.", "keep %s", "%s (%s)"
 DROP_MESSAGE = "To drop this need, tell Claude: “drop the %s need”."
 REQUIREMENTS_MESSAGE = "Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay."
 SHELVE_MESSAGE = "May copy a part's record from spark's catalog into your store."
@@ -275,31 +270,25 @@ WIRED_BUILD_MESSAGE = ("If you wired the board, this build can move pins: compar
                        "power, and rewire what differs.")
 #: The fixed sentence of each kind of offer that can move a pin.
 WIRED_EFFECT = {PICK: WIRED_PICK_MESSAGE, BUILD_BOARD: WIRED_BUILD_MESSAGE}
-#: The sentences that every pick of one project says alike (P1135): the Send box says them apart, after the pick's own, so a
-#: Send of several picks says each once.
+#: What every pick of one project says alike (P1135): the Send box says each apart, so a Send of several says it once.
 PROJECT_EFFECTS = (WIRED_PICK_MESSAGE, LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAGE)
 
 
 def effect_lines(effect):
-    """A pick's effect as the Send box's lines (P1135): the wired sentence first, as a pick's confirm opens with it (P1044),
-    then its own sentences, then each other of PROJECT_EFFECTS that it holds, each once. Sentences are joined with one
-    space, so each one is cut out whole."""
+    """A pick's effect as the Send box's lines (P1135): the wired sentence first (P1044; PROJECT_EFFECTS holds it
+    first), its own, then its other PROJECT_EFFECTS, each once. One space joins sentences, so each is cut out whole."""
     shared = [said for said in PROJECT_EFFECTS if said in effect]
     own = " %s " % effect
     for said in shared:
         own = own.replace(" %s " % said, " ")
-    first = shared[:1] if WIRED_PICK_MESSAGE in shared else []  # PROJECT_EFFECTS holds it first
-    return first + [own.strip()] + shared[len(first):]
+    return shared[:1] + [own.strip()] + shared[1:] if WIRED_PICK_MESSAGE in shared else [own.strip()] + shared
 
 
 def board_file_line(effect):
-    """The sentence of a pick's `effect` that says spark cannot build from the pick (NO_BOARD_FILE_MESSAGE, P991), or None:
-    the page keeps it on the pick's row (P1135)."""
+    """The NO_BOARD_FILE_MESSAGE sentence of a pick's `effect` (P991), kept on its page row (P1135), or None."""
     start, end = NO_BOARD_FILE_MESSAGE.split("%s")
     at = effect.find(start)
-    if at < 0:
-        return None
-    stop = effect.find(end, at + len(start))
+    stop = effect.find(end, at + len(start)) if at >= 0 else -1
     return effect[at:stop + len(end)] if stop >= 0 else None
 
 
