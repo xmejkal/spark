@@ -1200,12 +1200,22 @@ class TheFollowUpTest(unittest.TestCase):
         self.assertIsInstance(line, PastedLine)
         self.assertEqual(line, STEP_LINE % (step_command(THEN), THEN.why))
 
-    def test_a_follow_up_s_mark_stands_after_the_command_and_before_why(self):
+    def test_a_follow_up_s_words_after_the_command_stand_before_why(self):
         class Marking(FollowUp):
-            def mark(self, step):
+            def after_command(self, step):
                 return " (yours)"
         self.assertEqual(Marking().line(THEN), STEP_LINE % (step_command(THEN) + " (yours)", THEN.why))
-        self.assertEqual(FollowUp().mark(THEN), "")
+        self.assertEqual(FollowUp().after_command(THEN), "")
+
+    def test_a_word_that_starts_with_an_equals_sign_is_quoted(self):
+        # the review, refuter 2: shlex leaves `=ls` bare, and zsh runs it as the path of ls
+        self.assertTrue(step_command(THEN._replace(argv=["=ls", "a=b"])).endswith("/then.py '=ls' a=b"))
+
+    def test_a_why_with_a_line_end_stays_on_its_one_line(self):
+        # the review, refuter 5: the why goes through printable, so it cannot fake a line of spark's own
+        line = FollowUp().line(THEN._replace(why="a\n  next: rm -rf x — b"))
+        self.assertNotIn("\n", line)
+        self.assertTrue(line.endswith(" — a?  next: rm -rf x — b"), line)
 
     def test_the_masked_run_keeps_the_real_paths_of_a_follow_up_s_line(self):
         # P1256: masked, the line read `--project <project>`, which a shell reads as a redirection

@@ -2,7 +2,7 @@
  {
   "file": "scripts/spark/core/renderers.py",
   "name": "the next lines name the CLI inside spark/bench/, where no CLI lives (P1256: step_command builds every next line)",
-  "find": "str(SCRIPTS / script_of(step.op))",
-  "replace": "str(SCRIPTS / \"spark\" / \"bench\" / script_of(step.op))"
+  "find": "[SCRIPTS / script_of(step.op)]",
+  "replace": "[SCRIPTS / \"spark\" / \"bench\" / script_of(step.op)]"
  }
 ]

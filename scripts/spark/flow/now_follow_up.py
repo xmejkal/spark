@@ -35,8 +35,8 @@ def kept_its_page(result):
 
 class FlowFollowUp(FollowUp):
     """Strategy: the follow-up of a run that wrote to a project: the now steps of `flow.py show` (`show_flow.now_steps`),
-    and for each the base's line (`step_command`, P1256), marked with NEEDS_YOU for a step that needs the person or
-    their yes (`show_flow.needs_you`). Its refresh writes page.html again (PR 2). `renderer` and `store` are what a test
+    and for each the base's line (`follow_up.step_line`, P1256), with NEEDS_YOU after the command for a step that needs
+    the person or their yes (`show_flow.needs_you`). Its refresh writes page.html again (PR 2). `renderer` and `store` are what a test
     swaps (None: the real ones)."""
 
     refreshes = FlowHtmlPage.FILE_NAME
@@ -60,7 +60,7 @@ class FlowFollowUp(FollowUp):
         phases, guide = flow_and_guide(project)
         return now_steps(project, phases, guide)
 
-    def mark(self, step):
+    def after_command(self, step):
         return NEEDS_YOU if needs_you(step) else ""
 
 

@@ -31,6 +31,18 @@ class TheRuleRefusesTest(unittest.TestCase):
     def test_a_tilde_that_starts_a_quoted_word_is_not_the_home_folder(self):
         self.refused("look.py --project '~/lamp'", 'look.py --project "~/lamp"', "'~/lamp/x.py'")
 
+    def test_a_tilde_after_an_equals_sign_is_not_the_home_folder(self):
+        # the review, refuter 1: bash and zsh print `--project=~/lamp` as it is
+        self.refused("x.py --project=~/lamp", "x.py --project='~/lamp'", 'x.py --project="~/lamp"', "SPARK_HOME=~/s x.py")
+
+    def test_an_unquoted_equals_sign_that_starts_a_word_is_zsh_s_path_of_a_command(self):
+        # the review, refuter 2: zsh runs `=ls` as /bin/ls, and stops at `=nosuchcmd`
+        self.refused("x.py =ls", "=ls x.py")
+
+    def test_a_quote_or_a_backslash_left_open_at_the_end(self):
+        # the review, refuter 3: the shell waits for the rest
+        self.refused("x.py 'a", 'x.py "a', "x.py a\\")
+
     def test_an_unquoted_space_of_the_home_folder_splits_the_word(self):
         self.refused("/tmp/a b/x.py --project p", "x.py --project /tmp/a b/lamp")
 
@@ -55,7 +67,10 @@ class TheRulePassesTest(unittest.TestCase):
         self.passed("x.py '!'", "x.py hi\\!")
 
     def test_a_tilde_inside_a_quoted_word_or_unquoted(self):
-        self.passed("x.py 'a~b'", "x.py ~/lamp", "x.py --project=~/lamp", "x.py a'~'")
+        self.passed("x.py 'a~b'", "x.py ~/lamp", "x.py a'~'", "x.py 'a=~'")
+
+    def test_an_equals_sign_inside_a_word_or_quoted(self):
+        self.passed("SPARK_HOME=/s x.py --part=x", "x.py '=ls'", "x.py a=b")
 
     def test_the_home_folder_quoted_or_escaped(self):
         self.passed("'/tmp/a b/x.py' --project '/tmp/a b/lamp'", '"/tmp/a b/x.py"', "/tmp/a\\ b/x.py",
@@ -66,5 +81,5 @@ class TheRulePassesTest(unittest.TestCase):
 
     def test_a_line_that_shlex_joins_passes(self):
         import shlex
-        argv = [str(HOME / "x.py"), "--project", str(HOME / "lamp"), "<part>", "a!b", "$(rm)", "a;b", "a|b"]
+        argv = [str(HOME / "x.py"), "--project", str(HOME / "lamp"), "<part>", "a!b", "$(rm)", "a;b", "a|b", "'", "a\\"]
         self.assertTrue(copyable("SPARK_HOME=%s %s" % (shlex.quote(str(HOME / "s")), shlex.join(argv)), HOME))

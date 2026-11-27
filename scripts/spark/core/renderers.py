@@ -121,11 +121,17 @@ def script_of(op):
     return OP_SCRIPTS.get(op, "%s.py" % op)
 
 
+def shell_word(word):
+    """`word` quoted for bash and zsh: `shlex.quote`, and in single quotes a word that starts with `=`, which shlex leaves
+    bare and zsh reads as the path of a command (P1256, the review)."""
+    return "'%s'" % word if word.startswith("=") else shlex.quote(word)
+
+
 def step_command(step):
     """The one line a person runs for `step`: `NAME=value` for each variable of its env, then its script and argv, all
-    shell-quoted and through `printable`, so a newline in an argument shows as `?` and never breaks the line."""
+    shell-quoted (`shell_word`) and through `printable`, so a newline in an argument shows as `?` and never breaks the line."""
     names = ["%s=%s" % (name, shlex.quote(str(value))) for name, value in sorted((step.env or {}).items())]
-    return printable(" ".join(names + [shlex.join([str(SCRIPTS / script_of(step.op))] + [str(each) for each in step.argv])]))
+    return printable(" ".join(names + [shell_word(str(each)) for each in [SCRIPTS / script_of(step.op)] + list(step.argv)]))
 
 
 def import_rich():

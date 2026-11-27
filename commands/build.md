@@ -218,7 +218,7 @@ writes no `built`, and the tally says `not built yet`.
   the chain runs end to end
 ```
 
-In a project, the verdict then ends with `next:` and the look step: first write `firmware/main.py` from `pins.py`. When the picture cannot draw a part (`no_drawing_fact`), the build still exits 0 and a `research.py --part <id>` step comes first: offer it to the person before the wiring, because it finds the facts that draw the part (P945). After an ok build with `--keep`, `next` ends with the step of `flow.py show` (P1035). Each `next:` line is the command as it runs, with the whole paths of your store and your project, so copy it as it is (P1256).
+In a project, the verdict then ends with `next:` and the look step: first write `firmware/main.py` from `pins.py`. When the picture cannot draw a part (`no_drawing_fact`), the build still exits 0 and a `research.py --part <id>` step comes first: offer it to the person before the wiring, because it finds the facts that draw the part (P945). After an ok build with `--keep`, `next` ends with the step of `flow.py show` (P1035). Each `next:` line is the command as it runs, with the whole path of your project, and of your store when SPARK_HOME is set, so copy it as it is (P1256).
 
 15 routed traces carry the 18 written connections: a group of N connected pins needs N−1 traces.
 
