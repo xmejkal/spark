@@ -488,7 +488,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def kept_epaper_result(self, under=None):
         """The OperationResult of an ok build of the e-paper project with no physical facts, kept into itself: its `next`
-        holds the research step and the look step (P945, P517)."""
+        holds the research step (P945), and no look step of its own (P1292)."""
         project, work = self.epaper_project(physical=False, under=under)
         values = {"requirements": str(project / "requirements.json"), "keep": str(project), "sim_dir": None, "firmware": None}
         return run_operation(build_board.BuildBoard(FakeRequirementsBuild([Stage("build", check_spine.OK, "fine")], work)),
@@ -502,11 +502,39 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         from spark.core.renderers import step_command
         result = self.kept_epaper_result()
         said = [line for line in result.lines if line.startswith("  next: ")]
-        self.assertEqual([step.op for step in result.next], ["research", "look"])
+        self.assertEqual([step.op for step in result.next], ["research"])
         self.assertEqual(said, [STEP_LINE % (step_command(step), step.why) for step in result.next])
-        self.assertEqual([type(line) for line in said], [PastedLine, PastedLine])
-        self.assertEqual(list(result.lines[-2:]), said)
-        self.assertTrue(result.lines[-3].startswith("  the chain runs end to end"), result.lines[-3])  # no blank line between
+        self.assertEqual([type(line) for line in said], [PastedLine])
+        self.assertEqual(list(result.lines[-1:]), said)
+        self.assertTrue(result.lines[-2].startswith("  the chain runs end to end"), result.lines[-2])  # no blank line between
+
+    def test_the_research_step_carries_the_store_and_the_line_quotes_a_space(self):
+        # P1292: moved from P517's look step, which went; the research step (P945) carries the store the same way
+        home = Path(tempfile.mkdtemp(), "home store").resolve()
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            result = self.kept_epaper_result()
+        step, last = result.next[0], result.lines[-1]
+        self.assertEqual((step.op, step.env), ("research", {"SPARK_HOME": str(home)}))
+        self.assertTrue(last.startswith("  next: SPARK_HOME=%s " % shlex.quote(str(home))), last)
+
+    def test_a_kept_build_with_a_research_step_at_a_firmware_now_ends_with_it_then_show_s_now_line(self):
+        # P1292's council (the PO assistant's F1): the build's own research step first, then show's NOW line, because
+        # show names no step at the firmware: check_spine's follow-up says show's own line there
+        import flow
+        from spark.core.cli import run_cli
+        from spark.core.outside import build_bare_outside_world
+        project, work = self.epaper_project(physical=False)
+        argv = [str(project / "requirements.json"), "--keep", str(project)]
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            code = run_cli(check_spine.HELP, build_board.BuildBoard(FakeRequirementsBuild([Stage("build", check_spine.OK, "fine")], work)),
+                           argv, outside_builder=build_bare_outside_world)
+        lines = out.getvalue().splitlines()
+        with contextlib.redirect_stdout(io.StringIO()) as shown:
+            flow.main(["show", "--project", str(project)])
+        self.assertEqual(code, 0)
+        self.assertTrue(lines[-2].startswith("  next: ") and "/research.py --part " in lines[-2], lines[-2])
+        self.assertEqual(lines[-1], shown.getvalue().splitlines()[0])
+        self.assertTrue(lines[-1].startswith("  NOW (firmware): "), lines[-1])
 
     def test_every_command_the_build_prints_passes_the_copyable_rule(self):
         # P1256: a home folder with a space, so the rule has a space to find; the line quotes the whole path
@@ -515,7 +543,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         home = Path(tempfile.mkdtemp()).resolve() / "a b"
         home.mkdir()
         result = self.kept_epaper_result(under=home)
-        self.assertEqual([step.op for step in result.next], ["research", "look"])
+        self.assertEqual([step.op for step in result.next], ["research"])
         for step in result.next:
             with self.subTest(op=step.op):
                 command = step_command(step)
@@ -3346,57 +3374,39 @@ class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
                 self.assertNotIn("unserved", json.loads(self.answer(requirements, "--json")[1]))
 
 
-class TheVerdictNamesTheFirmwareStepTest(unittest.TestCase):
-    """P517 (#713): a build that reaches ok in a project names the step that comes next: write the firmware from the pin map."""
+class TheVerdictNamesNoStepOfItsOwnTest(unittest.TestCase):
+    """P1292 (it reverses P517, #713): a build that reaches ok in a project without --keep names no step of its own. With
+    --keep, check_spine's follow-up names the steps of `flow.py show` (test_flow's TheFollowUpTest)."""
 
-    WHY = "first write firmware/main.py from pins.py"
-
-    def answer(self, stages, json_out=False, library=False, folder="lamp"):
-        project = (Path(tempfile.mkdtemp()) / folder).resolve()
-        project.mkdir()
-        if not library:
-            (project / ".spark").mkdir()
+    def answer(self, stages, json_out=False):
+        """(the exit code, the printed text) of a build of `stages` in a new project, without --keep."""
+        project = (Path(tempfile.mkdtemp()) / "lamp").resolve()
+        (project / ".spark").mkdir(parents=True)
         args = argparse.Namespace(keep=None, json=json_out, requirements=str(project / "requirements.json"), sim_dir=None)
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
             code = run_build_board(stages, args)
-        return code, out.getvalue(), project
+        return code, out.getvalue()
 
     def ok(self):
         return [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
 
-    def test_with_json_next_is_a_look_step_for_the_project(self):
-        code, said, project = self.answer(self.ok(), True)
-        step = json.loads(said)["next"]
+    def test_with_json_an_ok_build_in_a_project_has_no_next_key(self):
+        code, said = self.answer(self.ok(), True)
         self.assertEqual(code, 0)
-        self.assertEqual([(each["op"], each["why"]) for each in step], [("look", self.WHY)])
-        self.assertEqual(Path(step[0]["argv"][1]).resolve(), project)
-        self.assertEqual(step[0]["argv"][0], "--project")
+        self.assertNotIn("next", json.loads(said))
 
-    def test_the_text_ends_with_the_same_step(self):
-        _, said, project = self.answer(self.ok())
-        last = said.rstrip("\n").split("\n")[-1]
-        self.assertTrue(last.startswith("  next: "), last)
-        self.assertTrue(last.endswith("look.py --project %s — %s" % (project, self.WHY)), last)
+    def test_the_text_ends_with_the_verdict_and_no_next_line(self):
+        _, said = self.answer(self.ok())
+        self.assertNotIn("  next: ", said)
+        self.assertEqual(said.rstrip("\n").split("\n")[-1], "  the chain runs end to end")
 
-    def test_the_step_carries_the_store_and_the_line_quotes_a_space(self):
-        home = Path(tempfile.mkdtemp(), "home store").resolve()
-        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
-            step = json.loads(self.answer(self.ok(), True, folder="my lamp")[1])["next"][0]
-            _, said, project = self.answer(self.ok(), folder="my lamp")
-        self.assertEqual(step["env"], {"SPARK_HOME": str(home)})
-        last = said.rstrip("\n").split("\n")[-1]
-        self.assertTrue(last.startswith("  next: SPARK_HOME=%s " % shlex.quote(str(home))), last)
-        self.assertIn("--project %s — " % shlex.quote(str(project)), last)
-
-    def test_a_problem_a_could_not_run_and_a_library_run_name_no_step(self):
-        for label, stages, library in (("problem", [stage("build", check_spine.PROBLEMS)], False),
-                                       ("could not run", [stage("build", check_spine.COULD_NOT_RUN)], False),
-                                       ("library", self.ok(), True)):
+    def test_a_problem_and_a_could_not_run_name_no_step(self):
+        for label, stages in (("problem", [stage("build", check_spine.PROBLEMS)]),
+                              ("could not run", [stage("build", check_spine.COULD_NOT_RUN)])):
             with self.subTest(label):
-                _, said, _ = self.answer(stages, True, library)
-                self.assertNotIn("next", json.loads(said))
-                self.assertNotIn("  next: ", self.answer(stages, library=library)[1])
+                self.assertNotIn("next", json.loads(self.answer(stages, True)[1]))
+                self.assertNotIn("  next: ", self.answer(stages)[1])
 
 
 class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):

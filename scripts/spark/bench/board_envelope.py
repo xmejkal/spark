@@ -15,7 +15,6 @@ from spark.bench import board_look
 from spark.bench import download_mode
 from spark.records import board_records
 from spark.bench.deploy_stages import DeployPhase
-from spark.design import loader
 from spark.core import codes, outcomes
 from spark.core.follow_up import step_line
 from spark.core.result import Finding, Headline, NextStep, OperationResult
@@ -229,16 +228,6 @@ def look_step(project, port, evidence=None, why="read the board first: the board
     """The step that runs look.py. It writes nothing. With no evidence, its arguments are the project's alone. `needs_person`
     is True after a deploy stopped at the board (P892): the look asks the person first."""
     return outcomes.add_env(outcomes.step("look", look_argv(project, port, evidence), why, needs_person=needs_person), store.read_given_env())
-
-
-#: Why a finished build names the look step next (P517): the board is read, then the conversation writes the firmware.
-WHY_FIRMWARE_NEXT = "first write firmware/main.py from pins.py"
-
-
-def firmware_next_steps(code_ok, requirements_file):
-    """The `next` of a build's verdict: the look step with the firmware to write, or [] unless the build is ok in a real project."""
-    project = loader.project_for(requirements_file) if requirements_file else None
-    return [look_step(project, None, why=WHY_FIRMWARE_NEXT)] if code_ok and project and not loader.is_library(project) else []
 
 
 def next_lines(steps):

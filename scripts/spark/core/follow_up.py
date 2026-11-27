@@ -26,7 +26,9 @@ class FollowUp:
     follow the Operation's own, and `line(step)` the line a person reads for each: `step_line`, with the words of
     `after_command(step)` after the command (P1256). `refresh(project, result)` (PR 2) writes
     again the file `refreshes` names, one the project already has, and gives the sentence that says so, or None when it
-    wrote nothing; what it raises is the core's to report. The base adds nothing."""
+    wrote nothing; what it raises is the core's to report. `closing_line(project)` (P1292) is one line after the step lines
+    and before the refresh's line. A follow-up may keep what its `steps` read for its `closing_line`, so a frontend makes
+    one instance per run. The base adds nothing."""
 
     #: The file `refresh` writes again, named in its note and in the line of a refresh that failed: None in the base.
     refreshes = None
@@ -42,5 +44,9 @@ class FollowUp:
         return step_line(step, self.after_command(step))
 
     def refresh(self, project, result):
+        return None
+
+    def closing_line(self, project):
+        """The one line after the step lines and before the refresh's line (P1292), or None: None in the base."""
         return None
 # --- end MVP ---

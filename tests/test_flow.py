@@ -2466,7 +2466,8 @@ class TheFollowUpTest(FlowTest):
         self.assertEqual((code, said["status"], said["next"]), (1, "problems", []))
         self.assertTrue(show(project)[0]["next"])
 
-    def test_a_kept_build_ends_with_its_own_steps_then_the_flow_s(self):
+    def test_a_kept_build_ends_with_the_flow_s_steps_alone(self):
+        # P1292: the build names no look step of its own; its next is show's, and show names a step, so no NOW line
         from spark.build.stages import Stage
         project = an_image(a_firmware(a_built_project()))
         lines, code = a_kept_build(project, [Stage("build", OK, "fine")])
@@ -2474,12 +2475,27 @@ class TheFollowUpTest(FlowTest):
         flow_steps = show(project)[0]["next"]
         self.assertEqual(code, 0)
         self.assertTrue(flow_steps)
-        self.assertEqual(steps[-len(flow_steps):], flow_steps)
-        self.assertEqual(steps[0]["op"], "look")  # the build's own step comes first
+        self.assertEqual(steps, flow_steps)
         self.assertEqual(list(json.loads(lines[0]))[-1], "next")
         text, _ = a_kept_build(project, [Stage("build", OK, "fine")], as_json=False)
         self.assertEqual(len([line for line in text if line.startswith("  next: ")]), len(steps))
         self.assertTrue(text[-1].startswith("  next: ") and "/run_scenario.py " in text[-1], text[-1])
+        self.assertFalse([line for line in text if line.startswith("  NOW (")], text)
+
+    def test_a_kept_build_at_a_firmware_now_ends_with_show_s_now_line(self):
+        # P1292: show names no step at the firmware (main.py is the conversation's to write), so the last line of a kept
+        # build is show's own NOW line, which check_spine's follow-up says (says_now), and its JSON has no next
+        from spark.build.stages import Stage
+        project = a_built_project()
+        said, _ = show(project)
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"]), ("firmware", []))
+        lines, code = a_kept_build(project, [Stage("build", OK, "fine")])
+        self.assertEqual(code, 0)
+        self.assertNotIn("next", json.loads(lines[0]))
+        text, _ = a_kept_build(project, [Stage("build", OK, "fine")], as_json=False)
+        self.assertFalse([line for line in text if line.startswith("  next: ")], text)
+        self.assertEqual(text[-1], lines_of(project)[0])
+        self.assertTrue(text[-1].startswith("  NOW (firmware): Two jobs, in any order:"), text[-1])
 
     def test_a_kept_rebuild_at_the_deploy_names_the_flow_s_step_after_it(self):
         from spark.build.stages import Stage
@@ -2507,22 +2523,30 @@ class TheFollowUpTest(FlowTest):
         self.assertEqual((code, said["status"], said.get("next", [])), (1, "problems", []))
         self.assertEqual([step["op"] for step in show(project)[0]["next"]], ["build-board"])
 
-    def test_a_kept_build_that_kept_no_simulation_never_names_itself_again(self):
-        # the review, refuter 1: with no sim/wokwi.toml kept, the flow names the build again with the run's own argv
+    def test_a_kept_build_whose_flow_names_the_build_again_ends_with_no_step_and_no_line(self):
+        # the review, refuter 1: with no sim/wokwi.toml kept, the flow names the build again with the run's own argv, which
+        # runs_again drops. P1292: show names a step, so no NOW line comes either; a now with no usable step is P1181 #1725
         from spark.build.stages import Stage
         project = a_firmware(a_built_project())
         lines, code = a_kept_build(project, [Stage("build", OK, "fine")])
-        flow_steps = show(project)[0]["next"]
-        self.assertEqual([(step["op"], step["argv"]) for step in flow_steps],
+        said = show(project)[0]
+        self.assertEqual(said["data"]["guide"]["now"]["phase"], "simulate")
+        self.assertEqual([(step["op"], step["argv"]) for step in said["next"]],
                          [("build-board", [str(project / "requirements.json"), "--keep", str(project)])])
-        self.assertEqual((code, [step["op"] for step in json.loads(lines[0])["next"]]), (0, ["look"]))
+        self.assertEqual(code, 0)
+        self.assertNotIn("next", json.loads(lines[0]))
+        text, _ = a_kept_build(project, [Stage("build", OK, "fine")], as_json=False)
+        self.assertFalse([line for line in text if line.startswith(("  next: ", "  NOW ("))], text)
 
     def test_a_build_without_keep_names_no_flow_step(self):
         from spark.build.stages import Stage
         project = an_image(a_firmware(a_built_project()))
         lines, code = a_kept_build(project, [Stage("build", OK, "fine")], keep=False)
-        self.assertEqual((code, [step["op"] for step in json.loads(lines[0])["next"]]), (0, ["look"]))
+        self.assertEqual(code, 0)
+        self.assertNotIn("next", json.loads(lines[0]))  # P1292: no look step of its own
         self.assertEqual([step["op"] for step in show(project)[0]["next"]], ["run-scenario"])
+        text, _ = a_kept_build(project, [Stage("build", OK, "fine")], keep=False, as_json=False)
+        self.assertFalse([line for line in text if line.startswith(("  next: ", "  NOW ("))], text)
 
     def test_the_line_marks_a_step_that_needs_the_person_s_yes_and_names_its_script(self):
         # round 2, amendment D: the brief step has needs_yes and no needs_person, and its op is its script's name
@@ -2611,6 +2635,107 @@ class TheFollowUpTest(FlowTest):
             with self.subTest(op=op):
                 self.assertTrue((ROOT / "scripts" / script_of(op)).is_file(), script_of(op))
         self.assertEqual((script_of("move-hold"), script_of("research-part")), ("parts.py", "research.py"))
+
+
+class TheClosingLineTest(FlowTest):
+    """P1292: FlowFollowUp with `says_now` ends a run's text with show's own NOW line when show names no step. It reads the
+    flow once, in `steps`, and its `closing_line` takes that reading for the same project."""
+
+    def test_guide_now_line_is_the_first_line_show_prints(self):
+        # the review (lens 3): a second source, the CLI's printed line, not guide_lines, which calls guide_now_line
+        from spark.flow.show_flow import guide_now_line, now_steps
+        for project in (a_built_project(), an_image(a_firmware(a_built_project()))):
+            with self.subTest(project=project.parent.name):
+                phases, guide = flow_and_guide(project)
+                steps = now_steps(project, phases, guide)
+                self.assertEqual(guide_now_line(guide, steps), lines_of(project)[0])
+        self.assertIsNone(guide_now_line({"now": None}))
+
+    def test_without_the_flag_there_is_no_closing_line(self):
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = a_built_project(), FlowFollowUp()
+        self.assertEqual(follow_up.steps(project), [])
+        self.assertIsNone(follow_up.closing_line(project))
+
+    def test_with_the_flag_at_a_firmware_now_the_closing_line_is_show_s_now_line(self):
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = a_built_project(), FlowFollowUp(says_now=True)
+        said, _ = show(project)
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"]), ("firmware", []))
+        self.assertEqual(follow_up.steps(project), [])
+        line = follow_up.closing_line(project)
+        self.assertEqual(line, lines_of(project)[0])
+        self.assertTrue(line.startswith("  NOW (firmware): Two jobs, in any order:"), line)
+
+    def test_the_closing_line_carries_show_s_mask_and_the_build_prints_it_as_show_does(self):
+        # P1292 review (refuter 1): a failed run's log named like a secret; show masks its NOW line with privacy_for, and
+        # check_spine's BuildBoard has no privacy_for, so FlowFollowUp masks the closing line with show's own mask
+        from spark.build.build_board import BuildBoard
+        from spark.build.stages import Stage
+        from spark.flow.now_follow_up import FlowFollowUp
+        project = with_secrets(a_run(an_image(a_firmware(a_built_project())), "failed"), 'WIFI_PASSWORD = "%s"\n' % SECRET)
+        (project / "sim" / "runs" / "one.log").rename(project / "sim" / "runs" / (SECRET + ".log"))
+        follow_up = FlowFollowUp(says_now=True)
+        self.assertEqual(follow_up.steps(project), [])
+        line = follow_up.closing_line(project)
+        self.assertEqual(line, lines_of(project)[0])
+        self.assertTrue(line.startswith("  NOW (simulate): A run failed on this image (***.log)."), line)
+        self.assertIsNone(BuildBoard.privacy_for)
+        text, code = a_kept_build(project, [Stage("build", OK, "fine")], as_json=False)
+        self.assertEqual((code, text[-1]), (0, lines_of(project)[0]))
+        self.assertNotIn(SECRET, "\n".join(text))
+
+    def test_with_the_flag_where_show_names_a_step_there_is_no_closing_line(self):
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = an_image(a_firmware(a_built_project())), FlowFollowUp(says_now=True)
+        self.assertEqual([step.op for step in follow_up.steps(project)], ["run-scenario"])
+        self.assertIsNone(follow_up.closing_line(project))
+
+    def test_no_closing_line_before_any_steps_or_for_another_project(self):
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, other, follow_up = a_built_project(), a_built_project(), FlowFollowUp(says_now=True)
+        self.assertIsNone(follow_up.closing_line(project))
+        follow_up.steps(other)
+        self.assertIsNone(follow_up.closing_line(project))
+
+    def test_the_closing_line_takes_the_reading(self):
+        # the council's F1: a second closing_line has no reading left
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = a_built_project(), FlowFollowUp(says_now=True)
+        follow_up.steps(project)
+        self.assertIsNotNone(follow_up.closing_line(project))
+        self.assertIsNone(follow_up.closing_line(project))
+
+    def test_the_closing_line_reads_the_flow_of_its_steps_and_nothing_more(self):
+        # one steps and one closing_line read the flow once: after steps, the project moves on to a simulate now with a
+        # step, and the closing line still says the firmware now that steps read (T2: no mock.patch counts the reads)
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = a_built_project(), FlowFollowUp(says_now=True)
+        self.assertEqual(follow_up.steps(project), [])
+        an_image(a_firmware(project))
+        self.assertTrue(lines_of(project)[0].startswith("  NOW (simulate): "), lines_of(project)[0])
+        self.assertTrue(follow_up.closing_line(project).startswith("  NOW (firmware): Two jobs, in any order:"))
+
+    def test_steps_that_raise_leave_no_reading_of_an_earlier_run(self):
+        # the flow of no project raises TypeError, as any reading that fails: the earlier run's reading is gone
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = a_built_project(), FlowFollowUp(says_now=True)
+        follow_up.steps(project)
+        with self.assertRaises(TypeError):
+            follow_up.steps(None)
+        self.assertIsNone(follow_up.closing_line(project))
+
+    def test_only_check_spine_sets_the_flag(self):
+        # P1292: parts.py and run_scenario.py keep their output; a pick prints no NOW line
+        import check_spine
+        import parts
+        import run_scenario
+        self.assertEqual((check_spine.HELP.follow_up.says_now, parts.HELP.follow_up.says_now), (True, False))
+        self.assertIn("follow_up=FlowFollowUp())", Path(run_scenario.__file__).read_text())  # its main makes it, with no HELP
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "soil", "does": "sense", "what": "soil-moisture"}])
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many"])
+        self.assertEqual(code, 0)
+        self.assertFalse([line for line in lines if line.startswith("  NOW (")], lines)
 
 
 def wrote_nothing():
