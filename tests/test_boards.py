@@ -1704,6 +1704,31 @@ class TheFireBeetleCitesItsStandInsDefinitionTest(unittest.TestCase):
         self.assertFalse(board_records.read_simulated_part(board).is_stand_in)
 
 
+#: P999: the FireBeetle 2 C6 on its Wokwi stand-in, the ESP32-C6 DevKitC-1, with a hand-made definition in Wokwi's shape.
+STAND_IN_C6 = ROOT / "tests" / "data" / "stand-in-c6"
+C6_DEFINITION = STAND_IN_C6 / "wokwi-esp32-c6-devkitc-1.board.json"
+
+
+class TheC6StandInFixtureTest(unittest.TestCase):
+    """P999: the fixture record cites the hand-made definition beside it, and once kept, the definition lacks GPIO14 (D3)
+    and names GPIO16 and GPIO17 by their targets, as Wokwi's devkit does."""
+
+    def test_the_record_cites_the_sha256_of_the_hand_made_definition(self):
+        import hashlib
+        entry = board_records.load(STAND_IN_C6, "firebeetle2-esp32c6")["documents"]["wokwi-board"]
+        self.assertEqual(entry["sha256"], hashlib.sha256(C6_DEFINITION.read_bytes()).hexdigest())
+        self.assertEqual(entry["file"], C6_DEFINITION.name)
+
+    def test_the_kept_definition_has_every_gpio_of_the_devkit_and_no_gpio14(self):
+        board = board_records.load(STAND_IN_C6, "firebeetle2-esp32c6")
+        entry = board["documents"]["wokwi-board"]
+        self.assertEqual(store.keep(C6_DEFINITION.read_bytes(), entry["file"]), entry["sha256"])
+        part = board_records.read_simulated_part(board)
+        self.assertEqual((part.state, part.gpios, part.is_stand_in),
+                         ("recorded", frozenset(range(0, 24)) - {14}, True))
+        self.assertEqual(board["pins"]["D3"], 14)
+
+
 # --- end MVP ---
 
 
