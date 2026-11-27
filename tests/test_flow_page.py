@@ -1130,7 +1130,8 @@ TEAL_ROLES = {(selector, prop) for selector in ("[data-makes-stale]>button:not(:
               for prop in ("background", "border-color")} | {
     ("[data-makes-stale] [role=group]", "border-color"), ("a:focus-visible", "outline"), ("button:focus-visible", "outline"),
     ("summary:focus-visible", "outline"), (".now [data-makes-stale]>button", "border-color"),
-    (".now [data-makes-stale]>button:hover", "border-color"), (".now>p:first-child::before", "border")}
+    (".now [data-makes-stale]>button:hover", "border-color"), (".now>p:first-child::before", "border"),
+    ('[data-need] label:has(:checked:not([value=""]):not(:disabled))', "border-color")}
 #: (text, ground) pairs that a person reads: 4.5:1 in both themes. The outline button and the confirm box are ink on the
 #: surface, the disabled label is muted on the line, and the Now link is the Now ink on the Now plane.
 TEXT_PAIRS = [("--ink", "--bg"), ("--ink", "--surface"), ("--muted", "--bg"), ("--muted", "--surface"), ("--muted", "--line"),

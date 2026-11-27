@@ -156,6 +156,7 @@ class FlowHtmlPage:
     #: outline, is every other. Until P1115 the selectors read where the script puts a button. While the confirm shows, the
     #: offer's own button is an outline again, so Send is the one teal button. A disabled offer on the Now plane keeps its halo
     #: edge, since without it the dark edge is 1.18:1 against the plane; the grey fill still says disabled.
+    #: A part chosen in a need's row (P1135) gets a teal edge on the pale ground, as the canvas draws it, not a ring.
     STYLE = ("body{max-width:1180px;margin:0 auto;padding:var(--space-m) var(--space-l);"
              "font:var(--size-text)/1.55 var(--body);background:var(--bg);color:var(--ink)}h1,h2{font-weight:600;"
              "line-height:1.2;letter-spacing:-0.02em}h1{font-size:var(--size-title);line-height:1.1}"
@@ -177,6 +178,9 @@ class FlowHtmlPage:
              "background:var(--surface);padding:var(--space-s) var(--space-l);margin:var(--space-s) 0}"
              "[role=group]{color:var(--ink);font-size:var(--size-text)}"
              "[data-makes-stale] [role=group]{border-color:var(--accent-edge)}"
+             "[data-need] label{border:2px solid transparent;border-radius:var(--radius-button);padding:0 var(--space-s)}"
+             "[data-need] label:has(:checked:not([value=\"\"]):not(:disabled)){background:var(--bg);"
+             "border-color:var(--accent-edge)}"
              "#guide p{margin:var(--space-s) 0}.now{background:var(--now-bg);color:var(--now-ink);"
              "border-radius:var(--radius-frame);padding:var(--space-s) var(--space-l);margin:var(--space-s) 0}"
              ".now>p:first-child::before{content:\"\";display:inline-block;width:8px;height:8px;"
