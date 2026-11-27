@@ -12,10 +12,10 @@ Read where the project stands with `flow.py show --project . --json`, and take n
 page shows is in `show`'s answer (P1060). Read `page.html` whole only to publish it. The steps and their why are in
 [the Artifact how-to](../docs/guide/artifact-how-to.md). `show`, `run-request` and the page show each value of the
 project's secrets files (`firmware/*secret*.py`) as `***` ([the secrets](../docs/guide/artifact-how-to.md#10-secrets)).
-After an ok `parts.py --pick`, and after `deploy.py` and `check_firmware.py` at any status but a crash, spark also writes
-an existing `page.html` again on disk, but never publishes it (P1035, P1069, P1209). When you relay the guide, relay
-`data.guide.simulation.line` as it is: it is the free checks' state and why there is no simulation, read from the check
-record, and you run no check to say it.
+After an ok `parts.py --pick`, and after a write to the board and `check_firmware.py` at any status but a crash, spark
+also writes an existing `page.html` again on disk, but never publishes it (P1035, P1069, P1209). When you relay the
+guide, relay `data.guide.simulation.line` as it is: it is the free checks' state and why there is no simulation, read
+from the check record, and you run no check to say it.
 The published copy lags until the next `/spark:page` republishes it ([carry the requests](#carry-the-requests), step 3).
 Published as an Artifact with its database, it shows its owner a button for each step that spark lets the page ask for,
 and in its parts each need's pick marked ✓ and a choice of a part for each need, with one Send of the chosen picks
