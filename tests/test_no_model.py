@@ -34,6 +34,10 @@ class TheNoModelRuleTest(unittest.TestCase):
     def test_a_simulation_skipped_because_every_part_is_skipped_does_not_count(self):
         self.assertFalse(stops_only_for_no_model(record(BOARD, ("simulation", "skipped", "every_part_skipped"))))
 
+    def test_a_new_board_only_record_whose_simulation_is_skipped_for_no_wokwi_model_counts(self):
+        skipped = [(name, "skipped", "board_only") for name in ("parts", "schematic", "footprint", "build")]
+        self.assertTrue(stops_only_for_no_model(record(BOARD, *skipped, ("simulation", "skipped", "board_not_in_wokwi"))))
+
     def test_an_old_record_with_no_code_does_not_count(self):
         self.assertFalse(stops_only_for_no_model(record(BOARD, ("simulation", "could-not-run", None))))
 

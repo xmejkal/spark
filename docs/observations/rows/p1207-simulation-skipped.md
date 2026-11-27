@@ -28,3 +28,4 @@ from 1.
 | 18 | `flow.py show` prints the "No simulation" sentence under the build and in the guide | build refuter | rejected | by design: the build phase says its own state, and the guide says what to do |
 | 19 | The role turned off (D11's second half) | plan writer | raised | [P1214 #1763](https://github.com/xmejkal/spark/issues/1763), comment of 2026-11-26 |
 | 20 | The hook ran the quick run, not a story run, because no test named `no_model.py` | the hook, d6623af2 | acted | `tests/test_no_model.py` tests the rule directly: an old and a new record count, and every other skip, stop or missing code does not |
+| 21 | The refuter's pass on the fix commits 6bb3c3f4..94e64efa: no defect. Each moved or re-anchored row is caught when planted. p977 row 9 is caught by test_flow but not by test_no_model alone | the refuter's pass on the fix commits | acted | `test_no_model` gains a board-only new record, so the module's own test catches the row too |
