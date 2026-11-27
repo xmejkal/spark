@@ -62,6 +62,7 @@ interface Words {
   refused_picks: Record<string, string>;
   needs_join: string;
   label_join: string;
+  no_pick_saved: string;
 }
 
 interface RequestRow {
@@ -181,7 +182,8 @@ function shownState(request: RequestRow | null, answer: AnswerRow | null, words:
     const note = typeof answer.note === "string" && answer.note ? " " + fill(words.note, sentence(answer.note)) : "";
     return { mark: words.marks.ok, text: said + note, grey: false };
   }
-  if (answer.status === "problems") return { mark: words.marks.problems, text: fill(words.problems, sentence(answer.line)), grey: false };
+  const unsaved = isPicks(request) ? words.no_pick_saved + " " : "";  // P1067: several picks are saved together or not at all
+  if (answer.status === "problems") return { mark: words.marks.problems, text: unsaved + fill(words.problems, sentence(answer.line)), grey: false };
   return { mark: words.marks["could-not-run"], text: fill(words.ran, sentence(answer.line)), grey: false };
 }
 

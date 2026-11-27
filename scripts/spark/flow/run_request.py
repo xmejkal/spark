@@ -196,7 +196,7 @@ keys names no key. After a run, write the page again with flow.py page."""
         if unreadable:  # no offer: its key and label can hold a value of the file that could not be read (#1610 review)
             return refused_answer(request, None, fingerprint, request_codes.REQUEST_SECRETS_UNREADABLE, ", ".join(unreadable))
         refused = refusal_of(request, offers, fingerprint)
-        offer = offers.get(key_of(request))
+        offer = offers.get(key_of(request)) if request is None or request.keys is None else None  # a row of both names neither
         if refused:
             return refused_answer(request, offer, fingerprint, refused)
         chosen = [offers[key] for key in keys_of(request)]

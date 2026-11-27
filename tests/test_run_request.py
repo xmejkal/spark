@@ -561,6 +561,13 @@ class SeveralPicksTest(RunRequestTest):
                 envelope = self.refused_picks(asked.pop("keys"), "request_malformed", **asked)
                 self.assertEqual(envelope["data"]["for"], ID)
 
+    def test_a_row_with_key_and_keys_is_malformed_and_its_answer_names_no_key(self):
+        """The PR refuter of P1067: the row's `key` is an offer spark holds, but a row with both is no request, so its
+        answer names neither."""
+        envelope = self.refused_picks(["pick:light:led-red-5mm"], "request_malformed", key="build")
+        self.assertEqual({key: envelope["data"][key] for key in ("for", "key", "keys", "label")},
+                         {"for": ID, "key": None, "keys": [], "label": None})
+
     def test_a_stale_page_and_a_step_asked_in_the_chat_run_nothing(self):
         self.refused_picks(list(PICKS), "request_stale", seen="0123456789ab")
         self.refused_picks(["pick:light:led-red-5mm", "needs-drop:light"], "request_in_chat")

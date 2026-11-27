@@ -46,7 +46,7 @@ const WORDS = {
   picks_together: "Spark checks the picks together. If one fails, spark saves none.",
   waiting_picks: "Sent at %s: %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
   ok_picks: "Saved as the picks. Nothing is built yet. Reload to see the new state.",
-  last_request_picks: "your picks", needs_join: ", ", label_join: ": ",
+  last_request_picks: "your picks", needs_join: ", ", label_join: ": ", no_pick_saved: "No pick was saved.",
   refused_picks: { "the request names a step that spark does not offer now, so nothing ran":
                    "Nothing ran. Spark no longer offers one of these picks. Reload this page." },
 };
@@ -559,4 +559,12 @@ test("P1067: a row of a shape the page does not know reads as request_other and 
       JSON.stringify(request));
     assert.match(script.shownState(request, null, WORDS).text, WAITING);
   }
+});
+
+test("P1067: picks that ran with problems say first that no pick was saved, and one key's problems do not", () => {
+  const problems = { ran: true, status: "problems", line: "the button has no piece left." };
+  assert.deepEqual(script.shownState({ id: "x", keys: [OLED, TACTILE], at: AT }, problems, WORDS),
+    { mark: "✗", text: "No pick was saved. Ran, with problems: the button has no piece left. Reload to see the new state.", grey: false });
+  assert.equal(script.shownState({ id: "x", key: OLED, at: AT }, problems, WORDS).text,
+    "Ran, with problems: the button has no piece left. Reload to see the new state.");
 });

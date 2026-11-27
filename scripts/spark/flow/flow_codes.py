@@ -316,6 +316,8 @@ RAN_OTHER_SAYS = "Spark says: %s. " + NEW_STATE
 #: notes of a parts-list write, such as the entries it kept that no pick explains (P1139).
 RAN_NOTE_SAYS = "Note: %s."
 RAN_PROBLEMS_SAYS = "Ran, with problems: %s. " + NEW_STATE
+#: Said first of several picks that ran with problems (P1067): PickParts saves all of them or none.
+NO_PICK_SAVED_SAYS = "No pick was saved."
 COULD_NOT_RUN_SAYS = "Could not run: %s. " + NEW_STATE
 #: What the page says of each refusal of `flow.py run-request`, by the code's name: nothing ran, in grey, never red.
 REFUSED_SAYS = {"request_stale": "Nothing ran. The project changed after you clicked. Reload this page and click again.",

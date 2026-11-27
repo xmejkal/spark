@@ -103,8 +103,9 @@ function shownState(request, answer, words) {
         const note = typeof answer.note === "string" && answer.note ? " " + fill(words.note, sentence(answer.note)) : "";
         return { mark: words.marks.ok, text: said + note, grey: false };
     }
+    const unsaved = isPicks(request) ? words.no_pick_saved + " " : ""; // P1067: several picks are saved together or not at all
     if (answer.status === "problems")
-        return { mark: words.marks.problems, text: fill(words.problems, sentence(answer.line)), grey: false };
+        return { mark: words.marks.problems, text: unsaved + fill(words.problems, sentence(answer.line)), grey: false };
     return { mark: words.marks["could-not-run"], text: fill(words.ran, sentence(answer.line)), grey: false };
 }
 /** A Shown as the status line says it: its mark, then its text. */

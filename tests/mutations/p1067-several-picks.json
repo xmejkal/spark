@@ -88,5 +88,17 @@
   "name": "P1067: a row of picks is labelled by its keys (page_script.test.js, a row of picks waits naming them)",
   "find": "return picksSaid(words, request.keys) || words.last_request_picks;",
   "replace": "return String(request.keys);"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1067: picks that ran with problems do not say that no pick was saved (page_script.test.js, picks that ran with problems say first that no pick was saved)",
+  "find": "const unsaved = isPicks(request) ? words.no_pick_saved + \" \" : \"\";",
+  "replace": "const unsaved = \"\";"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a row with key and keys names its key in the refusal (test_run_request.SeveralPicksTest.test_a_row_with_key_and_keys_is_malformed_and_its_answer_names_no_key)",
+  "find": "offer = offers.get(key_of(request)) if request is None or request.keys is None else None",
+  "replace": "offer = offers.get(key_of(request))"
  }
 ]
