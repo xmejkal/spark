@@ -3538,7 +3538,7 @@ class TheDefaultStoreEnvTest(unittest.TestCase):
             self.assertEqual(self.without(self.step({"SPARK_HOME": str(self.default)})), self.step({"SPARK_HOME": str(self.default)}))
 
 
-GOAL ="a button switches a light on and off"
+GOAL = "a button switches a light on and off"
 GOAL_LINE = "your goal is “%s”" % GOAL
 NO_GOAL_LINE = "the brief holds no goal"
 
