@@ -1391,6 +1391,52 @@ class TheFollowUpTest(unittest.TestCase):
                          (["own"], ["  done"], [], []))
         self.assertEqual(list(result.diagnostics), [FOLLOW_FAILED_MESSAGE % "KeyError"])
 
+    def test_a_closing_line_comes_after_the_step_lines(self):
+        # P1292: the follow-up's one closing line, asked after the step lines
+        follow_up = FakeFollowUp([THEN], closing="c")
+        result = self.followed(Writing(), follow_up)
+        self.assertEqual(list(result.lines), ["  done", "line of then", "c"])
+        self.assertEqual((follow_up.closed_at, list(result.diagnostics)), ([Path("p")], []))
+
+    def test_a_closing_line_comes_with_no_step(self):
+        result = self.followed(Writing(), FakeFollowUp([], closing="c"))
+        self.assertEqual(([step.op for step in result.next], list(result.lines)), (["own"], ["  done", "c"]))
+
+    def test_a_closing_line_comes_before_the_refresh_s_line(self):
+        # P1292's council, F3: after the step lines and before the refresh's line
+        result = self.followed(Writing(), FakeFollowUp([THEN], closing="c", refreshed="wrote the page again"))
+        self.assertEqual(list(result.lines), ["  done", "line of then", "c", "  wrote the page again"])
+
+    def test_a_run_that_is_not_ok_or_names_no_project_gets_no_closing_line(self):
+        for operation, found in ((Writing(), "problems"), (Writing(), "unchecked"), (NoProject(), None), (ReadsOnly(), None)):
+            with self.subTest(operation=type(operation).__name__, found=found):
+                follow_up = FakeFollowUp([], closing="c")
+                result = self.followed(operation, follow_up, found)
+                self.assertNotIn("c", list(result.lines))
+                self.assertEqual(follow_up.closed_at, [])
+
+    def test_steps_that_raise_give_one_diagnostics_line_and_no_closing_line(self):
+        follow_up = FakeFollowUp([], raises=OSError, closing="c")
+        result = self.followed(Writing(), follow_up)
+        self.assertEqual((list(result.lines), list(result.diagnostics)), (["  done"], [FOLLOW_FAILED_MESSAGE % "OSError"]))
+        self.assertEqual(follow_up.closed_at, [])
+
+    def test_a_closing_line_that_raises_adds_one_diagnostics_line_and_the_result_stands(self):
+        alone = self.followed(Writing(), FakeFollowUp([THEN]))
+        result = self.followed(Writing(), FakeFollowUp([THEN], closing="c", closing_raises=ValueError))
+        self.assertEqual(result._replace(diagnostics=()), alone._replace(diagnostics=()))
+        self.assertEqual(list(result.diagnostics), [FOLLOW_FAILED_MESSAGE % "ValueError"])
+
+    def test_the_base_gives_no_closing_line(self):
+        self.assertIsNone(FollowUp().closing_line(Path("p")))
+        self.assertEqual(list(self.followed(Writing(), FollowUp()).lines), ["  done"])
+
+    def test_the_closing_line_is_masked(self):
+        # P1292: the closing line is a plain str, not a PastedLine, so the mask treats it as any line
+        privacy = Privacy.of(Path("/opt/someone/p"), Path("/opt/store"), Path("/opt/home"), ())
+        result = self.followed(Writing(), FakeFollowUp([], closing="  NOW (x): in /opt/someone/p"), privacy=privacy)
+        self.assertEqual(result.lines[-1], "  NOW (x): in <project>")
+
     def test_run_cli_hands_the_cli_s_follow_up_to_the_run(self):
         import contextlib
         import io

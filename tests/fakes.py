@@ -616,14 +616,17 @@ class FakeFollowUp:
     each project it was asked for in `asked`, `line(step)` gives `line of <op>`. `raises` is an exception class that
     `steps` raises, `line_raises` one that `line` raises (for the op `raising_op` only, or every op when None), each with
     a message that names a home path. `refresh(project, result)` (PR 2) keeps each project in `refreshed_at` and gives
-    the sentence `refreshed` (None: it wrote nothing), or raises `refresh_raises`."""
+    the sentence `refreshed` (None: it wrote nothing), or raises `refresh_raises`. `closing_line(project)` (P1292) keeps
+    each project in `closed_at` and gives `closing` (None: no line), or raises `closing_raises`."""
 
     #: The file its refresh names (P1035 PR 2).
     refreshes = "the page"
 
-    def __init__(self, added, raises=None, line_raises=None, raising_op=None, refreshed=None, refresh_raises=None):
+    def __init__(self, added, raises=None, line_raises=None, raising_op=None, refreshed=None, refresh_raises=None,
+                 closing=None, closing_raises=None):
         self.added, self.raises, self.line_raises, self.raising_op, self.asked = list(added), raises, line_raises, raising_op, []
         self.refreshed, self.refresh_raises, self.refreshed_at = refreshed, refresh_raises, []
+        self.closing, self.closing_raises, self.closed_at = closing, closing_raises, []
 
     def steps(self, project):
         self.asked.append(project)
@@ -641,6 +644,12 @@ class FakeFollowUp:
         if self.refresh_raises:
             raise self.refresh_raises("the refresh at /opt/someone failed")
         return self.refreshed
+
+    def closing_line(self, project):
+        self.closed_at.append(project)
+        if self.closing_raises:
+            raise self.closing_raises("the closing line at /opt/someone failed")
+        return self.closing
 
 
 class FakePageRenderer:
