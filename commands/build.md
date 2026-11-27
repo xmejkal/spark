@@ -61,7 +61,9 @@ build needs Node, as a full build does. Any other board-only build, such as the 
 itself), holds the board alone and needs no converter. A full build whose every part's record skips the simulation
 (`simulation.skip`) builds and keeps its board, and its simulation stage is `skipped`, with the code `every_part_skipped`, and with the records' reasons under what it
 cannot show; the closing line is `the chain runs end to end; every part is skipped from the simulation, so the diagram holds none
-of the project's parts`, exit 0, and the store notes no build (P778).
+of the project's parts`, exit 0, and the store notes no build (P778). A board whose record names no Wokwi part builds the
+same way: its simulation stage is `skipped` with the code `board_not_in_wokwi`, the closing line adds that code's
+meaning, and the run exits 0 (P1207). Test that firmware on the board itself.
 
 A scenario presses `onboard_button` and waits for the line the firmware prints, then releases it:
 

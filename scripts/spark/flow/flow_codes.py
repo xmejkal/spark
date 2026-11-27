@@ -480,7 +480,8 @@ SCENARIO_FIRST_WHY = "Claude first writes the scenario from the person's words, 
 #: Why the look is the deploy's step (P1034): the person wires and plugs the board in first.
 LOOK_WHY = ("The person wires the breadboard and plugs the board into USB first. The look reads the board, and the board "
             "restarts while it is read.")
-#: A build whose only stop is a board Wokwi has no model of is counted as done (the PO, 2026-11-21), and this says why.
+#: A build that skipped its simulation only because Wokwi has no model of the board (P1207), or an older record that
+#: stopped there alone, is counted as done (the PO, 2026-11-21), and this says why.
 NO_SIMULATION_NOW = "No simulation: Wokwi has no model of this board. You test it on the real board."
 #: The station line (P1119): where a phase stands beside the phase to act on now, as the guide's `stations` gives it.
 DONE_PLACE, NOW_PLACE, LATER_PLACE = "done", "now", "later"
