@@ -233,6 +233,12 @@ class TheDoctorLinesOnOneLineTest(unittest.TestCase):
         self.assertNotIn("\n", lines[0])
         self.assertIn("(no doctor: no esp?fix: tool here)", lines[0])
 
+    def test_a_cause_with_its_own_lines_is_one_doctor_line(self):
+        # the review's R2: board_doctor.py:184 puts the cause on the doctor's one line, its own lines too
+        failed = tool_finder.ToolError.of_lines(["no esptool here", "  see the tools list"], code="tool_missing")
+        lines, _ = board_doctor.stop_answer("look.py", self.stop(), self.Platform(Path("p"), failed), None)
+        self.assertEqual(lines, ["look.py: esptool could not read the board (no doctor: no esptool here?  see the tools list)"])
+
     def test_the_could_not_read_line_holds_the_port_on_one_line(self):
         lines, _ = board_doctor.stop_answer("look.py", self.stop(), self.Platform(Path("p")), None)
         self.assertEqual(lines[0], "look.py: could not read the board on /dev/cu.x?fix: rm -rf ~")

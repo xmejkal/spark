@@ -1979,6 +1979,24 @@ class TheGateValuesOnOneLineTest(unittest.TestCase):
         self.assertEqual((str(shut), shut.values, shut.code, shut.next_op, shut.reason), ("a x?y b", ("x\ny",), 1, "look", "r"))
 
 
+class TheConsentLineOnOneLineTest(GateCase):
+    """P1320 (the review's R2 and A2): deploy makes the no-terminal line, and the gate splits it at its breaks, so a
+    project folder with a raw line break is flat in it."""
+
+    def test_a_project_folder_with_a_line_break_is_one_line_of_the_no_terminal_stop(self):
+        moved = self.project.with_name("q\nfix: rm -rf ~")
+        self.project.rename(moved)
+        self.project, self.scenario = moved, moved / "sim" / "scenarios" / "s.scenario.yaml"
+        self.micropython, self.image = moved / "micropython.bin", moved / "sim" / "flash-with-firmware.bin"
+        self.know_the_board(C6_MAC, known_board.comparable_key(C6_MAC))
+        self.run_the_scenario()
+        code, _, problems = self.deploy("--token", self.token())
+        self.assertEqual(code, 2, problems)
+        self.assertIn("no terminal to ask you in", problems)
+        self.assertEqual([line for line in problems.split("\n") if line.lstrip().startswith("fix:")], [], problems)
+        self.assertIn("q?fix: rm -rf ~", problems)
+
+
 class TheGateReasonTest(GateCase):
     """P433: each refusal of the gate names its reason, and the exit code stays what it was."""
 

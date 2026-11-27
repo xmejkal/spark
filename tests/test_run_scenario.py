@@ -1336,6 +1336,13 @@ class TheRunSentencesOnOneLineTest(ProjectCase):
         self.assertEqual(refusal.split("\n"), ["x?fix: rm -rf ~.scenario.yaml: littlefs is not installed", "  run: /spark:setup"])
         self.assertEqual(refusal.code, "tool_missing")
 
+    def test_a_later_line_of_a_plain_error_shows_a_control_character_as_a_question_mark(self):
+        # the review's R2: scenario_run.py:153 flattens each later line too, not only the head
+        finder = FakeToolFinder({"littlefs": ValueError("littlefs said:\n  a \x1b[31m line")})
+        refusal = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
+                                           outside=program_world(self.project, find_tool=finder.find)).problem()
+        self.assertEqual(refusal.split("\n"), ["lights.v2.scenario.yaml: littlefs said:", "  a ?[31m line"])
+
 
 if __name__ == "__main__":
     unittest.main()
