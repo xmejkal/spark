@@ -38,8 +38,8 @@
  {
   "file": "scripts/spark/checks/check_design.py",
   "name": "P1255: the requirements files are no inputs (test_check_all.TheCheckRecordIsKeptTest.test_a_rebuild_a_changed_requirements_file_and_a_board_copied_into_boards_make_the_record_older)",
-  "find": "    names += [input_name(checked.project, Path(checked.folder) / name)\n",
-  "replace": "    names += [] and [input_name(checked.project, Path(checked.folder) / name)\n"
+  "find": "    names += [input_name(checked.project, path)\n",
+  "replace": "    names += [] and [input_name(checked.project, path)\n"
  },
  {
   "file": "scripts/spark/checks/check_design.py",
@@ -122,7 +122,7 @@
  {
   "file": "scripts/spark/checks/check_design.py",
   "name": "P1255 fix A: a requirements name is saved as it is (test_check_all.TheCheckRecordIsKeptTest.test_a_requirements_file_with_a_colon_in_its_name_keeps_the_answer_and_says_why_no_record)",
-  "find": "    names += [input_name(checked.project, Path(checked.folder) / name)\n",
-  "replace": "    names += [name\n"
+  "find": "    names += [input_name(checked.project, path)\n",
+  "replace": "    names += [path.name\n"
  }
 ]

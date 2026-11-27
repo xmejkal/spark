@@ -16,7 +16,7 @@ from spark.core.renderers import JsonDocument
 from spark.core.result import Finding, OperationResult
 from spark.core.zone_time import stamp
 from spark.design import loader
-from spark.records.board_records import PROJECT_BOARDS_DIR
+from spark.records.board_records import PROJECT_BOARDS_DIR, REQUIREMENTS_NAME, requirements_files
 from spark.records.check_record import (NOT_KEPT_SENTENCE, CheckRecordStore, answer_not_saved, answer_saved, input_name,
                                         record_file)
 
@@ -28,8 +28,6 @@ OUTSIDE = NOT_KEPT_SENTENCE % "an input is outside the project, spark and the st
 #: of the checks that found nothing and what it rests on, and the checks not asked for.
 FOUND_LINE, BLIND_LINE = "%s found %s", "%s could not look"
 CLEAN_LINE, RESTING_PART, NOT_ASKED_LINE = "%d check(s) found nothing", "resting on %d unmeasured value(s)", "not asked for: %s"
-#: The requirements file of a folder, whose `board` chooses the board to verify (`check.folder_boards` globs `*` before it).
-REQUIREMENTS = "requirements.json"
 #: The characters that make a CONVENTIONS pattern a glob, which names no default input.
 GLOB = frozenset("*?[")
 
@@ -67,8 +65,8 @@ def record_inputs(checked, inputs):
             names.append(input_name(checked.project, inputs[name]))
         elif not GLOB & set(patterns[0]):
             names.append(patterns[0])
-    names += [input_name(checked.project, Path(checked.folder) / name)
-              for name in sorted({REQUIREMENTS, *(found.name for found in Path(checked.folder).glob("*" + REQUIREMENTS))})]
+    names += [input_name(checked.project, path)
+              for path in sorted({Path(checked.folder) / REQUIREMENTS_NAME, *requirements_files(checked.folder)})]
     names += [PROJECT_BOARDS_DIR + "/"] + [input_name(checked.project, board) for board in inputs.get("boards") or []]
     return list(dict.fromkeys(names))
 

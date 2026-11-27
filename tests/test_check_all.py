@@ -38,6 +38,7 @@ from spark.core import outcomes  # noqa: E402
 from spark.core.operation import READS, WRITES  # noqa: E402
 from spark.core.zone_time import stamp  # noqa: E402
 from spark.flow import checks_reading  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from spark.records.check_record import CheckRecordStore  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.result import OperationResult  # noqa: E402
@@ -1381,6 +1382,16 @@ class TheCheckRecordIsKeptTest(unittest.TestCase):
         code, answer, text = self.run_on(self.project)
         self.assertEqual((code, answer["written"], answer["not_written"]), (before, False, self.NOT_KEPT_OUTSIDE))
         self.assertNotIn("a check record's inputs are plain paths", text)
+
+    def test_the_record_hashes_the_requirements_files_that_choose_the_board(self):
+        """P1255 fix B: one rule, `board_records.requirements_files`, names the files that choose the board, for the check
+        and for its record."""
+        (self.project / "remote.requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3"}))
+        self.run_on(self.project)
+        self.assertEqual([path.name for path in board_records.requirements_files(self.project)],
+                         ["remote.requirements.json", "requirements.json"])
+        self.assertEqual([name for name in self.kept().inputs if name.endswith("requirements.json")],
+                         ["remote.requirements.json", "requirements.json"])
 
     def test_a_circuit_built_after_the_run_makes_the_record_older(self):
         """An input not found yet is kept by its convention's first pattern when that is no glob, so a later build counts."""

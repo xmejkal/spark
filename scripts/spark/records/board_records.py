@@ -174,6 +174,12 @@ def active_id(project: Path) -> str:
 REQUIREMENTS_NAME, NOT_MARKED = "requirements.json", "no board is marked: %s"
 
 
+def requirements_files(folder):
+    """The requirements files of `folder`, sorted: every `*requirements.json`, as a folder can hold the car's and its
+    remote's (P1325). The checks read their boards and loads from them, and check-design's record hashes them (P1255)."""
+    return sorted(Path(folder).glob("*" + REQUIREMENTS_NAME))
+
+
 def requirements_board(project: Path):
     """requirements.json's `board` (D35, P988), or None for no requirements.json, no key, `null` or `""`. A file that
     cannot be read, is no JSON object or holds any other value that is no string is a BoardError (RECORD_FILE_BROKEN)."""

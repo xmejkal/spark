@@ -172,7 +172,7 @@ def placeholder_components_in(project):
     from spark.design import loader
     from spark.design import board_components
     names, notes = set(), []
-    for requirements in sorted(Path(project).glob("*requirements.json")):
+    for requirements in board_records.requirements_files(project):
         try:
             # the file's own project, the one the build reads (P319)
             part_list = loader.parts_of(loader.read(requirements), loader.project_for(requirements))
@@ -198,7 +198,7 @@ def rail_loads_in(project, circuit):
     from spark.design import power_rails
     present = {e.get("name") for e in circuit if e.get("type") == "source_component"}
     matched, notes = [], []
-    for requirements in sorted(Path(project).glob("*requirements.json")):
+    for requirements in board_records.requirements_files(project):
         try:
             made = loader.load(requirements)  # the file's own project, the one the build reads (P319)
         except loader.DesignError as broken:
@@ -380,7 +380,7 @@ def folder_boards(checked):
     """
     marked = board_records.marked_board(checked.project)[0]
     boards = []
-    for requirements in sorted(Path(checked.folder).glob("*requirements.json")):
+    for requirements in board_records.requirements_files(checked.folder):
         named = loader.read(requirements).get("board")
         if named is not None and not isinstance(named, str):
             raise loader.DesignError("%s holds %r where one board id belongs", requirements, named,
