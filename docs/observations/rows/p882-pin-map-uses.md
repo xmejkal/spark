@@ -14,9 +14,9 @@ only: the plan check's fixes, the delegated council's fixes (2026-11-27) and wha
 | 7 | the sentences a person reads | council W1 to W8 | acted | the finding, fix, line, place and parse-error sentences are as the council gave them; `pin_findings` and `line_from` tests pin each |
 | 8 | the pin line shows twice in `flow.py show` | council A4 | acted | on purpose: in the free checks' line and as the firmware phase's first line. Named in the PR body. `test_the_free_checks_line_says_the_pin_line_too_so_it_shows_twice_on_purpose` |
 | 9 | one read of the check record per show | plan check, lens point 2 | raised | a card, only if the PR's timing shows a cost; the PR gives one time before and after |
-| 10 | one `ast` reader of firmware files; sleep_calls shares the loop and the rebinding rule | council | raised | a card (spark-main files it) |
-| 11 | the text view prints no assumptions | council | raised | a card (spark-main files it) |
-| 12 | a scope-aware module-alias rule | council | raised | a card, Idea (spark-main files it) |
-| 13 | `PIN_MODULE` names two things (import_probe.py:17, kept_files.py:27) | council | raised | a card (spark-main files it) |
-| 14 | the design-reviewer agent reads `data.pin_map` | council | raised | a card (spark-main files it); a comment on P1270 #1829: it reuses `PinMapUses` |
+| 10 | one `ast` reader of firmware files; sleep_calls shares the loop and the rebinding rule | council | raised | a card: [P1328 #1906](https://github.com/xmejkal/spark/issues/1906) |
+| 11 | the text view prints no assumptions | council | raised | a card: [P1329 #1907](https://github.com/xmejkal/spark/issues/1907) |
+| 12 | a scope-aware module-alias rule | council | raised | a card, Idea: [P1330 #1908](https://github.com/xmejkal/spark/issues/1908) |
+| 13 | `PIN_MODULE` names two things (import_probe.py:17, kept_files.py:27) | council | raised | a card: [P1331 #1909](https://github.com/xmejkal/spark/issues/1909) |
+| 14 | the design-reviewer agent reads `data.pin_map` | council | raised | a card: [P1332 #1910](https://github.com/xmejkal/spark/issues/1910); a comment on P1270 #1829: it reuses `PinMapUses` |
 | 15 | a table cell over 300 characters in firmware-codes.md | the build, `tests/test_docs.py` | acted | the two new codes have a row of their own beside the `check_firmware.py` row |
