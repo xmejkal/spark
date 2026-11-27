@@ -36,6 +36,8 @@ A second file held both DFRobot models and the KiCad model. The script mirrored 
 - The amplifier's pass line of S2 is now met in a file that ran.
 - The USB-C socket of the FireBeetle is missing from its place. The script hid the 22 loose surface pieces that the writer leaves at the root. A case design needs that socket, so spark must keep those surfaces with their part.
 - A record's box is no stand-in for a case: the FireBeetle's box was 1.6 mm tall, and the maker's model is 8.3 mm.
+- At about 17:47 CET a script moved the 22 loose pieces with their parts: 19 for the FireBeetle, 3 for the amplifier. Each got the same turn and move as its part. The USB-C socket (8.95 x 7.75 x 4.26 mm) then sat at the USB edge. So the maker's file holds it, and the writer loses its place.
+- The model's circuit board measures 25.400 x 60.000 x 1.600 mm, as the record does. Its pin pitch (2.5635 mm) and its radio module label (`ESP-WROOM-32`) differ from the real board. The file is dated 2023-10-20 and names no hardware version.
 - Fusion with this file left 22 % of memory free, and swap reached 87 %.
 
 ## Found on the way: the record's width is the 3-pin width
