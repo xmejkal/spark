@@ -1,0 +1,116 @@
+[
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: the record is never saved (test_check_all.TheCheckRecordIsKeptTest.test_a_run_keeps_its_answer_over_the_inputs_it_read)",
+  "find": "        kept = answer_saved(CheckRecordStore(project, self.name), result, names, stamp(outside.clock.now()), answer)\n",
+  "replace": "        kept = result._replace(data=dict(result.data, written=True))\n"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: a sub-folder keeps a record in its project (test_check_all.TheCheckRecordIsKeptTest.test_a_sub_folder_keeps_no_record_and_says_why)",
+  "find": "    if checked.elsewhere():\n        return None, SUB_FOLDER\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: a folder in no project says it is a sub-folder (test_check_all.TheCheckRecordIsKeptTest.test_no_project_a_missing_folder_and_a_folder_in_no_project_keep_none_and_say_nothing)",
+  "find": "    if checked is None or loader.is_library(checked.project):",
+  "replace": "    if checked is None:"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: an input outside the project and its roots is not said (test_check_all.TheCheckRecordIsKeptTest.test_an_input_outside_the_project_and_its_roots_keeps_no_record_and_says_why)",
+  "find": "            project, why = None, OUTSIDE\n",
+  "replace": "            project, why = None, None\n"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: the boards checked are no inputs (test_check_all.TheCheckRecordIsKeptTest.test_the_boards_flag_puts_its_own_file_in_the_inputs)",
+  "find": "[input_name(checked.project, board) for board in inputs.get(\"boards\") or []]",
+  "replace": "[]"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: an input not found yet is no input (test_check_all.TheCheckRecordIsKeptTest.test_a_circuit_built_after_the_run_makes_the_record_older)",
+  "find": "            names.append(patterns[0])\n",
+  "replace": "            pass\n"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: the requirements files are no inputs (test_check_all.TheCheckRecordIsKeptTest.test_a_rebuild_a_changed_requirements_file_and_a_board_copied_into_boards_make_the_record_older)",
+  "find": "    names += sorted({REQUIREMENTS, *(found.name for found in Path(checked.folder).glob(\"*\" + REQUIREMENTS))})\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: a check with problems is not named (test_check_all.TheCheckRecordIsKeptTest.test_the_kept_lines_name_each_check_by_what_it_found)",
+  "find": "    lines = [FOUND_LINE % (found.subject, found.sentence) for found in findings if found.code == check_codes.CHECK_FOUND_PROBLEMS]\n",
+  "replace": "    lines = []\n"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: the checks that could not look are not named (test_check_all.TheCheckRecordIsKeptTest.test_the_kept_lines_name_each_check_by_what_it_found)",
+  "find": "    lines += [BLIND_LINE % \", \".join(blind)] if blind else []\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: the count drops what it rests on (test_check_all.TheCheckRecordIsKeptTest.test_the_kept_lines_name_each_check_by_what_it_found)",
+  "find": "([RESTING_PART % unmeasured] if unmeasured else [])",
+  "replace": "[]"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255: no page refresh (test_check_all.TheCheckRecordIsKeptTest.test_a_project_with_a_page_has_it_written_again)",
+  "find": "    effects = (READS, WRITES)\n",
+  "replace": "    effects = (READS,)\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1255: an unknown root is a path in the project (test_check_record.TheRootInputsTest.test_an_unknown_root_a_drive_and_a_climb_out_of_a_root_are_refused)",
+  "find": "    if colon and root not in roots:\n        return False\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1255: a root input hashes in the project (test_check_record.TheRootInputsTest.test_a_record_over_root_inputs_reads_current_and_a_changed_byte_in_either_reads_older)",
+  "find": "(Path(roots[root]()), root + colon)",
+  "replace": "(Path(project), root + colon)"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1255: input_name compares a path through a link as given (test_check_record.TheRootInputsTest.test_input_name_resolves_a_project_given_through_a_link)",
+  "find": "    path = Path(path).resolve()\n",
+  "replace": "    path = Path(path)\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1255: a failed save raises (test_check_record.TheAnswerSavedTest.test_a_failed_save_is_written_false_with_one_note_and_one_line)",
+  "find": "    except OSError as failed:\n        sentence = NOT_KEPT_SENTENCE",
+  "replace": "    except ValueError as failed:\n        sentence = NOT_KEPT_SENTENCE"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1255: the line reads check-firmware's record (test_checks_reading.TheDesignLineTest.test_the_line_reads_check_design_s_record_not_check_firmware_s)",
+  "find": "    check = read_check(project, CheckDesign.name)\n",
+  "replace": "    check = read_check(project, CheckFirmware.name)\n"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1255: the line shows before any build (test_checks_reading.TheDesignLineTest.test_no_build_and_no_record_is_no_line)",
+  "find": "    if not built and check.state == NONE_RECORDED:\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P1255: the build row drops the line (test_flow.TheDesignChecksLineTest.test_show_its_json_and_the_page_hold_the_same_line)",
+  "find": "        says += checked\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P1255: a board-only build says not run yet (test_flow.TheDesignChecksLineTest.test_a_board_only_build_says_the_line_only_with_a_record)",
+  "find": "        built = record is not None and BUILD.name not in skipped_stages(record)\n",
+  "replace": "        built = record is not None\n"
+ }
+]

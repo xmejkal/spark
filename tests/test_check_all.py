@@ -1373,6 +1373,15 @@ class TheCheckRecordIsKeptTest(unittest.TestCase):
                 change()
                 self.assertFalse(self.kept().current)
 
+    def test_a_circuit_built_after_the_run_makes_the_record_older(self):
+        """An input not found yet is kept by its convention's first pattern when that is no glob, so a later build counts."""
+        (self.project / "dist" / "board" / "circuit.json").unlink()
+        self.run_on(self.project)
+        self.assertIn("dist/board/circuit.json", self.kept().inputs)
+        self.assertTrue(self.kept().current)
+        (self.project / "dist" / "board" / "circuit.json").write_text("[]")
+        self.assertFalse(self.kept().current)
+
     def test_the_flow_reads_the_record_with_its_secrets_rule_as_current(self):
         self.run_on(self.project)
         self.assertTrue(checks_reading.read_check(self.project, CheckDesign.name).current)
