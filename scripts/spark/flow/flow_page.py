@@ -68,7 +68,7 @@ def offer_words(offer, stale):
 def page_words(phases):
     """
     Every word the page's script shows (P829 PR 3, the plan's section 9), as one dict: per sendable offer its label (the
-    button and the confirm's title) and the confirm's lines (its effect, the phases it may make out of date, the wait),
+    button and the confirm's title) and the confirm's lines (its effect and the phases it may make out of date; the wait stands in `intro` and, after Send, in `waiting`),
     the fixed words of the buttons and the status line, and the words of each answer. A refusal's words are keyed by
     its code's meaning, the `line` that `flow.py run-request` answers. The script fills in a time, a label or a line.
     `intro` is the published page's intro, `last_request` the line of the last request, `months` the month words of its
