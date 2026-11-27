@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT / "tools"))  # `mutate`, which test_every_script_ans
 
 from spark.records import deploy_record_store  # noqa: E402
 from spark.records import board_records  # noqa: E402
+from spark.records import check_record  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
@@ -145,6 +146,15 @@ def read_definition(case):
     return board_records.read_simulated_part(board)
 
 
+def read_check_record(text):
+    """CheckRecordStore.read of a project with `text` as its `.spark/check-firmware.json` (None: no file), over no inputs."""
+    project = Path(tempfile.mkdtemp())
+    if text is not None:
+        (project / ".spark").mkdir()
+        (project / ".spark" / "check-firmware.json").write_text(text)
+    return check_record.CheckRecordStore(project, "check-firmware").read()
+
+
 #: Every reader that follows the rule in outcomes.py: its function from an input to a Value, and for each input the state
 #: it must give, as the literal the records and goldens hold. Each has a missing, a malformed and a good input.
 READERS = {
@@ -184,6 +194,12 @@ READERS = {
         "a folder where the file goes": (("folder", None), "not-checked"),
         "bytes that are no text": (("bytes", b"\xff\xfe"), "not-checked"),
         "good": ('[wokwi]\nversion = 1\nfirmware = "flash.bin"\n', "recorded")}),
+    "CheckRecordStore.read": (read_check_record, {
+        "missing": (None, "none-recorded"),
+        "malformed": ("{not json", "not-checked"),
+        "wrong shape": ('{"schema": 1, "op": "check-firmware"}', "not-checked"),
+        "good": ('{"schema": 1, "op": "check-firmware", "at": "2026-11-27T02:10:00+01:00", "inputs": [], "inputs_sha256": {}, '
+                 '"status": "ok", "data": {}, "lines": []}', "recorded")}),
     "ScenarioSteps.from_text": (read_text, {
         "missing": (None, "none-recorded"),
         "malformed": ("steps:\n  - just-a-word\n", "not-checked"),
