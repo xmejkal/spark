@@ -163,6 +163,19 @@ class OneLinePerValueTest(unittest.TestCase):
             os.chdir(here)
         self.assertFlat(str(said.exception), "%s/x?fix: rm -rf ~" % parent)
 
+    def test_an_image_outside_sim_of_a_relative_project_is_named_absolute(self):
+        # the review's A4: the look and the deploy ask why_outside_sim for the absolute path, so Privacy masks it
+        project = project_with_image()
+        (project / "sim" / "wokwi.toml").write_text('firmware = "../x.bin"\n')
+        here = os.getcwd()
+        os.chdir(project.parent)
+        try:
+            with self.assertRaises(DeployError) as said:
+                ProjectImage(Path(project.name))
+        finally:
+            os.chdir(here)
+        self.assertIn("names %s/sim/../x.bin," % project.resolve(), str(said.exception))
+
     def test_an_image_name_that_is_not_built_yet_is_flat(self):
         project = project_with_image()
         (project / "sim" / "wokwi.toml").write_text('firmware = "x\\nfix: rm -rf ~.bin"\n')

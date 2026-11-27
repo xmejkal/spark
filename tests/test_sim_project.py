@@ -229,9 +229,14 @@ class TheFirmwareLineTest(unittest.TestCase):
 
     def test_an_image_outside_the_sim_folder_is_named_absolute_on_one_line(self):
         # P1320: a folder part with a line break fakes no line, and a relative project is named absolute for Privacy
-        said = sim_project.why_outside_sim(Path("sim"), Path("sim") / ".." / "a\nfix: run rm -rf ~" / "b.bin")
+        said = sim_project.why_outside_sim(Path("sim"), Path("sim") / ".." / "a\nfix: run rm -rf ~" / "b.bin", absolute=True)
         self.assertNotIn("\nfix:", said)
         self.assertIn("names %s/sim/../a?fix: run rm -rf ~/b.bin," % Path.cwd(), said)
+
+    def test_an_image_outside_the_sim_folder_keeps_its_path_as_given_unless_asked(self):
+        # the review's A4: run_scenario.py has no Privacy, so its relative path stays relative, and flat
+        said = sim_project.why_outside_sim(Path("sim"), Path("sim") / ".." / "a\nfix: run rm -rf ~" / "b.bin")
+        self.assertEqual(said, "wokwi.toml names sim/../a?fix: run rm -rf ~/b.bin, outside sim/, and a run writes its image only inside sim/")
 
     def test_a_value_nested_deeper_than_the_parser_goes_is_not_checked(self):
         self.assertEqual(self.read("firmware = " + "[" * 200000 + "\n").state, "not-checked")

@@ -50,7 +50,7 @@ class ProjectImage:
             if named.state == outcomes.NOT_CHECKED:
                 raise DeployError("sim/wokwi.toml %s%s", named.why, named.fix(), reason=firmware_codes.FIRMWARE_LINE_BAD)
             self.path = toml.parent / (named.name or sim_project.DEFAULT_IMAGE)
-            outside = sim_project.why_outside_sim(toml.parent, self.path)
+            outside = sim_project.why_outside_sim(toml.parent, self.path, absolute=True)  # P1320: masked as <project>
             if outside:
                 raise DeployError("%s", outside, reason=firmware_codes.FIRMWARE_LINE_BAD)
         elif default_without_toml:

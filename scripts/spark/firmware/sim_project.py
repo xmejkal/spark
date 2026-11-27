@@ -405,15 +405,17 @@ def converter_warnings(stdout):
 # --- end MVP ---
 
 
-def why_outside_sim(sim, image):
+def why_outside_sim(sim, image, absolute=False):
     """The sentence that refuses an image outside the sim folder, or None when it is inside. A run writes its image, so it
     only writes inside sim/, and the look and the deploy refuse the same image: they would flash a file no run made. The
-    image is named absolute and on one line (P1320), so a folder part with a line break fakes no line and Privacy masks it."""
+    image is on one line (P1320), so a folder part with a line break fakes no line. With `absolute` it is named absolute,
+    so Privacy masks a relative project: the look and the deploy ask it; a scenario run has no Privacy and keeps its path."""
     try:
         outside = Path(sim).resolve() not in Path(image).resolve().parents
     except (OSError, ValueError, RuntimeError):  # a null byte in the name, a link loop
         outside = True
-    return flat_line("wokwi.toml names %s, outside sim/, and a run writes its image only inside sim/", Path(image).absolute()) if outside else None
+    named = Path(image).absolute() if absolute else image
+    return flat_line("wokwi.toml names %s, outside sim/, and a run writes its image only inside sim/", named) if outside else None
 
 
 #: The image named in wokwi.toml when the build named none (moved here from run_scenario.py, P685).
