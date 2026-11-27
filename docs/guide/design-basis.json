@@ -162,7 +162,7 @@
    "label": "Write the firmware",
    "op": null,
    "from_page": false,
-   "tell": "Write the firmware for this project's board."
+   "tell": "Write the firmware for this project's board, with a thin main that calls modules the free checks can import."
   },
   {
    "key": "offer:run-simulation",
@@ -736,12 +736,15 @@
    "op": "check-firmware",
    "area": "firmware",
    "summary": "Check the firmware for free: its imports and the project's own tests, with no sim/ and no board.",
-   "effects": [],
+   "effects": [
+    "writes"
+   ],
    "data_keys": [
     "project",
     "imports",
     "modules",
-    "tests"
+    "tests",
+    "written"
    ],
    "network": false
   },

@@ -301,18 +301,26 @@ class GuideHtmlSection:
     KEYS = ("phase:*", "by:*") + SENDABLE_KEYS + CHAT_KEYS
 
     def text(self, page):
-        """The guide (P977 PR 2, P1062) in `<section id="guide">`, under the station line: the NOW box, then, muted, the line on
-        why there is no simulation and SET ASIDE. The station line says what is done and later (P1119), so the page draws no
+        """The guide (P977 PR 2, P1062) in `<section id="guide">`, under the station line: the NOW box, then the simulation line
+        (P1209: the free checks' state and why there is no simulation, muted only when the reading says `grey`, read with
+        `guide.get`) and, muted, SET ASIDE. The station line says what is done and later (P1119), so the page draws no
         DONE or LATER line; `flow.py show` keeps them. A list with no item draws no line. Nothing with no guide, or a guide
         with no line. The script puts its panel last in it."""
         guide = page.guide
         if guide is None:
             return ""
         lines = [self._now(page),
-                 '<p class="muted">%s</p>' % _text(guide["no_simulation"]) if guide["no_simulation"] else "",
+                 self._simulation(guide.get("simulation") or {}),
                  _muted_line(flow_codes.GUIDE_SET_ASIDE, guide["set_aside"])]
         lines = [line for line in lines if line]
         return "\n".join(['<section id="guide">'] + lines + ["</section>"]) if lines else ""
+
+    @staticmethod
+    def _simulation(simulation):
+        """The simulation line (P1209), grey (`muted`) where the reading says nothing more runs, else its own class."""
+        if not simulation.get("line"):
+            return ""
+        return '<p class="%s">%s</p>' % ("muted" if simulation.get("grey") else "simulation", _text(simulation["line"]))
 
     def _now(self, page):
         """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), NEXT, the guide's
