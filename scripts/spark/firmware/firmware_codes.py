@@ -4,7 +4,7 @@ check_firmware.py and the image a deploy reads (project_image.py).
 
 A leaf: it imports nothing of spark but `spark.core.codes`. Each refusal names its code, so an agent decides on the code and never on the English
 sentence (no magic strings, P260). A refusal that raises gives its exception a `code`; one that returns a sentence returns
-a Refusal (`spark.core.result`). `check_firmware.py --json` writes the code of each problem and unchecked item, with its fix (P1208). The six codes it answers with
+a Refusal (`spark.core.result`). `check_firmware.py --json` writes the code of each problem and unchecked item, with its fix (P1208). The eight codes it answers with
 are Codes (P853, P935), each holding its meaning and its fix, a str that equals its word, so a reader of the word is unchanged.
 `run_scenario.py --json` writes the code of its refusal or its failure too (P1078). flash_image.py prints the sentence alone,
 and its codes wait in the library for the Operation that comes later.
@@ -43,6 +43,13 @@ OWN_TEST_FAILED = Code("own_test_failed", "a test in the project's tests/ failed
                        "fix the test, or the code it tests, then run check_firmware.py again")
 OWN_TESTS_NOT_RUN = Code("own_tests_not_run", "the project's tests did not finish within the timeout, gave no count, or ran no test (an empty tests/, or every test skipped)",
                          "run `python3 -m unittest discover -s tests` in the project to see why, then run check_firmware.py again")
+#: check_firmware.py: the pin names of the firmware against the pin map (P882).
+PIN_MAP_NAME_MISSING = Code("pin_map_name_missing", "a firmware file uses a pin name that firmware/pins.py does not hold",
+                            "use a name that firmware/pins.py holds, or add the part to the requirements and build again with --keep. "
+                            "Do not edit pins.py by hand. Then run check_firmware.py again")
+PIN_MAP_NOT_READ = Code("pin_map_not_read", "a firmware file or the pin map does not parse on this machine, or the map takes names it does not show",
+                        "fix the file that the sentence names, then run check_firmware.py again. firmware/pins.py is written by the build: "
+                        "build again with --keep instead of editing it")
 
 #: Each code and the one sentence that says what it means.
 CODES = {
@@ -77,6 +84,8 @@ CODES = {
     IMPORT_TIMEOUT: IMPORT_TIMEOUT.meaning,
     OWN_TEST_FAILED: OWN_TEST_FAILED.meaning,
     OWN_TESTS_NOT_RUN: OWN_TESTS_NOT_RUN.meaning,
+    PIN_MAP_NAME_MISSING: PIN_MAP_NAME_MISSING.meaning,
+    PIN_MAP_NOT_READ: PIN_MAP_NOT_READ.meaning,
 }
 
 # --- end MVP ---
