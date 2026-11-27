@@ -116,12 +116,14 @@ def verdict(code, serial, out, err, timeout_ms):
 class ScenarioRun:
     """
     Service: one run of one scenario in a project's sim/. problem() makes every check that costs nothing, so a run that cannot
-    pass is refused before it spends a Wokwi minute; run() then makes the image, runs wokwi-cli and writes the log.
+    pass is refused before it spends a Wokwi minute; run() then makes the image, runs wokwi-cli and writes the log. `outside`
+    is the run's OutsideWorld, or any object with its two fields this needs (P1078): `find_tool(name)`, the project's tool
+    finder (`ToolFinder(project).find`), and `run`, which starts wokwi-cli as `subprocess.run` does. A world built for a dry
+    run refuses any program, so a dry run cannot start one.
     """
 
-    def __init__(self, project, scenario, micropython=None, timeout_ms=DEFAULT_TIMEOUT_MS, find_tool=None):
-        self.project = Path(project)
-        self.find_tool = find_tool or tool_finder.find  # (a name, a project) -> Tool; the real finder when None (P725)
+    def __init__(self, project, scenario, micropython=None, timeout_ms=DEFAULT_TIMEOUT_MS, *, outside):
+        self.project, self.outside = Path(project), outside
         self.scenario = self.project / scenario  # a relative path is the project's; an absolute one stays as it is
         self.sim = self.project / "sim"
         self.micropython, self.timeout_ms = micropython, timeout_ms
@@ -140,11 +142,10 @@ class ScenarioRun:
             unknown = self.unknown_component_ids()
             if unknown:
                 return unknown
-            self.find_tool("littlefs", self.project)  # P457: a project's tools file that turns it off is named
+            self.outside.find_tool("littlefs")  # P457: a project's tools file that turns it off is named
             self.image = image_in(self.sim / "wokwi.toml")
             self.files = image_builder.files_under(self.project / "firmware")
-            self.flash = image_builder.interpreter_for(self.micropython, self.project,
-                                                      lambda name: self.find_tool(name, self.project)).image(self.files)
+            self.flash = image_builder.interpreter_for(self.micropython, self.project, self.outside.find_tool).image(self.files)
         except (OSError, ValueError, tool_finder.ToolError) as cannot:  # a missing tool, or image_builder's codes
             code = (TOOL_MISSING if isinstance(cannot, tool_finder.ToolError)
                     else getattr(cannot, "code", RUN_INPUT_UNUSABLE))
@@ -180,20 +181,21 @@ class ScenarioRun:
     def start(self, say):
         """
         The whole order of a paid run, each step once (P696): the older log goes, the free checks build the one image and find the
-        simulator and its token, `say` gets the lines said before the run (a refusal, or the not-checked lines), then the run.
-        A StartResult; `ran` is False when the free checks refused it.
+        simulator and its token, `say` gets the not-checked lines said before the run, then the run. A StartResult; `ran` is
+        False when the free checks refused it, and its sentence is then the refusal, with its code (P1078).
         """
         self.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run refused here
-        simulator, said = free_checks(self, self.project)
+        simulator, refusal = free_checks(self)
+        if simulator is None:
+            return StartResult(COULD_NOT_RUN, refusal, None, False)
+        said = self.not_checked()
         if said:
             say(said)
-        if simulator is None:
-            return StartResult(COULD_NOT_RUN, None, None, False)
         return StartResult(*self.simulate(simulator.command), True)
 
     def run(self, cli):
         """The free checks, then the run with the simulator `cli`: (status, sentence, the log or None). The tests' door;
-        run_scenario.py goes through `start`, which finds the simulator itself."""
+        the Operation goes through `start`, which finds the simulator itself."""
         self.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run that could not start
         problem = self.problem()
         if problem:
@@ -210,10 +212,10 @@ class ScenarioRun:
             serial_log = Path(scratch) / "serial.log"
             try:
                 as_run.write_text(self.steps_text)
-                done = subprocess.run(list(cli) + [str(self.sim), "--scenario", str(as_run), "--timeout",
-                                                   str(self.timeout_ms), "--serial-log-file", str(serial_log)],
-                                      capture_output=True, encoding="utf-8", errors="replace",
-                                      timeout=self.timeout_ms / 1000 + STARTUP_ALLOWANCE_S)
+                done = self.outside.run(list(cli) + [str(self.sim), "--scenario", str(as_run), "--timeout",
+                                                     str(self.timeout_ms), "--serial-log-file", str(serial_log)],
+                                        capture_output=True, encoding="utf-8", errors="replace",
+                                        timeout=self.timeout_ms / 1000 + STARTUP_ALLOWANCE_S)
             except subprocess.TimeoutExpired as late:
                 sentence = Refusal("wokwi-cli did not finish in %d s" % late.timeout, SIMULATOR_HUNG)
                 return COULD_NOT_RUN, sentence, self.write_log(sentence, "\n".join(map(printed_text, (late.stdout, late.stderr))))
@@ -253,21 +255,20 @@ class StartResult(namedtuple("StartResult", "status sentence log ran")):
     checks refused the run before any Wokwi minute), and `ran`."""
 
 
-def free_checks(run, project):  # --- MVP --- (P399)
+def free_checks(run):  # --- MVP --- (P399)
     """
-    (the simulator, the lines to print) for this ScenarioRun: what costs nothing first, then the tool, then the token, so a
-    missing build comes before an account. A refused run has no simulator and one line. A run that goes on has the not_checked lines.
+    (the simulator, None) or (None, the Refusal) for this ScenarioRun: what costs nothing first, then the tool, then the token,
+    so a missing build comes before an account.
     """
     refusal = run.problem()
-    simulator, refusal = (None, refusal) if refusal else find_simulator(project, run.find_tool)
-    return simulator, [refusal] if refusal else run.not_checked()
+    return (None, refusal) if refusal else find_simulator(run.outside.find_tool)
 
 
-def find_simulator(project, find_tool=None):  # --- MVP --- (P684)
-    """(the simulator, None) or (None, a Refusal): no simulator, or its token unset. `find_tool`: tool_finder.find when
-    None."""
+def find_simulator(find_tool):  # --- MVP --- (P684)
+    """(the simulator, None) or (None, a Refusal): no simulator, or its token unset. `find_tool(name)` is the project's
+    finder, the run's world's (P1078)."""
     try:
-        simulator = (find_tool or tool_finder.find)("simulator", project)
+        simulator = find_tool("simulator")
     except tool_finder.ToolError as missing:
         return None, Refusal(str(missing), TOOL_MISSING)
     token = simulator.entry.get("account_env", "WOKWI_CLI_TOKEN")

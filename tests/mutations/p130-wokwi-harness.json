@@ -116,7 +116,7 @@
  {
   "file": "scripts/spark/firmware/scenario_run.py",
   "name": "the timeout is not passed, and wokwi-cli runs its own 30 s",
-  "find": "\"--timeout\",\n                                                   str(self.timeout_ms), ",
+  "find": "\"--timeout\",\n                                                     str(self.timeout_ms), ",
   "replace": ""
  },
  {

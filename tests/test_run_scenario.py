@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 from suite_runs import needs_littlefs  # noqa: E402
 from micropython_fakes import fake_interpreter  # noqa: E402
-from fakes import FakeToolFinder  # noqa: E402
+from fakes import FakeToolFinder, program_world  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -391,14 +391,17 @@ class ProjectCase(unittest.TestCase):
         self.seen = self.project / "seen.json"
         self.log = sim / "runs" / "lights.v2.log"
 
-    def run_with(self, serial="ready\n", exit_code=0, out=READY_MATCHED, err=""):
+    def run_with(self, serial="ready\n", exit_code=0, out=READY_MATCHED, err="", run=None):
+        """The run's (status, sentence, log), wokwi-cli the fake CLI, started by `run` (None: a ProgramRunner's)."""
         told = {"FAKE_WOKWI_SERIAL": serial, "FAKE_WOKWI_EXIT": str(exit_code), "FAKE_WOKWI_OUT": out,
                 "FAKE_WOKWI_ERR": err, "FAKE_WOKWI_SEEN": str(self.seen)}
         with mock.patch.dict(os.environ, told):
-            return scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
+            return scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
+                                            outside=program_world(self.project, run)).run(FAKE_CLI)
 
     def command(self, *argv, token="t", tool=FAKE_SIMULATOR, exit_code=0, **fake):
-        self.finder = FakeToolFinder({"simulator": tool}, fall_back=tool_finder.find)  # `tool` may be the exception to raise
+        real = tool_finder.ToolFinder(self.project).find  # littlefs and the interpreter stay real, as the project's tools list says
+        self.finder = FakeToolFinder({"simulator": tool}, fall_back=lambda name, project: real(name))  # `tool` may be the exception to raise
         find_tool = self.finder.find
         told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_OUT": READY_MATCHED, "FAKE_WOKWI_EXIT": str(exit_code),
                 "FAKE_WOKWI_SEEN": str(self.seen), **fake}
@@ -447,7 +450,8 @@ class TheRunTest(ProjectCase):
         try:
             os.chdir(self.project)
             with mock.patch.dict(os.environ, told):
-                scenario_run.ScenarioRun(".", self.scenario.relative_to(self.project), micropython=self.micropython).run(FAKE_CLI)
+                scenario_run.ScenarioRun(".", self.scenario.relative_to(self.project), micropython=self.micropython,
+                                         outside=program_world(".")).run(FAKE_CLI)
         finally:
             os.chdir(here)
         args = json.loads(self.seen.read_text())["args"]
@@ -544,9 +548,10 @@ class TheLogNamesTheImageTest(ProjectCase):
         found = tool_finder.Tool("micropython-xiao-esp32c6", None, {}, [str(c6)])
         told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_EXIT": "0", "FAKE_WOKWI_OUT": READY_MATCHED,
                 "FAKE_WOKWI_ERR": "", "FAKE_WOKWI_SEEN": str(self.seen)}
-        find_tool = FakeToolFinder({"micropython-xiao-esp32c6": found}, fall_back=tool_finder.find).find
+        real = tool_finder.ToolFinder(self.project).find
+        find_tool = FakeToolFinder({"micropython-xiao-esp32c6": found}, fall_back=lambda name, project: real(name)).find
         with mock.patch.dict(os.environ, told):
-            scenario_run.ScenarioRun(self.project, self.scenario, find_tool=find_tool).run(FAKE_CLI)
+            scenario_run.ScenarioRun(self.project, self.scenario, outside=program_world(self.project, find_tool=find_tool)).run(FAKE_CLI)
         self.assertEqual((self.project / "sim" / "flash-with-firmware.bin").read_bytes()[:3], b"\xe9C6")
 
     def test_a_log_from_an_older_spark_names_no_image(self):
@@ -799,21 +804,20 @@ class TheMutationTesterFoundTheseMissingTest(ProjectCase):
     def test_the_wall_clock_is_the_simulated_time_and_two_minutes(self):
         # 120 s for wokwi-cli to connect and send the image, beside the simulated 60 s.
         done = subprocess.CompletedProcess([], 0, READY_MATCHED, "")
-        with mock.patch.object(scenario_run.subprocess, "run", return_value=done) as ran:
-            self.run_with()
+        ran = mock.Mock(return_value=done)
+        self.run_with(run=ran)
         self.assertEqual(ran.call_args.kwargs["timeout"], 180)
 
     def test_the_bytes_of_a_killed_wokwi_cli_are_decoded_into_the_log(self):
         late = subprocess.TimeoutExpired(["wokwi-cli"], 180, output=b"ready \xff", stderr=b"Error: stuck")
-        with mock.patch.object(scenario_run.subprocess, "run", side_effect=late):
-            status, _, log = self.run_with()
+        status, _, log = self.run_with(run=mock.Mock(side_effect=late))
         self.assertEqual(status, COULD_NOT_RUN)
         self.assertIn("ready \ufffd", log.read_text())
         self.assertIn("Error: stuck", log.read_text())
 
     def test_a_wokwi_cli_that_cannot_start_could_not_run_and_leaves_nothing(self):
-        status, said, log = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(
-            ["/no/such/wokwi-cli"])
+        status, said, log = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
+                                                     outside=program_world(self.project)).run(["/no/such/wokwi-cli"])
         self.assertEqual((status, log, said.code), (COULD_NOT_RUN, None, "simulator_cannot_start"))
         self.assertIn("could not start", said)
         self.assertEqual(list(self.scenario.parent.glob(".as-run.*")), [])
@@ -870,7 +874,7 @@ class TheRunLeavesAnOriginalScenarioAndALogTest(ProjectCase):
             told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_SEEN": str(self.seen)}
             with mock.patch.dict(os.environ, told):
                 status, said, log = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
-                                                              timeout_ms=1).run(FAKE_CLI)
+                                                              timeout_ms=1, outside=program_world(self.project)).run(FAKE_CLI)
         self.assertEqual((status, said.code), (COULD_NOT_RUN, "simulator_hung"))
         self.assertIn("did not finish", log.read_text())
 
@@ -1089,7 +1093,8 @@ class TheRunComparesTheComponentIdsTest(ProjectCase):
 
     def test_the_refusal_has_its_code(self):
         self.scenario_with("expect-pin: { part-id: nope, pin: A, value: 1 }")
-        refusal = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).problem()
+        refusal = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
+                                           outside=program_world(self.project)).problem()
         self.assertEqual(refusal.code, "unknown_component_id")
 
     def test_a_right_id_runs(self):
@@ -1206,7 +1211,8 @@ class TheImageNameIsWrittenOnARealRunOnlyTest(ProjectCase):
         for text in ("[wokwi]\nversion = 1\n", '[wokwi]\nversion = 1\nfirmware = "build/x.bin"\n', '[wokwi]\nversion = 1\nfirmware = "folder.bin"\n'):
             with self.subTest(text):
                 self.toml().write_text(text)
-                refusal = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).problem()
+                refusal = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
+                                                   outside=program_world(self.project)).problem()
                 self.assertEqual(refusal.code, "run_input_unusable")
                 self.assertIn("wokwi.toml", refusal)
 
@@ -1270,17 +1276,37 @@ class EachRefusalHasItsCodeTest(ProjectCase):
         self.assertEqual((status, said.code), (COULD_NOT_RUN, "interpreter_unusable"))
 
     def test_a_missing_simulator_and_an_unset_token_are_their_codes(self):
-        def missing(name, project):
+        def missing(name):
             raise tool_finder.ToolError("simulator (wokwi-cli) is not installed", code="tool_missing")
 
-        self.assertEqual(scenario_run.find_simulator(self.project, missing)[1].code, "tool_missing")
+        self.assertEqual(scenario_run.find_simulator(missing)[1].code, "tool_missing")
         with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": ""}):
-            simulator, refusal = scenario_run.find_simulator(self.project, lambda name, project: FAKE_SIMULATOR)
+            simulator, refusal = scenario_run.find_simulator(lambda name: FAKE_SIMULATOR)
         self.assertEqual((simulator, refusal.code), (None, "no_token"))
         self.assertTrue(refusal.startswith("WOKWI_CLI_TOKEN is not set: "), refusal)
         with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": "t"}):
-            self.assertEqual(scenario_run.find_simulator(self.project, lambda name, project: FAKE_SIMULATOR),
-                             (FAKE_SIMULATOR, None))
+            self.assertEqual(scenario_run.find_simulator(lambda name: FAKE_SIMULATOR), (FAKE_SIMULATOR, None))
+
+    @needs_littlefs
+    def test_a_fake_run_sees_the_wokwi_cli_argv(self):
+        # P1078: the paid run goes through the world's `run`, so a test hands a fake and no program starts
+        done = subprocess.CompletedProcess([], 0, READY_MATCHED, "")
+        ran = mock.Mock(return_value=done)
+        self.run_with(run=ran)
+        argv = ran.call_args.args[0]
+        self.assertEqual(argv[:len(FAKE_CLI) + 2], FAKE_CLI + [str(self.project / "sim"), "--scenario"])
+        self.assertEqual(argv[len(FAKE_CLI) + 3:len(FAKE_CLI) + 5], ["--timeout", "60000"])
+        self.assertEqual(argv[-2], "--serial-log-file")
+
+    def test_start_returns_the_refusal_with_its_code_and_says_nothing(self):
+        # P1078: a refused run's sentence is the refusal, so the Operation makes its Finding from it; `say` gets only
+        # the not-checked lines of a run that goes on
+        (self.project / "sim" / "diagram.json").unlink()
+        said = []
+        status, sentence, log, ran = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
+                                                              outside=program_world(self.project)).start(said.extend)
+        self.assertEqual((status, sentence.code, log, ran, said), (COULD_NOT_RUN, "no_sim_project", None, False, []))
+        self.assertTrue(sentence.startswith("no simulation project in "), sentence)
 
 
 if __name__ == "__main__":

@@ -39,8 +39,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.firmware.scenario_run import DEFAULT_TIMEOUT_MS, ScenarioRun
+from spark.core.events import TerminalReporter
+from spark.core.operation import READS, RUNS, WRITES
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_FOR, OK
+from spark.core.outside import build_outside_world
 from spark.core.text_guards import guard_lines
+from spark.records.tool_finder import ToolFinder
 
 #: What --help says beyond the arguments: the cost, the token, the contract and the exit codes.
 EPILOG = """A run spends Wokwi CI minutes: ask the person before each run, whatever your permissions allow.
@@ -61,13 +65,15 @@ ARGUMENTS = (
 )
 
 
-def main(argv=None, find_tool=None):  # find_tool: a test's (a name, a project -> Tool), into ScenarioRun (P725)
+def main(argv=None, find_tool=None):  # find_tool: a test's one-name finder, into the run's world (P725, P1078)
     parser = argparse.ArgumentParser(prog="run_scenario.py", description=__doc__.strip().split("\n\n")[0],
                                      epilog=EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
     for flags, options in ARGUMENTS:
         parser.add_argument(*flags, **options)
     args = parser.parse_args(argv)
-    run = ScenarioRun(args.project, args.scenario, args.micropython, args.timeout_ms, find_tool)
+    outside = build_outside_world((READS, RUNS, WRITES), TerminalReporter(sys.stderr),
+                                  find_tool=find_tool or ToolFinder(args.project).find)
+    run = ScenarioRun(args.project, args.scenario, args.micropython, args.timeout_ms, outside=outside)
     if args.dry_run:  # before the unlink: a dry run leaves an older log in place
         status, said = run.dry_run()
         print(guard_lines("\n".join(map(str, said))), file=sys.stdout if status == OK else sys.stderr)
@@ -76,6 +82,7 @@ def main(argv=None, find_tool=None):  # find_tool: a test's (a name, a project -
         print(guard_lines("\n".join("run_scenario.py: %s" % each for each in lines)), file=sys.stderr)
     status, sentence, log, ran = run.start(say)
     if not ran:
+        say([sentence])
         return EXIT_COULD_NOT_RUN
     print(guard_lines("%s: %s%s" % (args.scenario.name, sentence, "\nlog: %s" % log if log else "")),
           file=sys.stdout if status == OK else sys.stderr)  # the log file in sim/runs keeps the raw text
