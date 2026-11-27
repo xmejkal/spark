@@ -313,9 +313,14 @@ def picked_names(plan, need):
             for pick in need.get("pick") or []]
 
 
+def quoted(names):
+    """Names as a person reads them in a sentence: each in quotes (“…”), ", " between two."""
+    return ", ".join("“%s”" % name for name in names)
+
+
 def picked_sentence(names):
-    """The one text of a need's picks (P1135), for the page and `show`: each name in quotes."""
-    return flow_codes.PICKED_SAID % ", ".join("“%s”" % name for name in names)
+    """The one text of a need's picks (P1135), for the page and `show`."""
+    return flow_codes.PICKED_SAID % quoted(names)
 
 
 def have_of(candidate):

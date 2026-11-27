@@ -21,7 +21,7 @@ from spark.flow.fingerprint import SHORT
 from spark.flow.page_sections import (WIRING, DeveloperHtmlFold, FreshHtmlLine, GuideHtmlSection, IntroHtmlLine, NotesHtmlSection,
                                       PartsHtmlFold, PicturesHtmlFold, StandsAtHtmlLine, StationsHtmlLine, TitleHtmlHeading,
                                       WiringHtmlFold, _text)
-from spark.flow.phase_readers import MARKS, pick_need
+from spark.flow.phase_readers import MARKS, effect_lines, pick_need, quoted
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import MONTHS
 
@@ -60,17 +60,22 @@ def page_words(phases):
     its code's meaning, the `line` that `flow.py run-request` answers. The script fills in a time, a label or a line.
     `intro` is the published page's intro, `last_request` the line of the last request, `months` the month words of its
     time, and `request_kinds` and `request_other` its words when its offer left the page (P1062). `copied` is what Copy says
-    once it copied a chat offer's tell (P1122). A pick's words also hold its `need` and its `part`, and the words of several
-    picks in one Send are the ones with `picks` in their name (P1067).
+    once it copied a chat offer's tell (P1122). A pick's words also hold its `need`, and the words of several picks in one
+    Send are the ones with `picks` in their name (P1067). A pick's confirm lines are its effect's (`effect_lines`, P1135),
+    so the sentences every pick of the project says stand apart and once in a Send of several. `keep` names the first radio
+    of each picked need: its picks.
     """
     offers = {}
     for offer in (offer for phase in phases for offer in phase["offers"] if flow_codes.is_sendable(offer["key"])):
         stale = [flow_codes.CONFIRM_STALE % ", ".join(offer["makes_stale"])] if offer["makes_stale"] else []
-        words, need = {"label": offer["label"], "says": [offer["effect"]] + stale}, pick_need(offer["key"])
-        offers[offer["key"]] = dict(words, need=need, part=offer.get("part")) if need else words
+        need = pick_need(offer["key"])
+        words = {"label": offer["label"], "says": (effect_lines(offer["effect"]) if need else [offer["effect"]]) + stale}
+        offers[offer["key"]] = dict(words, need=need) if need else words
+    keep = {need["need"]: flow_codes.KEEP_PICK % quoted(need["picked"]) for phase in phases for need in phase.get("needs") or []
+            if need["picked"]}
     meanings = {str(code): meaning for code, meaning in request_codes.CODES.items()}
     marks = {status: MARKS[status][1] for status in (OK, PROBLEMS, COULD_NOT_RUN)}
-    return {"offers": offers, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY, "copied": flow_codes.COPIED_SAYS,
+    return {"offers": offers, "keep": keep, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY, "copied": flow_codes.COPIED_SAYS,
             "withdraw": flow_codes.WITHDRAW, "command": flow_codes.PAGE_COMMAND, "waiting": flow_codes.WAITING_SAYS,
             "now_button": flow_codes.NOW_BUTTON,
             "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "last_request": flow_codes.LAST_REQUEST_SAYS,
