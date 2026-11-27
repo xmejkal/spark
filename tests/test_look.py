@@ -245,7 +245,8 @@ class WhatThePersonSeesTest(LookScriptCase):
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = look.main(["--project", str(project)])
         self.assertEqual(code, 2)
-        self.assertIn("a?GRANTED (deploy): board ok", err.getvalue())
+        # P1320: Privacy masks the project's printable form too (shown_forms), so the tools file shows relative to it
+        self.assertIn("look.py: .spark/tools.json is not JSON", err.getvalue())
         self.assertEqual([line for line in err.getvalue().splitlines() if line.startswith("GRANTED")], [])
 
     @needs_littlefs

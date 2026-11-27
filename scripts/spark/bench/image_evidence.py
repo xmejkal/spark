@@ -142,14 +142,14 @@ class CompileCheck:
                             timeout=COMPILE_TIMEOUT_S)
         except subprocess.TimeoutExpired as late:
             said = late.stdout.decode(errors="replace") if isinstance(late.stdout, bytes) else late.stdout
-            return TIMEOUT_REASON % (text_guards.printable(self._read(said)[0] or NO_FILE_YET), COMPILE_TIMEOUT_S)
+            return text_guards.flat_line(TIMEOUT_REASON, self._read(said)[0] or NO_FILE_YET, COMPILE_TIMEOUT_S)
         checking, result = self._read(done.stdout)
         if result is None:
-            last = text_guards.printable(checking or NO_FILE_YET)
+            last = checking or NO_FILE_YET
             if done.returncode == 0:
-                return NO_ANSWER_REASON % last
+                return text_guards.flat_line(NO_ANSWER_REASON, last)
             detail = SIGNAL_DETAIL % -done.returncode if done.returncode < 0 else EXIT_DETAIL % done.returncode
-            return STOPPED_REASON % (last, detail)
+            return text_guards.flat_line(STOPPED_REASON, last, detail)
         return self._sentence(result, checking)
 
     @staticmethod
@@ -174,15 +174,15 @@ class CompileCheck:
     def _sentence(result, checking):
         if result.get("ok"):
             return None
-        name = text_guards.printable(str(result.get("name") or checking or NO_NAME))
+        name = str(result.get("name") or checking or NO_NAME)  # P1320: flat_line puts each value on one line
         kind = result.get("kind")
         if kind == SYNTAX:
-            return SYNTAX_REASON % (name, result.get("line"), result.get("msg"))
+            return text_guards.flat_line(SYNTAX_REASON, name, result.get("line"), result.get("msg"))
         if kind == TOO_DEEP:
-            return TOO_DEEP_REASON % name
+            return text_guards.flat_line(TOO_DEEP_REASON, name)
         if kind == UNREADABLE:
-            return UNREADABLE_REASON % (name, result.get("msg"))
-        return BYTES_REASON % (name, result.get("msg"))
+            return text_guards.flat_line(UNREADABLE_REASON, name, result.get("msg"))
+        return text_guards.flat_line(BYTES_REASON, name, result.get("msg"))
 
 
 def image_of(project, evidence):
@@ -346,8 +346,8 @@ class PassedRunEvidence(ImageEvidence):
 
     def notes(self, image):
         changed = image.find_newer_files()
-        notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
-                 "scenario again to test it." % ", ".join(changed)] if changed else []
+        notes = [text_guards.flat_line("%s changed after this image was made: the board gets the image that passed, not the change. "
+                                       "Run its scenario again to test it.", ", ".join(changed))] if changed else []
         other = image.why_other_runs()
         return notes + [other] if other else notes
 
@@ -418,7 +418,7 @@ class NoSimulationEvidence(ImageEvidence):
 
     def _why_no_main(self):
         if not (self.project / "firmware" / "main.py").is_file():
-            return NO_MAIN % (self.project, READY)
+            return text_guards.flat_line(NO_MAIN, self.project, READY)  # a pasted code's sentence: the project as given
         return None
 
     def _why_not_compiling(self):
@@ -430,8 +430,8 @@ class NoSimulationEvidence(ImageEvidence):
     def _why_run_failed(self, image):
         """A run that did not pass on this image refuses here too: a passed run is not needed, a failed one still counts."""
         for log, verdict in image.failed_runs():  # P1220: the one reader, which the flow's guide and gate A read too
-            return ("%s did not pass on this image (verdict: %s): deploy.py flashes no image that a run failed"
-                    % (log.name, verdict))
+            return text_guards.flat_line("%s did not pass on this image (verdict: %s): deploy.py flashes no image that a run failed",
+                                         log.name, verdict)
         return None
 
     # --- MVP --- P436: a board record that cannot be read is a sentence (evidence_refuses), not a missing tool
@@ -458,10 +458,9 @@ class NoSimulationEvidence(ImageEvidence):
         if held != built:
             build, entry = image_builder.build_entry(self.project)
             own = image_builder.own_build_hint_for(self.project, build, entry and entry[0], image.path)
-            return ("%s does not match a build of firmware/ as it is now (firmware/, the board's MicroPython or how spark "
-                    "builds images changed since): %s%s"
-                    % (image.path.name, BUILD_IMAGE_HINT % image_builder.build_command(self.project, image.path),
-                       "; or " + own if own else ""))
+            return text_guards.flat_line("%s does not match a build of firmware/ as it is now (firmware/, the board's MicroPython or "
+                                         "how spark builds images changed since): %s%s", image.path.name,
+                                         BUILD_IMAGE_HINT % image_builder.build_command(self.project, image.path), "; or " + own if own else "")
         return None
     # --- end MVP ---
 

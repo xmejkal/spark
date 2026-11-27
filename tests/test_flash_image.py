@@ -338,6 +338,31 @@ class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
         assert_flat(self, caught.exception)
 
 
+class TheImageSentencesOnOneLineTest(unittest.TestCase):
+    """P1320: a partition label reaches the look through `cannot_check`, which keeps line breaks, so it is flat at its source."""
+
+    def test_a_partition_label_with_a_line_break_is_one_line_through_cannot_check(self):
+        from spark.bench import image_evidence
+        past = MICROPYTHON_TABLE[:2] + (("x\nfix: rm", 0, 0, 0x10000, 0x1f0001),)
+        with self.assertRaises(image_builder.InterpreterError) as caught:
+            image_builder.PartitionTable.read(fake_interpreter(table=table_bytes(past)), 0).with_filesystem()
+        self.assertIsInstance(caught.exception, ValueError)
+        self.assertIn('the partition "x?fix: rm" ends at 0x200001, past 0x200000', str(caught.exception))
+        said = str(image_evidence.cannot_check("flash.bin", caught.exception))
+        self.assertNotIn("\nfix:", said)
+        self.assertIn("x?fix: rm", said)
+
+    def test_an_interpreter_path_and_a_folder_with_a_line_break_are_one_line(self):
+        folder = Path(tempfile.mkdtemp())
+        finder = FakeToolFinder({"littlefs": image_builder.tool_finder.Tool("littlefs", "littlefs", {}, [])})
+        _, refused = image_builder.make_image(folder / "x\nfix: rm -rf ~.bin", folder, folder, find_tool=finder.find)
+        self.assertEqual((refused.code, "\nfix:" in refused), ("no_interpreter", False), refused)
+        self.assertIn("x?fix: rm -rf ~.bin", refused)
+        (folder / "mp.bin").write_bytes(b"\x00")
+        _, refused = image_builder.make_image(folder / "mp.bin", folder, folder / "x\nfix: rm -rf ~", find_tool=finder.find)
+        self.assertEqual((refused.code, "\nfix:" in refused), ("files_not_folder", False), refused)
+
+
 class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
     """P82: littlefs and the MicroPython build are tools on the list, not a traceback and a path to type."""
 

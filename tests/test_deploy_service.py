@@ -330,6 +330,66 @@ class TheFlashNotFinishedTest(ServiceCase):
         self.assertEqual((code, board_log.newest_logged_deploy(self.project)[1].verdict), (0, "ready seen"))
 
 
+class TheValuesOnOneLineTest(ServiceCase):
+    """P1320: a raw line break in a value of a deploy error shows as `?`, and a line break that the sentence intends stays."""
+
+    RAW_PORT = "/dev/cu.x\nfix: rm -rf ~"
+
+    def service_with_command(self, command):
+        """The service, whose plan runs `command` alone (no mock.patch, rule T2)."""
+        service = self.service()
+        planned = service.plan
+        service.plan = lambda port=None: planned(port)._replace(commands=[command])
+        return service
+
+    @needs_littlefs
+    def test_a_command_with_a_line_break_is_one_line_in_its_running_line(self):
+        # the review's R1: the running line is an Event, and its text view keeps line breaks
+        report = self.look()
+        self.service_with_command(["esptool", "--port", self.RAW_PORT, "erase-flash"]).deploy(report, report.token(), FakeConsent(True))
+        self.assertEqual(self.said(), ["running: esptool --port '/dev/cu.x?fix: rm -rf ~' erase-flash"])
+
+    def test_a_refusal_of_the_evidence_keeps_its_line_break_and_shows_a_control_character_as_a_question_mark(self):
+        class Refuses(image_evidence.PassedRunEvidence):
+            def why_not_ready(self, image):
+                return "head \x1b[31m\n  second"
+
+            def way_out(self, image):
+                return ": way \x1b"
+        service = deploy_service.DeployService(self.project, self.platform(), Refuses(), self.service_outside())
+        with self.assertRaises(project_image.DeployError) as refused:
+            service.plan()
+        self.assertEqual((str(refused.exception), refused.exception.reason), ("head ?[31m\n  second: way ?", "evidence_refuses"))
+
+    @needs_littlefs
+    def test_a_failed_command_with_a_line_break_shows_on_one_line(self):
+        self.fails = True
+        report = self.look()
+        with self.assertRaises(deploy_service.FlashError) as failed:
+            self.service_with_command(["esptool", "--port", self.RAW_PORT, "erase-flash"]).deploy(report, report.token(), FakeConsent(True))
+        self.assertNotIn("\nfix:", str(failed.exception))
+        self.assertIn("x?fix: rm -rf ~", str(failed.exception))
+        self.assertEqual(failed.exception.reason, "flash_failed")
+
+    @needs_littlefs
+    def test_a_retry_the_gate_stopped_keeps_the_stop_s_own_line_under_a_flat_head(self):
+        self.fails = True
+        case = self
+
+        class NoTerminal(FakeConsent):
+            def require_ready(self):
+                if case.slept:
+                    raise deploy_gate.GateClosedError("no terminal to ask you in:\n  deploy.py --project p", reason="no_terminal")
+        report = self.look()
+        with self.assertRaises(deploy_service.FlashError) as failed:
+            self.service_with_command(["esptool", "--port", self.RAW_PORT, "erase-flash"]).deploy(report, report.token(), NoTerminal(True))
+        head, *rest = str(failed.exception).split("\n")
+        self.assertEqual(rest, ["  deploy.py --project p"])
+        self.assertIn("x?fix: rm -rf ~", head)
+        self.assertTrue(head.endswith("and its retry did not run: no terminal to ask you in:"), head)
+        self.assertEqual(failed.exception.reason, "no_terminal")
+
+
 class TheVerifyNotFinishedTest(ServiceCase):
     """P1110 tests 1 to 3: a crash or a Ctrl-C in the verify, before its board log, writes a board log with the verdict
     `ready unknown` and the reason crash or interrupted, then goes on unchanged. The flash finished, so the board is not

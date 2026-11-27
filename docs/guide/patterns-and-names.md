@@ -193,19 +193,19 @@ one key: they say how many, not where, so a new breach next to an old one shows 
 
 ### Messages that hold a value (V1)
 
-An error that puts a path, a name or a record's field into its sentence inherits from `ValueMessageError`
-(`scripts/spark/core/text_guards.py`, [P444](https://github.com/xmejkal/spark/issues/592)) and a raise passes the values
-as arguments: `raise ToolError("%s is not JSON (%s)", path, broken)`, never `"..." % (path, broken)`. The class puts
-each value on one line, keeps a number and a `%r` value as they are, and keeps the raw values on `.values`. Rule V1
-counts the raises that build the text first. Its baseline is empty
-([#606](https://github.com/xmejkal/spark/issues/606)): a new raw site is fixed, never baselined. A template kept as data
-is filled with `%` (P852). `Class.of_lines([...])` raises several sentences, one per line, each flattened;
-`Class.of_error(error)` does the same for the lines of another error, so a nested error keeps its line breaks.
-
-What V1 does not see, so a reviewer looks for it: a class under another name (`import ToolError as SP`, `P = ToolError`),
-the lines that `X.of_lines(...)` and `X.of_error(...)` take (safe by construction), and a message built before the raise
-(a sentence a function returns, such as `tool_finder.off_sentence` and `tool_finder.entry_problem`, which
-use `flat_line` by hand).
+An error that puts a path, a name or a record's field into its sentence inherits from `ValueMessageError` (`core/text_guards.py`,
+[P444](https://github.com/xmejkal/spark/issues/592)), and a raise passes the values as arguments: `raise ToolError("%s is not
+JSON (%s)", path, broken)`, never `"..." % (path, broken)`. Each value goes on one line, a number and a `%r` value stay as
+they are, and `.values` keeps the raw values. V1 counts a raise that builds the text first; its baseline is empty ([#606](https://github.com/xmejkal/spark/issues/606)).
+The three forms ([P1320](https://github.com/xmejkal/spark/issues/1897)): a raise with values; `flat_line(template, *values)`
+for a sentence a function returns (a `why_*`, a `Stop`, a `Refusal`), raised as `X("%s", flat_line(CONSTANT, ...))` for a
+constant with no line break, where `.values` holds the sentence; and `Class.of_lines([...])` or `Class.of_error(error)`
+for intended line breaks, each line flattened (a constant with one is split, as `NO_TERMINAL_HEAD`). P852's "template kept
+as data" is a data table such as `BUILD_STAGES`. What V1 does not see, so a reviewer looks for it: a class under another
+name (`import ToolError as SP`), a message built before the raise, and the sources of a split at line breaks, safe only when
+each is a `ValueMessageError` or `flat_line`: a row pins each, and [P1337](https://github.com/xmejkal/spark/issues/1917)
+counts them. A first sentence and another error's own lines are written by hand in `image_evidence.cannot_check`,
+`deploy_service.py`, `deploy_gate.py` and `scenario_run.py`; one `of_error(error, head, *values)` waits on [P1336](https://github.com/xmejkal/spark/issues/1916).
 
 ### One responsibility, one name
 

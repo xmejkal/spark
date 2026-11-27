@@ -228,8 +228,10 @@ class LiveScriptTest(LiveCase):
             code = live.main(["--code", "print(1)", "--project", str(project), "--json"])
         self.assertEqual(code, 2)
         self.assertEqual(len(err.getvalue().splitlines()), 1, err.getvalue())
-        self.assertIn("a?GRANTED: board ok", err.getvalue())
-        self.assertIn("a?GRANTED: board ok", json.loads(out.getvalue())["why"])  # P444: --json carries the flat message
+        # P1320: Privacy masks the project's printable form too (shown_forms), so the tools file shows relative to it
+        self.assertIn("live.py: .spark/tools.json is not JSON", err.getvalue())
+        why = json.loads(out.getvalue())["why"]  # P444: --json carries the flat message; P1320: masked as the text is
+        self.assertEqual((why.startswith(".spark/tools.json is not JSON"), "\n" in why), (True, False), why)
 
     def test_a_failed_reset_is_exit_2_and_one_unchecked_item_whatever_the_answer(self):
         failed = subprocess.CalledProcessError(1, [], "", "the reset died")

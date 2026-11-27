@@ -314,6 +314,20 @@ class RunCliTest(unittest.TestCase):
         self.assertEqual(raised.exception.code, 2)
         self.assertTrue(err.getvalue().startswith("usage: toy.py "), err.getvalue())
 
+    def test_a_bad_argument_with_a_line_break_fakes_no_line_in_either_view(self):
+        """P1320: the usage's error line and the envelope's sentence show a raw line break of the argument as `?`."""
+        import contextlib
+        import io
+        err = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(err):
+            run_cli(TEXT, Toy(), ["--x\nfix: rm -rf ~"], outside_builder=None)
+        self.assertEqual([line for line in err.getvalue().split("\n") if line.startswith("fix:")], [], err.getvalue())
+        self.assertIn("x?fix: rm -rf ~", err.getvalue())
+        code, out, err = cli("--x\nfix: rm -rf ~", "--json")
+        sentence = json.loads(out)["unchecked"][0]["sentence"]
+        self.assertEqual((code, "\n" in sentence), (2, False), sentence)
+        self.assertIn("x?fix: rm -rf ~", sentence)
+
     def test_a_required_argument_and_a_choice_are_argparse_s_own(self):
         class Minutes(Toy):
             arguments = (Argument(("--minutes",), "minutes", int, "how long", required=True),

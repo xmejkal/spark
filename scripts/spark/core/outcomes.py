@@ -19,6 +19,8 @@ import argparse
 import json
 import sys
 
+from spark.core.text_guards import ValueMessageError
+
 #: What the shell sees.
 EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
 
@@ -130,8 +132,9 @@ def add_env(said, env):
 
 
 # --- MVP ---
-class BadArgumentError(Exception):
-    """An argument a script cannot run with: could-not-run, and with --json an envelope like any other answer."""
+class BadArgumentError(ValueMessageError):
+    """An argument a script cannot run with: could-not-run, and with --json an envelope like any other answer. argparse's
+    message is one line, so a line break in it comes from the person's argument: it is a value, shown as `?` (P1320)."""
 
 
 class AnsweringParser(argparse.ArgumentParser):
@@ -139,11 +142,12 @@ class AnsweringParser(argparse.ArgumentParser):
     anything. A script catches it, and prints an envelope with --json or calls `exit_with_usage` without it."""
 
     def error(self, message):
-        raise BadArgumentError(message)
+        raise BadArgumentError("%s", message)
 
     def exit_with_usage(self, message):
         """Print the usage and `message` on stderr as argparse does, and exit with EXIT_COULD_NOT_RUN. The message holds the
-        person's own arguments, so the caller passes it through text_guards first (outcomes imports nothing of spark)."""
+        person's own arguments, so the caller passes it through text_guards first: BadArgumentError's text is one line already,
+        and a fix the caller adds is its own (P1320)."""
         self.print_usage(sys.stderr)
         self.exit(EXIT_COULD_NOT_RUN, "%s: error: %s\n" % (self.prog, message))
 # --- end MVP ---

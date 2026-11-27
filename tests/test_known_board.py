@@ -549,5 +549,16 @@ class TheBenchBuilderTest(unittest.TestCase):
         self.assertIs(outside.replies(question).value, True)
 
 
+
+class TheOtherBoardSentenceTest(unittest.TestCase):
+    """P1320: the port is the person's own, so a raw line break in it shows as `?` in the other_board Finding."""
+
+    def test_a_port_with_a_line_break_is_one_line(self):
+        known = known_board.KnownBoard("/p", MAC_A, None, "xiao-esp32-c6", "a test", "2026-11-17T18:00:00+01:00")
+        said = known_board.other_after(known, "/dev/cu.x\nfix: rm -rf ~", MAC_B, "the fix").sentence
+        self.assertNotIn("\nfix:", said)
+        self.assertTrue(said.startswith("The board on /dev/cu.x?fix: rm -rf ~ (MAC ends"), said)
+
+
 if __name__ == "__main__":
     unittest.main()
