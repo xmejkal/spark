@@ -9,20 +9,17 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.breadboard import sheet
-from spark.build import build_codes
 from spark.build.build_record import BuildRecordStore
-from spark.build.stages import SIMULATION
 from spark.design import entry_origin, needs
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import deploy_reading, flow_codes, wired_board
+from spark.flow.no_model import stops_only_for_no_model
 from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, read_requirements, set_aside
 from spark.core.errors import CodedMessageError
-from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS, SKIPPED
+from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 
 # --- MVP ---
-#: The codes of a simulation stage whose build counts as done (the PO, 2026-11-21): Wokwi has no model of the board.
-NO_MODEL_CODES = (build_codes.BOARD_NOT_IN_WOKWI,)
 #: What reading the wiring sheet can raise: its own refusals, and a circuit.json that is no JSON, holds a value of the
 #: wrong type or shape, or is nested too deep (tests/test_flow_page.py's TheMissingWiringTest).
 SHEET_UNREADABLE = sheet.REFUSALS + (ValueError, KeyError, TypeError, AttributeError, IndexError, RecursionError)
@@ -41,19 +38,13 @@ def readable(read, default):
         return default
 
 
-def stops_only_for_no_model(record):
-    """True when the build `record`'s one stage that ended neither ok nor skipped is the simulation, with a code of
-    NO_MODEL_CODES. An old record with no code is never counted as done."""
-    stopped = [stage for stage in (record or {}).get("stages") or [] if stage.get("status") not in (OK, SKIPPED)]
-    return [stage.get("name") for stage in stopped] == [SIMULATION.name] and stopped[0].get("code") in NO_MODEL_CODES
-
-
 def no_model_phases(project, by_name):
-    """The phases counted as done because Wokwi has no model of the board: a build that could not run for that alone,
-    and after it a simulate with no status or not started. The build phase keeps could-not-run, so the exit stays 2.
-    It reads .spark/build.json once more: a stage code on every Phase would change the phases' JSON contract."""
+    """The phases counted as done because Wokwi has no model of the board: a build that stopped for that alone, and after
+    it a simulate with no status or not started. A new record's build phase has no status (P1207, the simulation stage is
+    skipped). An old record's build phase keeps could-not-run, so for an old record the exit stays 2. A stale build is
+    never counted. It reads .spark/build.json once more: a stage code on every Phase would change the phases' JSON contract."""
     build, simulate = by_name.get(flow_codes.BUILD), by_name.get(flow_codes.SIMULATE)
-    if not build or build.status != COULD_NOT_RUN or not stops_only_for_no_model(readable(BuildRecordStore(project).read, None)):
+    if not build or build.status not in (COULD_NOT_RUN, None) or not stops_only_for_no_model(readable(BuildRecordStore(project).read, None)):
         return set()
     return {flow_codes.BUILD} | ({flow_codes.SIMULATE} if simulate and simulate.status in (flow_codes.NOT_STARTED, None) else set())
 

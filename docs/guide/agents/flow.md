@@ -46,8 +46,8 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
 
   A build whose only stop is a simulation stage with the code `board_not_in_wokwi` is counted as
   done: `done` says `build (no simulation)`, a simulate with no status or not started is in `later` as `simulate (no
-  Wokwi model of this board)`, and `no_simulation` says why (else `null`). The build phase keeps `could-not-run`, so the
-  exit stays 2. Else the simulate is `now` while a run failed on its image, a file under `firmware/` changed after the
+  Wokwi model of this board)`, and `no_simulation` says why (else `null`). Since [P1207](https://github.com/xmejkal/spark/issues/1756) the build ends that stage `skipped`, so the build phase has no status and `flow.py show` exits 0.
+  An older record has the stage `could-not-run`: its build phase keeps `could-not-run`, and the exit stays 2 until the next build. Else the simulate is `now` while a run failed on its image, a file under `firmware/` changed after the
   image, or no run tested it, each with its own sentence and who acts (`claude` for the first two, which name the failed log
   or ask for a new image). Relay `now.says` as it is.
 
@@ -94,7 +94,7 @@ A phase that spark did not judge is never a pass, and a skipped stage is not one
 - A breadboard sheet that is current. Spark does not judge the wiring.
 - A build on the board alone, whose `build` stage is skipped. No board was built, and the breadboard phase has
   nothing to wire. A rebuild skips the same stages, so `stands_at` passes both phases and the build phase has no offer.
-- A build that ended `ok` and skipped only its `simulation` stage, because every part is skipped from the simulation.
+- A build that ended `ok` and skipped only its `simulation` stage, because every part is skipped from the simulation (`every_part_skipped`) or because Wokwi has no model of the board (`board_not_in_wokwi`, P1207). The second one's build phase ends its `says` with the sentence of the guide's `no_simulation`, and the guide counts it as done.
 
 A build that ended `ok` and skipped any other stage is `partial`. No build does that today. With no log in
 `sim/runs/`, the simulate phase says to run a scenario. It blames an older spark only for a log that names no image.
@@ -356,10 +356,10 @@ The envelope has `op` `run-request`. Its `data` holds:
   `could-not-run`.
 - `line`: one sentence. For a step, its first problem or reason, or `ran <label>: ok` when it ended ok. For a refusal,
   the code's meaning below.
-- `note`: `null`, or one sentence beside an ok answer. A build that could not run only its simulation, for
+- `note`: `null`, or one sentence beside an ok answer. A build that skipped only its simulation, for
   `board_not_in_wokwi`, built the board, sheet and pin map, and the guide counts it done ([P1008](https://github.com/xmejkal/spark/issues/1467)).
-  Its `status` is `ok`, `line` is `ran <label>: ok` and `note` is that code's meaning. The envelope keeps the `unchecked`
-  item (exit 2), so decide on `data.status`. A parts-list write's `note` is its notes joined by `; `, only when ok, such as the
+  Its `status` is `ok`, `line` is `ran <label>: ok` and `note` is that code's meaning. Since [P1207](https://github.com/xmejkal/spark/issues/1756) the build itself is `ok`,
+  so the envelope has no `unchecked` item for it and the run exits 0, not 2. A parts-list write's `note` is its notes joined by `; `, only when ok, such as the
   entries it kept that no pick explains ([P1139](https://github.com/xmejkal/spark/issues/1674)). A pick's notes never reach it.
 - `fingerprint`: the fingerprint after the run, the whole sha256.
 

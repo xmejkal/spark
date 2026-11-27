@@ -2320,10 +2320,12 @@ class TheBoardAloneTest(unittest.TestCase):
         self.assertIn("[--  ] build", said)
         self.assertIn("the chain runs end to end for the board alone", said)
 
-    def test_a_board_wokwi_cannot_show_is_could_not_run(self):
+    def test_a_board_wokwi_cannot_show_is_skipped(self):
+        # P1207: D11 ends this stage skipped with its code, not could-not-run
         board = {"name": "No Wokwi Board"}
         stages = build_service.board_alone(board, Path(tempfile.mkdtemp()))
-        self.assertEqual((stages[-1].name, stages[-1].status), ("simulation", check_spine.COULD_NOT_RUN))
+        self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].code),
+                         ("simulation", check_spine.SKIPPED, "board_not_in_wokwi"))
 
     def test_the_breadboard_line_says_there_is_nothing_to_wire(self):
         workdir, stages = self.run_alone()
