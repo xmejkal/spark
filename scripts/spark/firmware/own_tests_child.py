@@ -14,7 +14,7 @@ folder stay off sys.path, and it imports nothing of spark (the twin of import_ch
 
 The line: `total` (the tests run, a failing test once), `failed` (a list of {"id", "line"}: the id of each test that failed,
 raised or succeeded when it was expected to fail, and the last line of its traceback) and `skipped` (a test with three skipped
-subtests once). Right after the count the child ends with os._exit, so nothing a test registered with atexit runs after it.
+subtests once, and no test that also failed or passed a subtest). Right after the count the child ends with os._exit, so nothing a test registered with atexit runs after it.
 """
 
 import json
@@ -51,18 +51,33 @@ def failures_of(result):
     return failed
 
 
-def skipped_of(result):
-    """The count of the tests of RESULT that were skipped, each test once: a test with three skipped subtests is one."""
-    return len({getattr(test, "test_case", test).id() for test, _ in result.skipped})
+class CountedResult(unittest.TextTestResult):
+    """The run's result, which also keeps the ids of the tests that passed a subtest: such a test ran, so it is no skipped test."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.passed_a_subtest = set()
+
+    def addSubTest(self, test, subtest, err):
+        super().addSubTest(test, subtest, err)
+        if err is None:
+            self.passed_a_subtest.add(test.id())
+
+
+def skipped_of(result, failed):
+    """The count of the tests of RESULT that were skipped, each test once: a test with three skipped subtests is one. A test
+    that also failed (in FAILED) or passed a subtest ran, so it is no skipped test."""
+    skipped = {getattr(test, "test_case", test).id() for test, _ in result.skipped}
+    return len(skipped - {each["id"] for each in failed} - getattr(result, "passed_a_subtest", set()))
 
 
 def count_tests(project, folder):
     """The dict of the run of PROJECT/FOLDER: {"total", "failed", "skipped"}. A test that raised outside any test (setUpClass)
     has no count of its own, so it is added to the total."""
-    result = unittest.TextTestRunner(verbosity=0).run(discover(project, folder))  # the runner's stream is stderr
+    result = unittest.TextTestRunner(verbosity=0, resultclass=CountedResult).run(discover(project, folder))  # stream: stderr
     failed = failures_of(result)
     outside = sum(1 for test, _ in result.errors + result.failures if not isinstance(getattr(test, "test_case", test), unittest.TestCase))
-    return {"total": result.testsRun + outside, "failed": failed, "skipped": skipped_of(result)}
+    return {"total": result.testsRun + outside, "failed": failed, "skipped": skipped_of(result, failed)}
 
 
 class CountRenderer:

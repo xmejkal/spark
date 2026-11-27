@@ -76,5 +76,6 @@
   "name": "P1208: no firmware/ gives the empty imports of old",
   "find": "return {\"state\": NOT_CHECKED} if unchecked else",
   "replace": "return {} if unchecked else"
- }
+ },
+  {"file": "scripts/spark/firmware/own_tests_child.py", "name": "P1208 fix pass: a test whose subtests skip and fail is counted as skipped too, so a run of it reads as every test skipped (test_own_tests.CountingTest.test_a_test_whose_subtests_skip_and_fail_is_one_failed_test_and_no_skipped_one)", "find": "    return len(skipped - {each[\"id\"] for each in failed} - getattr(result, \"passed_a_subtest\", set()))", "replace": "    return len(skipped - getattr(result, \"passed_a_subtest\", set()))"}
 ]

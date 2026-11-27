@@ -75,6 +75,23 @@ class CountingTest(unittest.TestCase):
             "            with self.subTest(n=n):\n                self.skipTest('later')\n\n    def test_fine(self):\n        pass\n")))
         self.assertEqual((found.state, found.passed, found.total, found.failed, found.skipped), ("recorded", 1, 2, [], 1))
 
+    def test_a_test_whose_subtests_skip_and_fail_is_one_failed_test_and_no_skipped_one(self):
+        # the refuter's pass on the fix (row 35): counted twice, it read as every test skipped and hid the failure
+        found = read(a_project(test_a=(
+            "import unittest\n\nclass A(unittest.TestCase):\n    def test_mixed(self):\n"
+            "        with self.subTest(n=0):\n            self.skipTest('later')\n"
+            "        with self.subTest(n=1):\n            self.fail('broken')\n\n    def test_fine(self):\n        pass\n")))
+        self.assertEqual((found.state, found.passed, found.total, found.failed, found.skipped),
+                         ("recorded", 1, 2, ["test_a.A.test_mixed"], 0))
+
+    def test_a_test_with_a_skipped_and_a_passing_subtest_is_a_passed_test(self):
+        # the refuter's pass on the fix (row 36): a test that passed a subtest ran, so it is not a skipped test
+        found = read(a_project(test_a=(
+            "import unittest\n\nclass A(unittest.TestCase):\n    def test_mixed(self):\n"
+            "        with self.subTest(n=0):\n            self.skipTest('later')\n"
+            "        with self.subTest(n=1):\n            pass\n")))
+        self.assertEqual((found.state, found.passed, found.total, found.failed, found.skipped), ("recorded", 1, 1, [], 0))
+
     def test_an_expected_failure_that_fails_as_expected_counts_as_passed(self):
         found = read(a_project(test_a=(
             "import unittest\n\nclass A(unittest.TestCase):\n    @unittest.expectedFailure\n    def test_known(self):\n        self.fail('known')\n\n"
