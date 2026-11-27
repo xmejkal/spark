@@ -3493,9 +3493,9 @@ class TheDefaultStoreEnvTest(unittest.TestCase):
     def setUp(self):
         self.folder = Path(tempfile.mkdtemp()).resolve()
         self.addCleanup(shutil.rmtree, self.folder, True)
-        patch = mock.patch.dict(os.environ, {"HOME": str(self.folder / "h")})
-        patch.start()
-        self.addCleanup(patch.stop)
+        patcher = mock.patch.dict(os.environ, {"HOME": str(self.folder / "h")})
+        patcher.start()
+        self.addCleanup(patcher.stop)
         os.environ.pop("XDG_DATA_HOME", None)
         self.default = self.folder / "h" / ".local" / "share" / "spark"
 

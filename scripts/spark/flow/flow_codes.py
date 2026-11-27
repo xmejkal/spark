@@ -363,16 +363,10 @@ REFUSED_PICKS_SAYS = "Nothing ran. Spark no longer offers one of these picks. Re
 REFUSED_PICKS = dict(REFUSED_SAYS, request_not_offered=REFUSED_PICKS_SAYS)
 #: The mark of a request that ran nothing: a dash, grey.
 NOT_RUN_MARK = "–"
-#: The head of the NOW box's block of a chat offer (P1122): plain bold text, never a button. Under it the tell stands in a
-#: code box, and the owner's page adds COPY beside it, which says COPIED_SAYS once it copied the tell. It never sends.
-ASK_CLAUDE = "Ask Claude"
-COPIED_SAYS = "Copied: paste it in Claude Code."
-#: The deploy's line to type (P1286, O4): the run block's label in the NOW box and in `flow.py show`, beside its line, and
-#: what its COPY says once it copied the line. With no line, the one sentence NO_LINE_TO_TYPE_SAYS stands in its place.
-LINE_TO_TYPE_LABEL = "In your own terminal"
-COPIED_LINE_SAYS = "Copied: paste it in your own terminal."
-NO_LINE_TO_TYPE_SAYS = ("Ask Claude in the chat for this step's line: spark shows it here only for the default store and a project "
-                        "in your home folder.")
+#: The NOW box's blocks to copy: a bold head (never a button) over a code box, and the owner's COPY, which never sends. A chat
+#: offer's (P1122) holds its tell; the deploy's run block (P1286, O4), also in `flow.py show`, its line, else NO_LINE_TO_TYPE_SAYS.
+ASK_CLAUDE, COPIED_SAYS = "Ask Claude", "Copied: paste it in Claude Code."
+LINE_TO_TYPE_LABEL, COPIED_LINE_SAYS, NO_LINE_TO_TYPE_SAYS = "In your own terminal", "Copied: paste it in your own terminal.", "Ask Claude in the chat for this step's line: spark shows it here only for the default store and a project in your home folder."
 
 #: The page of the project (P827): its code when the file cannot be written, the words a status has no word for, and the
 #: bench note. This page does not look at the board, and the note says so.

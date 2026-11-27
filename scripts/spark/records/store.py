@@ -1,14 +1,12 @@
 """
 Where spark keeps what it keeps, and how bytes get there (P88; docs/2026-10-04-store-design.md §6.1).
 
-The person's store is one folder outside every repository: the kept documents, the catalog, the drawer, the
-shelf, the history, the projects list, the tools list. Its place was spelled `Path.home() / ".local" / "share" / "spark"` in
-two scripts and read once at import, so the suite kept away from the real one only by patching sixteen
-constants by hand — and a test that forgot one would have written into the person's store. Now the home is
-read on every call: SPARK_HOME, else XDG_DATA_HOME/spark, else ~/.local/share/spark.
+The person's store is one folder outside every repository: the kept documents, the catalog, the drawer, the shelf, the
+history, the projects list, the tools list. Its place was spelled `Path.home() / ".local" / "share" / "spark"` in two
+scripts and read once at import, so the suite kept away from the real one only by patching sixteen constants by hand —
+and a test that forgot one would have written into the person's store. Now `home()` reads it on every call.
 
-This module owns *where* and *how bytes move*; `record_kind` owns what a record must be. It imports only the
-standard library and the leaf `text_guards`, which imports nothing of spark.
+This module owns *where* and *how bytes move*; `record_kind` owns what a record must be.
 """
 
 import atexit
@@ -57,14 +55,11 @@ def _spark_home():
 
 def home():
     """The store's folder, read from the environment on every call (§6.1): SPARK_HOME, else `default_store()`."""
-    if _spark_home():
-        return Path(_spark_home())
-    return default_store()
+    return Path(_spark_home()) if _spark_home() else default_store()
 
 
 def default_store():
-    """The store's folder when no SPARK_HOME is set, whatever SPARK_HOME says now: XDG_DATA_HOME/spark, else the person's
-    home folder's .local/share/spark (P1286: the page's line names no env for this store)."""
+    """The store with no SPARK_HOME, whatever it says now: XDG_DATA_HOME/spark, else ~/.local/share/spark (P1286)."""
     if os.environ.get("XDG_DATA_HOME"):
         return Path(os.environ["XDG_DATA_HOME"]) / "spark"
     return Path.home() / ".local" / "share" / "spark"
