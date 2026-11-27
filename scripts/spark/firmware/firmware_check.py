@@ -19,13 +19,11 @@ from spark.firmware.import_probe import IMPORT_TIMEOUT_S, IMPORTED, look
 from spark.firmware.own_tests import OWN_TESTS_TIMEOUT_S, TESTS_FOLDER, UnittestReader
 from spark.firmware.pin_map_uses import PIN_MAP_PATH, PinMapUses, no_map_sentence
 from spark.firmware.project_secrets import FIRMWARE_FOLDER, is_secret_path
-from spark.records.check_record import CheckRecordStore
+from spark.records.check_record import CheckRecordStore, answer_saved
 
 # --- MVP ---
 #: The notes and lines of the answer, one sentence each.
 NO_TESTS_NOTE = "no tests/ folder: this project has no own tests"
-#: What a run that could not keep its check record says, as a note and a line, with the class of what failed (P1209).
-NOT_KEPT_SENTENCE = "did not keep the check record: %s"
 #: The folders the free checks read, which the check record hashes and its older line names, and the keys of `data` it keeps.
 INPUTS, KEPT_KEYS = (FIRMWARE_FOLDER + "/", TESTS_FOLDER + "/"), ("imports", "tests", "pin_map")
 IMPORTS_LINE, IMPORTS_NOT_CHECKED_LINE = "imports: %d of %d imported", "imports: not checked (no firmware/ folder)"
@@ -131,18 +129,12 @@ class CheckFirmware(Operation):
     def keep(self, project, result, kept_lines, outside):
         """`result` with `data.written`, after its check record is saved (P1209): its status, the data of KEPT_KEYS and
         `kept_lines`, at `outside.clock`'s time. With no firmware/ nothing is kept. A write that fails adds its sentence
-        as a note and a line, and the result stands."""
+        as a note and a line, and the result stands (`check_record.answer_saved`, the keep step check-design shares)."""
         if result.data["imports"].get("state") == NOT_CHECKED:
             return result._replace(data=dict(result.data, written=False))
         answer = {"status": result.status(), "data": {key: result.data[key] for key in KEPT_KEYS}, "lines": kept_lines}
         records = CheckRecordStore(project, self.name, leave_out=is_secret_path)
-        try:
-            records.save(INPUTS, stamp(outside.clock.now()), answer)
-        except OSError as failed:
-            sentence = NOT_KEPT_SENTENCE % type(failed).__name__
-            return result._replace(data=dict(result.data, written=False), lines=list(result.lines) + [sentence],
-                                   notes=list(result.notes or []) + [{"subject": records.path.relative_to(project).as_posix(), "sentence": sentence}])
-        return result._replace(data=dict(result.data, written=True))
+        return answer_saved(records, result, INPUTS, stamp(outside.clock.now()), answer)
 
     def written_project(self, values):
         """The project whose check record a run writes, so the core writes its page again (P1035)."""

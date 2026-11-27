@@ -42,19 +42,19 @@
   "replace": "]"
  },
  {
-  "file": "scripts/spark/firmware/firmware_check.py",
+  "file": "scripts/spark/records/check_record.py",
   "name": "P1209: the check record is not written (test_check_firmware.TheCheckRecordTest.test_a_run_keeps_its_answer_in_the_check_record)",
-  "find": "            records.save(INPUTS, stamp(outside.clock.now()), answer)\n",
-  "replace": "            None\n"
+  "find": "        records.save(inputs, at, answer)\n",
+  "replace": "        None\n"
  },
  {
-  "file": "scripts/spark/firmware/firmware_check.py",
+  "file": "scripts/spark/records/check_record.py",
   "name": "P1209: a failed write of the check record fails the check (test_check_firmware.TheCheckRecordTest.test_a_record_that_cannot_be_written_is_a_note_and_the_result_stands)",
-  "find": "            sentence = NOT_KEPT_SENTENCE % type(failed).__name__\n",
-  "replace": "            raise\n"
+  "find": "        sentence = NOT_KEPT_SENTENCE % type(failed).__name__\n",
+  "replace": "        raise\n"
  },
  {
-  "file": "scripts/spark/firmware/firmware_check.py",
+  "file": "scripts/spark/records/check_record.py",
   "name": "P1209: a failed write is no line of the text (test_check_firmware.TheCheckRecordTest.test_a_record_that_cannot_be_written_is_a_note_and_the_result_stands)",
   "find": "lines=list(result.lines) + [sentence],",
   "replace": "lines=list(result.lines),"
@@ -164,7 +164,7 @@
  {
   "file": "scripts/spark/records/check_record.py",
   "name": "P1209 fix pass: save keeps a record over inputs that are not plain (test_check_record.TheCheckRecordTest.test_save_refuses_an_input_that_is_not_plain)",
-  "find": "        if not inputs or not all(is_plain_input(each) for each in inputs):\n",
+  "find": "        if not inputs or not all(is_plain_input(each, self.roots) for each in inputs):\n",
   "replace": "        if False:\n"
  }
 ]
