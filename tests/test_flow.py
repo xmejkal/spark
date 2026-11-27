@@ -3671,6 +3671,32 @@ class TheChatOfferTest(FlowTest):
         self.assertEqual((now["phase"], now["offer"], now["chat_offer"]), ("build", "build", None))
 
 
+class TheNextWordsOnThePageTest(FlowTest):
+    """P1290: over a tell the page's NEXT says the situation, and `show` and its JSON keep the guide's whole sentence."""
+
+    def test_the_two_jobs_keep_their_whole_sentence_in_show_and_say_the_short_one_on_the_page(self):
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        project = a_project_built_with_no_simulation()
+        said = show(project)[0]
+        self.assertTrue(said["data"]["guide"]["now"]["says"].startswith("Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the firmware."))
+        self.assertTrue(now_line(project).startswith("  NOW (firmware): Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the firmware."))
+        write_page(project, store=FlowPageStore())
+        page = (project / "page.html").read_text(encoding="utf-8")
+        self.assertIn("NEXT</strong> Two jobs, in any order: wire the breadboard (10 steps, power off), and get the firmware from Claude. "
+                      "Spark cannot see your wiring. Paste the line below in Claude Code.", page)
+        self.assertNotIn("and ask Claude to write the firmware", page)
+
+    def test_the_simulation_keeps_its_sentence_in_show_and_says_the_short_one_on_the_page(self):
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        project = a_simulate_now(a_built_project(), "a.scenario.yaml")
+        said = show(project)[0]
+        self.assertEqual(said["data"]["guide"]["now"]["says"], "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes.")
+        write_page(project, store=FlowPageStore())
+        page = (project / "page.html").read_text(encoding="utf-8")
+        self.assertIn("NEXT</strong> No simulation tested this firmware yet. Paste the line below in Claude Code. "
+                      "You run the scenario in your own terminal. It uses Wokwi CI minutes.", page)
+
+
 class TheNowSentenceTest(unittest.TestCase):
     """P1133: each NOW sentence picker returns a NowSentence, whose `chosen_by` is the (phase, value) it chose the sentence by,
     and `chat_offer_of` is the one lookup of that pair in CHAT_NOW. The pairs and the words are literals here."""

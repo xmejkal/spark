@@ -25,7 +25,7 @@ const WORDS = {
             "pick:light:led-red-5mm": { label: "Pick “Red LED” for light", says: ["Saves “Red LED” as the pick."] },
             "pick:display:oled-128": pick("display", "OLED 128"), "pick:display:lcd-1602": pick("display", "LCD 1602"),
             "pick:button:tactile-6mm": pick("button", "Tactile 6 mm"), "pick:button:tactile-12mm": pick("button", "Tactile 12 mm") },
-  send: "Send", cancel: "Cancel", copy: "Copy", copied: "Copied: paste it in Claude Code.",
+  send: "Send", cancel: "Cancel", copy: "Copy", copied: "Copied: paste it in Claude Code.", not_copied: "Could not copy. Select the text and copy it.",
   copied_line: "Copied: paste it in your own terminal.", withdraw: "Withdraw", command: "/spark:page",
   intro: "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.",
   waiting: "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
@@ -430,6 +430,43 @@ test("P1122: the owner gets one Copy in a chat offer's block, which copies the t
   assert.deepEqual(clipboard.written, [TELL]);
   assert.equal(copy[0].textContent, "Copied: paste it in Claude Code.");
   assert.equal(db.rows.size, 0, "nothing is sent");
+});
+
+const NOT_COPIED = "Could not copy. Select the text and copy it.";
+
+test("P1290: a clipboard that refuses the write makes Copy say so, and nothing is sent", async () => {
+  const db = fakeDb();
+  const { win, made, block, clipboard } = fakeWindow(db, true, "build", true, TELL);
+  clipboard.writeText = async () => { throw new Error("refused"); };
+  await script.start(win);
+  const copy = block.children.filter((child) => child.tag === "button")[0];
+  await copy.click();
+  assert.deepEqual([copy.textContent, copy.disabled], [NOT_COPIED, false]);
+  assert.deepEqual(clipboard.written, []);
+  assert.equal(db.rows.size, 0, "nothing is sent");
+});
+
+test("P1290: with no clipboard Copy says so", async () => {
+  const { win, block } = fakeWindow(fakeDb(), true, "build", true, TELL);
+  win.navigator = {};
+  await script.start(win);
+  const copy = block.children.filter((child) => child.tag === "button")[0];
+  await copy.click();
+  assert.deepEqual([copy.textContent, copy.disabled], [NOT_COPIED, false]);
+});
+
+test("P1290: after a refusal a second click, with a clipboard that works, copies and says so", async () => {
+  const { win, block, clipboard } = fakeWindow(fakeDb(), true, "build", true, TELL);
+  const write = clipboard.writeText;
+  clipboard.writeText = async () => { throw new Error("refused"); };
+  await script.start(win);
+  const copy = block.children.filter((child) => child.tag === "button")[0];
+  await copy.click();
+  assert.equal(copy.textContent, NOT_COPIED);
+  clipboard.writeText = write;
+  await copy.click();
+  assert.deepEqual(clipboard.written, [TELL]);
+  assert.equal(copy.textContent, "Copied: paste it in Claude Code.");
 });
 
 test("P1122: a waiting request leaves the Copy of a chat offer as it is", async () => {

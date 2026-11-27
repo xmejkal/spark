@@ -1706,6 +1706,17 @@ class TheGuideSectionTest(unittest.TestCase):
         self.assertLess(section.index(block), section.index("</div>", section.index(block) + len(block)))
         self.assertNotIn("data-makes-stale", section)
 
+    def test_over_a_tell_next_says_the_situation_and_the_block_holds_the_one_ask(self):
+        # P1290: NEXT holds next_words' firmware words, escaped; "Ask Claude" stands once in the NOW box
+        now = dict(a_guide()["now"], phase="firmware", offer=None, chat_offer="write-firmware",
+                   says="Ask Claude in the chat to write the firmware for this board. Keep main.py thin, with the code in modules it calls, so the free checks can import them.")
+        section = guide_lines(guide_page(a_guide(now=now)))[1]
+        self.assertIn('<strong>NEXT</strong> No firmware yet. Paste the line below in Claude Code. Keep main.py thin, with the code in modules it calls, so the free checks can import them.', section)
+        self.assertEqual(section.lower().count("ask claude"), 1)
+        self.assertIn("<strong>Ask Claude</strong>", section)
+        without = guide_page(a_guide(now=dict(now, chat_offer=None)))
+        self.assertIn("NEXT</strong> Ask Claude in the chat to write the firmware", without)
+
     def test_no_chat_offer_or_no_key_for_it_draws_no_block(self):
         for now in (a_guide()["now"], dict(a_guide()["now"], chat_offer=None), dict(a_guide()["now"], chat_offer="needs-drop")):
             with self.subTest(now=now.get("chat_offer", "no key")):
@@ -2532,6 +2543,7 @@ class ThePageScriptTest(unittest.TestCase):
                 "The parts list changed since the last build. Build the board again. Use the button."})
         self.assertEqual(words["waiting"], "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.")
         self.assertEqual((words["copy"], words["copied"]), ("Copy", "Copied: paste it in Claude Code."))  # P1122: a chat offer's Copy
+        self.assertEqual(words["not_copied"], "Could not copy. Select the text and copy it.")  # P1290: a refused Copy says so
         self.assertEqual(words["ok"], {
             "pick": "Saved as the pick. Nothing is built yet. Reload to see the new state.",
             "requirements": "The parts list is written. Nothing is built yet. Reload to see the new state.",
