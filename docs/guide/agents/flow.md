@@ -324,10 +324,10 @@ with `, needs you` after the command for a step with `needs_person` or `needs_ye
 ## A page request
 
 `flow.py run-request` runs the step that the person asked for on the page ([P829](https://github.com/xmejkal/spark/issues/1187)).
-The request is one file, `.spark/page-request.json` in the project: `{id, key, seen, at}`, the page's id for the click
-(a UUID), the offer's key, the first 12 hex digits of the fingerprint the page was read at, and when it was sent. Spark
-does not read `at`. Claude writes the file from the page's request, as the page sent it. Never write a key or a `seen`
-of your own into it.
+The request is one file, `.spark/page-request.json` in the project. It names one offer, or several picks, one per need
+([P1067](https://github.com/xmejkal/spark/issues/1565)). `flow.py run-request --help` says its shape and its refusals.
+Claude writes the file from the page's request, as the page sent it. Never write a key or a `seen` of your own into it,
+and never join or split the picks of one request.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" run-request --project . --json
@@ -335,9 +335,9 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" run-request --project . --json
 
 It reads the file and deletes it at once, so one request runs once at most. A file it cannot delete, and anything that
 is no regular file (a folder), runs nothing and is left. Then it reads the flow, as `show` does. It runs the step only
-when `seen` is the fingerprint now, the key is one of the offers now, its kind is `pick`, `requirements` or `build`,
-and its step's op is `pick`, `requirements` or `build-board`. The fingerprint comes first, so a second click on a pick,
-which is no offer once it ran, is stale. It runs the offer's step, its argv parsed by the Operation of its op. A step
+when `seen` is the fingerprint now, each key is one of the offers now, its kind is `pick`, `requirements` or `build`,
+and its step's op is `pick`, `requirements` or `build-board`. Several picks run as one pick of all their needs, from the
+offers' own steps: any problem saves none. The fingerprint comes first, so a second click on a pick, which is no offer once it ran, is stale. It runs the offer's step, its argv parsed by the Operation of its op. A step
 whose argv does not parse runs nothing. The values come from spark's offer, never from the request: a pick of that one part for that need, the parts list with no
 `--dry-run` and no `--replies`, so it removes nothing, and the build of the project's `requirements.json` with `--keep`
 the project. The step writes what the offer's effect says. A deploy, a simulation, a look or a grant is never an offer
@@ -349,8 +349,8 @@ and `flow.py show` for the next step.
 The envelope has `op` `run-request`. Its `data` holds:
 
 - `for`: the request's id, so the page matches the answer to its click, or `null` when the id is no UUID.
-- `key` and `label`: the offer's key and the words of its button, or `null` when the key is no offer now. A key that is
-  no offer never reaches the answer.
+- `key`, `keys` and `label`: the offer's key, the keys that ran in the request's order, and the words of its button. For
+  several picks `key` is `null` and `label` joins their labels with `; `. Only an offer spark holds now is named (else `null` and `[]`), so a key that is no offer never reaches the answer.
 - `ran`: `true` when the step ran, `false` when nothing ran.
 - `status` and `mark`: how the step ended, as a phase's (`ok`, `problems` or `could-not-run`). A refusal is
   `could-not-run`.
@@ -368,10 +368,10 @@ envelope's. A refusal is one `unchecked` item, and its fix tells you what to do:
 
 | code | meaning | what to do |
 | --- | --- | --- |
-| `request_malformed` | the file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or could not be deleted | write the page's request to the file as the page sent it; if it was written that way, ask the person to click again |
+| `request_malformed` | the file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, holds a key and picks both or neither, or could not be deleted | write the page's request to the file as the page sent it; if it was written that way, ask the person to click again |
 | `request_in_chat` | the key is a need's drop or a chat offer, which are asked in the chat | tell Claude in the chat, for example: drop the light need |
 | `request_stale` | the project changed after the page was read: `seen` is not the fingerprint now | write the page again with `flow.py page`, then click again |
-| `request_not_offered` | spark does not offer the key now, the page never runs its kind or its step's op, or the step's argv does not parse | write the page again with `flow.py page`, then click again |
+| `request_not_offered` | spark does not offer a key now, the page never runs its kind or its step's op, the step's argv does not parse, or a request of picks names a key that is no pick or two picks of one need | write the page again with `flow.py page`, then click again |
 | `request_secrets_unreadable` | a secrets file in `firmware/` cannot be read or parsed, so spark cannot mask its values; the item's subject names it | repair or remove that file, then click again |
 
 A stale refusal is normal: a second Build from the same page is stale once the first one ran. The exit is 0 when the step

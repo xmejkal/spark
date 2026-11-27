@@ -1,0 +1,62 @@
+[
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: two keys of one need run as one pick (test_run_request.SeveralPicksTest.test_two_picks_of_one_need_a_key_that_is_no_pick_or_a_key_not_offered_runs_nothing)",
+  "find": "(None in needs or len(set(needs)) < len(needs))",
+  "replace": "(None in needs)"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a key that is no pick runs in a row of keys (test_run_request.SeveralPicksTest.test_two_picks_of_one_need_a_key_that_is_no_pick_or_a_key_not_offered_runs_nothing)",
+  "find": "(None in needs or len(set(needs)) < len(needs))",
+  "replace": "(len(set(needs)) < len(needs))"
+ },
+ {
+  "file": "scripts/spark/flow/offer_steps.py",
+  "name": "P1067: the joined step keeps only the first offer's pair (test_flow.TheOfferStepTest.test_the_joined_step_of_three_picks_is_the_pick_of_their_pairs_with_pick_parts_s_op_and_effects, test_run_request.SeveralPicksTest.test_four_picks_of_four_needs_run_one_pick_with_the_four_pairs_in_the_row_s_order)",
+  "find": "pairs = [pair for step in steps for pair in step.argv[2:]]",
+  "replace": "pairs = steps[0].argv[2:]"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a row with key and keys both is read (test_run_request.SeveralPicksTest.test_a_row_with_key_and_keys_with_neither_or_with_keys_that_are_no_list_of_text_is_malformed)",
+  "find": "if request is None or (request.key is None) == (request.keys is None):",
+  "replace": "if request is None or (request.key is None and request.keys is None):"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: an empty keys is read (test_run_request.SeveralPicksTest.test_a_row_with_key_and_keys_with_neither_or_with_keys_that_are_no_list_of_text_is_malformed)",
+  "find": "isinstance(keys, list) and keys and all(",
+  "replace": "isinstance(keys, list) and all("
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a keys of text is read as its letters (test_run_request.SeveralPicksTest.test_a_row_with_key_and_keys_with_neither_or_with_keys_that_are_no_list_of_text_is_malformed)",
+  "find": "return list(keys) if isinstance(keys, list) and keys",
+  "replace": "return list(keys) if keys"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a key in keys that is no text is read (test_run_request.SeveralPicksTest.test_a_row_with_key_and_keys_with_neither_or_with_keys_that_are_no_list_of_text_is_malformed)",
+  "find": "all(isinstance(key, str) and key for key in keys)",
+  "replace": "all(key for key in keys)"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: the answer of several picks names the first key as key (test_run_request.SeveralPicksTest.test_the_answer_of_four_picks_names_their_keys_and_labels_and_no_key)",
+  "find": "\"key\": None if offer is None else offer.key,",
+  "replace": "\"key\": chosen[0].key,"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: the answer's label is only the first pick's label (test_run_request.SeveralPicksTest.test_the_answer_of_four_picks_names_their_keys_and_labels_and_no_key)",
+  "find": "label = flow_codes.LABELS_JOIN.join(each.label for each in chosen)",
+  "replace": "label = chosen[0].label"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a refusal of a row of keys names its keys (test_run_request.SeveralPicksTest.test_a_refusal_of_picks_names_no_key_no_label_and_no_text_of_the_row)",
+  "find": "\"keys\": [offer.key] if offer else [],",
+  "replace": "\"keys\": keys_of(request) or [],"
+ }
+]

@@ -65,14 +65,14 @@
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "a second click on a pick is not offered, not stale (P829 review)",
-  "find": "    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n    if key not in offered or not flow_codes.is_sendable(key) or offered[key].step.op not in STEP_OPERATIONS:\n        return request_codes.REQUEST_NOT_OFFERED\n",
-  "replace": "    if key not in offered or not flow_codes.is_sendable(key) or offered[key].step.op not in STEP_OPERATIONS:\n        return request_codes.REQUEST_NOT_OFFERED\n    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n"
+  "find": "    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n    for key in keys:\n        if key not in offered or not flow_codes.is_sendable(key) or offered[key].step.op not in STEP_OPERATIONS:\n            return request_codes.REQUEST_NOT_OFFERED\n",
+  "replace": "    for key in keys:\n        if key not in offered or not flow_codes.is_sendable(key) or offered[key].step.op not in STEP_OPERATIONS:\n            return request_codes.REQUEST_NOT_OFFERED\n    if request.seen != fingerprint[:SHORT]:\n        return request_codes.REQUEST_STALE\n"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
   "name": "an ok step's line names the machine key, not the offer's label (P829 review)",
-  "find": "else line_of(offer.label, result)",
-  "replace": "else line_of(offer.key, result)"
+  "find": "else line_of(label, result)",
+  "replace": "else line_of(chosen[0].key, result)"
  },
  {
   "file": "scripts/spark/flow/offer_steps.py",
