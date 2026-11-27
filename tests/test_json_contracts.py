@@ -708,8 +708,8 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         self.assertEqual({str(code): code.fix for code in check_codes.CODES}, self.CHECK_FIXES)
         self.assertEqual(len(check_codes.CODES), 19)
 
-    #: P935 PR 5: the fix of each of the build's 28 codes, as the PO read it (the plan check changed twelve; P1058 adds
-    #: file_refused and tools_list_broken for his read)
+    #: P935 PR 5: the fix of each of the build's 29 codes, as the PO read it (the plan check changed twelve; P1058 adds
+    #: file_refused and tools_list_broken for his read; P999 adds pin_not_in_wokwi_part for his read)
     BUILD_FIXES = {
         "board_unusable":
             # byte-equal in design_codes (the pair test)
@@ -747,6 +747,8 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
             "if the sentence says the chip has no compiled binary, ask the person to run /spark:setup. Otherwise fix the error it shows in the chip's .chip.c beside its record. Then build again",
         "board_not_in_wokwi":
             "if Wokwi has a part for this board, write it in the board record's wokwi_part_type and build again. Else test the firmware on the board itself: the board built",
+        "pin_not_in_wokwi_part":
+            "move the signal that the sentence names to a free pad that the Wokwi part has: add {\"name\": the signal, \"pin\": the pad} to the requirements file's \"signals\", and build again. A bus line (SPI, I2C) cannot be pinned there, because the assigner places the bus: test the firmware on the board itself",
         "converter_lacks_part":
             "test that part on the bench. The design built. Report the component that the sentence names at https://github.com/xmejkal/spark/issues so that the converter can map it",
         "no_diagram":
@@ -775,7 +777,7 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
 
     def test_the_build_s_codes_hold_the_fix_the_po_read(self):
         self.assertEqual({str(code): code.fix for code in build_codes.CODES}, self.BUILD_FIXES)
-        self.assertEqual(len(build_codes.CODES), 28)
+        self.assertEqual(len(build_codes.CODES), 29)
 
     def test_the_six_codes_check_firmware_answers_are_codes_with_a_fix_and_its_findings_name_them_and_give_none(self):
         # P1208 review A2: firmware_codes keeps plain words for the other steps, so the area is not in AREAS_WITH_FIXES; its
