@@ -909,7 +909,7 @@ class WhenItCannotLookTest(unittest.TestCase):
     def test_the_json_keeps_its_shape(self):
         _, answer = answer_for(a_project(light="x = 1\n"))
         self.assertEqual(sorted(answer), ["data", "envelope", "next", "notes", "op", "problems", "status", "tool", "truncated", "unchecked"])
-        self.assertEqual(sorted(answer["data"]), ["imports", "modules", "project", "tests"])
+        self.assertEqual(sorted(answer["data"]), ["imports", "modules", "project", "tests", "written"])  # P1209: the check record
         self.assertEqual(sorted(answer["data"]["modules"][0]), ["detail", "module", "status"])
 
     def test_help_says_what_it_does_and_leaves_alone(self):

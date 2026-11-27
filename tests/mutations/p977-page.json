@@ -38,8 +38,8 @@
  {
   "file": "scripts/spark/flow/page_sections.py",
   "name": "the no-simulation line is never drawn (P977 PR 2)",
-  "find": "'<p class=\"muted\">%s</p>' % _text(guide[\"no_simulation\"]) if guide[\"no_simulation\"] else \"\"",
-  "replace": "\"\""
+  "find": "self._simulation(guide.get(\"simulation\") or {}),",
+  "replace": "\"\","
  },
  {
   "file": "scripts/spark/flow/page_sections.py",

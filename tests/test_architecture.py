@@ -576,7 +576,7 @@ class TheRecordsAreaTest(unittest.TestCase):
     `boards.py` and `tools.py`."""
     RECORDS = ROOT / "scripts" / "spark" / "records"
     #: The modules of the area so far, by the names of its page (`areas/records.md`).
-    MODULES = ["answer_operation", "board_pads", "board_records", "board_rules", "brief", "chip_table", "deploy_record_store", "fact_needs", "folder_walk", "launcher",
+    MODULES = ["answer_operation", "board_pads", "board_records", "board_rules", "brief", "check_record", "chip_table", "deploy_record_store", "fact_needs", "folder_walk", "launcher",
                "missing_facts", "onboard_parts", "project_commit", "provenance", "record_kind", "records_codes", "registered_project_store",
                "storage", "store", "tool_choices",
                "tool_finder", "versions"]
@@ -730,7 +730,7 @@ class TheFlowAreaTest(unittest.TestCase):
     alone, and `flow_operations.OPERATIONS` maps each op to its Operation. `scripts/` keeps the CLI `flow.py`."""
     FLOW = ROOT / "scripts" / "spark" / "flow"
     #: The modules of the area, as the map lists them (`docs/guide/map.md`, the flow's rows).
-    MODULES = ["deploy_reading", "fingerprint", "flow_codes", "flow_operations", "flow_page", "flow_reading", "guide", "no_model", "now_follow_up", "offer_steps", "page_sections", "phase_readers", "phase_steps",
+    MODULES = ["checks_reading", "deploy_reading", "fingerprint", "flow_codes", "flow_operations", "flow_page", "flow_reading", "guide", "no_model", "now_follow_up", "offer_steps", "page_sections", "phase_readers", "phase_steps",
                "published_page", "request_codes", "run_request", "show_flow", "wired_board", "write_flow_page"]
 
     def test_the_area_holds_its_modules_and_scripts_holds_no_copy(self):

@@ -58,7 +58,7 @@ How to read this page:
 | `offer:requirements` | requirements | `Write the parts list` | requirements | yes |  |
 | `offer:build` | build | `Build the board` | build-board | yes |  |
 | `offer:needs-drop` | needs | `Drop the %s need` | needs-drop | no |  |
-| `offer:write-firmware` | firmware | `Write the firmware` | none | no | Write the firmware for this project's board. |
+| `offer:write-firmware` | firmware | `Write the firmware` | none | no | Write the firmware for this project's board, with a thin main that calls modules the free checks can import. |
 | `offer:run-simulation` | simulate | `Run the simulation` | none | no | Help me run the simulation of this project. |
 | `offer:look-at-board` | deploy | `Look at the board` | none | no | Look at this project's board with me. |
 
@@ -199,7 +199,7 @@ How to read this page:
 ### firmware
 
 - `op:check-firmware`
-  - Effects: none, it only reads. Data keys: project, imports, modules, tests.
+  - Effects: writes. Data keys: project, imports, modules, tests, written.
   - Summary: Check the firmware for free: its imports and the project's own tests, with no sim/ and no board.
 - `op:run-scenario`
   - Effects: writes. Data keys: project, scenario, log, ran.

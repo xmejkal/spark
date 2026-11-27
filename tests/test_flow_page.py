@@ -1615,12 +1615,31 @@ class TheGuideSectionTest(unittest.TestCase):
             self.assertNotIn(gone, before_developer(guide_page(a_guide())))  # the developer fold holds them (P1119, D22)
 
     def test_no_simulation_is_its_own_line_under_later(self):
-        text = guide_page(a_guide(no_simulation="No simulation: Wokwi has no model of this board."))
+        text = guide_page(a_guide(simulation={"line": "No simulation: Wokwi has no model of this board.", "grey": True, "check": None}))
         _lines, section = guide_lines(text)
         self.assertIn('<p class="muted">No simulation: Wokwi has no model of this board.</p>', section)
         self.assertLess(section.index('<p class="next"'), section.index("No simulation: Wokwi"))  # P1119: LATER is gone
         self.assertLess(section.index("No simulation: Wokwi"), section.index("SET ASIDE"))
         self.assertNotIn("No simulation", guide_page(a_guide()))
+
+    def test_the_simulation_line_is_grey_only_where_nothing_more_runs(self):
+        """P1209 (D5): the page decides nothing: `grey` comes from the reading."""
+        line = "Free checks, 27 Nov 2026, 02:10: imports: 6 of 6 imported."
+        _lines, grey = guide_lines(guide_page(a_guide(simulation={"line": line, "grey": True, "check": None})))
+        _lines, plain = guide_lines(guide_page(a_guide(simulation={"line": line, "grey": False, "check": None})))
+        self.assertIn('<p class="muted">%s</p>' % line, grey)
+        self.assertIn('<p class="simulation">%s</p>' % line, plain)
+        self.assertNotIn('<p class="muted">Free checks', plain)
+        self.assertLess(plain.index('<p class="next"'), plain.index(line))
+        self.assertLess(plain.index(line), plain.index("SET ASIDE"))
+        _lines, none = guide_lines(guide_page(a_guide(simulation={"line": None, "grey": False, "check": None})))
+        self.assertNotIn('class="simulation"', none)
+
+    def test_an_older_guide_with_no_simulation_key_draws_no_line(self):
+        """An older page value (tests/data/flow-page/sample-page.json) has no `simulation` key: no line, no error."""
+        text = guide_page(a_guide(no_simulation="No simulation: Wokwi has no model of this board."))
+        self.assertNotIn("No simulation", text)
+        self.assertNotIn('class="simulation"', text)
 
     def test_a_null_now_draws_no_now_line(self):
         lines, _section = guide_lines(guide_page(a_guide(now=None)))
@@ -1655,7 +1674,7 @@ class TheGuideSectionTest(unittest.TestCase):
     def test_a_text_with_an_angle_bracket_or_an_ampersand_is_escaped(self):
         now = dict(a_guide()["now"], says="<b>go</b> & wait")
         # P1119: the page draws done and later as the station line, so the two words stand there as phases
-        text = guide_page(a_guide(now=now, done=["<i>idea</i>"], later=["a&b"], set_aside=["<u>x</u>"], no_simulation="<s>none</s>",
+        text = guide_page(a_guide(now=now, done=["<i>idea</i>"], later=["a&b"], set_aside=["<u>x</u>"], simulation={"line": "<s>none</s>", "grey": True, "check": None},
                                   stations=stations(("<i>idea</i>", "done", None), ("a&b", "later", None))))
         for raw in ("<b>go", "<i>idea", "<u>x", "<s>none", "a&b"):
             self.assertNotIn(raw, text)

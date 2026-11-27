@@ -36,6 +36,13 @@ def is_secret_file(name):
     return fnmatch.fnmatchcase(name.lower(), SECRET_FILE_PATTERN)
 
 
+def is_secret_path(relative):
+    """True for the path in the project, with `/`, of a file the rule names: directly in firmware/, its name `is_secret_file`'s.
+    A check record leaves such a file out (P1209)."""
+    folder, _slash, name = relative.rpartition("/")
+    return folder == FIRMWARE_FOLDER and is_secret_file(name)
+
+
 def text_of(value):
     """The text of a constant: a str as it is, bytes as UTF-8 with what is no UTF-8 left out, anything else None."""
     if isinstance(value, bytes):
