@@ -720,14 +720,18 @@
    "op": "check-design",
    "area": "checks",
    "summary": "Run every deterministic check and answer once.",
-   "effects": [],
+   "effects": [
+    "writes"
+   ],
    "data_keys": [
     "tool",
     "status",
     "unmeasured",
     "resolved",
     "results",
-    "project"
+    "project",
+    "written",
+    "not_written"
    ],
    "network": false
   },

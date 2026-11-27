@@ -53,5 +53,7 @@
       "unchecked": []
     }
   ],
-  "project": "<project-dir>"
+  "project": "<project-dir>",
+  "written": true,
+  "not_written": null
 }

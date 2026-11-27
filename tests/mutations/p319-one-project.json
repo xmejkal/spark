@@ -74,7 +74,7 @@
  {
   "file": "scripts/spark/checks/check.py",
   "name": "a missing folder is not could-not-run",
-  "find": "        return {\"tool\": \"check_all\", \"status\": COULD_NOT_RUN, \"reason\": refusal}",
+  "find": "        return {\"tool\": \"check_all\", \"status\": COULD_NOT_RUN, \"reason\": refusal}, {}, None",
   "replace": "        pass"
  }
 ]

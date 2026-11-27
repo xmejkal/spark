@@ -129,7 +129,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 
 | script | top-level keys |
 | --- | --- |
-| `check_all.py` | `project` (with `--project`), `resolved`, `results`, `status`, `tool`, `unmeasured` |
+| `check_all.py` | `project` (with `--project`), `resolved`, `results`, `status`, `tool`, `unmeasured`, `written` (true when the run kept the check record `.spark/check-design.json`, P1255) and `not_written` (why it kept none, or null). A refusal holds `tool`, `status` and `reason` only |
 | `check_physics.py` | `design`, `findings`, `status`, `tool` |
 | `check_footprints.py` | `findings`, `status`, `tool`; a refusal: `message`, `status`, `tool`, `code` (P688) |
 | `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`. A missing circuit or rules file gives only `tool`, `status`, `reason` and `fix`. A rules file that cannot be read or is refused, or a circuit that is not JSON, gives `reason` and no `fix` |

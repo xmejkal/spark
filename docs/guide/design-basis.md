@@ -193,7 +193,7 @@ How to read this page:
 ### checks
 
 - `op:check-design`
-  - Effects: none, it only reads. Data keys: tool, status, unmeasured, resolved, results, project.
+  - Effects: writes. Data keys: tool, status, unmeasured, resolved, results, project, written, not_written.
   - Summary: Run every deterministic check and answer once.
 
 ### firmware

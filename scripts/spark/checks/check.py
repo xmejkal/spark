@@ -472,16 +472,14 @@ def run(inputs, ambiguous=None):
     return [check.run(inputs, ambiguous) for check in CHECKS]
 
 
-def run_every_check(project=None, boards=(), circuit=None, rules=None, package=None):
-    """
-    The dict `check_all.py --json` prints, for the five inputs as plain values (P804): a refusal (`tool`, `status`
-    could-not-run, `reason`) when `project` names no usable folder, else `tool`, `status`, `unmeasured`, `resolved`,
-    `results` and, when a folder was checked, `project`. `run` is the loop over the checks; this finds their inputs
-    first. Writes nothing.
-    """
+def every_check(project=None, boards=(), circuit=None, rules=None, package=None):
+    """(the dict `check_all.py --json` prints, the inputs the checks were given after the flags' merge, the CheckedFolder),
+    for the five inputs as plain values (P804, P1255): a refusal (`tool`, `status` could-not-run, `reason`), {} and None when
+    `project` names no usable folder, else `tool`, `status`, `unmeasured`, `resolved`, `results` and, when a folder was
+    checked, `project`. `run` is the loop over the checks; this finds their inputs first. Writes nothing."""
     checked, refusal = CheckedFolder.named(project)
     if refusal:
-        return {"tool": "check_all", "status": COULD_NOT_RUN, "reason": refusal}
+        return {"tool": "check_all", "status": COULD_NOT_RUN, "reason": refusal}, {}, None
     values = {"project": project, "boards": [boards] if isinstance(boards, str) else list(boards or ()), "circuit": circuit, "rules": rules, "package": package}
     inputs, resolved, ambiguous = inputs_for(values, checked)
     results = run(inputs, ambiguous)
@@ -491,7 +489,12 @@ def run_every_check(project=None, boards=(), circuit=None, rules=None, package=N
         # the project the build reads (P319), resolved as `loader.project_for` resolves it; null for none, never
         # the plugin's own folder
         result["project"] = None if loader.is_library(checked.project) else str(checked.project.resolve())
-    return result
+    return result, inputs, checked
+
+
+def run_every_check(project=None, boards=(), circuit=None, rules=None, package=None):
+    """The dict of `every_check` alone: what `check_all.py --json` prints."""
+    return every_check(project, boards, circuit, rules, package)[0]
 
 
 def render_every_check(result, project):
