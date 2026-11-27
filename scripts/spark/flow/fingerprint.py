@@ -12,12 +12,11 @@ from pathlib import Path
 from spark.build.build_record import BUILD_RECORD_FILE
 from spark.design import needs
 from spark.flow.phase_readers import REQUIREMENTS_FILE
+from spark.records.folder_walk import MISSING
 
 # --- MVP ---
 #: The project's files the fingerprint reads, from the project's folder: the needs, the parts list and the last build.
 FILES = (needs.FILE, Path(REQUIREMENTS_FILE), BUILD_RECORD_FILE)
-#: What a missing file adds: not the bytes of an empty one, so a file that appears empty still changes the fingerprint.
-MISSING = b"\x00missing"
 #: How many hex digits the page and a request carry.
 SHORT = 12
 
