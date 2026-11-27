@@ -37,13 +37,11 @@ MARKS = {OK: (None, "✓"), PROBLEMS: ("problems", "✗"), COULD_NOT_RUN: ("coul
 #: problem. Never the library's own sentence: it names a store, a project and a script path (P979).
 NOT_SIMULATED_SAYS = {firmware_codes.NO_SIM_TOML: [flow_codes.NO_SIM_MESSAGE],
                       firmware_codes.NO_IMAGE: [flow_codes.NO_IMAGE_MESSAGE, flow_codes.SCENARIO_HINT]}
-#: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (the words of its button), its effect (plain
-#: sentences that name every write taking it makes), `makes_stale`, the phases it can make out of date (P829), `step`,
-#: the NextStep that runs it (offer_steps, P1030), `part`, a pick's part's name (P1067), and `have`, what the person has
-#: of it (`sheet.have_of`, P1135), else None each. The JSON of `data` holds all but the step, which is in `next`.
+#: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (its button's words), its effect (sentences that
+#: name every write it makes), `makes_stale` (P829), `step`, its NextStep (P1030), and a pick's `part` (P1067) and `have`
+#: (`sheet.have_of`, P1135), else None. The JSON of `data` holds all but the step, which is in `next`.
 Offer = namedtuple("Offer", "key label effect makes_stale step part have", defaults=(None, None))
-#: Value (P1135): one need of the parts phase that counts: its id, `picked` (its picks by name, [] for none) and `says`,
-#: its own lines. Its pick offers are the phase's, by `pick_need`.
+#: Value (P1135): a need of the parts phase that counts: its id, `picked` (its picks by name) and `says`, its own lines.
 PartsNeed = namedtuple("PartsNeed", "need picked says")
 #: The parts phase offers at most this many picks per need (P976, the PO, 2026-11-21: "so many unrelated things").
 OFFERS_PER_NEED = 3
