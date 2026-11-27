@@ -27,15 +27,16 @@ from spark.flow.write_flow_page import write_kept_page
 
 #: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
 EVERY_PART_SKIPPED_LINE = "; every part is skipped from the simulation, so the diagram holds none of the project's parts"
-#: The closing line's addition by the skipped simulation stage's code: a board with no Wokwi part (P1207) says its code's
-#: own meaning. A skipped simulation stage has one of these two codes today. The fallback keeps the old line for any other.
-SKIPPED_SIMULATION_LINES = {build_codes.EVERY_PART_SKIPPED: EVERY_PART_SKIPPED_LINE,
-                            build_codes.BOARD_NOT_IN_WOKWI: "; " + build_codes.BOARD_NOT_IN_WOKWI.meaning}
 
 
 def skipped_line(stages):
-    """What the closing line of an ok full build adds for its skipped stage, or "" when no stage is skipped."""
-    return next((SKIPPED_SIMULATION_LINES.get(stage.code, EVERY_PART_SKIPPED_LINE) for stage in stages if stage.status == SKIPPED), "")
+    """What the closing line of an ok full build adds for its skipped stage, or "" when no stage is skipped: the skipped
+    code's own meaning (P1207, P999), and EVERY_PART_SKIPPED_LINE for every_part_skipped or a code CODES lacks."""
+    skipped = [stage.code for stage in stages if stage.status == SKIPPED]
+    if not skipped:
+        return ""
+    meaning = None if skipped[0] == build_codes.EVERY_PART_SKIPPED else build_codes.CODES.get(skipped[0])
+    return "; " + meaning if meaning else EVERY_PART_SKIPPED_LINE
 
 
 def render(stages, code, unserved=()):

@@ -16,7 +16,7 @@ from spark.design import entry_origin, need_requirements, needs, needs_basis
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import deploy_reading, flow_codes, offer_steps
-from spark.flow.no_model import stops_only_for_no_model
+from spark.flow.no_model import skipped_simulation_line, stops_only_for_no_model
 from spark.flow.pick_notes import candidate_label, is_plausible, own_part_of, part_words, pick_id_of, pick_notes
 from spark.records import record_kind, records_codes, store
 from spark.records.brief import Brief
@@ -476,7 +476,7 @@ class BuildReader(PhaseReader):
         if skipped == [SIMULATION.name] and stops_only_for_no_model(record):
             return self.phase(None, says + [flow_codes.NO_SIMULATION_NOW], offers)  # P1207: Wokwi has no model of the board
         if skipped == [SIMULATION.name]:
-            return self.phase(None, says + [flow_codes.SIMULATION_SKIPPED_MESSAGE], offers)
+            return self.phase(None, says + [skipped_simulation_line(record)], offers)  # P999: the code's meaning
         if skipped:
             return self.phase(flow_codes.PARTIAL, says, offers)
         return self.phase(record.get("status") if record.get("status") in (OK, PROBLEMS) else COULD_NOT_RUN, says, offers)
