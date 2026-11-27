@@ -22,7 +22,7 @@ KiCad 10 on the PO's Mac holds `Connector_JST.3dshapes/JST_PH_B2B-PH-K_1x02_P2.0
 
 So a part without a maker's file can take its model from a KiCad install, with the same placement fields as in S2.
 
-Which pin is plus is not settled: the speaker terminal's record marks its pin order as not verified.
+Which pin is plus is not settled: the speaker terminal's record marks its pin order as not verified. The side of the model's latch was not compared with the footprint.
 
 ## All three models together, at about 17:45 CET
 
@@ -42,4 +42,12 @@ A second file held both DFRobot models and the KiCad model. The script mirrored 
 
 ## Found on the way: the record's width is the 3-pin width
 
-`parts/jst-ph-2-power-inlet.json` gives `body_mm` 7.9 x 5.8 mm and marks it verified. `parts/speaker-terminal.json` copies it and marks it not verified. The KiCad model measures 5.9 x 4.55 mm. Copies of JST's PH series tables give dimension B as 5.9 mm for 2 circuits. They give 7.9 mm for 3 circuits. One example is [Mouser's copy](https://www.mouser.com/datasheet/2/813/ePH-2487508.pdf). The tables were read as search result text, not as the drawing itself. The depth was not compared with a drawing.
+`parts/jst-ph-2-power-inlet.json` gives `body_mm` 7.9 x 5.8 mm and marks it verified. `parts/speaker-terminal.json` copies it and marks it not verified. The KiCad model measures 5.9 x 4.55 mm.
+
+JST's [PH series drawing](https://www.jst-mfg.com/product/pdf/eng/ePH.pdf), page 3 of 5, agrees with the model (sha256 `447624f4f2f7d37c58c1eaa7ee314ad757fe7aff48f6186491ef6f69fbc00b96`, read on 2026-11-27):
+
+- The upright 2-pin header `B2B-PH-K-S` is 5.9 mm wide and 4.5 mm deep.
+- 7.9 mm is the width of the 3-pin header `B3B-PH-K-S`.
+- 5.8 mm is the width of the 2-pin cable plug `PHR-2`.
+
+Filed as P1335 #1915.
