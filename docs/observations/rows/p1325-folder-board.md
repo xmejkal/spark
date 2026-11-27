@@ -16,3 +16,7 @@ findings only. 2026-11-27.
 | 8 | `CheckedFolder`'s docstring lacks its role word, and the R6 baseline key was renamed by hand | spark-artifact point 1 | acted | the docstring starts with "Value:"; the key is removed, and `tests.test_architecture` passes without it |
 | 9 | main holds 50 critical rows, the cap | spark-artifact, the ledger | acted | the two rows of the branch are not critical; `tests.test_ledger` run before the report |
 | 10 | map.md says "none" for the tests of `checked_folder.py` | lens 7 | rejected | the tests reach the module through `test_check_all.py`, and the map is no test claim |
+| 11 | a requirements file the build refuses (a bad signal) also gives every board, and the docs say only "cannot be read" | final review 2 | acted | json.md and the `folder_boards` docstring add "or the build refuses it (signals, parts)"; a test with a signal that has no name |
+| 12 | wording: the spark-review row, the `discover_boards` docstring and the test class docstring still speak of one board or only the project's boards | final review 4 | acted | "each of the folder's boards"; the docstring names the shelf's and the library's boards; the class docstring is plural |
+| 13 | checks.md's dated-record sentence does not link the rule | final review 5 | acted | one link to json.md inside the same line |
+| 14 | `TheFolderBoardIsCheckedTest` leaves its temp folders | final review 6 | acted | `addCleanup(shutil.rmtree, ...)` for the store, the project and the bare folder |

@@ -17,6 +17,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -815,12 +816,13 @@ class TheBuildsProjectIsCheckedTest(unittest.TestCase):
 
 class TheFolderBoardIsCheckedTest(unittest.TestCase):
     """
-    P1325: vendor-truth checks the folder's board (the folder's requirements.json board, else the project's board), and
-    every board only when neither names one with a record. A shelf board the build never uses is no input.
+    P1325: vendor-truth checks the folder's boards (the board of each requirements file, else the project's board), and
+    every board only when none names one with a record. A shelf board the build never uses is no input.
     """
 
     def setUp(self):
         self.store = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.store, True)
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.store)})
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -830,6 +832,7 @@ class TheFolderBoardIsCheckedTest(unittest.TestCase):
         self.shelf_path = self.store / "shelf" / "boards" / "shelf-board.json"
         self.shelf_path.write_text(json.dumps(shelf))
         self.project = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.project, True)
         (self.project / ".spark").mkdir()
 
     def _requirements(self, folder, text):
@@ -897,6 +900,7 @@ class TheFolderBoardIsCheckedTest(unittest.TestCase):
 
     def test_a_folder_in_no_project_checks_the_board_its_requirements_name(self):
         bare = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, bare, True)
         self._requirements(bare, {"board": "xiao-esp32-c6"})
         _, answer = self._answer(bare)
         self.assertEqual(self._boards(answer), ["boards       1 definition(s): xiao-esp32-c6"])
@@ -927,6 +931,14 @@ class TheFolderBoardIsCheckedTest(unittest.TestCase):
         self.assertEqual(boards[0], "boards       3 definition(s): firebeetle2-esp32s3, shelf-board, xiao-esp32-c6")
         self.assertEqual(len(boards), 2, boards)
         self.assertIn(str(car), boards[1])
+
+    def test_a_requirements_file_the_build_refuses_checks_every_board_and_says_why(self):
+        self._requirements(self.project, {"board": "xiao-esp32-c6", "signals": [{"needs": []}]})  # a signal with no name
+        _, answer = self._answer(self.project)
+        boards = self._boards(answer)
+        self.assertEqual(boards[0], "boards       3 definition(s): firebeetle2-esp32s3, shelf-board, xiao-esp32-c6")
+        self.assertEqual(len(boards), 2, boards)
+        self.assertTrue(boards[1].startswith("boards       not resolved (") and "signals[0]" in boards[1], boards)
 
     def test_a_sub_folder_whose_board_is_no_text_says_its_own_sentence(self):
         self._requirements(self.project, {"board": "xiao-esp32-c6"})

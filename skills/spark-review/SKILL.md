@@ -30,7 +30,7 @@ boards, and spark handles one board per project today: the reason names an absol
 
 | check | owns |
 | --- | --- |
-| vendor-truth | the pin map of that board, re-derived from the vendor's own header |
+| vendor-truth | the pin map of each of the folder's boards, re-derived from the vendor's own header |
 | buildability | drill vs the pin that goes in it, annular ring, via class, package vs value |
 | the-order | the BOM against the schematic it came from |
 | physics | trace current, capacitor derating, resistor dissipation (every resistor, an LED's series resistor too), I²C rise time |

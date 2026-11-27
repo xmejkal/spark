@@ -375,7 +375,8 @@ def folder_boards(checked):
     (a folder can hold several, the car and its remote, as `rail_loads_in` reads them), and a file that names none takes
     the project's board (D35, P988). The build of the folder reads the folder's own file (loader.py:466), so a
     sub-folder's board wins over its project's. Empty when no file and no project names a board. A requirements file
-    that cannot be read, or whose `board` is no text, is a DesignError with its own sentence.
+    that cannot be read, or the build refuses (signals, parts), or whose `board` is no text, is a DesignError with its
+    own sentence.
     """
     marked = board_records.marked_board(checked.project)[0]
     boards = []
@@ -401,7 +402,7 @@ def boards_to_verify(checked, boards):
 def discover_boards(checked, found, notes):
     """
     Add the boards to verify for `checked` to `found` and say them in `notes`, both in place: the folder's boards that
-    have a record, else every board of its project (P1325). The board library knows where board definitions are; a glob
+    have a record, else every board of its project: the project's, the shelf's and the library's (P1325). The board library knows where board definitions are; a glob
     does not, and guessing is how the selection file ended up being checked against a vendor header it does not have.
     The folder's boards are read once. When every board was taken, or one of the folder's boards has no record, a second
     `boards` line gives the reason (`not resolved (...)`).
