@@ -6,7 +6,7 @@
   "replace": "NO_WOKWI_PART_TYPE_ENDING = StageEnding(build_codes.BOARD_NOT_IN_WOKWI, COULD_NOT_RUN,"
  },
  {
-  "file": "scripts/spark/flow/phase_readers.py",
+  "file": "scripts/spark/flow/no_model.py",
   "name": "P1207: a skipped no-model stage no longer counts as stopped, so a new record is not done (test_flow TheGuideTest new-record tests)",
   "find": " or stage.get(\"code\") in NO_MODEL_CODES]",
   "replace": "]"

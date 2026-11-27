@@ -12,12 +12,6 @@
   "replace": "    if status == OK and stops_only_for_no_model(result.data):"
  },
  {
-  "file": "scripts/spark/flow/run_request.py",
-  "name": "P1008: the answer of an ok build with a note keeps the simulation's sentence as its line (test_run_request built-with-a-note test)",
-  "find": "        line = RAN_LINE % (offer.label, MARKS[status][0] or OK) if note else line_of(offer.label, result)",
-  "replace": "        line = line_of(offer.label, result)"
- },
- {
   "file": "scripts/spark/flow/page_script.js",
   "name": "P1008: the page drops the note of an ok build (page_script.test.js status line test)",
   "find": "    return { mark: words.marks.ok, text: said + note, grey: false };",

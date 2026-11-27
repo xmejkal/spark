@@ -94,7 +94,7 @@ import them from there. Every script ends in exactly one of three outcomes, neve
 `check_all.py` adds a fourth word, `skipped`: a check that was never asked, because its input was not given. That is
 not the same as one that could not look. More in the glossary:
 [the three outcomes](../../GLOSSARY.md#the-three-outcomes--ok-problems-could-not-run) and
-[`skipped`](../../GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it).
+[`skipped`](../../GLOSSARY.md#skipped-the-fourth-word-for-a-check-or-a-stage).
 
 **Not yet true everywhere:**
 

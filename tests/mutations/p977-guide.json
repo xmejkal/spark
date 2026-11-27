@@ -42,13 +42,13 @@
   "replace": "[]"
  },
  {
-  "file": "scripts/spark/flow/phase_readers.py",
+  "file": "scripts/spark/flow/no_model.py",
   "name": "the guide counts a build as done whatever stopped its simulation (P977)",
   "find": "and stopped[0].get(\"code\") in NO_MODEL_CODES",
   "replace": ""
  },
  {
-  "file": "scripts/spark/flow/phase_readers.py",
+  "file": "scripts/spark/flow/no_model.py",
   "name": "a skipped stage stops a board-only build with no model counting as done (P977)",
   "find": "if stage.get(\"status\") not in (OK, SKIPPED) or stage.get(\"code\") in NO_MODEL_CODES]",
   "replace": "if stage.get(\"status\") != OK or stage.get(\"code\") in NO_MODEL_CODES]"

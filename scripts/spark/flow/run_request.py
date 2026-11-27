@@ -19,7 +19,7 @@ from spark.design.pick_parts import PickParts
 from spark.design.write_requirements import WriteRequirements
 from spark.flow import flow_codes, request_codes
 from spark.flow.fingerprint import SHORT, fingerprint_of
-from spark.flow.phase_readers import NO_MODEL_CODES, stops_only_for_no_model
+from spark.flow.no_model import NO_MODEL_CODES, stops_only_for_no_model
 from spark.flow.phase_readers import MARKS
 from spark.flow.show_flow import phases_of, privacy_for
 from spark.firmware.project_secrets import ProjectSecrets
@@ -172,7 +172,7 @@ class RunRequest(Operation):
         result = run_operation(self.operations.get(step.op) or STEP_OPERATIONS[step.op](), values, outside=outside)
         after = fingerprint_of(project, phases_of(project, self.readers))
         status, note = answer_of(flow_codes.kind_of(offer.key), result)
-        line = RAN_LINE % (offer.label, MARKS[status][0] or OK) if note else line_of(offer.label, result)
+        line = line_of(offer.label, result)
         data = {"for": request.id, "key": offer.key, "label": offer.label, "ran": True, "status": status, "mark": MARKS[status][1],
                 "line": line, "note": note, "fingerprint": after}
         return OperationResult(data, result.findings, lines=[RAN_LINE % (offer.label, MARKS[status][0] or OK)] + list(result.lines),

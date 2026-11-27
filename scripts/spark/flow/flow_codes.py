@@ -66,7 +66,8 @@ MISSING_FACTS_MESSAGE = "%d fact(s) the board record lacks, named in firmware/pi
 #: A build on the board alone (P878): its four skipped stages are final, so the build and the sheet say so and have no status.
 BOARD_ONLY_BUILD_MESSAGE = "board only: nothing to wire, no board was built"
 BOARD_ONLY_MESSAGE = "board only: nothing to wire"
-#: The one cause of a skipped simulation stage today (`build_service`, P778).
+#: A skipped simulation stage when every part's record skips it (`build_service`, P778). A board with no Wokwi part says
+#: NO_SIMULATION_NOW instead (P1207).
 SIMULATION_SKIPPED_MESSAGE = "every part is skipped from the simulation, so spark did not judge the diagram"
 NO_SHEET_MESSAGE = "no breadboard.md yet"
 SHEET_NOT_JUDGED_MESSAGE = "breadboard.md, spark does not judge the wiring"

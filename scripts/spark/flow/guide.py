@@ -14,7 +14,8 @@ from spark.design import entry_origin, needs
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import deploy_reading, flow_codes, wired_board
-from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, read_requirements, set_aside, stops_only_for_no_model
+from spark.flow.no_model import stops_only_for_no_model
+from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, read_requirements, set_aside
 from spark.core.errors import CodedMessageError
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 

@@ -342,7 +342,8 @@ class ABoardWithNoWokwiPartInTheFullBuildTest(unittest.TestCase):
         board = dict(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text()), id=self.BOARD, wokwi_part_type=None)
         stages = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}], boards=[(self.BOARD, board)])
         self.assertEqual(build_board.render(stages, verdict(stages)).splitlines()[-1],
-                         "  the chain runs end to end; " + build_codes.BOARD_NOT_IN_WOKWI.meaning)
+                         "  the chain runs end to end; the board's record names no Wokwi part, so Wokwi has no model of it and "
+                         "nothing is simulated")
 
     def test_the_full_path_still_keeps_the_sheet_the_pin_map_and_the_page_and_tries_the_picture(self):
         # The review of PR #1364: the skipped simulation stops no kept file. The picture is refused here for the display's

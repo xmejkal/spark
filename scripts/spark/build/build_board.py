@@ -28,7 +28,7 @@ from spark.flow.write_flow_page import write_kept_page
 #: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
 EVERY_PART_SKIPPED_LINE = "; every part is skipped from the simulation, so the diagram holds none of the project's parts"
 #: The closing line's addition by the skipped simulation stage's code: a board with no Wokwi part (P1207) says its code's
-#: own meaning. A skipped stage with any other code, or none, says EVERY_PART_SKIPPED_LINE.
+#: own meaning. A skipped simulation stage has one of these two codes today. The fallback keeps the old line for any other.
 SKIPPED_SIMULATION_LINES = {build_codes.EVERY_PART_SKIPPED: EVERY_PART_SKIPPED_LINE,
                             build_codes.BOARD_NOT_IN_WOKWI: "; " + build_codes.BOARD_NOT_IN_WOKWI.meaning}
 

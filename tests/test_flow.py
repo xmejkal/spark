@@ -735,7 +735,7 @@ class TheGuideTest(FlowTest):
         old_guide.pop("wired")
         self.assertEqual(guide, old_guide)
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (0, None, "firmware"))
-        self.assertEqual(says(said, "build")[-1], flow_codes.NO_SIMULATION_NOW)
+        self.assertEqual(says(said, "build")[-1], "No simulation: Wokwi has no model of this board. You test it on the real board.")
 
     def test_a_new_board_only_record_of_a_board_wokwi_has_no_model_of_is_done_once_with_the_board_only_sentence(self):
         project = a_built_project(OK, {"board": "ok", "parts": "skipped", "schematic": "skipped", "footprint": "skipped",
@@ -748,7 +748,7 @@ class TheGuideTest(FlowTest):
         guide = said["data"]["guide"]
         self.assertEqual((code, guide["now"]["phase"], guide["no_simulation"]), (0, "firmware", NO_MODEL))
         self.assertEqual(guide["done"], ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"])
-        self.assertEqual(says(said, "build"), [flow_codes.BOARD_ONLY_BUILD_MESSAGE])
+        self.assertEqual(says(said, "build"), ["board only: nothing to wire, no board was built"])
 
     def test_the_project_stands_where_the_guide_says_now(self):
         """P1030: one rule says where a project stands, the guide's now phase, in data.stands_at too."""

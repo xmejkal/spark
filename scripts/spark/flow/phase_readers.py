@@ -9,7 +9,6 @@ import json
 from collections import namedtuple
 from pathlib import Path
 
-from spark.build import build_codes
 from spark.build.build_record import BUILD_RECORD_FILE, BuildRecordStore, earlier_dist, sha256_of
 from spark.build.stages import BUILD, SIMULATION
 from spark.breadboard import sheet
@@ -17,6 +16,7 @@ from spark.design import entry_origin, need_requirements, needs, needs_basis
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import deploy_reading, flow_codes, offer_steps
+from spark.flow.no_model import stops_only_for_no_model
 from spark.records import record_kind, records_codes, store
 from spark.records.brief import Brief
 from spark.core.errors import CodedMessageError
@@ -473,19 +473,6 @@ def build_effect(project):
 def skipped_stages(record):
     """The names of the stages the build `record` skipped, in the record's order."""
     return [stage.get("name") for stage in record.get("stages") or [] if stage.get("status") == SKIPPED]
-
-
-#: The codes of a simulation stage whose build counts as done (the PO, 2026-11-21): Wokwi has no model of the board.
-NO_MODEL_CODES = (build_codes.BOARD_NOT_IN_WOKWI,)
-
-
-def stops_only_for_no_model(record):
-    """True when the build `record`'s one stopped stage is the simulation, with a code of NO_MODEL_CODES. A stage is
-    stopped when it ended neither ok nor skipped (an old record, could-not-run), or when its code is in NO_MODEL_CODES (a
-    new record, skipped since P1207). An old record with no code is never counted as done."""
-    stopped = [stage for stage in (record or {}).get("stages") or []
-               if stage.get("status") not in (OK, SKIPPED) or stage.get("code") in NO_MODEL_CODES]
-    return [stage.get("name") for stage in stopped] == [SIMULATION.name] and stopped[0].get("code") in NO_MODEL_CODES
 
 
 class BuildReader(PhaseReader):
