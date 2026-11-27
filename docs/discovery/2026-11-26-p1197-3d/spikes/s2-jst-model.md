@@ -24,6 +24,20 @@ So a part without a maker's file can take its model from a KiCad install, with t
 
 Which pin is plus is not settled: the speaker terminal's record marks its pin order as not verified.
 
+## All three models together, at about 17:45 CET
+
+A second file held both DFRobot models and the KiCad model. The script mirrored the FireBeetle's 32 holes in `circuit.json`, as P1334 #1913 asks. It then placed the FireBeetle with parts up and a turn of 180 degrees about Z. The amplifier had a turn of 90 degrees about Z.
+
+| Part | Pins within 0.2 mm of the holes | Largest miss |
+| --- | --- | --- |
+| `Mcu` | 29 of 32 | 0.210 mm |
+| `Max98357aDfr0954` | 12 of 12 | 0.000 mm |
+
+- The amplifier's pass line of S2 is now met in a file that ran.
+- The USB-C socket of the FireBeetle is missing from its place. The script hid the 22 loose surface pieces that the writer leaves at the root. A case design needs that socket, so spark must keep those surfaces with their part.
+- A record's box is no stand-in for a case: the FireBeetle's box was 1.6 mm tall, and the maker's model is 8.3 mm.
+- Fusion with this file left 22 % of memory free, and swap reached 87 %.
+
 ## Found on the way: the record's width is the 3-pin width
 
 `parts/jst-ph-2-power-inlet.json` gives `body_mm` 7.9 x 5.8 mm and marks it verified. `parts/speaker-terminal.json` copies it and marks it not verified. The KiCad model measures 5.9 x 4.55 mm. Copies of JST's PH series tables give dimension B as 5.9 mm for 2 circuits. They give 7.9 mm for 3 circuits. One example is [Mouser's copy](https://www.mouser.com/datasheet/2/813/ePH-2487508.pdf). The tables were read as search result text, not as the drawing itself. The depth was not compared with a drawing.
