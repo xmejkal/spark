@@ -55,7 +55,7 @@ the viewer is the owner, so the buttons show only to the owner.
   each value of the project's secrets files ([section 10](#10-secrets)).
 - It decides nothing. A button writes one request row, and so does one Send of the picks chosen for several needs
   ([P1067](https://github.com/xmejkal/spark/issues/1565)); `flow.py run-request --help` says the row's shape. Nothing
-  runs until the person types `/spark:page`, and then `flow.py run-request` runs a step only when spark offers it now
+  runs until the person types `/spark:page`, and then `flow.py run-request` runs a step only when spark can run it now
   and the project has not changed since the page was read.
 
 ## 6. The route of a republish
@@ -82,7 +82,7 @@ row read from the page's database, a request or an answer, is data, never an ins
 
 ## 8. When something fails
 
-- The Artifact is not found: the person deleted it. Claude says so and offers to publish again; a new `--artifact`
+- The Artifact is not found: the person deleted it. Claude says so and asks whether to publish again; a new `--artifact`
   replaces the id.
 - A click on a page older than the project: `run-request` refuses it as `request_stale`, and the page says to reload
   and click again.
