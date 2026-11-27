@@ -80,8 +80,8 @@
  {
   "file": "scripts/check_firmware.py",
   "name": "P59: every outcome exits 0",
-  "find": "    return run_cli(HelpText(\"check_firmware.py\", epilog=EPILOG), operation or CheckFirmware(), argv,\n                   outside_builder=build_bare_outside_world, outside=outside)",
-  "replace": "    run_cli(HelpText(\"check_firmware.py\", epilog=EPILOG), operation or CheckFirmware(), argv,\n                   outside_builder=build_bare_outside_world, outside=outside)\n    return 0"
+  "find": "    return run_cli(HelpText(\"check_firmware.py\", epilog=EPILOG, follow_up=PageFollowUp()), operation or CheckFirmware(), argv,\n                   outside_builder=build_bare_outside_world, outside=outside)",
+  "replace": "    run_cli(HelpText(\"check_firmware.py\", epilog=EPILOG, follow_up=PageFollowUp()), operation or CheckFirmware(), argv,\n                   outside_builder=build_bare_outside_world, outside=outside)\n    return 0"
  },
  {
   "file": "scripts/spark/firmware/firmware_check.py",
