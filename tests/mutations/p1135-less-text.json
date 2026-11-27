@@ -50,7 +50,7 @@
  {
   "file": "scripts/spark/flow/page_sections.py",
   "name": "P1135: a pick's row writes its effect again (test_flow_page.TheLessTextTest.test_a_pick_s_row_reads_its_part_and_what_you_have_and_keeps_its_board_file_line)",
-  "find": "_text(flow_codes.PICK_ROW % (offer[\"part\"], offer[\"have\"])), line)",
+  "find": "_text(flow_codes.PICK_ROW % (part_words(offer[\"part\"], offer.get(\"own_part\")), offer[\"have\"])), line)",
   "replace": "_text(offer[\"effect\"]), line)"
  },
  {

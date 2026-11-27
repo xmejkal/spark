@@ -44,8 +44,8 @@
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "P1180: Phase.to_dict drops a pick's notes (test_flow.ThePickNotesTest.test_every_offer_in_data_has_notes_and_one_that_is_no_pick_none)",
-  "find": "part=offer.part, have=offer.have, notes=list(offer.notes))",
-  "replace": "part=offer.part, have=offer.have)"
+  "find": "part=offer.part, have=offer.have, notes=list(offer.notes), own_part=offer.own_part)",
+  "replace": "part=offer.part, have=offer.have, own_part=offer.own_part)"
  },
  {
   "file": "scripts/spark/flow/show_flow.py",

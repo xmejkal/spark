@@ -1,0 +1,56 @@
+[
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1136: own_part_of names a function for a compute need (test_flow.TheBoardsOwnPartTest.test_the_board_for_the_compute_need_and_a_part_for_the_button_name_no_own_part)",
+  "find": "    if candidate[\"kind\"] == \"board\" and need[\"does\"] != COMPUTE and candidate[\"what\"]:",
+  "replace": "    if candidate[\"kind\"] == \"board\" and candidate[\"what\"]:"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1136: own_part_of names one for a part, not a board (test_flow.TheBoardsOwnPartTest.test_the_board_for_the_compute_need_and_a_part_for_the_button_name_no_own_part)",
+  "find": "    if candidate[\"kind\"] == \"board\" and need[\"does\"] != COMPUTE and candidate[\"what\"]:",
+  "replace": "    if need[\"does\"] != COMPUTE and candidate[\"what\"]:"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1136: own_part_of takes the last what word, not the first; the store's board has two for a button (test_flow.TheBoardsOwnPartTest.test_a_board_s_pick_for_a_button_names_its_onboard_button)",
+  "find": "        return candidate[\"what\"][0]",
+  "replace": "        return candidate[\"what\"][-1]"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1136: the onboard note fires for a board that any need picks (test_flow.TheBoardsOwnPartTest.test_a_board_picked_only_by_a_need_that_does_not_compute_says_no_note)",
+  "find": "                and computing & set(candidate.get(\"picked_for\", ())))",
+  "replace": "                and set(candidate.get(\"picked_for\", ())))"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1136: the onboard note fires for an implausible match (test_flow.TheBoardsOwnPartTest.test_an_implausible_own_part_is_named_and_says_no_note)",
+  "find": "    return bool(own_part_of(need, candidate) and is_plausible(need, candidate)",
+  "replace": "    return bool(own_part_of(need, candidate)"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1136: the onboard note never fires (test_flow.TheBoardsOwnPartTest.test_with_the_board_picked_by_the_compute_need_its_first_note_says_so)",
+  "find": "    facts = ((flow_codes.ONBOARD_NOTE, is_on_picked_board(plan, need, candidate)),",
+  "replace": "    facts = ((flow_codes.ONBOARD_NOTE, False),"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1136: part_words drops the board's own part (test_flow.TheBoardsOwnPartTest.test_a_board_s_pick_for_a_button_names_its_onboard_button, test_flow_page.TheBoardsOwnPartOnThePageTest)",
+  "find": "    return part + flow_codes.OWN_PART % own_part if own_part else part",
+  "replace": "    return part"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P1136: Phase.to_dict drops own_part (test_flow.TheBoardsOwnPartTest.test_every_offer_in_data_has_own_part_and_one_that_is_no_pick_none, test_flow.TheOfferStepTest.test_the_offers_in_data_keep_their_six_keys_and_no_step)",
+  "find": "notes=list(offer.notes), own_part=offer.own_part) for offer in self.offers],",
+  "replace": "notes=list(offer.notes)) for offer in self.offers],"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1136: the confirm box does not scroll into view (page_script.test.js, via test_flow_script)",
+  "find": "this.box.scrollIntoView({ block: \"nearest\" });",
+  "replace": "void 0;"
+ }
+]
