@@ -18,7 +18,7 @@ Can the STEP file of a maker sit in spark's assembly at the right place?
 | Pass line | `Mcu` (FireBeetle, DFR0975) | `Max98357aDfr0954` (amplifier) |
 | --- | --- | --- |
 | Shows in Fusion on the board, named | Met | Met |
-| Pins meet the board holes within 0.2 mm | Not met. 29 of 32 are within 0.2 mm. The largest miss is 0.210 mm. | Met by calculation. With a turn of 90 degrees, 12 of 12 miss by 0.000 mm. |
+| Pins meet the board holes within 0.2 mm | Not met. 29 of 32 are within 0.2 mm. The largest miss is 0.210 mm. | Not run. Calculated: with a turn of 90 degrees, 12 of 12 miss by 0.000 mm. |
 | Offset and turn written down | Yes, but for a mirrored footprint (see below) | Yes |
 
 The amplifier file in Fusion had no turn. The turn of 90 degrees was calculated from the loops that Fusion reported. The file was not written again with it. At that turn, each of the 12 pin names printed on the model falls on the hole with the same name in spark's record.
@@ -55,6 +55,6 @@ The pins in this spike matched the footprint only with the model upside down, be
 - The pin pitch in the FireBeetle model is 2.5635 mm, not 2.54 mm. The rows are 23.0 mm apart, not 22.86 mm. This causes the miss of 0.210 mm.
 - The amplifier model measures 18.0 x 18.0 x 7.13 mm. The record's box is 18 x 18 x 7.1 mm.
 - The surface shells of the maker files did not stay with their part. The two files hold 19 and 3 of them, and Fusion showed 22 loose bodies at the root. A view of one part alone showed a USB connector and small pieces far from it. The writer moves only the solids with the part.
-- The pages state no terms for the files.
+- The two wiki pages name no license for the files. Their footer says "Copyright © 2025 DFRobot. All rights reserved." The files stay out of git.
 - The writer made the 31 MB assembly in 2.0 s, with a peak of 485 MB of memory and no network use.
 - The Mac has 8 GB. With this assembly open in Fusion, free memory fell to 23 % and swap reached 87 %.
