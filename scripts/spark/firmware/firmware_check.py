@@ -23,8 +23,8 @@ from spark.records.check_record import CheckRecordStore
 NO_TESTS_NOTE = "no tests/ folder: this project has no own tests"
 #: What a run that could not keep its check record says, as a note and a line, with the class of what failed (P1209).
 NOT_KEPT_SENTENCE = "did not keep the check record: %s"
-#: The folders the free checks read, which the check record hashes, and the keys of `data` it keeps.
-INPUTS, KEPT_KEYS = (FIRMWARE_FOLDER, TESTS_FOLDER), ("imports", "tests")
+#: The folders the free checks read, which the check record hashes and its older line names, and the keys of `data` it keeps.
+INPUTS, KEPT_KEYS = (FIRMWARE_FOLDER + "/", TESTS_FOLDER + "/"), ("imports", "tests")
 IMPORTS_LINE, IMPORTS_NOT_CHECKED_LINE = "imports: %d of %d imported", "imports: not checked (no firmware/ folder)"
 TESTS_LINE, SKIPPED_PART = "tests: %d of %d passed (%s/)", ", %d skipped"
 NO_TESTS_LINE, TESTS_NOT_CHECKED_LINE = "tests: none (no %s/ folder)", "tests: not checked (%s)"
