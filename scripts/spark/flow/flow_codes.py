@@ -521,9 +521,12 @@ LEFT_OUT_NOTES = frozenset((NOT_DONE_NOTE, NO_SHEET_NOTE))
 STATION_NOTES = {NO_PICKS_NOTE: "no needs or picks behind it", NO_MODEL_NOTE: "no simulation",
                  UNSEEN_NOTE: "spark cannot see it", MAY_CHANGE_NOTE: "done, may change"}
 STATION_NOTES_BY_PHASE = {(NO_MODEL_NOTE, SIMULATE): "no Wokwi model of this board"}
-#: Gate A's row "Tested before the board" (P1220, D10): the fact it reads, NO_MODEL_NOTE for a board Wokwi has no model of,
-#: and the row's words by fact. Each says a fact and no action: the NOW sentence and NEXT say what to do, so a failed
-#: run is not said twice on the page (P1220's look in Chrome). The row is data only: no code refuses on it, and an empty `shut_by` never means that gate A is open.
+#: Gate A's row "Tested before the board" (P1220, D10), with its words by fact.
+#: A fact is NO_MODEL_NOTE for a board Wokwi has no model of.
+#: Each row says a fact and no action.
+#: The NOW sentence and NEXT say what to do, so a failed run is not said twice on the page.
+#: The row is data only. No code refuses on it.
+#: An empty `shut_by` never means that gate A is open.
 GATE_A_SAYS = {RUN_FAILED: "A run failed on this image (%s).", IMAGE_TESTED: "A run passed on this image.",
                IMAGE_OLDER: "Your firmware changed after the image, so no run tested it as it is now.",
                IMAGE_UNTESTED: "No run tested this image.",
