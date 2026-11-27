@@ -54,6 +54,7 @@ The pins in this spike matched the footprint only with the model upside down, be
 - The FireBeetle zip holds a RAR archive with the STEP file (24.9 MB) and a Rhino file (79 MB). It also holds a case from the maker: `top.stl` and `bottom.stl`.
 - The pin pitch in the FireBeetle model is 2.5635 mm, not 2.54 mm. The rows are 23.0 mm apart, not 22.86 mm. This causes the miss of 0.210 mm.
 - The amplifier model measures 18.0 x 18.0 x 7.13 mm. The record's box is 18 x 18 x 7.1 mm.
+- The surface shells of the maker files did not stay with their part. The two files hold 19 and 3 of them, and Fusion showed 22 loose bodies at the root. A view of one part alone showed a USB connector and small pieces far from it. The writer moves only the solids with the part.
 - The pages state no terms for the files.
 - The writer made the 31 MB assembly in 2.0 s, with a peak of 485 MB of memory and no network use.
 - The Mac has 8 GB. With this assembly open in Fusion, free memory fell to 23 % and swap reached 87 %.
