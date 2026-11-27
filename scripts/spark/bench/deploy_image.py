@@ -38,6 +38,7 @@ from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 from spark.core.replies import RepliesStore
 from spark.core.renderers import StatusLine
 from spark.core.result import Finding, Headline, NextStep, OperationResult
+from spark.core.text_guards import flat_line
 
 # --- MVP ---
 #: The lines of a refusal name the script that printed them before the core, so they read the same from every frontend.
@@ -98,7 +99,7 @@ def grant_hint(project, port, evidence):
     allows = (" and any passed image of any project" if evidence.simulation != SIMULATION_NONE else
               ", any passed image of any project, and firmware that no simulation tested")
     return ("\nOr, to let Claude deploy this board for N minutes (1 to 1440) with no yes each time, run this once. It "
-            "allows an erase of ALL of the flash%s:\n  %s" % (allows, line))
+            "allows an erase of ALL of the flash%s:\n  %s" % (allows, flat_line("%s", line)))  # P1320: the gate splits at its breaks
 
 
 def who_said_yes(consent):
@@ -328,7 +329,7 @@ class DeployFlowService:
         matched and the evidence allows it (a passed run's, with no ignored older run), else the outside's, which asks the
         person. One line says why the grant was not used, unless there is none."""
         project, evidence = self._reached["project"], self._reached["evidence"]
-        line = rerun_line(project, token, look.port, evidence)
+        line = flat_line("%s", rerun_line(project, token, look.port, evidence))  # P1320: the gate splits the line at its breaks
         if self.grants.may_cover(look, evidence):
             line += grant_hint(project, look.port, evidence)
         chosen = self.grants.consent_for_deploy(look, evidence, self.outside.make_consent(line))

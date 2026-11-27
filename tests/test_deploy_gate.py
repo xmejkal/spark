@@ -1928,6 +1928,57 @@ class TerminalConsentTest(unittest.TestCase):
             self.assertEqual((shut.exception.code, shut.exception.reason), (2, "no_terminal"))
 
 
+class TheGateValuesOnOneLineTest(unittest.TestCase):
+    """P1320: a raw line break in a value of a gate's stop shows as `?`; a line break the sentence intends stays."""
+
+    class GateLook:
+        """A look's report with `stops`, no token and `why` as the reason for it: only what require_open_gate reads."""
+
+        def __init__(self, stops=(), why=None):
+            self.stops, self.why = list(stops), why
+
+        def token(self):
+            return None
+
+        def no_token_reason(self):
+            return self.why
+
+    def shut(self, report):
+        with self.assertRaises(deploy_gate.GateClosedError) as shut:
+            deploy_gate.require_open_gate(report, "aaaa-bbbb", FakeConsent(True), "x.bin", [])
+        return shut.exception
+
+    def test_a_stop_sentence_with_a_line_break_is_one_line(self):
+        shut = self.shut(self.GateLook([board_look.Stop("chip_differs", "x\nfix: rm -rf ~")]))
+        self.assertEqual((str(shut), shut.code, shut.reason), ("x?fix: rm -rf ~. not flashed.", 1, "chip_differs"))
+
+    def test_a_no_token_sentence_keeps_the_lines_of_a_board_error_and_flattens_a_raw_value_in_its_head(self):
+        # the refuter's 2: image_builder raises ToolError.of_lines with a BoardError's lines, and they reach the gate through cannot_check
+        sentence = str(tool_finder.ToolError.of_lines(["cannot build: x\nfix: rm -rf ~", "  a problem line"], code="tool_missing"))
+        self.assertEqual(str(self.shut(self.GateLook(why=board_look.NoToken("no_image", sentence)))),
+                         "no token: cannot build: x?fix: rm -rf ~\n  a problem line. not flashed.")
+        self.assertEqual(str(self.shut(self.GateLook(why=board_look.NoToken("no_image", "a \x1b[31m word\n  its line")))),
+                         "no token: a ?[31m word\n  its line. not flashed.")
+
+    def test_the_no_terminal_line_stays_alone_under_the_head_and_its_intended_lines_stay(self):
+        line = "deploy.py --port \x1b\nOr, run this once:\n  grant.py"
+        with self.assertRaises(deploy_gate.GateClosedError) as shut:
+            deploy_gate.TerminalConsentStrategy(line, Stream("yes\n", False), Stream()).require_ready()
+        self.assertEqual(str(shut.exception).split("\n"), ["no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):",
+                                                       "  deploy.py --port ?", "Or, run this once:", "  grant.py"])
+        self.assertEqual((shut.exception.code, shut.exception.next_op, shut.exception.reason), (2, "deploy", "no_terminal"))
+
+    def test_the_grant_hint_holds_a_project_with_a_line_break_on_its_own_line(self):
+        # the gate splits the no-terminal line at its breaks, so its maker flattens each value (P1320)
+        hint = deploy_image.grant_hint(Path("/p\nfix: rm -rf ~"), "/dev/cu.usbmodem101", image_evidence.PassedRunEvidence())
+        self.assertEqual(len(hint.split("\n")), 3, hint)
+        self.assertIn("/p?fix: rm -rf ~", hint)
+
+    def test_the_code_and_the_next_step_are_keywords_and_the_values_stay_raw(self):
+        shut = deploy_gate.GateClosedError("a %s b", "x\ny", code=1, next_op="look", reason="r")
+        self.assertEqual((str(shut), shut.values, shut.code, shut.next_op, shut.reason), ("a x?y b", ("x\ny",), 1, "look", "r"))
+
+
 class TheGateReasonTest(GateCase):
     """P433: each refusal of the gate names its reason, and the exit code stays what it was."""
 
