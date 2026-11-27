@@ -69,7 +69,7 @@ that Wokwi has no part for needed the person's typed yes at every flash (P1029).
 `grants/direct_flashing_disallowed` is in the store, no grant answers such a deploy. The person deletes it to allow
 direct flashing again.
 
-### `skipped`, the fourth word, for a check or a stage
+### `skipped` — the fourth word, for a check or a stage
 
 "I was not asked" is not "I was asked and could not look". A check whose inputs were never
 supplied is `skipped`; a check that was given what it needs and still could not examine the thing

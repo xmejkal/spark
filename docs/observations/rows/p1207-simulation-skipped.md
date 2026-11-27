@@ -21,9 +21,10 @@ from 1.
 | 11 | The hook failed: `phase_readers.py` grew to 610 lines (R1, at most 600) | the hook, 6bb3c3f4 | acted | the rule moved to its own module `scripts/spark/flow/no_model.py`, and `phase_readers.py` has 597 lines. Rows on the rule point at `no_model.py` |
 | 12 | The hook failed: three new tests read the code's own constants as their expectation | the hook, 6bb3c3f4 | acted | each test states its sentence as a literal |
 | 13 | The hook failed: `docs/guide/map.md` was stale | the hook, 6bb3c3f4 | acted | `tools/map.py --write` |
-| 14 | `GLOSSARY.md:72` said only `check_all` has `skipped`, but build stages have it too | plan writer | acted | the heading is "`skipped`, the fourth word, for a check or a stage", its two links follow, and one sentence names the build's skips |
+| 14 | `GLOSSARY.md:72` said only `check_all` has `skipped`, but build stages have it too | plan writer | acted | the heading is "`skipped` — the fourth word, for a check or a stage" (the glossary test splits a heading at " — "), its two links follow, and one sentence names the build's skips |
 | 15 | `flow.md:50` restarts with "Else" in the middle of a long line | build lens | rejected | the page is at its 400-line budget, so a split would break it. The line is correct |
 | 16 | The ok-pick test passes on the old code too | build lens | rejected | it exists to catch the p1008 row that drops the `kind ==` check, which its docstring says |
 | 17 | p1207 row 3's name must say which test catches it | build lens | rejected | its name already names the new-record tests of `TheGuideTest` |
 | 18 | `flow.py show` prints the "No simulation" sentence under the build and in the guide | build refuter | rejected | by design: the build phase says its own state, and the guide says what to do |
 | 19 | The role turned off (D11's second half) | plan writer | raised | [P1214 #1763](https://github.com/xmejkal/spark/issues/1763), comment of 2026-11-26 |
+| 20 | The hook ran the quick run, not a story run, because no test named `no_model.py` | the hook, d6623af2 | acted | `tests/test_no_model.py` tests the rule directly: an old and a new record count, and every other skip, stop or missing code does not |
