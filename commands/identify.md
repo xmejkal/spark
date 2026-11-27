@@ -36,7 +36,7 @@ person and keep it for the agent. The list has two parts:
 ## 2. What exists
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need <the chip numbers, the board name or what it is> --project .
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need '<the chip numbers, the board name or what it is>' --project .
 ```
 
 A match means the module is known; check the photo against the record's pin order rather than
@@ -61,8 +61,8 @@ is true of the one in the photo, and says so (W5).
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --validate --project .
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --sources <id> --project .
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified <id> --project .
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --sources '<id>' --project .
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified '<id>' --project .
 ```
 
 `--sources` asks every cited URL whether it answers, so it reaches the network: no command's `allowed-tools` lets it run

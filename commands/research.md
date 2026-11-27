@@ -16,8 +16,8 @@ drawing or a distributor, and `why_it_matters` says what rests on it.
 ## 1. Reuse first, with no network
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need <words> --project .
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept <part number or words> --project .
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need '<words>' --project .
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept '<part number or words>' --project .
 ```
 
 `--need` searches what the person owns and what spark knows: every part and board record (the project, the shelf, the library, the
@@ -42,8 +42,8 @@ small agents work on it, in turn:
    maker's datasheet URL, and it writes nothing. The person picks.
 2. Write the skeleton and keep the datasheet:
    ```
-   ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton <id> --kind <kind> --vendor <maker> --project .
-   ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fetch <id> --project .        # or --keep <file> --url <url> --part <id> --project .
+   ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton '<id>' --kind '<kind>' --vendor '<maker>' --project .
+   ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fetch '<id>' --project .        # or --keep '<file>' --url '<url>' --part '<id>' --project .
    ```
    The id is a plain key of lower-case letters, digits and `-`, like `led-red-5mm`. Files are named by it, and the
    board names the part after it in code. `--skeleton` refuses any other id, dry run or not, and writes nothing:
@@ -92,8 +92,8 @@ chip inside a module is not gathered.
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --validate --project .          # the contract
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --sources <id> --project .      # every cited URL answers
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified <id> --project .   # what nobody has checked
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --sources '<id>' --project .      # every cited URL answers
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified '<id>' --project .   # what nobody has checked
 ```
 
 `--sources` asks every cited URL whether it answers, so it reaches the network. No command's `allowed-tools` lets it run
@@ -118,8 +118,8 @@ sources in order. The DFRobot wiki source reads the module's wiki page by its `s
 page lists. The kept-documents source asks one question per gap that cites the kept dimension drawing.
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton <id> --kind <kind> --vendor dfrobot --sku <SKU> --project .
-${CLAUDE_PLUGIN_ROOT}/scripts/research.py --part <id> --project . --json
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton '<id>' --kind '<kind>' --vendor dfrobot --sku '<SKU>' --project .
+${CLAUDE_PLUGIN_ROOT}/scripts/research.py --part '<id>' --project . --json
 ```
 
 The wiki source fetches the page once per record, and never again once its URL is in the record's `sources`. It

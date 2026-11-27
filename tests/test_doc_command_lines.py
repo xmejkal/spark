@@ -20,7 +20,7 @@ COMMAND_START = re.compile(
     r"^(\$ |python3? |SPARK_HOME=|\$\{CLAUDE_PLUGIN_ROOT\}|\"\$\{CLAUDE_PLUGIN_ROOT\}\"|<spark>/scripts/|"
     r"'<spark>'/scripts/|[\w./-]*scripts/[\w./-]+\.py|[\w-]+\.py )"
 )
-PLACEHOLDER = re.compile(r"<[A-Za-z][\w -]*>")
+PLACEHOLDER = re.compile(r"<[A-Za-z][^<>]*>")
 
 
 def unquoted_placeholder(line):
