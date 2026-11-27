@@ -173,7 +173,9 @@ def may_be_mac(serial):
 
 class GrantRefusedError(GateClosedError):
     """Error: no grant, for one of the WHY_ codes. Its exit code is 1, a refusal, as the deploy gate's stops are, or 2
-    for a code in COULD_NOT_RUN_WHYS."""
+    for a code in COULD_NOT_RUN_WHYS. Its one argument is the WHY_ code, not a template as its base class takes, so the
+    `of_lines` and `of_error` it inherits do not apply to it. A raise gives it as `why=`, so rule V1 does not count the
+    name as a template (P1320)."""
 
     def __init__(self, why):
         said = MESSAGE_FOR[why] + (ALLOW_AGAIN % shlex.quote(printable(str(GrantStore.disallowed_path())))
