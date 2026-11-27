@@ -17,7 +17,6 @@ from spark.flow.published_page import ARTIFACT_PATTERN, PublishedPageStore
 from spark.flow.show_flow import privacy_for, reading_of
 from spark.firmware.project_secrets import ProjectSecrets
 from spark.core import codes
-from spark.core.renderers import SCRIPTS
 from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Argument, Operation
 from spark.core.outcomes import COULD_NOT_RUN
 from spark.records import store
@@ -130,20 +129,22 @@ def compose_page(reading, parts):
                     deploy_reading.deployed_line(reading.deploy))
 
 
-def write_page(project, readers=None, parts=None, renderer=None, store=None, scripts=SCRIPTS):
+def write_page(project, read=None, parts=None, renderer=None, store=None):
     """
-    Read the flow of `project` once (`reading_of`), compose its FlowPage, mask it, render it and write it: a Written.
-    `parts` is a function `project -> PageParts` (None: `kept_parts`), `store` a FlowPageStore, `scripts` the scripts folder
-    of the deploy's line to type (P1286), the one `flow.py show` reads. A `renderer` has `FILE_NAME`, `PURPOSE_MESSAGE`
-    and `text(page)`: the page's phases are dicts, its pictures Pictures, and a renderer shows a phase through
-    `page_sections.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
+    Read the flow of `project` once (`read`), compose its FlowPage, mask it, render it and write it: a Written. `read` is
+    a function `project -> FlowReading` (None: `reading_of`, the reading `flow.py show` prints, with its readers and its
+    scripts folder, so the deploy's line to type is show's, P1286): a test hands its own readers or scripts folder through
+    it, as one seam (R3, the review). `parts` is a function `project -> PageParts` (None: `kept_parts`), `store` a
+    FlowPageStore. A `renderer` has `FILE_NAME`, `PURPOSE_MESSAGE` and `text(page)`: the page's phases are dicts, its
+    pictures Pictures, and a renderer shows a phase through `page_sections.shown_phase`, which holds the tick guard. An
+    OSError from the store is the caller's.
     The texts take the mask of the project's secrets (P1060), the SVG and the rendered page the paths-only one. A secrets
     file that cannot be read or parsed raises SecretsUnreadableError before anything is read or written (D5).
     """
     secrets = ProjectSecrets.read(project)
     if secrets.unreadable:
         raise SecretsUnreadableError(secrets.unreadable)
-    page = compose_page(reading_of(project, readers, scripts), (parts or kept_parts)(project))
+    page = compose_page((read or reading_of)(project), (parts or kept_parts)(project))
     paths = privacy_for(project, secrets=())
     page = masked_page(page, privacy_for(project, secrets.values), paths)
     renderer = renderer or FlowHtmlPage()
@@ -173,8 +174,8 @@ class WriteFlowPage(Operation):
     Operation: write the project's page. It answers the file (relative to the project), what it did, where the project
     stands, each phase's status, the flow's fingerprint (P829), the guide (P977) and the Artifact the page is published as
     (P829 PR 4: `--artifact` keeps its id in .spark/page.json first, through PublishedPageStore). A page that cannot be written is one could-not-run Finding. The phases' own problems
-    do not change its status: `flow.py show` reports those. `readers`, `parts`, `renderer` and `store` are what a test
-    swaps (None: the real ones).
+    do not change its status: `flow.py show` reports those. `read` (write_page's), `parts`, `renderer` and `store` are what
+    a test swaps (None: the real ones).
     """
 
     name = "write-flow-page"
@@ -198,8 +199,8 @@ Only /spark:page publishes the page."""
     data_keys = ("file", "did", "stands_at", "phases", "fingerprint", "guide", "artifact")
     privacy_for = staticmethod(privacy_for)
 
-    def __init__(self, readers=None, parts=None, renderer=None, store=None):
-        self.readers, self.parts, self.renderer, self.store = readers, parts, renderer, store
+    def __init__(self, read=None, parts=None, renderer=None, store=None):
+        self.read, self.parts, self.renderer, self.store = read, parts, renderer, store
 
     def run(self, project, artifact=None, *, outside):
         renderer = self.renderer or FlowHtmlPage()
@@ -210,7 +211,7 @@ Only /spark:page publishes the page."""
         try:
             if artifact is not None:
                 published.write(artifact)
-            written = write_page(project, self.readers, self.parts, renderer, self.store)
+            written = write_page(project, self.read, self.parts, renderer, self.store)
         except (OSError, UnicodeError) as refused:  # a text the file cannot hold (a lone surrogate) is a page not written
             said, fix = not_written(renderer.FILE_NAME, refused)
             return OperationResult(findings=[Finding(COULD_NOT_RUN, renderer.FILE_NAME, flow_codes.PAGE_NOT_WRITTEN, said, fix)],
