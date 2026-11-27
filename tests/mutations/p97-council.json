@@ -26,8 +26,8 @@
  {
   "file": "scripts/spark/design/need_requirements.py",
   "name": "item 2: a pick that owes only its outline is refused again",
-  "find": "if set(owed) - set(LAYOUT_FACTS)",
-  "replace": "if owed"
+  "find": "    return [fact for fact in owed if fact not in LAYOUT_FACTS + SIMULATION_FACTS]",
+  "replace": "    return [fact for fact in owed if fact not in SIMULATION_FACTS]"
  },
  {
   "file": "scripts/spark/design/need_requirements.py",

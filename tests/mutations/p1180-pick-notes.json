@@ -1,0 +1,86 @@
+[
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1180: the unsure note never fires (test_flow.ThePickNotesTest.test_an_unsure_entry_says_to_check_the_drawer)",
+  "find": "             (flow_codes.UNSURE_NOTE, candidate[\"unsure\"]))",
+  "replace": "             (flow_codes.UNSURE_NOTE, False))"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1180: the unsure note fires on every pick (test_flow.ThePickNotesTest.test_a_record_that_owes_nothing_has_no_note)",
+  "find": "             (flow_codes.UNSURE_NOTE, candidate[\"unsure\"]))",
+  "replace": "             (flow_codes.UNSURE_NOTE, True))"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1180: the simulation note reads any owed fact (test_flow.ThePickNotesTest.test_a_record_that_owes_only_its_outline_has_no_note)",
+  "find": "    unsimulated = set(owed) & set(need_requirements.SIMULATION_FACTS) and not need_requirements.refuses(owed, broken)",
+  "replace": "    unsimulated = bool(owed) and not need_requirements.refuses(owed, broken)"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1180: the simulation note ignores a refusal, for a stop fact and simulation (test_flow.ThePickNotesTest.test_a_record_that_owes_a_stop_fact_and_its_simulation_only_needs_more_facts)",
+  "find": "    unsimulated = set(owed) & set(need_requirements.SIMULATION_FACTS) and not need_requirements.refuses(owed, broken)",
+  "replace": "    unsimulated = set(owed) & set(need_requirements.SIMULATION_FACTS)"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1180: the simulation note ignores a broken record (test_flow.ThePickNotesTest.test_a_broken_record_that_owes_its_simulation_is_only_broken)",
+  "find": "    unsimulated = set(owed) & set(need_requirements.SIMULATION_FACTS) and not need_requirements.refuses(owed, broken)",
+  "replace": "    unsimulated = set(owed) & set(need_requirements.SIMULATION_FACTS) and not need_requirements.refuses(owed, [])"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1180: the broken note never fires (test_flow.ThePickNotesTest.test_a_broken_record_says_so)",
+  "find": "             (flow_codes.BROKEN_NOTE, broken),",
+  "replace": "             (flow_codes.BROKEN_NOTE, None),"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1180: the notes stand in the wrong order (test_flow.ThePickNotesTest.test_the_notes_stand_in_one_order)",
+  "find": "    return tuple(note for note, fact in facts if fact)",
+  "replace": "    return tuple(reversed([note for note, fact in facts if fact]))"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P1180: Phase.to_dict drops a pick's notes (test_flow.ThePickNotesTest.test_every_offer_in_data_has_notes_and_one_that_is_no_pick_none)",
+  "find": "part=offer.part, have=offer.have, notes=list(offer.notes))",
+  "replace": "part=offer.part, have=offer.have)"
+ },
+ {
+  "file": "scripts/spark/flow/show_flow.py",
+  "name": "P1180: show writes no note line (test_flow.ThePickNotesTest.test_a_pick_with_notes_says_them_on_a_line_under_its_need_s_line_and_one_with_none_has_none, test_flow_page.ThePickNotesOnThePageTest.test_the_row_and_show_s_line_say_the_same_notes_and_a_pick_with_none_has_no_line)",
+  "find": "        lines += [NOTE_LINE % (offer.key, said_of(list(offer.notes))) for offer in picks if offer.notes]",
+  "replace": "        lines += []"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "P1180: the Send box drops a pick's notes (test_flow_page.ThePickNotesOnThePageTest.test_the_send_box_says_the_wired_line_the_pick_s_own_its_note_then_the_shared_ones)",
+  "find": "    return first + [own.strip()] + list(notes) + shared[len(first):]",
+  "replace": "    return first + [own.strip()] + shared[len(first):]"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1180: a pick's words leave out its notes (test_flow_page.ThePickNotesOnThePageTest.test_the_words_of_a_pick_with_notes_name_them_and_of_one_with_none_do_not)",
+  "find": "    notes = {\"notes\": list(offer[\"notes\"])} if offer[\"notes\"] else {}",
+  "replace": "    notes = {}"
+ },
+ {
+  "file": "scripts/spark/flow/fingerprint.py",
+  "name": "P1180: the fingerprint ignores a pick's notes (test_flow_page.ThePickNotesOnThePageTest.test_the_fingerprint_reads_a_pick_s_notes_and_an_offer_with_none_as_before)",
+  "find": "    return dict(said, notes=list(offer.notes)) if offer.notes else said",
+  "replace": "    return said"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1180: a pick's radio gets no description from its note (page_script.test.js, via test_flow_script)",
+  "find": "label.firstChild.setAttribute(\"aria-describedby\", note.id);",
+  "replace": "void 0;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1180 refuter: a note two chosen picks share moves into the shared lines (page_script.test.js, via test_flow_script)",
+  "find": "offer.says.filter((said) => !noted(offer, said)).forEach(",
+  "replace": "offer.says.forEach("
+ }
+]

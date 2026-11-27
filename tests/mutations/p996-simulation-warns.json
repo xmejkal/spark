@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/design/need_requirements.py",
   "name": "P996: an owed simulation stance refuses the parts list again (test_needs.TheRequirementsFileTest, test_flow.TheBlockersTest)",
-  "find": "if set(owed) - set(LAYOUT_FACTS) - set(SIMULATION_FACTS)",
-  "replace": "if set(owed) - set(LAYOUT_FACTS)"
+  "find": "    return [fact for fact in owed if fact not in LAYOUT_FACTS + SIMULATION_FACTS]",
+  "replace": "    return [fact for fact in owed if fact not in LAYOUT_FACTS]"
  },
  {
   "file": "scripts/spark/design/need_requirements.py",
@@ -32,7 +32,7 @@
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "P996 review: the page names an owed simulation in place of the fault that refuses the parts list (test_flow.TheBlockersTest)",
-  "find": "passed = need_requirements.LAYOUT_FACTS + need_requirements.SIMULATION_FACTS",
-  "replace": "passed = need_requirements.LAYOUT_FACTS"
+  "find": "need_requirements.blocking_facts(record_kind.owes(record))",
+  "replace": "[fact for fact in record_kind.owes(record) if fact not in need_requirements.LAYOUT_FACTS]"
  }
 ]

@@ -24,31 +24,31 @@
   "replace": "(LAYERS.index(c[\"in\"]) if c[\"in\"] in LAYERS else len(LAYERS),"
  },
  {
-  "file": "scripts/spark/flow/phase_readers.py",
+  "file": "scripts/spark/flow/pick_notes.py",
   "name": "P991 review: a drawer board offered for a need that does not compute says the board need's refusal (test_flow.RecordFirstOffersTest)",
   "find": "    pick = plan.resolve(pick_id_of(candidate)) if need[\"does\"] == COMPUTE else None",
   "replace": "    pick = plan.resolve(pick_id_of(candidate))"
  },
  {
-  "file": "scripts/spark/flow/phase_readers.py",
+  "file": "scripts/spark/flow/pick_notes.py",
   "name": "P991: a pick of a board record is asked for a board file refusal as if it were a drawer entry (test_flow.RecordFirstOffersTest)",
   "find": "    if not pick or \"entry\" not in pick:",
   "replace": "    if not pick:"
  },
  {
-  "file": "scripts/spark/flow/phase_readers.py",
+  "file": "scripts/spark/flow/pick_notes.py",
   "name": "P991: the board file refusal is asked of the needs as they are, not with the pick made (test_flow.RecordFirstOffersTest)",
   "find": "    problems = need_requirements.board_problems(plan.after(need[\"need\"], pick), plan.known, plan.entries, project)",
   "replace": "    problems = need_requirements.board_problems(plan.current, plan.known, plan.entries, project)"
  },
  {
-  "file": "scripts/spark/flow/phase_readers.py",
+  "file": "scripts/spark/flow/pick_notes.py",
   "name": "P991: a drawer board offer never says that spark cannot build from it (test_flow.RecordFirstOffersTest)",
-  "find": "            + ([flow_codes.NO_BOARD_FILE_MESSAGE % candidate_label(candidate)] if refusal else []))",
-  "replace": "            + [])"
+  "find": "(flow_codes.NO_BOARD_FILE_MESSAGE, board_file_refusal(project, plan, need, candidate))",
+  "replace": "(flow_codes.NO_BOARD_FILE_MESSAGE, None)"
  },
  {
-  "file": "scripts/spark/flow/phase_readers.py",
+  "file": "scripts/spark/flow/pick_notes.py",
   "name": "P991: a drawer board offer says a refusal that names no drawer entry, such as pick one board (test_flow.RecordFirstOffersTest)",
   "find": "    return next((problem[\"sentence\"] for problem in problems if problem[\"subject\"] == pick[\"entry\"]), None)",
   "replace": "    return next((problem[\"sentence\"] for problem in problems), None)"

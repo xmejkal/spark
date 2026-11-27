@@ -38,8 +38,8 @@
  {
   "file": "scripts/spark/flow/flow_page.py",
   "name": "P1135: a pick's confirm says its effect whole (test_flow_page.TheLessTextTest.test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part)",
-  "find": "(effect_lines(offer[\"effect\"]) if need else [offer[\"effect\"]])",
-  "replace": "[offer[\"effect\"]]"
+  "find": "effect_lines(offer[\"effect\"], offer[\"notes\"]) + stale",
+  "replace": "[offer[\"effect\"]] + list(offer[\"notes\"]) + stale"
  },
  {
   "file": "scripts/spark/flow/page_sections.py",
@@ -62,14 +62,14 @@
  {
   "file": "scripts/spark/flow/page_sections.py",
   "name": "P1135: the board-file line leaves the pick's row (test_flow_page.TheLessTextTest.test_a_pick_s_row_reads_its_part_and_what_you_have_and_keeps_its_board_file_line)",
-  "find": "line = '<p class=\"muted\">%s</p>' % _text(refused) if refused else \"\"",
+  "find": "line = '<p class=\"muted\" id=\"note-%s\">%s</p>' % (key, _text(\" \".join(offer[\"notes\"]))) if offer[\"notes\"] else \"\"",
   "replace": "line = \"\""
  },
  {
   "file": "scripts/spark/flow/page_sections.py",
   "name": "P1135: the developer fold drops a pick's have (test_flow_page.TheLessTextTest.test_the_developer_fold_keeps_every_key_label_and_effect_and_a_pick_s_have)",
-  "find": "_text(offer[\"label\"]), self._have(offer), _text(offer[\"effect\"]))",
-  "replace": "_text(offer[\"label\"]), \"\", _text(offer[\"effect\"]))"
+  "find": "_text(offer[\"label\"]), self._have(offer),",
+  "replace": "_text(offer[\"label\"]), \"\","
  },
  {
   "file": "scripts/spark/flow/show_flow.py",
@@ -110,7 +110,7 @@
  {
   "file": "scripts/spark/flow/flow_codes.py",
   "name": "P1135 review: a pick's Send box puts the wired sentence after the pick's own (test_flow.ThePartsNeedsTest.test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_the_wired_one_first, test_flow_page.TheLessTextTest.test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part)",
-  "find": "    return shared[:1] + [own.strip()] + shared[1:] if WIRED_PICK_MESSAGE in shared else [own.strip()] + shared",
-  "replace": "    return [own.strip()] + shared"
+  "find": "    first = shared[:1] if WIRED_PICK_MESSAGE in shared else []",
+  "replace": "    first = []"
  }
 ]
