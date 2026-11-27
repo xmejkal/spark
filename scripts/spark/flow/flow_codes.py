@@ -225,8 +225,10 @@ OWED_MESSAGE = "%s still lacks what spark needs: %s. Ask Claude how to fill it i
 NO_STANCE_MESSAGE = ("Spark cannot simulate %s yet. The parts list and the build go on, and a deploy asks your yes for "
                      "firmware that no simulation tested.")
 PICKED_BY = "%s for %s"
-#: The says line that names a need's pick (P991): the need, then each pick's name in quotes (“…”), ", " between two.
-PICKED_FOR_MESSAGE = "Picked for %s: %s."
+#: The line of a picked need (P991, P1135): each pick's name in quotes (“…”), ", " between two. The page and `show` put the
+#: tick of an ok status before it. KEEP_PICK is the first radio of a picked need on the page, its picks the same way.
+PICKED_SAID = "picked %s."
+KEEP_PICK = "keep %s"
 DROP_MESSAGE = "To drop this need, tell Claude: “drop the %s need”."
 REQUIREMENTS_MESSAGE = "Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay."
 SHELVE_MESSAGE = "May copy a part's record from spark's catalog into your store."
@@ -269,6 +271,9 @@ WIRED_BUILD_MESSAGE = ("If you wired the board, this build can move pins: compar
                        "power, and rewire what differs.")
 #: The fixed sentence of each kind of offer that can move a pin.
 WIRED_EFFECT = {PICK: WIRED_PICK_MESSAGE, BUILD_BOARD: WIRED_BUILD_MESSAGE}
+#: The sentences that every pick of one project says alike (P1135): the Send box says them apart, after the pick's own, so a
+#: Send of several picks says each once.
+PROJECT_EFFECTS = (WIRED_PICK_MESSAGE, LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAGE)
 
 #: The page's script (P829 PR 3): every word the script shows, for the kinds of offer the page sends (`SENDABLE`). Python
 #: writes them into the page's inert words block; the script fills in only a time, an offer's label or spark's own line.
@@ -388,7 +393,7 @@ BACK_LABEL, NEXT_LABEL = "Back to step %d", "Next: step %d"
 #: (phase, status). Each names who acts. A phase and status with none here gets PROBLEMS_NOW or COULD_NOT_RUN_NOW. A stale parts list is
 #: `STALE_REQUIREMENTS`'s (P1140).
 IDEA_NOW = "Tell Claude your goal in the chat, in your own words."
-PARTS_NOW = "%s no part yet: %s. Tell Claude a pick for each, or to set it aside."
+PARTS_NOW = "%s no part yet: %s. Pick a part for each, or ask Claude to set one aside."
 ONE_NEED_HAS, MANY_NEEDS_HAVE = "1 need has", "%d needs have"
 REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your picks."
 #: Every need set aside (P980): the parts phase is ok, but the parts list has no pick to be written from.

@@ -35,6 +35,7 @@ from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import Offer, Phase, SimulateReader  # noqa: E402
+from spark.flow.phase_readers import board_file_line, effect_lines, have_of, picked_sentence  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
 from spark.flow import flow_page, run_request  # noqa: E402
 from spark.flow import deploy_reading  # noqa: E402
@@ -90,6 +91,17 @@ def offers(envelope, phase):
 
 def says(envelope, phase):
     return next(each for each in envelope["data"]["phases"] if each["phase"] == phase)["says"]
+
+
+def needs_of(envelope):
+    """{need: (its picked names, its lines)} of the parts phase's `needs` (P1135), in their order."""
+    parts = next(each for each in envelope["data"]["phases"] if each["phase"] == "parts")
+    return {each["need"]: (each["picked"], each["says"]) for each in parts["needs"]}
+
+
+def need_says(envelope, need):
+    """The lines of one need of the parts phase (P1135): they left the phase's `says`."""
+    return needs_of(envelope)[need][1]
 
 
 def a_store():
@@ -214,11 +226,12 @@ class ThePhasesTest(FlowTest):
                                        "requirements": (NS, []), "build": (NS, []), "breadboard": (NS, []),
                                        "firmware": (NS, []), "simulate": (NS, []), "deploy": (NS, [])})  # P993: no board is picked, so no parts list
         self.assertEqual(said["data"]["stands_at"], "parts")
-        # P976: the refused pick is no offer; the says line counts it for each need. P991: the pick is named first, and the
-        # review: a refused pick is named, with who holds it.
-        self.assertEqual(says(said, "parts"), ["1 of 2 needs picked", "Picked for soil: “A soil probe”.",
-                                               "Not shown for soil, refused: %s.%s" % (HELD, LIST),
-                                               "Not shown for wet, refused: %s.%s" % (HELD, LIST)])
+        # P976: the refused pick is no offer; the says line counts it for each need. P991: the pick is named, and the
+        # review: a refused pick is named, with who holds it. P1135: the mark and the short line come from the parts
+        # reader's data, so each need's pick and lines are its own.
+        self.assertEqual(says(said, "parts"), ["1 of 2 needs picked"])
+        self.assertEqual(needs_of(said), {"soil": (["A soil probe"], ["Not shown for soil, refused: %s.%s" % (HELD, LIST)]),
+                                          "wet": ([], ["Not shown for wet, refused: %s.%s" % (HELD, LIST)])})
         effects = {offer["key"]: offer["effect"] for offer in said["data"]["phases"][2]["offers"]}
         self.assertEqual(effects["pick:wet:x-many"], "Saves “A soil probe” as the pick for the wet need in this project. Uses 1 of your “A soil "
                                                      "probe” for the wet. Adds this project to your list of projects. May note the choice in your history.")
@@ -842,15 +855,16 @@ class TheGuideTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True},
             {"id": "dry", "does": "sense", "what": "soil-moisture", "aside": True, "pick": [{"part": "x-many"}]}])
         said, _ = show(project)
-        # P976: the refused pick (x-held) of each need with offers is counted in its own line. P991: a pick is named first.
-        self.assertEqual((statuses(said)["parts"], says(said, "parts")), ("partial", [
-            "1 of 2 needs picked", "set aside: wet, dry", "Not shown for soil, refused: %s.%s" % (HELD, LIST),  # P991 review: named
-            "Picked for dry: “A soil probe”.", "Not shown for dry, refused: %s.%s" % (HELD, LIST)]))
+        # P976: the refused pick (x-held) of each need with offers is counted in its own line. P991: a pick is named. P1135:
+        # each need's pick and lines are its own, and a need set aside with no pick is none of them.
+        self.assertEqual((statuses(said)["parts"], says(said, "parts")), ("partial", ["1 of 2 needs picked", "set aside: wet, dry"]))
+        self.assertEqual(needs_of(said), {"soil": ([], ["Not shown for soil, refused: %s.%s" % (HELD, LIST)]),  # P991 review: named
+                                          "dry": (["A soil probe"], ["Not shown for dry, refused: %s.%s" % (HELD, LIST)])})
         self.assertFalse([key for key in offers(said, "parts") if key.startswith("pick:wet:")])
         self.assertTrue([key for key in offers(said, "parts") if key.startswith("pick:dry:")])
         guide = said["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["needs"], guide["now"]["says"], guide["set_aside"]),
-                         ("parts", ["you"], ["soil"], "1 need has no part yet: soil. Tell Claude a pick for each, or to set it aside.",
+                         ("parts", ["you"], ["soil"], "1 need has no part yet: soil. Pick a part for each, or ask Claude to set one aside.",
                           ["wet", "dry"]))
         self.assertEqual(guide["done"], ["idea", "needs"])
 
@@ -859,7 +873,7 @@ class TheGuideTest(FlowTest):
             {"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "pump", "does": "move", "what": "water"},
             {"id": "led", "does": "indicate", "what": "light"}])
         self.assertEqual(show(project)[0]["data"]["guide"]["now"]["says"],
-                         "3 needs have no part yet: soil, pump, led. Tell Claude a pick for each, or to set it aside.")
+                         "3 needs have no part yet: soil, pump, led. Pick a part for each, or ask Claude to set one aside.")
 
     def test_every_need_picked_or_set_aside_makes_the_parts_ok_and_the_parts_list_now(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
@@ -1115,7 +1129,7 @@ class TheReviewRoundTest(FlowTest):
         # P976: the refused pick is no offer; the says line counts it (x-held is refused too)
         self.assertNotIn("pick:wet:x-one", offers(said, "parts"))
         # P991 review: each refused pick is named; x-one is held by this project's own pick only, so no other holder
-        self.assertIn("Not shown for wet, refused: %s; “A soil probe” (too few free).%s" % (HELD, LIST), says(said, "parts"))
+        self.assertIn("Not shown for wet, refused: %s; “A soil probe” (too few free).%s" % (HELD, LIST), need_says(said, "wet"))
         self.assertNotIn("pick:soil:x-one", offers(said, "parts"))  # P976: the current pick is no offer
 
     def test_a_pick_is_refused_when_another_need_s_pick_cannot_get_its_part(self):
@@ -1125,7 +1139,7 @@ class TheReviewRoundTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture"}])
         said, _ = show(project)
         # P976: the refusal is said once, in the need's says line, and the need gets no offers
-        self.assertEqual([line for line in says(said, "parts") if "cannot get" in line],
+        self.assertEqual([line for line in need_says(said, "wet") if "cannot get" in line],
                          ["Spark can save no new pick for wet: the pick for soil cannot get “A soil probe” (1 owned, held by other — "
                           "1 picked here)."])  # P993
         self.assertEqual([key for key in offers(said, "parts") if key.startswith("pick:wet:")], [])
@@ -1147,7 +1161,7 @@ class TheReviewRoundTest(FlowTest):
         # P976: the refused pick is no offer; the says line counts it (x-held is refused too)
         self.assertNotIn("pick:wet:x-two", offers(said, "parts"))
         # P991 review: each refused pick is named with who else holds it
-        self.assertIn("Not shown for wet, refused: %s; “A soil probe” (too few free, held by other).%s" % (HELD, LIST), says(said, "parts"))
+        self.assertIn("Not shown for wet, refused: %s; “A soil probe” (too few free, held by other).%s" % (HELD, LIST), need_says(said, "wet"))
 
     def test_a_first_pick_frees_a_hold_given_by_hand_and_names_no_old_pick(self):
         (self.home / "drawer" / "many.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": "many",
@@ -1198,27 +1212,29 @@ class OffersPerNeedTest(FlowTest):
     def test_three_plausible_picks_are_offered_and_the_refused_one_is_counted(self):
         said, _ = show(self.project)
         self.assertEqual(offers(said, "parts"), ["pick:probe:c-1", "pick:probe:c-2", "pick:probe:c-3"])
-        # P991: the pick is named first
-        self.assertEqual(says(said, "parts"), ["1 of 1 needs picked", "Picked for probe: “Probe b-pick”.",  # P991 review: named
-                                               "Not shown for probe, refused: “Probe a-refused” (none free, held by other).%s" % LIST])
+        # P991: the pick is named. P1135: it and the need's lines are the need's own
+        self.assertEqual(says(said, "parts"), ["1 of 1 needs picked"])
+        self.assertEqual(needs_of(said), {"probe": (["Probe b-pick"], [  # P991 review: named
+            "Not shown for probe, refused: “Probe a-refused” (none free, held by other).%s" % LIST])})
 
     def test_a_fourth_plausible_pick_is_counted_and_not_offered(self):
         self.probe("c-4")
         said, _ = show(self.project)
         self.assertEqual(offers(said, "parts"), ["pick:probe:c-1", "pick:probe:c-2", "pick:probe:c-3"])
-        # P991: the full list, with the pick named first
-        self.assertEqual(says(said, "parts"),
-                         ["1 of 1 needs picked", "Picked for probe: “Probe b-pick”.",
-                          "Not shown for probe: 1 more pick; refused: “Probe a-refused” (none free, held by other).%s" % LIST])  # P991 review
+        # P991: the full list, with the pick named. P1135: it and the need's lines are the need's own
+        self.assertEqual(says(said, "parts"), ["1 of 1 needs picked"])
+        self.assertEqual(needs_of(said), {"probe": (["Probe b-pick"], [
+            "Not shown for probe: 1 more pick; refused: “Probe a-refused” (none free, held by other).%s" % LIST])})  # P991 review
 
     def test_with_none_refused_the_line_says_only_how_many_more(self):
         self.gone("a-refused")
         self.probe("c-4")
         self.probe("c-5")
         said, _ = show(self.project)
-        # P991: the full list, with the pick named first
-        self.assertEqual(says(said, "parts"), ["1 of 1 needs picked", "Picked for probe: “Probe b-pick”.",
-                                               "Not shown for probe: 2 more picks. Claude can list them with parts.py --match."])
+        # P991: the full list, with the pick named. P1135: it and the need's lines are the need's own
+        self.assertEqual(says(said, "parts"), ["1 of 1 needs picked"])
+        self.assertEqual(needs_of(said), {"probe": (["Probe b-pick"], [
+            "Not shown for probe: 2 more picks. Claude can list them with parts.py --match."])})
 
     def test_a_part_with_the_need_s_word_only_in_its_tags_is_offered_by_the_default_matcher(self):
         # word-overlap is the default (the PO's yes, 2026-11-21): same-words would not offer c-0
@@ -1232,8 +1248,8 @@ class OffersPerNeedTest(FlowTest):
         # the review of PR #1416: a need with no offer is never silent
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "odd", "does": "sense", "what": "quuxwobble"}])
         said, _ = show(project)
-        self.assertEqual((offers(said, "parts"), says(said, "parts")),
-                         ([], ["0 of 1 needs picked", "No pick fits odd by its words. Ask Claude to run parts.py --match."]))
+        self.assertEqual((offers(said, "parts"), says(said, "parts")), ([], ["0 of 1 needs picked"]))
+        self.assertEqual(needs_of(said), {"odd": ([], ["No pick fits odd by its words. Ask Claude to run parts.py --match."])})
 
     def test_a_need_with_no_candidate_at_all_has_no_line(self):
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "odd", "does": "keep-time", "what": "quuxwobble"}])
@@ -1328,7 +1344,7 @@ class RecordFirstOffersTest(FlowTest):
         # the review of PR #1448 (the PO: "even if taken"): the owned C6 held by two other projects is named, not only counted
         self.entry("c6", {"label": "my C6", "count": 2, "is": {"board": "xiao-esp32-c6"}, "used_in": {"p-a": 1, "p-b": 1}})
         said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "board", "does": "compute", "what": "microcontroller"}]))
-        line = next(line for line in says(said, "parts") if line.startswith("Not shown for board"))
+        line = next(line for line in need_says(said, "board") if line.startswith("Not shown for board"))
         self.assertIn("refused: “Seeed XIAO ESP32-C6” (none free, held by p-a, p-b).", line)
 
     def test_the_parts_phase_names_each_need_s_pick_by_its_name(self):
@@ -1339,13 +1355,94 @@ class RecordFirstOffersTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture", "pick": [{"entry": "many"}]},
             {"id": "dry", "does": "sense", "what": "soil-moisture"},
             {"id": "two", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}, {"entry": "spare"}]}])
-        lines = says(show(project)[0], "parts")
-        self.assertEqual(lines[0], "3 of 4 needs picked")
-        self.assertEqual([line for line in lines if line.startswith("Picked for")],
-                         ["Picked for soil: “A soil probe”.", "Picked for wet: “A soil probe”.",
-                          "Picked for two: “A soil probe”, “Spare probe from the shed”."])
-        self.assertLess(lines.index("Picked for soil: “A soil probe”."),
-                        min(number for number, line in enumerate(lines) if " for soil " in line or line.startswith("Not shown for soil")))
+        said = show(project)[0]
+        self.assertEqual(says(said, "parts")[0], "3 of 4 needs picked")
+        # P1135: each need's `picked`, by the names a person reads; show's need line puts the pick first (TheNeedLinesTest)
+        self.assertEqual({need: picked for need, (picked, _lines) in needs_of(said).items()},
+                         {"soil": ["A soil probe"], "wet": ["A soil probe"], "dry": [], "two": ["A soil probe", "Spare probe from the shed"]})
+
+
+def sentences(text):
+    """The sentences of an effect, which spark joins with one space after each full stop."""
+    return [said + "." for said in text[:-1].split(". ")]
+
+
+class ThePartsNeedsTest(FlowTest):
+    """P1135 (the PO: "its still way too much text"): the parts reader gives each need that counts its picks by name and its
+    own lines (`needs`), each pick offer what the person has of its part (`have`, in the sheet's words), and a pick's effect
+    in the Send box's lines, the sentences every pick of the project says apart and last."""
+
+    def a_part(self, part, entry=None):
+        """Put the soil probe `part` in the scratch catalog, and `entry` (a drawer entry's fields) in the drawer."""
+        (self.home / "catalog" / (part + ".json")).write_text(json.dumps({"schema": 1, "id": part, "name": "Probe " + part, "kind": "sensor",
+                                                                         "function": [{"does": "sense", "what": "soil-moisture"}]}))
+        if entry is not None:
+            (self.home / "drawer" / (part + ".json")).write_text(json.dumps(dict({"schema": 1, "label": part, "is": {"part": part}}, **entry)))
+
+    def test_the_needs_follow_the_needs_file_and_a_picked_need_names_its_record(self):
+        said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "wet", "does": "sense", "what": "soil-moisture"},
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"entry": "many"}]}]))
+        self.assertEqual(list(needs_of(said)), ["wet", "soil"])
+        self.assertEqual(needs_of(said)["soil"][0], ["A soil probe"])  # the drawer entry "many" is the record x-many
+        self.assertEqual(says(said, "parts"), ["1 of 2 needs picked"])
+
+    def test_every_other_phase_and_a_parts_phase_with_problems_or_that_could_not_run_have_no_needs(self):
+        said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL))
+        self.assertEqual({phase["phase"]: phase["needs"] for phase in said["data"]["phases"] if phase["phase"] != "parts"},
+                         {phase: None for phase in PHASES if phase != "parts"})
+        problems, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "soil", "does": "sense"}]))
+        broken = Path(tempfile.mkdtemp()) / "plant-alarm"
+        (broken / ".spark").mkdir(parents=True)
+        (broken / ".spark" / "needs.json").write_text("{broken")
+        could_not, _ = show(broken)
+        for envelope, status in ((problems, "problems"), (could_not, "could-not-run")):
+            parts = next(phase for phase in envelope["data"]["phases"] if phase["phase"] == "parts")
+            self.assertEqual((parts["status"], parts["needs"]), (status, None))
+
+    def test_a_hand_written_project_s_parts_phase_has_no_need(self):
+        parts = next(phase for phase in show(a_built_project())[0]["data"]["phases"] if phase["phase"] == "parts")
+        self.assertEqual(parts["needs"], [])
+
+    def test_have_reads_the_drawer_in_the_sheet_s_words(self):
+        # P1135 fix 5: an unknown count and a count of many read as the sheet reads them, in your drawer (sheet.py `_have`)
+        self.assertEqual([have_of({"owned": owned}) for owned in (1, "many", "unknown", 0)],
+                         ["in your drawer", "in your drawer", "in your drawer", "to get"])
+        self.assertEqual(have_of({"owned": 1, "held_here": 1}), "yours")
+
+    def test_each_pick_offer_says_what_you_have_of_its_part_and_any_other_offer_nothing(self):
+        self.a_part("x-none")
+        said, _ = show(with_needs(a_built_project(), SOIL))
+        have = {offer["key"]: offer["have"] for phase in said["data"]["phases"] for offer in phase["offers"]}
+        self.assertEqual((have["pick:soil:x-none"], have["pick:soil:x-many"], have["pick:soil:x-unknown"]),
+                         ("to get", "in your drawer", "in your drawer"))
+        self.assertIsNone(have["build"])
+        (self.home / "drawer" / "many.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": "many",
+                                                                    "is": {"part": "x-many"}, "used_in": {"plant-alarm": 1}}))
+        said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL))
+        self.assertEqual(offer_of(said, "pick:soil:x-many")["have"], "yours")
+
+    def test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_and_the_shared_ones_last(self):
+        self.a_part("x-none")
+        said, _ = show(with_needs(a_built_project(), SOIL))
+        effect = offer_of(said, "pick:soil:x-none")["effect"]
+        self.assertTrue(effect.startswith(flow_codes.WIRED_PICK_MESSAGE))  # wired_offer puts it first (fix 1)
+        lines = effect_lines(effect)
+        said_once = [sentence for line in lines for sentence in sentences(line)]
+        self.assertEqual(sorted(said_once), sorted(sentences(effect)))
+        self.assertEqual(len(said_once), len(set(said_once)))
+        self.assertEqual(lines[1:], list(flow_codes.PROJECT_EFFECTS))
+        self.assertIn(flow_codes.TO_GET_MESSAGE, lines[0])
+        self.assertEqual(effect_lines("Saves it. May note the choice in your history."), ["Saves it.", flow_codes.PICK_HISTORY_MESSAGE])
+
+    def test_the_board_file_line_is_found_in_an_effect_that_holds_it_and_in_no_other(self):
+        refused = " ".join((flow_codes.PICK_MESSAGE % ("Beetle", "board"), flow_codes.NO_BOARD_FILE_MESSAGE % "Beetle",
+                            flow_codes.PICK_HISTORY_MESSAGE))
+        self.assertEqual(board_file_line(refused), "Spark cannot build from this pick: it has no board file for “Beetle”.")
+        self.assertIsNone(board_file_line(" ".join((flow_codes.PICK_MESSAGE % ("Beetle", "board"), flow_codes.PICK_HISTORY_MESSAGE))))
+
+    def test_the_picked_sentence_names_each_pick_in_quotes(self):
+        self.assertEqual(picked_sentence(["A", "B"]), "picked “A”, “B”.")
 
 
 class FingerprintTest(FlowTest):
@@ -1720,10 +1817,10 @@ class TheOfferStepTest(FlowTest):
         self.assertEqual(lines[at:at + 3][:2], ["  " + NO_MODEL, "  SET ASIDE: soil"])
         self.assertIn("idea:", lines[at + 2])
 
-    def test_the_offers_in_data_keep_their_five_keys_and_no_step(self):
+    def test_the_offers_in_data_keep_their_six_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))
         self.assertEqual({tuple(offer) for phase in said["data"]["phases"] for offer in phase["offers"]},
-                         {("key", "label", "effect", "makes_stale", "part")})
+                         {("key", "label", "effect", "makes_stale", "part", "have")})
 
     def test_a_pick_offer_in_data_names_its_part_and_every_other_offer_null(self):
         """P1067 (D22: each fact on the page is in show): the page labels a pick's radio by its part."""

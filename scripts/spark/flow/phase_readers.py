@@ -38,9 +38,13 @@ NOT_SIMULATED_SAYS = {firmware_codes.NO_SIM_TOML: [flow_codes.NO_SIM_MESSAGE],
                       firmware_codes.NO_IMAGE: [flow_codes.NO_IMAGE_MESSAGE, flow_codes.SCENARIO_HINT]}
 #: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (the words of its button), its effect (plain
 #: sentences that name every write taking it makes), `makes_stale`, the phases it can make out of date (P829), `step`,
-#: the NextStep that runs it (offer_steps, P1030), and `part`, the name of a pick's part, else None (P1067: the page's radio
-#: says it). The JSON of `data` holds all but the step, which is in `next`.
-Offer = namedtuple("Offer", "key label effect makes_stale step part", defaults=(None,))
+#: the NextStep that runs it (offer_steps, P1030), `part`, the name of a pick's part, else None (P1067: the page's radio
+#: says it), and `have`, what the person has of a pick's part in the sheet's words (`have_of`, P1135), else None. The JSON
+#: of `data` holds all but the step, which is in `next`.
+Offer = namedtuple("Offer", "key label effect makes_stale step part have", defaults=(None, None))
+#: Value (P1135): one need of the parts phase that counts: its id, `picked` (its picks by the names a person reads, [] for
+#: none) and `says`, its own lines. Its pick offers are the phase's, by `pick_need`.
+PartsNeed = namedtuple("PartsNeed", "need picked says")
 #: The parts phase offers at most this many picks per need (P976, the PO, 2026-11-21: "so many unrelated things").
 OFFERS_PER_NEED = 3
 #: The verb of the need a board serves (`needs`' board need): a board is a plausible pick for it whatever its words.
@@ -50,13 +54,15 @@ HELD_FILES = {flow_codes.REQUIREMENTS: Path(REQUIREMENTS_FILE), flow_codes.BUILD
               flow_codes.BREADBOARD: Path(sheet.SHEET)}
 
 
-class Phase(namedtuple("Phase", "phase status mark by says offers")):
+class Phase(namedtuple("Phase", "phase status mark by says offers needs", defaults=(None,))):
     """Value: where one phase of a project stands: its name, its status (an outcome, a phase word of `flow_codes`, or None),
-    its glyph from MARKS, who does it, what it says (sentences for a person; a null value reads `unknown`) and its Offers."""
+    its glyph from MARKS, who does it, what it says (sentences for a person; a null value reads `unknown`), its Offers and
+    `needs`, the PartsNeeds of a parts phase that read its needs (P1135), else None."""
 
     def to_dict(self):
         return dict(self._asdict(), offers=[dict(key=offer.key, label=offer.label, effect=offer.effect, makes_stale=list(offer.makes_stale),
-                                                 part=offer.part) for offer in self.offers])
+                                                 part=offer.part, have=offer.have) for offer in self.offers],
+                    needs=None if self.needs is None else [need._asdict() for need in self.needs])
 
 
 class PhaseReader:
@@ -77,9 +83,9 @@ class PhaseReader:
         except (CodedMessageError, OSError) as unread:
             return self.phase(COULD_NOT_RUN, [str(unread)])
 
-    def phase(self, status, says, offers=()):
+    def phase(self, status, says, offers=(), needs=None):
         return Phase(self.PHASE, status, MARKS[status][1], self.BY,
-                     [flow_codes.UNKNOWN if said is None else said for said in says], list(offers))
+                     [flow_codes.UNKNOWN if said is None else said for said in says], list(offers), None if needs is None else list(needs))
 
 
 def read_requirements(project):
@@ -300,12 +306,25 @@ def board_file_refusal(project, plan, need, candidate):
     return next((problem["sentence"] for problem in problems if problem["subject"] == pick["entry"]), None)
 
 
-def picked_line(plan, need):
-    """The says line that names the need's picks (P991): each by the name a person reads (`PickPlan.name_of`), a drawer
-    entry of a record spark knows by the record's; None for a need with no pick."""
-    names = ["“%s”" % plan.name_of(next(iter(needs.as_record(pick, plan.known, plan.entries).values())))
-             for pick in need.get("pick") or []]
-    return flow_codes.PICKED_FOR_MESSAGE % (need["need"], ", ".join(names)) if names else None
+def picked_names(plan, need):
+    """The names of the need's picks (P991, P1135): each by the name a person reads (`PickPlan.name_of`), a drawer entry
+    of a record spark knows by the record's; [] for a need with no pick."""
+    return [plan.name_of(next(iter(needs.as_record(pick, plan.known, plan.entries).values())))
+            for pick in need.get("pick") or []]
+
+
+def picked_sentence(names):
+    """The one text of a need's picks (P1135), for the page and `show`: each name in quotes."""
+    return flow_codes.PICKED_SAID % ", ".join("“%s”" % name for name in names)
+
+
+def have_of(candidate):
+    """What the person has of `candidate` (a row of `needs.match`), in the sheet's have words (P1135), as `sheet._have`
+    decides them from the drawer: yours when this project holds a piece, to get when they own none, else in your drawer,
+    a count of many or unknown too."""
+    if candidate.get("held_here"):
+        return sheet.HAVE_YOURS
+    return sheet.HAVE_IN_DRAWER if candidate["owned"] else sheet.HAVE_TO_GET
 
 
 def pick_offer(project, need, candidate, listed, notes):
@@ -316,7 +335,29 @@ def pick_offer(project, need, candidate, listed, notes):
     said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)] + notes
     said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK),
-                 offer_steps.pick_step(project, need, pick_id, candidate_label(candidate)), candidate_label(candidate))
+                 offer_steps.pick_step(project, need, pick_id, candidate_label(candidate)), candidate_label(candidate),
+                 have_of(candidate))
+
+
+def effect_lines(effect):
+    """A pick's effect as the Send box's lines (P1135): its own sentences, then each of `flow_codes.PROJECT_EFFECTS` that
+    it holds, each once. Sentences are joined with one space, so each one is cut out whole."""
+    shared = [said for said in flow_codes.PROJECT_EFFECTS if said in effect]
+    own = " %s " % effect
+    for said in shared:
+        own = own.replace(" %s " % said, " ")
+    return [own.strip()] + shared
+
+
+def board_file_line(effect):
+    """The sentence of a pick's `effect` that says spark cannot build from the pick (NO_BOARD_FILE_MESSAGE, P991), or None:
+    the page keeps it on the pick's row (P1135)."""
+    start, end = flow_codes.NO_BOARD_FILE_MESSAGE.split("%s")
+    at = effect.find(start)
+    if at < 0:
+        return None
+    stop = effect.find(end, at + len(start))
+    return effect[at:stop + len(end)] if stop >= 0 else None
 
 
 def pick_need(key):
@@ -381,7 +422,8 @@ def set_aside(listed):
 class PartsReader(PhaseReader):
     """Strategy: the picks of the needs (`needs.match`): problems when a need cannot be matched, partial while some need
     that counts has no pick, and every candidate offered as a pick. A need set aside with no pick does not count, has no
-    pick offer and is named (P977)."""
+    pick offer and is named (P977). Each need that counts is one PartsNeed, with its picks by name and its own lines
+    (P1135); the phase says the count and what is set aside."""
 
     PHASE, BY = flow_codes.PARTS, flow_codes.BY_YOU
 
@@ -391,19 +433,19 @@ class PartsReader(PhaseReader):
             return self.phase(PROBLEMS, problem_lines(problems))
         if not matched:
             status, said = without_needs(project, self.PHASE)
-            return self.phase(status, [said])
+            return self.phase(status, [said], needs=[])
         open_needs, aside = counted(matched), [need["need"] for need in set_aside(matched)]
         picked = sum(1 for need in open_needs if need.get("pick"))
         status = OK if picked == len(open_needs) else flow_codes.PARTIAL if picked else flow_codes.NOT_STARTED
         # the list is read as the pick reads it: one that cannot be read stops this phase, as needs.match does
         plan, listed = needs.PickPlan(project), store.find_listed_name(project) is not None
-        picks = []
+        picks, parts = [], []
         said = [flow_codes.PICKED_MESSAGE % (picked, len(open_needs))] + ([flow_codes.ASIDE_MESSAGE % ", ".join(aside)] if aside else [])
         for need in open_needs:
             offered, lines = need_picks(project, need, plan, listed)
-            named = picked_line(plan, need)
-            picks, said = picks + offered, said + ([named] if named else []) + lines
-        return self.phase(status, said, picks)
+            picks += offered
+            parts.append(PartsNeed(need["need"], picked_names(plan, need), lines))
+        return self.phase(status, said, picks, parts)
 
 
 class RequirementsReader(PhaseReader):

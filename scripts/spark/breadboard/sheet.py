@@ -159,7 +159,8 @@ HAVE_YOURS, HAVE_IN_DRAWER, HAVE_TO_GET = "yours", "in your drawer", "to get"
 
 
 def _have(requirements_path, record_ids):
-    """{record id: yours | in your drawer | to get}, from the drawer; None when the project is not on the list."""
+    """{record id: yours | in your drawer | to get}, from the drawer; None when the project is not on the list. The flow's
+    pick offers say the same words of a candidate (`phase_readers.have_of`, P1135)."""
     name = store.find_listed_name(requirements_path.resolve().parent)
     if not name:
         return None
