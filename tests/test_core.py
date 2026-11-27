@@ -20,12 +20,13 @@ from spark.core import codes, outcomes  # noqa: E402
 from spark.core.codes import Code  # noqa: E402
 from spark.core.cli import (DEFAULT_RUN, FOLLOW_FAILED_MESSAGE, REFRESH_FAILED_MESSAGE, HelpText, RunOptions, TextReport,  # noqa: E402
                              refreshes, run_cli, run_operation)
-from spark.core.renderers import FlatJsonLine, FixFlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
+from spark.core.renderers import FlatJsonLine, FixFlatJsonLine, FullEnvelope, JsonEnvelope, step_command  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
 from spark.core.view_reporter import TextViewReporter  # noqa: E402
 from spark.core.operation import ASKS, COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, WRITES, Argument, Operation  # noqa: E402
-from spark.core.privacy import Privacy  # noqa: E402
+from spark.core.follow_up import STEP_LINE, FollowUp  # noqa: E402
+from spark.core.privacy import PastedLine, Privacy  # noqa: E402
 from spark.core.outside import OutsideWorld, ProgramRunner, build_bare_outside_world, build_outside_world, refuse_replies  # noqa: E402
 from spark.core.replies import AGENT, VALUE, GivenReplyStrategy, Question, Reply  # noqa: E402
 from spark.core.result import MARK_STOP, Finding, Headline, NextStep, OperationResult, envelope_item, output_schema  # noqa: E402
@@ -1192,6 +1193,39 @@ class TheFollowUpTest(unittest.TestCase):
         self.assertEqual(result.next[-1].argv, THEN.argv)
         self.assertNotIn("/opt/someone/p", result.next[-1].why)
         self.assertEqual(result.next[-1].why, privacy.mask_text(THEN.why))
+
+    def test_the_base_line_is_the_step_s_command_as_a_pasted_line(self):
+        # P1256: the one builder `step_command` writes the line, and a PastedLine keeps its paths through the mask
+        line = FollowUp().line(THEN)
+        self.assertIsInstance(line, PastedLine)
+        self.assertEqual(line, STEP_LINE % (step_command(THEN), THEN.why))
+
+    def test_a_follow_up_s_words_after_the_command_stand_before_why(self):
+        class Marking(FollowUp):
+            def after_command(self, step):
+                return " (yours)"
+        self.assertEqual(Marking().line(THEN), STEP_LINE % (step_command(THEN) + " (yours)", THEN.why))
+        self.assertEqual(FollowUp().after_command(THEN), "")
+
+    def test_a_word_that_starts_with_an_equals_sign_is_quoted(self):
+        # the review, refuter 2: shlex leaves `=ls` bare, and zsh runs it as the path of ls
+        self.assertTrue(step_command(THEN._replace(argv=["=ls", "a=b"])).endswith("/then.py '=ls' a=b"))
+
+    def test_a_why_with_a_line_end_stays_on_its_one_line(self):
+        # the review, refuter 5: the why goes through printable, so it cannot fake a line of spark's own
+        line = FollowUp().line(THEN._replace(why="a\n  next: rm -rf x — b"))
+        self.assertNotIn("\n", line)
+        self.assertTrue(line.endswith(" — a?  next: rm -rf x — b"), line)
+
+    def test_the_masked_run_keeps_the_real_paths_of_a_follow_up_s_line(self):
+        # P1256: masked, the line read `--project <project>`, which a shell reads as a redirection
+        class Then(FollowUp):
+            def steps(self, project):
+                return [THEN]
+        privacy = Privacy.of(Path("/opt/someone/p"), Path("/opt/store"), Path("/opt/home"), ())
+        result = self.followed(Writing(), Then(), privacy=privacy)
+        self.assertIn("--project /opt/someone/p", result.lines[-1])
+        self.assertNotIn("<project>", result.lines[-1])
 
     def test_the_flat_line_holds_next_last(self):
         said = OperationResult(None, next=[THEN]).to_envelope("t", "o")["next"]

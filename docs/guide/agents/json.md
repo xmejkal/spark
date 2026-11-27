@@ -307,7 +307,7 @@ P423 and P430 set these rules for the text output of `parts.py`, `look.py`, `dep
   with `<store>` (the store as `store.home()` finds it: SPARK_HOME, else XDG_DATA_HOME/spark, else ~/.local/share/spark),
   as `store_record` shows; any other path under your home starts with `~/`; a tools list's `account_env` value is `***`.
   A path to open or run keeps its real form: `data.run_in_terminal`, `data.board_log`, `data.commands`,
-  `data.repl_command`, each `next` step's `argv` and `env`, grant.py's `rm` line, an item whose code is in
+  `data.repl_command`, each `next` step's `argv` and `env`, the text's `next:` lines of the build and of a follow-up (P1256), grant.py's `rm` line, an item whose code is in
   `board_codes.PASTED_CODES` and every line that holds its sentence. Tokens are masked there too. Any other path to
   open: rebuild it from the store as `store.home()` finds it. deploy.py's yes question is masked too.
 - Exact reply: in the text of `live.py` a tab in the board's reply shows as `?`, so read `output` from `--json` for the exact reply.
