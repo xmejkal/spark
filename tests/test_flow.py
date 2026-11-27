@@ -416,8 +416,8 @@ class ThePhasesTest(FlowTest):
         project = a_built_project(stages={"board": "ok", "build": "ok", "simulation": "skipped"})
         said, code = show(project)
         self.assertEqual((code, statuses(said)["build"], marks(said)["build"]), (0, None, "·"))
-        self.assertEqual(says(said, "build")[1:], ["simulation: skipped", "Design checks: not run yet. Ask Claude to run them, for free.",
-                                                   "every part is skipped from the simulation, so spark did not judge the diagram"])
+        self.assertEqual(says(said, "build")[1:], ["simulation: skipped", "every part is skipped from the simulation, so spark did not judge the diagram",
+                                                   "Design checks: not run yet. Ask Claude to run them, for free."])
         self.assertEqual(said["data"]["stands_at"], "firmware")
         self.assertFalse([line for line in lines_of(project) if "✓ build" in line])
 
@@ -425,14 +425,14 @@ class ThePhasesTest(FlowTest):
         # P999: the build phase says why, in the code's own words, and has no status, as any skipped simulation alone
         said, code = show(a_project_built_with_no_simulation_now("pin_not_in_wokwi_part"))
         self.assertEqual((code, statuses(said)["build"]), (0, None))
-        self.assertEqual(says(said, "build")[-1], "not simulated: the design wires a board pin that the board's Wokwi part has "
+        self.assertEqual(says(said, "build")[-2], "not simulated: the design wires a board pin that the board's Wokwi part has "
                                                   "no pin for, so no diagram is written; the board built")
 
     def test_every_part_skipped_and_a_code_the_build_does_not_know_keep_the_every_part_line(self):
         for skipped in ("every_part_skipped", "no_such_code"):
             with self.subTest(code=skipped):
                 said, _ = show(a_project_built_with_no_simulation_now(skipped))
-                self.assertEqual(says(said, "build")[-1], "every part is skipped from the simulation, so spark did not judge the diagram")
+                self.assertEqual(says(said, "build")[-2], "every part is skipped from the simulation, so spark did not judge the diagram")
 
     def test_any_other_skipped_stage_makes_the_build_partly_done(self):
         for stages in ({"board": "ok", "footprint": "skipped", "build": "ok"},
@@ -683,6 +683,13 @@ class TheDesignChecksLineTest(FlowTest):
         write_page(project)
         self.assertIn("<p>%s</p>" % html.escape(line), (project / "page.html").read_text())
 
+    def test_the_line_is_the_build_row_s_last_clause_so_no_clause_follows_its_full_stop(self):
+        """P1255 fix D (the Chrome check): show joins a clause after a full stop with a space, so a lower-case clause after
+        the line read "... with you. every part is skipped ...". The line comes last of the build's notes."""
+        project = a_built_project(stages={"board": "ok", "build": "ok", "simulation": "skipped"})
+        row = next(row for row in lines_of(project) if " build: " in row)
+        self.assertTrue(row.endswith(self.NOT_RUN + " (claude)"), row)
+
     def test_a_board_only_build_says_the_line_only_with_a_record(self):
         self.assertEqual(says(show(a_board_only_project())[0], "build"), ["board only: nothing to wire, no board was built"])
         said, _ = show(self.kept(a_board_only_project(), "ok", ["2 check(s) found nothing"]))
@@ -842,7 +849,7 @@ class TheGuideTest(FlowTest):
         old_guide.pop("wired")
         self.assertEqual(guide, old_guide)
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (0, None, "firmware"))
-        self.assertEqual(says(said, "build")[-1], "No simulation: Wokwi has no model of this board. You test it on the real board.")
+        self.assertEqual(says(said, "build")[-2], "No simulation: Wokwi has no model of this board. You test it on the real board.")
 
     def test_a_new_board_only_record_of_a_board_wokwi_has_no_model_of_is_done_once_with_the_board_only_sentence(self):
         project = a_built_project(OK, {"board": "ok", "parts": "skipped", "schematic": "skipped", "footprint": "skipped",

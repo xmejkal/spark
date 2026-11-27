@@ -104,8 +104,8 @@
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "P1255: the build row drops the line (test_flow.TheDesignChecksLineTest.test_show_its_json_and_the_page_hold_the_same_line)",
-  "find": "        says += checked\n",
-  "replace": ""
+  "find": "        return phase._replace(says=list(phase.says) + checked)\n",
+  "replace": "        return phase\n"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",

@@ -458,31 +458,36 @@ class BuildReader(PhaseReader):
     """Strategy: the record of the last build (`.spark/build.json`): its status, or stale when the requirements file it was
     built from changed after it. A skipped stage is no pass (P878): an ok build on the board alone, or one whose simulation
     alone was skipped, says so and has no status, because a rebuild skips the same; any other skipped stage is partial. It
-    says the Design checks' line too (`checks_reading.design_line`, P1255), with a build or a record: the line carries its
-    own status word, and the build's mark stays the build's."""
+    says the Design checks' line last (`checks_reading.design_line`, P1255), with a build or a record: the line carries its
+    own status word, and the build's mark stays the build's. Last, because show joins a clause after a full stop with a
+    space, so a lower-case clause after the line would read as a broken sentence."""
 
     PHASE, BY = flow_codes.BUILD, flow_codes.BY_CLAUDE
 
     def read(self, project):
         record = BuildRecordStore(project).read()
+        built = record is not None and not board_only(record)
+        checked = [line for line in [checks_reading.design_line(project, built)] if line]  # P1255: the Design checks' line
+        phase = self.read_record(project, record)
+        return phase._replace(says=list(phase.says) + checked)
+
+    def read_record(self, project, record):
+        """The build's phase from its `record` (None: no build yet), before the Design checks' line."""
         offers = ([Offer(flow_codes.BUILD_BOARD, flow_codes.BUILD_LABEL, build_effect(project), makes_stale(project, flow_codes.BUILD_BOARD),
                          offer_steps.build_step(project))]
                   if (project / REQUIREMENTS_FILE).is_file() else [])
-        built = record is not None and not board_only(record)
-        checked = [line for line in [checks_reading.design_line(project, built)] if line]  # P1255: the Design checks' line
         if record is None:
-            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_BUILD_MESSAGE] + checked, offers)
+            return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_BUILD_MESSAGE], offers)
         says = [flow_codes.BUILT_MESSAGE % (record.get("at") or flow_codes.UNKNOWN, record.get("status") or flow_codes.UNKNOWN)]
         says += ["%s: %s" % (stage.get("name"), stage.get("status")) for stage in record.get("stages") or [] if stage.get("status") != OK]
         says += [flow_codes.MISSING_FACTS_MESSAGE % len(record["missing_facts"])] if record.get("missing_facts") else []
         says += [line for line in [earlier_dist(project)] if line]  # P1088: a dist/ the last build did not write (P816)
-        says += checked
         stale = why_build_stale(project, record)
         if stale:
             return self.phase(flow_codes.STALE, [stale] + says, offers)
         skipped = skipped_stages(record) if record.get("status") == OK else []
         if skipped and board_only(record):
-            return self.phase(None, [flow_codes.BOARD_ONLY_BUILD_MESSAGE] + checked)  # no offer: a rebuild skips the same stages
+            return self.phase(None, [flow_codes.BOARD_ONLY_BUILD_MESSAGE])  # no offer: a rebuild skips the same stages
         if skipped == [SIMULATION.name] and stops_only_for_no_model(record):
             return self.phase(None, says + [flow_codes.NO_SIMULATION_NOW], offers)  # P1207: Wokwi has no model of the board
         if skipped == [SIMULATION.name]:
