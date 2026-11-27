@@ -16,8 +16,8 @@ reviewing anything.
 
 ## 2. Run the checks
 
-One command, one argument. It finds the circuit, the rules, the fab package and the board
-definitions inside the project, and **prints every path it resolved** before it reports anything.
+One command, one argument. It finds the circuit, the rules, the fab package and the
+folder's boards, and **prints every path it resolved** before it reports anything.
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py --project .
@@ -30,7 +30,7 @@ boards, and spark handles one board per project today: the reason names an absol
 
 | check | owns |
 | --- | --- |
-| vendor-truth | the pin map, re-derived from the vendor's own header |
+| vendor-truth | the pin map of each of the folder's boards, re-derived from the vendor's own header |
 | buildability | drill vs the pin that goes in it, annular ring, via class, package vs value |
 | the-order | the BOM against the schematic it came from |
 | physics | trace current, capacitor derating, resistor dissipation (every resistor, an LED's series resistor too), I²C rise time |

@@ -56,7 +56,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project .
 ```
 
 The lines are a dated record, not today's output: the last line now ends in a count of the `?` lines, and the
-four-resistor `!` line now names its cause (below).
+four-resistor `!` line now names its cause (below), and the `boards` line now names the folder's board alone ([the rule](../agents/json.md), P1325).
 
 <!-- output: run 2026-10-05, spark 0.6.0 -->
 ```text

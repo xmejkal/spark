@@ -17,6 +17,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -361,7 +362,7 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         (root / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "no-such-board"}))
         (root / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
         boards = [note for note in self._resolved(root, boards=None) if note.startswith("boards ")]
-        self.assertEqual(boards, ["boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6"])
+        self.assertEqual(boards, ["boards       1 definition(s): xiao-esp32-c6"])  # P1325: the one board the build uses
 
     def test_a_second_note_of_a_given_input_is_dropped(self):
         notes = ["project      /p (the project up from here, the one the build reads)",
@@ -813,6 +814,150 @@ class TheBuildsProjectIsCheckedTest(unittest.TestCase):
         self.assertNotIn("project", answer)
 
 
+class TheFolderBoardIsCheckedTest(unittest.TestCase):
+    """
+    P1325: vendor-truth checks the folder's boards (the board of each requirements file, else the project's board), and
+    every board only when none names one with a record. A shelf board the build never uses is no input.
+    """
+
+    def setUp(self):
+        self.store = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.store, True)
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.store)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        shelf = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
+        shelf["vendor"] = {"arduino_variant": "NO_SUCH_VARIANT"}  # no cache holds its header
+        (self.store / "shelf" / "boards").mkdir(parents=True)
+        self.shelf_path = self.store / "shelf" / "boards" / "shelf-board.json"
+        self.shelf_path.write_text(json.dumps(shelf))
+        self.project = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.project, True)
+        (self.project / ".spark").mkdir()
+
+    def _requirements(self, folder, text):
+        (folder / "requirements.json").write_text(text if isinstance(text, str) else json.dumps(text))
+
+    def _answer(self, folder, *flags):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = check_all.main(["--project", str(folder), "--json", *flags])
+        return code, json.loads(out.getvalue())
+
+    def _boards(self, answer):
+        return [note for note in answer["resolved"] if note.startswith("boards ")]
+
+    def _vendor_truth(self, answer):
+        return next(result for result in answer["results"] if result["check"] == "vendor-truth")
+
+    def test_a_project_that_names_a_board_checks_that_board_alone(self):
+        self._requirements(self.project, {"board": "xiao-esp32-c6"})
+        code, answer = self._answer(self.project)
+        self.assertEqual(self._boards(answer), ["boards       1 definition(s): xiao-esp32-c6"])
+        self.assertEqual(self._vendor_truth(answer)["status"], check.OK)
+        self.assertEqual(code, 0, answer)
+        self.assertFalse(any("shelf-board" in note for note in answer["resolved"]), answer["resolved"])
+
+    def test_a_project_that_names_no_board_checks_every_board(self):
+        _, answer = self._answer(self.project)
+        boards = self._boards(answer)
+        self.assertEqual(boards[0], "boards       3 definition(s): firebeetle2-esp32s3, shelf-board, xiao-esp32-c6")
+        self.assertEqual(len(boards), 2, boards)
+        self.assertTrue(boards[1].startswith("boards       not resolved ("), boards)
+        self.assertEqual(self._vendor_truth(answer)["status"], check.COULD_NOT_RUN)
+
+    def test_a_name_with_no_record_checks_every_board(self):
+        self._requirements(self.project, {"board": "no-such-board"})
+        _, answer = self._answer(self.project)
+        boards = self._boards(answer)
+        self.assertEqual(boards[0], "boards       3 definition(s): firebeetle2-esp32s3, shelf-board, xiao-esp32-c6")
+        self.assertTrue(boards[1].startswith("boards       not resolved (no board definition for 'no-such-board'"), boards)
+
+    def test_the_flag_wins(self):
+        self._requirements(self.project, {"board": "xiao-esp32-c6"})
+        code, answer = self._answer(self.project, "--boards", str(self.shelf_path))
+        self.assertEqual(self._boards(answer), ["boards       %s (given)" % self.shelf_path])
+        self.assertEqual(self._vendor_truth(answer)["status"], check.COULD_NOT_RUN)
+        self.assertEqual(code, check_all.EXIT_COULD_NOT_RUN)
+
+    def test_a_sub_folder_checks_its_own_board_under_a_project_that_names_none(self):
+        car = self.project / "car"
+        car.mkdir()
+        self._requirements(car, {"board": "firebeetle2-esp32s3"})
+        _, answer = self._answer(car)
+        self.assertEqual(self._boards(answer), ["boards       1 definition(s): firebeetle2-esp32s3"])
+
+    def test_a_sub_folder_board_wins_over_the_project_board_as_the_build_reads_it(self):
+        # loader.load reads wanted.get("board") of the folder's requirements.json (loader.py:466): the two agree
+        self._requirements(self.project, {"board": "xiao-esp32-c6"})
+        car = self.project / "car"
+        car.mkdir()
+        self._requirements(car, {"board": "firebeetle2-esp32s3"})
+        _, answer = self._answer(car)
+        self.assertEqual(self._boards(answer), ["boards       1 definition(s): firebeetle2-esp32s3"])
+        self.assertEqual(loader.read(car / "requirements.json").get("board"), "firebeetle2-esp32s3")
+        self.assertEqual(check.folder_boards(check.CheckedFolder.at(car)), [loader.read(car / "requirements.json")["board"]])
+
+    def test_a_folder_in_no_project_checks_the_board_its_requirements_name(self):
+        bare = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, bare, True)
+        self._requirements(bare, {"board": "xiao-esp32-c6"})
+        _, answer = self._answer(bare)
+        self.assertEqual(self._boards(answer), ["boards       1 definition(s): xiao-esp32-c6"])
+        self.assertIsNone(answer["project"])
+
+    def test_two_requirements_files_check_both_boards(self):
+        # "the car and its remote": rail_loads_in globs *requirements.json, so the boards do too
+        self._requirements(self.project, {"board": "firebeetle2-esp32s3"})
+        (self.project / "remote.requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        _, answer = self._answer(self.project)
+        self.assertEqual(self._boards(answer), ["boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6"])
+
+    def test_a_file_that_names_no_board_takes_the_selection_beside_another_that_does(self):
+        (self.project / "boards").mkdir()
+        (self.project / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "firebeetle2-esp32s3"}))
+        self._requirements(self.project, {"parts": []})
+        (self.project / "remote.requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        _, answer = self._answer(self.project)
+        self.assertEqual(self._boards(answer), ["boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6"])
+
+    def test_a_sub_folder_with_a_broken_file_says_its_own_sentence(self):
+        self._requirements(self.project, {"board": "xiao-esp32-c6"})
+        car = self.project / "car"
+        car.mkdir()
+        self._requirements(car, "{not json")
+        _, answer = self._answer(car)
+        boards = self._boards(answer)
+        self.assertEqual(boards[0], "boards       3 definition(s): firebeetle2-esp32s3, shelf-board, xiao-esp32-c6")
+        self.assertEqual(len(boards), 2, boards)
+        self.assertIn(str(car), boards[1])
+
+    def test_a_requirements_file_the_build_refuses_checks_every_board_and_says_why(self):
+        self._requirements(self.project, {"board": "xiao-esp32-c6", "signals": [{"needs": []}]})  # a signal with no name
+        _, answer = self._answer(self.project)
+        boards = self._boards(answer)
+        self.assertEqual(boards[0], "boards       3 definition(s): firebeetle2-esp32s3, shelf-board, xiao-esp32-c6")
+        self.assertEqual(len(boards), 2, boards)
+        self.assertTrue(boards[1].startswith("boards       not resolved (") and "signals[0]" in boards[1], boards)
+
+    def test_a_sub_folder_whose_board_is_no_text_says_its_own_sentence(self):
+        self._requirements(self.project, {"board": "xiao-esp32-c6"})
+        car = self.project / "car"
+        car.mkdir()
+        self._requirements(car, {"board": 5})
+        _, answer = self._answer(car)
+        boards = self._boards(answer)
+        self.assertEqual(len(boards), 2, boards)
+        self.assertTrue(boards[1].startswith("boards       not resolved (") and str(car) in boards[1], boards)
+
+    def test_a_broken_requirements_file_checks_every_board_and_names_the_file(self):
+        self._requirements(self.project, "{not json")
+        _, answer = self._answer(self.project)
+        boards = self._boards(answer)
+        self.assertEqual(boards[0], "boards       3 definition(s): firebeetle2-esp32s3, shelf-board, xiao-esp32-c6")
+        self.assertTrue(boards[1].startswith("boards       not resolved (") and "requirements.json" in boards[1], boards)
+
+
 class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
     """
     A second board silently switched six of seven checks off and still reported `ok`.
@@ -1025,11 +1170,12 @@ class TheCheckListItselfTest(unittest.TestCase):
         # runner knows how to feed. Each needs a reason, because an exclusion list is also how a check gets quietly
         # switched off.
         #   check       — the runner itself.
+        #   checked_folder — the folder `--project` names and its project (P319): a Value, not a check.
         #   check_codes — the leaf of the checks' refusal codes (P693): a table, not a check.
         #   physics_board — the netlist that `physics_check` reads (P708): a Value, not a check.
         #   check_design, checks_operations — check_all as an Operation on the core and its table (P804): the runner's frontend.
         # `check_spine` (it BUILDS a design) and `check_commit` (it measures a commit) are not in the area.
-        NOT_A_CHECK = {"__init__", "check", "check_codes", "check_design", "checks_operations", "physics_board"}
+        NOT_A_CHECK = {"__init__", "check", "check_codes", "checked_folder", "check_design", "checks_operations", "physics_board"}
         on_disk = {path.stem for path in (ROOT / "scripts" / "spark" / "checks").glob("*.py")} - NOT_A_CHECK
 
         wired = set()

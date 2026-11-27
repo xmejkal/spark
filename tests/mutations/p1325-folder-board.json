@@ -1,0 +1,56 @@
+[
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: every board is checked again",
+    "find": "    return sorted(board for board in boards if board in every) or every",
+    "replace": "    return every"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: a folder board with no record is checked alone",
+    "find": "    return sorted(board for board in boards if board in every) or every",
+    "replace": "    return sorted(boards) or every"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: a folder that names no board gets no board",
+    "find": "    return sorted(board for board in boards if board in every) or every",
+    "replace": "    return sorted(board for board in boards if board in every)"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: the folder's requirements are not read",
+    "find": "        boards.append(named or marked)",
+    "replace": "        boards.append(marked)"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: a broken requirements.json stops the board list",
+    "find": "        except (loader.DesignError, board_records.BoardError) as broken:",
+    "replace": "        except ZeroDivisionError as broken:"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: the note names every board, but one is checked",
+    "find": "\", \".join(ids)",
+    "replace": "\", \".join(sorted(board_records.available(project)))"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: a resolved folder board still says not resolved",
+    "find": "            board_records.definition_path(project, board)\n",
+    "replace": "            board_records.definition_path(project)\n"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: the folder's own sentence is not said",
+    "find": "            raise reason",
+    "replace": "            pass"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: only the first requirements file is read",
+    "find": "    return list(dict.fromkeys(board for board in boards or [marked] if board))",
+    "replace": "    return list(dict.fromkeys(board for board in boards[:1] or [marked] if board))"
+  }
+]

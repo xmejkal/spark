@@ -88,7 +88,7 @@ With the package in the project, `check_all` finds it and the-order answers `[ok
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project .
 ```
 
-A dated record again: today's last line also counts the `?` lines.
+A dated record again: today's last line also counts the `?` lines, and the `boards` line now names the folder's board alone (P1325).
 
 <!-- output: run 2026-10-06, spark 0.6.0 -->
 ```text

@@ -71,7 +71,6 @@
 "R6:scripts/spark/checks/build_check.py:Finding": 1,
 "R6:scripts/spark/checks/check.py:BuildCheck": 1,
 "R6:scripts/spark/checks/check.py:Check": 1,
-"R6:scripts/spark/checks/check.py:CheckedFolder": 1,
 "R6:scripts/spark/checks/check.py:OrderCheck": 1,
 "R6:scripts/spark/checks/check.py:PhysicsCheck": 1,
 "R6:scripts/spark/checks/check.py:RulesCheck": 1,

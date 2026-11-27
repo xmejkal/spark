@@ -119,7 +119,9 @@ The fields:
 **In the text output,** `problems` are the `-` lines, `unchecked` the `!` lines and `unmeasured` the `?` lines.
 
 After a build that did not write `dist/`, a second `circuit` line in `resolved` says the last build, with its time, did not write it (P816).
-The requirements files, which buildability and physics also read, are not listed in `resolved`. vendor-truth checks every board definition available, including the library's.
+The requirements files, which buildability and physics also read, are not listed in `resolved`. vendor-truth checks the folder's boards (P1325; the block above is a dated record that lists every board), by this rule:
+- The board that each `*requirements.json` of the folder names, else the project's board. When none names a board with a definition, or a requirements file cannot be read or the build refuses it (signals, parts), every board available: the project's, the shelf's and spark's library. A second `boards` line gives the reason (`not resolved (...)`). `--boards` replaces both.
+- A project on a shelf board with no cached header still ends `could-not-run` (`no_cached_header`): copy `$SPARK_HOME/shelf/boards/<id>.json` into the project's `boards/` and run `check_vendor_pins.py` once without `--offline`, which downloads the vendor's header from the internet. A design built with `assign_pins.py --board` is checked against the board the requirements name; pass `--boards` for the built one.
 
 ## The other scripts' JSON
 
