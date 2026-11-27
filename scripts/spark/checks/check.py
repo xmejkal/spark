@@ -39,13 +39,13 @@ days after that changed (audit B18, 2026-09-29). Five checks running clean will 
 """
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
 
 from spark.records import board_records
 from spark.build import build_record
 from spark.design import design_codes, fab, loader
 from spark.checks import check_codes
+from spark.checks.checked_folder import FOLDER, PROJECT, CheckedFolder
 from spark.core.outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, answer
 from spark.core.result import Finding, Refusal
 
@@ -300,52 +300,11 @@ CHECKS = [
 #: and got two of them wrong: it globbed `boards/*.json`, which matches the selection file rather
 #: than a board definition, and it never passed `--design` or `--firmware` at all — so the
 #: flagship check was permanently unasked and the review still called itself complete.
-#: Each input is read in one of two roots (P319): the FOLDER `--project` names, where the build and the requirements
-#: are, or the PROJECT the build reads, where the records are.
-FOLDER, PROJECT = "folder", "project"
 CONVENTIONS = {
     "circuit": (FOLDER, list(loader.CIRCUIT_PATHS)),
     "rules": (PROJECT, [str(loader.RULES_PATH)]),
     "package": (FOLDER, ["*-gerbers.zip", "fab/*.zip"]),
 }
-
-
-@dataclass(frozen=True)
-class CheckedFolder:
-    """
-    The folder `--project` names and the project the build reads for it (P319): one job, to say where each input is
-    read. A board folder with no `.spark/` builds with its parent's records, so its checks read the parent's too.
-    """
-    folder: Path
-    project: Path
-
-    @classmethod
-    def at(cls, folder):
-        """The folder and its project, found the way `loader.project_for` finds a requirements file's."""
-        folder = Path(folder)
-        if not folder.is_dir():
-            # a folder that is not there walked up to a project nobody named
-            raise loader.DesignError("no directory at %s — `--project` names a project directory", folder,
-                                     code=design_codes.NO_PROJECT_FOLDER)
-        project = board_records.project_or_library(folder.resolve())
-        return cls(folder, folder if project == folder.resolve() else project)  # the folder as given, when it is one
-
-    @classmethod
-    def named(cls, project):
-        """Value: (the CheckedFolder of `--project`, None), (None, None) when none is named, or (None, the Refusal that
-        says why the folder cannot be read)."""
-        try:
-            return (cls.at(project) if project else None), None
-        except loader.DesignError as broken:
-            return None, Refusal(str(broken), check_codes.PROJECT_UNUSABLE)
-
-    def root(self, where):
-        """The root a `CONVENTIONS` entry is read in."""
-        return self.project if where == PROJECT else self.folder
-
-    def elsewhere(self):
-        """Whether the records come from a project other than the folder itself."""
-        return self.project != self.folder
 
 
 #: {input: the sentence that says how to choose between its matches}. An input not here gets "name one with --<it>".

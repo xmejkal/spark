@@ -441,7 +441,7 @@ class TheChecksAreaTest(unittest.TestCase):
     P1208), and each CLI defines `main` only."""
     CHECKS = ROOT / "scripts" / "spark" / "checks"
     #: The modules of the area, by the names of its page (`areas/checks.md`).
-    MODULES = ["build_check", "check", "check_codes", "check_design", "checks_operations", "order_check", "physics_board", "physics_check", "rules_check", "vendor_pins_check"]
+    MODULES = ["build_check", "check", "check_codes", "check_design", "checked_folder", "checks_operations", "order_check", "physics_board", "physics_check", "rules_check", "vendor_pins_check"]
     CLIS = ["check_all.py", "check_bom.py", "check_footprints.py", "check_physics.py", "check_vendor_pins.py",
             "compare_design.py"]
 

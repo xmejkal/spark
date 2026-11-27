@@ -1025,11 +1025,12 @@ class TheCheckListItselfTest(unittest.TestCase):
         # runner knows how to feed. Each needs a reason, because an exclusion list is also how a check gets quietly
         # switched off.
         #   check       — the runner itself.
+        #   checked_folder — the folder `--project` names and its project (P319): a Value, not a check.
         #   check_codes — the leaf of the checks' refusal codes (P693): a table, not a check.
         #   physics_board — the netlist that `physics_check` reads (P708): a Value, not a check.
         #   check_design, checks_operations — check_all as an Operation on the core and its table (P804): the runner's frontend.
         # `check_spine` (it BUILDS a design) and `check_commit` (it measures a commit) are not in the area.
-        NOT_A_CHECK = {"__init__", "check", "check_codes", "check_design", "checks_operations", "physics_board"}
+        NOT_A_CHECK = {"__init__", "check", "check_codes", "checked_folder", "check_design", "checks_operations", "physics_board"}
         on_disk = {path.stem for path in (ROOT / "scripts" / "spark" / "checks").glob("*.py")} - NOT_A_CHECK
 
         wired = set()

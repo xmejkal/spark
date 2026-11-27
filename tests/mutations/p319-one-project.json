@@ -1,36 +1,36 @@
 [
  {
-  "file": "scripts/spark/checks/check.py",
+  "file": "scripts/spark/checks/checked_folder.py",
   "name": "a non-directory is accepted",
   "find": "        if not folder.is_dir():",
   "replace": "        if False:"
  },
  {
-  "file": "scripts/spark/checks/check.py",
+  "file": "scripts/spark/checks/checked_folder.py",
   "name": "the folder as given is never kept",
   "find": "folder if project == folder.resolve() else project)",
   "replace": "project)"
  },
  {
-  "file": "scripts/spark/checks/check.py",
+  "file": "scripts/spark/checks/checked_folder.py",
   "name": "the folder is compared by the wrong test",
   "find": "folder if project == folder.resolve() else project)",
   "replace": "folder if project != folder.resolve() else project)"
  },
  {
-  "file": "scripts/spark/checks/check.py",
+  "file": "scripts/spark/checks/checked_folder.py",
   "name": "root always the folder",
   "find": "return self.project if where == PROJECT else self.folder",
   "replace": "return self.folder"
  },
  {
-  "file": "scripts/spark/checks/check.py",
+  "file": "scripts/spark/checks/checked_folder.py",
   "name": "root always the project",
   "find": "return self.project if where == PROJECT else self.folder",
   "replace": "return self.project"
  },
  {
-  "file": "scripts/spark/checks/check.py",
+  "file": "scripts/spark/checks/checked_folder.py",
   "name": "elsewhere always false",
   "find": "return self.project != self.folder",
   "replace": "return False"
