@@ -3,7 +3,8 @@
 Card: [P1292 #1859](https://github.com/xmejkal/spark/issues/1859), split from P1286 #1852 (its O1). The plan was
 checked by the architecture lens (Opus) and the refuter (Opus); the delegated council (the tech lead, the architect and
 the PO assistant, all on Opus) answered its open choices and gave the build fixes. Rows 1 to 16 are the plan check's,
-rows 17 to 28 the delegated council's, and rows 29 on the build's. This file holds the acted, raised and rejected
+rows 17 to 28 the delegated council's, rows 29 to 33 the build's, and rows 34 on the PR review's: the lens
+(architecture, Opus) and the refuter (Opus). This file holds the acted, raised and rejected
 findings only. 2026-11-27.
 
 | # | claim | source | status | evidence / where it went |
@@ -41,3 +42,12 @@ findings only. 2026-11-27.
 | 31 | the map's row of `outside.py` moved, because test_check_spine imports it now | the build | acted | `tools/map.py --write` |
 | 32 | the plan's read-count and raise tests used `mock.patch.object`, which T2 refuses in a test file | the build, test_architecture | acted | the closing line still says the firmware now after the project moved on to a simulate now; `steps(None)` raises TypeError; both rows killed by hand |
 | 33 | `test_json_contracts.test_check_spine_adds_missing_facts_beside_status_only_when_the_record_lacks_a_level` expects a `next` key, which held only P517's look step; there show's now is the idea with no step, so `next` is absent and the text ends with `NOW (idea): ...` | the build, test_json_contracts | acted | spark-main approved the intended contract change: test_json_contracts' expected keys drop `next` (old → new: [check, kept, missing_facts, next, stages, status] → [check, kept, missing_facts, stages, status]), because a kept build at the idea phase names no step now |
+| 34 | the closing line can print a secret that show masks: a failed run's log named like a secret printed `wifipass1234.log`, where show prints `***.log`; `test_the_closing_line_is_masked` proved a mask that check_spine never applies | PR refuter (1, reproduced), PR lens (2) | acted | 6e508074: `closing_line` masks with `show_flow.privacy_for(project)`, show's own mask; a test with that log; the core test goes through `run_cli`; one mutation row, killed by hand |
+| 35 | the closing line can print a home or store path that show masks | PR refuter (1) | rejected | every NOW sentence is filled with a phase name, a count, need ids, a log's `.name` or fixed words, never a path; and fix 6e508074 masks paths too |
+| 36 | "byte for byte" in flow.md is false while show masks and the build does not | PR lens (2), PR refuter (3) | acted | true again after 6e508074; flow.md adds "with show's mask" (c7e191bc) |
+| 37 | json.md's "an empty `next` means ... the text then ends with show's NOW line" is untrue (the build again, nothing open, steps that raise) and keyed to the wrong condition (a research step and the line) | PR lens (1), PR refuter (2) | acted | c7e191bc: json.md, flow.md and commands/build.md say "when show names no step and something is open" |
+| 38 | `test_guide_now_line_is_the_first_line_of_guide_lines` compares the function with its own caller | PR lens (3), PR refuter (4) | acted | 6f74baee: it compares with `lines_of(project)[0]`, the line `flow.py show` prints |
+| 39 | the `library` subtest and `answer`'s `library` and `folder` parameters guard nothing since `firmware_next_steps` went | PR lens (4), PR refuter (5) | acted | c18e3c8c: removed; the problem and could-not-run cases stand |
+| 40 | run_scenario's check greps for "says_now", which `FlowFollowUp(None, None, True)` passes; assert on the instance | PR lens (5) | acted | 7ae935b5, with the refuter's fix (6): run_scenario.py has no HELP and makes `FlowFollowUp()` in `main`, so the test asserts its source holds `follow_up=FlowFollowUp())` |
+| 41 | "a frontend makes one instance per run", but check_spine's HELP is one instance per process; safe, because `steps` resets the reading and `closing_line` takes it | PR lens (6), PR refuter (7) | raised | P1318 [#1895](https://github.com/xmejkal/spark/issues/1895), one home for each Operation's follow-up, made once per run |
+| 42 | a kept build into a folder that is no spark project now ends with `NOW (idea): Tell Claude your goal in the chat, in your own words.`, where it printed no line before | PR refuter (8, reproduced) | raised | P1319 [#1896](https://github.com/xmejkal/spark/issues/1896), filed by spark-main |
