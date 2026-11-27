@@ -199,8 +199,10 @@ sentences say is for you to judge. An offer is a key, such as pick:soil:x-led, w
 such as Build the board), its effect (plain sentences that name every write it makes), makes_stale (the phases it can
 make out of date, only those that hold something now), part (a pick's part, else null), have (what you have of a
 pick's part, in the breadboard sheet's words: yours, in your drawer or to get; else null) and notes, a pick's notes as
-plain sentences, [] for none (P1180). The text says a pick's notes on a line of its own under its need's line. flow.py
-show runs no offer."""
+plain sentences, [] for none (P1180), and own_part, the board's own part that serves the need, such as onboard button,
+else null: a board's pick for a need that does not compute names it in its label, and its first note says when a
+compute need picked that board (P1136). The text says a pick's notes on a line of its own under its need's line.
+flow.py show runs no offer."""
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS,)
     data_keys = ("phases", "stands_at", "fingerprint", "guide", "deploy", "name", "title", "stamp", "artifact")

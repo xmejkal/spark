@@ -525,9 +525,11 @@ to rank meant a second copy (P211).
 One thing a need can match: a record with the drawer entries that say they are it, or a drawer entry with no record.
 It lives in `scripts/spark/sourcing/matching.py` as `Offer`. `parts.py --offer KEY` prints its whole text. **The
 failure behind it:** a chooser saw only a score and a label for a candidate, not what the part says of itself. The
-flow's offer is another word (a person reads it as a button, or as a choice in a need's row for a pick, [the rule](docs/guide/agents/flow.md#the-page-script)): a step a phase lists, `{key, label, effect, makes_stale, part, have, notes}` (`phase_readers.Offer`,
+flow's offer is another word (a person reads it as a button, or as a choice in a need's row for a pick, [the rule](docs/guide/agents/flow.md#the-page-script)): a step a phase lists, `{key, label, effect, makes_stale, part, have, notes, own_part}` (`phase_readers.Offer`,
 P829), where `have` says what the person has of a pick's part in the breadboard sheet's words (P1135) and `notes` are a
-pick's notes, plain sentences from `pick_notes` (P1180). An offer's `notes` are not show-flow's `notes` (the secrets
+pick's notes, plain sentences from `pick_notes` (P1180), and `own_part` names *the board's own part*: the part a board
+carries itself that serves a need that does not compute, such as its onboard button, by the first of the board's words
+for that need (P1136). An offer's `notes` are not show-flow's `notes` (the secrets
 files it cannot read) and not `FlowPage.notes` (the page's fixed notes).
 
 ### Station, and place

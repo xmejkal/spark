@@ -184,7 +184,7 @@ the wiring of a built project (the lines before power, then the steps, one at a 
 the project holds: the breadboard, and the schematic and the PCB that the build with --keep kept as files. No tick on
 a phase that is not ok. Only the build with --keep draws the schematic and the PCB. The page reads the project's files and its board logs, and cannot see your wiring or what the board shows now. In
 the parts fold each need has a row: its pick with a tick, each part it may pick with what you have of it and its notes, muted
-(P1180), then the need's own lines (P1135). Every other offer is a %s with its label, or a choice in a need's row for a pick; its effect stands in its Send box and in the developer
+(P1180), then the need's own lines (P1135). A board's own part says so (P1136). A Send box scrolls into view as it opens. Every other offer is a %s with its label, or a choice in a need's row for a pick; its effect stands in its Send box and in the developer
 fold, which also says a pick's have and its notes. A pick on the NOW line says its notes under NEXT. The page's <body> carries data-fingerprint (the first 12 hex digits of the
 fingerprint) and data-written (the newest change time of .spark/needs.json, requirements.json and .spark/build.json).
 Only /spark:page publishes the page.""" % flow_codes.BUTTON_WORD
