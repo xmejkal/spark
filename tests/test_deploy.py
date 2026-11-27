@@ -437,6 +437,24 @@ class TheGuardedPrintTest(ProjectCase):
         self.assertTrue(json.loads(said)["next"][0]["argv"][1].endswith("/a\u202eb"))  # a pasted place: --json keeps it raw
 
 
+    def test_a_relative_project_with_a_line_break_fakes_no_line_and_shows_as_the_placeholder(self):
+        # P1320, the card's own: the project is named absolute in the sentence, flat, and Privacy masks its printable form
+        parent = self.project.parent
+        (parent / "p\nfix: rm -rf ~").mkdir()
+        here = os.getcwd()
+        os.chdir(parent)
+        try:
+            code, _, problems, _ = self.deploy("--project", "p\nfix: rm -rf ~", "--dry-run")
+            _, said, _, _ = self.deploy("--project", "p\nfix: rm -rf ~", "--dry-run", "--json")
+        finally:
+            os.chdir(here)
+        self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
+        self.assertEqual([line for line in problems.split("\n") if line.startswith("fix: rm")], [], problems)
+        self.assertIn("no sim/wokwi.toml in <project>: build", problems)
+        sentence = json.loads(said)["unchecked"][0]["sentence"]
+        self.assertTrue(sentence.startswith("no sim/wokwi.toml in <project>: build"), sentence)
+
+
 class TheHelpTest(unittest.TestCase):
     """P937 (the PO, 2026-11-20): each paragraph of deploy.py --help in its place: the stages' `why:` lines are
     DeployImage's, so they come before the CLI's own --json and exit codes."""

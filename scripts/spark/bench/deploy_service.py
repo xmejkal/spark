@@ -31,6 +31,7 @@ from spark.firmware import sleep_calls
 from spark.firmware.project_image import DeployError
 from spark.core import codes
 from spark.core.events import Event
+from spark.core.text_guards import flat_line
 
 #: Value: what `plan` returns. `flasher` is the Flasher, `commands` are the flash commands it builds, `mpremote` is
 #: the board shell's command, and `notes` are sentences for the person. `image_sha256` is the image that `deploy` gave the
@@ -136,7 +137,7 @@ class DeployService:
         image = image_evidence.image_of(self.project, self.evidence)
         why = self.evidence.why_not_ready(image)
         if why:
-            raise DeployError(why + self.evidence.way_out(image), reason=board_codes.EVIDENCE_REFUSES)
+            raise DeployError.of_lines((why + self.evidence.way_out(image)).split("\n"), reason=board_codes.EVIDENCE_REFUSES)
         project_flasher = self.platform.make_flasher()
         shell_command = self.platform.make_shell_command()
         notes = self.evidence.notes(image)
@@ -179,7 +180,7 @@ class DeployService:
                     self._run_flash(command, planned.flasher, consent, retry=index == 0)
                 except (OSError, subprocess.CalledProcessError) as failed:
                     hint = planned.flasher.boot_hint
-                    raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""),
+                    raise FlashError("`%s` failed (%s)%s", shlex.join(command), failed, ": " + hint if hint else "",
                                      reason=board_codes.FLASH_FAILED)
         return planned._replace(image_sha256=image_sha256)
 
@@ -230,8 +231,9 @@ class DeployService:
             try:
                 consent.require_ready()
             except deploy_gate.GateClosedError as shut:  # the first try ran: the board may be erased
-                raise FlashError("`%s` failed (%s), and its retry did not run: %s" % (shlex.join(command), failed, shut),
-                                 reason=shut.reason)  # the yes ended: grant_ended
+                first, *more = str(shut).split("\n")  # P1320: a stop such as NO_TERMINAL keeps its own line under the head
+                raise FlashError.of_lines([flat_line("`%s` failed (%s), and its retry did not run: %s", shlex.join(command), failed, first)]
+                                          + more, reason=shut.reason)  # the yes ended: grant_ended
             self.run(command, check=True)
 
     def verify(self, look, planned):
