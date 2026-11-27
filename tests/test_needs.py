@@ -2099,7 +2099,7 @@ class TheNeedsDropTest(unittest.TestCase):
         said, _ = run(["--needs-drop", str(self.project), "soil"])
         self.assertEqual([note["sentence"] for note in said["notes"]],
                          ["requirements.json still lists x-soil: run parts.py --requirements %s or edit the file, then build. "
-                          "If the firmware imported its signal, run import_firmware.py." % self.project])
+                          "If the firmware imported its signal, run check_firmware.py." % self.project])
         elsewhere, _ = run(["--needs-drop", str(self.project), "alarm"])
         self.assertEqual(elsewhere["notes"], [])
 

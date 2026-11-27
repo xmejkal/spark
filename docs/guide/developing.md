@@ -73,7 +73,7 @@ The suite still reads source for rules about the code itself:
 A golden is a file with the expected output of one script run. `tests/test_golden_bench.py` keeps the goldens in
 `tests/golden/`, for `look.py`, `deploy.py`, `grant.py --check`, `live.py` and `reach.py`
 ([P380](https://github.com/xmejkal/spark/issues/487)), and `tests/test_golden_firmware.py` those of `run_scenario.py`,
-`flash_image.py` and `import_firmware.py` in `tests/golden-firmware/`
+`flash_image.py` and `check_firmware.py` in `tests/golden-firmware/`
 ([P683](https://github.com/xmejkal/spark/issues/920)): its `wokwi-cli` shim runs `tests/fake_wokwi_cli.py` with a fake
 token only, so no golden spends a Wokwi minute. `tests/test_golden_breadboard.py` keeps those of `breadboard.py` in
 `tests/golden-breadboard/` ([P686](https://github.com/xmejkal/spark/issues/924)): each Case copies a fixture of
@@ -94,7 +94,7 @@ change what a script prints, write that op's goldens again, read `git diff tests
 
 ```sh
 SPARK_HOME=<scratch> SPARK_ACCEPT=look python3 -m unittest tests.test_golden_bench   # writes look's goldens, then fails
-SPARK_HOME=<scratch> SPARK_ACCEPT=run-scenario python3 -m unittest tests.test_golden_firmware   # or flash-image, import-firmware
+SPARK_HOME=<scratch> SPARK_ACCEPT=run-scenario python3 -m unittest tests.test_golden_firmware   # or flash-image, check-firmware
 SPARK_HOME=<scratch> SPARK_ACCEPT=breadboard python3 -m unittest tests.test_golden_breadboard
 SPARK_HOME=<scratch> SPARK_ACCEPT=check-all python3 -m unittest tests.test_golden_checks   # or the op of another check CLI
 SPARK_HOME=<scratch> SPARK_ACCEPT=check-spine python3 -m unittest tests.test_golden_design   # or assign-pins, emit-board, emit-footprint, init-project

@@ -1,5 +1,5 @@
 """
-The firmware goldens (P683, #920, W6-F1): what run_scenario.py, flash_image.py and import_firmware.py print today, kept
+The firmware goldens (P683, #920, W6-F1): what run_scenario.py, flash_image.py and check_firmware.py print today, kept
 in tests/golden-firmware/.
 
 A helper module beside golden_bench.py, no tests in it: tests/test_golden_firmware.py runs each Case. A Case runs one
@@ -70,8 +70,8 @@ CASES = [
     Case("flash-image-could-not-run-files-not-written.txt", "flash_image.py",
          ["--project", PROJECT, "--micropython", "micropython.bin", "--files", "firmware", "-o", "flash.bin"], 2,
          (("firmware/big.bin", bytes(3 << 20)),)),
-    Case("import-firmware-ok.json", "import_firmware.py", [PROJECT, "--json"], 0, (GOOD_MODULE,)),
-    Case("import-firmware-problems.json", "import_firmware.py", [PROJECT, "--json"], 1, (GOOD_MODULE, RAISING_MODULE)),
+    Case("check-firmware-ok.json", "check_firmware.py", ["--project", PROJECT, "--json"], 0, (GOOD_MODULE,)),
+    Case("check-firmware-problems.json", "check_firmware.py", ["--project", PROJECT, "--json"], 1, (GOOD_MODULE, RAISING_MODULE)),
 ]
 
 

@@ -313,6 +313,16 @@ nobody has run it on a spark project yet, so treat the first run as the check.
 
 ## Simulate it — for real, with the values set in the test
 
+First run the free check of the firmware ([P1208](https://github.com/xmejkal/spark/issues/1757)):
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/check_firmware.py --project .
+```
+
+It imports each module of `firmware/` with stand-ins for the board's modules and runs the project's own `tests/`. It
+needs no `sim/`, no board and no token, and it writes nothing (`check_firmware.py --help`). If it says ok, the next step
+is the scenario below. If a module does not import or an own test fails, fix that first: the paid run would fail on it.
+
 Every part record says how it is simulated (`simulation`: a Wokwi part standing in, a custom
 chip kept beside the record and compiled to WebAssembly by `wokwi-cli chip compile`, or a skip
 with its reason), so the one command's last stage needs no table anywhere else. To run a scenario, with a Wokwi

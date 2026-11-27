@@ -29,17 +29,18 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.firmware import import_child  # noqa: E402
-import import_firmware  # noqa: E402
+import check_firmware  # noqa: E402
 from spark.firmware import import_probe  # noqa: E402
+from spark.firmware.firmware_check import CheckFirmware  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 
 
 STAND_IN = ROOT / "scripts" / "spark" / "firmware" / "stand_in" / "machine.py"
 #: framebuf.py and micropython.py live here: the check puts this folder after the firmware's own.
 FALLBACK = STAND_IN.parent / "fallback"
-SCRIPT = ROOT / "scripts" / "import_firmware.py"
+SCRIPT = ROOT / "scripts" / "check_firmware.py"
 #: Long enough to see a loop is a loop, short enough for the suite.
-LOOP_TIMEOUT_S = "0.5"
+LOOP_TIMEOUT_S = 0.5
 
 
 def a_stand_in(name="machine"):
@@ -470,21 +471,23 @@ def a_project(**modules):
     return project
 
 
-def run_command(*argv):
-    """import_firmware.main in this process, as (exit code, stdout); each module still imports in a process of its own."""
+def run_command(project, *flags, import_timeout_s=None):
+    """check_firmware.main in this process, as (exit code, stdout); each module still imports in a process of its own. A test
+    that needs a shorter import timeout gives it as the Operation's keyword (v2-2: there is no --timeout)."""
     out = io.StringIO()
+    operation = CheckFirmware(import_timeout_s=import_timeout_s) if import_timeout_s else None
     with contextlib.redirect_stdout(out):
-        code = import_firmware.main([str(argument) for argument in argv])
+        code = check_firmware.main(["--project", str(project)] + [str(flag) for flag in flags], operation=operation)
     return code, out.getvalue()
 
 
-def answer_for(project, *flags):
-    code, out = run_command(project, "--json", *flags)
+def answer_for(project, *flags, import_timeout_s=None):
+    code, out = run_command(project, "--json", *flags, import_timeout_s=import_timeout_s)
     return code, json.loads(out)
 
 
 def module_named(answer, name):
-    return next(entry for entry in answer["modules"] if entry["module"] == name)
+    return next(entry for entry in answer["data"]["modules"] if entry["module"] == name)
 
 
 class AModuleThatImportsIsOkTest(unittest.TestCase):
@@ -529,7 +532,7 @@ class AModuleThatImportsIsOkTest(unittest.TestCase):
         project = a_project(pins="BUTTON = 4\n", light="import pins\nBUTTON = pins.BUTTON\n")
         code, answer = answer_for(project)
         self.assertEqual(code, outcomes.EXIT_OK, answer)
-        self.assertEqual(sorted(entry["module"] for entry in answer["modules"]), ["light", "pins"])
+        self.assertEqual(sorted(entry["module"] for entry in answer["data"]["modules"]), ["light", "pins"])
 
     def test_a_firmware_that_imports_a_pin_the_pins_module_lost_to_a_dropped_need_raises_naming_it(self):
         # P514: --needs-drop leaves pins.py and the firmware alone, so the import check is what finds the signal that went
@@ -545,20 +548,20 @@ class AModuleThatImportsIsOkTest(unittest.TestCase):
         (project / "firmware" / "lib" / "driver.py").write_text("LEVEL = 1\n")
         code, answer = answer_for(project)
         self.assertEqual(code, outcomes.EXIT_OK, answer)
-        self.assertEqual([entry["module"] for entry in answer["modules"]], ["light"], "a driver is not firmware to import")
+        self.assertEqual([entry["module"] for entry in answer["data"]["modules"]], ["light"], "a driver is not firmware to import")
 
     def test_main_py_is_left_unrun(self):
         project = a_project(main="open('main-ran', 'w').close()\n", light="x = 1\n")
         code, answer = answer_for(project)
         self.assertEqual(code, outcomes.EXIT_OK, answer)
-        self.assertEqual([entry["module"] for entry in answer["modules"]], ["light"])
+        self.assertEqual([entry["module"] for entry in answer["data"]["modules"]], ["light"])
         self.assertFalse(list(project.rglob("main-ran")), "main.py ran")
 
     def test_boot_py_is_left_unrun_too(self):
         project = a_project(boot="open('boot-ran', 'w').close()\n", light="x = 1\n")
         code, answer = answer_for(project)
         self.assertEqual(code, outcomes.EXIT_OK, answer)
-        self.assertEqual([entry["module"] for entry in answer["modules"]], ["light"])
+        self.assertEqual([entry["module"] for entry in answer["data"]["modules"]], ["light"])
         self.assertFalse(list(project.rglob("boot-ran")), "boot.py ran")
 
     def test_importing_leaves_no_bytecode_in_the_person_s_folder(self):
@@ -652,13 +655,13 @@ class TheChildGivesTimeMicroPythonsNamesTest(unittest.TestCase):
 
     def test_a_long_sleep_at_import_does_not_wait(self):
         project = a_project(slow="import time\ntime.sleep_ms(10_000)\ntime.sleep_us(10_000_000)\n")
-        _, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
+        _, answer = answer_for(project, import_timeout_s=LOOP_TIMEOUT_S)
         self.assertEqual(module_named(answer, "slow")["status"], "imported", answer)
 
     def test_a_wait_on_ticks_ms_times_out_because_it_is_always_zero(self):
         project = a_project(wait=("import time\nstart = time.ticks_ms()\n"
                                   "while time.ticks_diff(time.ticks_ms(), start) < 100:\n    pass\n"))
-        _, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
+        _, answer = answer_for(project, import_timeout_s=LOOP_TIMEOUT_S)
         self.assertEqual(module_named(answer, "wait")["status"], "timed out", answer)
 
     def test_real_time_stays_real(self):
@@ -769,7 +772,7 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
 
     def test_the_timeout_is_the_one_asked_for(self):
         project = a_project(slow="import time\ntime.sleep(3)\n")
-        _, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
+        _, answer = answer_for(project, import_timeout_s=LOOP_TIMEOUT_S)
         self.assertEqual(module_named(answer, "slow")["status"], "timed out")
         self.assertIn("within 0.5 s", module_named(answer, "slow")["detail"])
 
@@ -786,7 +789,7 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
 
     def test_a_module_that_loops_at_import_is_cut_off_and_told_to_use_a_function(self):
         project = a_project(spin="while True:\n    pass\n", pins="BUTTON = 4\n")
-        code, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
+        code, answer = answer_for(project, import_timeout_s=LOOP_TIMEOUT_S)
         self.assertEqual(code, outcomes.EXIT_PROBLEMS, answer)
         self.assertEqual(module_named(answer, "spin")["status"], "timed out")
         self.assertIn("function that main.py calls", module_named(answer, "spin")["detail"])
@@ -796,22 +799,22 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
         project = a_project(main="while True:\n    pass\n")
         code, answer = answer_for(project)
         self.assertEqual((code, answer["status"]), (outcomes.EXIT_PROBLEMS, outcomes.PROBLEMS), answer)
-        self.assertIn("main.py", answer["problems"][0])
-        self.assertIn("move the code out of main.py", answer["problems"][0])
+        self.assertIn("main.py", answer["problems"][0]["sentence"])
+        self.assertIn("move the code out of main.py", answer["problems"][0]["sentence"])
 
     def test_main_py_and_the_pin_map_alone_are_the_same_problem(self):
         project = a_project(main="while True:\n    pass\n", pins="BUTTON = 4\n")
         code, answer = answer_for(project)
         self.assertEqual(code, outcomes.EXIT_PROBLEMS, answer)
-        self.assertIn("move the code out of main.py", answer["problems"][0])
+        self.assertIn("move the code out of main.py", answer["problems"][0]["sentence"])
 
     def test_a_comment_only_boot_py_does_not_make_a_main_py_with_the_loop_importable(self):
         # F4, irrigation's exact case: the stock boot.py is comments, and the loop is still in main.py.
         project = a_project(boot="# boot.py -- run on boot-up\n", pins="BUTTON = 4\n", main="while True:\n    pass\n")
         code, answer = answer_for(project)
         self.assertEqual(code, outcomes.EXIT_PROBLEMS, answer)
-        self.assertIn("move the code out of main.py", answer["problems"][0])
-        self.assertEqual([entry["module"] for entry in answer["modules"]], ["pins"])
+        self.assertIn("move the code out of main.py", answer["problems"][0]["sentence"])
+        self.assertEqual([entry["module"] for entry in answer["data"]["modules"]], ["pins"])
 
     def test_an_empty_firmware_folder_is_the_same_problem(self):
         code, answer = answer_for(a_project())
@@ -820,16 +823,44 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
     def test_a_module_not_imported_carries_its_code_and_one_imported_carries_none(self):
         # P684 (W6-F2): an agent decides on the code, never on the detail's words
         project = a_project(light="x = 1\n", broken="raise KeyError('k')\n", spin="while True:\n    pass\n")
-        _, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
-        self.assertEqual([(entry["module"], entry.get("code")) for entry in answer["modules"]],
+        _, answer = answer_for(project, import_timeout_s=LOOP_TIMEOUT_S)
+        self.assertEqual([(entry["module"], entry.get("code")) for entry in answer["data"]["modules"]],
                          [("broken", "import_failed"), ("light", None), ("spin", "import_timeout")])
         self.assertEqual(sorted(module_named(answer, "broken")), ["code", "detail", "module", "status"])
 
     def test_nothing_to_import_and_no_folder_have_their_codes_in_the_library(self):
-        problems = import_probe.look(a_project(main="while True:\n    pass\n"), 5)[1]
+        problems = import_probe.look(a_project(main="while True:\n    pass\n"), 5, subprocess.run)[1]
         self.assertEqual([problem.code for problem in problems], ["nothing_to_import"])
-        unchecked = import_probe.look(Path(tempfile.mkdtemp()), 5)[2]
+        unchecked = import_probe.look(Path(tempfile.mkdtemp()), 5, subprocess.run)[2]
         self.assertEqual([gap.code for gap in unchecked], ["no_firmware_folder"])
+
+
+class LookRunsThroughTheGivenRunTest(unittest.TestCase):
+    """P1208: the import check starts each child through the `run` it is given, so the outside world is the caller's."""
+
+    def test_each_module_runs_through_run(self):
+        project = a_project(light="x = 1\n", pins="BUTTON = 4\n")
+        calls = []
+
+        def recording_run(command, **options):
+            calls.append((command, options))
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        modules, problems, unchecked = import_probe.look(project, 5, recording_run)
+        self.assertEqual([(entry["module"], entry["status"]) for entry in modules], [("light", "imported"), ("pins", "imported")])
+        self.assertEqual((problems, unchecked), ([], []))
+        self.assertEqual(len(calls), 2)
+        for command, options in calls:
+            self.assertEqual(command[1:3], ["-I", "-B"])
+            self.assertEqual(options["cwd"], str((project / "firmware").resolve()))
+
+    def test_a_run_that_times_out_is_a_timed_out_module(self):
+        def too_slow(command, **options):
+            raise subprocess.TimeoutExpired(command, options["timeout"])
+
+        modules, problems, _ = import_probe.look(a_project(light="x = 1\n"), 0.25, too_slow)
+        self.assertEqual(modules[0]["status"], "timed out")
+        self.assertEqual([problem.code for problem in problems], ["import_timeout"])
 
 
 def with_package(project, name, init="x = 1\n"):
@@ -858,7 +889,7 @@ class APackageIsFirmwareToo(unittest.TestCase):
         (project / "firmware" / "data").mkdir()
         (project / "firmware" / "data" / "table.py").write_text("raise ValueError\n")
         _, answer = answer_for(project)
-        self.assertEqual([entry["module"] for entry in answer["modules"]], ["light"])
+        self.assertEqual([entry["module"] for entry in answer["data"]["modules"]], ["light"])
 
 
 class WhenItCannotLookTest(unittest.TestCase):
@@ -866,7 +897,7 @@ class WhenItCannotLookTest(unittest.TestCase):
         empty = Path(tempfile.mkdtemp())
         code, answer = answer_for(empty)
         self.assertEqual((code, answer["status"]), (outcomes.EXIT_COULD_NOT_RUN, outcomes.COULD_NOT_RUN), answer)
-        self.assertIn("firmware", answer["unchecked"][0])
+        self.assertIn("firmware", answer["unchecked"][0]["sentence"])
 
     def test_the_text_answer_names_each_module_and_the_verdict(self):
         project = a_project(light="x = 1\n", broken="raise KeyError('k')\n")
@@ -877,13 +908,14 @@ class WhenItCannotLookTest(unittest.TestCase):
 
     def test_the_json_keeps_its_shape(self):
         _, answer = answer_for(a_project(light="x = 1\n"))
-        self.assertEqual(sorted(answer), ["modules", "problems", "status", "tool", "unchecked"])
-        self.assertEqual(sorted(answer["modules"][0]), ["detail", "module", "status"])
+        self.assertEqual(sorted(answer), ["data", "envelope", "next", "notes", "op", "problems", "status", "tool", "truncated", "unchecked"])
+        self.assertEqual(sorted(answer["data"]), ["imports", "modules", "project", "tests"])
+        self.assertEqual(sorted(answer["data"]["modules"][0]), ["detail", "module", "status"])
 
     def test_help_says_what_it_does_and_leaves_alone(self):
         done = subprocess.run([sys.executable, str(SCRIPT), "--help"], capture_output=True, text=True)
         self.assertEqual(done.returncode, 0)
-        for said in ("usage:", "main.py", "stand-in", "--timeout", "--json", "ADC", "I2S", "framebuf",
+        for said in ("usage:", "main.py", "stand-in", "--project", "tests/", "--json", "ADC", "I2S", "framebuf",
                      "sleep_ms", "proves that the names exist and the module-level calls ran"):
             self.assertIn(said, done.stdout)
         self.assertNotIn("nothing else", done.stdout)
