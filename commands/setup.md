@@ -37,7 +37,7 @@ the dry run shows it as `cannot:`. A global line, such as `npm install -g bun`, 
 If anything reads `[????]`, first see exactly what installing them would run:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <names from the last line> --project . --dry-run
+${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install '<name>' '<name>' … --project . --dry-run
 ```
 
 Show the person those commands and ask **once**: *install them now?* A line marked *chosen by this
@@ -45,7 +45,7 @@ project's .spark/tools.json* came from the design's own file, not from spark —
 can put any command there — so say so plainly before the yes. With a yes, the same without `--dry-run`:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <names from the last line> --project .
+${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install '<name>' '<name>' … --project .
 ```
 
 Each installs the way its kind does, in the person's own space: an npm tool into the project, which needs its

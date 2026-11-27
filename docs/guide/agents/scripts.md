@@ -9,8 +9,8 @@ Part of the [guide for AI agents](../agents.md).
 ```sh
 git clone https://github.com/xmejkal/spark
 export CLAUDE_PLUGIN_ROOT="$PWD/spark"
-cd <the gadget's project folder>        # not the clone's folder, and not your home
-python3 "$CLAUDE_PLUGIN_ROOT/scripts/init_project.py" --project . --board <id>
+cd "<the gadget's project folder>"        # not the clone's folder, and not your home
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/init_project.py" --project . --board '<id>'
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/tools.py" --status --project .
 ```
 

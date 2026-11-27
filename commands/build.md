@@ -329,8 +329,8 @@ with its reason), so the one command's last stage needs no table anywhere else. 
 account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci), first the free checks, then the run:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml --dry-run --json
-${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml --json
+${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/'<name>'.scenario.yaml --dry-run --json
+${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/'<name>'.scenario.yaml --json
 ```
 
 Decide on its envelope (op `run-scenario`, [its JSON](../docs/guide/agents/firmware-codes.md#run_scenariopys-envelope), P1078): the status,

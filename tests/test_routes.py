@@ -387,7 +387,7 @@ class ThePageCommandTest(unittest.TestCase):
         # a declaration that fails must not leave a published page with no id kept: the next run would publish a second one
         text = " ".join(self.PAGE.read_text().split())
         published = text.index("Call `publish_files` with one file")
-        kept = text.index("flow.py page --project . --artifact <id> --json")
+        kept = text.index("flow.py page --project . --artifact '<id>' --json")
         declared = text.index("Call `read_declaration` for its version, then `declare_capabilities`")
         self.assertLess(published, kept)
         self.assertLess(kept, declared)

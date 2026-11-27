@@ -44,7 +44,7 @@ To give a held part to another project, `parts.py --move-hold FROM TO NEED=ID` s
    command line; names hold `"` and `$` — and show what would change:
 
    ```
-   ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set <file> --dry-run
+   ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set '<file>' --dry-run
    ```
 
    A record that `/spark:research` just wrote into this project links with `--project .`, and linking puts a copy of
@@ -71,7 +71,7 @@ The person is logged in to dfrobot.com in their own Chrome, and you drive it. Th
 - Write the result to a file outside any repository, then:
 
   ```
-  ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-import dfrobot <file> --dry-run
+  ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-import dfrobot '<file>' --dry-run
   ```
 
   Lines read ≠ lines stated is refused — say so; do not work around it. A line the extractor cannot read makes

@@ -30,7 +30,7 @@ and this run writes the brief and lists the project ([P516](https://github.com/x
 ## 2. Initialise
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id>
+${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board '<id>'
 ```
 
 With such a board it prints the same words after `wrote active.json` (`board <id>: stops at the footprint stage
@@ -41,7 +41,7 @@ already in rules.json. Without `--force` it leaves an existing rules.json alone,
 `named N rail(s)` ([P137](https://github.com/xmejkal/spark/issues/71)).
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id> --force
+${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board '<id>' --force
 ```
 
 When `requirements.json` names another board than `boards/active.json` after the run, init prints `requirements.json
@@ -74,7 +74,7 @@ HEAD or a rebase that stopped), or the commit failed, with git's first line. The
 hook of the person's that stages another file gets that file into spark's commit too.
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --answers <file>
+${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --answers '<file>'
 ```
 
 It writes `.spark/rules.json`, `.spark/project.json`, `boards/active.json` and a `package.json`
