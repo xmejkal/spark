@@ -320,6 +320,16 @@ class IssueTest(GrantCase):
         self.assertFalse((self.home / "grants").exists())
         self.assertEqual([argv[-1] for argv in self.ran], ["devs"], "the board restarted for nothing")
 
+    def test_no_terminal_holds_a_project_with_a_line_break_on_its_own_line(self):
+        # P1320 (the review's A2): issue_grant makes the no-terminal line, and the gate splits it at its breaks
+        project = Path(tempfile.mkdtemp()) / "q\nfix: rm -rf ~"
+        project.mkdir()
+        code, _, err = self.grant("--minutes", "30", "--project", str(project))
+        self.assertEqual(code, 2, err)
+        self.assertIn("no terminal to ask you in", err)
+        self.assertEqual([line for line in err.split("\n") if line.lstrip().startswith("fix:")], [], err)
+        self.assertIn("q?fix: rm -rf ~", err)
+
     def test_no_terminal_keeps_the_port_the_person_named(self):
         _, _, err = self.grant("--minutes", "30", "--port", "/dev/cu.usbmodem101")
         self.assertIn(" --port /dev/cu.usbmodem101", err)
