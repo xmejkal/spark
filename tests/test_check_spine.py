@@ -506,6 +506,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertEqual(said, [STEP_LINE % (step_command(step), step.why) for step in result.next])
         self.assertEqual([type(line) for line in said], [PastedLine, PastedLine])
         self.assertEqual(list(result.lines[-2:]), said)
+        self.assertTrue(result.lines[-3].startswith("  the chain runs end to end"), result.lines[-3])  # no blank line between
 
     def test_every_command_the_build_prints_passes_the_copyable_rule(self):
         # P1256: a home folder with a space, so the rule has a space to find; the line quotes the whole path
