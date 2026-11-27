@@ -22,7 +22,7 @@ import struct
 from collections import namedtuple
 from pathlib import Path
 
-from spark.records import board_records
+from spark.records import board_records, folder_walk
 from spark.core.result import Refusal
 from spark.firmware import firmware_codes
 from spark.records import store
@@ -39,8 +39,7 @@ LITTLEFS_SETTINGS = dict(block_size=BLOCK_SIZE, read_size=32, prog_size=32, cach
 def files_under(root):
     """Every file under the tree, as (path inside the image, bytes), sorted."""
     root = Path(root)
-    return [("/" + str(path.relative_to(root)), path.read_bytes())
-            for path in sorted(root.rglob("*")) if path.is_file() and "__pycache__" not in path.parts]
+    return [("/" + str(path.relative_to(root)), path.read_bytes()) for path in folder_walk.files_under(root)]
 
 
 def put_in_filesystem(fs, destination, content):
