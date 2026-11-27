@@ -3693,7 +3693,7 @@ class TheNextWordsOnThePageTest(FlowTest):
         self.assertEqual(said["data"]["guide"]["now"]["says"], "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes.")
         write_page(project, store=FlowPageStore())
         page = (project / "page.html").read_text(encoding="utf-8")
-        self.assertIn("NEXT</strong> No run tested this firmware&#x27;s image yet. Paste the line below in Claude Code. "
+        self.assertIn("NEXT</strong> No simulation tested this firmware yet. Paste the line below in Claude Code. "
                       "You run the scenario in your own terminal. It uses Wokwi CI minutes.", page)
 
 

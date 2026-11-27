@@ -50,7 +50,7 @@
  {
   "file": "scripts/spark/flow/next_words.py",
   "name": "P1290: the simulate row of NOW_WITH_TELL is removed (test_next_words, test_flow)",
-  "find": "    flow_codes.SIMULATE_NOW: \" \".join((\"No run tested this firmware's image yet.\", PASTE_TELL_HINT, SCENARIO_COST_MESSAGE)),\n",
+  "find": "    flow_codes.SIMULATE_NOW: \" \".join((\"No simulation tested this firmware yet.\", PASTE_TELL_HINT, SCENARIO_COST_MESSAGE)),\n",
   "replace": ""
  },
  {

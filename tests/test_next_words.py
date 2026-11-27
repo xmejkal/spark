@@ -25,7 +25,7 @@ TWO_JOBS_SAYS = ("Two jobs, in any order: wire the breadboard (10 steps, power o
                  "Spark cannot see your wiring. Keep main.py thin, with the code in modules it calls, so the free checks can import them.")
 THIN = "Keep main.py thin, with the code in modules it calls, so the free checks can import them."
 FIRMWARE_WORDS = "No firmware yet. Paste the line below in Claude Code. " + THIN
-SIMULATE_WORDS = ("No run tested this firmware's image yet. Paste the line below in Claude Code. "
+SIMULATE_WORDS = ("No simulation tested this firmware yet. Paste the line below in Claude Code. "
                   "You run the scenario in your own terminal. It uses Wokwi CI minutes.")
 SCENARIO_FIRST_WORDS = ("No scenario is written yet, so Claude writes one first. Paste the line below in Claude Code. "
                         "You run the scenario in your own terminal. It uses Wokwi CI minutes.")
