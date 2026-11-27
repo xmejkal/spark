@@ -17,7 +17,7 @@ reviewing anything.
 ## 2. Run the checks
 
 One command, one argument. It finds the circuit, the rules, the fab package and the
-definition of the board the project uses, and **prints every path it resolved** before it reports anything.
+folder's boards, and **prints every path it resolved** before it reports anything.
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py --project .

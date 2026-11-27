@@ -27,7 +27,7 @@ class CheckDesign(Operation):
                           "the folder the requirements file and the kept build (--keep) are in; every input is "
                           "discovered by convention and each resolved path is printed. The rules, parts and boards "
                           "come from the project the build reads: the nearest one up from the folder"),
-                 Argument(("--boards",), "boards", str, "board definitions to verify against their vendor headers. Without it: the board that the folder's requirements.json names, else the project's board. When neither names a board, or the named board has no definition: every board of the project, the shelf and spark's library", [], nargs="*"),
+                 Argument(("--boards",), "boards", str, "board definitions to verify against their vendor headers. Without it: the board that each requirements.json of the folder names, else the project's board. When none names a board with a definition: every board of the project, the shelf and spark's library", [], nargs="*"),
                  Argument(("--circuit",), "circuit", str, "the built netlist"),
                  Argument(("--rules",), "rules", str, "the project's rules file"),
                  Argument(("--package",), "package", str, "the exported fab package"),
