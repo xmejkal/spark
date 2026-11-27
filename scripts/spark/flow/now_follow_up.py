@@ -12,13 +12,10 @@ import os
 import stat
 from pathlib import Path
 
-from spark.core.follow_up import STEP_LINE, FollowUp
-from spark.core.renderers import SCRIPTS, script_of
-from spark.core.text_guards import printable
+from spark.core.follow_up import FollowUp
 from spark.flow.flow_page import FlowHtmlPage
 from spark.flow.show_flow import NEEDS_YOU, flow_and_guide, needs_you, now_steps
 from spark.flow.write_flow_page import write_page
-from spark.records import store
 
 # --- MVP ---
 #: The sentence of the page written again (P1035 PR 2): a line of the text, and a note under --json.
@@ -38,8 +35,8 @@ def kept_its_page(result):
 
 class FlowFollowUp(FollowUp):
     """Strategy: the follow-up of a run that wrote to a project: the now steps of `flow.py show` (`show_flow.now_steps`),
-    and for each the line a person runs, with NEEDS_YOU after the command for a step that needs the person or their yes
-    (`show_flow.needs_you`), then why. Its refresh writes page.html again (PR 2). `renderer` and `store` are what a test
+    and for each the base's line (`step_command`, P1256), marked with NEEDS_YOU for a step that needs the person or
+    their yes (`show_flow.needs_you`). Its refresh writes page.html again (PR 2). `renderer` and `store` are what a test
     swaps (None: the real ones)."""
 
     refreshes = FlowHtmlPage.FILE_NAME
@@ -63,10 +60,8 @@ class FlowFollowUp(FollowUp):
         phases, guide = flow_and_guide(project)
         return now_steps(project, phases, guide)
 
-    def line(self, step):
-        script = SCRIPTS / script_of(step.op)
-        mark = NEEDS_YOU if needs_you(step) else ""
-        return printable(STEP_LINE % (store.format_rerun_line(script, step.argv) + mark, step.why))
+    def mark(self, step):
+        return NEEDS_YOU if needs_you(step) else ""
 
 
 class PageFollowUp(FollowUp):
