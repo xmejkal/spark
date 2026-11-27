@@ -555,7 +555,8 @@ class PageView {
     }, () => {});
   }
 
-  /** The confirm box in `item`: its title, its lines, Send, which closes it and does `send`, and Cancel. */
+  /** The confirm box in `item`: its title, its lines, Send, which closes it and does `send`, and Cancel. It scrolls into
+   * view to the nearest edge, with no motion, so Send and Cancel never open below the window (P1136); focus stays where it is. */
   confirm(item: Element, head: string, says: string[], send: () => void) {
     if (this.requests.waiting()) return;
     this.close();
@@ -576,6 +577,7 @@ class PageView {
     }));
     this.box.appendChild(this.button(this.words.cancel, () => this.close()));
     item.appendChild(this.box);
+    this.box.scrollIntoView({ block: "nearest" });
   }
 
   close() {

@@ -16,6 +16,7 @@ from spark.flow import flow_codes
 from spark.flow.guide import note_words
 from spark.flow.flow_codes import picked_sentence
 from spark.flow.phase_readers import MARKS, pick_need
+from spark.flow.pick_notes import part_words
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import day_and_time
 
@@ -435,12 +436,13 @@ class PartsHtmlFold:
     @staticmethod
     def _hooked(offer):
         """A sendable offer's row: its key and `data-makes-stale` for the script, then its label alone (P1135): its effect
-        stands in its Send box and in the developer fold. A pick's row says its part and what you have of it, then its notes
-        (P1180), muted, in one line whose id (`note-<key>`) the script's radio names."""
+        stands in its Send box and in the developer fold. A pick's row says its part, with a board's own part (`part_words`,
+        P1136), and what you have of it, then its notes (P1180), muted, in one line whose id (`note-<key>`) the script's
+        radio names."""
         if pick_need(offer["key"]) is None:
             return '<li data-key="%s"%s>%s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(offer["label"]))
         line = _note_line(offer) if offer["notes"] else ""
-        return '<li data-key="%s"%s>%s%s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(flow_codes.PICK_ROW % (offer["part"], offer["have"])), line)
+        return '<li data-key="%s"%s>%s%s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(flow_codes.PICK_ROW % (part_words(offer["part"], offer.get("own_part")), offer["have"])), line)
 
 
 class WiringHtmlFold:
