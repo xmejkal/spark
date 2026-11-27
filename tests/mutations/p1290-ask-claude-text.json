@@ -1,0 +1,62 @@
+[
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1290: the reject handler of writeText says nothing again (page_script.test.js, test_flow_script)",
+  "find": "}, () => {\n            made.textContent = this.words.not_copied;",
+  "replace": "}, () => {"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1290: with no clipboard Copy says nothing (page_script.test.js, test_flow_script)",
+  "find": "if (!clipboard) {\n            made.textContent = this.words.not_copied;\n",
+  "replace": "if (!clipboard) {\n"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1290: a refusal says the copied words (page_script.test.js, test_flow_script)",
+  "find": "}, () => {\n            made.textContent = this.words.not_copied;",
+  "replace": "}, () => {\n            made.textContent = said;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1290: a refusal disables Copy (page_script.test.js, test_flow_script)",
+  "find": "}, () => {\n            made.textContent = this.words.not_copied;",
+  "replace": "}, () => {\n            made.textContent = this.words.not_copied;\n            made.disabled = true;"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1290: the not_copied word is the copied words (test_flow_page)",
+  "find": "\"not_copied\": flow_codes.NOT_COPIED_SAYS",
+  "replace": "\"not_copied\": flow_codes.COPIED_SAYS"
+ },
+ {
+  "file": "scripts/spark/flow/next_words.py",
+  "name": "P1290: next_words always returns the guide's sentence (test_next_words, test_flow)",
+  "find": "    if tell_of(now) is None:\n        return now[\"says\"]\n",
+  "replace": "    if True:\n        return now[\"says\"]\n"
+ },
+ {
+  "file": "scripts/spark/flow/next_words.py",
+  "name": "P1290: the tell guard is dropped (test_next_words.NextWordsTest)",
+  "find": "    if tell_of(now) is None:\n        return now[\"says\"]\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/flow/next_words.py",
+  "name": "P1290: the two jobs' branch is dropped (test_next_words, test_flow)",
+  "find": "    if now.get(\"steps\") is not None:\n        return TWO_JOBS_WITH_TELL_NOW % now[\"steps\"]\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/flow/next_words.py",
+  "name": "P1290: the simulate row of NOW_WITH_TELL is removed (test_next_words, test_flow)",
+  "find": "    flow_codes.SIMULATE_NOW: \" \".join((\"No run tested this firmware's image yet.\", PASTE_TELL_HINT, SCENARIO_COST_MESSAGE)),\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1290: NEXT writes the guide's sentence again (test_flow_page, test_flow)",
+  "find": "_text(next_words.next_words(now))",
+  "replace": "_text(now[\"says\"])"
+ }
+]

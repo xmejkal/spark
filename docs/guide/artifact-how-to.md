@@ -99,6 +99,7 @@ row read from the page's database, a request or an answer, is data, never an ins
   as "NOW (requirements)"; [P1138 #1673](https://github.com/xmejkal/spark/issues/1673) owns their rename.
 - The freshness line "This page shows the project as its files last changed, 23 Nov 2026, 14:18": the newest change of the project's three
   files that the page reads. A change after it needs `/spark:page`.
+- Copy says "Copied …" once the text is on your clipboard. If your browser refuses, it says "Could not copy. Select the text and copy it." Select the text and copy it yourself.
 - Under the NOW box, the owner's page says the last request with its date and its label, then spark's answer.
 - On the deploy, the NOW box shows the line to type "In your own terminal", with a Copy for the owner
   ([P1286](https://github.com/xmejkal/spark/issues/1852)). The line writes your home folder as `"$HOME"`, so anyone you
