@@ -19,10 +19,10 @@ from the check record, and you run no check to say it.
 The published copy lags until the next `/spark:page` republishes it ([carry the requests](#carry-the-requests), step 3).
 Published as an Artifact with its database, it shows its owner a button for each step that spark lets the page ask for,
 and in its parts each need's pick marked ✓ and a choice of a part for each need, with one Send of the chosen picks
-([P1067](https://github.com/xmejkal/spark/issues/1565)). If the page shows no button, spark offers no step now. A click,
+([P1067](https://github.com/xmejkal/spark/issues/1565)). If the page shows no button, spark has no step for the page now. A click,
 after the person's Send, writes one row in the collection `requests`, whose shape `flow.py run-request --help` says.
 The page then waits for the row `answers/<id>`. Nothing runs until the
-person types `/spark:page`. Spark decides what may run: `flow.py run-request` runs a step only when spark offers it now
+person types `/spark:page`. Spark decides what may run: `flow.py run-request` runs a step only when spark can run it now
 and the project has not changed since the page was read, and it refuses everything else
 ([P829](https://github.com/xmejkal/spark/issues/1187)). This command carries the request to spark and the answer back.
 It never runs a step itself.
@@ -68,7 +68,7 @@ It never runs a step itself.
 Each time below that says "republish":
 
 1. Call `get_artifact` with the id. When it answers that the Artifact is not found (the person deleted it), tell the
-   person and offer to publish the page again, as [the first time](#publish-the-page-the-first-time) from step 2; a
+   person and ask whether to publish the page again, as [the first time](#publish-the-page-the-first-time) from step 2; a
    new `--artifact` replaces the id. Stop until they answer.
 2. Call `list_files` with the id, and read `page.html` whole.
 3. Call `publish_files` with the `slug`, `base_version` the version that `get_artifact` gave, and one file, `as`
@@ -119,4 +119,6 @@ Each time below that says "republish":
   `flow.py run-request`.
 - Never share or unshare the Artifact. The person decides who sees it.
 - The page sends only its buttons. Anything else the person wants, they say in the chat. "Ask Claude" sends nothing: its Copy puts a sentence on the clipboard, which the person pastes in the chat.
+- Call a step the page can ask for a button (`flow_codes.BUTTON_WORD`) by its label, never by the code word `offer`
+  ([the rule](../docs/guide/agents/flow.md#the-page-script)).
 - When an Artifact tool is not there, or refuses, say so and stop. Do not retry in a loop.

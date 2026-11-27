@@ -282,10 +282,11 @@ Its box says each pick, a line two picks share once, and "Spark checks the picks
 The answer row holds `flow.py run-request`'s `data` unchanged ([a page request](#a-page-request)). The script says it in
 the page's words, after "Your last request, <its time in the browser's zone>: <its offer's label, else its kind's words (`request_kinds`), else `request_other`; for picks their count and needs, else "your picks">." (the request lives in the page's database, not in `show`): what ran ok by its kind, the step's first problem (`line`), spark's line for a step that ran and could not run, or why it could not run. A refusal shows as
 its code's own words only when `line` is exactly that code's meaning, in grey; any other `line` with `ran: false` shows
-as could not run. Picks that ran ok say "Saved as the picks.", picks that ran with problems say first "No pick was saved.", and a not-offered refusal of picks says that spark no longer offers one of them. Never "done" alone.
+as could not run. Picks that ran ok say "Saved as the picks.", picks that ran with problems say first "No pick was saved.", and a `request_not_offered` refusal of picks says that spark cannot save one of them now. Never "done" alone.
 
-Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect
-line says and ask the person first.
+To a person, an offer the page sends is a button (`flow_codes.BUTTON_WORD`), or a choice in a need's row for a pick. Name a button by its label, such as click **Build the board**, and say "button" alone only where no label exists. `offer` is spark's code and data word: never say it to the person.
+
+Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect line says and ask the person first.
 
 ## The next step
 
@@ -370,7 +371,7 @@ envelope's. A refusal is one `unchecked` item, and its fix tells you what to do:
 | `request_malformed` | the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or could not be deleted, so nothing ran | write the page's request to the file as the page sent it; if it was written that way, ask the person to click again |
 | `request_in_chat` | the key is a need's drop or a chat offer, which are asked in the chat | tell Claude in the chat, for example: drop the light need |
 | `request_stale` | the project changed after the page was read: `seen` is not the fingerprint now | write the page again with `flow.py page`, then click again |
-| `request_not_offered` | spark does not offer a key now, the page never runs its kind or its step's op, the step's argv does not parse, or a request of picks names a key that is no pick or two picks of one need | write the page again with `flow.py page`, then click again |
+| `request_not_offered` | spark cannot run a key now, the page never runs its kind or its step's op, the step's argv does not parse, or a request of picks names a key that is no pick or two picks of one need | write the page again with `flow.py page`; after a reload the page shows only the steps spark can run now |
 | `request_secrets_unreadable` | a secrets file in `firmware/` cannot be read or parsed, so spark cannot mask its values; the item's subject names it | repair or remove that file, then click again |
 
 A stale refusal is normal: a second Build from the same page is stale once the first one ran. The exit is 0 when the step

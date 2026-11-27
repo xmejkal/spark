@@ -395,7 +395,7 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
     def test_a_refusal_answers_whom_it_is_for_and_says_nothing_ran(self):
         envelope = self.refused("deploy", "request_not_offered")
         self.assertEqual(envelope["data"], {"for": ID, "key": None, "keys": [], "label": None, "ran": False, "status": "could-not-run", "mark": "?",
-                                            "line": "the request names a step that spark does not offer now, so nothing ran",
+                                            "line": "the request names a step that spark cannot run now, so nothing ran",
                                             "note": None, "fingerprint": self.fingerprint()})
 
     def test_a_refusal_of_an_offered_key_names_its_offer(self):
@@ -406,8 +406,8 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
         fixes = {}
         for key, code, seen in (("deploy", "request_not_offered", None), ("build", "request_stale", "0123456789ab")):
             fixes[code] = self.refused(key, code, seen=seen)["unchecked"][0]["fix"]
-        self.assertEqual(fixes, {"request_not_offered": "write the page again with flow.py page, then click again: the page shows the steps "
-                                                        "spark offers now",
+        self.assertEqual(fixes, {"request_not_offered": "write the page again with flow.py page; after a reload the page shows only the "
+                                                        "steps spark can run now",
                                  "request_stale": "write the page again with flow.py page, then click again"})
 
     def test_a_stale_refusal_says_the_project_changed(self):
