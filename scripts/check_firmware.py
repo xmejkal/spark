@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Check a project's firmware for free: import it on this machine, and run the project's own tests (P59, #7; P1208, #1757).
+Check a project's firmware for free: import it on this machine, run the project's own tests and compare the pin names with firmware/pins.py (P59, #7; P1208, #1757).
 
     check_firmware.py [--project PROJECT] [--json]
 

@@ -17,7 +17,7 @@ from spark.core.zone_time import stamp
 from spark.firmware import firmware_codes
 from spark.firmware.import_probe import IMPORT_TIMEOUT_S, IMPORTED, look
 from spark.firmware.own_tests import OWN_TESTS_TIMEOUT_S, TESTS_FOLDER, UnittestReader
-from spark.firmware.pin_map_uses import PIN_MAP_PATH, PinMapUses
+from spark.firmware.pin_map_uses import PIN_MAP_PATH, PinMapUses, no_map_sentence
 from spark.firmware.project_secrets import FIRMWARE_FOLDER, is_secret_path
 from spark.records.check_record import CheckRecordStore
 
@@ -34,8 +34,6 @@ NO_TESTS_LINE, TESTS_NOT_CHECKED_LINE = "tests: none (no %s/ folder)", "tests: n
 #: The subject of an import problem that names no module (`nothing_to_import`).
 FIRMWARE_SUBJECT = "firmware"
 #: With no firmware/pins.py, the one problem of the pin names (its code is a variant with the fix to build the map).
-NO_PIN_MAP_ONE = PIN_MAP_PATH + " is not there, and 1 use needs it, first %s:%d"
-NO_PIN_MAP_MANY = PIN_MAP_PATH + " is not there, and %d uses need it, first %s:%d"
 
 #: What `--help` says after the arguments (P481).
 DETAILS = """It needs no sim/, no board and no token. It writes one file, .spark/check-firmware.json, the check record that
@@ -75,7 +73,7 @@ after `import pins [as p]`, and each name of `from pins import X`. A name the ma
 with its file and line), and a file or a map that does not parse is could-not-run (`pin_map_not_read`). A use it cannot compare
 (`from pins import *`, the module used as a value, a module name that the file binds another way too) is an assumption,
 counted in the result line, never a pass. It compares names only. It never sees whether the pin is wired, right or used right.
-`data.pin_map` holds `used`, `missing` and `not_compared`.
+`data.pin_map` holds `used`, `missing` and `not_compared`, and `has_map`: false, only when firmware/pins.py is not there.
 
 The own tests are PROJECT/tests, run with unittest in a process of their own (`own_tests_child.py`), %g s at most.
 The tests' code runs on this machine too, in the project folder, and can write files there: spark writes only its record. The
@@ -98,7 +96,7 @@ class CheckFirmware(Operation):
     """
 
     name = "check-firmware"
-    summary = "Check the firmware for free: its imports and the project's own tests, with no sim/ and no board."
+    summary = "Check the firmware for free: its imports, the project's own tests and the pin names against firmware/pins.py, with no sim/ and no board."
     details = DETAILS
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder with firmware/ and tests/ (default: here)"),
                  COMMON_ARGUMENTS[JSON_DEST])
@@ -116,7 +114,7 @@ class CheckFirmware(Operation):
         self.reader = own_tests_reader or UnittestReader(OWN_TESTS_TIMEOUT_S if tests_timeout_s is None else tests_timeout_s)
 
     def run(self, project, *, outside):
-        """The imports and the own tests of PROJECT, each child started through `outside.run`."""
+        """The imports and the own tests of PROJECT, each child started through `outside.run`, and its pin names against firmware/pins.py."""
         modules, import_problems, unchecked = look(project, self.import_timeout_s, outside.run)
         tests = self.reader.read(project, outside)
         pins = PinMapUses.read(project)
@@ -177,8 +175,7 @@ class CheckFirmware(Operation):
         if not pins.has_map and pins.missing:
             first, count = pins.missing[0], len(pins.missing)
             return [Finding.of(PROBLEMS, PIN_MAP_PATH, firmware_codes.PIN_MAP_NAME_MISSING_NO_MAP,
-                               (NO_PIN_MAP_ONE % (printable(first.file), first.line) if count == 1
-                                else NO_PIN_MAP_MANY % (count, printable(first.file), first.line)))]
+                               no_map_sentence(count, printable(first.file), first.line))]
         return [Finding.of(PROBLEMS, printable("%s:%d" % (each.file, each.line)), firmware_codes.PIN_MAP_NAME_MISSING, each.sentence())
                 for each in pins.missing]
 

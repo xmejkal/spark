@@ -39,9 +39,10 @@ USES_SENTENCE, IMPORTS_SENTENCE = "%s:%d uses %s.%s, and %s has no %s", "%s:%d i
 LINE_FOUND, LINE_NONE = "pin map: %d of %d uses found in " + PIN_MAP_PATH, "pin map: none compared"
 LINE_MISSING, LINE_PLACES, LINE_NOT_READ = ", not found: %s", ", not compared in %d place%s, first %s:%d", "pin map: not checked (%s)"
 LINE_MISSING_ITEM = "%s (%s:%d)"
-#: With no firmware/pins.py the line says so, for one use and for more (the data keeps `has_map` false then).
-LINE_NO_MAP_ONE = "pin map: " + PIN_MAP_PATH + " is not there, 1 use needs it, first %s:%d"
-LINE_NO_MAP_MANY = "pin map: " + PIN_MAP_PATH + " is not there, %d uses need it, first %s:%d"
+#: With no firmware/pins.py the line and the finding say so, for one use and for more (`has_map` is false in the data then).
+NO_MAP_ONE = PIN_MAP_PATH + " is not there, and 1 use needs it, first %s:%d"
+NO_MAP_MANY = PIN_MAP_PATH + " is not there, and %d uses need it, first %s:%d"
+LINE_PREFIX = "pin map: "
 
 Place = collections.namedtuple("Place", "file line form")
 
@@ -103,7 +104,7 @@ class PinMapUses(collections.namedtuple("PinMapUses", "state why where has_map u
         return cls(RECORDED, None, None, has_map, len(uses), missing, tuple(sorted(places)), tuple(sorted(names)))
 
     def to_data(self):
-        """The `pin_map` of the answer and of the check record, JSON values."""
+        """The `pin_map` of the answer and of the check record, JSON values. `has_map` is `false` only when firmware/pins.py is not there."""
         if self.state != RECORDED:
             return {"state": self.state, "why": self.why}
         data = {"state": self.state, "used": self.used,
@@ -131,8 +132,7 @@ class PinMapUses(collections.namedtuple("PinMapUses", "state why where has_map u
             return None
         if data.get("has_map") is False and missing:  # every use is missing: the map is not there
             first = min(missing, key=lambda each: (each["file"], each["line"]))
-            line = (LINE_NO_MAP_ONE % (first["file"], first["line"]) if len(missing) == 1
-                    else LINE_NO_MAP_MANY % (len(missing), first["file"], first["line"]))
+            line = LINE_PREFIX + no_map_sentence(len(missing), first["file"], first["line"])
         else:
             line = LINE_FOUND % (data["used"] - len(missing), data["used"]) if data["used"] else LINE_NONE
         if missing and data.get("has_map") is not False:
@@ -141,6 +141,11 @@ class PinMapUses(collections.namedtuple("PinMapUses", "state why where has_map u
             first = min(places, key=lambda each: (each["file"], each["line"]))
             line += LINE_PLACES % (len(places), "" if len(places) == 1 else "s", first["file"], first["line"])
         return printable(line)
+
+
+def no_map_sentence(count, file, line):
+    """The sentence for `count` uses that need the pin map when it is not there, `file`:`line` the first of them."""
+    return NO_MAP_ONE % (file, line) if count == 1 else NO_MAP_MANY % (count, file, line)
 
 
 def _is_count(value):
@@ -156,7 +161,7 @@ def _shape_of(data):
     missing, places = data.get("missing"), data.get("not_compared")
     if data.get("state") != RECORDED or not _is_count(data.get("used")) or not isinstance(missing, list) or not isinstance(places, list):
         return None
-    if len(missing) > data["used"] or "has_map" in data and data["has_map"] is not False:
+    if len(missing) > data["used"] or "has_map" in data and not isinstance(data["has_map"], bool):
         return None
     well_made = (all(isinstance(each, dict) and isinstance(each.get("name"), str) and isinstance(each.get("file"), str)
                      and _is_count(each.get("line")) for each in missing)

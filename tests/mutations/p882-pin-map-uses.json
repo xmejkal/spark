@@ -94,5 +94,41 @@
   "name": "P882: the pin line comes after the written line",
   "find": "[pin_line, written]",
   "replace": "[written, pin_line]"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: a guarded name is a missing use",
+  "find": "    guarded = _guarded(tree, aliases)\n",
+  "replace": "    guarded = set()\n"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: a two-argument getattr is a guard",
+  "find": "\"getattr\": 3}",
+  "replace": "\"getattr\": 2}"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: the line has no no-map branch",
+  "find": "if data.get(\"has_map\") is False and missing:",
+  "replace": "if False and missing:"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: to_data drops has_map",
+  "find": "return data if self.has_map else dict(data, has_map=False)",
+  "replace": "return data"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: one use and many say the same",
+  "find": "NO_MAP_ONE % (file, line) if count == 1 else",
+  "replace": "NO_MAP_ONE % (file, line) if count else"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P882: no pin map is a problem for each use",
+  "find": "if not pins.has_map and pins.missing:",
+  "replace": "if False and pins.missing:"
  }
 ]

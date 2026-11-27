@@ -249,9 +249,9 @@ class TheDataAndTheLineTest(unittest.TestCase):
         uses = read({"main.py": MAIN + "x = pins.LED\n"}, pins=None)
         self.assertEqual(uses.to_data()["has_map"], False)
         self.assertEqual(PinMapUses.line_from(uses.to_data()),
-                         "pin map: firmware/pins.py is not there, 2 uses need it, first firmware/main.py:3")
+                         "pin map: firmware/pins.py is not there, and 2 uses need it, first firmware/main.py:3")
         one = read({"main.py": MAIN}, pins=None).to_data()
-        self.assertEqual(PinMapUses.line_from(one), "pin map: firmware/pins.py is not there, 1 use needs it, first firmware/main.py:3")
+        self.assertEqual(PinMapUses.line_from(one), "pin map: firmware/pins.py is not there, and 1 use needs it, first firmware/main.py:3")
         self.assertEqual(PinMapUses.line_from(one, missing_only=True), PinMapUses.line_from(one))
 
     def test_a_map_that_is_there_keeps_the_data_as_it_was(self):

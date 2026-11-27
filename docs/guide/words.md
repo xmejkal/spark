@@ -40,6 +40,7 @@ Words for a check's kept answer ([P1209](https://github.com/xmejkal/spark/issues
 | check record | the file `.spark/<op>.json` that a check Operation keeps of its last answer (`check-firmware` today, `check-design` with P1255), written and read through `CheckRecordStore` | "kept check": *kept* is `--keep`'s, the kept step's and the kept document's | `scripts/spark/records/check_record.py` |
 | free checks | the import check and the own tests together, the line's label "Free checks" | the paid scenario run | `flow/checks_reading.FREE_CHECKS_LABEL` |
 | current, older | the record's inputs hash to its kept sha256, or they do not | "stale", a phase status word | `CheckRecord.current` |
+| pin map, use | the pin map is `firmware/pins.py`; a use is one pin name at one file and line, compared by `PinMapUses` (`pin_map_uses.py`), whose kept data `checks_reading.missing_pin_line` reads | "pin name" (a part's pin), "unseen" | `PinMapUses`, `data.pin_map` |
 | grey | the page's `muted` style of the simulation line, `guide.simulation.grey` | a status | `checks_reading.simulation_of` |
 
 Git's two words for a file differ (P1150). "Held" is `ProjectCommit.held_as_is`: in HEAD and the same on disk. "Tracked" is git's

@@ -3424,7 +3424,7 @@ class ThePinMapTest(FlowTest):
             check_firmware.main(["--project", str(project)])
         said, code = show(project)
         self.assertEqual((statuses(said)["firmware"], code, says(said, "firmware")[0]),
-                         ("problems", 1, "pin map: firmware/pins.py is not there, 1 use needs it, first firmware/main.py:3"))
+                         ("problems", 1, "pin map: firmware/pins.py is not there, and 1 use needs it, first firmware/main.py:3"))
 
     def test_no_check_record_gives_no_status(self):
         project = a_firmware(a_built_project())
