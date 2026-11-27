@@ -7,6 +7,7 @@ Each test names its red: the module missing from the running Python, then the wr
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -135,10 +136,72 @@ class TheToolPythonIsFoundTest(TheVenvTest):
             finder = tool_python.ToolPythonFinder(reader=tool_python.ModuleReader(run=run, timeout_s=7))
             self.assertIsNone(finder.find(self.entry()))
             said[name] = finder.on_path(self.entry(), "python3 -m pip install --user p1264-mod==1.29.0")
-        self.assertIn("%s did not answer in 7 s." % self.python, said["a timeout"])
-        self.assertIn("%s cannot be started (No such file)." % self.python, said["no start"])
-        self.assertIn("%s gave an answer spark cannot read." % self.python, said["no json"])
-        self.assertTrue(all("holds no p1264_mod module" not in line for line in said.values()))
+        head = "p1264-exe is on your PATH (%s). Spark cannot ask %s: " % (self.exe, self.python)
+        self.assertEqual(said["a timeout"], head + "did not answer in 7 s.")
+        self.assertEqual(said["no start"], head + "cannot be started (No such file).")
+        self.assertEqual(said["no json"], head + "gave an answer spark cannot read.")
+        for line in said.values():  # learned rule 2.1: a could-not-run is not a missing, and has no install step
+            self.assertNotIn("holds no p1264_mod module", line)
+            self.assertNotIn("holds its module", line)
+            self.assertNotIn("pip install", line)
+
+    def test_one_python_that_cannot_be_asked_and_one_that_holds_no_module_step_with_the_second(self):
+        """Red: the sentence said no Python holds the module, and the step named a Python spark could not ask."""
+        two = self.root / "two"
+        exe = write_script(two / "p1264-two", "#!" + sys.executable)
+        beside = write_script(two / "python3", "#!/bin/sh")
+        self.path("two")
+
+        def run(argv, **kwargs):
+            if argv[0] == sys.executable:
+                return subprocess.CompletedProcess(argv, 3, stdout="", stderr="")
+            raise FileNotFoundError(2, "No such file")
+        finder = tool_python.ToolPythonFinder(reader=tool_python.ModuleReader(run=run))
+        entry = self.entry(exe="p1264-two")
+        self.assertIsNone(finder.find(entry))
+        self.assertEqual(finder.on_path(entry, "python3 -m pip install --user p1264-mod==1.29.0 \u2014 needs Python 3 first"),
+                         "p1264-two is on your PATH (%s). Spark cannot ask %s: cannot be started (No such file). %s holds no "
+                         "p1264_mod module. Copy this step: %s -m pip install --user p1264-mod==1.29.0"
+                         % (exe, beside, sys.executable, sys.executable))
+
+    def test_the_step_to_copy_has_no_ending_and_the_pin_line_is_whole_and_names_a_script_that_exists(self):
+        """Red: the step ended with "\u2014 needs Python 3 first", and the pin line was a bare `tools.py --pin`."""
+        self.path("bare")
+        finder = tool_python.ToolPythonFinder()
+        entry = self.entry(exe="p1264-bare")
+        finder.find(entry)
+        step = finder.on_path(entry, "python3 -m pip install --user p1264-mod==1.29.0 \u2014 needs Python 3 first").split("Copy this step: ")[1]
+        self.assertEqual(shlex.split(step), [sys.executable, "-m", "pip", "install", "--user", "p1264-mod==1.29.0"])
+        self.assertTrue(os.path.isfile(shlex.split(step)[0]))
+        pin = finder.on_path(entry, "brew install x", "p1264-tool", self.root).split("Copy this step: ")[1]
+        words = shlex.split(pin)[-4:] if False else shlex.split(pin)
+        script = next(word for word in words if word.endswith("tools.py"))
+        self.assertTrue(os.path.isfile(script), pin)
+        self.assertEqual(words[words.index(script) + 1:], ["--project", str(self.root), "--pin", "p1264-tool.exe="])
+
+    def test_a_json_py_in_the_start_folder_does_not_run_in_the_probe(self):
+        """Red: the probe's `import json` ran the project's own json.py, and both tools read as missing."""
+        folder = Path(tempfile.mkdtemp(dir=self.root))
+        (folder / "json.py").write_text("open(%r, 'w').write('ran')\nraise SystemExit(7)\n" % str(folder / "marker"))
+        before = os.getcwd()
+        os.chdir(folder)
+        self.addCleanup(os.chdir, before)
+        answer = tool_python.ModuleReader().probe(self.python, "p1264_mod")
+        self.assertEqual(answer, ((self.python, "1.29.0"), ""))
+        self.assertFalse((folder / "marker").exists())
+
+    def test_the_probe_runs_like_the_run_without_i_and_with_the_callers_folder_and_environment(self):
+        """C4. Red: a child started with -I, a cwd or an env of its own saw another Python than the run does."""
+        seen = []
+
+        def run(argv, **kwargs):
+            seen.append((argv, kwargs))
+            return subprocess.CompletedProcess(argv, 3, stdout="", stderr="")
+        tool_python.ModuleReader(run=run).probe("/x/python3", "p1264_mod")
+        argv, kwargs = seen[0]
+        self.assertEqual(argv[:2], ["/x/python3", "-c"])
+        self.assertNotIn("-I", argv)
+        self.assertTrue({"cwd", "env"}.isdisjoint(kwargs), kwargs)
 
     def test_an_entry_with_no_exe_is_never_looked_for_on_the_path(self):
         """Red: an import tool with no `exe` was looked for as its module's name."""
@@ -260,8 +323,17 @@ class TheFinderUsesItTest(TheVenvTest):
         self.assertEqual(missing.exception.code, "tool_missing")
         self.assertEqual(self.row_of(project)[0], "missing")
 
+    def test_a_tool_on_the_path_with_no_usable_python_is_left_out_of_to_install_and_its_row_says_why(self):
+        """Red: setup offered to pip install it, into whichever python3 came first."""
+        self.path("bare")
+        project = self.project_with(dict(ENTRY, exe="p1264-bare"))
+        self.assertNotIn("p1264-tool", tool_finder.to_install(project, self.nobody))
+        self.assertIn("is on your PATH (%s)" % self.bare, self.row_of(project)[2])
+
     def row_of(self, project):
         return next(row for row in tool_finder.status(project, self.nobody) if row[1] == "board-shell")
+
+
 
     def test_the_floor_holds_on_the_tools_python(self):
         """Red: the release was read in the running Python only, so the floor never fired."""
@@ -321,6 +393,8 @@ class TheFinderUsesItTest(TheVenvTest):
         """C3. Red: a page named another phrase than the sentence holds."""
         for page in ("commands/setup.md", "commands/build.md", "commands/research.md", "docs/guide/agents/scripts.md"):
             self.assertIn("`but no Python spark asked holds its module`", (ROOT / page).read_text(), page)
+        for page in ("commands/setup.md", "docs/guide/agents/scripts.md"):
+            self.assertIn("`Spark cannot ask`", (ROOT / page).read_text(), page)
 
     def test_install_forgets_what_was_kept(self):
         """Red: a tool installed by /spark:setup was still missing for the process."""

@@ -317,7 +317,7 @@ def find(name, project=None, personal=None, _seen=()):
     command = locate(entry, project, refused)
     if command is None:
         hint = install_hint(entry) or "see its entry in %s" % DEFAULTS
-        raise ToolMissingError("%s", tool_python.TOOL_PYTHONS.on_path(entry, hint) or "%s (%s) is not installed — install: %s%s%s"
+        raise ToolMissingError("%s", tool_python.TOOL_PYTHONS.on_path(entry, hint, tool_name, project) or "%s (%s) is not installed — install: %s%s%s"
                                % (role or tool_name, tool_name, hint, tool_python.TOOL_PYTHONS.looked(entry),
                                   "".join("; " + line for line in refused)), code=records_codes.TOOL_MISSING)
     here = versions.too_old(entry)
@@ -376,7 +376,7 @@ def to_install(project=None, personal=None):
             want = lists["tools"].get(wanted)
             if want is None or entry_problem(want) or wanted in names:
                 continue  # a broken entry is a row in the picture, not something to install
-            if locate(want, project) is None or versions.too_old(want):
+            if (locate(want, project) is None and not tool_python.TOOL_PYTHONS.unusable(want)) or versions.too_old(want):
                 names.append(wanted)
     return names
 

@@ -10,7 +10,9 @@
  {"file": "scripts/spark/records/tool_python.py", "name": "a probe failure reads as no module", "find": "return None, \"did not answer in %d s\" % self.timeout_s", "replace": "return None, \"\""},
  {"file": "scripts/spark/records/tool_python.py", "name": "exit 3 is no module", "find": "done.returncode == 3", "replace": "done.returncode == 1"},
  {"file": "scripts/spark/records/tool_finder.py", "name": "install keeps what it found", "find": "        tool_python.TOOL_PYTHONS.forget()\n", "replace": "        pass\n"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "a tool on the PATH with no module reads as not installed", "find": "tool_python.TOOL_PYTHONS.on_path(entry, hint) or", "replace": "\"\" or"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "a tool on the PATH with no module reads as not installed", "find": "tool_python.TOOL_PYTHONS.on_path(entry, hint, tool_name, project) or", "replace": "\"\" or"},
  {"file": "scripts/spark/records/tool_finder.py", "name": "the running Python no longer wins", "find": "        if importlib.util.find_spec(entry[\"module\"]):\n            return [sys.executable]", "replace": "        if False:\n            return [sys.executable]"},
- {"file": "scripts/spark/bench/board_start.py", "name": "port gone names a Python that may not hold mpremote", "find": "shlex.join(devs) if devs else \"mpremote devs\"", "replace": "\"python3 -m mpremote devs\""}
+ {"file": "scripts/spark/bench/board_start.py", "name": "port gone names a Python that may not hold mpremote", "find": "shlex.join(devs) if devs else \"mpremote devs\"", "replace": "\"python3 -m mpremote devs\""},
+ {"file": "scripts/spark/records/tool_python.py", "name": "the probe child runs with -I", "find": "[python, \"-c\", PROBE, module]", "replace": "[python, \"-I\", \"-c\", PROBE, module]"},
+ {"file": "scripts/spark/records/tool_python.py", "name": "the start folder stays on the probe's path", "find": "import sys; del sys.path[0]  # the folder", "replace": "import sys  # the folder"}
 ]

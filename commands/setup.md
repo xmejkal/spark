@@ -92,8 +92,8 @@ with the plugin; turning one off is done in Claude Code's `/mcp`.
 ## From any other command
 
 A spark command that reports a missing tool — `… is not installed — install: …` — is answered the same
-way. The exception is a sentence that holds `but no Python spark asked holds its module`: the tool is on the PATH,
-and no Python spark can use holds its module. Do not run `--install`. Tell the person which Python holds the
+way. The exception is a sentence that holds `but no Python spark asked holds its module` or `Spark cannot ask`: the tool is on the
+PATH, and no Python spark can use holds its module, or spark could not ask one. Do not run `--install`. Tell the person which Python holds the
 executable, and give the step at the end of the sentence. A person who wants no PATH lookup for a tool runs
 `tools.py --pin mpremote.exe=`. Otherwise: ask the person once, run `tools.py --install <name> --project .`, and carry on with the step. The same
 `package.json` rule holds: no `package.json`, `/spark:init` first. Claude Code asks before that `--install` runs, whichever

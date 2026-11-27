@@ -10,16 +10,22 @@ child asks each Python, started as a run starts it, in the same folder and envir
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
 from collections import namedtuple
+from pathlib import Path
+
+from spark.records import store
 
 #: The seconds one child may take to answer. A pyenv shim takes about half a second.
 PROBE_TIMEOUT_S = 20
 
-#: What each child runs: the module is found without importing it. Exit 3 says there is no such module.
-PROBE = """import importlib.metadata, importlib.util, json, sys
+#: What each child runs: the module is found without importing it. Exit 3 says there is no such module. The first line
+#: leaves the start folder off `sys.path`, as `-I` would, but the user site stays on, so the child sees what the run sees.
+PROBE = """import sys; del sys.path[0]  # the folder the child starts in: a json.py there must not run
+import importlib.metadata, importlib.util, json
 if importlib.util.find_spec(sys.argv[1]) is None:
     sys.exit(3)
 try:
@@ -31,6 +37,10 @@ print(json.dumps([sys.executable, release]))
 
 #: The words that /spark:setup keys on: the tool is on the PATH, and no Python spark can use holds its module (P1264, C3).
 NO_PYTHON_HOLDS_IT = "but no Python spark asked holds its module"
+#: The words of a Python that spark could not ask: a could-not-run, never a "holds no module" (learned rule 2.1).
+CANNOT_ASK = "Spark cannot ask"
+#: The script a step to copy runs, by its whole path (`tools.py` beside the `spark` package).
+TOOLS_SCRIPT = Path(__file__).resolve().parents[2] / "tools.py"
 
 #: The Python that holds the module (the child's own `sys.executable`, never a shim), its release or None, and the
 #: executable on the PATH that it was found through.
@@ -77,7 +87,8 @@ def _first_line_python(executable):
 
 class ToolPythonFinder:
     """Adapter: `find(entry)` gives the ToolPython of an entry that names an `exe` on the PATH, or None. A found answer is
-    kept for the process, a not-found one never, so a tool installed while spark runs is found at the next ask.
+    kept for the process, a not-found one never, so a tool installed while spark runs is found at the next ask. A tool
+    uninstalled while one process runs stays found until `install`'s `forget()` or the next process.
     `which` and `reader` are looked up when used, so a test sees what it set."""
 
     def __init__(self, reader=None, which=None):
@@ -125,19 +136,34 @@ class ToolPythonFinder:
         return ". Spark looked for the %s module in %s, the Python that runs spark, and for %s on the PATH." % (
             entry["module"], sys.executable, entry["exe"])
 
-    def on_path(self, entry, install_line):
-        """The sentence for a tool that is on the PATH but in no Python spark can use, else ''. It leads with that
-        fact and ends with one step to copy: the install line run by the Python that holds the executable."""
+    def unusable(self, entry):
+        """Whether the entry's executable is on the PATH although no Python holds its module (after `find` gave None)."""
+        return self._executable(entry) is not None
+
+    def on_path(self, entry, install_line, name=None, project=None):
+        """The sentence for a tool that is on the PATH but in no Python spark can use, else ''. A Python that spark could
+        not ask is said as that, with no install step. Else it ends with one step to copy: the install line run by the
+        first Python that holds no module, or the line that turns the PATH lookup off for the tool `name`."""
         executable = self._executable(entry)
         if executable is None:
             return ""
-        asked = self.tried.get((executable, entry["module"])) or []
-        said = ", ".join("%s %s" % (path, why or "holds no %s module" % entry["module"]) for path, why in asked)
-        step = "%s %s" % (asked[0][0], install_line[len("python3 "):]) \
-            if asked and install_line.startswith("python3 -m pip install --user ") \
-            else "tools.py --pin %s.exe=" % entry["module"]
-        return "%s is on your PATH (%s), %s: %s. Copy this step: %s" % (
-            entry["exe"], executable, NO_PYTHON_HOLDS_IT, said or "none could be asked", step)
+        module = entry["module"]
+        asked = self.tried.get((executable, module)) or []
+        cannot, holds_none = [(path, why) for path, why in asked if why], [path for path, why in asked if not why]
+        head = "%s is on your PATH (%s)" % (entry["exe"], executable)
+        if cannot:
+            lead = "%s. %s%s" % (head, " ".join("%s %s: %s." % (CANNOT_ASK, path, why) for path, why in cannot),
+                                 "".join(" %s holds no %s module." % (path, module) for path in holds_none))
+        else:
+            lead = "%s, %s: %s." % (head, NO_PYTHON_HOLDS_IT, ", ".join("%s holds no %s module" % (path, module) for path in holds_none)
+                                    or "none could be asked")
+        line = install_line.split(" \u2014 needs ")[0]  # the hint's ending is for a person, not for the shell
+        if holds_none and line.startswith("python3 -m pip install --user "):
+            return "%s Copy this step: %s %s" % (lead, shlex.quote(holds_none[0]), line[len("python3 "):])
+        if cannot:
+            return lead
+        return "%s Copy this step: %s" % (lead, store.format_rerun_line(
+            TOOLS_SCRIPT, (["--project", project] if project else []) + ["--pin", "%s.exe=" % (name or module)]))
 
     def row(self, name, entry, command):
         """The setup report's words for a tool found through the PATH, or '' when the running Python holds it."""
