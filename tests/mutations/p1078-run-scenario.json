@@ -74,8 +74,32 @@
  {
   "file": "scripts/spark/core/renderers.py",
   "name": "P1078: script_of loses run-scenario (test_flow.TheFollowUpTest.test_every_catalogue_op_a_step_names_has_its_script)",
-  "find": "              \"run-scenario\": \"run_scenario.py\"}",
-  "replace": "              }"
+  "find": "\"research-part\": \"research.py\", \"run-scenario\": \"run_scenario.py\"}",
+  "replace": "\"research-part\": \"research.py\"}"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1078 review: script_of loses move-hold (test_flow.TheFollowUpTest.test_every_op_a_next_step_is_built_with_has_its_script)",
+  "find": "\"needs-drop\": \"parts.py\", \"move-hold\": \"parts.py\",",
+  "replace": "\"needs-drop\": \"parts.py\","
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078 review: the step keeps a relative project (test_firmware_scenario.TheOperationTest.test_the_step_makes_a_relative_project_whole)",
+  "find": "\"--project\", str(Path(project).absolute())]",
+  "replace": "\"--project\", str(project)]"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078 review: the next step keeps a relative interpreter (test_firmware_scenario.TheOperationTest.test_the_run_s_own_flags_make_a_relative_interpreter_whole)",
+  "find": "str(Path(given[\"micropython\"]).absolute())",
+  "replace": "str(given[\"micropython\"])"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078 review: a paid run writes to no project (test_firmware_scenario.ThePaidRunTest.test_a_pass_through_the_cli_ends_with_the_flow_s_next_step)",
+  "find": "return None if values[\"dry_run\"] else Path(values[\"project\"])",
+  "replace": "return None"
  },
  {
   "file": "scripts/spark/firmware/firmware_scenario.py",

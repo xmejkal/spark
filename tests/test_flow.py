@@ -2126,6 +2126,45 @@ class TheFollowUpTest(FlowTest):
                 self.assertTrue((ROOT / "scripts" / script_of(op)).is_file())
         self.assertEqual((script_of("run-scenario"), script_of("pick"), script_of("look")), ("run_scenario.py", "parts.py", "look.py"))
 
+    def test_every_op_a_next_step_is_built_with_has_its_script(self):
+        # P1081 #1585 (the review of P1078): each NextStep(...) in scripts/spark whose op is a literal, a module constant or
+        # a class's `name` runs the script script_of names, and that script exists
+        import ast
+        from spark.core.renderers import script_of
+        ops = set()
+        for module in sorted((ROOT / "scripts" / "spark").rglob("*.py")):
+            tree = ast.parse(module.read_text())
+            consts = {}
+            for node in tree.body:
+                if isinstance(node, ast.Assign) and isinstance(node.value, (ast.Constant, ast.Tuple)):
+                    names = node.targets[0].elts if isinstance(node.targets[0], ast.Tuple) else [node.targets[0]]
+                    values = node.value.elts if isinstance(node.value, ast.Tuple) else [node.value]
+                    consts.update({name.id: value.value for name, value in zip(names, values)
+                                   if isinstance(name, ast.Name) and isinstance(value, ast.Constant)})
+            for cls in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
+                for node in cls.body:
+                    if isinstance(node, ast.Assign) and [t.id for t in node.targets if isinstance(t, ast.Name)] == ["name"]:
+                        value = node.value
+                        consts[cls.name + ".name"] = value.value if isinstance(value, ast.Constant) else consts.get(getattr(value, "id", None))
+                owner = consts.get(cls.name + ".name")
+                for call in [node for node in ast.walk(cls) if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "NextStep"]:
+                    first = call.args[0] if call.args else None
+                    if isinstance(first, ast.Attribute) and getattr(first.value, "id", None) == "self" and first.attr == "name":
+                        ops.add(owner)
+            for call in [node for node in ast.walk(tree) if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "NextStep"]:
+                first = call.args[0] if call.args else None
+                if isinstance(first, ast.Constant):
+                    ops.add(first.value)
+                elif isinstance(first, ast.Name) and first.id in consts:
+                    ops.add(consts[first.id])
+                elif isinstance(first, ast.Attribute) and isinstance(first.value, ast.Name) and first.value.id != "self":
+                    ops.add(consts.get(first.value.id + ".name"))
+        self.assertTrue({"look", "move-hold", "research-part", "run-scenario", "pick", "init_project"} <= ops, ops)
+        for op in sorted(ops):
+            with self.subTest(op=op):
+                self.assertTrue((ROOT / "scripts" / script_of(op)).is_file(), script_of(op))
+        self.assertEqual((script_of("move-hold"), script_of("research-part")), ("parts.py", "research.py"))
+
 
 def wrote_nothing():
     """Operation: a run that writes to `project` and changes nothing there, so two runs read the same flow (P1035 PR 2)."""

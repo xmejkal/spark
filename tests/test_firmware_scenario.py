@@ -26,7 +26,7 @@ from spark.core.cli import HelpText, run_cli, run_operation  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.outside import build_outside_world  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
-from spark.firmware.firmware_scenario import RunScenario  # noqa: E402
+from spark.firmware.firmware_scenario import RunScenario, paid_run_step  # noqa: E402
 from spark.operation_catalogue import CATALOGUE  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 
@@ -120,6 +120,20 @@ class TheOperationTest(unittest.TestCase):
         with self.assertRaises(SparkError):
             firmware.run(["the-shim"])  # a world for (reads,) starts no program
 
+    def test_the_step_makes_a_relative_project_whole(self):
+        # the review of P1078: the person runs the step from anywhere, so its --project names the whole path
+        step = paid_run_step(Path("walks") / "lamp", "sim/scenarios/s.scenario.yaml", "the why")
+        self.assertEqual(step.argv, ["sim/scenarios/s.scenario.yaml", "--project", os.path.join(os.getcwd(), "walks", "lamp")])
+
+    def test_the_run_s_own_flags_make_a_relative_interpreter_whole(self):
+        self.assertEqual(RunScenario.extra_of({"micropython": Path("m.bin"), "timeout_ms": 60000}),
+                         ["--micropython", os.path.join(os.getcwd(), "m.bin")])
+        self.assertEqual(RunScenario.extra_of({"micropython": None, "timeout_ms": 5000}), ["--timeout-ms", "5000"])
+
+    def test_a_paid_run_writes_to_its_project_and_a_dry_run_to_none(self):
+        self.assertEqual(RunScenario().written_project({"dry_run": False, "project": Path("lamp")}), Path("lamp"))
+        self.assertIsNone(RunScenario().written_project({"dry_run": True, "project": Path("lamp")}))
+
     def test_a_dry_run_only_reads_and_a_run_reads_runs_and_writes(self):
         self.assertEqual(RunScenario().effects_of({"dry_run": True}), ("reads",))
         self.assertEqual(RunScenario().effects_of({"dry_run": False}), ("reads", "runs", "writes"))
@@ -192,6 +206,17 @@ class ThePaidRunTest(RunScenarioCase):
         self.assertEqual(said["status"], "ok")
         self.assertTrue(said["assumptions"][0].startswith("not checked: the scenario's component ids, because"), said)
         self.assertEqual(said["problems"] + said["unchecked"], [])
+
+    def test_a_pass_through_the_cli_ends_with_the_flow_s_next_step(self):
+        # the review of P1078: the CLI's follow-up names the flow's now step after a paid run, which writes the project
+        import run_scenario
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": []}))
+        os.environ["WOKWI_CLI_TOKEN"] = "t"
+        with redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()):
+            code = run_scenario.main(self.argv("--json"), self.build(fake_run(0, "ready\n", READY_MATCHED)))
+        said = json.loads(out.getvalue())
+        self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertEqual([step["op"] for step in said["next"]], ["build-board"], said)
 
     def test_a_refusal_is_not_ran_and_a_pass_is(self):
         self.assertFalse(json.loads(self.cli("--json")[1])["data"]["ran"])

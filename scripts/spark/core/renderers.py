@@ -97,8 +97,8 @@ SCRIPTS = Path(__file__).resolve().parents[2]
 #: The script of each step op that is not `<op>.py` (P1081 #1585, P1078). Which script runs an op is the CLI frontend's
 #: fact, which the Operation catalogue does not hold (P1077): `step_command`, `board_envelope.next_text` and the flow's
 #: follow-up line read it through `script_of`.
-OP_SCRIPTS = {"pick": "parts.py", "requirements": "parts.py", "needs-drop": "parts.py", "build-board": "check_spine.py",
-              "run-scenario": "run_scenario.py"}
+OP_SCRIPTS = {"pick": "parts.py", "requirements": "parts.py", "needs-drop": "parts.py", "move-hold": "parts.py",
+              "build-board": "check_spine.py", "research-part": "research.py", "run-scenario": "run_scenario.py"}
 #: The symbol of each mark on the status line, when the stream can encode it.
 MARK_SYMBOLS = {MARK_OK: "✓", MARK_STOP: "✗", MARK_WARNING: "!", MARK_UNCHECKED: "?"}
 #: The ASCII word of each mark, for a stream whose encoding cannot encode the symbols (D8).
