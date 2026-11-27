@@ -39,6 +39,8 @@ print(json.dumps([sys.executable, release]))
 NO_PYTHON_HOLDS_IT = "but no Python spark asked holds its module"
 #: The words of a Python that spark could not ask: a could-not-run, never a "holds no module" (learned rule 2.1).
 CANNOT_ASK = "Spark cannot ask"
+# The start of a Python tool's install line in data/tools.json: the step to copy runs it with the tool's own Python.
+PIP_USER_INSTALL = "python3 -m pip install --user "
 #: The script a step to copy runs, by its whole path (`tools.py` beside the `spark` package).
 TOOLS_SCRIPT = Path(__file__).resolve().parents[2] / "tools.py"
 
@@ -158,7 +160,7 @@ class ToolPythonFinder:
             lead = "%s, %s: %s." % (head, NO_PYTHON_HOLDS_IT, ", ".join("%s holds no %s module" % (path, module) for path in holds_none)
                                     or "none could be asked")
         line = install_line.split(" \u2014 needs ")[0]  # the hint's ending is for a person, not for the shell
-        if holds_none and line.startswith("python3 -m pip install --user "):
+        if holds_none and line.startswith(PIP_USER_INSTALL):
             return "%s Copy this step: %s %s" % (lead, shlex.quote(holds_none[0]), line[len("python3 "):])
         if cannot:
             return lead
