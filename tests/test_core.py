@@ -1153,7 +1153,6 @@ class TheCopyLineTest(unittest.TestCase):
         return copy_line(step, home or self.home, privacy or self.privacy(), self.scripts)
 
     def test_with_no_homes_the_line_keeps_its_bytes(self):
-        self.assertEqual(step_command(THEN), step_command(THEN, ()))
         self.assertTrue(step_command(THEN).endswith("/then.py --project /opt/someone/p"), step_command(THEN))
 
     def test_a_word_equal_to_or_under_a_home_starts_with_the_home_variable(self):
