@@ -1,6 +1,6 @@
 [
   {"file": "scripts/spark/operation_catalogue.py", "name": "P1077: the research table is left out of the Operation catalogue (test_operation_catalogue T1, T2, T4)", "find": "(\"sourcing.research\", RESEARCH), ", "replace": ""},
-  {"file": "scripts/spark/operation_catalogue.py", "name": "P1077: the bench table is left out of the Operation catalogue (test_operation_catalogue T1, T2)", "find": "(\"checks\", CHECKS), (\"bench\", BENCH)", "replace": "(\"checks\", CHECKS)"},
+  {"file": "scripts/spark/operation_catalogue.py", "name": "P1077: the bench table is left out of the Operation catalogue (test_operation_catalogue T1, T2)", "find": "(\"firmware\", FIRMWARE), (\"bench\", BENCH)", "replace": "(\"firmware\", FIRMWARE)"},
   {"file": "scripts/spark/operation_catalogue.py", "name": "P1077: NETWORK lists the ops that write, not the ones that fetch (test_operation_catalogue T4)", "find": "FETCHES in operation.effects", "replace": "\"writes\" in operation.effects"},
   {"file": "scripts/spark/bench/__init__.py", "name": "P1077: grant.py's third mode is in no table again (test_operation_catalogue T2, test_look)", "find": "RecordDeploy, DisallowDirectFlashing)", "replace": "RecordDeploy)"},
   {"file": "scripts/spark/idea/drop_need.py", "name": "P1077: DropNeed has no sentence for a frontend to list (test_operation_catalogue T3)", "find": "    summary = \"Drop a need and its pick from .spark/needs.json, and release only the holds of the dropped pick.\"", "replace": "    summary = None"},

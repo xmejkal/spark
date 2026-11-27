@@ -94,7 +94,7 @@ def _built(path):
 
 def _diagram(path):
     diagram = json.loads(path.read_text())
-    lacking = {"wokwi-pushbutton", "wokwi-led"} - {part["type"] for part in diagram.get("parts", [])}
+    lacking = {"wokwi-pushbutton-6mm", "wokwi-led"} - {part["type"] for part in diagram.get("parts", [])}
     if lacking:
         return "no %s in it" % ", ".join(sorted(lacking))
     return None if build_service.wires_in(diagram) else "no wire in it"
@@ -397,10 +397,10 @@ class TheBasicJourneyTest(unittest.TestCase):
 
     def test_the_firmware_imports_with_the_stand_in_and_main_py_is_left_unrun(self):
         # P59: the one command, as a person runs it, on the project after the walk.
-        done = subprocess.run([sys.executable, str(ROOT / "scripts" / "import_firmware.py"), "--json"],
+        done = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_firmware.py"), "--json"],
                               cwd=str(self.project), capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertEqual(sorted(entry["module"] for entry in json.loads(done.stdout)["modules"]), ["light", "pins"])
+        self.assertEqual(sorted(entry["module"] for entry in json.loads(done.stdout)["data"]["modules"]), ["light", "pins"])
 
     @needs_littlefs
     def test_every_stage_leaves_what_the_next_one_reads(self):

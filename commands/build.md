@@ -61,7 +61,9 @@ build needs Node, as a full build does. Any other board-only build, such as the 
 itself), holds the board alone and needs no converter. A full build whose every part's record skips the simulation
 (`simulation.skip`) builds and keeps its board, and its simulation stage is `skipped`, with the code `every_part_skipped`, and with the records' reasons under what it
 cannot show; the closing line is `the chain runs end to end; every part is skipped from the simulation, so the diagram holds none
-of the project's parts`, exit 0, and the store notes no build (P778).
+of the project's parts`, exit 0, and the store notes no build (P778). A board whose record names no Wokwi part builds the
+same way: its simulation stage is `skipped` with the code `board_not_in_wokwi`, the closing line adds that code's
+meaning, and the run exits 0 (P1207). Test that firmware on the board itself.
 
 A scenario presses `onboard_button` and waits for the line the firmware prints, then releases it:
 
@@ -310,6 +312,16 @@ New License** starts one. Whether it spends the CI minutes `wokwi-cli` does is n
 nobody has run it on a spark project yet, so treat the first run as the check.
 
 ## Simulate it — for real, with the values set in the test
+
+First run the free check of the firmware ([P1208](https://github.com/xmejkal/spark/issues/1757)):
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/check_firmware.py --project .
+```
+
+It imports each module of `firmware/` with stand-ins for the board's modules and runs the project's own `tests/`. It
+needs no `sim/`, no board and no token, and it writes nothing (`check_firmware.py --help`). If it says ok, the next step
+is the scenario below. If a module does not import or an own test fails, fix that first: the paid run would fail on it.
 
 Every part record says how it is simulated (`simulation`: a Wokwi part standing in, a custom
 chip kept beside the record and compiled to WebAssembly by `wokwi-cli chip compile`, or a skip

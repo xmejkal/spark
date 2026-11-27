@@ -1,4 +1,4 @@
-"""P683 (#920, W6-F1): what run_scenario.py, flash_image.py and import_firmware.py print today stays what they print, so
+"""P683 (#920, W6-F1): what run_scenario.py, flash_image.py and check_firmware.py print today stays what they print, so
 no move breaks it. No golden run spends a Wokwi minute: ShimGuardTest proves the guard, and FirmwareGoldenTest runs
 no Case unless the simulator found is the shim."""
 
@@ -64,7 +64,7 @@ class FirmwareOpTest(unittest.TestCase):
 
     def test_the_op_of_a_firmware_case_is_its_script(self):
         self.assertEqual({golden_bench.op_of(case) for case in golden_firmware.CASES},
-                         {"run-scenario", "flash-image", "import-firmware"})
+                         {"run-scenario", "flash-image", "check-firmware"})
 
     def test_the_op_of_a_bench_case_is_still_the_first_word_of_its_golden(self):
         self.assertEqual([golden_bench.op_of(case) for case in golden_bench.CASES],

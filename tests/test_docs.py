@@ -51,7 +51,7 @@ class TheChecksTest(unittest.TestCase):
         self.assertEqual(check_docs.missing_names("the project gets `pins.py`"), [])
 
     def test_the_boot_file_a_project_holds_may_be_named(self):
-        # P59: import_firmware.py leaves the project's own main.py unrun, and the guides say so.
+        # P59: check_firmware.py leaves the project's own main.py unrun, and the guides say so.
         self.assertEqual(check_docs.missing_names("the command leaves `main.py` and `boot.py` unrun"), [])
 
     def test_every_command_skill_and_agent_must_be_listed(self):

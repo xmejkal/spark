@@ -21,7 +21,8 @@ at "just draw the schematic" it is relaxed; approaching a board order it is stri
    verified-parts pin maps. Any pin that is not sourced from a `verified: true` entry is
    flagged for datasheet or bench confirmation. Emit nothing to fab while flags remain.
 
-4. **Firmware simulation (functional).** `scripts/run_scenario.py` runs a scenario in Wokwi on the board's chip:
+4. **Firmware simulation (functional).** First `scripts/check_firmware.py --project .` runs the free check: each module
+   of `firmware/` imports, and the project's own `tests/` pass, with no Wokwi. Then `scripts/run_scenario.py` runs a scenario in Wokwi on the board's chip:
    it asserts serial output and GPIO/bus activity (`commands/build.md`, *Simulate it*). Note: some breakouts (e.g. TB6612, MAX98357A) may only be verifiable
    from the MCU side, not the peripheral's real response.
 

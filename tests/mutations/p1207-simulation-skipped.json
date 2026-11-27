@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/spark/build/stages.py",
+  "name": "P1207: a board with no Wokwi part ends the simulation could-not-run again (test_stages TheTableTest, test_build_service ABoardWithNoWokwiPartInTheFullBuildTest and test_a_board_alone_with_no_wokwi_part)",
+  "find": "NO_WOKWI_PART_TYPE_ENDING = StageEnding(build_codes.BOARD_NOT_IN_WOKWI, SKIPPED,",
+  "replace": "NO_WOKWI_PART_TYPE_ENDING = StageEnding(build_codes.BOARD_NOT_IN_WOKWI, COULD_NOT_RUN,"
+ },
+ {
+  "file": "scripts/spark/flow/no_model.py",
+  "name": "P1207: a skipped no-model stage no longer counts as stopped, so a new record is not done (test_flow TheGuideTest new-record tests)",
+  "find": " or stage.get(\"code\") in NO_MODEL_CODES]",
+  "replace": "]"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1207: the guide's guard wants a could-not-run build phase again, so a new record is not done (test_flow TheGuideTest new-record tests)",
+  "find": "build.status not in (COULD_NOT_RUN, None)",
+  "replace": "build.status != COULD_NOT_RUN"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P1207: the build phase of a new no-model record says every part is skipped (test_flow TheGuideTest new-record test, its says)",
+  "find": "says + [flow_codes.NO_SIMULATION_NOW], offers)",
+  "replace": "says + [flow_codes.SIMULATION_SKIPPED_MESSAGE], offers)"
+ },
+ {
+  "file": "scripts/spark/build/build_board.py",
+  "name": "P1207: the closing line of a board with no Wokwi part says every part is skipped (test_build_service closing-line test)",
+  "find": "build_codes.BOARD_NOT_IN_WOKWI: \"; \" + build_codes.BOARD_NOT_IN_WOKWI.meaning}",
+  "replace": "build_codes.BOARD_NOT_IN_WOKWI: EVERY_PART_SKIPPED_LINE}"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1207: the page's answer asks a could-not-run build for the note, as before P1207, so an ok build has none (test_run_request built-with-a-note test)",
+  "find": "    if kind == flow_codes.BUILD_BOARD and status == OK and stops_only_for_no_model(result.data):",
+  "replace": "    if kind == flow_codes.BUILD_BOARD and status == COULD_NOT_RUN and stops_only_for_no_model(result.data):"
+ }
+]

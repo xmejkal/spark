@@ -185,7 +185,7 @@ class OtherEditsTest(unittest.TestCase):
         edit(project, lambda drawn: next(one for one in drawn["parts"] if one["id"] == "TactileButton")
              .update(type="wokwi-slide-switch"))
         self.assertEqual(codes(build(project)), {"TactileButton": "type-changed"})
-        self.assertEqual(part(project, "TactileButton")["type"], "wokwi-pushbutton")
+        self.assertEqual(part(project, "TactileButton")["type"], "wokwi-pushbutton-6mm")
 
     def test_a_turn_that_is_not_a_quarter_turn_is_named(self):
         project = new_project(FULL)
