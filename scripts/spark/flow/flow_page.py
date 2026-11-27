@@ -21,7 +21,7 @@ from spark.flow.fingerprint import SHORT
 from spark.flow.page_sections import (WIRING, DeveloperHtmlFold, FreshHtmlLine, GuideHtmlSection, IntroHtmlLine, NotesHtmlSection,
                                       PartsHtmlFold, PicturesHtmlFold, StandsAtHtmlLine, StationsHtmlLine, TitleHtmlHeading,
                                       WiringHtmlFold, _text)
-from spark.flow.phase_readers import MARKS
+from spark.flow.phase_readers import MARKS, pick_need
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import MONTHS
 
@@ -60,12 +60,14 @@ def page_words(phases):
     its code's meaning, the `line` that `flow.py run-request` answers. The script fills in a time, a label or a line.
     `intro` is the published page's intro, `last_request` the line of the last request, `months` the month words of its
     time, and `request_kinds` and `request_other` its words when its offer left the page (P1062). `copied` is what Copy says
-    once it copied a chat offer's tell (P1122).
+    once it copied a chat offer's tell (P1122). A pick's words also hold its `need` and its `part`, and the words of several
+    picks in one Send are the ones with `picks` in their name (P1067).
     """
     offers = {}
     for offer in (offer for phase in phases for offer in phase["offers"] if flow_codes.is_sendable(offer["key"])):
         stale = [flow_codes.CONFIRM_STALE % ", ".join(offer["makes_stale"])] if offer["makes_stale"] else []
-        offers[offer["key"]] = {"label": offer["label"], "says": [offer["effect"]] + stale}
+        words, need = {"label": offer["label"], "says": [offer["effect"]] + stale}, pick_need(offer["key"])
+        offers[offer["key"]] = dict(words, need=need, part=offer.get("part")) if need else words
     meanings = {str(code): meaning for code, meaning in request_codes.CODES.items()}
     marks = {status: MARKS[status][1] for status in (OK, PROBLEMS, COULD_NOT_RUN)}
     return {"offers": offers, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY, "copied": flow_codes.COPIED_SAYS,
@@ -78,6 +80,12 @@ def page_words(phases):
             "ok": dict(flow_codes.RAN_OK_SAYS), "ran": flow_codes.RAN_OTHER_SAYS, "note": flow_codes.RAN_NOTE_SAYS, "problems": flow_codes.RAN_PROBLEMS_SAYS,
             "could_not_run": flow_codes.COULD_NOT_RUN_SAYS,
             "refused": {meanings[name]: said for name, said in flow_codes.REFUSED_SAYS.items()},
+            "refused_picks": {meanings[name]: said for name, said in flow_codes.REFUSED_PICKS.items()},
+            "not_now": flow_codes.NOT_NOW, "picks_said": list(flow_codes.PICKS_SAID), "send_picks": flow_codes.SEND_PICKS,
+            "choose_first": flow_codes.CHOOSE_FIRST, "picks_together": flow_codes.PICKS_TOGETHER_MESSAGE,
+            "waiting_picks": flow_codes.WAITING_PICKS_SAYS, "ok_picks": flow_codes.RAN_OK_PICKS_SAYS,
+            "last_request_picks": flow_codes.LAST_REQUEST_PICKS, "needs_join": flow_codes.NEEDS_JOIN, "label_join": flow_codes.LABEL_JOIN,
+            "no_pick_saved": flow_codes.NO_PICK_SAVED_SAYS,
             "marks": dict(marks, **{"not-run": flow_codes.NOT_RUN_MARK})}
 
 
@@ -191,7 +199,7 @@ class FlowHtmlPage:
     def _script(self, page):
         """The page's words (`page_words`) as an inert JSON block, then its one script (P829 PR 3), as one block before
         `</body>`: without it the page is the page with no script, byte for byte, but the script's hooks (`data-makes-stale` on
-        a sendable offer, and `data-key` with it on the NOW box's NEXT line, `sendable_now`).
+        a sendable offer, `data-key` with it on the NOW box's NEXT line, `sendable_now`, and `data-need` on a need's row, P1067).
         A `<` in the words is written `\\u003c`, so no text closes the block."""
         words = json.dumps(page_words(page.phases), ensure_ascii=False, sort_keys=True).replace("<", "\\u003c")
         return '<script type="application/json" id="%s">%s</script>\n<script>%s</script>' % (

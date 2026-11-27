@@ -15,6 +15,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shlex
 import shutil
 import sys
@@ -725,6 +726,7 @@ class TheGuideTest(FlowTest):
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL,
             "simulation": {"line": NO_MODEL, "grey": True, "check": NO_CHECK},  # P1209: no firmware and no check record
             "no_open_phase": None, "wired": {"sheet_at": sheet_at(project), "deploy_at": None},  # P1044: the fixture keeps a sheet
+            "gate_a": None,  # P1220: no board log yet
             # P1119: the two jobs: the breadboard is now beside the firmware, so it is in no list
             "stations": stations(("idea", "done", None), ("needs", "done", "not-done"), ("parts", "done", "not-done"),
                                  ("requirements", "done", "no-picks"), ("build", "done", "no-model"), ("breadboard", "now", None),
@@ -785,6 +787,7 @@ class TheGuideTest(FlowTest):
             "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL, "no_open_phase": None,
             "simulation": {"line": NOT_RUN_YET + " " + NO_MODEL, "grey": False, "check": NO_CHECK},  # P1209: firmware, no record
             "wired": {"sheet_at": sheet_at(project), "deploy_at": None},  # P1044: the fixture keeps a sheet
+            "gate_a": {"shut_by": [], "fact": "no-model", "says": "No simulator run: none covers this board."},  # P1220: the deploy is now
             # P1119: a simulate with no model is later, though it stands before the deploy now
             "stations": stations(("idea", "done", None), ("needs", "done", "not-done"), ("parts", "done", "not-done"),
                                  ("requirements", "done", "no-picks"), ("build", "done", "no-model"), ("breadboard", "done", "unseen"),
@@ -877,6 +880,7 @@ class TheGuideTest(FlowTest):
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None,  # P1044: no sheet and no board log
             "simulation": {"line": None, "grey": False, "check": NO_CHECK},  # P1209: nothing to say
+            "gate_a": None,  # P1220
             "stations": stations(("idea", "now", None), *[(phase, "later", None) for phase in PHASES[1:]])})  # P1119
 
     def test_needs_set_aside_do_not_count_and_a_picked_one_counts_as_picked(self):
@@ -1687,6 +1691,20 @@ class TheOfferStepTest(FlowTest):
         self.assertEqual({step.op: step.effects for step in steps.values()},
                          {op: tuple(operation.effects) for op, operation in operations.items() if op in ("pick", "build-board", "needs-drop")})
 
+    def test_the_joined_step_of_three_picks_is_the_pick_of_their_pairs_with_pick_parts_s_op_and_effects(self):
+        """P1067: the page's Send of several picks runs one step, built through `picks_step` from the offers' own steps."""
+        from spark.core.cli import values_of
+        from spark.flow import offer_steps
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        steps = [offer_steps.pick_step(project, need, pick_id, name) for need, pick_id, name in
+                 (("soil", "x-many", "A soil probe"), ("light", "led-red-5mm", "Red LED"), ("board", "xiao-esp32-c6", "XIAO"))]
+        joined = offer_steps.joined_picks(steps)
+        self.assertEqual(joined, offer_steps.picks_step(project, ["soil=x-many", "light=led-red-5mm", "board=xiao-esp32-c6"],
+                                                        "; ".join(step.why for step in steps)))
+        self.assertEqual((joined.op, joined.effects), (PickParts.name, tuple(PickParts.effects)))
+        self.assertEqual(values_of(PickParts(), joined.argv)[0]["project_and_picks"],
+                         [str(project.absolute()), "soil=x-many", "light=led-red-5mm", "board=xiao-esp32-c6"])
+
     def test_the_parts_list_step_parses_with_its_own_operation(self):
         from spark.core.cli import values_of
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD)
@@ -1766,10 +1784,19 @@ class TheOfferStepTest(FlowTest):
         section = (project / "page.html").read_text(encoding="utf-8").split('<section id="guide">')[1].split("</section>")[0]
         self.assertIn('<p class="muted">%s</p>' % line, section)
 
-    def test_the_offers_in_data_keep_their_four_keys_and_no_step(self):
+    def test_the_offers_in_data_keep_their_five_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))
         self.assertEqual({tuple(offer) for phase in said["data"]["phases"] for offer in phase["offers"]},
-                         {("key", "label", "effect", "makes_stale")})
+                         {("key", "label", "effect", "makes_stale", "part")})
+
+    def test_a_pick_offer_in_data_names_its_part_and_every_other_offer_null(self):
+        """P1067 (D22: each fact on the page is in show): the page labels a pick's radio by its part."""
+        said, _ = show(with_needs(a_built_project(), SOIL))
+        parts = {offer["key"]: offer["part"] for phase in said["data"]["phases"] for offer in phase["offers"]}
+        self.assertEqual(parts["pick:soil:x-many"], "A soil probe")
+        self.assertEqual({key: part for key, part in parts.items() if not key.startswith("pick:")},
+                         {key: None for key in parts if not key.startswith("pick:")})
+        self.assertIn("build", parts)
 
 
 def a_simulate_now(project, *scenarios):
@@ -3214,6 +3241,151 @@ class TheIdeaGoalTest(FlowTest):
     def test_an_idea_with_a_goal_is_no_finding_and_keeps_the_exit(self):
         said, code = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
         self.assertEqual((code, said["status"], said["problems"]), (0, "ok", []))
+
+
+FAILED_NOW = "A run failed on this image (one.log)."
+CANNOT_TELL = "Spark cannot tell. The simulation phase says why."
+
+
+def runs_folder_state(project):
+    """{file: mtime_ns} of every file under sim/runs/: a reader that wrote or ran something changes it."""
+    return {path.as_posix(): path.stat().st_mtime_ns for path in sorted((project / "sim" / "runs").rglob("*")) if path.is_file()}
+
+
+def a_project_at_the_board(verdict="failed"):
+    """An image, a run of it that ended in `verdict`, and a board log of it that saw ready: the deploy is ok (P1220)."""
+    project = a_run(an_image(a_firmware(a_built_project())), verdict)
+    return a_board_log(project, "ready seen", SEEN_SENTENCE)
+
+
+def gate_a_of_project(project):
+    return show(project)[0]["data"]["guide"]["gate_a"]
+
+
+class TheGateATest(FlowTest):
+    """P1220 (#1769): gate A's one free condition, no failed run on the current image (D10), and its row "Tested before the board"."""
+
+    def test_a_failed_run_on_the_image_shuts_gate_a_and_the_row_says_which_log(self):
+        self.assertEqual(gate_a_of_project(a_project_at_the_board()),
+                         {"shut_by": ["run-failed"], "fact": "run-failed", "says": FAILED_NOW})
+
+    def test_reading_gate_a_costs_no_minutes_through_show_and_the_page(self):
+        """The fake run raises, and the files under sim/runs/ keep their mtimes: nothing ran and nothing was written there."""
+        from spark.flow.write_flow_page import WriteFlowPage
+        project = a_project_at_the_board()
+        before = runs_folder_state(project)
+        self.assertEqual(sorted(path.name for path in (project / "sim" / "runs").glob("*.log")), ["one.log"])
+        for operation, values in ((ShowFlow(), {"project": str(project)}), (WriteFlowPage(), {"project": str(project), "artifact": None})):
+            with self.subTest(operation=operation.name):
+                outside = FakeOutsideWorld(run=mock.Mock(side_effect=AssertionError("a program ran")))
+                result = run_operation(operation, values, outside)
+                self.assertEqual((outside.ran, result.data["guide"]["gate_a"]["shut_by"]), ([], ["run-failed"]))
+                self.assertEqual(runs_folder_state(project), before)
+
+    def test_show_prints_the_row_after_the_now_line_and_prints_none_before_the_station(self):
+        lines = lines_of(a_project_at_the_board())
+        self.assertEqual(lines[1], "  TESTED BEFORE THE BOARD: A run failed on this image (one.log).")
+        self.assertTrue(lines[0].startswith("  NOW (simulate)"), lines[0])
+        self.assertFalse([line for line in lines_of(a_run(an_image(a_firmware(a_built_project())), "failed")) if "TESTED BEFORE" in line])
+        self.assertFalse([line for line in lines_of(Path(tempfile.mkdtemp())) if "TESTED BEFORE" in line])
+
+    def test_show_prints_a_null_shut_by_row(self):
+        """A null `shut_by` is not a null `gate_a`: the deploy has a board log and a log cannot be read."""
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
+        log = project / "sim" / "runs" / "one.log"
+        self.addCleanup(log.chmod, 0o644)
+        log.chmod(0)
+        self.assertIn("  TESTED BEFORE THE BOARD: " + CANNOT_TELL, lines_of(project))
+
+    def test_show_prints_the_row_after_the_line_that_says_nothing_is_open(self):
+        lines = lines_of(a_project_at_the_board("passed"))
+        self.assertEqual(lines[0], "  " + NOTHING_WAITS)
+        self.assertEqual(lines[1], "  TESTED BEFORE THE BOARD: A run passed on this image.")
+
+    def test_a_passed_run_and_a_board_log_leave_nothing_shutting_gate_a(self):
+        self.assertEqual(gate_a_of_project(a_project_at_the_board("passed")),
+                         {"shut_by": [], "fact": "image-tested", "says": "A run passed on this image."})
+
+    def test_a_failed_run_beside_a_later_passed_run_still_shuts_gate_a(self):
+        project = a_project_at_the_board()
+        (project / "sim" / "runs" / "two.log").write_text("verdict: passed\nimage sha256: %s\n\nx\n" % hashlib.sha256(b"an image").hexdigest())
+        self.assertEqual(gate_a_of_project(project)["shut_by"], ["run-failed"])
+
+    def test_a_failed_run_on_another_image_shuts_nothing(self):
+        project = a_board_log(a_run(an_image(a_firmware(a_built_project())), "failed", image=b"older"), "ready seen", SEEN_SENTENCE)
+        self.assertEqual(gate_a_of_project(project),
+                         {"shut_by": [], "fact": "image-untested", "says": "No run tested this image."})
+
+    def test_a_rebuild_after_an_older_board_log_and_a_failed_run_on_the_new_image_shuts_gate_a(self):
+        project = a_board_log(a_firmware(a_built_project()), "ready seen", SEEN_SENTENCE, image=b"the older image")
+        a_run(an_image(project, b"the new image"), "failed", image=b"the new image")
+        self.assertEqual(gate_a_of_project(project)["shut_by"], ["run-failed"])
+
+    def test_firmware_changed_after_the_image_is_said_in_the_row(self):
+        project = a_project_at_the_board("passed")
+        os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
+        self.assertEqual(gate_a_of_project(project), {
+            "shut_by": [], "fact": "image-older", "says": "Your firmware changed after the image, so no run tested it as it is now."})
+
+    def test_before_the_on_the_board_station_gate_a_is_null(self):
+        for name, project in (("a fresh project", Path(tempfile.mkdtemp())), ("the simulate now", a_run(an_image(a_firmware(a_built_project())), "failed"))):
+            with self.subTest(name):
+                self.assertIsNone(gate_a_of_project(project))
+
+    def test_the_deploy_now_reaches_the_station_and_a_log_that_cannot_be_read_gives_null(self):
+        project = a_deploy_project()
+        self.assertEqual(gate_a_of_project(project)["fact"], "image-tested")  # the deploy is now, with no board log
+        a_board_log(project, "ready seen", SEEN_SENTENCE)
+        self.assertEqual(gate_a_of_project(project), {"shut_by": [], "fact": "image-tested", "says": "A run passed on this image."})
+        log = project / "sim" / "runs" / "one.log"
+        self.addCleanup(log.chmod, 0o644)
+        log.chmod(0)
+        self.assertEqual(gate_a_of_project(project), {"shut_by": None, "fact": None, "says": CANNOT_TELL})
+
+    def test_a_board_with_no_wokwi_model_says_no_model_and_a_failed_run_still_shuts_it(self):
+        project = a_board_log(a_firmware(a_project_built_with_no_simulation()), "ready seen", SEEN_SENTENCE)
+        self.assertEqual(gate_a_of_project(project),
+                         {"shut_by": [], "fact": "no-model", "says": "No simulator run: none covers this board."})
+        project = a_board_log(a_run(an_image(a_firmware(a_project_built_with_no_simulation())), "failed"), "ready seen", SEEN_SENTENCE)
+        self.assertEqual(gate_a_of_project(project)["shut_by"], ["run-failed"])
+
+    def a_no_model_board_with_the_default_image(self):
+        """A real no-model board (P1001): no sim/wokwi.toml, and the image sim/flash-with-firmware.bin."""
+        project = a_firmware(a_project_built_with_no_simulation())
+        (project / "sim").mkdir(exist_ok=True)
+        (project / "sim" / "flash-with-firmware.bin").write_bytes(b"an image")
+        return project
+
+    def test_a_no_model_board_with_no_toml_reads_the_default_image_as_the_deploy_does(self):
+        project = a_run(self.a_no_model_board_with_the_default_image(), "failed")
+        a_board_log(project, "ready seen", SEEN_SENTENCE)
+        self.assertEqual(gate_a_of_project(project), {"shut_by": ["run-failed"], "fact": "run-failed", "says": FAILED_NOW})
+        log = project / "sim" / "runs" / "one.log"
+        self.addCleanup(log.chmod, 0o644)
+        log.chmod(0)
+        self.assertEqual(gate_a_of_project(project), {"shut_by": None, "fact": None, "says": CANNOT_TELL})
+
+    def test_a_no_model_board_with_the_default_image_and_no_failed_run_says_no_model(self):
+        project = a_board_log(self.a_no_model_board_with_the_default_image(), "ready seen", SEEN_SENTENCE)
+        self.assertEqual(gate_a_of_project(project)["fact"], "no-model")
+
+    def test_a_failed_log_with_no_sim_wokwi_toml_is_not_seen_and_the_row_says_no_simulation_files(self):
+        """The risk the plan names: image_fact reads no image without sim/wokwi.toml, though the deploy refuses a failed log
+        on sim/flash-with-firmware.bin. Pinned so a change shows."""
+        project = a_board_log(a_run(a_firmware(a_built_project()), "failed"), "ready seen", SEEN_SENTENCE)
+        self.assertEqual(gate_a_of_project(project), {
+            "shut_by": [], "fact": "no-sim-files", "says": "No run tested this image: the project has no simulation files."})
+
+    def test_no_row_with_an_empty_shut_by_says_a_word_of_permission(self):
+        from spark.flow import flow_codes as codes
+        projects = (a_project_at_the_board("passed"), a_board_log(a_firmware(a_project_built_with_no_simulation()), "ready seen", SEEN_SENTENCE),
+                    a_board_log(a_run(an_image(a_firmware(a_built_project())), "failed", image=b"older"), "ready seen", SEEN_SENTENCE),
+                    a_board_log(a_run(a_firmware(a_built_project()), "failed"), "ready seen", SEEN_SENTENCE))
+        said = [gate_a_of_project(project) for project in projects] + [{"says": text} for text in codes.GATE_A_SAYS.values()]
+        for row in said:
+            with self.subTest(row["says"]):
+                self.assertFalse(re.search(r"\b(open|ok|allowed|ready|permitted)\b", row["says"], re.IGNORECASE), row["says"])
+        self.assertEqual(len(said), 4 + len(codes.GATE_A_SAYS))
 
 
 if __name__ == "__main__":

@@ -17,9 +17,11 @@ an existing `page.html` again on disk, but never publishes it (P1035, P1069, P12
 `data.guide.simulation.line` as it is: it is the free checks' state and why there is no simulation, read from the check
 record, and you run no check to say it.
 The published copy lags until the next `/spark:page` republishes it ([carry the requests](#carry-the-requests), step 3).
-Published as an Artifact with its database, it shows its owner a button for each step that spark lets the page ask for.
-If the page shows no button, spark offers no step now. A click, after the person's Send, writes one row in the
-collection `requests`: `{id, key, seen, at}`. The page then waits for the row `answers/<id>`. Nothing runs until the
+Published as an Artifact with its database, it shows its owner a button for each step that spark lets the page ask for,
+and in its parts a choice of a part for each need, with one Send of the chosen picks
+([P1067](https://github.com/xmejkal/spark/issues/1565)). If the page shows no button, spark offers no step now. A click,
+after the person's Send, writes one row in the collection `requests`, whose shape `flow.py run-request --help` says.
+The page then waits for the row `answers/<id>`. Nothing runs until the
 person types `/spark:page`. Spark decides what may run: `flow.py run-request` runs a step only when spark offers it now
 and the project has not changed since the page was read, and it refuses everything else
 ([P829](https://github.com/xmejkal/spark/issues/1187)). This command carries the request to spark and the answer back.
@@ -84,8 +86,9 @@ Each time below that says "republish":
 4. For each waiting request, the oldest first:
    1. Its id must be a UUID in lower case (8, 4, 4, 4 and 12 hex digits, with hyphens). If it is not, skip the request,
       write nothing for it, and tell the person: "A request on the page could not be read, so nothing ran for it."
-   2. Write `.spark/page-request.json` in the project with the Write tool: the row's `id`, `key`, `seen` and `at`,
-      exactly as the page wrote them. Add nothing and change nothing. Never write a key or a `seen` of your own.
+   2. Write `.spark/page-request.json` in the project with the Write tool: the row's `id`, `key` or `keys`, `seen` and
+      `at`, exactly as the page wrote them. Add nothing and change nothing. Never join or split `keys`, and never write
+      a key or a `seen` of your own.
    3. Run the request in the foreground, with a timeout of 600000 ms (a build can take minutes):
 
       ```
@@ -101,7 +104,8 @@ Each time below that says "republish":
       could not run, or it holds a parts-list write's notes: the parts it kept that no pick explains, an entry written
       for a pick that is gone, or why `.spark/requirements-origin.json` was not read or written. When nothing ran: the fix of the refusal's code, in plain words.
    7. When `ran` is false, go on to the next request. When `ran` is true and `data.status` is not `ok`, tell the person
-      `data.line` and the fix of its finding, and stop: carry no other request in this turn.
+      `data.line` and the fix of its finding, and stop: carry no other request in this turn. For a row with `keys`,
+      say first "not ok: no pick was saved": spark saves the picks together or none.
 
 ## Rules
 

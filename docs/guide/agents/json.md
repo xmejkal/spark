@@ -138,7 +138,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `check_spine.py` | `check`, `stages`, `status`, and `kept`, `missing_facts`, `next` and `unserved` when they apply ([its keys](#check_spinepy)) |
 | `look.py`, `deploy.py` | the envelope, as `parts.py`'s ([their envelope](#lookpy-and-deploypys-envelope)) |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
-| `flow.py` | the envelope, as `parts.py`'s. `show`'s `data` is one reading of the flow, which `page` draws ([its keys and `page`'s](flow.md)). For wiring read `data.guide.wired` (P1044); for places, `.stations` (P1119). `run-request`: [a page request](flow.md#a-page-request), its `for` the page's click id |
+| `flow.py` | the envelope, as `parts.py`'s. `show`'s `data` is one reading of the flow, which `page` draws ([its keys and `page`'s](flow.md)). Wiring: `data.guide.wired` (P1044); places: `.stations` (P1119). `run-request`: [a page request](flow.md#a-page-request), `for` the click id, `keys` the keys it names |
 | `bench.py` | the envelope, as `parts.py`'s, with `tool` `bench` and `op` `show-bench`: `data.boards`, one row per board on USB ([its keys](bench.md)) |
 ### check_spine.py
 

@@ -324,19 +324,29 @@ class GuideHtmlSection:
     def _now(self, page):
         """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), NEXT, the guide's
         sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`), and the chat offer's
-        block (`_ask`). With no now, the line that says nothing is open (P1043, read with `.get`), or nothing."""
+        block (`_ask`). Gate A's row stands after ON THE BOARD (`_tested`, P1220). With no now, the line that says nothing is
+        open (P1043, read with `.get`) and the row, or nothing."""
         now = page.guide["now"]
         if not now:
             said = page.guide.get("no_open_phase")
-            return '<div class="now">\n<p>%s</p>\n</div>' % _text(said) if said else ""
+            lines = (['<p>%s</p>' % _text(said)] if said else []) + self._tested(page)
+            return "\n".join(['<div class="now">'] + lines + ["</div>"]) if lines else ""
         lines = ["<p><strong>%s</strong></p>" % _text(flow_codes.NOW_BY % (now["phase"], flow_codes.NOW_BY_JOIN.join(now["by"])))]
         if page.deployed:
             lines.append('<p class="board"><strong>%s</strong> %s</p>' % (_text(flow_codes.ON_BOARD_LABEL), _text(page.deployed)))
+        lines += self._tested(page)
         offer = sendable_now(page)
         hooks = ' data-key="%s"%s' % (_text(offer["key"]), _makes_stale(offer)) if offer else ""
         lines.append('<p class="next"%s><strong>%s</strong> %s%s</p>' % (
             hooks, _text(flow_codes.NEXT_ACT_LABEL), _text(now["says"]), self._step_link(page)))
         return "\n".join(['<div class="now">'] + lines + self._ask(now) + ["</div>"])
+
+    @staticmethod
+    def _tested(page):
+        """Gate A's row (P1220), under ON THE BOARD, or under the line that says nothing is open: its label in bold and the
+        guide's `gate_a.says`, as `flow.py show` prints it. [] when the guide holds no `gate_a` or holds null: it decides nothing."""
+        gate_a = page.guide.get("gate_a")
+        return ['<p class="tested"><strong>%s</strong> %s</p>' % (_text(flow_codes.TESTED_LABEL), _text(gate_a["says"]))] if gate_a else []
 
     @staticmethod
     def _ask(now):
@@ -382,7 +392,8 @@ class PartsHtmlFold:
 
     def text(self, page):
         """The parts fold (P1062): the parts phase's says in order (P1044's wired line first), one row per need with its
-        picks in the reading's order (`pick_need`), then the other sendable offers, the parts list and the build. Each is a
+        picks in the reading's order (`pick_need`), its `data-need` the script's (P1067), then the other sendable offers, the
+        parts list and the build. Each is a
         hooked row, but the one on the NOW line. Open while the parts are NOW. Nothing with no parts phase and no row."""
         phase = next((each for each in page.phases if each["phase"] == flow_codes.PARTS), None)
         on_now = (sendable_now(page) or {}).get("key")
@@ -391,7 +402,8 @@ class PartsHtmlFold:
             needs.setdefault(pick_need(offer["key"]), []).append(offer)
         if phase is None and not needs:
             return ""
-        rows = ['<li class="need"><strong>%s</strong><ul>%s</ul></li>' % (_text(need), "".join(self._hooked(offer) for offer in offers))
+        rows = ['<li class="need" data-need="%s"><strong>%s</strong><ul>%s</ul></li>' % (_text(need), _text(need), "".join(
+                    self._hooked(offer) for offer in offers))
                 for need, offers in needs.items() if need is not None]
         rows += [self._hooked(offer) for offer in needs.get(None, [])]
         said = list(dict.fromkeys(phase["says"])) if phase else []  # a line the phase says for every need stands once

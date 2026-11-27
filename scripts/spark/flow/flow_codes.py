@@ -140,6 +140,9 @@ MAKES_STALE = {PICK: (REQUIREMENTS,), WRITE_REQUIREMENTS: (BUILD, BREADBOARD), B
 PICK_LABEL = "Pick “%s” for %s"
 #: The why of a pick's step (P1030): a pick is the person's choice, so the step names the part and the need.
 PICK_WHY = "The person's choice: “%s” for the %s need"
+#: Between two labels, and two whys, of the picks of one page request (P1067): `flow.py run-request`'s answer and the step it
+#: runs. No page word.
+LABELS_JOIN = "; "
 #: The why of the parts phase's own step (P1141), a pick for each open need while no one offer does the job.
 PICK_OPEN_WHY = "The person's choice for each need: Claude fills each <part> with an id from parts.py --match, or the need is set aside."
 DROP_LABEL = "Drop the %s need"
@@ -289,23 +292,42 @@ LAST_REQUEST_SAYS = "Your last request, %s: %s."
 #: The last request's words when its offer is no longer on the page (the review of #1619): by its kind, else one sentence.
 LAST_REQUEST_KINDS = {PICK: "a pick", WRITE_REQUIREMENTS: "the parts list", BUILD_BOARD: "the build"}
 LAST_REQUEST_OTHER = "a step this page no longer offers"
+#: Several picks in one Send (P1067, the P1038 design of 2026-11-23): each need's radios, "not now" first; the Send of the
+#: picks named by the count and their needs (PICKS_SAID: one, many), with CHOOSE_FIRST under it while none is chosen; the
+#: Send box's last line; the wait; an ok answer; and the last request's words when its picks left the page.
+NOT_NOW = "not now"
+PICKS_SAID = ("%d pick (%s)", "%d picks (%s)")
+SEND_PICKS = "Send %s"
+CHOOSE_FIRST = "Choose a part first."
+PICKS_TOGETHER_MESSAGE = "Spark checks the picks together. If one fails, spark saves none."
+WAITING_PICKS_SAYS = "Sent at %s: %s. Nothing has run yet. To run it, type /spark:page in Claude Code."
+LAST_REQUEST_PICKS = "your picks"
+#: The script's two joins (P1067): between the needs PICKS_SAID names, and between a pick's label and its words in the Send box.
+NEEDS_JOIN, LABEL_JOIN = ", ", ": "
 NEW_STATE = "Reload to see the new state."
 #: What the page says when a step ran ok, by its kind: what it did and what is not done yet.
 RAN_OK_SAYS = {PICK: "Saved as the pick. Nothing is built yet. " + NEW_STATE,
                WRITE_REQUIREMENTS: "The parts list is written. Nothing is built yet. " + NEW_STATE,
                BUILD_BOARD: "The board builds. It is not wired, not flashed and not simulated yet. " + NEW_STATE}
+#: Several picks that ran ok (P1067): not a kind, so it stays out of RAN_OK_SAYS.
+RAN_OK_PICKS_SAYS = "Saved as the picks. Nothing is built yet. " + NEW_STATE
 #: A step of another kind that ran ok, with spark's own line (`ran <label>: ok`); the page sends no other kind today.
 RAN_OTHER_SAYS = "Spark says: %s. " + NEW_STATE
 #: The note after an ok answer that has one: a build that built while its simulation could not run (P1008), or the
 #: notes of a parts-list write, such as the entries it kept that no pick explains (P1139).
 RAN_NOTE_SAYS = "Note: %s."
 RAN_PROBLEMS_SAYS = "Ran, with problems: %s. " + NEW_STATE
+#: Said first of several picks that ran with problems (P1067): PickParts saves all of them or none.
+NO_PICK_SAVED_SAYS = "No pick was saved."
 COULD_NOT_RUN_SAYS = "Could not run: %s. " + NEW_STATE
 #: What the page says of each refusal of `flow.py run-request`, by the code's name: nothing ran, in grey, never red.
 REFUSED_SAYS = {"request_stale": "Nothing ran. The project changed after you clicked. Reload this page and click again.",
                 "request_not_offered": "Nothing ran. This button is no longer offered. Reload the page.",
                 "request_in_chat": "Nothing ran. This step is asked in the chat: tell Claude.",
                 "request_malformed": "Nothing ran. The request could not be read. Reload the page and click again."}
+#: The refusals of a request of several picks (P1067): as REFUSED_SAYS, but one that spark no longer offers.
+REFUSED_PICKS_SAYS = "Nothing ran. Spark no longer offers one of these picks. Reload this page."
+REFUSED_PICKS = dict(REFUSED_SAYS, request_not_offered=REFUSED_PICKS_SAYS)
 #: The mark of a request that ran nothing: a dash, grey.
 NOT_RUN_MARK = "–"
 #: The head of the NOW box's block of a chat offer (P1122): plain bold text, never a button. Under it the tell stands in a
@@ -499,6 +521,21 @@ LEFT_OUT_NOTES = frozenset((NOT_DONE_NOTE, NO_SHEET_NOTE))
 STATION_NOTES = {NO_PICKS_NOTE: "no needs or picks behind it", NO_MODEL_NOTE: "no simulation",
                  UNSEEN_NOTE: "spark cannot see it", MAY_CHANGE_NOTE: "done, may change"}
 STATION_NOTES_BY_PHASE = {(NO_MODEL_NOTE, SIMULATE): "no Wokwi model of this board"}
+#: Gate A's row "Tested before the board" (P1220, D10), with its words by fact.
+#: A fact is NO_MODEL_NOTE for a board Wokwi has no model of.
+#: Each row says a fact and no action.
+#: The NOW sentence and NEXT say what to do, so a failed run is not said twice on the page.
+#: The row is data only. No code refuses on it.
+#: An empty `shut_by` never means that gate A is open.
+GATE_A_SAYS = {RUN_FAILED: "A run failed on this image (%s).", IMAGE_TESTED: "A run passed on this image.",
+               IMAGE_OLDER: "Your firmware changed after the image, so no run tested it as it is now.",
+               IMAGE_UNTESTED: "No run tested this image.",
+               NO_SIM_FILES: "No run tested this image: the project has no simulation files.",
+               NO_MODEL_NOTE: "No simulator run: none covers this board."}
+#: The row when spark cannot read the runs (the image or a log is missing or unreadable): `shut_by` is null.
+GATE_A_CANNOT_TELL = "Spark cannot tell. The simulation phase says why."
+#: The row's label in the NOW box and in `flow.py show`, beside ON THE BOARD.
+TESTED_LABEL = "TESTED BEFORE THE BOARD"
 NOTED_PHASE = "%s (%s)"
 #: The plain name of each phase on the page's station line (P1119, the canvas of 2026-11-25). A phase not here shows its word.
 PHASE_NAMES = {IDEA: "Idea", NEEDS: "Needs", PARTS: "Parts", REQUIREMENTS: "Parts list", BUILD: "Board files",

@@ -14,13 +14,13 @@
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "the request row lacks the page's fingerprint (P829)",
-  "find": "const row = { id: this.makeId(), key: key, seen: this.seen, at: this.now().toISOString() };",
-  "replace": "const row = { id: this.makeId(), key: key, at: this.now().toISOString() };"
+  "find": "const row = Object.assign({ id: this.makeId() }, named, { seen: this.seen, at: this.now().toISOString() });",
+  "replace": "const row = Object.assign({ id: this.makeId() }, named, { at: this.now().toISOString() });"
  },
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "a request with no answer says done (P829)",
-  "find": "    if (!answer)\n        return { mark: \"\", text: fill(words.waiting, clock(request.at)), grey: false };",
+  "find": "    if (!answer)\n        return { mark: \"\", text: waitingLine(request, words), grey: false };",
   "replace": "    if (!answer)\n        return { mark: \"\", text: \"done\", grey: false };"
  },
  {
@@ -32,8 +32,8 @@
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "an answer's line reaches the prototype of the refusal words (P829)",
-  "find": "const refused = own(words.refused, answer.line);",
-  "replace": "const refused = words.refused[answer.line];"
+  "find": "const refused = own(isPicks(request) ? words.refused_picks : words.refused, answer.line);",
+  "replace": "const refused = (isPicks(request) ? words.refused_picks : words.refused)[answer.line];"
  },
  {
   "file": "scripts/spark/flow/page_script.js",

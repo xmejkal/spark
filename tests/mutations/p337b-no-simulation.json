@@ -74,8 +74,8 @@
  {
   "file": "scripts/spark/bench/image_evidence.py",
   "name": "failed-run-ignored",
-  "find": "if sha256 == image.sha256 and verdict != PASSED:",
-  "replace": "if sha256 == image.sha256 and verdict == PASSED and False:"
+  "find": "return (\"%s did not pass on this image (verdict: %s): deploy.py flashes no image that a run failed\"",
+  "replace": "return None and (\"%s did not pass on this image (verdict: %s): deploy.py flashes no image that a run failed\""
  },
  {
   "file": "scripts/spark/bench/board_envelope.py",

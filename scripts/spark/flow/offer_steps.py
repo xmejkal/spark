@@ -33,6 +33,13 @@ def pick_step(project, need, pick_id, name):
     return picks_step(project, ["%s=%s" % (need, pick_id)], flow_codes.PICK_WHY % (name, need))
 
 
+def joined_picks(steps):
+    """The one step of the pick steps `steps` together (P1067), their pairs in their order and their whys joined: the page's
+    Send of several picks. It builds through `picks_step` and reads its argv layout: `--pick`, the project, the pairs."""
+    pairs = [pair for step in steps for pair in step.argv[2:]]
+    return picks_step(steps[0].argv[1], pairs, flow_codes.LABELS_JOIN.join(step.why for step in steps))
+
+
 def requirements_step(project):
     """The step of the offer to write the parts list from the picks."""
     return NextStep("requirements", ["--requirements", str(whole(project))], flow_codes.REQUIREMENTS_LABEL, (READS, WRITES),
