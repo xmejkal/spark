@@ -3009,11 +3009,10 @@ def a_not_finished_log(project, reason="flash_failed", **kw):
                        facts_line="facts file: not written: the flash did not finish", **kw)
 
 
-class TheLineToTypeTest(FlowTest):
-    """P1286 step 3: the deploy's now carries `command`, the line a person types for its step in the `"$HOME"` form, or
-    `no_command`, the one sentence why there is none; every other now has both null. HOME is a resolved temp folder that
-    holds the project, the store is its default one (no XDG_DATA_HOME), and the scripts are a stub folder under it: with
-    the suite's scratch store, `command` is null. `next` keeps its steps and their env."""
+class DeployInAHome(FlowTest):
+    """P1286: a project whose now is the deploy. HOME is a resolved temp folder that holds the project, the store is its
+    default one (no XDG_DATA_HOME), and the scripts are a stub folder under it. `line` is the look's line to type, and
+    `shown` runs show with those scripts. It holds no test: TheLineToTypeTest and the page's test build on it."""
 
     def setUp(self):
         super().setUp()
@@ -3032,6 +3031,12 @@ class TheLineToTypeTest(FlowTest):
 
     def shown(self, project=None):
         return run_operation(ShowFlow(scripts=self.scripts), {"project": str(project or self.project)}, FakeOutsideWorld(clock=FakeClock()))
+
+
+class TheLineToTypeTest(DeployInAHome):
+    """P1286 step 3: the deploy's now carries `command`, the line a person types for its step in the `"$HOME"` form, or
+    `no_command`, the one sentence why there is none; every other now has both null. With the suite's scratch store,
+    `command` is null. `next` keeps its steps and their env."""
 
     def test_the_deploy_now_holds_the_look_s_line_and_next_keeps_its_env(self):
         result = self.shown()

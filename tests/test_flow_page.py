@@ -49,7 +49,7 @@ from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRE
 from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
-from test_flow import MAY_NOTE, SHARED, SOIL, WIRED_PICK, FlowTest, in_prague, with_needs  # noqa: E402
+from test_flow import MAY_NOTE, SHARED, SOIL, WIRED_PICK, DeployInAHome, FlowTest, in_prague, with_needs  # noqa: E402
 from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
 from spark.flow.write_flow_page import masked_page  # noqa: E402
 
@@ -1745,6 +1745,18 @@ class TheGuideSectionTest(unittest.TestCase):
             text = paths.masked(FlowHtmlPage().text(masked_page(page, privacy_for(project), paths)))
         self.assertEqual(line, '"$HOME"/spark/scripts/look.py --project "$HOME"\'/a&b\'')
         self.assertIn("<code>%s</code>" % html.escape(line), text)
+
+
+class ThePageLineIsShowsLineTest(DeployInAHome):
+    """P1286, the review (lens L2): at the deploy, the page's run block holds the very line that show answers as
+    `data.guide.now.command`: both read it from `reading_of`, the page through `write_page`'s `scripts`."""
+
+    def test_the_page_s_code_box_unescaped_is_show_s_command(self):
+        command = self.shown().data["guide"]["now"]["command"]
+        write_page(self.project, store=FlowPageStore(), scripts=self.scripts)
+        boxes = re.findall(r'<div class="run"><strong>[^<]*</strong> <code>([^<]*)</code></div>',
+                           (self.project / "page.html").read_text(encoding="utf-8"))
+        self.assertEqual((command, [html.unescape(box) for box in boxes]), (self.line, [command]))
 
 
 class TheGuideThroughWritePageTest(unittest.TestCase):

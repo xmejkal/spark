@@ -17,6 +17,7 @@ from spark.flow.published_page import ARTIFACT_PATTERN, PublishedPageStore
 from spark.flow.show_flow import privacy_for, reading_of
 from spark.firmware.project_secrets import ProjectSecrets
 from spark.core import codes
+from spark.core.renderers import SCRIPTS
 from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Argument, Operation
 from spark.core.outcomes import COULD_NOT_RUN
 from spark.records import store
@@ -129,19 +130,20 @@ def compose_page(reading, parts):
                     deploy_reading.deployed_line(reading.deploy))
 
 
-def write_page(project, readers=None, parts=None, renderer=None, store=None):
+def write_page(project, readers=None, parts=None, renderer=None, store=None, scripts=SCRIPTS):
     """
     Read the flow of `project` once (`reading_of`), compose its FlowPage, mask it, render it and write it: a Written.
-    `parts` is a function `project -> PageParts` (None: `kept_parts`), `store` a FlowPageStore. A `renderer` has
-    `FILE_NAME`, `PURPOSE_MESSAGE` and `text(page)`: the page's phases are dicts, its pictures Pictures, and a renderer
-    shows a phase through `page_sections.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
+    `parts` is a function `project -> PageParts` (None: `kept_parts`), `store` a FlowPageStore, `scripts` the scripts folder
+    of the deploy's line to type (P1286), the one `flow.py show` reads. A `renderer` has `FILE_NAME`, `PURPOSE_MESSAGE`
+    and `text(page)`: the page's phases are dicts, its pictures Pictures, and a renderer shows a phase through
+    `page_sections.shown_phase`, which holds the tick guard. An OSError from the store is the caller's.
     The texts take the mask of the project's secrets (P1060), the SVG and the rendered page the paths-only one. A secrets
     file that cannot be read or parsed raises SecretsUnreadableError before anything is read or written (D5).
     """
     secrets = ProjectSecrets.read(project)
     if secrets.unreadable:
         raise SecretsUnreadableError(secrets.unreadable)
-    page = compose_page(reading_of(project, readers), (parts or kept_parts)(project))
+    page = compose_page(reading_of(project, readers, scripts), (parts or kept_parts)(project))
     paths = privacy_for(project, secrets=())
     page = masked_page(page, privacy_for(project, secrets.values), paths)
     renderer = renderer or FlowHtmlPage()
