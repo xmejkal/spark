@@ -9,8 +9,8 @@ entry and field by field, the project winning. Every script asks `find`; nothing
 A missing tool is a `ToolMissingError`, a `ToolError` whose sentence says what installs it. Only `install` installs, and
 only for /spark:setup once the person has said yes; it never runs `sudo`. This module is the library, the choices a
 person makes on it are in `tool_choices`, and the CLI `scripts/tools.py` is what /spark:setup runs (P719).
-`ToolFinder(project).find` is the Adapter an area's builder hands an Operation as `OutsideWorld.find_tool` (P725); the
-logic stays in the module `find`.
+`ToolFinder(project).find` is the Adapter an area's builder (`build_tool_outside_world`, P1078) hands an Operation as
+`OutsideWorld.find_tool` (P725); the logic stays in the module `find`.
 """
 
 import importlib.util
@@ -26,11 +26,9 @@ from collections import namedtuple
 from pathlib import Path
 
 from spark.core.errors import CodedMessageError
+from spark.core.outside import build_outside_world
 from spark.core.text_guards import flat_line
-from spark.records import board_records
-from spark.records import records_codes
-from spark.records import store
-from spark.records import versions
+from spark.records import board_records, records_codes, store, versions
 
 #: What spark says of a tool whose `--version` said nothing; check_spine writes it, and both modules read it.
 UNKNOWN_VERSION = "unknown version"
@@ -60,14 +58,18 @@ class ToolMissingError(ToolError):
 
 
 class ToolFinder:
-    """Adapter: `find(name)` gives the `Tool` for a role or a tool's name in `project`, or raises `ToolError`; the thin door an
-    area's builder hands an Operation as `OutsideWorld.find_tool` (P725). The logic stays in the module `find`."""
+    """Adapter: `find(name)` gives the `Tool` for a role or a tool's name in `project`, or raises `ToolError` (P725)."""
 
     def __init__(self, project=None):
         self.project = project
 
     def find(self, name):
         return find(name, self.project)
+
+
+def build_tool_outside_world(project, effects, reporter, values=None, **slots):
+    """The OutsideWorld of an Operation on `project` (P1078): `find_tool` is `ToolFinder(project).find`, `slots` go to `build_outside_world`."""
+    return build_outside_world(effects, reporter, find_tool=ToolFinder(project).find, **slots)
 
 
 def _read(path):

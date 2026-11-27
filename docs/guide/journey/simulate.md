@@ -18,6 +18,7 @@ A run is a separate step:
    board comes from `/spark:setup add micropython-esp32s3`, `micropython-esp32c6` for a C6 board, `micropython-xiao-esp32c6` for the XIAO, or `micropython-esp32` for the original ESP32, such as the T-Display.
 
 ```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/run_scenario.py" sim/scenarios/the-button-lights-the-led.scenario.yaml --dry-run   # free: no token, no run
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/run_scenario.py" sim/scenarios/the-button-lights-the-led.scenario.yaml
 ```
 
@@ -27,7 +28,7 @@ the-button-lights-the-led.scenario.yaml: passed
 log: sim/runs/the-button-lights-the-led.log
 ```
 
-If a step names a component that `sim/diagram.json` does not hold, the command stops with exit 2 before it spends a Wokwi minute. `--dry-run` makes the checks that cost nothing, with no token and no run, and writes nothing. The command puts MicroPython and `firmware/` into one flash image and waits for the firmware's `ready` line. Then it
+Since [P1078](https://github.com/xmejkal/spark/issues/1582) the text starts with a status line (`✓ run-scenario: ok. <name>: passed`), and `--json` prints one envelope. If a step names a component that `sim/diagram.json` does not hold, the command stops with exit 2 before it spends a Wokwi minute. `--dry-run` makes the checks that cost nothing, with no token and no run, and writes nothing. The command puts MicroPython and `firmware/` into one flash image and waits for the firmware's `ready` line. Then it
 runs the steps and writes the log with its date ([P130](https://github.com/xmejkal/spark/issues/64)). The diagram the
 build writes wires the board's serial port to Wokwi's serial monitor, so a scenario's `wait-serial` hears the firmware
 ([P190](https://github.com/xmejkal/spark/issues/142)). The ready contract and the scenario's form are on
@@ -38,8 +39,7 @@ step names that line. The log's header keeps the names (`step names: 2`, then on
 [the look](bench.md#look-at-the-board) lists the must lines that no passed scenario named
 ([P345](https://github.com/xmejkal/spark/issues/440)). A name is a claim, not a test: spark does not check that the step asserts the line.
 
-A run spends Wokwi CI minutes. Watching it live in VS Code needs a Wokwi licence that includes VS Code, Hobby+ or above
-per wokwi.com/pricing (read 2026-10-01).
+A run spends Wokwi CI minutes. Watching it live in VS Code needs a Wokwi licence that includes VS Code, Hobby+ or above per wokwi.com/pricing (read 2026-10-01).
 
 **Today, in full.** If spark keeps the board's Wokwi definition, the build names each on-board LED or button that it
 has no pin for. spark knows no way for a scenario to reach such a part. So you test it on the board, such as

@@ -13,6 +13,7 @@ import stat
 from pathlib import Path
 
 from spark.core.follow_up import STEP_LINE, FollowUp
+from spark.core.renderers import SCRIPTS, script_of
 from spark.core.text_guards import printable
 from spark.flow.flow_page import FlowHtmlPage
 from spark.flow.show_flow import NEEDS_YOU, flow_and_guide, needs_you, now_steps
@@ -20,12 +21,6 @@ from spark.flow.write_flow_page import write_page
 from spark.records import store
 
 # --- MVP ---
-#: The script of a step whose op is not its script's name; every other op runs `<op>.py`, as `board_envelope.next_text`
-#: and flow.md name it (`look`, `run_scenario`, `init_project`). Which script runs an op is the frontend's fact, which the
-#: Operation catalogue does not hold (P1077); P1081 #1585 moves it to one place.
-STEP_SCRIPTS = {"pick": "parts.py", "requirements": "parts.py", "needs-drop": "parts.py", "build-board": "check_spine.py"}
-#: The folder of the scripts a step runs.
-SCRIPTS = Path(__file__).resolve().parents[2]
 #: The sentence of the page written again (P1035 PR 2): a line of the text, and a note under --json.
 REFRESHED = "wrote %s again: /spark:page publishes it" % FlowHtmlPage.FILE_NAME
 
@@ -69,7 +64,7 @@ class FlowFollowUp(FollowUp):
         return now_steps(project, phases, guide)
 
     def line(self, step):
-        script = SCRIPTS / STEP_SCRIPTS.get(step.op, "%s.py" % step.op)
+        script = SCRIPTS / script_of(step.op)
         mark = NEEDS_YOU if needs_you(step) else ""
         return printable(STEP_LINE % (store.format_rerun_line(script, step.argv) + mark, step.why))
 

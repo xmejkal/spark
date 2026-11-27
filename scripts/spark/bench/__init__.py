@@ -6,7 +6,7 @@ deploys (P920), and `disallow-direct-flashing`, grant.py's third mode (P1029). `
 """
 
 from spark.bench import deploy_gate
-from spark.records.tool_finder import ToolFinder
+from spark.records.tool_finder import build_tool_outside_world
 from spark.bench.deploy_image import DeployImage
 from spark.bench.check_grant import CheckGrant
 from spark.bench.direct_flashing import DisallowDirectFlashing
@@ -18,7 +18,6 @@ from spark.bench.register_project import RegisterProject
 from spark.bench.run_live_code import RunLiveCode
 from spark.bench.show_bench import ShowBench
 from spark.core.operation import JSON_DEST
-from spark.core.outside import build_outside_world
 from spark.core.replies import Terminal, reply_strategy_for
 
 # --- MVP ---
@@ -27,8 +26,9 @@ OPERATIONS = {operation.name: operation for operation in (LookAtBoard, DeployIma
 
 
 def build_project_outside_world(project, effects, reporter, values=None):
-    """Core's OutsideWorld for an Operation on `project`: `find_tool` is `ToolFinder(project).find`, which finds a role or a
-    tool as the project's tools list says (P725); `report` is the given Reporter's (P507); `clock` the computer's;
+    """Core's OutsideWorld for an Operation on `project`, `tool_finder.build_tool_outside_world`'s (P1078): `find_tool` is
+    `ToolFinder(project).find`, which finds a role or a tool as the project's tools list says (P725); `report` is the given
+    Reporter's (P507); `clock` the computer's;
     `make_consent` asks in the terminal, on the Reporter's stream (P655), the question masked as the Reporter masks (P677).
     `replies` answers the look's Question (P865), for an Operation that takes `--replies`: from that file in `values`, the
     parsed arguments `run_cli` hands every builder, then live in the terminal, with no terminal under `--json`, as research's
@@ -36,8 +36,7 @@ def build_project_outside_world(project, effects, reporter, values=None):
     values = values or {}
     replies = reply_strategy_for(values["replies"], None if values.get(JSON_DEST) else Terminal(stdout=reporter.stream, mask=reporter.mask)) \
         if "replies" in values else None
-    return build_outside_world(effects, reporter,
-                               find_tool=ToolFinder(project).find,
-                               make_consent=lambda line: deploy_gate.TerminalConsentStrategy(line, stdout=reporter.stream, mask=reporter.mask),
-                               replies=replies)
+    return build_tool_outside_world(project, effects, reporter, values,
+                                    make_consent=lambda line: deploy_gate.TerminalConsentStrategy(line, stdout=reporter.stream, mask=reporter.mask),
+                                    replies=replies)
 # --- end MVP ---

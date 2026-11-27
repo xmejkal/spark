@@ -16,7 +16,6 @@
 "R1:scripts/emit_footprint.py:main": 27,
 "R1:scripts/flash_image.py:main": 22,
 "R1:scripts/init_project.py:main": 76,
-"R1:scripts/run_scenario.py:main": 19,
 "R1:scripts/spark/build/project_setup.py:rules_for": 70,
 "R1:scripts/spark/checks/build_check.py:check_cross_pluggable_connectors": 70,
 "R1:scripts/spark/checks/physics_check.py:check_resistor_power": 94,

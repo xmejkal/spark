@@ -105,7 +105,7 @@ a rule checklist in the loop. Follow it.
    simulation runs it (`commands/build.md`, *Simulate*). Write the firmware so that it prints `ready` once its setup
    is done, and a line for each change a scenario waits on. Then run `check_firmware.py --project .`, the free check of
    the imports and the project's own tests (`commands/build.md`, *Simulate*), and fix what it names. Write the scenario from the person's words into
-   `sim/scenarios/`, then run it with `run_scenario.py`, after asking the person, because a run spends Wokwi CI minutes. Then `look.py` reads the board and prints a token, and `deploy.py --token <token>` puts the image that passed onto the board after the person types yes in their own terminal, or has given a deploy grant (`/spark:deploy`, `commands/deploy.md`). A board is ordered only once these work, and only if the
+   `sim/scenarios/`, check it with `run_scenario.py --dry-run --json`, then run it with `run_scenario.py --json`, after asking the person, because a run spends Wokwi CI minutes. Then `look.py` reads the board and prints a token, and `deploy.py --token <token>` puts the image that passed onto the board after the person types yes in their own terminal, or has given a deploy grant (`/spark:deploy`, `commands/deploy.md`). A board is ordered only once these work, and only if the
    person wants one.
 
 7. **Verify before emitting fab output.** Hand off to `spark-review`, which ends with the fab

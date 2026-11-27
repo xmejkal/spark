@@ -32,8 +32,8 @@
  {
   "file": "scripts/spark/firmware/scenario_run.py",
   "name": "what could not be compared is never printed",
-  "find": "    return simulator, [refusal] if refusal else run.not_checked()\n",
-  "replace": "    return simulator, [refusal] if refusal else []\n"
+  "find": "        said = self.not_checked()\n",
+  "replace": "        said = []\n"
  },
  {
   "file": "scripts/spark/firmware/scenario_steps.py",

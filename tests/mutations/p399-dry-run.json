@@ -1,15 +1,9 @@
 [
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/firmware_scenario.py",
   "name": "a dry run deletes the older log",
-  "find": "    if args.dry_run:  # before the unlink: a dry run leaves an older log in place\n",
-  "replace": "    run.log.unlink(missing_ok=True)\n    if args.dry_run:\n"
- },
- {
-  "file": "scripts/run_scenario.py",
-  "name": "a dry run prints its refusal on stdout",
-  "find": "file=sys.stdout if status == OK else sys.stderr)\n        return EXIT_FOR[status]",
-  "replace": "file=sys.stdout)\n        return EXIT_FOR[status]"
+  "find": "        if dry_run:\n",
+  "replace": "        run.log.unlink(missing_ok=True)\n        if dry_run:\n"
  },
  {
   "file": "scripts/spark/firmware/scenario_run.py",

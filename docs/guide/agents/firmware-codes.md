@@ -5,13 +5,14 @@ Each refusal of `run_scenario.py`, `flash_image.py` and `check_firmware.py` has 
 Decide on a code, never on the English sentence.
 
 Where a code shows today: `check_firmware.py --json` writes `code` on each item of `modules` that was not imported, and on each
-item of `problems` and `unchecked` ([its JSON](json.md#check_firmwarepy)). `run_scenario.py` and `flash_image.py` take no `--json`, so they print the
-sentence alone, with the same exit code as before. Their codes wait in the library for a `--json` or an Operation.
+item of `problems` and `unchecked` ([its JSON](json.md#check_firmwarepy)). `run_scenario.py --json` writes `code` on the item of `problems`
+or `unchecked` of a run that failed or was refused ([its envelope](#run_scenariopys-envelope), P1078). `flash_image.py` takes no `--json`, so it prints
+the sentence alone, with the same exit code as before. Its codes wait in the library for a `--json` or an Operation.
 
 | script | codes |
 | --- | --- |
 | `run_scenario.py`, before the paid call | `no_sim_project`, `no_main_py`, `unknown_component_id`, `run_input_unusable`, `firmware_line_bad`, `tool_missing` (littlefs, the simulator or the MicroPython build; it ends with each place spark cannot read, P1071), `interpreter_unusable`, `files_not_written`, `no_token` |
-| `run_scenario.py`, during the run | `simulator_cannot_start`, `simulator_hung` (wokwi-cli outlived its wall clock), `simulator_lost`, `board_silent`, `board_not_started`, `never_ready`, `step_timeout`, `step_failed` |
+| `run_scenario.py`, during the run | `simulator_cannot_start`, `simulator_hung` (wokwi-cli outlived its wall clock), `simulator_lost`, `board_silent`, `board_not_started` (all `unchecked`), and `never_ready`, `step_timeout`, `step_failed` (`problems`) |
 | `flash_image.py` | `tool_missing`, `no_interpreter`, `files_not_folder`, `config_not_json`, `interpreter_unusable` (damaged, too large, or not the build for the board's chip), `files_not_written` |
 | `check_firmware.py` | `import_failed`, `import_timeout`, `nothing_to_import`, `no_firmware_folder`, `own_test_failed` (a test failed or raised; its `subject` is its id), `own_tests_not_run` (no count in time, or no test ran: an empty `tests/` or every test skipped): all in `--json` |
 | the image a deploy reads | `no_sim_toml`, `firmware_line_bad`, `no_image`, `log_unreadable`: a `DeployError`'s `reason` |
@@ -39,3 +40,10 @@ how it went, in one of three states:
 
 A failed own test blocks no deploy: `check_firmware.py` writes nothing, and a deploy reads the logs of `sim/runs/` only.
 The tests' code runs on this machine, in the project folder.
+
+## run_scenario.py's envelope
+
+- The envelope (op `run-scenario`, [P1078](https://github.com/xmejkal/spark/issues/1582)). `data` holds `project`, `scenario`, `log` (the run's log in `sim/runs/`, or `null` when no run reached wokwi-cli) and `ran` (`false` for a refused run and for `--dry-run`). A run that failed is `problems`, one item with the scenario as `subject` and its code (`never_ready`, `step_failed`, `step_timeout`). A run the free checks refused is `could-not-run` with its code (`no_token`, `no_sim_project`, `tool_missing`, ...), and nothing was spent. A run that started and could not finish (`simulator_lost`, `simulator_hung`, `board_silent`) is `could-not-run` too, with `ran` true. Decide on the code (the tables above).
+- Run `--dry-run --json` first: it needs no token, starts no run and writes nothing. An `ok` dry run's `next` is the paid run, op `run-scenario` with `needs_person` true, its argv holding the run's own `--micropython` and `--timeout-ms`. The paid run spends Wokwi CI minutes: ask the person first.
+- A pass is `ok`. A pass whose scenario has no set-control or no expect-pin step, or whose steps were not counted, has its "passed, but ..." sentence as one item of `notes`: relay it whole ([never assume](never-assume.md)). A step or a diagram the run could not compare is an item of `assumptions`, `not checked: ...`, and the pass stays `ok`.
+- After a paid run, `next` lists the steps `flow.py show` names now, and page.html is written again (P1035).

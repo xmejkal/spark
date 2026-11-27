@@ -46,7 +46,7 @@ from spark.firmware import sim_project  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
 from spark.core.events import TerminalReporter  # noqa: E402
-from fakes import FakeOutsideWorld, FakeToolFinder  # noqa: E402
+from fakes import FakeOutsideWorld, FakeToolFinder, program_world  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
 #: The firmware a person (or the conversation) writes once the pin map exists (P59): main.py over light.py.
@@ -264,7 +264,7 @@ def run_the_scenario(project):
     interpreter = Path(tempfile.mkdtemp()) / "micropython.bin"
     interpreter.write_bytes(fake_interpreter())
     with unittest.mock.patch.dict(os.environ, {"FAKE_WOKWI_SERIAL": "ready\nLED on\nLED off\n"}):
-        return scenario_run.ScenarioRun(project, scenario, micropython=interpreter).run(FAKE_WOKWI_CLI)[1]
+        return scenario_run.ScenarioRun(project, scenario, micropython=interpreter, outside=program_world(project)).run(FAKE_WOKWI_CLI)[1]
 
 
 class TheFirmwareStageBitesTest(unittest.TestCase):

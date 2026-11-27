@@ -1,2 +1,9 @@
---- stderr ---
-run_scenario.py: no simulation project in <project-dir>/sim: build first with /spark:build --keep .
+? run-scenario: could-not-run. s.scenario.yaml: not run, so no Wokwi minute was spent
+
+
+  Not checked
+    - no simulation project in <project-dir>/sim: build first with /spark:build --keep .
+      fix: fix what the sentence names, then run the scenario again: a refused run spends no Wokwi minute
+
+  Next:
+    No command: the first item under Not checked above says why.

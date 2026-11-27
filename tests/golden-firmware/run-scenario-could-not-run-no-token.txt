@@ -1,2 +1,9 @@
---- stderr ---
-run_scenario.py: WOKWI_CLI_TOKEN is not set: a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci (a run spends Wokwi CI minutes)
+? run-scenario: could-not-run. s.scenario.yaml: not run, so no Wokwi minute was spent
+
+
+  Not checked
+    - WOKWI_CLI_TOKEN is not set: a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci (a run spends Wokwi CI minutes)
+      fix: fix what the sentence names, then run the scenario again: a refused run spends no Wokwi minute
+
+  Next:
+    No command: the first item under Not checked above says why.
