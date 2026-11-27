@@ -12,7 +12,7 @@ from collections import namedtuple
 
 from spark.breadboard import before_power, part_pictures, picture_check
 from spark.breadboard.svg_diagram import PAD_MARKS
-from spark.flow import flow_codes
+from spark.flow import flow_codes, next_words
 from spark.flow.guide import note_words
 from spark.flow.flow_codes import picked_sentence
 from spark.flow.phase_readers import MARKS, pick_need
@@ -331,8 +331,8 @@ class GuideHtmlSection:
 
     def _now(self, page):
         """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), NEXT, the guide's
-        sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`), that offer's notes
-        (P1180, `_note_line`), the deploy's line to type (`_run`, P1286) and the chat offer's block (`_ask`). Gate A's row
+        sentence (over a tell, `next_words`' words, P1290), with the step link and the hooks of the sendable offer the now names
+        (`sendable_now`), that offer's notes (P1180, `_note_line`), the deploy's line to type (`_run`, P1286) and the chat offer's block (`_ask`). Gate A's row
         stands after ON THE BOARD (`_tested`, P1220). With no now, the line that says nothing is open (P1043, read with
         `.get`) and the row, or nothing."""
         now = page.guide["now"]
@@ -347,7 +347,7 @@ class GuideHtmlSection:
         offer = sendable_now(page)
         hooks = ' data-key="%s"%s' % (_text(offer["key"]), _makes_stale(offer)) if offer else ""
         lines.append('<p class="next"%s><strong>%s</strong> %s%s</p>' % (
-            hooks, _text(flow_codes.NEXT_ACT_LABEL), _text(now["says"]), self._step_link(page)))
+            hooks, _text(flow_codes.NEXT_ACT_LABEL), _text(next_words.next_words(now)), self._step_link(page)))
         lines += [_note_line(offer)] if offer and offer.get("notes") else []
         return "\n".join(['<div class="now">'] + lines + self._run(now) + self._ask(now) + ["</div>"])
 
@@ -373,12 +373,11 @@ class GuideHtmlSection:
         ASK_CLAUDE in bold, never a button, and the offer's tell in a code box, which a person selects from disk. `data-key`
         is the hook where the owner's script puts Copy; no `data-makes-stale`, so nothing on it sends. Nothing with no chat
         offer, or a key with no tell."""
-        key = now.get("chat_offer")
-        row = flow_codes.OFFER_KINDS.get(key)
-        if not (row and row.tell):
+        tell = next_words.tell_of(now)
+        if not tell:
             return []
         return ['<div class="ask" data-key="%s"><strong>%s</strong> <code>%s</code></div>' % (
-            _text(key), _text(flow_codes.ASK_CLAUDE), _text(row.tell))]
+            _text(now["chat_offer"]), _text(flow_codes.ASK_CLAUDE), _text(tell))]
 
     @staticmethod
     def _step_link(page):
