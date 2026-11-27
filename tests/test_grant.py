@@ -626,7 +626,8 @@ class GuardedPrintsTest(GrantCase):
             code = grant.main(["--check", "--project", str(project)])
         self.assertEqual(code, 2)
         self.assertEqual(len(err.getvalue().splitlines()), 1, err.getvalue())
-        self.assertIn("a?GRANTED: board ok", err.getvalue())
+        # P1320: Privacy masks the project's printable form too (shown_forms), so the tools file shows relative to it
+        self.assertIn("grant.py: .spark/tools.json is not JSON", err.getvalue())
 
     def test_a_newline_in_the_store_path_cannot_fake_a_line_of_the_rm_line(self):
         self.home = self.home / "a\nGRANTED: board ok"
