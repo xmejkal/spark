@@ -355,7 +355,7 @@ def discover(checked):
                             how_to_choose(name, ambiguous[name])))
         else:
             notes.append("%-12s not found (looked for %s)" % (name, ", ".join(patterns)))
-    discover_boards(project, found, notes)
+    discover_boards(checked, found, notes)
     notes += ["%-12s %s" % ("circuit", e) for e in [build_record.earlier_dist(checked.folder)] if e and "circuit" in found]  # P816
     return found, notes, ambiguous
 
@@ -369,21 +369,46 @@ def first_matches(root, patterns):
     return []
 
 
-def discover_boards(project, found, notes):
+def folder_board(checked):
     """
-    Add the board definitions of `project` to `found` and say them in `notes`, both in place. The board library knows
-    where board definitions are; a glob does not, and guessing is how the selection file ended up being checked against
-    a vendor header it does not have.
+    The id of the folder's board (P1325), or None: the `board` of the folder's requirements.json, else the project's
+    board (D35, P988). It is the board the build of the folder uses: `loader.load` reads `wanted.get("board")` of the
+    folder's own requirements file (loader.py:466), so a sub-folder's board wins over its project's. None for no board
+    named, and for a requirements.json that cannot be read: every board is checked then, and the note says why.
     """
     try:
-        definitions = [str(board_records.definition_path(project, board_id))
-                       for board_id in board_records.available(project)]
+        return board_records.requirements_board(checked.folder) or board_records.marked_board(checked.project)[0]
+    except board_records.BoardError:
+        return None
+
+
+def boards_to_verify(checked, board=None):
+    """
+    The ids of the boards vendor-truth verifies without `--boards` (P1325): the folder's board when it has a record,
+    else every board available (the project's, the shelf's and the library's), as before. A shelf board the build never
+    uses is no input. `board` is the folder's board when the caller has it already.
+    """
+    every = board_records.available(checked.project)
+    board = board or folder_board(checked)
+    return [board] if board in every else every
+
+
+def discover_boards(checked, found, notes):
+    """
+    Add the boards to verify for `checked` to `found` and say them in `notes`, both in place: the folder's board when it
+    has a record, else every board of its project (P1325). The board library knows where board definitions are; a glob
+    does not, and guessing is how the selection file ended up being checked against a vendor header it does not have.
+    The folder's board is read once. A folder that names no board, or one with no record, gets a second `boards` note
+    that says why every board was taken.
+    """
+    project, board = checked.project, folder_board(checked)
+    try:
+        ids = boards_to_verify(checked, board)
+        definitions = [str(board_records.definition_path(project, board_id)) for board_id in ids]
         if definitions:
             found["boards"] = definitions
-            notes.append("%-12s %d definition(s): %s"
-                         % ("boards", len(definitions),
-                            ", ".join(sorted(board_records.available(project)))))
-        board_records.definition_path(project)
+            notes.append("%-12s %d definition(s): %s" % ("boards", len(definitions), ", ".join(ids)))
+        board_records.definition_path(project, board)
     except Exception as broken:  # noqa: BLE001 - a project with no board chosen is a normal state
         notes.append("%-12s not resolved (%s)" % ("boards", broken))
 

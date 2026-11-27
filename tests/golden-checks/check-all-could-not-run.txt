@@ -2,7 +2,7 @@
     circuit      dist/board/circuit.json
     rules        .spark/rules.json
     package      not found (looked for *-gerbers.zip, fab/*.zip)
-    boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6
+    boards       1 definition(s): firebeetle2-esp32s3
 
   [ok  ] vendor-truth       the board definition matches the vendor's own pin header
   [ok  ] buildability       holes take their pins, packages hold their values
