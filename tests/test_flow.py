@@ -2641,13 +2641,14 @@ class TheClosingLineTest(FlowTest):
     """P1292: FlowFollowUp with `says_now` ends a run's text with show's own NOW line when show names no step. It reads the
     flow once, in `steps`, and its `closing_line` takes that reading for the same project."""
 
-    def test_guide_now_line_is_the_first_line_of_guide_lines(self):
-        from spark.flow.show_flow import guide_lines, guide_now_line, now_steps
+    def test_guide_now_line_is_the_first_line_show_prints(self):
+        # the review (lens 3): a second source, the CLI's printed line, not guide_lines, which calls guide_now_line
+        from spark.flow.show_flow import guide_now_line, now_steps
         for project in (a_built_project(), an_image(a_firmware(a_built_project()))):
             with self.subTest(project=project.parent.name):
                 phases, guide = flow_and_guide(project)
                 steps = now_steps(project, phases, guide)
-                self.assertEqual(guide_now_line(guide, steps), guide_lines(guide, steps)[0])
+                self.assertEqual(guide_now_line(guide, steps), lines_of(project)[0])
         self.assertIsNone(guide_now_line({"now": None}))
 
     def test_without_the_flag_there_is_no_closing_line(self):
