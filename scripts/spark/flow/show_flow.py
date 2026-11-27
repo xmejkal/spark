@@ -77,7 +77,7 @@ def now_tag(now, steps):
 
 def guide_lines(guide, steps=()):
     """The guide as a person reads it in a terminal (P1030): NOW with the key of its offer or the op of its next-only step
-    (`now_tag`), the row "Tested before the board" (P1220), DONE, LATER, why there is no simulation, SET ASIDE. A list with no item draws no line. The page draws its
+    (`now_tag`), gate A's row (P1220), DONE, LATER, why there is no simulation, SET ASIDE. A list with no item draws no line. The page draws its
     station line in place of DONE and LATER (P1119); the CLI keeps them. The line that says nothing is open (P1043,
     `guide.get`, as the page reads it) stands where NOW would, right after it: the two never both hold (P1142)."""
     now = guide["now"]

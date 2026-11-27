@@ -316,19 +316,29 @@ class GuideHtmlSection:
     def _now(self, page):
         """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), NEXT, the guide's
         sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`), and the chat offer's
-        block (`_ask`). With no now, the line that says nothing is open (P1043, read with `.get`), or nothing."""
+        block (`_ask`). Gate A's row stands after ON THE BOARD (`_tested`, P1220). With no now, the line that says nothing is
+        open (P1043, read with `.get`) and the row, or nothing."""
         now = page.guide["now"]
         if not now:
             said = page.guide.get("no_open_phase")
-            return '<div class="now">\n<p>%s</p>\n</div>' % _text(said) if said else ""
+            lines = (['<p>%s</p>' % _text(said)] if said else []) + self._tested(page)
+            return "\n".join(['<div class="now">'] + lines + ["</div>"]) if lines else ""
         lines = ["<p><strong>%s</strong></p>" % _text(flow_codes.NOW_BY % (now["phase"], flow_codes.NOW_BY_JOIN.join(now["by"])))]
         if page.deployed:
             lines.append('<p class="board"><strong>%s</strong> %s</p>' % (_text(flow_codes.ON_BOARD_LABEL), _text(page.deployed)))
+        lines += self._tested(page)
         offer = sendable_now(page)
         hooks = ' data-key="%s"%s' % (_text(offer["key"]), _makes_stale(offer)) if offer else ""
         lines.append('<p class="next"%s><strong>%s</strong> %s%s</p>' % (
             hooks, _text(flow_codes.NEXT_ACT_LABEL), _text(now["says"]), self._step_link(page)))
         return "\n".join(['<div class="now">'] + lines + self._ask(now) + ["</div>"])
+
+    @staticmethod
+    def _tested(page):
+        """Gate A's row (P1220), under ON THE BOARD, or under the line that says nothing is open: its label in bold and the
+        guide's `gate_a.says`, as `flow.py show` prints it. [] when the guide holds no `gate_a` or holds null: it decides nothing."""
+        gate_a = page.guide.get("gate_a")
+        return ['<p class="tested"><strong>%s</strong> %s</p>' % (_text(flow_codes.TESTED_LABEL), _text(gate_a["says"]))] if gate_a else []
 
     @staticmethod
     def _ask(now):
