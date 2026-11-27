@@ -21,6 +21,11 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from spark.bench import board_connection  # noqa: E402
+from spark.bench import board_look  # noqa: E402
+from spark.bench import deploy_image  # noqa: E402
+from spark.bench import firmware_platform  # noqa: E402
+from spark.bench import look_at_board  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from spark.records import tool_python  # noqa: E402
 from spark.records import versions  # noqa: E402
@@ -320,6 +325,49 @@ class TheFinderUsesItTest(TheVenvTest):
         self.assertTrue(tool_python.TOOL_PYTHONS.kept)
         tool_finder.install(["p1264-tool"], project, self.nobody, run=lambda argv, **kw: None)
         self.assertFalse(tool_python.TOOL_PYTHONS.kept)
+
+
+class TheLookTheFlashAndTheSetupReportAgreeTest(TheVenvTest):
+    """The look, the deploy and `tools.py --status` all ask `find`, so they run the tool's Python and say one sentence."""
+
+    def setUp(self):
+        super().setUp()
+        self.project = Path(tempfile.mkdtemp(dir=self.root))
+        (self.project / ".spark").mkdir()
+        (self.project / ".spark" / "tools.json").write_text(
+            json.dumps({"p1264-tool": ENTRY, "roles": {"board-shell": "p1264-tool"}}))
+        self.platform = firmware_platform.MicroPythonPlatform(self.project)
+
+    def test_the_flash_and_the_look_use_the_tools_python(self):
+        """Red: the port finder, the quiet connection and the console probe took the running Python."""
+        self.path("bin")
+        run = subprocess.run
+        self.assertEqual(self.platform.make_port_finder(run).command, [self.python, "-m", "p1264_mod", "devs"])
+        quiet = self.platform.make_connection(["p1264_mod"], "/dev/null", run, usb=board_connection.USB_SERIAL_JTAG)
+        self.assertIsInstance(quiet, board_connection.QuietBoardConnection)
+        self.assertEqual(quiet.command[:3], [self.python, "-c", board_connection.QUIET_MPREMOTE])
+        self.assertEqual(self.platform.make_console_probe("/dev/null", run).python, [self.python])
+
+    def test_the_three_say_one_sentence_for_one_missing_tool(self):
+        """Red: each place made its own sentence, or one of them left out where spark looked."""
+        self.path("pybin")
+        with self.assertRaises(board_look.LookStopError) as looked:
+            board_look.looker(self.platform)
+        with self.assertRaises(tool_finder.ToolError) as deployed:
+            self.platform.make_shell_command()
+        row = next(row for row in tool_finder.status(self.project, self.project / "absent.json") if row[1] == "board-shell")
+        self.assertEqual(row[0], "missing")
+        self.assertEqual(str(looked.exception), row[2])
+        self.assertEqual(str(deployed.exception), row[2])
+        self.assertIn("Spark looked for the p1264_mod module in", row[2])
+
+    def test_the_one_help_sentence_is_in_the_look_and_the_deploy(self):
+        """Red: the two `--help` texts said it twice, in two wordings, or not at all."""
+        said = firmware_platform.FINDING_THE_TOOLS
+        self.assertEqual(said, "Spark finds mpremote and esptool in the Python that runs it. When that Python lacks one, spark "
+                               "asks the Python of the one on your PATH. When neither has it, the stop says where spark looked.")
+        self.assertIn(said, look_at_board.DETAILS)
+        self.assertIn(said, deploy_image.DETAILS)
 
 
 if __name__ == "__main__":

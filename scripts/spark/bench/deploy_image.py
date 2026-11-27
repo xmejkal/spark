@@ -24,7 +24,7 @@ from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
 from spark.bench.deploy_stages import DEPLOY_STAGES, PHASE_WHY, READ_WAIT_MESSAGE, DeployPhase
 from spark.bench.deploy_service import DeployService, ended_after_the_yes
-from spark.bench.firmware_platform import MicroPythonPlatform
+from spark.bench.firmware_platform import FINDING_THE_TOOLS, MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, SIMULATION_NONE, evidence_for
 from spark.firmware.project_image import DeployError
 from spark.bench import bench_privacy
@@ -381,6 +381,8 @@ It erases the board's flash first. If the erase stops with esptool's exit 2,
 it makes one retry after 5 s and prints `retry in 5 s: ...` (P290).
 When the board refuses mpremote's raw REPL for the facts copy after the flash, that copy gets one retry after 2 s (P420).
 
+%s
+
 The gate: run look.py first and pass its token. deploy.py looks at the board again (the board restarts) and refuses a
 stop (another chip, a flash too small for the image) or a token that is not this board's and this image's. Then it
 asks in your terminal, naming every warning: type yes to accept them and erase. Only a real terminal can answer.
@@ -452,7 +454,7 @@ and no status line: stdout holds the envelope, and stderr the other lines as bef
 such as `reading the board`, and on a terminal a spinner with the seconds under it, erased before the next line.
 TERM=dumb or a pipe gives a still screen, and --json prints neither.
 Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
-    NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)
+    NO_SIMULATION_CAVEAT, FINDING_THE_TOOLS, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 
 class DeployImage(Operation):
