@@ -14,14 +14,14 @@ Does `circuit-json-to-step` 0.0.68 give Fusion named parts and real board holes?
 4. A short script called `circuitJsonToStep(circuitJson)` with no options. The script refused every network connection and logged it.
 5. The Fusion MCP imported the file as a new unsaved document. A read-only script read the tree and the sizes. It also tested the center of every hole against the board body.
 
-## Result: three of four pass lines met, the fourth is not tested
+## Result: pass
 
 | Pass line | Result |
 | --- | --- |
 | 4 items named as the parts | Met. `PCB`, `Mcu`, `Max98357aDfr0954`, `SpeakerTerminal`. The part numbers hold the ids. |
 | The board is one body with a hole at every plated hole (46) | Met. One body of 53 faces. All 46 plated hole centers and the 1 via are open. A control point on the board is solid. |
 | 3 sizes within 0.1 mm | Met. All differ by 0.000 mm. |
-| The same through the open dialog | Not tested. The PO has not opened the file. |
+| The same through the open dialog | Met. The PO opened the file at about 17:34 CET. A read-only script found the same four names and sizes, one board body of 53 faces, and all 47 hole centers open. |
 
 | Item | Faces | Size in mm |
 | --- | --- | --- |
@@ -43,6 +43,6 @@ The fixture gives no body for this part, only the footprint name `jst_ph_2`. The
 - The scratch install holds 56 packages and one added package, 118 MB. The writer itself has 1.1 MB.
 - One fixture, one board. A panel, a bottom-side part and a part with a vendor file were not run.
 - The missing `schematic-symbols` package is a fault of the dependency tree. If spark uses this writer, it must name that package.
-- The import went through the API.
+- The size table comes from the import through the API. The open dialog gave the same values.
 
 Sources: [circuit-json-to-step](https://github.com/tscircuit/circuit-json-to-step) 0.0.68 from the npm registry, published 2026-11-24.
