@@ -50,8 +50,8 @@
  {
   "file": "scripts/spark/firmware/own_tests_child.py",
   "name": "P1208: skipped subtests are counted one each, not once per test",
-  "find": "len({getattr(test, \"test_case\", test).id() for test, _ in result.skipped})",
-  "replace": "len(result.skipped)"
+  "find": "    skipped = {getattr(test, \"test_case\", test).id() for test, _ in result.skipped}",
+  "replace": "    skipped = {test.id() for test, _ in result.skipped}"
  },
  {
   "file": "scripts/spark/firmware/own_tests.py",
