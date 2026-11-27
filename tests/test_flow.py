@@ -3258,6 +3258,18 @@ class TheGateATest(FlowTest):
                 self.assertEqual((outside.ran, result.data["guide"]["gate_a"]["shut_by"]), ([], ["run-failed"]))
                 self.assertEqual(runs_folder_state(project), before)
 
+    def test_show_prints_the_row_after_the_now_line_and_prints_none_before_the_station(self):
+        lines = lines_of(a_project_at_the_board())
+        self.assertEqual(lines[1], "  TESTED BEFORE THE BOARD: A run failed on this image (one.log). Ask Claude to go through its log with you.")
+        self.assertTrue(lines[0].startswith("  NOW (simulate)"), lines[0])
+        self.assertFalse([line for line in lines_of(a_run(an_image(a_firmware(a_built_project())), "failed")) if "TESTED BEFORE" in line])
+        self.assertFalse([line for line in lines_of(Path(tempfile.mkdtemp())) if "TESTED BEFORE" in line])
+
+    def test_show_prints_the_row_after_the_line_that_says_nothing_is_open(self):
+        lines = lines_of(a_project_at_the_board("passed"))
+        self.assertEqual(lines[0], "  " + NOTHING_WAITS)
+        self.assertEqual(lines[1], "  TESTED BEFORE THE BOARD: A run passed on this image.")
+
     def test_a_passed_run_and_a_board_log_leave_nothing_shutting_gate_a(self):
         self.assertEqual(gate_a_of_project(a_project_at_the_board("passed")),
                          {"shut_by": [], "fact": "image-tested", "says": "A run passed on this image."})
