@@ -408,6 +408,21 @@ class APinTheWokwiPartLacksStopsTheSimulationTest(unittest.TestCase):
         self.assertNotEqual(stages[-1].code, "pin_not_in_wokwi_part")
         self.assertTrue((self.project / SHIM_ARGS).exists())
 
+    def test_two_signals_on_two_pins_the_definition_lacks_give_two_lines(self):
+        # a definition with no pin 18 either (D7), kept under its own sha256; one line per signal, joined as other details are
+        from spark.records import store
+        board = self.board()
+        entry = board["documents"]["wokwi-board"]
+        definition = json.loads((STAND_IN_C6 / entry["file"]).read_text())
+        del definition["pins"]["18"]
+        board["documents"] = dict(board["documents"], **{"wokwi-board": dict(entry, sha256=store.keep(json.dumps(definition).encode(), entry["file"]))})
+        stages = self.stages([{"part": "led-red-5mm", "name": "Led"}, {"part": "led-red-5mm", "name": "Led2"}], boards=[(self.BOARD, board)],
+                             signals=[{"name": "LED_STATUS_LED", "pin": "D3"}, {"name": "LED2_STATUS_LED", "pin": "D7"}])
+        self.assertEqual((stages[-1].code, stages[-1].detail), ("pin_not_in_wokwi_part", self.ON_D3 + "\n           "
+                         "LED2_STATUS_LED on D7 (GPIO18): Wokwi has no DFRobot FireBeetle 2 ESP32-C6, so it simulates a stand-in, "
+                         "board-esp32-c6-devkitc-1, which has no pin on GPIO18"))
+        self.assertFalse((self.project / SHIM_ARGS).exists())
+
     def test_a_board_that_is_no_stand_in_names_its_own_wokwi_part(self):
         stages = self.build_with(self.board(wokwi_is_stand_in=False), "D3")
         self.assertEqual(stages[-1].detail, "LED_STATUS_LED on D3 (GPIO14): board-esp32-c6-devkitc-1, the board's Wokwi "
