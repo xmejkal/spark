@@ -17,7 +17,7 @@ from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import deploy_reading, flow_codes, offer_steps
 from spark.flow.no_model import stops_only_for_no_model
-from spark.flow.pick_notes import COMPUTE, candidate_label, pick_id_of, pick_notes
+from spark.flow.pick_notes import candidate_label, is_plausible, own_part_of, part_words, pick_id_of, pick_notes
 from spark.records import record_kind, records_codes, store
 from spark.records.brief import Brief
 from spark.core.errors import CodedMessageError
@@ -40,9 +40,9 @@ NOT_SIMULATED_SAYS = {firmware_codes.NO_SIM_TOML: [flow_codes.NO_SIM_MESSAGE],
                       firmware_codes.NO_IMAGE: [flow_codes.NO_IMAGE_MESSAGE, flow_codes.SCENARIO_HINT]}
 #: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (its button's words), its effect (sentences that
 #: name every write it makes), `makes_stale` (P829), `step`, its NextStep (P1030), a pick's `part` (P1067) and `have`
-#: (`sheet.have_of`, P1135), else None, and a pick's `notes` (`pick_notes`, P1180), else (). The JSON of `data` holds all
-#: but the step, which is in `next`.
-Offer = namedtuple("Offer", "key label effect makes_stale step part have notes", defaults=(None, None, ()))
+#: (`sheet.have_of`, P1135), else None, a pick's `notes` (`pick_notes`, P1180), else (), and a board pick's `own_part`
+#: (`pick_notes.own_part_of`, P1136), else None. The JSON of `data` holds all but the step, which is in `next`.
+Offer = namedtuple("Offer", "key label effect makes_stale step part have notes own_part", defaults=(None, None, (), None))
 #: Value (P1135): a need of the parts phase that counts: its id, `picked` (its picks by name) and `says`, its own lines.
 PartsNeed = namedtuple("PartsNeed", "need picked says")
 #: The parts phase offers at most this many picks per need (P976, the PO, 2026-11-21: "so many unrelated things").
@@ -58,7 +58,7 @@ class Phase(namedtuple("Phase", "phase status mark by says offers needs", defaul
 
     def to_dict(self):
         return dict(self._asdict(), offers=[dict(key=offer.key, label=offer.label, effect=offer.effect, makes_stale=list(offer.makes_stale),
-                                                 part=offer.part, have=offer.have, notes=list(offer.notes)) for offer in self.offers],
+                                                 part=offer.part, have=offer.have, notes=list(offer.notes), own_part=offer.own_part) for offer in self.offers],
                     needs=None if self.needs is None else [need._asdict() for need in self.needs])
 
 
@@ -217,14 +217,6 @@ def other_pick_sentence(plan, need, problems):
                                              plan.name_of(other["subject"]), other["sentence"])
 
 
-def is_plausible(need, candidate):
-    """True when `candidate` holds the need's words or the matcher scores it above 0 (P976): owned junk takes no place. A
-    board is plausible for a compute need whatever its words: the board is what a compute need picks."""
-    if need["does"] == COMPUTE and candidate["kind"] == "board":
-        return True
-    return bool(candidate["what_matches"]) or candidate["score"] > 0
-
-
 def counted_words(count, words):
     """The word of `words` (one, many) that goes with `count`."""
     return words[0] if count == 1 else words[1]
@@ -269,7 +261,7 @@ def need_picks(project, need, plan, listed):
         elif problems:
             return [], [other_pick_sentence(plan, need["need"], problems)]
         else:
-            offered.append(pick_offer(project, need["need"], candidate, listed, freed_sentences(plan, need, changes))
+            offered.append(pick_offer(project, need, candidate, listed, freed_sentences(plan, need, changes))
                            ._replace(notes=pick_notes(project, plan, need, candidate)))
     return offered[:OFFERS_PER_NEED], left_out_lines(need["need"], len(offered) - OFFERS_PER_NEED, refused)
 
@@ -288,16 +280,18 @@ def picked_names(plan, need):
             for pick in need.get("pick") or []]
 
 
-def pick_offer(project, need, candidate, listed, freed):
-    """The Offer to pick `candidate` for `need`, one the project's `needs.PickPlan` does not refuse. `freed` are the
-    sentences `freed_sentences` gave of it. `listed` says whether the project is on the person's list."""
-    pick_id = pick_id_of(candidate)
-    key, label = "%s:%s:%s" % (flow_codes.PICK, need, pick_id), flow_codes.PICK_LABEL % (candidate_label(candidate), need)
+def pick_offer(project, matched, candidate, listed, freed):
+    """The Offer to pick `candidate` for the `matched` need (a need of `needs.match`), one the project's `needs.PickPlan`
+    does not refuse. `freed` are the sentences `freed_sentences` gave of it. `listed` says whether the project is on the
+    person's list. A board's label names its own part that serves the need (P1136); the effect names the board alone."""
+    need, pick_id, own_part = matched["need"], pick_id_of(candidate), own_part_of(matched, candidate)
+    key = "%s:%s:%s" % (flow_codes.PICK, need, pick_id)
+    label = flow_codes.PICK_LABEL % (part_words(candidate_label(candidate), own_part), need)
     said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)] + freed
     said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK),
                  offer_steps.pick_step(project, need, pick_id, candidate_label(candidate)), candidate_label(candidate),
-                 sheet.have_of(candidate))
+                 sheet.have_of(candidate), own_part=own_part)
 
 
 def pick_need(key):

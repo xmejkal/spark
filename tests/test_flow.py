@@ -47,6 +47,7 @@ from spark.flow.guide import NO_IMAGE_FACT, ImageFact, chat_offer_of, guide_of, 
 from spark.flow.guide import stations_of, who_and_sentence  # noqa: E402
 from spark.flow.show_flow import ShowFlow, flow_and_guide, need_lines, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
+from spark.flow.pick_notes import own_part_of, pick_notes  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.outcomes import OK, PROBLEMS  # noqa: E402
 from spark.design import needs  # noqa: E402
@@ -1495,6 +1496,85 @@ class ThePickNotesTest(FlowTest):
         self.assertEqual(notes["pick:soil:x-many"], [self.OWED])
 
 
+class TheBoardsOwnPartTest(FlowTest):
+    """P1136 (the PO at the p829 walk: "i'm not sure if I'm picking the right button and light, because I want the onboard
+    ones on the ttgo"): a pick of a board for a need that does not compute names the board's own part (`own_part`, the first
+    of its `what` words), and when a compute need picks that board and the match is plausible, its first note says so. The
+    scratch store's T-Display also says "user button" itself, so a button need reads two words, "onboard button" first."""
+
+    BOARD, NAME = "lilygo-t-display", "LILYGO TTGO T-Display (ESP32, V1.1)"
+    ONBOARD, UNSURE = "The board you picked has one.", "You may not have it: check your drawer."
+    BRAIN = {"id": "board", "does": "compute", "what": "microcontroller"}
+    BUTTON = {"id": "button", "does": "input", "what": "button"}
+    LIGHT = {"id": "light", "does": "indicate", "what": "light"}
+
+    def setUp(self):
+        super().setUp()
+        board = json.loads((ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json").read_text())
+        # a function of its own drops the board's default one, so it names the compute one too
+        board["function"] = [{"does": "compute", "what": "microcontroller"}, {"does": "input", "what": "user button"}]
+        (self.home / "shelf" / "boards").mkdir(parents=True)
+        (self.home / "shelf" / "boards" / (self.BOARD + ".json")).write_text(json.dumps(board))
+
+    def project(self, *listed):
+        return with_needs(Path(tempfile.mkdtemp()) / "button-light", list(listed))
+
+    def picks(self, need, board=None):
+        """`need` with a pick of `board` (None: the store's T-Display)."""
+        return dict(need, pick=[{"board": board or self.BOARD}])
+
+    def row(self, project, need):
+        """(the matched `need` of `project`, the T-Display's row of `needs.match` for it)."""
+        matched = next(each for each in needs.match(project)[0] if each["need"] == need)
+        return matched, next(candidate for candidate in matched["candidates"] if candidate["id"] == self.BOARD)
+
+    def test_a_board_s_pick_for_a_button_names_its_onboard_button(self):
+        said, _ = show(self.project(self.picks(self.BRAIN), self.BUTTON))
+        offer = offer_of(said, "pick:button:" + self.BOARD)
+        self.assertEqual((offer["own_part"], offer["part"], offer["label"]),
+                         ("onboard button", self.NAME, "Pick “%s, its onboard button” for button" % self.NAME))
+
+    def test_with_the_board_picked_by_the_compute_need_its_first_note_says_so(self):
+        project = self.project(self.picks(self.BRAIN), self.BUTTON)
+        said, _ = show(project)
+        self.assertEqual(offer_of(said, "pick:button:" + self.BOARD)["notes"], [self.ONBOARD])
+        need, row = self.row(project, "button")
+        self.assertEqual(pick_notes(project, needs.PickPlan(project), need, dict(row, unsure=True)), (self.ONBOARD, self.UNSURE))
+
+    def test_a_board_picked_only_by_a_need_that_does_not_compute_says_no_note(self):
+        # the refuter's case: the board serves another button, and no compute need picked it
+        said, _ = show(self.project(self.BRAIN, self.BUTTON, self.picks(dict(self.BUTTON, id="press"))))
+        offer = offer_of(said, "pick:button:" + self.BOARD)
+        self.assertEqual((offer["own_part"], offer["notes"]), ("onboard button", []))
+
+    def test_with_no_board_or_another_board_picked_there_is_no_note(self):
+        for brain in (self.BRAIN, self.picks(self.BRAIN, "xiao-esp32-c6")):
+            with self.subTest(brain=brain):
+                said, _ = show(self.project(brain, self.BUTTON))
+                offer = offer_of(said, "pick:button:" + self.BOARD)
+                self.assertEqual((offer["own_part"], offer["notes"]), ("onboard button", []))
+
+    def test_an_implausible_own_part_is_named_and_says_no_note(self):
+        # the walk's light: the T-Display's display holds none of the word "light", and its score is 0, so no offer
+        project = self.project(self.picks(self.BRAIN), self.LIGHT)
+        need, row = self.row(project, "light")
+        self.assertEqual((own_part_of(need, row), row["what_matches"], row["score"]), ("onboard display screen", False, 0.0))
+        self.assertEqual(pick_notes(project, needs.PickPlan(project), need, row), ())
+        self.assertNotIn("pick:light:" + self.BOARD, offers(show(project)[0], "parts"))
+
+    def test_the_board_for_the_compute_need_and_a_part_for_the_button_name_no_own_part(self):
+        said, _ = show(self.project(self.BRAIN, self.BUTTON))
+        board, button = offer_of(said, "pick:board:" + self.BOARD), offer_of(said, "pick:button:tactile-button")
+        self.assertEqual((board["own_part"], board["label"]), (None, "Pick “%s” for board" % self.NAME))
+        self.assertEqual((button["own_part"], button["label"]), (None, "Pick “6x6 mm tactile push button” for button"))
+
+    def test_every_offer_in_data_has_own_part_and_one_that_is_no_pick_none(self):
+        said, _ = show(with_needs(a_built_project(), SOIL))
+        own = {offer["key"]: offer["own_part"] for phase in said["data"]["phases"] for offer in phase["offers"]}
+        self.assertIn("build", own)
+        self.assertEqual(own, {key: None for key in own})
+
+
 #: The three sentences every pick of an unlisted project on a board that can be wired says, as a person reads them (P1135).
 WIRED_PICK = ("If you wired the board, this pick needs a new build, and a new build can move pins: compare the new sheet with "
               "your wiring before power, and rewire what differs.")
@@ -2039,7 +2119,7 @@ class TheOfferStepTest(FlowTest):
     def test_the_offers_in_data_keep_their_six_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))
         self.assertEqual({tuple(offer) for phase in said["data"]["phases"] for offer in phase["offers"]},
-                         {("key", "label", "effect", "makes_stale", "part", "have", "notes")})
+                         {("key", "label", "effect", "makes_stale", "part", "have", "notes", "own_part")})
 
     def test_a_pick_offer_in_data_names_its_part_and_every_other_offer_null(self):
         """P1067 (D22: each fact on the page is in show): the page labels a pick's radio by its part."""

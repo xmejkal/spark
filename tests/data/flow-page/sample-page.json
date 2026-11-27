@@ -43,7 +43,8 @@
      "have": "in your drawer",
      "notes": [
       "You may not have it: check your drawer."
-     ]
+     ],
+     "own_part": null
     },
     {
      "key": "needs-drop:light",
@@ -52,7 +53,8 @@
      "makes_stale": [],
      "part": null,
      "have": null,
-     "notes": []
+     "notes": [],
+     "own_part": null
     }
    ],
    "needs": [
@@ -89,7 +91,8 @@
      ],
      "part": null,
      "have": null,
-     "notes": []
+     "notes": [],
+     "own_part": null
     }
    ],
    "needs": null
@@ -110,7 +113,8 @@
      "makes_stale": [],
      "part": null,
      "have": null,
-     "notes": []
+     "notes": [],
+     "own_part": null
     }
    ],
    "needs": null
