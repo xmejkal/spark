@@ -17,7 +17,7 @@ from spark.records import board_records
 from spark.bench.deploy_stages import DeployPhase
 from spark.design import loader
 from spark.core import codes, outcomes
-from spark.core.renderers import SCRIPTS, script_of
+from spark.core.follow_up import step_line
 from spark.core.result import Finding, Headline, NextStep, OperationResult
 from spark.core.text_guards import printable
 from spark.bench import ready_probe
@@ -241,10 +241,10 @@ def firmware_next_steps(code_ok, requirements_file):
     return [look_step(project, None, why=WHY_FIRMWARE_NEXT)] if code_ok and project and not loader.is_library(project) else []
 
 
-def next_text(steps):
-    """The line that says the same steps to a person (nothing for none), built from their own arguments."""
-    return "".join("  next: %s — %s\n" % (store.format_rerun_line(SCRIPTS / script_of(each["op"]), each["argv"]), each["why"])
-                   for each in steps)
+def next_lines(steps):
+    """The lines that say the same steps to a person, one per step (none for none): `follow_up.step_line`, the follow-up's
+    form, so the mask keeps the paths a person pastes (P1256)."""
+    return [step_line(NextStep(**each)) for each in steps]
 
 
 def deploy_step(project, token, port, evidence, why):

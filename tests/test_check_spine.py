@@ -471,14 +471,11 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             run_build_board([Stage("build", check_spine.OK, "fine")], args, work)
         return [entry for entry in json.loads(out.getvalue())["kept"] if Path(entry["file"]).name.startswith("breadboard.")]
 
-    def keep_the_epaper(self, physical=True):
-        """`report` with --json on a copy of the e-paper project, kept into itself, its record with or without its
-        physical block (P945): the exit code, the JSON said and the project folder."""
-        import argparse
-        import contextlib
-        import io
+    def epaper_project(self, physical=True, under=None):
+        """A copy of the e-paper project in a new folder under `under` (None: a temp folder), its record with or without
+        its physical block (P945), and a work folder that holds its board: (the project folder, the work folder)."""
         import shutil
-        project = Path(tempfile.mkdtemp()) / "epaper"
+        project = Path(under or tempfile.mkdtemp()) / "epaper"
         shutil.copytree(Path(__file__).resolve().parent / "data" / "breadboard" / "epaper", project)
         record_path = project / "parts" / "epaper-2in9-bwr-mh-et-live.json"
         if not physical:
@@ -487,6 +484,52 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             record_path.write_text(json.dumps(record))
         work = self.workdir()
         shutil.copy(project / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
+        return project, work
+
+    def kept_epaper_result(self, under=None):
+        """The OperationResult of an ok build of the e-paper project with no physical facts, kept into itself: its `next`
+        holds the research step and the look step (P945, P517)."""
+        project, work = self.epaper_project(physical=False, under=under)
+        values = {"requirements": str(project / "requirements.json"), "keep": str(project), "sim_dir": None, "firmware": None}
+        return run_operation(build_board.BuildBoard(FakeRequirementsBuild([Stage("build", check_spine.OK, "fine")], work)),
+                             values, FakeOutsideWorld())
+
+    def test_each_own_next_line_is_its_step_s_command_as_a_pasted_line(self):
+        # P1256 (B4): the build's next: lines come from step_command, the one builder, after the split, so the mask keeps
+        # their real paths
+        from spark.core.follow_up import STEP_LINE
+        from spark.core.privacy import PastedLine
+        from spark.core.renderers import step_command
+        result = self.kept_epaper_result()
+        said = [line for line in result.lines if line.startswith("  next: ")]
+        self.assertEqual([step.op for step in result.next], ["research", "look"])
+        self.assertEqual(said, [STEP_LINE % (step_command(step), step.why) for step in result.next])
+        self.assertEqual([type(line) for line in said], [PastedLine, PastedLine])
+        self.assertEqual(list(result.lines[-2:]), said)
+        self.assertTrue(result.lines[-3].startswith("  the chain runs end to end"), result.lines[-3])  # no blank line between
+
+    def test_every_command_the_build_prints_passes_the_copyable_rule(self):
+        # P1256: a home folder with a space, so the rule has a space to find; the line quotes the whole path
+        from spark.core.renderers import step_command
+        from spark.core.shell_line import copyable
+        home = Path(tempfile.mkdtemp()).resolve() / "a b"
+        home.mkdir()
+        result = self.kept_epaper_result(under=home)
+        self.assertEqual([step.op for step in result.next], ["research", "look"])
+        for step in result.next:
+            with self.subTest(op=step.op):
+                command = step_command(step)
+                self.assertIn(command, "\n".join(result.lines))
+                self.assertIn(" '%s/epaper'" % home, command)
+                self.assertTrue(copyable(command, home), command)
+
+    def keep_the_epaper(self, physical=True):
+        """`report` with --json on a copy of the e-paper project, kept into itself, its record with or without its
+        physical block (P945): the exit code, the JSON said and the project folder."""
+        import argparse
+        import contextlib
+        import io
+        project, work = self.epaper_project(physical)
         args = argparse.Namespace(json=True, keep=project, requirements=str(project / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
             code = run_build_board([Stage("build", check_spine.OK, "fine")], args, work)

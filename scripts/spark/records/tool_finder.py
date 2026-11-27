@@ -1,16 +1,15 @@
 """
 The tool finder: the tools spark depends on, found from one merged list (P82, docs/2026-10-03-tools-design.md).
 
-spark's dependencies were decided in seven places, each with its own lookup and its own error message. Now one list says
-what each tool is for, how to find it, how to install it and which contract it meets: spark's defaults in
-data/tools.json, the person's in ~/.local/share/spark/tools.json, the project's in .spark/tools.json — merged entry by
-entry and field by field, the project winning. Every script asks `find`; nothing else names a tool.
+One list says what each tool is for, how to find it, how to install it and which contract it meets: spark's defaults in
+data/tools.json, the person's in ~/.local/share/spark/tools.json, the project's in .spark/tools.json, merged entry by
+entry and field by field, the project winning. Every script asks `find`; nothing else names a tool. A Python tool is
+found in the running Python, else in the Python that its `exe` on the PATH runs (`tool_python`, P1264).
 
-A missing tool is a `ToolMissingError`, a `ToolError` whose sentence says what installs it. Only `install` installs, and
-only for /spark:setup once the person has said yes; it never runs `sudo`. This module is the library, the choices a
-person makes on it are in `tool_choices`, and the CLI `scripts/tools.py` is what /spark:setup runs (P719).
-`ToolFinder(project).find` is the Adapter an area's builder (`build_tool_outside_world`, P1078) hands an Operation as
-`OutsideWorld.find_tool` (P725); the logic stays in the module `find`.
+A missing tool is a `ToolMissingError` whose sentence says what installs it. Only `install` installs, for /spark:setup
+once the person has said yes, and never with `sudo`. The choices a person makes are in `tool_choices`, and the CLI
+`scripts/tools.py` is what /spark:setup runs (P719). `ToolFinder(project).find` is the Adapter an area's builder
+(`build_tool_outside_world`, P1078) hands an Operation as `OutsideWorld.find_tool` (P725); the logic stays in `find`.
 """
 
 import importlib.util
@@ -28,7 +27,7 @@ from pathlib import Path
 from spark.core.errors import CodedMessageError
 from spark.core.outside import build_outside_world
 from spark.core.text_guards import flat_line
-from spark.records import board_records, records_codes, store, versions
+from spark.records import board_records, records_codes, store, tool_python, versions
 
 #: What spark says of a tool whose `--version` said nothing; check_spine writes it, and both modules read it.
 UNKNOWN_VERSION = "unknown version"
@@ -159,10 +158,7 @@ def platform_key():
 
 def fetch_of(entry):
     """(file, url, sha256, executable) of what spark downloads for this tool here, or None when it downloads nothing.
-
-    A `download` entry is one file for every machine (the MicroPython build); a `fetch` block names one
-    build per platform (wokwi-cli, whose releases are a binary each). No build for this machine is a ToolError.
-    """
+    A `download` entry is one file for every machine; a `fetch` block names one build per platform. No build here is a ToolError."""
     if entry.get("kind") == "download":
         return entry["file"], entry["url"], entry["sha256"], bool(entry.get("executable"))
     fetch = entry.get("fetch")
@@ -176,8 +172,8 @@ def fetch_of(entry):
 
 
 def _file_here(path, refused=None):
-    """Whether `path` is a regular file. A refusal raises a ToolError (P1041) unless a list `refused` is given. Then
-    it is not here, and its sentence goes in the list (P1071)."""
+    """Whether `path` is a regular file. A refusal raises a ToolError (P1041) unless a list `refused` is given: then it is
+    not here, and its sentence goes in the list (P1071)."""
     try:
         return stat.S_ISREG(path.stat().st_mode)
     except (FileNotFoundError, NotADirectoryError):
@@ -200,7 +196,10 @@ def locate(entry, project, refused=None):
     if kind == "mcp":
         return None  # Claude Code runs a server; spark has no command for it
     if kind == "python":
-        return [sys.executable] if importlib.util.find_spec(entry["module"]) else None
+        if importlib.util.find_spec(entry["module"]):
+            return [sys.executable]
+        found = tool_python.TOOL_PYTHONS.find(entry)
+        return [found.python] if found else None
     if kind == "download":
         path = DOWNLOADS / entry["file"]
         return [str(path)] if _file_here(path) else None
@@ -317,9 +316,10 @@ def find(name, project=None, personal=None, _seen=()):
     refused = []
     command = locate(entry, project, refused)
     if command is None:
-        raise ToolMissingError("%s (%s) is not installed — install: %s%s", role or tool_name, tool_name,
-                               install_hint(entry) or "see its entry in %s" % DEFAULTS,
-                               "".join("; " + line for line in refused), code=records_codes.TOOL_MISSING)
+        hint = install_hint(entry) or "see its entry in %s" % DEFAULTS
+        raise ToolMissingError("%s", tool_python.TOOL_PYTHONS.on_path(entry, hint, tool_name, project) or "%s (%s) is not installed — install: %s%s%s"
+                               % (role or tool_name, tool_name, hint, tool_python.TOOL_PYTHONS.looked(entry),
+                                  "".join("; " + line for line in refused)), code=records_codes.TOOL_MISSING)
     here = versions.too_old(entry)
     if here:
         raise ToolError("%s %s is too old: spark needs %s or newer. Install: %s", tool_name, here,
@@ -332,8 +332,7 @@ def status(project=None, personal=None):
 
     state is "ok", "missing", "off" or "person" (something only the person can do: an account, an instrument).
     """
-    lists = merged(project, personal)
-    rows = []
+    lists, rows = merged(project, personal), []
     named = sorted(lists["roles"].items())
     named += sorted((name, name) for name, entry in lists["tools"].items()
                     if entry.get("kind") == "mcp" and name not in lists["roles"].values())
@@ -355,7 +354,8 @@ def status(project=None, personal=None):
                 notes = "".join("; %s %s here, the list pins %s — /spark:setup installs the pinned one"
                                 % (field, here or "unknown", pinned)
                                 for field, here, pinned in pin_differences(found.entry, found.command))
-                rows.append(("ok", label, "%s — %s%s" % (name, " ".join(found.command), notes)))
+                rows.append(("ok", label, (tool_python.TOOL_PYTHONS.row(name, found.entry, found.command)
+                                           or "%s — %s" % (name, " ".join(found.command))) + notes))
         except ToolError as missing:
             rows.append(("missing", label, str(missing)))
         if entry.get("needs_account") and not os.environ.get(entry.get("account_env") or "", ""):
@@ -367,8 +367,7 @@ def status(project=None, personal=None):
 
 def to_install(project=None, personal=None):
     """The tools /spark:setup would install: each missing tool or missing need of an entry that is on."""
-    lists = merged(project, personal)
-    names = []
+    lists, names = merged(project, personal), []
     for name in list(lists["roles"].values()) + [n for n, e in lists["tools"].items() if e.get("kind") == "mcp"]:
         entry = lists["tools"].get(name, {})
         if entry.get("on") is False:
@@ -377,7 +376,7 @@ def to_install(project=None, personal=None):
             want = lists["tools"].get(wanted)
             if want is None or entry_problem(want) or wanted in names:
                 continue  # a broken entry is a row in the picture, not something to install
-            if locate(want, project) is None or versions.too_old(want):
+            if (locate(want, project) is None and not tool_python.TOOL_PYTHONS.unusable(want)) or versions.too_old(want):
                 names.append(wanted)
     return names
 
@@ -482,6 +481,7 @@ def install(names, project=None, personal=None, run=None):
                 (DOWNLOADS / (fetch[0] + ".part")).unlink()
             continue
         ran.append(argv)
+        tool_python.TOOL_PYTHONS.forget()
         if fetch:
             try:
                 settle_download(*fetch)

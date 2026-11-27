@@ -116,6 +116,14 @@ class BoardStartTest(unittest.TestCase):
         start = service.wait_for_start(ROM.device, self.answers_after(0), self.report, timeout_s=3)
         self.assertEqual((start.code, start.port, self.asked), ("port_gone", None, []))
         self.assertIn("unplug", start.sentence)
+        self.assertTrue(start.sentence.endswith("then run `mpremote devs` to see its port"))
+
+    def test_port_gone_names_the_command_the_finder_ran_so_the_person_runs_the_same(self):
+        """P1264. Red: the sentence said `python3 -m mpremote devs`, a Python that may not hold mpremote."""
+        service = self.service([ROM], [])
+        self.finder.command = ["/x/python3", "-m", "mpremote", "devs"]
+        start = service.wait_for_start(ROM.device, self.answers_after(0), self.report, timeout_s=3)
+        self.assertTrue(start.sentence.endswith("then run `/x/python3 -m mpremote devs` to see its port"), start.sentence)
 
     def test_a_port_that_never_goes_is_download_mode_stayed(self):
         service = self.service([ROM])

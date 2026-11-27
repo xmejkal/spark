@@ -218,7 +218,7 @@ writes no `built`, and the tally says `not built yet`.
   the chain runs end to end
 ```
 
-In a project, the verdict then ends with `next:` and the look step: first write `firmware/main.py` from `pins.py`. When the picture cannot draw a part (`no_drawing_fact`), the build still exits 0 and a `research.py --part <id>` step comes first: offer it to the person before the wiring, because it finds the facts that draw the part (P945). After an ok build with `--keep`, `next` ends with the step of `flow.py show` (P1035).
+In a project, the verdict then ends with `next:` and the look step: first write `firmware/main.py` from `pins.py`. When the picture cannot draw a part (`no_drawing_fact`), the build still exits 0 and a `research.py --part <id>` step comes first: offer it to the person before the wiring, because it finds the facts that draw the part (P945). After an ok build with `--keep`, `next` ends with the step of `flow.py show` (P1035). Each `next:` line is the command as it runs, with the whole path of your project, and of your store when SPARK_HOME is set, so copy it as it is (P1256).
 
 15 routed traces carry the 18 written connections: a group of N connected pins needs N−1 traces.
 
@@ -236,7 +236,7 @@ says so. A chain that could not be exercised has not been proven; the difference
 point. A big board can take many minutes to build. The build stops after 15 minutes, and then the stage is
 could-not-run, not a pass.
 
-A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once). `--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before it runs (unless the person's own settings already let it run: an allow rule of theirs, or auto mode), and the person's answer there is the yes. If the project has no `package.json`, run `/spark:init` first: without one, npm installs into the nearest parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)). When the line ends with `; <path> cannot be read (…) — fix it or its permissions`, the person fixes that folder's permissions first: spark could not look there, and an install into a folder you cannot read fails too ([P1071](https://github.com/xmejkal/spark/issues/1571)).
+A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once). A line that says `but no Python spark asked holds its module` is the exception: do not run `--install`, and follow `/spark:setup`. `--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before it runs (unless the person's own settings already let it run: an allow rule of theirs, or auto mode), and the person's answer there is the yes. If the project has no `package.json`, run `/spark:init` first: without one, npm installs into the nearest parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)). When the line ends with `; <path> cannot be read (…) — fix it or its permissions`, the person fixes that folder's permissions first: spark could not look there, and an install into a folder you cannot read fails too ([P1071](https://github.com/xmejkal/spark/issues/1571)).
 
 ## The steps, when one is wanted on its own
 

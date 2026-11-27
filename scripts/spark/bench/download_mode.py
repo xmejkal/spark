@@ -24,7 +24,7 @@ NO_RESET = "the board still waits in download mode after %(wait)d s: press its %
 NOT_COUNTED = "the board restarted and still waits in download mode: press its %(reset)s once%(orientation)s"
 #: What deploy.py says when the board's port is gone, formatted by port_gone.
 PORT_GONE = ("the board's port is gone: press its %(reset)s once%(orientation)s. If the port stays gone, unplug the board and "
-             "plug it in, then run `python3 -m mpremote devs` to see its port")
+             "plug it in, then run `%(devs)s` to see its port")
 #: What the board log adds when the console heard the firmware's `ready`, and deploy.py read the board again (P245).
 READ_AGAIN = "read again"
 #: What the board log keeps of the first read when deploy.py reads the board again (P1025): its verdict and sentence,
@@ -47,9 +47,9 @@ def not_counted(places=board_records.ButtonPlaces.EMPTY):
     return NOT_COUNTED % {"reset": places.reset, "orientation": places.orientation}
 
 
-def port_gone(places=board_records.ButtonPlaces.EMPTY):
-    """PORT_GONE with the RESET button's place from `places`."""
-    return PORT_GONE % {"reset": places.reset, "orientation": places.orientation}
+def port_gone(places=board_records.ButtonPlaces.EMPTY, devs="mpremote devs"):
+    """PORT_GONE with the RESET button's place from `places`, and `devs`, the line that lists the ports (P1264: the one spark ran)."""
+    return PORT_GONE % {"reset": places.reset, "orientation": places.orientation, "devs": devs}
 
 
 def first_read(ready):
