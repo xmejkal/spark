@@ -16,8 +16,8 @@ drawing or a distributor, and `why_it_matters` says what rests on it.
 ## 1. Reuse first, with no network
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need '<words>' --project .
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept '<part number or words>' --project .
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need '<word>' '<word>' … --project .
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept '<word>' '<word>' … --project .
 ```
 
 `--need` searches what the person owns and what spark knows: every part and board record (the project, the shelf, the library, the

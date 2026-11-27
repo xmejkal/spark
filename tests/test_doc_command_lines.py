@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 #: How a command line starts, after an optional `$ `.
 COMMAND_START = re.compile(
-    r"^(\$ |python3? |SPARK_HOME=|\$\{CLAUDE_PLUGIN_ROOT\}|\"\$\{CLAUDE_PLUGIN_ROOT\}\"|<spark>/scripts/|"
+    r"^(\$ |cd |python3? |SPARK_HOME=|\$\{CLAUDE_PLUGIN_ROOT\}|\"\$\{CLAUDE_PLUGIN_ROOT\}\"|<spark>/scripts/|"
     r"'<spark>'/scripts/|[\w./-]*scripts/[\w./-]+\.py|[\w-]+\.py )"
 )
 PLACEHOLDER = re.compile(r"<[A-Za-z][^<>]*>")
@@ -40,12 +40,17 @@ def unquoted_placeholder(line):
 def command_lines(text):
     """Each (line number, line) of a command inside a fenced block of `text`."""
     fence = None
+    recorded = False  # a block under `<!-- output: run ... -->` is a run as it was recorded, a fact: not edited
+    heading = ""
     for number, line in enumerate(text.splitlines(), 1):
         stripped = line.strip()
         if stripped.startswith("```"):
             fence = None if fence else stripped
+            recorded = bool(fence) and heading.startswith("<!-- output:")
             continue
-        if fence and COMMAND_START.match(stripped):
+        if not fence and stripped:
+            heading = stripped
+        if fence and not recorded and COMMAND_START.match(stripped):
             yield number, stripped
 
 
@@ -70,6 +75,14 @@ class TheCheckTest(unittest.TestCase):
     def test_only_command_lines_of_a_fenced_block_are_read(self):
         text = "<a> prose\n```\n$ run <x>\nname: <y>\n```\n$ run <z>\n"
         self.assertEqual(list(command_lines(text)), [(3, "$ run <x>")])
+
+
+    def test_a_block_headed_by_an_output_comment_is_a_recorded_run_and_is_not_read(self):
+        text = "<!-- output: run 2026-10-14 -->\n```text\n$ run <x>\n```\n\n```\n$ run <y>\n```\n"
+        self.assertEqual(list(command_lines(text)), [(6, "$ run <y>")])
+
+    def test_a_cd_line_is_a_command(self):
+        self.assertEqual(list(command_lines("```sh\ncd <the folder>\n```\n")), [(2, "cd <the folder>")])
 
 
 class TheDocsTest(unittest.TestCase):

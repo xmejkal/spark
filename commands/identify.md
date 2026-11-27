@@ -36,7 +36,7 @@ person and keep it for the agent. The list has two parts:
 ## 2. What exists
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need '<the chip numbers, the board name or what it is>' --project .
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need '<chip number>' '<board name>' … --project .
 ```
 
 A match means the module is known; check the photo against the record's pin order rather than

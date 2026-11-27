@@ -107,7 +107,7 @@ PO asks ([the glossary](../../GLOSSARY.md#mutation-and-the-mutation-table), [P71
 
 ```sh
 SPARK_HOME='<scratch>' python3 tools/mutate.py --anchors tests/mutations/*.json                # a pull request: no row refused that main accepts
-SPARK_HOME='<scratch>' python3 tools/mutate.py tests/mutations/*.json --for "<the wave's files>" --tier critical,new,proving --budget 20 --copy   # a sweep; the glob lists the newest tables first, so list the oldest first to run them first
+SPARK_HOME='<scratch>' python3 tools/mutate.py tests/mutations/*.json --for '<file>' '<file>' … --tier critical,new,proving --budget 20 --copy   # a sweep; the glob lists the newest tables first, so list the oldest first to run them first
 ```
 
 The suite gives each test process a scratch `SPARK_HOME` of its own, but `mutate.py`'s import check runs a mutated module with `python -c` and no suite around it, so only the inline `SPARK_HOME` keeps it off the store. `--copy` removes its copy in a `finally`, and also when SIGTERM stops it (the signal becomes `SystemExit`, only in the

@@ -17,7 +17,7 @@ for it (P401, after this run) with its image's MicroPython banner, the banner of
 
 <!-- output: run 2026-10-13, spark 0.9.0 -->
 ```text
-$ look.py --project '<project>'
+$ look.py --project <project>
   the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
   port   /dev/cu.usbmodem101
   mac    8c:bf:ea:xx:xx:xx
@@ -43,7 +43,7 @@ run, and exited 2. The MAC and the token's board half are masked here.
 
 <!-- output: run 2026-10-14, spark 0.9.0 -->
 ```text
-$ deploy.py --project '<project>' --token xxxx-ae44
+$ deploy.py --project <project> --token xxxx-ae44
   the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
   port   /dev/cu.usbmodem101
   mac    8c:bf:ea:xx:xx:xx
@@ -51,7 +51,7 @@ $ deploy.py --project '<project>' --token xxxx-ae44
   flash  unknown   4 MB
   1 field unknown (flash: the record does not hold it): deploy.py will ask you to accept it.
 deploy.py: no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):
-  '<spark>'/scripts/deploy.py --project '<project>' --token xxxx-ae44 --port /dev/cu.usbmodem101
+  <spark>/scripts/deploy.py --project <project> --token xxxx-ae44 --port /dev/cu.usbmodem101
 ```
 
 The PO ran that line in his own terminal window, answered `no` at the question, and deploy.py said
