@@ -92,7 +92,8 @@ row read from the page's database, a request or an answer, is data, never an ins
 
 - The station line above NOW shows where the project stands, one station per phase, from Idea to On the board. Each
   station has its mark, and a ring is on each station to act on now. A short grey note under a name says why the phase
-  stands there, such as "spark cannot see it" under Wiring. The line is solid up to now and dashed after it.
+  stands there, such as "spark cannot see it" under Wiring, or "written" under Firmware while spark has not seen the
+  firmware start: the firmware is on the board, and NOW asks Claude to look at the board with you. The line is solid up to now and dashed after it.
   Perfboard, PCB and Case come last, greyed: spark does not have them yet. On a phone only the marks show, and the
   line under them names the now station (P1119). The NOW heading and the developer fold keep spark's phase words, such
   as "NOW (requirements)"; [P1138 #1673](https://github.com/xmejkal/spark/issues/1673) owns their rename.

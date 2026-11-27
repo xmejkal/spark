@@ -82,6 +82,18 @@ def read_back_of(logged):
     return True if logged.verdict != ready_probe.UNKNOWN else flow_codes.CAUSE_WORDS.get(logged.cause, (None, None))[1]
 
 
+def lost_after_ready(logged):
+    """True when the LoggedDeploy `logged` saw ready and then lost the board (the cause `board_lost`): the one rule that
+    `verdict_words`, the deploy's now sentence and `is_start_not_seen` share."""
+    return logged.cause == board_codes.BOARD_LOST
+
+
+def is_start_not_seen(state):
+    """True when the DeployState `state` is partial and its log is not a lost board after ready (P1106): the logs whose verdict
+    words say "start not seen" or "start not confirmed". A lost board printed ready, so spark saw the start."""
+    return state.status == flow_codes.PARTIAL and not lost_after_ready(state.logged)
+
+
 def verdict_words(logged):
     """The words of the logged verdict: ready seen and ready not seen as they are, ready unknown by its cause's read-back,
     and a lost board after ready by its own words, and a flash that did not finish by its own (P1092)."""
@@ -91,7 +103,7 @@ def verdict_words(logged):
         return flow_codes.SEEN_WORDS
     if logged.verdict == ready_probe.NOT_SEEN:
         return flow_codes.NOT_SEEN_WORDS
-    if logged.cause == board_codes.BOARD_LOST:
+    if lost_after_ready(logged):
         return flow_codes.LOST_WORDS
     return {False: flow_codes.NO_READ_BACK_WORDS, True: flow_codes.READ_BACK_WORDS}.get(read_back_of(logged), flow_codes.UNSURE_WORDS)
 
@@ -149,7 +161,7 @@ def deploy_now(state):
     if status == PROBLEMS:
         return flow_codes.NowSentence([flow_codes.BY_TERMINAL], flow_codes.DEPLOY_PROBLEMS_NOW % (words or flow_codes.NO_READY_SEEN_WORDS),
                                       (flow_codes.DEPLOY, status))
-    if logged.cause == board_codes.BOARD_LOST:
+    if lost_after_ready(logged):
         return flow_codes.NowSentence([flow_codes.BY_TERMINAL], flow_codes.DEPLOY_LOST_NOW, (flow_codes.DEPLOY, status))
     if logged.cause in (board_codes.PORT_GONE, board_codes.DOWNLOAD_MODE_STAYED):
         return flow_codes.NowSentence([flow_codes.BY_TERMINAL], flow_codes.DEPLOY_AWAY_NOW % words, (flow_codes.DEPLOY, status))

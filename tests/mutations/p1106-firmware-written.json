@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1106: the firmware is never written (test_flow.TheFirmwareWrittenTest.test_each_partial_deploy_but_a_lost_board_says_the_firmware_is_written)",
+  "find": "            if unseen and station[\"place\"] == flow_codes.DONE_PLACE and station[\"phase\"] == flow_codes.FIRMWARE else station",
+  "replace": "            if False else station"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1106: every done firmware is written (test_flow.TheFirmwareWrittenTest.test_every_other_deploy_keeps_a_plain_firmware)",
+  "find": "            if unseen and station[\"place\"] == flow_codes.DONE_PLACE and station[\"phase\"] == flow_codes.FIRMWARE else station",
+  "replace": "            if station[\"place\"] == flow_codes.DONE_PLACE and station[\"phase\"] == flow_codes.FIRMWARE else station"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1106: the firmware is written at and after now too (test_flow.TheStationsTest.test_the_firmware_before_now_is_written_when_the_start_was_not_seen_and_no_other_phase_is)",
+  "find": "            if unseen and station[\"place\"] == flow_codes.DONE_PLACE and station[\"phase\"] == flow_codes.FIRMWARE else station",
+  "replace": "            if unseen and station[\"phase\"] == flow_codes.FIRMWARE else station"
+ },
+ {
+  "file": "scripts/spark/flow/deploy_reading.py",
+  "name": "P1106: a lost board after ready is written too (test_flow.TheFirmwareWrittenTest.test_every_other_deploy_keeps_a_plain_firmware)",
+  "find": "    return state.status == flow_codes.PARTIAL and not lost_after_ready(state.logged)",
+  "replace": "    return state.status == flow_codes.PARTIAL"
+ },
+ {
+  "file": "scripts/spark/flow/deploy_reading.py",
+  "name": "P1106: ready not seen is written too (test_flow.TheFirmwareWrittenTest.test_every_other_deploy_keeps_a_plain_firmware)",
+  "find": "    return state.status == flow_codes.PARTIAL and not lost_after_ready(state.logged)",
+  "replace": "    return state.status in (flow_codes.PARTIAL, PROBLEMS) and not lost_after_ready(state.logged)"
+ },
+ {
+  "file": "scripts/spark/flow/deploy_reading.py",
+  "name": "P1106: the lost board's words follow a wrong cause (test_flow.TheDeployReaderTest.test_an_old_log_of_the_c6_sequence_says_nothing_false)",
+  "find": "    return logged.cause == board_codes.BOARD_LOST",
+  "replace": "    return logged.cause == board_codes.PORT_GONE"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "P1106: the note's words change (test_flow.TheFirmwareWrittenTest.test_with_no_simulation_the_written_firmware_ends_done)",
+  "find": "                 START_NOT_SEEN_NOTE: \"written\"}",
+  "replace": "                 START_NOT_SEEN_NOTE: \"start not seen\"}"
+ }
+]
