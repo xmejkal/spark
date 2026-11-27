@@ -47,6 +47,7 @@ def command_lines(text):
         if stripped.startswith("```"):
             fence = None if fence else stripped
             recorded = bool(fence) and heading.startswith("<!-- output:")
+            heading = ""
             continue
         if not fence and stripped:
             heading = stripped
@@ -79,7 +80,7 @@ class TheCheckTest(unittest.TestCase):
 
     def test_a_block_headed_by_an_output_comment_is_a_recorded_run_and_is_not_read(self):
         text = "<!-- output: run 2026-10-14 -->\n```text\n$ run <x>\n```\n\n```\n$ run <y>\n```\n"
-        self.assertEqual(list(command_lines(text)), [(6, "$ run <y>")])
+        self.assertEqual(list(command_lines(text)), [(7, "$ run <y>")])
 
     def test_a_cd_line_is_a_command(self):
         self.assertEqual(list(command_lines("```sh\ncd <the folder>\n```\n")), [(2, "cd <the folder>")])
