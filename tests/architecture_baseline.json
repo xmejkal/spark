@@ -75,7 +75,6 @@
 "R6:scripts/spark/checks/check.py:PhysicsCheck": 1,
 "R6:scripts/spark/checks/check.py:RulesCheck": 1,
 "R6:scripts/spark/checks/check.py:VendorPinsCheck": 1,
-"R6:scripts/spark/checks/checked_folder.py:CheckedFolder": 1,
 "R6:scripts/spark/checks/physics_check.py:Finding": 1,
 "R6:scripts/spark/checks/rules_check.py:Failure": 1,
 "R6:scripts/spark/checks/vendor_pins_check.py:CouldNotKeepError": 1,

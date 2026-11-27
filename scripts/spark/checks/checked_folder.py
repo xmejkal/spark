@@ -19,7 +19,7 @@ FOLDER, PROJECT = "folder", "project"
 @dataclass(frozen=True)
 class CheckedFolder:
     """
-    The folder `--project` names and the project the build reads for it (P319): one job, to say where each input is
+    Value: the folder `--project` names and the project the build reads for it (P319): one job, to say where each input is
     read. A board folder with no `.spark/` builds with its parent's records, so its checks read the parent's too.
     """
     folder: Path
