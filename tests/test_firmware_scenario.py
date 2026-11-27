@@ -102,6 +102,22 @@ class TheOperationTest(unittest.TestCase):
         self.assertEqual(schema["properties"]["timeout_ms"], {"type": "integer", "description": "simulated time the run may take",
                                                                "default": 60000})
 
+    def test_the_bench_s_world_and_the_firmware_world_find_the_same_tool(self):
+        # D7: one builder gives find_tool, and the bench's builder adds its consent and replies to it
+        from spark.bench import build_project_outside_world
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / ".spark" / "tools.json").write_text(json.dumps(
+            {"wokwi-cli": {"kind": "path", "exe": str(project / "the-shim"), "also": [], "fetch": None}}))
+        (project / "the-shim").write_text("#!/bin/sh\n")
+        (project / "the-shim").chmod(0o755)
+        bench = build_project_outside_world(project, ("reads",), FakeReporter(), {})
+        firmware = tool_finder.build_tool_outside_world(project, ("reads",), FakeReporter())
+        self.assertEqual(bench.find_tool("simulator").command, [str(project / "the-shim")])
+        self.assertEqual(firmware.find_tool("simulator").command, [str(project / "the-shim")])
+        with self.assertRaises(SparkError):
+            firmware.run(["the-shim"])  # a world for (reads,) starts no program
+
     def test_a_dry_run_only_reads_and_a_run_reads_runs_and_writes(self):
         self.assertEqual(RunScenario().effects_of({"dry_run": True}), ("reads",))
         self.assertEqual(RunScenario().effects_of({"dry_run": False}), ("reads", "runs", "writes"))
