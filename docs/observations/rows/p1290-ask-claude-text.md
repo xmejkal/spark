@@ -35,3 +35,4 @@ only. 2026-11-27.
 | 26 | NEXT talks of an image that the fold says does not exist | refuter 3 | acted | the simulate words are "No simulation tested this firmware yet."; tests, rows and anchors follow |
 | 27 | row 19 named no destination, and the council's rows are 10 to 16 | refuter 2 | acted | row 19 is rejected with its reason; the header counts are right |
 | 28 | the plan's risk that test (f) fails on a new sentence is untrue | refuter 4 | rejected | a claim for the PR body only, which leaves it out |
+| 29 | the hook refused P1122's mutation row 9: its anchor in `GuideHtmlSection._ask` moved when `_ask` began to call `tell_of` | hook | acted | `tests/mutations/p1122-claude-jobs.json` row 9 re-anchored on `tell_of`, same mutant; planted by hand, `TheGuideSectionTest` fails (2 failures, 14 errors) |
