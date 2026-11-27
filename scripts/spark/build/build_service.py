@@ -19,6 +19,7 @@ from spark.build.stages import (BOARD, BOARD_EMITTER_CRASHED_ENDING, BOARD_ONLY_
                                 DIAGRAM_UNWIRED_ENDING, ENGINE_MISSING_ENDING, EVERY_PART_SKIPPED_ENDING, FACT_MISSING_ENDING,
                                 FOOTPRINT, FOOTPRINT_EMITTER_CRASHED_ENDING, NO_CIRCUIT_ENDING, NO_FOOTPRINT_HINT,
                                 NO_PARTS_ENDING, NO_WOKWI_PART_TYPE_ENDING, NOT_ROUTED_ENDING, PART_STRANDED_ENDING, PARTS,
+                                PIN_NOT_IN_WOKWI_PART_ENDING,
                                 SCHEMATIC, SCHEMATIC_NOTED_ENDING, SCHEMATIC_NOTES, SCHEMATIC_REFUSED_ENDING, SIMULATION,
                                 STAGE_NAMED, TIMED_OUT_ENDING, TOOL_CANNOT_BUILD_ENDING, TOOLS_FILE_REFUSED_ENDING,
                                 TOOLS_LIST_BROKEN_ENDING)
@@ -34,7 +35,7 @@ from spark.build import board_alone_input
 from spark.firmware import sim_project
 from spark.records import tool_finder
 
-from spark.core.outcomes import EXIT_FOR, EXIT_OK, COULD_NOT_RUN, PROBLEMS, SKIPPED, status_of
+from spark.core.outcomes import EXIT_FOR, EXIT_OK, COULD_NOT_RUN, PROBLEMS, RECORDED, SKIPPED, status_of
 from spark.core.result import Finding
 from spark.core.text_guards import clean
 
@@ -195,7 +196,8 @@ class BuildService:
     Service: runs the six stages of a build, in order, over the two collaborators it is given, a board engine
     (`board_engine.TscircuitEngine`) and a board emitter (`board_emitter.BoardEmitter`), and stops at the first stage that
     cannot produce input for the next. Each stage method appends to `stages` and returns its product, or None when the
-    build ends there. A test swaps either collaborator for a Fake; the CLI takes `for_toolchain`.
+    build ends there; the simulation stage's two guards, `no_wokwi_part` and `pin_not_in_wokwi_part`, run in `build` before
+    it (P999). A test swaps either collaborator for a Fake; the CLI takes `for_toolchain`.
     """
 
     def __init__(self, engine, emitter, find_tool=None, runner=None):
@@ -225,7 +227,11 @@ class BuildService:
             return stages
         built = self._build_circuit(inputs, project, board, part_list, stages)
         if built is not None:
-            self._simulation(inputs, project, board, built, stages)
+            stopped = no_wokwi_part(board) or pin_not_in_wokwi_part(board, board_inputs.assignments)
+            if stopped:
+                stages.append(stopped)
+            else:
+                self._simulation(inputs, project, board, built, stages)
         return stages
 
     def _board(self, inputs, project, stages):
@@ -394,12 +400,9 @@ class BuildService:
 
     def _simulation(self, inputs, project, board, built, stages):
         """The simulation project, the last step of the product goal: the converter found from the project (not from `cwd`:
-        run from /tmp the converter beside the project was "not found"), the stand-ins from the records (P31) and the board's own (P792), the diagram."""
+        run from /tmp the converter beside the project was "not found"), the stand-ins from the records (P31) and the board's own (P792), the diagram.
+        Its two guards ran in `build` before it (P999): the board has a Wokwi part, and its kept definition lacks no pin the design wires."""
         workdir = inputs.workdir
-        stopped = no_wokwi_part(board)
-        if stopped:
-            stages.append(stopped)
-            return
         own = find_converter(project)
         missing = converter_stage_problem(project, own, self.find_tool)
         if missing:
@@ -449,11 +452,33 @@ class BuildService:
 
 def no_wokwi_part(board):
     """The skipped simulation stage of a board whose record names no Wokwi part (P1207), or None: one guard for the full
-    build and the board-only build (P955). It speaks before the converter, whose lint crashed on the null type, and before
-    a missing converter or an unmapped part, so a person who adds the board's Wokwi part sees the next cause next."""
+    build, where `BuildService.build` runs it before `pin_not_in_wokwi_part` and the simulation stage (P999), and for the
+    board-only build (P955). It speaks before the converter, whose lint crashed on the null type, and before a missing
+    converter or an unmapped part, so a person who adds the board's Wokwi part sees the next cause next."""
     if not board.get("wokwi_part_type"):
         return SIMULATION.ended(NO_WOKWI_PART_TYPE_ENDING)
     return None
+
+
+#: One line of `pin_not_in_wokwi_part` for a pad whose GPIO the board's own Wokwi part lacks (P999).
+PIN_NOT_IN_PART = "%(signal)s on %(pin)s (GPIO%(gpio)d): %(part)s, the board's Wokwi part, has no pin on GPIO%(gpio)d"
+#: The same line for a stand-in (`wokwi_is_stand_in`), where Wokwi has no part for the board and simulates a devkit.
+PIN_NOT_IN_STAND_IN = ("%(signal)s on %(pin)s (GPIO%(gpio)d): Wokwi has no %(board)s, so it simulates a stand-in, %(part)s, "
+                       "which has no pin on GPIO%(gpio)d")
+
+
+def pin_not_in_wokwi_part(board, assignments):
+    """The skipped simulation stage of a design whose pin map (`assignments`, the assigner's dicts of signal, pin and gpio)
+    wires a GPIO that the board's kept Wokwi definition lacks, with one line for each such pin (P999), or None. A definition
+    spark has not kept says nothing here: the converter still refuses the pin. The board-only build needs no such guard,
+    because it wires only the board's own LED and button, which the converter checks (tests/test_converter.py)."""
+    part = board_records.read_simulated_part(board)
+    if part.state != RECORDED:
+        return None
+    said = PIN_NOT_IN_STAND_IN if part.is_stand_in else PIN_NOT_IN_PART
+    lines = [said % dict(assignment, part=board["wokwi_part_type"], board=board.get("name") or part.board_id)
+             for assignment in assignments if assignment["gpio"] not in part.gpios]
+    return SIMULATION.ended(PIN_NOT_IN_WOKWI_PART_ENDING, "\n           ".join(lines)) if lines else None
 
 
 def board_alone(board, workdir, firmware=None, project=None, runner=None):

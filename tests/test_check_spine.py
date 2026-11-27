@@ -3515,7 +3515,8 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
         "file_refused", "tools_list_broken",  # P1058: a tools file the engine lookup cannot read, or no tools list
         "tool_cannot_build", "design_not_built", "stage_timed_out", "part_stranded", "design_not_built", "not_routed",
         "simulation_fact_missing", "diagram_unwired", "every_part_skipped", "chip_not_compiled",
-        "board_not_in_wokwi", "board_only", "simulation_fact_missing",  # P977: the board with no Wokwi part has its own code
+        "board_not_in_wokwi", "pin_not_in_wokwi_part",  # P977: the board with no Wokwi part has its own code; P999: a pin it lacks
+        "board_only", "simulation_fact_missing",
         "broken.code", "stage_timed_out", "stage_crashed",
     ]
 

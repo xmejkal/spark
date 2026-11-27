@@ -221,10 +221,10 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         """The simulation stage of `stages`."""
         return self.stages(parts, diagram)[-1]
 
-    def stages(self, parts, diagram=BOARD_ALONE_DIAGRAM, runner=None, records=(), boards=()):
+    def stages(self, parts, diagram=BOARD_ALONE_DIAGRAM, runner=None, records=(), boards=(), signals=()):
         """The stages of a build on BOARD whose project holds the display's record, `records` and `boards` ((id, record)),
         and a converter that writes `diagram` (run by `runner` when given); the engine builds a circuit that feeds the board
-        and the display, so the build stage passes."""
+        and the display, so the build stage passes. `signals` is the requirements' own "signals", when given."""
         project = self.project = Path(tempfile.mkdtemp()) / "sim project"
         (project / ".spark").mkdir(parents=True)
         (project / "parts").mkdir()
@@ -234,7 +234,8 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         for board_id, board in boards:
             (project / "boards" / (board_id + ".json")).write_text(json.dumps(board))
         (project / ".spark" / "tools.json").write_text(json.dumps(a_converter_shim(project, diagram)))
-        self.workdir, stages = a_build({"board": self.BOARD, "parts": parts}, engine=FakeTscircuitEngine(fed_circuit(self.FEEDS)), runner=runner, project=project)
+        requirements = dict({"board": self.BOARD, "parts": parts}, **({"signals": list(signals)} if signals else {}))
+        self.workdir, stages = a_build(requirements, engine=FakeTscircuitEngine(fed_circuit(self.FEEDS)), runner=runner, project=project)
         self.assertEqual(stages[-1].name, "simulation", [(stage.name, stage.status, stage.detail) for stage in stages])
         return stages
 
@@ -359,6 +360,65 @@ class ABoardWithNoWokwiPartInTheFullBuildTest(unittest.TestCase):
             self.assertEqual(did[name], ("wrote", None), name)
         self.assertEqual(did["breadboard.svg"], ("not written", "no_drawing_fact"))
         self.assertNotIn("sim", did)  # no simulation project: the converter never ran
+
+
+#: P999: the FireBeetle 2 C6 on its Wokwi stand-in, the ESP32-C6 DevKitC-1, whose hand-made definition lacks GPIO14 (D3).
+STAND_IN_C6 = ROOT / "tests" / "data" / "stand-in-c6"
+
+
+class APinTheWokwiPartLacksStopsTheSimulationTest(unittest.TestCase):
+    """P999: a design that wires a pad whose GPIO the board's kept Wokwi definition lacks builds, and its simulation stage
+    is skipped with pin_not_in_wokwi_part and a sentence that names the signal, the pad, the GPIO and the Wokwi part,
+    before the converter, which would refuse the pin with worse words. A definition spark has not kept says nothing."""
+
+    BOARD = "firebeetle2-esp32c6"
+    #: The C6 joins 3V3 and 3V3_2, so both are fed for the build stage to pass.
+    FEEDS = (("Mcu", "3V3", "V33"), ("Mcu", "3V3_2", "V33"))
+    LED = [{"part": "led-red-5mm", "name": "Led"}]
+    stages = TheSimulationStageOfASkippedDesignTest.stages  # the helper alone: a subclass would run the parent's tests twice
+    ON_D3 = ("LED_STATUS_LED on D3 (GPIO14): Wokwi has no DFRobot FireBeetle 2 ESP32-C6, so it simulates a stand-in, "
+             "board-esp32-c6-devkitc-1, which has no pin on GPIO14")
+
+    def board(self, **changed):
+        """The fixture record with `changed` keys, its definition kept in this process's scratch store."""
+        from spark.records import store
+        board = dict(json.loads((STAND_IN_C6 / "boards" / (self.BOARD + ".json")).read_text()), **changed)
+        entry = board["documents"]["wokwi-board"]
+        self.assertEqual(store.keep((STAND_IN_C6 / entry["file"]).read_bytes(), entry["file"]), entry["sha256"])
+        return board
+
+    def build_with(self, board, pad=None):
+        signals = [{"name": "LED_STATUS_LED", "pin": pad}] if pad else ()
+        return self.stages(self.LED, boards=[(self.BOARD, board)], signals=signals)
+
+    def test_a_signal_pinned_on_d3_skips_the_simulation_names_the_pin_and_the_converter_is_not_run(self):
+        stages = self.build_with(self.board(), "D3")
+        self.assertEqual([(stage.name, stage.status) for stage in stages][-2:], [("build", OK), ("simulation", SKIPPED)])
+        self.assertEqual((stages[-1].code, stages[-1].detail), ("pin_not_in_wokwi_part", self.ON_D3))
+        self.assertFalse((self.project / SHIM_ARGS).exists())  # the converter never ran
+        self.assertEqual((verdict(stages), vouches_for_a_build(stages)), (EXIT_OK, False))
+
+    def test_an_unpinned_led_lands_on_d3_and_is_named_too(self):
+        # GPIO14 is the assigner's first pick on the C6 (P1310 #1885 takes a pin the definition lacks last)
+        stages = self.build_with(self.board())
+        self.assertEqual((stages[-1].code, stages[-1].detail), ("pin_not_in_wokwi_part", self.ON_D3))
+
+    def test_the_same_design_on_d6_reaches_the_converter(self):
+        stages = self.build_with(self.board(), "D6")
+        self.assertNotEqual(stages[-1].code, "pin_not_in_wokwi_part")
+        self.assertTrue((self.project / SHIM_ARGS).exists())
+
+    def test_a_board_that_is_no_stand_in_names_its_own_wokwi_part(self):
+        stages = self.build_with(self.board(wokwi_is_stand_in=False), "D3")
+        self.assertEqual(stages[-1].detail, "LED_STATUS_LED on D3 (GPIO14): board-esp32-c6-devkitc-1, the board's Wokwi "
+                                            "part, has no pin on GPIO14")
+
+    def test_a_definition_spark_has_not_kept_leaves_the_pin_to_the_converter(self):
+        board = self.board()
+        board["documents"] = dict(board["documents"], **{"wokwi-board": dict(board["documents"]["wokwi-board"], file="absent.board.json")})
+        stages = self.build_with(board, "D3")
+        self.assertNotEqual(stages[-1].code, "pin_not_in_wokwi_part")
+        self.assertTrue((self.project / SHIM_ARGS).exists())
 
 
 def crashes(*given, **named):

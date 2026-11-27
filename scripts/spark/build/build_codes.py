@@ -82,6 +82,14 @@ DIAGRAM_UNWIRED = Code("diagram_unwired", "the diagram holds the parts and no wi
 BOARD_NOT_IN_WOKWI = Code("board_not_in_wokwi", "the board's record names no Wokwi part, so Wokwi has no model of it and nothing is simulated",
                           "if Wokwi has a part for this board, write it in the board record's wokwi_part_type and build again. Else "
                           "test the firmware on the board itself: the board built")
+#: The design wires a pad whose GPIO the board's kept Wokwi definition lacks (P999), as the FireBeetle 2 C6's D3 on its
+#: stand-in: the simulation stage is skipped before the converter, the build exits 0, and the guide does not count it done.
+PIN_NOT_IN_WOKWI_PART = Code("pin_not_in_wokwi_part", "not simulated: the design wires a board pin that the board's Wokwi "
+                             "part has no pin for, so no diagram is written; the board built",
+                             "move the signal that the sentence names to a free pad that the Wokwi part has: add "
+                             "{\"name\": the signal, \"pin\": the pad} to the requirements file's \"signals\", and build "
+                             "again. A bus line (SPI, I2C) cannot be pinned there, because the assigner places the bus: test "
+                             "the firmware on the board itself")
 #: A stage the build skipped, which is never ok and never a problem (P936, the PO 2026-11-20): it had nothing to do.
 BOARD_ONLY = Code("board_only", "the requirements say board_only and name no part, so the project runs on the board alone "
                   "and this stage has nothing to wire", "nothing to fix: the firmware is written for the board alone; "
@@ -111,6 +119,6 @@ ANSWERS_UNUSABLE = Code("answers_unusable", "--answers names a file that is not 
 CODES = {code: code.meaning for code in (
     BOARD_UNUSABLE, BOARD_ONLY_WITH_PARTS, NO_PARTS, STAGE_CRASHED, STAGE_TIMED_OUT, SCHEMATIC_REFUSED, SCHEMATIC_NOTED,
     TOOL_MISSING, FILE_REFUSED, TOOLS_LIST_BROKEN, TOOL_CANNOT_BUILD, DESIGN_NOT_BUILT, NOT_ROUTED, PART_STRANDED, SIMULATION_FACT_MISSING, CHIP_NOT_COMPILED,
-    BOARD_NOT_IN_WOKWI, CONVERTER_LACKS_PART, NO_DIAGRAM, DIAGRAM_UNWIRED, BOARD_ONLY, EVERY_PART_SKIPPED, NO_PROJECT_FOLDER,
+    BOARD_NOT_IN_WOKWI, PIN_NOT_IN_WOKWI_PART, CONVERTER_LACKS_PART, NO_DIAGRAM, DIAGRAM_UNWIRED, BOARD_ONLY, EVERY_PART_SKIPPED, NO_PROJECT_FOLDER,
     TOOLS_FILE_UNREADABLE, UNKNOWN_BOARD, ANSWERS_UNUSABLE, NOTHING_TO_DO, INPUT_AMBIGUOUS)}
 # --- end MVP ---
