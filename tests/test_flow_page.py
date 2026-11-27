@@ -1140,7 +1140,8 @@ TEXT_PAIRS = [("--ink", "--bg"), ("--ink", "--surface"), ("--muted", "--bg"), ("
 #: (edge, ground) pairs of a control or a ring: 3:1 in both themes. The kind-1 fill and Send on a frame or the ground, the
 #: outline, the focus ring on each ground it can stand on, the Now dot and the Now button's edge, and the confirm frame.
 EDGE_PAIRS = [("--accent", "--surface"), ("--accent", "--bg"), ("--ink", "--surface"), ("--focus", "--bg"), ("--focus", "--surface"),
-              ("--focus", "--now-bg"), ("--now-halo", "--now-bg"), ("--accent-edge", "--surface"), ("--accent-edge", "--now-bg")]
+              ("--focus", "--now-bg"), ("--now-halo", "--now-bg"), ("--accent-edge", "--surface"), ("--accent-edge", "--now-bg"),
+              ("--accent-edge", "--bg")]  # P1135: the chosen pick's edge stands on its pale fill
 
 
 def page_style(page):
