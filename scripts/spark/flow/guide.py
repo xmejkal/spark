@@ -144,14 +144,12 @@ def chat_offer_of(sentence):
     return flow_codes.CHAT_NOW.get(sentence.chosen_by)
 
 
-def with_deploy_now(project, sentence, now, deploy=None):
+def with_deploy_now(sentence, now, deploy):
     """The NowSentence of an open deploy after a deploy (P1043, P1122, `deploy_reading.deploy_now`) in place of `sentence`,
-    from `deploy`, the DeployState the run read its deploy phase from (None: read it here, as `image_fact` reads the image:
-    a fact on every Phase would change the phases' JSON). Else `sentence` as it is."""
+    from `deploy`, the DeployState that `guide_of` read once for the run (P1106). Else `sentence` as it is."""
     if not (now and now.phase == flow_codes.DEPLOY):
         return sentence
-    state = deploy or deploy_reading.read_deploy(project)
-    told = deploy_reading.deploy_now(state)
+    told = deploy_reading.deploy_now(deploy)
     return told or sentence
 
 
@@ -163,8 +161,8 @@ def requirements_now(by, written):
 
 def with_requirements_now(project, sentence, now):
     """The NowSentence of a stale parts list by whether the file is as spark last wrote it (P1140, `requirements_now`,
-    `flow_codes.STALE_REQUIREMENTS`, the table the phase line reads too) in place of `sentence`, read here as
-    `with_deploy_now` reads the deploy. Else `sentence`."""
+    `flow_codes.STALE_REQUIREMENTS`, the table the phase line reads too) in place of `sentence`, the file read here. Else
+    `sentence`."""
     if not (now and now.phase == flow_codes.REQUIREMENTS and now.status == flow_codes.STALE):
         return sentence
     written = readable(lambda: entry_origin.EntryOriginStore(project).is_as_written(read_requirements(project)), None)
@@ -221,15 +219,12 @@ def place_of(index, name, at, no_model, breadboard_place):
     return flow_codes.DONE_PLACE if index < at else flow_codes.NOW_PLACE if index == at else flow_codes.LATER_PLACE
 
 
-def note_of(phase, place, no_model, breadboard_place, no_picks, start_not_seen=False):
+def note_of(phase, place, no_model, breadboard_place, no_picks):
     """The one note of `phase` at `place` (P1119, `flow_codes.NO_PICKS_NOTE` and its kin), or None. Before now, with
     `no_picks` the needs and the parts are not done and the requirements have no picks behind them (P980), and the breadboard
     is unseen while `breadboard_place` is done (a current sheet) or has no sheet. A phase counted as done for no model says
-    so, and a later phase whose status is ok may change. With `start_not_seen` (`deploy_reading.is_start_not_seen`) the firmware
-    before now has the note `flow_codes.START_NOT_SEEN_NOTE`, which DONE shows as "firmware (written)" (P1106)."""
+    so, and a later phase whose status is ok may change. The firmware's own note is `with_start_not_seen`'s (P1106)."""
     name, done = phase.phase, place == flow_codes.DONE_PLACE
-    if done and start_not_seen and name == flow_codes.FIRMWARE:
-        return flow_codes.START_NOT_SEEN_NOTE
     if done and no_picks and name in (flow_codes.NEEDS, flow_codes.PARTS):
         return flow_codes.NOT_DONE_NOTE
     if done and no_picks and name == flow_codes.REQUIREMENTS:
@@ -241,19 +236,28 @@ def note_of(phase, place, no_model, breadboard_place, no_picks, start_not_seen=F
     return flow_codes.MAY_CHANGE_NOTE if place == flow_codes.LATER_PLACE and phase.status == OK else None
 
 
-def stations_of(phases, at, no_model, breadboard_place, no_picks=False, start_not_seen=False):
+def stations_of(phases, at, no_model, breadboard_place, no_picks=False):
     """
     The station of each of the `phases` the guide is given, in their order (P1119): `{"phase", "place", "note"}`, with
     `place_of` and `note_of`. `at` is the index of the now phase, `len(phases)` with none. `no_model` holds the phases
     counted as done for no Wokwi model. `breadboard_place` is where the breadboard stands: NOW_PLACE beside the firmware
-    (the two jobs), DONE_PLACE with a current sheet, else None. `no_picks`: no needs are written (`has_no_picks`). `start_not_seen`: the
-    deploy is partial and spark did not see the start (P1106). Pure: it reads no file.
+    (the two jobs), DONE_PLACE with a current sheet, else None. `no_picks`: no needs are written (`has_no_picks`). Pure: it reads
+    no file.
     """
     stations = []
     for index, phase in enumerate(phases):
         place = place_of(index, phase.phase, at, no_model, breadboard_place)
-        stations.append({"phase": phase.phase, "place": place, "note": note_of(phase, place, no_model, breadboard_place, no_picks, start_not_seen)})
+        stations.append({"phase": phase.phase, "place": place, "note": note_of(phase, place, no_model, breadboard_place, no_picks)})
     return stations
+
+
+def with_start_not_seen(stations, unseen):
+    """The `stations` with the firmware before now noted `flow_codes.START_NOT_SEEN_NOTE` when `unseen`
+    (`deploy_reading.is_start_not_seen`: the deploy is partial and spark did not see the start), so DONE shows
+    "firmware (written)" (P1106). Pure."""
+    return [dict(station, note=flow_codes.START_NOT_SEEN_NOTE)
+            if unseen and station["place"] == flow_codes.DONE_PLACE and station["phase"] == flow_codes.FIRMWARE else station
+            for station in stations]
 
 
 def note_words(station):
@@ -311,8 +315,7 @@ def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     `no_simulation` is the flag's sentence and `simulation` the line show and the page draw (`checks_reading.simulation_of`).
     `stations` places each phase beside the now (`stations_of`, P1119), and `done` and `later` are built from it. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
-    run's DeployState (P1043), None to read it here, once: the now sentence, the firmware's note (`is_start_not_seen`, P1106)
-    and `wired` all take that one state, so a log that lands between two reads cannot make them disagree. `board` is the run's WiredBoard (P1044), None to read it here:
+    run's DeployState (P1043), None to read it here once for the now, the firmware's note (P1106) and `wired`. `board` is the run's WiredBoard (P1044), None to read it here:
     `wired` is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, or None when spark saw none.
     `gate_a` is `gate_a_of`'s row (P1220), None before the deploy has a board log or is now.
     """
@@ -332,14 +335,13 @@ def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     count = steps(project) if beside_sheet else None
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
     written = not (now and now.phase == flow_codes.SIMULATE) or bool(scenario_names(project))
-    sentence = with_requirements_now(project, with_deploy_now(project, now_sentence(now, open_needs, fact, count, written), now, deploy), now) \
+    sentence = with_requirements_now(project, with_deploy_now(now_sentence(now, open_needs, fact, count, written), now, deploy), now) \
         if now else None
     said = dict(now_of(now, sentence, open_needs, count), with_wiring=with_wiring(project, now, by_name, count)) if now else None
     # beside the firmware, the wiring is part of now
     breadboard_place = flow_codes.NOW_PLACE if two_jobs else flow_codes.DONE_PLACE if is_sheet_current(project, by_name) else None
-    stations = stations_of(phases, at, no_model, breadboard_place, has_no_picks(by_name), deploy_reading.is_start_not_seen(deploy))
-    if board is None:
-        board = wired_board.read_wired(project, deploy)
+    stations = with_start_not_seen(stations_of(phases, at, no_model, breadboard_place, has_no_picks(by_name)), deploy_reading.is_start_not_seen(deploy))
+    board = board if board is not None else wired_board.read_wired(project, deploy)
     no_sim, firmware = flow_codes.BUILD in no_model, by_name.get(flow_codes.FIRMWARE)  # one no-model rule for both keys
     return {"now": said, "stations": stations, "done": names_at(stations, flow_codes.DONE_PLACE),
             "later": names_at(stations, flow_codes.LATER_PLACE), "set_aside": [need["id"] for need in set_aside(listed)],

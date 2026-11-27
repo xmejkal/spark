@@ -44,7 +44,7 @@ from spark.flow import deploy_reading  # noqa: E402
 from spark.bench import board_log  # noqa: E402
 from spark.flow.deploy_reading import DeployState  # noqa: E402
 from spark.flow.guide import NO_IMAGE_FACT, ImageFact, chat_offer_of, guide_of, job_offer, names_at, requirements_now  # noqa: E402
-from spark.flow.guide import stations_of, who_and_sentence  # noqa: E402
+from spark.flow.guide import stations_of, who_and_sentence, with_start_not_seen  # noqa: E402
 from spark.flow.show_flow import ShowFlow, flow_and_guide, need_lines, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.flow.pick_notes import own_part_of, pick_notes  # noqa: E402
@@ -1052,12 +1052,12 @@ class TheStationsTest(unittest.TestCase):
         self.assertEqual(self.lists(rows), ([], ["two (done, may change)", "three"]))
 
     def test_the_firmware_before_now_is_written_when_the_start_was_not_seen_and_no_other_phase_is(self):
-        rows = stations_of(ALL_OK, PHASES.index("deploy"), set(), None, start_not_seen=True)
+        rows = with_start_not_seen(stations_of(ALL_OK, PHASES.index("deploy"), set(), None), True)
         self.assertEqual([row["phase"] for row in rows if row["note"] == "start-not-seen"], ["firmware"])
         self.assertIn("firmware (written)", self.lists(rows)[0])
         for at in ("firmware", "breadboard"):  # the firmware now, or before it, is not written yet
             with self.subTest(at=at):
-                rows = stations_of(ALL_OK, PHASES.index(at), set(), None, start_not_seen=True)
+                rows = with_start_not_seen(stations_of(ALL_OK, PHASES.index(at), set(), None), True)
                 self.assertNotIn("start-not-seen", [row["note"] for row in rows])
         self.assertNotIn("start-not-seen", [row["note"] for row in stations_of(ALL_OK, PHASES.index("deploy"), set(), None)])
 

@@ -2,20 +2,20 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "P1106: the firmware is never written (test_flow.TheFirmwareWrittenTest.test_each_partial_deploy_but_a_lost_board_says_the_firmware_is_written)",
-  "find": "    if done and start_not_seen and name == flow_codes.FIRMWARE:",
-  "replace": "    if False:"
+  "find": "            if unseen and station[\"place\"] == flow_codes.DONE_PLACE and station[\"phase\"] == flow_codes.FIRMWARE else station",
+  "replace": "            if False else station"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "P1106: every done firmware is written (test_flow.TheFirmwareWrittenTest.test_every_other_deploy_keeps_a_plain_firmware)",
-  "find": "    if done and start_not_seen and name == flow_codes.FIRMWARE:",
-  "replace": "    if done and name == flow_codes.FIRMWARE:"
+  "find": "            if unseen and station[\"place\"] == flow_codes.DONE_PLACE and station[\"phase\"] == flow_codes.FIRMWARE else station",
+  "replace": "            if station[\"place\"] == flow_codes.DONE_PLACE and station[\"phase\"] == flow_codes.FIRMWARE else station"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "P1106: the firmware is written at and after now too (test_flow.TheStationsTest.test_the_firmware_before_now_is_written_when_the_start_was_not_seen_and_no_other_phase_is)",
-  "find": "    if done and start_not_seen and name == flow_codes.FIRMWARE:",
-  "replace": "    if start_not_seen and name == flow_codes.FIRMWARE:"
+  "find": "            if unseen and station[\"place\"] == flow_codes.DONE_PLACE and station[\"phase\"] == flow_codes.FIRMWARE else station",
+  "replace": "            if unseen and station[\"phase\"] == flow_codes.FIRMWARE else station"
  },
  {
   "file": "scripts/spark/flow/deploy_reading.py",
