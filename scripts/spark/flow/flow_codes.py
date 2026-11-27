@@ -272,14 +272,16 @@ WIRED_EFFECT = {PICK: WIRED_PICK_MESSAGE, BUILD_BOARD: WIRED_BUILD_MESSAGE}
 PROJECT_EFFECTS = (WIRED_PICK_MESSAGE, LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAGE)
 
 
-def effect_lines(effect):
-    """A pick's effect as the Send box's lines (P1135): the wired sentence first (P1044; PROJECT_EFFECTS holds it
-    first), its own, then its other PROJECT_EFFECTS, each once. One space joins sentences, so each is cut out whole."""
+def effect_lines(effect, notes=()):
+    """A pick's effect and its `notes` as the Send box's lines (P1135, P1180): the wired sentence first (P1044;
+    PROJECT_EFFECTS holds it first), its own, its notes, then its other PROJECT_EFFECTS, each once. One space joins
+    sentences, so each is cut out whole."""
     shared = [said for said in PROJECT_EFFECTS if said in effect]
     own = " %s " % effect
     for said in shared:
         own = own.replace(" %s " % said, " ")
-    return shared[:1] + [own.strip()] + shared[1:] if WIRED_PICK_MESSAGE in shared else [own.strip()] + shared
+    first = shared[:1] if WIRED_PICK_MESSAGE in shared else []
+    return first + [own.strip()] + list(notes) + shared[len(first):]
 
 
 def quoted(names):

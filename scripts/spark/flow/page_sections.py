@@ -520,14 +520,15 @@ class DeveloperHtmlFold:
 
     def _phase(self, phase):
         """A phase's section in the developer fold: its heading in a `<summary>`, its text in a `<div>`, always closed. An offer
-        shows its key in `<code>`, its label, what you have of a pick's part (P1135) and its effect, with no hook: the page's
-        buttons stand on NOW and in the folds."""
+        shows its key in `<code>`, its label, what you have of a pick's part (P1135) and its effect, then a pick's notes
+        (P1180), with no hook: the page's buttons stand on NOW and in the folds."""
         shown = shown_phase(phase)
         lines = ['<section class="phase" %s>' % _data(phase),
                  "<details><summary><h2>%s %s %s</h2></summary>" % (_mark(shown), _text(phase["phase"]), _word(phase["status"], shown.word)),
                  '<div id="phase-%s">' % _text(phase["phase"]), "<p>Done by: %s</p>" % _text(phase["by"])]
         lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
-        offers = ["<li><code>%s</code> %s%s: %s</li>" % (_text(offer["key"]), _text(offer["label"]), self._have(offer), _text(offer["effect"]))
+        offers = ["<li><code>%s</code> %s%s: %s</li>" % (_text(offer["key"]), _text(offer["label"]), self._have(offer),
+                                                      _text(" ".join([offer["effect"]] + list(offer.get("notes") or ()))))
                   for offer in phase["offers"]]
         return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</div>", "</details>", "</section>"])
 
