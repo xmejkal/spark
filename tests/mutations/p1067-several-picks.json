@@ -70,5 +70,23 @@
   "name": "P1067: a pick's words lose its part, so its radio has no label (test_flow_page.TheSliceOneOrderTest.test_a_pick_offer_s_words_hold_its_need_and_its_part_and_the_other_offers_neither)",
   "find": "dict(words, need=need, part=offer.get(\"part\"))",
   "replace": "dict(words, need=need, part=None)"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1067: Send-picks is enabled with nothing chosen (page_script.test.js, Send-picks is disabled and says to choose a part)",
+  "find": "this.picks.disabled = Boolean(waiting) || !keys.length;",
+  "replace": "this.picks.disabled = Boolean(waiting);"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1067: Send-picks writes the first pick's key (page_script.test.js, Send writes one row of the picks' keys and no key)",
+  "find": "() => this.requests.sendPicks(keys));",
+  "replace": "() => this.requests.send(keys[0]));"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1067: a row of picks is labelled by its keys (page_script.test.js, a row of picks waits naming them)",
+  "find": "return picksSaid(words, request.keys) || words.last_request_picks;",
+  "replace": "return String(request.keys);"
  }
 ]

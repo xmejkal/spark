@@ -2,7 +2,8 @@
  * The page's one script (P829 PR 3, #1187). From disk it does nothing: the page stays as it is. In a published page with
  * the Artifact database, for the artifact's owner only, it says how the page is used in the intro, adds a button to each
  * offer the page may send (a pick, the parts list, the build), asks the person to confirm with the offer's own words, and
- * writes one request row {id, key, seen, at}. One request waits at a time, with Copy and Withdraw; the panel stands last
+ * writes one request row, whose shape `flow.py run-request --help` says. In the parts fold each need's picks are radios,
+ * and one Send names the chosen picks in one row (P1067). One request waits at a time, with Copy and Withdraw; the panel stands last
  * in the guide, under the NOW box (P1062), and says the last request with its date, in the browser's zone, and its label,
  * then the answer row that /spark:page writes. Beside each chat offer's tell (P1122) it adds a Copy that only copies the
  * tell and never sends. Python writes every word in the inert block "spark-words"; this script
@@ -20,6 +21,8 @@ const WORDS_ID = "spark-words";
 interface Offer {
   label: string;
   says: string[];
+  need?: string;
+  part?: string | null;
 }
 
 interface Words {
@@ -48,11 +51,21 @@ interface Words {
   note: string;
   problems: string;
   could_not_run: string;
+  not_now: string;
+  picks_said: string[];
+  send_picks: string;
+  choose_first: string;
+  picks_together: string;
+  waiting_picks: string;
+  ok_picks: string;
+  last_request_picks: string;
+  refused_picks: Record<string, string>;
 }
 
 interface RequestRow {
   id: string;
-  key: string;
+  key?: string;
+  keys?: string[];
   seen: string | null;
   at: string;
   withdrawn?: boolean;
@@ -103,8 +116,40 @@ function dayAndTime(moment: string, months: string[]): string {
 }
 
 /** The kind of an offer's key: the word before its first colon. */
-function kindOf(key: string): string {
+function kindOf(key: string | undefined): string {
   return String(key).split(":")[0];
+}
+
+/** True for a row of several picks (P1067): its `keys` is a list. Any other row is read by its `key`. */
+function isPicks(request: RequestRow): boolean {
+  return Array.isArray(request.keys);
+}
+
+/**
+ * P1067: "2 picks (display, button)", the picks of `keys` by the needs of their offers in `words.offers`, in their order,
+ * or the empty text when one of them left the page. `picks_said` is (one, many), and its %d is the count. Pure.
+ */
+function picksSaid(words: Words, keys: string[]): string {
+  const offers = keys.map((key) => own(words.offers, key));
+  if (!offers.length || offers.some((offer) => !offer || !offer.need)) return "";
+  const said = words.picks_said[offers.length === 1 ? 0 : 1].replace("%d", () => String(offers.length));
+  return fill(said, offers.map((offer) => offer!.need).join(", "));
+}
+
+/**
+ * The label of a request: for picks, `picksSaid`, else `last_request_picks` (P1067); for a key, its offer's label on this
+ * page, else its kind's words, else `request_other` (P1062): never a part of a key. A row of another shape reads as
+ * `request_other`. Pure.
+ */
+function requestLabel(words: Words, request: RequestRow): string {
+  if (isPicks(request)) return picksSaid(words, request.keys!) || words.last_request_picks;
+  return labelOf(words, request.key) || own(words.request_kinds, kindOf(request.key)) || words.request_other;
+}
+
+/** The line of a request that waits: its time, and for picks which they are (P1067). Pure. */
+function waitingLine(request: RequestRow, words: Words): string {
+  if (!isPicks(request)) return fill(words.waiting, clock(request.at));
+  return fill(fill(words.waiting_picks, clock(request.at)), requestLabel(words, request));
 }
 
 /** Spark's line without its last full stop, so the words around it end it once. */
@@ -123,14 +168,14 @@ function shownState(request: RequestRow | null, answer: AnswerRow | null, words:
   if (!request) return null;
   const notRun = words.marks["not-run"];
   if (request.withdrawn && !answer) return { mark: notRun, text: words.withdrawn, grey: true };
-  if (!answer) return { mark: "", text: fill(words.waiting, clock(request.at)), grey: false };
+  if (!answer) return { mark: "", text: waitingLine(request, words), grey: false };
   if (answer.ran !== true) {
-    const refused = own(words.refused, answer.line);
+    const refused = own(isPicks(request) ? words.refused_picks : words.refused, answer.line);
     if (refused) return { mark: notRun, text: refused, grey: true };
     return { mark: words.marks["could-not-run"], text: fill(words.could_not_run, sentence(answer.line)), grey: false };
   }
   if (answer.status === "ok") {
-    const said = own(words.ok, kindOf(request.key)) || fill(words.ran, sentence(answer.line));
+    const said = (isPicks(request) ? words.ok_picks : own(words.ok, kindOf(request.key))) || fill(words.ran, sentence(answer.line));
     const note = typeof answer.note === "string" && answer.note ? " " + fill(words.note, sentence(answer.note)) : "";
     return { mark: words.marks.ok, text: said + note, grey: false };
   }
@@ -145,15 +190,13 @@ function said(shown: Shown): string {
 
 /**
  * The status line of the last request (P1062): "Your last request, <its time>: <its label>." and what `shownState` says,
- * or the waiting line alone, or the empty text with no request. The label is the offer's on this page, else its kind's words, else
- * `request_other`: never a part of the key. Pure.
+ * or the waiting line alone, or the empty text with no request. The label is `requestLabel`'s. Pure.
  */
 function lastRequest(request: RequestRow | null, answer: AnswerRow | null, words: Words): string {
   const shown = shownState(request, answer, words);
   if (!request || !shown) return "";
   if (!request.withdrawn && !answer) return said(shown);
-  const label = labelOf(words, request.key) || own(words.request_kinds, kindOf(request.key)) || words.request_other;
-  return fill(fill(words.last_request, dayAndTime(request.at, words.months)), label) + " " + said(shown);
+  return fill(fill(words.last_request, dayAndTime(request.at, words.months)), requestLabel(words, request)) + " " + said(shown);
 }
 
 /**
@@ -240,10 +283,19 @@ class Requests {
     return this.latest && !this.latest.withdrawn && !this.answer ? this.latest : null;
   }
 
-  async send(key: string) {
+  send(key: string) {
+    return this.write({ key });
+  }
+
+  /** P1067: one request of several picks, `keys`, one per need, as the browser's radios keep them. */
+  sendPicks(keys: string[]) {
+    return this.write({ keys });
+  }
+
+  async write(named: { key: string } | { keys: string[] }) {
     if (this.waiting()) return null;
     const before: unknown[] = [this.latest, this.answer];
-    const row = { id: this.makeId(), key: key, seen: this.seen, at: this.now().toISOString() };
+    const row: RequestRow = Object.assign({ id: this.makeId() }, named, { seen: this.seen, at: this.now().toISOString() });
     [this.latest, this.answer, this.note] = [row, null, null];
     this.changed();
     try {
@@ -298,7 +350,7 @@ class Requests {
 }
 
 /** The label of an offer's key on this page, or the empty text. */
-function labelOf(words: Words, key: string): string {
+function labelOf(words: Words, key: string | undefined): string {
   const offer = own(words.offers, key);
   return offer ? offer.label : "";
 }
@@ -307,7 +359,8 @@ function labelOf(words: Words, key: string): string {
  * View: the intro, the status panel, the buttons and the confirm, made with createElement and addEventListener, every
  * text set as text. The panel stands last in the guide, under the NOW box (P1062), or under the intro on a page with no
  * guide; a button stands on each element that carries `data-makes-stale` (a sendable offer, and the NOW box's NEXT line
- * when the guide's now names one sendable offer), and a Copy in each chat offer's block (`.ask[data-key]`, P1122).
+ * when the guide's now names one sendable offer), but a pick in a need's row (`[data-need]`), which gets a radio, with one
+ * Send of the chosen picks after the need rows (P1067), and a Copy in each chat offer's block (`.ask[data-key]`, P1122).
  */
 class PageView {
   declare win: Window;
@@ -319,6 +372,9 @@ class PageView {
   declare copy: HTMLButtonElement;
   declare withdraw: HTMLButtonElement;
   declare buttons: HTMLButtonElement[];
+  declare radios: HTMLInputElement[];
+  declare picks: HTMLButtonElement | null;
+  declare chooseFirst: HTMLElement | null;
   declare box: HTMLElement | null;
 
   constructor(win: Window, requests: Requests, words: Words) {
@@ -328,6 +384,9 @@ class PageView {
     this.copy = this.button(words.copy, () => this.copyCommand());
     this.withdraw = this.button(words.withdraw, () => this.requests.withdraw());
     this.buttons = [];
+    this.radios = [];
+    this.picks = null;
+    this.chooseFirst = null;
     this.box = null;
   }
 
@@ -360,11 +419,19 @@ class PageView {
   }
 
   drawButtons() {
+    const needs: Element[] = [];
     this.doc.querySelectorAll("[data-makes-stale]").forEach((item) => {
       const key = item.getAttribute("data-key")!;
       const offer = own(this.words.offers, key);
       if (!offer) return;
-      const made = this.button(offer.label, () => this.confirm(item, key, offer));
+      const need = item.closest("[data-need]");
+      if (need) {
+        if (!needs.includes(need)) needs.push(this.drawNeed(need));
+        item.appendChild(this.doc.createTextNode(" "));
+        item.appendChild(this.radio(need, key, offer.part || offer.label));
+        return;
+      }
+      const made = this.button(offer.label, () => this.confirm(item, offer.label, offer.says, () => this.requests.send(key)));
       // P993: the guide's line of what to do now (a <p>; an offer is an <li>) asks Claude in the chat; with its button
       // here, its sentence becomes the step and "Use the button." (`now_button`). A sentence it does not name stays.
       const said = item.tagName === "P" ? item.lastChild : null;
@@ -374,6 +441,70 @@ class PageView {
       item.appendChild(made);
       this.buttons.push(made);
     });
+    if (needs.length) this.drawSendPicks(needs[needs.length - 1]);
+  }
+
+  /** P1067: a need's row as a radiogroup named by its need, whose first radio, "not now", is checked. */
+  drawNeed(need: Element) {
+    need.setAttribute("role", "radiogroup");
+    need.setAttribute("aria-label", need.getAttribute("data-need")!);
+    need.insertBefore(this.radio(need, "", this.words.not_now), need.querySelector("ul"));
+    return need;
+  }
+
+  /**
+   * P1067: one native radio of `need` in a label, its value `key` (the empty text: not now). The browser keeps one choice
+   * per need, so the script holds no rule of its own; a choice sends nothing. The label's height is the page's 44 px target,
+   * and the radio keeps the browser's own focus ring.
+   */
+  radio(need: Element, key: string, words: string) {
+    const label = this.doc.createElement("label");
+    Object.assign(label.style, { display: "inline-flex", alignItems: "center", minHeight: "var(--button-height)" });
+    const made = this.doc.createElement("input");
+    made.type = "radio";
+    made.name = "pick:" + need.getAttribute("data-need");
+    made.value = key;
+    made.checked = !key;
+    made.addEventListener("change", () => {
+      this.close();
+      this.render();
+    });
+    label.appendChild(made);
+    label.appendChild(this.doc.createTextNode(" " + words));
+    this.radios.push(made);
+    return label;
+  }
+
+  /** The keys of the chosen picks, in the page's order. */
+  chosen() {
+    return this.radios.filter((radio) => radio.checked && radio.value).map((radio) => radio.value);
+  }
+
+  /**
+   * P1067: after the need rows, one row with `data-makes-stale`, so its Send of the picks is teal, and under it, while no
+   * part is chosen, why it waits, as text.
+   */
+  drawSendPicks(last: Element) {
+    const row = this.doc.createElement("li");
+    row.setAttribute("data-makes-stale", "");
+    this.picks = this.button(this.words.send, () => this.confirmPicks(row));
+    this.chooseFirst = this.doc.createElement("p");
+    this.chooseFirst.textContent = this.words.choose_first;
+    row.appendChild(this.picks);
+    row.appendChild(this.chooseFirst);
+    last.parentNode!.insertBefore(row, last.nextSibling);
+  }
+
+  /** P1067: the Send box of the chosen picks: a line per pick, a line two picks share once, then that spark checks them together. */
+  confirmPicks(row: Element) {
+    const keys = this.chosen();
+    if (!keys.length) return;
+    const offers = keys.map((key) => own(this.words.offers, key)!);
+    const counts = new Map<string, number>();
+    offers.forEach((offer) => offer.says.forEach((said) => counts.set(said, (counts.get(said) || 0) + 1)));
+    const lines = offers.map((offer) => [offer.label].concat(offer.says.filter((said) => counts.get(said) === 1)).join(" "));
+    const shared = [...counts.keys()].filter((said) => counts.get(said)! > 1);
+    this.confirm(row, this.picks!.textContent!, lines.concat(shared, this.words.picks_together), () => this.requests.sendPicks(keys));
   }
 
   /**
@@ -399,23 +530,24 @@ class PageView {
     }, () => {});
   }
 
-  confirm(item: Element, key: string, offer: Offer) {
+  /** The confirm box in `item`: its title, its lines, Send, which closes it and does `send`, and Cancel. */
+  confirm(item: Element, head: string, says: string[], send: () => void) {
     if (this.requests.waiting()) return;
     this.close();
     const doc = this.doc;
     this.box = doc.createElement("div");
     this.box.setAttribute("role", "group");
     const title = doc.createElement("strong");
-    title.textContent = offer.label;
+    title.textContent = head;
     this.box.appendChild(title);
-    offer.says.forEach((said) => {
+    says.forEach((said) => {
       const line = doc.createElement("p");
       line.textContent = said;
       this.box!.appendChild(line);
     });
     this.box.appendChild(this.button(this.words.send, () => {
       this.close();
-      this.requests.send(key);
+      send();
     }));
     this.box.appendChild(this.button(this.words.cancel, () => this.close()));
     item.appendChild(this.box);
@@ -439,11 +571,20 @@ class PageView {
     this.status.style.color = shown && shown.grey ? "var(--muted)" : "";
     this.copy.hidden = !waiting;
     this.withdraw.hidden = !waiting;
-    const why = waiting ? fill(this.words.waiting_for, labelOf(this.words, waiting.key)) : "";
+    const why = waiting ? fill(this.words.waiting_for, requestLabel(this.words, waiting)) : "";
     this.buttons.forEach((made) => {
       made.disabled = Boolean(waiting);
       made.title = why;
     });
+    this.radios.forEach((radio) => {
+      radio.disabled = Boolean(waiting);
+    });
+    if (!this.picks) return;
+    const keys = this.chosen();
+    this.picks.textContent = keys.length ? fill(this.words.send_picks, picksSaid(this.words, keys)) : this.words.send;
+    this.picks.disabled = Boolean(waiting) || !keys.length;
+    this.picks.title = why;
+    this.chooseFirst!.hidden = keys.length > 0;
   }
 }
 
