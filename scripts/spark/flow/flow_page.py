@@ -72,10 +72,10 @@ def page_words(phases):
     the fixed words of the buttons and the status line, and the words of each answer. A refusal's words are keyed by
     its code's meaning, the `line` that `flow.py run-request` answers. The script fills in a time, a label or a line.
     `intro` is the published page's intro, `last_request` the line of the last request, `months` the month words of its
-    time, and `request_kinds` and `request_other` its words when its offer left the page (P1062). `copied` is what Copy says
-    once it copied a chat offer's tell (P1122). A pick's words also hold its `need`, and the words of several picks in one
-    Send are the ones with `picks` in their name (P1067); each offer's words are `offer_words`'. `keep` names the first
-    radio of each picked need: its picks.
+    time, and `request_kinds` and `request_other` its words when its offer left the page (P1062). `copied` is what Copy
+    says once it copied a chat offer's tell (P1122), `copied_line` the deploy's line (P1286). A pick's words also hold
+    its `need`, and the words of several picks in one Send are the ones with `picks` in their name (P1067); each
+    offer's words are `offer_words`'. `keep` names the first radio of each picked need: its picks.
     """
     offers = {}
     for offer in (offer for phase in phases for offer in phase["offers"] if flow_codes.is_sendable(offer["key"])):
@@ -87,7 +87,7 @@ def page_words(phases):
     marks = {status: MARKS[status][1] for status in (OK, PROBLEMS, COULD_NOT_RUN)}
     return {"offers": offers, "keep": keep, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY, "copied": flow_codes.COPIED_SAYS,
             "withdraw": flow_codes.WITHDRAW, "command": flow_codes.PAGE_COMMAND, "waiting": flow_codes.WAITING_SAYS,
-            "now_button": flow_codes.NOW_BUTTON,
+            "now_button": flow_codes.NOW_BUTTON, "copied_line": flow_codes.COPIED_LINE_SAYS,
             "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "last_request": flow_codes.LAST_REQUEST_SAYS,
             "not_sent": flow_codes.NOT_SENT_SAYS, "not_withdrawn": flow_codes.NOT_WITHDRAWN_SAYS,
             "intro": flow_codes.PUBLISHED_INTRO, "months": list(MONTHS),
@@ -195,7 +195,7 @@ class FlowHtmlPage:
              ".now>p:first-child::before{content:\"\";display:inline-block;width:8px;height:8px;"
              "margin-right:var(--space-s);border:2px solid var(--now-halo);border-radius:50%;vertical-align:1px}"
              ".next{font-size:var(--size-heading)}.muted,#request{color:var(--muted)}"
-             ".ask code{display:block;margin:var(--space-s) 0;padding:var(--space-s) var(--space-m);background:var(--bg);"
+             ".ask code,.run code{display:block;margin:var(--space-s) 0;padding:var(--space-s) var(--space-m);background:var(--bg);"
              "color:var(--ink);border:1px solid var(--line);border-radius:var(--radius-button);overflow-wrap:anywhere}"
              ".plane-amber{color:var(--amber-ink);background:var(--amber-plane);"
              "border-left:3px solid var(--amber-ink);padding:0 var(--space-s)}.plane-red{color:var(--red-ink);"

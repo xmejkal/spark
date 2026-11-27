@@ -42,15 +42,19 @@ from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, pa
 from spark.flow.page_sections import TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.offer_steps import build_step  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, PartsNeed, Phase  # noqa: E402
-from spark.flow.show_flow import need_lines, read_flow  # noqa: E402
+from spark.flow.show_flow import need_lines, privacy_for, read_flow, reading_of  # noqa: E402
 from spark.records.folder_walk import MISSING  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
+from spark.core.renderers import copy_line  # noqa: E402
+from spark.core.result import NextStep  # noqa: E402
+from spark.flow.flow_codes import LINE_TO_TYPE_LABEL, NO_LINE_TO_TYPE_SAYS  # noqa: E402
 from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
 from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
-from test_flow import MAY_NOTE, SHARED, SOIL, WIRED_PICK, FlowTest, in_prague, with_needs  # noqa: E402
+from test_flow import MAY_NOTE, SHARED, SOIL, WIRED_PICK, DeployInAHome, FlowTest, in_prague, with_needs  # noqa: E402
 from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
+from spark.flow.write_flow_page import masked_page  # noqa: E402
 
 #: The built fixture test_flow.py builds its projects from.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -148,10 +152,15 @@ def readers_of(*phases):
     return [FakeReader(phase) for phase in phases]
 
 
+def read_of(*phases):
+    """write_page's `read`: the reading of a project through FakeReaders of `phases`."""
+    return lambda project: reading_of(project, readers_of(*phases))
+
+
 def page_of(*phases, project="project", pictures=()):
     """The text of the page of `phases`, through write_page and a fake store."""
     store = FakeStore()
-    write_page(Path(tempfile.mkdtemp()) / project, readers_of(*phases), parts_of(list(pictures)), store=store)
+    write_page(Path(tempfile.mkdtemp()) / project, read_of(*phases), parts_of(list(pictures)), store=store)
     return store.written[0][2]
 
 
@@ -215,7 +224,7 @@ class FlowOfNPhasesTest(unittest.TestCase):
     def test_show_and_page_read_the_same_phases(self):
         phases = readers_of(a_phase("one", "stale"), a_phase("two", None))
         shown, shown_at = read_flow("project", phases)
-        written = write_page("project", phases, parts_of([]), store=FakeStore())
+        written = write_page("project", lambda project: reading_of(project, phases), parts_of([]), store=FakeStore())
         self.assertEqual([(phase.phase, phase.status) for phase in shown], [(phase["phase"], phase["status"]) for phase in written.phases])
         self.assertEqual(shown_at, written.stands_at)
 
@@ -386,7 +395,7 @@ class TheMaskTest(unittest.TestCase):
         picture = Picture("Breadboard", None, "no file in %s/drawings" % home)
         store = FakeStore()
         with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
-            write_page(project, readers_of(phase), parts_of([picture]), store=store)
+            write_page(project, read_of(phase), parts_of([picture]), store=store)
         text = store.written[0][2]
         self.assertNotIn(str(home), text)
         self.assertIn("~/secret/notes", text)
@@ -424,7 +433,7 @@ class TheSecretMaskTest(unittest.TestCase):
         drawn = Picture("Breadboard", '<svg xmlns="http://www.w3.org/2000/svg"><text>%s</text></svg>' % SECRET, None)
         missing = Picture("Schematic", None, "not drawn for %s" % SECRET)
         store = FakeStore()
-        write_page(project, readers_of(phase), parts_of([drawn, missing]), store=store)
+        write_page(project, read_of(phase), parts_of([drawn, missing]), store=store)
         text = without_script(store.written[0][2])
         self.assertIn("joins the network ***", text)
         self.assertIn("not drawn for ***", text)
@@ -440,7 +449,7 @@ class TheSecretMaskTest(unittest.TestCase):
         for value in (OTHER_SECRET, SECRET):
             (project / "firmware" / "wifi_secrets.py").write_text(a_secrets_line(value), encoding="utf-8")
             store = FakeStore()
-            write_page(project, readers_of(phase), parts_of([drawn]), store=store)
+            write_page(project, read_of(phase), parts_of([drawn]), store=store)
             pages.append(store.written[0][2])
         without_mask, with_mask = pages
         self.assertIn(SECRET, without_mask)
@@ -538,7 +547,7 @@ class TheCommandTest(unittest.TestCase):
         class Refusing:
             def write(self, project, file_name, text):
                 raise PermissionError("read-only")
-        result = WriteFlowPage(readers=readers_of(a_phase("one")), parts=parts_of([]), store=Refusing()).run(Path("."), outside=None)
+        result = WriteFlowPage(read=read_of(a_phase("one")), parts=parts_of([]), store=Refusing()).run(Path("."), outside=None)
         self.assertEqual([(finding.severity, finding.code) for finding in result.findings], [(COULD_NOT_RUN, NOT_WRITTEN)])
 
     def test_page_on_a_record_whose_stages_is_no_list_writes_the_page_with_the_sentence(self):
@@ -578,7 +587,7 @@ class TheCommandTest(unittest.TestCase):
                       "Ask Claude how to fill it in.", html.unescape(text))
 
     def test_a_phase_that_holds_problems_does_not_change_the_page_s_status(self):
-        result = WriteFlowPage(readers=readers_of(a_phase("one", "problems")), parts=parts_of([]), store=FakeStore()).run(
+        result = WriteFlowPage(read=read_of(a_phase("one", "problems")), parts=parts_of([]), store=FakeStore()).run(
             Path("."), outside=None)
         self.assertEqual(list(result.findings), [])
 
@@ -689,7 +698,7 @@ WIRING_FIRST = "Below: the wiring and its pictures, then each phase, folded: cli
 def page_of_wiring(wiring, pictures=()):
     """The text of a page whose wiring is `wiring`, on one fake phase."""
     store = FakeStore()
-    write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one")), parts_of(list(pictures), wiring), store=store)
+    write_page(Path(tempfile.mkdtemp()) / "project", read_of(a_phase("one")), parts_of(list(pictures), wiring), store=store)
     return store.written[0][2]
 
 
@@ -1078,7 +1087,7 @@ class TheInlinePictureTest(unittest.TestCase):
         picture = Picture("Breadboard", '<svg xmlns="http://www.w3.org/2000/svg"><text>%s/notes</text></svg>' % home, None)
         store = FakeStore()
         with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
-            write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("one")), parts_of([picture]),
+            write_page(Path(tempfile.mkdtemp()).resolve() / "project", read_of(a_phase("one")), parts_of([picture]),
                        store=store)
         text = store.written[0][2]
         self.assertNotIn(str(home), text)
@@ -1094,7 +1103,7 @@ class TheInlinePictureTest(unittest.TestCase):
         picture = Picture("Breadboard", '<svg xmlns="http://www.w3.org/2000/svg"><text>%s&#47;notes</text></svg>' % encoded, None)
         store = FakeStore()
         with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
-            write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("one")), parts_of([picture]),
+            write_page(Path(tempfile.mkdtemp()).resolve() / "project", read_of(a_phase("one")), parts_of([picture]),
                        store=store)
         text = store.written[0][2]
         self.assertNotIn(str(home), text)
@@ -1705,6 +1714,58 @@ class TheGuideSectionTest(unittest.TestCase):
     def test_the_guide_adds_no_script_and_loads_only_the_font(self):
         assert_spark_s_script_only(self, guide_page(a_guide(), PageWiring([(1, "x")], [], [], None)))
 
+    def test_the_deploy_s_line_draws_its_run_block_after_next_and_before_the_ask_block(self):
+        # P1286: the label in bold and the line in a code box, escaped, with no hook that sends; the owner's script adds Copy
+        line = '"$HOME"/spark/scripts/look.py --project "$HOME"\'/a&b\''
+        now = dict(a_guide()["now"], phase="deploy", offer=None, chat_offer="look-at-board", command=line, no_command=None)
+        section = guide_lines(guide_page(a_guide(now=now)))[1]
+        block = '<div class="run"><strong>%s</strong> <code>%s</code></div>' % (LINE_TO_TYPE_LABEL, html.escape(line))
+        self.assertIn("&amp;", block)
+        self.assertEqual(section.count('class="run"'), 1)
+        self.assertIn(block, section)
+        self.assertLess(section.index('<p class="next"'), section.index(block))
+        self.assertLess(section.index(block), section.index('<div class="ask"'))
+        self.assertNotIn(NO_LINE_TO_TYPE_SAYS, section)
+        self.assertNotIn("data-makes-stale", section)
+
+    def test_with_no_line_the_now_box_says_why_and_draws_no_run_block(self):
+        now = dict(a_guide()["now"], phase="deploy", offer=None, command=None, no_command=NO_LINE_TO_TYPE_SAYS)
+        section = guide_lines(guide_page(a_guide(now=now)))[1]
+        self.assertIn('<p class="muted">%s</p>' % html.escape(NO_LINE_TO_TYPE_SAYS), section)
+        self.assertNotIn('class="run"', section)
+        for now in (a_guide()["now"], dict(a_guide()["now"], command=None, no_command=None)):
+            self.assertNotIn('class="run"', guide_page(a_guide(now=now)))
+            self.assertNotIn(NO_LINE_TO_TYPE_SAYS, guide_page(a_guide(now=now)))
+
+    def test_the_page_s_two_masks_leave_the_line_as_built(self):
+        # P1286: write_page masks the data with the secrets, then the rendered page with the paths: the line stays as
+        # copy_line built it, with no `~` and no `<project>`. HOME is a resolved temp folder, never the person's.
+        home = Path(tempfile.mkdtemp()).resolve()
+        project, scripts = home / "a&b", home / "spark" / "scripts"
+        project.mkdir()
+        scripts.mkdir(parents=True)
+        (scripts / "look.py").write_text("")
+        with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / ".local" / "share" / "spark")}):
+            line = copy_line(NextStep("look", ["--project", str(project)], "why"), home, privacy_for(project), scripts)
+            now = dict(a_guide()["now"], phase="deploy", offer=None, command=line, no_command=None)
+            page = FlowPage("t", [a_phase("one").to_dict()], "one", [], [], None, None, None, a_guide(now=now))
+            paths = privacy_for(project, secrets=())
+            text = paths.masked(FlowHtmlPage().text(masked_page(page, privacy_for(project), paths)))
+        self.assertEqual(line, '"$HOME"/spark/scripts/look.py --project "$HOME"\'/a&b\'')
+        self.assertIn("<code>%s</code>" % html.escape(line), text)
+
+
+class ThePageLineIsShowsLineTest(DeployInAHome):
+    """P1286, the review (lens L2): at the deploy, the page's run block holds the very line that show answers as
+    `data.guide.now.command`: both read it from `reading_of`, the page through `write_page`'s `read`."""
+
+    def test_the_page_s_code_box_unescaped_is_show_s_command(self):
+        command = self.shown().data["guide"]["now"]["command"]
+        write_page(self.project, lambda project: reading_of(project, None, self.scripts), store=FlowPageStore())
+        boxes = re.findall(r'<div class="run"><strong>[^<]*</strong> <code>([^<]*)</code></div>',
+                           (self.project / "page.html").read_text(encoding="utf-8"))
+        self.assertEqual((command, [html.unescape(box) for box in boxes]), (self.line, [command]))
+
 
 class TheGuideThroughWritePageTest(unittest.TestCase):
     """The guide is computed once in write_page, masked, drawn, and answered as Written.guide."""
@@ -1712,7 +1773,7 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
     def test_a_phase_after_now_that_is_ok_says_it_may_change(self):
         # P977 PR 2 review: the rail says ok, so LATER must not list it as work still to do; a phase not ok has no suffix.
         store = FakeStore()
-        written = write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one", "not-started"), a_phase("two", OK),
+        written = write_page(Path(tempfile.mkdtemp()) / "project", read_of(a_phase("one", "not-started"), a_phase("two", OK),
                                                                             a_phase("three", "not-started")), parts_of([]), store=store)
         self.assertEqual(written.guide["later"], ["two (done, may change)", "three"])
         # P1119: the page draws the station line, where two is later with its own tick and its note, and no LATER line
@@ -1722,7 +1783,7 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
 
     def test_write_page_draws_the_guide_it_answers(self):
         store = FakeStore()
-        written = write_page(Path(tempfile.mkdtemp()) / "project", readers_of(a_phase("one", OK), a_phase("two", "not-started")),
+        written = write_page(Path(tempfile.mkdtemp()) / "project", read_of(a_phase("one", OK), a_phase("two", "not-started")),
                              parts_of([]), store=store)
         text = store.written[0][2]
         self.assertEqual(text.count('<section id="guide">'), 1)
@@ -1735,7 +1796,7 @@ class TheGuideThroughWritePageTest(unittest.TestCase):
         home = Path(tempfile.mkdtemp()).resolve()
         store = FakeStore()  # a phase's name reaches the guide's station line (P1119)
         with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / "store")}):
-            written = write_page(Path(tempfile.mkdtemp()).resolve() / "project", readers_of(a_phase("read %s/secret" % home)),
+            written = write_page(Path(tempfile.mkdtemp()).resolve() / "project", read_of(a_phase("read %s/secret" % home)),
                                  parts_of([]), store=store)
         self.assertNotIn(str(home), store.written[0][2])
         self.assertIn('<span class="name">read ~/secret</span>', store.written[0][2])
