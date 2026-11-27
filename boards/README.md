@@ -253,10 +253,10 @@ where the devkit has only bare header pins (P483).
 A stand-in's `documents["wokwi-board"]` entry cites the stand-in's own file, so a GPIO it reaches is a header pin and the limits say so.
 
 A board whose `wokwi_part_type` is `null` still builds (P955). The full build and the board-only build end its
-simulation stage `could-not-run` with "the board record names no wokwi_part_type" (code `board_not_in_wokwi`, P977),
-before the converter runs. The sheet, the picture and `pins.py` are still written, and the run exits 2: the chain was
-not exercised, so it is not a pass. The next step: name Wokwi's part for the board, or a devkit with the same chip and
-`wokwi_is_stand_in: true`.
+simulation stage `skipped` with the code `board_not_in_wokwi` (P977, P1207), before the converter runs. The sheet, the
+picture and `pins.py` are still written, and the run exits 0. A skipped stage is no pass: nothing was simulated, so you
+test the firmware on the board itself. To simulate it, name Wokwi's part for the board, or a devkit with the same chip
+and `wokwi_is_stand_in: true`.
 
 Wokwi custom boards exist but are a browser-only feature (F1 → "Load custom board file"):
 `wokwi.toml` has no board key, and the simulator loads boards from a bundle Wokwi hosts. Getting

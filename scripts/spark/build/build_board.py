@@ -9,6 +9,7 @@ from pathlib import Path
 
 from spark.bench import board_envelope
 from spark.breadboard import tabbed_page
+from spark.build import build_codes
 from spark.build.build_service import findings_of, verdict
 from spark.build.kept_files import KeepAsked, keep_all, left_off, simulation_dir
 from spark.build.requirements_build import RequirementsBuildService
@@ -26,6 +27,15 @@ from spark.flow.write_flow_page import write_kept_page
 
 #: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
 EVERY_PART_SKIPPED_LINE = "; every part is skipped from the simulation, so the diagram holds none of the project's parts"
+#: The closing line's addition by the skipped simulation stage's code: a board with no Wokwi part (P1207) says its code's
+#: own meaning. A skipped simulation stage has one of these two codes today. The fallback keeps the old line for any other.
+SKIPPED_SIMULATION_LINES = {build_codes.EVERY_PART_SKIPPED: EVERY_PART_SKIPPED_LINE,
+                            build_codes.BOARD_NOT_IN_WOKWI: "; " + build_codes.BOARD_NOT_IN_WOKWI.meaning}
+
+
+def skipped_line(stages):
+    """What the closing line of an ok full build adds for its skipped stage, or "" when no stage is skipped."""
+    return next((SKIPPED_SIMULATION_LINES.get(stage.code, EVERY_PART_SKIPPED_LINE) for stage in stages if stage.status == SKIPPED), "")
 
 
 def render(stages, code, unserved=()):
@@ -36,7 +46,7 @@ def render(stages, code, unserved=()):
     lines.append("")
     lines.append({
         EXIT_OK: "  the chain runs end to end" + (" for the board alone: nothing to wire, so no board was built" if skipped_the_build(stages)
-                                                  else EVERY_PART_SKIPPED_LINE if any(stage.status == SKIPPED for stage in stages) else ""),
+                                                  else skipped_line(stages)),
         EXIT_PROBLEMS: "  the chain is broken",
         EXIT_COULD_NOT_RUN: "  the chain was NOT exercised — this is not a pass",
     }[code] + (" — but not every need is on the board: %s" % ", ".join(unserved) if unserved and code == EXIT_OK else ""))

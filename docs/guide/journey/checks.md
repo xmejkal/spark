@@ -90,7 +90,7 @@ Every check ends in one of three outcomes, and `check_all` adds a fourth word, `
 - `[ok  ]` is ok: it looked and found nothing.
 - `[FAIL]` is problems, each on a `-` line.
 - `[????]` is could-not-run, and each `!` line says what it could not check.
-- `[--  ]` is skipped: it was [never asked](../../../GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it).
+- `[--  ]` is skipped: it was [never asked](../../../GLOSSARY.md#skipped--the-fourth-word-for-a-check-or-a-stage).
 
 `!` lines can also appear under `[FAIL]`: a check that found a problem may also have failed to look at something, and
 problems outranks could-not-run. A `?` line is an

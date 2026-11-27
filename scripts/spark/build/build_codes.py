@@ -77,7 +77,8 @@ NO_DIAGRAM = Code("no_diagram", "the diagram converter wrote no diagram",
 DIAGRAM_UNWIRED = Code("diagram_unwired", "the diagram holds the parts and no wire joins them",
                        "report it at https://github.com/xmejkal/spark/issues with the requirements file: the converter wired "
                        "none of the parts")
-#: The board's record names no Wokwi part (P977): no simulation can run, and the flow's guide passes such a build.
+#: The board's record names no Wokwi part (P977): the simulation stage is skipped with this code, the build exits 0
+#: (P1207), and the flow's guide counts such a build as done.
 BOARD_NOT_IN_WOKWI = Code("board_not_in_wokwi", "the board's record names no Wokwi part, so Wokwi has no model of it and nothing is simulated",
                           "if Wokwi has a part for this board, write it in the board record's wokwi_part_type and build again. Else "
                           "test the firmware on the board itself: the board built")

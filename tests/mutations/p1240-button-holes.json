@@ -1,0 +1,14 @@
+[
+ {
+  "file": "data/wokwi-geometry.json",
+  "name": "the 6 mm button's right pins sit 67 px away, as on the 12 mm part",
+  "find": "\"1.r\": [28, 2.2], \"2.r\": [28, 21]",
+  "replace": "\"1.r\": [67, 2.2], \"2.r\": [67, 21]"
+ },
+ {
+  "file": "parts/tactile-button.json",
+  "name": "the 6x6 button names the 12 mm Wokwi part again",
+  "find": "\"part\": \"wokwi-pushbutton-6mm\"",
+  "replace": "\"part\": \"wokwi-pushbutton\""
+ }
+]

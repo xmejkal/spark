@@ -49,6 +49,8 @@ OFFERED = ("needs-drop:light", "pick:light:led-red-5mm", "requirements", "build"
 
 #: The one Finding of a build whose simulation stage could not run because the board's record names no Wokwi part (P1008).
 NO_MODEL = Finding("could-not-run", "simulation", "board_not_in_wokwi", "the board record names no wokwi_part_type", "test it on the board")
+#: The stages of an ok build's data whose simulation stage is skipped because the board's record names no Wokwi part (P1207).
+NO_MODEL_STAGES = [{"name": "build", "status": "ok"}, {"name": "simulation", "status": "skipped", "code": "board_not_in_wokwi"}]
 
 
 class FakeStep(Operation):
@@ -179,11 +181,12 @@ class EachKindRunsItsStepTest(RunRequestTest):
                          (2, True, "could-not-run", "tsci is not installed"))
 
     def test_a_build_that_stopped_only_at_the_simulation_for_no_wokwi_part_answers_built_with_a_note(self):
-        """P1008: the board, the sheet and the pin map were written; only Wokwi has no model of the board."""
-        self.steps["build-board"] = FakeStep("build-board", OperationResult({}, [NO_MODEL]))
+        """P1008: the board, the sheet and the pin map were written; only Wokwi has no model of the board. P1207 (D11): the
+        build is ok, and its data holds the skipped simulation stage with its code, with no Finding."""
+        self.steps["build-board"] = FakeStep("build-board", OperationResult({"stages": NO_MODEL_STAGES}))
         self.ask("build")
         envelope, code = self.run_request()
-        self.assertEqual((code, envelope["status"], [item["code"] for item in envelope["unchecked"]]), (2, "could-not-run", ["board_not_in_wokwi"]))
+        self.assertEqual((code, envelope["status"], [item["code"] for item in envelope.get("unchecked", [])]), (0, "ok", []))
         self.assertEqual({key: envelope["data"][key] for key in ("ran", "status", "mark", "line", "note")},
                          {"ran": True, "status": "ok", "mark": "✓", "line": "ran label of build: ok",
                           "note": "the board's record names no Wokwi part, so Wokwi has no model of it and nothing is simulated"})
@@ -200,6 +203,13 @@ class EachKindRunsItsStepTest(RunRequestTest):
                 self.ask("build")
                 envelope, code = self.run_request()
                 self.assertEqual((code, envelope["data"]["status"], envelope["data"]["note"]), (2, "could-not-run", None))
+
+    def test_an_ok_pick_whose_data_holds_a_no_model_stage_has_no_note(self):
+        """P1207: only the build's answer reads the stages for the note."""
+        self.steps["pick"] = FakeStep("pick", OperationResult({"stages": NO_MODEL_STAGES}))
+        self.ask("pick:light:led-red-5mm")
+        envelope, code = self.run_request()
+        self.assertEqual((code, envelope["data"]["status"], envelope["data"]["note"]), (0, "ok", None))
 
     def test_a_pick_that_could_not_run_for_the_same_code_keeps_could_not_run(self):
         self.steps["pick"] = FakeStep("pick", OperationResult({}, [NO_MODEL]))

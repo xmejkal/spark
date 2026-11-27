@@ -26,7 +26,7 @@ raised and rejected findings only. 2026-11-27.
 | 16 | the radios miss the 44 px target | the refuter, round 2 | acted | each radio's label gets the button height through `style`; Chrome measured 44 px |
 | 17 | `RunRequest.data_keys` lacks "keys", and the ran line reads `offer.label` when `offer` is None | the refuter, round 2 | acted | both fixed, with a test |
 | 18 | a committed copy of today's page script, so a test can load an old page | the plan | rejected | today's script was run on a `keys` row in node: it showed "a step this page no longer offers" and did not crash; a node test pins that a row of an unknown shape reads as `request_other` |
-| 19 | the three new rows of the run's rule are not marked critical | the builder | dropped | dropped because the critical cap is full at 50 of 50: the rows run as new rows in every sweep, and a critical place for them needs the PO to free one, which is on his morning list |
+| 19 | the three new rows of the run's rule are not marked critical | the builder | closed | dropped because the critical cap is full at 50 of 50: the rows run as new rows in every sweep, and a critical place for them needs the PO to free one, which is on his morning list |
 | 20 | each radio came after its offer's long words, while the design draws the choice first | the Chrome check | acted | the radio's label leads its row; a node test pins it |
 | 21 | the Send box ran a pick's label into its words ("for board If you wired") | the Chrome check | acted | a colon joins them |
 | 22 | the canvas draws a small picture of each part in the pick rows; the page shows none | the Chrome check | raised | [P1275 #1835](https://github.com/xmejkal/spark/issues/1835): each pick row shows the part's picture from its record |

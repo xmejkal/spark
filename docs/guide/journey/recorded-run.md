@@ -303,9 +303,9 @@ verified: the pads, the side of the row, and the USB end. The sheet says so and 
 picture. Wokwi has no part with its pins, so for the FireBeetle the sheet says `There is no Wokwi diagram: Wokwi has no part for the board.`
 It also names the ground pad (GND2). A board whose record lacks a fact says which one.
 The same project on the XIAO, as Wokwi shows its `breadboard.json`
-([the measurement](../../discovery/2026-10-16-p267-wokwi-holes/README.md)):
+([the measurement](../../discovery/2026-10-16-p267-wokwi-holes/README.md), the 6 mm button looked at in Wokwi on 2026-11-27):
 
-![The button-and-LED project on a XIAO ESP32-C6, drawn on a Wokwi half breadboard](../../discovery/2026-10-16-p267-wokwi-holes/button-light-xiao.png)
+![The button-and-LED project on a XIAO ESP32-C6, drawn on a Wokwi half breadboard](../../discovery/2026-10-16-p267-wokwi-holes/button-light-xiao-6mm.png)
 
 Since 2026-10-16 the sheet also shows the layout itself ([P268](https://github.com/xmejkal/spark/issues/302)). The
 build writes `breadboard.svg` beside the sheet, and `breadboard.md` shows it under the steps. Each part is a plain

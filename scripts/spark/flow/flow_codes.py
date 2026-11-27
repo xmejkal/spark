@@ -66,7 +66,8 @@ MISSING_FACTS_MESSAGE = "%d fact(s) the board record lacks, named in firmware/pi
 #: A build on the board alone (P878): its four skipped stages are final, so the build and the sheet say so and have no status.
 BOARD_ONLY_BUILD_MESSAGE = "board only: nothing to wire, no board was built"
 BOARD_ONLY_MESSAGE = "board only: nothing to wire"
-#: The one cause of a skipped simulation stage today (`build_service`, P778).
+#: A skipped simulation stage when every part's record skips it (`build_service`, P778). A board with no Wokwi part says
+#: NO_SIMULATION_NOW instead (P1207).
 SIMULATION_SKIPPED_MESSAGE = "every part is skipped from the simulation, so spark did not judge the diagram"
 NO_SHEET_MESSAGE = "no breadboard.md yet"
 SHEET_NOT_JUDGED_MESSAGE = "breadboard.md, spark does not judge the wiring"
@@ -541,7 +542,8 @@ SCENARIO_FIRST_WHY = "Claude first writes the scenario from the person's words, 
 #: Why the look is the deploy's step (P1034): the person wires and plugs the board in first.
 LOOK_WHY = ("The person wires the breadboard and plugs the board into USB first. The look reads the board, and the board "
             "restarts while it is read.")
-#: A build whose only stop is a board Wokwi has no model of is counted as done (the PO, 2026-11-21), and this says why.
+#: A build that skipped its simulation only because Wokwi has no model of the board (P1207), or an older record that
+#: stopped there alone, is counted as done (the PO, 2026-11-21), and this says why.
 NO_SIMULATION_NOW = "No simulation: Wokwi has no model of this board. You test it on the real board."
 #: The station line (P1119): where a phase stands beside the phase to act on now, as the guide's `stations` gives it.
 DONE_PLACE, NOW_PLACE, LATER_PLACE = "done", "now", "later"
