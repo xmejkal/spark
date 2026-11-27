@@ -197,6 +197,129 @@ class TheToolPythonIsFoundTest(TheVenvTest):
                          % sys.executable)
         self.assertEqual(finder.looked(dict(self.entry(), exe="")), "")
 
+    def test_only_tool_finder_and_versions_import_tool_python(self):
+        """C7: one door. Red: a module outside the two read the finder."""
+        importers = sorted(path.stem for path in (ROOT / "scripts").rglob("*.py")
+                           if "tool_python" in "".join(line for line in path.read_text().splitlines()
+                                                       if line.startswith(("import ", "from ")) or line.startswith("    from "))
+                           and path.stem != "tool_python")
+        self.assertEqual(importers, ["tool_finder", "versions"])
+
+
+class TheFinderUsesItTest(TheVenvTest):
+    """The card's tests: a tool found on the PATH and not in the running Python counts as installed."""
+
+    def setUp(self):
+        super().setUp()
+        self.nobody = Path(tempfile.mkdtemp(dir=self.root)) / "absent.json"
+        self.project = self.project_with(ENTRY)
+
+    def project_with(self, entry):
+        root = Path(tempfile.mkdtemp(dir=self.root))
+        (root / ".spark").mkdir()
+        (root / ".spark" / "tools.json").write_text(json.dumps({"p1264-tool": entry, "roles": {"board-shell": "p1264-tool"}}))
+        return root
+
+    def row(self):
+        rows = tool_finder.status(self.project, self.nobody)
+        return next(row for row in rows if row[1] == "board-shell")
+
+    def test_a_tool_found_on_the_path_and_not_in_the_running_python_counts_as_installed(self):
+        """THE CARD'S TEST. Red: ToolMissingError, because only the running Python was asked."""
+        self.path("bin")
+        tool = tool_finder.find("board-shell", self.project, self.nobody)
+        self.assertEqual(tool.command, [self.python])
+        self.assertEqual(tool_finder.command_for(tool), [self.python, "-m", "p1264_mod"])
+        self.assertEqual(self.row(), ("ok", "board-shell", "p1264-tool 1.29.0, runs with %s (found through %s)" % (self.python, self.exe)))
+
+    def test_a_tool_found_nowhere_still_says_how_to_install_it(self):
+        """THE CARD'S TEST. Red: the sentence did not say where spark looked."""
+        self.path("pybin")
+        with self.assertRaises(tool_finder.ToolMissingError) as missing:
+            tool_finder.find("board-shell", self.project, self.nobody)
+        self.assertEqual(str(missing.exception),
+                         "board-shell (p1264-tool) is not installed — install: python3 -m pip install --user p1264-mod==1.29.0"
+                         ". Spark looked for the p1264_mod module in %s, the Python that runs spark, and for p1264-exe on the PATH."
+                         % sys.executable)
+        self.assertEqual(missing.exception.code, "tool_missing")
+
+    def test_a_tool_on_the_path_whose_pythons_hold_no_module_says_so_and_ends_with_one_step_to_copy(self):
+        """C2. Red: the sentence said "is not installed" and gave an install line for a Python that was not asked."""
+        self.path("bare")
+        project = self.project_with(dict(ENTRY, exe="p1264-bare"))
+        with self.assertRaises(tool_finder.ToolMissingError) as missing:
+            tool_finder.find("board-shell", project, self.nobody)
+        self.assertEqual(str(missing.exception),
+                         "p1264-bare is on your PATH (%s), but no Python spark asked holds its module: %s holds no p1264_mod "
+                         "module. Copy this step: %s -m pip install --user p1264-mod==1.29.0" % (self.bare, sys.executable, sys.executable))
+        self.assertEqual(missing.exception.code, "tool_missing")
+        self.assertEqual(self.row_of(project)[0], "missing")
+
+    def row_of(self, project):
+        return next(row for row in tool_finder.status(project, self.nobody) if row[1] == "board-shell")
+
+    def test_the_floor_holds_on_the_tools_python(self):
+        """Red: the release was read in the running Python only, so the floor never fired."""
+        self.path("bin")
+        project = self.project_with(dict(ENTRY, oldest_version="2.0"))
+        with self.assertRaises(tool_finder.ToolError) as old:
+            tool_finder.find("board-shell", project, self.nobody)
+        self.assertEqual(old.exception.code, "tool_too_old")
+        self.assertIn("p1264-tool 1.29.0 is too old: spark needs 2.0 or newer.", str(old.exception))
+
+    def test_the_pin_holds_on_the_tools_python_and_the_plan_says_already_here(self):
+        """Red: the pin compared None to the pin."""
+        self.path("bin")
+        command = tool_finder.find("board-shell", self.project, self.nobody).command
+        self.assertEqual(tool_finder.pin_differences(self.entry(), command), [])
+        self.assertEqual(tool_finder.pin_differences(self.entry(version="1.30.0"), command), [("version", "1.29.0", "1.30.0")])
+        steps = tool_finder.plan(["p1264-tool"], self.project, self.nobody)
+        self.assertEqual(steps[-1]["here"], "the p1264_mod module of %s" % self.python)
+        self.assertEqual(versions.installed_release(self.entry()), "1.29.0")
+
+    def test_to_install_leaves_out_a_tool_found_through_the_path_and_names_one_that_is_not(self):
+        """Red: the tool was offered for install."""
+        self.path("bin")
+        self.assertNotIn("p1264-tool", tool_finder.to_install(self.project, self.nobody))
+        self.path("pybin")
+        tool_python.TOOL_PYTHONS.forget()
+        self.assertIn("p1264-tool", tool_finder.to_install(self.project, self.nobody))
+
+    def test_the_running_python_still_wins_and_runs_no_child(self):
+        """Red: the PATH was asked first, and a child ran."""
+        self.path("bin")
+        reader = CountingReader()
+        self.addCleanup(setattr, tool_python.TOOL_PYTHONS, "reader", None)
+        tool_python.TOOL_PYTHONS.reader = reader
+        project = self.project_with(dict(ENTRY, module="json"))
+        self.assertEqual(tool_finder.find("board-shell", project, self.nobody).command, [sys.executable])
+        self.assertEqual(reader.count, 0)
+
+    def test_an_empty_exe_turns_the_path_lookup_off(self):
+        """The setting `exe` (project layer). Red: an empty `exe` was looked for as a name."""
+        self.path("bin")
+        project = self.project_with(dict(ENTRY, exe=""))
+        with self.assertRaises(tool_finder.ToolError) as lacking:
+            tool_finder.find("board-shell", project, self.nobody)
+        self.assertEqual(lacking.exception.code, "tool_missing")
+
+    def test_the_release_of_the_row_is_the_one_locate_kept_and_no_second_child_runs(self):
+        """C8. Red: installed_release asked a second child."""
+        self.path("bin")
+        reader = CountingReader()
+        self.addCleanup(setattr, tool_python.TOOL_PYTHONS, "reader", None)
+        tool_python.TOOL_PYTHONS.reader = reader
+        self.row()
+        self.assertEqual(reader.count, 1)
+
+    def test_install_forgets_what_was_kept(self):
+        """Red: a tool installed by /spark:setup was still missing for the process."""
+        self.path("bin")
+        project = self.project_with(dict(ENTRY, version="1.30.0"))
+        tool_finder.find("board-shell", project, self.nobody)
+        self.assertTrue(tool_python.TOOL_PYTHONS.kept)
+        tool_finder.install(["p1264-tool"], project, self.nobody, run=lambda argv, **kw: None)
+        self.assertFalse(tool_python.TOOL_PYTHONS.kept)
 
 
 if __name__ == "__main__":

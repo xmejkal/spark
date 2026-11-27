@@ -2,18 +2,23 @@
 Version numbers compared: a pin against the release installed (P214), and an installed release against the oldest one
 spark runs (P471, #642).
 
-Reads only the metadata of an installed module. In the floor compare (`release_tuple`) a pre-release counts as its release; `release` keeps it.
+Reads only the metadata of an installed module, here or in the tool's Python. In the floor compare (`release_tuple`) a pre-release counts as its release; `release` keeps it.
 """
 
 import importlib.metadata
+import importlib.util
+
+from spark.records import tool_python
 
 
 def installed_release(entry):
-    """A Python tool's module version as installed for this interpreter, or None without metadata."""
+    """A Python tool's module version as installed for this interpreter, or None without metadata. A module that this
+    interpreter does not hold has the release of the tool's Python (P1264): the one `locate` kept, with no second probe."""
     try:
         return importlib.metadata.version(entry["module"])
     except importlib.metadata.PackageNotFoundError:
-        return None
+        found = None if importlib.util.find_spec(entry["module"]) else tool_python.TOOL_PYTHONS.find(entry)
+        return found.release if found else None
 
 
 def too_old(entry):

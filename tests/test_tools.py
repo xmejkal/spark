@@ -347,8 +347,9 @@ class ALookupSparkCannotReadTest(unittest.TestCase):
 
     def test_an_npm_tool_on_path_is_found_past_a_node_modules_spark_cannot_read(self):
         project = self.npm_project("sh")
-        self.assertEqual(tool_finder.find("t1071", project, self.nobody).command, [shutil.which("sh")])
-        self.assertNotIn("t1071", tool_finder.to_install(project, self.nobody))  # the plan check, B
+        with mock.patch.dict(os.environ, {"PATH": "/usr/bin:/bin"}):  # P1264: to_install asks every role, so its PATH is fixed
+            self.assertEqual(tool_finder.find("t1071", project, self.nobody).command, [shutil.which("sh")])
+            self.assertNotIn("t1071", tool_finder.to_install(project, self.nobody))  # the plan check, B
 
     def test_an_npm_tool_no_place_finds_names_the_node_modules_spark_cannot_read(self):
         project = self.npm_project("no-such-program-p1071")

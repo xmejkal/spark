@@ -73,7 +73,7 @@ def settled_enter(transport, *args, **kwargs):
         sys.stderr.write("spark: the %g s settle heard %s\\n" % (settle, " ".join(heard)))
         raise
 serial.Serial.open, SerialTransport.enter_raw_repl = quiet_open, settled_enter
-sys.argv[0] = "mpremote"
+sys.argv[0] = mpremote_main.__name__.split(".")[0]  # the tool's own module name, as the shell names it
 sys.exit(mpremote_main.main())
 """
 
