@@ -1373,6 +1373,15 @@ class TheCheckRecordIsKeptTest(unittest.TestCase):
                 change()
                 self.assertFalse(self.kept().current)
 
+    def test_a_requirements_file_with_a_colon_in_its_name_keeps_the_answer_and_says_why_no_record(self):
+        """The refuter's regression (P1255 fix A): `v2:requirements.json` is no plain input, so the run says it is outside
+        and keeps the exit it has without that file, never a ValueError."""
+        before, _, _ = self.run_on(self.project)
+        (self.project / "v2:requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        code, answer, text = self.run_on(self.project)
+        self.assertEqual((code, answer["written"], answer["not_written"]), (before, False, self.NOT_KEPT_OUTSIDE))
+        self.assertNotIn("a check record's inputs are plain paths", text)
+
     def test_a_circuit_built_after_the_run_makes_the_record_older(self):
         """An input not found yet is kept by its convention's first pattern when that is no glob, so a later build counts."""
         (self.project / "dist" / "board" / "circuit.json").unlink()

@@ -67,7 +67,8 @@ def record_inputs(checked, inputs):
             names.append(input_name(checked.project, inputs[name]))
         elif not GLOB & set(patterns[0]):
             names.append(patterns[0])
-    names += sorted({REQUIREMENTS, *(found.name for found in Path(checked.folder).glob("*" + REQUIREMENTS))})
+    names += [input_name(checked.project, Path(checked.folder) / name)
+              for name in sorted({REQUIREMENTS, *(found.name for found in Path(checked.folder).glob("*" + REQUIREMENTS))})]
     names += [PROJECT_BOARDS_DIR + "/"] + [input_name(checked.project, board) for board in inputs.get("boards") or []]
     return list(dict.fromkeys(names))
 

@@ -38,8 +38,8 @@
  {
   "file": "scripts/spark/checks/check_design.py",
   "name": "P1255: the requirements files are no inputs (test_check_all.TheCheckRecordIsKeptTest.test_a_rebuild_a_changed_requirements_file_and_a_board_copied_into_boards_make_the_record_older)",
-  "find": "    names += sorted({REQUIREMENTS, *(found.name for found in Path(checked.folder).glob(\"*\" + REQUIREMENTS))})\n",
-  "replace": ""
+  "find": "    names += [input_name(checked.project, Path(checked.folder) / name)\n",
+  "replace": "    names += [] and [input_name(checked.project, Path(checked.folder) / name)\n"
  },
  {
   "file": "scripts/spark/checks/check_design.py",
@@ -86,8 +86,8 @@
  {
   "file": "scripts/spark/records/check_record.py",
   "name": "P1255: a failed save raises (test_check_record.TheAnswerSavedTest.test_a_failed_save_is_written_false_with_one_note_and_one_line)",
-  "find": "    except OSError as failed:\n        sentence = NOT_KEPT_SENTENCE",
-  "replace": "    except ValueError as failed:\n        sentence = NOT_KEPT_SENTENCE"
+  "find": "    except (OSError, ValueError) as failed:\n        sentence = NOT_KEPT_SENTENCE",
+  "replace": "    except KeyError as failed:\n        sentence = NOT_KEPT_SENTENCE"
  },
  {
   "file": "scripts/spark/flow/checks_reading.py",
@@ -112,5 +112,17 @@
   "name": "P1255: a board-only build says not run yet (test_flow.TheDesignChecksLineTest.test_a_board_only_build_says_the_line_only_with_a_record)",
   "find": "        built = record is not None and BUILD.name not in skipped_stages(record)\n",
   "replace": "        built = record is not None\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1255 fix A: an input save refuses loses the answer (test_check_record.TheAnswerSavedTest.test_an_input_save_refuses_is_written_false_and_the_answer_stands)",
+  "find": "    except (OSError, ValueError) as failed:\n",
+  "replace": "    except OSError as failed:\n"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255 fix A: a requirements name is saved as it is (test_check_all.TheCheckRecordIsKeptTest.test_a_requirements_file_with_a_colon_in_its_name_keeps_the_answer_and_says_why_no_record)",
+  "find": "    names += [input_name(checked.project, Path(checked.folder) / name)\n",
+  "replace": "    names += [name\n"
  }
 ]

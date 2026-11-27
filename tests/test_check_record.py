@@ -323,6 +323,11 @@ class TheAnswerSavedTest(unittest.TestCase):
         self.assertEqual((result.data["written"], list(result.lines)), (False, ["a line", sentence]))
         self.assertEqual(result.notes, [{"subject": ".spark/check-firmware.json", "sentence": sentence}])
 
+    def test_an_input_save_refuses_is_written_false_and_the_answer_stands(self):
+        """P1255 fix A: a ValueError of `save` (an input that is no plain input) never loses the check's answer."""
+        result = answer_saved(CheckRecordStore(a_project(), "check-design"), self.RESULT, ("home:x",), AT, ANSWER)
+        self.assertEqual((result.data["written"], list(result.lines)), (False, ["a line", "did not keep the check record: ValueError"]))
+
     def test_an_answer_not_saved_with_a_reason_says_it_and_with_none_says_nothing(self):
         said = answer_not_saved(self.RESULT, ".spark/check-design.json", "did not keep the check record: a reason")
         self.assertEqual((said.data["written"], list(said.lines)), (False, ["a line", "did not keep the check record: a reason"]))
