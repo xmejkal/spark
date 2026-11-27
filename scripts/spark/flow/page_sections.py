@@ -14,7 +14,7 @@ from spark.breadboard import before_power, part_pictures, picture_check
 from spark.breadboard.svg_diagram import PAD_MARKS
 from spark.flow import flow_codes
 from spark.flow.guide import note_words
-from spark.flow.flow_codes import board_file_line, picked_sentence
+from spark.flow.flow_codes import picked_sentence
 from spark.flow.phase_readers import MARKS, pick_need
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import day_and_time
@@ -420,14 +420,13 @@ class PartsHtmlFold:
     @staticmethod
     def _hooked(offer):
         """A sendable offer's row: its key and `data-makes-stale` for the script, then its label alone (P1135): its effect
-        stands in its Send box and in the developer fold. A pick's row says its part and what you have of it, and keeps the
-        sentence that spark cannot build from it, muted (`board_file_line`)."""
+        stands in its Send box and in the developer fold. A pick's row says its part and what you have of it, then its notes
+        (P1180), muted, in one line whose id (`note-<key>`) the script's radio names."""
         if pick_need(offer["key"]) is None:
             return '<li data-key="%s"%s>%s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(offer["label"]))
-        refused = board_file_line(offer["effect"])
-        line = '<p class="muted">%s</p>' % _text(refused) if refused else ""
-        return '<li data-key="%s"%s>%s%s</li>' % (_text(offer["key"]), _makes_stale(offer),
-                                                 _text(flow_codes.PICK_ROW % (offer["part"], offer["have"])), line)
+        key = _text(offer["key"])
+        line = '<p class="muted" id="note-%s">%s</p>' % (key, _text(" ".join(offer["notes"]))) if offer["notes"] else ""
+        return '<li data-key="%s"%s>%s%s</li>' % (key, _makes_stale(offer), _text(flow_codes.PICK_ROW % (offer["part"], offer["have"])), line)
 
 
 class WiringHtmlFold:

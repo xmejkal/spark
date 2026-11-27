@@ -1951,9 +1951,10 @@ def a_need_phase(says=("1 of 2 needs picked",), status="partial"):
     (P1135), neither picked."""
     def pick(need, part):
         return {"key": "pick:%s:%s" % (need, part), "label": "Pick %s for %s" % (part, need), "effect": "Saves %s." % part,
-                "makes_stale": ["requirements"], "part": part, "have": "in your drawer"}
+                "makes_stale": ["requirements"], "part": part, "have": "in your drawer", "notes": []}
     offers = [pick("light", "led-red"), pick("button", "tact-6mm"), pick("light", "led-green"), pick("button", "tact-12mm"),
-              {"key": "needs-drop:light", "label": "Drop the light need", "effect": "Drops it.", "makes_stale": [], "part": None, "have": None}]
+              {"key": "needs-drop:light", "label": "Drop the light need", "effect": "Drops it.", "makes_stale": [], "part": None, "have": None,
+               "notes": []}]
     needs = [{"need": need, "picked": [], "says": []} for need in ("light", "button")]
     return dict(a_phase("parts", status, says=says).to_dict(), offers=offers, needs=needs)
 
@@ -2166,14 +2167,18 @@ def wired_effect(own):
     return " ".join([WIRED_PICK, own] + SHARED[1:])
 
 
+#: The note of a pick spark has no board file for (P1180).
+NO_BOARD_FILE = "Spark cannot build from it: no board file."
+
+
 def a_picked_phase():
     """A parts phase dict (P1135): button picked “Tactile 6 mm”, with one more pick and a line of its own, and board not
-    picked, with a pick spark has no board file for and one it has."""
-    def pick(need, part, name, effect):
+    picked, with a pick spark has no board file for, which says so in its note (P1180), and one it has."""
+    def pick(need, part, name, effect, notes=()):
         return {"key": "pick:%s:%s" % (need, part), "label": "Pick “%s” for %s" % (name, need), "effect": effect,
-                "makes_stale": ["requirements"], "part": name, "have": "in your drawer"}
+                "makes_stale": ["requirements"], "part": name, "have": "in your drawer", "notes": list(notes)}
     offers = [pick("button", "tact-12mm", "Tactile 12 mm", wired_effect("Saves “Tactile 12 mm” as the pick.")),
-              pick("board", "beetle", "Beetle", wired_effect("Saves “Beetle” as the pick. Spark cannot build from this pick: it has no board file for “Beetle”.")),
+              pick("board", "beetle", "Beetle", wired_effect("Saves “Beetle” as the pick."), [NO_BOARD_FILE]),
               dict(pick("board", "c6", "XIAO C6", wired_effect("Saves “XIAO C6” as the pick.")), have="to get")]
     needs = [{"need": "button", "picked": ["Tactile 6 mm"], "says": ["Not shown for button: 1 more pick."]},
              {"need": "board", "picked": [], "says": []}]
@@ -2211,8 +2216,8 @@ class TheLessTextTest(unittest.TestCase):
         self.assertEqual(self.parts.count("Not shown for button"), 1)
 
     def test_a_pick_s_row_reads_its_part_and_what_you_have_and_keeps_its_board_file_line(self):
-        self.assertIn('<li data-key="pick:board:beetle" data-makes-stale="requirements">Beetle (in your drawer)<p class="muted">'
-                      'Spark cannot build from this pick: it has no board file for “Beetle”.</p></li>', self.parts)
+        self.assertIn('<li data-key="pick:board:beetle" data-makes-stale="requirements">Beetle (in your drawer)<p class="muted" '
+                      'id="note-pick:board:beetle">Spark cannot build from it: no board file.</p></li>', self.parts)
         self.assertIn('<li data-key="pick:board:c6" data-makes-stale="requirements">XIAO C6 (to get)</li>', self.parts)
         for said in ("Saves “Beetle”", html.escape(WIRED_PICK), MAY_NOTE):
             self.assertNotIn(said, before_developer(self.text))

@@ -40,7 +40,10 @@
       "requirements"
      ],
      "part": "Red LED 5 mm",
-     "have": "in your drawer"
+     "have": "in your drawer",
+     "notes": [
+      "You may not have it: check your drawer."
+     ]
     },
     {
      "key": "needs-drop:light",
@@ -48,7 +51,8 @@
      "effect": "To drop this need, tell Claude: “drop the light need”.",
      "makes_stale": [],
      "part": null,
-     "have": null
+     "have": null,
+     "notes": []
     }
    ],
    "needs": [
@@ -84,7 +88,8 @@
       "breadboard"
      ],
      "part": null,
-     "have": null
+     "have": null,
+     "notes": []
     }
    ],
    "needs": null
@@ -104,7 +109,8 @@
      "effect": "Saves its files in this project. Runs no simulation and costs nothing.",
      "makes_stale": [],
      "part": null,
-     "have": null
+     "have": null,
+     "notes": []
     }
    ],
    "needs": null

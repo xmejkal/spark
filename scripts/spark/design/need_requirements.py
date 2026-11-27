@@ -84,6 +84,18 @@ LAYOUT_FACTS = ("body_mm",)
 SIMULATION_FACTS = ("simulation",)
 
 
+def blocking_facts(owed):
+    """The facts of `owed` that refuse the parts list (P1180): all but LAYOUT_FACTS and SIMULATION_FACTS, which it says.
+    The one rule of the parts list (`_part_picks`), the requirements phase and a pick's notes."""
+    return [fact for fact in owed if fact not in LAYOUT_FACTS + SIMULATION_FACTS]
+
+
+def refuses(owed, broken):
+    """True when the parts list refuses the record of a part that owes `owed` (P1180): it owes a blocking fact, or it is
+    `broken`."""
+    return bool(blocking_facts(owed) or broken)
+
+
 def _part_of(entry):
     """The part an entry of a requirements file's `parts` names — a bare id, or {part, name} — or None when it names none."""
     named = entry.get("part") if isinstance(entry, dict) else entry
@@ -272,7 +284,7 @@ def _part_picks(picks, known):
         owed = owes(record) if isinstance(record, dict) else []
         wrong = (["no record called %s any more" % key] if path is None else
                  ["its record at %s does not parse as a JSON object — repair the file by hand" % path] if not isinstance(record, dict) else
-                 ["owes %s — %s" % (", ".join(owed), _how_to_fill(path))] if set(owed) - set(LAYOUT_FACTS) - set(SIMULATION_FACTS)
+                 ["owes %s — %s" % (", ".join(owed), _how_to_fill(path))] if blocking_facts(owed)
                  else broken_problems(record, path))
         problems += [_problem(key, sentence) for sentence in wrong]
         shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []

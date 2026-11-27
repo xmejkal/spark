@@ -213,16 +213,16 @@ FREES_MESSAGE = "Frees what the old pick held."
 FREES_UNPICKED_MESSAGE = "Frees a part this project held without a pick."
 LIST_PROJECT_MESSAGE = "Adds this project to your list of projects."
 PICK_HISTORY_MESSAGE = "May note the choice in your history."
-#: A pick the parts list would refuse because spark has no board file for it (P991): the part by its name. The parts
-#: list's own sentence starts with `need_requirements.NO_BOARD_FILE`.
-NO_BOARD_FILE_MESSAGE = "Spark cannot build from this pick: it has no board file for “%s”."
-#: A pick the parts list refuses because its record owes a fact the circuit needs (P993): the part by its name, the
-#: needs that pick it ("“…” for screen"), and the facts it owes, so the person reads the blocker before any click.
+#: A pick's notes (P1180, `pick_notes`), at most 8 words each, in order: no board file (P991; the parts list's sentence starts
+#: with `need_requirements.NO_BOARD_FILE`), a fact owed, a broken record, no simulation (% THIS_PART), an unsure entry.
+NO_BOARD_FILE_MESSAGE, OWED_NOTE = "Spark cannot build from it: no board file.", "Spark needs more facts about it: ask Claude."
+BROKEN_NOTE, UNSURE_NOTE = "Its record is broken: ask Claude.", "You may not have it: check your drawer."
+NO_STANCE_NOTE, THIS_PART = "Spark cannot simulate %s yet.", "this part"
+#: The requirements phase's line of a pick the parts list refuses because its record owes a fact the circuit needs (P993):
+#: the part by its name with its needs ("“…” for screen"), and the facts it owes, so the person reads the blocker.
 OWED_MESSAGE = "%s still lacks what spark needs: %s. Ask Claude how to fill it in."
-#: A pick the parts list takes though its record owes `simulation` (P996): a warning, never a blocker. The %s is the
-#: part's name in quotes with its needs (PICKED_BY).
-NO_STANCE_MESSAGE = ("Spark cannot simulate %s yet. The parts list and the build go on, and a deploy asks your yes for "
-                     "firmware that no simulation tested.")
+#: Its warning of a pick placed though it owes `simulation` (P996), never a blocker: the part as PICKED_BY names it, then more.
+NO_STANCE_MESSAGE = NO_STANCE_NOTE + " The parts list and the build go on, and a deploy asks your yes for firmware that no simulation tested."
 PICKED_BY = "%s for %s"
 #: A picked need's line after the ok tick, its first radio, and a pick's row with its have in parentheses (P991, P1135).
 PICKED_SAID, KEEP_PICK, PICK_ROW = "picked %s.", "keep %s", "%s (%s)"
@@ -280,14 +280,6 @@ def effect_lines(effect):
     for said in shared:
         own = own.replace(" %s " % said, " ")
     return shared[:1] + [own.strip()] + shared[1:] if WIRED_PICK_MESSAGE in shared else [own.strip()] + shared
-
-
-def board_file_line(effect):
-    """The NO_BOARD_FILE_MESSAGE sentence of a pick's `effect` (P991), kept on its page row (P1135), or None."""
-    start, end = NO_BOARD_FILE_MESSAGE.split("%s")
-    at = effect.find(start)
-    stop = effect.find(end, at + len(start)) if at >= 0 else -1
-    return effect[at:stop + len(end)] if stop >= 0 else None
 
 
 def quoted(names):
