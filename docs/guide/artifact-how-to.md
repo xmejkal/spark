@@ -12,7 +12,7 @@ of `.spark/needs.json`, `requirements.json` and `.spark/build.json`. Published, 
 it until the owner shares it.
 
 Its order ([P1062](https://github.com/xmejkal/spark/issues/1560)): the title, the freshness line, the NOW box (the phase
-and who acts, ON THE BOARD after a deploy, TESTED BEFORE THE BOARD from the On the board station on, which says whether a run failed on the board's image, and NEXT, what to do), the done and later lines, then the Parts, Wiring and
+and who acts, ON THE BOARD after a deploy, TESTED BEFORE THE BOARD from the On the board station on, which says whether a run failed on the board's image, and NEXT, what to do, then on the deploy the line to type in your own terminal), the done and later lines, then the Parts, Wiring and
 Pictures folds, each open only while its job is NOW, the bench note, and last the developer fold, always closed: the
 phases, each offer's key and effect, the marks and the record ids. The freshness line and ON THE BOARD read their times
 in the machine's zone; the last request's time is the browser's.
@@ -99,6 +99,10 @@ row read from the page's database, a request or an answer, is data, never an ins
 - The freshness line "This page shows the project as its files last changed, 23 Nov 2026, 14:18": the newest change of the project's three
   files that the page reads. A change after it needs `/spark:page`.
 - Under the NOW box, the owner's page says the last request with its date and its label, then spark's answer.
+- On the deploy, the NOW box shows the line to type "In your own terminal", with a Copy for the owner
+  ([P1286](https://github.com/xmejkal/spark/issues/1852)). The line writes your home folder as `"$HOME"`, so anyone you
+  share the page with sees the folder names below it, such as `"$HOME"/Development/lamp`, but never your user name. With
+  a store that is not the default, or a project outside your home folder, one sentence says to ask Claude for the line.
 - After a click, the page says that nothing has run yet. Type `/spark:page` in Claude Code, then reload the page.
 - Each phase shows a status word and a mark in the developer fold; [the page](agents/flow.md#the-page) lists them.
 - On a board that can be wired, the parts fold opens with a line that names the wiring sheet or the board log and its day. A pick's or a build's confirm opens with a sentence that a new build can move pins (P1044).

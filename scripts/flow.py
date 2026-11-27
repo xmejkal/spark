@@ -24,8 +24,10 @@ EPILOG = """Each verb's own --help says what it does: flow.py show --help, flow.
 The rest of this text is the CLI's own, for every verb.
 
 The guide (P977) starts the text: NOW, the phase to act on now, its sentence and the key of its offer, or next: and the
-op of the step of a now phase that holds no offer, with needs you for a step the person takes (P1034), then DONE and
-LATER (with nothing open, the line that says so stands in place of NOW). One line per phase comes after it; the parts
+op of the step of a now phase that holds no offer, with needs you for a step the person takes (P1034). Under a deploy NOW
+stands the line to type in your own terminal, data.guide.now.command, with the home folder as "$HOME", or the sentence
+why there is none, data.guide.now.no_command (P1286). Then DONE and LATER (with nothing open, the line that says so
+stands in place of NOW). One line per phase comes after it; the parts
 line says the count, and one line per need follows it: its pick with a tick, its lines, then its pick keys, each with
 its have (P1135). With --json,
 next holds the step of that offer, raw (P1030), or the step of the simulate or the deploy (P1034), and an empty next
