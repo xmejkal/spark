@@ -522,9 +522,9 @@ STATION_NOTES = {NO_PICKS_NOTE: "no needs or picks behind it", NO_MODEL_NOTE: "n
                  UNSEEN_NOTE: "spark cannot see it", MAY_CHANGE_NOTE: "done, may change"}
 STATION_NOTES_BY_PHASE = {(NO_MODEL_NOTE, SIMULATE): "no Wokwi model of this board"}
 #: Gate A's row "Tested before the board" (P1220, D10): the fact it reads, NO_MODEL_NOTE for a board Wokwi has no model of,
-#: and the row's words by fact. The words of a run that failed are RUN_FAILED_NOW's, with the log's
-#: name. The row is data only: no code refuses on it, and an empty `shut_by` never means that gate A is open.
-GATE_A_SAYS = {RUN_FAILED: RUN_FAILED_NOW, IMAGE_TESTED: "A run passed on this image.",
+#: and the row's words by fact. Each says a fact and no action: the NOW sentence and NEXT say what to do, so a failed
+#: run is not said twice on the page (P1220's look in Chrome). The row is data only: no code refuses on it, and an empty `shut_by` never means that gate A is open.
+GATE_A_SAYS = {RUN_FAILED: "A run failed on this image (%s).", IMAGE_TESTED: "A run passed on this image.",
                IMAGE_OLDER: "Your firmware changed after the image, so no run tested it as it is now.",
                IMAGE_UNTESTED: "No run tested this image.",
                NO_SIM_FILES: "No run tested this image: the project has no simulation files.",

@@ -2337,7 +2337,7 @@ class ThePublishedPageTest(unittest.TestCase):
                          {"artifact": "9667a2de-3d30-4c7f-a7fc-9ded96a0e967"})
 
 
-FAILED_ROW = "A run failed on this image (one.log). Ask Claude to go through its log with you."
+FAILED_ROW = "A run failed on this image (one.log)."
 TESTED_ROW = '<p class="tested"><strong>TESTED BEFORE THE BOARD</strong> %s</p>'
 
 

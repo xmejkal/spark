@@ -3219,7 +3219,7 @@ class TheIdeaGoalTest(FlowTest):
         self.assertEqual((code, said["status"], said["problems"]), (0, "ok", []))
 
 
-FAILED_NOW = "A run failed on this image (one.log). Ask Claude to go through its log with you."
+FAILED_NOW = "A run failed on this image (one.log)."
 CANNOT_TELL = "Spark cannot tell. The simulation phase says why."
 
 
@@ -3260,7 +3260,7 @@ class TheGateATest(FlowTest):
 
     def test_show_prints_the_row_after_the_now_line_and_prints_none_before_the_station(self):
         lines = lines_of(a_project_at_the_board())
-        self.assertEqual(lines[1], "  TESTED BEFORE THE BOARD: A run failed on this image (one.log). Ask Claude to go through its log with you.")
+        self.assertEqual(lines[1], "  TESTED BEFORE THE BOARD: A run failed on this image (one.log).")
         self.assertTrue(lines[0].startswith("  NOW (simulate)"), lines[0])
         self.assertFalse([line for line in lines_of(a_run(an_image(a_firmware(a_built_project())), "failed")) if "TESTED BEFORE" in line])
         self.assertFalse([line for line in lines_of(Path(tempfile.mkdtemp())) if "TESTED BEFORE" in line])
