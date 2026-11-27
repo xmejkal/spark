@@ -42,9 +42,9 @@
   "replace": "        return status, sentence, log"
  },
  {
-  "file": "scripts/run_scenario.py",
-  "name": "a pass with a caveat goes to stderr",
-  "find": "          file=sys.stdout if status == OK else sys.stderr)",
-  "replace": "          file=sys.stdout if sentence == \"passed\" else sys.stderr)"
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "a pass with a caveat is no ok answer",
+  "find": "        if status == OK:\n            notes = ",
+  "replace": "        if sentence == PASSED:\n            notes = "
  }
 ]

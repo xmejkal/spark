@@ -63,6 +63,11 @@ CASES = [
          [SCENARIO, "--project", PROJECT, "--micropython", "micropython.bin"], 2, env={"WOKWI_CLI_TOKEN": ""}),
     Case("run-scenario-could-not-run-no-sim.txt", "run_scenario.py",
          [SCENARIO, "--project", PROJECT, "--micropython", "micropython.bin"], 2, (("sim/diagram.json", None),)),
+    # P1078: the envelope of a pass and of a refusal
+    Case("run-scenario-ok.json", "run_scenario.py", [SCENARIO, "--project", PROJECT, "--micropython", "micropython.bin", "--json"], 0,
+         env=READY_RUN),
+    Case("run-scenario-could-not-run-no-token.json", "run_scenario.py",
+         [SCENARIO, "--project", PROJECT, "--micropython", "micropython.bin", "--json"], 2, env={"WOKWI_CLI_TOKEN": ""}),
     Case("flash-image-ok.txt", "flash_image.py",
          ["--project", PROJECT, "--micropython", "micropython.bin", "--files", "firmware", "-o", "flash.bin"], 0),
     Case("flash-image-could-not-run-no-interpreter.txt", "flash_image.py",

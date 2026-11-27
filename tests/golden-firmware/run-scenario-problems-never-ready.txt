@@ -1,6 +1,13 @@
---- stderr ---
-s.scenario.yaml: the firmware never printed 'ready': print it once setup is done (the ready contract, commands/build.md)
+✗ run-scenario: problems. s.scenario.yaml: failed
+
 log: <project-dir>/sim/runs/s.log
+
+  Problems
+    - the firmware never printed 'ready': print it once setup is done (the ready contract, commands/build.md)
+      fix: read the run's log in sim/runs/, fix what it names, then run the scenario again
+
+  Next:
+    No command: the first item under Problems above says why.
 --- sim/runs/s.log ---
 # s.scenario.yaml, run <time>, timeout 60000 ms
 verdict: the firmware never printed 'ready': print it once setup is done (the ready contract, commands/build.md)

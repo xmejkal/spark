@@ -566,6 +566,13 @@ class FakeOutsideWorld:
         return self._find_tool(name, **where)
 
 
+def program_world(project, run=None, find_tool=None):
+    """The FakeOutsideWorld of a scenario run in `project` (P1078): `run` is the given fake, or `ProgramRunner().run`,
+    which starts the program the test names, the fake wokwi-cli and never a paid one; `find_tool` is the given one-name
+    finder, or the project's real one, `ToolFinder(project).find`."""
+    return FakeOutsideWorld(run=run or ProgramRunner().run, find_tool=find_tool or tool_finder.ToolFinder(project).find)
+
+
 class FakeToolFinder:
     """Fake tool_finder.ToolFinder (P725): `find(name, project=None)` answers from `answers` (a role or a name -> a Tool,
     or an exception to raise), keeps each `(name, project)` asked in `asked`, and for a name it lacks calls `fall_back(name,

@@ -749,6 +749,22 @@
    "network": false
   },
   {
+   "key": "op:run-scenario",
+   "op": "run-scenario",
+   "area": "firmware",
+   "summary": "Run one scenario in Wokwi. A run spends Wokwi CI minutes.",
+   "effects": [
+    "writes"
+   ],
+   "data_keys": [
+    "project",
+    "scenario",
+    "log",
+    "ran"
+   ],
+   "network": false
+  },
+  {
    "key": "op:look",
    "op": "look",
    "area": "bench",

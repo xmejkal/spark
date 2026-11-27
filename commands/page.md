@@ -48,7 +48,7 @@ It never runs a step itself.
 4. Straight away, before anything else, keep the id, the `slug` that `publish_files` answered:
 
    ```
-   ${CLAUDE_PLUGIN_ROOT}/scripts/flow.py page --project . --artifact <id> --json
+   ${CLAUDE_PLUGIN_ROOT}/scripts/flow.py page --project . --artifact '<id>' --json
    ```
 
    It keeps the id in `.spark/page.json`, the id only, and `data.artifact` answers it from then on. So a step below

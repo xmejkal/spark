@@ -1,5 +1,11 @@
-s.scenario.yaml: passed, but it has no set-control step (the step that presses a button or sets a sensor) and no expect-pin step (the step that reads a pin)
+✓ run-scenario: ok. s.scenario.yaml: passed, but it has no set-control step (the step that presses a button or sets a sensor) and no expect-pin step (the step that reads a pin)
+
 log: <project-dir>/sim/runs/s.log
+  next: SPARK_HOME=<spark-home> <repo>/scripts/check_spine.py <project-dir>/requirements.json --keep <project-dir> — Build the board
+
+  Next:
+    why: Build the board
+    SPARK_HOME=<spark-home> <repo>/scripts/check_spine.py <project-dir>/requirements.json --keep <project-dir>
 --- sim/runs/s.log ---
 # s.scenario.yaml, run <time>, timeout 60000 ms
 verdict: passed

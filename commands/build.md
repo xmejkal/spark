@@ -327,13 +327,15 @@ is the scenario below. If a module does not import or an own test fails, fix tha
 Every part record says how it is simulated (`simulation`: a Wokwi part standing in, a custom
 chip kept beside the record and compiled to WebAssembly by `wokwi-cli chip compile`, or a skip
 with its reason), so the one command's last stage needs no table anywhere else. To run a scenario, with a Wokwi
-account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci):
+account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci), first the free checks, then the run:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml
+${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/'<name>'.scenario.yaml --dry-run --json
+${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/'<name>'.scenario.yaml --json
 ```
 
-The scenario's path is the project's, so it works from the project folder or with `--project`. It needs the
+Decide on its envelope (op `run-scenario`, [its JSON](../docs/guide/agents/firmware-codes.md#run_scenariopys-envelope), P1078): the status,
+the code of a refusal or a failure, `data.log`, the "passed, but ..." sentence in `notes`. The scenario's path is the project's, so it works from the project folder or with `--project`. It needs the
 simulation project in `sim/` (`diagram.json`, `wokwi.toml`, the chips), which the one command keeps with `--keep .`,
 and a `firmware/main.py`. It runs one scenario ([P130](https://github.com/xmejkal/spark/issues/64)). A step's `part-id` must be a component id of
 `sim/diagram.json`: a wrong one exits 2 with the word and the diagram's ids, before wokwi-cli starts. A step whose id spark cannot read, or a

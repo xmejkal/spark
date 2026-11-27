@@ -6,7 +6,8 @@ A leaf: it imports nothing of spark but `spark.core.codes`. Each refusal names i
 sentence (no magic strings, P260). A refusal that raises gives its exception a `code`; one that returns a sentence returns
 a Refusal (`spark.core.result`). `check_firmware.py --json` writes the code of each problem and unchecked item, with its fix (P1208). The six codes it answers with
 are Codes (P853, P935), each holding its meaning and its fix, a str that equals its word, so a reader of the word is unchanged.
-The two text CLIs print the sentence alone, and their codes wait in the library for the Operation that comes later.
+`run_scenario.py --json` writes the code of its refusal or its failure too (P1078). flash_image.py prints the sentence alone,
+and its codes wait in the library for the Operation that comes later.
 
 Five codes are also board_codes' (NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE, LOG_UNREADABLE, TOOL_MISSING), as equal
 literals in two leaves: project_image raises the first four from here, and the bench raises TOOL_MISSING itself (P685). The codes every Operation can write are the core's.
@@ -18,10 +19,10 @@ from spark.core.codes import Code
 #: The image a deploy reads, and the firmware line a run reads (equal to board_codes').
 NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE = "no_sim_toml", "firmware_line_bad", "no_image"
 LOG_UNREADABLE, TOOL_MISSING = "log_unreadable", "tool_missing"
-#: run_scenario.py: what stops a run before the paid call.
+#: run-scenario (run_scenario.py): what stops a run before the paid call.
 NO_SIM_PROJECT, NO_MAIN_PY, RUN_INPUT_UNUSABLE, NO_TOKEN = "no_sim_project", "no_main_py", "run_input_unusable", "no_token"
 UNKNOWN_COMPONENT_ID = "unknown_component_id"
-#: run_scenario.py: wokwi-cli and the board, during the run.
+#: run-scenario (run_scenario.py): wokwi-cli and the board, during the run.
 SIMULATOR_CANNOT_START, SIMULATOR_HUNG, SIMULATOR_LOST = "simulator_cannot_start", "simulator_hung", "simulator_lost"
 BOARD_SILENT, BOARD_NOT_STARTED, NEVER_READY = "board_silent", "board_not_started", "never_ready"
 STEP_TIMEOUT, STEP_FAILED = "step_timeout", "step_failed"

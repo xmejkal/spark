@@ -70,7 +70,6 @@ MAY_READ = {
     "bench.OPERATIONS": STRUCTURE + " (P919: scripts/bench.py made `bench` a scripts/ name, and the look's test walks the bench area's ops)",
     "sourcing_operations.OPERATIONS": STRUCTURE + " (P726 PR 2: the fifteen part ops on the core, each checked against its parts.OPERATIONS row)",
     "codes.INPUT_UNREADABLE": "a code's NAME, the word an agent decides on — vocabulary, not a value",
-    "run_scenario.ARGUMENTS": STRUCTURE + " (P1034: the script's own argument table, which a flow step's argv must parse with; the script off the core has no Operation)",
     "parts.HELP": "parts.py's own HelpText, given to run_cli so a test prints as parts.py prints — a fixture, not a value",
     "board_console.READ_CONSOLE": "the script the test runs against a fake serial module: the code under test, not the expectation",
     "board_connection.QUIET_MPREMOTE": "the script the quiet connection runs, which a test compiles and finds in the commands run: the code under test, not the expectation (P1007)",

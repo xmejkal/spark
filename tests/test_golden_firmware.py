@@ -2,6 +2,7 @@
 no move breaks it. No golden run spends a Wokwi minute: ShimGuardTest proves the guard, and FirmwareGoldenTest runs
 no Case unless the simulator found is the shim."""
 
+import hashlib
 import os
 import shutil
 import subprocess
@@ -74,6 +75,21 @@ class FirmwareOpTest(unittest.TestCase):
         case = golden_firmware.CASES[0]
         why = golden_bench.check_golden(case, "printed", golden_dir=Path(tempfile.mkdtemp()))
         self.assertEqual(why, "%s does not exist: write it with SPARK_ACCEPT=run-scenario" % case.golden)
+
+
+class TheLogSectionsHoldTest(unittest.TestCase):
+    """P1078: the scenario run moves onto the core, and the log it writes keeps its bytes. The sha256 of each golden's
+    log section, from the golden marker to the end, is pinned here as a literal taken before the move, so a rewrite of
+    the goldens (SPARK_ACCEPT=run-scenario) that changes a log fails here, while the text above the log may change."""
+
+    def test_the_log_section_of_each_paid_run_golden_keeps_its_bytes(self):
+        pinned = {"run-scenario-ok.txt": "6a400dff0ca798d2c492822bffe969904b2e3e8091dd033ca26608062536699c",
+                  "run-scenario-problems-never-ready.txt": "9333d52ee13dac7db82e532d2b0b90232286a3aff73bd9b11e746de3cc7a7d8a"}
+        for name, digest in pinned.items():
+            with self.subTest(name):
+                text = (golden_firmware.GOLDEN_DIR / name).read_text()
+                section = text[text.index("--- sim/runs/s.log ---\n"):]
+                self.assertEqual(hashlib.sha256(section.encode()).hexdigest(), digest)
 
 
 @needs_littlefs

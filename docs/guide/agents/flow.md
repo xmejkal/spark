@@ -308,13 +308,13 @@ A pick is the person's choice. Its step has `needs_person: true`, and `why` name
 | now phase | when | op (script) | `needs_person` |
 | --- | --- | --- | --- |
 | simulate | no `sim/wokwi.toml` | `build-board` (`check_spine.py`), the build's offer step | no key |
-| simulate | no image, an image no run tested, or one older than `firmware/` | `run_scenario` (`run_scenario.py`), one per `sim/scenarios/*.scenario.yaml`. While none is written, it names `sim/scenarios/<name>.scenario.yaml`, and Claude writes that scenario first | true |
+| simulate | no image, an image no run tested, or one older than `firmware/` | `run-scenario` (`run_scenario.py`), one per `sim/scenarios/*.scenario.yaml`. While none is written, it names `sim/scenarios/<name>.scenario.yaml`, and Claude writes that scenario first | true |
 | deploy | `not-started`, `partial`, `problems` or `stale` | `look` (`look.py`), with `--no-simulation` when `data.guide.no_simulation` is set | true |
 | idea | `stale` (a need was dropped) | `init_project` (`init_project.py`), the brief step, with `needs_yes: true` and `--answers <answers.json>` | no key |
 | parts | `not-started` or `partial`, and no one pick offer ([P1141](https://github.com/xmejkal/spark/issues/1676)) | `pick` (`parts.py`), one step with `<need>=<part>` for each need in `data.guide.now.needs`. Claude fills each `<part>` with the person's choice | true |
 
-`run-request` runs the build step from the page's button, and refuses `run_scenario` and `look`. An op named like a
-script is `scripts/<op>.py`, not on the core yet (piece 5 of [P793](https://github.com/xmejkal/spark/issues/1105)). With
+`run-request` runs the build step from the page's button, and refuses `run-scenario` and `look`. Each op runs the script
+in the table's brackets (`renderers.script_of`, [P1078](https://github.com/xmejkal/spark/issues/1582)). With
 `needs_person`, the person acts first: they run a scenario in their own terminal, and it spends Wokwi CI minutes, so ask
 before each run. Before a look, they plug the wired board into USB. After a deploy, the deploy phase reads the newest
 board log (P1043). Ready seen on the image the project holds now is `ok`, and nothing is open. Ready unknown is `partial`, ready not seen is `problems`, and so is a flash that did not finish, which wins over `stale` (the board may be erased). Firmware newer than that image, another image or no image is `stale`, which wins over ready not seen; the says line keeps the verdict. Claude acts first on firmware newer than the image and on no image (`by` `["claude"]`), the person's terminal on another image. The cause's words are spark's own, by the code: the log's own sentence, port and console stay in the file. `sim/runs/` is in spark's section of the project's `.gitignore`, so a clone has no board log and shows the deploy `not-started`. The text's NOW line ends with `[<offer key>]`, `[next: <op>]` or `[next: <op>, needs you]`. The text starts with the guide's lines (NOW, or the line that says nothing is open, then DONE, LATER, the no-simulation line and SET ASIDE), then one line per phase, so its first line is the next step ([P1142](https://github.com/xmejkal/spark/issues/1677)). With neither NOW nor that line (only a test's swapped readers), the first line is DONE.

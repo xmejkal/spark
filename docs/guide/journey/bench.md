@@ -122,7 +122,7 @@ paths written out, so it runs from any folder ([P283](https://github.com/xmejkal
 that Claude prints. The line below shows its form, and `<spark>` and `<project>` stand for the real folders:
 
 ```sh
-<spark>/scripts/grant.py --minutes 30 --project <project>
+'<spark>'/scripts/grant.py --minutes 30 --project '<project>'
 ```
 
 It reads the board once with esptool, so the board restarts. Then it asks you to let Claude run code on that board
@@ -136,7 +136,7 @@ By default every deploy waits for a yes that you type in your own terminal. If y
 without that yes each time, give a deploy grant ([P242](https://github.com/xmejkal/spark/issues/249)):
 
 ```sh
-<spark>/scripts/grant.py --scope deploy --minutes 60 --project <project>
+'<spark>'/scripts/grant.py --scope deploy --minutes 60 --project '<project>'
 ```
 
 Its question says that it lets Claude erase ALL of that board's flash and write any passed image of any project,

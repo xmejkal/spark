@@ -4,7 +4,7 @@ Re-introduce each defect and prove the suite goes red.
 
     tools/mutate.py tests/mutations/<table>.json
     tools/mutate.py --anchors tests/mutations/*.json      # anchors and syntax only, a second
-    tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy    # one file's rows, in a copy
+    tools/mutate.py tests/mutations/*.json --for scripts/spark/firmware/firmware_scenario.py --copy    # one file's rows, in a copy
     tools/mutate.py tests/mutations/*.json --for $changed --copy   # a branch's: changed=$(git diff --name-only origin/main...HEAD)
     tools/mutate.py tests/mutations/*.json --retarget scripts/a.py scripts/spark/a.py   # a file moved: its rows follow
     tools/mutate.py --ledger                              # the ledger's lines, counted by status
