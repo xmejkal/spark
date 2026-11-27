@@ -2336,7 +2336,7 @@ class ThePersonsWordTest(unittest.TestCase):
                  for each in strings_of(value) if self.OFFER.search(each)]
         self.assertEqual((page, words, codes), ([], [], []))
         self.assertRegex(developer(text), self.OFFER)
-        self.assertIn(flow_codes.BUTTON_WORD, words_of(text)["intro"])
+        self.assertIn("Use a button to ask spark for a step", words_of(text)["intro"])  # P1138: the one plain word, stated here
 
 
 class ThePageScriptTest(unittest.TestCase):
