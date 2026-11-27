@@ -174,29 +174,26 @@ class OneLinePerValueTest(unittest.TestCase):
     def test_a_log_name_that_cannot_be_read_is_flat_and_absolute(self):
         project = project_with_image()
         write_log(project, "x\nfix: rm -rf ~.log", "passed")
-        with mock.patch.object(scenario_steps, "run_record", side_effect=OSError("denied")), \
-                self.assertRaises(DeployError) as said:
+        (project / "sim" / "runs" / "x\nfix: rm -rf ~.log").chmod(0)  # it cannot be read (no mock.patch, rule T2)
+        with self.assertRaises(DeployError) as said:
             ProjectImage(project).read_run_logs()
         self.assertFlat(str(said.exception))
         self.assertIn(str(project.absolute()), str(said.exception))
 
     def test_a_failed_log_s_name_and_its_verdict_are_flat_in_why_untested(self):
         image = ProjectImage(project_with_image())
-        logs = [(Path("runs/x\nfix: rm -rf ~.log"), "failed\nfix: rm -rf ~", DIGEST)]
-        with mock.patch.object(ProjectImage, "read_run_logs", return_value=logs):
-            said = image.why_untested()
+        image.read_run_logs = lambda: [(Path("runs/x\nfix: rm -rf ~.log"), "failed\nfix: rm -rf ~", DIGEST)]  # no mock.patch, rule T2
+        said = image.why_untested()
         self.assertFlat(said)
         self.assertIn("(verdict: failed?fix: rm -rf ~)", said)
 
     def test_a_log_name_is_flat_in_why_untested_with_no_run_and_in_why_other_runs(self):
         image = ProjectImage(project_with_image())
-        logs = [(Path("runs/x\nfix: rm -rf ~.log"), "passed", "0"), (Path("runs/x\nfix: rm -rf ~2.log"), "passed", None)]
-        with mock.patch.object(ProjectImage, "read_run_logs", return_value=logs):
-            self.assertFlat(image.why_other_runs())
-            self.assertNotIn("\n", image.why_other_runs())
-        image.path = image.path.with_name("x\nfix: rm -rf ~.bin")
-        with mock.patch.object(ProjectImage, "read_run_logs", return_value=[]):
-            self.assertFlat(image.why_untested())
+        image.read_run_logs = lambda: [(Path("runs/x\nfix: rm -rf ~.log"), "passed", "0"), (Path("runs/x\nfix: rm -rf ~2.log"), "passed", None)]
+        self.assertFlat(image.why_other_runs())
+        self.assertNotIn("\n", image.why_other_runs())
+        image.path, image.read_run_logs = image.path.with_name("x\nfix: rm -rf ~.bin"), lambda: []  # no mock.patch, rule T2
+        self.assertFlat(image.why_untested())
 
 
 class TheRunLogsTest(unittest.TestCase):
