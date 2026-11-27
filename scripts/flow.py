@@ -25,7 +25,9 @@ The rest of this text is the CLI's own, for every verb.
 
 The guide (P977) starts the text: NOW, the phase to act on now, its sentence and the key of its offer, or next: and the
 op of the step of a now phase that holds no offer, with needs you for a step the person takes (P1034), then DONE and
-LATER (with nothing open, the line that says so stands in place of NOW). One line per phase comes after it. With --json,
+LATER (with nothing open, the line that says so stands in place of NOW). One line per phase comes after it; the parts
+line says the count, and one line per need follows it: its pick with a tick, its lines, then its pick keys, each with
+its have (P1135). With --json,
 next holds the step of that offer, raw (P1030), or the step of the simulate or the deploy (P1034), and an empty next
 means: read data.guide.now. When Wokwi has no model of the board, the build ends its simulation stage skipped with the
 code board_not_in_wokwi and exits 0 (P1207). The guide counts that build as done and says there is no simulation. An

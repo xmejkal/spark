@@ -192,9 +192,8 @@ project whose last need was dropped, which says so. Written firmware and a simul
 sentences say is for you to judge. An offer is a key, such as pick:soil:x-led, with a label (the words of its button,
 such as Build the board), its effect (plain sentences that name every write it makes), makes_stale (the phases it can
 make out of date, only those that hold something now), part (a pick's part, else null) and have (what you have of a
-pick's part, in the breadboard sheet's words: yours, in your drawer or to get; else null). In the text, the parts line
-says the count, and one line per need follows it: its pick with a tick, its lines, then its pick keys, each with its
-have. flow.py show runs no offer."""
+pick's part, in the breadboard sheet's words: yours, in your drawer or to get; else null). flow.py show runs no
+offer."""
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS,)
     data_keys = ("phases", "stands_at", "fingerprint", "guide", "deploy", "name", "title", "stamp", "artifact")
